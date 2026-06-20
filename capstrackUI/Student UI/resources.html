@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Resources - CapsTRACK</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<div class="toast" id="toast"></div>
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <div class="sidebar-brand">
+    <div class="brand-badge">
+      <div class="brand-icon">
+        <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+      </div>
+      <div>
+        <div class="brand-name">CapsTRACK</div>
+        <div class="brand-sub">Student Portal</div>
+      </div>
+    </div>
+  </div>
+  <div class="sidebar-user" id="profile-trigger" onclick="openProfile()">
+    <div class="avatar">MA</div>
+    <div class="user-info">
+      <div class="user-name">Mark Anthony B.</div>
+      <div class="user-role">Team Nexus · BSCS-4A</div>
+    </div>
+    <div class="status-dot"></div>
+    <div class="sidebar-user-caret">
+      <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+    </div>
+  </div>
+  <nav class="nav">
+    <div class="nav-section">Main</div>
+    <a href="dashboard.html" class="nav-item">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      Dashboard
+    </a>
+    <a href="team.html" class="nav-item">
+      <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      Team Management
+    </a>
+    <a href="experts.html" class="nav-item">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 1 0-16 0"/></svg>
+      Capstone Expert
+      <span class="nav-badge warn">2</span>
+    </a>
+    <div class="nav-section">Documents</div>
+    <a href="submission.html" class="nav-item">
+      <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      Document Submission
+    </a>
+    <a href="review.html" class="nav-item">
+      <svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+      Review Viewer
+      <span class="nav-badge">3</span>
+    </a>
+    <a href="duplication.html" class="nav-item">
+      <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      Duplication Checker
+    </a>
+    <div class="nav-section">Schedule</div>
+    <a href="consultation.html" class="nav-item">
+      <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      Consultation
+    </a>
+    <div class="nav-section">Tracking</div>
+    <a href="progress.html" class="nav-item">
+      <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+      Progress Tracker
+    </a>
+    <a href="financial.html" class="nav-item">
+      <svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+      Financial Records
+    </a>
+    <div class="nav-section">Reference</div>
+    <a href="resources.html" class="nav-item active">
+      <svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+      Resources
+      <span class="nav-badge">2</span>
+    </a>
+    <a href="archive.html" class="nav-item">
+      <svg viewBox="0 0 24 24"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+      Archived Capstones
+    </a>
+    <div class="nav-section">Account</div>
+    <a href="../login.html" class="nav-item">
+      <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      Sign Out
+    </a>
+  </nav>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="topbar">
+    <div class="page-title">Resources</div>
+    <div class="topbar-actions">
+      <div class="notif-btn">
+        <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        <div class="notif-dot"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- STAT ROW -->
+    <div class="grid-4" style="margin-bottom:18px">
+      <div class="stat-chip">
+        <div class="stat-n" style="color:var(--accent3)" id="stat-total">7</div>
+        <div class="stat-l">Total Files</div>
+      </div>
+      <div class="stat-chip">
+        <div class="stat-n" style="color:var(--blue)" id="stat-new">2</div>
+        <div class="stat-l">New This Week</div>
+      </div>
+      <div class="stat-chip">
+        <div class="stat-n" style="color:var(--green)" id="stat-dl">3</div>
+        <div class="stat-l">Downloaded</div>
+      </div>
+      <div class="stat-chip">
+        <div class="stat-n" style="color:var(--purple)" id="stat-cats">5</div>
+        <div class="stat-l">Categories</div>
+      </div>
+    </div>
+
+    <!-- TOOLBAR -->
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap">
+      <div class="ftabs" id="ftabs">
+        <button class="ftab active" onclick="setFilter('all',this)">All</button>
+        <button class="ftab" onclick="setFilter('pre-proposal',this)">Pre-Proposal</button>
+        <button class="ftab" onclick="setFilter('ch1-3',this)">Ch. 1–3</button>
+        <button class="ftab" onclick="setFilter('ch4-5',this)">Ch. 4–5</button>
+        <button class="ftab" onclick="setFilter('final',this)">Final MS</button>
+        <button class="ftab" onclick="setFilter('presentation',this)">Presentation</button>
+        <button class="ftab" onclick="setFilter('lesson',this)">Lessons</button>
+        <button class="ftab" onclick="setFilter('forms',this)">Forms</button>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <div style="position:relative">
+          <svg style="position:absolute;left:10px;top:50%;transform:translateY(-50%);width:13px;height:13px;stroke:var(--text3);fill:none;stroke-width:2;pointer-events:none" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input class="input" id="q" placeholder="Search resources…" style="padding-left:32px;width:210px;font-size:12px" oninput="render()"/>
+        </div>
+        <select class="input" id="srt" style="width:145px;font-size:12px" onchange="render()">
+          <option value="newest">Newest First</option>
+          <option value="oldest">Oldest First</option>
+          <option value="az">Name A–Z</option>
+          <option value="popular">Most Downloaded</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- LIST -->
+    <div id="res-list" class="gap-12"></div>
+
+  </div>
+</div>
+
+<div class="profile-overlay" id="profile-overlay" onclick="handleOverlayClick(event)">
+  <div class="profile-modal" id="profile-modal">
+
+    <div class="pm-header">
+      <div class="pm-avatar">MA</div>
+      <div style="flex:1;min-width:0">
+        <div class="pm-header-name">Mark Anthony B. Balilla</div>
+        <div class="pm-header-role">Student · Team Nexus</div>
+      </div>
+      <button onclick="closeProfile()" style="background:none;border:none;cursor:pointer;color:rgba(255,255,255,0.4);padding:4px;line-height:1;display:flex">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+
+    <div class="pm-body" id="pm-body">
+
+      <div class="pm-field">
+        <div class="pm-label">Full Name</div>
+        <div class="pm-value pm-view-only">Mark Anthony B. Balilla</div>
+        <div class="pm-edit-only">
+          <div style="display:flex;gap:6px">
+            <input class="pm-input" id="edit-fname" value="Mark Anthony B." style="flex:1" placeholder="First name"/>
+            <input class="pm-input" id="edit-lname" value="Balilla" style="width:90px" placeholder="Last name"/>
+          </div>
+        </div>
+      </div>
+
+      <div class="pm-field">
+        <div class="pm-label">Institutional Email</div>
+        <div class="pm-value readonly">
+          <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          mabalilla@my.cspc.edu.ph
+        </div>
+      </div>
+
+      <div class="pm-divider"></div>
+
+      <div class="pm-field">
+        <div class="pm-label">Course</div>
+        <div class="pm-value pm-view-only">Bachelor of Science in Computer Science</div>
+        <div class="pm-edit-only">
+          <select class="pm-input" id="edit-course">
+            <option selected>Bachelor of Science in Computer Science</option>
+            <option>Bachelor of Science in Information Technology</option>
+            <option>Bachelor of Science in Information Systems</option>
+            <option>Bachelor of Library and Information Science</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="pm-field">
+        <div class="pm-label">Year &amp; Section</div>
+        <div class="pm-value pm-view-only">4th Year · BSCS-4A</div>
+        <div class="pm-edit-only">
+          <div style="display:flex;gap:6px">
+            <select class="pm-input" id="edit-year" style="flex:1">
+              <option>1st Year</option><option>2nd Year</option>
+              <option>3rd Year</option><option selected>4th Year</option>
+            </select>
+            <input class="pm-input" id="edit-section" value="BSCS-4A" style="width:90px" placeholder="Section"/>
+          </div>
+        </div>
+      </div>
+
+      <div class="pm-divider"></div>
+
+      <div class="pm-field">
+        <div class="pm-label">Capstone Team</div>
+        <div class="pm-team-badge">
+          <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          Team Nexus
+          <span style="font-size:11px;color:var(--text3);font-weight:400;margin-left:2px">· 4 members</span>
+        </div>
+      </div>
+
+      <div class="pm-field" style="margin-top:14px">
+        <div class="pm-label">Student ID</div>
+        <div class="pm-value readonly">
+          <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          2021-00456
+        </div>
+      </div>
+
+    </div>
+
+    <div class="pm-footer">
+      <button class="btn btn-ghost content" id="pm-edit-btn" onclick="toggleEdit()">
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        Edit Profile
+      </button>
+      <button class="btn btn-primary content" id="pm-save-btn" onclick="saveProfile()" style="display:none">
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        Save Changes
+      </button>
+      <button class="btn btn-ghost content" id="pm-cancel-btn" onclick="cancelEdit()" style="display:none">
+        Cancel
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const DATA = [
+  {id:1,name:'Pre-Proposal Form Template',category:'pre-proposal',ext:'docx',size:'124 KB',date:'2026-04-01',dateLabel:'Apr 1, 2026',downloads:54,desc:'Official pre-proposal template with all required sections, signature fields, and formatting guidelines.',isNew:false,dl:true},
+  {id:2,name:'Chapter 1–3 Manuscript Template',category:'ch1-3',ext:'docx',size:'256 KB',date:'2026-03-28',dateLabel:'Mar 28, 2026',downloads:82,desc:'Complete manuscript template covering Introduction, Review of Related Literature, and Methodology chapters with APA margins and headings.',isNew:false,dl:true},
+  {id:3,name:'Chapter 4–5 Results & Discussion Template',category:'ch4-5',ext:'docx',size:'198 KB',date:'2026-04-02',dateLabel:'Apr 2, 2026',downloads:31,desc:'Template for Results & Discussion and Conclusions & Recommendations — includes table and figure caption formats.',isNew:true,dl:false},
+  {id:4,name:'Final Manuscript Formatting Guide',category:'final',ext:'pdf',size:'340 KB',date:'2026-03-20',dateLabel:'Mar 20, 2026',downloads:47,desc:'Comprehensive formatting reference for the final manuscript: margins, fonts, pagination, and citation standards.',isNew:false,dl:false},
+  {id:5,name:'Defense Presentation Slide Deck',category:'presentation',ext:'pptx',size:'1.2 MB',date:'2026-04-03',dateLabel:'Apr 3, 2026',downloads:26,desc:'CSPC-branded PowerPoint template for title defense and final oral defense presentations.',isNew:true,dl:false},
+  {id:6,name:'APA 7th Edition Quick Reference',category:'lesson',ext:'pdf',size:'87 KB',date:'2026-03-15',dateLabel:'Mar 15, 2026',downloads:99,desc:'Quick guide to APA 7th edition in-text citations, reference list formatting, and common academic source types.',isNew:false,dl:true},
+  {id:7,name:'Capstone Defense Checklist & Rubric',category:'forms',ext:'pdf',size:'112 KB',date:'2026-03-10',dateLabel:'Mar 10, 2026',downloads:38,desc:'Panel evaluation rubric and student self-checklist to prepare your manuscript and presentation for defense.',isNew:false,dl:false},
+];
+
+const CAT = {
+  'pre-proposal':['Pre-Proposal','cc-gold'],
+  'ch1-3':['Ch. 1–3 Template','cc-purple'],
+  'ch4-5':['Ch. 4–5 Template','cc-blue'],
+  'final':['Final Manuscript','cc-cyan'],
+  'presentation':['Presentation','cc-green'],
+  'lesson':['Lesson / Reference','cc-red'],
+  'forms':['Forms & Checklists','cc-gold'],
+};
+const ECLS  = {pdf:'ftype-pdf',docx:'ftype-docx',pptx:'ftype-pptx'};
+const EICON = {
+  pdf:`<svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>`,
+  docx:`<svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>`,
+  pptx:`<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="12" x2="13" y2="12"/><line x1="9" y1="15" x2="14" y2="15"/></svg>`,
+};
+
+// live download state
+const dlState = {};
+DATA.forEach(r=>{ dlState[r.id]=r.dl; });
+
+let activeFilter = 'all';
+
+function setFilter(cat,btn){
+  activeFilter=cat;
+  document.querySelectorAll('.ftab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  render();
+}
+
+function hl(text,q){
+  if(!q) return text;
+  const re=new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`, 'gi');
+  return text.replace(re,'<mark>$1</mark>');
+}
+
+function render(){
+  const q   = document.getElementById('q').value.trim().toLowerCase();
+  const srt = document.getElementById('srt').value;
+  const list= document.getElementById('res-list');
+
+  let data = DATA.filter(r=>{
+    const mc = activeFilter==='all' || r.category===activeFilter;
+    const mq = !q || r.name.toLowerCase().includes(q) || r.desc.toLowerCase().includes(q) || (CAT[r.category]||[''])[0].toLowerCase().includes(q);
+    return mc && mq;
+  });
+
+  if(srt==='newest')  data.sort((a,b)=>b.date.localeCompare(a.date));
+  if(srt==='oldest')  data.sort((a,b)=>a.date.localeCompare(b.date));
+  if(srt==='az')      data.sort((a,b)=>a.name.localeCompare(b.name));
+  if(srt==='popular') data.sort((a,b)=>b.downloads-a.downloads);
+
+  if(!data.length){
+    list.innerHTML=`<div class="card empty-res">
+      <svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+      <p>No resources match your search.</p>
+    </div>`;
+    updateStats();
+    return;
+  }
+
+  list.innerHTML = data.map(r=>{
+    const [catLabel, catCls] = CAT[r.category]||['Other','cc-gold'];
+    const isDl = dlState[r.id];
+    const dlBtn = isDl
+      ? `<button class="btn-dl done" id="dlb-${r.id}" onclick="dl(${r.id})">
+           <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>Downloaded
+         </button>`
+      : `<button class="btn-dl" id="dlb-${r.id}" onclick="dl(${r.id})">
+           <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="3" x2="12" y2="15"/></svg>Download
+         </button>`;
+    const newTag = r.isNew ? `<span class="badge badge-red" style="font-size:9px;padding:2px 7px;line-height:1.4">New</span>` : '';
+
+    return `<div class="res-card" id="rc-${r.id}">
+      <div class="ftype-badge ${ECLS[r.ext]||'ftype-pdf'}">${EICON[r.ext]||EICON.pdf}<span>${r.ext.toUpperCase()}</span></div>
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:7px;margin-bottom:4px;flex-wrap:wrap">
+          <span style="font-size:14px;font-weight:600;color:var(--text)">${hl(r.name,q)}</span>${newTag}
+        </div>
+        <div style="font-size:12px;color:var(--text2);line-height:1.55;margin-bottom:8px">${hl(r.desc,q)}</div>
+        <div style="margin-bottom:7px"><span class="cat-chip ${catCls}">${catLabel}</span></div>
+        <div class="res-meta-row">
+          <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          <span id="dlct-${r.id}">${r.downloads} downloads</span>
+          <span class="res-meta-sep">·</span>
+          <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          <span>${r.dateLabel}</span>
+          <span class="res-meta-sep">·</span>
+          <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          <span>${r.size}</span>
+        </div>
+      </div>
+      <div style="flex-shrink:0;padding-top:2px">${dlBtn}</div>
+    </div>`;
+  }).join('');
+
+  updateStats();
+}
+
+function dl(id){
+  const btn = document.getElementById(`dlb-${id}`);
+  if(!btn) return;
+  btn.classList.add('loading');
+  btn.innerHTML = `<svg class="spin-icon" viewBox="0 0 24 24" style="stroke-dasharray:28 56;stroke-linecap:round"><path d="M12 3a9 9 0 1 0 9 9"/></svg> Preparing…`;
+
+  setTimeout(()=>{
+    const r = DATA.find(x=>x.id===id);
+    if(r){ r.downloads++; }
+    dlState[id]=true;
+
+    const btn2 = document.getElementById(`dlb-${id}`);
+    if(btn2){
+      btn2.className='btn-dl done';
+      btn2.innerHTML=`<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>Downloaded`;
+      btn2.onclick=()=>dl(id);
+    }
+    const ct = document.getElementById(`dlct-${id}`);
+    if(ct && r) ct.textContent=`${r.downloads} downloads`;
+
+    updateStats();
+    showToast(`⬇  "${r?.name}" download started.`);
+  }, 950);
+}
+
+function updateStats(){
+  document.getElementById('stat-total').textContent = DATA.length;
+  document.getElementById('stat-new').textContent   = DATA.filter(r=>r.isNew).length;
+  document.getElementById('stat-dl').textContent    = Object.values(dlState).filter(Boolean).length;
+  document.getElementById('stat-cats').textContent  = new Set(DATA.map(r=>r.category)).size;
+}
+
+let _tt;
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  clearTimeout(_tt); _tt=setTimeout(()=>t.classList.remove('show'),2700);
+}
+
+render();
+
+// Profile Modal Logic
+const overlay   = document.getElementById('profile-overlay');
+const trigger   = document.getElementById('profile-trigger');
+const pmBody    = document.getElementById('pm-body');
+const editBtn   = document.getElementById('pm-edit-btn');
+const saveBtn   = document.getElementById('pm-save-btn');
+const cancelBtn = document.getElementById('pm-cancel-btn');
+let isEditing   = false;
+
+function openProfile() {
+  overlay.classList.add('open');
+  trigger.classList.add('active');
+}
+function closeProfile() {
+  overlay.classList.remove('open');
+  trigger.classList.remove('active');
+  if (isEditing) cancelEdit();
+}
+function handleOverlayClick(e) {
+  if (e.target === overlay) closeProfile();
+}
+function toggleEdit() {
+  isEditing = true;
+  pmBody.classList.add('edit-mode');
+  editBtn.style.display   = 'none';
+  saveBtn.style.display   = 'inline-flex';
+  cancelBtn.style.display = 'inline-flex';
+}
+function cancelEdit() {
+  isEditing = false;
+  pmBody.classList.remove('edit-mode');
+  editBtn.style.display   = 'inline-flex';
+  saveBtn.style.display   = 'none';
+  cancelBtn.style.display = 'none';
+}
+function saveProfile() {
+  const fname   = document.getElementById('edit-fname').value.trim();
+  const lname   = document.getElementById('edit-lname').value.trim();
+  const course  = document.getElementById('edit-course').value;
+  const year    = document.getElementById('edit-year').value;
+  const section = document.getElementById('edit-section').value.trim();
+  if (!fname || !lname) { document.getElementById('edit-fname').focus(); return; }
+  const fullName = fname + ' ' + lname;
+  document.querySelector('.pm-header-name').textContent = fullName;
+  document.querySelector('.sidebar .user-name').textContent = fname;
+  document.querySelector('.pm-avatar').textContent = (fname[0] + lname[0]).toUpperCase();
+  document.querySelector('.sidebar .avatar').textContent = (fname[0] + lname[0]).toUpperCase();
+  const viewFields = pmBody.querySelectorAll('.pm-view-only');
+  viewFields[0].textContent = fullName;
+  viewFields[1].textContent = course;
+  viewFields[2].textContent = year + ' · ' + section;
+  document.querySelector('.sidebar .user-role').textContent = 'Team Nexus · ' + section;
+  cancelEdit();
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeProfile(); });
+</script>
+</body>
+</html>

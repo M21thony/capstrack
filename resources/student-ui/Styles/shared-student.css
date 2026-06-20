@@ -1,0 +1,223 @@
+/* Shared sidebar profile + page tutorials (imported by student page CSS bundles) */
+
+.sidebar-avatar{
+  width:36px;
+  height:36px;
+  min-width:36px;
+  max-width:36px;
+  border-radius:50%;
+  overflow:hidden;
+  background:var(--navy-hover);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  flex-shrink:0;
+  border:2px solid rgba(201,168,44,0.25);
+}
+
+.sidebar-avatar-img{
+  width:100%;
+  height:100%;
+  max-width:36px;
+  max-height:36px;
+  object-fit:cover;
+  display:block;
+}
+
+.sidebar-avatar-fallback{
+  width:100%;
+  height:100%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:12px;
+  font-weight:700;
+  color:var(--accent);
+  background:rgba(201,168,44,0.15);
+}
+
+.sidebar-user{
+  cursor:pointer;
+  transition:background 0.13s;
+}
+
+.sidebar-user:hover{
+  background:rgba(201,168,44,0.1);
+}
+
+.sidebar-user-incomplete{
+  text-decoration:none;
+  cursor:pointer;
+}
+
+.sidebar-user-incomplete:hover{
+  background:rgba(201,168,44,0.12);
+}
+
+.sidebar-user-caret{
+  margin-left:auto;
+  flex-shrink:0;
+  opacity:0.4;
+  transition:transform 0.18s;
+}
+
+.sidebar-user-caret svg{
+  width:14px;
+  height:14px;
+  stroke:var(--navy-text2);
+  fill:none;
+  stroke-width:2;
+}
+
+.sidebar-user.active .sidebar-user-caret{
+  transform:rotate(180deg);
+  opacity:0.7;
+}
+
+.user-info{
+  flex:1;
+  min-width:0;
+  overflow:hidden;
+}
+
+.user-name{
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+.user-role{
+  font-size:10px;
+  color:var(--navy-text2);
+  margin-top:2px;
+  font-weight:500;
+  line-height:1.35;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  text-transform:none;
+  letter-spacing:0;
+}
+
+.nav-item-button{
+  width:100%;
+  border:none;
+  background:transparent;
+  font-family:inherit;
+  text-align:left;
+}
+
+.nav-item{
+  min-height:40px;
+}
+
+.pm-avatar-img{
+  width:52px;
+  height:52px;
+  max-width:52px;
+  max-height:52px;
+  border-radius:50%;
+  object-fit:cover;
+  display:block;
+  flex-shrink:0;
+  border:2.5px solid rgba(201,168,44,0.5);
+}
+
+/* Page tutorials */
+.page-tutorial{
+  margin-bottom:16px;
+}
+
+.page-tutorial[hidden]{
+  display:none !important;
+}
+
+.page-tutorial-inner{
+  display:flex;
+  flex-wrap:wrap;
+  gap:14px 16px;
+  align-items:flex-start;
+  padding:16px 18px;
+  background:var(--accent-light);
+  border:1px solid rgba(201,168,44,0.3);
+  border-radius:12px;
+  border-left:4px solid var(--accent);
+}
+
+.page-tutorial-icon{
+  flex-shrink:0;
+  width:36px;
+  height:36px;
+  border-radius:10px;
+  background:rgba(201,168,44,0.15);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:var(--accent3);
+}
+
+.page-tutorial-content{
+  flex:1;
+  min-width:200px;
+}
+
+.page-tutorial-title{
+  font-size:15px;
+  font-weight:600;
+  color:var(--text);
+  margin-bottom:4px;
+}
+
+.page-tutorial-summary{
+  font-size:13px;
+  color:var(--text2);
+  margin:0 0 10px;
+  line-height:1.5;
+}
+
+.page-tutorial-steps{
+  margin:0;
+  padding-left:18px;
+  font-size:12px;
+  color:var(--text2);
+  line-height:1.55;
+}
+
+.page-tutorial-steps li{
+  margin-bottom:5px;
+}
+
+.page-tutorial-steps li:last-child{
+  margin-bottom:0;
+}
+
+.page-tutorial-dismiss{
+  flex-shrink:0;
+  padding:10px 18px;
+  border-radius:9px;
+  border:none;
+  background:var(--accent);
+  font-size:13px;
+  font-weight:600;
+  cursor:pointer;
+  color:#18191f;
+  transition:background 0.15s,transform 0.1s;
+  font-family:inherit;
+  align-self:center;
+  margin-left:auto;
+}
+
+.page-tutorial-dismiss:hover{
+  background:var(--accent2);
+}
+
+@media (max-width:640px){
+  .page-tutorial-inner{
+    flex-direction:column;
+  }
+
+  .page-tutorial-dismiss{
+    margin-left:0;
+    width:100%;
+  }
+}

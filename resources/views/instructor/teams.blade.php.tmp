@@ -1,0 +1,713 @@
+﻿
+<div class="main">
+  <div class="topbar">
+    <div class="page-title">Team Overview</div>
+    <div class="topbar-actions">
+      <div class="notif-btn">
+        <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        <div class="notif-dot"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- Stat strip -->
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:16px">
+      <div class="stat-chip">
+        <div class="stat-n" style="color:var(--accent3)">6</div>
+        <div class="stat-l">Total Teams</div>
+        <div class="stat-sub">AY 2024â€“2025</div>
+      </div>
+      <div class="stat-chip">
+        <div class="stat-n" style="color:var(--green)">3</div>
+        <div class="stat-l">As Adviser</div>
+      </div>
+      <div class="stat-chip">
+        <div class="stat-n" style="color:var(--purple)">2</div>
+        <div class="stat-l">As Panel</div>
+      </div>
+      <div class="stat-chip">
+        <div class="stat-n" style="color:var(--cyan)">1</div>
+        <div class="stat-l">As Consultant</div>
+      </div>
+      <div class="stat-chip">
+        <div class="stat-n" style="color:var(--blue)">0</div>
+        <div class="stat-l">As Grammarian</div>
+      </div>
+    </div>
+
+    <!-- Filter bar -->
+    <div class="filter-bar" style="margin-bottom: 16px;">
+      <div class="role-tabs">
+        <div class="role-tab active" onclick="filterTeams('all', this)">All</div>
+        <div class="role-tab" onclick="filterTeams('adviser', this)">Adviser</div>
+        <div class="role-tab" onclick="filterTeams('panel', this)">Panel</div>
+        <div class="role-tab" onclick="filterTeams('consultant', this)">Consultant</div>
+        <div class="role-tab" onclick="filterTeams('grammarian', this)">Grammarian</div>
+      </div>
+      <input class="input" id="searchInput" placeholder="Search team or titleâ€¦" style="max-width:240px;margin-left:4px;margin-top: 10px;" oninput="searchTeams(this.value)"/>
+      <select class="input" style="width:150px" onchange="filterSection(this.value)">
+        <option value="">All Sections</option>
+        <option value="BSCS-4A">BSCS-4A</option>
+        <option value="BSIT-4A">BSIT-4A</option>
+        <option value="BSIT-4B">BSIT-4B</option>
+      </select>
+      <span style="margin-left:auto;font-size:12px;color:var(--text3)" id="countLabel">Showing 6 teams</span>
+    </div>
+
+    <!-- Team cards grid -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px" id="teamGrid">
+
+      <!-- â”€â”€ TEAM NEXUS (Adviser) â”€â”€ -->
+      <div class="team-card" data-role="adviser" data-section="BSCS-4A" data-search="team nexus ai-powered attendance system facial recognition">
+        <div class="team-card-header">
+          <div class="team-card-avatar" style="background:linear-gradient(135deg,#c9a82c,#8a6e10)">TN</div>
+          <div class="team-card-info">
+            <div class="team-card-name">
+              Team Nexus
+              <span class="badge badge-gray" style="font-size:10px">BSCS-4A</span>
+            </div>
+            <div class="team-card-title">AI-Powered Attendance System Using Facial Recognition for Higher Education</div>
+            <div style="margin-top:7px;display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+              <span class="role-pill role-adviser">Adviser</span>
+              <span class="badge badge-amber" style="font-size:10px">1 Overdue</span>
+            </div>
+          </div>
+          <div style="text-align:right;flex-shrink:0">
+            <div style="font-family:'Space Mono',monospace;font-size:20px;font-weight:700;color:var(--accent3)">67%</div>
+            <div style="font-size:10px;color:var(--text3)">progress</div>
+          </div>
+        </div>
+
+        <div class="team-card-body">
+          <div class="team-stats">
+            <div class="team-stat">
+              <div class="team-stat-n">5</div>
+              <div class="team-stat-l">Members</div>
+            </div>
+            <div class="team-stat">
+              <div class="team-stat-n" style="color:var(--green)">2</div>
+              <div class="team-stat-l">Docs Approved</div>
+            </div>
+            <div class="team-stat">
+              <div class="team-stat-n" style="color:var(--accent3)">3</div>
+              <div class="team-stat-l">Consults Done</div>
+            </div>
+          </div>
+
+          <!-- Chapter progress -->
+          <div class="section-label">Milestone Progress</div>
+          <div class="progress-inline"><span class="progress-inline-label">Title Defense</span><div class="progress-inline-bar"><div class="progress-inline-fill pf-green" style="width:100%"></div></div><span class="progress-inline-pct" style="color:var(--green)">100</span></div>
+          <div class="progress-inline"><span class="progress-inline-label">Chapter 1</span><div class="progress-inline-bar"><div class="progress-inline-fill pf-green" style="width:100%"></div></div><span class="progress-inline-pct" style="color:var(--green)">100</span></div>
+          <div class="progress-inline"><span class="progress-inline-label">Chapter 2</span><div class="progress-inline-bar"><div class="progress-inline-fill pf-gold" style="width:80%"></div></div><span class="progress-inline-pct">80</span></div>
+          <div class="progress-inline" style="margin-bottom:0"><span class="progress-inline-label">Chapter 3</span><div class="progress-inline-bar"><div class="progress-inline-fill pf-gold" style="width:45%"></div></div><span class="progress-inline-pct">45</span></div>
+
+          <!-- Members toggle -->
+          <div class="members-toggle" onclick="toggleMembers(this)">
+            <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+            Show members (5)
+          </div>
+          <div class="members-section">
+            <div class="member-list">
+              <div class="member-row"><div class="member-avatar">MA</div><span class="member-name">Maria Andres</span><span class="member-role-tag">Team Lead</span></div>
+              <div class="member-row"><div class="member-avatar">JL</div><span class="member-name">Jose Lim</span><span class="member-role-tag">Developer</span></div>
+              <div class="member-row"><div class="member-avatar">KC</div><span class="member-name">Karen Cruz</span><span class="member-role-tag">Researcher</span></div>
+              <div class="member-row"><div class="member-avatar">RS</div><span class="member-name">Ramon Santos</span><span class="member-role-tag">Developer</span></div>
+              <div class="member-row"><div class="member-avatar">LC</div><span class="member-name">Lea Cruz</span><span class="member-role-tag">Analyst</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="team-card-footer">
+          <div class="quick-actions">
+            <a href="{{ route('instructor.progress') }}" class="btn btn-ghost" style="font-size:11px;padding:5px 11px">
+              <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+              Progress
+            </a>
+            <a href="{{ route('instructor.docreview') }}" class="btn btn-ghost" style="font-size:11px;padding:5px 11px">
+              <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              Docs
+            </a>
+            <a href="{{ route('instructor.consultations') }}" class="btn btn-ghost" style="font-size:11px;padding:5px 11px">
+              <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              Consult
+            </a>
+          </div>
+          <span style="margin-left:auto;font-size:11px;color:var(--text3)">Next: May 12</span>
+        </div>
+      </div>
+
+      <!-- â”€â”€ TEAM ALPHA (Adviser) â”€â”€ -->
+      <div class="team-card" data-role="adviser" data-section="BSIT-4A" data-search="team alpha plant disease detection deep learning mobile app">
+        <div class="team-card-header">
+          <div class="team-card-avatar" style="background:linear-gradient(135deg,#16a34a,#0891b2)">TA</div>
+          <div class="team-card-info">
+            <div class="team-card-name">
+              Team Alpha
+              <span class="badge badge-gray" style="font-size:10px">BSIT-4A</span>
+            </div>
+            <div class="team-card-title">Plant Disease Detection Using Deep Learning Mobile App</div>
+            <div style="margin-top:7px;display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+              <span class="role-pill role-adviser">Adviser</span>
+              <span class="badge badge-green" style="font-size:10px">On Track</span>
+            </div>
+          </div>
+          <div style="text-align:right;flex-shrink:0">
+            <div style="font-family:'Space Mono',monospace;font-size:20px;font-weight:700;color:var(--green)">85%</div>
+            <div style="font-size:10px;color:var(--text3)">progress</div>
+          </div>
+        </div>
+
+        <div class="team-card-body">
+          <div class="team-stats">
+            <div class="team-stat">
+              <div class="team-stat-n">4</div>
+              <div class="team-stat-l">Members</div>
+            </div>
+            <div class="team-stat">
+              <div class="team-stat-n" style="color:var(--green)">3</div>
+              <div class="team-stat-l">Docs Approved</div>
+            </div>
+            <div class="team-stat">
+              <div class="team-stat-n" style="color:var(--accent3)">4</div>
+              <div class="team-stat-l">Consults Done</div>
+            </div>
+          </div>
+
+          <div class="section-label">Milestone Progress</div>
+          <div class="progress-inline"><span class="progress-inline-label">Title Defense</span><div class="progress-inline-bar"><div class="progress-inline-fill pf-green" style="width:100%"></div></div><span class="progress-inline-pct" style="color:var(--green)">100</span></div>
+          <div class="progress-inline"><span class="progress-inline-label">Chapter 1â€“2</span><div class="progress-inline-bar"><div class="progress-inline-fill pf-green" style="width:100%"></div></div><span class="progress-inline-pct" style="color:var(--green)">100</span></div>
+          <div class="progress-inline"><span class="progress-inline-label">Chapter 3</span><div class="progress-inline-bar"><div class="progress-inline-fill pf-gold" style="width:75%"></div></div><span class="progress-inline-pct">75</span></div>
+          <div class="progress-inline" style="margin-bottom:0"><span class="progress-inline-label">Chapter 4</span><div class="progress-inline-bar"><div class="progress-inline-fill pf-blue" style="width:30%"></div></div><span class="progress-inline-pct" style="color:var(--blue)">30</span></div>
+
+          <div class="members-toggle" onclick="toggleMembers(this)">
+            <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+            Show members (4)
+          </div>
+          <div class="members-section">
+            <div class="member-list">
+              <div class="member-row"><div class="member-avatar">JR</div><span class="member-name">Juan Reyes</span><span class="member-role-tag">Team Lead</span></div>
+              <div class="member-row"><div class="member-avatar">AG</div><span class="member-name">Ana Garcia</span><span class="member-role-tag">ML Engineer</span></div>
+              <div class="member-row"><div class="member-avatar">BT</div><span class="member-name">Bea Tan</span><span class="member-role-tag">UI Designer</span></div>
+              <div class="member-row"><div class="member-avatar">EF</div><span class="member-name">Eman Flores</span><span class="member-role-tag">Developer</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="team-card-footer">
+          <div class="quick-actions">
+            <a href="{{ route('instructor.progress') }}" class="btn btn-ghost" style="font-size:11px;padding:5px 11px"><svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>Progress</a>
+            <a href="{{ route('instructor.docreview') }}" class="btn btn-ghost" style="font-size:11px;padding:5px 11px"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Docs</a>
+            <a href="{{ route('instructor.consultations') }}" class="btn btn-ghost" style="font-size:11px;padding:5px 11px"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Consult</a>
+          </div>
+          <span style="margin-left:auto;font-size:11px;color:var(--text3)">Next: May 16</span>
+        </div>
+      </div>
+
+      <!-- â”€â”€ TEAM PRISM (Panel) â”€â”€ -->
+      <div class="team-card" data-role="panel" data-section="BSIT-4B" data-search="team prism blockchain document verification academic records">
+        <div class="team-card-header">
+          <div class="team-card-avatar" style="background:linear-gradient(135deg,#1d4ed8,#7c3aed)">TP</div>
+          <div class="team-card-info">
+            <div class="team-card-name">
+              Team Prism
+              <span class="badge badge-gray" style="font-size:10px">BSIT-4B</span>
+            </div>
+            <div class="team-card-title">Blockchain-Based Document Verification for Academic Records</div>
+            <div style="margin-top:7px;display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+              <span class="role-pill role-panel">Panel</span>
+              <span class="badge badge-red" style="font-size:10px">2 Overdue</span>
+            </div>
+          </div>
+          <div style="text-align:right;flex-shrink:0">
+            <div style="font-family:'Space Mono',monospace;font-size:20px;font-weight:700;color:var(--red)">42%</div>
+            <div style="font-size:10px;color:var(--text3)">progress</div>
+          </div>
+        </div>
+
+        <div class="team-card-body">
+          <div class="team-stats">
+            <div class="team-stat">
+              <div class="team-stat-n">4</div>
+              <div class="team-stat-l">Members</div>
+            </div>
+            <div class="team-stat">
+              <div class="team-stat-n" style="color:var(--red)">1</div>
+              <div class="team-stat-l">Docs Approved</div>
+            </div>
+            <div class="team-stat">
+              <div class="team-stat-n" style="color:var(--text3)">1</div>
+              <div class="team-stat-l">Consults Done</div>
+            </div>
+          </div>
+
+          <div class="section-label">Milestone Progress</div>
+          <div class="progress-inline"><span class="progress-inline-label">Title Defense</span><div class="progress-inline-bar"><div class="progress-inline-fill pf-green" style="width:100%"></div></div><span class="progress-inline-pct" style="color:var(--green)">100</span></div>
+          <div class="progress-inline"><span class="progress-inline-label">Chapter 1</span><div class="progress-inline-bar"><div class="progress-inline-fill pf-green" style="width:100%"></div></div><span class="progress-inline-pct" style="color:var(--green)">100</span></div>
+          <div class="progress-inline"><span class="progress-inline-label">Chapter 2</span><div class="progress-inline-bar"><div class="progress-inline-fill pf-gold" style="width:60%"></div></div><span class="progress-inline-pct">60</span></div>
+          <div class="progress-inline" style="margin-bottom:0"><span class="progress-inline-label">Chapter 3</span><div class="progress-inline-bar"><div class="progress-inline-fill pf-blue" style="width:10%"></div></div><span class="progress-inline-pct" style="color:var(--red)">10</span></div>
+
+          <div class="members-toggle" onclick="toggleMembers(this)">
+            <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+            Show members (4)
+          </div>
+          <div class="members-section">
+            <div class="member-list">
+              <div class="member-row"><div class="member-avatar">RP</div><span class="member-name">Rico PeÃ±a</span><span class="member-role-tag">Team Lead</span></div>
+              <div class="member-row"><div class="member-avatar">CL</div><span class="member-name">Carla Luna</span><span class="member-role-tag">Developer</span></div>
+              <div class="member-row"><div class="member-avatar">TV</div><span class="member-name">Toni Villanueva</span><span class="member-role-tag">Researcher</span></div>
+              <div class="member-row"><div class="member-avatar">KM</div><span class="member-name">Ken Magno</span><span class="member-role-tag">Designer</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="team-card-footer">
+          <div class="quick-actions">
+            <a href="{{ route('instructor.progress') }}" class="btn btn-ghost" style="font-size:11px;padding:5px 11px"><svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>Progress</a>
+            <a href="{{ route('instructor.docreview') }}" class="btn btn-ghost" style="font-size:11px;padding:5px 11px"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Docs</a>
+            <a href="{{ route('instructor.consultations') }}" class="btn btn-ghost" style="font-size:11px;padding:5px 11px"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Consult</a>
+          </div>
+          <span style="margin-left:auto;font-size:11px;color:var(--red)">Needs attention</span>
+        </div>
+      </div>
+
+      <!-- â”€â”€ TEAM SYNTAX (Consultant) â”€â”€ -->
+      <div class="team-card" data-role="consultant" data-section="BSIT-4A" data-search="team syntax smart campus energy monitoring iot sensors">
+        <div class="team-card-header">
+          <div class="team-card-avatar" style="background:linear-gradient(135deg,#b45309,#dc2626)">TS</div>
+          <div class="team-card-info">
+            <div class="team-card-name">
+              Team Syntax
+              <span class="badge badge-gray" style="font-size:10px">BSIT-4A</span>
+            </div>
+            <div class="team-card-title">Smart Campus Energy Monitoring Using IoT Sensors</div>
+            <div style="margin-top:7px;display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+              <span class="role-pill role-consultant">Consultant</span>
+              <span class="badge badge-amber" style="font-size:10px">1 Overdue</span>
+            </div>
+          </div>
+          <div style="text-align:right;flex-shrink:0">
+            <div style="font-family:'Space Mono',monospace;font-size:20px;font-weight:700;color:var(--accent3)">55%</div>
+            <div style="font-size:10px;color:var(--text3)">progress</div>
+          </div>
+        </div>
+
+        <div class="team-card-body">
+          <div class="team-stats">
+            <div class="team-stat">
+              <div class="team-stat-n">5</div>
+              <div class="team-stat-l">Members</div>
+            </div>
+            <div class="team-stat">
+              <div class="team-stat-n" style="color:var(--green)">2</div>
+              <div class="team-stat-l">Docs Approved</div>
+            </div>
+            <div class="team-stat">
+              <div class="team-stat-n" style="color:var(--accent3)">2</div>
+              <div class="team-stat-l">Consults Done</div>
+            </div>
+          </div>
+
+          <div class="section-label">Milestone Progress</div>
+          <div class="progress-inline"><span class="progress-inline-label">Title Defense</span><div class="progress-inline-bar"><div class="progress-inline-fill pf-green" style="width:100%"></div></div><span class="progress-inline-pct" style="color:var(--green)">100</span></div>
+          <div class="progress-inline"><span class="progress-inline-label">Chapter 1</span><div class="progress-inline-bar"><div class="progress-inline-fill pf-green" style="width:100%"></div></div><span class="progress-inline-pct" style="color:var(--green)">100</span></div>
+          <div class="progress-inline"><span class="progress-inline-label">Chapter 2</span><div class="progress-inline-bar"><div class="progress-inline-fill pf-gold" style="width:90%"></div></div><span class="progress-inline-pct">90</span></div>
+          <div class="progress-inline" style="margin-bottom:0"><span class="progress-inline-label">Chapter 3</span><div class="progress-inline-bar"><div class="progress-inline-fill pf-gold" style="width:40%"></div></div><span class="progress-inline-pct">40</span></div>
+
+          <div class="members-toggle" onclick="toggleMembers(this)">
+            <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+            Show members (5)
+          </div>
+          <div class="members-section">
+            <div class="member-list">
+              <div class="member-row"><div class="member-avatar">PD</div><span class="member-name">Paolo Dela Cruz</span><span class="member-role-tag">Team Lead</span></div>
+              <div class="member-row"><div class="member-avatar">MR</div><span class="member-name">Mia Ramos</span><span class="member-role-tag">IoT Engineer</span></div>
+              <div class="member-row"><div class="member-avatar">AL</div><span class="member-name">Ardo Lim</span><span class="member-role-tag">Developer</span></div>
+              <div class="member-row"><div class="member-avatar">SB</div><span class="member-name">Sofia Buenaventura</span><span class="member-role-tag">Analyst</span></div>
+              <div class="member-row"><div class="member-avatar">DM</div><span class="member-name">Dante Manalo</span><span class="member-role-tag">Researcher</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="team-card-footer">
+          <div class="quick-actions">
+            <a href="{{ route('instructor.progress') }}" class="btn btn-ghost" style="font-size:11px;padding:5px 11px"><svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>Progress</a>
+            <a href="{{ route('instructor.docreview') }}" class="btn btn-ghost" style="font-size:11px;padding:5px 11px"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Docs</a>
+            <a href="{{ route('instructor.consultations') }}" class="btn btn-ghost" style="font-size:11px;padding:5px 11px"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Consult</a>
+          </div>
+          <span style="margin-left:auto;font-size:11px;color:var(--text3)">No upcoming</span>
+        </div>
+      </div>
+
+      <!-- â”€â”€ TEAM VERTEX (Panel) â”€â”€ -->
+      <div class="team-card" data-role="panel" data-section="BSCS-4A" data-search="team vertex augmented reality campus navigation mobile application">
+        <div class="team-card-header">
+          <div class="team-card-avatar" style="background:linear-gradient(135deg,#7c3aed,#c026d3)">TV</div>
+          <div class="team-card-info">
+            <div class="team-card-name">
+              Team Vertex
+              <span class="badge badge-gray" style="font-size:10px">BSCS-4A</span>
+            </div>
+            <div class="team-card-title">Augmented Reality Campus Navigation Mobile Application</div>
+            <div style="margin-top:7px;display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+              <span class="role-pill role-panel">Panel</span>
+              <span class="badge badge-green" style="font-size:10px">On Track</span>
+            </div>
+          </div>
+          <div style="text-align:right;flex-shrink:0">
+            <div style="font-family:'Space Mono',monospace;font-size:20px;font-weight:700;color:var(--purple)">72%</div>
+            <div style="font-size:10px;color:var(--text3)">progress</div>
+          </div>
+        </div>
+
+        <div class="team-card-body">
+          <div class="team-stats">
+            <div class="team-stat">
+              <div class="team-stat-n">4</div>
+              <div class="team-stat-l">Members</div>
+            </div>
+            <div class="team-stat">
+              <div class="team-stat-n" style="color:var(--green)">3</div>
+              <div class="team-stat-l">Docs Approved</div>
+            </div>
+            <div class="team-stat">
+              <div class="team-stat-n" style="color:var(--accent3)">2</div>
+              <div class="team-stat-l">Consults Done</div>
+            </div>
+          </div>
+
+          <div class="section-label">Milestone Progress</div>
+          <div class="progress-inline"><span class="progress-inline-label">Title Defense</span><div class="progress-inline-bar"><div class="progress-inline-fill pf-green" style="width:100%"></div></div><span class="progress-inline-pct" style="color:var(--green)">100</span></div>
+          <div class="progress-inline"><span class="progress-inline-label">Chapter 1â€“2</span><div class="progress-inline-bar"><div class="progress-inline-fill pf-green" style="width:100%"></div></div><span class="progress-inline-pct" style="color:var(--green)">100</span></div>
+          <div class="progress-inline"><span class="progress-inline-label">Chapter 3</span><div class="progress-inline-bar"><div class="progress-inline-fill pf-gold" style="width:65%"></div></div><span class="progress-inline-pct">65</span></div>
+          <div class="progress-inline" style="margin-bottom:0"><span class="progress-inline-label">Chapter 4</span><div class="progress-inline-bar"><div class="progress-inline-fill pf-blue" style="width:15%"></div></div><span class="progress-inline-pct" style="color:var(--blue)">15</span></div>
+
+          <div class="members-toggle" onclick="toggleMembers(this)">
+            <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+            Show members (4)
+          </div>
+          <div class="members-section">
+            <div class="member-list">
+              <div class="member-row"><div class="member-avatar">NB</div><span class="member-name">Nico Bautista</span><span class="member-role-tag">Team Lead</span></div>
+              <div class="member-row"><div class="member-avatar">IE</div><span class="member-name">Iris Estrada</span><span class="member-role-tag">AR Developer</span></div>
+              <div class="member-row"><div class="member-avatar">LM</div><span class="member-name">Luis Mapa</span><span class="member-role-tag">Developer</span></div>
+              <div class="member-row"><div class="member-avatar">GV</div><span class="member-name">Grace Villena</span><span class="member-role-tag">UI Designer</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="team-card-footer">
+          <div class="quick-actions">
+            <a href="{{ route('instructor.progress') }}" class="btn btn-ghost" style="font-size:11px;padding:5px 11px"><svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>Progress</a>
+            <a href="{{ route('instructor.docreview') }}" class="btn btn-ghost" style="font-size:11px;padding:5px 11px"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Docs</a>
+            <a href="{{ route('instructor.consultations') }}" class="btn btn-ghost" style="font-size:11px;padding:5px 11px"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Consult</a>
+          </div>
+          <span style="margin-left:auto;font-size:11px;color:var(--text3)">Defense: Jun 3</span>
+        </div>
+      </div>
+
+      <!-- â”€â”€ TEAM ZENITH (Adviser + Grammarian) â”€â”€ -->
+      <div class="team-card" data-role="adviser grammarian" data-section="BSIT-4B" data-search="team zenith automated grading system natural language processing essays">
+        <div class="team-card-header">
+          <div class="team-card-avatar" style="background:linear-gradient(135deg,#0891b2,#0e7490)">TZ</div>
+          <div class="team-card-info">
+            <div class="team-card-name">
+              Team Zenith
+              <span class="badge badge-gray" style="font-size:10px">BSIT-4B</span>
+            </div>
+            <div class="team-card-title">Automated Essay Grading System Using Natural Language Processing</div>
+            <div style="margin-top:7px;display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+              <span class="role-pill role-adviser">Adviser</span>
+              <span class="role-pill role-grammarian">Grammarian</span>
+              <span class="badge badge-green" style="font-size:10px">On Track</span>
+            </div>
+          </div>
+          <div style="text-align:right;flex-shrink:0">
+            <div style="font-family:'Space Mono',monospace;font-size:20px;font-weight:700;color:var(--cyan)">78%</div>
+            <div style="font-size:10px;color:var(--text3)">progress</div>
+          </div>
+        </div>
+
+        <div class="team-card-body">
+          <div class="team-stats">
+            <div class="team-stat">
+              <div class="team-stat-n">5</div>
+              <div class="team-stat-l">Members</div>
+            </div>
+            <div class="team-stat">
+              <div class="team-stat-n" style="color:var(--green)">3</div>
+              <div class="team-stat-l">Docs Approved</div>
+            </div>
+            <div class="team-stat">
+              <div class="team-stat-n" style="color:var(--accent3)">3</div>
+              <div class="team-stat-l">Consults Done</div>
+            </div>
+          </div>
+
+          <div class="section-label">Milestone Progress</div>
+          <div class="progress-inline"><span class="progress-inline-label">Title Defense</span><div class="progress-inline-bar"><div class="progress-inline-fill pf-green" style="width:100%"></div></div><span class="progress-inline-pct" style="color:var(--green)">100</span></div>
+          <div class="progress-inline"><span class="progress-inline-label">Chapter 1â€“2</span><div class="progress-inline-bar"><div class="progress-inline-fill pf-green" style="width:100%"></div></div><span class="progress-inline-pct" style="color:var(--green)">100</span></div>
+          <div class="progress-inline"><span class="progress-inline-label">Chapter 3</span><div class="progress-inline-bar"><div class="progress-inline-fill pf-gold" style="width:80%"></div></div><span class="progress-inline-pct">80</span></div>
+          <div class="progress-inline" style="margin-bottom:0"><span class="progress-inline-label">Chapter 4</span><div class="progress-inline-bar"><div class="progress-inline-fill pf-blue" style="width:20%"></div></div><span class="progress-inline-pct" style="color:var(--blue)">20</span></div>
+
+          <div class="members-toggle" onclick="toggleMembers(this)">
+            <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+            Show members (5)
+          </div>
+          <div class="members-section">
+            <div class="member-list">
+              <div class="member-row"><div class="member-avatar">FP</div><span class="member-name">Faye Pascual</span><span class="member-role-tag">Team Lead</span></div>
+              <div class="member-row"><div class="member-avatar">TO</div><span class="member-name">Tim Ocampo</span><span class="member-role-tag">NLP Engineer</span></div>
+              <div class="member-row"><div class="member-avatar">ZA</div><span class="member-name">Zoe Abello</span><span class="member-role-tag">Researcher</span></div>
+              <div class="member-row"><div class="member-avatar">VR</div><span class="member-name">Vince Reyes</span><span class="member-role-tag">Developer</span></div>
+              <div class="member-row"><div class="member-avatar">AN</div><span class="member-name">Alma Navarro</span><span class="member-role-tag">Analyst</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="team-card-footer">
+          <div class="quick-actions">
+            <a href="{{ route('instructor.progress') }}" class="btn btn-ghost" style="font-size:11px;padding:5px 11px"><svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>Progress</a>
+            <a href="{{ route('instructor.docreview') }}" class="btn btn-ghost" style="font-size:11px;padding:5px 11px"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Docs</a>
+            <a href="{{ route('instructor.consultations') }}" class="btn btn-ghost" style="font-size:11px;padding:5px 11px"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Consult</a>
+          </div>
+          <span style="margin-left:auto;font-size:11px;color:var(--text3)">Next: May 20</span>
+        </div>
+      </div>
+
+    </div><!-- /teamGrid -->
+
+    <!-- Empty state (hidden by default) -->
+    <div class="empty-state" id="emptyState" style="display:none">
+      <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      <div style="font-size:15px;font-weight:600;color:var(--text2);margin-bottom:6px">No teams found</div>
+      <div style="font-size:13px">Try adjusting your filter or search query.</div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+
+<!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+     EXPERT PROFILE SIDE PANEL
+     Sits flush against the right edge of the
+     sidebar (left: 250px). No dark overlay.
+     â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+<div class="ep-overlay" id="ep-overlay" onclick="handleEpOverlay(event)">
+  <div class="ep-modal" id="ep-modal">
+
+    <!-- Sticky Header -->
+    <div class="ep-header">
+      <div class="ep-avatar">CS</div>
+      <div style="flex:1;min-width:0">
+        <div class="ep-header-name">Dr. Neil A. Inocencio</div>
+        <div class="ep-header-sub">Capstone Expert Â· Active</div>
+      </div>
+      <button class="ep-close" onclick="closeExpertProfile()">
+        <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+
+    <!-- Scrollable Body -->
+    <div class="ep-body">
+
+      <!-- Full Name â€” readonly -->
+      <div class="ep-field">
+        <div class="ep-label">Full Name</div>
+        <div class="ep-value readonly">
+          <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          Dr. Neil A. Inocencio
+        </div>
+      </div>
+
+      <!-- Email â€” readonly -->
+      <div class="ep-field">
+        <div class="ep-label">Institutional Email</div>
+        <div class="ep-value readonly">
+          <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          nainocencio@cspc.edu.ph
+        </div>
+      </div>
+
+      <div class="ep-divider"></div>
+
+        <!-- Roles â€” readonly, assigned by admin -->
+        <div class="ep-field">
+          <div class="ep-label">Assigned Roles</div>
+          <div class="ep-tags-wrap">
+            <span class="role-pill role-adviser">Adviser</span>
+            <span class="role-pill role-panel">Panel</span>
+            <span class="role-pill role-consultant">Consultant</span>
+            <span class="role-pill role-grammarian">Grammarian</span>
+          </div>
+        <div style="font-size:11px;color:var(--text3);margin-top:8px;display:flex;align-items:center;gap:4px">
+          <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          Managed by the system administrator
+        </div>
+      </div>
+
+      <div class="ep-divider"></div>
+
+      <!-- Max Teams â€” readonly -->
+      <div class="ep-field">
+        <div class="ep-label">Team Capacity</div>
+        <div class="ep-value readonly">
+          <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          Max 4 teams Â· Currently advising 3
+        </div>
+      </div>
+
+      <div class="ep-divider"></div>
+
+      <!-- Expertise Tags â€” editable -->
+      <div class="ep-field">
+        <div class="ep-label">Areas of Expertise</div>
+        <div class="ep-tags-wrap" id="ep-tags-wrap"></div>
+        <div class="ep-tag-input-row">
+          <input
+            class="ep-tag-input"
+            id="ep-tag-input"
+            type="text"
+            placeholder="Add expertiseâ€¦"
+            onkeydown="handleTagKey(event)"
+          />
+          <button class="ep-tag-add-btn" onclick="addTag()">+ Add</button>
+        </div>
+        <div style="font-size:11px;color:var(--text3);margin-top:7px">
+          Press Enter or click Add. Click Ã— to remove.
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Sticky Footer -->
+    <div class="ep-footer">
+      <button class="btn content btn-ghost" style="color: #FFFF00" onclick="closeExpertProfile()">Close</button>
+      <button class="btn btn-primary" onclick="saveExpertProfile()">
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        Save
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  let activeRole = 'all';
+  let activeSection = '';
+  let activeSearch = '';
+
+  function filterTeams(role, el) {
+    activeRole = role;
+    document.querySelectorAll('.role-tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    applyFilters();
+  }
+
+  function filterSection(val) {
+    activeSection = val;
+    applyFilters();
+  }
+
+  function searchTeams(val) {
+    activeSearch = val.toLowerCase();
+    applyFilters();
+  }
+
+  function applyFilters() {
+    const cards = document.querySelectorAll('#teamGrid .team-card');
+    let visible = 0;
+    cards.forEach(card => {
+      const role = card.dataset.role || '';
+      const section = card.dataset.section || '';
+      const search = card.dataset.search || '';
+
+      const roleMatch = activeRole === 'all' || role.includes(activeRole);
+      const sectionMatch = !activeSection || section === activeSection;
+      const searchMatch = !activeSearch || search.includes(activeSearch) || card.querySelector('.team-card-name').textContent.toLowerCase().includes(activeSearch);
+
+      if (roleMatch && sectionMatch && searchMatch) {
+        card.style.display = '';
+        visible++;
+      } else {
+        card.style.display = 'none';
+      }
+    });
+    document.getElementById('countLabel').textContent = `Showing ${visible} team${visible !== 1 ? 's' : ''}`;
+    document.getElementById('emptyState').style.display = visible === 0 ? 'block' : 'none';
+  }
+
+  function toggleMembers(el) {
+    el.classList.toggle('open');
+    const section = el.nextElementSibling;
+    section.classList.toggle('visible');
+    const isOpen = section.classList.contains('visible');
+    const count = section.querySelectorAll('.member-row').length;
+    el.innerHTML = `<svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg> ${isOpen ? 'Hide' : 'Show'} members (${count})`;
+  }
+    // Profile Modal Logic
+  const EP_OVERLAY = document.getElementById('ep-overlay');
+const EP_TRIGGER = document.getElementById('ep-trigger');
+const EP_TAGS_EL = document.getElementById('ep-tags-wrap');
+const EP_INPUT   = document.getElementById('ep-tag-input');
+
+let epTags = [
+  'Web & Mobile Development',
+  'Machine Learning & AI',
+  'IoT & Embedded Systems',
+  'Cybersecurity',
+];
+
+function renderTags(){
+  EP_TAGS_EL.innerHTML = '';
+  epTags.forEach((tag, i) => {
+    const span = document.createElement('span');
+    span.className = 'ep-tag';
+    span.innerHTML = `${tag}
+      <button class="ep-tag-remove" onclick="removeTag(${i})" title="Remove">
+        <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>`;
+    EP_TAGS_EL.appendChild(span);
+  });
+}
+
+function addTag(){
+  const val = EP_INPUT.value.trim();
+  if(!val) return;
+  if(epTags.map(t=>t.toLowerCase()).includes(val.toLowerCase())){ EP_INPUT.select(); return; }
+  epTags.push(val);
+  EP_INPUT.value = '';
+  renderTags();
+  EP_INPUT.focus();
+}
+
+function removeTag(i){ epTags.splice(i,1); renderTags(); }
+function handleTagKey(e){ if(e.key==='Enter'){ e.preventDefault(); addTag(); } }
+
+function openExpertProfile(){
+  EP_OVERLAY.classList.add('open');
+  EP_TRIGGER.classList.add('ep-open');
+  renderTags();
+}
+
+function closeExpertProfile(){
+  EP_OVERLAY.classList.remove('open');
+  EP_TRIGGER.classList.remove('ep-open');
+}
+
+// Close when clicking outside the modal panel (on main content)
+function handleEpOverlay(e){
+  if(e.target === EP_OVERLAY) closeExpertProfile();
+}
+
+function saveExpertProfile(){
+  closeExpertProfile();
+  // hook up to your actual save API here
+}
+
+document.addEventListener('keydown', e => {
+  if(e.key === 'Escape') closeExpertProfile();
+});
+</script>
+</body>
+</html>
