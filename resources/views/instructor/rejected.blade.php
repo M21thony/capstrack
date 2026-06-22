@@ -181,10 +181,10 @@ p {
     <h1>Account Request Rejected</h1>
     <p>We regret to inform you that your request for an instructor account on CapsTRACK has been rejected by the administrator.</p>
 
-    @if(Auth::guard('instructor')->user()->rejection_reason)
+    @if(Auth::guard('expert')->user()->rejection_reason)
     <div class="reason-box">
       <div class="reason-title">Reason for Rejection</div>
-      <div class="reason-text">"{{ Auth::guard('instructor')->user()->rejection_reason }}"</div>
+      <div class="reason-text">"{{ Auth::guard('expert')->user()->rejection_reason }}"</div>
     </div>
     @else
     <div class="reason-box">

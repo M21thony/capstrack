@@ -1,5 +1,5 @@
 @php
-    $admin = Auth::guard('instructor')->user();
+    $admin = Auth::guard('expert')->user();
     $initials = $admin ? $admin->avatarInitials() : 'AD';
     $adminName = $admin ? $admin->name : 'System Administrator';
     $adminEmail = $admin ? $admin->email : '';

@@ -51,7 +51,11 @@ class PersonalInfoController extends Controller
         $validated = $request->validated();
 
         $student->f_name = $validated['first_name'];
+        $student->m_name = $validated['middle_name'] ?? null;
         $student->l_name = $validated['last_name'];
+        $student->student_number = $validated['student_id'];
+        $student->course = $validated['course'];
+        $student->year_section = $validated['year'].' · '.$validated['section'];
         $student->p_picture = $validated['avatar'];
 
         $student->save();

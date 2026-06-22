@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('recruitment', function (Blueprint $table) {
             $table->id('recruitment_id');
-            $table->foreignId('student_id')->constrained('students')->cascadeOnDelete();
+            $table->foreignId('student_id')->constrained('students', 'student_id')->cascadeOnDelete();
             $table->enum('recruitment_goal', ['build_a_team', 'find_a_team']);
             $table->json('roles')->nullable();
             $table->text('description')->nullable();

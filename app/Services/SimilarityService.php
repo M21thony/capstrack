@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Models\ArchivedDocument;
-use App\Models\User;
 use Illuminate\Support\Facades\Log;
 use Smalot\PdfParser\Parser;
 
@@ -14,8 +13,9 @@ class SimilarityService
     // ── 1. Extract raw text from uploaded PDF ─────────────────────────
     public function extractPdfText(string $filePath): string
     {
-        $parser = new Parser();
-        $pdf    = $parser->parseFile($filePath);
+        $parser = new Parser;
+        $pdf = $parser->parseFile($filePath);
+
         return preg_replace('/\s+/', ' ', trim($pdf->getText()));
     }
 
@@ -42,9 +42,9 @@ Pre-proposal text:
 {$truncated}
 PROMPT;
 
-        $raw     = $this->ollama->generate($prompt);
+        $raw = $this->ollama->generate($prompt);
         $cleaned = trim(preg_replace('/```json|```/i', '', $raw));
-        $data    = json_decode($cleaned, true);
+        $data = json_decode($cleaned, true);
 
         if (json_last_error() !== JSON_ERROR_NONE) {
             Log::error('extractKeyConcepts parse error', ['raw' => $raw]);
@@ -60,20 +60,20 @@ PROMPT;
         // ── Phase 1: Semantic keyword expansion via Ollama ────────────────
         $conceptText = implode(', ', $concepts['keywords'] ?? []);
 
-        $expandPrompt = "Given this capstone pre-proposal topic, list 15 related search terms "
-                    . "that could appear in similar capstone titles. Include synonyms, related domains, "
-                    . "and common variations. Return ONLY a JSON array of strings. No markdown.\n\n"
-                    . "Topic: {$concepts['main_topic']}\n"
-                    . "Domain: {$concepts['domain']}\n"
-                    . "Keywords: {$conceptText}\n\n"
-                    . '["term1","term2",...]';
+        $expandPrompt = 'Given this capstone pre-proposal topic, list 15 related search terms '
+                    .'that could appear in similar capstone titles. Include synonyms, related domains, '
+                    ."and common variations. Return ONLY a JSON array of strings. No markdown.\n\n"
+                    ."Topic: {$concepts['main_topic']}\n"
+                    ."Domain: {$concepts['domain']}\n"
+                    ."Keywords: {$conceptText}\n\n"
+                    .'["term1","term2",...]';
 
         try {
-            $raw          = $this->ollama->generate($expandPrompt);
-            $cleaned      = trim(preg_replace('/```json|```/i', '', $raw));
+            $raw = $this->ollama->generate($expandPrompt);
+            $cleaned = trim(preg_replace('/```json|```/i', '', $raw));
             preg_match('/\[.*\]/s', $cleaned, $m);
             $expandedTerms = json_decode($m[0] ?? $cleaned, true);
-            if (json_last_error() !== JSON_ERROR_NONE || !is_array($expandedTerms)) {
+            if (json_last_error() !== JSON_ERROR_NONE || ! is_array($expandedTerms)) {
                 $expandedTerms = $concepts['keywords'] ?? [];
             }
         } catch (\Exception $e) {
@@ -90,14 +90,16 @@ PROMPT;
         $query = ArchivedDocument::query();
         $query->where(function ($q) use ($allTerms, $concepts) {
             foreach ($allTerms as $term) {
-                if (strlen(trim($term)) < 3) continue;
-                $q->orWhere('title',    'LIKE', '%' . $term . '%');
-                $q->orWhere('abstract', 'LIKE', '%' . $term . '%');
+                if (strlen(trim($term)) < 3) {
+                    continue;
+                }
+                $q->orWhere('title', 'LIKE', '%'.$term.'%');
+                $q->orWhere('abstract', 'LIKE', '%'.$term.'%');
             }
             // Always include domain words
             foreach (explode(' ', $concepts['domain']) as $word) {
                 if (strlen($word) > 3) {
-                    $q->orWhere('title', 'LIKE', '%' . $word . '%');
+                    $q->orWhere('title', 'LIKE', '%'.$word.'%');
                 }
             }
         });
@@ -107,46 +109,46 @@ PROMPT;
         // Pad with recent records if too few results
         if ($filtered->count() < 20) {
             $filteredIds = $filtered->pluck('archived_id')->toArray();
-            $extras      = ArchivedDocument::whereNotIn('archived_id', $filteredIds)
-                            ->orderBy('academic_year', 'desc')
-                            ->limit(20 - $filtered->count())
-                            ->get();
-            $filtered    = $filtered->merge($extras);
+            $extras = ArchivedDocument::whereNotIn('archived_id', $filteredIds)
+                ->orderBy('academic_year', 'desc')
+                ->limit(20 - $filtered->count())
+                ->get();
+            $filtered = $filtered->merge($extras);
         }
 
         // ── Phase 3: Semantic scoring via Ollama in chunks of 20 ─────────
         $allScores = [];
-        $chunks    = $filtered->chunk(10);
+        $chunks = $filtered->chunk(10);
 
         foreach ($chunks as $chunkIndex => $chunk) {
-            $docList = $chunk->map(fn($doc) => [
-                'id'    => $doc->archived_id,
+            $docList = $chunk->map(fn ($doc) => [
+                'id' => $doc->archived_id,
                 'title' => mb_substr($doc->title, 0, 100),
-                'abs'   => mb_substr($doc->abstract ?? '', 0, 150),
+                'abs' => mb_substr($doc->abstract ?? '', 0, 150),
             ])->values()->toArray();
 
             $docsJson = json_encode($docList);
 
-            $prompt = "Perform semantic similarity analysis between this capstone pre-proposal "
-                    . "and the archived capstones below.\n"
-                    . "Consider meaning, intent, domain, technology, and problem being solved — not just keywords.\n"
-                    . "Score each 0-100. Return ONLY a JSON array. No markdown.\n"
-                    . '[{"id":<id>,"score":<0-100>,"reason":"one sentence semantic explanation"}]'
-                    . "\n\nPRE-PROPOSAL:"
-                    . "\nTopic: {$concepts['main_topic']}"
-                    . "\nDomain: {$concepts['domain']}"
-                    . "\nKeywords: {$conceptText}"
-                    . "\nProblem: {$concepts['problem_statement']}"
-                    . "\nSolution: {$concepts['proposed_solution']}"
-                    . "\n\nARCHIVED CAPSTONES:\n{$docsJson}";
+            $prompt = 'Perform semantic similarity analysis between this capstone pre-proposal '
+                    ."and the archived capstones below.\n"
+                    ."Consider meaning, intent, domain, technology, and problem being solved — not just keywords.\n"
+                    ."Score each 0-100. Return ONLY a JSON array. No markdown.\n"
+                    .'[{"id":<id>,"score":<0-100>,"reason":"one sentence semantic explanation"}]'
+                    ."\n\nPRE-PROPOSAL:"
+                    ."\nTopic: {$concepts['main_topic']}"
+                    ."\nDomain: {$concepts['domain']}"
+                    ."\nKeywords: {$conceptText}"
+                    ."\nProblem: {$concepts['problem_statement']}"
+                    ."\nSolution: {$concepts['proposed_solution']}"
+                    ."\n\nARCHIVED CAPSTONES:\n{$docsJson}";
 
             try {
-                $raw     = $this->ollama->generate($prompt);
+                $raw = $this->ollama->generate($prompt);
                 $cleaned = trim(preg_replace('/```json|```/i', '', $raw));
 
                 preg_match('/\[.*\]/s', $cleaned, $matches);
                 $jsonStr = $matches[0] ?? $cleaned;
-                $scores  = json_decode($jsonStr, true);
+                $scores = json_decode($jsonStr, true);
 
                 if (json_last_error() === JSON_ERROR_NONE && is_array($scores)) {
                     $allScores = array_merge($allScores, $scores);
@@ -155,6 +157,7 @@ PROMPT;
                 }
             } catch (\Exception $e) {
                 Log::warning("Chunk {$chunkIndex} failed", ['error' => $e->getMessage()]);
+
                 continue;
             }
         }
@@ -164,21 +167,23 @@ PROMPT;
         }
 
         // Sort descending and take top N
-        usort($allScores, fn($a, $b) => ($b['score'] ?? 0) <=> ($a['score'] ?? 0));
+        usort($allScores, fn ($a, $b) => ($b['score'] ?? 0) <=> ($a['score'] ?? 0));
         $topScores = array_slice($allScores, 0, $topN);
 
         // Map back to document models
-        $docMap  = $filtered->keyBy('archived_id');
+        $docMap = $filtered->keyBy('archived_id');
         $results = [];
 
         foreach ($topScores as $item) {
             $doc = $docMap->get($item['id']);
-            if (!$doc) continue;
+            if (! $doc) {
+                continue;
+            }
 
             $results[] = [
-                'document'   => $doc,
-                'score'      => (int) ($item['score'] ?? 0),
-                'reason'     => $item['reason']     ?? '',
+                'document' => $doc,
+                'score' => (int) ($item['score'] ?? 0),
+                'reason' => $item['reason'] ?? '',
                 'matched_on' => $item['matched_on'] ?? [],
             ];
         }
@@ -213,39 +218,39 @@ PROMPT;
             return [];
         }
 
-        $validIds  = $experts->pluck('expert_id')->toArray();
+        $validIds = $experts->pluck('expert_id')->toArray();
         $expertMap = $experts->keyBy('expert_id');
 
-        $domain      = $concepts['domain'];
-        $keywords    = implode(', ', $concepts['keywords'] ?? []);
-        $listJson    = json_encode($experts->map(fn($e) => [
-            'id'        => $e->expert_id,
-            'name'      => $e->first_name . ' ' . $e->last_name,
+        $domain = $concepts['domain'];
+        $keywords = implode(', ', $concepts['keywords'] ?? []);
+        $listJson = json_encode($experts->map(fn ($e) => [
+            'id' => $e->expert_id,
+            'name' => $e->first_name.' '.$e->last_name,
             'expertise' => $e->expertise ?? 'General',
         ])->values()->toArray());
 
         $prompt = "You are matching a capstone pre-proposal to instructors using semantic analysis.\n"
-                . "Analyze the meaning and relevance of each instructor's expertise against the proposal.\n"
-                . "IMPORTANT: You MUST only return instructors from the list below using their exact IDs.\n"
-                . "Do NOT invent new instructors. If only 1 instructor exists, return only that 1.\n"
-                . "Return ONLY a valid JSON array. No markdown. No explanation.\n\n"
-                . '[{"id":<exact id from list>,"name":"exact name","reason":"semantic reason why expertise matches"}]'
-                . "\n\nPRE-PROPOSAL:"
-                . "\nDomain: {$domain}"
-                . "\nKeywords: {$keywords}"
-                . "\nTopic: {$concepts['main_topic']}"
-                . "\nProblem: {$concepts['problem_statement']}"
-                . "\n\nINSTRUCTOR LIST (ONLY use these exact IDs):\n{$listJson}";
+                ."Analyze the meaning and relevance of each instructor's expertise against the proposal.\n"
+                ."IMPORTANT: You MUST only return instructors from the list below using their exact IDs.\n"
+                ."Do NOT invent new instructors. If only 1 instructor exists, return only that 1.\n"
+                ."Return ONLY a valid JSON array. No markdown. No explanation.\n\n"
+                .'[{"id":<exact id from list>,"name":"exact name","reason":"semantic reason why expertise matches"}]'
+                ."\n\nPRE-PROPOSAL:"
+                ."\nDomain: {$domain}"
+                ."\nKeywords: {$keywords}"
+                ."\nTopic: {$concepts['main_topic']}"
+                ."\nProblem: {$concepts['problem_statement']}"
+                ."\n\nINSTRUCTOR LIST (ONLY use these exact IDs):\n{$listJson}";
 
         try {
-            $raw     = $this->ollama->generate($prompt);
+            $raw = $this->ollama->generate($prompt);
             $cleaned = trim(preg_replace('/```json|```/i', '', $raw));
 
             preg_match('/\[.*\]/s', $cleaned, $matches);
-            $jsonStr  = $matches[0] ?? $cleaned;
+            $jsonStr = $matches[0] ?? $cleaned;
             $suggests = json_decode($jsonStr, true);
 
-            if (json_last_error() !== JSON_ERROR_NONE || !is_array($suggests)) {
+            if (json_last_error() !== JSON_ERROR_NONE || ! is_array($suggests)) {
                 Log::error('suggestInstructors parse error', ['raw' => $raw]);
                 $suggests = [];
             }
@@ -254,14 +259,16 @@ PROMPT;
             $results = [];
             foreach ($suggests as $s) {
                 $id = (int) ($s['id'] ?? 0);
-                if (!in_array($id, $validIds)) continue;
+                if (! in_array($id, $validIds)) {
+                    continue;
+                }
 
-                $expert    = $expertMap->get($id);
+                $expert = $expertMap->get($id);
                 $results[] = [
-                    'id'        => $id,
-                    'name'      => $expert->first_name . ' ' . $expert->last_name,
+                    'id' => $id,
+                    'name' => $expert->first_name.' '.$expert->last_name,
                     'expertise' => $expert->expertise ?? 'General',
-                    'reason'    => $s['reason'] ?? '',
+                    'reason' => $s['reason'] ?? '',
                 ];
             }
 
@@ -269,10 +276,10 @@ PROMPT;
             if (empty($results)) {
                 foreach ($experts as $e) {
                     $results[] = [
-                        'id'        => $e->expert_id,
-                        'name'      => $e->first_name . ' ' . $e->last_name,
+                        'id' => $e->expert_id,
+                        'name' => $e->first_name.' '.$e->last_name,
                         'expertise' => $e->expertise ?? 'General',
-                        'reason'    => 'Semantically relevant based on expertise in ' . ($e->expertise ?? 'computing') . '.',
+                        'reason' => 'Semantically relevant based on expertise in '.($e->expertise ?? 'computing').'.',
                     ];
                 }
             }
@@ -281,6 +288,7 @@ PROMPT;
 
         } catch (\Exception $e) {
             Log::error('suggestInstructors error', ['error' => $e->getMessage()]);
+
             return [];
         }
     }

@@ -208,15 +208,15 @@ p {
     <div class="info-box">
       <div class="info-item">
         <span class="info-key">Name</span>
-        <span class="info-val">{{ Auth::guard('instructor')->user()->first_name }} {{ Auth::guard('instructor')->user()->last_name }}</span>
+        <span class="info-val">{{ Auth::guard('expert')->user()->first_name }} {{ Auth::guard('expert')->user()->last_name }}</span>
       </div>
       <div class="info-item">
         <span class="info-key">Email</span>
-        <span class="info-val">{{ Auth::guard('instructor')->user()->email }}</span>
+        <span class="info-val">{{ Auth::guard('expert')->user()->email }}</span>
       </div>
       <div class="info-item">
         <span class="info-key">Specialization</span>
-        <span class="info-val">{{ ucfirst(Auth::guard('instructor')->user()->specialization) }}</span>
+        <span class="info-val">{{ ucfirst(Auth::guard('expert')->user()->specialization) }}</span>
       </div>
       <div class="info-item">
         <span class="info-key">Status</span>

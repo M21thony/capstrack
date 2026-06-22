@@ -12,9 +12,13 @@ use Illuminate\Support\Str;
 
 #[Fillable([
     'email',
+    'student_number',
     'f_name',
+    'm_name',
     'l_name',
     'p_picture',
+    'course',
+    'year_section',
 ])]
 class Student extends Authenticatable
 {
@@ -38,6 +42,7 @@ class Student extends Authenticatable
     {
         return filled($this->f_name)
             && filled($this->l_name)
+            && filled($this->student_number)
             && filled($this->p_picture)
             && $this->hasValidAvatarPreset();
     }

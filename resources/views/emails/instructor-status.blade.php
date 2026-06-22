@@ -122,8 +122,15 @@
                     <a href="{{ route('login') }}" class="btn" style="color: #ffffff;">Access Your Account</a>
                 </div>
             @else
-                <div class="status-badge status-rejected">Pending/Rejected</div>
-                <p>Your account request is still pending review or has been rejected. Please wait for the administrator to process your request.</p>
+                <div class="status-badge status-rejected">Rejected</div>
+                <p>Your account request has been rejected.</p>
+                @if(isset($reason) && $reason)
+                    <div class="reason-box">
+                        <strong>Reason:</strong>
+                        <p>{{ $reason }}</p>
+                    </div>
+                @endif
+                <p>Please review the feedback and consider reapplying if appropriate.</p>
             @endif
 
             <p>Best regards,<br>The CapsTRACK Team</p>

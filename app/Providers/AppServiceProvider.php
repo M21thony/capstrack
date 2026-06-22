@@ -2,10 +2,10 @@
 
 namespace App\Providers;
 
-use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\ServiceProvider;
 use App\Services\OllamaSSHClient;
 use App\Services\SimilarityService;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -15,11 +15,11 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(OllamaSSHClient::class,
-            fn() => new OllamaSSHClient()
+            fn () => new OllamaSSHClient
         );
 
         $this->app->singleton(SimilarityService::class,
-            fn($app) => new SimilarityService(
+            fn ($app) => new SimilarityService(
                 $app->make(OllamaSSHClient::class)
             )
         );

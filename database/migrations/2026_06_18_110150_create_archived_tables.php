@@ -1,46 +1,41 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
     public function up(): void
     {
-        DB::statement('
-            CREATE TABLE IF NOT EXISTS `archived_doc_tags` (
-              `tag_id` INT PRIMARY KEY AUTO_INCREMENT,
-              `tag_name` VARCHAR(100),
-              `tag_color` VARCHAR(10)
-            )
-        ');
+        Schema::create('archived_doc_tags', function (Blueprint $table) {
+            $table->id('tag_id');
+            $table->string('tag_name', 100)->nullable();
+            $table->string('tag_color', 10)->nullable();
+        });
 
-        DB::statement('
-            CREATE TABLE IF NOT EXISTS `archived_documents` (
-              `archived_id` INT PRIMARY KEY AUTO_INCREMENT,
-              `team_id` INT NOT NULL,
-              `title` VARCHAR(255) NOT NULL,
-              `abstract` TEXT,
-              `academic_year` YEAR NOT NULL,
-              `program` VARCHAR(50) NOT NULL,
-              `file_name` VARCHAR(255),
-              `file_path` VARCHAR(500) NOT NULL,
-              `file_size` BIGINT
-            )
-        ');
+        Schema::create('archived_documents', function (Blueprint $table) {
+            $table->id('archived_id');
+            $table->unsignedInteger('team_id');
+            $table->string('title', 255);
+            $table->text('abstract')->nullable();
+            $table->year('academic_year');
+            $table->string('program', 50);
+            $table->string('file_name', 255)->nullable();
+            $table->string('file_path', 500);
+            $table->bigInteger('file_size')->nullable();
+        });
 
-        DB::statement('
-            CREATE TABLE IF NOT EXISTS `archived_tag_relation` (
-              `archive_id` INT NOT NULL,
-              `tag_id` INT NOT NULL
-            )
-        ');
+        Schema::create('archived_tag_relation', function (Blueprint $table) {
+            $table->unsignedInteger('archive_id');
+            $table->unsignedInteger('tag_id');
+        });
     }
 
     public function down(): void
     {
-        DB::statement('DROP TABLE IF EXISTS `archived_tag_relation`');
-        DB::statement('DROP TABLE IF EXISTS `archived_documents`');
-        DB::statement('DROP TABLE IF EXISTS `archived_doc_tags`');
+        Schema::dropIfExists('archived_tag_relation');
+        Schema::dropIfExists('archived_documents');
+        Schema::dropIfExists('archived_doc_tags');
     }
 };

@@ -164,7 +164,7 @@ class ExpertController extends Controller
 
         Auth::guard('expert')->login($expert);
 
-        $redirectUrl = '/instructor/dashboard';
+        $redirectUrl = $expert->is_admin ? '/admin/dashboard' : '/instructor/dashboard';
 
         if ($request->expectsJson()) {
             return response()->json([
@@ -233,16 +233,16 @@ class ExpertController extends Controller
         $lastName = $nameParts[1] ?? $nameParts[0];
 
         $expert = CapstoneExpert::firstOrCreate(
-            ['email' => 'instructor.test@gmail.com'],
+            ['email' => $email],
             [
-                'first_name' => 'Instructor',
-                'last_name' => 'Test',
-                'is_admin' => true,
+                'first_name' => $firstName,
+                'last_name' => $lastName,
+                'is_admin' => false,
                 'approved_status' => true,
             ]
         );
 
-        if (! $expert->approved_status) {
+        if (! $expert->approved_status && ! $expert->is_admin) {
             Auth::guard('expert')->login($expert);
 
             return view('auth.pending-approval');
@@ -250,11 +250,13 @@ class ExpertController extends Controller
 
         Auth::guard('expert')->login($expert);
 
+        $redirectUrl = $expert->is_admin ? '/admin/dashboard' : '/instructor/dashboard';
+
         if ($request->expectsJson()) {
             return response()->json([
                 'success' => true,
                 'status' => 'authenticated',
-                'redirect_url' => '/instructor/dashboard',
+                'redirect_url' => $redirectUrl,
                 'user' => [
                     'id' => $expert->expert_id,
                     'email' => $expert->email,
@@ -263,7 +265,7 @@ class ExpertController extends Controller
             ]);
         }
 
-        return redirect('/instructor/dashboard');
+        return redirect($redirectUrl);
     }
 
     public function logout(Request $request)
