@@ -163,11 +163,10 @@
         <h1 style="font-size: 24px; font-weight: 700; color: var(--text);">TEAM SELECTION</h1>
       </div>
 
-
   <div class="team-container">
     <!-- LEFT COLUMN -->
     <div style="display: flex; flex-direction: column; gap: 20px;">
-      <div class="card" style="border-style: dashed; border-width: 2px; cursor: pointer;" onclick="openPostModal()">
+      <div class="card" style="border-style: dashed; border-width: 2px; cursor: pointer;" onclick="openPostModal(@json($myRecruitment ?? null))">
         <div style="display: flex; gap: 12px; align-items: center;">
           <div class="avatar" style="width: 40px; height: 40px; background: var(--accent); color: white;">+</div>
           <div style="color: var(--text3); font-size: 14px;">Looking for a team or members? Post your expertise here...</div>
@@ -177,18 +176,32 @@
       <div class="profile-grid" id="recruitment-feed">
           @if($myRecruitment)
             @php
-              $isLeader = $myRecruitment->recruitment_goal === 'leader';
+              $isLeader = $myRecruitment->recruitment_goal === 'build_a_team';
               $goalLabel = $isLeader ? 'BUILD A TEAM' : 'Find a Team';
               $ringClass = $isLeader ? 'hiring' : 'looking';
               $dotColor = $isLeader ? '#22c55e' : '#3b82f6';
               $initials = auth()->user()->avatarInitials();
             @endphp
-            <div class="profile-card-compact" id="my-active-post" onclick='viewPostDetails(this, "{{ addslashes(auth()->user()->f_name . " " . auth()->user()->l_name) }}", "{{ implode(", ", $skills) }}", "{{ $myRecruitment->looking_for }}", "{{ auth()->user()->team->team_name ?? 'No Team' }}", "{{ auth()->user()->team->project_title ?? 'No project set' }}", "{{ auth()->user()->student_id }}", true)'>
+            <div class="profile-card-compact" id="my-active-post"
+              onclick='viewPostDetails(
+                this,
+                @json(auth()->user()->f_name . " " . auth()->user()->l_name),
+                @json(implode(", ", $skills ?? [])),
+                @json($myRecruitment->looking_for ?? ""),
+                @json(auth()->user()->team->team_name ?? "No Team"),
+                @json(auth()->user()->team->project_title ?? "No project set"),
+                @json(auth()->user()->student_id),
+                true,
+                @json($isLeader ? "Leader" : "Individual"),
+                @json($myRecruitment)
+              )'>
               <div class="post-actions" style="position:absolute; top:8px; right:8px; z-index:2;">
-                <form method="POST" action="{{ route('recruitment.destroy', $myRecruitment) }}" id="delete-recruitment-form" style="display:inline;">
+                <form method="POST" action="{{ route('recruitment.destroy', ['recruitment' => $myRecruitment->recruitment_id]) }}" id="delete-recruitment-form" style="display:inline;">
                   @csrf
                   @method('DELETE')
-                  <button type="button" class="btn-icon" style="width:24px; height:24px;" onclick="event.stopPropagation(); openDeleteModal()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4 a2 2 0 0 1 2 2v2"></path></svg></button>
+                  <button type="button" class="btn-icon" style="width:24px; height:24px;" onclick="event.stopPropagation(); openDeleteModal()">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                  </button>
                 </form>
               </div>
               <div class="avatar-ring {{ $ringClass }}">
@@ -202,13 +215,25 @@
 
           @forelse($otherRecruitments as $recruit)
             @php
-              $isLeader = $recruit->recruitment_goal === 'leader';
+              $isLeader = $recruit->recruitment_goal === 'build_a_team';
               $goalLabel = $isLeader ? 'BUILD A TEAM' : 'Find a Team';
               $ringClass = $isLeader ? 'hiring' : 'looking';
               $dotColor = $isLeader ? '#22c55e' : '#3b82f6';
               $initials = $recruit->student->avatarInitials();
             @endphp
-            <div class="profile-card-compact" onclick='viewPostDetails(this, "{{ addslashes($recruit->student->f_name . " " . $recruit->student->l_name) }}", "{{ implode(", ", $recruit->roles ?? []) }}", "{{ $recruit->looking_for }}", "{{ $recruit->student->team->team_name ?? 'No Team' }}", "{{ $recruit->student->team->project_title ?? 'No project set' }}", "{{ $recruit->student->student_id }}", false, "{{ $isLeader ? 'Leader' : 'Individual' }}")'>
+            <div class="profile-card-compact"
+              onclick='viewPostDetails(
+                this,
+                @json($recruit->student->f_name . " " . $recruit->student->l_name),
+                @json(implode(", ", $recruit->roles ?? [])),
+                @json($recruit->looking_for ?? ""),
+                @json($recruit->student->team->team_name ?? "No Team"),
+                @json($recruit->student->team->project_title ?? "No project set"),
+                @json($recruit->student->student_id),
+                false,
+                @json($isLeader ? "Leader" : "Individual"),
+                null
+              )'>
               <div class="avatar-ring {{ $ringClass }}">
                 <div class="avatar-text">{{ $initials }}</div>
                 <div class="status-badge-dot" style="background:{{ $dotColor }}"></div>
@@ -293,13 +318,11 @@
       <div class="pg-arrow" title="Previous">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
       </div>
-      
       <div class="pg-btn active">1</div>
       <div class="pg-btn">2</div>
       <div class="pg-btn">3</div>
       <div style="color: var(--text3); font-size: 11px; margin: 0 4px;">...</div>
       <div class="pg-btn">12</div>
-
       <div class="pg-arrow" title="Next">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
       </div>
@@ -321,6 +344,7 @@
       <div class="credits-names">Jolina · John Kenneth · Mark Anthony · Ian Cyrus · Alexa Nicole</div>
   </div>
 
+  <!-- DETAIL MODAL -->
   <div class="modal-overlay" id="detailModal" onclick="if(event.target==this) this.classList.remove('active')">
       <div class="card" style="width: 380px; padding: 28px; position: relative;">
           <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 18px;">
@@ -353,78 +377,84 @@
               <div id="detail-skills" style="display: flex; flex-wrap: wrap; gap: 6px;"></div>
           </div>
 
-          <button class="btn-primary" style="width: 100%;" id="action-btn-text">Send Request</button>
+          <button class="btn-primary" style="width: 100%;" id="detail-action-btn">Send Request</button>
       </div>
   </div>
 
-<div class="modal-overlay" id="postModal" onclick="if(event.target==this) closePostModal()">
-  <div class="card" style="width: 480px; padding: 30px; border: 1px solid var(--accent);">
-    <div class="section-title" id="modal-title">Build a Team</div>
-    
-    <div style="margin-top: 20px;">
-      <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 8px;">Recruitment Goal</label>
-      <select class="custom-select" id="post-goal" style="margin-bottom: 20px;" onchange="updateModalUI()">
-        <option value="leader">Build a Team (Find Members)</option>
-        <option value="individual">Find a Team (Join Others)</option>
-      </select>
-
-       <div class="modal-tutorial" id="modal-note-box">
-           <p id="modal-note-text"><strong>CapsTip:</strong> A standard capstone team usually consists of 3-5 members. Setting this helps students know if you still have slots available.</p>
-       </div>
-
-       <div id="leader-fields">
-      <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 8px;">Looking For</label>
-      <textarea id="leader-looking-for" name="looking_for" rows="3" placeholder="e.g. 1 Backend Dev, 1 UI Designer..." style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg2); color: var(--text); font-size: 13px; resize: vertical; margin-bottom: 16px;"></textarea>
-      </div>
-
-      <div id="individual-fields" style="display:none;">
-        <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 8px;">Short Introduction</label>
-        <textarea id="individual-intro" rows="3" placeholder="Briefly introduce yourself and what you bring to the team..." style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg2); color: var(--text); font-size: 13px; resize: vertical; margin-bottom: 16px;"></textarea>
-      </div>
-
-      <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 8px;">Expertise & Roles</label>
-      <div class="tag-input-field" id="tag-container" style="margin-bottom: 12px;">
-        <span style="color: var(--text3); font-size: 12px;" id="placeholder-text">Click tags below to add...</span>
-      </div>
-
-      <div id="skill-selector" style="margin-bottom: 25px;">
-        <span class="skill-chip leader-skill" onclick="toggleTag(this, 'UI Designer')">UI Designer</span>
-        <span class="skill-chip leader-skill" onclick="toggleTag(this, 'App Developer')">App Developer</span>
-        <span class="skill-chip leader-skill" onclick="toggleTag(this, 'Backend Dev')">Backend Dev</span>
-        <span class="skill-chip leader-skill" onclick="toggleTag(this, 'Documentation')">Documentation</span>
-        <span class="skill-chip individual-skill" style="display:none;" onclick="toggleTag(this, 'Leadership')">Leadership</span>
-        <span class="skill-chip individual-skill" style="display:none;" onclick="toggleTag(this, 'Research')">Research</span>
-        <span class="skill-chip individual-skill" style="display:none;" onclick="toggleTag(this, 'Design')">Design</span>
-        <span class="skill-chip individual-skill" style="display:none;" onclick="toggleTag(this, 'Testing')">Testing</span>
-      </div>
+  <!-- POST / EDIT MODAL -->
+  <div class="modal-overlay" id="postModal" onclick="if(event.target==this) closePostModal()">
+    <div class="card" style="width: 480px; padding: 30px; border: 1px solid var(--accent);">
+      <div class="section-title" id="modal-title">Build a Team</div>
       
-      <div style="display: flex; gap: 10px;">
-        <form method="POST" action="{{ route('recruitment.store') }}" style="flex: 1;" id="recruitment-form" onsubmit="publishPost(event)">
-          @csrf
-          <input type="hidden" name="recruitment_goal" id="recruitment-goal-input" value="build_a_team">
-          <input type="hidden" name="looking_for" id="looking-for-input" value="">
-          <input type="hidden" name="introduction" id="introduction-input" value="">
-          <button type="submit" class="btn-primary" style="width: 100%;">Publish Post</button>
-        </form>
-        <button class="google-btn" style="flex: 1; border: none;" onclick="closePostModal()">Cancel</button>
+      <div style="margin-top: 20px;">
+        <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 8px;">Recruitment Goal</label>
+        <select class="custom-select" id="post-goal" style="margin-bottom: 20px;" onchange="updateModalUI()">
+          <option value="leader">Build a Team (Find Members)</option>
+          <option value="individual">Find a Team (Join Others)</option>
+        </select>
+
+         <div class="modal-tutorial" id="modal-note-box">
+             <p id="modal-note-text"><strong>CapsTip:</strong> A standard capstone team usually consists of 3-5 members. Setting this helps students know if you still have slots available.</p>
+         </div>
+
+         <div id="leader-fields">
+          <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 8px;">Looking For</label>
+          <textarea id="leader-looking-for" name="looking_for" rows="3" placeholder="e.g. 1 Backend Dev, 1 UI Designer..." style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg2); color: var(--text); font-size: 13px; resize: vertical; margin-bottom: 16px;"></textarea>
+        </div>
+
+        <div id="individual-fields" style="display:none;">
+          <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 8px;">Short Introduction</label>
+          <textarea id="individual-intro" rows="3" placeholder="Briefly introduce yourself and what you bring to the team..." style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg2); color: var(--text); font-size: 13px; resize: vertical; margin-bottom: 16px;"></textarea>
+        </div>
+
+        <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 8px;">Expertise & Roles</label>
+        <div class="tag-input-field" id="tag-container" style="margin-bottom: 12px;">
+          <span style="color: var(--text3); font-size: 12px;" id="placeholder-text">Click tags below to add...</span>
+        </div>
+
+        <div id="skill-selector" style="margin-bottom: 25px;">
+          <span class="skill-chip leader-skill" onclick="toggleTag(this, 'UI Designer')">UI Designer</span>
+          <span class="skill-chip leader-skill" onclick="toggleTag(this, 'App Developer')">App Developer</span>
+          <span class="skill-chip leader-skill" onclick="toggleTag(this, 'Backend Dev')">Backend Dev</span>
+          <span class="skill-chip leader-skill" onclick="toggleTag(this, 'Documentation')">Documentation</span>
+          <span class="skill-chip individual-skill" style="display:none;" onclick="toggleTag(this, 'Leadership')">Leadership</span>
+          <span class="skill-chip individual-skill" style="display:none;" onclick="toggleTag(this, 'Research')">Research</span>
+          <span class="skill-chip individual-skill" style="display:none;" onclick="toggleTag(this, 'Design')">Design</span>
+          <span class="skill-chip individual-skill" style="display:none;" onclick="toggleTag(this, 'Testing')">Testing</span>
+        </div>
+        
+        <div style="display: flex; gap: 10px;">
+          <form method="POST" action="{{ route('recruitment.store') }}" style="flex: 1;" id="recruitment-form" onsubmit="publishPost(event)">
+            @csrf
+            <input type="hidden" name="_method" id="form-method-input" value="POST">
+            <input type="hidden" name="recruitment_goal" id="recruitment-goal-input" value="build_a_team">
+            <input type="hidden" name="recruitment_id" id="recruitment-id-input" value="">
+            <input type="hidden" name="looking_for" id="looking-for-input" value="">
+            <input type="hidden" name="introduction" id="introduction-input" value="">
+            <button type="submit" class="btn-primary" style="width: 100%;" id="submit-btn-text">Publish Post</button>
+          </form>
+          <button class="google-btn" style="flex: 1; border: none;" onclick="closePostModal()">Cancel</button>
+        </div>
       </div>
     </div>
   </div>
-</div>
 
-<div class="modal-overlay" id="deleteModal" onclick="if(event.target==this) closeDeleteModal()">
-  <div class="card" style="width: 360px; padding: 30px; text-align: center;">
-    <div class="section-title">Delete Post</div>
-    <p style="margin-top: 12px; font-size: 13px; color: var(--text2);">Are you sure you want to remove your recruitment post? This action cannot be undone.</p>
-    <div style="display: flex; gap: 10px; margin-top: 20px;">
-      <button class="btn-primary" style="flex: 1; background: #ef4444;" onclick="submitDeleteForm()">Delete</button>
-      <button class="google-btn" style="flex: 1; border: none;" onclick="closeDeleteModal()">Cancel</button>
+  <!-- DELETE CONFIRM MODAL -->
+  <div class="modal-overlay" id="deleteModal" onclick="if(event.target==this) closeDeleteModal()">
+    <div class="card" style="width: 360px; padding: 30px; text-align: center;">
+      <div class="section-title">Delete Post</div>
+      <p style="margin-top: 12px; font-size: 13px; color: var(--text2);">Are you sure you want to remove your recruitment post? This action cannot be undone.</p>
+      <div style="display: flex; gap: 10px; margin-top: 20px;">
+        <button class="btn-primary" style="flex: 1; background: #ef4444;" onclick="submitDeleteForm()">Delete</button>
+        <button class="google-btn" style="flex: 1; border: none;" onclick="closeDeleteModal()">Cancel</button>
+      </div>
     </div>
   </div>
-</div>
 
 <script>
 let selectedTags = new Set();
+// Store the update URL template from Laravel
+const updateUrlTemplate = '{{ route('recruitment.update', ['recruitment' => ':id']) }}';
 
 function toggleTag(chip, skill) {
     if (selectedTags.has(skill)) {
@@ -439,27 +469,32 @@ function toggleTag(chip, skill) {
 
 function renderTags() {
     const container = document.getElementById('tag-container');
-
     if (selectedTags.size > 0) {
         container.innerHTML = Array.from(selectedTags).map(function(tag) {
             return '<div class="selected-tag">' + tag + '</div>';
         }).join('');
     } else {
-        container.innerHTML = '<span style="color: var(--text3); font-size: 12px;" id="placeholder-text">Click tags below to add...</span>';
+        container.innerHTML = '<span style="color: var(--text3); font-size: 12px;">Click tags below to add...</span>';
     }
 }
 
 function publishPost(event) {
     event.preventDefault();
+
     if (selectedTags.size === 0) {
         alert('Please select at least one expertise.');
         return;
     }
+
     document.getElementById('looking-for-input').value = document.getElementById('leader-looking-for').value;
     document.getElementById('introduction-input').value = document.getElementById('individual-intro').value;
 
     const form = document.getElementById('recruitment-form');
+
+    // Remove any previously appended role inputs
     form.querySelectorAll('input[name="roles[]"]').forEach(function(el) { el.remove(); });
+
+    // Append each selected tag as a hidden input
     Array.from(selectedTags).forEach(function(tag) {
         const input = document.createElement('input');
         input.type = 'hidden';
@@ -468,47 +503,75 @@ function publishPost(event) {
         form.appendChild(input);
     });
 
+    const recruitmentId = document.getElementById('recruitment-id-input').value;
+    if (recruitmentId) {
+        // UPDATE: change form action and spoof PUT
+        form.action = updateUrlTemplate.replace(':id', recruitmentId);
+        document.getElementById('form-method-input').value = 'PUT';
+    } else {
+        // CREATE: reset to store route and POST
+        form.action = '{{ route('recruitment.store') }}';
+        document.getElementById('form-method-input').value = 'POST';
+    }
+
     form.submit();
 }
 
-function openPostModal() {
+function openPostModal(recruitment) {
+    // Reset state
+    selectedTags.clear();
+    document.querySelectorAll('.skill-chip').forEach(function(chip) { chip.classList.remove('selected'); });
+    document.getElementById('leader-looking-for').value = '';
+    document.getElementById('individual-intro').value = '';
+    document.getElementById('recruitment-id-input').value = '';
+    document.getElementById('form-method-input').value = 'POST';
+    document.getElementById('submit-btn-text').textContent = 'Publish Post';
+    document.getElementById('post-goal').value = 'leader';
+
+    if (recruitment && recruitment.recruitment_id) {
+        // Editing an existing post
+        document.getElementById('recruitment-id-input').value = recruitment.recruitment_id;
+        document.getElementById('submit-btn-text').textContent = 'Update Post';
+
+        const isLeader = recruitment.recruitment_goal === 'build_a_team';
+        document.getElementById('post-goal').value = isLeader ? 'leader' : 'individual';
+
+        if (isLeader) {
+            document.getElementById('leader-looking-for').value = recruitment.looking_for || '';
+        } else {
+            document.getElementById('individual-intro').value = recruitment.introduction || '';
+        }
+
+        // Pre-select saved roles
+        if (Array.isArray(recruitment.roles)) {
+            recruitment.roles.forEach(function(role) {
+                selectedTags.add(role);
+                document.querySelectorAll('.skill-chip').forEach(function(chip) {
+                    if (chip.textContent.trim() === role) {
+                        chip.classList.add('selected');
+                    }
+                });
+            });
+        }
+    }
+
+    updateModalUI();
+    renderTags();
     document.getElementById('postModal').classList.add('active');
 }
-function closePostModal() { document.getElementById('postModal').classList.remove('active'); }
 
-function confirmJoin(teamName) {
-    if(confirm('Are you sure you want to join ' + teamName + '? This will close your current recruitment post.')) {
-        alert('Welcome to ' + teamName + '! Redirecting to Team Dashboard...');
-    }
+function closePostModal() {
+    document.getElementById('postModal').classList.remove('active');
 }
 
-function viewPostDetails(cardEl, name, skills, lookingFor, teamName, projectTitle, studentId, isOwner, type) {
+function viewPostDetails(cardEl, name, skills, lookingFor, teamName, projectTitle, studentId, isOwner, type, recruitment) {
     const modal = document.getElementById('detailModal');
-
-    
-    const goalLabelEl = cardEl.querySelector('.goal-label');
-    if (isOwner) {
-        goalLabelEl.textContent = 'Your Post';
-    } else {
-        goalLabelEl.textContent = type === 'Leader' ? 'BUILD A TEAM' : 'Find a Team';
-    }
 
     document.getElementById('detail-name').textContent = name;
     document.getElementById('detail-student-id').textContent = 'Student ID: ' + studentId;
-    document.getElementById('detail-looking-for').textContent = lookingFor ? 'Looking For: ' + lookingFor : 'Looking For: -';
-    document.getElementById('detail-team-name').textContent = 'Team: ' + (teamName || '-');
-    document.getElementById('detail-project').textContent = 'Project: ' + (projectTitle || '-');
-    const ownerMsg = document.getElementById('detail-owner-msg');
-    const actionBtn = document.getElementById('action-btn-text');
-    if (isOwner) {
-        ownerMsg.style.display = 'block';
-        actionBtn.textContent = 'Close';
-        actionBtn.onclick = function() { modal.classList.remove('active'); };
-    } else {
-        ownerMsg.style.display = 'none';
-        actionBtn.textContent = 'Send Request';
-        actionBtn.onclick = null;
-    }
+    document.getElementById('detail-looking-for').textContent = lookingFor ? lookingFor : '-';
+    document.getElementById('detail-team-name').textContent = teamName || '-';
+    document.getElementById('detail-project').textContent = projectTitle || '-';
 
     const initials = name.split(' ').map(function(n) { return n[0]; }).join('').substring(0, 2).toUpperCase();
     document.getElementById('detail-avatar').textContent = initials;
@@ -517,6 +580,22 @@ function viewPostDetails(cardEl, name, skills, lookingFor, teamName, projectTitl
     skillContainer.innerHTML = skills.split(',').map(function(s) {
         return '<span class="expertise-tag" style="margin:0; font-size:10px">' + s.trim() + '</span>';
     }).join('');
+
+    const ownerMsg = document.getElementById('detail-owner-msg');
+    const actionBtn = document.getElementById('detail-action-btn');
+
+    if (isOwner) {
+        ownerMsg.style.display = 'block';
+        actionBtn.textContent = 'Edit Post';
+        actionBtn.onclick = function() {
+            modal.classList.remove('active');
+            openPostModal(recruitment);
+        };
+    } else {
+        ownerMsg.style.display = 'none';
+        actionBtn.textContent = 'Send Request';
+        actionBtn.onclick = null;
+    }
 
     modal.classList.add('active');
 }
@@ -535,8 +614,8 @@ function updateModalUI() {
         leaderFields.style.display = 'block';
         individualFields.style.display = 'none';
         modalTitle.textContent = 'Build a Team';
-        noteText.innerHTML = "<strong>CapsTip:</strong> Clearly state the roles you need (e.g. 1 Backend, 1 UI) to attract the right members for your 5-person team.";
-        noteBox.style.borderLeftColor = "var(--accent)";
+        noteText.innerHTML = '<strong>CapsTip:</strong> Clearly state the roles you need (e.g. 1 Backend, 1 UI) to attract the right members for your 5-person team.';
+        noteBox.style.borderLeftColor = 'var(--accent)';
         leaderSkills.forEach(function(chip) { chip.style.display = 'inline-block'; });
         individualSkills.forEach(function(chip) { chip.style.display = 'none'; });
         document.getElementById('recruitment-goal-input').value = 'build_a_team';
@@ -544,18 +623,28 @@ function updateModalUI() {
         leaderFields.style.display = 'none';
         individualFields.style.display = 'block';
         modalTitle.textContent = 'Find a Team';
-        noteText.innerHTML = "<strong>CapsTip:</strong> Highlight your best skills! Other team leaders will see your profile and invite you if your expertise matches their project needs.";
-        noteBox.style.borderLeftColor = "#3b82f6";
+        noteText.innerHTML = '<strong>CapsTip:</strong> Highlight your best skills! Other team leaders will see your profile and invite you if your expertise matches their project needs.';
+        noteBox.style.borderLeftColor = '#3b82f6';
         leaderSkills.forEach(function(chip) { chip.style.display = 'none'; });
         individualSkills.forEach(function(chip) { chip.style.display = 'inline-block'; });
         document.getElementById('recruitment-goal-input').value = 'find_a_team';
     }
 }
 
+function confirmJoin(teamName) {
+    if (confirm('Are you sure you want to join ' + teamName + '? This will close your current recruitment post.')) {
+        alert('Welcome to ' + teamName + '! Redirecting to Team Dashboard...');
+    }
+}
+
 function openDeleteModal() {
     document.getElementById('deleteModal').classList.add('active');
 }
-function closeDeleteModal() { document.getElementById('deleteModal').classList.remove('active'); }
+
+function closeDeleteModal() {
+    document.getElementById('deleteModal').classList.remove('active');
+}
+
 function submitDeleteForm() {
     document.getElementById('delete-recruitment-form').submit();
 }

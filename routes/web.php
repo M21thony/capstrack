@@ -67,6 +67,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/team', [TeamController::class, 'store'])->name('team.store');
     Route::delete('/team', [TeamController::class, 'destroy'])->name('team.destroy');
     Route::post('/recruitment', [RecruitmentController::class, 'store'])->name('recruitment.store');
+    Route::put('/recruitment/{recruitment}', [RecruitmentController::class, 'update'])->name('recruitment.update');
     Route::delete('/recruitment/{recruitment}', [RecruitmentController::class, 'destroy'])->name('recruitment.destroy');
 
     Route::get('/duplication',        [DuplicationController::class, 'index'])->name('duplication.index');

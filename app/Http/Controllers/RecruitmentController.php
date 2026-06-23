@@ -43,6 +43,42 @@ class RecruitmentController extends Controller
             ->with('status', 'Recruitment post published!');
     }
 
+    public function update(Request $request, Recruitment $recruitment): JsonResponse|RedirectResponse
+    {
+        $student = $request->user();
+
+        if ($recruitment->student_id !== $student->student_id) {
+            abort(403);
+        }
+
+        $validated = $request->validate([
+            'recruitment_goal' => ['required', Rule::in(['build_a_team', 'find_a_team'])],
+            'looking_for' => ['nullable', 'string', 'max:500'],
+            'introduction' => ['nullable', 'string', 'max:500'],
+            'roles' => ['required', 'array', 'min:1'],
+            'roles.*' => ['string', 'max:50'],
+        ]);
+
+        $recruitment->update([
+            'recruitment_goal' => $validated['recruitment_goal'],
+            'roles' => $validated['roles'],
+            'looking_for' => $validated['looking_for'] ?? null,
+            'introduction' => $validated['introduction'] ?? null,
+        ]);
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Recruitment post updated.',
+                'recruitment' => $recruitment,
+            ]);
+        }
+
+        return redirect()
+            ->back()
+            ->with('status', 'Recruitment post updated!');
+    }
+
     public function destroy(Request $request, Recruitment $recruitment): RedirectResponse
     {
         $student = $request->user();
