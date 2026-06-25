@@ -170,12 +170,14 @@ class AuthController extends Controller
             $expert = CapstoneExpert::where('email', $email)->first();
 
             if ($expert) {
-                if (! $expert->approved_status) {
+                if (! $expert->approved_status && ! $expert->is_admin) {
                     return view('auth.pending-approval');
                 }
                 Auth::guard('expert')->login($expert);
 
-                return redirect('/instructor/dashboard');
+                $redirectUrl = $expert->is_admin ? '/admin/dashboard' : '/instructor/dashboard';
+
+                return redirect($redirectUrl);
             }
 
             return redirect('/request-account?email='.urlencode($email).'&first_name='.urlencode($firstName).'&last_name='.urlencode($lastName));
@@ -288,11 +290,13 @@ class AuthController extends Controller
 
             Auth::guard('expert')->login($expert);
 
+            $redirectUrl = $expert->is_admin ? '/admin/dashboard' : '/instructor/dashboard';
+
             if ($request->expectsJson()) {
                 return response()->json([
                     'success' => true,
                     'status' => 'authenticated',
-                    'redirect_url' => '/instructor/dashboard',
+                    'redirect_url' => $redirectUrl,
                     'user' => [
                         'id' => $expert->expert_id,
                         'email' => $expert->email,
@@ -301,7 +305,7 @@ class AuthController extends Controller
                 ]);
             }
 
-            return redirect('/instructor/dashboard');
+            return redirect($redirectUrl);
         }
 
         $student = Student::firstOrCreate(

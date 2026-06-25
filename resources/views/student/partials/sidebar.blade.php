@@ -12,7 +12,7 @@
         <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
       </div>
       <div>
-        <div class="brand-name">CapsTRACK</div>
+        <div class="brand-name">CapsTrack</div>
         <div class="brand-sub">Student Portal</div>
       </div>
     </div>
@@ -114,6 +114,15 @@
   </nav>
 </div>
 
+<style>
+  .pm-close-btn { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; padding: 0; background-color: #f1f5f9; color: #64748b; border: none; border-radius: 50%; cursor: pointer; transition: all 0.15s ease-in-out; outline: none; }
+  .pm-close-btn:hover { background-color: #e2e8f0; color: #1e293b; transform: scale(1.05); }
+  .pm-close-btn:active { background-color: #cbd5e1; transform: scale(0.95); }
+  .pm-edit-profile-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; flex: 1; padding: 10px 16px; background-color: #2563eb; color: #ffffff !important; font-size: 13px; font-weight: 600; text-decoration: none; border-radius: 8px; border: none; transition: background-color 0.15s ease, transform 0.1s ease; box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2); text-align: center; }
+  .pm-edit-profile-btn:hover { background-color: #1d4ed8; box-shadow: 0 4px 6px rgba(37, 99, 235, 0.3); }
+  .pm-edit-profile-btn:active { transform: scale(0.98); }
+</style>
+
 <div class="profile-overlay" id="profile-overlay" onclick="handleOverlayClick(event)">
   <div class="profile-modal" id="profile-modal" onclick="event.stopPropagation()">
     <div class="pm-header">
@@ -127,23 +136,15 @@
         <div class="pm-header-role">{{ $student->role ?? 'Student' }}</div>
       </div>
       <button type="button" onclick="closeProfile()" class="pm-close-btn" aria-label="Close">
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
       </button>
-    </div>
-    <div class="pm-note">
-      View your details here. For full edits including avatar, use Personal Information.
     </div>
     <div class="pm-body" id="pm-body">
       <div class="pm-field">
         <div class="pm-label">Full Name</div>
-      <div class="pm-value pm-view-only">{{ trim($student->f_name.' '.($student->m_name ?? '').' '.$student->l_name) }}</div>
-      <div class="pm-edit-only">
-        <div style="display:flex;gap:6px;flex-wrap:wrap">
-          <input class="pm-input" id="edit-fname" value="{{ $student->f_name }}" style="flex:1;min-width:80px" placeholder="First name"/>
-          <input class="pm-input" id="edit-mname" value="{{ $student->m_name }}" style="flex:1;min-width:80px" placeholder="Middle name"/>
-          <input class="pm-input" id="edit-lname" value="{{ $student->l_name }}" style="flex:1;min-width:80px" placeholder="Last name"/>
-        </div>
-      </div>
+        <div class="pm-value">{{ trim($student->l_name . ', ' . $student->f_name . ($student->m_name ? ' ' . $student->m_name : '')) . '.' }}</div>
       </div>
       <div class="pm-field">
         <div class="pm-label">Institutional Email</div>
@@ -152,44 +153,19 @@
       <div class="pm-divider"></div>
       <div class="pm-field">
         <div class="pm-label">Course</div>
-        <div class="pm-value pm-view-only">{{ $student->course }}</div>
-        <div class="pm-edit-only">
-          <select class="pm-input" id="edit-course">
-            @foreach ([
-              'Bachelor of Science in Computer Science',
-              'Bachelor of Science in Information Technology',
-              'Bachelor of Science in Information Systems',
-              'Bachelor of Library and Information Science',
-            ] as $courseOption)
-              <option value="{{ $courseOption }}" @selected($student->course === $courseOption)>{{ $courseOption }}</option>
-            @endforeach
-          </select>
-        </div>
+        <div class="pm-value">{{ $student->course }}</div>
       </div>
       <div class="pm-field">
         <div class="pm-label">Year &amp; Section</div>
-        <div class="pm-value pm-view-only">{{ $student->year_section }}</div>
-        <div class="pm-edit-only">
-          <div style="display:flex;gap:6px">
-            <select class="pm-input" id="edit-year" style="flex:1">
-              @foreach (['1st Year', '2nd Year', '3rd Year', '4th Year'] as $yearOption)
-                <option value="{{ $yearOption }}" @selected($sidebarYear === $yearOption)>{{ $yearOption }}</option>
-              @endforeach
-            </select>
-            <input class="pm-input" id="edit-section" value="{{ $sidebarSection }}" style="width:90px" placeholder="Section"/>
-          </div>
-        </div>
+        <div class="pm-value">{{ $student->year_section }}</div>
       </div>
       <div class="pm-field">
         <div class="pm-label">Student ID</div>
-        <div class="pm-value readonly">{{ $student->student_id }}</div>
+        <div class="pm-value">{{ $student->student_number ?? '—' }}</div>
       </div>
     </div>
     <div class="pm-footer">
-      <a href="{{ route('student.personal-info.edit') }}" class="btn btn-ghost content" style="text-decoration:none">Full profile page</a>
-      <button type="button" class="btn btn-ghost content" id="pm-edit-btn" onclick="toggleEdit()">Quick edit</button>
-      <button type="button" class="btn btn-primary content" id="pm-save-btn" onclick="saveProfile()" style="display:none">Save</button>
-      <button type="button" class="btn btn-ghost content" id="pm-cancel-btn" onclick="cancelEdit()" style="display:none">Cancel</button>
+      <a href="{{ route('student.personal-info.edit') }}" class="pm-edit-profile-btn">Edit Profile</a>
     </div>
   </div>
 </div>
@@ -197,11 +173,6 @@
 <script>
   const overlay   = document.getElementById('profile-overlay');
   const trigger   = document.getElementById('profile-trigger');
-  const pmBody    = document.getElementById('pm-body');
-  const editBtn   = document.getElementById('pm-edit-btn');
-  const saveBtn   = document.getElementById('pm-save-btn');
-  const cancelBtn = document.getElementById('pm-cancel-btn');
-  let isEditing   = false;
 
   function openProfile() {
     if (!overlay || !trigger) return;
@@ -212,59 +183,10 @@
     if (!overlay || !trigger) return;
     overlay.classList.remove('open');
     trigger.classList.remove('active');
-    if (isEditing) cancelEdit();
   }
   function handleOverlayClick(e) {
     if (e.target === overlay) closeProfile();
   }
-  function toggleEdit() {
-    isEditing = true;
-    pmBody.classList.add('edit-mode');
-    if (editBtn) editBtn.style.display = 'none';
-    if (saveBtn) saveBtn.style.display = 'inline-flex';
-    if (cancelBtn) cancelBtn.style.display = 'inline-flex';
-  }
-  function cancelEdit() {
-    isEditing = false;
-    pmBody.classList.remove('edit-mode');
-    if (editBtn) editBtn.style.display = 'inline-flex';
-    if (saveBtn) saveBtn.style.display = 'none';
-    if (cancelBtn) cancelBtn.style.display = 'none';
-  }
-  function saveProfile() {
-    const tokenEl = document.querySelector('meta[name="csrf-token"]');
-    if (!tokenEl) { window.location.href = '{{ route('student.personal-info.edit') }}'; return; }
-    const fname   = document.getElementById('edit-fname').value.trim();
-    const mname   = document.getElementById('edit-mname')?.value.trim() || '';
-    const lname   = document.getElementById('edit-lname').value.trim();
-    const course  = document.getElementById('edit-course').value;
-    const year    = document.getElementById('edit-year').value;
-    const section = document.getElementById('edit-section').value.trim();
-    if (!fname || !lname) { document.getElementById('edit-fname').focus(); return; }
-    fetch('{{ route('profile.update') }}', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRF-TOKEN': tokenEl.getAttribute('content'),
-        'Accept': 'application/json'
-      },
-      body: JSON.stringify({
-        first_name: fname,
-        middle_name: mname,
-        last_name: lname,
-        course: course,
-        year_section: year + ' · ' + section
-      })
-    })
-    .then(r => r.json())
-    .then(data => {
-      if (data.success) {
-        location.reload();
-      } else {
-        alert(data.message || 'Failed to update profile');
-      }
-    })
-    .catch(() => alert('Error updating profile'));
-  }
   document.addEventListener('keydown', e => { if (e.key === 'Escape') closeProfile(); });
 </script>
+

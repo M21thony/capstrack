@@ -25,10 +25,10 @@
   <div class="content">
     @include('student.partials.page-tutorial', ['page' => 'dashboard'])
 <div class="grid-4" style="margin-bottom:16px">
-  <div class="stat-chip"><div class="stat-n" style="color:var(--accent)">67%</div><div class="stat-l">Overall Progress</div></div>
-  <div class="stat-chip"><div class="stat-n" style="color:var(--green)">8</div><div class="stat-l">Docs Submitted</div></div>
-  <div class="stat-chip"><div class="stat-n" style="color:var(--amber)">2</div><div class="stat-l">Pending Reviews</div></div>
-  <div class="stat-chip"><div class="stat-n" style="color:var(--purple)">4</div><div class="stat-l">Team Members</div></div>
+  <div class="stat-chip"><div class="stat-n" style="color:var(--accent)">{{ $overallProgress }}%</div><div class="stat-l">Overall Progress</div></div>
+  <div class="stat-chip"><div class="stat-n" style="color:var(--green)">{{ $docsSubmitted }}</div><div class="stat-l">Docs Submitted</div></div>
+  <div class="stat-chip"><div class="stat-n" style="color:var(--amber)">{{ $pendingReviews }}</div><div class="stat-l">Pending Reviews</div></div>
+  <div class="stat-chip"><div class="stat-n" style="color:var(--purple)">{{ $teamGroupsCount }}</div><div class="stat-l">Team Groups</div></div>
 </div>
 <div class="card" style="margin-bottom:16px">
   <div class="card-header"><span class="card-title">Announcements</span><span class="badge badge-accent">New</span></div>
@@ -72,22 +72,16 @@
   <div class="card">
     <div class="card-header"><span class="card-title">Recent Activity</span></div>
     <div>
-      <div class="activity-item">
-        <div class="act-icon" style="background:var(--green-bg)"><svg viewBox="0 0 24 24" style="stroke:var(--green)"><polyline points="20 6 9 17 4 12"/></svg></div>
-        <div class="act-text"><strong>Chapter 2 Draft</strong> submitted for review<div class="act-time">2 hours ago</div></div>
-      </div>
-      <div class="activity-item">
-        <div class="act-icon" style="background:var(--accent-glow)"><svg viewBox="0 0 24 24" style="stroke:var(--accent)"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
-        <div class="act-text"><strong>Dr. Santos</strong> left 3 annotations<div class="act-time">Yesterday, 3:42 PM</div></div>
-      </div>
-      <div class="activity-item">
-        <div class="act-icon" style="background:var(--amber-bg)"><svg viewBox="0 0 24 24" style="stroke:var(--amber)"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
-        <div class="act-text"><strong>Consultation</strong> booked for May 12, 2pm<div class="act-time">2 days ago</div></div>
-      </div>
-      <div class="activity-item">
-        <div class="act-icon" style="background:var(--purple-bg)"><svg viewBox="0 0 24 24" style="stroke:var(--purple)"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div>
-        <div class="act-text"><strong>Juan Reyes</strong> joined the team<div class="act-time">3 days ago</div></div>
-      </div>
+      @forelse($activities as $activity)
+        <div class="activity-item">
+          <div class="act-icon" style="background:{!! $activity->icon_bg !!}">{!! $activity->icon_svg !!}</div>
+          <div class="act-text">{!! $activity->text !!}<div class="act-time">{{ $activity->time }}</div></div>
+        </div>
+      @empty
+        <div style="text-align: center; padding: 24px; color: var(--text3); font-size: 13px;">
+          No recent activity.
+        </div>
+      @endforelse
     </div>
   </div>
 </div>
@@ -157,22 +151,33 @@
       </div>
 
       <div class="card">
-          <div class="card-header"><span class="card-title">Team Genesis</span></div>
+          <div class="card-header"><span class="card-title">Team ({{ $myTeam ? $myTeam->team_name : 'No Team' }})</span></div>
           <div class="history-list" style="margin-top: 10px;">
-              <div class="history-item">
-                  <div class="member-dot"></div>
-                  <div>
-                      <div style="font-size: 12px; font-weight: 600;">Mark Anthony (Lead)</div>
-                      <div style="font-size: 10px; color: var(--text3);">Created Team Nexus · Sept 12</div>
+              @forelse($teamMembers as $member)
+                  <div class="history-item">
+                      <div class="member-dot" style="background: {{ $member->student_id === auth()->id() ? 'var(--accent)' : 'var(--text3)' }}"></div>
+                      <div>
+                          <div style="font-size: 12px; font-weight: 600;">
+                            {{ $member->f_name }} {{ $member->l_name }}
+                            @if(isset($leaderStudentId) && $member->student_id === $leaderStudentId)
+                                <span class="badge" style="background: var(--purple-bg); color: var(--purple); font-size:10px; margin-left:4px;">Leader</span>
+                            @endif
+                            @if($member->student_id === auth()->id())
+                                <span style="color: var(--accent); font-size: 10px; font-weight: normal;">(You)</span>
+                            @endif
+                        </div>
+                          <div style="font-size: 10px; color: var(--text3);">{{ $member->student_number }} · {{ $member->course }}</div>
+                      </div>
                   </div>
-              </div>
-              <div class="history-item">
-                  <div class="member-dot"></div>
-                  <div>
-                      <div style="font-size: 12px; font-weight: 600;">Jolina, Alexa, Kenneth, Ian</div>
-                      <div style="font-size: 10px; color: var(--text3);">Team Completion · Sept 15</div>
+              @empty
+                  <div class="history-item">
+                      <div class="member-dot" style="background: var(--text3);"></div>
+                      <div>
+                          <div style="font-size: 12px; font-weight: 600; color: var(--text3);">No Team Joined</div>
+                          <div style="font-size: 10px; color: var(--text3);">Create or join a team to see members here.</div>
+                      </div>
                   </div>
-              </div>
+              @endforelse
           </div>
       </div>
   <div class="legal-credits">

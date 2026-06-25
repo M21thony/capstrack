@@ -19,7 +19,7 @@ class PersonalInfoOnboardingTest extends TestCase
             'course' => 'Bachelor of Science in Computer Science',
             'year' => '4th Year',
             'section' => 'BSCS-4A',
-            'student_id' => '2021-00456',
+            'student_id' => '221001135',
             'avatar' => 'avatar-01',
         ], $overrides);
     }
@@ -67,6 +67,9 @@ class PersonalInfoOnboardingTest extends TestCase
 
         $this->assertTrue($student->hasCompletedProfile());
         $this->assertEquals('avatar-01', $student->p_picture);
+        $this->assertEquals('221001135', $student->student_number);
+        $this->assertNotEquals('221001135', (string) $student->student_id);
+        $this->assertEquals('4th Year · BSCS-4A', $student->year_section);
 
         $this->actingAs($student)
             ->get(route('student.dashboard'))
@@ -88,12 +91,62 @@ class PersonalInfoOnboardingTest extends TestCase
         $this->assertFalse($student->fresh()->hasCompletedProfile());
     }
 
-    public function test_profile_update_rejects_invalid_avatar_preset(): void
+    public function test_invalid_student_id_format_is_rejected(): void
     {
         $student = Student::factory()->create([
+            'email' => 'format.test@my.cspc.edu.ph',
+        ]);
+
+        $this->actingAs($student)
+            ->post(route('student.personal-info.store'), $this->validPersonalInfoPayload([
+                'student_id' => '2021-00456',
+            ]))
+            ->assertSessionHasErrors(['student_id']);
+
+        $this->assertNull($student->fresh()->student_number);
+    }
+
+    public function test_duplicate_student_id_is_rejected(): void
+    {
+        Student::factory()->create([
+            'email' => 'existing@my.cspc.edu.ph',
+            'student_number' => '221001135',
+        ]);
+
+        $student = Student::factory()->create([
+            'email' => 'duplicate.test@my.cspc.edu.ph',
+        ]);
+
+        $this->actingAs($student)
+            ->post(route('student.personal-info.store'), $this->validPersonalInfoPayload([
+                'student_id' => '221001135',
+            ]))
+            ->assertSessionHasErrors(['student_id']);
+    }
+
+    public function test_profile_update_allows_changing_student_number(): void
+    {
+        $student = Student::factory()->withCompleteProfile()->create([
             'email' => 'profile.api@my.cspc.edu.ph',
-            'f_name' => 'Maria',
-            'l_name' => 'Santos',
+            'student_number' => '221001135',
+        ]);
+
+        $this->actingAs($student)
+            ->postJson(route('profile.update'), [
+                'first_name' => $student->f_name,
+                'last_name' => $student->l_name,
+                'student_id' => '221009999',
+            ])
+            ->assertOk()
+            ->assertJson(['success' => true]);
+
+        $this->assertEquals('221009999', $student->fresh()->student_number);
+    }
+
+    public function test_profile_update_rejects_invalid_avatar_preset(): void
+    {
+        $student = Student::factory()->withCompleteProfile()->create([
+            'email' => 'profile.api@my.cspc.edu.ph',
             'p_picture' => 'avatar-03',
         ]);
 
@@ -109,9 +162,21 @@ class PersonalInfoOnboardingTest extends TestCase
         $this->assertEquals('avatar-03', $student->fresh()->p_picture);
     }
 
-    public function test_completed_user_visiting_onboarding_is_redirected_to_dashboard(): void
+    public function test_has_completed_profile_requires_student_number(): void
     {
         $student = Student::factory()->create([
+            'email' => 'missing.id@my.cspc.edu.ph',
+            'f_name' => 'Ana',
+            'l_name' => 'Reyes',
+            'p_picture' => 'avatar-02',
+        ]);
+
+        $this->assertFalse($student->hasCompletedProfile());
+    }
+
+    public function test_completed_user_visiting_onboarding_is_redirected_to_dashboard(): void
+    {
+        $student = Student::factory()->withCompleteProfile()->create([
             'email' => 'done@my.cspc.edu.ph',
             'f_name' => 'Pedro',
             'l_name' => 'Garcia',

@@ -13,6 +13,27 @@
     $totalSteps = 4;
 @endphp
 
+<style>
+  [hidden] { display: none !important; }
+  .pi-wizard-actions { display: flex !important; flex-direction: row !important; justify-content: space-between !important; align-items: center !important; gap: 12px !important; margin-top: 32px !important; padding-top: 24px !important; border-top: 1px solid var(--border) !important; }
+  .pi-wizard-actions .pi-btn { flex: none !important; width: auto !important; min-width: 120px !important; justify-content: center !important; }
+  .pi-wizard-actions #pi-next, .pi-wizard-actions #pi-submit { margin-left: auto !important; }
+  .pi-label { display: block !important; font-size: 14px !important; font-weight: 500 !important; color: #1e293b !important; margin-bottom: 6px !important; }
+  .pi-label-optional { color: #64748b !important; font-weight: 400 !important; font-size: 13px !important; display: block !important; margin-top: 2px !important; }
+  .pi-row-3 { display: grid !important; grid-template-columns: repeat(3, 1fr) !important; gap: 16px !important; align-items: end !important; }
+  .pi-row-3 .pi-field { display: flex !important; flex-direction: column !important; justify-content: flex-end !important; height: 100% !important; }
+  .pi-row-3 .pi-input { width: 100% !important; }
+  .pi-row-2 { display: grid !important; grid-template-columns: repeat(2, 1fr) !important; gap: 16px !important; }
+  .pi-field:not(.pi-row-3 *) { display: flex !important; flex-direction: column !important; margin-top: 24px !important; }
+  .pi-field:not(.pi-row-3 *) .pi-label { margin-bottom: 6px !important; }
+  .pi-row-3 + .pi-field, .pi-field + .pi-row-3 { margin-top: 24px !important; }
+  @media (max-width: 600px) { .pi-row-3 { display: flex !important; flex-direction: column !important; gap: 16px !important; } .pi-row-2 { grid-template-columns: 1fr; } }
+  .pi-input { border: 1px solid #cbd5e1 !important; border-radius: 8px !important; padding: 10px 14px !important; font-size: 15px !important; color: #334155 !important; transition: all 0.15s ease-in-out !important; box-sizing: border-box !important; }
+  .pi-input:focus { border-color: #2563eb !important; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15) !important; }
+  .tutorial-note { background-color: #eff6ff; border-left: 4px solid #3b82f6; padding: 12px 16px; border-radius: 8px; font-size: 13px; color: #1e40af; margin-bottom: 24px; line-height: 1.5; display: flex; align-items: flex-start; gap: 10px; }
+  .tutorial-note svg { width: 18px; height: 18px; stroke: #3b82f6; fill: none; stroke-width: 2; flex-shrink: 0; margin-top: 2px; }
+</style>
+
 <form method="POST" action="{{ route('student.personal-info.store') }}" class="pi-form" id="pi-form" data-start-step="{{ $startStep }}" data-total-steps="{{ $totalSteps }}">
     @csrf
 
@@ -36,6 +57,18 @@
                 <h2 class="pi-section-title" id="pi-section-1">Institutional account</h2>
             </div>
             <p class="pi-hint">Signed in with your CSPC Google account. Email cannot be changed here.</p>
+            
+            <div class="tutorial-note">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="16" x2="12" y2="12"></line>
+                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                </svg>
+                <div>
+                    <strong>Guide:</strong> Your account is connected to your official school Google Email. This guarantees that all platform notifications and grading updates reach you safely.
+                </div>
+            </div>
+
             <div class="pi-field">
                 <label class="pi-label" for="pi-email">Email</label>
                 <input type="email" id="pi-email" class="pi-input pi-input-readonly" value="{{ $student->email }}" readonly aria-readonly="true">
@@ -48,6 +81,18 @@
                 <h2 class="pi-section-title" id="pi-section-2">Choose your avatar</h2>
             </div>
             <p class="pi-hint">Tap a preset avatar. Custom uploads are not allowed.</p>
+            
+            <div class="tutorial-note">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="16" x2="12" y2="12"></line>
+                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                </svg>
+                <div>
+                    <strong>Tip:</strong> Choose an avatar that represents you! This profile icon is visible to your capstone team members, panel, and advisers.
+                </div>
+            </div>
+
             <div class="pi-avatar-grid" role="radiogroup" aria-label="Preset avatar">
                 @foreach ($presets as $key => $preset)
                     <label class="pi-avatar-option {{ old('avatar', $student->p_picture) === $key ? 'selected' : '' }}" aria-label="{{ $preset['label'] }} avatar">
@@ -68,7 +113,19 @@
                 <h2 class="pi-section-title" id="pi-section-3">Personal details</h2>
             </div>
             <p class="pi-hint">Use your name as it appears on school records.</p>
-            <div class="pi-row">
+            
+            <div class="tutorial-note">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="16" x2="12" y2="12"></line>
+                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                </svg>
+                <div>
+                    <strong>Note:</strong> Please enter your legal name exactly as it appears in school records. Use a 9-digit Student ID (e.g., 221000001) to match your registrar enrollment profile.
+                </div>
+            </div>
+
+            <div class="pi-row-3">
                 <div class="pi-field">
                     <label class="pi-label" for="first_name">First name</label>
                     <input type="text" id="first_name" name="first_name" class="pi-input" value="{{ old('first_name', $student->f_name) }}" required autocomplete="given-name">
@@ -86,7 +143,7 @@
             </div>
             <div class="pi-field">
                 <label class="pi-label" for="student_id">Student ID</label>
-                <input type="text" id="student_id" name="student_id" class="pi-input" value="{{ old('student_id', $student->student_id) }}" placeholder="e.g. 2021-00456" {{ $isEditing && filled($student->student_id) ? 'readonly' : '' }} required>
+                <input type="text" id="student_id" name="student_id" class="pi-input" value="{{ old('student_id', $student->student_number) }}" placeholder="e.g. 221000001" required>
                 @error('student_id')<p class="pi-error">{{ $message }}</p>@enderror
             </div>
         </section>
@@ -97,6 +154,18 @@
                 <h2 class="pi-section-title" id="pi-section-4">Academic information</h2>
             </div>
             <p class="pi-hint">Your course, year level, and section (e.g. BSCS-4A).</p>
+            
+            <div class="tutorial-note">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="16" x2="12" y2="12"></line>
+                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                </svg>
+                <div>
+                    <strong>Guide:</strong> Select your course, year (3rd or 4th), and section (e.g. A, B, C). This ensures you are assigned to the correct advisers and group categories.
+                </div>
+            </div>
+
             <div class="pi-field">
                 <label class="pi-label" for="course">Course</label>
                 <select id="course" name="course" class="pi-input" required>
@@ -111,11 +180,11 @@
                 </select>
                 @error('course')<p class="pi-error">{{ $message }}</p>@enderror
             </div>
-            <div class="pi-row">
+            <div class="pi-row-2">
                 <div class="pi-field">
                     <label class="pi-label" for="year">Year</label>
                     <select id="year" name="year" class="pi-input" required>
-                        @foreach (['1st Year', '2nd Year', '3rd Year', '4th Year'] as $yearOption)
+                        @foreach (['3rd', '4th'] as $yearOption)
                             <option value="{{ $yearOption }}" @selected(old('year', $selectedYear) === $yearOption)>{{ $yearOption }}</option>
                         @endforeach
                     </select>
@@ -123,7 +192,7 @@
                 </div>
                 <div class="pi-field">
                     <label class="pi-label" for="section">Section</label>
-                    <input type="text" id="section" name="section" class="pi-input" value="{{ old('section', $selectedSection) }}" placeholder="e.g. BSCS-4A" required>
+                    <input type="text" id="section" name="section" class="pi-input" value="{{ old('section', $selectedSection) }}" placeholder="e.g. A" required>
                     @error('section')<p class="pi-error">{{ $message }}</p>@enderror
                 </div>
             </div>
@@ -132,15 +201,10 @@
 
     <p class="pi-wizard-error" id="pi-wizard-error" role="alert" hidden></p>
 
-    <div class="pi-actions pi-wizard-actions {{ $isEditing ? 'pi-actions-edit' : '' }}">
-        @if ($isEditing)
-            <a href="{{ route('student.dashboard') }}" class="pi-btn pi-btn-ghost pi-cancel-link">Cancel</a>
-        @endif
+    <div class="pi-actions pi-wizard-actions">
         <button type="button" class="pi-btn pi-btn-ghost" id="pi-back" {{ $startStep === 1 ? 'disabled' : '' }}>Back</button>
         <button type="button" class="pi-btn pi-btn-primary" id="pi-next">Next</button>
-        <button type="submit" class="pi-btn pi-btn-primary" id="pi-submit" hidden>
-            {{ $isEditing ? 'Save changes' : 'Save and continue to Dashboard' }}
-        </button>
+        <button type="submit" class="pi-btn pi-btn-primary" id="pi-submit" hidden>Save changes</button>
     </div>
 </form>
 
@@ -205,7 +269,7 @@
             var section = document.getElementById('section');
             if (!course.value) { showError('Please select your course.'); return false; }
             if (!year.value) { showError('Please select your year.'); return false; }
-            if (!section.value.trim()) { showError('Section is required (e.g. BSCS-4A).'); section.focus(); return false; }
+            if (!section.value.trim()) { showError('Section is required (e.g. A).'); section.focus(); return false; }
             return true;
         }
         return true;
@@ -225,9 +289,19 @@
         if (stepLabel) stepLabel.textContent = 'Step ' + step + ' of ' + total;
         if (stepName) stepName.textContent = stepNames[step] || '';
         if (progress) progress.setAttribute('aria-valuenow', String(step));
-        if (backBtn) backBtn.disabled = step === 1;
-        if (nextBtn) nextBtn.hidden = step === total;
-        if (submitBtn) submitBtn.hidden = step !== total;
+        
+        // Correctly handle visibility, display, and disabled states
+        if (backBtn) {
+            backBtn.hidden = step === 1;
+            backBtn.disabled = step === 1;
+        }
+        if (nextBtn) {
+            nextBtn.hidden = step === total;
+        }
+        if (submitBtn) {
+            submitBtn.hidden = step !== total;
+        }
+        
         showError('');
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }

@@ -10,16 +10,16 @@ class ArchivedDocumentSeeder extends Seeder
 {
     public function run(): void
     {
-        $path        = storage_path('app/seeders/CCS-with-abstract.xlsx');
+        $path = storage_path('app/seeders/CCS-with-abstract.xlsx');
         $spreadsheet = IOFactory::load($path);
-        $sheet       = $spreadsheet->getActiveSheet();
-        $rows        = $sheet->toArray();
+        $sheet = $spreadsheet->getActiveSheet();
+        $rows = $sheet->toArray();
 
         // Remove header
         array_shift($rows);
 
         $inserted = 0;
-        $skipped  = 0;
+        $skipped = 0;
 
         foreach ($rows as $row) {
             [$biblionumber, $title, $author, $year, $abstract, $note] = array_pad($row, 6, null);
@@ -27,12 +27,14 @@ class ArchivedDocumentSeeder extends Seeder
             // Skip if no title
             if (empty(trim((string) $title))) {
                 $skipped++;
+
                 continue;
             }
 
             // Skip if no valid year (academic_year is NOT NULL)
-            if (!is_numeric($year)) {
+            if (! is_numeric($year)) {
                 $skipped++;
+
                 continue;
             }
 
@@ -43,14 +45,14 @@ class ArchivedDocumentSeeder extends Seeder
             }
 
             DB::table('archived_documents')->insert([
-                'team_id'       => null,
-                'title'         => trim((string) $title),
-                'abstract'      => $abstract ? trim((string) $abstract) : null,
+                'team_id' => null,
+                'title' => trim((string) $title),
+                'abstract' => $abstract ? trim((string) $abstract) : null,
                 'academic_year' => (int) $year,
-                'program'       => $program,
-                'file_name'     => null,
-                'file_path'     => '',
-                'file_size'     => null,
+                'program' => $program,
+                'file_name' => null,
+                'file_path' => '',
+                'file_size' => null,
             ]);
 
             $inserted++;
