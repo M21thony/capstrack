@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\OllamaSSHClient;
 use App\Services\SimilarityService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -25,6 +26,9 @@ class DuplicationController extends Controller
         $path = null;
 
         try {
+            // 0. Warm up Ollama — loads model into GPU before real requests
+            app(OllamaSSHClient::class)->warmup();
+
             // 1. Save uploaded PDF temporarily
             $path     = $request->file('document')->store('temp-uploads');
             $fullPath = Storage::path($path);
@@ -48,10 +52,10 @@ class DuplicationController extends Controller
             // 6. Clean up temp file
             Storage::delete($path);
 
-            // 7. Determine overall verdict from the top match
+            // 7. Determine overall verdict from top match score
             $topScore = $matches[0]['score'] ?? 0;
-            $verdict  = $topScore >= 70 ? 'High Similarity'
-                      : ($topScore >= 40 ? 'Moderate Similarity' : 'Passed');
+            $verdict  = $topScore >= 65 ? 'High Similarity'
+                    : ($topScore >= 55 ? 'Moderate Similarity' : 'Passed');
 
             return response()->json([
                 'success'     => true,
@@ -72,7 +76,6 @@ class DuplicationController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            // Clean up temp file even on failure
             if ($path) {
                 Storage::delete($path);
             }

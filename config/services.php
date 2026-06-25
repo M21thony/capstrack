@@ -47,7 +47,8 @@ return [
     ],
 
     'ollama' => [
-    'model' => env('OLLAMA_MODEL', 'qwen2.5'),
+        'model'       => env('OLLAMA_MODEL', 'qwen2.5:3B'),
+        'embed_model' => env('OLLAMA_EMBED_MODEL', 'nomic-embed-text'),
     ],
 
     'ssh_tunnel' => [

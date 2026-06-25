@@ -20,6 +20,7 @@ class OllamaSSHClient
         }
 
         $ssh = new SSH2($host, $port);
+        $ssh->setTimeout(300); // 5 min — allows cold model load
         $key = PublicKeyLoader::load(file_get_contents($keyPath));
 
         if (!$ssh->login($user, $key)) {
@@ -29,7 +30,26 @@ class OllamaSSHClient
         return $ssh;
     }
 
-    // ── Text generation ───────────────────────────────────
+    // ── Warmup — loads model into GPU memory before real requests ─────
+    public function warmup(): void
+    {
+        try {
+            $ssh     = $this->makeConnection();
+            $payload = json_encode([
+                'model'   => config('services.ollama.model', 'qwen2.5:3B'),
+                'prompt'  => 'hi',
+                'stream'  => false,
+                'options' => ['num_predict' => 1],
+            ]);
+            $this->runCurl($ssh, $payload, '/api/generate');
+            $ssh->disconnect();
+            Log::info('Ollama warmup complete.');
+        } catch (\Exception $e) {
+            Log::warning('Ollama warmup failed', ['error' => $e->getMessage()]);
+        }
+    }
+
+    // ── Text generation ───────────────────────────────────────────────
     public function generate(string $prompt): string
     {
         $ssh   = $this->makeConnection();
@@ -45,7 +65,7 @@ class OllamaSSHClient
             ],
         ]);
 
-        $output = $this->runCurl($ssh, $payload, '/api/generate');
+        $output  = $this->runCurl($ssh, $payload, '/api/generate');
         $ssh->disconnect();
 
         $decoded = json_decode(trim($output), true);
@@ -59,19 +79,11 @@ class OllamaSSHClient
     }
 
     // ── Embedding generation via nomic-embed-text ─────────────────────
-    /**
-     * Generate a vector embedding for the given text.
-     * Uses the /api/embeddings endpoint with nomic-embed-text.
-     *
-     * @param  string  $text  The text to embed (title + abstract recommended)
-     * @return float[]        A float array of ~768 dimensions
-     */
     public function embed(string $text): array
     {
         $ssh   = $this->makeConnection();
         $model = config('services.ollama.embed_model', 'nomic-embed-text');
 
-        // Truncate to avoid token limits — nomic-embed-text supports ~8192 tokens
         $truncated = mb_substr($text, 0, 4000);
 
         $payload = json_encode([
@@ -79,7 +91,7 @@ class OllamaSSHClient
             'prompt' => $truncated,
         ]);
 
-        $output = $this->runCurl($ssh, $payload, '/api/embeddings');
+        $output  = $this->runCurl($ssh, $payload, '/api/embeddings');
         $ssh->disconnect();
 
         $decoded = json_decode(trim($output), true);
@@ -89,7 +101,7 @@ class OllamaSSHClient
             throw new \Exception('Failed to get embedding from Ollama. Raw: ' . substr($output, 0, 300));
         }
 
-        return $decoded['embedding']; // array of floats
+        return $decoded['embedding'];
     }
 
     // ── Shared cURL runner via SSH ────────────────────────────────────
@@ -99,15 +111,15 @@ class OllamaSSHClient
         $tmpFile = 'ollama_' . uniqid() . '.json';
 
         $command = 'powershell -Command "'
-                . '$bytes = [System.Convert]::FromBase64String(\''. $encoded .'\'); '
-                . '$tmp = \"$env:TEMP\\' . $tmpFile . '\"; '
-                . '[System.IO.File]::WriteAllBytes($tmp, $bytes); '
-                . '$r = curl.exe -s --max-time 180 -X POST http://localhost:11434' . $endpoint . ' '  // ← added --max-time 180
-                . '-H \"Content-Type: application/json\" '
-                . '--data-binary \"@$tmp\"; '
-                . 'Remove-Item $tmp; '
-                . 'Write-Output $r'
-                . '"';
+                 . '$bytes = [System.Convert]::FromBase64String(\'' . $encoded . '\'); '
+                 . '$tmp = \"$env:TEMP\\' . $tmpFile . '\"; '
+                 . '[System.IO.File]::WriteAllBytes($tmp, $bytes); '
+                 . '$r = curl.exe -s --max-time 240 -X POST http://localhost:11434' . $endpoint . ' '
+                 . '-H \"Content-Type: application/json\" '
+                 . '--data-binary \"@$tmp\"; '
+                 . 'Remove-Item $tmp -ErrorAction SilentlyContinue; '
+                 . 'Write-Output $r'
+                 . '"';
 
         $output = $ssh->exec($command);
 
