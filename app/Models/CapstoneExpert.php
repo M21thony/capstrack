@@ -3,8 +3,10 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Str;
 
 #[Fillable([
     'email',
@@ -21,7 +23,7 @@ use Illuminate\Notifications\Notifiable;
 ])]
 class CapstoneExpert extends Authenticatable
 {
-    use Notifiable;
+    use HasFactory, Notifiable;
 
     protected $primaryKey = 'expert_id';
 
@@ -49,7 +51,14 @@ class CapstoneExpert extends Authenticatable
 
     public function getStatusAttribute(): string
     {
-        return $this->approved_status ? 'approved' : 'pending';
+        if ($this->approved_status) {
+            return 'approved';
+        }
+        if (! is_null($this->rejection_reason) && $this->rejection_reason !== '') {
+            return 'rejected';
+        }
+
+        return 'pending';
     }
 
     public function getSpecializationAttribute(): string
@@ -64,12 +73,22 @@ class CapstoneExpert extends Authenticatable
         return $value ?? 4;
     }
 
-    public function getExpertiseAttribute(): array
+    // Removed getExpertiseAttribute accessor to allow direct relationship access
+
+    public function avatarInitials(): string
     {
-        if ($this->relationLoaded('expertise')) {
-            return $this->getRelationValue('expertise')->pluck('expertise_field')->toArray();
+        $first = Str::substr($this->first_name ?? '', 0, 1);
+        $last = Str::substr($this->last_name ?? '', 0, 1);
+
+        if ($first !== '' || $last !== '') {
+            return strtoupper($first.$last);
         }
 
-        return [];
+        return Str::substr($this->email ?? 'E', 0, 2);
+    }
+
+    public function getNameAttribute(): string
+    {
+        return trim(($this->first_name ?? '').' '.($this->last_name ?? ''));
     }
 }

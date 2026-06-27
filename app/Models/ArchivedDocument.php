@@ -7,7 +7,8 @@ use Illuminate\Database\Eloquent\Model;
 class ArchivedDocument extends Model
 {
     protected $primaryKey = 'archived_id';
-    public $timestamps    = false;
+
+    public $timestamps = false;
 
     protected $fillable = [
         'team_id',

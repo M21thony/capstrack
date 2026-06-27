@@ -13,10 +13,11 @@
 
   <!-- Click to open the side panel -->
   <div class="sidebar-user" id="ep-trigger" onclick="openExpertProfile()">
-    <div class="avatar">{{ strtoupper(substr(auth('expert')->user()?->first_name ?? 'U', 0, 1) . substr(auth('expert')->user()?->last_name ?? '', 0, 1)) }}</div>
+    <div class="avatar">{{ strtoupper(substr(auth('expert')->user()?->email ?? 'E', 0, 2)) }}</div>
+
     <div class="user-info">
       <div class="user-name">{{ auth('expert')->user()?->first_name }} {{ auth('expert')->user()?->last_name }}</div>
-      <div class="user-role">{{ ucfirst(auth('expert')->user()?->roles->pluck('role_name')->join(', ', ' & ')) ?? 'Expert' }} â¢ Active</div>
+      <div class="user-role">{{ ucfirst(auth('expert')->user()?->roles->pluck('role_name')->join(', ', ' & ')) ?? 'Expert' }} Active</div>
     </div>
     <div class="status-dot"></div>
     <div class="su-caret">
@@ -26,3 +27,4 @@
 
   @include('instructor.partials.sidebar-nav', ['currentPage' => $currentPage ?? ''])
 </div>
+@include('partials.idle-timeout')

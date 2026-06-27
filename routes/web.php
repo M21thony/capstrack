@@ -2,21 +2,26 @@
 
 use App\Http\Controllers\AccountRequestController;
 use App\Http\Controllers\AdminApprovalController;
+use App\Http\Controllers\AdminExpertsController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DuplicationController;
 use App\Http\Controllers\ExpertController;
+use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\PersonalInfoController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RecruitmentController;
 use App\Http\Controllers\TeamController;
-use App\Http\Controllers\DuplicationController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth:expert', 'expert.admin'])->prefix('admin')->name('admin.')->group(function () {
-    Route::get('/dashboard', [AdminApprovalController::class, 'index'])->name('dashboard');
+    Route::view('/dashboard', 'admin.dashboard')->name('dashboard');
+    Route::get('/experts', [AdminExpertsController::class, 'index'])->name('experts');
     Route::get('/approval', [AdminApprovalController::class, 'index'])->name('approval');
-    Route::post('/approval/{expert}/approve', [AdminApprovalController::class, 'approve'])->name('approval.approve');
-    Route::post('/approval/{expert}/reject', [AdminApprovalController::class, 'reject'])->name('approval.reject');
-    Route::view('/experts', 'admin.experts')->name('experts');
+    Route::post('/approval/{expert_id}/approve', [AdminApprovalController::class, 'approve'])->name('approval.approve');
+    Route::post('/approval/{expert_id}/reject', [AdminApprovalController::class, 'reject'])->name('approval.reject');
+    Route::post('/turnover', [AdminExpertsController::class, 'transferRights'])->name('turnover');
+    Route::delete('/experts/{expert}', [AdminExpertsController::class, 'destroy'])->name('experts.destroy');
     Route::view('/panel_assignment', 'admin.panel_assignment')->name('panel_assignment');
     Route::view('/analytics', 'admin.analytics')->name('analytics');
     Route::view('/financial', 'admin.financial')->name('financial');
@@ -50,6 +55,7 @@ Route::post('/login/google', [AuthController::class, 'initiateGoogleLogin'])->na
 Route::get('/login/google/callback', [AuthController::class, 'handleGoogleCallback'])->name('login.google.callback');
 Route::get('/login/google/mock', [AuthController::class, 'showMockLogin'])->name('login.google.mock');
 Route::post('/login/google/mock', [AuthController::class, 'handleMockLogin'])->name('login.google.mock.post');
+Route::get('/login/rejected', [AuthController::class, 'rejected'])->name('login.rejected');
 Route::get('/request-account', [AccountRequestController::class, 'create'])->name('account.request');
 Route::post('/request-account', [AccountRequestController::class, 'store'])->name('account.request.store');
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
@@ -70,7 +76,11 @@ Route::middleware(['auth'])->group(function () {
     Route::put('/recruitment/{recruitment}', [RecruitmentController::class, 'update'])->name('recruitment.update');
     Route::delete('/recruitment/{recruitment}', [RecruitmentController::class, 'destroy'])->name('recruitment.destroy');
 
-    Route::get('/duplication',        [DuplicationController::class, 'index'])->name('duplication.index');
+    Route::post('/invitations', [InvitationController::class, 'store'])->name('invitations.store');
+    Route::post('/invitations/{invitation}/accept', [InvitationController::class, 'accept'])->name('invitations.accept');
+    Route::post('/invitations/{invitation}/decline', [InvitationController::class, 'decline'])->name('invitations.decline');
+
+    Route::get('/duplication', [DuplicationController::class, 'index'])->name('duplication.index');
     Route::post('/duplication/check', [DuplicationController::class, 'check'])->name('duplication.check');
 
     Route::prefix('student')->group(function () {
@@ -80,8 +90,8 @@ Route::middleware(['auth'])->group(function () {
 
         Route::middleware(['profile.complete'])->group(function () {
             Route::redirect('/student', '/student/dashboard');
-            Route::view('/dashboard', 'student.dashboard')->name('student.dashboard');
-            Route::get('/team', [TeamController::class, 'show'])->name('student.team');
+            Route::get('/dashboard', [DashboardController::class, 'index'])->name('student.dashboard');
+            Route::get('/team', [TeamController::class, 'index'])->name('student.team');
             Route::view('/experts', 'student.experts')->name('student.experts');
             Route::view('/submission', 'student.submission')->name('student.submission');
             Route::view('/review', 'student.review')->name('student.review');

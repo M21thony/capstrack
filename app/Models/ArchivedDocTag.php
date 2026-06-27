@@ -7,7 +7,8 @@ use Illuminate\Database\Eloquent\Model;
 class ArchivedDocTag extends Model
 {
     protected $primaryKey = 'tag_id';
-    public $timestamps    = false;
+
+    public $timestamps = false;
 
     protected $fillable = [
         'tag_name',
