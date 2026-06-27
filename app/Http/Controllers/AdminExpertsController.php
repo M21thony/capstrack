@@ -30,6 +30,7 @@ class AdminExpertsController extends Controller
             ->get();
         // Optionally eager load relationships if needed by the client
         $experts->load('expertise', 'roles');
+
         return response()->json(['success' => true, 'data' => $experts]);
     }
 

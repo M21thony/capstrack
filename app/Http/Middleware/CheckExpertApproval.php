@@ -21,18 +21,6 @@ class CheckExpertApproval
             return $next($request);
         }
 
-        if (! $expert->approved_status) {
-            if ($request->expectsJson()) {
-                return response()->json([
-                    'success' => false,
-                    'status' => 'pending_approval',
-                    'message' => 'Your account is pending approval.',
-                ], 403);
-            }
-
-            return view('auth.pending-approval');
-        }
-
         return $next($request);
     }
 }

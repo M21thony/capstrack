@@ -39,13 +39,18 @@
         <option value="pending">Pending Only</option>
         <option value="all">All (incl. reviewed)</option>
       </select>
-      <span class="pending-count" id="pending-count">{{ $instructors->where('status', 'pending')->count() }} pending accounts</span>
+      <span class="pending-count" id="pending-count">{{ $pendingCount }} pending accounts</span>
     </div>
 
     <!-- Card list -->
     <div class="gap-12" id="card-list">
       @forelse ($instructors as $instructor)
-      <div class="expert-card" data-id="{{ $instructor->expert_id }}" data-role="{{ ucfirst($instructor->specialization) }}" data-status="{{ $instructor->status }}" data-name="{{ $instructor->first_name }} {{ $instructor->last_name }}" data-dept="{{ $instructor->department }}">
+      @php
+        $specList = is_array($instructor->specialization) ? $instructor->specialization : (array) $instructor->specialization;
+        $expertiseList = is_array($instructor->expertise) ? $instructor->expertise : [];
+        $primaryRole = !empty($specList) ? ucfirst($specList[0]) : 'N/A';
+      @endphp
+      <div class="expert-card" data-id="{{ $instructor->expert_id }}" data-role="{{ $primaryRole }}" data-status="{{ $instructor->status }}" data-name="{{ $instructor->first_name }} {{ $instructor->last_name }}" data-dept="{{ $instructor->department }}">
         <div style="display:flex;align-items:flex-start;gap:16px">
           <div class="expert-av" style="background:linear-gradient(135deg,#1d4ed8,#7c3aed);width:52px;height:52px;border-radius:14px;font-size:15px">
             {{ strtoupper(substr($instructor->first_name ?? 'I', 0, 1) . substr($instructor->last_name ?? '', 0, 1)) }}
@@ -57,24 +62,29 @@
               @if($instructor->status === 'approved')
                 <span class="badge badge-green" id="status-badge-{{ $instructor->expert_id }}">Approved</span>
               @elseif($instructor->status === 'rejected')
-                <span class="badge badge-red" id="status-badge-{{ $instructor->expert_id }}">Rejected</span>
+                <span class="badge badge-red" id="status-badge-{{ $instructor->expert_id }}">Rejected @if(isset($instructor->reject_attempts) && $instructor->reject_attempts > 0)({{ $instructor->reject_attempts }}/3)@endif</span>
               @else
                 <span class="badge badge-amber" id="status-badge-{{ $instructor->expert_id }}">Pending</span>
               @endif
-              <span class="expert-reg">{{ $instructor->created_at ? $instructor->created_at->format('M d, Y') : 'N/A' }}</span>
+              <span class="expert-reg">{{ $instructor->created_at ? \Carbon\Carbon::parse($instructor->created_at)->format('M d, Y') : 'N/A' }}</span>
             </div>
             <div class="expert-email" style="margin-bottom:10px">{{ $instructor->email }}</div>
             <div class="tags-wrap">
-              @if(is_array($instructor->expertise))
-                @foreach($instructor->expertise as $tag)
+              @foreach($expertiseList as $tag)
+                @if(is_string($tag) && trim($tag) !== '')
                   <span class="atag atag-web">{{ $tag }}</span>
-                @endforeach
-              @endif
+                @elseif(is_object($tag) && isset($tag->expertise_field))
+                  <span class="atag atag-web">{{ $tag->expertise_field }}</span>
+                @endif
+              @endforeach
             </div>
             <div class="info-block">
-              <span><strong>Role</strong><em>{{ ucfirst($instructor->specialization) }}</em></span>
+              <span><strong>Role</strong><em>{{ implode(', ', array_map('ucfirst', $specList)) ?: 'N/A' }}</em></span>
               <span><strong>Max Teams</strong><em>{{ $instructor->max_teams }}</em></span>
               <span><strong>Department</strong><em>{{ $instructor->department }}</em></span>
+              @if($instructor->status === 'rejected' && isset($instructor->reject_attempts) && $instructor->reject_attempts > 0)
+              <span><strong>Attempts</strong><em>{{ $instructor->reject_attempts }}/3</em></span>
+              @endif
             </div>
             <div class="card-actions" id="actions-{{ $instructor->expert_id }}">
 @if($instructor->status === 'pending')
@@ -145,7 +155,7 @@
             <div class="modal-detail-key">Date Registered</div>
             <div class="modal-detail-val date" id="rm-date">April 3, 2026</div>
           </div>
-          <div class="modal-detail-item full">
+    <div class="modal-detail-item full">
             <div class="modal-detail-key">CSPC Email Address</div>
             <div class="modal-detail-val email" id="rm-email2">jose.delacruz@cspc.edu.ph</div>
           </div>
@@ -195,7 +205,8 @@
           Reject
         </button>
 
-        <button class="btn btn-success" id="rm-approve-btn" onclick="openConfirmApproveFromReview()" style="font-size:12px;padding:7px 18px">
+<button class="btn btn-success" id="rm-approve-btn" type="button" onclick="openConfirmApproveFromReview()" style="font-size:12px;padding:7px 18px">
+
           <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
           Approve Account
         </button>
@@ -243,24 +254,28 @@
 <script>
 // ── DATA ──────────────────────────────────────────────────────────────────
 const experts = {
-  @foreach($instructors as $instructor)
+@foreach($instructors as $instructor)
+@php
+  $specList = is_array($instructor->specialization) ? $instructor->specialization : (array) $instructor->specialization;
+  $expertiseList = is_array($instructor->expertise) ? $instructor->expertise : [];
+  $primaryRole = !empty($specList) ? ucfirst($specList[0]) : 'N/A';
+@endphp
   {{ $instructor->expert_id }}: {
     initials: '{{ strtoupper(substr($instructor->first_name ?? "I", 0, 1) . substr($instructor->last_name ?? "", 0, 1)) }}',
     grad: 'linear-gradient(135deg,#1d4ed8,#7c3aed)',
     name: '{{ $instructor->first_name }} {{ $instructor->last_name }}',
     email: '{{ $instructor->email }}',
-    date: '{{ $instructor->created_at ? $instructor->created_at->format("F d, Y") : "N/A" }}',
-    role: '{{ ucfirst($instructor->specialization) }}',
+    date: '{{ $instructor->created_at ? \Carbon\Carbon::parse($instructor->created_at)->format("F d, Y") : "N/A" }}',
+    role: '{{ $primaryRole }}',
     maxTeams: {{ $instructor->max_teams ?? 0 }},
     dept: '{{ $instructor->department }}',
     tags: [
-      @if(is_array($instructor->expertise))
-        @foreach($instructor->expertise as $tag)
-          {label: '{{ $tag }}', cls: 'atag-web'},
-        @endforeach
-      @endif
+      @foreach($expertiseList as $tag)
+        {label: '{{ is_string($tag) ? $tag : ($tag->expertise_field ?? $tag) }}', cls: 'atag-web'},
+      @endforeach
     ],
-    status: '{{ $instructor->status }}'
+    status: '{{ $instructor->status }}',
+    rejectAttempts: {{ $instructor->reject_attempts ?? 0 }}
   },
   @endforeach
 };
@@ -473,34 +488,30 @@ function confirmInlineReject(id){
 function executeAction(id, type, reasonOverride){
   if(!id || !type) return;
 
-  const url = type === 'approve'
-    ? `/admin/approval/${id}/approve`
-    : `/admin/approval/${id}/reject`;
-
-  let reason = null;
+  let body = null;
   if(type === 'reject'){
-    if(typeof reasonOverride === 'string'){
-      reason = reasonOverride;
-    } else {
-      const el = document.getElementById(`reject-reason-inline-${id}`);
-      reason = el ? el.value : '';
-    }
+    const reason = typeof reasonOverride === 'string' ? reasonOverride : '';
+    body = JSON.stringify({ reason });
   }
 
   setActionBusy(id, type, true);
 
-  fetch(url, {
+  // basic front-end lock so user can't double-submit rapidly
+  const cardEl = document.querySelector(`.expert-card[data-id="${id}"]`);
+  if(cardEl) cardEl.style.pointerEvents = 'none';
+
+  fetch(`/admin/approval/${id}/${type}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'X-CSRF-TOKEN': '{{ csrf_token() }}',
       'Accept': 'application/json'
     },
-    body: type === 'reject' ? JSON.stringify({ reason: reason }) : null
+    body: body
   })
   .then(response => {
     if (!response.ok) throw new Error('Action failed.');
-    return response.json();
+    return response.json().catch(() => ({}));
   })
   .then(()=>{
     applyDecision(id, type);
@@ -554,12 +565,11 @@ function applyDecision(id, type){
   updatePendingCount();
 
   // Check if should hide under current filter
+  // If current view is Pending Only, remove immediately after decision
   const statusFilter = document.getElementById('status-filter').value;
   if(statusFilter === 'pending'){
-    setTimeout(()=>{
-      card.classList.add('removing');
-      setTimeout(()=>{ card.style.display='none'; filterCards(); }, 250);
-    }, 1800);
+    card.classList.add('removing');
+    setTimeout(()=>{ card.style.display='none'; filterCards(); }, 250);
   }
 }
 
@@ -568,19 +578,27 @@ function showToast(type, msg){
   const wrap = document.getElementById('toast-wrap');
   const t = document.createElement('div');
   t.className = `toast ${type==='approve'?'success':'danger'}`;
+  t.style.pointerEvents = 'auto';
+
   const checkSvg = type==='approve'
     ? '<polyline points="20 6 9 17 4 12"/>'
     : '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>';
+
   t.innerHTML=`
     <div class="toast-icon">
       <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5">${checkSvg}</svg>
     </div>
-    <span>${msg}</span>`;
+    <span>${msg}</span>
+    <button type="button" aria-label="Dismiss" onclick="this.parentElement && this.parentElement.remove()" style="margin-left:10px;background:transparent;border:none;color:inherit;cursor:pointer;opacity:.7">✕</button>`;
+
   wrap.appendChild(t);
+
+  const DURATION_MS = 5200;
   setTimeout(()=>{
-    t.style.animation='toastOut .3s ease forwards';
-    setTimeout(()=>t.remove(), 300);
-  }, 5200);
+    t.style.animation='toastOut .35s ease forwards';
+    setTimeout(()=>t.remove(), 360);
+  }, DURATION_MS);
+
 }
 
 // ── ESC KEY ───────────────────────────────────────────────────────────────

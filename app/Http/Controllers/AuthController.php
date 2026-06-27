@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AccountRequest;
 use App\Models\CapstoneExpert;
 use App\Models\Student;
 use Illuminate\Http\JsonResponse;
@@ -170,14 +171,30 @@ class AuthController extends Controller
             $expert = CapstoneExpert::where('email', $email)->first();
 
             if ($expert) {
-                if (! $expert->approved_status && ! $expert->is_admin) {
-                    return view('auth.pending-approval');
-                }
                 Auth::guard('expert')->login($expert);
 
                 $redirectUrl = $expert->is_admin ? '/admin/dashboard' : '/instructor/dashboard';
 
                 return redirect($redirectUrl);
+            }
+
+            $accountRequest = AccountRequest::where('email', $email)->first();
+
+            if ($accountRequest) {
+                if ($accountRequest->status === 'pending') {
+                    return view('auth.pending-approval', ['accountRequest' => $accountRequest]);
+                }
+
+                if ($accountRequest->status === 'rejected') {
+                    $attempts = (int) $accountRequest->reject_attempts;
+                    $cooldownUntil = $accountRequest->reject_cooldown_until;
+
+                    if ($attempts >= 3 && $cooldownUntil && now()->lt($cooldownUntil)) {
+                        return redirect('/request-account?email='.urlencode($email).'&blocked=cooldown');
+                    }
+
+                    return redirect('/login/rejected?email='.urlencode($email));
+                }
             }
 
             return redirect('/request-account?email='.urlencode($email).'&first_name='.urlencode($firstName).'&last_name='.urlencode($lastName));
@@ -357,5 +374,21 @@ class AuthController extends Controller
         }
 
         return redirect('/');
+    }
+
+    public function rejected(Request $request)
+    {
+        $email = $request->query('email');
+
+        if (! $email) {
+            return redirect('/login');
+        }
+
+        $accountRequest = AccountRequest::where('email', $email)->first();
+
+        return view('instructor.rejected', [
+            'accountRequest' => $accountRequest,
+            'email' => $email,
+        ]);
     }
 }
