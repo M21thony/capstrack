@@ -47,7 +47,7 @@ return [
     ],
 
     'ollama' => [
-        'model'       => env('OLLAMA_MODEL', 'qwen2.5:3B'),
+        'model'       => env('OLLAMA_MODEL', 'qwen2.5:7B'),
         'embed_model' => env('OLLAMA_EMBED_MODEL', 'nomic-embed-text'),
     ],
 

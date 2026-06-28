@@ -20,7 +20,7 @@ class OllamaSSHClient
         }
 
         $ssh = new SSH2($host, $port);
-        $ssh->setTimeout(300); // 5 min — allows cold model load
+        $ssh->setTimeout(120); // 2 min — reasonable for 7B model
         $key = PublicKeyLoader::load(file_get_contents($keyPath));
 
         if (!$ssh->login($user, $key)) {
@@ -60,7 +60,7 @@ class OllamaSSHClient
             'prompt'  => $prompt,
             'stream'  => false,
             'options' => [
-                'num_predict' => 2048,
+                'num_predict' => 1024,
                 'temperature' => 0.2,
             ],
         ]);

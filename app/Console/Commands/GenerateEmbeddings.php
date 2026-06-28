@@ -12,20 +12,36 @@ class GenerateEmbeddings extends Command
     protected $description = 'Generate vector embeddings for all archived documents';
 
     private array $stopWords = [
-        // Generic system words
-        'proposed', 'computerized', 'system', 'management', 'records', 'using',
-        'based', 'web', 'online', 'automated', 'digital', 'application',
-        'information', 'technology', 'development', 'design', 'implementation',
-        'modified', 'integrated', 'centralized', 'electronic', 'mobile',
+        // Articles & prepositions
+        'a', 'an', 'the', 'of', 'for', 'and', 'or', 'in', 'to', 'is', 'are',
+        'with', 'that', 'this', 'on', 'at', 'by', 'from', 'it', 'its', 'be',
+        'as', 'was', 'were', 'has', 'have', 'had', 'do', 'does', 'did', 'not',
+        'its', 'their', 'our', 'your', 'his', 'her',
+
+        // Platform words — must match SimilarityService stop words
+        'web', 'mobile', 'desktop', 'online', 'electronic', 'digital',
+        'internet', 'android', 'ios', 'app', 'application', 'platform', 'portal',
+
+        // Generic capstone/academic words
+        'proposed', 'computerized', 'system', 'management', 'records', 'record',
+        'using', 'based', 'automated', 'implementation', 'development', 'design',
+        'modified', 'integrated', 'centralized', 'computer', 'computing',
+        'software', 'hardware', 'database', 'information', 'technology',
+        'generation', 'data', 'file', 'document', 'report', 'form',
+
         // Location noise
         'camarines', 'sur', 'nabua', 'cspc', 'iriga', 'city', 'colleges',
-        'polytechnic', 'philippines', 'bicol', 'naga',
-        // School noise
+        'polytechnic', 'philippines', 'bicol', 'naga', 'buhi', 'bato',
+        'rinconada', 'ocampo', 'polangui', 'albay', 'laguna', 'manila',
+
+        // School/dept noise
         'college', 'department', 'university', 'school', 'cict', 'bsit',
         'bscs', 'institute', 'campus', 'high', 'national', 'junior', 'senior',
+        'elementary', 'secondary', 'tertiary', 'academy', 'institute',
+
         // Common filler
-        'a', 'an', 'the', 'of', 'for', 'and', 'or', 'in', 'to', 'is',
-        'are', 'with', 'that', 'this', 'on', 'at', 'by', 'from',
+        'version', 'study', 'case', 'research', 'project', 'capstone',
+        'thesis', 'proposal', 'pre', 'post', 'new', 'old', 'local', 'global',
     ];
 
     public function handle(OllamaSSHClient $ollama): void
@@ -53,12 +69,11 @@ class GenerateEmbeddings extends Command
 
         foreach ($docs as $doc) {
             try {
-                // Clean title + abstract before embedding
                 $raw  = $doc->title . ' ' . ($doc->abstract ?? '');
                 $text = $this->cleanText($raw);
 
-                if (empty(trim($text))) {
-                    $text = $doc->title; // fallback to raw title
+                if (strlen(trim($text)) < 5) {
+                    $text = $this->cleanText($doc->title);
                 }
 
                 $text = mb_substr($text, 0, 4000);
@@ -88,11 +103,21 @@ class GenerateEmbeddings extends Command
 
     private function cleanText(string $text): string
     {
-        $words    = explode(' ', strtolower($text));
+        // Lowercase
+        $text = strtolower($text);
+
+        // Remove punctuation and slashes
+        $text = preg_replace('/[\/\\\,\.\(\)\[\]\{\}:;!?"\'\-_]/', ' ', $text);
+
+        // Split and filter
+        $words    = explode(' ', $text);
         $filtered = array_filter(
             $words,
-            fn($w) => !in_array(trim($w, '.,/()'), $this->stopWords) && strlen(trim($w)) > 2
+            fn($w) => !in_array(trim($w), $this->stopWords)
+                   && strlen(trim($w)) > 2
+                   && !is_numeric(trim($w))
         );
-        return implode(' ', $filtered);
+
+        return implode(' ', array_values($filtered));
     }
 }
