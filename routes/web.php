@@ -1,12 +1,12 @@
 <?php
 
-use App\Http\Controllers\AccountRequestController;
 use App\Http\Controllers\AdminApprovalController;
 use App\Http\Controllers\AdminExpertsController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DuplicationController;
 use App\Http\Controllers\ExpertController;
+use App\Http\Controllers\Instructor\ScheduleController;
 use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\PersonalInfoController;
 use App\Http\Controllers\ProfileController;
@@ -18,8 +18,8 @@ Route::middleware(['auth:expert', 'expert.admin'])->prefix('admin')->name('admin
     Route::view('/dashboard', 'admin.dashboard')->name('dashboard');
     Route::get('/experts', [AdminExpertsController::class, 'index'])->name('experts');
     Route::get('/approval', [AdminApprovalController::class, 'index'])->name('approval');
-    Route::post('/approval/{expert}/approve', [AdminApprovalController::class, 'approve'])->name('approval.approve');
-    Route::post('/approval/{expert}/reject', [AdminApprovalController::class, 'reject'])->name('approval.reject');
+    Route::post('/approval/{expert_id}/approve', [AdminApprovalController::class, 'approve'])->name('approval.approve');
+    Route::post('/approval/{expert_id}/reject', [AdminApprovalController::class, 'reject'])->name('approval.reject');
     Route::post('/turnover', [AdminExpertsController::class, 'transferRights'])->name('turnover');
     Route::delete('/experts/{expert}', [AdminExpertsController::class, 'destroy'])->name('experts.destroy');
     Route::view('/panel_assignment', 'admin.panel_assignment')->name('panel_assignment');
@@ -55,8 +55,9 @@ Route::post('/login/google', [AuthController::class, 'initiateGoogleLogin'])->na
 Route::get('/login/google/callback', [AuthController::class, 'handleGoogleCallback'])->name('login.google.callback');
 Route::get('/login/google/mock', [AuthController::class, 'showMockLogin'])->name('login.google.mock');
 Route::post('/login/google/mock', [AuthController::class, 'handleMockLogin'])->name('login.google.mock.post');
-Route::get('/request-account', [AccountRequestController::class, 'create'])->name('account.request');
-Route::post('/request-account', [AccountRequestController::class, 'store'])->name('account.request.store');
+Route::get('/login/rejected', [AuthController::class, 'rejected'])->name('login.rejected');
+Route::get('/request-account', [ExpertController::class, 'showRequestForm'])->name('account.request');
+Route::post('/request-account', [ExpertController::class, 'storeRequest'])->name('account.request.store');
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 Route::prefix('expert')->group(function () {
@@ -106,3 +107,12 @@ Route::middleware(['auth'])->group(function () {
 
     Route::post('/profile/update', [ProfileController::class, 'update'])->name('profile.update');
 });
+Route::prefix('instructor/schedule')
+    ->middleware('auth:expert')
+    ->group(function () {
+        Route::get('slots', [ScheduleController::class, 'getSlots']);
+        Route::post('slots', [ScheduleController::class, 'addSlot']);
+        Route::patch('slots/{id}', [ScheduleController::class, 'updateSlot']);
+        Route::delete('slots/{id}', [ScheduleController::class, 'deleteSlot']);
+        Route::patch('slots/{id}/toggle', [ScheduleController::class, 'toggleAvailability']);
+    });

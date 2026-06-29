@@ -178,13 +178,34 @@ p {
         <line x1="9" y1="9" x2="15" y2="15"/>
       </svg>
     </div>
+    @php
+      $rejAttempts = (int) ($accountRequest?->reject_attempts ?? 0);
+      $maxRejects = 3;
+      $rejCooldownUntil = $accountRequest?->reject_cooldown_until;
+      $rejCooldownActive = $rejCooldownUntil && now()->lt($rejCooldownUntil);
+      $rejWaitSeconds = $rejCooldownActive ? now()->diffInSeconds($rejCooldownUntil) : null;
+      $rejRemaining = max(0, $maxRejects - $rejAttempts);
+    @endphp
+
     <h1>Account Request Rejected</h1>
     <p>We regret to inform you that your request for an instructor account on CapsTRACK has been rejected by the administrator.</p>
 
-    @if(Auth::guard('expert')->user()->rejection_reason)
+    <div style="display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:8px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);font-size:12px;color:#f59e0b;font-weight:600;margin-bottom:16px">
+      @if($rejAttempts >= $maxRejects)
+        @if($rejCooldownActive)
+          Attempt {{ $rejAttempts }}/{{ $maxRejects }} — Cooldown: {{ $rejWaitSeconds }}s remaining
+        @else
+          Attempt {{ $rejAttempts }}/{{ $maxRejects }} — Cooldown expired, you may retry
+        @endif
+      @else
+        Attempt {{ $rejAttempts }}/{{ $maxRejects }} — {{ $rejRemaining }} attempt{{ $rejRemaining !== 1 ? 's' : '' }} remaining
+      @endif
+    </div>
+
+    @if($accountRequest && $accountRequest->rejection_reason)
     <div class="reason-box">
       <div class="reason-title">Reason for Rejection</div>
-      <div class="reason-text">"{{ Auth::guard('expert')->user()->rejection_reason }}"</div>
+      <div class="reason-text">"{{ $accountRequest->rejection_reason }}"</div>
     </div>
     @else
     <div class="reason-box">
@@ -193,17 +214,12 @@ p {
     </div>
     @endif
 
-    <form action="{{ route('logout') }}" method="POST">
-      @csrf
-      <button type="submit" class="btn-logout">
-        <svg viewBox="0 0 24 24">
-          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-          <polyline points="16 17 21 12 16 7"/>
-          <line x1="21" y1="12" x2="9" y2="12"/>
-        </svg>
-        Sign Out
-      </button>
-    </form>
+    <div style="margin-top:24px">
+      <a href="{{ route('account.request') }}" class="btn-logout" style="display:inline-flex;align-items:center;gap:8px;text-decoration:none;">
+        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+        Request Account Again
+      </a>
+    </div>
   </div>
 </div>
 @endsection

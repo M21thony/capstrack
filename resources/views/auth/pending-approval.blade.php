@@ -148,11 +148,47 @@
       <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
     </div>
     <div class="title">Account Pending Approval</div>
-    <div class="subtitle">Your account request is awaiting administrator review. You will be notified via email once your request is processed.</div>
+
+    @php
+      $rejectAttempts = (int) ($accountRequest?->reject_attempts ?? 0);
+      $maxRejects = 3;
+      $cooldownUntil = $accountRequest?->reject_cooldown_until;
+      $cooldownActive = $cooldownUntil && now()->lt($cooldownUntil);
+      $waitSeconds = $cooldownActive ? now()->diffInSeconds($cooldownUntil) : null;
+      $attemptsRemaining = max(0, $maxRejects - $rejectAttempts);
+    @endphp
+
+    @if($rejectAttempts > 0)
+      @if($rejectAttempts < $maxRejects)
+        <div class="subtitle">Your request is awaiting administrator review. Attempt <b>{{ $rejectAttempts }}</b>/{{ $maxRejects }} — {{ $attemptsRemaining }} attempt{{ $attemptsRemaining !== 1 ? 's' : '' }} remaining before cooldown.</div>
+      @else
+        @if($cooldownActive)
+          <div class="subtitle">Maximum attempts reached ({{ $rejectAttempts }}/{{ $maxRejects }}). Cooldown active — you can submit again in <b>{{ $waitSeconds }}</b> seconds.</div>
+        @else
+          <div class="subtitle">Maximum attempts reached ({{ $rejectAttempts }}/{{ $maxRejects }}). Cooldown expired — you may submit a new request now.</div>
+        @endif
+      @endif
+    @else
+      <div class="subtitle">Your account request is awaiting administrator review. You will be notified via email once your request is processed.</div>
+    @endif
+
     <div class="info-box">
       <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
       Typical review time: 1–3 business days
     </div>
+
+    @if($rejectAttempts > 0)
+      <div style="margin: 0 auto 16px; max-width: 360px;">
+        <a href="{{ route('account.request') }}" class="btn btn-primary" style="text-decoration:none; width:100%; justify-content:center;">
+          <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:8px;">
+            <path d="M12 5v14"/>
+            <path d="M5 12h14"/>
+          </svg>
+          Request account again
+        </a>
+      </div>
+    @endif
+
     <form method="POST" action="{{ route('logout') }}">
       @csrf
       <button type="submit" class="btn btn-primary">

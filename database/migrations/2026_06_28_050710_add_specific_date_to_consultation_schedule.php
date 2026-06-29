@@ -9,11 +9,10 @@ return new class extends Migration
     /**
      * Run the migrations.
      */
-    public function up(): void
+    public function up()
     {
-        Schema::create('account_requests', function (Blueprint $table) {
-            $table->id();
-            $table->timestamps();
+        Schema::table('consultation_schedule', function (Blueprint $table) {
+            $table->date('specific_date')->nullable()->after('available_date');
         });
     }
 
@@ -22,6 +21,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('account_requests');
+        Schema::table('consultation_schedule', function (Blueprint $table) {
+            //
+        });
     }
 };

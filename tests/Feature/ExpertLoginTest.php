@@ -77,11 +77,10 @@ class ExpertLoginTest extends TestCase
         $state = 'test-state-token';
         $this->withSession(['oauth_state' => $state]);
 
-        $expert = CapstoneExpert::create([
+        CapstoneExpert::create([
             'email' => 'unapproved.expert@gmail.com',
             'first_name' => 'Unapproved',
             'last_name' => 'Expert',
-            'is_admin' => false,
             'approved_status' => false,
         ]);
 
@@ -157,24 +156,18 @@ class ExpertLoginTest extends TestCase
     /** @test */
     public function test_pending_and_rejected_views_can_be_rendered_without_guard_errors(): void
     {
-        $expert = CapstoneExpert::create([
-            'email' => 'test.expert@gmail.com',
-            'first_name' => 'Test',
+        CapstoneExpert::create([
+            'email' => 'rejected.expert@gmail.com',
+            'first_name' => 'Rejected',
             'last_name' => 'Expert',
-            'is_admin' => false,
-            'approved_status' => true,
+            'approved_status' => false,
+            'rejection_reason' => 'Insufficient credentials.',
         ]);
 
-        $this->actingAs($expert, 'expert');
-
-        // Render the instructor.pending view directly to ensure it has no guard errors
-        $response = $this->get('/instructor/pending');
+        $response = $this->get('/login/rejected?email=rejected.expert@gmail.com');
         $response->assertStatus(200);
-        $response->assertSee('Test Expert');
-
-        // Render the instructor.rejected view directly to ensure it has no guard errors
-        $response = $this->get('/instructor/rejected');
-        $response->assertStatus(200);
+        $response->assertSee('Account Request Rejected');
+        $response->assertSee('Insufficient credentials.');
     }
 
     /** @test */

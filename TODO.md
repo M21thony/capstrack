@@ -1,12 +1,14 @@
-# TODO - Admin approval/reject email notification fix
+- [x] Update request-account UI: Middle Initial -> Middle Name (review + submit payload formatting)
 
-- [x] Update `AdminApprovalController` to send approval/rejection email to the correct requestor account (`AccountRequest`) instead of directly to `CapstoneExpert`.
+- [x] Update request-account UI: Department -> Course (dropdown options: BSIT, BSCS, BSIS, BLIS; review + submit payload)
 
-- [x] Ensure approve/reject decision is applied to the correct status fields used by UI (`status` vs `approved_status`).
+- [x] Update request-account UI: Unlimited expertise tagging via input + Add button (prevent duplicates; becomes selected chip; included in submit + review)
+
+- [x] Update AccountRequestController: validate/store `course` request key but save into existing `department` DB column (DB column remains department)
 
 
-- [x] Keep reject reason passed into `InstructorRejected` mailable.
-- [x] Add guard for missing email before sending.
 
-- [ ] Run basic checks/tests (at least `php artisan test` if available).
+- [ ] Smoke test: load page, add custom expertise (Add button), submit, verify validation + stored fields
+
+
 

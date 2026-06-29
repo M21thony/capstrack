@@ -1,10 +1,20 @@
 @php
     $admin = Auth::guard('expert')->user();
-    $initials = $admin ? $admin->avatarInitials() : 'AD';
-    $adminName = $admin ? $admin->name : 'System Administrator';
-    $adminEmail = $admin ? $admin->email : '';
+
+    // Use the email of the currently logged-in admin/expert account.
+    // (This is the Gmail profile email they log in with.)
+    $adminEmail = $admin?->email;
+    $adminAvatar = $adminEmail ?: 'system';
+    $adminName = $admin ? trim(($admin->first_name ?? '').' '.($admin->last_name ?? '')) : 'System Administrator';
+
+    // Render actual stored profile picture for the logged-in admin/expert.
+    $adminProfilePicture = $admin ? ($admin->profile_picture ?: null) : null;
+
     $currentRoute = Route::currentRouteName();
 @endphp
+
+
+
 
 <div class="sidebar">
   <div class="sidebar-brand">
@@ -17,7 +27,31 @@
     </div>
   </div>
   <div class="sidebar-user">
-    <div class="avatar">{{ $initials }}</div>
+    <div class="avatar">
+      @php
+        $defaultAvatarUrl = asset('images/default-avatar.jpg');
+        $profilePictureUrl = null;
+        if (!empty($adminProfilePicture)) {
+          // capstrackdb shows profile_picture may be a filename like "avatar-07".
+          $profilePictureUrl = asset('images/avatars/'.$adminProfilePicture);
+        }
+      @endphp
+
+      <img
+        src="{{ $profilePictureUrl ?: $defaultAvatarUrl }}"
+        alt="Profile"
+        style="width:100%;height:100%;object-fit:cover;border-radius:50%;display:block;"
+        loading="lazy"
+        onerror="this.onerror=null; this.src='{{ $defaultAvatarUrl }}';"
+      />
+    </div>
+
+
+
+
+
+
+
     <div class="user-info">
       <div class="user-name">{{ $adminName }}</div>
       <div class="user-role" title="{{ $adminEmail }}">CCS · CSPC</div>
@@ -85,3 +119,4 @@
     </a>
   </nav>
 </div>
+@include('partials.idle-timeout')

@@ -74,10 +74,10 @@ class AuthController extends Controller
             'client_id' => $clientId,
             'redirect_uri' => config('services.google.redirect_uri'),
             'response_type' => 'code',
-            'scope' => 'openid email profile',
+            'scope' => 'openid email profile https://www.googleapis.com/auth/calendar',
             'state' => $state,
-            'hd' => 'my.cspc.edu.ph',
-            'prompt' => 'select_account',
+            'prompt' => 'consent',   // forces refresh_token to be returned
+            'access_type' => 'offline',   // needed for refresh_token
         ]);
 
         return response()->json([
@@ -170,14 +170,37 @@ class AuthController extends Controller
             $expert = CapstoneExpert::where('email', $email)->first();
 
             if ($expert) {
-                if (! $expert->approved_status && ! $expert->is_admin) {
-                    return view('auth.pending-approval');
+                if ($expert->approved_status) {
+                    $expert->update([
+                        'google_token' => json_encode([
+                            'access_token' => $accessToken,
+                            'refresh_token' => $response->json('refresh_token'),
+                            'token_type' => $response->json('token_type'),
+                        ]),
+                        'google_token_expires_at' => now()->addSeconds($response->json('expires_in', 3600)),
+                    ]);
+
+                    Auth::guard('expert')->login($expert);
+
+                    $redirectUrl = $expert->is_admin ? '/admin/dashboard' : '/instructor/dashboard';
+
+                    return redirect($redirectUrl);
                 }
-                Auth::guard('expert')->login($expert);
 
-                $redirectUrl = $expert->is_admin ? '/admin/dashboard' : '/instructor/dashboard';
+                $status = $expert->status;
 
-                return redirect($redirectUrl);
+                if ($status === 'rejected') {
+                    $attempts = (int) $expert->reject_attempts;
+                    $cooldownUntil = $expert->reject_cooldown_until;
+
+                    if ($attempts >= 3 && $cooldownUntil && now()->lt($cooldownUntil)) {
+                        return redirect('/request-account?email='.urlencode($email).'&blocked=cooldown');
+                    }
+
+                    return redirect('/login/rejected?email='.urlencode($email));
+                }
+
+                return view('auth.pending-approval', ['accountRequest' => $expert]);
             }
 
             return redirect('/request-account?email='.urlencode($email).'&first_name='.urlencode($firstName).'&last_name='.urlencode($lastName));
@@ -272,40 +295,49 @@ class AuthController extends Controller
         $lastName = $nameParts[1] ?? $nameParts[0];
 
         if ($isExpert) {
-            $expert = CapstoneExpert::firstOrCreate(
-                ['email' => $email],
-                [
-                    'first_name' => $firstName,
-                    'last_name' => $lastName,
-                    'is_admin' => false,
-                    'approved_status' => false,
-                ]
-            );
+            $expert = CapstoneExpert::where('email', $email)->first();
 
-            if (! $expert->approved_status && ! $expert->is_admin) {
+            if ($expert) {
+                if ($expert->approved_status) {
+                    Auth::guard('expert')->login($expert);
+
+                    $redirectUrl = $expert->is_admin ? '/admin/dashboard' : '/instructor/dashboard';
+
+                    if ($request->expectsJson()) {
+                        return response()->json([
+                            'success' => true,
+                            'status' => 'authenticated',
+                            'redirect_url' => $redirectUrl,
+                            'user' => [
+                                'id' => $expert->expert_id,
+                                'email' => $expert->email,
+                                'name' => $expert->first_name.' '.$expert->last_name,
+                            ],
+                        ]);
+                    }
+
+                    return redirect($redirectUrl);
+                }
+
+                $status = $expert->status;
+
+                if ($status === 'rejected') {
+                    $attempts = (int) $expert->reject_attempts;
+                    $cooldownUntil = $expert->reject_cooldown_until;
+
+                    if ($attempts >= 3 && $cooldownUntil && now()->lt($cooldownUntil)) {
+                        return redirect('/request-account?email='.urlencode($email).'&blocked=cooldown');
+                    }
+
+                    return redirect('/login/rejected?email='.urlencode($email));
+                }
+
                 Auth::guard('expert')->login($expert);
 
-                return view('auth.pending-approval');
+                return view('auth.pending-approval', ['accountRequest' => $expert]);
             }
 
-            Auth::guard('expert')->login($expert);
-
-            $redirectUrl = $expert->is_admin ? '/admin/dashboard' : '/instructor/dashboard';
-
-            if ($request->expectsJson()) {
-                return response()->json([
-                    'success' => true,
-                    'status' => 'authenticated',
-                    'redirect_url' => $redirectUrl,
-                    'user' => [
-                        'id' => $expert->expert_id,
-                        'email' => $expert->email,
-                        'name' => $expert->first_name.' '.$expert->last_name,
-                    ],
-                ]);
-            }
-
-            return redirect($redirectUrl);
+            return redirect('/request-account?email='.urlencode($email).'&first_name='.urlencode($firstName).'&last_name='.urlencode($lastName));
         }
 
         $student = Student::firstOrCreate(
@@ -357,5 +389,21 @@ class AuthController extends Controller
         }
 
         return redirect('/');
+    }
+
+    public function rejected(Request $request)
+    {
+        $email = $request->query('email');
+
+        if (! $email) {
+            return redirect('/login');
+        }
+
+        $expert = CapstoneExpert::where('email', $email)->first();
+
+        return view('instructor.rejected', [
+            'accountRequest' => $expert,
+            'email' => $email,
+        ]);
     }
 }

@@ -170,6 +170,8 @@
   </div>
 </div>
 
+@include('partials.idle-timeout')
+
 <script>
   const overlay   = document.getElementById('profile-overlay');
   const trigger   = document.getElementById('profile-trigger');
