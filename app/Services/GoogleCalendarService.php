@@ -28,6 +28,10 @@ class GoogleCalendarService
         $client->setClientSecret(config('services.google.client_secret'));
         $client->setAccessToken($tokenData);
 
+        if (app()->environment('local')) {
+            $client->setHttpClient(new \GuzzleHttp\Client(['verify' => false]));
+        }
+
         // Auto-refresh if expired
         if ($client->isAccessTokenExpired() && ! empty($tokenData['refresh_token'])) {
             $newToken = $client->fetchAccessTokenWithRefreshToken($tokenData['refresh_token']);
@@ -55,6 +59,7 @@ class GoogleCalendarService
         string $topic = ''
     ): string {
         $client = $this->getClient($expertId);
+
         $service = new Calendar($client);
 
         $event = new Event([
