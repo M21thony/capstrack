@@ -185,21 +185,4 @@ class AdminApprovalController extends Controller
 
         return response()->json(['success' => true, 'message' => 'Account rejected and email sent.']);
     }
-
-    private function getExpertSpecialization(int $expertId): array
-    {
-        return DB::table('expert_roles')
-            ->join('roles', 'expert_roles.role_id', '=', 'roles.role_id')
-            ->where('expert_roles.expert_id', $expertId)
-            ->pluck('roles.role_name')
-            ->toArray();
-    }
-
-    private function getExpertExpertise(int $expertId): array
-    {
-        return DB::table('expert_expertise')
-            ->where('expert_id', $expertId)
-            ->pluck('expertise_field')
-            ->toArray();
-    }
 }
