@@ -16,6 +16,8 @@ return new class extends Migration
             $table->string('email', 250)->unique();
             $table->string('first_name', 50);
             $table->string('last_name', 50);
+            $table->string('middle_name', 50)->nullable();
+            $table->string('credentials', 50)->nullable();
             $table->string('profile_picture', 255)->nullable();
             $table->boolean('is_admin')->default(false);
             $table->boolean('approved_status')->default(false);
