@@ -15,6 +15,13 @@ class ProfileController extends Controller
     {
         $student = $request->user();
 
+        if (StudentSchoolYear::where('student_id', $student->student_id)->whereNotNull('team_id')->exists()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You must leave your team first before editing your profile.',
+            ], 422);
+        }
+
         $validator = Validator::make($request->all(), [
             'first_name' => ['required', 'string', 'max:255'],
             'last_name' => ['required', 'string', 'max:255'],

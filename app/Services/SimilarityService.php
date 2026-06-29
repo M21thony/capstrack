@@ -77,8 +77,8 @@ PROMPT;
             'institute', 'campus',
         ];
 
-        $words    = explode(' ', strtolower($text));
-        $filtered = array_filter($words, fn($w) => !in_array(trim($w), $stopWords) && strlen(trim($w)) > 2);
+        $words = explode(' ', strtolower($text));
+        $filtered = array_filter($words, fn ($w) => ! in_array(trim($w), $stopWords) && strlen(trim($w)) > 2);
 
         return implode(' ', $filtered);
     }
@@ -88,8 +88,8 @@ PROMPT;
     {
         // Build a rich text representation — strip stop words before embedding
         $rawQueryText = implode("\n", array_filter([
-            $concepts['main_topic']        ?? '',
-            $concepts['domain']            ?? '',
+            $concepts['main_topic'] ?? '',
+            $concepts['domain'] ?? '',
             implode(', ', $concepts['keywords'] ?? []),
             $concepts['problem_statement'] ?? '',
             $concepts['proposed_solution'] ?? '',
@@ -103,6 +103,7 @@ PROMPT;
             $queryEmbedding = $this->ollama->embed($queryText);
         } catch (\Exception $e) {
             Log::warning('RAG embed failed, falling back to keyword search', ['error' => $e->getMessage()]);
+
             return $this->findSimilarDocumentsLegacy($concepts, $topN);
         }
 
@@ -111,6 +112,7 @@ PROMPT;
 
         if ($docs->count() < 5) {
             Log::info('Too few embedded docs, using legacy search', ['count' => $docs->count()]);
+
             return $this->findSimilarDocumentsLegacy($concepts, $topN);
         }
 
@@ -120,7 +122,7 @@ PROMPT;
         foreach ($docs as $doc) {
             $storedEmbedding = json_decode($doc->embedding, true);
 
-            if (!is_array($storedEmbedding) || empty($storedEmbedding)) {
+            if (! is_array($storedEmbedding) || empty($storedEmbedding)) {
                 continue;
             }
 
@@ -136,19 +138,20 @@ PROMPT;
 
             $scored[] = [
                 'document' => $doc,
-                'score'    => $score,
-                'reason'   => '',
+                'score' => $score,
+                'reason' => '',
             ];
         }
 
         if (empty($scored)) {
             // No strong matches found — return empty rather than noise
             Log::info('No matches above 40% threshold — returning empty result.');
+
             return [];
         }
 
         // Sort by score descending, take top candidates for enrichment
-        usort($scored, fn($a, $b) => $b['score'] <=> $a['score']);
+        usort($scored, fn ($a, $b) => $b['score'] <=> $a['score']);
         $topCandidates = array_slice($scored, 0, min(20, count($scored)));
 
         // ── Phase 4: Enrich top matches with AI-generated reasons ─────
@@ -162,35 +165,35 @@ PROMPT;
     {
         $conceptText = implode(', ', $concepts['keywords'] ?? []);
 
-        $docList = array_map(fn($item) => [
-            'id'    => $item['document']->archived_id,
+        $docList = array_map(fn ($item) => [
+            'id' => $item['document']->archived_id,
             'title' => mb_substr($item['document']->title, 0, 100),
-            'abs'   => mb_substr($item['document']->abstract ?? '', 0, 150),
+            'abs' => mb_substr($item['document']->abstract ?? '', 0, 150),
             'score' => $item['score'],
         ], $topCandidates);
 
         $docsJson = json_encode(array_values($docList));
 
         // FIX: Better prompt that focuses on core concepts, not generic words
-        $prompt = "You are an academic similarity checker. These archived capstones were flagged as "
-                . "potentially similar to the pre-proposal below using vector embeddings.\n\n"
-                . "STRICT RULES:\n"
-                . "- IGNORE generic words: proposed, computerized, system, management, records, web, online, automated, digital\n"
-                . "- IGNORE location names: Camarines Sur, Nabua, CSPC, Iriga, Philippines\n"
-                . "- IGNORE school/dept names: college, department, polytechnic, CICT, BSIT\n"
-                . "- Focus ONLY on: core domain, problem being solved, target users, system purpose\n"
-                . "- If they are NOT actually similar in core concept, say so clearly\n\n"
-                . "For each, write ONE sentence explaining if and why the core concept matches or does not match.\n"
-                . "Return ONLY a JSON array. No markdown.\n"
-                . '[{"id":<id>,"reason":"one sentence about core concept match or mismatch"}]'
-                . "\n\nPRE-PROPOSAL:"
-                . "\nTopic: {$concepts['main_topic']}"
-                . "\nDomain: {$concepts['domain']}"
-                . "\nKeywords: {$conceptText}"
-                . "\n\nMATCHED DOCUMENTS:\n{$docsJson}";
+        $prompt = 'You are an academic similarity checker. These archived capstones were flagged as '
+                ."potentially similar to the pre-proposal below using vector embeddings.\n\n"
+                ."STRICT RULES:\n"
+                ."- IGNORE generic words: proposed, computerized, system, management, records, web, online, automated, digital\n"
+                ."- IGNORE location names: Camarines Sur, Nabua, CSPC, Iriga, Philippines\n"
+                ."- IGNORE school/dept names: college, department, polytechnic, CICT, BSIT\n"
+                ."- Focus ONLY on: core domain, problem being solved, target users, system purpose\n"
+                ."- If they are NOT actually similar in core concept, say so clearly\n\n"
+                ."For each, write ONE sentence explaining if and why the core concept matches or does not match.\n"
+                ."Return ONLY a JSON array. No markdown.\n"
+                .'[{"id":<id>,"reason":"one sentence about core concept match or mismatch"}]'
+                ."\n\nPRE-PROPOSAL:"
+                ."\nTopic: {$concepts['main_topic']}"
+                ."\nDomain: {$concepts['domain']}"
+                ."\nKeywords: {$conceptText}"
+                ."\n\nMATCHED DOCUMENTS:\n{$docsJson}";
 
         try {
-            $raw     = $this->ollama->generate($prompt);
+            $raw = $this->ollama->generate($prompt);
             $cleaned = trim(preg_replace('/```json|```/i', '', $raw));
 
             preg_match('/\[.*\]/s', $cleaned, $matches);
@@ -223,13 +226,13 @@ PROMPT;
     // ── 5. Cosine similarity between two float vectors ─────────────────
     private function cosineSimilarity(array $a, array $b): float
     {
-        $dot    = 0.0;
-        $normA  = 0.0;
-        $normB  = 0.0;
+        $dot = 0.0;
+        $normA = 0.0;
+        $normB = 0.0;
         $length = min(count($a), count($b));
 
         for ($i = 0; $i < $length; $i++) {
-            $dot   += $a[$i] * $b[$i];
+            $dot += $a[$i] * $b[$i];
             $normA += $a[$i] * $a[$i];
             $normB += $b[$i] * $b[$i];
         }
@@ -307,28 +310,27 @@ PROMPT;
 
             $docsJson = json_encode($docList);
 
-<<<<<<< HEAD
             // FIX: Better prompt with strict rules to ignore generic noise words
-            $prompt = "You are an academic similarity checker. Compare this capstone pre-proposal "
-                    . "against the archived capstones below.\n\n"
-                    . "STRICT RULES:\n"
-                    . "- IGNORE generic words: proposed, computerized, system, management, records, web, online, automated, digital\n"
-                    . "- IGNORE location names: Camarines Sur, Nabua, CSPC, Iriga, Philippines\n"
-                    . "- IGNORE school/dept names: college, department, polytechnic, CICT, BSIT\n"
-                    . "- Focus ONLY on: core domain, problem being solved, target users, and system purpose\n"
-                    . "- Score 70-100 ONLY if the core domain AND purpose are the same\n"
-                    . "- Score 40-69 if the domain matches but purpose differs\n"
-                    . "- Score 0-39 if they are fundamentally different topics\n\n"
-                    . "Return ONLY a JSON array. No markdown.\n"
-                    . '[{"id":<id>,"score":<0-100>,"reason":"one sentence focusing on core concept match or mismatch"}]'
-                    . "\n\nPRE-PROPOSAL:"
-                    . "\nTopic: {$concepts['main_topic']}"
-                    . "\nDomain: {$concepts['domain']}"
-                    . "\nKeywords: {$conceptText}"
-                    . "\nProblem: {$concepts['problem_statement']}"
-                    . "\nSolution: {$concepts['proposed_solution']}"
-                    . "\n\nARCHIVED CAPSTONES:\n{$docsJson}";
-=======
+            $prompt = 'You are an academic similarity checker. Compare this capstone pre-proposal '
+                    ."against the archived capstones below.\n\n"
+                    ."STRICT RULES:\n"
+                    ."- IGNORE generic words: proposed, computerized, system, management, records, web, online, automated, digital\n"
+                    ."- IGNORE location names: Camarines Sur, Nabua, CSPC, Iriga, Philippines\n"
+                    ."- IGNORE school/dept names: college, department, polytechnic, CICT, BSIT\n"
+                    ."- Focus ONLY on: core domain, problem being solved, target users, and system purpose\n"
+                    ."- Score 70-100 ONLY if the core domain AND purpose are the same\n"
+                    ."- Score 40-69 if the domain matches but purpose differs\n"
+                    ."- Score 0-39 if they are fundamentally different topics\n\n"
+                    ."Return ONLY a JSON array. No markdown.\n"
+                    .'[{"id":<id>,"score":<0-100>,"reason":"one sentence focusing on core concept match or mismatch"}]'
+                    ."\n\nPRE-PROPOSAL:"
+                    ."\nTopic: {$concepts['main_topic']}"
+                    ."\nDomain: {$concepts['domain']}"
+                    ."\nKeywords: {$conceptText}"
+                    ."\nProblem: {$concepts['problem_statement']}"
+                    ."\nSolution: {$concepts['proposed_solution']}"
+                    ."\n\nARCHIVED CAPSTONES:\n{$docsJson}";
+
             $prompt = 'Perform semantic similarity analysis between this capstone pre-proposal '
                     ."and the archived capstones below.\n"
                     ."Consider meaning, intent, domain, technology, and problem being solved — not just keywords.\n"
@@ -341,7 +343,6 @@ PROMPT;
                     ."\nProblem: {$concepts['problem_statement']}"
                     ."\nSolution: {$concepts['proposed_solution']}"
                     ."\n\nARCHIVED CAPSTONES:\n{$docsJson}";
->>>>>>> naanap_kuna_di_code_haha
 
             try {
                 $raw = $this->ollama->generate($prompt);
@@ -353,7 +354,7 @@ PROMPT;
 
                 if (json_last_error() === JSON_ERROR_NONE && is_array($scores)) {
                     // FIX: Only keep scores >= 40 from legacy path too
-                    $scores = array_filter($scores, fn($s) => ($s['score'] ?? 0) >= 40);
+                    $scores = array_filter($scores, fn ($s) => ($s['score'] ?? 0) >= 40);
                     $allScores = array_merge($allScores, array_values($scores));
                 } else {
                     Log::warning("Chunk {$chunkIndex} parse failed", ['raw' => substr($raw, 0, 200)]);
@@ -367,22 +368,21 @@ PROMPT;
 
         if (empty($allScores)) {
             Log::info('Legacy search: no matches above 40% threshold.');
+
             return [];
         }
 
-<<<<<<< HEAD
-        usort($allScores, fn($a, $b) => ($b['score'] ?? 0) <=> ($a['score'] ?? 0));
+        usort($allScores, fn ($a, $b) => ($b['score'] ?? 0) <=> ($a['score'] ?? 0));
         $topScores = array_slice($allScores, 0, $topN);
 
-        $docMap  = $filtered->keyBy('archived_id');
-=======
+        $docMap = $filtered->keyBy('archived_id');
+
         // Sort descending and take top N
         usort($allScores, fn ($a, $b) => ($b['score'] ?? 0) <=> ($a['score'] ?? 0));
         $topScores = array_slice($allScores, 0, $topN);
 
         // Map back to document models
         $docMap = $filtered->keyBy('archived_id');
->>>>>>> naanap_kuna_di_code_haha
         $results = [];
 
         foreach ($topScores as $item) {
@@ -392,15 +392,12 @@ PROMPT;
             }
 
             $results[] = [
-<<<<<<< HEAD
-                'document'   => $doc,
-                'score'      => (int) ($item['score'] ?? 0),
-                'reason'     => $item['reason'] ?? '',
-=======
                 'document' => $doc,
                 'score' => (int) ($item['score'] ?? 0),
                 'reason' => $item['reason'] ?? '',
->>>>>>> naanap_kuna_di_code_haha
+                'document' => $doc,
+                'score' => (int) ($item['score'] ?? 0),
+                'reason' => $item['reason'] ?? '',
                 'matched_on' => $item['matched_on'] ?? [],
             ];
         }
@@ -432,19 +429,18 @@ PROMPT;
         $validIds = $experts->pluck('expert_id')->toArray();
         $expertMap = $experts->keyBy('expert_id');
 
-<<<<<<< HEAD
-        $domain   = $concepts['domain'];
-        $keywords = implode(', ', $concepts['keywords'] ?? []);
-        $listJson = json_encode($experts->map(fn($e) => [
-            'id'        => $e->expert_id,
-            'name'      => $e->first_name . ' ' . $e->last_name,
-=======
         $domain = $concepts['domain'];
         $keywords = implode(', ', $concepts['keywords'] ?? []);
         $listJson = json_encode($experts->map(fn ($e) => [
             'id' => $e->expert_id,
             'name' => $e->first_name.' '.$e->last_name,
->>>>>>> naanap_kuna_di_code_haha
+        ])->toArray());
+
+        $domain = $concepts['domain'];
+        $keywords = implode(', ', $concepts['keywords'] ?? []);
+        $listJson = json_encode($experts->map(fn ($e) => [
+            'id' => $e->expert_id,
+            'name' => $e->first_name.' '.$e->last_name,
             'expertise' => $e->expertise ?? 'General',
         ])->values()->toArray());
 
@@ -462,13 +458,10 @@ PROMPT;
                 ."\n\nINSTRUCTOR LIST (ONLY use these exact IDs):\n{$listJson}";
 
         try {
-<<<<<<< HEAD
-            $raw      = $this->ollama->generate($prompt);
-            $cleaned  = trim(preg_replace('/```json|```/i', '', $raw));
-=======
             $raw = $this->ollama->generate($prompt);
             $cleaned = trim(preg_replace('/```json|```/i', '', $raw));
->>>>>>> naanap_kuna_di_code_haha
+            $raw = $this->ollama->generate($prompt);
+            $cleaned = trim(preg_replace('/```json|```/i', '', $raw));
 
             preg_match('/\[.*\]/s', $cleaned, $matches);
             $jsonStr = $matches[0] ?? $cleaned;

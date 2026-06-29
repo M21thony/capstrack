@@ -192,7 +192,7 @@
                 </div>
                 <div class="pi-field">
                     <label class="pi-label" for="section">Section</label>
-                    <input type="text" id="section" name="section" class="pi-input" value="{{ old('section', $selectedSection) }}" placeholder="e.g. A" required>
+                    <input type="text" id="section" name="section" class="pi-input" value="{{ old('section', $selectedSection) }}" placeholder="e.g. A" required maxlength="1" oninput="this.value = this.value.toUpperCase().replace(/[^A-Z]/g, '')">
                     @error('section')<p class="pi-error">{{ $message }}</p>@enderror
                 </div>
             </div>

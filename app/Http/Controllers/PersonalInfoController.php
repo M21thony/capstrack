@@ -36,6 +36,11 @@ class PersonalInfoController extends Controller
             return redirect()->route('student.personal-info');
         }
 
+        if (StudentSchoolYear::where('student_id', $student->student_id)->whereNotNull('team_id')->exists()) {
+            return redirect()->route('student.team')
+                ->with('error', 'You must leave your team first before editing your profile.');
+        }
+
         return view('student.personal-info', [
             'student' => $student,
             'presets' => config('avatars.presets', []),
@@ -48,6 +53,13 @@ class PersonalInfoController extends Controller
     public function store(StorePersonalInfoRequest $request): RedirectResponse
     {
         $student = $request->user();
+
+        if ($student->hasCompletedProfile()
+            && StudentSchoolYear::where('student_id', $student->student_id)->whereNotNull('team_id')->exists()) {
+            return redirect()->route('student.team')
+                ->with('error', 'You must leave your team first before editing your profile.');
+        }
+
         $validated = $request->validated();
 
         $student->f_name = $validated['first_name'];
@@ -55,7 +67,7 @@ class PersonalInfoController extends Controller
         $student->l_name = $validated['last_name'];
         $student->student_number = $validated['student_id'];
         $student->course = $validated['course'];
-        $student->year_section = $validated['year'].' · '.$validated['section'];
+        $student->year_section = $validated['year'].' · '.strtoupper(substr($validated['section'], 0, 1));
         $student->p_picture = $validated['avatar'];
 
         $student->save();

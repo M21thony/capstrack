@@ -28,12 +28,14 @@ class Recruitment extends Model
         'roles',
         'looking_for',
         'introduction',
+        'member_count',
     ];
 
     protected function casts(): array
     {
         return [
             'roles' => 'array',
+            'member_count' => 'integer',
         ];
     }
 

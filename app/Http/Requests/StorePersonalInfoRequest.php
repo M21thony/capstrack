@@ -29,7 +29,7 @@ class StorePersonalInfoRequest extends FormRequest
             ],
             'course' => ['required', 'string', 'max:100'],
             'year' => ['required', 'string', 'max:20'],
-            'section' => ['required', 'string', 'max:50'],
+            'section' => ['required', 'string', 'max:1', 'alpha'],
             'avatar' => ['required', 'string', Rule::in(Student::allowedAvatarKeys())],
         ];
     }

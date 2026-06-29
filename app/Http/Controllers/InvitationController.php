@@ -2,8 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Notification;
 use App\Models\Recruitment;
+use App\Models\Student;
 use App\Models\StudentSchoolYear;
+use App\Models\Team;
 use App\Models\TeamInvitation;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -63,6 +66,40 @@ class InvitationController extends Controller
             'status' => 'pending',
         ]);
 
+        // Log activity
+        if ($validated['type'] === 'invite') {
+            $this->logActivity(
+                $studentId,
+                'invitation_sent',
+                'Invited <strong>'.e(Student::find($validated['receiver_id'])?->f_name ?? 'a student').'</strong> to join the team',
+                ['receiver_id' => $validated['receiver_id'], 'team_id' => $validated['team_id']]
+            );
+            // Notify receiver
+            Notification::create([
+                'student_id' => $validated['receiver_id'],
+                'type' => 'invitation_received',
+                'title' => 'Team Invitation',
+                'message' => 'You have been invited to join a team.',
+                'link' => route('student.team'),
+            ]);
+        } else {
+            $this->logActivity(
+                $studentId,
+                'request_sent',
+                'Requested to join a team',
+                ['team_id' => $validated['team_id']]
+            );
+            // Notify team leader (receiver)
+            $receiver = Student::find($validated['receiver_id']);
+            Notification::create([
+                'student_id' => $validated['receiver_id'],
+                'type' => 'request_received',
+                'title' => 'Join Request',
+                'message' => ($receiver ? $receiver->f_name.' '.$receiver->l_name : 'A student').' wants to join your team.',
+                'link' => route('student.team'),
+            ]);
+        }
+
         if ($request->expectsJson()) {
             return response()->json([
                 'success' => true,
@@ -107,6 +144,59 @@ class InvitationController extends Controller
         $joinedStudentId = $invitation->type === 'invite' ? $studentId : $invitation->sender_id;
         Recruitment::where('student_id', $joinedStudentId)->delete();
 
+        // Log the join activity
+        $team = Team::find($invitation->team_id);
+        $joiningStudent = Student::find($joinedStudentId);
+        if ($team && $joiningStudent) {
+            $this->logActivity(
+                $joinedStudentId,
+                'team_joined',
+                'Joined team <strong>'.e($team->team_name).'</strong>',
+                ['team_id' => $team->team_id, 'team_name' => $team->team_name]
+            );
+            if ($invitation->type === 'request' && $invitation->receiver_id === $studentId) {
+                $this->logActivity(
+                    $studentId,
+                    'request_accepted',
+                    'Accepted <strong>'.e($joiningStudent->f_name.' '.$joiningStudent->l_name).'</strong>\'s request to join the team',
+                    ['joined_student_id' => $joinedStudentId, 'team_id' => $team->team_id]
+                );
+            }
+        }
+
+        // Notify the sender that their invite/request was accepted
+        if ($invitation->type === 'invite') {
+            Notification::create([
+                'student_id' => $invitation->sender_id,
+                'type' => 'invitation_accepted',
+                'title' => 'Invitation Accepted',
+                'message' => ($joiningStudent ? $joiningStudent->f_name.' '.$joiningStudent->l_name : 'Someone').' accepted your invitation to join the team.',
+                'link' => route('student.team'),
+            ]);
+        } else {
+            Notification::create([
+                'student_id' => $invitation->sender_id,
+                'type' => 'request_accepted',
+                'title' => 'Request Accepted',
+                'message' => 'Your request to join <strong>'.e($team->team_name ?? 'the team').'</strong> has been accepted.',
+                'link' => route('student.team'),
+            ]);
+        }
+
+        // Notify other team members that someone joined
+        $teamMemberIds = StudentSchoolYear::where('team_id', $invitation->team_id)
+            ->where('student_id', '!=', $joinedStudentId)
+            ->pluck('student_id');
+        foreach ($teamMemberIds as $memberId) {
+            Notification::create([
+                'student_id' => $memberId,
+                'type' => 'member_joined',
+                'title' => 'New Team Member',
+                'message' => ($joiningStudent ? $joiningStudent->f_name.' '.$joiningStudent->l_name : 'Someone').' joined the team.',
+                'link' => route('student.team'),
+            ]);
+        }
+
         // Decline other invitations for this student since they joined a team
         TeamInvitation::where('status', 'pending')
             ->where(function ($query) use ($studentId, $invitation) {
@@ -139,6 +229,33 @@ class InvitationController extends Controller
         }
 
         $invitation->update(['status' => 'declined']);
+
+        // Log activity
+        $otherPartyId = $invitation->sender_id === $studentId ? $invitation->receiver_id : $invitation->sender_id;
+        if ($invitation->type === 'invite') {
+            $this->logActivity(
+                $studentId,
+                'invitation_declined',
+                'Declined invitation to join the team',
+                ['invitation_id' => $invitation->id]
+            );
+        } else {
+            $this->logActivity(
+                $studentId,
+                'request_declined',
+                'Declined a join request',
+                ['invitation_id' => $invitation->id]
+            );
+        }
+
+        // Notify the other party
+        Notification::create([
+            'student_id' => $otherPartyId,
+            'type' => $invitation->type === 'invite' ? 'invitation_declined' : 'request_declined',
+            'title' => $invitation->type === 'invite' ? 'Invitation Declined' : 'Request Declined',
+            'message' => 'Your '.($invitation->type === 'invite' ? 'invitation' : 'join request').' has been declined.',
+            'link' => route('student.team'),
+        ]);
 
         if ($request->expectsJson()) {
             return response()->json([

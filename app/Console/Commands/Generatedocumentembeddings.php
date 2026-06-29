@@ -28,19 +28,21 @@ class GenerateDocumentEmbeddings extends Command
         // ── Single document mode ──────────────────────────────────────
         if ($singleId) {
             $doc = ArchivedDocument::find($singleId);
-            if (!$doc) {
+            if (! $doc) {
                 $this->error("Document #{$singleId} not found.");
+
                 return Command::FAILURE;
             }
             $this->embedDocument($doc);
             $this->info("Done — document #{$singleId} embedded.");
+
             return Command::SUCCESS;
         }
 
         // ── Batch mode ────────────────────────────────────────────────
         $query = ArchivedDocument::query();
 
-        if (!$force) {
+        if (! $force) {
             $query->whereNull('embedding');
         }
 
@@ -48,6 +50,7 @@ class GenerateDocumentEmbeddings extends Command
 
         if ($total === 0) {
             $this->info('All documents already have embeddings. Use --force to regenerate.');
+
             return Command::SUCCESS;
         }
 
@@ -56,7 +59,7 @@ class GenerateDocumentEmbeddings extends Command
         $bar->start();
 
         $success = 0;
-        $failed  = 0;
+        $failed = 0;
 
         $query->orderBy('archived_id')->chunk(10, function ($docs) use (&$success, &$failed, $bar) {
             foreach ($docs as $doc) {
@@ -67,7 +70,7 @@ class GenerateDocumentEmbeddings extends Command
                     $failed++;
                     Log::error('Embedding failed', [
                         'archived_id' => $doc->archived_id,
-                        'error'       => $e->getMessage(),
+                        'error' => $e->getMessage(),
                     ]);
                 }
                 $bar->advance();
@@ -88,7 +91,7 @@ class GenerateDocumentEmbeddings extends Command
     private function embedDocument(ArchivedDocument $doc): void
     {
         // Combine title + abstract for a richer semantic representation
-        $text = trim($doc->title . "\n\n" . ($doc->abstract ?? ''));
+        $text = trim($doc->title."\n\n".($doc->abstract ?? ''));
 
         if (empty($text)) {
             throw new \Exception("Document #{$doc->archived_id} has no title or abstract.");
@@ -97,7 +100,7 @@ class GenerateDocumentEmbeddings extends Command
         $embedding = $this->ollama->embed($text);
 
         $doc->update([
-            'embedding'              => json_encode($embedding),
+            'embedding' => json_encode($embedding),
             'embedding_generated_at' => now(),
         ]);
     }

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\ActivityLog;
 use App\Models\Student;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
@@ -132,6 +133,24 @@ class StudentDashboardTest extends TestCase
             'status' => 'pending',
         ]);
 
+        // Create an activity_log entry for team creation
+        ActivityLog::create([
+            'student_id' => $student->student_id,
+            'type' => 'team_created',
+            'description' => 'Created team <strong>Team Omega</strong>',
+            'metadata' => json_encode(['team_id' => $team->team_id, 'team_name' => 'Team Omega']),
+            'created_at' => now()->subMinutes(5),
+        ]);
+
+        // Create an activity_log entry for inviting someone
+        ActivityLog::create([
+            'student_id' => $student->student_id,
+            'type' => 'invitation_sent',
+            'description' => 'Invited <strong>'.e($invitee->f_name.' '.$invitee->l_name).'</strong> to join the team',
+            'metadata' => json_encode(['team_id' => $team->team_id, 'invitee_id' => $invitee->student_id]),
+            'created_at' => now()->subMinutes(2),
+        ]);
+
         $response = $this->actingAs($student, 'web')
             ->get(route('student.dashboard'));
 
@@ -145,7 +164,7 @@ class StudentDashboardTest extends TestCase
         // The student's own name should appear in the team members list
         $response->assertSee($student->f_name);
 
-        // Activities should contain at least the invitation and profile events
+        // Activities should contain at least the team_created and invitation activities
         $activities = $response->viewData('activities');
         $this->assertNotEmpty($activities);
 

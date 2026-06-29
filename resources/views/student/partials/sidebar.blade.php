@@ -3,6 +3,9 @@
     $yearParts = explode(' · ', $student->year_section ?? '');
     $sidebarYear = $yearParts[0] ?? '';
     $sidebarSection = $yearParts[1] ?? '';
+    $courseAbbr = \App\Models\Student::mapCourseToProgram($student->course ?? '') ?? $student->course ?? '';
+    $sidebarYearNum = preg_replace('/[^0-9]/', '', $sidebarYear);
+    $sidebarYearSection = $courseAbbr ? $courseAbbr . ' - ' . $sidebarYearNum . $sidebarSection : $student->year_section ?? '';
 @endphp
 <!-- SIDEBAR -->
 <div class="sidebar">
@@ -29,7 +32,13 @@
       </div>
       <div class="user-info">
         <div class="user-name">{{ $student->displayFirstName() }}</div>
-        <div class="user-role">STUDENT</div>
+        <div class="user-role">
+          @if($student->hasCompletedProfile() && $sidebarYearSection)
+            {{ $sidebarYearSection }}
+          @else
+            STUDENT
+          @endif
+        </div>
       </div>
       <div class="sidebar-user-caret">
         <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
@@ -157,7 +166,7 @@
       </div>
       <div class="pm-field">
         <div class="pm-label">Year &amp; Section</div>
-        <div class="pm-value">{{ $student->year_section }}</div>
+        <div class="pm-value">{{ $sidebarYearSection }}</div>
       </div>
       <div class="pm-field">
         <div class="pm-label">Student ID</div>
@@ -165,7 +174,14 @@
       </div>
     </div>
     <div class="pm-footer">
-      <a href="{{ route('student.personal-info.edit') }}" class="pm-edit-profile-btn">Edit Profile</a>
+      @php
+        $studentHasTeam = \App\Models\StudentSchoolYear::where('student_id', $student->student_id)->whereNotNull('team_id')->exists();
+      @endphp
+      @if ($studentHasTeam)
+        <span style="font-size:11px;color:var(--text3);">Leave your team to edit profile</span>
+      @else
+        <a href="{{ route('student.personal-info.edit') }}" class="pm-edit-profile-btn">Edit Profile</a>
+      @endif
     </div>
   </div>
 </div>

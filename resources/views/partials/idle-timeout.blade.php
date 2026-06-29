@@ -113,10 +113,10 @@
     </div>
     <div class="idle-title">Session Timeout</div>
     <div class="idle-message">
-      You have been inactive for 30 minutes.<br>
+      You have been inactive for 10 minutes.<br>
       For security, your session will expire soon.
     </div>
-    <div class="idle-timer" id="idle-countdown">05:00</div>
+    <div class="idle-timer" id="idle-countdown">01:00</div>
     <div class="idle-actions">
       <button class="btn-stay" onclick="staySignedIn()">Stay Signed In</button>
       <button class="btn-logout" onclick="logoutNow()">Logout</button>
@@ -130,8 +130,8 @@
 
 <script>
   (function() {
-    const INACTIVITY_LIMIT = 30 * 60 * 1000;
-    const COUNTDOWN_DURATION = 5 * 60;
+    const INACTIVITY_LIMIT = 10 * 60 * 1000;
+    const COUNTDOWN_DURATION = 1 * 60;
 
     let idleTimer = null;
     let countdownTimer = null;

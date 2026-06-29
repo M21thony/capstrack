@@ -45,9 +45,8 @@ class OllamaSSHClient
             ],
         ]);
 
-<<<<<<< HEAD
         $output = $this->runCurl($ssh, $payload, '/api/generate');
-=======
+
         $encoded = base64_encode($payload);
         $tmpFile = 'ollama_'.uniqid().'.json';
 
@@ -64,24 +63,19 @@ class OllamaSSHClient
                 .'"';
 
         $output = $ssh->exec($command);
->>>>>>> naanap_kuna_di_code_haha
         $ssh->disconnect();
 
         $decoded = json_decode(trim($output), true);
 
         if (json_last_error() !== JSON_ERROR_NONE) {
-<<<<<<< HEAD
             Log::error('OllamaSSH generate raw output', ['output' => $output]);
-            throw new \Exception('Failed to decode Ollama JSON. Raw: ' . substr($output, 0, 300));
-=======
+            throw new \Exception('Failed to decode Ollama JSON. Raw: '.substr($output, 0, 300));
             Log::error('OllamaSSH raw output', ['output' => $output]);
             throw new \Exception('Failed to decode Ollama JSON. Raw: '.substr($output, 0, 300));
->>>>>>> naanap_kuna_di_code_haha
         }
 
         return $decoded['response'] ?? '';
     }
-<<<<<<< HEAD
 
     // ── Embedding generation via nomic-embed-text ─────────────────────
     /**
@@ -89,18 +83,18 @@ class OllamaSSHClient
      * Uses the /api/embeddings endpoint with nomic-embed-text.
      *
      * @param  string  $text  The text to embed (title + abstract recommended)
-     * @return float[]        A float array of ~768 dimensions
+     * @return float[] A float array of ~768 dimensions
      */
     public function embed(string $text): array
     {
-        $ssh   = $this->makeConnection();
+        $ssh = $this->makeConnection();
         $model = config('services.ollama.embed_model', 'nomic-embed-text');
 
         // Truncate to avoid token limits — nomic-embed-text supports ~8192 tokens
         $truncated = mb_substr($text, 0, 4000);
 
         $payload = json_encode([
-            'model'  => $model,
+            'model' => $model,
             'prompt' => $truncated,
         ]);
 
@@ -109,9 +103,9 @@ class OllamaSSHClient
 
         $decoded = json_decode(trim($output), true);
 
-        if (json_last_error() !== JSON_ERROR_NONE || !isset($decoded['embedding'])) {
+        if (json_last_error() !== JSON_ERROR_NONE || ! isset($decoded['embedding'])) {
             Log::error('OllamaSSH embed raw output', ['output' => $output]);
-            throw new \Exception('Failed to get embedding from Ollama. Raw: ' . substr($output, 0, 300));
+            throw new \Exception('Failed to get embedding from Ollama. Raw: '.substr($output, 0, 300));
         }
 
         return $decoded['embedding']; // array of floats
@@ -121,18 +115,18 @@ class OllamaSSHClient
     private function runCurl(SSH2 $ssh, string $jsonPayload, string $endpoint): string
     {
         $encoded = base64_encode($jsonPayload);
-        $tmpFile = 'ollama_' . uniqid() . '.json';
+        $tmpFile = 'ollama_'.uniqid().'.json';
 
         $command = 'powershell -Command "'
-                . '$bytes = [System.Convert]::FromBase64String(\''. $encoded .'\'); '
-                . '$tmp = \"$env:TEMP\\' . $tmpFile . '\"; '
-                . '[System.IO.File]::WriteAllBytes($tmp, $bytes); '
-                . '$r = curl.exe -s --max-time 180 -X POST http://localhost:11434' . $endpoint . ' '  // ← added --max-time 180
-                . '-H \"Content-Type: application/json\" '
-                . '--data-binary \"@$tmp\"; '
-                . 'Remove-Item $tmp; '
-                . 'Write-Output $r'
-                . '"';
+                .'$bytes = [System.Convert]::FromBase64String(\''.$encoded.'\'); '
+                .'$tmp = \"$env:TEMP\\'.$tmpFile.'\"; '
+                .'[System.IO.File]::WriteAllBytes($tmp, $bytes); '
+                .'$r = curl.exe -s --max-time 180 -X POST http://localhost:11434'.$endpoint.' '  // ← added --max-time 180
+                .'-H \"Content-Type: application/json\" '
+                .'--data-binary \"@$tmp\"; '
+                .'Remove-Item $tmp; '
+                .'Write-Output $r'
+                .'"';
 
         $output = $ssh->exec($command);
 
@@ -143,6 +137,3 @@ class OllamaSSHClient
         return $output;
     }
 }
-=======
-}
->>>>>>> naanap_kuna_di_code_haha
