@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use Carbon\Carbon;
 use Google\Client;
 use Google\Service\Calendar;
 use Google\Service\Calendar\Event;
@@ -62,16 +63,22 @@ class GoogleCalendarService
 
         $service = new Calendar($client);
 
+        $start = Carbon::parse("{$date} {$startTime}", 'Asia/Manila')
+            ->format('Y-m-d\TH:i:sP');
+
+        $end = Carbon::parse("{$date} {$endTime}", 'Asia/Manila')
+            ->format('Y-m-d\TH:i:sP');
+
         $event = new Event([
             'summary' => "{$slotType} — {$teamName}",
             'description' => $topic ?: "Scheduled {$slotType} session.",
             'start' => new EventDateTime([
-                'dateTime' => "{$date}T{$startTime}:00",
-                'timeZone' => 'Asia/Manila',
+                'dateTime' => $start,
+                'timeZone' => 'GMT+08:00',
             ]),
             'end' => new EventDateTime([
-                'dateTime' => "{$date}T{$endTime}:00",
-                'timeZone' => 'Asia/Manila',
+                'dateTime' => $end,
+                'timeZone' => 'GMT+08:00',
             ]),
             'attendees' => [
                 new EventAttendee(['email' => $expertEmail]),
@@ -80,9 +87,9 @@ class GoogleCalendarService
             'reminders' => [
                 'useDefault' => false,
                 'overrides' => [
-                    ['method' => 'email', 'minutes' => 1440], // 24hrs before
-                    ['method' => 'email', 'minutes' => 60],   // 1hr before
-                    ['method' => 'popup', 'minutes' => 30],
+                    ['method' => 'email',  'minutes' => 1440], // 24hrs before
+                    ['method' => 'email',  'minutes' => 60],   // 1hr before
+                    ['method' => 'popup',  'minutes' => 30],
                 ],
             ],
         ]);
@@ -100,7 +107,7 @@ class GoogleCalendarService
         $service = new Calendar($client);
 
         $service->events->delete('primary', $googleEventId, [
-            'sendNotifications' => true, // sends cancellation email to attendees
+            'sendNotifications' => true,
         ]);
     }
 }
