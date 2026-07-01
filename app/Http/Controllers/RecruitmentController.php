@@ -8,6 +8,7 @@ use App\Models\Team;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class RecruitmentController extends Controller
@@ -46,25 +47,28 @@ class RecruitmentController extends Controller
             $roles = json_decode($tagsJson, true) ?? [];
         }
 
-        // If goal is build_a_team and team_name is provided, create team and link it
-        if ($validated['recruitment_goal'] === 'build_a_team' && ! empty($validated['team_name'])) {
-            $team = Team::create([
-                'team_name' => $validated['team_name'],
-                'team_status' => 'Active',
+        $recruitment = DB::transaction(function () use ($validated, $studentId, $roles): Recruitment {
+            // If goal is build_a_team and team_name is provided, create team and link it
+            if ($validated['recruitment_goal'] === 'build_a_team' && ! empty($validated['team_name'])) {
+                $team = Team::create([
+                    'team_name' => $validated['team_name'],
+                    'team_status' => 'Active',
+                    'leader_id' => $studentId,
+                ]);
+
+                StudentSchoolYear::where('student_id', $studentId)
+                    ->update(['team_id' => $team->team_id]);
+            }
+
+            return Recruitment::create([
+                'student_id' => $studentId,
+                'recruitment_goal' => $validated['recruitment_goal'],
+                'roles' => $roles,
+                'looking_for' => $validated['looking_for'] ?? null,
+                'introduction' => $validated['introduction'] ?? null,
+                'member_count' => $validated['member_count'] ?? null,
             ]);
-
-            StudentSchoolYear::where('student_id', $studentId)
-                ->update(['team_id' => $team->team_id]);
-        }
-
-        $recruitment = Recruitment::create([
-            'student_id' => $studentId,
-            'recruitment_goal' => $validated['recruitment_goal'],
-            'roles' => $roles,
-            'looking_for' => $validated['looking_for'] ?? null,
-            'introduction' => $validated['introduction'] ?? null,
-            'member_count' => $validated['member_count'] ?? null,
-        ]);
+        });
 
         if ($validated['recruitment_goal'] === 'build_a_team') {
             $teamName = $validated['team_name'] ?? 'Unknown';

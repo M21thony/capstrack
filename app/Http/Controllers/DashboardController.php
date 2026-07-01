@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\ActivityLog;
 use App\Models\Notification;
-use App\Models\Recruitment;
 use App\Models\Student;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
@@ -22,23 +21,13 @@ class DashboardController extends Controller
         $studentSy = StudentSchoolYear::where('student_id', $student->student_id)->first();
         $teamId = $studentSy?->team_id;
 
-        // Determine the leader of the team (student with a 'build_a_team' recruitment goal)
-        $leaderStudentId = null;
-        if ($teamId) {
-            $leaderStudentId = Recruitment::where('recruitment_goal', 'build_a_team')
-                ->whereIn('student_id', function ($q) use ($teamId) {
-                    $q->select('student_id')
-                        ->from('student_s_y')
-                        ->where('team_id', $teamId);
-                })
-                ->value('student_id');
-        }
-
         $myTeam = null;
         $teamMembers = collect();
+        $leaderStudentId = null;
 
         if ($teamId) {
             $myTeam = Team::find($teamId);
+            $leaderStudentId = $myTeam?->leader_id;
             if ($myTeam) {
                 $teamMembers = Student::join('student_s_y', 'students.student_id', '=', 'student_s_y.student_id')
                     ->where('student_s_y.team_id', $teamId)

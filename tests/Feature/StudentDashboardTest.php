@@ -57,7 +57,7 @@ class StudentDashboardTest extends TestCase
 
         $team1 = Team::create([
             'team_name' => 'Team Alpha',
-            'team_status' => 'Active',
+            'team_status' => 'on-going',
         ]);
 
         StudentSchoolYear::create([
@@ -76,7 +76,7 @@ class StudentDashboardTest extends TestCase
 
         $team2 = Team::create([
             'team_name' => 'Team Beta',
-            'team_status' => 'Active',
+            'team_status' => 'on-going',
         ]);
 
         StudentSchoolYear::create([
@@ -110,7 +110,7 @@ class StudentDashboardTest extends TestCase
 
         $team = Team::create([
             'team_name' => 'Team Omega',
-            'team_status' => 'Active',
+            'team_status' => 'on-going',
         ]);
 
         StudentSchoolYear::create([

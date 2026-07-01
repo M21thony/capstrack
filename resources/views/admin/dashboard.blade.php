@@ -25,17 +25,30 @@
   <div class="content">
     <div class="grid-4" style="margin-bottom:16px">
       <div class="stat-chip">
-        <div class="stat-n" style="color:var(--accent3)">226</div>
-        <div class="stat-l">Total Users</div>
-        <div class="stat-sub">200 students · 20 faculty · 6 others</div>
+        <div class="stat-n" style="color:var(--blue)">{{ $totalStudents }}</div>
+        <div class="stat-l">Total Students</div>
+        <div class="stat-sub">Enrolled users</div>
       </div>
       <div class="stat-chip">
-        <div class="stat-n" style="color:var(--green)">48</div>
+        <div class="stat-n" style="color:var(--purple)">{{ $totalExperts }}</div>
+        <div class="stat-l">Total Experts</div>
+        <div class="stat-sub">Approved faculty accounts</div>
+      </div>
+      <div class="stat-chip">
+        <div class="stat-n" style="color:var(--green)">{{ $activeTeams }}</div>
         <div class="stat-l">Active Teams</div>
-        <div class="stat-sub">AY 2025–2026</div>
+        <div class="stat-sub">{{ $currentSchoolYearLabel }}</div>
       </div>
       <div class="stat-chip">
-        <div class="stat-n" style="color:var(--red)">4</div>
+        <div class="stat-n" style="color:var(--accent3)">{{ $completedTeams }}</div>
+        <div class="stat-l">Completed Teams</div>
+        <div class="stat-sub">Finished this school year</div>
+      </div>
+    </div>
+
+    <div class="grid-2" style="margin-bottom:16px">
+      <div class="stat-chip">
+        <div class="stat-n" style="color:var(--red)">{{ $pendingApprovals }}</div>
         <div class="stat-l">Pending Approvals</div>
         <div class="stat-sub">Expert accounts awaiting review</div>
       </div>

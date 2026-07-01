@@ -190,7 +190,7 @@ class PersonalInfoOnboardingTest extends TestCase
             ->assertRedirect(route('student.dashboard'));
     }
 
-    public function test_student_in_team_is_redirected_from_edit_page(): void
+    public function test_student_in_team_can_access_edit_page_with_locked_fields(): void
     {
         $student = Student::factory()->withCompleteProfile()->create([
             'email' => 'teamed.student@my.cspc.edu.ph',
@@ -207,17 +207,18 @@ class PersonalInfoOnboardingTest extends TestCase
 
         $this->actingAs($student)
             ->get(route('student.personal-info.edit'))
-            ->assertRedirect(route('student.team'))
-            ->assertSessionHas('error');
+            ->assertOk()
+            ->assertSee('Locked while in a team');
     }
 
-    public function test_student_in_team_cannot_submit_profile_update(): void
+    public function test_student_in_team_can_update_avatar_only(): void
     {
         $student = Student::factory()->withCompleteProfile()->create([
-            'email' => 'blocked.update@my.cspc.edu.ph',
+            'email' => 'update.avatar@my.cspc.edu.ph',
+            'p_picture' => 'avatar-01',
         ]);
 
-        $team = Team::create(['team_name' => 'Blocked Team']);
+        $team = Team::create(['team_name' => 'Avatar Team']);
 
         StudentSchoolYear::create([
             'student_id' => $student->student_id,
@@ -227,9 +228,45 @@ class PersonalInfoOnboardingTest extends TestCase
         ]);
 
         $this->actingAs($student)
-            ->post(route('student.personal-info.store'), $this->validPersonalInfoPayload())
-            ->assertRedirect(route('student.team'))
-            ->assertSessionHas('error');
+            ->post(route('student.personal-info.store'), $this->validPersonalInfoPayload(['avatar' => 'avatar-03']))
+            ->assertRedirect(route('student.dashboard'))
+            ->assertSessionHas('status', 'Your avatar has been updated.');
+
+        $student->refresh();
+        $this->assertEquals('avatar-03', $student->p_picture);
+    }
+
+    public function test_student_in_team_cannot_change_other_fields(): void
+    {
+        $student = Student::factory()->withCompleteProfile()->create([
+            'email' => 'locked.fields@my.cspc.edu.ph',
+            'f_name' => 'Original',
+            'l_name' => 'Name',
+            'course' => 'Bachelor of Science in Computer Science',
+            'p_picture' => 'avatar-01',
+        ]);
+
+        $team = Team::create(['team_name' => 'Locked Fields Team']);
+
+        StudentSchoolYear::create([
+            'student_id' => $student->student_id,
+            'team_id' => $team->team_id,
+            'school_year' => 2026,
+            'program' => 'BSCS',
+        ]);
+
+        $this->actingAs($student)
+            ->post(route('student.personal-info.store'), $this->validPersonalInfoPayload([
+                'first_name' => 'Hacked',
+                'last_name' => 'Changed',
+                'avatar' => 'avatar-02',
+            ]))
+            ->assertRedirect(route('student.dashboard'));
+
+        $student->refresh();
+        $this->assertEquals('Original', $student->f_name);
+        $this->assertEquals('Name', $student->l_name);
+        $this->assertEquals('avatar-02', $student->p_picture);
     }
 
     public function test_student_in_team_cannot_ajax_update_profile(): void

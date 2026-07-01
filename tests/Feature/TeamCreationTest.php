@@ -30,7 +30,7 @@ class TeamCreationTest extends TestCase
 
         $response = $this->post('/team', [
             'team_name' => 'Bulbasaur',
-            'team_status' => 'Active',
+            'team_status' => 'on-going',
         ]);
 
         $response->assertSessionHas('status');
@@ -56,7 +56,7 @@ class TeamCreationTest extends TestCase
 
         $team = Team::create([
             'team_name' => 'Team Charmander',
-            'team_status' => 'Active',
+            'team_status' => 'on-going',
         ]);
 
         StudentSchoolYear::create([
@@ -106,7 +106,8 @@ class TeamCreationTest extends TestCase
 
         $team = Team::create([
             'team_name' => 'Team Squirtle',
-            'team_status' => 'Active',
+            'team_status' => 'on-going',
+            'leader_id' => $leader->student_id,
         ]);
 
         StudentSchoolYear::create([
@@ -153,7 +154,8 @@ class TeamCreationTest extends TestCase
 
         $team = Team::create([
             'team_name' => 'Team Transfer',
-            'team_status' => 'Active',
+            'team_status' => 'on-going',
+            'leader_id' => $leader->student_id,
         ]);
 
         StudentSchoolYear::create([
@@ -183,13 +185,10 @@ class TeamCreationTest extends TestCase
         $response->assertRedirect(route('student.team'));
         $response->assertSessionHas('status', 'Leadership transferred successfully!');
 
-        // Verify old leader's build_a_team post is deleted
-        $this->assertDatabaseMissing('recruitment', ['student_id' => $leader->student_id]);
-
-        // Verify new leader has a build_a_team post
-        $this->assertDatabaseHas('recruitment', [
-            'student_id' => $member->student_id,
-            'recruitment_goal' => 'build_a_team',
+        // Verify the team's leader_id was updated
+        $this->assertDatabaseHas('team', [
+            'team_id' => $team->team_id,
+            'leader_id' => $member->student_id,
         ]);
 
         // Now the original leader can leave (they are a regular member now)

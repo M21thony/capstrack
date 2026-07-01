@@ -47,21 +47,19 @@ class TeamController extends Controller
         }
 
         $memberCount = $myRecruitment?->member_count ?? 5;
-        $isLeader = $myRecruitment && $myRecruitment->recruitment_goal === 'build_a_team';
+        $isLeader = $myTeam && (int) $myTeam->leader_id === (int) $studentId;
+        $teamFull = $myTeam && ! $myTeam->is_confirmed && $isLeader && $teamMembers->count() >= $memberCount;
+        $isConfirmed = $myTeam && $myTeam->is_confirmed;
+        $postHidden = $myTeam && in_array($myTeam->team_status, ['complete', 'closed']);
 
-        $leaderIds = [];
+        $leaderIds = $myTeam ? [(int) $myTeam->leader_id] : [];
+
         if ($teamId) {
-            $leaderIds = Recruitment::whereIn('student_id', $teamMembers->pluck('student_id'))
-                ->where('recruitment_goal', 'build_a_team')
-                ->pluck('student_id')
-                ->toArray();
-
-            $leaderStudentId = $leaderIds[0] ?? null;
-            $teamMembers = $teamMembers->sortBy(function ($member) use ($leaderStudentId, $studentId) {
-                if ($member->student_id === $leaderStudentId) {
+            $teamMembers = $teamMembers->sortBy(function ($member) use ($myTeam, $studentId) {
+                if ($myTeam && (int) $member->student_id === (int) $myTeam->leader_id) {
                     return 0;
                 }
-                if ($member->student_id === $studentId) {
+                if ((int) $member->student_id === (int) $studentId) {
                     return 1;
                 }
 
@@ -93,8 +91,12 @@ class TeamController extends Controller
             ->count();
 
         // Feed recruitment posts (only from students in the same course, year_section and school year)
+        // Exclude posts from leaders whose team is complete or closed
         $otherRecruitments = Recruitment::with(['student.team'])
             ->where('student_id', '!=', $studentId)
+            ->whereDoesntHave('student.team', function ($q) {
+                $q->whereIn('team_status', ['complete', 'closed']);
+            })
             ->whereIn('student_id', function ($query) use ($student, $currentSchoolYear) {
                 $query->select('student_s_y.student_id')
                     ->from('student_s_y')
@@ -126,6 +128,9 @@ class TeamController extends Controller
             'stillIndividual' => $stillIndividual,
             'invites' => $invites,
             'leaderIds' => $leaderIds,
+            'teamFull' => $teamFull,
+            'isConfirmed' => $isConfirmed,
+            'postHidden' => $postHidden,
         ]);
     }
 
@@ -134,7 +139,7 @@ class TeamController extends Controller
         $validated = $request->validate([
             'team_name' => ['required', 'string', 'max:100'],
             'project_title' => ['nullable', 'string', 'max:150'],
-            'team_status' => ['nullable', Rule::in(['Active', 'Full', 'Need Members', 'Done'])],
+            'team_status' => ['nullable', Rule::in(['on-going', 'complete', 'closed'])],
         ]);
 
         $student = $request->user();
@@ -142,15 +147,18 @@ class TeamController extends Controller
         $team = Team::create([
             'team_name' => $validated['team_name'],
             'project_title' => $validated['project_title'] ?? null,
-            'team_status' => $validated['team_status'] ?? 'Active',
+            'team_status' => $validated['team_status'] ?? 'on-going',
+            'leader_id' => $student->student_id,
         ]);
 
         DB::table('student_s_y')
             ->where('student_id', $student->student_id)
             ->update(['team_id' => $team->team_id]);
 
-        // Auto-delete the creator's recruitment post
-        Recruitment::where('student_id', $student->student_id)->delete();
+        // Only delete "find_a_team" posts — keep "build_a_team" so leader status is preserved
+        Recruitment::where('student_id', $student->student_id)
+            ->where('recruitment_goal', 'find_a_team')
+            ->delete();
 
         $this->logActivity(
             $student->student_id,
@@ -182,6 +190,39 @@ class TeamController extends Controller
             ->with('status', 'Team "'.$team->team_name.'" created successfully!');
     }
 
+    public function update(Request $request, Team $team): RedirectResponse
+    {
+        $student = $request->user();
+        $studentId = $student->student_id;
+
+        if ((int) $team->leader_id !== (int) $studentId) {
+            return redirect()->route('student.team')
+                ->with('error', 'Only the team leader can update the team.');
+        }
+
+        $validated = $request->validate([
+            'team_name' => ['required', 'string', 'max:100'],
+            'project_title' => ['nullable', 'string', 'max:150'],
+            'team_status' => ['nullable', Rule::in(['on-going', 'complete', 'closed'])],
+        ]);
+
+        $team->update([
+            'team_name' => $validated['team_name'],
+            'project_title' => $validated['project_title'] ?? null,
+            'team_status' => $validated['team_status'] ?? 'on-going',
+        ]);
+
+        $this->logActivity(
+            $studentId,
+            'team_updated',
+            'Updated team <strong>'.e($team->team_name).'</strong>',
+            ['team_id' => $team->team_id]
+        );
+
+        return redirect()->route('student.team')
+            ->with('status', 'Team updated successfully!');
+    }
+
     public function destroy(Request $request): RedirectResponse
     {
         $student = $request->user();
@@ -196,8 +237,8 @@ class TeamController extends Controller
                 ->with('status', 'You are not in a team.');
         }
 
-        $leavingRecruit = Recruitment::where('student_id', $studentId)->first();
-        $isLeader = $leavingRecruit && $leavingRecruit->recruitment_goal === 'build_a_team';
+        $team = Team::find($teamId);
+        $isLeader = $team && (int) $team->leader_id === (int) $studentId;
 
         if ($isLeader) {
             return redirect()
@@ -211,17 +252,13 @@ class TeamController extends Controller
         $this->logActivity(
             $studentId,
             'team_left',
-            'Left team <strong>'.e(Team::find($teamId)?->team_name ?? 'the team').'</strong>',
+            'Left team <strong>'.e($team->team_name ?? 'the team').'</strong>',
             ['team_id' => $teamId]
         );
 
         // Notify team leader that a member left
-        $team = Team::find($teamId);
         if ($team) {
-            $leaderId = Recruitment::where('recruitment_goal', 'build_a_team')
-                ->whereIn('student_id', function ($q) use ($teamId) {
-                    $q->select('student_id')->from('student_s_y')->where('team_id', $teamId);
-                })->value('student_id');
+            $leaderId = $team->leader_id;
             if ($leaderId) {
                 Notification::create([
                     'student_id' => $leaderId,
@@ -233,9 +270,8 @@ class TeamController extends Controller
             }
         }
 
-        if ($leavingRecruit) {
-            $leavingRecruit->delete();
-        }
+        // Delete the leaving member's recruitment post
+        Recruitment::where('student_id', $studentId)->delete();
 
         // If no members remain, clean up the team
         $remainingCount = StudentSchoolYear::where('team_id', $teamId)->count();
@@ -254,14 +290,6 @@ class TeamController extends Controller
         $student = $request->user();
         $studentId = $student->student_id;
 
-        $myRecruitment = Recruitment::where('student_id', $studentId)->first();
-        $isLeader = $myRecruitment && $myRecruitment->recruitment_goal === 'build_a_team';
-
-        if (! $isLeader) {
-            return redirect()->route('student.team')
-                ->with('error', 'Only the team leader can confirm the team.');
-        }
-
         $myTeam = Team::find(
             StudentSchoolYear::where('student_id', $studentId)->value('team_id')
         );
@@ -269,6 +297,13 @@ class TeamController extends Controller
         if (! $myTeam) {
             return redirect()->route('student.team')
                 ->with('error', 'You are not in a team.');
+        }
+
+        $isLeader = (int) $myTeam->leader_id === (int) $studentId;
+
+        if (! $isLeader) {
+            return redirect()->route('student.team')
+                ->with('error', 'Only the team leader can confirm the team.');
         }
 
         if ($myTeam->is_confirmed) {
@@ -308,14 +343,6 @@ class TeamController extends Controller
         $authUser = $request->user();
         $authId = $authUser->student_id;
 
-        $myRecruitment = Recruitment::where('student_id', $authId)->first();
-        $isLeader = $myRecruitment && $myRecruitment->recruitment_goal === 'build_a_team';
-
-        if (! $isLeader) {
-            return redirect()->route('student.team')
-                ->with('error', 'Only the team leader can remove members.');
-        }
-
         $myTeam = Team::find(
             StudentSchoolYear::where('student_id', $authId)->value('team_id')
         );
@@ -325,9 +352,9 @@ class TeamController extends Controller
                 ->with('error', 'You are not in a team.');
         }
 
-        if ($myTeam->is_confirmed) {
+        if ((int) $myTeam->leader_id !== (int) $authId) {
             return redirect()->route('student.team')
-                ->with('error', 'Cannot remove members after the team is confirmed.');
+                ->with('error', 'Only the team leader can remove members.');
         }
 
         if ($student->student_id === $authId) {
@@ -383,14 +410,6 @@ class TeamController extends Controller
         $authUser = $request->user();
         $authId = $authUser->student_id;
 
-        $myRecruitment = Recruitment::where('student_id', $authId)->first();
-        $isLeader = $myRecruitment && $myRecruitment->recruitment_goal === 'build_a_team';
-
-        if (! $isLeader) {
-            return redirect()->route('student.team')
-                ->with('error', 'Only the team leader can transfer leadership.');
-        }
-
         $myTeam = Team::find(
             StudentSchoolYear::where('student_id', $authId)->value('team_id')
         );
@@ -398,6 +417,11 @@ class TeamController extends Controller
         if (! $myTeam) {
             return redirect()->route('student.team')
                 ->with('error', 'You are not in a team.');
+        }
+
+        if ((int) $myTeam->leader_id !== (int) $authId) {
+            return redirect()->route('student.team')
+                ->with('error', 'Only the team leader can transfer leadership.');
         }
 
         $newLeaderId = (int) $validated['new_leader_id'];
@@ -417,20 +441,15 @@ class TeamController extends Controller
                 ->with('error', 'That student is not a member of your team.');
         }
 
-        // Demote old leader: delete their build_a_team post
-        $myRecruitment->delete();
+        $myTeam->update(['leader_id' => $newLeaderId]);
 
-        // Promote new leader: create or update a build_a_team post
-        $newLeaderRecruit = Recruitment::where('student_id', $newLeaderId)->first();
-        if ($newLeaderRecruit) {
-            $newLeaderRecruit->update(['recruitment_goal' => 'build_a_team']);
-        } else {
-            Recruitment::create([
-                'student_id' => $newLeaderId,
-                'recruitment_goal' => 'build_a_team',
-                'roles' => [],
-            ]);
-        }
+        // Transfer the build_a_team recruitment post to the new leader
+        Recruitment::where('student_id', $authId)
+            ->where('recruitment_goal', 'build_a_team')
+            ->update(['student_id' => $newLeaderId]);
+        Recruitment::where('student_id', $newLeaderId)
+            ->where('recruitment_goal', '!=', 'build_a_team')
+            ->delete();
 
         $newLeader = Student::find($newLeaderId);
         $this->logActivity(

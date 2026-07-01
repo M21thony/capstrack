@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AdminApprovalController;
+use App\Http\Controllers\AdminDashboardController;
 use App\Http\Controllers\AdminExpertsController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
@@ -16,7 +17,7 @@ use App\Http\Controllers\TeamController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth:expert', 'expert.admin', 'no.cache'])->prefix('admin')->name('admin.')->group(function () {
-    Route::view('/dashboard', 'admin.dashboard')->name('dashboard');
+    Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
     Route::get('/experts', [AdminExpertsController::class, 'index'])->name('experts');
     Route::get('/approval', [AdminApprovalController::class, 'index'])->name('approval');
     Route::post('/approval/{expert_id}/approve', [AdminApprovalController::class, 'approve'])->name('approval.approve');
@@ -72,12 +73,11 @@ Route::prefix('expert')->group(function () {
 
 Route::middleware(['auth', 'no.cache'])->group(function () {
     Route::post('/team', [TeamController::class, 'store'])->name('team.store');
+    Route::put('/team/{team}', [TeamController::class, 'update'])->name('team.update');
     Route::post('/team/confirm', [TeamController::class, 'confirm'])->name('team.confirm');
     Route::post('/team/transfer-leadership', [TeamController::class, 'transferLeadership'])->name('team.transfer-leadership');
-    Route::delete('/team', [TeamController::class, 'destroy'])->name('team.destroy');
-    Route::post('/team/confirm', [TeamController::class, 'confirm'])->name('team.confirm');
     Route::delete('/team/members/{student}', [TeamController::class, 'removeMember'])->name('team.members.remove');
-    Route::post('/team/transfer-leadership', [TeamController::class, 'transferLeadership'])->name('team.transfer-leadership');
+    Route::delete('/team', [TeamController::class, 'destroy'])->name('team.destroy');
     Route::post('/recruitment', [RecruitmentController::class, 'store'])->name('recruitment.store');
     Route::put('/recruitment/{recruitment}', [RecruitmentController::class, 'update'])->name('recruitment.update');
     Route::delete('/recruitment/{recruitment}', [RecruitmentController::class, 'destroy'])->name('recruitment.destroy');

@@ -43,7 +43,7 @@
                 <div class="pi-flash">{{ session('status') }}</div>
             @endif
 
-            @include('student.partials.personal-info-form', ['student' => $student, 'presets' => $presets, 'isEditing' => $isEditing])
+            @include('student.partials.personal-info-form', ['student' => $student, 'presets' => $presets, 'isEditing' => $isEditing, 'hasTeam' => $hasTeam ?? false])
         </main>
     </div>
 </body>

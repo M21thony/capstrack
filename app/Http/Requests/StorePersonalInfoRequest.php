@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Models\Student;
+use App\Models\StudentSchoolYear;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -16,6 +17,14 @@ class StorePersonalInfoRequest extends FormRequest
     public function rules(): array
     {
         $userId = auth()->id();
+
+        $hasTeam = StudentSchoolYear::where('student_id', $userId)->whereNotNull('team_id')->exists();
+
+        if ($hasTeam) {
+            return [
+                'avatar' => ['required', 'string', Rule::in(Student::allowedAvatarKeys())],
+            ];
+        }
 
         return [
             'first_name' => ['required', 'string', 'max:50'],

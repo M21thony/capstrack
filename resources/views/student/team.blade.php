@@ -28,10 +28,7 @@
   <div class="topbar">
     <div class="page-title">Team Management</div>
     <div class="topbar-actions">
-      <div class="notif-btn">
-        <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-        <div class="notif-dot"></div>
-      </div>
+      @include('student.partials.notification-dropdown')
     </div>
   </div>
   <div class="content">
@@ -48,8 +45,16 @@
           <div style="font-size: 20px; font-weight: 700; color: var(--text); letter-spacing: -0.3px;">{{ $myTeam->team_name }}</div>
           <div style="font-size: 12px; color: var(--text3); margin-top: 2px;">{{ auth()->user()->studentSchoolYear()->first()?->program ?? 'BSIT-4A' }} · Capstone SY 2025–2026</div>
         </div>
-        <div style="background: #16a34a; color: #fff; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; display: flex; align-items: center; gap: 6px;">
-          <span style="width: 6px; height: 6px; border-radius: 50%; background: #fff; display: inline-block;"></span>ACTIVE
+        @php
+          $statusColors = [
+            'on-going' => ['bg' => '#16a34a', 'label' => 'ON-GOING'],
+            'complete' => ['bg' => '#2563eb', 'label' => 'COMPLETED'],
+            'closed' => ['bg' => '#6b7280', 'label' => 'CLOSED'],
+          ];
+          $statusData = $statusColors[$myTeam->team_status] ?? ['bg' => '#16a34a', 'label' => 'ON-GOING'];
+        @endphp
+        <div style="background: {{ $statusData['bg'] }}; color: #fff; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; display: flex; align-items: center; gap: 6px;">
+          <span style="width: 6px; height: 6px; border-radius: 50%; background: #fff; display: inline-block;"></span>{{ $statusData['label'] }}
         </div>
       </div>
 
@@ -76,7 +81,7 @@
                   <div style="font-size: 11px; color: var(--text3);">{{ $isThisLeader ? 'Team Leader' : 'Team Member' }}</div>
                 </div>
                 <div style="background: {{ $isThisLeader ? '#fef3c7' : 'var(--bg2)' }}; color: {{ $isThisLeader ? '#92400e' : 'var(--text3)' }}; padding: 3px 8px; border-radius: 6px; font-size: 10px; font-weight: 700;">{{ $isThisLeader ? 'LEADER' : 'MEMBER' }}</div>
-                @if($isLeader && !$isThisUser && !$myTeam->is_confirmed)
+                @if($isLeader && !$isThisUser)
                   <button type="button" onclick="confirmRemoveMember({{ $member->student_id }}, '{{ addslashes($member->f_name . ' ' . $member->l_name) }}')" style="background:none;border:none;color:#ef4444;cursor:pointer;padding:4px;font-size:14px;line-height:1;" title="Remove member">✕</button>
                 @endif
               </div>
@@ -122,7 +127,7 @@
               </div>
               <div style="display: flex; justify-content: space-between; font-size: 12px; border-top: 1px solid var(--border); padding-top: 10px;">
                 <span style="color: var(--text3);">Status</span>
-                <span style="font-weight: 700; color: #16a34a;">{{ ucfirst($myTeam->team_status ?? 'Active') }}</span>
+                <span style="font-weight: 700; color: {{ $statusData['bg'] }};">{{ $statusData['label'] }}</span>
               </div>
               <div style="display: flex; justify-content: space-between; font-size: 12px; border-top: 1px solid var(--border); padding-top: 10px;">
                 <span style="color: var(--text3);">Confirmed</span>
@@ -144,7 +149,12 @@
       <div style="margin-top: 18px; display: flex; justify-content: flex-end; gap: 8px; padding-top: 10px; border-top: 1px solid var(--border);">
         @if($isLeader && !$myTeam->is_confirmed)
           <button type="button" onclick="showConfirmTeam()" style="padding: 5px 10px; border-radius: 6px; border: 1px solid #bbf7d0; background: #f0fdf4; color: #15803d; font-size: 10px; font-weight: 700; cursor: pointer;">Confirm Team</button>
+        @endif
+        @if($isLeader)
           <button type="button" onclick="openTransferModal()" style="padding: 5px 10px; border-radius: 6px; border: 1px solid #fde68a; background: #fffbeb; color: #92400e; font-size: 10px; font-weight: 700; cursor: pointer;">Transfer Leadership</button>
+        @endif
+        @if($isLeader)
+          <button type="button" onclick="openEditTeamModal()" style="padding: 5px 10px; border-radius: 6px; border: 1px solid #bfdbfe; background: #eff6ff; color: #1d4ed8; font-size: 10px; font-weight: 700; cursor: pointer;">Update Team</button>
         @endif
         <form method="POST" action="{{ route('team.destroy') }}" id="leave-team-form" style="display: inline;">
           @csrf
@@ -197,6 +207,26 @@
               $dotColor = $isLeader ? '#22c55e' : '#3b82f6';
               $initials = auth()->user()->avatarInitials();
             @endphp
+            @if(isset($postHidden) && $postHidden && $isLeader)
+            <div class="profile-card-compact" style="cursor: default; opacity: 0.85;">
+              <div class="avatar-ring {{ $ringClass }}" style="filter: grayscale(0.5);">
+                @if (auth()->user()->avatarUrl())
+                  <img src="{{ auth()->user()->avatarUrl() }}" alt="">
+                @else
+                  <div class="avatar-text">{{ $initials }}</div>
+                @endif
+                <div class="status-badge-dot" style="background:{{ $dotColor }}"></div>
+              </div>
+              <div class="name-label">{{ auth()->user()->f_name }} {{ auth()->user()->l_name }}</div>
+              <div class="goal-label" style="color: var(--text3);">
+                @if($myTeam && $myTeam->team_status === 'complete')
+                  COMPLETED
+                @elseif($myTeam && $myTeam->team_status === 'closed')
+                  CLOSED
+                @endif
+              </div>
+            </div>
+            @else
             <div class="profile-card-compact" id="my-active-post" onclick='viewPostDetails(this, "{{ addslashes(auth()->user()->f_name . " " . auth()->user()->l_name) }}", "{{ implode(", ", $skills) }}", "{{ $myRecruitment->looking_for }}", "{{ auth()->user()->team->team_name ?? 'No Team' }}", "{{ auth()->user()->team->project_title ?? 'No project set' }}", "{{ auth()->user()->student_number }}", true, "{{ $isLeader ? 'Leader' : 'Individual' }}", {{ auth()->user()->student_id }}, {{ auth()->user()->team->team_id ?? 'null' }}, "{{ auth()->user()->avatarUrl() }}", "{{ addslashes($myRecruitment->introduction ?? '') }}")'>
               <div class="post-actions" style="position:absolute; top:8px; right:8px; z-index:2;">
                 <button type="button" class="btn-icon" style="width:24px; height:24px; margin-right:4px;" onclick="event.stopPropagation(); openEditModal()">
@@ -219,6 +249,7 @@
               <div class="name-label">{{ auth()->user()->f_name }} {{ auth()->user()->l_name }}</div>
               <div class="goal-label">{{ $goalLabel }}</div>
             </div>
+            @endif
           @endif
 
           @forelse($otherRecruitments as $recruit)
@@ -499,6 +530,36 @@
     @method('DELETE')
 </form>
 
+@if($myTeam && $isLeader)
+{{-- Edit Team Modal --}}
+<div class="modal-overlay" id="editTeamModal" onclick="if(event.target==this) closeEditTeamModal()">
+  <div class="card" style="width: 460px; padding: 30px; border: 1px solid var(--accent); position: relative;">
+    <button type="button" onclick="closeEditTeamModal()" class="pm-close-btn" aria-label="Close" style="position: absolute; top: 20px; right: 20px;">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+    <div class="section-title">Update Team</div>
+    <form method="POST" action="{{ route('team.update', $myTeam->team_id) }}" style="margin-top: 20px;">
+      @csrf
+      @method('PUT')
+      <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 8px;">Team Name</label>
+      <input type="text" name="team_name" value="{{ $myTeam->team_name }}" placeholder="Enter team name..." style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;margin-bottom:16px;box-sizing:border-box;">
+      <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 8px;">Project Title</label>
+      <input type="text" name="project_title" value="{{ $myTeam->project_title }}" placeholder="Enter project title..." style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;margin-bottom:16px;box-sizing:border-box;">
+      <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 8px;">Team Status</label>
+      <select name="team_status" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;margin-bottom:20px;box-sizing:border-box;">
+        <option value="on-going" @if($myTeam->team_status === 'on-going') selected @endif>On-going</option>
+        <option value="complete" @if($myTeam->team_status === 'complete') selected @endif>Complete</option>
+        <option value="closed" @if($myTeam->team_status === 'closed') selected @endif>Closed</option>
+      </select>
+      <div style="display:flex;gap:10px;">
+        <button type="submit" class="btn-primary" style="flex:1;">Save Changes</button>
+        <button type="button" class="google-btn" style="flex:1;border:none;" onclick="closeEditTeamModal()">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+@endif
+
 {{-- Transfer Leadership Modal --}}
 <div class="modal-overlay" id="transferModal" onclick="if(event.target==this) closeTransferModal()">
   <div class="card" style="width: 400px; padding: 30px;">
@@ -579,7 +640,7 @@ function showConfirmTeam() {
     @endphp
     showConfirm({
         title: 'Confirm Team',
-        message: '@if($teamIsComplete)Are you sure you want to confirm <strong>{{ addslashes($myTeam->team_name) }}</strong>? Once confirmed, this team will be submitted to the admin and instructor dashboard. You will no longer be able to remove members or make changes to the team composition.@else<strong>Warning:</strong> Your team is not yet complete ({{ $teamMemberCount }}/{{ $memberCount }} members). Are you sure you want to confirm? Once confirmed, this team will be submitted to the admin and instructor dashboard.@endif',
+        message: '@if($teamIsComplete)Are you sure you want to confirm <strong>{{ addslashes($myTeam->team_name) }}</strong>? Once confirmed, the team will be submitted to the admin and instructor dashboard. Your recruitment post can still be edited and members can still be managed.@else<strong>Warning:</strong> Your team is not yet complete ({{ $teamMemberCount }}/{{ $memberCount }} members). Are you sure you want to confirm? Once confirmed, the team will be submitted to the admin and instructor dashboard.@endif',
         icon: 'team',
         confirmText: 'Yes, Confirm',
         confirmClass: 'success',
@@ -610,6 +671,14 @@ function openTransferModal() {
 
 function closeTransferModal() {
     document.getElementById('transferModal').classList.remove('active');
+}
+
+function openEditTeamModal() {
+    document.getElementById('editTeamModal').classList.add('active');
+}
+
+function closeEditTeamModal() {
+    document.getElementById('editTeamModal').classList.remove('active');
 }
 @endif
 
@@ -938,6 +1007,18 @@ function publishPost(event) {
 
     if (isEditing) {
         event.preventDefault();
+        const goal = document.getElementById('post-goal').value;
+        document.getElementById('recruitment-goal-input').value = goal === 'leader' ? 'build_a_team' : 'find_a_team';
+        document.getElementById('member-count-input').value = document.getElementById('member-count').value;
+        if (goal === 'leader') {
+            document.getElementById('team-name-hidden').value = document.getElementById('team-name').value;
+            document.getElementById('looking-for-input').value = document.getElementById('leader-looking-for').value;
+            document.getElementById('introduction-input').value = '';
+        } else {
+            document.getElementById('team-name-hidden').value = '';
+            document.getElementById('looking-for-input').value = '';
+            document.getElementById('introduction-input').value = document.getElementById('individual-intro').value;
+        }
         const form = document.getElementById('recruitment-form');
         form.querySelectorAll('input[name="roles[]"]').forEach(function(el) { el.remove(); });
         activeTags.forEach(function(tag) {
@@ -971,6 +1052,9 @@ document.addEventListener('click', function(e) {
 
 document.addEventListener('DOMContentLoaded', function() {
     updateModalUI();
+    @if(isset($teamFull) && $teamFull)
+    setTimeout(function() { showConfirmTeam(); }, 500);
+    @endif
 });
 </script>
 </body>

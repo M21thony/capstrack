@@ -2,9 +2,11 @@
 
 namespace App\Providers;
 
+use App\Models\Notification;
 use App\Services\OllamaSSHClient;
 use App\Services\SimilarityService;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -30,7 +32,21 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-
         Schema::defaultStringLength(191);
+
+        View::composer('student.*', function ($view) {
+            if (auth()->check()) {
+                $studentId = auth()->id();
+                $unreadNotifications = Notification::where('student_id', $studentId)
+                    ->where('is_read', false)
+                    ->latest('created_at')
+                    ->take(10)
+                    ->get();
+                $unreadCount = Notification::where('student_id', $studentId)
+                    ->where('is_read', false)
+                    ->count();
+                $view->with(compact('unreadNotifications', 'unreadCount'));
+            }
+        });
     }
 }

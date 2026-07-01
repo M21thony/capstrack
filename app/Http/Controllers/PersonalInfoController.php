@@ -22,7 +22,7 @@ class PersonalInfoController extends Controller
             'student' => $student,
             'presets' => config('avatars.presets', []),
             'isEditing' => false,
-            // Pre-split from Google's given_name / family_name stored at login
+            'hasTeam' => false,
             'autoFillFirstName' => $student->f_name,
             'autoFillLastName' => $student->l_name,
         ]);
@@ -36,15 +36,13 @@ class PersonalInfoController extends Controller
             return redirect()->route('student.personal-info');
         }
 
-        if (StudentSchoolYear::where('student_id', $student->student_id)->whereNotNull('team_id')->exists()) {
-            return redirect()->route('student.team')
-                ->with('error', 'You must leave your team first before editing your profile.');
-        }
+        $hasTeam = StudentSchoolYear::where('student_id', $student->student_id)->whereNotNull('team_id')->exists();
 
         return view('student.personal-info', [
             'student' => $student,
             'presets' => config('avatars.presets', []),
             'isEditing' => true,
+            'hasTeam' => $hasTeam,
             'autoFillFirstName' => $student->f_name,
             'autoFillLastName' => $student->l_name,
         ]);
@@ -53,14 +51,19 @@ class PersonalInfoController extends Controller
     public function store(StorePersonalInfoRequest $request): RedirectResponse
     {
         $student = $request->user();
-
-        if ($student->hasCompletedProfile()
-            && StudentSchoolYear::where('student_id', $student->student_id)->whereNotNull('team_id')->exists()) {
-            return redirect()->route('student.team')
-                ->with('error', 'You must leave your team first before editing your profile.');
-        }
-
         $validated = $request->validated();
+
+        $hasTeam = $student->hasCompletedProfile()
+            && StudentSchoolYear::where('student_id', $student->student_id)->whereNotNull('team_id')->exists();
+
+        if ($hasTeam) {
+            $student->p_picture = $validated['avatar'];
+            $student->save();
+
+            return redirect()
+                ->route('student.dashboard')
+                ->with('status', 'Your avatar has been updated.');
+        }
 
         $student->f_name = $validated['first_name'];
         $student->m_name = $validated['middle_name'] ?? null;

@@ -6,6 +6,7 @@
     $courseAbbr = \App\Models\Student::mapCourseToProgram($student->course ?? '') ?? $student->course ?? '';
     $sidebarYearNum = preg_replace('/[^0-9]/', '', $sidebarYear);
     $sidebarYearSection = $courseAbbr ? $courseAbbr . ' - ' . $sidebarYearNum . $sidebarSection : $student->year_section ?? '';
+    $studentHasTeam = \App\Models\StudentSchoolYear::where('student_id', $student->student_id)->whereNotNull('team_id')->exists();
 @endphp
 <!-- SIDEBAR -->
 <div class="sidebar">
@@ -111,7 +112,9 @@
     <div class="nav-section">Account</div>
     <a href="{{ route('student.personal-info.edit') }}" class="nav-item {{ request()->routeIs('student.personal-info*') ? 'active' : '' }}">
       <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-      Personal Information
+      Personal Information  
+      @if ($studentHasTeam)
+      @endif
     </a>
     <form id="logout-form" action="{{ route('logout') }}" method="POST">
         @csrf
@@ -174,14 +177,12 @@
       </div>
     </div>
     <div class="pm-footer">
-      @php
-        $studentHasTeam = \App\Models\StudentSchoolYear::where('student_id', $student->student_id)->whereNotNull('team_id')->exists();
-      @endphp
-      @if ($studentHasTeam)
-        <span style="font-size:11px;color:var(--text3);">Leave your team to edit profile</span>
-      @else
-        <a href="{{ route('student.personal-info.edit') }}" class="pm-edit-profile-btn">Edit Profile</a>
-      @endif
+      <a href="{{ route('student.personal-info.edit') }}" class="pm-edit-profile-btn" style="text-decoration:none;">
+        Edit Profile
+        @if ($studentHasTeam)
+
+        @endif
+      </a>
     </div>
   </div>
 </div>

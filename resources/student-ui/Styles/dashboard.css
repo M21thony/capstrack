@@ -102,7 +102,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
 /* ACTIVITY */
 .activity-item{display:flex;align-items:flex-start;gap:14px;padding:12px 0;border-bottom:1px solid var(--border)}
 .activity-item:last-child{border-bottom:none}
-.act-scroll{max-height:380px;overflow-y:auto}
+.act-scroll{max-height:260px;overflow-y:auto}
 .act-scroll::-webkit-scrollbar{width:4px}
 .act-scroll::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
 .act-icon{width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
