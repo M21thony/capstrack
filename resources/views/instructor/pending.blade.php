@@ -224,7 +224,7 @@ p {
       </div>
     </div>
 
-    <form action="{{ route('logout') }}" method="POST">
+    <form action="{{ route('expert.logout') }}" method="POST">
       @csrf
       <button type="submit" class="btn-logout">
         <svg viewBox="0 0 24 24">

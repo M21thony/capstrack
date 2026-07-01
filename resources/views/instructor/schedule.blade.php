@@ -925,18 +925,18 @@ function openSlotModal(key, dayNum, dayName) {
           </div>
           ${s.topic ? `<div style="font-size:11px;color:var(--text2);margin-top:4px;font-style:italic">"${s.topic}"</div>` : ''}
         </div>
-        <div style="display:flex;flex-direction:column;gap:4px">
-          ${s.schedule_id ? `
-          <button class="slot-delete-btn" onclick="toggleSlot(${s.schedule_id},'${key}',${i})"
-                  title="${s.is_available ? 'Mark unavailable' : 'Mark available'}" style="margin-bottom:2px">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
-            </svg>
-          </button>` : ''}
-          <button class="slot-delete-btn" onclick="deleteSlot('${key}',${i}${s.schedule_id ? ',' + s.schedule_id : ''})" title="Delete slot">
-            <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
-          </button>
-        </div>`;
+<div style="display:flex;flex-direction:column;gap:4px">
+           ${s.schedule_id ? `
+           <button class="slot-delete-btn" onclick="toggleSlot(${s.schedule_id},'${key}',${i})"
+                   title="${s.is_available ? 'Mark unavailable' : 'Mark available'}" style="margin-bottom:2px">
+             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+               <circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
+             </svg>
+           </button>` : ''}
+           <button class="slot-delete-btn" onclick="deleteSlot('${key}',${i}${s.schedule_id ? ',' + s.schedule_id : ''})" title="Delete slot">
+             <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+           </button>
+         </div>`;
       list.appendChild(row);
     });
   }
@@ -967,6 +967,19 @@ async function toggleSlot(scheduleId, key, index) {
     showToast(data.is_available ? 'Slot marked as available.' : 'Slot marked as unavailable.');
   } catch (e) {
     showToast('Failed to update slot: ' + e.message, 'error');
+  }
+}
+
+// ── Refresh Google Calendar event with correct timezone ───────────────
+async function refreshGcalSlot(scheduleId) {
+  try {
+    const data = await apiFetch(`/instructor/schedule/slots/${scheduleId}/refresh-gcal`, { method: 'PATCH' });
+
+    showToast('Google Calendar event refreshed with correct timezone ✓');
+    closeSlotModal();
+    renderCalendar();
+  } catch (e) {
+    showToast('Failed to refresh: ' + e.message, 'error');
   }
 }
 

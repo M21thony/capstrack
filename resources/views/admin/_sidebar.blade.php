@@ -110,7 +110,7 @@
       <svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
       Financial Records
     </a>
-    <form id="admin-logout-form" action="{{ route('logout') }}" method="POST" style="display: none;">
+    <form id="admin-logout-form" action="{{ route('expert.logout') }}" method="POST" style="display: none;">
       @csrf
     </form>
     <a href="#" onclick="event.preventDefault(); document.getElementById('admin-logout-form').submit();" class="nav-item">
