@@ -46,7 +46,7 @@
         </div>
         <div style="flex: 1; min-width: 0;">
           <div style="font-size: 20px; font-weight: 700; color: var(--text); letter-spacing: -0.3px;">{{ $myTeam->team_name }}</div>
-          <div style="font-size: 12px; color: var(--text3); margin-top: 2px;">{{ auth()->user()->studentSchoolYear()->first()?->program ?? 'BSIT-4A' }} · Capstone AY 2025–2026</div>
+          <div style="font-size: 12px; color: var(--text3); margin-top: 2px;">{{ auth()->user()->studentSchoolYear()->first()?->program ?? 'BSIT-4A' }} · Capstone SY 2025–2026</div>
         </div>
         <div style="background: #16a34a; color: #fff; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; display: flex; align-items: center; gap: 6px;">
           <span style="width: 6px; height: 6px; border-radius: 50%; background: #fff; display: inline-block;"></span>ACTIVE
@@ -58,41 +58,33 @@
         <div style="background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 16px;">
           <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 14px;">TEAM MEMBERS</div>
           <div style="display: flex; flex-direction: column; gap: 10px;">
-            <div style="display: flex; align-items: center; gap: 10px;">
-              <div style="width: 36px; height: 36px; border-radius: 50%; background: #fbbf24; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #1a1a1a; overflow: hidden; flex-shrink: 0;">
-                @if (auth()->user()->avatarUrl())
-                  <img src="{{ auth()->user()->avatarUrl() }}" alt="" style="width: 100%; height: 100%; object-fit: cover;">
-                @else
-                  {{ auth()->user()->avatarInitials() }}
-                @endif
-              </div>
-              <div style="flex: 1;">
-                <div style="font-size: 13px; font-weight: 600; color: var(--text);">{{ auth()->user()->f_name }} {{ auth()->user()->l_name }}</div>
-                <div style="font-size: 11px; color: var(--text3);">Team Leader</div>
-              </div>
-              <div style="background: #fef3c7; color: #92400e; padding: 3px 8px; border-radius: 6px; font-size: 10px; font-weight: 700;">LEADER</div>
-            </div>
-            @foreach($myTeam->members as $member)
-              @if($member->student_id === auth()->user()->student_id) @continue @endif
+            @foreach($teamMembers as $member)
+              @php
+                $isThisUser = $member->student_id === auth()->user()->student_id;
+                $isThisLeader = in_array($member->student_id, $leaderIds);
+              @endphp
               <div style="display: flex; align-items: center; gap: 10px;">
-                <div style="width: 36px; height: 36px; border-radius: 50%; background: #7c3aed; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #fff; overflow: hidden; flex-shrink: 0;">
+                <div style="width: 36px; height: 36px; border-radius: 50%; background: {{ $isThisLeader ? '#fbbf24' : ($isThisUser ? '#fbbf24' : '#7c3aed') }}; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #1a1a1a; overflow: hidden; flex-shrink: 0;">
                   @if ($member->avatarUrl())
                     <img src="{{ $member->avatarUrl() }}" alt="" style="width: 100%; height: 100%; object-fit: cover;">
                   @else
-                    {{ strtoupper(substr($member->avatarInitials() ?: ($member->f_name ?? $member->email ?? '?'), 0, 2)) }}
+                    {{ $member->avatarInitials() }}
                   @endif
                 </div>
                 <div style="flex: 1;">
                   <div style="font-size: 13px; font-weight: 600; color: var(--text);">{{ trim(($member->f_name ?? '') . ' ' . ($member->l_name ?? '')) ?: $member->email ?? 'Member' }}</div>
-                  <div style="font-size: 11px; color: var(--text3);">{{ $member->l_name ?? '' }}</div>
+                  <div style="font-size: 11px; color: var(--text3);">{{ $isThisLeader ? 'Team Leader' : 'Team Member' }}</div>
                 </div>
-                <div style="background: var(--bg2); color: var(--text3); padding: 3px 8px; border-radius: 6px; font-size: 10px; font-weight: 700;">MEMBER</div>
+                <div style="background: {{ $isThisLeader ? '#fef3c7' : 'var(--bg2)' }}; color: {{ $isThisLeader ? '#92400e' : 'var(--text3)' }}; padding: 3px 8px; border-radius: 6px; font-size: 10px; font-weight: 700;">{{ $isThisLeader ? 'LEADER' : 'MEMBER' }}</div>
+                @if($isLeader && !$isThisUser && !$myTeam->is_confirmed)
+                  <button type="button" onclick="confirmRemoveMember({{ $member->student_id }}, '{{ addslashes($member->f_name . ' ' . $member->l_name) }}')" style="background:none;border:none;color:#ef4444;cursor:pointer;padding:4px;font-size:14px;line-height:1;" title="Remove member">✕</button>
+                @endif
               </div>
             @endforeach
           </div>
           <div style="margin-top: 14px; display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text3);">
             @php
-              $total = 5;
+              $total = $memberCount;
               $count = \App\Models\StudentSchoolYear::where('team_id', $myTeam->team_id)->count();
             @endphp
             @for($i = 0; $i < $total; $i++)
@@ -117,19 +109,28 @@
                   $parts = array_map('trim', explode('·', $yearSection));
                   $year = $parts[0] ?? '';
                   $section = $parts[1] ?? '';
+                  $yearNum = preg_replace('/[^0-9]/', '', $year);
                   $sectionLabel = $program
-                    ? $program . ($year ? ', ' . $year : '') . ($section ? ' - ' . $section : '')
+                    ? $program . ' - ' . $yearNum . $section
                     : $yearSection;
                 @endphp
                 <span style="font-weight: 700; color: var(--text);">{{ $sectionLabel }}</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; font-size: 12px; border-top: 1px solid var(--border); padding-top: 10px;">
+                <span style="color: var(--text3);">Team Name</span>
+                <span style="font-weight: 700; color: var(--text);">{{ $myTeam->team_name }}</span>
               </div>
               <div style="display: flex; justify-content: space-between; font-size: 12px; border-top: 1px solid var(--border); padding-top: 10px;">
                 <span style="color: var(--text3);">Status</span>
                 <span style="font-weight: 700; color: #16a34a;">{{ ucfirst($myTeam->team_status ?? 'Active') }}</span>
               </div>
               <div style="display: flex; justify-content: space-between; font-size: 12px; border-top: 1px solid var(--border); padding-top: 10px;">
+                <span style="color: var(--text3);">Confirmed</span>
+                <span style="font-weight: 700; color: {{ $myTeam->is_confirmed ? '#16a34a' : '#f59e0b' }};">{{ $myTeam->is_confirmed ? 'Yes' : 'No' }}</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; font-size: 12px; border-top: 1px solid var(--border); padding-top: 10px;">
                 <span style="color: var(--text3);">Your Role</span>
-                <span style="font-weight: 700; color: #fbbf24;">Leader</span>
+                <span style="font-weight: 700; color: {{ $isLeader ? '#fbbf24' : 'var(--text3)' }};">{{ $isLeader ? 'Leader' : 'Member' }}</span>
               </div>
               <div style="display: flex; justify-content: space-between; font-size: 12px; border-top: 1px solid var(--border); padding-top: 10px;">
                 <span style="color: var(--text3);">Date Formed</span>
@@ -140,7 +141,11 @@
         </div>
       </div>
 
-      <div style="margin-top: 18px; text-align: right; padding-top: 10px; border-top: 1px solid var(--border);">
+      <div style="margin-top: 18px; display: flex; justify-content: flex-end; gap: 8px; padding-top: 10px; border-top: 1px solid var(--border);">
+        @if($isLeader && !$myTeam->is_confirmed)
+          <button type="button" onclick="showConfirmTeam()" style="padding: 5px 10px; border-radius: 6px; border: 1px solid #bbf7d0; background: #f0fdf4; color: #15803d; font-size: 10px; font-weight: 700; cursor: pointer;">Confirm Team</button>
+          <button type="button" onclick="openTransferModal()" style="padding: 5px 10px; border-radius: 6px; border: 1px solid #fde68a; background: #fffbeb; color: #92400e; font-size: 10px; font-weight: 700; cursor: pointer;">Transfer Leadership</button>
+        @endif
         <form method="POST" action="{{ route('team.destroy') }}" id="leave-team-form" style="display: inline;">
           @csrf
           @method('DELETE')
@@ -174,14 +179,8 @@
   <div class="team-container">
     <!-- LEFT COLUMN -->
     <div style="display: flex; flex-direction: column; gap: 20px;">
-      <div class="card" style="border-style: dashed; border-width: 2px; cursor: pointer;" onclick="openPostModal(@json($myRecruitment ?? null))">
-
       @if(!$myTeam)
       <div class="card" style="border-style: dashed; border-width: 2px; cursor: pointer;" onclick="openPostModal()">
-
-      @if(!$myTeam)
-      <div class="card" style="border-style: dashed; border-width: 2px; cursor: pointer;" onclick="openPostModal()">
-
         <div style="display: flex; gap: 12px; align-items: center;">
           <div class="avatar" style="width: 40px; height: 40px; background: var(--accent); color: white;">+</div>
           <div style="color: var(--text3); font-size: 14px;">Looking for a team or members? Post your expertise here...</div>
@@ -198,24 +197,11 @@
               $dotColor = $isLeader ? '#22c55e' : '#3b82f6';
               $initials = auth()->user()->avatarInitials();
             @endphp
-            <div class="profile-card-compact" id="my-active-post"
-              onclick='viewPostDetails(
-                this,
-                @json(auth()->user()->f_name . " " . auth()->user()->l_name),
-                @json(implode(", ", $skills ?? [])),
-                @json($myRecruitment->looking_for ?? ""),
-                @json(auth()->user()->team->team_name ?? "No Team"),
-                @json(auth()->user()->team->project_title ?? "No project set"),
-                @json(auth()->user()->student_id),
-                true,
-                @json($isLeader ? "Leader" : "Individual"),
-                @json($myRecruitment)
-              )'>
-            <div class="profile-card-compact" id="my-active-post" onclick='viewPostDetails(this, "{{ addslashes(auth()->user()->f_name . " " . auth()->user()->l_name) }}", "{{ implode(", ", $skills) }}", "{{ $myRecruitment->looking_for }}", "{{ auth()->user()->team->team_name ?? 'No Team' }}", "{{ auth()->user()->team->project_title ?? 'No project set' }}", "{{ auth()->user()->student_number }}", true, "{{ $isLeader ? 'Leader' : 'Individual' }}", {{ auth()->user()->student_id }}, {{ auth()->user()->team->team_id ?? 'null' }}, "{{ auth()->user()->avatarUrl() }}")'>
-
-            <div class="profile-card-compact" id="my-active-post" onclick='viewPostDetails(this, "{{ addslashes(auth()->user()->f_name . " " . auth()->user()->l_name) }}", "{{ implode(", ", $skills) }}", "{{ $myRecruitment->looking_for }}", "{{ auth()->user()->team->team_name ?? 'No Team' }}", "{{ auth()->user()->team->project_title ?? 'No project set' }}", "{{ auth()->user()->student_number }}", true, "{{ $isLeader ? 'Leader' : 'Individual' }}", {{ auth()->user()->student_id }}, {{ auth()->user()->team->team_id ?? 'null' }}, "{{ auth()->user()->avatarUrl() }}")'>
-
+            <div class="profile-card-compact" id="my-active-post" onclick='viewPostDetails(this, "{{ addslashes(auth()->user()->f_name . " " . auth()->user()->l_name) }}", "{{ implode(", ", $skills) }}", "{{ $myRecruitment->looking_for }}", "{{ auth()->user()->team->team_name ?? 'No Team' }}", "{{ auth()->user()->team->project_title ?? 'No project set' }}", "{{ auth()->user()->student_number }}", true, "{{ $isLeader ? 'Leader' : 'Individual' }}", {{ auth()->user()->student_id }}, {{ auth()->user()->team->team_id ?? 'null' }}, "{{ auth()->user()->avatarUrl() }}", "{{ addslashes($myRecruitment->introduction ?? '') }}")'>
               <div class="post-actions" style="position:absolute; top:8px; right:8px; z-index:2;">
+                <button type="button" class="btn-icon" style="width:24px; height:24px; margin-right:4px;" onclick="event.stopPropagation(); openEditModal()">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                </button>
                 <form method="POST" action="{{ route('recruitment.destroy', $myRecruitment) }}" id="delete-recruitment-form" style="display:inline;">
                   @csrf
                   @method('DELETE')
@@ -243,23 +229,7 @@
               $dotColor = $isLeader ? '#22c55e' : '#3b82f6';
               $initials = $recruit->student->avatarInitials();
             @endphp
-            <div class="profile-card-compact"
-              onclick='viewPostDetails(
-                this,
-                @json($recruit->student->f_name . " " . $recruit->student->l_name),
-                @json(implode(", ", $recruit->roles ?? [])),
-                @json($recruit->looking_for ?? ""),
-                @json($recruit->student->team->team_name ?? "No Team"),
-                @json($recruit->student->team->project_title ?? "No project set"),
-                @json($recruit->student->student_id),
-                false,
-                @json($isLeader ? "Leader" : "Individual"),
-                null
-              )'>
-            <div class="profile-card-compact" onclick='viewPostDetails(this, "{{ addslashes($recruit->student->f_name . " " . $recruit->student->l_name) }}", "{{ implode(", ", $recruit->roles ?? []) }}", "{{ $recruit->looking_for }}", "{{ $recruit->student->team->team_name ?? 'No Team' }}", "{{ $recruit->student->team->project_title ?? 'No project set' }}", "{{ $recruit->student->student_number }}", false, "{{ $isLeader ? 'Leader' : 'Individual' }}", {{ $recruit->student_id }}, {{ $recruit->student->team->team_id ?? 'null' }}, "{{ $recruit->student->avatarUrl() }}")'>
-
-            <div class="profile-card-compact" onclick='viewPostDetails(this, "{{ addslashes($recruit->student->f_name . " " . $recruit->student->l_name) }}", "{{ implode(", ", $recruit->roles ?? []) }}", "{{ $recruit->looking_for }}", "{{ $recruit->student->team->team_name ?? 'No Team' }}", "{{ $recruit->student->team->project_title ?? 'No project set' }}", "{{ $recruit->student->student_number }}", false, "{{ $isLeader ? 'Leader' : 'Individual' }}", {{ $recruit->student_id }}, {{ $recruit->student->team->team_id ?? 'null' }}, "{{ $recruit->student->avatarUrl() }}")'>
-
+            <div class="profile-card-compact" onclick='viewPostDetails(this, "{{ addslashes($recruit->student->f_name . " " . $recruit->student->l_name) }}", "{{ implode(", ", $recruit->roles ?? []) }}", "{{ $recruit->looking_for }}", "{{ $recruit->student->team->team_name ?? 'No Team' }}", "{{ $recruit->student->team->project_title ?? 'No project set' }}", "{{ $recruit->student->student_number }}", false, "{{ $isLeader ? 'Leader' : 'Individual' }}", {{ $recruit->student_id }}, {{ $recruit->student->team->team_id ?? 'null' }}, "{{ $recruit->student->avatarUrl() }}", "{{ addslashes($recruit->introduction ?? '') }}")'>
               <div class="avatar-ring {{ $ringClass }}">
                 @if ($recruit->student->avatarUrl())
                   <img src="{{ $recruit->student->avatarUrl() }}" alt="">
@@ -365,17 +335,6 @@
 
   @if ($otherRecruitments->hasPages())
   <div class="pagination-container">
-      <div class="pg-arrow" title="Previous">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
-      </div>
-      <div class="pg-btn active">1</div>
-      <div class="pg-btn">2</div>
-      <div class="pg-btn">3</div>
-      <div style="color: var(--text3); font-size: 11px; margin: 0 4px;">...</div>
-      <div class="pg-btn">12</div>
-      <div class="pg-arrow" title="Next">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
-      </div>
       @if ($otherRecruitments->onFirstPage())
           <div class="pg-arrow disabled" title="Previous" style="opacity: 0.5; cursor: not-allowed; display: flex; align-items: center; justify-content: center;">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
@@ -442,7 +401,11 @@
               <div style="display: flex; justify-content: space-between; font-size: 12px; border-top: 1px solid var(--border); padding-top: 6px; margin-top: 2px;">
                   <span style="color: var(--text3);">Team</span>
                   <span id="detail-team-name" style="font-weight: 600; color: var(--text); text-align: right; max-width: 60%;"></span>
-              </div> 
+              </div>
+              <div style="display: flex; justify-content: space-between; font-size: 12px; border-top: 1px solid var(--border); padding-top: 6px; margin-top: 2px;">
+                  <span style="color: var(--text3);">Role</span>
+                  <span id="detail-role" style="font-weight: 600; color: var(--text); text-align: right; max-width: 60%;"></span>
+              </div>
           </div>
 
           <div style="margin-bottom: 18px;">
@@ -454,60 +417,6 @@
       </div>
   </div>
 
-  <!-- POST / EDIT MODAL -->
-  <div class="modal-overlay" id="postModal" onclick="if(event.target==this) closePostModal()">
-    <div class="card" style="width: 480px; padding: 30px; border: 1px solid var(--accent);">
-      <div class="section-title" id="modal-title">Build a Team</div>
-      
-      <div style="margin-top: 20px;">
-        <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 8px;">Recruitment Goal</label>
-        <select class="custom-select" id="post-goal" style="margin-bottom: 20px;" onchange="updateModalUI()">
-          <option value="leader">Build a Team (Find Members)</option>
-          <option value="individual">Find a Team (Join Others)</option>
-        </select>
-
-         <div class="modal-tutorial" id="modal-note-box">
-             <p id="modal-note-text"><strong>CapsTip:</strong> A standard capstone team usually consists of 3-5 members. Setting this helps students know if you still have slots available.</p>
-         </div>
-
-         <div id="leader-fields">
-          <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 8px;">Looking For</label>
-          <textarea id="leader-looking-for" name="looking_for" rows="3" placeholder="e.g. 1 Backend Dev, 1 UI Designer..." style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg2); color: var(--text); font-size: 13px; resize: vertical; margin-bottom: 16px;"></textarea>
-        </div>
-
-        <div id="individual-fields" style="display:none;">
-          <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 8px;">Short Introduction</label>
-          <textarea id="individual-intro" rows="3" placeholder="Briefly introduce yourself and what you bring to the team..." style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg2); color: var(--text); font-size: 13px; resize: vertical; margin-bottom: 16px;"></textarea>
-        </div>
-
-        <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 8px;">Expertise & Roles</label>
-        <div class="tag-input-field" id="tag-container" style="margin-bottom: 12px;">
-          <span style="color: var(--text3); font-size: 12px;" id="placeholder-text">Click tags below to add...</span>
-        </div>
-
-        <div id="skill-selector" style="margin-bottom: 25px;">
-          <span class="skill-chip leader-skill" onclick="toggleTag(this, 'UI Designer')">UI Designer</span>
-          <span class="skill-chip leader-skill" onclick="toggleTag(this, 'App Developer')">App Developer</span>
-          <span class="skill-chip leader-skill" onclick="toggleTag(this, 'Backend Dev')">Backend Dev</span>
-          <span class="skill-chip leader-skill" onclick="toggleTag(this, 'Documentation')">Documentation</span>
-          <span class="skill-chip individual-skill" style="display:none;" onclick="toggleTag(this, 'Leadership')">Leadership</span>
-          <span class="skill-chip individual-skill" style="display:none;" onclick="toggleTag(this, 'Research')">Research</span>
-          <span class="skill-chip individual-skill" style="display:none;" onclick="toggleTag(this, 'Design')">Design</span>
-          <span class="skill-chip individual-skill" style="display:none;" onclick="toggleTag(this, 'Testing')">Testing</span>
-        </div>
-        
-        <div style="display: flex; gap: 10px;">
-          <form method="POST" action="{{ route('recruitment.store') }}" style="flex: 1;" id="recruitment-form" onsubmit="publishPost(event)">
-            @csrf
-            <input type="hidden" name="_method" id="form-method-input" value="POST">
-            <input type="hidden" name="recruitment_goal" id="recruitment-goal-input" value="build_a_team">
-            <input type="hidden" name="recruitment_id" id="recruitment-id-input" value="">
-            <input type="hidden" name="looking_for" id="looking-for-input" value="">
-            <input type="hidden" name="introduction" id="introduction-input" value="">
-            <button type="submit" class="btn-primary" style="width: 100%;" id="submit-btn-text">Publish Post</button>
-          </form>
-          <button class="google-btn" style="flex: 1; border: none;" onclick="closePostModal()">Cancel</button>
-        </div>
 <div class="modal-overlay" id="postModal" onclick="if(event.target==this) closePostModal()">
   <div class="card" style="width: 480px; padding: 30px; border: 1px solid var(--accent); position: relative;">
     <button type="button" onclick="closePostModal()" class="pm-close-btn" aria-label="Close" style="position: absolute; top: 20px; right: 20px;">
@@ -526,6 +435,11 @@
       <div id="leader-fields">
         <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 8px;">Team Name</label>
         <input type="text" id="team-name" name="team_name" placeholder="Enter your team name..." style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg2); color: var(--text); font-size: 13px; margin-bottom: 16px; box-sizing: border-box;">
+        <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 8px;">Team Members Needed</label>
+        <select id="member-count" class="custom-select" style="margin-bottom: 16px;">
+          <option value="3">3 Members</option>
+          <option value="5">5 Members</option>
+        </select>
         <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 8px;">Short Introduction</label>
         <textarea id="leader-looking-for" name="looking_for" rows="3" placeholder="Briefly introduce your Capstone Team..." style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg2); color: var(--text); font-size: 13px; resize: vertical; margin-bottom: 16px; box-sizing: border-box;"></textarea>
       </div>
@@ -543,15 +457,16 @@
       <div style="display: flex; gap: 10px;">
         <form method="POST" action="{{ route('recruitment.store') }}" style="flex: 1;" id="recruitment-form" onsubmit="publishPost(event)">
           @csrf
+          <input type="hidden" name="_method" id="form-method-input" value="">
           <input type="hidden" name="recruitment_goal" id="recruitment-goal-input" value="build_a_team">
           <input type="hidden" name="looking_for" id="looking-for-input" value="">
           <input type="hidden" name="introduction" id="introduction-input" value="">
           <input type="hidden" name="team_name" id="team-name-hidden" value="">
+          <input type="hidden" name="member_count" id="member-count-input" value="">
           <input type="hidden" name="tags" id="tags-hidden-input" value="">
-          <button type="submit" class="btn-primary" style="width: 100%;">Publish Post</button>
+          <button type="submit" class="btn-primary" style="width: 100%;" id="form-submit-btn">Publish Post</button>
         </form>
         <button class="google-btn" style="flex: 1; border: none;" onclick="closePostModal()">Cancel</button>
-
       </div>
     </div>
   </div>
@@ -575,6 +490,38 @@
     <input type="hidden" name="type" id="ir-type">
 </form>
 
+<form method="POST" action="{{ route('team.confirm') }}" id="confirm-team-form" style="display:none;">
+    @csrf
+</form>
+
+<form method="POST" action="" id="remove-member-form" style="display:none;">
+    @csrf
+    @method('DELETE')
+</form>
+
+{{-- Transfer Leadership Modal --}}
+<div class="modal-overlay" id="transferModal" onclick="if(event.target==this) closeTransferModal()">
+  <div class="card" style="width: 400px; padding: 30px;">
+    <div class="section-title">Transfer Leadership</div>
+    <p style="margin-top: 8px; font-size: 13px; color: var(--text2);">Select a team member to become the new leader. You will be demoted to a regular member.</p>
+    <form method="POST" action="{{ route('team.transfer-leadership') }}" style="margin-top: 20px;">
+      @csrf
+      <select name="new_leader_id" required style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;margin-bottom:20px;box-sizing:border-box;">
+        <option value="">Select a member...</option>
+        @foreach($teamMembers as $member)
+          @if($member->student_id !== auth()->user()->student_id)
+            <option value="{{ $member->student_id }}">{{ $member->f_name }} {{ $member->l_name }}</option>
+          @endif
+        @endforeach
+      </select>
+      <div style="display:flex;gap:10px;">
+        <button type="submit" class="btn-primary" style="flex:1;">Transfer</button>
+        <button type="button" class="google-btn" style="flex:1;border:none;" onclick="closeTransferModal()">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 {{-- Custom Confirm Modal --}}
 <div id="customConfirmModal" style="display:none; position:fixed; inset:0; z-index:99999; align-items:center; justify-content:center; background:rgba(15,16,22,0.75); backdrop-filter:blur(6px); padding:20px;">
   <div id="ccm-card" style="background:#fff; border-radius:18px; padding:32px 28px 24px; width:100%; max-width:380px; box-shadow:0 24px 60px rgba(0,0,0,0.25); transform:scale(0.92); transition:transform 0.22s cubic-bezier(0.16,1,0.3,1); text-align:center; position:relative;">
@@ -589,78 +536,29 @@
 </div>
 
 <script>
-let selectedTags = new Set();
-// Store the update URL template from Laravel
-const updateUrlTemplate = '{{ route('recruitment.update', ['recruitment' => ':id']) }}';
-
-function toggleTag(chip, skill) {
-    if (selectedTags.has(skill)) {
-        selectedTags.delete(skill);
-        chip.classList.remove('selected');
-    } else {
-        selectedTags.add(skill);
-        chip.classList.add('selected');
-    }
-    renderTags();
-}
-
-function renderTags() {
-    const container = document.getElementById('tag-container');
-    if (selectedTags.size > 0) {
-        container.innerHTML = Array.from(selectedTags).map(function(tag) {
-            return '<div class="selected-tag">' + tag + '</div>';
-        }).join('');
-    } else {
-        container.innerHTML = '<span style="color: var(--text3); font-size: 12px;">Click tags below to add...</span>';
-    }
-}
-
-function publishPost(event) {
-    event.preventDefault();
-
-    if (selectedTags.size === 0) {
-        alert('Please select at least one expertise.');
-        return;
-    }
-
-    document.getElementById('looking-for-input').value = document.getElementById('leader-looking-for').value;
-    document.getElementById('introduction-input').value = document.getElementById('individual-intro').value;
-
-    const form = document.getElementById('recruitment-form');
-
-    // Remove any previously appended role inputs
-    form.querySelectorAll('input[name="roles[]"]').forEach(function(el) { el.remove(); });
-
-    // Append each selected tag as a hidden input
-    Array.from(selectedTags).forEach(function(tag) {
-        const input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = 'roles[]';
-        input.value = tag;
-        form.appendChild(input);
-    });
-
-    const recruitmentId = document.getElementById('recruitment-id-input').value;
-    if (recruitmentId) {
-        // UPDATE: change form action and spoof PUT
-        form.action = updateUrlTemplate.replace(':id', recruitmentId);
-        document.getElementById('form-method-input').value = 'PUT';
-    } else {
-        // CREATE: reset to store route and POST
-        form.action = '{{ route('recruitment.store') }}';
-        document.getElementById('form-method-input').value = 'POST';
-    }
-
-    form.submit();
 const currentStudentTeamId = {{ auth()->user()->studentSchoolYear()->first()?->team_id ?? 'null' }};
 const currentStudentId = {{ auth()->user()->student_id }};
 const myRecruitmentGoal = '{{ $myRecruitmentGoal ?? '' }}';
 let activeTags = [];
+let isEditing = false;
+let editingId = null;
 const leaderPresets = ["UI Designer", "App Developer", "Backend Dev", "Documentation", "Fullstack Dev", "Web Dev", "Mobile Dev", "Project Manager"];
 const individualPresets = ["Leadership", "Research", "Design", "Testing", "Frontend Dev", "Database Admin", "QA Engineer", "Web Dev", "UI Designer", "Backend Dev"];
 
 @if($myTeam)
 function confirmLeaveTeam() {
+    @if($isLeader)
+    showConfirm({
+        title: 'Cannot Leave',
+        message: 'As the team leader, you cannot leave the team directly. Please <strong>Transfer Leadership</strong> to another member first, then you can leave as a regular member.',
+        icon: 'leave',
+        confirmText: 'Transfer Now',
+        confirmClass: 'primary',
+        onConfirm: function() {
+            openTransferModal();
+        }
+    });
+    @else
     showConfirm({
         title: 'Leave Team',
         message: 'Are you sure you want to leave <strong>{{ addslashes($myTeam->team_name) }}</strong>? This action cannot be undone.',
@@ -671,6 +569,47 @@ function confirmLeaveTeam() {
             document.getElementById('leave-team-form').submit();
         }
     });
+    @endif
+}
+
+function showConfirmTeam() {
+    @php
+      $teamMemberCount = \App\Models\StudentSchoolYear::where('team_id', $myTeam->team_id)->count();
+      $teamIsComplete = $teamMemberCount >= $memberCount;
+    @endphp
+    showConfirm({
+        title: 'Confirm Team',
+        message: '@if($teamIsComplete)Are you sure you want to confirm <strong>{{ addslashes($myTeam->team_name) }}</strong>? Once confirmed, this team will be submitted to the admin and instructor dashboard. You will no longer be able to remove members or make changes to the team composition.@else<strong>Warning:</strong> Your team is not yet complete ({{ $teamMemberCount }}/{{ $memberCount }} members). Are you sure you want to confirm? Once confirmed, this team will be submitted to the admin and instructor dashboard.@endif',
+        icon: 'team',
+        confirmText: 'Yes, Confirm',
+        confirmClass: 'success',
+        onConfirm: function() {
+            document.getElementById('confirm-team-form').submit();
+        }
+    });
+}
+
+function confirmRemoveMember(studentId, name) {
+    showConfirm({
+        title: 'Remove Member',
+        message: 'Are you sure you want to remove <strong>' + name + '</strong> from the team? They will be notified and their recruitment post will be removed.',
+        icon: 'leave',
+        confirmText: 'Remove',
+        confirmClass: 'danger',
+        onConfirm: function() {
+            var form = document.getElementById('remove-member-form');
+            form.action = '{{ url("/team/members") }}/' + studentId;
+            form.submit();
+        }
+    });
+}
+
+function openTransferModal() {
+    document.getElementById('transferModal').classList.add('active');
+}
+
+function closeTransferModal() {
+    document.getElementById('transferModal').classList.remove('active');
 }
 @endif
 
@@ -725,22 +664,71 @@ document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') closeConfirm();
 });
 
+function openEditModal() {
+    @if($myRecruitment)
+    isEditing = true;
+    editingId = {{ $myRecruitment->recruitment_id }};
+
+    const form = document.getElementById('recruitment-form');
+    form.action = '/recruitment/' + editingId;
+    document.getElementById('form-method-input').value = 'PUT';
+    document.getElementById('form-submit-btn').textContent = 'Update Post';
+    document.getElementById('modal-title').textContent = 'Edit Post';
+
+    const goal = '{{ $myRecruitment->recruitment_goal }}';
+    const isLeader = goal === 'build_a_team';
+    document.getElementById('post-goal').value = isLeader ? 'leader' : 'individual';
+    updateModalUI();
+
+    const teamName = '{{ addslashes($myTeam?->team_name ?? '') }}';
+    document.getElementById('team-name').value = teamName;
+
+    const memberCount = '{{ $myRecruitment->member_count ?? '' }}';
+    if (memberCount) {
+        document.getElementById('member-count').value = memberCount;
+    }
+
+    const lookingFor = '{{ addslashes($myRecruitment->looking_for ?? '') }}';
+    const introduction = '{{ addslashes($myRecruitment->introduction ?? '') }}';
+    if (isLeader) {
+        document.getElementById('leader-looking-for').value = lookingFor;
+    } else {
+        document.getElementById('individual-intro').value = introduction;
+    }
+
+    activeTags = JSON.parse('{{ addslashes(json_encode($myRecruitment->roles ?? [])) }}'.replace(/&quot;/g, '"').replace(/&#039;/g, "'"));
+    renderActiveTags();
+
+    document.getElementById('postModal').classList.add('active');
+    @endif
+}
+
+function resetPostModal() {
+    isEditing = false;
+    editingId = null;
+    const form = document.getElementById('recruitment-form');
+    form.action = '{{ route('recruitment.store') }}';
+    document.getElementById('form-method-input').value = '';
+    document.getElementById('form-submit-btn').textContent = 'Publish Post';
+    document.getElementById('team-name').value = '';
+    document.getElementById('member-count').value = '';
+    document.getElementById('leader-looking-for').value = '';
+    document.getElementById('individual-intro').value = '';
+    activeTags = [];
+    renderActiveTags();
+    document.getElementById('post-goal').value = 'leader';
+    updateModalUI();
+}
+
 function openPostModal() {
+    resetPostModal();
     document.getElementById('postModal').classList.add('active');
 }
 
 function closePostModal() {
     document.getElementById('postModal').classList.remove('active');
+    resetPostModal();
 }
-
-function viewPostDetails(cardEl, name, skills, lookingFor, teamName, projectTitle, studentId, isOwner, type, recruitment) {
-    const modal = document.getElementById('detailModal');
-
-    document.getElementById('detail-name').textContent = name;
-    document.getElementById('detail-student-id').textContent = 'Student ID: ' + studentId;
-    document.getElementById('detail-looking-for').textContent = lookingFor ? lookingFor : '-';
-    document.getElementById('detail-team-name').textContent = teamName || '-';
-    document.getElementById('detail-project').textContent = projectTitle || '-';
 
 function sendInviteOrRequest(receiverId, teamId, type) {
     const isInvite = type === 'invite';
@@ -761,7 +749,7 @@ function sendInviteOrRequest(receiverId, teamId, type) {
     });
 }
 
-function viewPostDetails(cardEl, name, skills, lookingFor, teamName, projectTitle, studentNumber, isOwner, type, postOwnerId, postOwnerTeamId, avatarUrl) {
+function viewPostDetails(cardEl, name, skills, lookingFor, teamName, projectTitle, studentNumber, isOwner, type, postOwnerId, postOwnerTeamId, avatarUrl, introduction) {
     const modal = document.getElementById('detailModal');
 
     const goalLabelEl = cardEl.querySelector('.goal-label');
@@ -773,18 +761,27 @@ function viewPostDetails(cardEl, name, skills, lookingFor, teamName, projectTitl
 
     document.getElementById('detail-name').textContent = name;
     document.getElementById('detail-student-id').textContent = 'Student ID: ' + studentNumber;
-    document.getElementById('detail-looking-for').textContent = lookingFor ? 'Looking For: ' + lookingFor : 'Looking For: -';
-    document.getElementById('detail-team-name').textContent = 'Team: ' + (teamName || '-');
+
+    const isLeaderType = type === 'Leader';
+    if (isLeaderType) {
+        document.getElementById('detail-looking-for').previousElementSibling.textContent = 'Looking For';
+        document.getElementById('detail-looking-for').textContent = lookingFor || '-';
+    } else {
+        document.getElementById('detail-looking-for').previousElementSibling.textContent = 'Introduction';
+        document.getElementById('detail-looking-for').textContent = introduction || lookingFor || '-';
+    }
+    document.getElementById('detail-team-name').textContent = teamName || '-';
+    document.getElementById('detail-role').textContent = isLeaderType ? 'Leader' : 'Member';
     
     const ownerMsg = document.getElementById('detail-owner-msg');
     const actionBtn = document.getElementById('action-btn-text');
     if (isOwner) {
         ownerMsg.style.display = 'block';
-        actionBtn.textContent = 'Close';
+        actionBtn.textContent = 'Edit Post';
         actionBtn.disabled = false;
         actionBtn.style.opacity = 1;
         actionBtn.style.cursor = 'pointer';
-        actionBtn.onclick = function() { modal.classList.remove('active'); };
+        actionBtn.onclick = function() { modal.classList.remove('active'); openEditModal(); };
     } else {
         ownerMsg.style.display = 'none';
         actionBtn.disabled = false;
@@ -866,27 +863,6 @@ function updateModalUI() {
     renderActiveTags();
 }
 
-    if (goal === 'leader') {
-        leaderFields.style.display = 'block';
-        individualFields.style.display = 'none';
-        modalTitle.textContent = 'Build a Team';
-        noteText.innerHTML = '<strong>CapsTip:</strong> Clearly state the roles you need (e.g. 1 Backend, 1 UI) to attract the right members for your 5-person team.';
-        noteBox.style.borderLeftColor = 'var(--accent)';
-        leaderSkills.forEach(function(chip) { chip.style.display = 'inline-block'; });
-        individualSkills.forEach(function(chip) { chip.style.display = 'none'; });
-        document.getElementById('recruitment-goal-input').value = 'build_a_team';
-    } else {
-        leaderFields.style.display = 'none';
-        individualFields.style.display = 'block';
-        modalTitle.textContent = 'Find a Team';
-        noteText.innerHTML = '<strong>CapsTip:</strong> Highlight your best skills! Other team leaders will see your profile and invite you if your expertise matches their project needs.';
-        noteBox.style.borderLeftColor = '#3b82f6';
-        leaderSkills.forEach(function(chip) { chip.style.display = 'none'; });
-        individualSkills.forEach(function(chip) { chip.style.display = 'inline-block'; });
-        document.getElementById('recruitment-goal-input').value = 'find_a_team';
-    }
-}
-
 function filterTagSuggestions() {
     const goal = document.getElementById('post-goal').value;
     const query = document.getElementById('tag-search-input').value.toLowerCase().trim();
@@ -957,6 +933,25 @@ function publishPost(event) {
         return;
     }
     const goal = document.getElementById('post-goal').value;
+    document.getElementById('member-count-input').value = document.getElementById('member-count').value;
+    document.getElementById('tags-hidden-input').value = JSON.stringify(activeTags);
+
+    if (isEditing) {
+        event.preventDefault();
+        const form = document.getElementById('recruitment-form');
+        form.querySelectorAll('input[name="roles[]"]').forEach(function(el) { el.remove(); });
+        activeTags.forEach(function(tag) {
+            var input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'roles[]';
+            input.value = tag;
+            form.appendChild(input);
+        });
+        document.getElementById('tags-hidden-input').disabled = true;
+        form.submit();
+        return;
+    }
+
     if (goal === 'leader') {
         document.getElementById('team-name-hidden').value = document.getElementById('team-name').value;
         document.getElementById('looking-for-input').value = document.getElementById('leader-looking-for').value;
@@ -966,7 +961,6 @@ function publishPost(event) {
         document.getElementById('looking-for-input').value = '';
         document.getElementById('introduction-input').value = document.getElementById('individual-intro').value;
     }
-    document.getElementById('tags-hidden-input').value = JSON.stringify(activeTags);
 }
 
 document.addEventListener('click', function(e) {

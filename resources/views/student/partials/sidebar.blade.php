@@ -3,6 +3,9 @@
     $yearParts = explode(' · ', $student->year_section ?? '');
     $sidebarYear = $yearParts[0] ?? '';
     $sidebarSection = $yearParts[1] ?? '';
+    $hasTeam = $student->studentSchoolYear()->first()?->team_id !== null;
+    $programAbbr = App\Models\Student::mapCourseToProgram($student->course);
+    $yearNum = preg_replace('/[^0-9]/', '', $sidebarYear);
 @endphp
 <!-- SIDEBAR -->
 <div class="sidebar">
@@ -142,6 +145,12 @@
       </button>
     </div>
     <div class="pm-body" id="pm-body">
+      @if($hasTeam)
+        <div style="background:#fef3c7;border:1px solid #fde68a;border-radius:8px;padding:10px 12px;font-size:12px;color:#92400e;margin-bottom:14px;display:flex;align-items:flex-start;gap:8px;">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:1px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <div>You are in a team — only your avatar can be changed in profile settings.</div>
+        </div>
+      @endif
       <div class="pm-field">
         <div class="pm-label">Full Name</div>
         <div class="pm-value">{{ trim($student->l_name . ', ' . $student->f_name . ($student->m_name ? ' ' . $student->m_name : '')) . '.' }}</div>
@@ -153,11 +162,11 @@
       <div class="pm-divider"></div>
       <div class="pm-field">
         <div class="pm-label">Course</div>
-        <div class="pm-value">{{ $student->course }}</div>
+        <div class="pm-value">{{  $student->course }}</div>
       </div>
       <div class="pm-field">
         <div class="pm-label">Year &amp; Section</div>
-        <div class="pm-value">{{ $student->year_section }}</div>
+        <div class="pm-value">{{ $programAbbr ?? $student->course }} — {{ $yearNum }}{{ $sidebarSection }}</div>
       </div>
       <div class="pm-field">
         <div class="pm-label">Student ID</div>

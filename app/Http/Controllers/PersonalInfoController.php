@@ -36,10 +36,15 @@ class PersonalInfoController extends Controller
             return redirect()->route('student.personal-info');
         }
 
+        $hasTeam = StudentSchoolYear::where('student_id', $student->student_id)
+            ->whereNotNull('team_id')
+            ->exists();
+
         return view('student.personal-info', [
             'student' => $student,
             'presets' => config('avatars.presets', []),
             'isEditing' => true,
+            'hasTeam' => $hasTeam,
             'autoFillFirstName' => $student->f_name,
             'autoFillLastName' => $student->l_name,
         ]);
@@ -50,17 +55,19 @@ class PersonalInfoController extends Controller
         $student = $request->user();
         $validated = $request->validated();
 
-        $student->f_name = $validated['first_name'];
-        $student->m_name = $validated['middle_name'] ?? null;
-        $student->l_name = $validated['last_name'];
-        $student->student_number = $validated['student_id'];
-        $student->course = $validated['course'];
-        $student->year_section = $validated['year'].' · '.$validated['section'];
+        $student->f_name = $validated['first_name'] ?? $student->f_name;
+        $student->m_name = $validated['middle_name'] ?? $student->m_name;
+        $student->l_name = $validated['last_name'] ?? $student->l_name;
+        $student->student_number = $validated['student_id'] ?? $student->student_number;
+        $student->course = $validated['course'] ?? $student->course;
+        $student->year_section = isset($validated['year'], $validated['section'])
+            ? $validated['year'].' · '.$validated['section']
+            : $student->year_section;
         $student->p_picture = $validated['avatar'];
 
         $student->save();
 
-        $program = Student::mapCourseToProgram($validated['course']);
+        $program = Student::mapCourseToProgram($student->course);
 
         if ($program) {
             StudentSchoolYear::updateOrCreate(

@@ -28,6 +28,7 @@ class Recruitment extends Model
         'roles',
         'looking_for',
         'introduction',
+        'member_count',
     ];
 
     protected function casts(): array

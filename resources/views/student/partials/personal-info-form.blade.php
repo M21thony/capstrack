@@ -2,7 +2,8 @@
     $yearParts = explode(' · ', $student->year_section ?? '');
     $selectedYear = $yearParts[0] ?? '4th Year';
     $selectedSection = $yearParts[1] ?? '';
-    $startStep = 1;
+    $hasTeam = $student->studentSchoolYear()->first()?->team_id !== null;
+    $startStep = $isEditing && $hasTeam ? 2 : 1;
     if ($errors->has('avatar')) {
         $startStep = 2;
     } elseif ($errors->hasAny(['first_name', 'last_name', 'student_id'])) {
@@ -50,6 +51,13 @@
         <div class="pi-wizard-bar"><div class="pi-wizard-bar-fill" id="pi-bar-fill" style="width:{{ ($startStep / $totalSteps) * 100 }}%"></div></div>
     </div>
 
+    @if($isEditing && $hasTeam)
+        <div style="background:#fef3c7;border:1px solid #fde68a;border-radius:8px;padding:12px 16px;font-size:13px;color:#92400e;margin-bottom:24px;display:flex;align-items:flex-start;gap:10px;line-height:1.5;">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:1px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <div><strong>Notice:</strong> You are currently in a team. To maintain team integrity, only your <strong>avatar</strong> can be changed. Other fields are view-only.</div>
+        </div>
+    @endif
+
     <div class="pi-wizard-panels">
         <section class="pi-wizard-panel {{ $startStep === 1 ? 'active' : '' }}" data-step="1" aria-labelledby="pi-section-1">
             <div class="pi-section-head">
@@ -71,7 +79,7 @@
 
             <div class="pi-field">
                 <label class="pi-label" for="pi-email">Email</label>
-                <input type="email" id="pi-email" class="pi-input pi-input-readonly" value="{{ $student->email }}" readonly aria-readonly="true">
+                <input type="email" id="pi-email" class="pi-input pi-input-readonly" value="{{ $student->email }}" readonly aria-readonly="true" {{ $isEditing && $hasTeam ? 'disabled' : '' }}>
             </div>
         </section>
 
@@ -128,22 +136,22 @@
             <div class="pi-row-3">
                 <div class="pi-field">
                     <label class="pi-label" for="first_name">First name</label>
-                    <input type="text" id="first_name" name="first_name" class="pi-input" value="{{ old('first_name', $student->f_name) }}" required autocomplete="given-name">
+                    <input type="text" id="first_name" name="first_name" class="pi-input" value="{{ old('first_name', $student->f_name) }}" required autocomplete="given-name" {{ $isEditing && $hasTeam ? 'disabled' : '' }}>
                     @error('first_name')<p class="pi-error">{{ $message }}</p>@enderror
                 </div>
                 <div class="pi-field">
                     <label class="pi-label" for="middle_name">Middle name <span class="pi-label-optional">(optional)</span></label>
-                    <input type="text" id="middle_name" name="middle_name" class="pi-input" value="{{ old('middle_name', $student->m_name) }}" autocomplete="additional-name">
+                    <input type="text" id="middle_name" name="middle_name" class="pi-input" value="{{ old('middle_name', $student->m_name) }}" autocomplete="additional-name" {{ $isEditing && $hasTeam ? 'disabled' : '' }}>
                 </div>
                 <div class="pi-field">
                     <label class="pi-label" for="last_name">Last name</label>
-                    <input type="text" id="last_name" name="last_name" class="pi-input" value="{{ old('last_name', $student->l_name) }}" required autocomplete="family-name">
+                    <input type="text" id="last_name" name="last_name" class="pi-input" value="{{ old('last_name', $student->l_name) }}" required autocomplete="family-name" {{ $isEditing && $hasTeam ? 'disabled' : '' }}>
                     @error('last_name')<p class="pi-error">{{ $message }}</p>@enderror
                 </div>
             </div>
             <div class="pi-field">
                 <label class="pi-label" for="student_id">Student ID</label>
-                <input type="text" id="student_id" name="student_id" class="pi-input" value="{{ old('student_id', $student->student_number) }}" placeholder="e.g. 221000001" required>
+                <input type="text" id="student_id" name="student_id" class="pi-input" value="{{ old('student_id', $student->student_number) }}" placeholder="e.g. 221000001" required {{ $isEditing && $hasTeam ? 'disabled' : '' }}>
                 @error('student_id')<p class="pi-error">{{ $message }}</p>@enderror
             </div>
         </section>
@@ -168,7 +176,7 @@
 
             <div class="pi-field">
                 <label class="pi-label" for="course">Course</label>
-                <select id="course" name="course" class="pi-input" required>
+                <select id="course" name="course" class="pi-input" required {{ $isEditing && $hasTeam ? 'disabled' : '' }}>
                     @foreach ([
                         'Bachelor of Science in Computer Science',
                         'Bachelor of Science in Information Technology',
@@ -183,7 +191,7 @@
             <div class="pi-row-2">
                 <div class="pi-field">
                     <label class="pi-label" for="year">Year</label>
-                    <select id="year" name="year" class="pi-input" required>
+                    <select id="year" name="year" class="pi-input" required {{ $isEditing && $hasTeam ? 'disabled' : '' }}>
                         @foreach (['3rd', '4th'] as $yearOption)
                             <option value="{{ $yearOption }}" @selected(old('year', $selectedYear) === $yearOption)>{{ $yearOption }}</option>
                         @endforeach
@@ -192,7 +200,7 @@
                 </div>
                 <div class="pi-field">
                     <label class="pi-label" for="section">Section</label>
-                    <input type="text" id="section" name="section" class="pi-input" value="{{ old('section', $selectedSection) }}" placeholder="e.g. A" required>
+                    <input type="text" id="section" name="section" class="pi-input" value="{{ old('section', $selectedSection) }}" placeholder="e.g. A" required {{ $isEditing && $hasTeam ? 'disabled' : '' }}>
                     @error('section')<p class="pi-error">{{ $message }}</p>@enderror
                 </div>
             </div>
@@ -215,6 +223,7 @@
 
     var total = parseInt(form.dataset.totalSteps, 10) || 4;
     var step = parseInt(form.dataset.startStep, 10) || 1;
+    var hasTeam = {{ $isEditing && $hasTeam ? 'true' : 'false' }};
     var stepNames = {
         1: 'Account',
         2: 'Avatar',
@@ -254,6 +263,7 @@
             }
             return true;
         }
+        if (hasTeam) return true;
         if (n === 3) {
             var fn = document.getElementById('first_name');
             var ln = document.getElementById('last_name');
@@ -292,11 +302,11 @@
         
         // Correctly handle visibility, display, and disabled states
         if (backBtn) {
-            backBtn.hidden = step === 1;
-            backBtn.disabled = step === 1;
+            backBtn.hidden = step === 1 || hasTeam;
+            backBtn.disabled = step === 1 || hasTeam;
         }
         if (nextBtn) {
-            nextBtn.hidden = step === total;
+            nextBtn.hidden = step === total || hasTeam;
         }
         if (submitBtn) {
             submitBtn.hidden = step !== total;
@@ -331,6 +341,7 @@
     });
 
     form.addEventListener('submit', function (e) {
+        if (hasTeam) return;
         if (step !== total) {
             e.preventDefault();
             if (validateStep(step)) {

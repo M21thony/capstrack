@@ -71,6 +71,8 @@ Route::prefix('expert')->group(function () {
 
 Route::middleware(['auth'])->group(function () {
     Route::post('/team', [TeamController::class, 'store'])->name('team.store');
+    Route::post('/team/confirm', [TeamController::class, 'confirm'])->name('team.confirm');
+    Route::post('/team/transfer-leadership', [TeamController::class, 'transferLeadership'])->name('team.transfer-leadership');
     Route::delete('/team', [TeamController::class, 'destroy'])->name('team.destroy');
     Route::post('/recruitment', [RecruitmentController::class, 'store'])->name('recruitment.store');
     Route::put('/recruitment/{recruitment}', [RecruitmentController::class, 'update'])->name('recruitment.update');

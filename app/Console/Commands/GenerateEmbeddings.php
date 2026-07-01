@@ -8,7 +8,8 @@ use Illuminate\Console\Command;
 
 class GenerateEmbeddings extends Command
 {
-    protected $signature   = 'embeddings:generate {--fresh : Regenerate all embeddings}';
+    protected $signature = 'embeddings:generate {--fresh : Regenerate all embeddings}';
+
     protected $description = 'Generate vector embeddings for all archived documents';
 
     private array $stopWords = [
@@ -48,15 +49,16 @@ class GenerateEmbeddings extends Command
     {
         $query = ArchivedDocument::query();
 
-        if (!$this->option('fresh')) {
+        if (! $this->option('fresh')) {
             $query->whereNull('embedding');
         }
 
-        $docs  = $query->get();
+        $docs = $query->get();
         $total = $docs->count();
 
         if ($total === 0) {
             $this->info('All documents already have embeddings.');
+
             return;
         }
 
@@ -65,11 +67,11 @@ class GenerateEmbeddings extends Command
         $bar->start();
 
         $success = 0;
-        $failed  = 0;
+        $failed = 0;
 
         foreach ($docs as $doc) {
             try {
-                $raw  = $doc->title . ' ' . ($doc->abstract ?? '');
+                $raw = $doc->title.' '.($doc->abstract ?? '');
                 $text = $this->cleanText($raw);
 
                 if (strlen(trim($text)) < 5) {
@@ -80,7 +82,7 @@ class GenerateEmbeddings extends Command
 
                 $embedding = $ollama->embed($text);
 
-                if (!empty($embedding)) {
+                if (! empty($embedding)) {
                     $doc->embedding = json_encode($embedding);
                     $doc->save();
                     $success++;
@@ -110,12 +112,12 @@ class GenerateEmbeddings extends Command
         $text = preg_replace('/[\/\\\,\.\(\)\[\]\{\}:;!?"\'\-_]/', ' ', $text);
 
         // Split and filter
-        $words    = explode(' ', $text);
+        $words = explode(' ', $text);
         $filtered = array_filter(
             $words,
-            fn($w) => !in_array(trim($w), $this->stopWords)
+            fn ($w) => ! in_array(trim($w), $this->stopWords)
                    && strlen(trim($w)) > 2
-                   && !is_numeric(trim($w))
+                   && ! is_numeric(trim($w))
         );
 
         return implode(' ', array_values($filtered));

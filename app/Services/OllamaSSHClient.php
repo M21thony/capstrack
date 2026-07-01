@@ -2,20 +2,20 @@
 
 namespace App\Services;
 
-use phpseclib3\Net\SSH2;
-use phpseclib3\Crypt\PublicKeyLoader;
 use Illuminate\Support\Facades\Log;
+use phpseclib3\Crypt\PublicKeyLoader;
+use phpseclib3\Net\SSH2;
 
 class OllamaSSHClient
 {
     private function makeConnection(): SSH2
     {
-        $host    = config('services.ssh_tunnel.host');
-        $port    = (int) config('services.ssh_tunnel.port', 22);
-        $user    = config('services.ssh_tunnel.user');
+        $host = config('services.ssh_tunnel.host');
+        $port = (int) config('services.ssh_tunnel.port', 22);
+        $user = config('services.ssh_tunnel.user');
         $keyPath = config('services.ssh_tunnel.key_path');
 
-        if (!file_exists($keyPath)) {
+        if (! file_exists($keyPath)) {
             throw new \Exception("SSH key not found at: {$keyPath}");
         }
 
@@ -23,7 +23,7 @@ class OllamaSSHClient
         $ssh->setTimeout(120); // 2 min — reasonable for 7B model
         $key = PublicKeyLoader::load(file_get_contents($keyPath));
 
-        if (!$ssh->login($user, $key)) {
+        if (! $ssh->login($user, $key)) {
             throw new \Exception('SSH login failed. Check host, user, and key.');
         }
 
@@ -34,11 +34,11 @@ class OllamaSSHClient
     public function warmup(): void
     {
         try {
-            $ssh     = $this->makeConnection();
+            $ssh = $this->makeConnection();
             $payload = json_encode([
-                'model'   => config('services.ollama.model', 'qwen2.5:3B'),
-                'prompt'  => 'hi',
-                'stream'  => false,
+                'model' => config('services.ollama.model', 'qwen2.5:3B'),
+                'prompt' => 'hi',
+                'stream' => false,
                 'options' => ['num_predict' => 1],
             ]);
             $this->runCurl($ssh, $payload, '/api/generate');
@@ -52,13 +52,13 @@ class OllamaSSHClient
     // ── Text generation ───────────────────────────────────────────────
     public function generate(string $prompt): string
     {
-        $ssh   = $this->makeConnection();
+        $ssh = $this->makeConnection();
         $model = config('services.ollama.model', 'qwen2.5:3B');
 
         $payload = json_encode([
-            'model'   => $model,
-            'prompt'  => $prompt,
-            'stream'  => false,
+            'model' => $model,
+            'prompt' => $prompt,
+            'stream' => false,
             'options' => [
                 'num_predict' => 1024,
                 'temperature' => 0.2,
@@ -82,22 +82,18 @@ class OllamaSSHClient
                 .'"';
 
         $output = $ssh->exec($command);
-        $output  = $this->runCurl($ssh, $payload, '/api/generate');
+        $output = $this->runCurl($ssh, $payload, '/api/generate');
         $ssh->disconnect();
 
         $decoded = json_decode(trim($output), true);
 
         if (json_last_error() !== JSON_ERROR_NONE) {
             Log::error('OllamaSSH generate raw output', ['output' => $output]);
-            throw new \Exception('Failed to decode Ollama JSON. Raw: ' . substr($output, 0, 300));
-
+            throw new \Exception('Failed to decode Ollama JSON. Raw: '.substr($output, 0, 300));
             Log::error('OllamaSSH raw output', ['output' => $output]);
             throw new \Exception('Failed to decode Ollama JSON. Raw: '.substr($output, 0, 300));
-
-
             Log::error('OllamaSSH generate raw output', ['output' => $output]);
-            throw new \Exception('Failed to decode Ollama JSON. Raw: ' . substr($output, 0, 300));
-
+            throw new \Exception('Failed to decode Ollama JSON. Raw: '.substr($output, 0, 300));
         }
 
         return $decoded['response'] ?? '';
@@ -106,24 +102,24 @@ class OllamaSSHClient
     // ── Embedding generation via nomic-embed-text ─────────────────────
     public function embed(string $text): array
     {
-        $ssh   = $this->makeConnection();
+        $ssh = $this->makeConnection();
         $model = config('services.ollama.embed_model', 'nomic-embed-text');
 
         $truncated = mb_substr($text, 0, 4000);
 
         $payload = json_encode([
-            'model'  => $model,
+            'model' => $model,
             'prompt' => $truncated,
         ]);
 
-        $output  = $this->runCurl($ssh, $payload, '/api/embeddings');
+        $output = $this->runCurl($ssh, $payload, '/api/embeddings');
         $ssh->disconnect();
 
         $decoded = json_decode(trim($output), true);
 
-        if (json_last_error() !== JSON_ERROR_NONE || !isset($decoded['embedding'])) {
+        if (json_last_error() !== JSON_ERROR_NONE || ! isset($decoded['embedding'])) {
             Log::error('OllamaSSH embed raw output', ['output' => $output]);
-            throw new \Exception('Failed to get embedding from Ollama. Raw: ' . substr($output, 0, 300));
+            throw new \Exception('Failed to get embedding from Ollama. Raw: '.substr($output, 0, 300));
         }
 
         return $decoded['embedding'];
@@ -133,18 +129,18 @@ class OllamaSSHClient
     private function runCurl(SSH2 $ssh, string $jsonPayload, string $endpoint): string
     {
         $encoded = base64_encode($jsonPayload);
-        $tmpFile = 'ollama_' . uniqid() . '.json';
+        $tmpFile = 'ollama_'.uniqid().'.json';
 
         $command = 'powershell -Command "'
-                 . '$bytes = [System.Convert]::FromBase64String(\'' . $encoded . '\'); '
-                 . '$tmp = \"$env:TEMP\\' . $tmpFile . '\"; '
-                 . '[System.IO.File]::WriteAllBytes($tmp, $bytes); '
-                 . '$r = curl.exe -s --max-time 240 -X POST http://localhost:11434' . $endpoint . ' '
-                 . '-H \"Content-Type: application/json\" '
-                 . '--data-binary \"@$tmp\"; '
-                 . 'Remove-Item $tmp -ErrorAction SilentlyContinue; '
-                 . 'Write-Output $r'
-                 . '"';
+                 .'$bytes = [System.Convert]::FromBase64String(\''.$encoded.'\'); '
+                 .'$tmp = \"$env:TEMP\\'.$tmpFile.'\"; '
+                 .'[System.IO.File]::WriteAllBytes($tmp, $bytes); '
+                 .'$r = curl.exe -s --max-time 240 -X POST http://localhost:11434'.$endpoint.' '
+                 .'-H \"Content-Type: application/json\" '
+                 .'--data-binary \"@$tmp\"; '
+                 .'Remove-Item $tmp -ErrorAction SilentlyContinue; '
+                 .'Write-Output $r'
+                 .'"';
 
         $output = $ssh->exec($command);
 

@@ -82,6 +82,23 @@ class TeamController extends Controller
             ->latest()
             ->paginate(5);
 
+        // Determine leader status for the current user and team
+        $isLeader = $myRecruitment && $myRecruitment->recruitment_goal === 'build_a_team';
+
+        $leaderIds = [];
+        if ($teamId) {
+            $leaderIds = Recruitment::whereIn('student_id', function ($query) use ($teamId) {
+                $query->select('student_id')
+                    ->from('student_s_y')
+                    ->where('team_id', $teamId);
+            })
+                ->where('recruitment_goal', 'build_a_team')
+                ->pluck('student_id')
+                ->toArray();
+        }
+
+        $memberCount = $myRecruitment?->member_count ?? 5;
+
         // Pending Invites Collection: both team invites sent to this student AND join requests sent to this student
         $invites = TeamInvitation::with(['team', 'sender', 'receiver'])
             ->where('receiver_id', $studentId)
@@ -99,7 +116,84 @@ class TeamController extends Controller
             'teamedUp' => $teamedUp,
             'stillIndividual' => $stillIndividual,
             'invites' => $invites,
+            'isLeader' => $isLeader,
+            'leaderIds' => $leaderIds,
+            'memberCount' => $memberCount,
         ]);
+    }
+
+    public function confirm(Request $request): RedirectResponse
+    {
+        $student = $request->user();
+        $studentSy = StudentSchoolYear::where('student_id', $student->student_id)->first();
+        $teamId = $studentSy?->team_id;
+
+        if (! $teamId) {
+            return redirect()->route('student.team')->with('status', 'You are not in a team.');
+        }
+
+        $team = Team::findOrFail($teamId);
+        $team->update(['is_confirmed' => true]);
+
+        return redirect()
+            ->route('student.team')
+            ->with('status', 'Team "'.$team->team_name.'" has been confirmed successfully!');
+    }
+
+    public function transferLeadership(Request $request): RedirectResponse
+    {
+        $student = $request->user();
+        $studentId = $student->student_id;
+
+        $studentSy = StudentSchoolYear::where('student_id', $studentId)->first();
+        $teamId = $studentSy?->team_id;
+
+        if (! $teamId) {
+            return redirect()->route('student.team')->with('status', 'You are not in a team.');
+        }
+
+        $validated = $request->validate([
+            'new_leader_id' => ['required', 'exists:students,student_id'],
+        ]);
+
+        $newLeaderId = $validated['new_leader_id'];
+
+        // Verify the new leader belongs to the same team
+        $newLeaderSy = StudentSchoolYear::where('student_id', $newLeaderId)
+            ->where('team_id', $teamId)
+            ->first();
+
+        if (! $newLeaderSy) {
+            return redirect()->route('student.team')->with('status', 'Selected member is not in your team.');
+        }
+
+        // Verify current user is actually the leader
+        $myRecruitment = Recruitment::where('student_id', $studentId)
+            ->where('recruitment_goal', 'build_a_team')
+            ->first();
+
+        if (! $myRecruitment) {
+            return redirect()->route('student.team')->with('status', 'You are not the team leader.');
+        }
+
+        DB::transaction(function () use ($newLeaderId, $myRecruitment): void {
+            $myRecruitment->delete();
+
+            Recruitment::where('student_id', $newLeaderId)->delete();
+
+            Recruitment::create([
+                'student_id' => $newLeaderId,
+                'recruitment_goal' => 'build_a_team',
+                'looking_for' => $myRecruitment->looking_for,
+                'introduction' => $myRecruitment->introduction,
+                'roles' => $myRecruitment->roles,
+                'member_count' => $myRecruitment->member_count,
+            ]);
+        });
+
+        return redirect()
+            ->route('student.team')
+            ->with('status', 'Leadership has been transferred successfully.');
     }
 
     public function store(Request $request): JsonResponse|RedirectResponse

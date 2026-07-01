@@ -16,7 +16,15 @@ class Team extends Model
         'team_name',
         'project_title',
         'team_status',
+        'is_confirmed',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'is_confirmed' => 'boolean',
+        ];
+    }
 
     public function members()
     {

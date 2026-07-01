@@ -205,6 +205,7 @@ PROMPT;
                     $jsonStr = substr($cleaned, $start, $end - $start + 1);
                 } else {
                     Log::warning("Chunk {$chunkIndex} parse failed - no array brackets found", ['raw' => substr($raw, 0, 300)]);
+
                     continue;
                 }
 
@@ -212,6 +213,7 @@ PROMPT;
 
                 if (json_last_error() !== JSON_ERROR_NONE || ! is_array($scores)) {
                     Log::warning("Chunk {$chunkIndex} parse failed - JSON decode error", ['raw' => substr($raw, 0, 300), 'json' => substr($jsonStr, 0, 200), 'error' => json_last_error_msg()]);
+
                     continue;
                 }
 
@@ -358,35 +360,35 @@ PROMPT;
 
         $allScores = [];
 
-foreach ($filtered->chunk(5) as $chunkIndex => $chunk) {
-            $docList  = $chunk->map(fn ($doc) => [
-                'id'    => $doc->archived_id,
+        foreach ($filtered->chunk(5) as $chunkIndex => $chunk) {
+            $docList = $chunk->map(fn ($doc) => [
+                'id' => $doc->archived_id,
                 'title' => mb_substr($doc->title, 0, 100),
-                'abs'   => mb_substr($doc->abstract ?? '', 0, 150),
+                'abs' => mb_substr($doc->abstract ?? '', 0, 150),
             ])->values()->toArray();
 
             $docsJson = json_encode($docList);
 
             // FIX: Better prompt with strict rules to ignore generic noise words
-            $prompt = "You are an academic similarity checker. Compare this capstone pre-proposal "
-                    . "against the archived capstones below.\n\n"
-                    . "STRICT RULES:\n"
-                    . "- IGNORE generic words: proposed, computerized, system, management, records, web, online, automated, digital\n"
-                    . "- IGNORE location names: Camarines Sur, Nabua, CSPC, Iriga, Philippines\n"
-                    . "- IGNORE school/dept names: college, department, polytechnic, CICT, BSIT\n"
-                    . "- Focus ONLY on: core domain, problem being solved, target users, and system purpose\n"
-                    . "- Score 70-100 ONLY if the core domain AND purpose are the same\n"
-                    . "- Score 40-69 if the domain matches but purpose differs\n"
-                    . "- Score 0-39 if they are fundamentally different topics\n\n"
-                    . "Return ONLY a JSON array. No markdown.\n"
-                    . '[{"id":<id>,"score":<0-100>,"reason":"one sentence focusing on core concept match or mismatch"}]'
-                    . "\n\nPRE-PROPOSAL:"
-                    . "\nTopic: {$concepts['main_topic']}"
-                    . "\nDomain: {$concepts['domain']}"
-                    . "\nKeywords: {$conceptText}"
-                    . "\nProblem: {$concepts['problem_statement']}"
-                    . "\nSolution: {$concepts['proposed_solution']}"
-                    . "\n\nARCHIVED CAPSTONES:\n{$docsJson}";
+            $prompt = 'You are an academic similarity checker. Compare this capstone pre-proposal '
+                    ."against the archived capstones below.\n\n"
+                    ."STRICT RULES:\n"
+                    ."- IGNORE generic words: proposed, computerized, system, management, records, web, online, automated, digital\n"
+                    ."- IGNORE location names: Camarines Sur, Nabua, CSPC, Iriga, Philippines\n"
+                    ."- IGNORE school/dept names: college, department, polytechnic, CICT, BSIT\n"
+                    ."- Focus ONLY on: core domain, problem being solved, target users, and system purpose\n"
+                    ."- Score 70-100 ONLY if the core domain AND purpose are the same\n"
+                    ."- Score 40-69 if the domain matches but purpose differs\n"
+                    ."- Score 0-39 if they are fundamentally different topics\n\n"
+                    ."Return ONLY a JSON array. No markdown.\n"
+                    .'[{"id":<id>,"score":<0-100>,"reason":"one sentence focusing on core concept match or mismatch"}]'
+                    ."\n\nPRE-PROPOSAL:"
+                    ."\nTopic: {$concepts['main_topic']}"
+                    ."\nDomain: {$concepts['domain']}"
+                    ."\nKeywords: {$conceptText}"
+                    ."\nProblem: {$concepts['problem_statement']}"
+                    ."\nSolution: {$concepts['proposed_solution']}"
+                    ."\n\nARCHIVED CAPSTONES:\n{$docsJson}";
             $prompt = 'Perform semantic similarity analysis between this capstone pre-proposal '
                     ."and the archived capstones below.\n"
                     ."Consider meaning, intent, domain, technology, and problem being solved — not just keywords.\n"
@@ -437,10 +439,10 @@ foreach ($filtered->chunk(5) as $chunkIndex => $chunk) {
             return [];
         }
 
-        usort($allScores, fn($a, $b) => ($b['score'] ?? 0) <=> ($a['score'] ?? 0));
+        usort($allScores, fn ($a, $b) => ($b['score'] ?? 0) <=> ($a['score'] ?? 0));
         $topScores = array_slice($allScores, 0, $topN);
 
-        $docMap  = $filtered->keyBy('archived_id');
+        $docMap = $filtered->keyBy('archived_id');
         // Sort descending and take top N
         usort($allScores, fn ($a, $b) => ($b['score'] ?? 0) <=> ($a['score'] ?? 0));
 
@@ -458,9 +460,9 @@ foreach ($filtered->chunk(5) as $chunkIndex => $chunk) {
             }
 
             $results[] = [
-                'document'   => $doc,
-                'score'      => (int) ($item['score'] ?? 0),
-                'reason'     => $item['reason'] ?? '',
+                'document' => $doc,
+                'score' => (int) ($item['score'] ?? 0),
+                'reason' => $item['reason'] ?? '',
                 'document' => $doc,
                 'score' => (int) ($item['score'] ?? 0),
                 'reason' => $item['reason'] ?? '',
@@ -520,11 +522,11 @@ foreach ($filtered->chunk(5) as $chunkIndex => $chunk) {
         $validIds = $experts->pluck('expert_id')->toArray();
         $expertMap = $experts->keyBy('expert_id');
 
-        $domain   = $concepts['domain'];
+        $domain = $concepts['domain'];
         $keywords = implode(', ', $concepts['keywords'] ?? []);
-        $listJson = json_encode($experts->map(fn($e) => [
-            'id'        => $e->expert_id,
-            'name'      => $e->first_name . ' ' . $e->last_name,
+        $listJson = json_encode($experts->map(fn ($e) => [
+            'id' => $e->expert_id,
+            'name' => $e->first_name.' '.$e->last_name,
             'expertise' => $e->expertise ?? 'General',
         ])->values()->toArray());
         $domain = $concepts['domain'];
@@ -549,8 +551,8 @@ foreach ($filtered->chunk(5) as $chunkIndex => $chunk) {
                 ."\n\nINSTRUCTOR LIST (ONLY use these exact IDs):\n{$listJson}";
 
         try {
-            $raw      = $this->ollama->generate($prompt);
-            $cleaned  = trim(preg_replace('/```json|```/i', '', $raw));
+            $raw = $this->ollama->generate($prompt);
+            $cleaned = trim(preg_replace('/```json|```/i', '', $raw));
             $raw = $this->ollama->generate($prompt);
             $cleaned = trim(preg_replace('/```json|```/i', '', $raw));
             $raw = $this->ollama->generate($prompt);
