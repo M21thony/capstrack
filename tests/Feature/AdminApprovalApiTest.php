@@ -13,31 +13,55 @@ class AdminApprovalApiTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        DB::table('roles')->insert([
+            ['role_name' => 'adviser', 'description' => 'Adviser'],
+            ['role_name' => 'consultant', 'description' => 'Consultant'],
+            ['role_name' => 'grammarian', 'description' => 'Grammarian'],
+            ['role_name' => 'capstone_adviser', 'description' => 'Capstone Adviser'],
+        ]);
+    }
+
     /** @test */
     public function test_approve_endpoint_returns_success()
     {
         Mail::fake();
 
-        $admin = CapstoneExpert::factory()->create([
+        $admin = CapstoneExpert::create([
+            'email' => 'admin.test@gmail.com',
+            'first_name' => 'Admin',
+            'last_name' => 'Test',
             'is_admin' => true,
             'approved_status' => true,
         ]);
 
-        $requestId = DB::table('account_requests')->insertGetId([
+        $expert = CapstoneExpert::create([
             'email' => 'instructor.test@gmail.com',
             'first_name' => 'John',
             'last_name' => 'Doe',
-            'status' => 'pending',
+            'approved_status' => false,
             'max_teams' => 4,
-            'specialization' => json_encode(['adviser']),
-            'expertise' => json_encode(['Web Development', 'UI/UX']),
+        ]);
+
+        $roleId = DB::table('roles')->where('role_name', 'adviser')->value('role_id');
+        DB::table('expert_roles')->insert([
+            'expert_id' => $expert->expert_id,
+            'role_id' => $roleId,
+        ]);
+
+        DB::table('expert_expertise')->insert([
+            'expert_id' => $expert->expert_id,
+            'expertise_field' => 'Web Development',
             'created_at' => now(),
             'updated_at' => now(),
         ]);
 
         $response = $this->actingAs($admin, 'expert')
             ->from(route('admin.approval'))
-            ->postJson(route('admin.approval.approve', ['expert_id' => $requestId]));
+            ->postJson(route('admin.approval.approve', ['expert_id' => $expert->expert_id]));
 
         $response->assertStatus(200)
             ->assertJson([
@@ -46,13 +70,8 @@ class AdminApprovalApiTest extends TestCase
             ]);
 
         $this->assertDatabaseHas('capstone_experts', [
-            'email' => 'instructor.test@gmail.com',
+            'expert_id' => $expert->expert_id,
             'approved_status' => true,
-        ]);
-
-        $this->assertDatabaseHas('account_requests', [
-            'id' => $requestId,
-            'status' => 'approved',
         ]);
 
         Mail::assertQueued(RequestStatusMail::class);
@@ -63,26 +82,25 @@ class AdminApprovalApiTest extends TestCase
     {
         Mail::fake();
 
-        $admin = CapstoneExpert::factory()->create([
+        $admin = CapstoneExpert::create([
+            'email' => 'admin.test@gmail.com',
+            'first_name' => 'Admin',
+            'last_name' => 'Test',
             'is_admin' => true,
             'approved_status' => true,
         ]);
 
-        $requestId = DB::table('account_requests')->insertGetId([
+        $expert = CapstoneExpert::create([
             'email' => 'instructor.test@gmail.com',
             'first_name' => 'John',
             'last_name' => 'Doe',
-            'status' => 'pending',
+            'approved_status' => false,
             'max_teams' => 4,
-            'specialization' => json_encode(['adviser']),
-            'expertise' => json_encode(['Web Development']),
-            'created_at' => now(),
-            'updated_at' => now(),
         ]);
 
         $response = $this->actingAs($admin, 'expert')
             ->from(route('admin.approval'))
-            ->postJson(route('admin.approval.reject', ['expert_id' => $requestId]), [
+            ->postJson(route('admin.approval.reject', ['expert_id' => $expert->expert_id]), [
                 'reason' => 'Insufficient credentials.',
             ]);
 
@@ -92,11 +110,9 @@ class AdminApprovalApiTest extends TestCase
                 'message' => 'Account rejected and email sent.',
             ]);
 
-        $this->assertDatabaseHas('account_requests', [
-            'id' => $requestId,
-            'status' => 'rejected',
+        $this->assertDatabaseHas('capstone_experts', [
+            'expert_id' => $expert->expert_id,
             'rejection_reason' => 'Insufficient credentials.',
-            'reject_attempts' => 0,
         ]);
 
         Mail::assertQueued(RequestStatusMail::class);
@@ -105,38 +121,40 @@ class AdminApprovalApiTest extends TestCase
     /** @test */
     public function test_reject_requires_reason()
     {
-        $admin = CapstoneExpert::factory()->create([
+        $admin = CapstoneExpert::create([
+            'email' => 'admin.test@gmail.com',
+            'first_name' => 'Admin',
+            'last_name' => 'Test',
             'is_admin' => true,
             'approved_status' => true,
         ]);
 
-        $requestId = DB::table('account_requests')->insertGetId([
+        $expert = CapstoneExpert::create([
             'email' => 'instructor.test@gmail.com',
             'first_name' => 'John',
             'last_name' => 'Doe',
-            'status' => 'pending',
+            'approved_status' => false,
             'max_teams' => 4,
-            'specialization' => json_encode(['adviser']),
-            'expertise' => json_encode(['Web Development']),
-            'created_at' => now(),
-            'updated_at' => now(),
         ]);
 
         $response = $this->actingAs($admin, 'expert')
-            ->postJson(route('admin.approval.reject', ['expert_id' => $requestId]));
+            ->postJson(route('admin.approval.reject', ['expert_id' => $expert->expert_id]));
 
         $this->assertNotEquals(200, $response->getStatusCode());
 
-        $this->assertDatabaseHas('account_requests', [
-            'id' => $requestId,
-            'status' => 'pending',
+        $this->assertDatabaseHas('capstone_experts', [
+            'expert_id' => $expert->expert_id,
+            'approved_status' => false,
         ]);
     }
 
     /** @test */
     public function test_approve_returns_404_for_nonexistent_request()
     {
-        $admin = CapstoneExpert::factory()->create([
+        $admin = CapstoneExpert::create([
+            'email' => 'admin.test@gmail.com',
+            'first_name' => 'Admin',
+            'last_name' => 'Test',
             'is_admin' => true,
             'approved_status' => true,
         ]);
@@ -155,7 +173,10 @@ class AdminApprovalApiTest extends TestCase
     /** @test */
     public function test_reject_returns_404_for_nonexistent_request()
     {
-        $admin = CapstoneExpert::factory()->create([
+        $admin = CapstoneExpert::create([
+            'email' => 'admin.test@gmail.com',
+            'first_name' => 'Admin',
+            'last_name' => 'Test',
             'is_admin' => true,
             'approved_status' => true,
         ]);

@@ -20,6 +20,10 @@ use Illuminate\Support\Str;
     'max_teams',
     'department',
     'rejection_reason',
+    'reject_attempts',
+    'reject_cooldown_until',
+    'google_token',
+    'google_token_expires_at',
 ])]
 class CapstoneExpert extends Authenticatable
 {
@@ -37,6 +41,7 @@ class CapstoneExpert extends Authenticatable
         'is_admin' => 'boolean',
         'approved_status' => 'boolean',
         'created_at' => 'datetime',
+        'reject_cooldown_until' => 'datetime',
     ];
 
     public function roles()

@@ -21,6 +21,10 @@ class CheckExpertApproval
             return $next($request);
         }
 
+        if (! $expert->approved_status) {
+            return redirect('/login/rejected?email='.urlencode($expert->email));
+        }
+
         return $next($request);
     }
 }

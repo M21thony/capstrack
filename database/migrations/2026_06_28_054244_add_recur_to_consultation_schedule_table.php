@@ -11,8 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('capstone_experts', function (Blueprint $table) {
-            $table->boolean('approved_status')->default(false)->after('is_admin');
+        Schema::table('consultation_schedule', function ($table) {
+            $table->string('recur')->nullable();
         });
     }
 
@@ -21,8 +21,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('capstone_experts', function (Blueprint $table) {
-            $table->dropColumn('approved_status');
+        Schema::table('consultation_schedule', function (Blueprint $table) {
+            //
         });
     }
 };

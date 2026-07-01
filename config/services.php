@@ -47,13 +47,14 @@ return [
     ],
 
     'ollama' => [
-        'model' => env('OLLAMA_MODEL', 'qwen2.5'),
+        'model'       => env('OLLAMA_MODEL', 'qwen2.5:7B'),
+        'embed_model' => env('OLLAMA_EMBED_MODEL', 'nomic-embed-text'),
     ],
 
     'ssh_tunnel' => [
-        'host' => env('SSH_TUNNEL_HOST'),
-        'port' => env('SSH_TUNNEL_PORT', 22),
-        'user' => env('SSH_TUNNEL_USER'),
+        'host'     => env('SSH_TUNNEL_HOST'),
+        'port'     => env('SSH_TUNNEL_PORT', 22),
+        'user'     => env('SSH_TUNNEL_USER'),
         'key_path' => env('SSH_TUNNEL_KEY_PATH'),
     ],
 

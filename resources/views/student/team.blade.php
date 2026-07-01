@@ -170,15 +170,18 @@
         <h1 style="font-size: 24px; font-weight: 700; color: var(--text);">TEAM SELECTION</h1>
       </div>
 
+
   <div class="team-container">
     <!-- LEFT COLUMN -->
     <div style="display: flex; flex-direction: column; gap: 20px;">
-<<<<<<< HEAD
       <div class="card" style="border-style: dashed; border-width: 2px; cursor: pointer;" onclick="openPostModal(@json($myRecruitment ?? null))">
-=======
+
       @if(!$myTeam)
       <div class="card" style="border-style: dashed; border-width: 2px; cursor: pointer;" onclick="openPostModal()">
->>>>>>> naanap_kuna_di_code_haha
+
+      @if(!$myTeam)
+      <div class="card" style="border-style: dashed; border-width: 2px; cursor: pointer;" onclick="openPostModal()">
+
         <div style="display: flex; gap: 12px; align-items: center;">
           <div class="avatar" style="width: 40px; height: 40px; background: var(--accent); color: white;">+</div>
           <div style="color: var(--text3); font-size: 14px;">Looking for a team or members? Post your expertise here...</div>
@@ -195,7 +198,6 @@
               $dotColor = $isLeader ? '#22c55e' : '#3b82f6';
               $initials = auth()->user()->avatarInitials();
             @endphp
-<<<<<<< HEAD
             <div class="profile-card-compact" id="my-active-post"
               onclick='viewPostDetails(
                 this,
@@ -209,16 +211,15 @@
                 @json($isLeader ? "Leader" : "Individual"),
                 @json($myRecruitment)
               )'>
-=======
             <div class="profile-card-compact" id="my-active-post" onclick='viewPostDetails(this, "{{ addslashes(auth()->user()->f_name . " " . auth()->user()->l_name) }}", "{{ implode(", ", $skills) }}", "{{ $myRecruitment->looking_for }}", "{{ auth()->user()->team->team_name ?? 'No Team' }}", "{{ auth()->user()->team->project_title ?? 'No project set' }}", "{{ auth()->user()->student_number }}", true, "{{ $isLeader ? 'Leader' : 'Individual' }}", {{ auth()->user()->student_id }}, {{ auth()->user()->team->team_id ?? 'null' }}, "{{ auth()->user()->avatarUrl() }}")'>
->>>>>>> naanap_kuna_di_code_haha
+
+            <div class="profile-card-compact" id="my-active-post" onclick='viewPostDetails(this, "{{ addslashes(auth()->user()->f_name . " " . auth()->user()->l_name) }}", "{{ implode(", ", $skills) }}", "{{ $myRecruitment->looking_for }}", "{{ auth()->user()->team->team_name ?? 'No Team' }}", "{{ auth()->user()->team->project_title ?? 'No project set' }}", "{{ auth()->user()->student_number }}", true, "{{ $isLeader ? 'Leader' : 'Individual' }}", {{ auth()->user()->student_id }}, {{ auth()->user()->team->team_id ?? 'null' }}, "{{ auth()->user()->avatarUrl() }}")'>
+
               <div class="post-actions" style="position:absolute; top:8px; right:8px; z-index:2;">
-                <form method="POST" action="{{ route('recruitment.destroy', ['recruitment' => $myRecruitment->recruitment_id]) }}" id="delete-recruitment-form" style="display:inline;">
+                <form method="POST" action="{{ route('recruitment.destroy', $myRecruitment) }}" id="delete-recruitment-form" style="display:inline;">
                   @csrf
                   @method('DELETE')
-                  <button type="button" class="btn-icon" style="width:24px; height:24px;" onclick="event.stopPropagation(); openDeleteModal()">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                  </button>
+                  <button type="button" class="btn-icon" style="width:24px; height:24px;" onclick="event.stopPropagation(); openDeleteModal()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4 a2 2 0 0 1 2 2v2"></path></svg></button>
                 </form>
               </div>
               <div class="avatar-ring {{ $ringClass }}">
@@ -242,7 +243,6 @@
               $dotColor = $isLeader ? '#22c55e' : '#3b82f6';
               $initials = $recruit->student->avatarInitials();
             @endphp
-<<<<<<< HEAD
             <div class="profile-card-compact"
               onclick='viewPostDetails(
                 this,
@@ -256,9 +256,10 @@
                 @json($isLeader ? "Leader" : "Individual"),
                 null
               )'>
-=======
             <div class="profile-card-compact" onclick='viewPostDetails(this, "{{ addslashes($recruit->student->f_name . " " . $recruit->student->l_name) }}", "{{ implode(", ", $recruit->roles ?? []) }}", "{{ $recruit->looking_for }}", "{{ $recruit->student->team->team_name ?? 'No Team' }}", "{{ $recruit->student->team->project_title ?? 'No project set' }}", "{{ $recruit->student->student_number }}", false, "{{ $isLeader ? 'Leader' : 'Individual' }}", {{ $recruit->student_id }}, {{ $recruit->student->team->team_id ?? 'null' }}, "{{ $recruit->student->avatarUrl() }}")'>
->>>>>>> naanap_kuna_di_code_haha
+
+            <div class="profile-card-compact" onclick='viewPostDetails(this, "{{ addslashes($recruit->student->f_name . " " . $recruit->student->l_name) }}", "{{ implode(", ", $recruit->roles ?? []) }}", "{{ $recruit->looking_for }}", "{{ $recruit->student->team->team_name ?? 'No Team' }}", "{{ $recruit->student->team->project_title ?? 'No project set' }}", "{{ $recruit->student->student_number }}", false, "{{ $isLeader ? 'Leader' : 'Individual' }}", {{ $recruit->student_id }}, {{ $recruit->student->team->team_id ?? 'null' }}, "{{ $recruit->student->avatarUrl() }}")'>
+
               <div class="avatar-ring {{ $ringClass }}">
                 @if ($recruit->student->avatarUrl())
                   <img src="{{ $recruit->student->avatarUrl() }}" alt="">
@@ -364,7 +365,6 @@
 
   @if ($otherRecruitments->hasPages())
   <div class="pagination-container">
-<<<<<<< HEAD
       <div class="pg-arrow" title="Previous">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
       </div>
@@ -376,7 +376,6 @@
       <div class="pg-arrow" title="Next">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
       </div>
-=======
       @if ($otherRecruitments->onFirstPage())
           <div class="pg-arrow disabled" title="Previous" style="opacity: 0.5; cursor: not-allowed; display: flex; align-items: center; justify-content: center;">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
@@ -404,7 +403,6 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
           </div>
       @endif
->>>>>>> naanap_kuna_di_code_haha
   </div>
   @endif
 
@@ -424,7 +422,6 @@
       <div class="credits-names">Jolina · John Kenneth · Mark Anthony · Ian Cyrus · Alexa Nicole</div>
   </div>
 
-  <!-- DETAIL MODAL -->
   <div class="modal-overlay" id="detailModal" onclick="if(event.target==this) this.classList.remove('active')">
       <div class="card" style="width: 380px; padding: 28px; position: relative;">
           <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 18px;">
@@ -453,11 +450,10 @@
               <div id="detail-skills" style="display: flex; flex-wrap: wrap; gap: 6px;"></div>
           </div>
 
-          <button class="btn-primary" style="width: 100%;" id="detail-action-btn">Send Request</button>
+          <button class="btn-primary" style="width: 100%;" id="action-btn-text">Send Request</button>
       </div>
   </div>
 
-<<<<<<< HEAD
   <!-- POST / EDIT MODAL -->
   <div class="modal-overlay" id="postModal" onclick="if(event.target==this) closePostModal()">
     <div class="card" style="width: 480px; padding: 30px; border: 1px solid var(--accent);">
@@ -512,7 +508,6 @@
           </form>
           <button class="google-btn" style="flex: 1; border: none;" onclick="closePostModal()">Cancel</button>
         </div>
-=======
 <div class="modal-overlay" id="postModal" onclick="if(event.target==this) closePostModal()">
   <div class="card" style="width: 480px; padding: 30px; border: 1px solid var(--accent); position: relative;">
     <button type="button" onclick="closePostModal()" class="pm-close-btn" aria-label="Close" style="position: absolute; top: 20px; right: 20px;">
@@ -556,22 +551,22 @@
           <button type="submit" class="btn-primary" style="width: 100%;">Publish Post</button>
         </form>
         <button class="google-btn" style="flex: 1; border: none;" onclick="closePostModal()">Cancel</button>
->>>>>>> naanap_kuna_di_code_haha
-      </div>
-    </div>
-  </div>
 
-  <!-- DELETE CONFIRM MODAL -->
-  <div class="modal-overlay" id="deleteModal" onclick="if(event.target==this) closeDeleteModal()">
-    <div class="card" style="width: 360px; padding: 30px; text-align: center;">
-      <div class="section-title">Delete Post</div>
-      <p style="margin-top: 12px; font-size: 13px; color: var(--text2);">Are you sure you want to remove your recruitment post? This action cannot be undone.</p>
-      <div style="display: flex; gap: 10px; margin-top: 20px;">
-        <button class="btn-primary" style="flex: 1; background: #ef4444;" onclick="submitDeleteForm()">Delete</button>
-        <button class="google-btn" style="flex: 1; border: none;" onclick="closeDeleteModal()">Cancel</button>
       </div>
     </div>
   </div>
+</div>
+
+<div class="modal-overlay" id="deleteModal" onclick="if(event.target==this) closeDeleteModal()">
+  <div class="card" style="width: 360px; padding: 30px; text-align: center;">
+    <div class="section-title">Delete Post</div>
+    <p style="margin-top: 12px; font-size: 13px; color: var(--text2);">Are you sure you want to remove your recruitment post? This action cannot be undone.</p>
+    <div style="display: flex; gap: 10px; margin-top: 20px;">
+      <button class="btn-primary" style="flex: 1; background: #ef4444;" onclick="submitDeleteForm()">Delete</button>
+      <button class="google-btn" style="flex: 1; border: none;" onclick="closeDeleteModal()">Cancel</button>
+    </div>
+  </div>
+</div>
 
 <form id="invite-request-form" method="POST" action="{{ route('invitations.store') }}" style="display:none;">
     @csrf
@@ -594,7 +589,6 @@
 </div>
 
 <script>
-<<<<<<< HEAD
 let selectedTags = new Set();
 // Store the update URL template from Laravel
 const updateUrlTemplate = '{{ route('recruitment.update', ['recruitment' => ':id']) }}';
@@ -658,7 +652,6 @@ function publishPost(event) {
     }
 
     form.submit();
-=======
 const currentStudentTeamId = {{ auth()->user()->studentSchoolYear()->first()?->team_id ?? 'null' }};
 const currentStudentId = {{ auth()->user()->student_id }};
 const myRecruitmentGoal = '{{ $myRecruitmentGoal ?? '' }}';
@@ -678,7 +671,6 @@ function confirmLeaveTeam() {
             document.getElementById('leave-team-form').submit();
         }
     });
->>>>>>> naanap_kuna_di_code_haha
 }
 @endif
 
@@ -733,46 +725,7 @@ document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') closeConfirm();
 });
 
-function openPostModal(recruitment) {
-    // Reset state
-    selectedTags.clear();
-    document.querySelectorAll('.skill-chip').forEach(function(chip) { chip.classList.remove('selected'); });
-    document.getElementById('leader-looking-for').value = '';
-    document.getElementById('individual-intro').value = '';
-    document.getElementById('recruitment-id-input').value = '';
-    document.getElementById('form-method-input').value = 'POST';
-    document.getElementById('submit-btn-text').textContent = 'Publish Post';
-    document.getElementById('post-goal').value = 'leader';
-
-    if (recruitment && recruitment.recruitment_id) {
-        // Editing an existing post
-        document.getElementById('recruitment-id-input').value = recruitment.recruitment_id;
-        document.getElementById('submit-btn-text').textContent = 'Update Post';
-
-        const isLeader = recruitment.recruitment_goal === 'build_a_team';
-        document.getElementById('post-goal').value = isLeader ? 'leader' : 'individual';
-
-        if (isLeader) {
-            document.getElementById('leader-looking-for').value = recruitment.looking_for || '';
-        } else {
-            document.getElementById('individual-intro').value = recruitment.introduction || '';
-        }
-
-        // Pre-select saved roles
-        if (Array.isArray(recruitment.roles)) {
-            recruitment.roles.forEach(function(role) {
-                selectedTags.add(role);
-                document.querySelectorAll('.skill-chip').forEach(function(chip) {
-                    if (chip.textContent.trim() === role) {
-                        chip.classList.add('selected');
-                    }
-                });
-            });
-        }
-    }
-
-    updateModalUI();
-    renderTags();
+function openPostModal() {
     document.getElementById('postModal').classList.add('active');
 }
 
@@ -780,7 +733,6 @@ function closePostModal() {
     document.getElementById('postModal').classList.remove('active');
 }
 
-<<<<<<< HEAD
 function viewPostDetails(cardEl, name, skills, lookingFor, teamName, projectTitle, studentId, isOwner, type, recruitment) {
     const modal = document.getElementById('detailModal');
 
@@ -789,7 +741,7 @@ function viewPostDetails(cardEl, name, skills, lookingFor, teamName, projectTitl
     document.getElementById('detail-looking-for').textContent = lookingFor ? lookingFor : '-';
     document.getElementById('detail-team-name').textContent = teamName || '-';
     document.getElementById('detail-project').textContent = projectTitle || '-';
-=======
+
 function sendInviteOrRequest(receiverId, teamId, type) {
     const isInvite = type === 'invite';
     showConfirm({
@@ -877,7 +829,6 @@ function viewPostDetails(cardEl, name, skills, lookingFor, teamName, projectTitl
             }
         }
     }
->>>>>>> naanap_kuna_di_code_haha
 
     const avatarEl = document.getElementById('detail-avatar');
     if (avatarUrl) {
@@ -894,22 +845,6 @@ function viewPostDetails(cardEl, name, skills, lookingFor, teamName, projectTitl
         }).join('');
     } else {
         skillContainer.innerHTML = '';
-    }
-
-    const ownerMsg = document.getElementById('detail-owner-msg');
-    const actionBtn = document.getElementById('detail-action-btn');
-
-    if (isOwner) {
-        ownerMsg.style.display = 'block';
-        actionBtn.textContent = 'Edit Post';
-        actionBtn.onclick = function() {
-            modal.classList.remove('active');
-            openPostModal(recruitment);
-        };
-    } else {
-        ownerMsg.style.display = 'none';
-        actionBtn.textContent = 'Send Request';
-        actionBtn.onclick = null;
     }
 
     modal.classList.add('active');
@@ -931,7 +866,6 @@ function updateModalUI() {
     renderActiveTags();
 }
 
-<<<<<<< HEAD
     if (goal === 'leader') {
         leaderFields.style.display = 'block';
         individualFields.style.display = 'none';
@@ -950,7 +884,9 @@ function updateModalUI() {
         leaderSkills.forEach(function(chip) { chip.style.display = 'none'; });
         individualSkills.forEach(function(chip) { chip.style.display = 'inline-block'; });
         document.getElementById('recruitment-goal-input').value = 'find_a_team';
-=======
+    }
+}
+
 function filterTagSuggestions() {
     const goal = document.getElementById('post-goal').value;
     const query = document.getElementById('tag-search-input').value.toLowerCase().trim();
@@ -962,7 +898,6 @@ function filterTagSuggestions() {
     if (filtered.length === 0) {
         box.style.display = 'none';
         return;
->>>>>>> naanap_kuna_di_code_haha
     }
     
     filtered.forEach(tag => {
@@ -1001,12 +936,6 @@ function renderActiveTags() {
         container.insertBefore(chip, input);
     });
     document.getElementById('tags-hidden-input').value = JSON.stringify(activeTags);
-}
-
-function confirmJoin(teamName) {
-    if (confirm('Are you sure you want to join ' + teamName + '? This will close your current recruitment post.')) {
-        alert('Welcome to ' + teamName + '! Redirecting to Team Dashboard...');
-    }
 }
 
 function openDeleteModal() {

@@ -12,129 +12,135 @@ class AdminApprovalController extends Controller
 {
     public function index()
     {
-        $pendingRequests = DB::table('account_requests')
-            ->where('status', 'pending')
+        $pendingIds = DB::table('capstone_experts')
+            ->where('approved_status', false)
+            ->whereNull('rejection_reason')
             ->orderBy('created_at', 'desc')
-            ->get()
-            ->map(function ($req) {
-                $req->specialization = $req->specialization ? json_decode($req->specialization, true) : [];
-                $req->expertise = $req->expertise ? json_decode($req->expertise, true) : [];
-                $req->expert_id = $req->id;
+            ->pluck('expert_id');
 
-                return $req;
-            });
-
-        $approvedExperts = DB::table('capstone_experts')
+        $approvedIds = DB::table('capstone_experts')
+            ->where('approved_status', true)
             ->orderBy('created_at', 'desc')
+            ->pluck('expert_id');
+
+        $rejectedIds = DB::table('capstone_experts')
+            ->where('approved_status', false)
+            ->whereNotNull('rejection_reason')
+            ->orderBy('created_at', 'desc')
+            ->pluck('expert_id');
+
+        $allIds = $pendingIds->merge($approvedIds)->merge($rejectedIds);
+
+        $instructors = DB::table('capstone_experts')
+            ->whereIn('expert_id', $allIds)
+            ->orderByRaw('FIELD(expert_id, '.$allIds->map(fn ($id) => (int) $id)->implode(',').')')
             ->get()
             ->map(function ($expert) {
-                $expert->id = $expert->expert_id;
-                $expert->specialization = $this->getExpertSpecialization($expert->expert_id);
-                $expert->expertise = $this->getExpertExpertise($expert->expert_id);
-                $expert->status = 'approved';
+                $expert->status = $expert->approved_status ? 'approved' : ($expert->rejection_reason ? 'rejected' : 'pending');
 
                 return $expert;
             });
 
-        $rejectedRequests = DB::table('account_requests')
-            ->where('status', 'rejected')
-            ->orderBy('created_at', 'desc')
+        $specializations = [];
+        $expertise = [];
+
+        $expertRoles = DB::table('expert_roles')
+            ->join('roles', 'expert_roles.role_id', '=', 'roles.role_id')
+            ->whereIn('expert_roles.expert_id', $allIds)
             ->get()
-            ->map(function ($req) {
-                $req->specialization = $req->specialization ? json_decode($req->specialization, true) : [];
-                $req->expertise = $req->expertise ? json_decode($req->expertise, true) : [];
-                $req->expert_id = $req->id;
+            ->groupBy('expert_id');
 
-                return $req;
-            });
+        foreach ($expertRoles as $expertId => $roles) {
+            $specializations[(int) $expertId] = $roles->pluck('role_name')->toArray();
+        }
 
-        $instructors = collect()
-            ->merge($pendingRequests)
-            ->merge($approvedExperts)
-            ->merge($rejectedRequests);
+        $expertExpertise = DB::table('expert_expertise')
+            ->whereIn('expert_id', $allIds)
+            ->get()
+            ->groupBy('expert_id');
+
+        foreach ($expertExpertise as $expertId => $exp) {
+            $expertise[(int) $expertId] = $exp->pluck('expertise_field')->toArray();
+        }
+
+        $instructors->map(function ($expert) use ($specializations, $expertise) {
+            $expert->specialization = $specializations[$expert->expert_id] ?? [];
+            $expert->expertise = $expertise[$expert->expert_id] ?? [];
+            $expert->id = $expert->expert_id;
+
+            return $expert;
+        });
 
         return view('admin.approval', [
             'instructors' => $instructors,
-            'pendingCount' => $pendingRequests->count(),
+            'pendingCount' => $pendingIds->count(),
         ]);
     }
 
     public function apiIndex(): JsonResponse
     {
-        $requests = DB::table('account_requests')
+        $expertIds = DB::table('capstone_experts')
+            ->orderBy('created_at', 'desc')
+            ->pluck('expert_id');
+
+        $experts = DB::table('capstone_experts')
             ->orderBy('created_at', 'desc')
             ->get()
-            ->map(function ($req) {
-                $req->specialization = $req->specialization ? json_decode($req->specialization, true) : [];
-                $req->expertise = $req->expertise ? json_decode($req->expertise, true) : [];
+            ->map(function ($expert) {
+                $expert->status = $expert->approved_status ? 'approved' : ($expert->rejection_reason ? 'rejected' : 'pending');
 
-                return $req;
+                return $expert;
             });
 
-        return response()->json(['success' => true, 'data' => $requests]);
+        $expertRoles = DB::table('expert_roles')
+            ->join('roles', 'expert_roles.role_id', '=', 'roles.role_id')
+            ->whereIn('expert_roles.expert_id', $expertIds)
+            ->get()
+            ->groupBy('expert_id');
+
+        $specializations = [];
+        foreach ($expertRoles as $expertId => $roles) {
+            $specializations[(int) $expertId] = $roles->pluck('role_name')->toArray();
+        }
+
+        $expertExpertise = DB::table('expert_expertise')
+            ->whereIn('expert_id', $expertIds)
+            ->get()
+            ->groupBy('expert_id');
+
+        $expertise = [];
+        foreach ($expertExpertise as $expertId => $exp) {
+            $expertise[(int) $expertId] = $exp->pluck('expertise_field')->toArray();
+        }
+
+        $experts->map(function ($expert) use ($specializations, $expertise) {
+            $expert->specialization = $specializations[$expert->expert_id] ?? [];
+            $expert->expertise = $expertise[$expert->expert_id] ?? [];
+
+            return $expert;
+        });
+
+        return response()->json(['success' => true, 'data' => $experts]);
     }
 
     public function approve($id): JsonResponse
     {
-        $requestRecord = DB::table('account_requests')->where('id', $id)->first();
+        $expert = DB::table('capstone_experts')->where('expert_id', $id)->first();
 
-        if (! $requestRecord) {
+        if (! $expert) {
             return response()->json(['success' => false, 'message' => 'Request not found.'], 404);
         }
 
-        if ($requestRecord->status !== 'pending') {
+        if ($expert->approved_status) {
             return response()->json(['success' => false, 'message' => 'Request already processed.'], 422);
         }
 
-        $specialization = $requestRecord->specialization ? json_decode($requestRecord->specialization, true) : [];
-        $expertise = $requestRecord->expertise ? json_decode($requestRecord->expertise, true) : [];
+        DB::table('capstone_experts')->where('expert_id', $id)->update([
+            'approved_status' => true,
+            'rejection_reason' => null,
+        ]);
 
-        DB::transaction(function () use ($requestRecord, $specialization, $expertise) {
-            $expertId = DB::table('capstone_experts')->insertGetId([
-                'email' => $requestRecord->email,
-                'first_name' => $requestRecord->first_name,
-                'last_name' => $requestRecord->last_name,
-                'credentials' => $requestRecord->credentials,
-                'department' => $requestRecord->department,
-                'max_teams' => $requestRecord->max_teams,
-                'is_admin' => false,
-                'approved_status' => true,
-                'created_at' => now(),
-            ]);
-
-            $roles = DB::table('roles')->whereIn('role_name', $specialization)->pluck('role_id', 'role_name');
-
-            foreach ($specialization as $roleName) {
-                $roleId = $roles[$roleName] ?? null;
-                if ($roleId) {
-                    DB::table('expert_roles')->insert([
-                        'expert_id' => $expertId,
-                        'role_id' => $roleId,
-                    ]);
-                }
-            }
-
-            foreach ($expertise as $field) {
-                if (is_string($field) && trim($field) !== '') {
-                    DB::table('expert_expertise')->insert([
-                        'expert_id' => $expertId,
-                        'expertise_field' => $field,
-                        'created_at' => now(),
-                        'updated_at' => now(),
-                    ]);
-                }
-            }
-
-            DB::table('account_requests')->where('id', $requestRecord->id)->update([
-                'status' => 'approved',
-                'rejection_reason' => null,
-                'updated_at' => now(),
-            ]);
-        });
-
-        $approvedExpert = DB::table('capstone_experts')
-            ->where('email', $requestRecord->email)
-            ->first();
+        $approvedExpert = DB::table('capstone_experts')->where('expert_id', $id)->first();
 
         Mail::to($approvedExpert->email)->queue(new RequestStatusMail(
             expert: (array) $approvedExpert,
@@ -150,27 +156,26 @@ class AdminApprovalController extends Controller
             'reason' => 'required|string|max:1000',
         ]);
 
-        $requestRecord = DB::table('account_requests')->where('id', $id)->first();
+        $expert = DB::table('capstone_experts')->where('expert_id', $id)->first();
 
-        if (! $requestRecord) {
+        if (! $expert) {
             return response()->json(['success' => false, 'message' => 'Request not found.'], 404);
         }
 
-        if ($requestRecord->status !== 'pending') {
+        if ($expert->approved_status) {
             return response()->json(['success' => false, 'message' => 'Request already processed.'], 422);
         }
 
-        $currentAttempts = (int) $requestRecord->reject_attempts;
-        $cooldownUntil = $currentAttempts >= 3 ? now()->addSeconds(60) : null;
+        $currentAttempts = (int) $expert->reject_attempts;
+        $cooldownUntil = $currentAttempts >= 2 ? now()->addSeconds(60) : null;
 
-        DB::table('account_requests')->where('id', $id)->update([
-            'status' => 'rejected',
+        DB::table('capstone_experts')->where('expert_id', $id)->update([
             'rejection_reason' => $validated['reason'],
             'reject_cooldown_until' => $cooldownUntil,
-            'updated_at' => now(),
+            'reject_attempts' => DB::raw('reject_attempts + 1'),
         ]);
 
-        $updated = DB::table('account_requests')->where('id', $id)->first();
+        $updated = DB::table('capstone_experts')->where('expert_id', $id)->first();
 
         Mail::to($updated->email)->queue(new RequestStatusMail(
             expert: (array) $updated,
@@ -179,22 +184,5 @@ class AdminApprovalController extends Controller
         ));
 
         return response()->json(['success' => true, 'message' => 'Account rejected and email sent.']);
-    }
-
-    private function getExpertSpecialization(int $expertId): array
-    {
-        return DB::table('expert_roles')
-            ->join('roles', 'expert_roles.role_id', '=', 'roles.role_id')
-            ->where('expert_roles.expert_id', $expertId)
-            ->pluck('roles.role_name')
-            ->toArray();
-    }
-
-    private function getExpertExpertise(int $expertId): array
-    {
-        return DB::table('expert_expertise')
-            ->where('expert_id', $expertId)
-            ->pluck('expertise_field')
-            ->toArray();
     }
 }

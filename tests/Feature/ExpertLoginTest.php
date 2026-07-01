@@ -5,7 +5,6 @@ namespace Tests\Feature;
 use App\Models\CapstoneExpert;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class ExpertLoginTest extends TestCase
@@ -78,13 +77,11 @@ class ExpertLoginTest extends TestCase
         $state = 'test-state-token';
         $this->withSession(['oauth_state' => $state]);
 
-        DB::table('account_requests')->insert([
+        CapstoneExpert::create([
             'email' => 'unapproved.expert@gmail.com',
             'first_name' => 'Unapproved',
             'last_name' => 'Expert',
-            'status' => 'pending',
-            'created_at' => now(),
-            'updated_at' => now(),
+            'approved_status' => false,
         ]);
 
         $response = $this->post('/expert/login/google/mock', [
@@ -159,14 +156,12 @@ class ExpertLoginTest extends TestCase
     /** @test */
     public function test_pending_and_rejected_views_can_be_rendered_without_guard_errors(): void
     {
-        DB::table('account_requests')->insert([
+        CapstoneExpert::create([
             'email' => 'rejected.expert@gmail.com',
             'first_name' => 'Rejected',
             'last_name' => 'Expert',
-            'status' => 'rejected',
+            'approved_status' => false,
             'rejection_reason' => 'Insufficient credentials.',
-            'created_at' => now(),
-            'updated_at' => now(),
         ]);
 
         $response = $this->get('/login/rejected?email=rejected.expert@gmail.com');

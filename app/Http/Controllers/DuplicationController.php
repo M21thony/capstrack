@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\OllamaSSHClient;
 use App\Services\SimilarityService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -25,8 +26,11 @@ class DuplicationController extends Controller
         $path = null;
 
         try {
+            // 0. Warm up Ollama — loads model into GPU before real requests
+            app(OllamaSSHClient::class)->warmup();
+
             // 1. Save uploaded PDF temporarily
-            $path = $request->file('document')->store('temp-uploads');
+            $path     = $request->file('document')->store('temp-uploads');
             $fullPath = Storage::path($path);
 
             // 2. Extract text from PDF
@@ -48,38 +52,37 @@ class DuplicationController extends Controller
             // 6. Clean up temp file
             Storage::delete($path);
 
-            // 7. Determine overall verdict from the top match
+            // 7. Determine overall verdict from top match score
             $topScore = $matches[0]['score'] ?? 0;
-            $verdict = $topScore >= 70 ? 'High Similarity'
-                      : ($topScore >= 40 ? 'Moderate Similarity' : 'Passed');
+            $verdict  = $topScore >= 65 ? 'High Similarity'
+                    : ($topScore >= 55 ? 'Moderate Similarity' : 'Passed');
 
             return response()->json([
-                'success' => true,
-                'concepts' => $concepts,
-                'top_score' => $topScore,
-                'verdict' => $verdict,
-                'matches' => array_map(fn ($m) => [
-                    'archived_id' => $m['document']->archived_id,
-                    'title' => $m['document']->title,
-                    'abstract' => $m['document']->abstract,
+                'success'     => true,
+                'concepts'    => $concepts,
+                'top_score'   => $topScore,
+                'verdict'     => $verdict,
+                'matches'     => array_map(fn($m) => [
+                    'archived_id'   => $m['document']->archived_id,
+                    'title'         => $m['document']->title,
+                    'abstract'      => $m['document']->abstract,
                     'academic_year' => $m['document']->academic_year,
-                    'program' => $m['document']->program,
-                    'score' => $m['score'],
-                    'reason' => $m['reason'],
-                    'matched_on' => $m['matched_on'] ?? [],
+                    'program'       => $m['document']->program,
+                    'score'         => $m['score'],
+                    'reason'        => $m['reason'],
+                    'matched_on'    => $m['matched_on'] ?? [],
                 ], $matches),
                 'instructors' => $instructors,
             ]);
 
         } catch (\Exception $e) {
-            // Clean up temp file even on failure
             if ($path) {
                 Storage::delete($path);
             }
 
             Log::error('Duplication check failed', [
                 'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
+                'trace'   => $e->getTraceAsString(),
             ]);
 
             return response()->json([

@@ -4,7 +4,6 @@
 
 @section('content')
 @php
-  $req = $accountRequest ?? null;
   $rejectAttempts = (int) ($req?->reject_attempts ?? 0);
   $maxRejects = 3;
   $cooldownUntil = $req?->reject_cooldown_until;
@@ -958,7 +957,6 @@
           <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
           Personal Details
         </div>
-
         <div class="field-row">
           <div class="field">
             <label>First Name <span class="req">*</span></label>
