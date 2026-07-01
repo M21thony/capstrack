@@ -14,7 +14,7 @@ use App\Http\Controllers\RecruitmentController;
 use App\Http\Controllers\TeamController;
 use Illuminate\Support\Facades\Route;
 
-Route::middleware(['auth:expert', 'expert.admin'])->prefix('admin')->name('admin.')->group(function () {
+Route::middleware(['auth:expert', 'expert.admin', 'no.cache'])->prefix('admin')->name('admin.')->group(function () {
     Route::view('/dashboard', 'admin.dashboard')->name('dashboard');
     Route::get('/experts', [AdminExpertsController::class, 'index'])->name('experts');
     Route::get('/approval', [AdminApprovalController::class, 'index'])->name('approval');
@@ -32,7 +32,7 @@ Route::middleware(['auth:expert', 'expert.admin'])->prefix('admin')->name('admin
     Route::view('/activitylog', 'admin.activitylog')->name('activitylog');
 });
 
-Route::middleware(['auth:expert', 'expert.approved'])->prefix('instructor')->name('instructor.')->group(function () {
+Route::middleware(['auth:expert', 'expert.approved', 'no.cache'])->prefix('instructor')->name('instructor.')->group(function () {
     Route::view('/dashboard', 'instructor.dashboard')->name('dashboard');
     Route::view('/applications', 'instructor.applications')->name('applications');
     Route::view('/teams', 'instructor.teams')->name('teams');
@@ -69,7 +69,7 @@ Route::prefix('expert')->group(function () {
     Route::post('/logout', [ExpertController::class, 'logout'])->name('expert.logout');
 });
 
-Route::middleware(['auth'])->group(function () {
+Route::middleware(['auth', 'no.cache'])->group(function () {
     Route::post('/team', [TeamController::class, 'store'])->name('team.store');
     Route::post('/team/confirm', [TeamController::class, 'confirm'])->name('team.confirm');
     Route::post('/team/transfer-leadership', [TeamController::class, 'transferLeadership'])->name('team.transfer-leadership');
@@ -110,7 +110,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/profile/update', [ProfileController::class, 'update'])->name('profile.update');
 });
 Route::prefix('instructor/schedule')
-    ->middleware('auth:expert')
+    ->middleware(['auth:expert', 'no.cache'])
     ->group(function () {
         Route::get('slots', [ScheduleController::class, 'getSlots']);
         Route::post('slots', [ScheduleController::class, 'addSlot']);
