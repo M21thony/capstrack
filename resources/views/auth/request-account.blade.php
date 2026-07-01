@@ -4,9 +4,9 @@
 
 @section('content')
 @php
-  $rejectAttempts = (int) ($req?->reject_attempts ?? 0);
+  $rejectAttempts = (int) ($accountRequest?->reject_attempts ?? 0);
   $maxRejects = 3;
-  $cooldownUntil = $req?->reject_cooldown_until;
+  $cooldownUntil = $accountRequest?->reject_cooldown_until;
   $cooldownActive = $cooldownUntil && now()->lt($cooldownUntil);
   $waitSeconds = $cooldownActive ? now()->diffInSeconds($cooldownUntil) : null;
   $attemptsRemaining = max(0, $maxRejects - $rejectAttempts);

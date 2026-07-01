@@ -15,10 +15,7 @@ class ExpertController extends Controller
 {
     public function login()
     {
-        return response()->json([
-            'success' => false,
-            'message' => 'Use initiateGoogleLogin to start authentication.',
-        ], 405);
+        return redirect('/');
     }
 
     public function showRequestForm(Request $request)
@@ -271,7 +268,6 @@ class ExpertController extends Controller
                 'message' => 'reCAPTCHA verification failed. Please try again.',
             ], 422);
         }
-
         $clientId = config('services.google.client_id');
 
         $state = Str::random(40);

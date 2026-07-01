@@ -17,10 +17,7 @@ class AuthController extends Controller
      */
     public function login()
     {
-        return response()->json([
-            'success' => false,
-            'message' => 'Use initiateGoogleLogin to start authentication.',
-        ], 405);
+        return redirect('/');
     }
 
     /**
