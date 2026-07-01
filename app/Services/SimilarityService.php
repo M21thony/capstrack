@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Models\ArchivedDocument;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 use Smalot\PdfParser\Parser;
 
@@ -45,9 +44,7 @@ PROMPT;
 
         $raw = $this->ollama->generate($prompt);
         $cleaned = trim(preg_replace('/```json|```/i', '', $raw));
-
-        preg_match('/\{.*\}/s', $cleaned, $m);
-        $data = json_decode($m[0] ?? $cleaned, true);
+        $data = json_decode($cleaned, true);
 
         if (json_last_error() !== JSON_ERROR_NONE) {
             Log::error('extractKeyConcepts parse error', ['raw' => $raw]);
@@ -61,262 +58,204 @@ PROMPT;
     private function removeStopWords(string $text): string
     {
         $stopWords = [
+            // Standard
             'a', 'an', 'the', 'of', 'for', 'and', 'or', 'in', 'to', 'is', 'are',
             'with', 'that', 'this', 'on', 'at', 'by', 'from', 'it', 'its', 'be',
             'as', 'was', 'were', 'has', 'have', 'had', 'do', 'does', 'did', 'not',
-            'its', 'their', 'our', 'your', 'his', 'her',
-            'web', 'mobile', 'desktop', 'online', 'electronic', 'digital',
-            'internet', 'android', 'ios', 'app', 'application', 'platform', 'portal',
-            'proposed', 'computerized', 'system', 'management', 'records', 'record',
-            'using', 'based', 'automated', 'implementation', 'development', 'design',
-            'modified', 'integrated', 'centralized', 'computer', 'computing',
-            'software', 'hardware', 'database', 'information', 'technology',
-            'generation', 'data', 'file', 'document', 'report', 'form',
+
+            // Generic capstone words (appear in almost every title)
+            'proposed', 'computerized', 'system', 'management', 'records',
+            'using', 'based', 'web', 'online', 'automated', 'digital', 'application',
+            'information', 'technology', 'development', 'design', 'implementation',
+
+            // Location noise
             'camarines', 'sur', 'nabua', 'cspc', 'iriga', 'city', 'colleges',
-            'polytechnic', 'philippines', 'bicol', 'naga', 'buhi', 'bato',
-            'rinconada', 'ocampo', 'polangui', 'albay', 'laguna', 'manila',
-            'college', 'department', 'university', 'school', 'cict', 'bsit',
-            'bscs', 'institute', 'campus', 'high', 'national', 'junior', 'senior',
-            'elementary', 'secondary', 'tertiary', 'academy',
-            'version', 'study', 'case', 'research', 'project', 'capstone',
-            'thesis', 'proposal', 'pre', 'post', 'new', 'old', 'local', 'global',
+            'polytechnic', 'philippines',
+
+            // School/dept noise
+            'college', 'department', 'university', 'school', 'cict', 'bsit', 'bscs',
+            'institute', 'campus',
         ];
 
-        $text = preg_replace('/[\/\\\,\.\(\)\[\]\{\}:;!?"\'\-_]/', ' ', strtolower($text));
-        $words = explode(' ', $text);
-        $filtered = array_filter(
-            $words,
-            fn ($w) => ! in_array(trim($w), $stopWords)
-                && strlen(trim($w)) > 2
-                && ! is_numeric(trim($w))
-        );
+        $words = explode(' ', strtolower($text));
+        $filtered = array_filter($words, fn ($w) => ! in_array(trim($w), $stopWords) && strlen(trim($w)) > 2);
 
-        return implode(' ', array_values($filtered));
+        return implode(' ', $filtered);
     }
 
-    // ── Shared AI scoring prompt ───────────────────────────────────────
-    private function buildScoringPrompt(array $concepts, string $docsJson): string
-    {
-        $conceptText = implode(', ', $concepts['keywords'] ?? []);
-        $targetUsers = $concepts['target_users'] ?? 'not specified';
-
-        return "You are an academic similarity checker comparing archived capstone projects to a new pre-proposal.\n\n"
-        ."Score each archived capstone. Return ONLY valid JSON.\n\n"
-        ."SCORING:\n"
-        ."- 60-100: Two or more significant overlaps (domain + function, domain + users)\n"
-        ."- 40-59: One substantial overlap (not just shared users)\n"
-        ."- Below 40: Trivial overlap (shared users only) or no overlap — exclude\n\n"
-        ."Example: If pre-proposal is capstone tracking:\n"
-        ."- Student record tracking system = 60-70 (domain + function)\n"
-        ."- Student attendance system = 40-50 (function overlap only)\n"
-        ."- Project mentioning \"students\" = below 40 (trivial user mention)\n\n"
-        ."Ignore: platform (web/mobile/desktop), school names.\n\n"
-        .'[{"id":<id>,"score":<40-100>,"reason":"one sentence"}]'
-        ."\n\nPRE-PROPOSAL:\n"
-        ."Topic: {$concepts['main_topic']}\n"
-        ."Keywords: {$conceptText}\n"
-        ."Target Users: {$targetUsers}\n"
-        ."Problem: {$concepts['problem_statement']}\n"
-        ."Solution: {$concepts['proposed_solution']}\n\n"
-        ."ARCHIVED CAPSTONES:\n{$docsJson}";
-    }
-
-    // ── 3. Main similarity search ──────────────────────────────────────
+    // ── 3. TRUE RAG: embed query → cosine similarity → top N ──────────
     public function findSimilarDocuments(array $concepts, int $topN = 10): array
     {
+        // Build a rich text representation — strip stop words before embedding
         $rawQueryText = implode("\n", array_filter([
             $concepts['main_topic'] ?? '',
+            $concepts['domain'] ?? '',
             implode(', ', $concepts['keywords'] ?? []),
             $concepts['problem_statement'] ?? '',
             $concepts['proposed_solution'] ?? '',
-            $concepts['target_users'] ?? '',
         ]));
 
+        // FIX: Apply stop words to query text for cleaner embedding
         $queryText = $this->removeStopWords($rawQueryText);
 
-        // ── Phase 1: Embedding pre-filter
+        // ── Phase 1: Generate embedding for the uploaded document ─────
         try {
             $queryEmbedding = $this->ollama->embed($queryText);
-            $docs = ArchivedDocument::whereNotNull('embedding')->get();
-
-            if ($docs->count() < 5) {
-                return $this->findSimilarDocumentsLegacy($concepts, $topN);
-            }
-
-            $scored = [];
-            foreach ($docs as $doc) {
-                $stored = json_decode($doc->embedding, true);
-                if (! is_array($stored) || empty($stored)) {
-                    continue;
-                }
-
-                $similarity = $this->cosineSimilarity($queryEmbedding, $stored);
-                if ($similarity < 0.25) {
-                    continue;
-                }
-
-                $scored[] = ['document' => $doc, 'similarity' => $similarity];
-            }
-
-            usort($scored, fn ($a, $b) => $b['similarity'] <=> $a['similarity']);
-            $candidates = collect(array_map(fn ($s) => $s['document'], array_slice($scored, 0, 10)));
-
-            if ($candidates->count() < 3) {
-                Log::info('Too few embedding candidates, merging SQL fallback', ['count' => $candidates->count()]);
-                $sqlCandidates = $this->sqlPreFilter($concepts);
-                $existingIds = $candidates->pluck('archived_id')->toArray();
-                $extras = $sqlCandidates->whereNotIn('archived_id', $existingIds)->take(10);
-                $candidates = $candidates->merge($extras);
-            }
-
         } catch (\Exception $e) {
-            Log::warning('Embedding failed, using SQL fallback', ['error' => $e->getMessage()]);
-            $candidates = $this->sqlPreFilter($concepts);
+            Log::warning('RAG embed failed, falling back to keyword search', ['error' => $e->getMessage()]);
+
+            return $this->findSimilarDocumentsLegacy($concepts, $topN);
         }
 
-        if ($candidates->isEmpty()) {
-            return [];
+        // ── Phase 2: Load all archived docs that have embeddings ──────
+        $docs = ArchivedDocument::whereNotNull('embedding')->get();
+
+        if ($docs->count() < 5) {
+            Log::info('Too few embedded docs, using legacy search', ['count' => $docs->count()]);
+
+            return $this->findSimilarDocumentsLegacy($concepts, $topN);
         }
 
-        // ── Phase 2: AI semantic scoring (chunked to respect context window)
-        $allScores = [];
+        // ── Phase 3: Cosine similarity against every stored embedding ─
+        $scored = [];
 
-        foreach ($candidates->chunk(5) as $chunkIndex => $chunk) {
-            $docList = $chunk->map(fn ($doc) => [
-                'id' => $doc->archived_id,
-                'title' => mb_substr($doc->title, 0, 100),
-                'abs' => mb_substr($doc->abstract ?? '', 0, 150),
-            ])->values()->toArray();
+        foreach ($docs as $doc) {
+            $storedEmbedding = json_decode($doc->embedding, true);
 
-            $docsJson = json_encode($docList);
-            $prompt = $this->buildScoringPrompt($concepts, $docsJson);
-
-            try {
-                $raw = $this->ollama->generate($prompt);
-
-                // Remove markdown code fences
-                $cleaned = trim(preg_replace('/```json|```|\`\`/i', '', $raw));
-
-                // Find JSON array - extract from first [ to last ]
-                $start = strpos($cleaned, '[');
-                $end = strrpos($cleaned, ']');
-
-                if ($start !== false && $end !== false && $end > $start) {
-                    $jsonStr = substr($cleaned, $start, $end - $start + 1);
-                } else {
-                    Log::warning("Chunk {$chunkIndex} parse failed - no array brackets found", ['raw' => substr($raw, 0, 300)]);
-
-                    continue;
-                }
-
-                $scores = json_decode($jsonStr, true);
-
-                if (json_last_error() !== JSON_ERROR_NONE || ! is_array($scores)) {
-                    Log::warning("Chunk {$chunkIndex} parse failed - JSON decode error", ['raw' => substr($raw, 0, 300), 'json' => substr($jsonStr, 0, 200), 'error' => json_last_error_msg()]);
-
-                    continue;
-                }
-
-                $scores = array_filter($scores, fn ($s) => isset($s['id']) && is_numeric($s['id']) &&
-                    isset($s['score']) && (int) $s['score'] >= 40
-                );
-                $allScores = array_merge($allScores, array_values($scores));
-
-                // Debug log for chunk results
-                Log::debug("Chunk {$chunkIndex} scored", ['count' => count($scores), 'ids' => array_column($scores, 'id')]);
-
-            } catch (\Exception $e) {
-                Log::warning("Chunk {$chunkIndex} failed", ['error' => $e->getMessage()]);
-
-                continue;
-            }
-        }
-
-        if (empty($allScores)) {
-            Log::info('No AI scores returned from any chunk', ['candidate_count' => $candidates->count()]);
-
-            return [];
-        }
-
-        usort($allScores, fn ($a, $b) => ($b['score'] ?? 0) <=> ($a['score'] ?? 0));
-
-        $docMap = $candidates->keyBy('archived_id');
-        $results = [];
-
-        foreach (array_slice($allScores, 0, $topN) as $item) {
-            if (! isset($item['id']) || ! is_numeric($item['id'])) {
+            if (! is_array($storedEmbedding) || empty($storedEmbedding)) {
                 continue;
             }
 
-            $doc = $docMap->get((int) $item['id']);
-            if (! $doc) {
+            $similarity = $this->cosineSimilarity($queryEmbedding, $storedEmbedding);
+
+            // Convert cosine similarity (–1 to 1) → percentage (0–100)
+            $score = (int) round((($similarity + 1) / 2) * 100);
+
+            // FIX: Skip weak matches — below 40% are likely noise from generic words
+            if ($score < 40) {
                 continue;
             }
 
-            $results[] = [
+            $scored[] = [
                 'document' => $doc,
-                'score' => (int) ($item['score'] ?? 0),
-                'reason' => $item['reason'] ?? '',
-                'matched_on' => [],
+                'score' => $score,
+                'reason' => '',
             ];
         }
 
-        return $results;
-    }
+        if (empty($scored)) {
+            // No strong matches found — return empty rather than noise
+            Log::info('No matches above 40% threshold — returning empty result.');
 
-    // ── 4. SQL pre-filter fallback ────────────────────────────────────
-    private function sqlPreFilter(array $concepts): Collection
-    {
-        $platformWords = ['web', 'mobile', 'app', 'system', 'online', 'digital', 'desktop', 'internet'];
-
-        $allTerms = array_unique(array_merge(
-            $concepts['keywords'] ?? [],
-            explode(' ', $concepts['target_users'] ?? '')
-        ));
-
-        $query = ArchivedDocument::query();
-        $query->where(function ($q) use ($allTerms, $platformWords) {
-            foreach ($allTerms as $term) {
-                $term = trim((string) $term);
-                if (strlen($term) < 3) {
-                    continue;
-                }
-                if (in_array(strtolower($term), $platformWords)) {
-                    continue;
-                }
-                $q->orWhere('title', 'LIKE', '%'.$term.'%');
-                $q->orWhere('abstract', 'LIKE', '%'.$term.'%');
-            }
-        });
-
-        $filtered = $query->limit(50)->get();
-
-        if ($filtered->count() < 10) {
-            $ids = $filtered->pluck('archived_id')->toArray();
-            $extras = ArchivedDocument::whereNotIn('archived_id', $ids)
-                ->orderBy('academic_year', 'desc')
-                ->limit(50 - $filtered->count())
-                ->get();
-            $filtered = $filtered->merge($extras);
+            return [];
         }
 
-        return $filtered;
+        // Sort by score descending, take top candidates for enrichment
+        usort($scored, fn ($a, $b) => $b['score'] <=> $a['score']);
+        $topCandidates = array_slice($scored, 0, min(20, count($scored)));
+
+        // ── Phase 4: Enrich top matches with AI-generated reasons ─────
+        $enriched = $this->enrichWithReasons($concepts, $topCandidates);
+
+        return array_slice($enriched, 0, $topN);
     }
 
-    // ── 5. Legacy keyword + Ollama scoring (fallback) ─────────────────
-    public function findSimilarDocumentsLegacy(array $concepts, int $topN = 10): array
+    // ── 4. Add human-readable reasons to top vector matches ───────────
+    private function enrichWithReasons(array $concepts, array $topCandidates): array
     {
-        $platformWords = ['web', 'mobile', 'app', 'system', 'online', 'digital', 'desktop', 'internet'];
         $conceptText = implode(', ', $concepts['keywords'] ?? []);
 
-        // Expand search terms via AI
-        $expandPrompt = "List 15 search terms related to this capstone topic that could appear in similar capstone titles.\n"
-                      ."Focus on the PROBLEM DOMAIN and TARGET USERS only. No platform words like web, mobile, desktop.\n"
-                      ."Return ONLY a JSON array of strings. No markdown.\n\n"
-                      ."Topic: {$concepts['main_topic']}\n"
-                      .'Target Users: '.($concepts['target_users'] ?? '')."\n"
-                      ."Keywords: {$conceptText}\n\n"
-                      .'["term1","term2",...]';
+        $docList = array_map(fn ($item) => [
+            'id' => $item['document']->archived_id,
+            'title' => mb_substr($item['document']->title, 0, 100),
+            'abs' => mb_substr($item['document']->abstract ?? '', 0, 150),
+            'score' => $item['score'],
+        ], $topCandidates);
+
+        $docsJson = json_encode(array_values($docList));
+
+        // FIX: Better prompt that focuses on core concepts, not generic words
+        $prompt = 'You are an academic similarity checker. These archived capstones were flagged as '
+                ."potentially similar to the pre-proposal below using vector embeddings.\n\n"
+                ."STRICT RULES:\n"
+                ."- IGNORE generic words: proposed, computerized, system, management, records, web, online, automated, digital\n"
+                ."- IGNORE location names: Camarines Sur, Nabua, CSPC, Iriga, Philippines\n"
+                ."- IGNORE school/dept names: college, department, polytechnic, CICT, BSIT\n"
+                ."- Focus ONLY on: core domain, problem being solved, target users, system purpose\n"
+                ."- If they are NOT actually similar in core concept, say so clearly\n\n"
+                ."For each, write ONE sentence explaining if and why the core concept matches or does not match.\n"
+                ."Return ONLY a JSON array. No markdown.\n"
+                .'[{"id":<id>,"reason":"one sentence about core concept match or mismatch"}]'
+                ."\n\nPRE-PROPOSAL:"
+                ."\nTopic: {$concepts['main_topic']}"
+                ."\nDomain: {$concepts['domain']}"
+                ."\nKeywords: {$conceptText}"
+                ."\n\nMATCHED DOCUMENTS:\n{$docsJson}";
+
+        try {
+            $raw = $this->ollama->generate($prompt);
+            $cleaned = trim(preg_replace('/```json|```/i', '', $raw));
+
+            preg_match('/\[.*\]/s', $cleaned, $matches);
+            $reasons = json_decode($matches[0] ?? $cleaned, true);
+
+            if (json_last_error() === JSON_ERROR_NONE && is_array($reasons)) {
+                $reasonMap = [];
+                foreach ($reasons as $r) {
+                    $reasonMap[(int) $r['id']] = $r['reason'] ?? '';
+                }
+
+                foreach ($topCandidates as &$item) {
+                    $id = $item['document']->archived_id;
+                    $item['reason'] = $reasonMap[$id]
+                        ?? 'Semantically similar based on vector embedding analysis.';
+                }
+                unset($item);
+            }
+        } catch (\Exception $e) {
+            Log::warning('enrichWithReasons failed', ['error' => $e->getMessage()]);
+            foreach ($topCandidates as &$item) {
+                $item['reason'] = 'Semantically similar based on vector embedding analysis.';
+            }
+            unset($item);
+        }
+
+        return $topCandidates;
+    }
+
+    // ── 5. Cosine similarity between two float vectors ─────────────────
+    private function cosineSimilarity(array $a, array $b): float
+    {
+        $dot = 0.0;
+        $normA = 0.0;
+        $normB = 0.0;
+        $length = min(count($a), count($b));
+
+        for ($i = 0; $i < $length; $i++) {
+            $dot += $a[$i] * $b[$i];
+            $normA += $a[$i] * $a[$i];
+            $normB += $b[$i] * $b[$i];
+        }
+
+        if ($normA === 0.0 || $normB === 0.0) {
+            return 0.0;
+        }
+
+        return $dot / (sqrt($normA) * sqrt($normB));
+    }
+
+    // ── 6. Legacy keyword + Ollama scoring ─────────────────
+    public function findSimilarDocumentsLegacy(array $concepts, int $topN = 10): array
+    {
+        $conceptText = implode(', ', $concepts['keywords'] ?? []);
+
+        $expandPrompt = 'Given this capstone pre-proposal topic, list 15 related search terms '
+                    .'that could appear in similar capstone titles. Include synonyms, related domains, '
+                    ."and common variations. Return ONLY a JSON array of strings. No markdown.\n\n"
+                    ."Topic: {$concepts['main_topic']}\n"
+                    ."Domain: {$concepts['domain']}\n"
+                    ."Keywords: {$conceptText}\n\n"
+                    .'["term1","term2",...]';
 
         try {
             $raw = $this->ollama->generate($expandPrompt);
@@ -333,34 +272,36 @@ PROMPT;
         $allTerms = array_unique(array_merge($concepts['keywords'] ?? [], $expandedTerms));
 
         $query = ArchivedDocument::query();
-        $query->where(function ($q) use ($allTerms, $platformWords) {
+        $query->where(function ($q) use ($allTerms, $concepts) {
             foreach ($allTerms as $term) {
-                $term = trim((string) $term);
-                if (strlen($term) < 3) {
-                    continue;
-                }
-                if (in_array(strtolower($term), $platformWords)) {
+                if (strlen(trim($term)) < 3) {
                     continue;
                 }
                 $q->orWhere('title', 'LIKE', '%'.$term.'%');
                 $q->orWhere('abstract', 'LIKE', '%'.$term.'%');
             }
+            foreach (explode(' ', $concepts['domain']) as $word) {
+                if (strlen($word) > 3) {
+                    $q->orWhere('title', 'LIKE', '%'.$word.'%');
+                }
+            }
         });
 
-        $filtered = $query->limit(30)->get();
+        $filtered = $query->limit(80)->get();
 
-        if ($filtered->count() < 10) {
+        if ($filtered->count() < 20) {
             $filteredIds = $filtered->pluck('archived_id')->toArray();
             $extras = ArchivedDocument::whereNotIn('archived_id', $filteredIds)
                 ->orderBy('academic_year', 'desc')
-                ->limit(10 - $filtered->count())
+                ->limit(20 - $filtered->count())
                 ->get();
             $filtered = $filtered->merge($extras);
         }
 
         $allScores = [];
+        $chunks = $filtered->chunk(10);
 
-        foreach ($filtered->chunk(5) as $chunkIndex => $chunk) {
+        foreach ($chunks as $chunkIndex => $chunk) {
             $docList = $chunk->map(fn ($doc) => [
                 'id' => $doc->archived_id,
                 'title' => mb_substr($doc->title, 0, 100),
@@ -389,6 +330,7 @@ PROMPT;
                     ."\nProblem: {$concepts['problem_statement']}"
                     ."\nSolution: {$concepts['proposed_solution']}"
                     ."\n\nARCHIVED CAPSTONES:\n{$docsJson}";
+
             $prompt = 'Perform semantic similarity analysis between this capstone pre-proposal '
                     ."and the archived capstones below.\n"
                     ."Consider meaning, intent, domain, technology, and problem being solved — not just keywords.\n"
@@ -401,32 +343,21 @@ PROMPT;
                     ."\nProblem: {$concepts['problem_statement']}"
                     ."\nSolution: {$concepts['proposed_solution']}"
                     ."\n\nARCHIVED CAPSTONES:\n{$docsJson}";
-            $prompt = $this->buildScoringPrompt($concepts, $docsJson);
 
             try {
                 $raw = $this->ollama->generate($prompt);
-
-                // Remove markdown code fences and extract JSON array
                 $cleaned = trim(preg_replace('/```json|```/i', '', $raw));
 
-                $start = strpos($cleaned, '[');
-                $end = strrpos($cleaned, ']');
-
-                if ($start !== false && $end !== false && $end > $start) {
-                    $jsonStr = substr($cleaned, $start, $end - $start + 1);
-                } else {
-                    $jsonStr = $cleaned;
-                }
-
+                preg_match('/\[.*\]/s', $cleaned, $matches);
+                $jsonStr = $matches[0] ?? $cleaned;
                 $scores = json_decode($jsonStr, true);
 
                 if (json_last_error() === JSON_ERROR_NONE && is_array($scores)) {
-                    $scores = array_filter($scores, fn ($s) => isset($s['id']) && is_numeric($s['id']) &&
-                        isset($s['score']) && (int) $s['score'] >= 40
-                    );
+                    // FIX: Only keep scores >= 40 from legacy path too
+                    $scores = array_filter($scores, fn ($s) => ($s['score'] ?? 0) >= 40);
                     $allScores = array_merge($allScores, array_values($scores));
                 } else {
-                    Log::warning("Chunk {$chunkIndex} parse failed", ['raw' => substr($raw, 0, 200), 'error' => json_last_error_msg()]);
+                    Log::warning("Chunk {$chunkIndex} parse failed", ['raw' => substr($raw, 0, 200)]);
                 }
             } catch (\Exception $e) {
                 Log::warning("Chunk {$chunkIndex} failed", ['error' => $e->getMessage()]);
@@ -436,6 +367,8 @@ PROMPT;
         }
 
         if (empty($allScores)) {
+            Log::info('Legacy search: no matches above 40% threshold.');
+
             return [];
         }
 
@@ -443,18 +376,17 @@ PROMPT;
         $topScores = array_slice($allScores, 0, $topN);
 
         $docMap = $filtered->keyBy('archived_id');
+
         // Sort descending and take top N
         usort($allScores, fn ($a, $b) => ($b['score'] ?? 0) <=> ($a['score'] ?? 0));
+        $topScores = array_slice($allScores, 0, $topN);
 
+        // Map back to document models
         $docMap = $filtered->keyBy('archived_id');
         $results = [];
 
-        foreach (array_slice($allScores, 0, $topN) as $item) {
-            if (! isset($item['id']) || ! is_numeric($item['id'])) {
-                continue;
-            }
-
-            $doc = $docMap->get((int) $item['id']);
+        foreach ($topScores as $item) {
+            $doc = $docMap->get($item['id']);
             if (! $doc) {
                 continue;
             }
@@ -467,38 +399,13 @@ PROMPT;
                 'score' => (int) ($item['score'] ?? 0),
                 'reason' => $item['reason'] ?? '',
                 'matched_on' => $item['matched_on'] ?? [],
-                'document' => $doc,
-                'score' => (int) ($item['score'] ?? 0),
-                'reason' => $item['reason'] ?? '',
-                'matched_on' => [],
             ];
         }
 
         return $results;
     }
 
-    // ── 6. Cosine similarity between two float vectors ─────────────────
-    private function cosineSimilarity(array $a, array $b): float
-    {
-        $dot = 0.0;
-        $normA = 0.0;
-        $normB = 0.0;
-        $len = min(count($a), count($b));
-
-        for ($i = 0; $i < $len; $i++) {
-            $dot += $a[$i] * $b[$i];
-            $normA += $a[$i] * $a[$i];
-            $normB += $b[$i] * $b[$i];
-        }
-
-        if ($normA === 0.0 || $normB === 0.0) {
-            return 0.0;
-        }
-
-        return $dot / (sqrt($normA) * sqrt($normB));
-    }
-
-    // ── 7. Suggest instructors ─────────────────────────────────────────
+    // ── 7. Suggest instructors ────────────────────────────
     public function suggestInstructors(array $concepts): array
     {
         $experts = \DB::table('capstone_experts as e')
@@ -527,8 +434,8 @@ PROMPT;
         $listJson = json_encode($experts->map(fn ($e) => [
             'id' => $e->expert_id,
             'name' => $e->first_name.' '.$e->last_name,
-            'expertise' => $e->expertise ?? 'General',
-        ])->values()->toArray());
+        ])->toArray());
+
         $domain = $concepts['domain'];
         $keywords = implode(', ', $concepts['keywords'] ?? []);
         $listJson = json_encode($experts->map(fn ($e) => [
@@ -555,11 +462,10 @@ PROMPT;
             $cleaned = trim(preg_replace('/```json|```/i', '', $raw));
             $raw = $this->ollama->generate($prompt);
             $cleaned = trim(preg_replace('/```json|```/i', '', $raw));
-            $raw = $this->ollama->generate($prompt);
-            $cleaned = trim(preg_replace('/```json|```/i', '', $raw));
 
             preg_match('/\[.*\]/s', $cleaned, $matches);
-            $suggests = json_decode($matches[0] ?? $cleaned, true);
+            $jsonStr = $matches[0] ?? $cleaned;
+            $suggests = json_decode($jsonStr, true);
 
             if (json_last_error() !== JSON_ERROR_NONE || ! is_array($suggests)) {
                 Log::error('suggestInstructors parse error', ['raw' => $raw]);
@@ -568,20 +474,12 @@ PROMPT;
 
             $results = [];
             foreach ($suggests as $s) {
-                if (! isset($s['id']) || ! is_numeric($s['id'])) {
-                    continue;
-                }
-
-                $id = (int) $s['id'];
+                $id = (int) ($s['id'] ?? 0);
                 if (! in_array($id, $validIds)) {
                     continue;
                 }
 
                 $expert = $expertMap->get($id);
-                if (! $expert) {
-                    continue;
-                }
-
                 $results[] = [
                     'id' => $id,
                     'name' => $expert->first_name.' '.$expert->last_name,

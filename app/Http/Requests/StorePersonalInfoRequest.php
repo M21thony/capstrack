@@ -3,7 +3,6 @@
 namespace App\Http\Requests;
 
 use App\Models\Student;
-use App\Models\StudentSchoolYear;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -18,22 +17,19 @@ class StorePersonalInfoRequest extends FormRequest
     {
         $userId = auth()->id();
 
-        $hasTeam = StudentSchoolYear::where('student_id', $userId)
-            ->whereNotNull('team_id')
-            ->exists();
-
-        $sometimes = $hasTeam ? ['sometimes'] : ['required'];
-
         return [
-            'first_name' => [...$sometimes, 'string', 'max:50'],
-            'middle_name' => [$hasTeam ? 'sometimes' : 'nullable', 'string', 'max:50'],
-            'last_name' => [...$sometimes, 'string', 'max:50'],
-            'student_id' => $hasTeam
-                ? ['sometimes', 'string', 'regex:/^\d{9}$/']
-                : ['required', 'string', 'regex:/^\d{9}$/', Rule::unique('students', 'student_number')->ignore($userId, 'student_id')],
-            'course' => [...$sometimes, 'string', 'max:100'],
-            'year' => [...$sometimes, 'string', 'max:20'],
-            'section' => [...$sometimes, 'string', 'max:50'],
+            'first_name' => ['required', 'string', 'max:50'],
+            'middle_name' => ['nullable', 'string', 'max:50'],
+            'last_name' => ['required', 'string', 'max:50'],
+            'student_id' => [
+                'required',
+                'string',
+                'regex:/^\d{9}$/',
+                Rule::unique('students', 'student_number')->ignore($userId, 'student_id'),
+            ],
+            'course' => ['required', 'string', 'max:100'],
+            'year' => ['required', 'string', 'max:20'],
+            'section' => ['required', 'string', 'max:1', 'alpha'],
             'avatar' => ['required', 'string', Rule::in(Student::allowedAvatarKeys())],
         ];
     }

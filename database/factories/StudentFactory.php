@@ -25,7 +25,7 @@ class StudentFactory extends Factory
             'p_picture' => 'avatar-01',
             'student_number' => fake()->unique()->numerify('#########'),
             'course' => 'Bachelor of Science in Computer Science',
-            'year_section' => '4th Year · BSCS-4A',
+            'year_section' => '4th · A',
         ]);
     }
 }

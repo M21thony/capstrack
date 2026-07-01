@@ -16,15 +16,13 @@ class Team extends Model
         'team_name',
         'project_title',
         'team_status',
+        'leader_id',
         'is_confirmed',
     ];
 
-    protected function casts(): array
-    {
-        return [
-            'is_confirmed' => 'boolean',
-        ];
-    }
+    protected $casts = [
+        'is_confirmed' => 'boolean',
+    ];
 
     public function members()
     {
@@ -36,5 +34,10 @@ class Team extends Model
             'team_id',
             'student_id'
         );
+    }
+
+    public function leader()
+    {
+        return $this->belongsTo(Student::class, 'leader_id', 'student_id');
     }
 }

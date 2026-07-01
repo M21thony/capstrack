@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ActivityLog;
+use App\Models\Notification;
 use App\Models\Recruitment;
 use App\Models\Student;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
-use App\Models\TeamInvitation;
-use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
@@ -42,7 +42,17 @@ class DashboardController extends Controller
             if ($myTeam) {
                 $teamMembers = Student::join('student_s_y', 'students.student_id', '=', 'student_s_y.student_id')
                     ->where('student_s_y.team_id', $teamId)
-                    ->get();
+                    ->get()
+                    ->sortBy(function ($member) use ($leaderStudentId, $student) {
+                        if ($member->student_id === $leaderStudentId) {
+                            return 0;
+                        }
+                        if ($member->student_id === $student->student_id) {
+                            return 1;
+                        }
+
+                        return 2;
+                    })->values();
             }
         }
 
@@ -113,172 +123,49 @@ class DashboardController extends Controller
             }
         }
 
-        // Build recent activities dynamically — only from real DB timestamps
-        $activities = collect();
+        // Build recent activities from activity_log
+        $activities = ActivityLog::where('student_id', $student->student_id)
+            ->latest('created_at')
+            ->take(50)
+            ->get()
+            ->map(function ($log) {
+                $icon = match ($log->type) {
+                    'team_created' => ['bg' => 'var(--purple-bg)', 'svg' => '<svg viewBox="0 0 24 24" style="stroke:var(--purple)"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>'],
+                    'team_joined' => ['bg' => 'var(--purple-bg)', 'svg' => '<svg viewBox="0 0 24 24" style="stroke:var(--purple)"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>'],
+                    'team_left' => ['bg' => 'rgba(239,68,68,0.1)', 'svg' => '<svg viewBox="0 0 24 24" style="stroke:#ef4444"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>'],
+                    'team_confirmed' => ['bg' => 'rgba(22,163,74,0.1)', 'svg' => '<svg viewBox="0 0 24 24" style="stroke:#16a34a"><polyline points="20 6 9 17 4 12"/></svg>'],
+                    'member_removed' => ['bg' => 'rgba(239,68,68,0.1)', 'svg' => '<svg viewBox="0 0 24 24" style="stroke:#ef4444"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'],
+                    'leadership_transferred' => ['bg' => 'rgba(251,191,36,0.15)', 'svg' => '<svg viewBox="0 0 24 24" style="stroke:#fbbf24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>'],
+                    'request_accepted' => ['bg' => 'rgba(22,163,74,0.1)', 'svg' => '<svg viewBox="0 0 24 24" style="stroke:#16a34a"><polyline points="20 6 9 17 4 12"/></svg>'],
+                    'invitation_sent' => ['bg' => 'var(--accent-glow)', 'svg' => '<svg viewBox="0 0 24 24" style="stroke:var(--accent)"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>'],
+                    'post_created' => ['bg' => 'var(--accent-glow)', 'svg' => '<svg viewBox="0 0 24 24" style="stroke:var(--accent)"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="m18.5 2.5 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>'],
+                    'post_updated' => ['bg' => 'var(--amber-bg)', 'svg' => '<svg viewBox="0 0 24 24" style="stroke:var(--amber)"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>'],
+                    'request_sent' => ['bg' => 'var(--accent-glow)', 'svg' => '<svg viewBox="0 0 24 24" style="stroke:var(--accent)"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>'],
+                    'invitation_declined' => ['bg' => 'rgba(239,68,68,0.1)', 'svg' => '<svg viewBox="0 0 24 24" style="stroke:#ef4444"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'],
+                    'request_declined' => ['bg' => 'rgba(239,68,68,0.1)', 'svg' => '<svg viewBox="0 0 24 24" style="stroke:#ef4444"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'],
+                    'post_deleted' => ['bg' => 'rgba(239,68,68,0.1)', 'svg' => '<svg viewBox="0 0 24 24" style="stroke:#ef4444"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>'],
+                    default => ['bg' => 'var(--accent-glow)', 'svg' => '<svg viewBox="0 0 24 24" style="stroke:var(--accent)"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>'],
+                };
 
-        // 1. Team creation — team.created_at is a real timestamp
-        if ($myTeam && $myTeam->created_at) {
-            $teamCreatedAt = Carbon::parse($myTeam->created_at);
-            $activities->push((object) [
-                'text' => 'Team <strong>'.e($myTeam->team_name).'</strong> was created',
-                'time' => $teamCreatedAt->diffForHumans(),
-                'icon_bg' => 'var(--purple-bg)',
-                'icon_svg' => '<svg viewBox="0 0 24 24" style="stroke:var(--purple)"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>',
-                'timestamp' => $teamCreatedAt->timestamp,
-            ]);
-        }
+                return (object) [
+                    'text' => $log->description,
+                    'time' => $log->created_at->diffForHumans(),
+                    'icon_bg' => $icon['bg'],
+                    'icon_svg' => $icon['svg'],
+                    'timestamp' => $log->created_at->timestamp,
+                ];
+            });
 
-        // 2. Team member joins — use team_invitations.updated_at (when accepted) as real join time
-        if ($myTeam && $teamMembers->isNotEmpty()) {
-            foreach ($teamMembers as $member) {
-                if ($member->student_id === $student->student_id) {
-                    continue;
-                }
-
-                // Find the accepted invitation for this member to this team
-                $acceptedInvite = TeamInvitation::where('team_id', $myTeam->team_id)
-                    ->where('status', 'accepted')
-                    ->where(function ($q) use ($member) {
-                        $q->where('receiver_id', $member->student_id)
-                            ->orWhere('sender_id', $member->student_id);
-                    })
-                    ->latest('updated_at')
-                    ->first();
-
-                if ($acceptedInvite && $acceptedInvite->updated_at) {
-                    $joinedAt = $acceptedInvite->updated_at;
-                    $activities->push((object) [
-                        'text' => '<strong>'.e($member->f_name.' '.$member->l_name).'</strong> joined the team',
-                        'time' => $joinedAt->diffForHumans(),
-                        'icon_bg' => 'var(--purple-bg)',
-                        'icon_svg' => '<svg viewBox="0 0 24 24" style="stroke:var(--purple)"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>',
-                        'timestamp' => $joinedAt->timestamp,
-                    ]);
-                }
-            }
-        }
-
-        // 3. Team invitations & join requests — team_invitations.created_at is accurate
-        $myInvitations = TeamInvitation::with(['sender', 'receiver', 'team'])
-            ->where(function ($query) use ($student, $teamId) {
-                $query->where('sender_id', $student->student_id)
-                    ->orWhere('receiver_id', $student->student_id);
-                if ($teamId) {
-                    $query->orWhere('team_id', $teamId);
-                }
-            })
-            ->latest()
+        // Unread notifications for the notification bell
+        $unreadNotifications = Notification::where('student_id', $student->student_id)
+            ->where('is_read', false)
+            ->latest('created_at')
             ->take(10)
             ->get();
 
-        foreach ($myInvitations as $invite) {
-            // For accepted/declined invites, updated_at reflects when the status changed
-            $eventTime = match ($invite->status) {
-                'accepted', 'declined' => $invite->updated_at ?? $invite->created_at,
-                default => $invite->created_at,
-            };
-
-            if (! $eventTime) {
-                continue;
-            }
-
-            if ($invite->type === 'invite') {
-                if ($invite->sender_id === $student->student_id) {
-                    $text = 'You invited <strong>'.e($invite->receiver->f_name.' '.$invite->receiver->l_name).'</strong> to join the team';
-                } else {
-                    $text = '<strong>'.e($invite->sender->f_name.' '.$invite->sender->l_name).'</strong> invited you to join <strong>'.e($invite->team->team_name ?? 'a team').'</strong>';
-                }
-            } else {
-                if ($invite->sender_id === $student->student_id) {
-                    $text = 'You requested to join team <strong>'.e($invite->team->team_name ?? 'a team').'</strong>';
-                } else {
-                    $text = '<strong>'.e($invite->sender->f_name.' '.$invite->sender->l_name).'</strong> requested to join your team';
-                }
-            }
-
-            if ($invite->status === 'accepted') {
-                $text .= ' · <span style="color:var(--green);font-size:10px;font-weight:700">Accepted</span>';
-            } elseif ($invite->status === 'declined') {
-                $text .= ' · <span style="color:var(--amber);font-size:10px;font-weight:700">Declined</span>';
-            }
-
-            $activities->push((object) [
-                'text' => $text,
-                'time' => $eventTime->diffForHumans(),
-                'icon_bg' => 'var(--accent-glow)',
-                'icon_svg' => '<svg viewBox="0 0 24 24" style="stroke:var(--accent)"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>',
-                'timestamp' => $eventTime->timestamp,
-            ]);
-        }
-
-        // 4. Document review annotations — pdf_remarks.created_at is a real timestamp
-        $remarks = collect();
-        try {
-            $remarks = DB::table('pdf_remarks')
-                ->join('capstone_document_review', 'pdf_remarks.review_id', '=', 'capstone_document_review.review_id')
-                ->join('capstone_documents', 'capstone_document_review.file_id', '=', 'capstone_documents.file_id')
-                ->join('capstone_experts', 'pdf_remarks.expert_id', '=', 'capstone_experts.expert_id')
-                ->where('capstone_documents.student_id', $student->student_id)
-                ->select(
-                    'pdf_remarks.created_at as remarked_at',
-                    'capstone_experts.first_name',
-                    'capstone_experts.last_name',
-                    'capstone_documents.file_name',
-                    DB::raw('COUNT(*) as annotation_count')
-                )
-                ->groupBy('pdf_remarks.review_id', 'pdf_remarks.created_at', 'capstone_experts.first_name', 'capstone_experts.last_name', 'capstone_documents.file_name')
-                ->orderByDesc('pdf_remarks.created_at')
-                ->take(3)
-                ->get();
-        } catch (\Exception $e) {
-            // Table not available in this environment
-        }
-
-        foreach ($remarks as $remark) {
-            $remarkedAt = Carbon::parse($remark->remarked_at);
-            $activities->push((object) [
-                'text' => '<strong>'.e($remark->first_name.' '.$remark->last_name).'</strong> left '.$remark->annotation_count.' annotation(s) on <strong>'.e($remark->file_name).'</strong>',
-                'time' => $remarkedAt->diffForHumans(),
-                'icon_bg' => 'var(--accent-glow)',
-                'icon_svg' => '<svg viewBox="0 0 24 24" style="stroke:var(--accent)"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>',
-                'timestamp' => $remarkedAt->timestamp,
-            ]);
-        }
-
-        // 5. Consultation bookings — use scheduled available_date+start_time as event time
-        $bookings = collect();
-        try {
-            $bookings = DB::table('consultation_booking')
-                ->join('consultation_schedule', 'consultation_booking.schedule_id', '=', 'consultation_schedule.schedule_id')
-                ->join('capstone_experts', 'consultation_schedule.expert_id', '=', 'capstone_experts.expert_id')
-                ->where('consultation_booking.student_id', $student->student_id)
-                ->select(
-                    'consultation_schedule.available_date',
-                    'consultation_schedule.start_time',
-                    'capstone_experts.first_name',
-                    'capstone_experts.last_name',
-                    'consultation_booking.booking_status'
-                )
-                ->orderByDesc('consultation_schedule.available_date')
-                ->get();
-        } catch (\Exception $e) {
-            // Table not available in this environment
-        }
-
-        foreach ($bookings as $booking) {
-            $scheduledAt = Carbon::parse($booking->available_date.' '.$booking->start_time);
-            $isPast = $scheduledAt->isPast();
-            $activities->push((object) [
-                'text' => '<strong>Consultation</strong> '.($isPast ? 'held' : 'scheduled').' with '.e($booking->first_name.' '.$booking->last_name).' on '.$scheduledAt->format('M j, Y g:i A'),
-                'time' => $scheduledAt->diffForHumans(),
-                'icon_bg' => 'var(--amber-bg)',
-                'icon_svg' => '<svg viewBox="0 0 24 24" style="stroke:var(--amber)"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
-                'timestamp' => $scheduledAt->timestamp,
-            ]);
-        }
-
-        // Sort activities and take 5
-        $sortedActivities = $activities->sortByDesc('timestamp')->take(5);
+        $unreadCount = Notification::where('student_id', $student->student_id)
+            ->where('is_read', false)
+            ->count();
 
         return view('student.dashboard', [
             'myTeam' => $myTeam,
@@ -288,7 +175,9 @@ class DashboardController extends Controller
             'docsSubmitted' => $docsSubmittedCount,
             'pendingReviews' => $pendingReviewsCount,
             'overallProgress' => $overallProgress,
-            'activities' => $sortedActivities,
+            'activities' => $activities,
+            'unreadNotifications' => $unreadNotifications,
+            'unreadCount' => $unreadCount,
         ]);
     }
 }

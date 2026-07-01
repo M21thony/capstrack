@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\Student;
+use App\Models\StudentSchoolYear;
+use App\Models\Team;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -17,8 +19,8 @@ class PersonalInfoOnboardingTest extends TestCase
             'middle_name' => null,
             'last_name' => 'Dela Cruz',
             'course' => 'Bachelor of Science in Computer Science',
-            'year' => '4th Year',
-            'section' => 'BSCS-4A',
+            'year' => '4th',
+            'section' => 'A',
             'student_id' => '221001135',
             'avatar' => 'avatar-01',
         ], $overrides);
@@ -69,7 +71,7 @@ class PersonalInfoOnboardingTest extends TestCase
         $this->assertEquals('avatar-01', $student->p_picture);
         $this->assertEquals('221001135', $student->student_number);
         $this->assertNotEquals('221001135', (string) $student->student_id);
-        $this->assertEquals('4th Year · BSCS-4A', $student->year_section);
+        $this->assertEquals('4th · A', $student->year_section);
 
         $this->actingAs($student)
             ->get(route('student.dashboard'))
@@ -186,5 +188,93 @@ class PersonalInfoOnboardingTest extends TestCase
         $this->actingAs($student)
             ->get(route('student.personal-info'))
             ->assertRedirect(route('student.dashboard'));
+    }
+
+    public function test_student_in_team_is_redirected_from_edit_page(): void
+    {
+        $student = Student::factory()->withCompleteProfile()->create([
+            'email' => 'teamed.student@my.cspc.edu.ph',
+        ]);
+
+        $team = Team::create(['team_name' => 'Test Team']);
+
+        StudentSchoolYear::create([
+            'student_id' => $student->student_id,
+            'team_id' => $team->team_id,
+            'school_year' => 2026,
+            'program' => 'BSCS',
+        ]);
+
+        $this->actingAs($student)
+            ->get(route('student.personal-info.edit'))
+            ->assertRedirect(route('student.team'))
+            ->assertSessionHas('error');
+    }
+
+    public function test_student_in_team_cannot_submit_profile_update(): void
+    {
+        $student = Student::factory()->withCompleteProfile()->create([
+            'email' => 'blocked.update@my.cspc.edu.ph',
+        ]);
+
+        $team = Team::create(['team_name' => 'Blocked Team']);
+
+        StudentSchoolYear::create([
+            'student_id' => $student->student_id,
+            'team_id' => $team->team_id,
+            'school_year' => 2026,
+            'program' => 'BSCS',
+        ]);
+
+        $this->actingAs($student)
+            ->post(route('student.personal-info.store'), $this->validPersonalInfoPayload())
+            ->assertRedirect(route('student.team'))
+            ->assertSessionHas('error');
+    }
+
+    public function test_student_in_team_cannot_ajax_update_profile(): void
+    {
+        $student = Student::factory()->withCompleteProfile()->create([
+            'email' => 'ajax.blocked@my.cspc.edu.ph',
+        ]);
+
+        $team = Team::create(['team_name' => 'Ajax Team']);
+
+        StudentSchoolYear::create([
+            'student_id' => $student->student_id,
+            'team_id' => $team->team_id,
+            'school_year' => 2026,
+            'program' => 'BSCS',
+        ]);
+
+        $this->actingAs($student)
+            ->postJson(route('profile.update'), [
+                'first_name' => 'NewName',
+                'last_name' => 'NewLast',
+            ])
+            ->assertUnprocessable()
+            ->assertJson([
+                'success' => false,
+                'message' => 'You must leave your team first before editing your profile.',
+            ]);
+    }
+
+    public function test_student_without_team_can_access_edit_page(): void
+    {
+        $student = Student::factory()->withCompleteProfile()->create([
+            'email' => 'free.edit@my.cspc.edu.ph',
+        ]);
+
+        StudentSchoolYear::create([
+            'student_id' => $student->student_id,
+            'school_year' => 2026,
+            'program' => 'BSCS',
+            'team_id' => null,
+        ]);
+
+        $this->actingAs($student)
+            ->get(route('student.personal-info.edit'))
+            ->assertOk()
+            ->assertSee('Update your profile');
     }
 }

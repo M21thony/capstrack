@@ -6,7 +6,6 @@ use App\Models\Recruitment;
 use App\Models\Student;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
-use App\Models\TeamInvitation;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -67,7 +66,7 @@ class TeamCreationTest extends TestCase
 
         Recruitment::create([
             'student_id' => $student->student_id,
-            'recruitment_goal' => 'build_a_team',
+            'recruitment_goal' => 'find_a_team',
             'roles' => ['Backend Dev'],
             'looking_for' => 'Backend member',
         ]);
@@ -78,7 +77,7 @@ class TeamCreationTest extends TestCase
         $response = $this->delete('/team');
 
         $response->assertRedirect(route('student.team'));
-        $response->assertSessionHas('status', 'You left the team. Since you were the leader, the team has been dissolved.');
+        $response->assertSessionHas('status', 'You have left the team.');
 
         // Verify team_id is set to null
         $sy = StudentSchoolYear::where('student_id', $student->student_id)->first();
@@ -91,7 +90,7 @@ class TeamCreationTest extends TestCase
         $this->assertDatabaseMissing('team', ['team_id' => $team->team_id]);
     }
 
-    public function test_leader_leaving_with_members_dissolves_team_and_unassigns_all(): void
+    public function test_leader_cannot_leave_team_without_transferring(): void
     {
         $leader = Student::create([
             'email' => 'leader@my.cspc.edu.ph',
@@ -120,18 +119,11 @@ class TeamCreationTest extends TestCase
             'team_id' => $team->team_id,
         ]);
 
+        // Leader has a build_a_team post
         Recruitment::create([
             'student_id' => $leader->student_id,
             'recruitment_goal' => 'build_a_team',
             'roles' => [],
-        ]);
-
-        TeamInvitation::create([
-            'sender_id' => $leader->student_id,
-            'receiver_id' => $member->student_id,
-            'team_id' => $team->team_id,
-            'type' => 'invite',
-            'status' => 'accepted',
         ]);
 
         $this->actingAs($leader, 'web');
@@ -139,19 +131,76 @@ class TeamCreationTest extends TestCase
         $response = $this->delete('/team');
 
         $response->assertRedirect(route('student.team'));
-        $response->assertSessionHas('status', 'You left the team. Since you were the leader, the team has been dissolved.');
+        $response->assertSessionHas('error', 'As the team leader, you cannot leave directly. Transfer leadership to another member first.');
 
-        // Both members should have no team
-        $this->assertNull(StudentSchoolYear::where('student_id', $leader->student_id)->value('team_id'));
-        $this->assertNull(StudentSchoolYear::where('student_id', $member->student_id)->value('team_id'));
+        // Team should still exist
+        $this->assertDatabaseHas('team', ['team_id' => $team->team_id]);
+    }
 
-        // Team should be deleted
-        $this->assertDatabaseMissing('team', ['team_id' => $team->team_id]);
+    public function test_leader_can_transfer_then_leave(): void
+    {
+        $leader = Student::create([
+            'email' => 'transfer.leader@my.cspc.edu.ph',
+            'f_name' => 'Charlie',
+            'l_name' => 'Leader',
+        ]);
 
-        // Invitations should be deleted
-        $this->assertDatabaseMissing('team_invitations', ['team_id' => $team->team_id]);
+        $member = Student::create([
+            'email' => 'transfer.member@my.cspc.edu.ph',
+            'f_name' => 'Diana',
+            'l_name' => 'Member',
+        ]);
 
-        // Leader's recruitment post should be deleted
+        $team = Team::create([
+            'team_name' => 'Team Transfer',
+            'team_status' => 'Active',
+        ]);
+
+        StudentSchoolYear::create([
+            'student_id' => $leader->student_id,
+            'team_id' => $team->team_id,
+        ]);
+
+        StudentSchoolYear::create([
+            'student_id' => $member->student_id,
+            'team_id' => $team->team_id,
+        ]);
+
+        // Leader has a build_a_team post
+        Recruitment::create([
+            'student_id' => $leader->student_id,
+            'recruitment_goal' => 'build_a_team',
+            'roles' => [],
+        ]);
+
+        $this->actingAs($leader, 'web');
+
+        // Transfer leadership
+        $response = $this->post('/team/transfer-leadership', [
+            'new_leader_id' => $member->student_id,
+        ]);
+
+        $response->assertRedirect(route('student.team'));
+        $response->assertSessionHas('status', 'Leadership transferred successfully!');
+
+        // Verify old leader's build_a_team post is deleted
         $this->assertDatabaseMissing('recruitment', ['student_id' => $leader->student_id]);
+
+        // Verify new leader has a build_a_team post
+        $this->assertDatabaseHas('recruitment', [
+            'student_id' => $member->student_id,
+            'recruitment_goal' => 'build_a_team',
+        ]);
+
+        // Now the original leader can leave (they are a regular member now)
+        $response = $this->delete('/team');
+        $response->assertRedirect(route('student.team'));
+        $response->assertSessionHas('status', 'You have left the team.');
+
+        // Verify the original leader's team_id is null
+        $this->assertNull(StudentSchoolYear::where('student_id', $leader->student_id)->value('team_id'));
+
+        // Team should still exist (member is still there)
+        $this->assertDatabaseHas('team', ['team_id' => $team->team_id]);
     }
 }

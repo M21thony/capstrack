@@ -8,6 +8,7 @@ use App\Http\Controllers\DuplicationController;
 use App\Http\Controllers\ExpertController;
 use App\Http\Controllers\Instructor\ScheduleController;
 use App\Http\Controllers\InvitationController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PersonalInfoController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RecruitmentController;
@@ -74,6 +75,9 @@ Route::middleware(['auth', 'no.cache'])->group(function () {
     Route::post('/team/confirm', [TeamController::class, 'confirm'])->name('team.confirm');
     Route::post('/team/transfer-leadership', [TeamController::class, 'transferLeadership'])->name('team.transfer-leadership');
     Route::delete('/team', [TeamController::class, 'destroy'])->name('team.destroy');
+    Route::post('/team/confirm', [TeamController::class, 'confirm'])->name('team.confirm');
+    Route::delete('/team/members/{student}', [TeamController::class, 'removeMember'])->name('team.members.remove');
+    Route::post('/team/transfer-leadership', [TeamController::class, 'transferLeadership'])->name('team.transfer-leadership');
     Route::post('/recruitment', [RecruitmentController::class, 'store'])->name('recruitment.store');
     Route::put('/recruitment/{recruitment}', [RecruitmentController::class, 'update'])->name('recruitment.update');
     Route::delete('/recruitment/{recruitment}', [RecruitmentController::class, 'destroy'])->name('recruitment.destroy');
@@ -91,7 +95,7 @@ Route::middleware(['auth', 'no.cache'])->group(function () {
         Route::post('/personal-info', [PersonalInfoController::class, 'store'])->name('student.personal-info.store');
 
         Route::middleware(['profile.complete'])->group(function () {
-            Route::redirect('/student', '/student/dashboard');
+            Route::redirect('/', '/student/dashboard');
             Route::get('/dashboard', [DashboardController::class, 'index'])->name('student.dashboard');
             Route::get('/team', [TeamController::class, 'index'])->name('student.team');
             Route::view('/experts', 'student.experts')->name('student.experts');
@@ -108,6 +112,11 @@ Route::middleware(['auth', 'no.cache'])->group(function () {
     });
 
     Route::post('/profile/update', [ProfileController::class, 'update'])->name('profile.update');
+
+    Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::get('/notifications/count', [NotificationController::class, 'count'])->name('notifications.count');
+    Route::post('/notifications/{notification}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
+    Route::post('/notifications/mark-all-read', [NotificationController::class, 'markAllRead'])->name('notifications.mark-all-read');
 });
 Route::prefix('instructor/schedule')
     ->middleware(['auth:expert', 'no.cache'])

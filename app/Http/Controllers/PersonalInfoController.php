@@ -36,15 +36,15 @@ class PersonalInfoController extends Controller
             return redirect()->route('student.personal-info');
         }
 
-        $hasTeam = StudentSchoolYear::where('student_id', $student->student_id)
-            ->whereNotNull('team_id')
-            ->exists();
+        if (StudentSchoolYear::where('student_id', $student->student_id)->whereNotNull('team_id')->exists()) {
+            return redirect()->route('student.team')
+                ->with('error', 'You must leave your team first before editing your profile.');
+        }
 
         return view('student.personal-info', [
             'student' => $student,
             'presets' => config('avatars.presets', []),
             'isEditing' => true,
-            'hasTeam' => $hasTeam,
             'autoFillFirstName' => $student->f_name,
             'autoFillLastName' => $student->l_name,
         ]);
@@ -53,21 +53,26 @@ class PersonalInfoController extends Controller
     public function store(StorePersonalInfoRequest $request): RedirectResponse
     {
         $student = $request->user();
+
+        if ($student->hasCompletedProfile()
+            && StudentSchoolYear::where('student_id', $student->student_id)->whereNotNull('team_id')->exists()) {
+            return redirect()->route('student.team')
+                ->with('error', 'You must leave your team first before editing your profile.');
+        }
+
         $validated = $request->validated();
 
-        $student->f_name = $validated['first_name'] ?? $student->f_name;
-        $student->m_name = $validated['middle_name'] ?? $student->m_name;
-        $student->l_name = $validated['last_name'] ?? $student->l_name;
-        $student->student_number = $validated['student_id'] ?? $student->student_number;
-        $student->course = $validated['course'] ?? $student->course;
-        $student->year_section = isset($validated['year'], $validated['section'])
-            ? $validated['year'].' · '.$validated['section']
-            : $student->year_section;
+        $student->f_name = $validated['first_name'];
+        $student->m_name = $validated['middle_name'] ?? null;
+        $student->l_name = $validated['last_name'];
+        $student->student_number = $validated['student_id'];
+        $student->course = $validated['course'];
+        $student->year_section = $validated['year'].' · '.strtoupper(substr($validated['section'], 0, 1));
         $student->p_picture = $validated['avatar'];
 
         $student->save();
 
-        $program = Student::mapCourseToProgram($student->course);
+        $program = Student::mapCourseToProgram($validated['course']);
 
         if ($program) {
             StudentSchoolYear::updateOrCreate(

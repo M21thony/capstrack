@@ -35,6 +35,7 @@ class Recruitment extends Model
     {
         return [
             'roles' => 'array',
+            'member_count' => 'integer',
         ];
     }
 

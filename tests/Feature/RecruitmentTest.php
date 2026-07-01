@@ -38,6 +38,7 @@ class RecruitmentTest extends TestCase
             'team_name' => 'Innovators',
             'looking_for' => 'Need a Frontend Developer',
             'tags' => json_encode(['Web Dev', 'UI Designer']),
+            'member_count' => 4,
         ]);
 
         $response->assertRedirect(route('student.team'));
@@ -57,6 +58,7 @@ class RecruitmentTest extends TestCase
         $this->assertEquals('build_a_team', $recruitment->recruitment_goal);
         $this->assertEquals('Need a Frontend Developer', $recruitment->looking_for);
         $this->assertEquals(['Web Dev', 'UI Designer'], $recruitment->roles);
+        $this->assertEquals(4, $recruitment->member_count);
     }
 
     public function test_student_can_publish_find_a_team_post(): void
@@ -463,5 +465,170 @@ class RecruitmentTest extends TestCase
             'id' => $invitation->id,
             'status' => 'declined',
         ]);
+    }
+
+    public function test_student_can_update_find_a_team_post(): void
+    {
+        $student = Student::create([
+            'email' => 'updater@my.cspc.edu.ph',
+            'f_name' => 'Update',
+            'l_name' => 'User',
+            'student_number' => '2026-0020',
+            'p_picture' => 'avatar-01',
+        ]);
+
+        $this->actingAs($student);
+
+        StudentSchoolYear::create([
+            'student_id' => $student->student_id,
+            'team_id' => null,
+            'school_year' => 2026,
+            'program' => 'BSIT',
+        ]);
+
+        $recruitment = Recruitment::create([
+            'student_id' => $student->student_id,
+            'recruitment_goal' => 'find_a_team',
+            'roles' => ['Web Dev'],
+            'introduction' => 'Original intro',
+        ]);
+
+        $response = $this->put("/recruitment/{$recruitment->recruitment_id}", [
+            'recruitment_goal' => 'find_a_team',
+            'introduction' => 'Updated introduction',
+            'roles' => ['Web Dev', 'UI Designer'],
+        ]);
+
+        $response->assertRedirect();
+        $response->assertSessionHas('status', 'Recruitment post updated!');
+
+        $recruitment->refresh();
+        $this->assertEquals('find_a_team', $recruitment->recruitment_goal);
+        $this->assertEquals('Updated introduction', $recruitment->introduction);
+        $this->assertEquals(['Web Dev', 'UI Designer'], $recruitment->roles);
+    }
+
+    public function test_student_can_update_build_a_team_post(): void
+    {
+        $student = Student::create([
+            'email' => 'leaderupdater@my.cspc.edu.ph',
+            'f_name' => 'Leader',
+            'l_name' => 'Updater',
+            'student_number' => '2026-0021',
+            'p_picture' => 'avatar-02',
+        ]);
+
+        $this->actingAs($student);
+
+        StudentSchoolYear::create([
+            'student_id' => $student->student_id,
+            'team_id' => null,
+            'school_year' => 2026,
+            'program' => 'BSIT',
+        ]);
+
+        $recruitment = Recruitment::create([
+            'student_id' => $student->student_id,
+            'recruitment_goal' => 'build_a_team',
+            'roles' => ['Backend Dev'],
+            'looking_for' => 'Looking for a backend dev',
+            'member_count' => 3,
+        ]);
+
+        $response = $this->put("/recruitment/{$recruitment->recruitment_id}", [
+            'recruitment_goal' => 'build_a_team',
+            'looking_for' => 'Now looking for a frontend dev',
+            'roles' => ['Frontend Dev', 'UI Designer'],
+            'member_count' => 5,
+        ]);
+
+        $response->assertRedirect();
+        $response->assertSessionHas('status', 'Recruitment post updated!');
+
+        $recruitment->refresh();
+        $this->assertEquals('build_a_team', $recruitment->recruitment_goal);
+        $this->assertEquals('Now looking for a frontend dev', $recruitment->looking_for);
+        $this->assertEquals(['Frontend Dev', 'UI Designer'], $recruitment->roles);
+        $this->assertEquals(5, $recruitment->member_count);
+    }
+
+    public function test_other_student_cannot_update_someone_elses_post(): void
+    {
+        $owner = Student::create([
+            'email' => 'owner@my.cspc.edu.ph',
+            'f_name' => 'Owner',
+            'l_name' => 'User',
+            'student_number' => '2026-0022',
+            'p_picture' => 'avatar-01',
+        ]);
+
+        $other = Student::create([
+            'email' => 'other@my.cspc.edu.ph',
+            'f_name' => 'Other',
+            'l_name' => 'User',
+            'student_number' => '2026-0023',
+            'p_picture' => 'avatar-02',
+        ]);
+
+        $this->actingAs($other);
+
+        StudentSchoolYear::create([
+            'student_id' => $owner->student_id,
+            'team_id' => null,
+            'school_year' => 2026,
+            'program' => 'BSIT',
+        ]);
+
+        $recruitment = Recruitment::create([
+            'student_id' => $owner->student_id,
+            'recruitment_goal' => 'find_a_team',
+            'roles' => ['Web Dev'],
+        ]);
+
+        $response = $this->put("/recruitment/{$recruitment->recruitment_id}", [
+            'recruitment_goal' => 'find_a_team',
+            'introduction' => 'Hacked',
+            'roles' => ['Hacker'],
+        ]);
+
+        $response->assertStatus(403);
+    }
+
+    public function test_member_count_must_be_between_3_and_5(): void
+    {
+        $student = Student::create([
+            'email' => 'membercount@my.cspc.edu.ph',
+            'f_name' => 'Member',
+            'l_name' => 'Count',
+            'student_number' => '2026-0030',
+            'p_picture' => 'avatar-01',
+        ]);
+
+        $this->actingAs($student);
+
+        StudentSchoolYear::create([
+            'student_id' => $student->student_id,
+            'team_id' => null,
+            'school_year' => 2026,
+            'program' => 'BSIT',
+        ]);
+
+        $response = $this->post('/recruitment', [
+            'recruitment_goal' => 'build_a_team',
+            'team_name' => 'Test Team',
+            'tags' => json_encode(['Web Dev']),
+            'member_count' => 2,
+        ]);
+
+        $response->assertSessionHasErrors(['member_count']);
+
+        $response = $this->post('/recruitment', [
+            'recruitment_goal' => 'build_a_team',
+            'team_name' => 'Test Team 2',
+            'tags' => json_encode(['Web Dev']),
+            'member_count' => 6,
+        ]);
+
+        $response->assertSessionHasErrors(['member_count']);
     }
 }

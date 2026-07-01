@@ -8,6 +8,7 @@ use App\Models\Team;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class RecruitmentController extends Controller
 {
@@ -19,6 +20,7 @@ class RecruitmentController extends Controller
             'introduction' => ['nullable', 'string', 'max:500'],
             'team_name' => ['nullable', 'string', 'max:100'],
             'tags' => ['nullable', 'string'],
+            'member_count' => ['nullable', 'integer', 'min:3', 'max:5'],
         ]);
 
         $student = $request->user();
@@ -61,7 +63,25 @@ class RecruitmentController extends Controller
             'roles' => $roles,
             'looking_for' => $validated['looking_for'] ?? null,
             'introduction' => $validated['introduction'] ?? null,
+            'member_count' => $validated['member_count'] ?? null,
         ]);
+
+        if ($validated['recruitment_goal'] === 'build_a_team') {
+            $teamName = $validated['team_name'] ?? 'Unknown';
+            $this->logActivity(
+                $studentId,
+                'post_created',
+                'Created a recruitment post to build team <strong>'.e($teamName).'</strong>',
+                ['recruitment_id' => $recruitment->id, 'team_name' => $teamName, 'goal' => 'build_a_team']
+            );
+        } else {
+            $this->logActivity(
+                $studentId,
+                'post_created',
+                'Created a recruitment post looking for a team',
+                ['recruitment_id' => $recruitment->id, 'goal' => 'find_a_team']
+            );
+        }
 
         if ($request->expectsJson()) {
             return response()->json([
@@ -90,6 +110,7 @@ class RecruitmentController extends Controller
             'introduction' => ['nullable', 'string', 'max:500'],
             'roles' => ['required', 'array', 'min:1'],
             'roles.*' => ['string', 'max:50'],
+            'member_count' => ['nullable', 'integer', 'min:3', 'max:5'],
         ]);
 
         $recruitment->update([
@@ -97,7 +118,15 @@ class RecruitmentController extends Controller
             'roles' => $validated['roles'],
             'looking_for' => $validated['looking_for'] ?? null,
             'introduction' => $validated['introduction'] ?? null,
+            'member_count' => $validated['member_count'] ?? null,
         ]);
+
+        $this->logActivity(
+            $student->student_id,
+            'post_updated',
+            'Updated recruitment post',
+            ['recruitment_id' => $recruitment->id, 'goal' => $validated['recruitment_goal']]
+        );
 
         if ($request->expectsJson()) {
             return response()->json([
@@ -122,6 +151,13 @@ class RecruitmentController extends Controller
         }
 
         $recruitment->delete();
+
+        $this->logActivity(
+            $studentId,
+            'post_deleted',
+            'Deleted recruitment post',
+            ['recruitment_id' => $recruitment->id]
+        );
 
         if ($request->expectsJson()) {
             return response()->json([

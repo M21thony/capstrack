@@ -94,7 +94,7 @@
             @if (Route::has('login'))
                 <div class="flex gap-4" style="display: flex; gap: 16px; align-items: center;">
                     @auth
-                        <a href="{{ url('/dashboard') }}" class="btn-ct btn-ct-outline" style="padding: 8px 20px; font-size: 0.9rem;">Dashboard</a>
+                        <a href="{{ route('student.dashboard') }}" class="btn-ct btn-ct-outline" style="padding: 8px 20px; font-size: 0.9rem;">Dashboard</a>
                     @else
                         <a href="#" class="btn-ct btn-ct-outline open-login-btn" style="cursor: pointer; border: none; padding: 8px 20px; font-size: 0.9rem;">Log in</a>
                         @if (Route::has('account.request'))
@@ -120,7 +120,7 @@
             
             <div class="hero-actions">
                 @auth
-                    <a href="{{ url('/dashboard') }}" class="btn-ct btn-ct-primary">
+                    <a href="{{ route('student.dashboard') }}" class="btn-ct btn-ct-primary">
                         Go to Dashboard
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
                     </a>
