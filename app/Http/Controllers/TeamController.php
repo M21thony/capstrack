@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Notification;
 use App\Models\Recruitment;
 use App\Models\Student;
+use App\Models\StudentRole;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
 use App\Models\TeamInvitation;
@@ -35,8 +36,23 @@ class TeamController extends Controller
         if ($teamId) {
             $myTeam = Team::find($teamId);
             $teamMembers = Student::join('student_s_y', 'students.student_id', '=', 'student_s_y.student_id')
+                ->leftJoin('student_roles', 'student_s_y.s_role_id', '=', 'student_roles.s_role_id')
                 ->where('student_s_y.team_id', $teamId)
-                ->get();
+                ->select('students.*', 'student_s_y.s_role_id', 'student_roles.s_role_name')
+                ->get()
+                ->sortBy(function ($member) use ($studentId) {
+                    $isLeader = $member->s_role_name === 'Leader';
+                    $isSelf = $member->student_id === $studentId;
+
+                    if ($isLeader) {
+                        return 0;
+                    }
+                    if ($isSelf) {
+                        return 1;
+                    }
+
+                    return 2;
+                })->values();
         }
 
         $myRecruitment = Recruitment::where('student_id', $studentId)->latest()->first();
@@ -54,6 +70,7 @@ class TeamController extends Controller
 
         $leaderIds = $myTeam ? [(int) $myTeam->leader_id] : [];
 
+<<<<<<< HEAD
         if ($teamId) {
             $teamMembers = $teamMembers->sortBy(function ($member) use ($myTeam, $studentId) {
                 if ($myTeam && (int) $member->student_id === (int) $myTeam->leader_id) {
@@ -66,6 +83,9 @@ class TeamController extends Controller
                 return 2;
             })->values();
         }
+=======
+        $leaderIds = $teamMembers->filter(fn ($m) => $m->s_role_name === 'Leader')->pluck('student_id')->toArray();
+>>>>>>> temp-fix-work
 
         $currentSchoolYear = $studentSy?->school_year;
 
@@ -114,6 +134,8 @@ class TeamController extends Controller
             ->where('status', 'pending')
             ->get();
 
+        $userRole = $studentSy?->role?->s_role_name;
+
         return view('student.team', [
             'myTeam' => $myTeam,
             'teamMembers' => $teamMembers,
@@ -128,9 +150,13 @@ class TeamController extends Controller
             'stillIndividual' => $stillIndividual,
             'invites' => $invites,
             'leaderIds' => $leaderIds,
+<<<<<<< HEAD
             'teamFull' => $teamFull,
             'isConfirmed' => $isConfirmed,
             'postHidden' => $postHidden,
+=======
+            'userRole' => $userRole,
+>>>>>>> temp-fix-work
         ]);
     }
 
@@ -151,9 +177,14 @@ class TeamController extends Controller
             'leader_id' => $student->student_id,
         ]);
 
+        $leaderRoleId = StudentRole::where('s_role_name', 'Leader')->value('s_role_id');
+
         DB::table('student_s_y')
             ->where('student_id', $student->student_id)
-            ->update(['team_id' => $team->team_id]);
+            ->update([
+                'team_id' => $team->team_id,
+                's_role_id' => $leaderRoleId,
+            ]);
 
         // Only delete "find_a_team" posts — keep "build_a_team" so leader status is preserved
         Recruitment::where('student_id', $student->student_id)
@@ -247,7 +278,7 @@ class TeamController extends Controller
         }
 
         // Regular member leaves — just unassign them
-        $studentSy->update(['team_id' => null]);
+        $studentSy->update(['team_id' => null, 's_role_id' => null]);
 
         $this->logActivity(
             $studentId,
@@ -372,7 +403,7 @@ class TeamController extends Controller
                 ->with('error', 'That student is not in your team.');
         }
 
-        $memberSy->update(['team_id' => null]);
+        $memberSy->update(['team_id' => null, 's_role_id' => null]);
 
         Recruitment::where('student_id', $student->student_id)->delete();
 
@@ -450,6 +481,12 @@ class TeamController extends Controller
         Recruitment::where('student_id', $newLeaderId)
             ->where('recruitment_goal', '!=', 'build_a_team')
             ->delete();
+
+        $leaderRoleId = StudentRole::where('s_role_name', 'Leader')->value('s_role_id');
+        $memberRoleId = StudentRole::where('s_role_name', 'Member')->value('s_role_id');
+
+        StudentSchoolYear::where('student_id', $authId)->update(['s_role_id' => $memberRoleId]);
+        StudentSchoolYear::where('student_id', $newLeaderId)->update(['s_role_id' => $leaderRoleId]);
 
         $newLeader = Student::find($newLeaderId);
         $this->logActivity(

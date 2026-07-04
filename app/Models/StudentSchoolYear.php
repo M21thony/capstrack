@@ -27,8 +27,13 @@ class StudentSchoolYear extends Model
         return $this->belongsTo(Student::class, 'student_id', 'student_id');
     }
 
-    public function team()
+    public function team(): BelongsTo
     {
         return $this->belongsTo(Team::class, 'team_id', 'team_id');
+    }
+
+    public function role(): BelongsTo
+    {
+        return $this->belongsTo(StudentRole::class, 's_role_id', 's_role_id');
     }
 }
