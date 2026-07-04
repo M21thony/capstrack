@@ -61,10 +61,9 @@
             @foreach($teamMembers as $member)
               @php
                 $isThisUser = $member->student_id === auth()->user()->student_id;
-                $isThisLeader = in_array($member->student_id, $leaderIds);
               @endphp
               <div style="display: flex; align-items: center; gap: 10px;">
-                <div style="width: 36px; height: 36px; border-radius: 50%; background: {{ $isThisLeader ? '#fbbf24' : ($isThisUser ? '#fbbf24' : '#7c3aed') }}; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #1a1a1a; overflow: hidden; flex-shrink: 0;">
+                <div style="width: 36px; height: 36px; border-radius: 50%; background: {{ $member->s_role_name === 'Leader' ? '#fbbf24' : ($isThisUser ? '#fbbf24' : '#7c3aed') }}; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #1a1a1a; overflow: hidden; flex-shrink: 0;">
                   @if ($member->avatarUrl())
                     <img src="{{ $member->avatarUrl() }}" alt="" style="width: 100%; height: 100%; object-fit: cover;">
                   @else
@@ -73,9 +72,9 @@
                 </div>
                 <div style="flex: 1;">
                   <div style="font-size: 13px; font-weight: 600; color: var(--text);">{{ trim(($member->f_name ?? '') . ' ' . ($member->l_name ?? '')) ?: $member->email ?? 'Member' }}</div>
-                  <div style="font-size: 11px; color: var(--text3);">{{ $isThisLeader ? 'Team Leader' : 'Team Member' }}</div>
+                  <div style="font-size: 11px; color: var(--text3);">{{ $member->s_role_name === 'Leader' ? 'Team Leader' : 'Team Member' }}</div>
                 </div>
-                <div style="background: {{ $isThisLeader ? '#fef3c7' : 'var(--bg2)' }}; color: {{ $isThisLeader ? '#92400e' : 'var(--text3)' }}; padding: 3px 8px; border-radius: 6px; font-size: 10px; font-weight: 700;">{{ $isThisLeader ? 'LEADER' : 'MEMBER' }}</div>
+                <div style="background: {{ $member->s_role_name === 'Leader' ? '#fef3c7' : 'var(--bg2)' }}; color: {{ $member->s_role_name === 'Leader' ? '#92400e' : 'var(--text3)' }}; padding: 3px 8px; border-radius: 6px; font-size: 10px; font-weight: 700;">{{ $member->s_role_name ?? 'MEMBER' }}</div>
                 @if($isLeader && !$isThisUser && !$myTeam->is_confirmed)
                   <button type="button" onclick="confirmRemoveMember({{ $member->student_id }}, '{{ addslashes($member->f_name . ' ' . $member->l_name) }}')" style="background:none;border:none;color:#ef4444;cursor:pointer;padding:4px;font-size:14px;line-height:1;" title="Remove member">✕</button>
                 @endif
@@ -125,12 +124,12 @@
                 <span style="font-weight: 700; color: #16a34a;">{{ ucfirst($myTeam->team_status ?? 'Active') }}</span>
               </div>
               <div style="display: flex; justify-content: space-between; font-size: 12px; border-top: 1px solid var(--border); padding-top: 10px;">
-                <span style="color: var(--text3);">Confirmed</span>
-                <span style="font-weight: 700; color: {{ $myTeam->is_confirmed ? '#16a34a' : '#f59e0b' }};">{{ $myTeam->is_confirmed ? 'Yes' : 'No' }}</span>
+                <span style="color: var(--text3);">Members</span>
+                <span style="font-weight: 700; color: var(--text);">{{ \App\Models\StudentSchoolYear::where('team_id', $myTeam->team_id)->count() }} / {{ $memberCount }}</span>
               </div>
               <div style="display: flex; justify-content: space-between; font-size: 12px; border-top: 1px solid var(--border); padding-top: 10px;">
                 <span style="color: var(--text3);">Your Role</span>
-                <span style="font-weight: 700; color: {{ $isLeader ? '#fbbf24' : 'var(--text3)' }};">{{ $isLeader ? 'Leader' : 'Member' }}</span>
+                <span style="font-weight: 700; color: {{ $userRole === 'Leader' ? '#fbbf24' : 'var(--text3)' }};">{{ $userRole ?? 'Member' }}</span>
               </div>
               <div style="display: flex; justify-content: space-between; font-size: 12px; border-top: 1px solid var(--border); padding-top: 10px;">
                 <span style="color: var(--text3);">Date Formed</span>

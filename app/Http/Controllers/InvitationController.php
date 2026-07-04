@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Notification;
 use App\Models\Recruitment;
 use App\Models\Student;
+use App\Models\StudentRole;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
 use App\Models\TeamInvitation;
@@ -118,24 +119,32 @@ class InvitationController extends Controller
         $student = $request->user();
         $studentId = $student ? $student->student_id : 8;
 
+        $memberRoleId = StudentRole::where('s_role_name', 'Member')->value('s_role_id');
+
         if ($invitation->type === 'invite') {
             // Logged in user is the receiver of the invite
             if ($invitation->receiver_id !== $studentId) {
                 abort(403);
             }
 
-            // Update the receiver's team_id
+            // Update the receiver's team_id and role
             StudentSchoolYear::where('student_id', $studentId)
-                ->update(['team_id' => $invitation->team_id]);
+                ->update([
+                    'team_id' => $invitation->team_id,
+                    's_role_id' => $memberRoleId,
+                ]);
         } else {
             // Type is request. The logged in user is the receiver (team leader or owner)
             if ($invitation->receiver_id !== $studentId) {
                 abort(403);
             }
 
-            // Update the sender's (who requested to join) team_id
+            // Update the sender's (who requested to join) team_id and role
             StudentSchoolYear::where('student_id', $invitation->sender_id)
-                ->update(['team_id' => $invitation->team_id]);
+                ->update([
+                    'team_id' => $invitation->team_id,
+                    's_role_id' => $memberRoleId,
+                ]);
         }
 
         $invitation->update(['status' => 'accepted']);
