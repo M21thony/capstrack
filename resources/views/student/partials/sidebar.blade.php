@@ -190,22 +190,23 @@
 @include('partials.idle-timeout')
 
 <script>
-  const overlay   = document.getElementById('profile-overlay');
-  const trigger   = document.getElementById('profile-trigger');
-
   function openProfile() {
+    var overlay = document.getElementById('profile-overlay');
+    var trigger = document.getElementById('profile-trigger');
     if (!overlay || !trigger) return;
     overlay.classList.add('open');
     trigger.classList.add('active');
   }
   function closeProfile() {
+    var overlay = document.getElementById('profile-overlay');
+    var trigger = document.getElementById('profile-trigger');
     if (!overlay || !trigger) return;
     overlay.classList.remove('open');
     trigger.classList.remove('active');
   }
   function handleOverlayClick(e) {
-    if (e.target === overlay) closeProfile();
+    if (e.target.id === 'profile-overlay') closeProfile();
   }
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeProfile(); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeProfile(); });
 </script>
 

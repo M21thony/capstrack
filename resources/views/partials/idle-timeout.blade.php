@@ -129,78 +129,82 @@
 </form>
 
 <script>
-  (function() {
-    const INACTIVITY_LIMIT = 10 * 60 * 1000;
-    const COUNTDOWN_DURATION = 1 * 60;
+  const INACTIVITY_LIMIT = 10 * 60 * 1000;
+  const COUNTDOWN_DURATION = 1 * 60;
 
-    let idleTimer = null;
-    let countdownTimer = null;
-    let countdownSeconds = COUNTDOWN_DURATION;
-    const overlay = document.getElementById('idle-overlay');
-    const countdownEl = document.getElementById('idle-countdown');
+  let idleTimer = null;
+  let countdownTimer = null;
+  let countdownSeconds = COUNTDOWN_DURATION;
+  const overlay = document.getElementById('idle-overlay');
+  const countdownEl = document.getElementById('idle-countdown');
 
-    function pad(n) {
-      return String(n).padStart(2, '0');
-    }
+  function pad(n) {
+    return String(n).padStart(2, '0');
+  }
 
-    function formatTime(sec) {
-      const m = Math.floor(sec / 60);
-      const s = sec % 60;
-      return pad(m) + ':' + pad(s);
-    }
+  function formatTime(sec) {
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return pad(m) + ':' + pad(s);
+  }
 
-    function startIdleTimer() {
-      if (idleTimer) clearTimeout(idleTimer);
-      idleTimer = setTimeout(showIdleModal, INACTIVITY_LIMIT);
-    }
+  function startIdleTimer() {
+    if (idleTimer) clearTimeout(idleTimer);
+    idleTimer = setTimeout(showIdleModal, INACTIVITY_LIMIT);
+  }
 
-    function clearAllTimers() {
-      if (idleTimer) { clearTimeout(idleTimer); idleTimer = null; }
-      if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
-    }
+  function clearAllTimers() {
+    if (idleTimer) { clearTimeout(idleTimer); idleTimer = null; }
+    if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
+  }
 
-    function showIdleModal() {
-      clearAllTimers();
-      countdownSeconds = COUNTDOWN_DURATION;
+  function showIdleModal() {
+    clearAllTimers();
+    countdownSeconds = COUNTDOWN_DURATION;
+    countdownEl.textContent = formatTime(countdownSeconds);
+    overlay.classList.add('open');
+    countdownTimer = setInterval(function() {
+      countdownSeconds--;
       countdownEl.textContent = formatTime(countdownSeconds);
-      overlay.classList.add('open');
-      countdownTimer = setInterval(function() {
-        countdownSeconds--;
-        countdownEl.textContent = formatTime(countdownSeconds);
-        if (countdownSeconds <= 0) {
-          clearInterval(countdownTimer);
-          countdownTimer = null;
-          autoLogout();
-        }
-      }, 1000);
-    }
+      if (countdownSeconds <= 0) {
+        clearInterval(countdownTimer);
+        countdownTimer = null;
+        logoutNow();
+      }
+    }, 1000);
+  }
 
-    function staySignedIn() {
-      overlay.classList.remove('open');
-      clearAllTimers();
-      startIdleTimer();
-    }
-
-    function logoutNow() {
-      clearAllTimers();
-      document.getElementById('idle-logout-form').submit();
-    }
-
-    function autoLogout() {
-      document.getElementById('idle-logout-form').submit();
-    }
-
-    function onUserActivity() {
-      if (!overlay.classList.contains('open')) {
+  function staySignedIn() {
+    fetch('/session/keep-alive', {
+      method: 'POST',
+      headers: {
+        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content ?? '',
+        'Accept': 'application/json',
+      },
+    }).then(function(res) {
+      if (res.ok) {
+        overlay.classList.remove('open');
+        clearAllTimers();
         startIdleTimer();
       }
-    }
+    });
+  }
 
-    var activityEvents = ['mousemove', 'keydown', 'mousedown', 'touchstart', 'scroll', 'wheel'];
-    for (var i = 0; i < activityEvents.length; i++) {
-      document.addEventListener(activityEvents[i], onUserActivity, { passive: true });
-    }
+  function logoutNow() {
+    clearAllTimers();
+    document.getElementById('idle-logout-form').submit();
+  }
 
-    startIdleTimer();
-  })();
+  function onUserActivity() {
+    if (!overlay.classList.contains('open')) {
+      startIdleTimer();
+    }
+  }
+
+  var activityEvents = ['mousemove', 'keydown', 'mousedown', 'touchstart', 'scroll', 'wheel'];
+  for (var i = 0; i < activityEvents.length; i++) {
+    document.addEventListener(activityEvents[i], onUserActivity, { passive: true });
+  }
+
+  startIdleTimer();
 </script>

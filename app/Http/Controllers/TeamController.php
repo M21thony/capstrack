@@ -62,30 +62,30 @@ class TeamController extends Controller
             $skills = $myRecruitment->roles;
         }
 
-        $memberCount = $myRecruitment?->member_count ?? 5;
+        $memberCount = $myTeam?->member_count ?? $myRecruitment?->member_count ?? 5;
         $isLeader = $myTeam && (int) $myTeam->leader_id === (int) $studentId;
         $teamFull = $myTeam && ! $myTeam->is_confirmed && $isLeader && $teamMembers->count() >= $memberCount;
+        $isTeamFull = $myTeam && $teamMembers->count() >= $memberCount;
         $isConfirmed = $myTeam && $myTeam->is_confirmed;
         $postHidden = $myTeam && in_array($myTeam->team_status, ['complete', 'closed']);
 
+        $fullTeamStudentIds = Recruitment::where('recruitment_goal', 'build_a_team')
+            ->with('student.team')
+            ->get()
+            ->filter(function ($recruit) {
+                $team = $recruit->student->team;
+
+                if (! $team) {
+                    return false;
+                }
+
+                return StudentSchoolYear::where('team_id', $team->team_id)->count() >= ($team->member_count ?? $recruit->member_count ?? 5);
+            })
+            ->pluck('student_id')
+            ->toArray();
+
         $leaderIds = $myTeam ? [(int) $myTeam->leader_id] : [];
-
-<<<<<<< HEAD
-        if ($teamId) {
-            $teamMembers = $teamMembers->sortBy(function ($member) use ($myTeam, $studentId) {
-                if ($myTeam && (int) $member->student_id === (int) $myTeam->leader_id) {
-                    return 0;
-                }
-                if ((int) $member->student_id === (int) $studentId) {
-                    return 1;
-                }
-
-                return 2;
-            })->values();
-        }
-=======
         $leaderIds = $teamMembers->filter(fn ($m) => $m->s_role_name === 'Leader')->pluck('student_id')->toArray();
->>>>>>> temp-fix-work
 
         $currentSchoolYear = $studentSy?->school_year;
 
@@ -111,9 +111,10 @@ class TeamController extends Controller
             ->count();
 
         // Feed recruitment posts (only from students in the same course, year_section and school year)
-        // Exclude posts from leaders whose team is complete or closed
+        // Exclude posts from leaders whose team is complete, closed, or full
         $otherRecruitments = Recruitment::with(['student.team'])
             ->where('student_id', '!=', $studentId)
+            ->whereNotIn('student_id', $fullTeamStudentIds)
             ->whereDoesntHave('student.team', function ($q) {
                 $q->whereIn('team_status', ['complete', 'closed']);
             })
@@ -141,6 +142,7 @@ class TeamController extends Controller
             'teamMembers' => $teamMembers,
             'myRecruitment' => $myRecruitment,
             'myRecruitmentGoal' => $myRecruitment?->recruitment_goal,
+            'isTeamFull' => $isTeamFull,
             'skills' => $skills,
             'memberCount' => $memberCount,
             'isLeader' => $isLeader,
@@ -150,13 +152,7 @@ class TeamController extends Controller
             'stillIndividual' => $stillIndividual,
             'invites' => $invites,
             'leaderIds' => $leaderIds,
-<<<<<<< HEAD
-            'teamFull' => $teamFull,
-            'isConfirmed' => $isConfirmed,
-            'postHidden' => $postHidden,
-=======
             'userRole' => $userRole,
->>>>>>> temp-fix-work
         ]);
     }
 
@@ -185,6 +181,14 @@ class TeamController extends Controller
                 'team_id' => $team->team_id,
                 's_role_id' => $leaderRoleId,
             ]);
+
+        // Sync member_count from recruitment post to team
+        $recruitment = Recruitment::where('student_id', $student->student_id)
+            ->where('recruitment_goal', 'build_a_team')
+            ->first();
+        if ($recruitment?->member_count) {
+            $team->update(['member_count' => $recruitment->member_count]);
+        }
 
         // Only delete "find_a_team" posts — keep "build_a_team" so leader status is preserved
         Recruitment::where('student_id', $student->student_id)
@@ -235,13 +239,59 @@ class TeamController extends Controller
             'team_name' => ['required', 'string', 'max:100'],
             'project_title' => ['nullable', 'string', 'max:150'],
             'team_status' => ['nullable', Rule::in(['on-going', 'complete', 'closed'])],
+            'member_count' => ['nullable', 'integer', Rule::in([3, 5])],
         ]);
+
+        $originalStatus = $team->team_status;
+        $originalMemberCount = $team->member_count;
 
         $team->update([
             'team_name' => $validated['team_name'],
             'project_title' => $validated['project_title'] ?? null,
             'team_status' => $validated['team_status'] ?? 'on-going',
+            'member_count' => $validated['member_count'] ?? $team->member_count ?? 5,
         ]);
+
+        // Sync member_count to recruitment post for consistency
+        if ($validated['member_count'] ?? false) {
+            Recruitment::where('student_id', $studentId)
+                ->where('recruitment_goal', 'build_a_team')
+                ->update(['member_count' => $validated['member_count']]);
+        }
+
+        // Auto-close team if it has reached full capacity
+        $autoClosed = false;
+        if ($team->team_status === 'on-going') {
+            $currentCount = StudentSchoolYear::where('team_id', $team->team_id)->count();
+            if ($currentCount >= $team->member_count) {
+                $team->update(['team_status' => 'closed']);
+                $autoClosed = true;
+                $this->logActivity(
+                    $studentId,
+                    'team_auto_closed',
+                    'Team <strong>'.e($team->team_name).'</strong> is now closed (all slots filled)',
+                    ['team_id' => $team->team_id]
+                );
+            }
+        }
+
+        if (! $autoClosed && $team->team_status !== $originalStatus) {
+            $this->logActivity(
+                $studentId,
+                'team_status_changed',
+                'Changed team status from <strong>'.e($originalStatus).'</strong> to <strong>'.e($team->team_status).'</strong>',
+                ['team_id' => $team->team_id, 'old' => $originalStatus, 'new' => $team->team_status]
+            );
+        }
+
+        if ($team->member_count !== $originalMemberCount) {
+            $this->logActivity(
+                $studentId,
+                'member_count_changed',
+                'Updated team member limit to <strong>'.$team->member_count.'</strong>',
+                ['team_id' => $team->team_id, 'member_count' => $team->member_count]
+            );
+        }
 
         $this->logActivity(
             $studentId,

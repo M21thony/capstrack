@@ -18,10 +18,12 @@ class Team extends Model
         'team_status',
         'leader_id',
         'is_confirmed',
+        'member_count',
     ];
 
     protected $casts = [
         'is_confirmed' => 'boolean',
+        'member_count' => 'integer',
     ];
 
     public function members()

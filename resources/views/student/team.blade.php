@@ -79,13 +79,9 @@
                   <div style="font-size: 13px; font-weight: 600; color: var(--text);">{{ trim(($member->f_name ?? '') . ' ' . ($member->l_name ?? '')) ?: $member->email ?? 'Member' }}</div>
                   <div style="font-size: 11px; color: var(--text3);">{{ $member->s_role_name === 'Leader' ? 'Team Leader' : 'Team Member' }}</div>
                 </div>
-<<<<<<< HEAD
-                <div style="background: {{ $isThisLeader ? '#fef3c7' : 'var(--bg2)' }}; color: {{ $isThisLeader ? '#92400e' : 'var(--text3)' }}; padding: 3px 8px; border-radius: 6px; font-size: 10px; font-weight: 700;">{{ $isThisLeader ? 'LEADER' : 'MEMBER' }}</div>
-                @if($isLeader && !$isThisUser)
-=======
                 <div style="background: {{ $member->s_role_name === 'Leader' ? '#fef3c7' : 'var(--bg2)' }}; color: {{ $member->s_role_name === 'Leader' ? '#92400e' : 'var(--text3)' }}; padding: 3px 8px; border-radius: 6px; font-size: 10px; font-weight: 700;">{{ $member->s_role_name ?? 'MEMBER' }}</div>
                 @if($isLeader && !$isThisUser && !$myTeam->is_confirmed)
->>>>>>> temp-fix-work
+
                   <button type="button" onclick="confirmRemoveMember({{ $member->student_id }}, '{{ addslashes($member->f_name . ' ' . $member->l_name) }}')" style="background:none;border:none;color:#ef4444;cursor:pointer;padding:4px;font-size:14px;line-height:1;" title="Remove member">✕</button>
                 @endif
               </div>
@@ -211,8 +207,10 @@
               $dotColor = $isLeader ? '#22c55e' : '#3b82f6';
               $initials = auth()->user()->avatarInitials();
             @endphp
-            @if(isset($postHidden) && $postHidden && $isLeader)
-            <div class="profile-card-compact" style="cursor: default; opacity: 0.85;">
+            @if(isset($postHidden) && $postHidden)
+            {{-- Post hidden when team status is complete or closed --}}
+            @elseif($isTeamFull && $isLeader)
+            <div class="profile-card-compact" style="opacity: 0.85;" onclick='viewPostDetails(this, "{{ addslashes(auth()->user()->f_name . " " . auth()->user()->l_name) }}", "{{ implode(", ", $skills) }}", "{{ $myRecruitment->looking_for }}", "{{ auth()->user()->team->team_name ?? 'No Team' }}", "{{ auth()->user()->team->project_title ?? 'No project set' }}", "{{ auth()->user()->student_number }}", true, "{{ $isLeader ? 'Leader' : 'Individual' }}", {{ auth()->user()->student_id }}, {{ auth()->user()->team->team_id ?? 'null' }}, "{{ auth()->user()->avatarUrl() }}", "{{ addslashes($myRecruitment->introduction ?? '') }}")'>
               <div class="avatar-ring {{ $ringClass }}" style="filter: grayscale(0.5);">
                 @if (auth()->user()->avatarUrl())
                   <img src="{{ auth()->user()->avatarUrl() }}" alt="">
@@ -222,13 +220,7 @@
                 <div class="status-badge-dot" style="background:{{ $dotColor }}"></div>
               </div>
               <div class="name-label">{{ auth()->user()->f_name }} {{ auth()->user()->l_name }}</div>
-              <div class="goal-label" style="color: var(--text3);">
-                @if($myTeam && $myTeam->team_status === 'complete')
-                  COMPLETED
-                @elseif($myTeam && $myTeam->team_status === 'closed')
-                  CLOSED
-                @endif
-              </div>
+              <div class="goal-label" style="color: var(--text3);">TEAM FULL</div>
             </div>
             @else
             <div class="profile-card-compact" id="my-active-post" onclick='viewPostDetails(this, "{{ addslashes(auth()->user()->f_name . " " . auth()->user()->l_name) }}", "{{ implode(", ", $skills) }}", "{{ $myRecruitment->looking_for }}", "{{ auth()->user()->team->team_name ?? 'No Team' }}", "{{ auth()->user()->team->project_title ?? 'No project set' }}", "{{ auth()->user()->student_number }}", true, "{{ $isLeader ? 'Leader' : 'Individual' }}", {{ auth()->user()->student_id }}, {{ auth()->user()->team->team_id ?? 'null' }}, "{{ auth()->user()->avatarUrl() }}", "{{ addslashes($myRecruitment->introduction ?? '') }}")'>
@@ -549,9 +541,19 @@
       <input type="text" name="team_name" value="{{ $myTeam->team_name }}" placeholder="Enter team name..." style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;margin-bottom:16px;box-sizing:border-box;">
       <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 8px;">Project Title</label>
       <input type="text" name="project_title" value="{{ $myTeam->project_title }}" placeholder="Enter project title..." style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;margin-bottom:16px;box-sizing:border-box;">
+      <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 8px;">Team Members</label>
+      <select name="member_count" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;margin-bottom:16px;box-sizing:border-box;">
+        <option value="3" @if($memberCount === 3) selected @endif>3 Members</option>
+        <option value="5" @if($memberCount === 5) selected @endif>5 Members</option>
+      </select>
       <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 8px;">Team Status</label>
+      @if($isTeamFull)
+      <div style="background:#fef3c7;border:1px solid #fde68a;border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:12px;color:#92400e;">
+        <strong>Team is now full!</strong> Your team has reached {{ $teamMembers->count() }}/{{ $memberCount }} members. You can now update the status to <strong>Complete</strong> or <strong>Closed</strong>.
+      </div>
+      @endif
       <select name="team_status" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;margin-bottom:20px;box-sizing:border-box;">
-        <option value="on-going" @if($myTeam->team_status === 'on-going') selected @endif>On-going</option>
+        <option value="on-going" @if($myTeam->team_status === 'on-going') selected @endif @if($isTeamFull) disabled @endif>On-going</option>
         <option value="complete" @if($myTeam->team_status === 'complete') selected @endif>Complete</option>
         <option value="closed" @if($myTeam->team_status === 'closed') selected @endif>Closed</option>
       </select>
@@ -604,6 +606,8 @@
 const currentStudentTeamId = {{ auth()->user()->studentSchoolYear()->first()?->team_id ?? 'null' }};
 const currentStudentId = {{ auth()->user()->student_id }};
 const myRecruitmentGoal = '{{ $myRecruitmentGoal ?? '' }}';
+const isTeamFull = @json($isTeamFull ?? false);
+const isPostHidden = @json(isset($postHidden) && $postHidden);
 let activeTags = [];
 let isEditing = false;
 let editingId = null;
@@ -850,11 +854,21 @@ function viewPostDetails(cardEl, name, skills, lookingFor, teamName, projectTitl
     const actionBtn = document.getElementById('action-btn-text');
     if (isOwner) {
         ownerMsg.style.display = 'block';
-        actionBtn.textContent = 'Edit Post';
-        actionBtn.disabled = false;
-        actionBtn.style.opacity = 1;
-        actionBtn.style.cursor = 'pointer';
-        actionBtn.onclick = function() { modal.classList.remove('active'); openEditModal(); };
+        if (isTeamFull || isPostHidden) {
+            ownerMsg.textContent = isTeamFull ? 'Team is full — post closed' : 'Post closed';
+            actionBtn.textContent = isTeamFull ? 'Team Full' : 'Closed';
+            actionBtn.disabled = true;
+            actionBtn.style.opacity = 0.5;
+            actionBtn.style.cursor = 'not-allowed';
+            actionBtn.onclick = null;
+        } else {
+            ownerMsg.textContent = 'Your Post';
+            actionBtn.textContent = 'Edit Post';
+            actionBtn.disabled = false;
+            actionBtn.style.opacity = 1;
+            actionBtn.style.cursor = 'pointer';
+            actionBtn.onclick = function() { modal.classList.remove('active'); openEditModal(); };
+        }
     } else {
         ownerMsg.style.display = 'none';
         actionBtn.disabled = false;

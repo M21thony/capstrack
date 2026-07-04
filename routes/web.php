@@ -14,6 +14,7 @@ use App\Http\Controllers\PersonalInfoController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RecruitmentController;
 use App\Http\Controllers\TeamController;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth:expert', 'expert.admin', 'no.cache'])->prefix('admin')->name('admin.')->group(function () {
@@ -127,3 +128,14 @@ Route::prefix('instructor/schedule')
         Route::delete('slots/{id}', [ScheduleController::class, 'deleteSlot']);
         Route::patch('slots/{id}/toggle', [ScheduleController::class, 'toggleAvailability']);
     });
+
+Route::post('/session/keep-alive', function () {
+    if (! Auth::check() && ! Auth::guard('expert')->check()) {
+        return response()->json(['success' => false], 401);
+    }
+
+    request()->session()->regenerate();
+    request()->session()->put('_timeout_at', now()->addMinutes((int) config('session.lifetime'))->timestamp);
+
+    return response()->json(['success' => true]);
+});
