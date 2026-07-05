@@ -1,0 +1,262 @@
+<?php
+
+namespace App\Http\Controllers\Api;
+
+use App\Http\Controllers\Controller;
+use App\Http\Resources\InvitationResource;
+use App\Models\Notification;
+use App\Models\Recruitment;
+use App\Models\Student;
+use App\Models\StudentRole;
+use App\Models\StudentSchoolYear;
+use App\Models\Team;
+use App\Models\TeamInvitation;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+
+class InvitationController extends Controller
+{
+    public function index(Request $request): JsonResponse
+    {
+        $student = $request->user();
+
+        $invitations = TeamInvitation::with(['team', 'sender', 'receiver'])
+            ->where(function ($q) use ($student) {
+                $q->where('receiver_id', $student->student_id)
+                    ->orWhere('sender_id', $student->student_id);
+            })
+            ->latest()
+            ->paginate(20);
+
+        return InvitationResource::collection($invitations)->response();
+    }
+
+    public function store(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'receiver_id' => ['required', 'integer', 'exists:students,student_id'],
+            'team_id' => ['nullable', 'integer', 'exists:team,team_id'],
+            'type' => ['required', 'string', 'in:invite,request'],
+        ]);
+
+        $student = $request->user();
+        $studentId = $student->student_id;
+
+        if ($validated['type'] === 'request') {
+            $senderSy = StudentSchoolYear::where('student_id', $studentId)->first();
+            if ($senderSy?->team_id) {
+                return response()->json([
+                    'message' => 'You are already in a team. Leave your team first before joining another.',
+                ], 422);
+            }
+        }
+
+        $exists = TeamInvitation::where('sender_id', $studentId)
+            ->where('receiver_id', $validated['receiver_id'])
+            ->where('type', $validated['type'])
+            ->where('status', 'pending')
+            ->exists();
+
+        if ($exists) {
+            return response()->json([
+                'message' => 'A pending invitation or request already exists.',
+            ], 422);
+        }
+
+        $invitation = TeamInvitation::create([
+            'sender_id' => $studentId,
+            'receiver_id' => $validated['receiver_id'],
+            'team_id' => $validated['team_id'] ?? null,
+            'type' => $validated['type'],
+            'status' => 'pending',
+        ]);
+
+        if ($validated['type'] === 'invite') {
+            $this->logActivity(
+                $studentId,
+                'invitation_sent',
+                'Invited <strong>'.e(Student::find($validated['receiver_id'])?->f_name ?? 'a student').'</strong> to join the team',
+                ['receiver_id' => $validated['receiver_id'], 'team_id' => $validated['team_id']]
+            );
+
+            Notification::create([
+                'student_id' => $validated['receiver_id'],
+                'type' => 'invitation_received',
+                'title' => 'Team Invitation',
+                'message' => 'You have been invited to join a team.',
+                'link' => route('student.team'),
+            ]);
+        } else {
+            $this->logActivity(
+                $studentId,
+                'request_sent',
+                'Requested to join a team',
+                ['team_id' => $validated['team_id']]
+            );
+
+            Notification::create([
+                'student_id' => $validated['receiver_id'],
+                'type' => 'request_received',
+                'title' => 'Join Request',
+                'message' => ($student->f_name.' '.$student->l_name).' wants to join your team.',
+                'link' => route('student.team'),
+            ]);
+        }
+
+        return response()->json([
+            'message' => $validated['type'] === 'invite' ? 'Invitation sent successfully.' : 'Join request sent successfully.',
+            'invitation' => new InvitationResource($invitation->load(['sender', 'receiver', 'team'])),
+        ], 201);
+    }
+
+    public function accept(Request $request, TeamInvitation $invitation): JsonResponse
+    {
+        $student = $request->user();
+        $studentId = $student->student_id;
+
+        $memberRoleId = StudentRole::where('s_role_name', 'Member')->value('s_role_id');
+
+        if ($invitation->type === 'invite') {
+            if ($invitation->receiver_id !== $studentId) {
+                return response()->json(['message' => 'Forbidden.'], 403);
+            }
+
+            StudentSchoolYear::where('student_id', $studentId)
+                ->update([
+                    'team_id' => $invitation->team_id,
+                    's_role_id' => $memberRoleId,
+                ]);
+        } else {
+            if ($invitation->receiver_id !== $studentId) {
+                return response()->json(['message' => 'Forbidden.'], 403);
+            }
+
+            StudentSchoolYear::where('student_id', $invitation->sender_id)
+                ->update([
+                    'team_id' => $invitation->team_id,
+                    's_role_id' => $memberRoleId,
+                ]);
+        }
+
+        $invitation->update(['status' => 'accepted']);
+
+        $joinedStudentId = $invitation->type === 'invite' ? $studentId : $invitation->sender_id;
+        Recruitment::where('student_id', $joinedStudentId)->delete();
+
+        $team = Team::find($invitation->team_id);
+        $joiningStudent = Student::find($joinedStudentId);
+
+        if ($team && $team->team_status === 'on-going') {
+            $currentCount = StudentSchoolYear::where('team_id', $team->team_id)->count();
+            if ($currentCount >= $team->member_count) {
+                $team->update(['team_status' => 'closed']);
+                $this->logActivity(
+                    $team->leader_id,
+                    'team_auto_closed',
+                    'Team <strong>'.e($team->team_name).'</strong> is now closed (all slots filled)',
+                    ['team_id' => $team->team_id]
+                );
+            }
+        }
+
+        if ($team && $joiningStudent) {
+            $this->logActivity(
+                $joinedStudentId,
+                'team_joined',
+                'Joined team <strong>'.e($team->team_name).'</strong>',
+                ['team_id' => $team->team_id, 'team_name' => $team->team_name]
+            );
+
+            if ($invitation->type === 'request') {
+                $this->logActivity(
+                    $studentId,
+                    'request_accepted',
+                    'Accepted <strong>'.e($joiningStudent->f_name.' '.$joiningStudent->l_name).'</strong>\'s request to join the team',
+                    ['joined_student_id' => $joinedStudentId, 'team_id' => $team->team_id]
+                );
+            }
+        }
+
+        if ($invitation->type === 'invite') {
+            Notification::create([
+                'student_id' => $invitation->sender_id,
+                'type' => 'invitation_accepted',
+                'title' => 'Invitation Accepted',
+                'message' => ($joiningStudent ? $joiningStudent->f_name.' '.$joiningStudent->l_name : 'Someone').' accepted your invitation to join the team.',
+                'link' => route('student.team'),
+            ]);
+        } else {
+            Notification::create([
+                'student_id' => $invitation->sender_id,
+                'type' => 'request_accepted',
+                'title' => 'Request Accepted',
+                'message' => 'Your request to join <strong>'.e($team->team_name ?? 'the team').'</strong> has been accepted.',
+                'link' => route('student.team'),
+            ]);
+        }
+
+        $teamMemberIds = StudentSchoolYear::where('team_id', $invitation->team_id)
+            ->where('student_id', '!=', $joinedStudentId)
+            ->pluck('student_id');
+
+        foreach ($teamMemberIds as $memberId) {
+            Notification::create([
+                'student_id' => $memberId,
+                'type' => 'member_joined',
+                'title' => 'New Team Member',
+                'message' => ($joiningStudent ? $joiningStudent->f_name.' '.$joiningStudent->l_name : 'Someone').' joined the team.',
+                'link' => route('student.team'),
+            ]);
+        }
+
+        TeamInvitation::where('status', 'pending')
+            ->where(function ($query) use ($studentId, $invitation) {
+                $targetId = $invitation->type === 'invite' ? $studentId : $invitation->sender_id;
+                $query->where('receiver_id', $targetId)
+                    ->orWhere('sender_id', $targetId);
+            })
+            ->update(['status' => 'declined']);
+
+        return response()->json(['message' => 'Invitation accepted.']);
+    }
+
+    public function decline(Request $request, TeamInvitation $invitation): JsonResponse
+    {
+        $student = $request->user();
+        $studentId = $student->student_id;
+
+        if ($invitation->sender_id !== $studentId && $invitation->receiver_id !== $studentId) {
+            return response()->json(['message' => 'Forbidden.'], 403);
+        }
+
+        $invitation->update(['status' => 'declined']);
+
+        $otherPartyId = $invitation->sender_id === $studentId ? $invitation->receiver_id : $invitation->sender_id;
+
+        if ($invitation->type === 'invite') {
+            $this->logActivity(
+                $studentId,
+                'invitation_declined',
+                'Declined invitation to join the team',
+                ['invitation_id' => $invitation->id]
+            );
+        } else {
+            $this->logActivity(
+                $studentId,
+                'request_declined',
+                'Declined a join request',
+                ['invitation_id' => $invitation->id]
+            );
+        }
+
+        Notification::create([
+            'student_id' => $otherPartyId,
+            'type' => $invitation->type === 'invite' ? 'invitation_declined' : 'request_declined',
+            'title' => $invitation->type === 'invite' ? 'Invitation Declined' : 'Request Declined',
+            'message' => 'Your '.($invitation->type === 'invite' ? 'invitation' : 'join request').' has been declined.',
+            'link' => route('student.team'),
+        ]);
+
+        return response()->json(['message' => 'Invitation declined.']);
+    }
+}
