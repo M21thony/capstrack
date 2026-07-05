@@ -20,12 +20,21 @@
   .tag-suggestion-item { padding: 10px 14px; font-size: 13px; color: var(--text); cursor: pointer; transition: background 0.1s; }
   .tag-suggestion-item:hover { background: var(--bg2); color: var(--accent); }
   @keyframes tagFadeIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+  @keyframes shimmer { 0% { background-position: -400px 0; } 100% { background-position: calc(400px + 100%) 0; } }
+  .skeleton-box { background: linear-gradient(90deg, var(--bg2) 25%, var(--bg) 50%, var(--bg2) 75%); background-size: 400px 100%; animation: shimmer 1.6s ease-in-out infinite; }
+  #pageSkeleton { position: absolute; inset: 0; z-index: 50; padding: 20px 0; opacity: 1; transition: opacity 0.35s ease; pointer-events: auto; }
+  #pageSkeleton.loaded { opacity: 0; pointer-events: none; }
+  .content { position: relative; }
 </style>
 <body>
 @include('student.partials.sidebar')
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
 <!-- MAIN -->
 <div class="main">
   <div class="topbar">
+    <button class="hamburger-btn" id="hamburgerBtn" onclick="toggleSidebar()" aria-label="Toggle navigation">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
     <div class="page-title">Team Management</div>
     <div class="topbar-actions">
       @include('student.partials.notification-dropdown')
@@ -34,16 +43,41 @@
   <div class="content">
     @include('student.partials.page-tutorial', ['page' => 'team'])
 
+    <div id="pageSkeleton">
+      <div class="card" style="margin-bottom: 20px; border: 1px solid var(--border);">
+        <div style="display: flex; align-items: center; gap: 14px;">
+          <div class="skeleton-box" style="width: 56px; height: 56px; border-radius: 14px; flex-shrink: 0;"></div>
+          <div style="flex: 1; min-width: 0;">
+            <div class="skeleton-box" style="width: 55%; height: 18px; border-radius: 6px; margin-bottom: 8px;"></div>
+            <div class="skeleton-box" style="width: 35%; height: 14px; border-radius: 5px; margin-bottom: 6px;"></div>
+            <div class="skeleton-box" style="width: 25%; height: 11px; border-radius: 4px;"></div>
+          </div>
+          <div class="skeleton-box" style="width: 80px; height: 26px; border-radius: 20px; flex-shrink: 0;"></div>
+        </div>
+        <div class="team-dash-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 20px;">
+          <div class="skeleton-box" style="height: 200px; border-radius: 12px;"></div>
+          <div class="skeleton-box" style="height: 200px; border-radius: 12px;"></div>
+        </div>
+        <div class="team-actions" style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; padding-top: 10px; border-top: 1px solid var(--border);">
+          <div class="skeleton-box" style="width: 100px; height: 32px; border-radius: 6px;"></div>
+          <div class="skeleton-box" style="width: 130px; height: 32px; border-radius: 6px;"></div>
+        </div>
+      </div>
+    </div>
+
     @if($myTeam)
     <!-- TEAM DASHBOARD -->
     <div class="card" style="margin-bottom: 20px;">
-      <div class="team-dash-header" style="display: flex; align-items: center; gap: 14px;">
+      <div class="team-dash-header" style="display: flex; align-items: center; gap: 14px; flex-wrap: wrap;">
         <div class="team-dash-logo" style="width: 56px; height: 56px; border-radius: 14px; background: #fbbf24; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 18px; color: #1a1a1a; flex-shrink: 0;">
           {{ substr($myTeam->team_name, 0, 2) }}
         </div>
         <div style="flex: 1; min-width: 0;">
-          <div style="font-size: 20px; font-weight: 700; color: var(--text); letter-spacing: -0.3px;">{{ $myTeam->team_name }}</div>
-          <div style="font-size: 12px; color: var(--text3); margin-top: 2px;">{{ auth()->user()->studentSchoolYear()->first()?->program ?? 'BSIT-4A' }} · Capstone SY 2025–2026</div>
+          @if($myTeam->project_title)
+            <div style="font-size: 18px; color: #1a1a1a; font-weight: 700; margin-bottom: 2px; line-height: 1.3;">{{ $myTeam->project_title }}</div>
+          @endif
+          <div style="font-size: 16px; font-weight: 600; color: var(--text3);">{{ $myTeam->team_name }}</div>
+          <div style="font-size: 12px; color: var(--text3); margin-top: 4px;">{{ auth()->user()->studentSchoolYear()->first()?->program ?? 'BSIT-4A' }} · Capstone SY 2025–2026</div>
         </div>
         @php
           $statusColors = [
@@ -58,7 +92,7 @@
         </div>
       </div>
 
-      <div style="margin-top: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+      <div class="team-dash-grid" style="margin-top: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
         <!-- Team Members -->
         <div style="background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 16px;">
           <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 14px;">TEAM MEMBERS</div>
@@ -81,7 +115,6 @@
                 </div>
                 <div style="background: {{ $member->s_role_name === 'Leader' ? '#fef3c7' : 'var(--bg2)' }}; color: {{ $member->s_role_name === 'Leader' ? '#92400e' : 'var(--text3)' }}; padding: 3px 8px; border-radius: 6px; font-size: 10px; font-weight: 700;">{{ $member->s_role_name ?? 'MEMBER' }}</div>
                 @if($isLeader && !$isThisUser && !$myTeam->is_confirmed)
-
                   <button type="button" onclick="confirmRemoveMember({{ $member->student_id }}, '{{ addslashes($member->f_name . ' ' . $member->l_name) }}')" style="background:none;border:none;color:#ef4444;cursor:pointer;padding:4px;font-size:14px;line-height:1;" title="Remove member">✕</button>
                 @endif
               </div>
@@ -146,7 +179,7 @@
         </div>
       </div>
 
-      <div style="margin-top: 18px; display: flex; justify-content: flex-end; gap: 8px; padding-top: 10px; border-top: 1px solid var(--border);">
+      <div class="team-actions" style="margin-top: 18px; display: flex; justify-content: flex-end; gap: 8px; padding-top: 10px; border-top: 1px solid var(--border);">
         @if($isLeader && !$myTeam->is_confirmed)
           <button type="button" onclick="showConfirmTeam()" style="padding: 5px 10px; border-radius: 6px; border: 1px solid #bbf7d0; background: #f0fdf4; color: #15803d; font-size: 10px; font-weight: 700; cursor: pointer;">Confirm Team</button>
         @endif
@@ -201,16 +234,16 @@
       <div class="profile-grid" id="recruitment-feed">
           @if($myRecruitment)
             @php
-              $isLeader = $myRecruitment->recruitment_goal === 'build_a_team';
-              $goalLabel = $isLeader ? 'BUILD A TEAM' : 'Find a Team';
-              $ringClass = $isLeader ? 'hiring' : 'looking';
-              $dotColor = $isLeader ? '#22c55e' : '#3b82f6';
+              $recruitIsLeader = $myRecruitment->recruitment_goal === 'build_a_team';
+              $goalLabel = $recruitIsLeader ? 'BUILD A TEAM' : 'Find a Team';
+              $ringClass = $recruitIsLeader ? 'hiring' : 'looking';
+              $dotColor = $recruitIsLeader ? '#22c55e' : '#3b82f6';
               $initials = auth()->user()->avatarInitials();
             @endphp
             @if(isset($postHidden) && $postHidden)
             {{-- Post hidden when team status is complete or closed --}}
-            @elseif($isTeamFull && $isLeader)
-            <div class="profile-card-compact" style="opacity: 0.85;" onclick='viewPostDetails(this, "{{ addslashes(auth()->user()->f_name . " " . auth()->user()->l_name) }}", "{{ implode(", ", $skills) }}", "{{ $myRecruitment->looking_for }}", "{{ auth()->user()->team->team_name ?? 'No Team' }}", "{{ auth()->user()->team->project_title ?? 'No project set' }}", "{{ auth()->user()->student_number }}", true, "{{ $isLeader ? 'Leader' : 'Individual' }}", {{ auth()->user()->student_id }}, {{ auth()->user()->team->team_id ?? 'null' }}, "{{ auth()->user()->avatarUrl() }}", "{{ addslashes($myRecruitment->introduction ?? '') }}")'>
+            @elseif($isTeamFull && $recruitIsLeader)
+            <div class="profile-card-compact" style="opacity: 0.85;" onclick='viewPostDetails(this, "{{ addslashes(auth()->user()->f_name . " " . auth()->user()->l_name) }}", "{{ implode(", ", $skills) }}", "{{ $myRecruitment->looking_for }}", "{{ auth()->user()->team->team_name ?? 'No Team' }}", "{{ auth()->user()->team->project_title ?? 'No project set' }}", "{{ auth()->user()->student_number }}", true, "{{ $recruitIsLeader ? 'Leader' : 'Individual' }}", {{ auth()->user()->student_id }}, {{ auth()->user()->team->team_id ?? 'null' }}, "{{ auth()->user()->avatarUrl() }}", "{{ addslashes($myRecruitment->introduction ?? '') }}")'>
               <div class="avatar-ring {{ $ringClass }}" style="filter: grayscale(0.5);">
                 @if (auth()->user()->avatarUrl())
                   <img src="{{ auth()->user()->avatarUrl() }}" alt="">
@@ -223,7 +256,7 @@
               <div class="goal-label" style="color: var(--text3);">TEAM FULL</div>
             </div>
             @else
-            <div class="profile-card-compact" id="my-active-post" onclick='viewPostDetails(this, "{{ addslashes(auth()->user()->f_name . " " . auth()->user()->l_name) }}", "{{ implode(", ", $skills) }}", "{{ $myRecruitment->looking_for }}", "{{ auth()->user()->team->team_name ?? 'No Team' }}", "{{ auth()->user()->team->project_title ?? 'No project set' }}", "{{ auth()->user()->student_number }}", true, "{{ $isLeader ? 'Leader' : 'Individual' }}", {{ auth()->user()->student_id }}, {{ auth()->user()->team->team_id ?? 'null' }}, "{{ auth()->user()->avatarUrl() }}", "{{ addslashes($myRecruitment->introduction ?? '') }}")'>
+            <div class="profile-card-compact" id="my-active-post" onclick='viewPostDetails(this, "{{ addslashes(auth()->user()->f_name . " " . auth()->user()->l_name) }}", "{{ implode(", ", $skills) }}", "{{ $myRecruitment->looking_for }}", "{{ auth()->user()->team->team_name ?? 'No Team' }}", "{{ auth()->user()->team->project_title ?? 'No project set' }}", "{{ auth()->user()->student_number }}", true, "{{ $recruitIsLeader ? 'Leader' : 'Individual' }}", {{ auth()->user()->student_id }}, {{ auth()->user()->team->team_id ?? 'null' }}, "{{ auth()->user()->avatarUrl() }}", "{{ addslashes($myRecruitment->introduction ?? '') }}")'>
               <div class="post-actions" style="position:absolute; top:8px; right:8px; z-index:2;">
                 <button type="button" class="btn-icon" style="width:24px; height:24px; margin-right:4px;" onclick="event.stopPropagation(); openEditModal()">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
@@ -250,13 +283,13 @@
 
           @forelse($otherRecruitments as $recruit)
             @php
-              $isLeader = $recruit->recruitment_goal === 'build_a_team';
-              $goalLabel = $isLeader ? 'BUILD A TEAM' : 'Find a Team';
-              $ringClass = $isLeader ? 'hiring' : 'looking';
-              $dotColor = $isLeader ? '#22c55e' : '#3b82f6';
+              $recruitIsLeader = $recruit->recruitment_goal === 'build_a_team';
+              $goalLabel = $recruitIsLeader ? 'BUILD A TEAM' : 'Find a Team';
+              $ringClass = $recruitIsLeader ? 'hiring' : 'looking';
+              $dotColor = $recruitIsLeader ? '#22c55e' : '#3b82f6';
               $initials = $recruit->student->avatarInitials();
             @endphp
-            <div class="profile-card-compact" onclick='viewPostDetails(this, "{{ addslashes($recruit->student->f_name . " " . $recruit->student->l_name) }}", "{{ implode(", ", $recruit->roles ?? []) }}", "{{ $recruit->looking_for }}", "{{ $recruit->student->team->team_name ?? 'No Team' }}", "{{ $recruit->student->team->project_title ?? 'No project set' }}", "{{ $recruit->student->student_number }}", false, "{{ $isLeader ? 'Leader' : 'Individual' }}", {{ $recruit->student_id }}, {{ $recruit->student->team->team_id ?? 'null' }}, "{{ $recruit->student->avatarUrl() }}", "{{ addslashes($recruit->introduction ?? '') }}")'>
+            <div class="profile-card-compact" onclick='viewPostDetails(this, "{{ addslashes($recruit->student->f_name . " " . $recruit->student->l_name) }}", "{{ implode(", ", $recruit->roles ?? []) }}", "{{ $recruit->looking_for }}", "{{ $recruit->student->team->team_name ?? 'No Team' }}", "{{ $recruit->student->team->project_title ?? 'No project set' }}", "{{ $recruit->student->student_number }}", false, "{{ $recruitIsLeader ? 'Leader' : 'Individual' }}", {{ $recruit->student_id }}, {{ $recruit->student->team->team_id ?? 'null' }}, "{{ $recruit->student->avatarUrl() }}", "{{ addslashes($recruit->introduction ?? '') }}")'>
               <div class="avatar-ring {{ $ringClass }}">
                 @if ($recruit->student->avatarUrl())
                   <img src="{{ $recruit->student->avatarUrl() }}" alt="">
@@ -540,7 +573,13 @@
       <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 8px;">Team Name</label>
       <input type="text" name="team_name" value="{{ $myTeam->team_name }}" placeholder="Enter team name..." style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;margin-bottom:16px;box-sizing:border-box;">
       <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 8px;">Project Title</label>
-      <input type="text" name="project_title" value="{{ $myTeam->project_title }}" placeholder="Enter project title..." style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;margin-bottom:16px;box-sizing:border-box;">
+      <textarea name="project_title" id="projectTitleInput" placeholder="Enter project title..." oninput="autoExpand(this); updateCompleteOption()" rows="2" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;margin-bottom:16px;box-sizing:border-box;resize:none;overflow:hidden;min-height:42px;font-family:inherit;">{{ $myTeam->project_title }}</textarea>
+      <div id="wordCountHint" style="display:flex;align-items:center;gap:8px;margin:-10px 0 16px;font-size:12px;">
+        <span id="wordCountBadge" style="padding:3px 10px;border-radius:10px;font-size:11px;font-weight:600;background:var(--bg2);border:1px solid var(--border);transition:0.2s;">
+          Words: <span id="wordCountDisplay">0</span>/11–12
+        </span>
+        <span style="color:var(--text3);">required for <strong>Complete</strong> (filler words excluded)</span>
+      </div>
       <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 8px;">Team Members</label>
       <select name="member_count" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;margin-bottom:16px;box-sizing:border-box;">
         <option value="3" @if($memberCount === 3) selected @endif>3 Members</option>
@@ -552,10 +591,10 @@
         <strong>Team is now full!</strong> Your team has reached {{ $teamMembers->count() }}/{{ $memberCount }} members. You can now update the status to <strong>Complete</strong> or <strong>Closed</strong>.
       </div>
       @endif
-      <select name="team_status" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;margin-bottom:20px;box-sizing:border-box;">
-        <option value="on-going" @if($myTeam->team_status === 'on-going') selected @endif @if($isTeamFull) disabled @endif>On-going</option>
-        <option value="complete" @if($myTeam->team_status === 'complete') selected @endif>Complete</option>
-        <option value="closed" @if($myTeam->team_status === 'closed') selected @endif>Closed</option>
+      <select name="team_status" id="teamStatusSelect" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;margin-bottom:20px;box-sizing:border-box;">
+        <option value="on-going" id="ongoingStatusOption" @if($myTeam->team_status === 'on-going') selected @endif @if($isTeamFull) disabled @endif>On-going</option>
+        <option value="complete" id="completeStatusOption" @if($myTeam->team_status === 'complete') selected @endif>Complete</option>
+        <option value="closed" id="closedStatusOption" @if($myTeam->team_status === 'closed') selected @endif>Closed</option>
       </select>
       <div style="display:flex;gap:10px;">
         <button type="submit" class="btn-primary" style="flex:1;">Save Changes</button>
@@ -630,7 +669,7 @@ function confirmLeaveTeam() {
     @else
     showConfirm({
         title: 'Leave Team',
-        message: 'Are you sure you want to leave <strong>{{ addslashes($myTeam->team_name) }}</strong>? This action cannot be undone.',
+        message: 'Are you sure you want to leave <strong>{{ addslashes($myTeam->team_name) }}</strong>?<br><br>\u2022 Your recruitment post will be removed<br>\u2022 You can only rejoin if the leader invites you again<br><br>This action cannot be undone.',
         icon: 'leave',
         confirmText: 'Yes, Leave',
         confirmClass: 'danger',
@@ -690,6 +729,68 @@ function closeEditTeamModal() {
 }
 @endif
 
+@if($myTeam && $isLeader)
+const stopWords = new Set(['a','an','the','and','or','but','in','on','at','to','for',
+    'of','by','with','from','is','are','was','were','be','been','being','have','has',
+    'had','do','does','did','will','would','can','could','shall','should','may','might',
+    'must','about','above','after','again','all','also','any','as','before','between',
+    'both','each','few','more','most','other','some','such','no','nor','not','only',
+    'own','same','so','than','that','then','there','these','they','this','those',
+    'through','too','very','etc','up','down','out','off','over','under','here','what',
+    'when','where','why','how','which','who','whom','whose']);
+
+function autoExpand(el) {
+    el.style.height = 'auto';
+    el.style.height = Math.max(el.scrollHeight, 42) + 'px';
+}
+
+function countMeaningfulWords(text) {
+    if (!text.trim()) return 0;
+    return text.trim().split(/\s+/).filter(function(w) {
+        var cleaned = w.replace(/[^a-zA-Z0-9']/g, '');
+        return cleaned.length > 0 && !stopWords.has(cleaned.toLowerCase());
+    }).length;
+}
+
+function updateCompleteOption() {
+    var titleInput = document.getElementById('projectTitleInput');
+    if (!titleInput) return;
+    var wordCount = countMeaningfulWords(titleInput.value);
+    var completeOpt = document.getElementById('completeStatusOption');
+    var wordDisplay = document.getElementById('wordCountDisplay');
+
+    if (wordDisplay) wordDisplay.textContent = wordCount;
+
+    if (completeOpt) {
+        var canComplete = wordCount >= 11 && wordCount <= 12;
+        completeOpt.disabled = !canComplete;
+        if (!canComplete && completeOpt.selected) {
+            var ongoingOpt = document.getElementById('ongoingStatusOption');
+            if (ongoingOpt) ongoingOpt.selected = true;
+        }
+        completeOpt.style.opacity = canComplete ? '1' : '0.4';
+        completeOpt.title = canComplete ? '' : 'Requires 11\u201312 meaningful words in project title';
+
+        var badge = document.getElementById('wordCountBadge');
+        if (badge) {
+            badge.style.background = canComplete ? '#d1fae5' : 'var(--bg2)';
+            badge.style.borderColor = canComplete ? '#6ee7b7' : 'var(--border)';
+        }
+    }
+}
+
+// Override openEditTeamModal to run word count and auto-expand on open
+var origOpenTeamModal = openEditTeamModal;
+openEditTeamModal = function() {
+    origOpenTeamModal();
+    setTimeout(function() {
+        updateCompleteOption();
+        var el = document.getElementById('projectTitleInput');
+        if (el) autoExpand(el);
+    }, 50);
+};
+@endif
+
 // ── Custom Confirm Modal ──
 const ccmIcons = {
     leave: { svg: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>', bg: 'rgba(220,38,38,0.08)', color: '#dc2626' },
@@ -739,6 +840,23 @@ function closeConfirm() {
 
 document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') closeConfirm();
+});
+
+// ── Mobile Sidebar ──
+function toggleSidebar() {
+    document.body.classList.toggle('sidebar-open');
+    document.body.style.overflow = document.body.classList.contains('sidebar-open') ? 'hidden' : '';
+}
+
+function closeSidebar() {
+    document.body.classList.remove('sidebar-open');
+    document.body.style.overflow = '';
+}
+
+document.querySelectorAll('.nav-item').forEach(function(el) {
+    el.addEventListener('click', function() {
+        if (window.innerWidth <= 768) closeSidebar();
+    });
 });
 
 function openEditModal() {
@@ -1070,6 +1188,13 @@ document.addEventListener('click', function(e) {
 
 document.addEventListener('DOMContentLoaded', function() {
     updateModalUI();
+
+    // Skeleton fade-out
+    var skeleton = document.getElementById('pageSkeleton');
+    if (skeleton) {
+        setTimeout(function() { skeleton.classList.add('loaded'); }, 450);
+    }
+
     @if(isset($teamFull) && $teamFull)
     setTimeout(function() { showConfirmTeam(); }, 500);
     @endif

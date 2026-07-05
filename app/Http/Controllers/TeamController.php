@@ -242,6 +242,21 @@ class TeamController extends Controller
             'member_count' => ['nullable', 'integer', Rule::in([3, 5])],
         ]);
 
+        if ($validated['team_status'] === 'complete') {
+            $request->validate([
+                'project_title' => [
+                    'required', 'string', 'max:150',
+                    function ($attr, $value, $fail) {
+                        $count = $this->countMeaningfulWords($value ?? '');
+
+                        if ($count < 11 || $count > 12) {
+                            $fail("Project title must contain 11–12 meaningful words (filler words like 'a', 'of', 'in' don't count). Current count: {$count}.");
+                        }
+                    },
+                ],
+            ]);
+        }
+
         $originalStatus = $team->team_status;
         $originalMemberCount = $team->member_count;
 
