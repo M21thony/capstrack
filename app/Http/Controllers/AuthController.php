@@ -73,8 +73,8 @@ class AuthController extends Controller
             'response_type' => 'code',
             'scope' => 'openid email profile https://www.googleapis.com/auth/calendar',
             'state' => $state,
-            'prompt' => 'consent',   // forces refresh_token to be returned
-            'access_type' => 'offline',   // needed for refresh_token
+            // 'prompt' => 'consent',   // forces refresh_token to be returned
+            // 'access_type' => 'offline',   // needed for refresh_token
         ]);
 
         return response()->json([

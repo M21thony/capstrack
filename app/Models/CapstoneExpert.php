@@ -13,6 +13,7 @@ use Illuminate\Support\Str;
     'first_name',
     'last_name',
     'middle_name',
+    'suffix',
     'credentials',
     'profile_picture',
     'is_admin',
@@ -94,6 +95,24 @@ class CapstoneExpert extends Authenticatable
 
     public function getNameAttribute(): string
     {
-        return trim(($this->first_name ?? '').' '.($this->last_name ?? ''));
+        $parts = array_filter([
+            $this->first_name ?? '',
+            $this->middle_name ? Str::substr($this->middle_name, 0, 1).'.' : '',
+            $this->last_name ?? '',
+            $this->suffix ?? '',
+        ]);
+
+        $name = implode(' ', $parts);
+
+        if ($this->credentials) {
+            $name .= ', '.$this->credentials;
+        }
+
+        return $name;
+    }
+
+    public function teamAssignments()
+    {
+        return $this->hasMany(TeamExpertAssignment::class, 'expert_id', 'expert_id');
     }
 }

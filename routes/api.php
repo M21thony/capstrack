@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\ActivityLogController;
 use App\Http\Controllers\Api\AdminExpertController;
 use App\Http\Controllers\Api\InvitationController;
 use App\Http\Controllers\Api\RecruitmentController;
+use App\Http\Controllers\Api\StudentExpertController;
 use App\Http\Controllers\Api\TeamController;
 use Illuminate\Support\Facades\Route;
 
@@ -39,6 +40,12 @@ Route::middleware('auth')->group(function () {
     Route::post('/invitations', [InvitationController::class, 'store']);
     Route::post('/invitations/{invitation}/accept', [InvitationController::class, 'accept']);
     Route::post('/invitations/{invitation}/decline', [InvitationController::class, 'decline']);
+
+    // Expert assignments
+    Route::get('/experts', [StudentExpertController::class, 'index'])->name('api.student.experts.index');
+    Route::get('/experts/{expert}', [StudentExpertController::class, 'show'])->name('api.student.experts.show');
+    Route::post('/assignments', [StudentExpertController::class, 'store'])->name('api.student.assignments.store');
+    Route::delete('/assignments/{assignment}', [StudentExpertController::class, 'destroy'])->name('api.student.assignments.destroy');
 
     // Activities
     Route::get('/activities', [ActivityLogController::class, 'index']);

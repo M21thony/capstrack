@@ -172,6 +172,296 @@ select.input{cursor:pointer}
 .stat-name{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:500;color:var(--text2)} /* Label inside stat card */
 
 /* ── PAGINATION ── */
-.pagination{display:flex;justify-content:center;gap:12px;margin-top:40px} /* Centered page navigation */
-.pg-item{width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:10px;background:var(--bg2);border:1px solid var(--border);font-size:13px;font-weight:600;cursor:pointer;transition:0.2s} /* Page button */
-.pg-item.active{background:var(--accent);color:white;border-color:var(--accent)} /* Selected page state */
+.pagination-container{display:flex;justify-content:center;align-items:center;gap:8px;margin-top:20px}
+.pg-btn{width:28px;height:28px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text2);font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:0.2s}
+.pg-btn:hover{border-color:var(--accent);color:var(--accent)}
+.pg-btn.active{background:var(--accent);color:white;border-color:var(--accent);box-shadow:0 2px 8px var(--accent-glow)}
+.pg-arrow{width:28px;height:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text3);transition:0.2s}
+.pg-arrow:hover{color:var(--accent)}
+.pg-arrow svg{width:14px;height:14px}
+
+/* ── EXPERT CARD MOBILE ACCENT BAR ── */
+.card-accent{display:none;height:3px;width:100%;position:absolute;top:0;left:0;border-radius:20px 20px 0 0;flex-shrink:0}
+
+/* ── DETAIL MODAL OVERLAY BLUR ── */
+.modal-overlay{z-index:300;background:rgba(0,0,0,0.45);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
+
+/* ── EXPERT POST MODAL (bottom sheet, responsive only) ── */
+.expert-post-modal{display:none;align-items:flex-end!important;justify-content:center!important}
+.expert-post-modal .expert-post-box{background:var(--bg2);border-radius:20px 20px 0 0;width:100%;max-width:500px;padding:28px 24px 32px;position:relative;animation:epSlideUp .25s cubic-bezier(.16,1,.3,1);max-height:85vh;overflow-y:auto}
+@keyframes epSlideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.expert-post-close{position:absolute;top:16px;right:16px;width:32px;height:32px;border-radius:50%;border:none;background:var(--bg3);color:var(--text2);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s;line-height:1}
+.expert-post-close:hover{background:var(--bg4);color:var(--text)}
+.expert-post-header{display:flex;align-items:center;gap:16px;margin-bottom:24px}
+.expert-post-avatar{width:56px;height:56px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:var(--navy-dark);flex-shrink:0}
+.expert-post-name{font-size:18px;font-weight:700;color:var(--text)}
+.expert-post-section{margin-bottom:20px}
+.expert-post-section:last-child{margin-bottom:0}
+.ep-label{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
+.ep-chips{display:flex;flex-wrap:wrap;gap:8px}
+.ep-chip{padding:6px 14px;border-radius:20px;font-size:13px;font-weight:600}
+.ep-tags{display:flex;flex-wrap:wrap;gap:6px}
+.ep-tag{padding:4px 10px;border-radius:6px;background:var(--bg3);color:var(--text2);font-size:12px;font-weight:500;border:1px solid var(--border)}
+.ep-tag-more{color:var(--text3);font-size:11px}
+.ep-slot-row{display:flex;align-items:center;gap:12px}
+.ep-slot-bar{flex:1;height:8px;background:var(--bg3);border-radius:10px;overflow:hidden}
+.ep-slot-fill{height:100%;border-radius:10px;transition:.5s ease}
+.ep-slot-text{font-size:13px;font-weight:700;color:var(--text3);white-space:nowrap}
+.expert-post-action{margin-top:24px;padding-top:20px;border-top:1px solid var(--border)}
+.expert-post-action .btn{width:100%!important;justify-content:center!important;padding:12px!important;font-size:14px!important;border-radius:10px!important}
+
+/* ── HAMBURGER (hidden on desktop) ── */
+.hamburger-btn{display:none;align-items:center;justify-content:center;width:36px;height:36px;border-radius:9px;background:rgba(255,255,255,0.06);border:1px solid rgba(245,193,0,0.2);cursor:pointer;color:var(--navy-text);flex-shrink:0;transition:background 0.15s}
+.hamburger-btn:hover{background:rgba(245,193,0,0.12)}
+.hamburger-btn svg{width:18px;height:18px}
+
+/* ── SIDEBAR OVERLAY (mobile backdrop) ── */
+.sidebar-overlay{display:none;position:fixed;inset:0;z-index:999;background:rgba(0,0,0,0.5)}
+
+/* ── HIDE EXPERT POST MODAL ON DESKTOP ── */
+@media (min-width:1024px){
+  .expert-post-modal{display:none!important}
+}
+
+/* ── TABLET LANDSCAPE (≤1024px) ── */
+@media (max-width:1024px){
+  .content{display:flex!important;flex-direction:column!important;gap:24px!important;padding:20px!important}
+  .overview-panel{position:static!important;width:auto!important;flex-shrink:0!important}
+  .expert-grid{grid-template-columns:repeat(2,1fr)!important;gap:18px!important}
+}
+
+/* ── TABLET PORTRAIT (≤768px) ── */
+@media (max-width:768px){
+  .hamburger-btn{display:inline-flex}
+  .sidebar{position:fixed!important;z-index:1000;transform:translateX(-100%);transition:transform 0.25s cubic-bezier(0.16,1,0.3,1)}
+  .sidebar-open .sidebar{transform:translateX(0)}
+  .sidebar-open .sidebar-overlay{display:block}
+  body.sidebar-open{overflow:hidden}
+  .topbar{padding:0 12px!important}
+  .topbar .page-title{font-size:15px!important}
+  .content{padding:14px!important}
+
+  /* ── Stats (3 compact cards side by side) ── */
+  .stat-grid{grid-template-columns:repeat(3,1fr)!important;gap:8px!important}
+  .stat-card{flex-direction:column!important;text-align:center!important;justify-content:center!important;align-items:center!important;padding:14px 6px!important;gap:6px!important;border-radius:12px!important;min-height:100px!important}
+  .stat-card-icon{width:32px!important;height:32px!important;border-radius:8px!important;margin:0!important;flex-shrink:0!important}
+  .stat-card-icon svg{width:16px!important;height:16px!important}
+  .stat-card-n{font-size:20px!important;line-height:1!important}
+  .stat-card-l{font-size:9px!important;margin-top:0!important;line-height:1.2!important}
+
+  /* ── Search + Filters stack ── */
+  .sticky-controls>div{flex-direction:column!important;align-items:stretch!important;gap:10px!important}
+  .sticky-controls .input{max-width:100%!important}
+  .filter-bar{margin-bottom:0!important;flex-wrap:wrap!important;justify-content:center!important}
+
+  /* ── Expert cards (list style on mobile) ── */
+  .expert-grid{grid-template-columns:1fr!important;gap:10px!important}
+  .expert-card-compact{flex-direction:row!important;align-items:center!important;text-align:left!important;padding:10px 12px!important;border-radius:10px!important;gap:10px!important;cursor:default!important}
+  .card-accent{display:none!important}
+  .expert-avatar-wrap{width:32px!important;height:32px!important;margin-bottom:0!important;flex-shrink:0!important;border-width:1.5px!important;padding:2px!important}
+  .expert-avatar-wrap .avatar{font-size:12px!important}
+  .expert-card-compact div[style*="font-size: 15px"]{font-size:13px!important;flex:1!important;min-width:0!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+  .expert-card-compact .role-chips,
+  .expert-card-compact .expertise-tags,
+  .expert-card-compact .mini-slot-bar,
+  .expert-card-compact div[style*="font-size: 10px"]:not(.btn),
+  .expert-card-compact .role-dot{display:none!important}
+  .expert-card-compact .btn{pointer-events:auto;flex-shrink:0!important;padding:5px 10px!important;font-size:10px!important;width:auto!important}
+  .expert-card-compact .btn svg{width:11px!important;height:11px!important}
+  .expert-card-compact:hover{transform:none!important;box-shadow:none!important}
+
+  /* ── Role Overview ── */
+  .role-overview{padding:10px 12px!important;margin-bottom:12px!important}
+  .role-overview-title{font-size:11px!important;margin-bottom:8px!important}
+  .role-overview-title svg{width:14px!important;height:14px!important}
+  .role-overview-row{padding:6px 0!important;gap:8px!important}
+  .role-overview-dot{width:8px!important;height:8px!important}
+  .role-overview-role{font-size:10px!important;width:70px!important}
+  .role-overview-status .check,
+  .role-overview-status .xmark{width:14px!important;height:14px!important}
+  .role-overview-status .assigned-name{font-size:11px!important}
+  .role-overview-status .not-assigned{font-size:10px!important}
+  .role-overview .btn{padding:2px 6px!important}
+  .role-overview .btn svg{width:11px!important;height:11px!important}
+
+  /* ── Request Section ── */
+  .req-section .section-title{font-size:13px!important;margin-bottom:10px!important}
+  .req-card{padding:8px 10px!important;flex-wrap:nowrap!important;gap:6px!important}
+  .req-card>div:first-child{width:28px!important;height:28px!important;font-size:9px!important}
+  .req-card>div:nth-child(2)>div:first-child{font-size:12px!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+  .req-card>div:nth-child(2)>div:nth-child(2){font-size:10px!important}
+  .req-card .status-badge{font-size:8px!important;padding:2px 6px!important}
+  .req-card .btn{padding:4px 8px!important;font-size:10px!important}
+  .req-card .btn svg{width:11px!important;height:11px!important}
+
+  /* ── Tutorial Note ── */
+  .tutorial-note{flex-wrap:wrap!important;gap:10px!important}
+  .tutorial-item{font-size:10px!important}
+
+  /* ── Overview Panel (2-column on mobile) ── */
+  .overview-panel{display:grid!important;grid-template-columns:1fr 1fr!important;gap:8px!important}
+  .overview-panel .card{padding:10px!important;margin-top:0!important}
+  .overview-panel .card .section-title{font-size:11px!important;margin-bottom:7px!important}
+  .overview-panel .card div[style*="margin-bottom"]{margin-bottom:6px!important}
+  .overview-panel .card div[style*="font-weight: 600"]{font-size:10px!important;margin-bottom:2px!important}
+  .overview-panel .card div[style*="line-height: 1.4"]{font-size:9px!important;line-height:1.3!important}
+  .overview-panel .card div[style*="margin: 16px 0"]{margin:8px 0!important}
+  .overview-panel .card p[style*="line-height: 1.4"]{font-size:9px!important;line-height:1.3!important}
+  .overview-panel .card ul[style*="font-size"]{font-size:10px!important;line-height:1.4!important;padding-left:14px!important}
+  .overview-panel .legal-credits{grid-column:1/-1!important;margin-top:0!important;padding:6px 0!important}
+  .overview-panel .legal-credits .credits-title{font-size:7px!important}
+  .overview-panel .legal-credits .credits-names{font-size:8px!important}
+
+  /* ── Pagination ── */
+  .pagination-container{gap:6px!important;margin-top:16px!important}
+  .pg-btn{width:26px!important;height:26px!important;font-size:10px!important}
+  .pg-arrow svg{width:12px!important;height:12px!important}
+
+  /* ── Modals ── */
+  .modal-box{width:92%!important;padding:22px!important}
+  .modal-box .modal-sub{font-size:12px!important}
+  .modal-actions{gap:8px!important}
+  .modal-actions .btn{padding:9px!important;font-size:12px!important}
+  .confirm-box{width:92%!important}
+  .review-box{width:92%!important}
+}
+
+/* ── PHONE (≤480px) ── */
+@media (max-width:480px){
+  .content{padding:10px!important;gap:16px!important;height:calc(100vh - 60px)!important}
+  .topbar .page-title{font-size:14px!important}
+  .stat-grid{grid-template-columns:repeat(3,1fr)!important;gap:6px!important}
+  .expert-grid{grid-template-columns:1fr!important;gap:6px!important}
+
+  .expert-card-compact{padding:8px 10px!important;border-radius:8px!important;gap:8px!important}
+  .expert-avatar-wrap{width:28px!important;height:28px!important;margin-bottom:0!important;border-width:1.5px!important;padding:2px!important}
+  .expert-avatar-wrap .avatar{font-size:10px!important}
+  .expert-card-compact div[style*="font-size: 15px"]{font-size:12px!important}
+  .expert-card-compact .btn{padding:4px 8px!important;font-size:9px!important}
+  .expert-card-compact .btn svg{width:10px!important;height:10px!important}
+
+  .stat-card{padding:10px 4px!important;gap:4px!important;border-radius:10px!important;min-height:80px!important}
+  .stat-card-icon{width:26px!important;height:26px!important;border-radius:6px!important}
+  .stat-card-icon svg{width:13px!important;height:13px!important}
+  .stat-card-n{font-size:16px!important}
+  .stat-card-l{font-size:8px!important}
+
+  .sticky-controls{ margin-top:0!important;padding-top:12px!important;padding-bottom:12px!important}
+  .sticky-controls .input{font-size:13px!important;padding:9px 12px!important}
+  .filter-chip{padding:6px 12px!important;font-size:11px!important}
+  .filter-bar{gap:6px!important}
+
+  .role-overview{padding:12px 14px!important;margin-bottom:14px!important}
+  .role-overview-title{font-size:12px!important;margin-bottom:8px!important}
+  .role-overview-title svg{width:15px!important;height:15px!important}
+  .role-overview-row{padding:6px 0!important;gap:10px!important}
+  .role-overview-dot{width:8px!important;height:8px!important}
+  .role-overview-role{font-size:10px!important;width:75px!important}
+  .role-overview-status .check,
+  .role-overview-status .xmark{width:14px!important;height:14px!important}
+  .role-overview-status .assigned-name{font-size:12px!important}
+  .role-overview-status .not-assigned{font-size:11px!important}
+  .role-overview .btn{padding:3px 7px!important}
+  .role-overview .btn svg{width:11px!important;height:11px!important}
+
+  .req-section .section-title{font-size:12px!important;margin-bottom:8px!important;gap:5px!important}
+  .req-section .section-title svg{width:14px!important;height:14px!important}
+  .req-card{flex-wrap:nowrap!important}
+  .req-card>div:first-child{width:24px!important;height:24px!important;font-size:9px!important}
+  .req-card>div:nth-child(2){min-width:0;overflow:hidden}
+  .req-card>div:nth-child(2)>div:first-child{font-size:11px!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .req-card>div:nth-child(2)>div:nth-child(2){font-size:9px!important}
+  .req-card .status-badge{font-size:7px!important;padding:1px 5px!important}
+  .req-card .btn{padding:3px 6px!important;font-size:9px!important;gap:4px!important}
+  .req-card .btn svg{width:10px!important;height:10px!important}
+
+  .empty-state{padding:24px 16px!important}
+
+  .tutorial-note{gap:8px!important;justify-content:center!important}
+  .tutorial-item{font-size:9px!important;gap:5px!important}
+
+  .overview-panel{display:grid!important;grid-template-columns:1fr 1fr!important;gap:6px!important;margin-top:10px!important}
+  .overview-panel .card{padding:8px!important}
+  .overview-panel .card .section-title{font-size:10px!important;margin-bottom:5px!important}
+  .overview-panel .card div[style*="margin-bottom"]{margin-bottom:4px!important}
+  .overview-panel .card div[style*="font-weight: 600"]{font-size:9px!important;margin-bottom:1px!important}
+  .overview-panel .card div[style*="line-height: 1.4"]{font-size:8px!important;line-height:1.2!important}
+  .overview-panel .card div[style*="margin: 16px 0"]{margin:5px 0!important}
+  .overview-panel .card p[style*="line-height: 1.4"]{font-size:8px!important;line-height:1.2!important}
+  .overview-panel .card ul[style*="font-size"]{font-size:9px!important;line-height:1.3!important;padding-left:12px!important}
+  .overview-panel .legal-credits{grid-column:1/-1!important;margin-top:0!important;padding:4px 0!important}
+  .overview-panel .legal-credits .credits-title{font-size:6px!important}
+  .overview-panel .legal-credits .credits-names{font-size:7px!important}
+  .overview-panel .card>div>div:first-child{font-size:10px!important}
+  .overview-panel .card>div>div:nth-child(2){font-size:9px!important}
+
+  .legal-credits{margin-top:28px!important;padding-top:14px!important;padding-bottom:14px!important}
+  .credits-title{font-size:7px!important}
+  .credits-names{font-size:8px!important}
+
+  .pagination-container{gap:4px!important;flex-wrap:wrap!important}
+  .pg-btn{width:24px!important;height:24px!important;font-size:9px!important;border-radius:6px!important}
+
+  .msg-toast{left:16px!important;right:16px!important;text-align:center;justify-content:center}
+
+  .modal-box{padding:18px!important}
+  .modal-box h3{font-size:15px!important}
+  .modal-actions{flex-direction:column!important}
+  .modal-actions .btn{width:100%!important;justify-content:center!important}
+  .confirm-box .confirm-icon{width:40px!important;height:40px!important}
+  .confirm-box h3{font-size:16px!important}
+  .remove-box .modal-input{font-size:16px!important;padding:14px!important}
+  .remove-field textarea.modal-input{min-height:100px!important}
+  .review-box .review-label{font-size:10px!important;width:80px!important}
+  .review-box .review-value{font-size:12px!important}
+  .expert-post-action .btn{padding:10px!important;font-size:13px!important;border-radius:8px!important}
+}
+
+/* ── VERY SMALL (≤360px) ── */
+@media (max-width:360px){
+  .content{padding:8px!important;gap:12px!important}
+  .expert-grid{gap:5px!important}
+  .expert-card-compact{padding:6px 8px!important;border-radius:6px!important;gap:6px!important}
+  .expert-avatar-wrap{width:24px!important;height:24px!important;border-width:1px!important;padding:1px!important}
+  .expert-avatar-wrap .avatar{font-size:9px!important}
+  .expert-card-compact div[style*="font-size: 15px"]{font-size:11px!important}
+  .expert-card-compact .btn{padding:3px 6px!important;font-size:8px!important;gap:4px!important}
+  .expert-card-compact .btn svg{width:8px!important;height:8px!important}
+  .expert-post-box{padding:20px 14px 24px!important}
+  .expert-post-header{gap:12px!important;margin-bottom:18px!important}
+  .expert-post-avatar{width:44px!important;height:44px!important;font-size:14px!important}
+  .expert-post-name{font-size:15px!important}
+  .expert-post-section{margin-bottom:14px!important}
+  .expert-post-action{margin-top:16px!important;padding-top:14px!important}
+  .expert-post-action .btn{padding:10px!important;font-size:13px!important}
+  .ep-label{font-size:9px!important;margin-bottom:5px!important}
+  .ep-chip{padding:4px 10px!important;font-size:11px!important}
+  .ep-tag{padding:3px 8px!important;font-size:10px!important}
+  .expert-post-action .btn{padding:10px!important;font-size:13px!important}
+
+  .req-section .section-title{font-size:11px!important;margin-bottom:6px!important;gap:4px!important}
+  .req-section .section-title svg{width:12px!important;height:12px!important}
+  .req-card{padding:5px 8px!important;gap:5px!important}
+  .req-card>div:first-child{width:20px!important;height:20px!important;font-size:7px!important}
+  .req-card>div:nth-child(2)>div:first-child{font-size:10px!important}
+  .req-card>div:nth-child(2)>div:nth-child(2){font-size:8px!important}
+  .req-card .status-badge{font-size:6px!important;padding:1px 4px!important;border-radius:4px!important}
+  .req-card .btn{padding:2px 5px!important;font-size:8px!important}
+  .req-card .btn svg{width:8px!important;height:8px!important}
+  .role-overview{padding:10px 12px!important;margin-bottom:10px!important}
+  .role-overview-title{font-size:11px!important;margin-bottom:6px!important}
+  .role-overview-title svg{width:13px!important;height:13px!important}
+  .role-overview-row{padding:5px 0!important;gap:8px!important}
+  .role-overview-dot{width:7px!important;height:7px!important}
+  .role-overview-role{font-size:9px!important;width:65px!important}
+  .role-overview-status .check,
+  .role-overview-status .xmark{width:13px!important;height:13px!important}
+  .role-overview-status .assigned-name{font-size:11px!important}
+  .role-overview-status .not-assigned{font-size:10px!important}
+  .role-overview .btn{padding:2px 6px!important}
+  .role-overview .btn svg{width:10px!important;height:10px!important}
+  .ep-slot-bar{height:6px!important}
+  .ep-slot-text{font-size:11px!important}
+  .remove-box .modal-input{font-size:16px!important;padding:12px!important}
+  .remove-field textarea.modal-input{min-height:90px!important}
+}

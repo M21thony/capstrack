@@ -42,4 +42,9 @@ class Team extends Model
     {
         return $this->belongsTo(Student::class, 'leader_id', 'student_id');
     }
+
+    public function expertAssignments()
+    {
+        return $this->hasMany(TeamExpertAssignment::class, 'team_id', 'team_id');
+    }
 }
