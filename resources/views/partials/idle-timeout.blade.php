@@ -104,6 +104,83 @@
   #idle-modal .btn-logout:hover {
     background: #e2e8f0;
   }
+
+  /* ── Responsive: Tablet (≤768px) ── */
+  @media (max-width: 768px) {
+    #idle-modal {
+      padding: 28px 24px 24px!important;
+      max-width: 360px!important;
+      width: 92%!important;
+    }
+    #idle-modal .idle-icon {
+      width: 44px!important;
+      height: 44px!important;
+      margin-bottom: 12px!important;
+    }
+    #idle-modal .idle-icon svg {
+      width: 22px!important;
+      height: 22px!important;
+    }
+    #idle-modal .idle-title {
+      font-size: 18px!important;
+      margin-bottom: 6px!important;
+    }
+    #idle-modal .idle-message {
+      font-size: 13px!important;
+      margin-bottom: 16px!important;
+    }
+    #idle-modal .idle-timer {
+      font-size: 36px!important;
+      margin-bottom: 20px!important;
+    }
+    #idle-modal .idle-actions {
+      gap: 8px!important;
+    }
+    #idle-modal .idle-actions button {
+      padding: 10px 0!important;
+      font-size: 13px!important;
+      border-radius: 8px!important;
+    }
+  }
+
+  /* ── Responsive: Phone (≤480px) ── */
+  @media (max-width: 480px) {
+    #idle-modal {
+      padding: 24px 20px 20px!important;
+      max-width: 320px!important;
+      width: 94%!important;
+      border-radius: 14px!important;
+    }
+    #idle-modal .idle-icon {
+      width: 40px!important;
+      height: 40px!important;
+      margin-bottom: 10px!important;
+    }
+    #idle-modal .idle-icon svg {
+      width: 20px!important;
+      height: 20px!important;
+    }
+    #idle-modal .idle-title {
+      font-size: 16px!important;
+    }
+    #idle-modal .idle-message {
+      font-size: 12px!important;
+      margin-bottom: 14px!important;
+    }
+    #idle-modal .idle-timer {
+      font-size: 30px!important;
+      margin-bottom: 16px!important;
+    }
+    #idle-modal .idle-actions {
+      flex-direction: column!important;
+      gap: 6px!important;
+    }
+    #idle-modal .idle-actions button {
+      width: 100%!important;
+      padding: 12px 0!important;
+      font-size: 13px!important;
+    }
+  }
 </style>
 
 <div id="idle-overlay">

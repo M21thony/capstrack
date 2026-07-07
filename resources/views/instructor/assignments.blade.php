@@ -29,13 +29,9 @@
 .req-leader { font-size: 10px; color: var(--text3); margin-top: 1px; }
 .req-card-right { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
 .req-role-badge { font-size: 9px; font-weight: 600; padding: 2px 8px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.3px; background: var(--accent-light); color: var(--accent3); white-space: nowrap; }
-.req-actions { display: flex; gap: 4px; flex-shrink: 0; }
-
-/* Icon buttons */
-.btn-icon { width: 28px; height: 28px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg2); color: var(--text3); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.15s; padding: 0; }
-.btn-icon:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
-.btn-icon-green:hover { border-color: var(--green); color: var(--green); background: var(--green-bg); }
-.btn-icon-red:hover { border-color: var(--red); color: var(--red); background: var(--red-bg); }
+.req-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.req-actions .btn { font-size: 11px; padding: 5px 10px; border-radius: 6px; }
+.req-actions .btn svg { width: 12px; height: 12px; flex-shrink: 0; }
 .status-dot-sm { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
 .btn { display: inline-flex; align-items: center; gap: 6px; border: none; font-family: 'DM Sans', sans-serif; font-weight: 600; cursor: pointer; transition: all 0.15s; border-radius: 8px; }
 .btn:disabled { opacity: 0.45; cursor: not-allowed; }
@@ -43,15 +39,10 @@
 .btn-soft { background: var(--bg3); color: var(--text2); border: 1px solid var(--border); }
 .btn-soft:hover { background: var(--border); border-color: var(--text3); }
 .btn-soft:active { background: var(--bg2); }
-.btn-solid-green { background: var(--green); color: white; }
-.btn-solid-green:hover { filter: brightness(1.08); }
-.btn-solid-green:active { filter: brightness(0.95); }
-.btn-solid-red { background: var(--red); color: white; }
-.btn-solid-red:hover { filter: brightness(1.08); }
-.btn-solid-red:active { filter: brightness(0.95); }
-.btn-soft-red { background: var(--red-bg); color: var(--red); border: 1px solid var(--red); }
-.btn-soft-red:hover { filter: brightness(1.08); }
-.btn-soft-red:active { filter: brightness(0.95); }
+.modal-actions .btn-success { background: var(--green); color: #fff; border: none; }
+.modal-actions .btn-success:hover { filter: brightness(1.08); }
+.modal-actions .btn-danger { background: var(--red); color: #fff; border: none; }
+.modal-actions .btn-danger:hover { filter: brightness(1.08); }
 
 .empty-state { text-align: center; padding: 40px; color: var(--text3); background: var(--bg2); border-radius: 12px; border: 1px dashed var(--border); }
 .empty-state svg { width: 40px; height: 40px; stroke: var(--border2); margin-bottom: 10px; }
@@ -65,19 +56,23 @@
 /* Sidebar overlay (mobile) */
 .sidebar-overlay{display:none;position:fixed;inset:0;z-index:999;background:rgba(0,0,0,0.5)}
 
-/* ── Responsive: Tablet Portrait (≤768px) ── */
-@media(max-width:768px){
-  .hamburger-btn{display:inline-flex;order:-1}
-  .sidebar{position:fixed!important;z-index:1000;transform:translateX(-100%);transition:transform 0.25s cubic-bezier(0.16,1,0.3,1)}
+/* ── Responsive: Tablet & below — sidebar fixed on left ── */
+@media(max-width:1024px){
+  .hamburger-btn{display:inline-flex}
+  .sidebar{position:fixed!important;left:0!important;top:0!important;height:100vh!important;z-index:1000;transform:translateX(-100%);transition:transform 0.25s cubic-bezier(0.16,1,0.3,1)}
   .sidebar-open .sidebar{transform:translateX(0)}
   .sidebar-open .sidebar-overlay{display:block}
   body.sidebar-open{overflow:hidden}
+}
+
+/* ── Responsive: Tablet Portrait (≤768px) ── */
+@media(max-width:768px){
   .topbar{padding:0 12px!important}
   .topbar .page-title{font-size:15px!important}
   .content{padding:14px!important}
 
-  /* Stat cards: 2 columns */
-  .stat-row{grid-template-columns:repeat(2,1fr)!important;gap:10px!important}
+  /* Stat cards: 3 columns always */
+  .stat-row{grid-template-columns:repeat(3,1fr)!important;gap:8px!important}
   .stat-card{padding:14px 16px!important}
   .stat-card-n{font-size:22px!important}
 
@@ -85,15 +80,16 @@
   .tab-bar{width:100%!important;overflow-x:auto!important;flex-wrap:nowrap!important;gap:2px!important}
   .tab-btn{padding:7px 14px!important;font-size:12px!important;white-space:nowrap!important}
 
-  /* Request cards: compact row */
-  .req-card{padding:10px 12px!important;gap:8px!important}
+  /* Request cards: stack on mobile */
+  .req-card{flex-direction:column!important;align-items:stretch!important;padding:12px!important;gap:8px!important}
+  .req-card-left{gap:8px!important}
   .req-team-icon{width:30px!important;height:30px!important;font-size:11px!important}
   .req-team-name{font-size:12px!important}
   .req-project{font-size:10px!important}
   .req-leader{font-size:9px!important}
+  .req-card-right{justify-content:space-between!important;padding-top:6px!important;border-top:1px solid var(--border)!important}
   .req-role-badge{font-size:8px!important;padding:2px 6px!important}
-  .btn-icon{width:26px!important;height:26px!important}
-  .btn-icon svg{width:12px!important;height:12px!important}
+  .req-actions .btn{font-size:10px!important;padding:5px 8px!important}
 
   /* Modals: full-width */
   .modal-box{width:94%!important;padding:20px!important;max-width:94%!important}
@@ -113,19 +109,19 @@
 /* ── Responsive: Phone (≤480px) ── */
 @media(max-width:480px){
   .content{padding:10px!important}
-  .stat-row{grid-template-columns:1fr!important;gap:8px!important}
+  .stat-row{grid-template-columns:repeat(3,1fr)!important;gap:6px!important}
   .stat-card{padding:12px 14px!important}
-  .stat-card-n{font-size:20px!important}
-  .stat-card-l{font-size:11px!important}
+  .stat-card-n{font-size:18px!important}
+  .stat-card-l{font-size:10px!important}
 
-  .req-card{padding:8px 10px!important;gap:6px!important}
+  .req-card{padding:10px!important;gap:6px!important}
   .req-team-icon{width:26px!important;height:26px!important;font-size:10px!important}
   .req-team-name{font-size:11px!important}
   .req-project{font-size:9px!important}
   .req-leader{font-size:8px!important}
   .req-role-badge{font-size:7px!important;padding:1px 5px!important}
-  .btn-icon{width:24px!important;height:24px!important}
-  .btn-icon svg{width:11px!important;height:11px!important}
+  .req-card-right{padding-top:4px!important}
+  .req-actions .btn{font-size:9px!important;padding:4px 6px!important}
 
   .tab-btn{padding:6px 10px!important;font-size:11px!important}
   .tab-bar{gap:2px!important}
@@ -134,7 +130,7 @@
   .modal-box h3{font-size:14px!important}
   .modal-actions{flex-direction:column!important}
   .modal-actions .btn{width:100%!important;justify-content:center!important;padding:10px!important}
-  .modal-box textarea{font-size:12px!important;min-height:60px!important}
+  .modal-box textarea{font-size:14px!important;min-height:80px!important;padding:12px 14px!important}
   .confirm-box .confirm-icon{width:36px!important;height:36px!important}
   .confirm-box .confirm-icon svg{width:18px!important;height:18px!important}
 
@@ -147,8 +143,9 @@
 .modal-box h3 { font-size: 17px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
 .modal-box .modal-sub { font-size: 13px; color: var(--text3); margin-bottom: 16px; }
 .modal-box .modal-divider { height: 1px; background: var(--border); margin: 14px 0; }
-.modal-box textarea { width: 100%; padding: 10px 12px; border-radius: 8px; border: 1.5px solid var(--border); background: var(--bg3); color: var(--text); font-size: 13px; font-family: 'DM Sans', sans-serif; outline: none; resize: vertical; min-height: 80px; box-sizing: border-box; }
-.modal-box textarea:focus { border-color: var(--red); }
+.modal-box textarea { width: 100%; padding: 14px 16px; border-radius: 12px; border: 1.5px solid var(--border); background: var(--bg2); color: var(--text); font-size: 15px; font-family: 'DM Sans', sans-serif; outline: none; resize: vertical; min-height: 100px; box-sizing: border-box; transition: border-color 0.2s, box-shadow 0.2s; line-height: 1.5; }
+.modal-box textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+.modal-box textarea::placeholder { color: var(--text3); font-size: 14px; }
 .modal-actions { display: flex; gap: 10px; margin-top: 18px; }
 .modal-actions .btn { flex: 1; justify-content: center; padding: 10px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: 0.15s; border: none; font-family: 'DM Sans', sans-serif; display: inline-flex; align-items: center; gap: 6px; }
 .modal-actions .btn:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -187,17 +184,17 @@
 
 <div class="main">
   <div class="topbar">
-    <div class="page-title">Team Assignments</div>
-    <div class="topbar-actions">
       <button class="hamburger-btn" onclick="toggleSidebar()" aria-label="Toggle sidebar">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
       </button>
-      <div class="notif-btn">
-        <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-        <div class="notif-dot"></div>
+      <div class="page-title">Team Assignments</div>
+      <div class="topbar-actions">
+        <div class="notif-btn">
+          <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          <div class="notif-dot"></div>
+        </div>
       </div>
     </div>
-  </div>
 
   <div class="content">
     <div class="stat-row">
@@ -239,14 +236,17 @@
           <div class="req-card-right">
             <span class="req-role-badge">{{ ucfirst($assignment->role?->role_name ?? '') }}</span>
             <div class="req-actions">
-              <button class="btn btn-icon" onclick="openTeamModal({{ $assignment->assignment_id }})" title="View Details">
+              <button class="btn btn-ghost" onclick="openTeamModal({{ $assignment->assignment_id }})" title="View Details">
                 <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                View Details
               </button>
-              <button class="btn btn-icon btn-icon-green" onclick="openApproveModal({{ $assignment->assignment_id }}, '{{ $assignment->team?->team_name ?? 'Unknown' }}', '{{ ucfirst($assignment->role?->role_name ?? '') }}', '{{ $assignment->team?->leader?->f_name ?? '' }}')" title="Approve">
+              <button class="btn btn-success" onclick="openApproveModal({{ $assignment->assignment_id }}, '{{ $assignment->team?->team_name ?? 'Unknown' }}', '{{ ucfirst($assignment->role?->role_name ?? '') }}', '{{ $assignment->team?->leader?->f_name ?? '' }}')" title="Approve">
                 <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                Approve
               </button>
-              <button class="btn btn-icon btn-icon-red" onclick="openRejectModal({{ $assignment->assignment_id }}, '{{ $assignment->team?->team_name ?? 'Unknown' }}', '{{ ucfirst($assignment->role?->role_name ?? '') }}')" title="Reject">
+              <button class="btn btn-danger" onclick="openRejectModal({{ $assignment->assignment_id }}, '{{ $assignment->team?->team_name ?? 'Unknown' }}', '{{ ucfirst($assignment->role?->role_name ?? '') }}')" title="Reject">
                 <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                Reject
               </button>
             </div>
           </div>
@@ -274,11 +274,13 @@
             <span class="req-role-badge">{{ ucfirst($assignment->role?->role_name ?? '') }}</span>
             <span class="status-dot-sm" style="background:var(--green);" title="Approved"></span>
             <div class="req-actions">
-              <button class="btn btn-icon" onclick="openTeamModal({{ $assignment->assignment_id }})" title="View Details">
+              <button class="btn btn-ghost" onclick="openTeamModal({{ $assignment->assignment_id }})" title="View Details">
                 <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                View Details
               </button>
-              <button class="btn btn-icon btn-icon-red" onclick="openInstructorRemoveModal({{ $assignment->assignment_id }}, '{{ $assignment->team?->team_name ?? 'Unknown' }}', '{{ ucfirst($assignment->role?->role_name ?? '') }}')" title="Remove">
+              <button class="btn btn-danger" onclick="openInstructorRemoveModal({{ $assignment->assignment_id }}, '{{ $assignment->team?->team_name ?? 'Unknown' }}', '{{ ucfirst($assignment->role?->role_name ?? '') }}')" title="Remove">
                 <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                Remove
               </button>
             </div>
           </div>
@@ -306,11 +308,13 @@
             <span class="req-role-badge">{{ ucfirst($assignment->role?->role_name ?? '') }}</span>
             <span class="status-dot-sm" style="background:var(--red);" title="Rejected"></span>
             <div class="req-actions">
-              <button class="btn btn-icon" onclick="openTeamModal({{ $assignment->assignment_id }})" title="View Details">
+              <button class="btn btn-ghost" onclick="openTeamModal({{ $assignment->assignment_id }})" title="View Details">
                 <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                View Details
               </button>
-              <button class="btn btn-icon btn-icon-red" onclick="openInstructorRemoveModal({{ $assignment->assignment_id }}, '{{ $assignment->team?->team_name ?? 'Unknown' }}', '{{ ucfirst($assignment->role?->role_name ?? '') }}')" title="Remove">
+              <button class="btn btn-danger" onclick="openInstructorRemoveModal({{ $assignment->assignment_id }}, '{{ $assignment->team?->team_name ?? 'Unknown' }}', '{{ ucfirst($assignment->role?->role_name ?? '') }}')" title="Remove">
                 <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                Remove
               </button>
             </div>
           </div>
@@ -389,7 +393,7 @@
     <div class="confirm-detail" id="approve-detail"></div>
     <div class="modal-actions" style="margin-top: 18px;">
       <button class="btn btn-soft" onclick="closeModal('approve-modal')">Cancel</button>
-      <button class="btn btn-solid-green" id="btn-confirm-approve" onclick="confirmApprove()" style="flex:1;justify-content:center;padding:10px;border-radius:8px;border:none;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px;">
+      <button class="btn btn-success" id="btn-confirm-approve" onclick="confirmApprove()">
         <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
         Yes, Approve
       </button>
@@ -405,14 +409,14 @@
 
     <div class="modal-divider"></div>
 
-    <label style="font-size: 12px; font-weight: 600; color: var(--text2); display: block; margin-bottom: 6px;">
+    <label style="font-size: 13px; font-weight: 600; color: var(--text2); display: block; margin-bottom: 8px;">
       Reason for Rejection <span style="color: var(--text3); font-weight: 400;">(optional)</span>
     </label>
     <textarea id="reject-reason" placeholder="The team will be notified of your reason..."></textarea>
 
     <div class="modal-actions">
       <button class="btn btn-soft" onclick="closeModal('reject-modal')">Cancel</button>
-      <button class="btn btn-solid-red" id="btn-confirm-reject" onclick="confirmReject()" style="flex:1;justify-content:center;padding:10px;border-radius:8px;border:none;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px;">
+      <button class="btn btn-danger" id="btn-confirm-reject" onclick="confirmReject()">
         <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         Reject Request
       </button>
@@ -431,7 +435,7 @@
     <div class="confirm-detail" id="instructor-remove-detail"></div>
     <div class="modal-actions" style="margin-top: 18px;">
       <button class="btn btn-soft" onclick="closeModal('instructor-remove-modal')">Cancel</button>
-      <button class="btn btn-solid-red" id="btn-confirm-instructor-remove" onclick="confirmInstructorRemove()" style="flex:1;justify-content:center;padding:10px;border-radius:8px;border:none;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px;">
+      <button class="btn btn-danger" id="btn-confirm-instructor-remove" onclick="confirmInstructorRemove()">
         <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         Yes, Remove
       </button>
