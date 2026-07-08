@@ -371,7 +371,12 @@
               {{ $_isFull ? 'FULL CAPACITY' : 'SLOTS: '.$_slotsUsed.'/'.$_maxSlots }}
             </div>
 
-            @if($team && $isLeader)
+            @if($team && $isLeader && !$teamConfirmed)
+              <button class="btn btn-sm btn-full btn-muted" disabled>
+                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2"><path d="M12 15v2m-6 4h12a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2zm10-10V7a4 4 0 0 0-8 0v4h8z"/></svg>
+                Verified First
+              </button>
+            @elseif($team && $isLeader)
               @php
                 $teamAssignmentsForExpert = $assignments->where('expert_id', $expert->expert_id);
                 $hasApproved = $teamAssignmentsForExpert->where('status', 'approved')->isNotEmpty();

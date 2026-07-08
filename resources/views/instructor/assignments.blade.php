@@ -176,6 +176,11 @@
 .msg-toast.error { border-left: 4px solid var(--red); }
 .msg-toast.show { display: flex; }
 @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Skeleton */
+@keyframes sk-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+.sk-overlay { background: var(--bg); min-height: calc(100vh - 60px); padding: 20px; }
+.sk { background: linear-gradient(90deg, var(--bg4) 25%, var(--bg2) 50%, var(--bg4) 75%); background-size: 200% 100%; animation: sk-shimmer 1.5s ease-in-out infinite; border-radius: 8px; }
 </style>
 </head>
 <body>
@@ -196,135 +201,156 @@
       </div>
     </div>
 
-  <div class="content">
-    <div class="stat-row">
-      <div class="stat-card">
-        <div class="stat-card-n">{{ $pendingAssignments->count() }}</div>
-        <div class="stat-card-l">Pending Requests</div>
+  <div id="skeleton-content" class="sk-overlay">
+    <div class="content" style="padding-top:0;">
+      <div class="stat-row">
+        <div class="sk" style="height:78px;border-radius:14px;"></div>
+        <div class="sk" style="height:78px;border-radius:14px;"></div>
+        <div class="sk" style="height:78px;border-radius:14px;"></div>
       </div>
-      <div class="stat-card">
-        <div class="stat-card-n">{{ $approvedAssignments->count() }}</div>
-        <div class="stat-card-l">Approved</div>
-        <div class="stat-card-sub">{{ $currentSlots }}/{{ $maxSlots }} slots used</div>
+      <div style="display:flex;gap:6px;margin-bottom:20px;">
+        <div class="sk" style="height:32px;width:88px;border-radius:8px;"></div>
+        <div class="sk" style="height:32px;width:88px;border-radius:8px;"></div>
+        <div class="sk" style="height:32px;width:78px;border-radius:8px;"></div>
       </div>
-      <div class="stat-card">
-        <div class="stat-card-n">{{ $rejectedAssignments->count() }}</div>
-        <div class="stat-card-l">Rejected</div>
-        <div class="stat-card-sub">Recent history</div>
+      <div class="sk" style="height:48px;border-radius:10px;margin-bottom:8px;"></div>
+      <div class="sk" style="height:48px;border-radius:10px;margin-bottom:8px;width:92%;"></div>
+      <div class="sk" style="height:48px;border-radius:10px;margin-bottom:8px;"></div>
+      <div class="sk" style="height:48px;border-radius:10px;margin-bottom:8px;width:85%;"></div>
+    </div>
+  </div>
+
+  <div id="real-content" style="display:none;">
+    <div class="content">
+      <div class="stat-row">
+        <div class="stat-card">
+          <div class="stat-card-n">{{ $pendingAssignments->count() }}</div>
+          <div class="stat-card-l">Pending Requests</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-n">{{ $approvedAssignments->count() }}</div>
+          <div class="stat-card-l">Approved</div>
+          <div class="stat-card-sub">{{ $currentSlots }}/{{ $maxSlots }} slots used</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-n">{{ $rejectedAssignments->count() }}</div>
+          <div class="stat-card-l">Rejected</div>
+          <div class="stat-card-sub">Recent history</div>
+        </div>
       </div>
-    </div>
 
-    <div class="tab-bar">
-      <button class="tab-btn active" onclick="switchTab('pending', this)">Pending ({{ $pendingAssignments->count() }})</button>
-      <button class="tab-btn" onclick="switchTab('approved', this)">Approved ({{ $approvedAssignments->count() }})</button>
-      <button class="tab-btn" onclick="switchTab('rejected', this)">Rejected ({{ $rejectedAssignments->count() }})</button>
-    </div>
+      <div class="tab-bar">
+        <button class="tab-btn active" onclick="switchTab('pending', this)">Pending ({{ $pendingAssignments->count() }})</button>
+        <button class="tab-btn" onclick="switchTab('approved', this)">Approved ({{ $approvedAssignments->count() }})</button>
+        <button class="tab-btn" onclick="switchTab('rejected', this)">Rejected ({{ $rejectedAssignments->count() }})</button>
+      </div>
 
-    <div id="tab-pending" class="tab-content active">
-      @forelse($pendingAssignments as $assignment)
-        <div class="req-card">
-          <div class="req-card-left">
-            <div class="req-team-icon">{{ substr($assignment->team?->team_name ?? 'T', 0, 2) }}</div>
-            <div class="req-info">
-              <div class="req-team-name">{{ $assignment->team?->team_name ?? 'Unknown Team' }}</div>
-              <div class="req-project">{{ $assignment->team?->project_title ?? 'No project title' }}</div>
-              @if($assignment->team && $assignment->team->leader)
-                <div class="req-leader">{{ $assignment->team->leader->displayFirstName() ?? $assignment->team->leader->f_name ?? '' }}</div>
-              @endif
+      <div id="tab-pending" class="tab-content active">
+        @forelse($pendingAssignments as $assignment)
+          <div class="req-card">
+            <div class="req-card-left">
+              <div class="req-team-icon">{{ substr($assignment->team?->team_name ?? 'T', 0, 2) }}</div>
+              <div class="req-info">
+                <div class="req-team-name">{{ $assignment->team?->team_name ?? 'Unknown Team' }}</div>
+                <div class="req-project">{{ $assignment->team?->project_title ?? 'No project title' }}</div>
+                @if($assignment->team && $assignment->team->leader)
+                  <div class="req-leader">{{ $assignment->team->leader->displayFirstName() ?? $assignment->team->leader->f_name ?? '' }}</div>
+                @endif
+              </div>
+            </div>
+            <div class="req-card-right">
+              <span class="req-role-badge">{{ ucfirst($assignment->role?->role_name ?? '') }}</span>
+              <div class="req-actions">
+                <button class="btn btn-ghost" onclick="openTeamModal({{ $assignment->assignment_id }})" title="View Details">
+                  <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                  View Details
+                </button>
+                <button class="btn btn-success" onclick="openApproveModal({{ $assignment->assignment_id }}, '{{ $assignment->team?->team_name ?? 'Unknown' }}', '{{ ucfirst($assignment->role?->role_name ?? '') }}', '{{ $assignment->team?->leader?->f_name ?? '' }}')" title="Approve">
+                  <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                  Approve
+                </button>
+                <button class="btn btn-danger" onclick="openRejectModal({{ $assignment->assignment_id }}, '{{ $assignment->team?->team_name ?? 'Unknown' }}', '{{ ucfirst($assignment->role?->role_name ?? '') }}')" title="Reject">
+                  <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  Reject
+                </button>
+              </div>
             </div>
           </div>
-          <div class="req-card-right">
-            <span class="req-role-badge">{{ ucfirst($assignment->role?->role_name ?? '') }}</span>
-            <div class="req-actions">
-              <button class="btn btn-ghost" onclick="openTeamModal({{ $assignment->assignment_id }})" title="View Details">
-                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-                View Details
-              </button>
-              <button class="btn btn-success" onclick="openApproveModal({{ $assignment->assignment_id }}, '{{ $assignment->team?->team_name ?? 'Unknown' }}', '{{ ucfirst($assignment->role?->role_name ?? '') }}', '{{ $assignment->team?->leader?->f_name ?? '' }}')" title="Approve">
-                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-                Approve
-              </button>
-              <button class="btn btn-danger" onclick="openRejectModal({{ $assignment->assignment_id }}, '{{ $assignment->team?->team_name ?? 'Unknown' }}', '{{ ucfirst($assignment->role?->role_name ?? '') }}')" title="Reject">
-                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                Reject
-              </button>
-            </div>
+        @empty
+          <div class="empty-state">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+            <p>No pending team requests at the moment.</p>
           </div>
-        </div>
-      @empty
-        <div class="empty-state">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
-          <p>No pending team requests at the moment.</p>
-        </div>
-      @endforelse
-    </div>
+        @endforelse
+      </div>
 
-    <div id="tab-approved" class="tab-content">
-      @forelse($approvedAssignments as $assignment)
-        <div class="req-card">
-          <div class="req-card-left">
-            <div class="req-team-icon" style="background: var(--green);">{{ substr($assignment->team?->team_name ?? 'T', 0, 2) }}</div>
-            <div class="req-info">
-              <div class="req-team-name">{{ $assignment->team?->team_name ?? 'Unknown Team' }}</div>
-              <div class="req-project">{{ $assignment->team?->project_title ?? 'No project title' }}</div>
-              <div class="req-leader">Assigned {{ $assignment->created_at ? $assignment->created_at->diffForHumans() : '' }}</div>
+      <div id="tab-approved" class="tab-content">
+        @forelse($approvedAssignments as $assignment)
+          <div class="req-card">
+            <div class="req-card-left">
+              <div class="req-team-icon" style="background: var(--green);">{{ substr($assignment->team?->team_name ?? 'T', 0, 2) }}</div>
+              <div class="req-info">
+                <div class="req-team-name">{{ $assignment->team?->team_name ?? 'Unknown Team' }}</div>
+                <div class="req-project">{{ $assignment->team?->project_title ?? 'No project title' }}</div>
+                <div class="req-leader">Assigned {{ $assignment->created_at ? $assignment->created_at->diffForHumans() : '' }}</div>
+              </div>
+            </div>
+            <div class="req-card-right">
+              <span class="req-role-badge">{{ ucfirst($assignment->role?->role_name ?? '') }}</span>
+              <span class="status-dot-sm" style="background:var(--green);" title="Approved"></span>
+              <div class="req-actions">
+                <button class="btn btn-ghost" onclick="openTeamModal({{ $assignment->assignment_id }})" title="View Details">
+                  <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                  View Details
+                </button>
+                <button class="btn btn-danger" onclick="openInstructorRemoveModal({{ $assignment->assignment_id }}, '{{ $assignment->team?->team_name ?? 'Unknown' }}', '{{ ucfirst($assignment->role?->role_name ?? '') }}')" title="Remove">
+                  <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  Remove
+                </button>
+              </div>
             </div>
           </div>
-          <div class="req-card-right">
-            <span class="req-role-badge">{{ ucfirst($assignment->role?->role_name ?? '') }}</span>
-            <span class="status-dot-sm" style="background:var(--green);" title="Approved"></span>
-            <div class="req-actions">
-              <button class="btn btn-ghost" onclick="openTeamModal({{ $assignment->assignment_id }})" title="View Details">
-                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-                View Details
-              </button>
-              <button class="btn btn-danger" onclick="openInstructorRemoveModal({{ $assignment->assignment_id }}, '{{ $assignment->team?->team_name ?? 'Unknown' }}', '{{ ucfirst($assignment->role?->role_name ?? '') }}')" title="Remove">
-                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                Remove
-              </button>
-            </div>
+        @empty
+          <div class="empty-state">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="20 6 9 17 4 12"/></svg>
+            <p>No approved team assignments yet.</p>
           </div>
-        </div>
-      @empty
-        <div class="empty-state">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="20 6 9 17 4 12"/></svg>
-          <p>No approved team assignments yet.</p>
-        </div>
-      @endforelse
-    </div>
+        @endforelse
+      </div>
 
-    <div id="tab-rejected" class="tab-content">
-      @forelse($rejectedAssignments as $assignment)
-        <div class="req-card">
-          <div class="req-card-left">
-            <div class="req-team-icon" style="background: var(--red);">{{ substr($assignment->team?->team_name ?? 'T', 0, 2) }}</div>
-            <div class="req-info">
-              <div class="req-team-name">{{ $assignment->team?->team_name ?? 'Unknown Team' }}</div>
-              <div class="req-project">{{ $assignment->team?->project_title ?? 'No project title' }}</div>
-              <div class="req-leader">Rejected {{ $assignment->updated_at ? $assignment->updated_at->diffForHumans() : '' }}</div>
+      <div id="tab-rejected" class="tab-content">
+        @forelse($rejectedAssignments as $assignment)
+          <div class="req-card">
+            <div class="req-card-left">
+              <div class="req-team-icon" style="background: var(--red);">{{ substr($assignment->team?->team_name ?? 'T', 0, 2) }}</div>
+              <div class="req-info">
+                <div class="req-team-name">{{ $assignment->team?->team_name ?? 'Unknown Team' }}</div>
+                <div class="req-project">{{ $assignment->team?->project_title ?? 'No project title' }}</div>
+                <div class="req-leader">Rejected {{ $assignment->updated_at ? $assignment->updated_at->diffForHumans() : '' }}</div>
+              </div>
+            </div>
+            <div class="req-card-right">
+              <span class="req-role-badge">{{ ucfirst($assignment->role?->role_name ?? '') }}</span>
+              <span class="status-dot-sm" style="background:var(--red);" title="Rejected"></span>
+              <div class="req-actions">
+                <button class="btn btn-ghost" onclick="openTeamModal({{ $assignment->assignment_id }})" title="View Details">
+                  <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                  View Details
+                </button>
+                <button class="btn btn-danger" onclick="openInstructorRemoveModal({{ $assignment->assignment_id }}, '{{ $assignment->team?->team_name ?? 'Unknown' }}', '{{ ucfirst($assignment->role?->role_name ?? '') }}')" title="Remove">
+                  <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  Remove
+                </button>
+              </div>
             </div>
           </div>
-          <div class="req-card-right">
-            <span class="req-role-badge">{{ ucfirst($assignment->role?->role_name ?? '') }}</span>
-            <span class="status-dot-sm" style="background:var(--red);" title="Rejected"></span>
-            <div class="req-actions">
-              <button class="btn btn-ghost" onclick="openTeamModal({{ $assignment->assignment_id }})" title="View Details">
-                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-                View Details
-              </button>
-              <button class="btn btn-danger" onclick="openInstructorRemoveModal({{ $assignment->assignment_id }}, '{{ $assignment->team?->team_name ?? 'Unknown' }}', '{{ ucfirst($assignment->role?->role_name ?? '') }}')" title="Remove">
-                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                Remove
-              </button>
-            </div>
+        @empty
+          <div class="empty-state">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+            <p>No rejected requests.</p>
           </div>
-        </div>
-      @empty
-        <div class="empty-state">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
-          <p>No rejected requests.</p>
-        </div>
-      @endforelse
+        @endforelse
+      </div>
     </div>
   </div>
 </div>
@@ -446,6 +472,25 @@
 <div class="msg-toast" id="msg-toast"></div>
 
 <script>
+document.addEventListener('DOMContentLoaded', () => {
+  const skel = document.getElementById('skeleton-content');
+  const real = document.getElementById('real-content');
+  if (skel && real) {
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        skel.style.transition = 'opacity 0.3s ease';
+        skel.style.opacity = '0';
+        real.style.display = 'block';
+        real.style.transition = 'opacity 0.35s ease';
+        setTimeout(() => {
+          skel.remove();
+          real.style.transition = '';
+        }, 350);
+      }, 600);
+    });
+  }
+});
+
 function openModal(id) { document.getElementById(id).classList.add('open'); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 

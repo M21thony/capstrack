@@ -66,6 +66,7 @@ class ExpertController extends Controller
             'assignments' => $assignments,
             'team' => $team,
             'isLeader' => $isLeader,
+            'teamConfirmed' => $team?->is_confirmed ?? false,
             'stats' => $stats,
             'roleAssignments' => $roleAssignments,
         ]);

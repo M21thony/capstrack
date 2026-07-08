@@ -73,7 +73,7 @@ class TeamController extends Controller
             ->with('student.team')
             ->get()
             ->filter(function ($recruit) {
-                $team = $recruit->student->team;
+                $team = $recruit->student?->team;
 
                 if (! $team) {
                     return false;
@@ -165,6 +165,14 @@ class TeamController extends Controller
         ]);
 
         $student = $request->user();
+
+        if (StudentSchoolYear::where('student_id', $student->student_id)->whereNotNull('team_id')->exists()) {
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'message' => 'You are already in a team.'], 422);
+            }
+
+            return redirect()->route('student.team')->with('error', 'You are already in a team.');
+        }
 
         $team = Team::create([
             'team_name' => $validated['team_name'],
@@ -337,9 +345,32 @@ class TeamController extends Controller
         $isLeader = $team && (int) $team->leader_id === (int) $studentId;
 
         if ($isLeader) {
+            $memberCount = StudentSchoolYear::where('team_id', $team->team_id)->count();
+
+            if ($memberCount > 1) {
+                return redirect()
+                    ->route('student.team')
+                    ->with('error', 'As the team leader, you cannot leave directly. Transfer leadership to another member first.');
+            }
+
+            // Solo leader — terminate the team entirely
+            $teamName = $team->team_name;
+            $teamId = $team->team_id;
+            StudentSchoolYear::where('team_id', $teamId)->update([
+                'team_id' => null,
+                's_role_id' => null,
+            ]);
+            $team->delete();
+
+            $this->logActivity(
+                $studentId,
+                'team_left',
+                'Left team <strong>'.e($teamName ?? 'the team').'</strong> (team terminated)',
+            );
+
             return redirect()
                 ->route('student.team')
-                ->with('error', 'As the team leader, you cannot leave directly. Transfer leadership to another member first.');
+                ->with('status', 'You have left the team and the team has been terminated.');
         }
 
         // Regular member leaves — just unassign them

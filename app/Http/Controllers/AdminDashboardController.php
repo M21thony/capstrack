@@ -21,8 +21,8 @@ class AdminDashboardController extends Controller
 
         $totalStudents = Student::count();
         $totalExperts = CapstoneExpert::where('approved_status', true)->count();
-        $activeTeams = Team::where('team_status', 'on-going')->count();
-        $completedTeams = Team::where('team_status', 'complete')->count();
+        $activeTeams = Team::where('is_confirmed', false)->where('team_status', '!=', 'closed')->count();
+        $completedTeams = Team::where('is_confirmed', true)->count();
         $pendingApprovals = CapstoneExpert::where('approved_status', false)
             ->whereNull('rejection_reason')
             ->count();

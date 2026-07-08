@@ -49,6 +49,10 @@ class TeamController extends Controller
 
         $student = $request->user();
 
+        if (StudentSchoolYear::where('student_id', $student->student_id)->whereNotNull('team_id')->exists()) {
+            return response()->json(['message' => 'You are already in a team.'], 422);
+        }
+
         $team = Team::create([
             'team_name' => $validated['team_name'],
             'project_title' => $validated['project_title'] ?? null,
@@ -225,9 +229,24 @@ class TeamController extends Controller
         $isLeader = (int) $team->leader_id === (int) $studentId;
 
         if ($isLeader) {
+            $memberCount = StudentSchoolYear::where('team_id', $team->team_id)->count();
+
+            if ($memberCount > 1) {
+                return response()->json([
+                    'message' => 'As the team leader, you cannot leave directly. Transfer leadership to another member first.',
+                ], 422);
+            }
+
+            // Solo leader — terminate the team
+            StudentSchoolYear::where('team_id', $team->team_id)->update([
+                'team_id' => null,
+                's_role_id' => null,
+            ]);
+            $team->delete();
+
             return response()->json([
-                'message' => 'As the team leader, you cannot leave directly. Transfer leadership to another member first.',
-            ], 422);
+                'message' => 'You have left the team and the team has been terminated.',
+            ]);
         }
 
         $studentSy = StudentSchoolYear::where('student_id', $studentId)->first();

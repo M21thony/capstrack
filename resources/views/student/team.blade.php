@@ -79,6 +79,7 @@
             'closed' => ['bg' => '#6b7280', 'label' => 'CLOSED'],
           ];
           $statusData = $statusColors[$myTeam->team_status] ?? ['bg' => '#16a34a', 'label' => 'ON-GOING'];
+          $isVerified = $myTeam->is_confirmed;
         @endphp
         <div style="flex: 1; min-width: 0;">
           @if($myTeam->project_title)
@@ -88,12 +89,18 @@
             <div style="font-size: 16px; font-weight: 600; color: var(--text3);">{{ $myTeam->team_name }}</div>
             <div class="team-status-badge team-status-badge--inline" style="background: {{ $statusData['bg'] }}; color: #fff; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; display: flex; align-items: center; gap: 6px;">
               <span style="width: 6px; height: 6px; border-radius: 50%; background: #fff; display: inline-block;"></span>{{ $statusData['label'] }}
+              @if($isVerified)
+                <span style="background:rgba(255,255,255,0.25);padding:1px 6px;border-radius:10px;font-size:9px;">✓ Verified</span>
+              @endif
             </div>
           </div>
           <div style="font-size: 12px; color: var(--text3); margin-top: 4px;">{{ auth()->user()->studentSchoolYear()->first()?->program ?? 'BSIT-4A' }} · Capstone SY 2025–2026</div>
         </div>
         <div class="team-status-badge team-status-badge--desktop" style="background: {{ $statusData['bg'] }}; color: #fff; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; display: flex; align-items: center; gap: 6px;">
           <span style="width: 6px; height: 6px; border-radius: 50%; background: #fff; display: inline-block;"></span>{{ $statusData['label'] }}
+          @if($isVerified)
+            <span style="background:rgba(255,255,255,0.25);padding:1px 6px;border-radius:10px;font-size:9px;">✓ Verified</span>
+          @endif
         </div>
       </div>
 
@@ -185,11 +192,16 @@
       </div>
 
       <div class="team-actions" style="margin-top: 18px; display: flex; justify-content: flex-end; gap: 8px; padding-top: 10px; border-top: 1px solid var(--border);">
-        @if($isLeader && !$myTeam->is_confirmed)
+        @if($isLeader && $myTeam->team_status === 'complete' && !$myTeam->is_confirmed)
           <button type="button" onclick="showConfirmTeam()" style="padding: 5px 10px; border-radius: 6px; border: 1px solid #bbf7d0; background: #f0fdf4; color: #15803d; font-size: 10px; font-weight: 700; cursor: pointer;">Confirm Team</button>
+        @elseif($isLeader && $myTeam->is_confirmed)
+          <span style="padding: 5px 10px; border-radius: 6px; border: 1px solid #bbf7d0; background: #f0fdf4; color: #15803d; font-size: 10px; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+            Verified
+          </span>
         @endif
         @if($isLeader)
-          <button type="button" onclick="openTransferModal()" style="padding: 5px 10px; border-radius: 6px; border: 1px solid #fde68a; background: #fffbeb; color: #92400e; font-size: 10px; font-weight: 700; cursor: pointer;">Transfer Leadership</button>
+          <button type="button" onclick="@if($teamMembers->count() > 1)openTransferModal()@else void(0)@endif" style="padding: 5px 10px; border-radius: 6px; border: 1px solid #fde68a; background: #fffbeb; color: #92400e; font-size: 10px; font-weight: 700; @if($teamMembers->count() <= 1)cursor: not-allowed; opacity: 0.5;@else cursor: pointer;@endif">Transfer Leadership</button>
         @endif
         @if($isLeader)
           <button type="button" onclick="openEditTeamModal()" style="padding: 5px 10px; border-radius: 6px; border: 1px solid #bfdbfe; background: #eff6ff; color: #1d4ed8; font-size: 10px; font-weight: 700; cursor: pointer;">Update Team</button>
@@ -266,11 +278,6 @@
                 <button type="button" class="btn-icon" style="width:24px; height:24px; margin-right:4px;" onclick="event.stopPropagation(); openEditModal()">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                 </button>
-                <form method="POST" action="{{ route('recruitment.destroy', $myRecruitment) }}" id="delete-recruitment-form" style="display:inline;">
-                  @csrf
-                  @method('DELETE')
-                  <button type="button" class="btn-icon" style="width:24px; height:24px;" onclick="event.stopPropagation(); openDeleteModal()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4 a2 2 0 0 1 2 2v2"></path></svg></button>
-                </form>
               </div>
               <div class="avatar-ring {{ $ringClass }}">
                 @if (auth()->user()->avatarUrl())
@@ -660,7 +667,8 @@ const individualPresets = ["Leadership", "Research", "Design", "Testing", "Front
 
 @if($myTeam)
 function confirmLeaveTeam() {
-    @if($isLeader)
+    @php $teamMemberCount = \App\Models\StudentSchoolYear::where('team_id', $myTeam->team_id)->count(); @endphp
+    @if($isLeader && $teamMemberCount > 1)
     showConfirm({
         title: 'Cannot Leave',
         message: 'As the team leader, you cannot leave the team directly. Please <strong>Transfer Leadership</strong> to another member first, then you can leave as a regular member.',
@@ -669,6 +677,17 @@ function confirmLeaveTeam() {
         confirmClass: 'primary',
         onConfirm: function() {
             openTransferModal();
+        }
+    });
+    @elseif($isLeader)
+    showConfirm({
+        title: 'Leave & Terminate Team',
+        message: 'You are the only member. Leaving will <strong>permanently terminate</strong> <strong>{{ addslashes($myTeam->team_name) }}</strong>. This cannot be undone.',
+        icon: 'leave',
+        confirmText: 'Yes, Leave & Terminate',
+        confirmClass: 'danger',
+        onConfirm: function() {
+            document.getElementById('leave-team-form').submit();
         }
     });
     @else
@@ -686,13 +705,9 @@ function confirmLeaveTeam() {
 }
 
 function showConfirmTeam() {
-    @php
-      $teamMemberCount = \App\Models\StudentSchoolYear::where('team_id', $myTeam->team_id)->count();
-      $teamIsComplete = $teamMemberCount >= $memberCount;
-    @endphp
     showConfirm({
         title: 'Confirm Team',
-        message: '@if($teamIsComplete)Are you sure you want to confirm <strong>{{ addslashes($myTeam->team_name) }}</strong>? Once confirmed, the team will be submitted to the admin and instructor dashboard. Your recruitment post can still be edited and members can still be managed.@else<strong>Warning:</strong> Your team is not yet complete ({{ $teamMemberCount }}/{{ $memberCount }} members). Are you sure you want to confirm? Once confirmed, the team will be submitted to the admin and instructor dashboard.@endif',
+        message: 'Are you sure you want to confirm <strong>{{ addslashes($myTeam->team_name) }}</strong>? Once verified, the team will be marked as completed in the admin dashboard.',
         icon: 'team',
         confirmText: 'Yes, Confirm',
         confirmClass: 'success',

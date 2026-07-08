@@ -9,7 +9,7 @@ use App\Http\Controllers\Api\TeamController;
 use Illuminate\Support\Facades\Route;
 
 // Admin API routes (session based auth for experts)
-Route::middleware(['auth:expert', 'expert.admin'])
+Route::middleware(['web', 'auth:expert', 'expert.admin'])
     ->prefix('admin')
     ->group(function () {
         Route::get('/experts', [AdminExpertController::class, 'index'])->name('api.admin.experts.index');
@@ -18,7 +18,7 @@ Route::middleware(['auth:expert', 'expert.admin'])
     });
 
 // Student API routes (session based auth for students)
-Route::middleware('auth')->group(function () {
+Route::middleware(['web', 'auth'])->group(function () {
     // Teams
     Route::get('/teams', [TeamController::class, 'index']);
     Route::post('/teams', [TeamController::class, 'store']);
