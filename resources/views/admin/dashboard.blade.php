@@ -42,7 +42,7 @@
       <div class="stat-chip">
         <div class="stat-n" style="color:var(--accent3)">{{ $completedTeams }}</div>
         <div class="stat-l">Completed Teams</div>
-        <div class="stat-sub">Finished this school year</div>
+        <div class="stat-sub">{{ $currentSchoolYearLabel }}</div>
       </div>
     </div>
 

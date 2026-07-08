@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class CapstoneDocumentReview extends Model
 {
     protected $table = 'capstone_document_review';
+
     protected $primaryKey = 'review_id';
 
     protected $fillable = [

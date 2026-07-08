@@ -6,12 +6,20 @@
 <title>Account Approval - CapsTRACK Admin</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="{{ asset('css/admin.css') }}"/>
+<style>
+@keyframes sk-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+.sk-overlay { background: var(--bg); min-height: calc(100vh - 60px); padding: 20px; }
+.sk { background: linear-gradient(90deg, var(--bg4) 25%, var(--bg2) 50%, var(--bg4) 75%); background-size: 200% 100%; animation: sk-shimmer 1.5s ease-in-out infinite; border-radius: 8px; }
+</style>
 </head>
 <body>
 
 @include('admin._sidebar')
 <div class="main">
   <div class="topbar">
+    <button class="hamburger-btn" onclick="toggleSidebar()" aria-label="Toggle sidebar">
+      <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
     <div class="page-title">Expert Account Approval</div>
     <div class="topbar-actions">
       <div class="notif-btn">
@@ -21,6 +29,23 @@
     </div>
   </div>
 
+  <div id="skeleton-content" class="sk-overlay">
+    <div class="content">
+      <div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;">
+        <div class="sk" style="height:38px;width:220px;border-radius:8px;"></div>
+        <div class="sk" style="height:38px;width:140px;border-radius:8px;"></div>
+        <div class="sk" style="height:38px;width:140px;border-radius:8px;"></div>
+        <div class="sk" style="height:38px;width:160px;border-radius:20px;"></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:14px;">
+        <div class="sk" style="height:140px;border-radius:14px;"></div>
+        <div class="sk" style="height:140px;border-radius:14px;"></div>
+        <div class="sk" style="height:140px;border-radius:14px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="real-content" style="display:none;flex:1;overflow:hidden;flex-direction:column;">
   <div class="content">
     <!-- Toolbar -->
     <div class="approval-toolbar">
@@ -28,17 +53,19 @@
         <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         <input class="input" id="search-input" placeholder="Search pending accounts..." style="max-width:260px" oninput="filterCards()"/>
       </div>
-      <select class="input" id="role-filter" style="width:155px" onchange="filterCards()">
-        <option value="">All Roles</option>
-        <option value="Adviser">Adviser</option>
-        <option value="Consultant">Consultant</option>
-        <option value="Grammarian">Grammarian</option>
-        <option value="CaPSA/TSA">CaPSA/TSA</option>
-      </select>
-      <select class="input" id="status-filter" style="width:155px" onchange="filterCards()">
-        <option value="pending">Pending Only</option>
-        <option value="all">All (incl. reviewed)</option>
-      </select>
+      <div class="filter-row">
+        <select class="input" id="role-filter" style="width:155px" onchange="filterCards()">
+          <option value="">All Roles</option>
+          <option value="Adviser">Adviser</option>
+          <option value="Consultant">Consultant</option>
+          <option value="Grammarian">Grammarian</option>
+          <option value="CaPSA/TSA">CaPSA/TSA</option>
+        </select>
+        <select class="input" id="status-filter" style="width:155px" onchange="filterCards()">
+          <option value="pending">Pending Only</option>
+          <option value="all">All (incl. reviewed)</option>
+        </select>
+      </div>
       <span class="pending-count" id="pending-count">{{ $pendingCount }} pending accounts</span>
     </div>
 
@@ -124,7 +151,10 @@
       <div class="empty-sub">No more pending expert accounts to action.</div>
     </div>
   </div><!-- /content -->
+  </div><!-- /real-content -->
 </div><!-- /main -->
+
+<div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
 
 <!-- ═══ REVIEW DETAILS MODAL ═══ -->
 <div class="review-overlay" id="review-overlay" onclick="closeReviewOnBg(event)">
@@ -618,6 +648,40 @@ window.addEventListener('beforeunload', () => {
     if (window._inlineRejectToast) window._inlineRejectToast.remove();
   } catch (e) {}
 });
+
+</script>
+
+<script>
+(function() {
+  var sk = document.getElementById('skeleton-content');
+  var rc = document.getElementById('real-content');
+  if (sk && rc) {
+    setTimeout(function () {
+      sk.style.display = 'none';
+      rc.style.display = 'flex';
+    }, 400);
+  }
+})();
+
+/* ── Mobile sidebar toggle ── */
+var sidebarEl = document.querySelector('.sidebar');
+var sidebarOverlay = document.getElementById('sidebar-overlay');
+function toggleSidebar() {
+  if (!sidebarEl) return;
+  sidebarEl.classList.contains('mobile-open') ? closeSidebar() : openSidebar();
+}
+function openSidebar() {
+  if (!sidebarEl || !sidebarOverlay) return;
+  sidebarEl.classList.add('mobile-open');
+  sidebarOverlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeSidebar() {
+  if (!sidebarEl || !sidebarOverlay) return;
+  sidebarEl.classList.remove('mobile-open');
+  sidebarOverlay.classList.remove('open');
+  document.body.style.overflow = '';
+}
 </script>
 
 </body>

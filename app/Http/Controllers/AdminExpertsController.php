@@ -14,6 +14,9 @@ class AdminExpertsController extends Controller
     {
         $experts = CapstoneExpert::where('approved_status', true)
             ->with('expertise', 'roles')
+            ->withCount(['teamAssignments' => function ($q) {
+                $q->where('status', 'approved');
+            }])
             ->orderBy('created_at', 'desc')
             ->get();
 

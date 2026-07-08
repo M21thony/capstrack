@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Controller;
 use App\Models\CapstoneDocument;
 use App\Models\CapstoneDocumentReview;
 use App\Models\GoogleDriveToken;
@@ -74,6 +73,7 @@ class SubmissionController extends Controller
                     'status' => 'unresolved',
                     'message' => 'No expert currently assigned to this role.',
                 ];
+
                 continue;
             }
 
@@ -116,14 +116,15 @@ class SubmissionController extends Controller
                 'drive_status' => 'not_connected',
                 'drive_error' => 'This recipient has not connected Google Drive yet.',
             ]);
+
             return;
         }
 
         $extensionMimeMap = [
-            'pdf'  => 'application/pdf',
-            'doc'  => 'application/msword',
+            'pdf' => 'application/pdf',
+            'doc' => 'application/msword',
             'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-            'ppt'  => 'application/vnd.ms-powerpoint',
+            'ppt' => 'application/vnd.ms-powerpoint',
             'pptx' => 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
         ];
         $mimeType = $extensionMimeMap[$ext] ?? $file->getMimeType();

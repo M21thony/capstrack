@@ -7,25 +7,113 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="{{ asset('css/admin.css') }}"/>
 <style>
-  /* Action buttons in table */
-  .btn-transfer,
+  /* Expert Management: role badges + action buttons */
+  .expert-role-badges{
+    display:flex;
+    flex-wrap:wrap;
+    gap:6px;
+    align-items:center;
+  }
+  .expert-role-stack{
+    display:inline-flex;
+    flex-direction:column;
+    gap:5px;
+    width:fit-content;
+    max-width:100%;
+  }
+  .expert-role-badge{
+    font-size:10px;
+    font-weight:600;
+    padding:5px 10px;
+    letter-spacing:0;
+    text-transform:none;
+    border-radius:999px;
+    box-shadow:none;
+  }
+  .expert-role-meta{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    width:fit-content;
+    font-size:10px;
+    font-weight:600;
+    color:var(--text3);
+    text-transform:none;
+    letter-spacing:0;
+  }
+  .expert-role-meta::before{
+    content:'';
+    width:4px;
+    height:4px;
+    border-radius:999px;
+    background:var(--accent);
+  }
+
+  .expert-actions{
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    gap:8px;
+  }
+  .expert-action-note{
+    font-size:11px;
+    font-weight:600;
+  }
+
+
   .btn-remove {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    font-size: 11px;
+    justify-content:center;
+    gap: 7px;
+    min-height: 32px;
+    font-size: 12px;
     font-weight: 600;
-    padding: 5px 11px;
-    border-radius: 6px;
-    border: 1px solid #e2e8f0;
-    background: #f8fafc;
-    color: #475569;
+    padding: 7px 14px;
+    border-radius: 999px;
     cursor: pointer;
-    transition: background 0.12s, color 0.12s, border-color 0.12s;
+    transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+    user-select: none;
+    border: 1.5px solid transparent;
+    white-space: nowrap;
+    box-shadow: none;
   }
-  .btn-transfer:hover { background: #fef9c3; color: #b45309; border-color: #fde68a; }
-  .btn-remove  { margin-left: 4px; }
-  .btn-remove:hover  { background: #fee2e2; color: #dc2626; border-color: #fca5a5; }
+
+  .btn-remove {
+    background: rgba(220, 38, 38, 0.06);
+    color: var(--red);
+    border-color: rgba(220, 38, 38, 0.16);
+  }
+  .btn-remove:hover {
+    background: rgba(220, 38, 38, 0.1);
+    border-color: rgba(220, 38, 38, 0.28);
+  }
+
+  .btn-remove:active {
+    transform: translateY(1px);
+  }
+
+  .btn-remove:focus-visible{
+    outline: 2px solid rgba(220, 38, 38, 0.2);
+    outline-offset: 2px;
+  }
+
+  .btn-remove svg{
+    width:12px;
+    height:12px;
+    flex-shrink:0;
+    stroke:currentColor;
+    fill:none;
+    stroke-width:2.2;
+  }
+
+  .btn-transfer:disabled,
+  .btn-remove:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    transform: none;
+  }
+
 
   /* ── Modal overlay ── */
   .ct-modal-overlay {
@@ -150,6 +238,11 @@
   }
   .ct-toast-close:hover { color: #475569; }
   @keyframes toastIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+
+  /* ── Skeleton ── */
+  @keyframes sk-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+  .sk-overlay { background: var(--bg); min-height: calc(100vh - 60px); padding: 20px; }
+  .sk { background: linear-gradient(90deg, var(--bg4) 25%, var(--bg2) 50%, var(--bg4) 75%); background-size: 200% 100%; animation: sk-shimmer 1.5s ease-in-out infinite; border-radius: 8px; }
 </style>
 </head>
 <body>
@@ -158,6 +251,9 @@
 
 <div class="main">
   <div class="topbar">
+    <button class="hamburger-btn" onclick="toggleSidebar()" aria-label="Toggle sidebar">
+      <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
     <div class="page-title">Expert Management</div>
     <div class="topbar-actions">
       <div class="notif-btn">
@@ -167,23 +263,58 @@
     </div>
   </div>
 
+  <div id="skeleton-content" class="sk-overlay">
+    <div class="content">
+      <div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;align-items:center;">
+        <div class="sk" style="height:38px;width:260px;border-radius:8px;"></div>
+        <div class="sk" style="height:38px;width:140px;border-radius:8px;"></div>
+        <div class="sk" style="height:38px;width:140px;border-radius:8px;"></div>
+        <div class="sk" style="height:38px;width:160px;border-radius:20px;"></div>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden;">
+        <table style="width:100%;border-collapse:collapse;">
+          <thead><tr><th style="padding:12px 20px;"><div class="sk" style="height:14px;width:40px;"></div></th><th style="padding:12px"><div class="sk" style="height:14px;width:50px;"></div></th><th style="padding:12px"><div class="sk" style="height:14px;width:60px;"></div></th><th style="padding:12px"><div class="sk" style="height:14px;width:50px;"></div></th><th style="padding:12px"><div class="sk" style="height:14px;width:70px;"></div></th><th style="padding:12px"><div class="sk" style="height:14px;width:40px;"></div></th><th style="padding:12px 20px;"><div class="sk" style="height:14px;width:50px;"></div></th></tr></thead>
+          <tbody>
+            @for($i = 0; $i < 4; $i++)
+            <tr>
+              <td style="padding:14px 20px;"><div style="display:flex;align-items:center;gap:10px;"><div class="sk" style="width:32px;height:32px;border-radius:8px;"></div><div><div class="sk" style="height:13px;width:110px;margin-bottom:5px;"></div><div class="sk" style="height:11px;width:80px;"></div></div></div></td>
+              <td style="padding:14px 12px;"><div class="sk" style="height:20px;width:60px;border-radius:10px;"></div></td>
+              <td style="padding:14px 12px;"><div class="sk" style="height:12px;width:100px;"></div></td>
+              <td style="padding:14px 12px;"><div class="sk" style="height:12px;width:50px;"></div></td>
+              <td style="padding:14px 12px;"><div style="display:flex;align-items:center;gap:8px;"><div class="sk" style="height:6px;width:60px;border-radius:3px;"></div><div class="sk" style="height:11px;width:40px;"></div></div></td>
+              <td style="padding:14px 12px;"><div class="sk" style="height:20px;width:50px;border-radius:10px;"></div></td>
+              <td style="padding:14px 20px;"><div class="sk" style="height:28px;width:120px;border-radius:6px;"></div></td>
+            </tr>
+            @endfor
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div id="real-content" style="display:none;flex:1;overflow:hidden;flex-direction:column;">
   <div class="content">
-    <div class="row" style="margin-bottom:16px;gap:8px">
-      <input class="input" placeholder="Search experts by name or expertise..." style="max-width:300px"/>
-      <select class="input" style="width:160px">
-        <option>All Roles</option>
-        <option>Adviser</option>
-        <option>Consultant</option>
-        <option>Grammarian</option>
-      </select>
-      <select class="input" style="width:160px" id="statusFilter">
-        <option value="all">All Status</option>
-        <option value="active">Active</option>
-        <option value="full">Full</option>
-        <option value="offline">Offline</option>
-      </select>
-      <span style="flex:1"></span>
-      <span style="font-size:12px;color:var(--text3)">{{ $experts->count() }} registered experts</span>
+    <div class="experts-toolbar">
+      <div class="experts-search">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input class="input" id="experts-search-input" placeholder="Search experts by name or expertise..."/>
+      </div>
+      <div class="filter-row">
+        <select class="input" id="experts-role-filter" style="width:160px">
+          <option>All Roles</option>
+          <option>Admin</option>
+          <option>Adviser</option>
+          <option>Consultant</option>
+          <option>Grammarian</option>
+        </select>
+        <select class="input" style="width:160px" id="statusFilter">
+          <option value="all">All Status</option>
+          <option value="active">Active</option>
+          <option value="full">Full</option>
+          <option value="offline">Offline</option>
+        </select>
+      </div>
+      <span class="experts-count">{{ $experts->count() }} registered experts</span>
     </div>
 
     <div class="card" style="padding:0;overflow:hidden">
@@ -202,7 +333,7 @@
         <tbody>
           @foreach($experts as $expert)
           <tr>
-            <td style="padding-left:20px">
+            <td style="padding-left:20px" data-label="Expert">
               <div style="display:flex;align-items:center;gap:10px">
                 <div class="expert-av" style="background:linear-gradient(135deg,#c9960c,#8a6508);width:32px;height:32px;border-radius:8px;font-size:11px">
                   {{ $expert->avatarInitials() }}
@@ -213,38 +344,44 @@
                 </div>
               </div>
             </td>
-            <td>
+            <td data-label="Role">
               @if ($expert->is_admin)
-                <span class="badge badge-red" style="font-size:10px;background:#dc2626;color:#fff;">Admin / Subject Adviser</span>
+                <div class="expert-role-stack">
+                  <div class="expert-role-badges">
+                    <span class="badge badge-red expert-role-badge">Admin/Subject Adviser</span>
+                  </div>
+                  <span class="expert-role-meta">System-wide access</span>
+                </div>
+
               @else
-                @forelse ($expert->roles as $role)
-                  <span class="badge badge-gold" style="font-size:10px;margin-right:4px;">{{ $role->role_name }}</span>
-                @empty
-                  <span class="badge badge-gray" style="font-size:10px">No Role</span>
-                @endforelse
+                <div class="expert-role-stack">
+                  <div class="expert-role-badges">
+                  @forelse ($expert->roles as $role)
+                    <span class="badge badge-gold expert-role-badge">{{ \Illuminate\Support\Str::of($role->role_name)->replace('_', ' ')->title() }}</span>
+                  @empty
+                    <span class="badge badge-gray expert-role-badge">No Role</span>
+                  @endforelse
+                  </div>
+                  <span class="expert-role-meta">{{ $expert->roles->count() }} role{{ $expert->roles->count() === 1 ? '' : 's' }}</span>
+                </div>
+
               @endif
             </td>
-            <td style="font-size:12px">
+
+            <td style="font-size:12px" data-label="Expertise">
               {{ $expert->expertise->pluck('expertise_field')->join(', ') ?: 'None specified' }}
             </td>
             @php
               $maxTeams = $expert->max_teams ?? 4;
-              // NOTE: current project doesn't expose expert-team assignment directly here.
-              // Default team count to 0 unless relationships are added.
-              $teamCount = 0;
+              $teamCount = $expert->team_assignments_count ?? 0;
               $slotsLeft = max(0, $maxTeams - $teamCount);
               $isFull = $teamCount >= $maxTeams;
-
-              // Offline/Active: no last_seen/online fields in capstone_experts schema.
-              // Default to Active (online) for now.
-              $isOffline = false;
-
-              // Status order preference: Full > Offline > Active
-              $computedStatus = $isFull ? 'full' : ($isOffline ? 'offline' : 'active');
+              $isOnline = $expert->is_online;
+              $computedStatus = $isFull ? 'full' : ($isOnline ? 'active' : 'offline');
             @endphp
 
-            <td style="font-family:'Space Mono',monospace;font-size:12px">{{ $teamCount }} / {{ $maxTeams }}</td>
-            <td>
+            <td style="font-family:'Space Mono',monospace;font-size:12px" data-label="Teams">{{ $teamCount }} / {{ $maxTeams }}</td>
+            <td data-label="Slots Left">
               <div style="display:flex;align-items:center;gap:8px">
                 <div class="pbar" style="width:60px">
                   <div class="pbar-fill pf-green" style="width:{{ $maxTeams > 0 ? round(($teamCount / $maxTeams) * 100) : 0 }}%"></div>
@@ -252,7 +389,7 @@
                 <span style="font-size:11px;color:var(--text3)">{{ $slotsLeft }} left</span>
               </div>
             </td>
-            <td>
+            <td data-label="Status">
               @if($computedStatus === 'full')
                 <span class="badge badge-amber">Full</span>
               @elseif($computedStatus === 'offline')
@@ -261,77 +398,74 @@
                 <span class="badge badge-green">Active</span>
               @endif
             </td>
-            <td>
-              @if ($expert->is_admin)
-                <span style="font-size:11px;color:var(--text3);font-weight:600;">Current Admin</span>
-              @else
-                <button type="button" class="btn-transfer" data-id="{{ $expert->expert_id }}" data-name="{{ $expert->name }}">
-                  Transfer Rights
-                </button>
-                <button type="button" class="btn-remove" data-id="{{ $expert->expert_id }}" data-name="{{ $expert->name }}">
-                  Remove
-                </button>
-              @endif
+            <td data-label="Action">
+              <div class="expert-actions">
+                @if ($expert->is_admin)
+                  <span class="badge badge-blue expert-action-note">Current Admin</span>
+                @else
+                  <button type="button" class="btn-remove" data-id="{{ $expert->expert_id }}" data-name="{{ $expert->name }}">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M7 6l1 14h8l1-14"/><path d="M10 10v6"/><path d="M14 10v6"/></svg>
+                    <span>Remove</span>
+                  </button>
+                @endif
+              </div>
             </td>
           </tr>
           @endforeach
 
 <script>
-  // Client-side filter by computed status badge.
-  const statusFilter = document.getElementById('statusFilter');
-  if(statusFilter){
-    const rows = document.querySelectorAll('table.table tbody tr');
+  // Client-side filtering: search, role, and status.
+  (function() {
+    var searchInput = document.getElementById('experts-search-input');
+    var roleFilter = document.getElementById('experts-role-filter');
+    var statusFilter = document.getElementById('statusFilter');
+    var rows = document.querySelectorAll('table.table tbody tr');
 
-    statusFilter.addEventListener('change', () => {
-      const val = statusFilter.value;
+    function filterRows() {
+      var q = searchInput ? searchInput.value.toLowerCase().trim() : '';
+      var role = roleFilter ? roleFilter.value : 'All Roles';
+      var status = statusFilter ? statusFilter.value : 'all';
 
-      rows.forEach(row => {
-        const badge = row.querySelector('td:nth-child(6) span');
-        const text = badge ? badge.textContent.trim().toLowerCase() : '';
+      rows.forEach(function(row) {
+        var name = (row.querySelector('.td-main')?.textContent || '').toLowerCase();
+        var email = (row.querySelector('td:first-child div[style*="font-size:11px"]')?.textContent || '').toLowerCase();
+        var expertise = (row.querySelector('td[data-label="Expertise"]')?.textContent || '').toLowerCase();
+        var roleTd = row.querySelector('td[data-label="Role"]');
+        var isAdmin = roleTd && roleTd.querySelector('.badge-red');
+        var roleBadges = roleTd ? roleTd.querySelectorAll('.badge-gold') : [];
+        var roleText = '';
+        roleBadges.forEach(function(b) { roleText += b.textContent.trim().toLowerCase() + ' '; });
 
-        let match = true;
-        if(val === 'active') match = text === 'active';
-        if(val === 'full') match = text === 'full';
-        if(val === 'offline') match = text === 'offline';
+        var badge = row.querySelector('td:nth-child(6) span, td[data-label="Status"] span');
+        var statusText = badge ? badge.textContent.trim().toLowerCase() : '';
 
-        row.style.display = match ? '' : 'none';
+        var matchSearch = !q || name.includes(q) || email.includes(q) || expertise.includes(q);
+        var matchRole = role === 'All Roles' || (role === 'Admin' && isAdmin) || (role !== 'Admin' && !isAdmin && roleText.includes(role.toLowerCase()));
+        var matchStatus = true;
+        if (status === 'active') matchStatus = statusText === 'active';
+        else if (status === 'full') matchStatus = statusText === 'full';
+        else if (status === 'offline') matchStatus = statusText === 'offline';
+
+        row.style.display = (matchSearch && matchRole && matchStatus) ? '' : 'none';
       });
-    });
-  }
+    }
+
+    if (searchInput) searchInput.addEventListener('input', filterRows);
+    if (roleFilter) roleFilter.addEventListener('change', filterRows);
+    if (statusFilter) statusFilter.addEventListener('change', filterRows);
+  })();
 </script>
         </tbody>
       </table>
     </div>
   </div>
+  </div><!-- /real-content -->
 </div>
+
+<div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
 
 {{-- Toast container --}}
 <div id="ct-toast-container"></div>
-
-{{-- ══════════════════════════════════════════
-     TRANSFER RIGHTS — Confirmation Modal
-══════════════════════════════════════════ --}}
-<div id="transferModal" class="ct-modal-overlay" style="display:none;">
-  <div class="ct-modal-card">
-    <div class="ct-modal-icon warning">
-      <svg width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
-        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-        <circle cx="9" cy="7" r="4"/>
-        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-        <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-      </svg>
-    </div>
-    <h3 class="ct-modal-title">Transfer Admin Rights</h3>
-    <p class="ct-modal-desc">
-      You are about to transfer admin rights to <strong id="transferExpertName" style="color:#0f172a;"></strong>.<br>
-      <span style="color:#ef4444;font-size:12.5px;">Your account will be demoted and you will be logged out immediately.</span>
-    </p>
-    <div class="ct-modal-actions">
-      <button type="button" id="transferCancelBtn" class="ct-btn ct-btn-secondary">Cancel</button>
-      <button type="button" id="transferConfirmBtn" class="ct-btn ct-btn-warning">Yes, Transfer</button>
-    </div>
-  </div>
-</div>
 
 {{-- ══════════════════════════════════════════
      REMOVE EXPERT — Confirmation Modal
@@ -394,54 +528,6 @@ function showToast(message, type = 'info', title = null) {
   }, 4000);
 }
 
-// ── TRANSFER RIGHTS ──────────────────────────────────────────
-const transferModal = document.getElementById('transferModal');
-
-document.querySelectorAll('.btn-transfer').forEach(btn => {
-  btn.addEventListener('click', function () {
-    transferModal.dataset.expertId = this.dataset.id;
-    document.getElementById('transferExpertName').textContent = this.dataset.name;
-    transferModal.style.display = 'flex';
-  });
-});
-
-document.getElementById('transferCancelBtn').addEventListener('click', () => {
-  transferModal.style.display = 'none';
-});
-
-document.getElementById('transferConfirmBtn').addEventListener('click', function () {
-  const expertId = transferModal.dataset.expertId;
-  this.disabled = true;
-  this.textContent = 'Transferring…';
-
-  fetch("{{ route('admin.turnover') }}", {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-CSRF-TOKEN': '{{ csrf_token() }}',
-      'Accept': 'application/json',
-    },
-    body: JSON.stringify({ expert_id: expertId }),
-  })
-    .then(res => res.json())
-    .then(data => {
-      if (data.success) {
-        showToast(data.message, 'success');
-        setTimeout(() => window.location.href = data.redirect_url, 1500);
-      } else {
-        showToast(data.message || 'An error occurred during transfer.', 'error');
-        this.disabled = false;
-        this.textContent = 'Yes, Transfer';
-      }
-    })
-    .catch(() => {
-      showToast('A network error occurred.', 'error');
-      this.disabled = false;
-      this.textContent = 'Yes, Transfer';
-    })
-    .finally(() => { transferModal.style.display = 'none'; });
-});
-
 // ── REMOVE EXPERT ─────────────────────────────────────────────
 const removeModal = document.getElementById('removeModal');
 const removeInput = document.getElementById('removeConfirmInput');
@@ -501,6 +587,38 @@ removeBtn.addEventListener('click', function () {
     })
     .finally(() => { removeModal.style.display = 'none'; });
 });
+
+// ── SKELETON SWAP ──────────────────────────────────────────────
+(function() {
+  var sk = document.getElementById('skeleton-content');
+  var rc = document.getElementById('real-content');
+  if (sk && rc) {
+    setTimeout(function () {
+      sk.style.display = 'none';
+      rc.style.display = 'flex';
+    }, 400);
+  }
+})();
+
+/* ── Mobile sidebar toggle ── */
+var sidebarEl = document.querySelector('.sidebar');
+var sidebarOverlay = document.getElementById('sidebar-overlay');
+function toggleSidebar() {
+  if (!sidebarEl) return;
+  sidebarEl.classList.contains('mobile-open') ? closeSidebar() : openSidebar();
+}
+function openSidebar() {
+  if (!sidebarEl || !sidebarOverlay) return;
+  sidebarEl.classList.add('mobile-open');
+  sidebarOverlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeSidebar() {
+  if (!sidebarEl || !sidebarOverlay) return;
+  sidebarEl.classList.remove('mobile-open');
+  sidebarOverlay.classList.remove('open');
+  document.body.style.overflow = '';
+}
 </script>
 
 </body>

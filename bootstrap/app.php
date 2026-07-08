@@ -5,6 +5,7 @@ use App\Http\Middleware\EnsureExpertIsAdmin;
 use App\Http\Middleware\EnsureExpertIsAuthenticated;
 use App\Http\Middleware\EnsureProfileIsComplete;
 use App\Http\Middleware\PreventBackHistory;
+use App\Http\Middleware\TrackExpertActivity;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -24,6 +25,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'expert.admin' => EnsureExpertIsAdmin::class,
             'expert.approved' => CheckExpertApproval::class,
             'no.cache' => PreventBackHistory::class,
+            'track.expert' => TrackExpertActivity::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

@@ -1090,3 +1090,146 @@ textarea.input{resize:vertical;min-height:80px}
 
 /* ── FILTER ACTIVE STATE ── */
 .filter-active{border-color:var(--accent)!important;background:rgba(201,168,44,.06)!important}
+
+/* ── EXPERTS TOOLBAR ── */
+.experts-toolbar{display:flex;align-items:center;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.experts-search{position:relative;display:flex;align-items:center;flex:1;min-width:200px}
+.experts-search svg{position:absolute;left:11px;width:14px;height:14px;stroke:var(--text3);fill:none;stroke-width:2;pointer-events:none}
+.experts-search input{padding-left:34px!important;width:100%;max-width:300px}
+.experts-count{font-size:12px;color:var(--text3);white-space:nowrap;padding:6px 14px;background:var(--bg4);border-radius:20px;font-weight:500}
+
+/* ── RESPONSIVE ── */
+.hamburger-btn{display:none;background:rgba(255,255,255,0.06);border:1px solid rgba(201,168,44,0.2);border-radius:9px;width:36px;height:36px;cursor:pointer;align-items:center;justify-content:center;flex-shrink:0}
+.hamburger-btn svg{width:16px;height:16px;stroke:rgba(255,255,200,0.7);fill:none;stroke-width:2}
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:400}
+.sidebar-overlay.open{display:block}
+.sidebar.mobile-open{display:flex;position:fixed;left:0;top:0;z-index:500;height:100vh}
+
+@media(max-width:768px){
+  .sidebar{display:none}
+  .hamburger-btn{display:flex}
+  .topbar{padding:0 16px}
+  .page-title{font-size:15px}
+  .content{padding:16px}
+  .sk-overlay{padding:16px}
+  .expert-card{padding:16px}
+  .info-block{gap:14px;padding:10px 12px}
+  .card-actions{flex-wrap:wrap}
+  .approval-toolbar{flex-wrap:wrap;gap:6px}
+  .approval-search{flex:1;min-width:160px}
+  .approval-search input{max-width:100%!important;width:100%}
+  .filter-row{display:flex;gap:6px;flex:1;min-width:200px}
+  .filter-row select{width:100%!important}
+  .pending-count{margin-left:auto}
+  .experts-toolbar{flex-wrap:wrap;gap:6px}
+  .experts-search{flex:1;min-width:160px}
+  .experts-search input{max-width:100%!important;width:100%}
+  .experts-count{margin-left:auto}
+}
+
+@media(max-width:480px){
+  .topbar{padding:0 10px}
+  .page-title{font-size:14px}
+  .content{padding:10px}
+  .sk-overlay{padding:10px}
+
+  /* ── Approval Toolbar (phone) ── */
+  .approval-toolbar{display:flex;flex-direction:column;gap:8px;margin-bottom:14px}
+  .approval-search{width:100%;position:relative}
+  .approval-search svg{left:12px;width:15px;height:15px}
+  .approval-search input{width:100%!important;max-width:100%!important;padding:11px 14px 11px 38px!important;font-size:14px;border-radius:20px;background:var(--bg2);border-color:var(--border)}
+  .filter-row{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .filter-row select{width:100%!important;font-size:13px;padding:9px 10px;border-radius:10px;background:var(--bg2)}
+  .pending-count{font-size:11px;padding:4px 12px;border-radius:20px;width:fit-content;margin:0 auto;text-align:center}
+
+  /* ── Expert Card (phone) ── */
+  .expert-card{padding:10px;border-radius:10px;border-width:1px}
+  .expert-card>div{gap:10px!important}
+  .expert-card .expert-av{width:36px!important;height:36px!important;font-size:11px!important;border-radius:9px!important}
+  .expert-meta{flex-wrap:wrap;gap:4px}
+  .expert-name{font-size:13px}
+  .expert-email{font-size:11px;margin-bottom:6px!important}
+  .expert-reg{font-size:9px;color:var(--text3)}
+  .tags-wrap{gap:3px;margin-bottom:8px}
+  .tags-wrap .atag{font-size:9px;padding:2px 7px;border-radius:12px}
+  .info-block{font-size:11px;padding:0;border-left:none;display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);border-radius:8px;overflow:hidden;margin-bottom:8px}
+  .info-block span{display:flex;flex-direction:column;gap:1px;background:var(--bg3);padding:6px 8px}
+  .info-block strong{font-size:9px;letter-spacing:.4px}
+  .info-block em{font-size:11px}
+  .card-actions{margin-top:0;padding-top:8px;flex-direction:column;gap:6px;border-top:1px solid var(--border)}
+  .card-actions button,.card-actions .btn,.card-actions .action-done,.card-actions span:not(.action-done):not(.badge){width:100%;justify-content:center;text-align:center}
+  .card-actions .btn-review{margin-left:0!important}
+  .card-actions button[onclick*="openReview"]{padding:10px!important;border-radius:10px!important;font-size:13px!important}
+  .card-actions button[onclick*="openRejectConfirmModal"]{padding:10px!important;border-radius:10px!important;font-size:13px!important}
+  .card-actions .action-done{padding:8px 14px;border-radius:8px;font-size:12px}
+
+  /* ── Experts Toolbar (phone) ── */
+  .experts-toolbar{display:flex;flex-direction:column;gap:8px;margin-bottom:14px}
+  .experts-search{width:100%;position:relative}
+  .experts-search svg{left:12px;width:15px;height:15px}
+  .experts-search input{width:100%!important;max-width:100%!important;padding:11px 14px 11px 38px!important;font-size:14px;border-radius:20px;background:var(--bg2);border-color:var(--border)}
+  .experts-count{font-size:11px;padding:4px 12px;border-radius:20px;width:fit-content;margin:0 auto;text-align:center;background:var(--bg4)}
+
+  /* ── Bottom Sheet: Review Modal ── */
+  .review-overlay{align-items:flex-end}
+  .review-modal{width:100%!important;max-width:100%!important;max-height:85vh;border-radius:16px 16px 0 0;animation:sheetUp 0.25s ease;margin-top:auto}
+  .review-modal::before{content:'';display:block;width:36px;height:4px;border-radius:2px;background:var(--border2);margin:-8px auto 14px}
+  .modal-header{padding:16px 18px 14px}
+  .modal-header-av{width:42px;height:42px;font-size:13px;border-radius:10px}
+  .modal-header-name{font-size:15px}
+  .modal-body{padding:16px 18px}
+  .modal-detail-grid{grid-template-columns:1fr}
+  .modal-footer{flex-direction:column;gap:8px;padding:14px 18px}
+  .modal-footer-note{font-size:11px;text-align:center}
+  .modal-footer #rm-actions-wrap{width:100%;justify-content:stretch}
+  .modal-footer #rm-actions-wrap button{flex:1}
+
+  /* ── Bottom Sheet: Confirm Modal ── */
+  .confirm-overlay{align-items:flex-end}
+  .confirm-box{width:100%!important;max-width:100%!important;border-radius:16px 16px 0 0;padding:22px 20px 24px;animation:sheetUp 0.25s ease;margin-top:auto}
+  .confirm-box::before{content:'';display:block;width:36px;height:4px;border-radius:2px;background:var(--border2);margin:-10px auto 14px}
+  .confirm-actions{flex-direction:column;gap:8px}
+  .confirm-actions button{width:100%;justify-content:center;padding:11px 14px}
+  .confirm-title{font-size:15px}
+  .confirm-sub{font-size:12px;margin-bottom:16px}
+  .confirm-icon{width:40px;height:40px;margin-bottom:10px}
+
+  /* ── Bottom Sheet: Transfer/Remove Modals (experts page) ── */
+  .ct-modal-overlay{align-items:flex-end}
+  .ct-modal-card{width:100%!important;max-width:100%!important;border-radius:16px 16px 0 0;padding:22px 20px 24px;animation:sheetUp 0.25s ease;margin-top:auto}
+  .ct-modal-card::before{content:'';display:block;width:36px;height:4px;border-radius:2px;background:var(--border2);margin:-10px auto 14px}
+  .ct-modal-actions{flex-direction:column;gap:8px}
+  .ct-modal-actions .ct-btn{width:100%;justify-content:center;padding:11px 14px}
+  .ct-modal-title{font-size:16px}
+  .ct-modal-desc{font-size:12px}
+  .ct-modal-icon{width:42px;height:42px}
+
+  /* ── Experts table → card layout on mobile ── */
+  .table, .table thead, .table tbody, .table th, .table td, .table tr{display:block}
+  .table thead{display:none}
+  .table tr{background:#fff;border:1.5px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,0.04)}
+  .table tr:hover td{background:transparent}
+  .table td{padding:6px 0;border-bottom:none;font-size:12px;display:flex;align-items:center;gap:8px}
+  .table td::before{content:attr(data-label);font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;width:70px;flex-shrink:0}
+  .table td:first-child{padding-top:0}
+  .table td:last-child{padding-bottom:0}
+  .table td[style*="padding-left"]{padding-left:0!important}
+
+  /* ── Experts Card Overrides (phone) ── */
+  .card:has(.table){padding:0;border:none;background:transparent;box-shadow:none}
+  .table tr{padding:14px;border-radius:14px}
+  .table td{padding:5px 0;gap:6px}
+  .table td::before{font-size:9px;width:65px;letter-spacing:.3px}
+  .table td:first-child::before{display:none}
+  .table td:first-child>div{gap:8px!important}
+  .table td:first-child .expert-av{width:36px!important;height:36px!important;font-size:12px!important;border-radius:10px!important}
+  .table td:first-child .td-main{font-size:14px}
+  .table td:first-child div[style*="font-size:11px"]{font-size:10px!important}
+  .table td:last-child{padding-bottom:0;flex-direction:column;gap:6px;padding-top:8px;border-top:1px solid var(--border);margin-top:4px}
+  .table td:last-child::before{display:none}
+  .table td:last-child button,.table td:last-child .btn-transfer,.table td:last-child .btn-remove{width:100%;justify-content:center;padding:9px 14px!important;border-radius:10px!important;font-size:13px!important;margin-left:0!important}
+  .table td:last-child span[style*="font-size:11px"]{width:100%;text-align:center;padding:8px 14px;background:var(--bg3);border-radius:8px;box-sizing:border-box}
+  .table td[data-label="Expertise"]{font-size:11px!important;line-height:1.4;white-space:normal;word-break:break-word}
+}
+
+@keyframes sheetUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
