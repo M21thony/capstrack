@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\Admin\GoogleDriveController;
+use App\Http\Controllers\Admin\ResourcesController;
 use App\Http\Controllers\AdminApprovalController;
 use App\Http\Controllers\AdminDashboardController;
 use App\Http\Controllers\AdminExpertsController;
@@ -8,6 +10,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DuplicationController;
 use App\Http\Controllers\ExpertController;
 use App\Http\Controllers\Instructor\AssignmentController as InstructorAssignmentController;
+use App\Http\Controllers\Instructor\DocReviewController;
 use App\Http\Controllers\Instructor\ScheduleController;
 use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\NotificationController;
@@ -15,6 +18,8 @@ use App\Http\Controllers\PersonalInfoController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RecruitmentController;
 use App\Http\Controllers\Student\ExpertController as StudentExpertController;
+use App\Http\Controllers\StudentResourcesController;
+use App\Http\Controllers\SubmissionController;
 use App\Http\Controllers\TeamController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
@@ -32,7 +37,10 @@ Route::middleware(['auth:expert', 'expert.admin', 'no.cache'])->prefix('admin')-
     Route::view('/financial', 'admin.financial')->name('financial');
     Route::view('/archive', 'admin.archive')->name('archive');
     Route::view('/announcements', 'admin.announcements')->name('announcements');
-    Route::view('/resources', 'admin.resources')->name('resources');
+    // NOTE: restored to controller-based route (was Route::view in your latest file) —
+    // resources.blade.php needs $driveConnected/$folders/$resources passed in by
+    // ResourcesController@index. Revert to Route::view(...) if this was intentional.
+    Route::get('/resources', [ResourcesController::class, 'index'])->name('resources');
     Route::view('/rubric_management', 'admin.rubric_management')->name('rubric_management');
     Route::view('/activitylog', 'admin.activitylog')->name('activitylog');
 });
@@ -46,7 +54,9 @@ Route::middleware(['auth:expert', 'expert.approved', 'no.cache'])->prefix('instr
     Route::view('/profile', 'instructor.profile')->name('profile');
     Route::view('/schedule', 'instructor.schedule')->name('schedule');
     Route::view('/grading', 'instructor.grading')->name('grading');
-    Route::view('/docreview', 'instructor.docreview')->name('docreview');
+    // NOTE: now controller-based to show real capstone_document_review rows
+    // for the logged-in expert, instead of the static mock table.
+    Route::get('/docreview', [DocReviewController::class, 'index'])->name('docreview');
     Route::get('/assignments', [InstructorAssignmentController::class, 'index'])->name('assignments');
     Route::post('/assignments/{assignment}/approve', [InstructorAssignmentController::class, 'approve'])->name('assignments.approve');
     Route::post('/assignments/{assignment}/reject', [InstructorAssignmentController::class, 'reject'])->name('assignments.reject');
@@ -107,12 +117,19 @@ Route::middleware(['auth', 'no.cache'])->group(function () {
             Route::get('/team', [TeamController::class, 'index'])->name('student.team');
             Route::get('/experts', [StudentExpertController::class, 'index'])->name('student.experts');
             Route::view('/submission', 'student.submission')->name('student.submission');
+            // NEW: handles the actual file upload + multi-recipient Drive delivery
+            Route::post('/submission', [SubmissionController::class, 'store'])->name('student.submission.store');
             Route::view('/review', 'student.review')->name('student.review');
             Route::view('/duplication', 'student.duplication')->name('student.duplication');
             Route::view('/consultation', 'student.consultation')->name('student.consultation');
             Route::view('/progress', 'student.progress')->name('student.progress');
             Route::view('/financial', 'student.financial')->name('student.financial');
-            Route::view('/resources', 'student.resources')->name('student.resources');
+            // NOTE: restored to controller-based routes (was Route::view in your latest
+            // file) — needed for the Google-Drive-backed resource list + download
+            // tracking. Revert to Route::view(...) if this was intentional.
+            Route::get('/resources', [StudentResourcesController::class, 'index'])->name('student.resources');
+            Route::get('/resources/{resource}/download', [StudentResourcesController::class, 'download'])->name('student.resources.download.file');
+            Route::post('/resources/{resource}/download', [StudentResourcesController::class, 'trackDownload'])->name('student.resources.download');
             Route::view('/archive', 'student.archive')->name('student.archive');
             Route::redirect('/profile', '/student/personal-info/edit')->name('student.profile');
         });
@@ -144,4 +161,17 @@ Route::post('/session/keep-alive', function () {
     request()->session()->put('_timeout_at', now()->addMinutes((int) config('session.lifetime'))->timestamp);
 
     return response()->json(['success' => true]);
+});
+
+// ── Google Drive OAuth + resource/submission delivery (from earlier work) ──
+Route::middleware(['auth:expert'])->prefix('admin/gdrive')->name('gdrive.')->group(function () {
+    Route::get('/connect', [GoogleDriveController::class, 'connect'])->name('connect');
+    Route::get('/callback', [GoogleDriveController::class, 'callback'])->name('callback');
+    Route::get('/status', [GoogleDriveController::class, 'status'])->name('status');
+    Route::post('/disconnect', [GoogleDriveController::class, 'disconnect'])->name('disconnect');
+    Route::get('/folders', [GoogleDriveController::class, 'listFolders'])->name('folders.index');
+    Route::post('/folders', [GoogleDriveController::class, 'createFolder'])->name('folders.store');
+    Route::post('/upload', [GoogleDriveController::class, 'upload'])->name('upload');
+    Route::post('/resources/{resource}/download', [GoogleDriveController::class, 'trackDownload'])->name('resources.download');
+    Route::delete('/resources/{resource}', [GoogleDriveController::class, 'destroy'])->name('resources.destroy');
 });

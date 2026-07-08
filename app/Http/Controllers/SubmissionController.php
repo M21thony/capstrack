@@ -1,0 +1,161 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Http\Controllers\Controller;
+use App\Models\CapstoneDocument;
+use App\Models\CapstoneDocumentReview;
+use App\Models\GoogleDriveToken;
+use App\Services\GoogleDriveService;
+use App\Services\RecipientResolver;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+
+class SubmissionController extends Controller
+{
+    public function __construct(
+        private GoogleDriveService $drive,
+        private RecipientResolver $resolver,
+    ) {}
+
+    public function store(Request $request)
+    {
+        $request->validate([
+            'title' => 'required|string|max:50',
+            'document_type' => 'nullable|string|max:100',
+            'message' => 'nullable|string',
+            'file' => 'required|file|max:25600', // 25 MB
+            'recipients' => 'required|array|min:1',
+            'recipients.*' => 'in:adviser,consultant,grammarian,subject_adviser',
+        ]);
+
+        $studentId = Auth::id(); // adjust guard if students use a named guard
+
+        // Resolve the student's current team + program from student_s_y
+        $studentYear = DB::table('student_s_y')
+            ->where('student_id', $studentId)
+            ->orderByDesc('school_year')
+            ->first();
+
+        if (! $studentYear || ! $studentYear->team_id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You are not currently assigned to a team.',
+            ], 422);
+        }
+
+        $team = DB::table('team')->where('team_id', $studentYear->team_id)->first();
+
+        $file = $request->file('file');
+        $originalExt = strtolower($file->getClientOriginalExtension());
+        $storedPath = $file->store('submissions', 'local'); // adjust disk as needed
+
+        // Determine next version number for this student (simple increment)
+        $lastVersion = CapstoneDocument::where('student_id', $studentId)->max('file_version') ?? 0;
+
+        $document = CapstoneDocument::create([
+            'student_id' => $studentId,
+            'file_name' => $request->input('title'),
+            'file_path' => $storedPath,
+            'file_version' => $lastVersion + 1,
+            'document_status' => 'Pending',
+        ]);
+
+        $results = [];
+
+        foreach ($request->input('recipients') as $role) {
+            $expertId = $this->resolver->resolve($role, $studentYear->team_id, $studentYear->program);
+
+            if (! $expertId) {
+                $results[] = [
+                    'role' => $role,
+                    'status' => 'unresolved',
+                    'message' => 'No expert currently assigned to this role.',
+                ];
+                continue;
+            }
+
+            $review = CapstoneDocumentReview::create([
+                'file_id' => $document->file_id,
+                'expert_id' => $expertId,
+                'role' => $role,
+                'review_status' => 'To Review',
+                'version' => (string) $document->file_version,
+                'drive_status' => 'pending',
+            ]);
+
+            $this->deliverToDrive($review, $expertId, $studentYear->team_id, $team->team_name ?? 'Unknown Team', $file, $originalExt);
+
+            $results[] = [
+                'role' => $role,
+                'status' => $review->fresh()->drive_status,
+            ];
+        }
+
+        return response()->json([
+            'success' => true,
+            'document' => $document,
+            'recipients' => $results,
+        ]);
+    }
+
+    private function deliverToDrive(
+        CapstoneDocumentReview $review,
+        int $expertId,
+        int $teamId,
+        string $teamName,
+        $file,
+        string $ext
+    ): void {
+        $hasToken = GoogleDriveToken::where('user_id', $expertId)->exists();
+
+        if (! $hasToken) {
+            $review->update([
+                'drive_status' => 'not_connected',
+                'drive_error' => 'This recipient has not connected Google Drive yet.',
+            ]);
+            return;
+        }
+
+        $extensionMimeMap = [
+            'pdf'  => 'application/pdf',
+            'doc'  => 'application/msword',
+            'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'ppt'  => 'application/vnd.ms-powerpoint',
+            'pptx' => 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+        ];
+        $mimeType = $extensionMimeMap[$ext] ?? $file->getMimeType();
+
+        try {
+            $folderId = $this->drive->getOrCreateSubmissionFolder($expertId, $teamId, $teamName);
+
+            $uploaded = $this->drive->uploadFile(
+                $expertId,
+                $file->getRealPath(),
+                $file->getClientOriginalName(),
+                $mimeType,
+                $folderId
+            );
+
+            $review->update([
+                'drive_file_id' => $uploaded['id'],
+                'drive_web_view_link' => $uploaded['web_view_link'],
+                'drive_status' => 'uploaded',
+                'drive_error' => null,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Submission Drive delivery failed', [
+                'review_id' => $review->review_id,
+                'expert_id' => $expertId,
+                'message' => $e->getMessage(),
+            ]);
+
+            $review->update([
+                'drive_status' => 'failed',
+                'drive_error' => $e->getMessage(),
+            ]);
+        }
+    }
+}
