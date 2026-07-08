@@ -12,6 +12,7 @@ use App\Http\Controllers\ExpertController;
 use App\Http\Controllers\Instructor\AssignmentController as InstructorAssignmentController;
 use App\Http\Controllers\Instructor\DocReviewController;
 use App\Http\Controllers\Instructor\ScheduleController;
+use App\Http\Controllers\Instructor\TeamController as InstructorTeamController;
 use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PersonalInfoController;
@@ -48,7 +49,7 @@ Route::middleware(['auth:expert', 'expert.admin', 'no.cache'])->prefix('admin')-
 Route::middleware(['auth:expert', 'expert.approved', 'no.cache'])->prefix('instructor')->name('instructor.')->group(function () {
     Route::view('/dashboard', 'instructor.dashboard')->name('dashboard');
     Route::view('/applications', 'instructor.applications')->name('applications');
-    Route::view('/teams', 'instructor.teams')->name('teams');
+    Route::get('/teams', [InstructorTeamController::class, 'index'])->name('teams');
     Route::view('/consultations', 'instructor.consultations')->name('consultations');
     Route::view('/progress', 'instructor.progress')->name('progress');
     Route::view('/profile', 'instructor.profile')->name('profile');
