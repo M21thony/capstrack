@@ -84,9 +84,139 @@
         .disc-item:hover { background: rgba(255,255,255,0.04); border-color: rgba(181, 148, 31, 0.2); }
         .disc-topic { font-size: 1.1rem; font-weight: 600; color: var(--primary); margin-bottom: 8px; display: flex; align-items: center; gap: 10px; }
         .disc-text { font-size: 0.95rem; color: rgba(255, 255, 255, 0.65); line-height: 1.6; }
+
+        .hide-mobile { display: revert; }
+        .show-mobile { display: none; }
+
+        /* ── SKELETON LOADING SCREEN ── */
+        .skeleton-loader {
+            position: fixed; inset: 0; background: var(--navy); z-index: 9999;
+            display: flex; flex-direction: column;
+            transition: opacity 0.6s ease, visibility 0.6s ease;
+        }
+        .skeleton-loader.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+
+        .sk-nav { display: flex; justify-content: space-between; align-items: center; padding: 30px; }
+        .sk-block { position: relative; overflow: hidden; border-radius: 8px; background: rgba(255,255,255,0.06); }
+        .sk-logo { width: 140px; height: 28px; }
+        .sk-nav-group { display: flex; gap: 12px; }
+        .sk-nav-btn { width: 100px; height: 36px; border-radius: 10px; }
+
+        .sk-hero { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0 20px; gap: 18px; }
+        .sk-title { width: min(500px, 80%); height: 52px; }
+        .sk-desc { width: min(400px, 70%); height: 16px; }
+        .sk-desc2 { width: min(300px, 50%); height: 16px; }
+        .sk-hero-actions { display: flex; gap: 14px; margin-top: 18px; flex-wrap: wrap; justify-content: center; }
+        .sk-btn { width: 150px; height: 48px; border-radius: 12px; }
+
+        .sk-footer { padding: 20px; display: flex; justify-content: center; }
+        .sk-footer-text { width: 200px; height: 12px; border-radius: 4px; background: rgba(255,255,255,0.04); }
+
+        .sk-shimmer {
+            position: absolute; inset: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent);
+            animation: skShimmer 1.5s ease-in-out infinite;
+        }
+        @keyframes skShimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+
+        .page-content { opacity: 1; transition: opacity 0.6s ease; }
+        .page-content.loading { opacity: 0; }
+
+        /* ── RESPONSIVE: Tablet (≤768px) ── */
+        @media (max-width: 768px) {
+            .nav-ct { padding: 20px 24px; }
+            .nav-logo { font-size: 1.3rem; }
+            .hero-section { height: 90vh; }
+            .hero-content { max-width: 700px; }
+            .btn-ct { padding: 12px 28px; min-height: 48px; }
+            .modal-card { padding: 28px; }
+            .modal-title { font-size: 1.5rem; }
+            .disc-item { padding: 16px; }
+            .disc-topic { font-size: 1rem; }
+            .features-grid { gap: 16px; margin-top: 40px; }
+            .feature-card { padding: 20px; }
+            .sk-nav { padding: 20px 24px; }
+            .sk-logo { width: 120px; height: 24px; }
+            .sk-nav-btn { width: 90px; height: 34px; }
+            .sk-title { height: 44px; }
+            .sk-btn { width: 130px; height: 44px; }
+        }
+
+        /* ── RESPONSIVE: Phone (≤480px) ── */
+        @media (max-width: 480px) {
+            .nav-ct { padding: 14px 16px; flex-wrap: wrap; gap: 10px; }
+            .nav-logo { font-size: 1.1rem; }
+            .nav-auth > div { gap: 8px; flex-wrap: wrap; }
+            .nav-auth .btn-ct { min-height: 44px; display: inline-flex; align-items: center; font-size: 0.8rem !important; padding: 8px 14px !important; }
+
+            .hero-section { min-height: 100dvh; height: auto; padding: 100px 0 70px; }
+            .hero-content { padding: 0 16px; }
+            .hero-title { font-size: clamp(2.2rem, 10vw, 3rem); margin-bottom: 16px; }
+            .hero-description { font-size: 0.7rem; margin-bottom: 28px; }
+
+            .hero-actions { flex-direction: row; flex-wrap: wrap; justify-content: center; gap: 8px; }
+            .hero-actions .btn-ct { width: auto; padding: 7px 14px; font-size: 0.75rem; min-height: 36px; }
+            .show-mobile { display: inline-flex; }
+            .hide-mobile { display: none !important; }
+
+            .modal-card { padding: 20px 14px; border-radius: 14px; width: 98%; max-height: 92vh; }
+            #login-modal .modal-card { max-width: 100% !important; width: 94% !important; padding: 22px 16px !important; border-radius: 14px; }
+            #login-modal .modal-card .modal-title { font-size: 1rem !important; }
+            #login-modal .modal-card > div:first-of-type { width: 90px !important; height: 38px !important; margin-bottom: 12px !important; }
+            #login-modal .modal-card > div:last-of-type { margin-top: 14px !important; font-size: 0.65rem !important; }
+            .modal-title { font-size: 1.1rem; }
+            .modal-header .modal-title { font-size: 1.1rem; }
+            .modal-header { margin-bottom: 14px; }
+            .modal-close { top: 12px; right: 12px; width: 36px; height: 36px; font-size: 1.3rem; }
+            .modal-footer .btn-ct-primary { width: 100%; }
+            #google-signin-btn { min-height: 44px; font-size: 0.8rem !important; padding: 10px !important; }
+            #login-modal .modal-card a[href*="account.request"] { font-size: 0.65rem !important; }
+
+            .disc-item { padding: 14px; }
+            .disc-topic { font-size: 0.95rem; }
+            .disc-text { font-size: 0.85rem; }
+
+            .features-grid { grid-template-columns: 1fr; gap: 14px; margin-top: 32px; }
+            .feature-card { padding: 18px; }
+
+            footer { position: relative; padding: 6px; font-size: 0.4rem; }
+
+            .sk-nav { padding: 14px 16px; }
+            .sk-logo { width: 90px; height: 20px; }
+            .sk-nav-btn { width: 70px; height: 32px; }
+            .sk-title { width: min(320px, 85%); height: 36px; }
+            .sk-desc { width: min(280px, 80%); height: 12px; }
+            .sk-desc2 { width: min(200px, 60%); height: 12px; }
+            .sk-btn { width: 120px; height: 38px; }
+        }
     </style>
 </head>
 <body>
+
+    <!-- ── SKELETON LOADER ── -->
+    <div class="skeleton-loader" id="skeleton-loader">
+        <div class="sk-nav">
+            <div class="sk-block sk-logo"><div class="sk-shimmer"></div></div>
+            <div class="sk-nav-group">
+                <div class="sk-block sk-nav-btn"><div class="sk-shimmer"></div></div>
+                <div class="sk-block sk-nav-btn"><div class="sk-shimmer"></div></div>
+            </div>
+        </div>
+        <div class="sk-hero">
+            <div class="sk-block sk-title"><div class="sk-shimmer"></div></div>
+            <div class="sk-block sk-desc"><div class="sk-shimmer"></div></div>
+            <div class="sk-block sk-desc2"><div class="sk-shimmer"></div></div>
+            <div class="sk-hero-actions">
+                <div class="sk-block sk-btn"><div class="sk-shimmer"></div></div>
+                <div class="sk-block sk-btn"><div class="sk-shimmer"></div></div>
+            </div>
+        </div>
+        <div class="sk-footer">
+            <div class="sk-block sk-footer-text"><div class="sk-shimmer"></div></div>
+        </div>
+    </div>
+
+    <div class="page-content loading" id="page-content">
     <nav class="nav-ct">
         <a href="/" class="nav-logo">Caps<span>Track
         </span></a>
@@ -98,7 +228,7 @@
                     @else
                         <a href="#" class="btn-ct btn-ct-outline open-login-btn" style="cursor: pointer; border: none; padding: 8px 20px; font-size: 0.9rem;">Log in</a>
                         @if (Route::has('account.request'))
-                            <a href="{{ route('account.request') }}" class="btn-ct btn-ct-primary" style="padding: 8px 20px; font-size: 0.9rem;">Request Account</a>
+                            <a href="{{ route('account.request') }}" class="btn-ct btn-ct-primary hide-mobile" style="padding: 8px 20px; font-size: 0.9rem;">Request Account</a>
                         @endif
                     @endauth
                 </div>
@@ -125,7 +255,9 @@
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
                     </a>
                 @else
-
+                    @if (Route::has('account.request'))
+                        <a href="{{ route('account.request') }}" class="btn-ct btn-ct-primary show-mobile">Request Account</a>
+                    @endif
                 @endauth
                 <button class="btn-ct btn-ct-outline" id="open-learn-more" style="cursor: pointer;">Learn More</button>
             </div>
@@ -232,8 +364,9 @@
     </div>
 
     <footer style="position: absolute; bottom: 0; width: 100%; padding: 20px; text-align: center; font-size: 0.8rem; color: rgba(255,255,255,0.3); z-index: 10;">
-        &copy; {{ date('Y') }} CSPC College of Computer Studies. CapsTrack System. - created by BULBASAUR
+        &copy; {{ date('Y') }} CSPC CCS CapsTrack - BULBASAUR
     </footer>
+    </div>
 
     <script>
         // Info Modal
@@ -308,6 +441,21 @@
 
 // reCAPTCHA v3 handling removed – v2 widget handles token automatically.
 
+        // ── SKELETON LOADING ──
+        const skeleton = document.getElementById('skeleton-loader');
+        const content = document.getElementById('page-content');
+
+        function hideSkeleton() {
+            skeleton.classList.add('hidden');
+            content.classList.remove('loading');
+        }
+
+        if (document.readyState === 'complete') {
+            hideSkeleton();
+        } else {
+            const minDisplay = new Promise(resolve => setTimeout(resolve, 800));
+            Promise.all([minDisplay, new Promise(resolve => window.addEventListener('load', resolve))]).then(hideSkeleton);
+        }
     </script>
 </body>
 </html>
