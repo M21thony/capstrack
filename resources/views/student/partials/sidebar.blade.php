@@ -1,3 +1,4 @@
+<script>document.documentElement.setAttribute('data-theme',localStorage.getItem('theme')||'light')</script>
 @php
     $student = Auth::user();
     $yearParts = explode(' · ', $student->year_section ?? '');
@@ -116,6 +117,11 @@
       @if ($studentHasTeam)
       @endif
     </a>
+    <div class="nav-section">Appearance</div>
+    <button class="nav-item nav-item-button" onclick="toggleTheme()" style="cursor:pointer">
+      <svg id="themeIcon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      <span id="themeLabel">Dark Mode</span>
+    </button>
     <form id="logout-form" action="{{ route('logout') }}" method="POST">
         @csrf
         <button type="submit" class="nav-item nav-item-button">
@@ -208,5 +214,29 @@
     if (e.target.id === 'profile-overlay') closeProfile();
   }
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeProfile(); });
+
+  function toggleTheme() {
+    var html = document.documentElement;
+    var isDark = html.getAttribute('data-theme') === 'dark';
+    html.setAttribute('data-theme', isDark ? 'light' : 'dark');
+    localStorage.setItem('theme', isDark ? 'light' : 'dark');
+    updateThemeUI();
+  }
+  function updateThemeUI() {
+    var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    var icon = document.getElementById('themeIcon');
+    var label = document.getElementById('themeLabel');
+    if (!icon || !label) return;
+    if (isDark) {
+      icon.setAttribute('viewBox', '0 0 24 24');
+      icon.innerHTML = '<circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>';
+      label.textContent = 'Light Mode';
+    } else {
+      icon.setAttribute('viewBox', '0 0 24 24');
+      icon.innerHTML = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
+      label.textContent = 'Dark Mode';
+    }
+  }
+  updateThemeUI();
 </script>
 

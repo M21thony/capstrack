@@ -22,7 +22,7 @@
   @keyframes tagFadeIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
   @keyframes shimmer { 0% { background-position: -400px 0; } 100% { background-position: calc(400px + 100%) 0; } }
   .skeleton-box { background: linear-gradient(90deg, var(--bg2) 25%, var(--bg) 50%, var(--bg2) 75%); background-size: 400px 100%; animation: shimmer 1.6s ease-in-out infinite; }
-  #pageSkeleton { position: absolute; inset: 0; z-index: 50; padding: 20px 0; opacity: 1; transition: opacity 0.35s ease; pointer-events: auto; }
+  #pageSkeleton { position: absolute; inset: 0; z-index: 50; padding: 0; opacity: 1; transition: opacity 0.35s ease; pointer-events: auto; }
   #pageSkeleton.loaded { opacity: 0; pointer-events: none; }
   .content { position: relative; }
 </style>
@@ -43,22 +43,80 @@
   <div class="content">
     @include('student.partials.page-tutorial', ['page' => 'team'])
 
+    <div id="contentWrapper" style="position: relative;">
     <div id="pageSkeleton">
-      <div class="card" style="margin-bottom: 20px; border: 1px solid var(--border);">
+      <div class="card" style="margin-bottom: 20px;">
         <div style="display: flex; align-items: center; gap: 14px;">
           <div class="skeleton-box" style="width: 56px; height: 56px; border-radius: 14px; flex-shrink: 0;"></div>
           <div style="flex: 1; min-width: 0;">
-            <div class="skeleton-box" style="width: 55%; height: 18px; border-radius: 6px; margin-bottom: 8px;"></div>
-            <div class="skeleton-box" style="width: 35%; height: 14px; border-radius: 5px; margin-bottom: 6px;"></div>
-            <div class="skeleton-box" style="width: 25%; height: 11px; border-radius: 4px;"></div>
+            <div class="skeleton-box" style="width: 60%; height: 20px; border-radius: 6px; margin-bottom: 8px;"></div>
+            <div class="skeleton-box" style="width: 40%; height: 14px; border-radius: 5px; margin-bottom: 6px;"></div>
+            <div class="skeleton-box" style="width: 30%; height: 11px; border-radius: 4px;"></div>
           </div>
           <div class="skeleton-box" style="width: 80px; height: 26px; border-radius: 20px; flex-shrink: 0;"></div>
         </div>
         <div class="team-dash-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 20px;">
-          <div class="skeleton-box" style="height: 200px; border-radius: 12px;"></div>
-          <div class="skeleton-box" style="height: 200px; border-radius: 12px;"></div>
+          <div style="background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 16px;">
+            <div class="skeleton-box" style="width: 110px; height: 11px; border-radius: 4px; margin-bottom: 14px;"></div>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <div class="skeleton-box" style="width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0;"></div>
+                <div style="flex: 1;">
+                  <div class="skeleton-box" style="width: 55%; height: 13px; border-radius: 5px; margin-bottom: 4px;"></div>
+                  <div class="skeleton-box" style="width: 35%; height: 10px; border-radius: 3px;"></div>
+                </div>
+                <div class="skeleton-box" style="width: 55px; height: 18px; border-radius: 6px;"></div>
+              </div>
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <div class="skeleton-box" style="width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0;"></div>
+                <div style="flex: 1;">
+                  <div class="skeleton-box" style="width: 45%; height: 13px; border-radius: 5px; margin-bottom: 4px;"></div>
+                  <div class="skeleton-box" style="width: 30%; height: 10px; border-radius: 3px;"></div>
+                </div>
+                <div class="skeleton-box" style="width: 55px; height: 18px; border-radius: 6px;"></div>
+              </div>
+            </div>
+            <div style="margin-top: 14px; display: flex; align-items: center; gap: 6px;">
+              <div class="skeleton-box" style="width: 14px; height: 4px; border-radius: 2px;"></div>
+              <div class="skeleton-box" style="width: 14px; height: 4px; border-radius: 2px;"></div>
+              <div class="skeleton-box" style="width: 14px; height: 4px; border-radius: 2px;"></div>
+              <div class="skeleton-box" style="width: 14px; height: 4px; border-radius: 2px;"></div>
+              <div class="skeleton-box" style="width: 65px; height: 10px; border-radius: 3px; margin-left: 4px;"></div>
+            </div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 0;">
+            <div style="background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 16px;">
+              <div class="skeleton-box" style="width: 110px; height: 11px; border-radius: 4px; margin-bottom: 14px;"></div>
+              <div style="display: flex; flex-direction: column; gap: 10px;">
+                <div style="display: flex; justify-content: space-between;">
+                  <div class="skeleton-box" style="width: 50px; height: 12px; border-radius: 3px;"></div>
+                  <div class="skeleton-box" style="width: 130px; height: 12px; border-radius: 3px;"></div>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                  <div class="skeleton-box" style="width: 50px; height: 12px; border-radius: 3px;"></div>
+                  <div class="skeleton-box" style="width: 110px; height: 12px; border-radius: 3px;"></div>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                  <div class="skeleton-box" style="width: 50px; height: 12px; border-radius: 3px;"></div>
+                  <div class="skeleton-box" style="width: 90px; height: 12px; border-radius: 3px;"></div>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                  <div class="skeleton-box" style="width: 50px; height: 12px; border-radius: 3px;"></div>
+                  <div class="skeleton-box" style="width: 70px; height: 12px; border-radius: 3px;"></div>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                  <div class="skeleton-box" style="width: 50px; height: 12px; border-radius: 3px;"></div>
+                  <div class="skeleton-box" style="width: 80px; height: 12px; border-radius: 3px;"></div>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                  <div class="skeleton-box" style="width: 50px; height: 12px; border-radius: 3px;"></div>
+                  <div class="skeleton-box" style="width: 120px; height: 12px; border-radius: 3px;"></div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-        <div class="team-actions" style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; padding-top: 10px; border-top: 1px solid var(--border);">
+        <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; padding-top: 10px; border-top: 1px solid var(--border);">
           <div class="skeleton-box" style="width: 100px; height: 32px; border-radius: 6px;"></div>
           <div class="skeleton-box" style="width: 130px; height: 32px; border-radius: 6px;"></div>
         </div>
@@ -83,23 +141,35 @@
         @endphp
         <div style="flex: 1; min-width: 0;">
           @if($myTeam->project_title)
-            <div style="font-size: 18px; color: #1a1a1a; font-weight: 700; margin-bottom: 2px; line-height: 1.3;">{{ $myTeam->project_title }}</div>
+            <div style="font-size: 18px; color: var(--text); font-weight: 700; margin-bottom: 2px; line-height: 1.3;">{{ $myTeam->project_title }}</div>
           @endif
           <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
             <div style="font-size: 16px; font-weight: 600; color: var(--text3);">{{ $myTeam->team_name }}</div>
             <div class="team-status-badge team-status-badge--inline" style="background: {{ $statusData['bg'] }}; color: #fff; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; display: flex; align-items: center; gap: 6px;">
               <span style="width: 6px; height: 6px; border-radius: 50%; background: #fff; display: inline-block;"></span>{{ $statusData['label'] }}
               @if($isVerified)
-                <span style="background:rgba(255,255,255,0.25);padding:1px 6px;border-radius:10px;font-size:9px;">✓ Verified</span>
+                <span class="verified-chip-inline" style="display:inline-flex;align-items:center;gap:3px;background:rgba(255,255,255,0.2);color:#fff;padding:1px 8px 1px 5px;border-radius:20px;font-size:8px;font-weight:600;backdrop-filter:blur(4px);border:1px solid rgba(255,255,255,0.15);">
+                  <svg viewBox="0 0 24 24" width="8" height="8" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+                  Verified
+                </span>
               @endif
             </div>
+            @if($isVerified)
+            <div class="verified-phone-badge" style="display:none;align-items:center;gap:4px;background:#fff;border:1px solid #a7f3d0;color:#059669;padding:2px 10px 2px 6px;border-radius:20px;font-size:10px;font-weight:700;box-shadow:0 1px 3px rgba(0,0,0,0.06);">
+              <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="#059669" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+              Verified
+            </div>
+            @endif
           </div>
           <div style="font-size: 12px; color: var(--text3); margin-top: 4px;">{{ auth()->user()->studentSchoolYear()->first()?->program ?? 'BSIT-4A' }} · Capstone SY 2025–2026</div>
         </div>
         <div class="team-status-badge team-status-badge--desktop" style="background: {{ $statusData['bg'] }}; color: #fff; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; display: flex; align-items: center; gap: 6px;">
           <span style="width: 6px; height: 6px; border-radius: 50%; background: #fff; display: inline-block;"></span>{{ $statusData['label'] }}
           @if($isVerified)
-            <span style="background:rgba(255,255,255,0.25);padding:1px 6px;border-radius:10px;font-size:9px;">✓ Verified</span>
+            <span class="verified-chip-desktop" style="display:inline-flex;align-items:center;gap:3px;background:rgba(255,255,255,0.2);color:#fff;padding:1px 8px 1px 5px;border-radius:20px;font-size:8px;font-weight:600;backdrop-filter:blur(4px);border:1px solid rgba(255,255,255,0.15);">
+              <svg viewBox="0 0 24 24" width="8" height="8" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+              Verified
+            </span>
           @endif
         </div>
       </div>
@@ -195,8 +265,8 @@
         @if($isLeader && $myTeam->team_status === 'complete' && !$myTeam->is_confirmed)
           <button type="button" onclick="showConfirmTeam()" style="padding: 5px 10px; border-radius: 6px; border: 1px solid #bbf7d0; background: #f0fdf4; color: #15803d; font-size: 10px; font-weight: 700; cursor: pointer;">Confirm Team</button>
         @elseif($isLeader && $myTeam->is_confirmed)
-          <span style="padding: 5px 10px; border-radius: 6px; border: 1px solid #bbf7d0; background: #f0fdf4; color: #15803d; font-size: 10px; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">
-            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+          <span class="verified-badge-standalone" style="display:inline-flex;align-items:center;gap:6px;background:linear-gradient(135deg,#10b981,#059669);color:#fff;padding:6px 14px 6px 10px;border-radius:20px;font-size:11px;font-weight:600;box-shadow:0 2px 8px rgba(16,185,129,0.35);border:none;letter-spacing:0.2px;">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
             Verified
           </span>
         @endif
@@ -401,6 +471,7 @@
           @endforelse
         </div>
       </div>
+    </div>
   </div>
   </div>
 </main>
@@ -603,11 +674,19 @@
         <strong>Team is now full!</strong> Your team has reached {{ $teamMembers->count() }}/{{ $memberCount }} members. You can now update the status to <strong>Complete</strong> or <strong>Closed</strong>.
       </div>
       @endif
-      <select name="team_status" id="teamStatusSelect" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;margin-bottom:20px;box-sizing:border-box;">
+      <select name="team_status" id="teamStatusSelect" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;margin-bottom:8px;box-sizing:border-box;@if($myTeam->is_confirmed) cursor:not-allowed;opacity:0.6;@endif" @if($myTeam->is_confirmed) disabled @endif>
         <option value="on-going" id="ongoingStatusOption" @if($myTeam->team_status === 'on-going') selected @endif @if($isTeamFull) disabled @endif>On-going</option>
         <option value="complete" id="completeStatusOption" @if($myTeam->team_status === 'complete') selected @endif>Complete</option>
         <option value="closed" id="closedStatusOption" @if($myTeam->team_status === 'closed') selected @endif>Closed</option>
       </select>
+      @if($myTeam->is_confirmed)
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:20px;font-size:12px;color:#6b7280;">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        <span>Team is verified — status cannot be changed.</span>
+      </div>
+      @else
+      <div style="margin-bottom:20px;"></div>
+      @endif
       <div style="display:flex;gap:10px;">
         <button type="submit" class="btn-primary" style="flex:1;">Save Changes</button>
         <button type="button" class="google-btn" style="flex:1;border:none;" onclick="closeEditTeamModal()">Cancel</button>

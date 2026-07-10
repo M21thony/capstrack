@@ -137,6 +137,10 @@ class TeamController extends Controller
             return response()->json(['message' => 'Only the team leader can update the team.'], 403);
         }
 
+        if ($team->is_confirmed && $request->has('team_status')) {
+            return response()->json(['message' => 'Cannot change status. Team is already verified.'], 403);
+        }
+
         $validated = $request->validate([
             'team_name' => ['required', 'string', 'max:100'],
             'project_title' => ['nullable', 'string', 'max:150'],

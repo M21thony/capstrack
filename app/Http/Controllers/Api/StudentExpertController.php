@@ -136,15 +136,15 @@ class StudentExpertController extends Controller
             ], 422);
         }
 
-        $existing = TeamExpertAssignment::where('team_id', $team->team_id)
-            ->where('expert_id', $validated['expert_id'])
+        $roleLocked = TeamExpertAssignment::where('team_id', $team->team_id)
             ->where('role_id', $validated['role_id'])
-            ->first();
+            ->whereIn('status', ['pending', 'approved'])
+            ->exists();
 
-        if ($existing) {
+        if ($roleLocked) {
             return response()->json([
                 'success' => false,
-                'message' => 'Your team already has an assignment with this expert for this role.',
+                'message' => 'Your team already has a pending or approved application for this role.',
             ], 409);
         }
 

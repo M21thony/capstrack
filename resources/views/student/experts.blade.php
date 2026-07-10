@@ -382,7 +382,9 @@
                 $hasApproved = $teamAssignmentsForExpert->where('status', 'approved')->isNotEmpty();
                 $hasPending = $teamAssignmentsForExpert->where('status', 'pending')->isNotEmpty();
                 $alreadyAssignedRoleIds = $teamAssignmentsForExpert->pluck('role_id')->toArray();
-                $availableRoles = $visibleRoles->reject(fn($r) => in_array($r->role_id, $alreadyAssignedRoleIds));
+                $availableRoles = $visibleRoles
+                  ->reject(fn($r) => in_array($r->role_id, $alreadyAssignedRoleIds))
+                  ->reject(fn($r) => in_array($r->role_name, $lockedRoles));
               @endphp
               @if($hasApproved)
                 <button class="btn btn-sm btn-full btn-muted-green" disabled>

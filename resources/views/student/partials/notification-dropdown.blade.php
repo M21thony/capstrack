@@ -46,10 +46,9 @@
 </div>
 
 <style>
-.notif-btn{position:relative;background:none;border:none;padding:0;cursor:pointer;display:inline-flex;align-items:center}
 .notif-dot{position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;border-radius:9px;background:#ef4444;border:2px solid var(--navy-mid);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;line-height:1;padding:0 4px}
 
-.notif-dropdown{position:absolute;top:calc(100% + 8px);right:-8px;width:380px;max-height:480px;background:#fff;border:1px solid var(--border);border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,0.12),0 0 0 1px rgba(0,0,0,0.04);z-index:300;display:none;overflow:hidden}
+.notif-dropdown{position:absolute;top:calc(100% + 8px);right:0;width:380px;max-height:480px;background:#fff;border:1px solid var(--border);border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,0.12),0 0 0 1px rgba(0,0,0,0.04);z-index:9999;display:none}
 .notif-dropdown.open{display:block;animation:notifFadeIn .12s ease}
 @keyframes notifFadeIn{from{opacity:0;transform:translateY(-6px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
 

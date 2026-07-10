@@ -26,7 +26,7 @@ class DashboardController extends Controller
         $leaderStudentId = null;
 
         if ($teamId) {
-            $myTeam = Team::find($teamId);
+            $myTeam = Team::with('expertAssignments.expert', 'expertAssignments.role')->find($teamId);
             $leaderStudentId = $myTeam?->leader_id;
             if ($myTeam) {
                 $teamMembers = Student::join('student_s_y', 'students.student_id', '=', 'student_s_y.student_id')

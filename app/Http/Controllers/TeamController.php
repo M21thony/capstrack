@@ -243,6 +243,11 @@ class TeamController extends Controller
                 ->with('error', 'Only the team leader can update the team.');
         }
 
+        if ($team->is_confirmed && $request->has('team_status')) {
+            return redirect()->route('student.team')
+                ->with('error', 'Cannot change status. Team is already verified.');
+        }
+
         $validated = $request->validate([
             'team_name' => ['required', 'string', 'max:100'],
             'project_title' => ['nullable', 'string', 'max:150'],

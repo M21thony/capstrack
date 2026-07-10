@@ -61,6 +61,13 @@ class ExpertController extends Controller
             'team_pending' => $assignments->where('status', 'pending')->count(),
         ];
 
+        $lockedRoles = $assignments->whereIn('status', ['pending', 'approved'])
+            ->pluck('role.role_name')
+            ->filter()
+            ->unique()
+            ->values()
+            ->toArray();
+
         return view('student.experts', [
             'experts' => $experts,
             'assignments' => $assignments,
@@ -69,6 +76,7 @@ class ExpertController extends Controller
             'teamConfirmed' => $team?->is_confirmed ?? false,
             'stats' => $stats,
             'roleAssignments' => $roleAssignments,
+            'lockedRoles' => $lockedRoles,
         ]);
     }
 }
