@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\ResourcesController;
 use App\Http\Controllers\AdminApprovalController;
 use App\Http\Controllers\AdminDashboardController;
 use App\Http\Controllers\AdminExpertsController;
+use App\Http\Controllers\AdminFinancialController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DuplicationController;
@@ -19,7 +20,7 @@ use App\Http\Controllers\PersonalInfoController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RecruitmentController;
 use App\Http\Controllers\Student\ExpertController as StudentExpertController;
-use App\Http\Controllers\StudentResourcesController;
+use App\Http\Controllers\StudentFinancialController;
 use App\Http\Controllers\SubmissionController;
 use App\Http\Controllers\TeamController;
 use Illuminate\Support\Facades\Auth;
@@ -35,7 +36,12 @@ Route::middleware(['auth:expert', 'expert.admin', 'no.cache', 'track.expert'])->
     Route::delete('/experts/{expert}', [AdminExpertsController::class, 'destroy'])->name('experts.destroy');
     Route::view('/panel_assignment', 'admin.panel_assignment')->name('panel_assignment');
     Route::view('/analytics', 'admin.analytics')->name('analytics');
-    Route::view('/financial', 'admin.financial')->name('financial');
+    Route::get('/financial', [AdminFinancialController::class, 'index'])->name('financial');
+    Route::post('/financial/expense-post', [AdminFinancialController::class, 'storeExpensePost'])->name('financial.expense-post.store');
+    Route::put('/financial/expense-post/{expensePost}', [AdminFinancialController::class, 'updateExpensePost'])->name('financial.expense-post.update');
+    Route::delete('/financial/expense-post/{expensePost}', [AdminFinancialController::class, 'destroyExpensePost'])->name('financial.expense-post.destroy');
+    Route::post('/financial/receipt/{financialRecord}/approve', [AdminFinancialController::class, 'approveReceipt'])->name('financial.receipt.approve');
+    Route::post('/financial/receipt/{financialRecord}/reject', [AdminFinancialController::class, 'rejectReceipt'])->name('financial.receipt.reject');
     Route::view('/archive', 'admin.archive')->name('archive');
     Route::view('/announcements', 'admin.announcements')->name('announcements');
     // NOTE: restored to controller-based route (was Route::view in your latest file) —
@@ -124,13 +130,9 @@ Route::middleware(['auth', 'no.cache', 'track.expert'])->group(function () {
             Route::view('/duplication', 'student.duplication')->name('student.duplication');
             Route::view('/consultation', 'student.consultation')->name('student.consultation');
             Route::view('/progress', 'student.progress')->name('student.progress');
-            Route::view('/financial', 'student.financial')->name('student.financial');
-            // NOTE: restored to controller-based routes (was Route::view in your latest
-            // file) — needed for the Google-Drive-backed resource list + download
-            // tracking. Revert to Route::view(...) if this was intentional.
-            Route::get('/resources', [StudentResourcesController::class, 'index'])->name('student.resources');
-            Route::get('/resources/{resource}/download', [StudentResourcesController::class, 'download'])->name('student.resources.download.file');
-            Route::post('/resources/{resource}/download', [StudentResourcesController::class, 'trackDownload'])->name('student.resources.download');
+            Route::get('/financial', [StudentFinancialController::class, 'index'])->name('student.financial');
+            Route::post('/financial/submit', [StudentFinancialController::class, 'submitReceipt'])->name('student.financial.submit');
+            Route::view('/resources', 'student.resources')->name('student.resources');
             Route::view('/archive', 'student.archive')->name('student.archive');
             Route::redirect('/profile', '/student/personal-info/edit')->name('student.profile');
         });
