@@ -719,6 +719,35 @@
   </div>
 </div>
 
+{{-- Expert Removed Popup Modal --}}
+@if(($expertRemovedNotifications ?? collect())->isNotEmpty())
+@php $expertRemovedIds = $expertRemovedNotifications->pluck('id')->implode(','); @endphp
+<div id="expertRemovedModal" style="position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:rgba(15,16,22,0.75);backdrop-filter:blur(6px);padding:20px;" data-ids="{{ $expertRemovedIds }}">
+  <div style="background:#fff;border-radius:18px;padding:32px 28px 24px;width:100%;max-width:420px;box-shadow:0 24px 60px rgba(0,0,0,0.25);text-align:center;position:relative;animation:expertPopIn 0.25s cubic-bezier(0.16,1,0.3,1);">
+    <div style="width:56px;height:56px;border-radius:50%;background:rgba(239,68,68,0.08);color:#ef4444;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+      <svg width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </div>
+    <h3 style="font-size:17px;font-weight:700;color:#1e2128;margin:0 0 6px;letter-spacing:-0.3px;">Expert Removed</h3>
+    <div id="expertRemovedContent" style="font-size:13px;color:#6b7280;line-height:1.6;margin:0 0 8px;text-align:left;max-height:200px;overflow-y:auto;padding:0 4px;">
+      @foreach($expertRemovedNotifications as $notif)
+        <div class="expert-removed-item" style="padding:12px 0;@if(!$loop->last)border-bottom:1px solid #f3f4f6;@endif">
+          <div style="font-weight:600;color:#1e2128;margin-bottom:4px;">{{ $notif->title }}</div>
+          <div>{!! $notif->message !!}</div>
+          <div style="font-size:11px;color:#9ca3af;margin-top:4px;">{{ $notif->created_at->diffForHumans() }}</div>
+        </div>
+      @endforeach
+    </div>
+    <button id="expertRemovedOkBtn" type="button" style="width:100%;padding:11px 16px;border-radius:10px;border:none;background:#1e2128;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:background 0.15s;margin-top:12px;">OK</button>
+  </div>
+</div>
+<style>
+  @keyframes expertPopIn { from { transform:scale(0.92) translateY(8px); opacity:0; } to { transform:scale(1) translateY(0); opacity:1; } }
+  #expertRemovedContent::-webkit-scrollbar { width:4px; }
+  #expertRemovedContent::-webkit-scrollbar-thumb { background:#e5e7eb; border-radius:4px; }
+  #expertRemovedOkBtn:hover { background:#374151; }
+</style>
+@endif
+
 {{-- Custom Confirm Modal --}}
 <div id="customConfirmModal" style="display:none; position:fixed; inset:0; z-index:99999; align-items:center; justify-content:center; background:rgba(15,16,22,0.75); backdrop-filter:blur(6px); padding:20px;">
   <div id="ccm-card" style="background:#fff; border-radius:18px; padding:32px 28px 24px; width:100%; max-width:380px; box-shadow:0 24px 60px rgba(0,0,0,0.25); transform:scale(0.92); transition:transform 0.22s cubic-bezier(0.16,1,0.3,1); text-align:center; position:relative;">
@@ -1297,6 +1326,25 @@ document.addEventListener('DOMContentLoaded', function() {
     @if(isset($teamFull) && $teamFull)
     setTimeout(function() { showConfirmTeam(); }, 500);
     @endif
+
+    // Expert Removed modal — mark each as read on dismiss
+    var expertModal = document.getElementById('expertRemovedModal');
+    var expertOkBtn = document.getElementById('expertRemovedOkBtn');
+    if (expertModal && expertOkBtn) {
+        var ids = (expertModal.getAttribute('data-ids') || '').split(',').filter(Boolean);
+        expertOkBtn.addEventListener('click', function() {
+            var token = document.querySelector('meta[name=csrf-token]').content;
+            var promises = ids.map(function(id) {
+                return fetch('/notifications/' + id + '/read', {
+                    method: 'POST',
+                    headers: { 'X-CSRF-TOKEN': token }
+                });
+            });
+            Promise.all(promises).finally(function() {
+                expertModal.style.display = 'none';
+            });
+        });
+    }
 });
 </script>
 </body>

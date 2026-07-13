@@ -485,6 +485,12 @@
       You are about to permanently remove <strong id="removeExpertName" style="color:#0f172a;"></strong> from the system.<br>
       This action <span style="color:#ef4444;font-weight:600;">cannot be undone</span>.
     </p>
+    <div style="margin-bottom:16px;text-align:left;">
+      <label class="ct-modal-label">
+        Reason for removal <span style="color:#ef4444;font-weight:400;">(sent to affected teams)</span>
+      </label>
+      <textarea id="removeReasonInput" class="ct-modal-input" rows="3" placeholder="Why is this expert being removed? This message will be sent to all affected team members..." style="resize:vertical;min-height:60px;font-family:inherit;"></textarea>
+    </div>
     <div style="margin-bottom:20px;text-align:left;">
       <label class="ct-modal-label">
         Type <code style="background:#fee2e2;color:#dc2626;padding:2px 6px;border-radius:4px;font-family:monospace;">remove</code> to confirm
@@ -531,6 +537,7 @@ function showToast(message, type = 'info', title = null) {
 // ── REMOVE EXPERT ─────────────────────────────────────────────
 const removeModal = document.getElementById('removeModal');
 const removeInput = document.getElementById('removeConfirmInput');
+const removeReason = document.getElementById('removeReasonInput');
 const removeBtn   = document.getElementById('removeConfirmBtn');
 
 document.querySelectorAll('.btn-remove').forEach(btn => {
@@ -538,10 +545,11 @@ document.querySelectorAll('.btn-remove').forEach(btn => {
     removeModal.dataset.expertId = this.dataset.id;
     document.getElementById('removeExpertName').textContent = this.dataset.name;
     removeInput.value = '';
+    removeReason.value = '';
     removeBtn.disabled = true;
     removeBtn.textContent = 'Delete';
     removeModal.style.display = 'flex';
-    setTimeout(() => removeInput.focus(), 60);
+    setTimeout(() => removeReason.focus(), 60);
   });
 });
 
@@ -567,7 +575,10 @@ removeBtn.addEventListener('click', function () {
       'X-CSRF-TOKEN': '{{ csrf_token() }}',
       'Accept': 'application/json',
     },
-    body: JSON.stringify({ _method: 'DELETE' }),
+    body: JSON.stringify({
+      _method: 'DELETE',
+      reason: removeReason.value.trim(),
+    }),
   })
     .then(res => res.json())
     .then(data => {

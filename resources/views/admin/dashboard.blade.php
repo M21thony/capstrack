@@ -11,6 +11,8 @@
 
 @include('admin._sidebar')
 
+@include('partials.welcome-modal')
+
 <div class="main">
   <div class="topbar">
     <div class="page-title">Dashboard</div>
@@ -53,9 +55,9 @@
         <div class="stat-sub">Expert accounts awaiting review</div>
       </div>
       <div class="stat-chip">
-        <div class="stat-n" style="color:var(--blue)">312</div>
+        <div class="stat-n" style="color:var(--blue)">{{ $archivedCapstones }}</div>
         <div class="stat-l">Archived Capstones</div>
-        <div class="stat-sub">2018–2025</div>
+        <div class="stat-sub">All time</div>
       </div>
     </div>
 
@@ -110,39 +112,25 @@
           <a href="{{ route('admin.approval') }}" class="btn btn-ghost" style="font-size:11px;padding:4px 10px">View All</a>
         </div>
         <div class="gap-12">
-          <div class="expert-row">
-            <div class="expert-av" style="background:linear-gradient(135deg,#1d4ed8,#7c3aed)">JD</div>
-            <div style="flex:1">
-              <div style="font-size:13px;font-weight:600;color:var(--text)">Dr. Jose Dela Cruz</div>
-              <div style="font-size:11px;color:var(--text3)">Machine Learning · Faculty</div>
+          @forelse ($pendingExperts as $expert)
+            <div class="expert-row">
+              <div class="expert-av" style="background:linear-gradient(135deg,#1d4ed8,#7c3aed)">{{ $expert->avatarInitials() }}</div>
+              <div style="flex:1">
+                <div style="font-size:13px;font-weight:600;color:var(--text)">{{ $expert->name }}</div>
+                <div style="font-size:11px;color:var(--text3)">
+                  {{ $expert->specialization ?: 'No role set' }}
+                  @if ($expert->department)
+                    · {{ $expert->department }}
+                  @endif
+                </div>
+              </div>
+              <div style="display:flex;gap:6px">
+                <a href="{{ route('admin.approval') }}" class="btn btn-success" style="font-size:10px;padding:4px 10px">Review</a>
+              </div>
             </div>
-            <div style="display:flex;gap:6px">
-              <button class="btn btn-success" style="font-size:10px;padding:4px 10px">Approve</button>
-              <button class="btn btn-danger" style="font-size:10px;padding:4px 10px">Reject</button>
-            </div>
-          </div>
-          <div class="expert-row">
-            <div class="expert-av" style="background:linear-gradient(135deg,#16a34a,#0891b2)">MR</div>
-            <div style="flex:1">
-              <div style="font-size:13px;font-weight:600;color:var(--text)">Prof. Maria Ramos</div>
-              <div style="font-size:11px;color:var(--text3)">Web Development · Faculty</div>
-            </div>
-            <div style="display:flex;gap:6px">
-              <button class="btn btn-success" style="font-size:10px;padding:4px 10px">Approve</button>
-              <button class="btn btn-danger" style="font-size:10px;padding:4px 10px">Reject</button>
-            </div>
-          </div>
-          <div class="expert-row">
-            <div class="expert-av" style="background:linear-gradient(135deg,#b45309,#dc2626)">KL</div>
-            <div style="flex:1">
-              <div style="font-size:13px;font-weight:600;color:var(--text)">Dr. Karl Lim</div>
-              <div style="font-size:11px;color:var(--text3)">Cybersecurity · Faculty</div>
-            </div>
-            <div style="display:flex;gap:6px">
-              <button class="btn btn-success" style="font-size:10px;padding:4px 10px">Approve</button>
-              <button class="btn btn-danger" style="font-size:10px;padding:4px 10px">Reject</button>
-            </div>
-          </div>
+          @empty
+            <div style="padding:24px 16px;text-align:center;color:var(--text3);font-size:13px">No pending approvals.</div>
+          @endforelse
         </div>
       </div>
 
@@ -152,26 +140,14 @@
           <a href="{{ route('admin.activitylog') }}" class="btn btn-ghost" style="font-size:11px;padding:4px 10px">View All</a>
         </div>
         <div>
-          <div class="act-item">
-            <div class="act-dot" style="background:var(--green-bg)"><svg viewBox="0 0 24 24" style="stroke:var(--green)"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
-            <div class="act-body"><strong>Team Nexus</strong> submitted Chapter 2 for review<div class="act-time">Today, 9:42 AM</div></div>
-          </div>
-          <div class="act-item">
-            <div class="act-dot" style="background:rgba(201,150,12,0.1)"><svg viewBox="0 0 24 24" style="stroke:var(--accent3)"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
-            <div class="act-body"><strong>Team Alpha</strong> booked consultation with Dr. Santos<div class="act-time">Today, 8:15 AM</div></div>
-          </div>
-          <div class="act-item">
-            <div class="act-dot" style="background:var(--blue-bg)"><svg viewBox="0 0 24 24" style="stroke:var(--blue)"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 1 0-16 0"/></svg></div>
-            <div class="act-body"><strong>Team Prism</strong> applied for Dr. Lim as Consultant<div class="act-time">Yesterday, 4:30 PM</div></div>
-          </div>
-          <div class="act-item">
-            <div class="act-dot" style="background:var(--purple-bg)"><svg viewBox="0 0 24 24" style="stroke:var(--purple)"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
-            <div class="act-body"><strong>Team Syntax</strong> ran duplication check on pre-proposal<div class="act-time">Yesterday, 2:10 PM</div></div>
-          </div>
-          <div class="act-item">
-            <div class="act-dot" style="background:var(--amber-bg)"><svg viewBox="0 0 24 24" style="stroke:var(--amber)"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
-            <div class="act-body"><strong>Maria Andres</strong> uploaded receipt for Printing Fee<div class="act-time">Yesterday, 11:00 AM</div></div>
-          </div>
+          @forelse ($recentActivity as $act)
+            <div class="act-item">
+              <div class="act-dot" style="background:{{ $act['iconBg'] }}"><svg viewBox="{{ $act['iconViewBox'] }}" style="stroke:{{ $act['iconColor'] }}">{!! $act['iconPath'] !!}</svg></div>
+              <div class="act-body">{!! $act['text'] !!}<div class="act-time">{{ $act['time'] ? \Carbon\Carbon::parse($act['time'])->diffForHumans() : '' }}</div></div>
+            </div>
+          @empty
+            <div style="padding:24px 16px;text-align:center;color:var(--text3);font-size:13px">No recent activity.</div>
+          @endforelse
         </div>
       </div>
     </div>

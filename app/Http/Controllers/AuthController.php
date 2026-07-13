@@ -179,6 +179,8 @@ class AuthController extends Controller
 
                     Auth::guard('expert')->login($expert);
 
+                    $expert->markFirstLogin();
+
                     $redirectUrl = $expert->is_admin ? '/admin/dashboard' : '/instructor/dashboard';
 
                     return redirect($redirectUrl);
@@ -297,6 +299,8 @@ class AuthController extends Controller
             if ($expert) {
                 if ($expert->approved_status) {
                     Auth::guard('expert')->login($expert);
+
+                    $expert->markFirstLogin();
 
                     $redirectUrl = $expert->is_admin ? '/admin/dashboard' : '/instructor/dashboard';
 

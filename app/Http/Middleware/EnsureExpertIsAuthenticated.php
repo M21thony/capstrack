@@ -12,6 +12,19 @@ class EnsureExpertIsAuthenticated
     public function handle(Request $request, Closure $next): Response
     {
         if (! Auth::guard('expert')->check()) {
+            $sessionKey = Auth::guard('expert')->getName();
+            $storedExpertId = $request->session()->get($sessionKey);
+
+            if ($storedExpertId) {
+                $removedData = cache()->get('expert_removed_'.$storedExpertId);
+
+                if ($removedData) {
+                    cache()->forget('expert_removed_'.$storedExpertId);
+
+                    return redirect('/?removed_expert=1&name='.urlencode($removedData['name']).'&reason='.urlencode($removedData['reason']));
+                }
+            }
+
             return redirect('/login');
         }
 

@@ -26,7 +26,7 @@ use App\Http\Controllers\TeamController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
-Route::middleware(['auth:expert', 'expert.admin', 'no.cache', 'track.expert'])->prefix('admin')->name('admin.')->group(function () {
+Route::middleware(['expert.auth', 'expert.admin', 'no.cache', 'track.expert'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
     Route::get('/experts', [AdminExpertsController::class, 'index'])->name('experts');
     Route::get('/approval', [AdminApprovalController::class, 'index'])->name('approval');
@@ -52,7 +52,7 @@ Route::middleware(['auth:expert', 'expert.admin', 'no.cache', 'track.expert'])->
     Route::view('/activitylog', 'admin.activitylog')->name('activitylog');
 });
 
-Route::middleware(['auth:expert', 'expert.approved', 'no.cache', 'track.expert'])->prefix('instructor')->name('instructor.')->group(function () {
+Route::middleware(['expert.auth', 'expert.approved', 'no.cache', 'track.expert'])->prefix('instructor')->name('instructor.')->group(function () {
     Route::view('/dashboard', 'instructor.dashboard')->name('dashboard');
     Route::view('/applications', 'instructor.applications')->name('applications');
     Route::get('/teams', [InstructorTeamController::class, 'index'])->name('teams');
@@ -73,7 +73,11 @@ Route::middleware(['auth:expert', 'expert.approved', 'no.cache', 'track.expert']
 });
 
 Route::get('/', function () {
-    return view('welcome');
+    return view('welcome', [
+        'removedExpert' => request()->has('removed_expert'),
+        'removedExpertName' => request('name', ''),
+        'removedExpertReason' => request('reason', ''),
+    ]);
 });
 
 Route::get('/login', [AuthController::class, 'login'])->name('login');
@@ -146,7 +150,7 @@ Route::middleware(['auth', 'no.cache', 'track.expert'])->group(function () {
     Route::post('/notifications/mark-all-read', [NotificationController::class, 'markAllRead'])->name('notifications.mark-all-read');
 });
 Route::prefix('instructor/schedule')
-    ->middleware(['auth:expert', 'no.cache', 'track.expert'])
+    ->middleware(['expert.auth', 'no.cache', 'track.expert'])
     ->group(function () {
         Route::get('slots', [ScheduleController::class, 'getSlots']);
         Route::post('slots', [ScheduleController::class, 'addSlot']);
@@ -173,7 +177,7 @@ Route::post('/session/keep-alive', function () {
 });
 
 // ── Google Drive OAuth + resource/submission delivery (from earlier work) ──
-Route::middleware(['auth:expert', 'track.expert'])->prefix('admin/gdrive')->name('gdrive.')->group(function () {
+Route::middleware(['expert.auth', 'track.expert'])->prefix('admin/gdrive')->name('gdrive.')->group(function () {
     Route::get('/connect', [GoogleDriveController::class, 'connect'])->name('connect');
     Route::get('/callback', [GoogleDriveController::class, 'callback'])->name('callback');
     Route::get('/status', [GoogleDriveController::class, 'status'])->name('status');

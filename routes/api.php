@@ -11,7 +11,7 @@ use App\Http\Controllers\Api\TeamController;
 use Illuminate\Support\Facades\Route;
 
 // Admin API routes (session based auth for experts)
-Route::middleware(['web', 'auth:expert', 'expert.admin'])
+Route::middleware(['web', 'expert.auth', 'expert.admin'])
     ->prefix('admin')
     ->group(function () {
         Route::get('/experts', [AdminExpertController::class, 'index'])->name('api.admin.experts.index');

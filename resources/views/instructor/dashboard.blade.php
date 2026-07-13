@@ -10,6 +10,7 @@
 <body>
 @include('instructor.partials.sidebar')
 <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• MAIN â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+@include('partials.welcome-modal')
 <div class="main">
   <div class="topbar">
     <div class="page-title">Dashboard</div>

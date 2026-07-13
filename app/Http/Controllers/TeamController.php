@@ -137,6 +137,12 @@ class TeamController extends Controller
 
         $userRole = $studentSy?->role?->s_role_name;
 
+        $expertRemovedNotifications = Notification::where('student_id', $studentId)
+            ->where('type', 'expert_removed')
+            ->where('is_read', false)
+            ->latest('created_at')
+            ->get();
+
         return view('student.team', [
             'myTeam' => $myTeam,
             'teamMembers' => $teamMembers,
@@ -153,6 +159,7 @@ class TeamController extends Controller
             'invites' => $invites,
             'leaderIds' => $leaderIds,
             'userRole' => $userRole,
+            'expertRemovedNotifications' => $expertRemovedNotifications,
         ]);
     }
 
