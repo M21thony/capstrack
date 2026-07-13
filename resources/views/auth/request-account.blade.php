@@ -28,6 +28,63 @@
     --blue: #3b82f6;
   }
 
+  [data-theme="light"] {
+    --navy: #eef1f6;
+    --navy-light: #f8f9fc;
+    --navy-mid: #ffffff;
+    --border: rgba(0,0,0,0.08);
+    --border2: rgba(0,0,0,0.18);
+    --text: #000000;
+    --text2: #1f2937;
+    --text3: #6b7280;
+  }
+  [data-theme="light"] input[type="text"],
+  [data-theme="light"] input[type="email"],
+  [data-theme="light"] input[type="number"],
+  [data-theme="light"] select,
+  [data-theme="light"] textarea {
+    background: #ffffff;
+    border-color: rgba(0,0,0,0.18);
+    color: #000000;
+  }
+  [data-theme="light"] input::placeholder,
+  [data-theme="light"] textarea::placeholder { color: #6b7280; }
+  [data-theme="light"] .section-label { color: #000000; }
+  [data-theme="light"] .field-hint { color: #000000; }
+  [data-theme="light"] .card-footer { background: #f9fafb; }
+  [data-theme="light"] select {
+    appearance: auto;
+    background-image: none;
+    padding-right: 14px;
+  }
+  [data-theme="light"] .tag-input-wrapper {
+    background: #ffffff;
+    border-color: rgba(0,0,0,0.18);
+  }
+  [data-theme="light"] .tag-input-wrapper .tag { background: #eef0f5; color: #000000; }
+  [data-theme="light"] .card { box-shadow: 0 4px 24px rgba(0,0,0,0.06); }
+  [data-theme="light"] .info-note { background: #ffffff; border-color: rgba(0,0,0,0.08); color: #000000; }
+  [data-theme="light"] .info-note svg { stroke: #000000; }
+  [data-theme="light"] .success-info { background: transparent; border-color: var(--border); color: var(--text2); }
+  [data-theme="light"] .review-key { color: #374151; }
+  [data-theme="light"] .review-value { color: #1f2937; }
+  [data-theme="light"] .review-tag { background: #dbeafe; border-color: #93c5fd; color: #1d4ed8; }
+  [data-theme="light"] .btn-primary { background: #3b82f6; color: #ffffff; }
+  [data-theme="light"] .btn-primary:hover { background: #2563eb; box-shadow: 0 4px 20px rgba(59,130,246,0.3); }
+  [data-theme="light"] .signin-link { color: #374151; }
+  [data-theme="light"] .signin-link:hover { color: #111827; }
+  [data-theme="light"] .tag-opt.selected { background: #e5e7eb; border-color: #9ca3af; color: #111827; }
+  [data-theme="light"] .tag-opt:hover { border-color: #9ca3af; color: #111827; }
+  [data-theme="light"] .role-card.selected { border-color: #3b82f6; background: #eff6ff; }
+  [data-theme="light"] .role-card.selected .role-icon { background: #dbeafe; }
+  [data-theme="light"] .role-card.selected .role-icon svg { stroke: #3b82f6; }
+  [data-theme="light"] .role-card.selected .role-name { color: #1d4ed8; }
+  [data-theme="light"] .role-card:hover { border-color: #93c5fd; background: #f0f7ff; }
+  [data-theme="light"] input:focus,
+  [data-theme="light"] select:focus,
+  [data-theme="light"] textarea:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.15); }
+  [data-theme="light"] select option { background: #ffffff; color: #000000; }
+
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
   body {
@@ -108,6 +165,17 @@
     white-space: nowrap;
     font-weight: 500;
   }
+
+  .theme-toggle {
+    position: fixed; top: 20px; right: 20px; z-index: 999;
+    display: flex; align-items: center; justify-content: center;
+    width: 40px; height: 40px; border-radius: 50%;
+    background: var(--navy-light); border: 1px solid var(--border);
+    color: var(--text2); cursor: pointer;
+    transition: 0.2s; box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+  }
+  .theme-toggle:hover { border-color: var(--primary); color: var(--primary); box-shadow: 0 4px 16px rgba(0,0,0,0.2); }
+  .theme-toggle svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; }
 
   .signin-link:hover {
     color: #d4b23a;
@@ -297,7 +365,7 @@
 
   .role-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr);
     gap: 10px;
     margin-bottom: 10px;
   }
@@ -379,28 +447,28 @@
   }
 
   .review-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
   }
 
   .review-item {
-    background: var(--navy-mid);
-    border-radius: 10px;
-    padding: 12px 14px;
+    display: flex;
+    align-items: baseline;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
   }
 
-  .review-item.full {
-    grid-column: 1 / -1;
+  .review-item:last-child {
+    border-bottom: none;
   }
 
   .review-key {
-    font-size: 10px;
+    font-size: 12px;
     color: var(--text3);
-    text-transform: uppercase;
-    letter-spacing: 0.8px;
-    font-weight: 700;
-    margin-bottom: 4px;
+    font-weight: 600;
+    min-width: 120px;
+    flex-shrink: 0;
   }
 
   .review-val {
@@ -413,11 +481,10 @@
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
-    margin-top: 6px;
   }
 
   .review-tag {
-    padding: 3px 10px;
+    padding: 2px 10px;
     border-radius: 6px;
     font-size: 11px;
     font-weight: 600;
@@ -585,11 +652,11 @@
     gap: 8px;
     padding: 10px 18px;
     border-radius: 10px;
-    background: rgba(245,158,11,0.08);
-    border: 1px solid rgba(245,158,11,0.2);
+    background: var(--navy-mid);
+    border: 1px solid var(--border);
     font-size: 12px;
-    color: #fbbf24;
-    font-weight: 600;
+    color: var(--text2);
+    font-weight: 500;
     margin-bottom: 24px;
   }
 
@@ -606,11 +673,75 @@
     to { opacity: 1; transform: translateY(0); }
   }
 
+  .field-row-3 {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+
   @media (max-width: 520px) {
+    body { padding: 0; }
+    .page-wrap { max-width: 100%; }
+    .card { border-radius: 0; min-height: 100dvh; display: flex; flex-direction: column; box-shadow: none; border: none; }
+    .card-body { padding: 20px 16px; flex: 1; }
+    .card-hero { padding: 16px; }
+    .card-footer {
+      padding: 12px 16px;
+      padding-bottom: max(12px, env(safe-area-inset-bottom));
+      flex-direction: row;
+      gap: 10px;
+      position: sticky;
+      bottom: 0;
+      background: var(--navy-light);
+      border-top: 1px solid var(--border);
+    }
+    .footer-left { width: auto; }
+    .btn {
+      flex: 0 0 auto;
+      justify-content: center;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 12.5px;
+    }
+    .btn svg { width: 14px; height: 14px; }
+    .btn-ghost { flex: 0 0 auto; padding: 10px 16px; }
+
+    #step-counter { font-size: 11px; }
     .field-row { grid-template-columns: 1fr; }
+    .field-row-3 { grid-template-columns: 1fr; }
     .role-grid { grid-template-columns: 1fr; }
-    .review-grid { grid-template-columns: 1fr; }
-    .card-body, .card-footer, .card-hero { padding-left: 18px; padding-right: 18px; }
+    .review-key { min-width: 90px; font-size: 11px; }
+    .review-val { font-size: 12px; }
+    .tag-opt { font-size: 11px; padding: 5px 10px; }
+    .theme-toggle { top: 12px; right: 12px; width: 40px; height: 40px; }
+    .side-toast { max-width: calc(100vw - 20px); }
+    .modal-box { padding: 24px 18px 20px; }
+    .attempts-bar { flex-direction: column; gap: 8px; align-items: flex-start; }
+    .role-card { padding: 12px 10px; }
+    .role-card .role-icon { width: 32px; height: 32px; }
+    .role-name { font-size: 13px; }
+    .field-hint { font-size: 10.5px; }
+    input[type="text"], input[type="email"], input[type="number"], select, textarea {
+      font-size: 15px; padding: 12px 14px;
+    }
+    .card-hero h1 { font-size: 16px; }
+    .card-hero p { font-size: 12px; }
+    .section-label { font-size: 10px; }
+    .modal-title { font-size: 15px; }
+    .modal-msg { font-size: 12px; }
+    .success-wrap { padding: 40px 16px 24px; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 60dvh; }
+    .success-wrap.show { display: flex; }
+    .success-icon { width: 56px; height: 56px; margin-bottom: 16px; }
+    .success-icon svg { width: 24px; height: 24px; }
+    .success-title { font-size: 16px; margin-bottom: 8px; }
+    .success-sub { font-size: 12px; max-width: 100%; margin-bottom: 20px; }
+    .success-info { font-size: 11px; padding: 8px 14px; margin-bottom: 20px; width: 100%; justify-content: center; }
+    .success-wrap .btn { width: 100%; }
+  }
+
+  @media (min-width: 521px) and (max-width: 768px) {
+    body { padding: 24px 12px; }
+    .card-body { padding: 20px 22px; }
+    .card-hero { padding: 20px 22px; }
+    .card-footer { padding: 16px 22px; }
   }
 
   .modal-overlay {
@@ -893,6 +1024,10 @@
   }
 </style>
 
+<button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()" title="Toggle theme" aria-label="Toggle theme">
+  <svg id="theme-icon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+</button>
+
 <div class="page-wrap">
 
   <div class="card" id="main-card">
@@ -928,11 +1063,12 @@
           </div>
         @endif
       @endif
-      <div class="step-dots" id="step-dots">
-
-        <div class="step-dot active" id="dot-1"></div>
-        <div class="step-dot" id="dot-2"></div>
-        <div class="step-dot" id="dot-3"></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <div class="step-dots" id="step-dots">
+          <div class="step-dot active" id="dot-1"></div>
+          <div class="step-dot" id="dot-2"></div>
+          <div class="step-dot" id="dot-3"></div>
+        </div>
       </div>
       <h1 id="hero-title">Personal Information</h1>
       <p id="hero-sub">Fill in your basic details to start your account request. All fields marked with <span style="color:var(--primary)">*</span> are required.</p>
@@ -970,17 +1106,21 @@
           </div>
         </div>
 
-        <div class="field-row">
+        <div class="field-row field-row-3">
           <div class="field">
             <label>Middle Name</label>
             <input type="text" id="mi" placeholder="e.g. Sigabo" length="50" value="{{ old('middle_name', '') }}"/>
-            <div class="field-hint">Optional. Your middle name.</div>
+            <div class="field-hint">Optional.</div>
           </div>
-
           <div class="field">
-            <label>Credentials / Suffix</label>
+            <label>Suffix</label>
+            <input type="text" id="suffix" placeholder="e.g. Jr., III" value="{{ old('suffix', '') }}"/>
+            <div class="field-hint">Optional.</div>
+          </div>
+          <div class="field">
+            <label>Credentials</label>
             <input type="text" id="credentials" placeholder="e.g. MIT, PhD" value="{{ old('credentials', '') }}"/>
-            <div class="field-hint">Optional. Academic credentials.</div>
+            <div class="field-hint">Optional.</div>
           </div>
         </div>
 
@@ -1083,7 +1223,7 @@
 
         <div class="section-label">
           <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-          Team Capacity
+          Team Capacity &amp; Course
         </div>
         <div class="field-row">
           <div class="field">
@@ -1091,15 +1231,6 @@
             <input type="number" id="max-teams" placeholder="e.g. 4" min="1" max="10" value="4"/>
             <div class="field-hint">How many teams you can advise simultaneously.</div>
           </div>
-        </div>
-
-        <div class="divider"></div>
-
-        <div class="section-label">
-          <svg viewBox="0 0 24 24"><path d="M3 7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4v10a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V7z"/><path d="M8 11h8"/><path d="M8 15h5"/></svg>
-          Course
-        </div>
-        <div class="field-row full">
           <div class="field">
             <label>Course</label>
             <select id="course">
@@ -1334,6 +1465,7 @@ function buildReview() {
   const fname = document.getElementById('fname').value.trim();
   const mi = document.getElementById('mi').value.trim();
   const lname = document.getElementById('lname').value.trim();
+  const suffix = document.getElementById('suffix').value.trim();
   const credentials = document.getElementById('credentials').value.trim();
   const email = document.getElementById('email').value.trim();
   const tags = getSelectedTags();
@@ -1344,7 +1476,7 @@ function buildReview() {
   let fullName = fname;
   if (mi) fullName += ` ${mi}`;
   fullName += ` ${lname}`;
-
+  if (suffix) fullName += ` ${suffix}`;
   if (credentials) fullName += `, ${credentials}`;
 
   panel.innerHTML = `
@@ -1352,23 +1484,23 @@ function buildReview() {
       <div class="review-key">Full Name</div>
       <div class="review-val">${fullName}</div>
     </div>
-    <div class="review-item full">
+    <div class="review-item">
       <div class="review-key">Roles</div>
-      <div class="review-tags">${selectedRoles.map(r => `<span class="review-tag">${r}</span>`).join('')}</div>
+      <div class="review-val"><div class="review-tags">${selectedRoles.map(r => `<span class="review-tag">${r}</span>`).join('')}</div></div>
     </div>
-    <div class="review-item full">
+    <div class="review-item">
       <div class="review-key">Email Address</div>
       <div class="review-val">${email}</div>
     </div>
-    <div class="review-item full">
-      <div class="review-key">Areas of Expertise</div>
-      <div class="review-tags">${tags.map(t => `<span class="review-tag">${t}</span>`).join('')}</div>
+    <div class="review-item">
+      <div class="review-key">Expertise</div>
+      <div class="review-val"><div class="review-tags">${tags.map(t => `<span class="review-tag">${t}</span>`).join('')}</div></div>
     </div>
     <div class="review-item">
       <div class="review-key">Max Teams</div>
       <div class="review-val">${maxTeams}</div>
     </div>
-    ${course ? `<div class="review-item full"><div class="review-key">Course</div><div class="review-val">${course}</div></div>` : ''}
+    ${course ? `<div class="review-item"><div class="review-key">Course</div><div class="review-val">${course}</div></div>` : ''}
 
   `;
 }
@@ -1381,6 +1513,7 @@ function submitRequest() {
   const fname = document.getElementById('fname').value.trim();
   const lname = document.getElementById('lname').value.trim();
   const mi = document.getElementById('mi').value.trim();
+  const suffix = document.getElementById('suffix').value.trim();
   const credentials = document.getElementById('credentials').value.trim();
   const email = document.getElementById('email').value.trim();
   const tags = getSelectedTags();
@@ -1402,6 +1535,7 @@ function submitRequest() {
       first_name: fname,
       last_name: lname,
       middle_name: mi,
+      suffix: suffix,
       credentials: credentials,
       email: email,
       specialization: selectedRoles,
@@ -1569,5 +1703,32 @@ document.querySelectorAll('input, select, textarea').forEach(el => {
     el.classList.remove('error');
   });
 });
+
+// ── THEME TOGGLE ──
+const moonSvg = '<svg viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
+const sunSvg = '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>';
+const icon = document.getElementById('theme-icon');
+
+function toggleTheme() {
+  const html = document.documentElement;
+  const isLight = html.getAttribute('data-theme') === 'light';
+  if (isLight) {
+    html.removeAttribute('data-theme');
+    localStorage.setItem('theme', 'dark');
+    icon.innerHTML = moonSvg;
+  } else {
+    html.setAttribute('data-theme', 'light');
+    localStorage.setItem('theme', 'light');
+    icon.innerHTML = sunSvg;
+  }
+}
+
+(function initTheme() {
+  const saved = localStorage.getItem('theme');
+  if (saved === 'light') {
+    document.documentElement.setAttribute('data-theme', 'light');
+    icon.innerHTML = sunSvg;
+  }
+})();
 </script>
 @endsection

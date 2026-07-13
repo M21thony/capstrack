@@ -44,6 +44,7 @@ class CapstoneExpert extends Authenticatable
         'created_at' => 'datetime',
         'reject_cooldown_until' => 'datetime',
         'last_seen_at' => 'datetime',
+        'first_login_at' => 'datetime',
     ];
 
     public function roles()
@@ -120,5 +121,19 @@ class CapstoneExpert extends Authenticatable
     public function teamAssignments()
     {
         return $this->hasMany(TeamExpertAssignment::class, 'expert_id', 'expert_id');
+    }
+
+    public function markFirstLogin(): bool
+    {
+        if ($this->first_login_at === null) {
+            $this->first_login_at = now();
+            $this->save();
+
+            session()->flash('show_welcome', true);
+
+            return true;
+        }
+
+        return false;
     }
 }
