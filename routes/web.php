@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\GoogleDriveController;
+use App\Http\Controllers\Admin\GradingRubricController;
 use App\Http\Controllers\Admin\ResourcesController;
 use App\Http\Controllers\AdminApprovalController;
 use App\Http\Controllers\AdminDashboardController;
@@ -48,7 +49,7 @@ Route::middleware(['auth:expert', 'expert.admin', 'no.cache', 'track.expert'])->
     // resources.blade.php needs $driveConnected/$folders/$resources passed in by
     // ResourcesController@index. Revert to Route::view(...) if this was intentional.
     Route::get('/resources', [ResourcesController::class, 'index'])->name('resources');
-    Route::view('/rubric_management', 'admin.rubric_management')->name('rubric_management');
+    Route::get('/rubric_management', [GradingRubricController::class, 'index'])->name('rubric_management');
     Route::view('/activitylog', 'admin.activitylog')->name('activitylog');
 });
 

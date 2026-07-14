@@ -856,11 +856,11 @@ textarea.input{resize:vertical;min-height:80px}
 .tab-btn.active{background:#fff;color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.09);font-weight:600}
 
 /* ── PAGE HEADER ── */
-.rb-page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:12px}
-.rb-stat-strip{display:flex;align-items:center;gap:0;background:#fff;border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.04)}
-.rb-stat-item{padding:12px 20px;display:flex;flex-direction:column;gap:2px}
-.rb-stat-n{font-family:"Space Mono",monospace;font-size:20px;font-weight:700;line-height:1}
-.rb-stat-l{font-size:10px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap}
+.rb-page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px}
+.rb-stat-strip{display:flex;align-items:center;gap:0;background:#fff;border:1px solid var(--border);border-radius:14px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.05)}
+.rb-stat-item{padding:16px 24px;display:flex;flex-direction:column;gap:4px;transition:all .2s ease}
+.rb-stat-n{font-family:"Space Mono",monospace;font-size:24px;font-weight:700;line-height:1.1}
+.rb-stat-l{font-size:11px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.6px;white-space:nowrap}
 .rb-stat-divider{width:1px;height:36px;background:var(--border);flex-shrink:0}
 
 /* ── TAB HEADER (new rubric-specific tab row) ── */
@@ -873,26 +873,27 @@ textarea.input{resize:vertical;min-height:80px}
 .rb-tab-count{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;background:rgba(255,255,255,.15);border-radius:9px;font-size:10px;font-weight:700;font-family:"Space Mono",monospace}
 .rb-tab-btn:not(.active) .rb-tab-count{background:var(--bg4);color:var(--text3)}
 .rb-tab-search{display:flex;align-items:center;gap:8px;padding:10px 14px;border-left:1px solid var(--border);flex-shrink:0}
-.rb-search-input{border:none;outline:none;background:transparent;font-size:13px;font-family:"DM Sans",sans-serif;color:var(--text);width:190px}
+.rb-search-input{border:none;outline:none;background:transparent;font-size:13px;font-family:"DM Sans",sans-serif;color:var(--text);width:190px;transition:width .2s ease}
 .rb-search-input::placeholder{color:var(--text3)}
+.rb-search-input:focus{width:260px}
 
 /* ── PAGINATION ── */
-.rb-pagination{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-top:1px solid var(--border);background:var(--bg3)}
+.rb-pagination{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-top:1px solid var(--border);background:var(--bg3)}
 .rb-pg-btns{display:flex;align-items:center;gap:4px}
 .rb-pg-pages{display:flex;gap:3px}
-.rb-pg-btn{width:30px;height:30px;border-radius:7px;border:1.5px solid var(--border);background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text2);transition:all .15s}
-.rb-pg-btn:hover:not(:disabled){border-color:var(--accent);color:var(--accent3)}
+.rb-pg-btn{width:30px;height:30px;border-radius:8px;border:1.5px solid var(--border);background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text2);transition:all .2s ease}
+.rb-pg-btn:hover:not(:disabled){border-color:var(--accent);color:var(--accent3);transform:translateY(-1px);box-shadow:0 2px 8px rgba(0,0,0,.06)}
 .rb-pg-btn:disabled{opacity:.35;cursor:not-allowed}
-.rb-pg-num{width:30px;height:30px;border-radius:7px;border:1.5px solid var(--border);background:#fff;cursor:pointer;font-size:12px;font-weight:600;color:var(--text2);transition:all .15s;font-family:"Space Mono",monospace}
-.rb-pg-num:hover:not(.active){border-color:var(--accent);color:var(--accent3)}
-.rb-pg-num.active{background:var(--navy-dark);border-color:var(--navy-dark);color:#fff}
+.rb-pg-num{width:30px;height:30px;border-radius:8px;border:1.5px solid var(--border);background:#fff;cursor:pointer;font-size:12px;font-weight:600;color:var(--text2);transition:all .2s ease;font-family:"Space Mono",monospace}
+.rb-pg-num:hover:not(.active){border-color:var(--accent);color:var(--accent3);transform:translateY(-1px);box-shadow:0 2px 8px rgba(0,0,0,.06)}
+.rb-pg-num.active{background:var(--navy-dark);border-color:var(--navy-dark);color:#fff;box-shadow:0 2px 8px rgba(0,0,0,.15)}
 
 /* ── EMPTY STATE ── */
 .rb-empty-state{text-align:center;padding:48px 24px}
 
 /* ── RUBRIC CARD ── */
-.rb-rubric-card{transition:box-shadow .15s}
-.rb-rubric-card:hover{box-shadow:0 4px 18px rgba(0,0,0,.08)}
+.rb-rubric-card{border:1px solid var(--border);border-radius:14px;transition:box-shadow .25s ease,transform .25s ease}
+.rb-rubric-card:hover{box-shadow:0 8px 28px rgba(0,0,0,.1);transform:translateY(-2px)}
 .rb-rubric-header{display:flex;align-items:flex-start;gap:14px;padding:16px 18px;border-bottom:1px solid var(--border)}
 .rb-rubric-footer{display:flex;align-items:center;gap:8px;padding:10px 18px;border-top:1px solid var(--border);background:var(--bg3);border-radius:0 0 14px 14px}
 .rb-crit-row{padding:12px 0;border-bottom:1px solid var(--border)}
@@ -907,8 +908,8 @@ textarea.input{resize:vertical;min-height:80px}
 /* ── ADD/EDIT MODAL ── */
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:100;display:none;align-items:center;justify-content:center;padding:20px}
 .modal-overlay.show{display:flex}
-.modal-box{background:#fff;border-radius:16px;padding:24px;width:340px;box-shadow:0 20px 60px rgba(0,0,0,.2);border:1px solid var(--border)}
-.modal-box-lg{width:min(700px,100%);max-height:90vh;overflow-y:auto}
+.modal-box{background:#fff;border-radius:18px;padding:24px;width:340px;box-shadow:0 24px 80px rgba(0,0,0,.25);border:1px solid var(--border)}
+.modal-box-lg{width:min(720px,100%);max-height:90vh;display:flex;flex-direction:column;overflow:hidden}
 .modal-icon-wrap{width:40px;height:40px;background:var(--red-bg);border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:12px}
 .modal-title{font-size:15px;font-weight:700;color:var(--text);margin-bottom:6px}
 .modal-sub{font-size:13px;color:var(--text3);line-height:1.5;margin-bottom:20px}

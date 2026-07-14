@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\ActivityLogController;
 use App\Http\Controllers\Api\AdminExpertController;
 use App\Http\Controllers\Api\AdminFinancialController;
+use App\Http\Controllers\Api\AdminGradingRubricController;
 use App\Http\Controllers\Api\InvitationController;
 use App\Http\Controllers\Api\RecruitmentController;
 use App\Http\Controllers\Api\StudentExpertController;
@@ -17,6 +18,19 @@ Route::middleware(['web', 'auth:expert', 'expert.admin'])
         Route::get('/experts', [AdminExpertController::class, 'index'])->name('api.admin.experts.index');
         Route::delete('/experts/{expert}', [AdminExpertController::class, 'destroy'])->name('api.admin.experts.destroy');
         Route::post('/turnover', [AdminExpertController::class, 'transferRights'])->name('api.admin.turnover');
+
+        // Grading Rubrics
+        Route::prefix('grading-rubrics')->name('api.admin.grading-rubrics.')->group(function () {
+            Route::get('/', [AdminGradingRubricController::class, 'index'])->name('index');
+            Route::get('/{gradingRubric}', [AdminGradingRubricController::class, 'show'])->name('show');
+            Route::post('/', [AdminGradingRubricController::class, 'store'])->name('store');
+            Route::put('/{gradingRubric}', [AdminGradingRubricController::class, 'update'])->name('update');
+            Route::delete('/{gradingRubric}', [AdminGradingRubricController::class, 'destroy'])->name('destroy');
+            Route::post('/{gradingRubric}/criteria', [AdminGradingRubricController::class, 'storeCriterion'])->name('criteria.store');
+            Route::put('/{gradingRubric}/criteria/{rubricCriterion}', [AdminGradingRubricController::class, 'updateCriterion'])->name('criteria.update');
+            Route::delete('/{gradingRubric}/criteria/{rubricCriterion}', [AdminGradingRubricController::class, 'destroyCriterion'])->name('criteria.destroy');
+            Route::post('/{gradingRubric}/criteria/sync', [AdminGradingRubricController::class, 'syncCriteria'])->name('criteria.sync');
+        });
 
         // Financial Records
         Route::prefix('financial')->name('api.admin.financial.')->group(function () {
