@@ -183,36 +183,60 @@
     </tbody>
   </table>
 </div>
-  <div class="dash-grid-v2">
+      <div class="dash-grid-v2">
       <div class="card">
         <div class="card-header"><span class="card-title">Recent Expenses & Receipts</span></div>
           <div class="history-list">
-              <div class="history-item">
-                  <div style="flex: 1;">
-                      <div style="font-size: 13px; font-weight: 600;">Hard Binding Payment</div>
-                      <div class="activity-meta">
-                          <span style="font-size: 11px; color: var(--text3);">₱850.00 · Oct 28</span>
+              @forelse ($recentExpenses as $expense)
+                  @php
+                      $badgeClass = match($expense->f_record_status) {
+                          'pending' => 'badge badge-amber',
+                          'verified' => 'badge badge-green',
+                          'rejected' => 'badge badge-red',
+                          default => 'badge',
+                      };
+                      $badgeText = match($expense->f_record_status) {
+                          'pending' => 'Pending',
+                          'verified' => 'Verified',
+                          'rejected' => 'Rejected',
+                          default => $expense->f_record_status,
+                      };
+                      $expenseTitle = $expense->expensePost?->title ?? $expense->payment_for ?? 'N/A';
+                      $receiptImageUrl = $expense->receipt_image ? asset('storage/' . $expense->receipt_image) : null;
+                      $uploadedDt = $expense->uploaded_at ? \Carbon\Carbon::parse($expense->uploaded_at) : null;
+                  @endphp
+                  <div class="history-item">
+                      <div style="flex: 1; min-width: 0;">
+                          <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                              <span style="font-size: 13px; font-weight: 600;">{{ $expenseTitle }}</span>
+                              <span class="{{ $badgeClass }}" style="font-size: 9px;">{{ $badgeText }}</span>
+                          </div>
+                          <div class="activity-meta">
+                              <span style="font-size: 11px; color: var(--text3);">₱{{ number_format($expense->amount ?? 0, 2) }} · {{ $uploadedDt ? $uploadedDt->format('M d') : 'N/A' }}</span>
+                          </div>
+                      </div>
+                      @if ($receiptImageUrl)
+                          <img src="{{ $receiptImageUrl }}"
+                              alt="Receipt for {{ $expenseTitle }}"
+                              class="receipt-thumb"
+                              title="Click to view full receipt"
+                              onclick="openReceipt(this.src)">
+                      @else
+                          <div class="receipt-thumb receipt-thumb--empty" style="width:40px;height:40px;border-radius:6px;background:var(--bg2);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="var(--text3)" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                          </div>
+                      @endif
+                  </div>
+              @empty
+                  <div class="history-item">
+                      <div style="flex: 1;">
+                          <div style="font-size: 13px; font-weight: 600; color: var(--text3);">No expenses yet</div>
+                          <div class="activity-meta">
+                              <span style="font-size: 11px; color: var(--text3);">Submit your first receipt on the Financial Records page.</span>
+                          </div>
                       </div>
                   </div>
-                  <img src="https://www.smartsheet.com/sites/default/files/2022-02/IC-Basic-Receipt-Template.png" 
-                  alt="Receipt for Binding" 
-                  class="receipt-thumb" 
-                  title="Click to view full receipt"
-                  onclick="openReceipt(this.src)">
-              </div>
-              <div class="history-item">
-                  <div style="flex: 1;">
-                      <div style="font-size: 13px; font-weight: 600;">System Hosting Fee</div>
-                      <div class="activity-meta">
-                          <span style="font-size: 11px; color: var(--text3);">₱1,200.00 · Oct 20</span>
-                      </div>
-                  </div>
-                  <img src="https://officetemplatesonline.com/wp-content/uploads/2021/07/business-receipt-template-for-ms-word.jpg" 
-                  alt="Receipt for Binding" 
-                  class="receipt-thumb" 
-                  title="Click to view full receipt"
-                  onclick="openReceipt(this.src)">
-              </div>
+              @endforelse
           </div>
       </div>
 

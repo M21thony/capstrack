@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\ActivityLog;
+use App\Models\FinancialRecord;
 use App\Models\Notification;
 use App\Models\Student;
 use App\Models\StudentSchoolYear;
@@ -112,6 +113,13 @@ class DashboardController extends Controller
             }
         }
 
+        // Recent expense receipts for dashboard widget
+        $recentExpenses = FinancialRecord::with('expensePost')
+            ->where('student_id', $student->student_id)
+            ->orderByDesc('uploaded_at')
+            ->take(5)
+            ->get();
+
         // Build recent activities from activity_log
         $activities = ActivityLog::where('student_id', $student->student_id)
             ->latest('created_at')
@@ -167,6 +175,7 @@ class DashboardController extends Controller
             'docsSubmitted' => $docsSubmittedCount,
             'pendingReviews' => $pendingReviewsCount,
             'overallProgress' => $overallProgress,
+            'recentExpenses' => $recentExpenses,
             'activities' => $activities,
             'unreadNotifications' => $unreadNotifications,
             'unreadCount' => $unreadCount,
