@@ -75,7 +75,6 @@ class ScheduleController extends Controller
             'start_time' => $request->start_time,
             'end_time' => $request->end_time,
             'consultation_limit' => $request->consultation_limit,
-            'slot_type' => $request->slot_type ?? 'consult',
             'is_available' => true,
             'google_event_id' => $googleEventId,
             'recur' => $request->recur ?? 'weekly',
@@ -215,61 +214,6 @@ class ScheduleController extends Controller
             ]);
 
         return response()->json(['is_available' => $newStatus]);
-    }
-
-    // PATCH /instructor/schedule/slots/{id}/refresh-gcal
-    // Refresh Google Calendar event with corrected timezone format
-    public function refreshGoogleCalendar(int $id)
-    {
-        $expert = Auth::guard('expert')->user();
-
-        $slot = DB::table('consultation_schedule')
-            ->where('schedule_id', $id)
-            ->where('expert_id', $expert->expert_id)
-            ->first();
-
-        if (! $slot) {
-            return response()->json(['error' => 'Slot not found.'], 404);
-        }
-
-        $nextDate = $this->getNextDateForDay($slot->available_date);
-
-        if ($slot->google_event_id && $expert->google_token) {
-            try {
-                // Delete old incorrectly-formatted event
-                $this->calendar->cancelBookingEvent($expert->expert_id, $slot->google_event_id);
-            } catch (\Exception $e) {
-                \Log::warning('Failed to delete old GCal event', ['error' => $e->getMessage()]);
-            }
-        }
-
-        try {
-            // Create new event with correct timezone format
-            $newEventId = $this->calendar->createBookingEvent(
-                expertId: $expert->expert_id,
-                date: $nextDate,
-                startTime: $slot->start_time,
-                endTime: $slot->end_time,
-                slotType: 'Consultation',
-                teamName: 'Available Slot',
-                studentEmail: $expert->email,
-                expertEmail: $expert->email,
-                topic: "Weekly consultation slot — {$slot->available_date}s",
-            );
-
-            DB::table('consultation_schedule')
-                ->where('schedule_id', $id)
-                ->update([
-                    'google_event_id' => $newEventId,
-                    'updated_at' => now(),
-                ]);
-
-            return response()->json(['refreshed' => true, 'google_synced' => true]);
-        } catch (\Exception $e) {
-            \Log::warning('GCal refresh failed', ['error' => $e->getMessage()]);
-
-            return response()->json(['refreshed' => false, 'error' => $e->getMessage()], 500);
-        }
     }
 
     // Helper — get next occurrence of a weekday from today

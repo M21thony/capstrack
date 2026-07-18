@@ -152,6 +152,36 @@ class GoogleDriveService
         ];
     }
 
+    /**
+     * Download a file's raw bytes from the user's Google Drive.
+     *
+     * @return string Binary file contents
+     */
+    public function downloadFile(int $userId, string $fileId): string
+    {
+        $client = $this->clientForUser($userId);
+        $service = new GoogleDrive($client);
+
+        $response = $service->files->get($fileId, ['alt' => 'media']);
+
+        return $response->getBody()->getContents();
+    }
+
+    /**
+     * Upload fresh content to an existing Drive file (keeps the same file id/link).
+     */
+    public function updateFile(int $userId, string $fileId, string $contents, string $mimeType = 'application/pdf'): void
+    {
+        $client = $this->clientForUser($userId);
+        $service = new GoogleDrive($client);
+
+        $service->files->update($fileId, new DriveFile, [
+            'data' => $contents,
+            'mimeType' => $mimeType,
+            'uploadType' => 'multipart',
+        ]);
+    }
+
     public function deleteFile(int $userId, string $fileId): void
     {
         $client = $this->clientForUser($userId);

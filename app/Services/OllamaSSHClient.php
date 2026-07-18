@@ -33,7 +33,7 @@ class OllamaSSHClient
     public function generate(string $prompt): string
     {
         $ssh = $this->makeConnection();
-        $model = config('services.ollama.model', 'qwen2.5:3B');
+        $model = config('services.ollama.model', 'qwen2.5:7B');
 
         $payload = json_encode([
             'model' => $model,

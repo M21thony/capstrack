@@ -71,10 +71,16 @@ class AuthController extends Controller
             'client_id' => $clientId,
             'redirect_uri' => config('services.google.redirect_uri'),
             'response_type' => 'code',
-            'scope' => 'openid email profile https://www.googleapis.com/auth/calendar',
+            // Added Drive scope (drive.file = access only to files the app creates/opens,
+            // safer than full 'drive' scope) alongside the existing calendar/profile scopes.
+            'scope' => 'openid email profile https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/drive.file',
             'state' => $state,
-            // 'prompt' => 'consent',   // forces refresh_token to be returned
-            // 'access_type' => 'offline',   // needed for refresh_token
+            // Required so Google actually returns a refresh_token — without these two,
+            // $response->json('refresh_token') below will always be null after the first login,
+            // and the stored Drive connection will silently stop working once the access
+            // token expires (usually within an hour).
+            'prompt' => 'consent',
+            'access_type' => 'offline',
         ]);
 
         return response()->json([

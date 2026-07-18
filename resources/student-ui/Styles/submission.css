@@ -171,16 +171,210 @@ select.input{cursor:pointer}
 /* SUBMISSION PAGE */
 .submission-container { display: grid; grid-template-columns: 1fr 350px; gap: 24px; width: 100%; }
 .upload-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 16px; padding: 30px; }
-.drop-zone { border: 2px dashed var(--border); border-radius: 12px; padding: 40px; text-align: center; transition: 0.2s; cursor: pointer; margin: 20px 0; }
-.drop-zone:hover { border-color: var(--accent); background: var(--accent-glow); }
 .guide-card { background: var(--bg3); border: 1px solid var(--border); border-radius: 16px; padding: 20px; font-size: 13px; }
 .step-item { display: flex; gap: 12px; margin-bottom: 15px; }
 .step-num { width: 24px; height: 24px; background: var(--navy-dark); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; flex-shrink: 0; }
 
-/* ── COMPACT DROP ZONE ── */
-.drop-zone{border:2px dashed var(--border);border-radius:12px;padding:20px;display:flex;align-items:center;justify-content:center;gap:15px;transition:0.2s;cursor:pointer;background:var(--bg3);margin-top:10px} 
-.drop-zone:hover{border-color:var(--accent);background:var(--accent-glow)} 
-.drop-zone svg{width:28px;height:28px;color:var(--accent)} 
-.drop-info{text-align:left} 
-.drop-info p{font-size:13px;font-weight:500;margin:0} 
-.drop-info span{font-size:11px;color:var(--text3)} 
+/* ══════════════════════════════════════════════ */
+/* ── SUBMISSION PAGE REDESIGN — full, complete   */
+/*    definitions. Nothing here depends on rules   */
+/*    existing elsewhere in this file.             */
+/* ══════════════════════════════════════════════ */
+
+/* ── UPLOAD CARD HEADER ── */
+.upload-card-header{
+  display:flex;
+  align-items:center;
+  gap:16px;
+  margin-bottom:28px;
+  padding-bottom:20px;
+  border-bottom:1px solid var(--border);
+}
+.upload-card-icon{
+  width:48px;
+  height:48px;
+  border-radius:12px;
+  background:linear-gradient(135deg, var(--accent), var(--accent2));
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  flex-shrink:0;
+  box-shadow:0 4px 10px rgba(201,168,44,0.25);
+}
+.upload-card-icon svg{width:22px;height:22px;stroke:#18191f}
+.upload-card-header h2{font-size:18px;font-weight:600;color:var(--text);margin-bottom:2px}
+.upload-card-header p{color:var(--text3);font-size:13px;margin:0}
+
+/* ── FORM SECTIONS ── */
+.form-section{margin-bottom:26px}
+.form-section:last-of-type{margin-bottom:22px}
+.section-label{
+  display:flex;
+  align-items:center;
+  gap:7px;
+  font-size:11px;
+  font-weight:700;
+  color:var(--accent3);
+  text-transform:uppercase;
+  letter-spacing:0.7px;
+  margin-bottom:14px;
+}
+.section-label svg{width:13px;height:13px;stroke:var(--accent3)}
+
+/* ── RECIPIENT SELECTOR (Send To) — FULL definition ── */
+.recipient-group{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+}
+@media (max-width: 480px){
+  .recipient-group{grid-template-columns:1fr}
+}
+
+.recipient-check{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:11px 12px;
+  border:1.5px solid var(--border);
+  border-radius:11px;
+  background:var(--bg3);
+  cursor:pointer;
+  transition:all 0.15s;
+  position:relative;
+}
+.recipient-check:hover{
+  border-color:var(--accent);
+  background:var(--accent-glow);
+  transform:translateY(-1px);
+}
+.recipient-check:has(input:checked){
+  border-color:var(--accent);
+  background:linear-gradient(135deg, rgba(201,168,44,0.08), rgba(201,168,44,0.03));
+  box-shadow:0 2px 8px rgba(201,168,44,0.12);
+}
+.recipient-check--disabled{
+  opacity:0.45;
+  cursor:not-allowed;
+}
+.recipient-check--disabled:hover{
+  transform:none;
+  border-color:var(--border);
+  background:var(--bg3);
+}
+.recipient-check--disabled input{cursor:not-allowed}
+
+.recipient-check input{
+  width:16px;
+  height:16px;
+  accent-color:var(--accent);
+  cursor:pointer;
+  flex-shrink:0;
+}
+
+.recipient-icon{
+  width:28px;
+  height:28px;
+  border-radius:8px;
+  background:rgba(201,168,44,0.12);
+  border:1px solid rgba(201,168,44,0.22);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  flex-shrink:0;
+}
+.recipient-icon svg{width:14px;height:14px;stroke:var(--accent3)}
+
+.recipient-text{
+  flex:1;
+  font-size:13px;
+  font-weight:500;
+  color:var(--text);
+  display:flex;
+  flex-direction:column;
+  min-width:0;
+}
+.recipient-text small{
+  font-size:10.5px;
+  font-weight:400;
+  color:var(--text3);
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  margin-top:1px;
+}
+
+.recipient-tag{font-size:9px;padding:2px 7px;flex-shrink:0}
+.recipient-hint{font-size:11.5px;color:var(--text3);margin-top:10px}
+
+/* ── DROP ZONE — FULL definition ── */
+.drop-zone{
+  border:2px dashed var(--border2);
+  border-radius:14px;
+  padding:26px 20px;
+  display:flex;
+  align-items:center;
+  gap:16px;
+  transition:all 0.2s;
+  cursor:pointer;
+  background:var(--bg3);
+}
+.drop-zone:hover{
+  border-color:var(--accent);
+  background:var(--accent-glow);
+}
+.drop-zone.has-file{
+  border-style:solid;
+  border-color:var(--accent);
+  background:var(--accent-light);
+}
+.drop-icon{
+  width:44px;
+  height:44px;
+  border-radius:11px;
+  background:rgba(201,168,44,0.12);
+  border:1px solid rgba(201,168,44,0.25);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  flex-shrink:0;
+}
+.drop-icon svg{width:20px;height:20px;stroke:var(--accent3)}
+.drop-info{text-align:left}
+.drop-info p{font-size:13.5px;font-weight:600;margin:0;color:var(--text)}
+.drop-info span{font-size:11.5px;color:var(--text3)}
+
+/* ── SUBMIT BUTTON ── */
+.btn-submit{
+  width:100%;
+  padding:13px;
+  font-weight:600;
+  font-size:14px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+}
+.btn-submit svg{width:15px;height:15px}
+
+/* ── SIDEBAR PANEL POLISH ── */
+.guide-title{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  font-size:13px;
+  font-weight:700;
+  color:var(--text);
+  margin-bottom:16px;
+}
+.guide-title svg{width:15px;height:15px;stroke:var(--accent3);flex-shrink:0}
+
+.activity-card{margin-top:16px}
+.activity-entry{
+  border-left:2px solid var(--accent);
+  padding:10px 0 10px 14px;
+  background:var(--accent-light);
+  border-radius:0 8px 8px 0;
+}
+.activity-title{font-size:13px;font-weight:600;color:var(--text)}
+.activity-time{font-size:11px;color:var(--text3);margin-top:2px}

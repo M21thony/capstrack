@@ -26,92 +26,139 @@
     @include('student.partials.page-tutorial', ['page' => 'submission'])
 <div class="submission-container">
 
-
     <div class="upload-card">
-      <h2 style="margin-bottom: 8px;">Submit Document</h2>
-      <p style="color: var(--text3); font-size: 14px; margin-bottom: 24px;">Upload your manuscript or report for review.</p>
-
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-          <div class="pm-field">
-              <label class="pm-label">Document Title</label>
-              <input type="text" class="input" id="doc-title" placeholder="e.g., Chapter 1-3 Final">
-          </div>
-          <div class="pm-field">
-              <label class="pm-label">Document Type</label>
-              <select class="input" id="doc-type">
-                  <option value="Proposal Draft">Proposal Draft</option>
-                  <option value="Final Manuscript">Final Manuscript</option>
-              </select>
-          </div>
-      </div>
-
-      <div class="pm-field" style="margin-top: 16px;">
-          <label class="pm-label">Message to Adviser</label>
-          <textarea class="input" id="doc-message" rows="3" style="resize: none;" placeholder="Briefly describe your submission..."></textarea>
-      </div>
-
-<!-- ── RECIPIENT SELECTOR (compact) ── -->
-<div class="pm-field" style="margin-top: 16px;">
-    <label class="pm-label">Send To</label>
-    <div class="recipient-group" id="recipientGroup">
-
-        <label class="recipient-check">
-            <input type="checkbox" name="recipients[]" value="adviser" checked>
-            <span class="recipient-text">
-                Capstone Project Adviser
-                <small>Juan Dela Cruz</small>
-            </span>
-            <span class="badge badge-gold recipient-tag">Primary</span>
-        </label>
-
-        <label class="recipient-check">
-            <input type="checkbox" name="recipients[]" value="consultant">
-            <span class="recipient-text">
-                Consultant
-                <small>Maria Santos</small>
-            </span>
-        </label>
-
-        <label class="recipient-check">
-            <input type="checkbox" name="recipients[]" value="grammarian">
-            <span class="recipient-text">
-                Grammarian
-                <small>Maria Santos</small>
-            </span>
-        </label>
-
-        <label class="recipient-check">
-            <input type="checkbox" name="recipients[]" value="subject_adviser">
-            <span class="recipient-text">
-                Capstone Project Subject Adviser
-                <small>Prof. Reyes</small>
-            </span>
-        </label>
-
-    </div>
-    <p class="recipient-hint">Select at least one recipient.</p>
-</div>
-<!-- ── END RECIPIENT SELECTOR ── -->
-
-      <div class="drop-zone" id="dropZone">
-          <input type="file" id="fileInput" accept=".pdf" style="display:none" />
+      <div class="upload-card-header">
+        <div class="upload-card-icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <path d="M14 2v6h6"/>
           </svg>
-          <div class="drop-info">
-              <p id="dropText">Click or drag PDF file to upload</p>
-              <span id="dropSub">PDF up to 25MB</span>
-          </div>
+        </div>
+        <div>
+          <h2>Submit Document</h2>
+          <p>Upload your manuscript or report for review.</p>
+        </div>
       </div>
 
-      <button class="btn-primary" style="width: 100%; padding: 12px; margin-top: 20px; font-weight: 600;" id="submitBtn">
+      <div class="form-section">
+        <div class="section-label">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h7"/></svg>
+          Document Details
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;">
+            <div class="pm-field">
+                <label class="pm-label">Document Title</label>
+                <input type="text" class="input" id="doc-title" placeholder="e.g., Chapter 1-3 Final">
+            </div>
+            <div class="pm-field">
+                <label class="pm-label">Chapter</label>
+                <select class="input" id="doc-chapter">
+                    <option value="" disabled selected>Select chapter</option>
+                    <option value="Chapter 1">Chapter 1</option>
+                    <option value="Chapter 2">Chapter 2</option>
+                    <option value="Chapter 3">Chapter 3</option>
+                    <option value="Chapter 4">Chapter 4</option>
+                    <option value="Chapter 5">Chapter 5</option>
+                </select>
+            </div>
+            <div class="pm-field">
+                <label class="pm-label">Document Type</label>
+                <select class="input" id="doc-type">
+                    <option value="Proposal Draft">Proposal Draft</option>
+                    <option value="Final Manuscript">Final Manuscript</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="pm-field" style="margin-top: 16px;">
+            <label class="pm-label">Message to Adviser</label>
+            <textarea class="input" id="doc-message" rows="3" style="resize: none;" placeholder="Briefly describe your submission..."></textarea>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="section-label">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          Send To
+        </div>
+        <div class="recipient-group" id="recipientGroup">
+
+            @php
+                $roleLabels = [
+                    'adviser' => 'Capstone Project Adviser',
+                    'consultant' => 'Consultant',
+                    'grammarian' => 'Grammarian',
+                    'subject_adviser' => 'Capstone Project Subject Adviser',
+                ];
+                $roleIcons = [
+                    'adviser' => 'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z',
+                    'consultant' => 'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z',
+                    'grammarian' => 'M4 19.5A2.5 2.5 0 0 1 6.5 17H20M4 4.5A2.5 2.5 0 0 1 6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15Z',
+                    'subject_adviser' => 'M12 2 3 7v6c0 5.25 3.75 9.75 9 11 5.25-1.25 9-5.75 9-11V7l-9-5Z',
+                ];
+            @endphp
+
+            @foreach ($roleLabels as $roleKey => $roleLabel)
+                @php
+                    $info = $recipients[$roleKey] ?? ['expert_id' => null, 'name' => null];
+                    $isAssigned = ! is_null($info['expert_id']);
+                @endphp
+                <label class="recipient-check {{ ! $isAssigned ? 'recipient-check--disabled' : '' }}">
+                    <input
+                        type="checkbox"
+                        name="recipients[]"
+                        value="{{ $roleKey }}"
+                        {{ $roleKey === 'adviser' ? 'checked' : '' }}
+                        {{ ! $isAssigned ? 'disabled' : '' }}
+                    >
+                    <span class="recipient-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="{{ $roleIcons[$roleKey] }}"/></svg>
+                    </span>
+                    <span class="recipient-text">
+                        {{ $roleLabel }}
+                        <small>{{ $isAssigned ? $info['name'] : 'Not yet assigned' }}</small>
+                    </span>
+                    @if ($roleKey === 'adviser')
+                        <span class="badge badge-gold recipient-tag">Primary</span>
+                    @endif
+                </label>
+            @endforeach
+
+        </div>
+        <p class="recipient-hint">Select at least one recipient for this submission.</p>
+      </div>
+
+      <div class="form-section">
+        <div class="section-label">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+          Attach File
+        </div>
+        <div class="drop-zone" id="dropZone">
+            <input type="file" id="fileInput" accept=".pdf" style="display:none" />
+            <div class="drop-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
+              </svg>
+            </div>
+            <div class="drop-info">
+                <p id="dropText">Click or drag PDF file to upload</p>
+                <span id="dropSub">PDF up to 25MB</span>
+            </div>
+        </div>
+      </div>
+
+      <button class="btn-primary btn-submit" id="submitBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 2 11 13M22 2 15 22l-4-9-9-4 20-7Z"/></svg>
           Submit to Adviser
       </button>
   </div>
 
     <div class="overview-panel">
       <div class="guide-card">
-        <h3 style="font-size: 14px; margin-bottom: 16px;">Submission Guide</h3>
+        <h3 class="guide-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+          Submission Guide
+        </h3>
         <div class="step-item">
           <div class="step-num">1</div>
           <div><strong>Format Check:</strong> Ensure document follows the CCS standard template.</div>
@@ -126,13 +173,14 @@
         </div>
       </div>
 
-      <div class="card" style="margin-top: 16px;">
-        <h3 style="font-size: 14px; margin-bottom: 12px;">Recent Activity</h3>
-        <div style="font-size: 12px; color: var(--text2);">
-            <div style="border-left: 2px solid var(--accent); padding-left: 12px; margin-bottom: 12px;">
-                <div style="font-weight: 600;">Chapter 1 Review</div>
-                <div style="font-size: 10px; color: var(--text3);">Oct 20, 2026 · 2:30 PM</div>
-            </div>
+      <div class="card activity-card">
+        <h3 class="guide-title" style="margin-bottom: 14px;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+          Recent Activity
+        </h3>
+        <div class="activity-entry">
+            <div class="activity-title">Chapter 1 Review</div>
+            <div class="activity-time">Oct 20, 2026 · 2:30 PM</div>
         </div>
       </div>
       <div class="legal-credits">
@@ -178,6 +226,7 @@ function handleFile(file) {
     return;
   }
   selectedFile = file;
+  dropZone.classList.add('has-file');
   dropText.textContent = file.name;
   dropSub.textContent = (file.size / (1024 * 1024)).toFixed(2) + ' MB — click to change';
 }
@@ -195,6 +244,12 @@ document.getElementById('submitBtn').addEventListener('click', function () {
     return;
   }
 
+  const chapter = document.getElementById('doc-chapter').value;
+  if (!chapter) {
+    alert('Please select a chapter.');
+    return;
+  }
+
   if (!selectedFile) {
     alert('Please attach a PDF file before submitting.');
     return;
@@ -202,15 +257,16 @@ document.getElementById('submitBtn').addEventListener('click', function () {
 
   const fd = new FormData();
   fd.append('title', title);
+  fd.append('chapter', chapter);
   fd.append('document_type', document.getElementById('doc-type').value);
   fd.append('message', document.getElementById('doc-message').value);
   fd.append('file', selectedFile);
   checked.forEach(cb => fd.append('recipients[]', cb.value));
 
   const btn = this;
-  const originalText = btn.textContent;
+  const originalText = btn.innerHTML;
   btn.disabled = true;
-  btn.textContent = 'Submitting…';
+  btn.innerHTML = 'Submitting…';
 
   fetch(SUBMIT_URL, {
     method: 'POST',
@@ -220,7 +276,7 @@ document.getElementById('submitBtn').addEventListener('click', function () {
     .then(r => r.json())
     .then(data => {
       btn.disabled = false;
-      btn.textContent = originalText;
+      btn.innerHTML = originalText;
 
       if (!data.success) {
         alert('❌ ' + (data.message || 'Submission failed.'));
@@ -238,7 +294,7 @@ document.getElementById('submitBtn').addEventListener('click', function () {
     })
     .catch(() => {
       btn.disabled = false;
-      btn.textContent = originalText;
+      btn.innerHTML = originalText;
       alert('❌ Submission failed. Please try again.');
     });
 });

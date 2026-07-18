@@ -13,9 +13,9 @@ class RecipientResolver
     public function resolveTeamRoleExpert(int $teamId, string $role): ?int
     {
         $roleNameMap = [
-            'adviser' => 'Adviser',
-            'consultant' => 'Consultant',
-            'grammarian' => 'Grammarian',
+            'adviser' => 'adviser',
+            'consultant' => 'consultant',
+            'grammarian' => 'grammarian',
         ];
 
         if (! isset($roleNameMap[$role])) {
@@ -26,7 +26,7 @@ class RecipientResolver
             ->join('expert_roles as er', 'er.expert_id', '=', 'a.expert_id')
             ->join('roles as r', 'r.role_id', '=', 'er.role_id')
             ->where('a.team_id', $teamId)
-            ->where('a.applicatin_status', 'accepted')
+            ->where('a.status', 'accepted')
             ->where('r.role_name', $roleNameMap[$role])
             ->select('a.expert_id')
             ->first();
@@ -45,7 +45,7 @@ class RecipientResolver
             ->join('roles as r', 'r.role_id', '=', 'er.role_id')
             ->where('e.is_admin', 1)
             ->where('e.department', $program)
-            ->where('r.role_name', 'Capstone Project Subject Adviser')
+            ->where('r.role_name', 'capstone_adviser')
             ->select('e.expert_id')
             ->first();
 
@@ -62,5 +62,66 @@ class RecipientResolver
         }
 
         return $this->resolveTeamRoleExpert($teamId, $role);
+    }
+
+    /**
+     * NEW: Resolve expert_id + display name for all four recipient roles
+     * in one pass, for populating the "Send To" UI dynamically.
+     *
+     * Returns:
+     * [
+     *   'adviser'         => ['expert_id' => int|null, 'name' => string|null],
+     *   'consultant'      => [...],
+     *   'grammarian'      => [...],
+     *   'subject_adviser' => [...],
+     * ]
+     */
+    /**
+     * Resolve expert_id + display name for all four recipient roles
+     * in one pass, for populating the "Send To" UI dynamically.
+     */
+    public function getAssignedNames(int $teamId, string $program): array
+    {
+        $result = [];
+
+        $teamRoles = [
+            'adviser' => 'adviser',
+            'consultant' => 'consultant',
+            'grammarian' => 'grammarian',
+        ];
+
+        foreach ($teamRoles as $role => $roleName) {
+            $row = DB::table('capstone_expert_application as a')
+                ->join('expert_roles as er', 'er.expert_id', '=', 'a.expert_id')
+                ->join('roles as r', 'r.role_id', '=', 'er.role_id')
+                ->join('capstone_experts as e', 'e.expert_id', '=', 'a.expert_id')
+                ->where('a.team_id', $teamId)
+                ->where('a.status', 'accepted')
+                ->where('r.role_name', $roleName)
+                ->select('e.expert_id', 'e.first_name', 'e.last_name')
+                ->first();
+
+            $result[$role] = [
+                'expert_id' => $row->expert_id ?? null,
+                'name' => $row ? trim("{$row->first_name} {$row->last_name}") : null,
+            ];
+        }
+
+        // Subject adviser (admin) — resolved by program/department, not team
+        $adminRow = DB::table('capstone_experts as e')
+            ->join('expert_roles as er', 'er.expert_id', '=', 'e.expert_id')
+            ->join('roles as r', 'r.role_id', '=', 'er.role_id')
+            ->where('e.is_admin', 1)
+            ->where('e.department', $program)
+            ->where('r.role_name', 'capstone_adviser')
+            ->select('e.expert_id', 'e.first_name', 'e.last_name')
+            ->first();
+
+        $result['subject_adviser'] = [
+            'expert_id' => $adminRow->expert_id ?? null,
+            'name' => $adminRow ? trim("{$adminRow->first_name} {$adminRow->last_name}") : null,
+        ];
+
+        return $result;
     }
 }

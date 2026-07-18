@@ -284,10 +284,18 @@ class ExpertController extends Controller
             'client_id' => $clientId,
             'redirect_uri' => config('services.google.redirect_uri'),
             'response_type' => 'code',
-            'scope' => 'openid email profile',
+            // Added Drive scope (drive.file = only files this app creates/opens,
+            // narrower and safer than the full 'drive' scope) so instructor login
+            // also grants Drive access.
+            'scope' => 'openid email profile https://www.googleapis.com/auth/drive.file',
             'state' => $state,
             'hd' => 'gmail.com',
-            'prompt' => 'select_account',
+            // 'consent' (not 'select_account') is required so Google actually returns
+            // a refresh_token on this login — otherwise handleGoogleCallback() below
+            // always saves null for refresh_token and the Drive connection expires
+            // after the first access token times out (usually ~1 hour).
+            'prompt' => 'consent',
+            'access_type' => 'offline',
         ]);
 
         return response()->json([

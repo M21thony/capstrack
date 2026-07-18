@@ -9,7 +9,7 @@
     <title>@yield('title', config('app.name', 'Laravel'))</title>
 
     <!-- Scripts and Styles -->
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @vite(['resources/css/app.css', 'resources/js/legacy.js'])
 </head>
 <body>
     @yield('content')

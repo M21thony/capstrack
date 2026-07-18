@@ -10,10 +10,16 @@ class PreventBackHistory
 {
     public function handle(Request $request, Closure $next): Response
     {
-        return $next($request)->withHeaders([
+        $response = $next($request);
+
+        foreach ([
             'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0, post-check=0, pre-check=0',
             'Pragma' => 'no-cache',
             'Expires' => 'Sat, 01 Jan 1990 00:00:00 GMT',
-        ]);
+        ] as $key => $value) {
+            $response->headers->set($key, $value);
+        }
+
+        return $response;
     }
 }

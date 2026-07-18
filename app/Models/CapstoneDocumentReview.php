@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class CapstoneDocumentReview extends Model
 {
     protected $table = 'capstone_document_review';
+
     protected $primaryKey = 'review_id';
 
     protected $fillable = [
@@ -25,5 +26,10 @@ class CapstoneDocumentReview extends Model
     public function document()
     {
         return $this->belongsTo(CapstoneDocument::class, 'file_id', 'file_id');
+    }
+
+    public function pdfRemarks()
+    {
+        return $this->hasMany(PdfRemark::class, 'review_id', 'review_id');
     }
 }

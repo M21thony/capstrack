@@ -14,6 +14,7 @@ use App\Http\Controllers\Instructor\DocReviewController;
 use App\Http\Controllers\Instructor\ScheduleController;
 use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\PdfAnnotationController;
 use App\Http\Controllers\PersonalInfoController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RecruitmentController;
@@ -21,6 +22,7 @@ use App\Http\Controllers\Student\ExpertController as StudentExpertController;
 use App\Http\Controllers\StudentResourcesController;
 use App\Http\Controllers\SubmissionController;
 use App\Http\Controllers\TeamController;
+use App\Http\Controllers\Instructor\ConsultationLogController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
@@ -57,12 +59,24 @@ Route::middleware(['auth:expert', 'expert.approved', 'no.cache'])->prefix('instr
     // NOTE: now controller-based to show real capstone_document_review rows
     // for the logged-in expert, instead of the static mock table.
     Route::get('/docreview', [DocReviewController::class, 'index'])->name('docreview');
+    Route::get('/docreview/{review}/annotate', [DocReviewController::class, 'annotate'])->name('docreview.annotate');
     Route::get('/assignments', [InstructorAssignmentController::class, 'index'])->name('assignments');
     Route::post('/assignments/{assignment}/approve', [InstructorAssignmentController::class, 'approve'])->name('assignments.approve');
     Route::post('/assignments/{assignment}/reject', [InstructorAssignmentController::class, 'reject'])->name('assignments.reject');
     Route::delete('/assignments/{assignment}', [InstructorAssignmentController::class, 'remove'])->name('assignments.remove');
     Route::view('/pending', 'instructor.pending')->name('pending');
     Route::view('/rejected', 'instructor.rejected')->name('rejected');
+    Route::get('/docreview/{reviewId}/clf', [ConsultationLogController::class, 'generate'])->name('docreview.clf');
+});
+
+// Annotator routes for PDF annotation and remarks
+Route::middleware(['auth:expert', 'expert.approved', 'no.cache'])->prefix('reviews')->name('reviews.')->group(function () {
+    Route::get('/{review}/pdf', [PdfAnnotationController::class, 'file'])->name('pdf');
+    Route::get('/{review}/remarks', [PdfAnnotationController::class, 'index'])->name('remarks.index');
+    Route::post('/{review}/remarks', [PdfAnnotationController::class, 'store'])->name('remarks.store');
+    Route::get('/{review}/status', [PdfAnnotationController::class, 'showStatus'])->name('status.show');
+    Route::post('/{review}/status', [PdfAnnotationController::class, 'updateStatus'])->name('status.update');
+    Route::post('/{review}/sync-drive', [PdfAnnotationController::class, 'syncDrive'])->name('sync-drive');
 });
 
 Route::get('/', function () {
@@ -116,7 +130,7 @@ Route::middleware(['auth', 'no.cache'])->group(function () {
             Route::get('/dashboard', [DashboardController::class, 'index'])->name('student.dashboard');
             Route::get('/team', [TeamController::class, 'index'])->name('student.team');
             Route::get('/experts', [StudentExpertController::class, 'index'])->name('student.experts');
-            Route::view('/submission', 'student.submission')->name('student.submission');
+            Route::get('/submission', [SubmissionController::class, 'create'])->name('student.submission');
             // NEW: handles the actual file upload + multi-recipient Drive delivery
             Route::post('/submission', [SubmissionController::class, 'store'])->name('student.submission.store');
             Route::view('/review', 'student.review')->name('student.review');

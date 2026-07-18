@@ -36,23 +36,12 @@ class ExpertController extends Controller
 
         $assignments = collect();
         $isLeader = false;
-        $roleAssignments = [
-            'adviser' => null,
-            'consultant' => null,
-            'grammarian' => null,
-        ];
 
         if ($team) {
             $isLeader = $team->leader_id === $student->student_id;
             $assignments = TeamExpertAssignment::where('team_id', $team->team_id)
-                ->with(['expert.roles', 'expert.expertise', 'role'])
+                ->with(['expert.roles', 'expert.expertise'])
                 ->get();
-
-            foreach ($assignments->where('status', 'approved') as $a) {
-                if (array_key_exists($a->role?->role_name ?? '', $roleAssignments)) {
-                    $roleAssignments[$a->role->role_name] = $a;
-                }
-            }
         }
 
         $stats = [
@@ -67,7 +56,6 @@ class ExpertController extends Controller
             'team' => $team,
             'isLeader' => $isLeader,
             'stats' => $stats,
-            'roleAssignments' => $roleAssignments,
         ]);
     }
 }

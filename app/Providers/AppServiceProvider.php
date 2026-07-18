@@ -2,9 +2,11 @@
 
 namespace App\Providers;
 
+use App\Models\CapstoneDocumentReview;
 use App\Models\Notification;
 use App\Services\OllamaSSHClient;
 use App\Services\SimilarityService;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
@@ -19,7 +21,6 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(OllamaSSHClient::class,
             fn () => new OllamaSSHClient
         );
-
         $this->app->singleton(SimilarityService::class,
             fn ($app) => new SimilarityService(
                 $app->make(OllamaSSHClient::class)
@@ -48,5 +49,7 @@ class AppServiceProvider extends ServiceProvider
                 $view->with(compact('unreadNotifications', 'unreadCount'));
             }
         });
+
+        Route::model('review', CapstoneDocumentReview::class);
     }
 }

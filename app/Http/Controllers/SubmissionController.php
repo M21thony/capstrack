@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Controller;
 use App\Models\CapstoneDocument;
 use App\Models\CapstoneDocumentReview;
 use App\Models\GoogleDriveToken;
@@ -24,6 +23,7 @@ class SubmissionController extends Controller
     {
         $request->validate([
             'title' => 'required|string|max:50',
+            'chapter' => 'required|string|max:50',
             'document_type' => 'nullable|string|max:100',
             'message' => 'nullable|string',
             'file' => 'required|file|max:25600', // 25 MB
@@ -58,6 +58,7 @@ class SubmissionController extends Controller
         $document = CapstoneDocument::create([
             'student_id' => $studentId,
             'file_name' => $request->input('title'),
+            'chapter' => $request->input('chapter'),
             'file_path' => $storedPath,
             'file_version' => $lastVersion + 1,
             'document_status' => 'Pending',
@@ -66,7 +67,17 @@ class SubmissionController extends Controller
         $results = [];
 
         foreach ($request->input('recipients') as $role) {
-            $expertId = $this->resolver->resolve($role, $studentYear->team_id, $studentYear->program);
+            if ($role === 'subject_adviser' && ! $studentYear->program) {
+                $results[] = [
+                    'role' => $role,
+                    'status' => 'unresolved',
+                    'message' => 'Your program is not set, so a Subject Adviser could not be determined.',
+                ];
+
+                continue;
+            }
+
+            $expertId = $this->resolver->resolve($role, $studentYear->team_id, $studentYear->program ?? '');
 
             if (! $expertId) {
                 $results[] = [
@@ -74,6 +85,7 @@ class SubmissionController extends Controller
                     'status' => 'unresolved',
                     'message' => 'No expert currently assigned to this role.',
                 ];
+
                 continue;
             }
 
@@ -101,6 +113,32 @@ class SubmissionController extends Controller
         ]);
     }
 
+    public function create()
+    {
+        $studentId = Auth::id();
+
+        $studentYear = DB::table('student_s_y')
+            ->where('student_id', $studentId)
+            ->orderByDesc('school_year')
+            ->first();
+
+        $recipients = [
+            'adviser' => ['expert_id' => null, 'name' => null],
+            'consultant' => ['expert_id' => null, 'name' => null],
+            'grammarian' => ['expert_id' => null, 'name' => null],
+            'subject_adviser' => ['expert_id' => null, 'name' => null],
+        ];
+
+        if ($studentYear && $studentYear->team_id) {
+            $recipients = $this->resolver->getAssignedNames(
+                $studentYear->team_id,
+                $studentYear->program ?? ''
+            );
+        }
+
+        return view('student.submission', compact('recipients'));
+    }
+
     private function deliverToDrive(
         CapstoneDocumentReview $review,
         int $expertId,
@@ -116,14 +154,15 @@ class SubmissionController extends Controller
                 'drive_status' => 'not_connected',
                 'drive_error' => 'This recipient has not connected Google Drive yet.',
             ]);
+
             return;
         }
 
         $extensionMimeMap = [
-            'pdf'  => 'application/pdf',
-            'doc'  => 'application/msword',
+            'pdf' => 'application/pdf',
+            'doc' => 'application/msword',
             'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-            'ppt'  => 'application/vnd.ms-powerpoint',
+            'ppt' => 'application/vnd.ms-powerpoint',
             'pptx' => 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
         ];
         $mimeType = $extensionMimeMap[$ext] ?? $file->getMimeType();

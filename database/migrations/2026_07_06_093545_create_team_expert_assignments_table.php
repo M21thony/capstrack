@@ -20,7 +20,7 @@ return new class extends Migration
             $table->foreign('expert_id')->references('expert_id')->on('capstone_experts')->onDelete('cascade');
             $table->foreign('role_id')->references('role_id')->on('roles')->onDelete('cascade');
 
-            $table->unique(['team_id', 'expert_id', 'role_id']);
+            $table->unique(['team_id', 'expert_id']);
         });
     }
 

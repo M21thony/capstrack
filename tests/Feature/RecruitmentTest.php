@@ -631,4 +631,38 @@ class RecruitmentTest extends TestCase
 
         $response->assertSessionHasErrors(['member_count']);
     }
+
+    public function test_build_a_team_post_creates_student_school_year_if_missing(): void
+    {
+        $student = Student::create([
+            'email' => 'nosy@my.cspc.edu.ph',
+            'f_name' => 'No',
+            'l_name' => 'SY',
+            'student_number' => '2026-0099',
+            'p_picture' => 'avatar-01',
+        ]);
+
+        $this->actingAs($student);
+
+        $this->assertFalse(StudentSchoolYear::where('student_id', $student->student_id)->exists());
+
+        $response = $this->post('/recruitment', [
+            'recruitment_goal' => 'build_a_team',
+            'team_name' => 'AutoTeam',
+            'looking_for' => 'Need members',
+            'tags' => json_encode(['Web Dev']),
+            'member_count' => 4,
+        ]);
+
+        $response->assertRedirect(route('student.team'));
+        $response->assertSessionHas('status', 'Recruitment post published!');
+
+        $sy = StudentSchoolYear::where('student_id', $student->student_id)->first();
+        $this->assertNotNull($sy);
+        $this->assertNotNull($sy->team_id);
+
+        $team = Team::where('team_name', 'AutoTeam')->first();
+        $this->assertNotNull($team);
+        $this->assertEquals($team->team_id, $sy->team_id);
+    }
 }

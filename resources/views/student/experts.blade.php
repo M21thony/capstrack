@@ -264,36 +264,26 @@
       <div class="role-overview">
         <div class="role-overview-title">
           <svg viewBox="0 0 24 24"><path d="M9 12l2 2 4-4"/><path d="M12 2a10 10 0 1 0 10 10"/></svg>
-          Team Expert Checklist
+          Your Team's Experts
         </div>
-        @php
-          $rolesConfig = [
-            'adviser' => ['label' => 'Adviser', 'color' => 'var(--accent)'],
-            'consultant' => ['label' => 'Consultant', 'color' => '#3b82f6'],
-            'grammarian' => ['label' => 'Grammarian', 'color' => '#9333ea'],
-          ];
-        @endphp
-        @foreach($rolesConfig as $key => $cfg)
-          @php $assigned = $roleAssignments[$key] ?? null; @endphp
+        @php $approvedAssignments = $assignments->where('status', 'approved'); @endphp
+        @forelse($approvedAssignments as $a)
           <div class="role-overview-row">
-            <div class="role-overview-dot" style="background: {{ $cfg['color'] }};"></div>
-            <div class="role-overview-role">{{ $cfg['label'] }}</div>
+            <div class="role-overview-dot" style="background: var(--accent);"></div>
+            <div class="role-overview-role">{{ $a->expert?->name ?? 'Unknown' }}</div>
             <div class="role-overview-status">
-              @if($assigned)
-                <svg class="check" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
-                <span class="assigned-name">{{ $assigned->expert?->name ?? 'Unknown' }}</span>
-                @if($isLeader)
-                  <button class="btn btn-sm btn-soft-red" onclick="openRemoveModal({{ $assigned->assignment_id }}, '{{ $assigned->expert?->name ?? '' }}', '{{ ucfirst($assigned->role?->role_name ?? '') }}')" title="Remove" style="margin-left:auto;padding:4px 8px;">
-                    <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                  </button>
-                @endif
-              @else
-                <svg class="xmark" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                <span class="not-assigned">Not yet assigned</span>
+              <svg class="check" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+              <span class="assigned-name">Assigned</span>
+              @if($isLeader)
+                <button class="btn btn-sm btn-soft-red" onclick="openRemoveModal({{ $a->assignment_id }}, '{{ $a->expert?->name ?? '' }}')" title="Remove" style="margin-left:auto;padding:4px 8px;">
+                  <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                </button>
               @endif
             </div>
           </div>
-        @endforeach
+        @empty
+          <div class="not-assigned" style="padding: 6px 0;">No experts assigned yet.</div>
+        @endforelse
       </div>
       @endif
 
@@ -376,8 +366,6 @@
                 $teamAssignmentsForExpert = $assignments->where('expert_id', $expert->expert_id);
                 $hasApproved = $teamAssignmentsForExpert->where('status', 'approved')->isNotEmpty();
                 $hasPending = $teamAssignmentsForExpert->where('status', 'pending')->isNotEmpty();
-                $alreadyAssignedRoleIds = $teamAssignmentsForExpert->pluck('role_id')->toArray();
-                $availableRoles = $visibleRoles->reject(fn($r) => in_array($r->role_id, $alreadyAssignedRoleIds));
               @endphp
               @if($hasApproved)
                 <button class="btn btn-sm btn-full btn-muted-green" disabled>
@@ -389,8 +377,8 @@
                   <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
                   Pending
                 </button>
-              @elseif($availableRoles->isNotEmpty() && !$_isFull)
-                <button class="btn btn-sm btn-full btn-solid" onclick="openApplyModal({{ $expert->expert_id }}, '{{ $expert->name }}', {{ json_encode($availableRoles->map(fn($r) => ['id' => $r->role_id, 'name' => ucfirst($r->role_name)])->toArray()) }})">
+              @elseif(!$_isFull)
+                <button class="btn btn-sm btn-full btn-solid" onclick="openApplyModal({{ $expert->expert_id }}, '{{ $expert->name }}')">
                   <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><polyline points="17 11 19 13 23 9"/></svg>
                   Apply Now
                 </button>
@@ -468,31 +456,28 @@
 
         @forelse($assignments as $assignment)
           @php
-            $roleColors = ['adviser' => 'var(--accent)', 'consultant' => '#3b82f6', 'grammarian' => '#9333ea'];
-            $aColor = $roleColors[$assignment->role?->role_name] ?? 'var(--accent)';
             $propUrl = $assignment->proposal_file ? Storage::url($assignment->proposal_file) : null;
           @endphp
           <div class="req-card">
-            <div class="avatar" style="width: 36px; height: 36px; font-size: 12px; background: {{ $aColor }}; color: white;">
+            <div class="avatar" style="width: 36px; height: 36px; font-size: 12px; background: var(--accent); color: white;">
               {{ $assignment->expert?->avatarInitials() ?? 'NA' }}
             </div>
             <div style="flex: 1; min-width: 0;">
               <div style="font-size: 13px; font-weight: 600; color: var(--text);">{{ $assignment->expert?->name ?? 'Unknown Expert' }}</div>
-              <div style="font-size: 11px; color: var(--text3); text-transform: uppercase;">{{ ucfirst($assignment->role?->role_name ?? '') }}</div>
+              <div style="font-size: 11px; color: var(--text3); text-transform: uppercase;">{{ ucfirst($assignment->status) }}</div>
             </div>
             <span class="status-badge" style="background: {{ $assignment->status === 'approved' ? 'var(--green-bg)' : ($assignment->status === 'pending' ? 'var(--amber-bg)' : 'var(--red-bg)') }}; color: {{ $assignment->status === 'approved' ? 'var(--green)' : ($assignment->status === 'pending' ? 'var(--amber)' : 'var(--red)') }};">
               {{ ucfirst($assignment->status) }}
             </span>
             <button class="btn btn-sm btn-soft" onclick="openReqInfoModal({{ json_encode([
               'name' => $assignment->expert?->name ?? 'Unknown',
-              'role' => ucfirst($assignment->role?->role_name ?? ''),
               'status' => ucfirst($assignment->status),
               'message' => $assignment->message ?? 'No message provided.',
               'proposal' => $propUrl,
               'date' => $assignment->created_at ? $assignment->created_at->format('M d, Y g:i A') : 'N/A',
             ]) }})" title="View details">View</button>
             @if($isLeader && $assignment->status !== 'approved')
-              <button class="btn btn-sm btn-soft-red" onclick="openRemoveModal({{ $assignment->assignment_id }}, '{{ $assignment->expert?->name ?? '' }}', '{{ ucfirst($assignment->role?->role_name ?? '') }}')" title="Remove">
+              <button class="btn btn-sm btn-soft-red" onclick="openRemoveModal({{ $assignment->assignment_id }}, '{{ $assignment->expert?->name ?? '' }}')" title="Remove">
                 <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
               </button>
             @endif
@@ -590,12 +575,6 @@
     <div class="modal-sub" id="apply-expert-name"></div>
 
     <div class="form-group">
-      <label>Select Role <span class="req">*</span></label>
-      <select id="apply-role-select"></select>
-      <div class="field-error" id="err-role">Please select a role.</div>
-    </div>
-
-    <div class="form-group">
       <label>Approved Pre-Proposal <span class="req">*</span></label>
       <div class="file-input-wrap">
         <svg class="file-icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="12" y2="12"/><line x1="15" y1="15" x2="12" y2="12"/></svg>
@@ -630,10 +609,6 @@
     <div class="review-row">
       <div class="review-label">Expert</div>
       <div class="review-value" id="review-expert"></div>
-    </div>
-    <div class="review-row">
-      <div class="review-label">Role</div>
-      <div class="review-value" id="review-role"></div>
     </div>
     <div class="review-row">
       <div class="review-label">Proposal</div>
@@ -693,7 +668,7 @@
       <div class="review-value" id="req-info-expert"></div>
     </div>
     <div class="review-row">
-      <div class="review-label">Role</div>
+      <div class="review-label">Status</div>
       <div class="review-value" id="req-info-role"></div>
     </div>
     <div class="review-row">
@@ -799,17 +774,9 @@ function openExpertPostModal(el) {
   openModal('expert-post-modal');
 }
 
-function openApplyModal(expertId, expertName, roles) {
+function openApplyModal(expertId, expertName) {
   currentExpertId = expertId;
   document.getElementById('apply-expert-name').textContent = 'Apply to ' + expertName;
-  const select = document.getElementById('apply-role-select');
-  select.innerHTML = '';
-  roles.forEach(r => {
-    const opt = document.createElement('option');
-    opt.value = r.id;
-    opt.textContent = r.name;
-    select.appendChild(opt);
-  });
   document.getElementById('file-label').textContent = 'Choose PDF file...';
   document.getElementById('file-label').classList.remove('has-file');
   document.getElementById('proposal-file').value = '';
@@ -847,17 +814,12 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function reviewApply() {
-  const roleSelect = document.getElementById('apply-role-select');
   const fileInput = document.getElementById('proposal-file');
   const message = document.getElementById('apply-message').value.trim();
   let valid = true;
 
   document.querySelectorAll('#apply-modal .field-error').forEach(e => e.classList.remove('show'));
 
-  if (!roleSelect.value) {
-    document.getElementById('err-role').classList.add('show');
-    valid = false;
-  }
   if (!fileInput.files || !fileInput.files[0]) {
     document.getElementById('err-file').classList.add('show');
     valid = false;
@@ -869,12 +831,10 @@ function reviewApply() {
 
   if (!valid) return;
 
-  currentRoleName = roleSelect.options[roleSelect.selectedIndex].text;
   currentFileName = fileInput.files[0].name;
   currentMessage = message;
 
   document.getElementById('review-expert').textContent = document.getElementById('apply-expert-name').textContent.replace('Apply to ', '');
-  document.getElementById('review-role').textContent = currentRoleName;
   document.getElementById('review-file').textContent = currentFileName;
   document.getElementById('review-message').textContent = message.length > 120 ? message.substring(0, 120) + '...' : message;
 
@@ -889,7 +849,6 @@ function confirmApply() {
 
   const formData = new FormData();
   formData.append('expert_id', currentExpertId);
-  formData.append('role_id', parseInt(document.getElementById('apply-role-select').value));
   formData.append('proposal_file', document.getElementById('proposal-file').files[0]);
   formData.append('message', currentMessage);
 
@@ -924,7 +883,7 @@ function confirmApply() {
 function openReqInfoModal(data) {
   document.getElementById('req-info-sub').textContent = 'Information about this expert request.';
   document.getElementById('req-info-expert').textContent = data.name;
-  document.getElementById('req-info-role').textContent = data.role;
+  document.getElementById('req-info-role').textContent = data.status;
   const statusColors = { Approved: 'var(--green)', Pending: 'var(--amber)', Rejected: 'var(--red)' };
   document.getElementById('req-info-status').innerHTML = '<span style="color:' + (statusColors[data.status] || 'var(--text3)') + ';font-weight:600;">' + data.status + '</span>';
   document.getElementById('req-info-message').textContent = data.message;
@@ -935,10 +894,10 @@ function openReqInfoModal(data) {
   openModal('req-info-modal');
 }
 
-function openRemoveModal(assignmentId, expertName, roleName) {
+function openRemoveModal(assignmentId, expertName) {
   currentRemoveId = assignmentId;
   document.getElementById('remove-detail').innerHTML =
-    '<strong>' + expertName + '</strong> — ' + roleName + '<br><span style="font-size:11px;color:var(--red);">This action cannot be undone.</span>';
+    '<strong>' + expertName + '</strong><br><span style="font-size:11px;color:var(--red);">This action cannot be undone.</span>';
   document.getElementById('remove-confirm-input').value = '';
   document.getElementById('remove-confirm-input').classList.remove('error');
   document.getElementById('err-remove-confirm').classList.remove('show');

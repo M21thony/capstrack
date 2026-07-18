@@ -176,11 +176,10 @@ class TeamController extends Controller
         $leaderRoleId = StudentRole::where('s_role_name', 'Leader')->value('s_role_id');
 
         DB::table('student_s_y')
-            ->where('student_id', $student->student_id)
-            ->update([
-                'team_id' => $team->team_id,
-                's_role_id' => $leaderRoleId,
-            ]);
+            ->updateOrInsert(
+                ['student_id' => $student->student_id],
+                ['team_id' => $team->team_id, 's_role_id' => $leaderRoleId]
+            );
 
         // Sync member_count from recruitment post to team
         $recruitment = Recruitment::where('student_id', $student->student_id)

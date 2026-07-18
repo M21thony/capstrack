@@ -234,17 +234,16 @@
             </div>
           </div>
           <div class="req-card-right">
-            <span class="req-role-badge">{{ ucfirst($assignment->role?->role_name ?? '') }}</span>
             <div class="req-actions">
               <button class="btn btn-ghost" onclick="openTeamModal({{ $assignment->assignment_id }})" title="View Details">
                 <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
                 View Details
               </button>
-              <button class="btn btn-success" onclick="openApproveModal({{ $assignment->assignment_id }}, '{{ $assignment->team?->team_name ?? 'Unknown' }}', '{{ ucfirst($assignment->role?->role_name ?? '') }}', '{{ $assignment->team?->leader?->f_name ?? '' }}')" title="Approve">
+              <button class="btn btn-success" onclick="openApproveModal({{ $assignment->assignment_id }}, '{{ $assignment->team?->team_name ?? 'Unknown' }}', '{{ $assignment->team?->leader?->f_name ?? '' }}')" title="Approve">
                 <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
                 Approve
               </button>
-              <button class="btn btn-danger" onclick="openRejectModal({{ $assignment->assignment_id }}, '{{ $assignment->team?->team_name ?? 'Unknown' }}', '{{ ucfirst($assignment->role?->role_name ?? '') }}')" title="Reject">
+              <button class="btn btn-danger" onclick="openRejectModal({{ $assignment->assignment_id }}, '{{ $assignment->team?->team_name ?? 'Unknown' }}')" title="Reject">
                 <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                 Reject
               </button>
@@ -271,14 +270,13 @@
             </div>
           </div>
           <div class="req-card-right">
-            <span class="req-role-badge">{{ ucfirst($assignment->role?->role_name ?? '') }}</span>
             <span class="status-dot-sm" style="background:var(--green);" title="Approved"></span>
             <div class="req-actions">
               <button class="btn btn-ghost" onclick="openTeamModal({{ $assignment->assignment_id }})" title="View Details">
                 <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
                 View Details
               </button>
-              <button class="btn btn-danger" onclick="openInstructorRemoveModal({{ $assignment->assignment_id }}, '{{ $assignment->team?->team_name ?? 'Unknown' }}', '{{ ucfirst($assignment->role?->role_name ?? '') }}')" title="Remove">
+              <button class="btn btn-danger" onclick="openInstructorRemoveModal({{ $assignment->assignment_id }}, '{{ $assignment->team?->team_name ?? 'Unknown' }}')" title="Remove">
                 <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                 Remove
               </button>
@@ -305,14 +303,13 @@
             </div>
           </div>
           <div class="req-card-right">
-            <span class="req-role-badge">{{ ucfirst($assignment->role?->role_name ?? '') }}</span>
             <span class="status-dot-sm" style="background:var(--red);" title="Rejected"></span>
             <div class="req-actions">
               <button class="btn btn-ghost" onclick="openTeamModal({{ $assignment->assignment_id }})" title="View Details">
                 <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
                 View Details
               </button>
-              <button class="btn btn-danger" onclick="openInstructorRemoveModal({{ $assignment->assignment_id }}, '{{ $assignment->team?->team_name ?? 'Unknown' }}', '{{ ucfirst($assignment->role?->role_name ?? '') }}')" title="Remove">
+              <button class="btn btn-danger" onclick="openInstructorRemoveModal({{ $assignment->assignment_id }}, '{{ $assignment->team?->team_name ?? 'Unknown' }}')" title="Remove">
                 <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                 Remove
               </button>
@@ -346,10 +343,6 @@
     <div class="info-row">
       <div class="info-label">Project</div>
       <div class="info-value" id="tm-project"></div>
-    </div>
-    <div class="info-row">
-      <div class="info-label">Role</div>
-      <div class="info-value" id="tm-role"></div>
     </div>
     <div class="info-row">
       <div class="info-label">Leader</div>
@@ -389,7 +382,7 @@
       <svg viewBox="0 0 24 24" stroke="var(--green)"><polyline points="20 6 9 17 4 12"/></svg>
     </div>
     <h3>Approve Team Request?</h3>
-    <div class="confirm-desc">This team will be assigned to you for the selected role.</div>
+    <div class="confirm-desc">This team will be assigned to you.</div>
     <div class="confirm-detail" id="approve-detail"></div>
     <div class="modal-actions" style="margin-top: 18px;">
       <button class="btn btn-soft" onclick="closeModal('approve-modal')">Cancel</button>
@@ -466,7 +459,6 @@ function openTeamModal(id) {
   document.getElementById('tm-status').innerHTML = '<span style="color:' + (statusColors[d.status] || 'var(--text3)') + ';font-weight:600;text-transform:capitalize;">' + d.status + '</span>';
   document.getElementById('tm-team').textContent = d.team;
   document.getElementById('tm-project').textContent = d.project;
-  document.getElementById('tm-role').innerHTML = '<span class="req-role-badge">' + d.role + '</span>';
   document.getElementById('tm-leader').innerHTML = d.leader + (d.leader_email ? '<br><span style="font-size:11px;color:var(--text3);">' + d.leader_email + '</span>' : '');
   document.getElementById('tm-members').innerHTML = d.members.length
     ? d.members.map(m => '<span class="member-tag">' + m.name + (m.email ? '<br><span style="font-size:10px;color:var(--text3);">' + m.email + '</span>' : '') + '</span>').join('')
@@ -488,10 +480,10 @@ function openTeamModal(id) {
 }
 
 let currentApproveId = null;
-function openApproveModal(id, teamName, roleName, leaderName) {
+function openApproveModal(id, teamName, leaderName) {
   currentApproveId = id;
   document.getElementById('approve-detail').innerHTML =
-    '<strong>' + teamName + '</strong> — ' + roleName + '<br>Leader: ' + (leaderName || 'N/A')
+    '<strong>' + teamName + '</strong><br>Leader: ' + (leaderName || 'N/A')
     + '<span class="slot-warn">This will use 1 of your ' + {{ $currentSlots }} + '/' + {{ $maxSlots }} + ' available slots.</span>';
   document.getElementById('btn-confirm-approve').disabled = false;
   document.getElementById('btn-confirm-approve').innerHTML =
@@ -500,9 +492,9 @@ function openApproveModal(id, teamName, roleName, leaderName) {
 }
 
 let currentRejectId = null;
-function openRejectModal(id, teamName, roleName) {
+function openRejectModal(id, teamName) {
   currentRejectId = id;
-  document.getElementById('reject-modal-sub').textContent = teamName + ' — ' + roleName;
+  document.getElementById('reject-modal-sub').textContent = teamName;
   document.getElementById('reject-reason').value = '';
   document.getElementById('btn-confirm-reject').disabled = false;
   document.getElementById('btn-confirm-reject').innerHTML =
@@ -581,10 +573,10 @@ function confirmReject() {
 
 let currentInstructorRemoveId = null;
 
-function openInstructorRemoveModal(id, teamName, roleName) {
+function openInstructorRemoveModal(id, teamName) {
   currentInstructorRemoveId = id;
   document.getElementById('instructor-remove-detail').innerHTML =
-    '<strong>' + teamName + '</strong> — ' + roleName + '<br><span style="font-size:11px;color:var(--red);">This action cannot be undone.</span>';
+    '<strong>' + teamName + '</strong><br><span style="font-size:11px;color:var(--red);">This action cannot be undone.</span>';
   closeModal('reject-modal');
   closeModal('approve-modal');
   openModal('instructor-remove-modal');

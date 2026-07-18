@@ -15,7 +15,7 @@
 <script src="https://www.google.com/recaptcha/api.js?render={{ config('services.recaptcha.site_key') }}"></script>
 
     <!-- Styles -->
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @vite(['resources/css/app.css', 'resources/js/legacy.js'])
     <link rel="stylesheet" href="{{ asset('css/styles.css') }}" />
 
     <style>

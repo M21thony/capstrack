@@ -56,8 +56,10 @@ class RecruitmentController extends Controller
                     'leader_id' => $studentId,
                 ]);
 
-                StudentSchoolYear::where('student_id', $studentId)
-                    ->update(['team_id' => $team->team_id]);
+                StudentSchoolYear::updateOrCreate(
+                    ['student_id' => $studentId],
+                    ['team_id' => $team->team_id]
+                );
             }
 
             return Recruitment::create([
