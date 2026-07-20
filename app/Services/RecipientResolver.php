@@ -13,9 +13,9 @@ class RecipientResolver
     public function resolveTeamRoleExpert(int $teamId, string $role): ?int
     {
         $roleNameMap = [
-            'adviser' => 'adviser',
-            'consultant' => 'consultant',
-            'grammarian' => 'grammarian',
+            'adviser' => 'Adviser',
+            'consultant' => 'Consultant',
+            'grammarian' => 'Grammarian',
         ];
 
         if (! isset($roleNameMap[$role])) {
@@ -45,7 +45,7 @@ class RecipientResolver
             ->join('roles as r', 'r.role_id', '=', 'er.role_id')
             ->where('e.is_admin', 1)
             ->where('e.department', $program)
-            ->where('r.role_name', 'capstone_adviser')
+            ->where('r.role_name', 'Capstone Project Subject Adviser')
             ->select('e.expert_id')
             ->first();
 
@@ -65,7 +65,7 @@ class RecipientResolver
     }
 
     /**
-     * NEW: Resolve expert_id + display name for all four recipient roles
+     * Resolve expert_id + display name for all four recipient roles
      * in one pass, for populating the "Send To" UI dynamically.
      *
      * Returns:
@@ -76,18 +76,14 @@ class RecipientResolver
      *   'subject_adviser' => [...],
      * ]
      */
-    /**
-     * Resolve expert_id + display name for all four recipient roles
-     * in one pass, for populating the "Send To" UI dynamically.
-     */
     public function getAssignedNames(int $teamId, string $program): array
     {
         $result = [];
 
         $teamRoles = [
-            'adviser' => 'adviser',
-            'consultant' => 'consultant',
-            'grammarian' => 'grammarian',
+            'adviser' => 'Adviser',
+            'consultant' => 'Consultant',
+            'grammarian' => 'Grammarian',
         ];
 
         foreach ($teamRoles as $role => $roleName) {
@@ -113,7 +109,7 @@ class RecipientResolver
             ->join('roles as r', 'r.role_id', '=', 'er.role_id')
             ->where('e.is_admin', 1)
             ->where('e.department', $program)
-            ->where('r.role_name', 'capstone_adviser')
+            ->where('r.role_name', 'Capstone Project Subject Adviser')
             ->select('e.expert_id', 'e.first_name', 'e.last_name')
             ->first();
 

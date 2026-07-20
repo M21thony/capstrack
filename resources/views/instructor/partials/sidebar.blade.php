@@ -25,6 +25,6 @@
     </div>
   </div>
 
-  @include('instructor.partials.sidebar-nav', ['currentPage' => $currentPage ?? ''])
+  @include('instructor.partials.sidebar-nav', ['currentPage' => $currentPage ?? '', 'totalTeams' => $totalTeams ?? 0])
 </div>
 @include('partials.idle-timeout')

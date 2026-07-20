@@ -78,6 +78,9 @@ function PDFChecker({
   const pageDimensions = { width: 816, height: 1056 };
   const containerRef = useRef(null);
   const isProcessingComment = useRef(false);
+  const pdfAreaRef = useRef(null);
+  const scrollTicking = useRef(false);
+  const [visiblePages, setVisiblePages] = useState(() => new Set([1, 2, 3, 4, 5]));
 
   useEffect(() => {
     // Load PDF from URL params or use default test.pdf
@@ -127,6 +130,43 @@ function PDFChecker({
       })
       .catch((e) => console.error("Failed to load remarks:", e));
   }, [setComments]);
+
+  useEffect(() => {
+    const pdfArea = pdfAreaRef.current;
+    if (!pdfArea || !numPages) return;
+
+    const updateVisiblePages = () => {
+      if (scrollTicking.current) return;
+      scrollTicking.current = true;
+
+      requestAnimationFrame(() => {
+        const scrollTop = pdfArea.scrollTop;
+        const viewportHeight = pdfArea.clientHeight;
+        const pageHeight = pageDimensions.height * scale + 40;
+
+        const startPage = Math.max(1, Math.floor(scrollTop / pageHeight) - 2);
+        const endPage = Math.min(numPages, Math.ceil((scrollTop + viewportHeight) / pageHeight) + 2);
+
+        const newVisible = new Set();
+        for (let i = startPage; i <= endPage; i++) {
+          newVisible.add(i);
+        }
+
+        setVisiblePages((prev) => {
+          if (prev.size === newVisible.size && [...prev].every((p) => newVisible.has(p))) {
+            return prev;
+          }
+          return newVisible;
+        });
+
+        scrollTicking.current = false;
+      });
+    };
+
+    updateVisiblePages();
+    pdfArea.addEventListener("scroll", updateVisiblePages, { passive: true });
+    return () => pdfArea.removeEventListener("scroll", updateVisiblePages);
+  }, [numPages, scale]);
 
   function onDocumentLoadSuccess({ numPages }) {
     setNumPages(numPages);
@@ -403,137 +443,197 @@ function PDFChecker({
                   }
                 >
                   {numPages &&
-                    Array.from({ length: numPages }, (_, index) => (
-                      <div
-                        key={`page_${index + 1}`}
-                        style={{ display: "flex", flexDirection: "row", gap: "20px", marginBottom: "20px" }}
-                      >
-                        {/* PDF Page */}
-                        <div style={styles.pageContainer}>
-                          <div
-                            style={styles.pageWrapper}
-                            onClick={(e) => handlePageClick(e, index + 1)}
-                          >
-                            <Page
-                              pageNumber={index + 1}
-                              width={pageDimensions.width * scale}
-                              height={pageDimensions.height * scale}
-                              renderTextLayer={true}
-                              renderAnnotationLayer={true}
-                            />
+                    Array.from({ length: numPages }, (_, index) => {
+                      const pageNum = index + 1;
+                      const isPageLoaded = visiblePages.has(pageNum);
 
-                            {/* Remarks Layer (comment merged with its highlight) */}
-                            {comments
-                              .filter((c) => Number(c.page_number) === index + 1)
-                              .map((comment) => {
-                                const bgColor =
-                                  HIGHLIGHT_COLORS[comment.color] || HIGHLIGHT_COLORS.yellow;
+                      return (
+                        <div
+                          key={`page_${pageNum}`}
+                          style={{ display: "flex", flexDirection: "row", gap: "20px", marginBottom: "20px" }}
+                        >
+                          {/* PDF Page */}
+                          <div style={styles.pageContainer}>
+                            <div
+                              style={{
+                                ...styles.pageWrapper,
+                                minHeight: pageDimensions.height * scale,
+                              }}
+                              onClick={(e) => handlePageClick(e, pageNum)}
+                            >
+                              {isPageLoaded && (
+                                <Page
+                                  pageNumber={pageNum}
+                                  width={pageDimensions.width * scale}
+                                  height={pageDimensions.height * scale}
+                                  renderTextLayer={true}
+                                  renderAnnotationLayer={true}
+                                />
+                              )}
 
-                                return (
-                                  <div key={comment.id}>
-                                    {/* Highlight for selected text, colored by the remark */}
-                                    {comment.highlightRects &&
-                                      comment.highlightRects.map((rect, idx) => (
-                                        <div
-                                          key={`${comment.id}-highlight-${idx}`}
-                                          style={{
-                                            position: "absolute",
-                                            top: `${rect.top_position * 100}%`,
-                                            left: `${rect.left_position * 100}%`,
-                                            width: `${rect.highlight_width * 100}%`,
-                                            height: `${rect.highlight_height * 100}%`,
-                                            backgroundColor: bgColor,
-                                            pointerEvents: "none",
-                                            zIndex: 10,
-                                          }}
-                                        />
-                                      ))}
+                              {/* Remarks Layer (comment merged with its highlight) */}
+                              {comments
+                                .filter((c) => Number(c.page_number) === pageNum)
+                                .map((comment) => {
+                                  const bgColor =
+                                    HIGHLIGHT_COLORS[comment.color] || HIGHLIGHT_COLORS.yellow;
 
-                                    {/* Comment marker on the page at its true position */}
-                                    <div
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setOpenCommentId(
-                                          openCommentId === comment.id ? null : comment.id
-                                        );
-                                      }}
-                                      style={{
-                                        position: "absolute",
-                                        top: `${comment.y_position * 100}%`,
-                                        right: "20px",
-                                        transform: "translateY(-50%)",
-                                        zIndex: 15,
-                                        cursor: "pointer",
-                                      }}
-                                    >
+                                  return (
+                                    <div key={comment.id}>
+                                      {/* Highlight for selected text, colored by the remark */}
+                                      {comment.highlightRects &&
+                                        comment.highlightRects.map((rect, idx) => (
+                                          <div
+                                            key={`${comment.id}-highlight-${idx}`}
+                                            style={{
+                                              position: "absolute",
+                                              top: `${rect.top_position * 100}%`,
+                                              left: `${rect.left_position * 100}%`,
+                                              width: `${rect.highlight_width * 100}%`,
+                                              height: `${rect.highlight_height * 100}%`,
+                                              backgroundColor: bgColor,
+                                              pointerEvents: "none",
+                                              zIndex: 10,
+                                            }}
+                                          />
+                                        ))}
+
+                                      {/* Comment marker on the page at its true position */}
                                       <div
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setOpenCommentId(
+                                            openCommentId === comment.id ? null : comment.id
+                                          );
+                                        }}
                                         style={{
-                                          ...styles.commentIcon,
-                                          backgroundColor:
-                                            openCommentId === comment.id
-                                              ? "#3b82f6"
-                                              : comment.resolved
-                                              ? "#9ca3af"
-                                              : "#fef08a",
-                                          border:
-                                            openCommentId === comment.id
-                                              ? "2px solid #3b82f6"
-                                              : "2px solid #eab308",
+                                          position: "absolute",
+                                          top: `${comment.y_position * 100}%`,
+                                          right: "20px",
+                                          transform: "translateY(-50%)",
+                                          zIndex: 15,
+                                          cursor: "pointer",
                                         }}
                                       >
-                                        <span style={{
-                                          color:
-                                            openCommentId === comment.id
-                                              ? "#ffffff"
-                                              : "#854d0e",
-                                          fontWeight: "bold",
-                                          fontSize: "12px",
-                                        }}>
-                                          C
-                                        </span>
+                                        <div
+                                          style={{
+                                            ...styles.commentIcon,
+                                            backgroundColor:
+                                              openCommentId === comment.id
+                                                ? "#3b82f6"
+                                                : comment.resolved
+                                                ? "#9ca3af"
+                                                : "#fef08a",
+                                            border:
+                                              openCommentId === comment.id
+                                                ? "2px solid #3b82f6"
+                                                : "2px solid #eab308",
+                                          }}
+                                        >
+                                          <span style={{
+                                            color:
+                                              openCommentId === comment.id
+                                                ? "#ffffff"
+                                                : "#854d0e",
+                                            fontWeight: "bold",
+                                            fontSize: "12px",
+                                          }}>
+                                            C
+                                          </span>
+                                        </div>
                                       </div>
                                     </div>
-                                  </div>
-                                );
-                              })}
+                                  );
+                                })}
 
-                            {/* Selection Comment Icon */}
-                            {selectionCommentIcon && selectionCommentIcon.pageNumber === index + 1 && (
-                              <div
-                                style={{
-                                  position: "absolute",
-                                  left: selectionCommentIcon.x,
-                                  top: selectionCommentIcon.y,
-                                  transform: "translate(0, -50%)",
-                                  zIndex: 100,
-                                }}
-                              >
-                                <button
-                                  onClick={handleSelectionComment}
-                                  style={styles.selectionCommentButton}
-                                  title="Add comment"
-                                >
-                                  💬
-                                </button>
-                              </div>
-                            )}
-
-                            {/* Open comment card - only the selected remark is shown,
-                                so cards can never overlap each other */}
-                            {comments
-                              .filter(
-                                (c) =>
-                                  Number(c.page_number) === index + 1 &&
-                                  c.id === openCommentId
-                              )
-                              .map((comment) => (
+                              {/* Selection Comment Icon */}
+                              {selectionCommentIcon && selectionCommentIcon.pageNumber === pageNum && (
                                 <div
-                                  key={comment.id}
                                   style={{
                                     position: "absolute",
-                                    top: `${comment.y_position * 100}%`,
-                                    right: "20px",
+                                    left: selectionCommentIcon.x,
+                                    top: selectionCommentIcon.y,
+                                    transform: "translate(0, -50%)",
                                     zIndex: 100,
+                                  }}
+                                >
+                                  <button
+                                    onClick={handleSelectionComment}
+                                    style={styles.selectionCommentButton}
+                                    title="Add comment"
+                                  >
+                                    💬
+                                  </button>
+                                </div>
+                              )}
+
+                              {/* Open comment card - only the selected remark is shown,
+                                  so cards can never overlap each other */}
+                              {comments
+                                .filter(
+                                  (c) =>
+                                    Number(c.page_number) === pageNum &&
+                                    c.id === openCommentId
+                                )
+                                .map((comment) => (
+                                  <div
+                                    key={comment.id}
+                                    style={{
+                                      position: "absolute",
+                                      top: `${comment.y_position * 100}%`,
+                                      right: "20px",
+                                      zIndex: 100,
+                                    }}
+                                  >
+                                    <div
+                                      style={{
+                                        position: "absolute",
+                                        top: 0,
+                                        left: "100%",
+                                        marginLeft: "35px",
+                                        width: "250px",
+                                      }}
+                                    >
+                                      <CommentCard
+                                        comment={comment}
+                                        onDelete={(id) => {
+                                          deleteComment(id);
+                                          setOpenCommentId(null);
+                                        }}
+                                      />
+                                    </div>
+                                  </div>
+                                ))}
+
+                              {/* Draft highlight - show the selected text highlighted
+                                  while composing, since the native selection is cleared on click */}
+                              {draft && draft.pageNumber === pageNum && draft.highlightRects &&
+                                draft.highlightRects.map((rect, idx) => (
+                                  <div
+                                    key={`draft-hl-${idx}`}
+                                    style={{
+                                      position: "absolute",
+                                      top: `${rect.top_position * 100}%`,
+                                      left: `${rect.left_position * 100}%`,
+                                      width: `${rect.highlight_width * 100}%`,
+                                      height: `${rect.highlight_height * 100}%`,
+                                      backgroundColor:
+                                        HIGHLIGHT_COLORS[selectedHighlightColor] ||
+                                        HIGHLIGHT_COLORS.yellow,
+                                      pointerEvents: "none",
+                                      zIndex: 10,
+                                    }}
+                                  />
+                                ))}
+
+                              {/* Draft card - shown while composing a comment */}
+                              {draft && draft.pageNumber === pageNum && (
+                                <div
+                                  style={{
+                                    position: "absolute",
+                                    top: `${draft.y * 100}%`,
+                                    right: "20px",
+                                    zIndex: 120,
                                   }}
                                 >
                                   <div
@@ -542,79 +642,29 @@ function PDFChecker({
                                       top: 0,
                                       left: "100%",
                                       marginLeft: "35px",
-                                      width: "250px",
+                                      width: "260px",
                                     }}
                                   >
-                                    <CommentCard
-                                      comment={comment}
-                                      onDelete={(id) => {
-                                        deleteComment(id);
-                                        setOpenCommentId(null);
-                                      }}
+                                    <DraftCard
+                                      draft={draft}
+                                      text={draftText}
+                                      setText={setDraftText}
+                                      onSubmit={submitDraft}
+                                      onCancel={cancelDraft}
                                     />
                                   </div>
                                 </div>
-                              ))}
+                              )}
+                            </div>
 
-                            {/* Draft highlight - show the selected text highlighted
-                                while composing, since the native selection is cleared on click */}
-                            {draft && draft.pageNumber === index + 1 && draft.highlightRects &&
-                              draft.highlightRects.map((rect, idx) => (
-                                <div
-                                  key={`draft-hl-${idx}`}
-                                  style={{
-                                    position: "absolute",
-                                    top: `${rect.top_position * 100}%`,
-                                    left: `${rect.left_position * 100}%`,
-                                    width: `${rect.highlight_width * 100}%`,
-                                    height: `${rect.highlight_height * 100}%`,
-                                    backgroundColor:
-                                      HIGHLIGHT_COLORS[selectedHighlightColor] ||
-                                      HIGHLIGHT_COLORS.yellow,
-                                    pointerEvents: "none",
-                                    zIndex: 10,
-                                  }}
-                                />
-                              ))}
-
-                            {/* Draft card - shown while composing a comment */}
-                            {draft && draft.pageNumber === index + 1 && (
-                              <div
-                                style={{
-                                  position: "absolute",
-                                  top: `${draft.y * 100}%`,
-                                  right: "20px",
-                                  zIndex: 120,
-                                }}
-                              >
-                                <div
-                                  style={{
-                                    position: "absolute",
-                                    top: 0,
-                                    left: "100%",
-                                    marginLeft: "35px",
-                                    width: "260px",
-                                  }}
-                                >
-                                  <DraftCard
-                                    draft={draft}
-                                    text={draftText}
-                                    setText={setDraftText}
-                                    onSubmit={submitDraft}
-                                    onCancel={cancelDraft}
-                                  />
-                                </div>
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Page Number Label */}
-                          <div style={styles.pageLabel}>
-                            Page {index + 1} of {numPages}
+                            {/* Page Number Label */}
+                            <div style={styles.pageLabel}>
+                              Page {pageNum} of {numPages}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                 </Document>
               </div>
             )}
@@ -959,3 +1009,5 @@ const styles = {
 };
 
 export default PDFChecker;
+
+

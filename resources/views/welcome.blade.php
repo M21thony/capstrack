@@ -9,6 +9,9 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Audiowide&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Geist+Pixel&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz@14..32&display=swap" rel="stylesheet">
 
     <!-- Google reCAPTCHA -->
     <!-- Use this site key in the HTML code your site serves to users - 6LcsrwotAAAAAKKcqCrYmohVfKP-bVvID6LjXWTp (reCAPTCHA v3) -->
@@ -36,15 +39,16 @@
             box-shadow: 0 8px 24px rgba(181, 148, 31, 0.3) !important;
             transform: translateY(-1px);
         }
-        body { font-family: 'DM Sans', sans-serif; background: var(--navy); color: #fff; margin: 0; overflow-x: hidden; }
+        body { font-family: 'Inter', sans-serif; font-optical-sizing: auto; background: var(--navy); color: #fff; margin: 0; overflow-x: hidden; }
         .hero-section { position: relative; height: 100vh; width: 100%; display: flex; align-items: center; justify-content: center; background-color: var(--navy); overflow: hidden; }
         .hero-bg { position: absolute; inset: 0; background-image: url('{{ asset('images/bg-ccs.jpg') }}'); background-size: cover; background-position: center; opacity: 0.3; z-index: 1; }
         .hero-overlay { position: absolute; inset: 0; background: radial-gradient(circle at center, transparent 20%, var(--navy) 100%); z-index: 2; }
         .hero-content { position: relative; z-index: 10; text-align: center; max-width: 900px; padding: 0 20px; animation: fadeInUp 1s ease-out; }
         .hero-logo { width: 180px; margin: 0 auto 30px; }
-        .hero-title { font-family: 'Space Mono', monospace; font-size: clamp(2.5rem, 8vw, 4.5rem); font-weight: 700; margin-bottom: 20px; letter-spacing: -2px; line-height: 1; }
+        .hero-title { font-family: 'Geist Pixel', sans-serif; font-size: clamp(3rem, 9vw, 4.8rem); font-weight: 600; font-optical-sizing: auto; font-variation-settings: 'ELSH' 5.7; margin-bottom: 20px; letter-spacing: -2px; line-height: 1; }
+        .hero-title-img { display: none; width: min(320px, 80%); height: auto; margin: 0 auto 20px; }
         .hero-title span { color: var(--primary); }
-        .hero-description { font-size: clamp(1rem, 3vw, 1.25rem); color: rgba(255, 255, 255, 0.7); margin-bottom: 40px; line-height: 1.6; max-width: 700px; margin-left: auto; margin-right: auto; }
+        .hero-description { font-size: clamp(1rem, 3vw, 0.8rem); color: rgba(255, 255, 255, 0.7); margin-bottom: 40px; line-height: 1.6; max-width: 700px; margin-left: auto; margin-right: auto; }
         .hero-actions { display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; }
         .btn-ct { padding: 14px 32px; border-radius: 12px; font-weight: 600; text-decoration: none; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); font-size: 1rem; display: inline-flex; align-items: center; gap: 8px; }
         .btn-ct-primary { background: var(--primary); color: var(--navy); }
@@ -52,7 +56,7 @@
         .btn-ct-outline { background: transparent; color: #fff; border: 1px solid rgba(255, 255, 255, 0.2); }
         .btn-ct-outline:hover { border-color: var(--primary); color: var(--primary); background: rgba(181, 148, 31, 0.05); transform: translateY(-2px); }
         .nav-ct { position: absolute; top: 0; left: 0; right: 0; padding: 30px; display: flex; justify-content: space-between; align-items: center; z-index: 100; }
-        .nav-logo { font-family: 'Space Mono', monospace; font-weight: 700; font-size: 1.5rem; color: #fff; text-decoration: none; letter-spacing: -1px; }
+        .nav-logo { font-family: 'Inter', sans-serif; font-weight: 700; font-size: 1.5rem; color: #fff; text-decoration: none; letter-spacing: -1px; }
         .nav-logo span { color: var(--primary); }
         @keyframes fadeInUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
         .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-top: 60px; }
@@ -84,9 +88,200 @@
         .disc-item:hover { background: rgba(255,255,255,0.04); border-color: rgba(181, 148, 31, 0.2); }
         .disc-topic { font-size: 1.1rem; font-weight: 600; color: var(--primary); margin-bottom: 8px; display: flex; align-items: center; gap: 10px; }
         .disc-text { font-size: 0.95rem; color: rgba(255, 255, 255, 0.65); line-height: 1.6; }
+
+        .hide-mobile { display: revert; }
+        .show-mobile { display: none; }
+
+        /* ── SKELETON LOADING SCREEN ── */
+        .skeleton-loader {
+            position: fixed; inset: 0; background: var(--navy); z-index: 9999;
+            display: flex; flex-direction: column;
+            transition: opacity 0.6s ease, visibility 0.6s ease;
+        }
+        .skeleton-loader.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+
+        .sk-nav { display: flex; justify-content: space-between; align-items: center; padding: 30px; }
+        .sk-block { position: relative; overflow: hidden; border-radius: 8px; background: rgba(255,255,255,0.06); }
+        .sk-logo { width: 140px; height: 28px; }
+        .sk-nav-group { display: flex; gap: 12px; }
+        .sk-nav-btn { width: 100px; height: 36px; border-radius: 10px; }
+
+        .sk-hero { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0 20px; gap: 18px; }
+        .sk-title { width: min(500px, 80%); height: 52px; }
+        .sk-desc { width: min(400px, 70%); height: 16px; }
+        .sk-desc2 { width: min(300px, 50%); height: 16px; }
+        .sk-hero-actions { display: flex; gap: 14px; margin-top: 18px; flex-wrap: wrap; justify-content: center; }
+        .sk-btn { width: 150px; height: 48px; border-radius: 12px; }
+
+        .sk-footer { padding: 20px; display: flex; justify-content: center; }
+        .sk-footer-text { width: 200px; height: 12px; border-radius: 4px; background: rgba(255,255,255,0.04); }
+
+        .sk-shimmer {
+            position: absolute; inset: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent);
+            animation: skShimmer 1.5s ease-in-out infinite;
+        }
+        @keyframes skShimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+
+        .page-content { opacity: 1; transition: opacity 0.6s ease; }
+        .page-content.loading { opacity: 0; }
+
+        /* ── RESPONSIVE: Tablet (≤768px) ── */
+        @media (max-width: 768px) {
+            .nav-ct { padding: 22px 28px; }
+            .nav-logo { font-size: 1.35rem; }
+            .nav-auth .btn-ct { min-height: 44px; font-size: 0.85rem; padding: 8px 18px !important; }
+
+            .hero-section { min-height: 100dvh; height: auto; padding: 90px 0 60px; }
+            .hero-content { max-width: 620px; padding: 0 24px; }
+            .hero-title { font-size: clamp(3.5rem, 7vw, 4.5rem); letter-spacing: -1px; }
+            .hero-title-img { width: min(300px, 70%); margin: 0 auto 24px; }
+            .hero-description { font-size: clamp(0.9rem, 2.5vw, 1.1rem); max-width: 520px; margin-bottom: 32px; }
+
+            .btn-ct { padding: 12px 26px; min-height: 48px; font-size: 0.95rem; }
+            .hero-actions { gap: 14px; }
+
+            .modal-card { padding: 32px; max-width: 600px; }
+            .modal-title { font-size: 1.6rem; }
+
+            .disc-item { padding: 18px; }
+            .disc-topic { font-size: 1.05rem; }
+            .features-grid { gap: 18px; margin-top: 48px; grid-template-columns: repeat(2, 1fr); }
+            .feature-card { padding: 22px; }
+
+            #info-modal .modal-card,
+            #login-modal .modal-card {
+                max-width: 520px !important; width: 92% !important;
+                position: relative !important; bottom: auto !important; left: auto !important; right: auto !important;
+                top: auto !important; transform: translateY(40px) !important; border-radius: 24px !important;
+                padding: 36px !important; border-bottom: 1px solid #ddd !important;
+                transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+            }
+            #info-modal .modal-card::before,
+            #login-modal .modal-card::before { display: none !important; }
+            #info-modal.modal-overlay,
+            #login-modal.modal-overlay { align-items: center; }
+            #info-modal.modal-overlay.active .modal-card,
+            #login-modal.modal-overlay.active .modal-card { transform: translateY(0) !important; }
+
+            .sk-nav { padding: 22px 28px; }
+            .sk-logo { width: 120px; height: 26px; }
+            .sk-nav-btn { width: 95px; height: 36px; }
+            .sk-title { width: min(420px, 75%); height: 48px; }
+            .sk-desc { width: min(360px, 65%); }
+            .sk-btn { width: 140px; height: 46px; }
+
+            footer { position: relative; padding: 16px; font-size: 0.65rem; }
+        }
+
+        /* ── RESPONSIVE: Phone (≤480px) ── */
+        @media (max-width: 480px) {
+            .nav-ct { padding: 14px 16px; flex-wrap: wrap; gap: 10px; }
+            .nav-logo { font-size: 1.1rem; }
+            .nav-auth > div { gap: 8px; flex-wrap: wrap; }
+            .nav-auth .btn-ct { min-height: 44px; display: inline-flex; align-items: center; font-size: 0.8rem !important; padding: 8px 14px !important; }
+
+            .hero-section { min-height: 100dvh; height: auto; padding: 100px 0 70px; }
+            .hero-content { padding: 0 16px; }
+            .hero-title { display: none; }
+            .hero-title-img { display: block; width: min(280px, 65%); margin: 0 auto 3px; }
+            .hero-description { font-size: 0.6rem; margin-bottom: 28px; }
+
+            .hero-actions { flex-direction: row; flex-wrap: wrap; justify-content: center; gap: 8px; }
+            .hero-actions .btn-ct { width: auto; padding: 7px 14px; font-size: 0.75rem; min-height: 36px; }
+            .show-mobile { display: inline-flex; }
+            .hide-mobile { display: none !important; }
+
+            .modal-card { padding: 20px 14px; border-radius: 14px; width: 98%; max-height: 92vh; }
+            #info-modal .modal-card {
+                position: fixed !important; bottom: 0 !important; left: 0 !important; right: 0 !important;
+                top: auto !important; transform: translateY(100%) !important; border-radius: 20px 20px 0 0 !important;
+                width: 100% !important; max-width: 100% !important; max-height: 85vh !important; padding: 28px 20px 32px !important;
+                border-bottom: none !important;
+                transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
+            }
+            #info-modal .modal-card::before {
+                content: ''; display: block; width: 40px; height: 5px;
+                background: rgba(0,0,0,0.15); border-radius: 10px;
+                margin: -4px auto 16px;
+            }
+            #info-modal.modal-overlay { align-items: flex-end; }
+            #info-modal.modal-overlay.active .modal-card { transform: translateY(0) !important; }
+            #info-modal .modal-close { top: 16px; right: 16px; width: 36px; height: 36px; font-size: 1.2rem; }
+            #info-modal .modal-header { margin-bottom: 14px; padding-right: 36px; }
+            #info-modal .modal-body p { font-size: 0.9rem; margin-bottom: 0.6rem; }
+            #info-modal .modal-body li { font-size: 0.85rem; margin-bottom: 0.4rem; }
+            #info-modal .modal-body ul { margin-left: 1rem; margin-bottom: 0.8rem; }
+            #login-modal .modal-card {
+                position: fixed !important; bottom: 0 !important; left: 0 !important; right: 0 !important;
+                top: auto !important; transform: translateY(100%) !important; border-radius: 20px 20px 0 0 !important;
+                width: 100% !important; max-width: 100% !important; max-height: 85vh !important; padding: 28px 20px 32px !important;
+                border-bottom: none !important;
+                transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
+            }
+            #login-modal .modal-card::before {
+                content: ''; display: block; width: 40px; height: 5px;
+                background: rgba(0,0,0,0.15); border-radius: 10px;
+                margin: -4px auto 16px;
+            }
+            #login-modal.modal-overlay { align-items: flex-end; }
+            #login-modal.modal-overlay.active .modal-card { transform: translateY(0) !important; }
+            #login-modal .modal-card .modal-title { font-size: 1rem !important; }
+            #login-modal .modal-close { top: 16px; right: 16px; }
+            #login-modal .modal-card > div:first-of-type { width: 90px !important; height: 38px !important; margin-bottom: 12px !important; }
+            #login-modal .modal-card > div:last-of-type { margin-top: 14px !important; font-size: 0.65rem !important; }
+            .modal-title { font-size: 1.1rem; }
+            .modal-header .modal-title { font-size: 1.1rem; }
+            .modal-header { margin-bottom: 14px; }
+            .modal-close { top: 12px; right: 12px; width: 36px; height: 36px; font-size: 1.3rem; }
+            .modal-footer .btn-ct-primary { width: 100%; }
+            #google-signin-btn { min-height: 44px; font-size: 0.8rem !important; padding: 10px !important; }
+            #login-modal .modal-card a[href*="account.request"] { font-size: 0.65rem !important; }
+
+            .disc-item { padding: 14px; }
+            .disc-topic { font-size: 0.95rem; }
+            .disc-text { font-size: 0.85rem; }
+
+            .features-grid { grid-template-columns: 1fr; gap: 14px; margin-top: 32px; }
+            .feature-card { padding: 18px; }
+
+            footer { position: relative; padding: 6px; font-size: 0.4rem; }
+
+            .sk-nav { padding: 14px 16px; }
+            .sk-logo { width: 90px; height: 20px; }
+            .sk-nav-btn { width: 70px; height: 32px; }
+            .sk-title { width: min(320px, 85%); height: 36px; }
+            .sk-desc { width: min(280px, 80%); height: 12px; }
+            .sk-desc2 { width: min(200px, 60%); height: 12px; }
+            .sk-btn { width: 120px; height: 38px; }
+        }
     </style>
 </head>
 <body>
+
+    <!-- ── SKELETON LOADER ── -->
+    <div class="skeleton-loader" id="skeleton-loader">
+        <div class="sk-nav">
+            <div class="sk-block sk-logo"><div class="sk-shimmer"></div></div>
+            <div class="sk-nav-group">
+                <div class="sk-block sk-nav-btn"><div class="sk-shimmer"></div></div>
+            </div>
+        </div>
+        <div class="sk-hero">
+            <div class="sk-block sk-title"><div class="sk-shimmer"></div></div>
+            <div class="sk-block sk-desc"><div class="sk-shimmer"></div></div>
+            <div class="sk-block sk-desc2"><div class="sk-shimmer"></div></div>
+            <div class="sk-hero-actions">
+                <div class="sk-block sk-btn"><div class="sk-shimmer"></div></div>
+                <div class="sk-block sk-btn"><div class="sk-shimmer"></div></div>
+            </div>
+        </div>
+        <div class="sk-footer">
+            <div class="sk-block sk-footer-text"><div class="sk-shimmer"></div></div>
+        </div>
+    </div>
+
+    <div class="page-content loading" id="page-content">
     <nav class="nav-ct">
         <a href="/" class="nav-logo">Caps<span>Track
         </span></a>
@@ -98,7 +293,7 @@
                     @else
                         <a href="#" class="btn-ct btn-ct-outline open-login-btn" style="cursor: pointer; border: none; padding: 8px 20px; font-size: 0.9rem;">Log in</a>
                         @if (Route::has('account.request'))
-                            <a href="{{ route('account.request') }}" class="btn-ct btn-ct-primary" style="padding: 8px 20px; font-size: 0.9rem;">Request Account</a>
+                            <a href="{{ route('account.request') }}" class="btn-ct btn-ct-primary hide-mobile" style="padding: 8px 20px; font-size: 0.9rem;">Request Account</a>
                         @endif
                     @endauth
                 </div>
@@ -113,6 +308,7 @@
         <div class="hero-content">
             
             <h1 class="hero-title">Centralized <span>Capstone</span> Management</h1>
+            <img src="{{ asset('img/capstrack1.png') }}" alt="CapsTrack" class="hero-title-img">
             <p class="hero-description">
                 A unified digital space for students and instructors at CSPC College of Computer Studies. 
                 Streamlining document submissions, expert matching, and project evaluation.
@@ -125,7 +321,9 @@
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
                     </a>
                 @else
-
+                    @if (Route::has('account.request'))
+                        <a href="{{ route('account.request') }}" class="btn-ct btn-ct-primary show-mobile">Request Account</a>
+                    @endif
                 @endauth
                 <button class="btn-ct btn-ct-outline" id="open-learn-more" style="cursor: pointer;">Learn More</button>
             </div>
@@ -138,16 +336,22 @@
                 <h2 class="modal-title">Learn More</h2>
             </div>
             <div class="modal-body">
-    <p><strong>Welcome to CapsTrack!</strong> This platform helps you easily manage your capstone projects from start to finish.</p>
-    <p><strong>CapsTrack</strong> is a cloud‑based solution for the <em>CSPC College of Computer Studies</em>, streamlining proposal submissions, mentor connections, and progress tracking.</p>
+    <p><strong>CapsTrack</strong> is the official capstone management system of the <em>CSPC College of Computer Studies</em>, designed to guide students from team formation to final defense.</p>
     <ul>
-        <li>🗂️ Create and manage project proposals, milestones, and deliverables.</li>
-        <li>🤝 Connect with faculty mentors and industry experts.</li>
-        <li>📊 Real‑time progress tracking with automated reminders.</li>
-        <li>📁 Secure document storage with version history.</li>
-        <li>🔒 Sign in using your <code>@my.cspc.edu.ph</code> Google account for single‑sign‑on access.</li>
+        <li>👥 <strong>Team Formation</strong> — Create or join teams, post recruitment ads, send invitations, and find members within your course.</li>
+        <li>🎯 <strong>Expert Matching</strong> — Browse and apply to advisers, consultants, and grammarians. Track request status and manage assignments.</li>
+        <li>📄 <strong>Document Submission & Review</strong> — Submit PDF manuscripts, receive annotated feedback, reply to comments, and track versions.</li>
+        <li>📊 <strong>Progress Tracking</strong> — Visual milestone board with chapter-based progress, overdue alerts, and per-team reports for instructors.</li>
+        <li>🤖 <strong>AI Duplication Checker</strong> — Upload your pre-proposal and get a similarity score with matched archived capstones.</li>
+        <li>📅 <strong>Consultation Scheduling</strong> — Book slots with your adviser through an interactive calendar with availability management.</li>
+        <li>📁 <strong>Google Drive Integration</strong> — Submissions are automatically stored in your adviser's Drive folder with version history.</li>
+        <li>📋 <strong>Rubric-Based Grading</strong> — Multi-criteria evaluation (oral, content, methodology, output) with automated scoring.</li>
+        <li>💳 <strong>Financial Tracking</strong> — Log expenses, upload receipts, and track verification status for approved budgets.</li>
+        <li>📚 <strong>Resource Library</strong> — Access templates, lessons, and forms organized by capstone stage, hosted on Google Drive.</li>
+        <li>🏛️ <strong>Archived Capstones</strong> — Browse past projects by year and category (Web, Mobile, IoT, AI/ML, and more).</li>
+        <li>🔒 <strong>Google SSO</strong> — Secure sign-in using your <code>@my.cspc.edu.ph</code> account with reCAPTCHA protection.</li>
     </ul>
-    <p>Ready to explore? Click the button below to get started or sign in with your university account.</p>
+    <p style="margin-top: 16px;">Ready to get started? Sign in with your university account or request access as an instructor.</p>
 
 </div>
         </div>
@@ -232,8 +436,28 @@
     </div>
 
     <footer style="position: absolute; bottom: 0; width: 100%; padding: 20px; text-align: center; font-size: 0.8rem; color: rgba(255,255,255,0.3); z-index: 10;">
-        &copy; {{ date('Y') }} CSPC College of Computer Studies. CapsTrack System. - created by BULBASAUR
+        &copy; {{ date('Y') }} CSPC CCS CapsTrack - BULBASAUR
     </footer>
+    </div>
+
+    @if($removedExpert)
+    <!-- ── EXPERT REMOVED MODAL ── -->
+    <div class="modal-overlay active" id="expert-removed-modal">
+        <div class="modal-card" style="max-width: 440px; text-align: center; padding: 40px 30px;">
+            <div style="width:56px;height:56px;border-radius:50%;background:rgba(239,68,68,0.08);color:#ef4444;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+                <svg width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </div>
+            <h3 style="font-size:17px;font-weight:700;color:#1e2128;margin:0 0 6px;letter-spacing:-0.3px;">Account Removed</h3>
+            <p style="font-size:13px;color:#6b7280;line-height:1.6;margin:0 0 12px;text-align:left;">
+                Your expert account <strong>{{ $removedExpertName }}</strong> has been removed from the system.
+                @if($removedExpertReason)
+                    <br><br>Reason: {{ $removedExpertReason }}
+                @endif
+            </p>
+            <button id="expert-removed-ok-btn" type="button" style="width:100%;padding:11px 16px;border-radius:10px;border:none;background:#1e2128;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:background 0.15s;margin-top:4px;">OK</button>
+        </div>
+    </div>
+    @endif
 
     <script>
         // Info Modal
@@ -308,6 +532,36 @@
 
 // reCAPTCHA v3 handling removed – v2 widget handles token automatically.
 
+        // ── EXPERT REMOVED MODAL ──
+        const expertRemovedModal = document.getElementById('expert-removed-modal');
+        const expertRemovedOkBtn = document.getElementById('expert-removed-ok-btn');
+        if (expertRemovedModal && expertRemovedOkBtn) {
+            expertRemovedOkBtn.addEventListener('click', function() {
+                expertRemovedModal.classList.remove('active');
+                expertRemovedModal.style.display = 'none';
+                const url = new URL(window.location);
+                url.searchParams.delete('removed_expert');
+                url.searchParams.delete('name');
+                url.searchParams.delete('reason');
+                window.history.replaceState({}, '', url);
+            });
+        }
+
+        // ── SKELETON LOADING ──
+        const skeleton = document.getElementById('skeleton-loader');
+        const content = document.getElementById('page-content');
+
+        function hideSkeleton() {
+            skeleton.classList.add('hidden');
+            content.classList.remove('loading');
+        }
+
+        if (document.readyState === 'complete') {
+            hideSkeleton();
+        } else {
+            const minDisplay = new Promise(resolve => setTimeout(resolve, 800));
+            Promise.all([minDisplay, new Promise(resolve => window.addEventListener('load', resolve))]).then(hideSkeleton);
+        }
     </script>
 </body>
 </html>

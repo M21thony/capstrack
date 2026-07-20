@@ -211,13 +211,130 @@
   background:var(--accent2);
 }
 
+/* ── DARK MODE ── */
+:root[data-theme="dark"]{
+  --bg:#0f0f13;--bg2:#17171e;--bg3:#1e1e27;--bg4:#25252f;
+  --border:#353545;--border2:#404052;
+  --text:#f0f0f5;--text2:#b8b8c8;--text3:#88889a;
+  --navy-dark:#08080c;--navy-mid:#0c0c12;--navy-light:#14141c;--navy-hover:#1a1a24;--navy-active:#20202c;
+  --navy-border:rgba(201,168,44,0.08);--navy-text:rgba(255,255,255,0.92);--navy-text2:rgba(255,255,255,0.5);--navy-text3:rgba(255,255,255,0.25);
+  --accent:#d4b33a;--accent2:#c4a32a;--accent3:#a88a1e;--accent-glow:rgba(212,179,58,0.12);--accent-light:rgba(212,179,58,0.08);
+  --green:#22c55e;--green-bg:rgba(34,197,94,0.15);
+  --amber:#f59e0b;--amber-bg:rgba(245,158,11,0.15);
+  --red:#ef4444;--red-bg:rgba(239,68,68,0.15);
+  --purple:#a78bfa;--purple-bg:rgba(167,139,250,0.15);
+  --cyan:#22d3ee;--cyan-bg:rgba(34,211,238,0.15);
+  --blue:#60a5fa;--blue-bg:rgba(96,165,250,0.15);
+}
+
+[data-theme="dark"] .card,
+[data-theme="dark"] .card-sm,
+[data-theme="dark"] .stat-chip,
+[data-theme="dark"] .profile-modal,
+[data-theme="dark"] .expert-card-compact{background:var(--bg2)!important}
+
+[data-theme="dark"] .card{border-color:var(--border)!important}
+
+/* ── DARK MODE — icon brightness ── */
+[data-theme="dark"] .nav-item svg{opacity:0.85!important}
+[data-theme="dark"] .notif-btn svg{stroke:rgba(255,255,255,0.85)!important}
+[data-theme="dark"] .hamburger-btn{color:var(--navy-text)!important}
+
+/* ── DARK MODE — notification dropdown ── */
+[data-theme="dark"] .notif-dropdown{background:var(--bg2)!important;border-color:var(--border)!important;box-shadow:0 8px 30px rgba(0,0,0,0.4)!important}
+[data-theme="dark"] .notif-mark-all-btn{color:#fff!important;background:rgba(255,255,255,0.1)!important}
+[data-theme="dark"] .notif-mark-all-btn:hover{background:rgba(255,255,255,0.16)!important}
+
+/* ── DARK MODE — skeleton loaders ── */
+[data-theme="dark"] .skel{background:linear-gradient(90deg,#25252f 0%,#2e2e3a 40%,#353542 50%,#2e2e3a 60%,#25252f 100%)!important}
+[data-theme="dark"] .skeleton-box{background:linear-gradient(90deg,var(--bg2) 25%,var(--bg4) 50%,var(--bg2) 75%)!important}
+
+/* ── DARK MODE — icon buttons ── */
+[data-theme="dark"] .btn-icon{color:var(--text)!important;border-color:var(--border2)!important}
+
+/* ── DARK MODE — forms, inputs, misc cards ── */
+[data-theme="dark"] .input,
+[data-theme="dark"] .pm-input,
+[data-theme="dark"] .expert-card,
+[data-theme="dark"] .archive-card,
+[data-theme="dark"] .res-card,
+[data-theme="dark"] .slot,
+[data-theme="dark"] .login-card,
+[data-theme="dark"] .sim-inner,
+[data-theme="dark"] .ftab.active{background:var(--bg2)!important}
+
 @media (max-width:640px){
   .page-tutorial-inner{
     flex-direction:column;
+    gap:12px;
   }
 
   .page-tutorial-dismiss{
     margin-left:0;
     width:100%;
+    text-align:center;
   }
+}
+
+@media (max-width:480px){
+  .page-tutorial{
+    margin-bottom:10px;
+  }
+
+  .page-tutorial-inner{
+    padding:10px 12px;
+    gap:8px;
+    border-left-width:3px;
+    border-radius:8px;
+  }
+
+  .page-tutorial-icon{
+    width:28px;
+    height:28px;
+    border-radius:6px;
+  }
+  .page-tutorial-icon svg{
+    width:14px;
+    height:14px;
+  }
+
+  .page-tutorial-title{
+    font-size:13px;
+    margin-bottom:1px;
+  }
+
+  .page-tutorial-summary{
+    font-size:11px;
+    margin-bottom:6px;
+    line-height:1.35;
+  }
+
+  .page-tutorial-steps{
+    font-size:11px;
+    line-height:1.4;
+    padding-left:14px;
+  }
+
+  .page-tutorial-steps li{
+    margin-bottom:3px;
+  }
+
+  .page-tutorial-dismiss{
+    padding:8px 12px;
+    font-size:12px;
+    font-weight:600;
+    border-radius:8px;
+    width:100%;
+    text-align:center;
+  }
+
+  /* ── Notification Dropdown ── */
+  .notif-dropdown{width:calc(100vw - 24px)!important;right:0!important;top:calc(100% + 6px)!important;max-height:70vh!important;border-radius:10px!important}
+  .notif-list{max-height:calc(70vh - 52px)!important}
+  .notif-item{padding:10px 14px!important;gap:10px!important}
+  .notif-item-icon{width:28px!important;height:28px!important;border-radius:6px!important}
+  .notif-item-icon svg{width:14px!important;height:14px!important}
+  .notif-item-title{font-size:12px!important}
+  .notif-item-msg{font-size:11px!important}
+  .notif-item-time{font-size:10px!important;margin-top:2px!important}
 }

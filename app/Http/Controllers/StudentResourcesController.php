@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\AdminDriveFolder;
 use App\Models\Resource;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class StudentResourcesController extends Controller
@@ -37,7 +36,7 @@ class StudentResourcesController extends Controller
 
     public function download(Resource $resource)
     {
-        if (!$resource->drive_file_id) {
+        if (! $resource->drive_file_id) {
             return response()->json(['success' => false, 'message' => 'File not found.'], 404);
         }
 

@@ -43,6 +43,8 @@ class CapstoneExpert extends Authenticatable
         'approved_status' => 'boolean',
         'created_at' => 'datetime',
         'reject_cooldown_until' => 'datetime',
+        'last_seen_at' => 'datetime',
+        'first_login_at' => 'datetime',
     ];
 
     public function roles()
@@ -81,6 +83,11 @@ class CapstoneExpert extends Authenticatable
 
     // Removed getExpertiseAttribute accessor to allow direct relationship access
 
+    public function getIsOnlineAttribute(): bool
+    {
+        return $this->last_seen_at && $this->last_seen_at->gt(now()->subMinutes(5));
+    }
+
     public function avatarInitials(): string
     {
         $first = Str::substr($this->first_name ?? '', 0, 1);
@@ -114,5 +121,19 @@ class CapstoneExpert extends Authenticatable
     public function teamAssignments()
     {
         return $this->hasMany(TeamExpertAssignment::class, 'expert_id', 'expert_id');
+    }
+
+    public function markFirstLogin(): bool
+    {
+        if ($this->first_login_at === null) {
+            $this->first_login_at = now();
+            $this->save();
+
+            session()->flash('show_welcome', true);
+
+            return true;
+        }
+
+        return false;
     }
 }

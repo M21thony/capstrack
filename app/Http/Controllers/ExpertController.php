@@ -49,6 +49,7 @@ class ExpertController extends Controller
                 'first_name' => ['required', 'string', 'max:50'],
                 'last_name' => ['required', 'string', 'max:50'],
                 'middle_name' => ['nullable', 'string', 'max:50'],
+                'suffix' => ['nullable', 'string', 'max:50'],
                 'credentials' => ['nullable', 'string', 'max:50'],
                 'email' => ['required', 'email', 'regex:/@gmail\\.com$/i'],
                 'specialization' => ['required', 'array', 'min:1'],
@@ -99,6 +100,7 @@ class ExpertController extends Controller
                         'first_name' => $validated['first_name'],
                         'last_name' => $validated['last_name'],
                         'middle_name' => $validated['middle_name'] ?? null,
+                        'suffix' => $validated['suffix'] ?? null,
                         'credentials' => $validated['credentials'] ?? null,
                         'department' => $validated['course'] ?? null,
                         'approved_status' => false,
@@ -106,6 +108,7 @@ class ExpertController extends Controller
                         'reject_attempts' => 0,
                         'reject_cooldown_until' => null,
                         'max_teams' => $validated['max_teams'] ?? 4,
+                        'is_admin' => in_array('capstone_adviser', $validated['specialization']),
                     ]);
 
                     DB::table('expert_roles')->where('expert_id', $existing->expert_id)->delete();
@@ -143,12 +146,14 @@ class ExpertController extends Controller
                     'first_name' => $validated['first_name'],
                     'last_name' => $validated['last_name'],
                     'middle_name' => $validated['middle_name'] ?? null,
+                    'suffix' => $validated['suffix'] ?? null,
                     'credentials' => $validated['credentials'] ?? null,
                     'department' => $validated['course'] ?? null,
                     'approved_status' => false,
                     'rejection_reason' => null,
                     'reject_attempts' => DB::raw('reject_attempts + 1'),
                     'max_teams' => $validated['max_teams'] ?? 4,
+                    'is_admin' => in_array('capstone_adviser', $validated['specialization']),
                 ]);
 
                 DB::table('expert_roles')->where('expert_id', $existing->expert_id)->delete();
@@ -188,12 +193,13 @@ class ExpertController extends Controller
                     'first_name' => $validated['first_name'],
                     'last_name' => $validated['last_name'],
                     'middle_name' => $validated['middle_name'] ?? null,
+                    'suffix' => $validated['suffix'] ?? null,
                     'credentials' => $validated['credentials'] ?? null,
                     'department' => $validated['course'] ?? null,
                     'approved_status' => false,
                     'max_teams' => $validated['max_teams'] ?? 4,
                     'reject_attempts' => 1,
-                    'is_admin' => false,
+                    'is_admin' => in_array('capstone_adviser', $validated['specialization']),
                     'created_at' => now(),
                 ]);
 
@@ -393,6 +399,8 @@ class ExpertController extends Controller
 
                 Auth::guard('expert')->login($expert);
 
+                $expert->markFirstLogin();
+
                 $redirectUrl = $expert->is_admin ? '/admin/dashboard' : '/instructor/dashboard';
 
                 if ($request->expectsJson()) {
@@ -485,6 +493,8 @@ class ExpertController extends Controller
         if ($expert) {
             if ($expert->approved_status) {
                 Auth::guard('expert')->login($expert);
+
+                $expert->markFirstLogin();
 
                 $redirectUrl = $expert->is_admin ? '/admin/dashboard' : '/instructor/dashboard';
 

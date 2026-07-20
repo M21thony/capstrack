@@ -28,4 +28,9 @@ class TeamExpertAssignment extends Model
     {
         return $this->belongsTo(CapstoneExpert::class, 'expert_id', 'expert_id');
     }
+
+    public function role()
+    {
+        return $this->belongsToMany(Role::class, 'expert_roles', 'expert_id', 'role_id');
+    }
 }

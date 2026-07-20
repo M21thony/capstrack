@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\ResourcesController;
 use App\Http\Controllers\AdminApprovalController;
 use App\Http\Controllers\AdminDashboardController;
 use App\Http\Controllers\AdminExpertsController;
+use App\Http\Controllers\AdminFinancialController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DuplicationController;
@@ -12,6 +13,7 @@ use App\Http\Controllers\ExpertController;
 use App\Http\Controllers\Instructor\AssignmentController as InstructorAssignmentController;
 use App\Http\Controllers\Instructor\DocReviewController;
 use App\Http\Controllers\Instructor\ScheduleController;
+use App\Http\Controllers\Instructor\TeamController as InstructorTeamController;
 use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PdfAnnotationController;
@@ -20,13 +22,14 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RecruitmentController;
 use App\Http\Controllers\Student\ExpertController as StudentExpertController;
 use App\Http\Controllers\StudentResourcesController;
+use App\Http\Controllers\StudentFinancialController;
 use App\Http\Controllers\SubmissionController;
 use App\Http\Controllers\TeamController;
 use App\Http\Controllers\Instructor\ConsultationLogController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
-Route::middleware(['auth:expert', 'expert.admin', 'no.cache'])->prefix('admin')->name('admin.')->group(function () {
+Route::middleware(['expert.auth', 'expert.admin', 'no.cache', 'track.expert'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
     Route::get('/experts', [AdminExpertsController::class, 'index'])->name('experts');
     Route::get('/approval', [AdminApprovalController::class, 'index'])->name('approval');
@@ -36,7 +39,12 @@ Route::middleware(['auth:expert', 'expert.admin', 'no.cache'])->prefix('admin')-
     Route::delete('/experts/{expert}', [AdminExpertsController::class, 'destroy'])->name('experts.destroy');
     Route::view('/panel_assignment', 'admin.panel_assignment')->name('panel_assignment');
     Route::view('/analytics', 'admin.analytics')->name('analytics');
-    Route::view('/financial', 'admin.financial')->name('financial');
+    Route::get('/financial', [AdminFinancialController::class, 'index'])->name('financial');
+    Route::post('/financial/expense-post', [AdminFinancialController::class, 'storeExpensePost'])->name('financial.expense-post.store');
+    Route::put('/financial/expense-post/{expensePost}', [AdminFinancialController::class, 'updateExpensePost'])->name('financial.expense-post.update');
+    Route::delete('/financial/expense-post/{expensePost}', [AdminFinancialController::class, 'destroyExpensePost'])->name('financial.expense-post.destroy');
+    Route::post('/financial/receipt/{financialRecord}/approve', [AdminFinancialController::class, 'approveReceipt'])->name('financial.receipt.approve');
+    Route::post('/financial/receipt/{financialRecord}/reject', [AdminFinancialController::class, 'rejectReceipt'])->name('financial.receipt.reject');
     Route::view('/archive', 'admin.archive')->name('archive');
     Route::view('/announcements', 'admin.announcements')->name('announcements');
     // NOTE: restored to controller-based route (was Route::view in your latest file) —
@@ -47,10 +55,10 @@ Route::middleware(['auth:expert', 'expert.admin', 'no.cache'])->prefix('admin')-
     Route::view('/activitylog', 'admin.activitylog')->name('activitylog');
 });
 
-Route::middleware(['auth:expert', 'expert.approved', 'no.cache'])->prefix('instructor')->name('instructor.')->group(function () {
+Route::middleware(['expert.auth', 'expert.approved', 'no.cache', 'track.expert'])->prefix('instructor')->name('instructor.')->group(function () {
     Route::view('/dashboard', 'instructor.dashboard')->name('dashboard');
     Route::view('/applications', 'instructor.applications')->name('applications');
-    Route::view('/teams', 'instructor.teams')->name('teams');
+    Route::get('/teams', [InstructorTeamController::class, 'index'])->name('teams');
     Route::view('/consultations', 'instructor.consultations')->name('consultations');
     Route::view('/progress', 'instructor.progress')->name('progress');
     Route::view('/profile', 'instructor.profile')->name('profile');
@@ -80,7 +88,11 @@ Route::middleware(['auth:expert', 'expert.approved', 'no.cache'])->prefix('revie
 });
 
 Route::get('/', function () {
-    return view('welcome');
+    return view('welcome', [
+        'removedExpert' => request()->has('removed_expert'),
+        'removedExpertName' => request('name', ''),
+        'removedExpertReason' => request('reason', ''),
+    ]);
 });
 
 Route::get('/login', [AuthController::class, 'login'])->name('login');
@@ -102,7 +114,7 @@ Route::prefix('expert')->group(function () {
     Route::post('/logout', [ExpertController::class, 'logout'])->name('expert.logout');
 });
 
-Route::middleware(['auth', 'no.cache'])->group(function () {
+Route::middleware(['auth', 'no.cache', 'track.expert'])->group(function () {
     Route::post('/team', [TeamController::class, 'store'])->name('team.store');
     Route::put('/team/{team}', [TeamController::class, 'update'])->name('team.update');
     Route::post('/team/confirm', [TeamController::class, 'confirm'])->name('team.confirm');
@@ -137,13 +149,9 @@ Route::middleware(['auth', 'no.cache'])->group(function () {
             Route::view('/duplication', 'student.duplication')->name('student.duplication');
             Route::view('/consultation', 'student.consultation')->name('student.consultation');
             Route::view('/progress', 'student.progress')->name('student.progress');
-            Route::view('/financial', 'student.financial')->name('student.financial');
-            // NOTE: restored to controller-based routes (was Route::view in your latest
-            // file) — needed for the Google-Drive-backed resource list + download
-            // tracking. Revert to Route::view(...) if this was intentional.
+            Route::get('/financial', [StudentFinancialController::class, 'index'])->name('student.financial');
+            Route::post('/financial/submit', [StudentFinancialController::class, 'submitReceipt'])->name('student.financial.submit');
             Route::get('/resources', [StudentResourcesController::class, 'index'])->name('student.resources');
-            Route::get('/resources/{resource}/download', [StudentResourcesController::class, 'download'])->name('student.resources.download.file');
-            Route::post('/resources/{resource}/download', [StudentResourcesController::class, 'trackDownload'])->name('student.resources.download');
             Route::view('/archive', 'student.archive')->name('student.archive');
             Route::redirect('/profile', '/student/personal-info/edit')->name('student.profile');
         });
@@ -157,7 +165,7 @@ Route::middleware(['auth', 'no.cache'])->group(function () {
     Route::post('/notifications/mark-all-read', [NotificationController::class, 'markAllRead'])->name('notifications.mark-all-read');
 });
 Route::prefix('instructor/schedule')
-    ->middleware(['auth:expert', 'no.cache'])
+    ->middleware(['expert.auth', 'no.cache', 'track.expert'])
     ->group(function () {
         Route::get('slots', [ScheduleController::class, 'getSlots']);
         Route::post('slots', [ScheduleController::class, 'addSlot']);
@@ -171,6 +179,12 @@ Route::post('/session/keep-alive', function () {
         return response()->json(['success' => false], 401);
     }
 
+    if (Auth::guard('expert')->check()) {
+        $expert = Auth::guard('expert')->user();
+        $expert->last_seen_at = now();
+        $expert->save();
+    }
+
     request()->session()->regenerate();
     request()->session()->put('_timeout_at', now()->addMinutes((int) config('session.lifetime'))->timestamp);
 
@@ -178,7 +192,7 @@ Route::post('/session/keep-alive', function () {
 });
 
 // ── Google Drive OAuth + resource/submission delivery (from earlier work) ──
-Route::middleware(['auth:expert'])->prefix('admin/gdrive')->name('gdrive.')->group(function () {
+Route::middleware(['expert.auth', 'track.expert'])->prefix('admin/gdrive')->name('gdrive.')->group(function () {
     Route::get('/connect', [GoogleDriveController::class, 'connect'])->name('connect');
     Route::get('/callback', [GoogleDriveController::class, 'callback'])->name('callback');
     Route::get('/status', [GoogleDriveController::class, 'status'])->name('status');

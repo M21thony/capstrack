@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Recruitment;
+use App\Models\StudentRole;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
 use Illuminate\Http\JsonResponse;
@@ -52,14 +53,17 @@ class RecruitmentController extends Controller
             if ($validated['recruitment_goal'] === 'build_a_team' && ! empty($validated['team_name'])) {
                 $team = Team::create([
                     'team_name' => $validated['team_name'],
-                    'team_status' => 'Active',
+                    'team_status' => 'on-going',
                     'leader_id' => $studentId,
                 ]);
 
-                StudentSchoolYear::updateOrCreate(
-                    ['student_id' => $studentId],
-                    ['team_id' => $team->team_id]
-                );
+                $leaderRoleId = StudentRole::where('s_role_name', 'Leader')->value('s_role_id');
+
+                StudentSchoolYear::where('student_id', $studentId)
+                    ->update([
+                        'team_id' => $team->team_id,
+                        's_role_id' => $leaderRoleId,
+                    ]);
             }
 
             return Recruitment::create([

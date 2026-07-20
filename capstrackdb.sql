@@ -544,13 +544,38 @@ DROP TABLE IF EXISTS `financial_records`;
 CREATE TABLE IF NOT EXISTS `financial_records` (
   `id` int NOT NULL AUTO_INCREMENT,
   `student_id` int NOT NULL,
+  `expense_post_id` int unsigned DEFAULT NULL,
   `receipt_image` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `f_record_status` enum('verified','pending') COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `f_record_status` enum('verified','pending','rejected') COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `uploaded_at` datetime DEFAULT NULL,
   `verified_at` datetime DEFAULT NULL,
+  `rejection_reason` text COLLATE utf8mb4_unicode_ci,
   `payment_for` enum('TD','POD','FOD') COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `amount` decimal(10,2) DEFAULT NULL,
+  `description` text COLLATE utf8mb4_unicode_ci,
   PRIMARY KEY (`id`),
   KEY `student_id` (`student_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `expense_posts`
+--
+
+DROP TABLE IF EXISTS `expense_posts`;
+CREATE TABLE IF NOT EXISTS `expense_posts` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `admin_id` bigint unsigned DEFAULT NULL,
+  `title` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `course` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'BSIT',
+  `year_level` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '3rd',
+  `amount` decimal(10,2) NOT NULL,
+  `description` text COLLATE utf8mb4_unicode_ci,
+  `is_active` tinyint(1) NOT NULL DEFAULT '1',
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
@@ -624,7 +649,7 @@ CREATE TABLE IF NOT EXISTS `migrations` (
   `migration` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `batch` int NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=MyISAM AUTO_INCREMENT=95 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=MyISAM AUTO_INCREMENT=97 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `migrations`
@@ -684,7 +709,9 @@ INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES
 (91, '2026_06_28_060000_add_slot_type_to_consultation_schedule_table', 33),
 (92, '2026_06_28_034354_create_consultation_schedule_table', 33),
 (93, '2026_07_01_112734_add_missing_columns_to_recruitment_and_team_tables', 34),
-(94, '2026_07_01_131744_update_team_status_values_in_team_table', 35);
+(94, '2026_07_01_131744_update_team_status_values_in_team_table', 35),
+(95, '2026_07_06_131850_create_expense_posts_table', 39),
+(96, '2026_07_06_131917_add_expense_post_id_to_financial_records_table', 39);
 
 -- --------------------------------------------------------
 

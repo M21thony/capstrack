@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class CapstoneDocument extends Model
 {
     protected $table = 'capstone_documents';
+
     protected $primaryKey = 'file_id';
 
     protected $fillable = [

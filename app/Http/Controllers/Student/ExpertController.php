@@ -36,12 +36,24 @@ class ExpertController extends Controller
 
         $assignments = collect();
         $isLeader = false;
+        $roleAssignments = [
+            'adviser' => null,
+            'consultant' => null,
+            'grammarian' => null,
+        ];
 
         if ($team) {
             $isLeader = $team->leader_id === $student->student_id;
             $assignments = TeamExpertAssignment::where('team_id', $team->team_id)
                 ->with(['expert.roles', 'expert.expertise'])
                 ->get();
+
+            foreach ($assignments->where('status', 'approved') as $a) {
+                $roleName = $a->expert?->roles?->first()?->role_name;
+                if ($roleName && array_key_exists($roleName, $roleAssignments)) {
+                    $roleAssignments[$roleName] = $a;
+                }
+            }
         }
 
         $stats = [
@@ -50,12 +62,24 @@ class ExpertController extends Controller
             'team_pending' => $assignments->where('status', 'pending')->count(),
         ];
 
+        $lockedRoles = $assignments->whereIn('status', ['pending', 'approved'])
+            ->map(function ($a) {
+                return $a->expert?->roles?->first()?->role_name;
+            })
+            ->filter()
+            ->unique()
+            ->values()
+            ->toArray();
+
         return view('student.experts', [
             'experts' => $experts,
             'assignments' => $assignments,
             'team' => $team,
             'isLeader' => $isLeader,
+            'teamConfirmed' => $team?->is_confirmed ?? false,
             'stats' => $stats,
+            'roleAssignments' => $roleAssignments,
+            'lockedRoles' => $lockedRoles,
         ]);
     }
 }

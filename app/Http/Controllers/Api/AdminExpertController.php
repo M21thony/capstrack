@@ -13,6 +13,9 @@ class AdminExpertController extends Controller
     public function index(): JsonResponse
     {
         $experts = CapstoneExpert::where('approved_status', true)
+            ->withCount(['teamAssignments' => function ($q) {
+                $q->where('status', 'approved');
+            }])
             ->orderBy('created_at', 'desc')
             ->get()
             ->load('expertise', 'roles');

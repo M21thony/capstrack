@@ -23,14 +23,20 @@ class GoogleDriveController extends Controller
     // ── OAuth callback — Google redirects here after consent ───────────
     public function callback(Request $request)
     {
+        $expert = Auth::guard('expert')->user();
+        $route = $expert && $expert->is_admin ? 'admin.resources' : 'instructor.docreview';
+
         if ($request->has('error')) {
-            return redirect()->route('admin.resources')->with('error', 'Google Drive connection was cancelled.');
+            return redirect()->route($route)->with('error', 'Google Drive connection was cancelled.');
         }
 
         try {
+            $expert = Auth::guard('expert')->user();
             $this->drive->handleCallback($request->get('code'), Auth::guard('expert')->id());
 
-            return redirect()->route('admin.resources')->with('success', 'Google Drive connected successfully.');
+            $route = $expert && $expert->is_admin ? 'admin.resources' : 'instructor.docreview';
+
+            return redirect()->route($route)->with('success', 'Google Drive connected successfully.');
         } catch (\Exception $e) {
             Log::error('Google Drive callback failed', [
                 'message' => $e->getMessage(),
@@ -38,7 +44,7 @@ class GoogleDriveController extends Controller
                 'trace' => $e->getTraceAsString(),
             ]);
 
-            return redirect()->route('admin.resources')->with('error', 'Failed to connect Google Drive: '.$e->getMessage());
+            return redirect()->route('instructor.docreview')->with('error', 'Failed to connect Google Drive: '.$e->getMessage());
         }
     }
 

@@ -22,7 +22,7 @@
   @keyframes tagFadeIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
   @keyframes shimmer { 0% { background-position: -400px 0; } 100% { background-position: calc(400px + 100%) 0; } }
   .skeleton-box { background: linear-gradient(90deg, var(--bg2) 25%, var(--bg) 50%, var(--bg2) 75%); background-size: 400px 100%; animation: shimmer 1.6s ease-in-out infinite; }
-  #pageSkeleton { position: absolute; inset: 0; z-index: 50; padding: 20px 0; opacity: 1; transition: opacity 0.35s ease; pointer-events: auto; }
+  #pageSkeleton { position: absolute; inset: 0; z-index: 50; padding: 0; opacity: 1; transition: opacity 0.35s ease; pointer-events: auto; }
   #pageSkeleton.loaded { opacity: 0; pointer-events: none; }
   .content { position: relative; }
 </style>
@@ -43,22 +43,80 @@
   <div class="content">
     @include('student.partials.page-tutorial', ['page' => 'team'])
 
+    <div id="contentWrapper" style="position: relative;">
     <div id="pageSkeleton">
-      <div class="card" style="margin-bottom: 20px; border: 1px solid var(--border);">
+      <div class="card" style="margin-bottom: 20px;">
         <div style="display: flex; align-items: center; gap: 14px;">
           <div class="skeleton-box" style="width: 56px; height: 56px; border-radius: 14px; flex-shrink: 0;"></div>
           <div style="flex: 1; min-width: 0;">
-            <div class="skeleton-box" style="width: 55%; height: 18px; border-radius: 6px; margin-bottom: 8px;"></div>
-            <div class="skeleton-box" style="width: 35%; height: 14px; border-radius: 5px; margin-bottom: 6px;"></div>
-            <div class="skeleton-box" style="width: 25%; height: 11px; border-radius: 4px;"></div>
+            <div class="skeleton-box" style="width: 60%; height: 20px; border-radius: 6px; margin-bottom: 8px;"></div>
+            <div class="skeleton-box" style="width: 40%; height: 14px; border-radius: 5px; margin-bottom: 6px;"></div>
+            <div class="skeleton-box" style="width: 30%; height: 11px; border-radius: 4px;"></div>
           </div>
           <div class="skeleton-box" style="width: 80px; height: 26px; border-radius: 20px; flex-shrink: 0;"></div>
         </div>
         <div class="team-dash-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 20px;">
-          <div class="skeleton-box" style="height: 200px; border-radius: 12px;"></div>
-          <div class="skeleton-box" style="height: 200px; border-radius: 12px;"></div>
+          <div style="background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 16px;">
+            <div class="skeleton-box" style="width: 110px; height: 11px; border-radius: 4px; margin-bottom: 14px;"></div>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <div class="skeleton-box" style="width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0;"></div>
+                <div style="flex: 1;">
+                  <div class="skeleton-box" style="width: 55%; height: 13px; border-radius: 5px; margin-bottom: 4px;"></div>
+                  <div class="skeleton-box" style="width: 35%; height: 10px; border-radius: 3px;"></div>
+                </div>
+                <div class="skeleton-box" style="width: 55px; height: 18px; border-radius: 6px;"></div>
+              </div>
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <div class="skeleton-box" style="width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0;"></div>
+                <div style="flex: 1;">
+                  <div class="skeleton-box" style="width: 45%; height: 13px; border-radius: 5px; margin-bottom: 4px;"></div>
+                  <div class="skeleton-box" style="width: 30%; height: 10px; border-radius: 3px;"></div>
+                </div>
+                <div class="skeleton-box" style="width: 55px; height: 18px; border-radius: 6px;"></div>
+              </div>
+            </div>
+            <div style="margin-top: 14px; display: flex; align-items: center; gap: 6px;">
+              <div class="skeleton-box" style="width: 14px; height: 4px; border-radius: 2px;"></div>
+              <div class="skeleton-box" style="width: 14px; height: 4px; border-radius: 2px;"></div>
+              <div class="skeleton-box" style="width: 14px; height: 4px; border-radius: 2px;"></div>
+              <div class="skeleton-box" style="width: 14px; height: 4px; border-radius: 2px;"></div>
+              <div class="skeleton-box" style="width: 65px; height: 10px; border-radius: 3px; margin-left: 4px;"></div>
+            </div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 0;">
+            <div style="background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 16px;">
+              <div class="skeleton-box" style="width: 110px; height: 11px; border-radius: 4px; margin-bottom: 14px;"></div>
+              <div style="display: flex; flex-direction: column; gap: 10px;">
+                <div style="display: flex; justify-content: space-between;">
+                  <div class="skeleton-box" style="width: 50px; height: 12px; border-radius: 3px;"></div>
+                  <div class="skeleton-box" style="width: 130px; height: 12px; border-radius: 3px;"></div>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                  <div class="skeleton-box" style="width: 50px; height: 12px; border-radius: 3px;"></div>
+                  <div class="skeleton-box" style="width: 110px; height: 12px; border-radius: 3px;"></div>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                  <div class="skeleton-box" style="width: 50px; height: 12px; border-radius: 3px;"></div>
+                  <div class="skeleton-box" style="width: 90px; height: 12px; border-radius: 3px;"></div>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                  <div class="skeleton-box" style="width: 50px; height: 12px; border-radius: 3px;"></div>
+                  <div class="skeleton-box" style="width: 70px; height: 12px; border-radius: 3px;"></div>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                  <div class="skeleton-box" style="width: 50px; height: 12px; border-radius: 3px;"></div>
+                  <div class="skeleton-box" style="width: 80px; height: 12px; border-radius: 3px;"></div>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                  <div class="skeleton-box" style="width: 50px; height: 12px; border-radius: 3px;"></div>
+                  <div class="skeleton-box" style="width: 120px; height: 12px; border-radius: 3px;"></div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-        <div class="team-actions" style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; padding-top: 10px; border-top: 1px solid var(--border);">
+        <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; padding-top: 10px; border-top: 1px solid var(--border);">
           <div class="skeleton-box" style="width: 100px; height: 32px; border-radius: 6px;"></div>
           <div class="skeleton-box" style="width: 130px; height: 32px; border-radius: 6px;"></div>
         </div>
@@ -79,21 +137,40 @@
             'closed' => ['bg' => '#6b7280', 'label' => 'CLOSED'],
           ];
           $statusData = $statusColors[$myTeam->team_status] ?? ['bg' => '#16a34a', 'label' => 'ON-GOING'];
+          $isVerified = $myTeam->is_confirmed;
         @endphp
         <div style="flex: 1; min-width: 0;">
           @if($myTeam->project_title)
-            <div style="font-size: 18px; color: #1a1a1a; font-weight: 700; margin-bottom: 2px; line-height: 1.3;">{{ $myTeam->project_title }}</div>
+            <div style="font-size: 18px; color: var(--text); font-weight: 700; margin-bottom: 2px; line-height: 1.3;">{{ $myTeam->project_title }}</div>
           @endif
           <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
             <div style="font-size: 16px; font-weight: 600; color: var(--text3);">{{ $myTeam->team_name }}</div>
             <div class="team-status-badge team-status-badge--inline" style="background: {{ $statusData['bg'] }}; color: #fff; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; display: flex; align-items: center; gap: 6px;">
               <span style="width: 6px; height: 6px; border-radius: 50%; background: #fff; display: inline-block;"></span>{{ $statusData['label'] }}
+              @if($isVerified)
+                <span class="verified-chip-inline" style="display:inline-flex;align-items:center;gap:3px;background:rgba(255,255,255,0.2);color:#fff;padding:1px 8px 1px 5px;border-radius:20px;font-size:8px;font-weight:600;backdrop-filter:blur(4px);border:1px solid rgba(255,255,255,0.15);">
+                  <svg viewBox="0 0 24 24" width="8" height="8" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+                  Verified
+                </span>
+              @endif
             </div>
+            @if($isVerified)
+            <div class="verified-phone-badge" style="display:none;align-items:center;gap:4px;background:#fff;border:1px solid #a7f3d0;color:#059669;padding:2px 10px 2px 6px;border-radius:20px;font-size:10px;font-weight:700;box-shadow:0 1px 3px rgba(0,0,0,0.06);">
+              <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="#059669" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+              Verified
+            </div>
+            @endif
           </div>
           <div style="font-size: 12px; color: var(--text3); margin-top: 4px;">{{ auth()->user()->studentSchoolYear()->first()?->program ?? 'BSIT-4A' }} · Capstone SY 2025–2026</div>
         </div>
         <div class="team-status-badge team-status-badge--desktop" style="background: {{ $statusData['bg'] }}; color: #fff; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; display: flex; align-items: center; gap: 6px;">
           <span style="width: 6px; height: 6px; border-radius: 50%; background: #fff; display: inline-block;"></span>{{ $statusData['label'] }}
+          @if($isVerified)
+            <span class="verified-chip-desktop" style="display:inline-flex;align-items:center;gap:3px;background:rgba(255,255,255,0.2);color:#fff;padding:1px 8px 1px 5px;border-radius:20px;font-size:8px;font-weight:600;backdrop-filter:blur(4px);border:1px solid rgba(255,255,255,0.15);">
+              <svg viewBox="0 0 24 24" width="8" height="8" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+              Verified
+            </span>
+          @endif
         </div>
       </div>
 
@@ -185,11 +262,16 @@
       </div>
 
       <div class="team-actions" style="margin-top: 18px; display: flex; justify-content: flex-end; gap: 8px; padding-top: 10px; border-top: 1px solid var(--border);">
-        @if($isLeader && !$myTeam->is_confirmed)
+        @if($isLeader && $myTeam->team_status === 'complete' && !$myTeam->is_confirmed)
           <button type="button" onclick="showConfirmTeam()" style="padding: 5px 10px; border-radius: 6px; border: 1px solid #bbf7d0; background: #f0fdf4; color: #15803d; font-size: 10px; font-weight: 700; cursor: pointer;">Confirm Team</button>
+        @elseif($isLeader && $myTeam->is_confirmed)
+          <span class="verified-badge-standalone" style="display:inline-flex;align-items:center;gap:6px;background:linear-gradient(135deg,#10b981,#059669);color:#fff;padding:6px 14px 6px 10px;border-radius:20px;font-size:11px;font-weight:600;box-shadow:0 2px 8px rgba(16,185,129,0.35);border:none;letter-spacing:0.2px;">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+            Verified
+          </span>
         @endif
         @if($isLeader)
-          <button type="button" onclick="openTransferModal()" style="padding: 5px 10px; border-radius: 6px; border: 1px solid #fde68a; background: #fffbeb; color: #92400e; font-size: 10px; font-weight: 700; cursor: pointer;">Transfer Leadership</button>
+          <button type="button" onclick="@if($teamMembers->count() > 1)openTransferModal()@else void(0)@endif" style="padding: 5px 10px; border-radius: 6px; border: 1px solid #fde68a; background: #fffbeb; color: #92400e; font-size: 10px; font-weight: 700; @if($teamMembers->count() <= 1)cursor: not-allowed; opacity: 0.5;@else cursor: pointer;@endif">Transfer Leadership</button>
         @endif
         @if($isLeader)
           <button type="button" onclick="openEditTeamModal()" style="padding: 5px 10px; border-radius: 6px; border: 1px solid #bfdbfe; background: #eff6ff; color: #1d4ed8; font-size: 10px; font-weight: 700; cursor: pointer;">Update Team</button>
@@ -266,11 +348,6 @@
                 <button type="button" class="btn-icon" style="width:24px; height:24px; margin-right:4px;" onclick="event.stopPropagation(); openEditModal()">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                 </button>
-                <form method="POST" action="{{ route('recruitment.destroy', $myRecruitment) }}" id="delete-recruitment-form" style="display:inline;">
-                  @csrf
-                  @method('DELETE')
-                  <button type="button" class="btn-icon" style="width:24px; height:24px;" onclick="event.stopPropagation(); openDeleteModal()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4 a2 2 0 0 1 2 2v2"></path></svg></button>
-                </form>
               </div>
               <div class="avatar-ring {{ $ringClass }}">
                 @if (auth()->user()->avatarUrl())
@@ -394,6 +471,7 @@
           @endforelse
         </div>
       </div>
+    </div>
   </div>
   </div>
 </main>
@@ -596,11 +674,19 @@
         <strong>Team is now full!</strong> Your team has reached {{ $teamMembers->count() }}/{{ $memberCount }} members. You can now update the status to <strong>Complete</strong> or <strong>Closed</strong>.
       </div>
       @endif
-      <select name="team_status" id="teamStatusSelect" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;margin-bottom:20px;box-sizing:border-box;">
+      <select name="team_status" id="teamStatusSelect" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;margin-bottom:8px;box-sizing:border-box;@if($myTeam->is_confirmed) cursor:not-allowed;opacity:0.6;@endif" @if($myTeam->is_confirmed) disabled @endif>
         <option value="on-going" id="ongoingStatusOption" @if($myTeam->team_status === 'on-going') selected @endif @if($isTeamFull) disabled @endif>On-going</option>
         <option value="complete" id="completeStatusOption" @if($myTeam->team_status === 'complete') selected @endif>Complete</option>
         <option value="closed" id="closedStatusOption" @if($myTeam->team_status === 'closed') selected @endif>Closed</option>
       </select>
+      @if($myTeam->is_confirmed)
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:20px;font-size:12px;color:#6b7280;">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        <span>Team is verified — status cannot be changed.</span>
+      </div>
+      @else
+      <div style="margin-bottom:20px;"></div>
+      @endif
       <div style="display:flex;gap:10px;">
         <button type="submit" class="btn-primary" style="flex:1;">Save Changes</button>
         <button type="button" class="google-btn" style="flex:1;border:none;" onclick="closeEditTeamModal()">Cancel</button>
@@ -633,6 +719,35 @@
   </div>
 </div>
 
+{{-- Expert Removed Popup Modal --}}
+@if(($expertRemovedNotifications ?? collect())->isNotEmpty())
+@php $expertRemovedIds = $expertRemovedNotifications->pluck('id')->implode(','); @endphp
+<div id="expertRemovedModal" style="position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:rgba(15,16,22,0.75);backdrop-filter:blur(6px);padding:20px;" data-ids="{{ $expertRemovedIds }}">
+  <div style="background:#fff;border-radius:18px;padding:32px 28px 24px;width:100%;max-width:420px;box-shadow:0 24px 60px rgba(0,0,0,0.25);text-align:center;position:relative;animation:expertPopIn 0.25s cubic-bezier(0.16,1,0.3,1);">
+    <div style="width:56px;height:56px;border-radius:50%;background:rgba(239,68,68,0.08);color:#ef4444;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+      <svg width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </div>
+    <h3 style="font-size:17px;font-weight:700;color:#1e2128;margin:0 0 6px;letter-spacing:-0.3px;">Expert Removed</h3>
+    <div id="expertRemovedContent" style="font-size:13px;color:#6b7280;line-height:1.6;margin:0 0 8px;text-align:left;max-height:200px;overflow-y:auto;padding:0 4px;">
+      @foreach($expertRemovedNotifications as $notif)
+        <div class="expert-removed-item" style="padding:12px 0;@if(!$loop->last)border-bottom:1px solid #f3f4f6;@endif">
+          <div style="font-weight:600;color:#1e2128;margin-bottom:4px;">{{ $notif->title }}</div>
+          <div>{!! $notif->message !!}</div>
+          <div style="font-size:11px;color:#9ca3af;margin-top:4px;">{{ $notif->created_at->diffForHumans() }}</div>
+        </div>
+      @endforeach
+    </div>
+    <button id="expertRemovedOkBtn" type="button" style="width:100%;padding:11px 16px;border-radius:10px;border:none;background:#1e2128;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:background 0.15s;margin-top:12px;">OK</button>
+  </div>
+</div>
+<style>
+  @keyframes expertPopIn { from { transform:scale(0.92) translateY(8px); opacity:0; } to { transform:scale(1) translateY(0); opacity:1; } }
+  #expertRemovedContent::-webkit-scrollbar { width:4px; }
+  #expertRemovedContent::-webkit-scrollbar-thumb { background:#e5e7eb; border-radius:4px; }
+  #expertRemovedOkBtn:hover { background:#374151; }
+</style>
+@endif
+
 {{-- Custom Confirm Modal --}}
 <div id="customConfirmModal" style="display:none; position:fixed; inset:0; z-index:99999; align-items:center; justify-content:center; background:rgba(15,16,22,0.75); backdrop-filter:blur(6px); padding:20px;">
   <div id="ccm-card" style="background:#fff; border-radius:18px; padding:32px 28px 24px; width:100%; max-width:380px; box-shadow:0 24px 60px rgba(0,0,0,0.25); transform:scale(0.92); transition:transform 0.22s cubic-bezier(0.16,1,0.3,1); text-align:center; position:relative;">
@@ -660,7 +775,8 @@ const individualPresets = ["Leadership", "Research", "Design", "Testing", "Front
 
 @if($myTeam)
 function confirmLeaveTeam() {
-    @if($isLeader)
+    @php $teamMemberCount = \App\Models\StudentSchoolYear::where('team_id', $myTeam->team_id)->count(); @endphp
+    @if($isLeader && $teamMemberCount > 1)
     showConfirm({
         title: 'Cannot Leave',
         message: 'As the team leader, you cannot leave the team directly. Please <strong>Transfer Leadership</strong> to another member first, then you can leave as a regular member.',
@@ -669,6 +785,17 @@ function confirmLeaveTeam() {
         confirmClass: 'primary',
         onConfirm: function() {
             openTransferModal();
+        }
+    });
+    @elseif($isLeader)
+    showConfirm({
+        title: 'Leave & Terminate Team',
+        message: 'You are the only member. Leaving will <strong>permanently terminate</strong> <strong>{{ addslashes($myTeam->team_name) }}</strong>. This cannot be undone.',
+        icon: 'leave',
+        confirmText: 'Yes, Leave & Terminate',
+        confirmClass: 'danger',
+        onConfirm: function() {
+            document.getElementById('leave-team-form').submit();
         }
     });
     @else
@@ -686,13 +813,9 @@ function confirmLeaveTeam() {
 }
 
 function showConfirmTeam() {
-    @php
-      $teamMemberCount = \App\Models\StudentSchoolYear::where('team_id', $myTeam->team_id)->count();
-      $teamIsComplete = $teamMemberCount >= $memberCount;
-    @endphp
     showConfirm({
         title: 'Confirm Team',
-        message: '@if($teamIsComplete)Are you sure you want to confirm <strong>{{ addslashes($myTeam->team_name) }}</strong>? Once confirmed, the team will be submitted to the admin and instructor dashboard. Your recruitment post can still be edited and members can still be managed.@else<strong>Warning:</strong> Your team is not yet complete ({{ $teamMemberCount }}/{{ $memberCount }} members). Are you sure you want to confirm? Once confirmed, the team will be submitted to the admin and instructor dashboard.@endif',
+        message: 'Are you sure you want to confirm <strong>{{ addslashes($myTeam->team_name) }}</strong>? Once verified, the team will be marked as completed in the admin dashboard.',
         icon: 'team',
         confirmText: 'Yes, Confirm',
         confirmClass: 'success',
@@ -1203,6 +1326,25 @@ document.addEventListener('DOMContentLoaded', function() {
     @if(isset($teamFull) && $teamFull)
     setTimeout(function() { showConfirmTeam(); }, 500);
     @endif
+
+    // Expert Removed modal — mark each as read on dismiss
+    var expertModal = document.getElementById('expertRemovedModal');
+    var expertOkBtn = document.getElementById('expertRemovedOkBtn');
+    if (expertModal && expertOkBtn) {
+        var ids = (expertModal.getAttribute('data-ids') || '').split(',').filter(Boolean);
+        expertOkBtn.addEventListener('click', function() {
+            var token = document.querySelector('meta[name=csrf-token]').content;
+            var promises = ids.map(function(id) {
+                return fetch('/notifications/' + id + '/read', {
+                    method: 'POST',
+                    headers: { 'X-CSRF-TOKEN': token }
+                });
+            });
+            Promise.all(promises).finally(function() {
+                expertModal.style.display = 'none';
+            });
+        });
+    }
 });
 </script>
 </body>
