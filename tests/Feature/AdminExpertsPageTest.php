@@ -19,6 +19,15 @@ class AdminExpertsPageTest extends TestCase
 
     protected function ensureSchema(): void
     {
+        if (! Schema::hasTable('team')) {
+            Schema::create('team', function (Blueprint $table): void {
+                $table->id('team_id');
+                $table->string('team_name');
+                $table->string('project_title')->nullable();
+                $table->timestamps();
+            });
+        }
+
         if (! Schema::hasTable('capstone_experts')) {
             Schema::create('capstone_experts', function (Blueprint $table): void {
                 $table->id('expert_id');

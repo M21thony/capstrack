@@ -175,7 +175,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
 .btn-icon:hover{background:var(--bg3);border-color:var(--accent)}
 .tag-input-field{min-height:48px;padding:8px 12px;border:1px solid var(--border);border-radius:10px;background:var(--bg2);display:flex;flex-wrap:wrap;gap:8px;align-items:center;transition:0.2s;cursor:default}
 .tag-input-field:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow)}
-.selected-tag{background:var(--accent-light);color:var(--accent3);padding:4px 10px;border-radius:6px;font-size:12px;font-weight:600;display:flex;align-items:center;gap:6px;border:1px solid rgba(181,148,31,0.2)}
+.selected-tag{background:var(--blue-bg);color:var(--blue);padding:4px 10px;border-radius:6px;font-size:12px;font-weight:500;display:flex;align-items:center;gap:6px;border:1px solid rgba(29,78,216,0.2)}
 .tag-remove{cursor:pointer;display:flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;background:rgba(181,148,31,0.2);transition:0.2s}
 .tag-remove:hover{background:var(--accent);color:white}
 .custom-select{width:100%;padding:12px;border:1px solid var(--border);border-radius:10px;background:var(--bg2);color:var(--text);font-family:inherit;font-size:13px;cursor:pointer;outline:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23B5941F' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;background-size:16px}
@@ -303,14 +303,30 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
   .page-header h1{font-size:20px!important}
 
   /* ── Modals ── */
-  .modal-overlay>.card{width:92%!important;max-width:420px;padding:24px 16px!important;margin:0 auto!important}
-  .modal-overlay>.card .section-title{font-size:15px!important}
-  .modal-overlay>.card .custom-select,.modal-overlay>.card input[type="text"],.modal-overlay>.card textarea,.modal-overlay>.card select{font-size:13px!important}
-  .modal-overlay>.card .btn-primary{width:100%!important;justify-content:center!important}
-  .modal-overlay>.card .pm-close-btn{top:12px!important;right:12px!important}
-  .modal-overlay>.card .post-type-btn{font-size:11px!important;padding:8px!important}
-  .modal-overlay>.card .tag-input-field{min-height:40px!important}
-  .modal-overlay>.card .member-input-group{padding:10px 14px!important}
+  .modal-overlay{align-items:flex-end!important;justify-content:center!important;padding:0!important}
+  .modal-overlay>.card{width:100%!important;max-width:560px!important;max-height:calc(100dvh - 12px)!important;padding:22px 18px 18px!important;margin:0 auto!important;overflow-y:auto!important;overscroll-behavior:contain!important;-webkit-overflow-scrolling:touch!important;scrollbar-width:thin!important;border-radius:24px 24px 0 0!important;transform:translateY(24px)!important;animation:modalSlideUp 0.28s cubic-bezier(0.16,1,0.3,1) forwards!important}
+  .modal-card{border-radius:24px 24px 0 0!important}
+  .modal-card .section-title{font-size:15px!important;line-height:1.2!important;padding-right:48px!important}
+  .modal-card label{font-size:10px!important;margin-bottom:6px!important;letter-spacing:0.7px!important}
+  .modal-card .custom-select,.modal-card select{font-size:14px!important;min-height:44px!important;padding:12px 36px 12px 14px!important;border-radius:12px!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important}
+  .modal-card input[type="text"],.modal-card textarea,.modal-card .custom-input{font-size:14px!important;min-height:44px!important;padding:12px 14px!important;border-radius:12px!important}
+  .modal-card textarea{min-height:96px!important}
+  .modal-card .btn-primary,.modal-card .google-btn{width:100%!important;min-height:44px!important;justify-content:center!important}
+  .modal-card .modal-actions{flex-direction:column!important;gap:8px!important}
+  .modal-card .modal-actions > *{width:100%!important}
+  .modal-card .pm-close-btn{top:10px!important;right:10px!important;width:36px!important;height:36px!important}
+  .modal-card .post-type-btn{font-size:11px!important;padding:8px!important}
+  .modal-card .tag-input-field{min-height:46px!important;padding:10px 12px!important;border-radius:12px!important}
+  .modal-card .tag-suggestions-box{top:auto!important;bottom:100%!important;margin:0 0 6px!important;max-height:36vh!important;border-radius:12px!important;box-shadow:0 -12px 28px rgba(0,0,0,0.14)!important}
+  .modal-card .tag-suggestion-item{padding:12px 14px!important;font-size:14px!important}
+  .modal-card .member-input-group{padding:10px 14px!important}
+  .modal-card .modal-tutorial{padding:12px 14px!important;border-radius:12px!important}
+  .modal-card .modal-tutorial p{font-size:12px!important;line-height:1.45!important}
+  .modal-card--recruitment > div[style*="margin-top: 20px"]{display:flex!important;flex-direction:column!important;gap:14px!important;margin-top:16px!important}
+  .modal-card--recruitment #leader-fields,.modal-card--recruitment #individual-fields{display:flex!important;flex-direction:column!important;gap:12px!important}
+  .modal-card--recruitment #post-goal,.modal-card--recruitment #member-count{margin-bottom:0!important}
+  .modal-card--recruitment label{margin-bottom:0!important}
+  .modal-card--recruitment .tag-wrapper-box{margin-bottom:14px!important}
 
   /* ── Custom Confirm Modal ── */
   #ccm-card{padding:28px 20px 20px!important;max-width:340px!important}
@@ -409,13 +425,27 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
   .page-header h1{font-size:17px!important}
 
   /* ── Modals ── */
-  .modal-overlay>.card{width:94%!important;padding:20px 14px!important}
-  .modal-overlay>.card .section-title{font-size:14px!important}
-  .modal-overlay>.card .custom-select,.modal-overlay>.card input[type="text"],.modal-overlay>.card textarea,.modal-overlay>.card select{padding:10px!important;font-size:12px!important}
-  .modal-overlay>.card label{font-size:10px!important}
-  .modal-overlay>.card .btn-primary,.modal-overlay>.card .google-btn{padding:10px!important;font-size:12px!important;min-height:40px!important}
-  .modal-overlay>.card .member-input-group{padding:8px 12px!important;margin-bottom:16px!important}
-  .modal-overlay>.card .skill-chip{padding:5px 10px!important;font-size:11px!important}
+  .modal-overlay{align-items:flex-end!important;padding:0!important}
+  .modal-overlay>.card{width:100%!important;max-width:none!important;padding:18px 14px 14px!important;max-height:calc(100dvh - 10px)!important;border-radius:22px 22px 0 0!important;transform:translateY(20px)!important;animation:modalSlideUp 0.28s cubic-bezier(0.16,1,0.3,1) forwards!important}
+  .modal-card{border-radius:22px 22px 0 0!important}
+  .modal-card .section-title{font-size:14px!important;padding-right:44px!important}
+  .modal-card .custom-select,.modal-card select,.modal-card input[type="text"],.modal-card textarea,.modal-card .custom-input{font-size:13px!important}
+  .modal-card .custom-select,.modal-card select{padding:10px 36px 10px 12px!important;min-height:42px!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important}
+  .modal-card input[type="text"],.modal-card textarea,.modal-card .custom-input{padding:10px 12px!important;min-height:42px!important}
+  .modal-card label{font-size:9px!important}
+  .modal-card .btn-primary,.modal-card .google-btn{padding:10px!important;font-size:12px!important;min-height:42px!important}
+  .modal-card .modal-actions{gap:6px!important}
+  .modal-card .member-input-group{padding:8px 12px!important;margin-bottom:16px!important}
+  .modal-card .skill-chip{padding:5px 10px!important;font-size:11px!important}
+  .modal-card .tag-input-field{min-height:42px!important;padding:8px 10px!important}
+  .modal-card .tag-suggestions-box{top:auto!important;bottom:100%!important;margin:0 0 6px!important;max-height:32vh!important;box-shadow:0 -12px 28px rgba(0,0,0,0.14)!important}
+  .modal-card--recruitment > div[style*="margin-top: 20px"]{gap:12px!important;margin-top:14px!important}
+  .modal-card--recruitment #leader-fields,.modal-card--recruitment #individual-fields{gap:10px!important}
+  .modal-card--recruitment #post-goal,.modal-card--recruitment #member-count{margin-bottom:0!important}
+  .modal-card--recruitment label{margin-bottom:0!important}
+  .modal-card--recruitment .tag-wrapper-box{margin-bottom:12px!important}
+
+  @keyframes modalSlideUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
 
   /* ── Custom Confirm Modal ── */
   #ccm-card{padding:24px 16px 16px!important;max-width:300px!important}

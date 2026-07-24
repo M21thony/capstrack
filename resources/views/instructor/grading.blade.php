@@ -24,19 +24,29 @@
 
   <div class="content">
 
+  @if(!$isPanel)
+    <div style="text-align:center;padding:64px 24px">
+      <div style="font-size:48px;margin-bottom:16px;opacity:0.3">
+        <svg viewBox="0 0 24 24" width="64" height="64" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+      </div>
+      <div style="font-size:18px;font-weight:600;color:var(--text2);margin-bottom:8px">Grading Not Available</div>
+      <div style="font-size:13px;color:var(--text3);max-width:400px;margin:0 auto">You are not assigned as a panelist. Only panel members can access the grading interface.</div>
+    </div>
+  @else
+
     <div class="team-selector-wrap">
-      <div class="team-selector-avatar" id="teamAvatar" style="background:linear-gradient(135deg,#1d4ed8,#7c3aed)">TP</div>
+      <div class="team-selector-avatar" id="teamAvatar" style="background:linear-gradient(135deg,#1d4ed8,#7c3aed)">{{ optional($teams->first())->name ? substr($teams->first()->name, 0, 2) : '?' }}</div>
       <div style="flex:1">
         <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:6px">Grading For</div>
         <select class="input" style="max-width:360px" id="teamSelect" onchange="switchTeam(this)">
-          <option value="TP|linear-gradient(135deg,#1d4ed8,#7c3aed)|Team Prism|Blockchain-Based Document Verification for Academic Records|BSIT-4B">Team Prism â€” Blockchain-Based Document Verification</option>
-          <option value="TN|linear-gradient(135deg,#c9a82c,#8a6e10)|Team Nexus|AI-Powered Attendance System Using Facial Recognition|BSCS-4A">Team Nexus â€” AI-Powered Attendance System</option>
-          <option value="TV|linear-gradient(135deg,#7c3aed,#c026d3)|Team Vertex|Augmented Reality Campus Navigation Mobile App|BSCS-4A">Team Vertex â€” AR Campus Navigation App</option>
+          @foreach($teams as $team)
+          <option value="{{ $team->id }}|linear-gradient(135deg,#1d4ed8,#7c3aed)|{{ $team->name }}|{{ $team->project_title ?? 'No title' }}|{{ $team->section }}">{{ $team->name }} — {{ $team->project_title ?? 'No title' }}</option>
+          @endforeach
         </select>
       </div>
       <div style="text-align:right">
         <div style="font-size:11px;color:var(--text3);margin-bottom:4px">Rubric Type</div>
-        <span class="badge badge-gold">Pre-Proposal Defense</span>
+        <span class="badge badge-gold">{{ optional($rubrics->first())->name ?? 'Pre-Proposal Defense' }}</span>
       </div>
       <div style="text-align:right">
         <div style="font-size:11px;color:var(--text3);margin-bottom:4px">Your Role</div>
@@ -491,11 +501,12 @@
         </button>
       </div>
     </div>
+  @endif
 
   </div>
 </div>
 
-<!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+<!-- ════════════════════════════════════════════════════════════
      EXPERT PROFILE SIDE PANEL
      Sits flush against the right edge of the
      sidebar (left: 250px). No dark overlay.

@@ -215,6 +215,8 @@ class AuthController extends Controller
 
         Auth::login($student);
 
+        $student->update(['last_seen_at' => now()]);
+
         $redirectUrl = $student->hasCompletedProfile() ? route('student.dashboard') : route('student.personal-info');
 
         if ($request->expectsJson()) {
@@ -350,6 +352,8 @@ class AuthController extends Controller
         );
 
         Auth::login($student);
+
+        $student->update(['last_seen_at' => now()]);
 
         if ($request->expectsJson()) {
             return response()->json([

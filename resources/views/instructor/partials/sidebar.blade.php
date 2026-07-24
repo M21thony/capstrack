@@ -11,13 +11,44 @@
     </div>
   @endif
 
-  <!-- Click to open the side panel -->
+  @php
+    $expert = auth('expert')->user();
+    $currentRouteName = request()->route()?->getName();
+
+    $pendingAssignmentIds = $expert ? App\Models\TeamExpertAssignment::where('expert_id', $expert->expert_id)->where('status', 'pending')->pluck('assignment_id')->toArray() : [];
+    $seenAssignmentIds = session('instructor_seen_assignment_ids', []);
+    $unseenAssignmentCount = count(array_diff($pendingAssignmentIds, $seenAssignmentIds));
+
+    if ($currentRouteName === 'instructor.assignments') {
+      session()->put('instructor_seen_assignment_ids', array_unique(array_merge($seenAssignmentIds, $pendingAssignmentIds)));
+    }
+
+    $pendingDocReviewIds = [];
+    if ($expert && Schema::hasTable('capstone_document_review')) {
+      $pendingDocReviewIds = DB::table('capstone_document_review')->where('expert_id', $expert->expert_id)->where('review_status', 'pending')->pluck('review_id')->toArray();
+    }
+    $seenDocReviewIds = session('instructor_seen_doc_review_ids', []);
+    $unseenDocReviewCount = count(array_diff($pendingDocReviewIds, $seenDocReviewIds));
+
+    if ($currentRouteName === 'instructor.docreview') {
+      session()->put('instructor_seen_doc_review_ids', array_unique(array_merge($seenDocReviewIds, $pendingDocReviewIds)));
+    }
+
+    $scheduleIds = $expert ? DB::table('consultation_schedule')->where('expert_id', $expert->expert_id)->where('is_available', 1)->pluck('schedule_id')->toArray() : [];
+    $seenScheduleIds = session('instructor_seen_schedule_ids', []);
+    $unseenScheduleCount = count(array_diff($scheduleIds, $seenScheduleIds));
+
+    if ($currentRouteName === 'instructor.schedule') {
+      session()->put('instructor_seen_schedule_ids', array_unique(array_merge($seenScheduleIds, $scheduleIds)));
+    }
+  @endphp
+
   <div class="sidebar-user" id="ep-trigger" onclick="openExpertProfile()">
-    <div class="avatar">{{ strtoupper(substr(auth('expert')->user()?->email ?? 'E', 0, 2)) }}</div>
+    <div class="avatar">{{ strtoupper(substr($expert?->email ?? 'E', 0, 2)) }}</div>
 
     <div class="user-info">
-      <div class="user-name">{{ auth('expert')->user()?->first_name }} {{ auth('expert')->user()?->last_name }}</div>
-      <div class="user-role">{{ ucfirst(auth('expert')->user()?->roles->pluck('role_name')->join(', ', ' & ')) ?? 'Expert' }} Active</div>
+      <div class="user-name">{{ $expert?->first_name }} {{ $expert?->last_name }}</div>
+      <div class="user-role">{{ ucfirst($expert?->roles->pluck('role_name')->join(', ', ' & ')) ?? 'Expert' }} Active</div>
     </div>
     <div class="status-dot"></div>
     <div class="su-caret">
@@ -25,6 +56,12 @@
     </div>
   </div>
 
-  @include('instructor.partials.sidebar-nav', ['currentPage' => $currentPage ?? '', 'totalTeams' => $totalTeams ?? 0])
+  @include('instructor.partials.sidebar-nav', [
+    'currentPage' => $currentPage ?? '',
+    'totalTeams' => $totalTeams ?? 0,
+    'unseenAssignmentCount' => $unseenAssignmentCount,
+    'unseenDocReviewCount' => $unseenDocReviewCount,
+    'unseenScheduleCount' => $unseenScheduleCount,
+  ])
 </div>
 @include('partials.idle-timeout')

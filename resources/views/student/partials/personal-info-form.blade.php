@@ -18,16 +18,16 @@
   .pi-wizard-actions { display: flex !important; flex-direction: row !important; justify-content: space-between !important; align-items: center !important; gap: 12px !important; margin-top: 32px !important; padding-top: 24px !important; border-top: 1px solid var(--border) !important; }
   .pi-wizard-actions .pi-btn { flex: none !important; width: auto !important; min-width: 120px !important; justify-content: center !important; }
   .pi-wizard-actions #pi-next, .pi-wizard-actions #pi-submit { margin-left: auto !important; }
-  .pi-label { display: block !important; font-size: 14px !important; font-weight: 500 !important; color: #1e293b !important; margin-bottom: 6px !important; }
-  .pi-label-optional { color: #64748b !important; font-weight: 400 !important; font-size: 13px !important; display: block !important; margin-top: 2px !important; }
-  .pi-row-3 { display: grid !important; grid-template-columns: repeat(3, 1fr) !important; gap: 16px !important; align-items: end !important; }
-  .pi-row-3 .pi-field { display: flex !important; flex-direction: column !important; justify-content: flex-end !important; height: 100% !important; }
-  .pi-row-3 .pi-input { width: 100% !important; }
-  .pi-row-2 { display: grid !important; grid-template-columns: repeat(2, 1fr) !important; gap: 16px !important; }
-  .pi-field:not(.pi-row-3 *) { display: flex !important; flex-direction: column !important; margin-top: 24px !important; }
-  .pi-field:not(.pi-row-3 *) .pi-label { margin-bottom: 6px !important; }
-  .pi-row-3 + .pi-field, .pi-field + .pi-row-3 { margin-top: 24px !important; }
-  @media (max-width: 600px) { .pi-row-3 { display: flex !important; flex-direction: column !important; gap: 16px !important; } .pi-row-2 { grid-template-columns: 1fr; } }
+  .pi-field-row { display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 14px !important; margin-bottom: 14px !important; }
+  .pi-field-row.full { grid-template-columns: 1fr !important; }
+  .pi-field-row-3 { display: grid !important; grid-template-columns: repeat(3, 1fr) !important; gap: 14px !important; margin-bottom: 14px !important; }
+  .pi-field-row .pi-field, .pi-field-row-3 .pi-field { display: flex !important; flex-direction: column !important; gap: 6px !important; margin-top: 0 !important; }
+  .pi-field-row .pi-input, .pi-field-row-3 .pi-input { width: 100% !important; }
+  .pi-label { display: block !important; font-size: 12.5px !important; font-weight: 500 !important; color: #475569 !important; margin-bottom: 0 !important; }
+  .pi-label-optional { color: #94a3b8 !important; font-weight: 400 !important; font-size: 12px !important; margin-left: 4px !important; }
+  .pi-field:not(.pi-field-row *) { display: flex !important; flex-direction: column !important; gap: 6px !important; margin-top: 18px !important; }
+  .pi-field:not(.pi-field-row *) .pi-label { margin-bottom: 0 !important; }
+  @media (max-width: 600px) { .pi-field-row { grid-template-columns: 1fr !important; } .pi-field-row-3 { grid-template-columns: 1fr !important; } .pi-field-row, .pi-field-row-3 { gap: 12px !important; margin-bottom: 12px !important; } .pi-wizard-actions { flex-direction: column !important; gap: 10px !important; } .pi-wizard-actions .pi-btn { width: 100% !important; min-width: 0 !important; padding: 14px 16px !important; font-size: 15px !important; } .pi-wizard-actions #pi-back { margin-left: 0 !important; } .pi-wizard-actions #pi-next, .pi-wizard-actions #pi-submit { margin-left: 0 !important; } .pi-field:not(.pi-field-row *) { margin-top: 14px !important; } }
   .pi-input { border: 1px solid #cbd5e1 !important; border-radius: 8px !important; padding: 10px 14px !important; font-size: 15px !important; color: #334155 !important; transition: all 0.15s ease-in-out !important; box-sizing: border-box !important; }
   .pi-input:focus { border-color: #2563eb !important; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15) !important; }
   .tutorial-note { background-color: #eff6ff; border-left: 4px solid #3b82f6; padding: 12px 16px; border-radius: 8px; font-size: 13px; color: #1e40af; margin-bottom: 24px; line-height: 1.5; display: flex; align-items: flex-start; gap: 10px; }
@@ -150,7 +150,7 @@
                 </div>
             @endif
 
-            <div class="pi-row-3">
+            <div class="pi-field-row-3">
                 <div class="pi-field">
                     <label class="pi-label" for="first_name">First name</label>
                     <input type="text" id="first_name" name="first_name" class="pi-input {{ $hasTeam ? 'pi-input-readonly' : '' }}" value="{{ old('first_name', $student->f_name) }}" {{ $hasTeam ? 'readonly' : 'required' }} autocomplete="given-name">
@@ -166,10 +166,18 @@
                     @error('last_name')<p class="pi-error">{{ $message }}</p>@enderror
                 </div>
             </div>
-            <div class="pi-field">
-                <label class="pi-label" for="student_id">Student ID</label>
-                <input type="text" id="student_id" name="student_id" class="pi-input {{ $hasTeam ? 'pi-input-readonly' : '' }}" value="{{ old('student_id', $student->student_number) }}" placeholder="e.g. 221000001" {{ $hasTeam ? 'readonly' : 'required' }}>
-                @error('student_id')<p class="pi-error">{{ $message }}</p>@enderror
+            <div class="pi-field-row full">
+                <div class="pi-field">
+                    <label class="pi-label" for="suffix">Suffix <span class="pi-label-optional">(optional)</span></label>
+                    <input type="text" id="suffix" name="suffix" class="pi-input {{ $hasTeam ? 'pi-input-readonly' : '' }}" value="{{ old('suffix', $student->suffix) }}" {{ $hasTeam ? 'readonly' : '' }} placeholder="e.g. Jr., III" autocomplete="suffix">
+                </div>
+            </div>
+            <div class="pi-field-row full">
+                <div class="pi-field">
+                    <label class="pi-label" for="student_id">Student ID</label>
+                    <input type="text" id="student_id" name="student_id" class="pi-input {{ $hasTeam ? 'pi-input-readonly' : '' }}" value="{{ old('student_id', $student->student_number) }}" placeholder="e.g. 221000001" {{ $hasTeam ? 'readonly' : 'required' }}>
+                    @error('student_id')<p class="pi-error">{{ $message }}</p>@enderror
+                </div>
             </div>
         </section>
 
@@ -231,6 +239,12 @@
                     <label class="pi-label" for="section">Section</label>
                     <input type="text" id="section" name="section" class="pi-input {{ $hasTeam ? 'pi-input-readonly' : '' }}" value="{{ old('section', $selectedSection) }}" placeholder="e.g. A" {{ $hasTeam ? 'readonly' : 'required' }} maxlength="1" {{ $hasTeam ? '' : 'oninput="this.value = this.value.toUpperCase().replace(/[^A-Z]/g, \'\')"' }}>
                     @error('section')<p class="pi-error">{{ $message }}</p>@enderror
+                </div>
+            </div>
+            <div class="pi-field">
+                <label class="pi-label">School Year</label>
+                <div style="padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-size:15px;color:var(--text);background:rgba(37,99,235,0.04);font-weight:500">
+                    {{ $studentSy?->school_year ?? '—' }}
                 </div>
             </div>
         </section>

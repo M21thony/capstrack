@@ -20,6 +20,8 @@ use Illuminate\Support\Str;
     'approved_status',
     'max_teams',
     'department',
+    'sections',
+    'school_year',
     'rejection_reason',
     'reject_attempts',
     'reject_cooldown_until',
@@ -41,6 +43,7 @@ class CapstoneExpert extends Authenticatable
     protected $casts = [
         'is_admin' => 'boolean',
         'approved_status' => 'boolean',
+        'sections' => 'array',
         'created_at' => 'datetime',
         'reject_cooldown_until' => 'datetime',
         'last_seen_at' => 'datetime',
@@ -86,6 +89,30 @@ class CapstoneExpert extends Authenticatable
     public function getIsOnlineAttribute(): bool
     {
         return $this->last_seen_at && $this->last_seen_at->gt(now()->subMinutes(5));
+    }
+
+    public function hasValidAvatarPreset(): bool
+    {
+        return filled($this->profile_picture) && array_key_exists($this->profile_picture, config('avatars.presets', []));
+    }
+
+    public function avatarUrl(): string
+    {
+        if (filled($this->profile_picture)) {
+            if (filter_var($this->profile_picture, FILTER_VALIDATE_URL)) {
+                return $this->profile_picture;
+            }
+
+            if ($this->hasValidAvatarPreset()) {
+                $path = public_path('images/avatars/'.$this->profile_picture.'.svg');
+
+                if (file_exists($path)) {
+                    return asset('images/avatars/'.$this->profile_picture.'.svg');
+                }
+            }
+        }
+
+        return asset('images/default-avatar.jpg');
     }
 
     public function avatarInitials(): string
@@ -135,5 +162,30 @@ class CapstoneExpert extends Authenticatable
         }
 
         return false;
+    }
+
+    public function getResolvedSchoolYearAttribute(): ?string
+    {
+        if (! $this->school_year) {
+            return null;
+        }
+
+        $parts = explode('-', $this->school_year);
+        if (count($parts) < 2) {
+            return null;
+        }
+
+        $lastTwo = (int) $parts[0];
+        $currentYear = (int) date('Y');
+        $currentLastTwo = $currentYear % 100;
+
+        if ($lastTwo === $currentLastTwo || $lastTwo === ($currentYear + 1) % 100) {
+            return $currentYear.'-'.($currentYear + 1);
+        }
+
+        $prefix = '20';
+        $startYear = (int) ($prefix.str_pad((string) $lastTwo, 2, '0', STR_PAD_LEFT));
+
+        return $startYear.'-'.($startYear + 1);
     }
 }

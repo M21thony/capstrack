@@ -113,6 +113,9 @@ class ExpertController extends Controller
 
                     DB::table('expert_roles')->where('expert_id', $existing->expert_id)->delete();
                     foreach ($validated['specialization'] as $roleName) {
+                        if ($roleName === 'capstone_adviser') {
+                            continue;
+                        }
                         $roleId = DB::table('roles')->where('role_name', $roleName)->value('role_id');
                         if ($roleId) {
                             DB::table('expert_roles')->insert([
@@ -151,13 +154,15 @@ class ExpertController extends Controller
                     'department' => $validated['course'] ?? null,
                     'approved_status' => false,
                     'rejection_reason' => null,
-                    'reject_attempts' => DB::raw('reject_attempts + 1'),
                     'max_teams' => $validated['max_teams'] ?? 4,
                     'is_admin' => in_array('capstone_adviser', $validated['specialization']),
                 ]);
 
                 DB::table('expert_roles')->where('expert_id', $existing->expert_id)->delete();
                 foreach ($validated['specialization'] as $roleName) {
+                    if ($roleName === 'capstone_adviser') {
+                        continue;
+                    }
                     $roleId = DB::table('roles')->where('role_name', $roleName)->value('role_id');
                     if ($roleId) {
                         DB::table('expert_roles')->insert([
@@ -198,12 +203,15 @@ class ExpertController extends Controller
                     'department' => $validated['course'] ?? null,
                     'approved_status' => false,
                     'max_teams' => $validated['max_teams'] ?? 4,
-                    'reject_attempts' => 1,
+                    'reject_attempts' => 0,
                     'is_admin' => in_array('capstone_adviser', $validated['specialization']),
                     'created_at' => now(),
                 ]);
 
                 foreach ($validated['specialization'] as $roleName) {
+                    if ($roleName === 'capstone_adviser') {
+                        continue;
+                    }
                     $roleId = DB::table('roles')->where('role_name', $roleName)->value('role_id');
                     if ($roleId) {
                         DB::table('expert_roles')->insert([

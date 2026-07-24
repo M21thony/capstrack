@@ -30,7 +30,7 @@ class TeamController extends Controller
         }
         $tabs->push('panel');
 
-        $totalTeams = $approvedAssignments->count();
+        $totalTeams = $approvedAssignments->unique('team_id')->count();
 
         return view('instructor.teams', [
             'grouped' => $grouped,

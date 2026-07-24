@@ -341,6 +341,37 @@ body.pi-page-body{
   margin-top:14px;
 }
 
+.pi-field-row{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:14px;
+  margin-bottom:14px;
+}
+
+.pi-field-row.full{
+  grid-template-columns:1fr;
+}
+
+.pi-field-row-3{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:14px;
+  margin-bottom:14px;
+}
+
+.pi-field-row .pi-field,
+.pi-field-row-3 .pi-field{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  margin-top:0;
+}
+
+.pi-field-row .pi-input,
+.pi-field-row-3 .pi-input{
+  width:100%;
+}
+
 .pi-label{
   display:block;
   font-size:12px;
@@ -526,4 +557,57 @@ select.pi-input{
   border-color:var(--border2);
   color:var(--text);
   background:var(--bg4);
+}
+
+/* ── RESPONSIVE: Tablet ── */
+@media (max-width: 768px) {
+  .pi-page { padding: 24px 16px 48px; }
+  .pi-card { padding: 28px 20px; }
+  .pi-title { font-size: 22px; }
+  .pi-wizard-actions .pi-btn { min-width: 100px !important; }
+}
+
+/* ── RESPONSIVE: Phone ── */
+@media (max-width: 480px) {
+  .pi-page { padding: 12px 10px 32px; }
+  .pi-header { flex-direction: column; align-items: flex-start; gap: 6px; margin-bottom: 20px; }
+  .pi-brand { gap: 10px; }
+  .pi-brand-icon { width: 34px; height: 34px; }
+  .pi-brand-icon svg { width: 17px; height: 17px; }
+  .pi-brand-name { font-size: 15px; }
+  .pi-brand-sub { font-size: 10px; }
+  .pi-link-back { font-size: 12px; }
+  .pi-card { padding: 20px 14px; border-radius: 12px; }
+  .pi-hero { margin-bottom: 20px; padding-bottom: 16px; }
+  .pi-title { font-size: 20px; letter-spacing: -0.01em; }
+  .pi-meta { font-size: 12px; }
+  .pi-intro { font-size: 13px; }
+  .pi-input { font-size: 16px !important; min-height: 48px; padding: 13px 12px !important; }
+  .pi-label { font-size: 13px !important; }
+  .pi-section-head { gap: 8px; }
+  .pi-step { width: 24px; height: 24px; font-size: 11px; }
+  .pi-section-title { font-size: 15px; }
+  .pi-hint { font-size: 12px; padding-left: 0 !important; }
+  .pi-wizard-progress { margin-bottom: 18px; }
+  .pi-wizard-dots { gap: 6px; }
+  .pi-wizard-dot { width: 8px; height: 8px; }
+  .pi-wizard-actions { flex-direction: column !important; gap: 8px !important; margin-top: 24px !important; padding-top: 18px !important; }
+  .pi-wizard-actions .pi-btn { width: 100% !important; min-width: 0 !important; padding: 14px 16px; font-size: 15px; }
+  .pi-wizard-actions #pi-back { margin-left: 0 !important; }
+  .pi-wizard-actions #pi-next,
+  .pi-wizard-actions #pi-submit { margin-left: 0 !important; }
+  .pi-avatar-grid { padding-left: 0 !important; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .pi-avatar-option { padding: 10px 6px; gap: 6px; }
+  .pi-avatar-option img { width: 44px; height: 44px; }
+  .pi-avatar-option span { font-size: 10px; }
+  .tutorial-note { padding: 10px 12px; font-size: 12px; border-left-width: 3px; gap: 8px; }
+  .tutorial-note svg { width: 16px; height: 16px; }
+  .pi-field:not(.pi-field-row *) { margin-top: 14px !important; }
+  .pi-field-row, .pi-field-row-3 { gap: 12px !important; margin-bottom: 12px !important; }
+  .pi-field-row-3 { grid-template-columns: 1fr !important; }
+  .pi-field-row { grid-template-columns: 1fr !important; }
+  .pi-row-2 { gap: 10px !important; }
+  .pi-btn { padding: 14px 16px; font-size: 15px; min-height: 48px; }
+  .pi-flash { font-size: 12px; padding: 10px 12px; margin-bottom: 16px; }
+  .pi-wizard-error { font-size: 12px; padding: 8px 10px; }
 }

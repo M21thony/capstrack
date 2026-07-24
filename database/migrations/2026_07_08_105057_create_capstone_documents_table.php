@@ -6,20 +6,21 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::create('capstone_documents', function (Blueprint $table) {
-            $table->id();
+            $table->id('file_id');
+            $table->unsignedBigInteger('student_id');
+            $table->string('file_name');
+            $table->string('file_path');
+            $table->unsignedInteger('file_version')->default(1);
+            $table->string('document_status')->default('pending');
             $table->timestamps();
+
+            $table->foreign('student_id')->references('student_id')->on('students')->cascadeOnDelete();
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('capstone_documents');

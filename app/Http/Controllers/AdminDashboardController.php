@@ -56,86 +56,68 @@ class AdminDashboardController extends Controller
 
     private function buildRecentActivity(): array
     {
-        $activities = [];
+        $activities = collect();
 
-        $recentSignups = CapstoneExpert::where('approved_status', false)
+        CapstoneExpert::where('approved_status', false)
             ->whereNull('rejection_reason')
             ->latest('created_at')
             ->take(5)
-            ->get();
+            ->get()
+            ->each(function ($e) use ($activities) {
+                $activities->push([
+                    'iconSvg' => '<svg viewBox="0 0 24 24" style="stroke:var(--accent3);width:13px;height:13px;fill:none;stroke-width:2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
+                    'text' => "<strong>{$e->first_name} {$e->last_name}</strong> requested an expert account",
+                    'time' => $e->created_at?->diffForHumans(),
+                ]);
+            });
 
-        foreach ($recentSignups as $e) {
-            $activities[] = [
-                'icon' => 'person',
-                'iconBg' => 'rgba(201,150,12,0.1)',
-                'iconColor' => 'var(--accent3)',
-                'iconViewBox' => '0 0 24 24',
-                'iconPath' => '<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',
-                'text' => "<strong>{$e->first_name} {$e->last_name}</strong> requested an expert account",
-                'time' => $e->created_at,
-            ];
-        }
-
-        $recentApprovals = CapstoneExpert::where('approved_status', true)
+        CapstoneExpert::where('approved_status', true)
             ->orderBy('created_at', 'desc')
             ->take(5)
-            ->get();
+            ->get()
+            ->each(function ($e) use ($activities) {
+                $activities->push([
+                    'iconSvg' => '<svg viewBox="0 0 24 24" style="stroke:var(--green);width:13px;height:13px;fill:none;stroke-width:2.5"><polyline points="20 6 9 17 4 12"/></svg>',
+                    'text' => "<strong>{$e->first_name} {$e->last_name}</strong> was approved as an expert",
+                    'time' => $e->created_at?->diffForHumans(),
+                ]);
+            });
 
-        foreach ($recentApprovals as $e) {
-            $activities[] = [
-                'icon' => 'check',
-                'iconBg' => 'var(--green-bg)',
-                'iconColor' => 'var(--green)',
-                'iconViewBox' => '0 0 24 24',
-                'iconPath' => '<polyline points="20 6 9 17 4 12"/>',
-                'text' => "<strong>{$e->first_name} {$e->last_name}</strong> was approved as an expert",
-                'time' => $e->created_at,
-            ];
-        }
-
-        $assignments = TeamExpertAssignment::with(['team', 'expert', 'role'])
+        TeamExpertAssignment::with(['team', 'expert', 'role'])
             ->latest('created_at')
             ->take(10)
-            ->get();
+            ->get()
+            ->each(function ($a) use ($activities) {
+                $teamName = $a->team?->team_name ?? 'Unknown';
+                $expertName = $a->expert ? "{$a->expert->first_name} {$a->expert->last_name}" : 'Unknown';
+                $roleName = $a->role?->role_name ?? '';
 
-        foreach ($assignments as $a) {
-            $teamName = $a->team?->team_name ?? 'Unknown';
-            $expertName = $a->expert ? "{$a->expert->first_name} {$a->expert->last_name}" : 'Unknown';
-            $roleName = $a->role?->role_name ?? '';
+                if ($a->status === 'pending') {
+                    $activities->push([
+                        'iconSvg' => '<svg viewBox="0 0 24 24" style="stroke:var(--accent3);width:13px;height:13px;fill:none;stroke-width:2.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',
+                        'text' => "<strong>Team {$teamName}</strong> applied for {$expertName} as ".Str::title($roleName),
+                        'time' => $a->created_at?->diffForHumans(),
+                    ]);
+                }
+            });
 
-            if ($a->status === 'pending') {
-                $activities[] = [
-                    'icon' => 'clipboard',
-                    'iconBg' => 'rgba(201,150,12,0.1)',
-                    'iconColor' => 'var(--accent3)',
-                    'iconViewBox' => '0 0 24 24',
-                    'iconPath' => '<rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>',
-                    'text' => "<strong>Team {$teamName}</strong> applied for {$expertName} as ".Str::title($roleName),
-                    'time' => $a->created_at,
-                ];
-            }
-        }
-
-        $logEntries = ActivityLog::latest('created_at')
+        ActivityLog::latest('created_at')
             ->take(10)
-            ->get();
+            ->get()
+            ->each(function ($log) use ($activities) {
+                $activities->push([
+                    'iconSvg' => '<svg viewBox="0 0 24 24" style="stroke:var(--blue);width:13px;height:13px;fill:none;stroke-width:2.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>',
+                    'text' => $log->description,
+                    'time' => $log->created_at?->diffForHumans(),
+                ]);
+            });
 
-        foreach ($logEntries as $log) {
-            $activities[] = [
-                'icon' => 'activity',
-                'iconBg' => 'var(--blue-bg)',
-                'iconColor' => 'var(--blue)',
-                'iconViewBox' => '0 0 24 24',
-                'iconPath' => '<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>',
-                'text' => $log->description,
-                'time' => $log->created_at,
-            ];
-        }
-
-        usort($activities, function ($a, $b) {
-            return $b['time']->timestamp <=> $a['time']->timestamp;
-        });
-
-        return array_slice($activities, 0, 10);
+        return $activities
+            ->sortByDesc(function ($a) {
+                return $a['time'] ?? '';
+            })
+            ->values()
+            ->take(10)
+            ->toArray();
     }
 }

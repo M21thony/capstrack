@@ -1,5 +1,8 @@
 <?php
 
+use App\Http\Controllers\Admin\AnnouncementController;
+use App\Http\Controllers\Admin\ArchiveController;
+use App\Http\Controllers\Admin\RubricController;
 use App\Http\Controllers\Api\ActivityLogController;
 use App\Http\Controllers\Api\AdminExpertController;
 use App\Http\Controllers\Api\AdminFinancialController;
@@ -32,6 +35,18 @@ Route::middleware(['web', 'expert.auth', 'expert.admin'])
             Route::put('/expense-posts/{expensePost}', [AdminFinancialController::class, 'updateExpensePost'])->name('expense-posts.update');
             Route::delete('/expense-posts/{expensePost}', [AdminFinancialController::class, 'destroyExpensePost'])->name('expense-posts.destroy');
         });
+
+        Route::post('/announcements', [AnnouncementController::class, 'store'])->name('api.admin.announcements.store');
+        Route::put('/announcements/{announcement}', [AnnouncementController::class, 'update'])->name('api.admin.announcements.update');
+        Route::delete('/announcements/{announcement}', [AnnouncementController::class, 'destroy'])->name('api.admin.announcements.destroy');
+
+        Route::post('/rubrics', [RubricController::class, 'store'])->name('api.admin.rubrics.store');
+        Route::put('/rubrics/{rubric}', [RubricController::class, 'update'])->name('api.admin.rubrics.update');
+        Route::delete('/rubrics/{rubric}', [RubricController::class, 'destroy'])->name('api.admin.rubrics.destroy');
+
+        Route::post('/archive', [ArchiveController::class, 'store'])->name('api.admin.archive.store');
+        Route::put('/archive/{archive}', [ArchiveController::class, 'update'])->name('api.admin.archive.update');
+        Route::delete('/archive/{archive}', [ArchiveController::class, 'destroy'])->name('api.admin.archive.destroy');
     });
 
 // Student API routes (session based auth for students)

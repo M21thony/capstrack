@@ -1311,6 +1311,16 @@ let currentStep = 1;
 const totalSteps = 3;
 let selectedRoles = [];
 
+function roleDisplayName(slug) {
+  const names = {
+    'capstone_adviser': 'CaPSA / Thesis Adviser',
+    'adviser': 'Adviser',
+    'consultant': 'Consultant',
+    'grammarian': 'Grammarian',
+  };
+  return names[slug] || slug;
+}
+
 function goNext() {
   if (!validateStep(currentStep)) return;
   if (currentStep === 3) { submitRequest(); return; }
@@ -1486,7 +1496,7 @@ function buildReview() {
     </div>
     <div class="review-item">
       <div class="review-key">Roles</div>
-      <div class="review-val"><div class="review-tags">${selectedRoles.map(r => `<span class="review-tag">${r}</span>`).join('')}</div></div>
+      <div class="review-val"><div class="review-tags">${selectedRoles.map(r => `<span class="review-tag">${roleDisplayName(r)}</span>`).join('')}</div></div>
     </div>
     <div class="review-item">
       <div class="review-key">Email Address</div>

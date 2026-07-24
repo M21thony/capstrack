@@ -1,9 +1,10 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Activity Log - CapsTRACK Admin</title>
+<meta name="csrf-token" content="{{ csrf_token() }}"/>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="{{ asset('css/admin.css') }}"/>
 </head>
@@ -14,119 +15,108 @@
   <div class="topbar">
     <div class="page-title">Activity Log</div>
     <div class="topbar-actions">
-      <div class="notif-btn">
-        <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-        <div class="notif-dot"></div>
-      </div>
-      <button class="btn btn-ghost-nav">
-        <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><path d="M12 15V3"/></svg>
-        Export CSV
-      </button>
+      @include('admin.partials.notification-dropdown')
     </div>
   </div>
 
   <div class="content">
-    <div class="row" style="margin-bottom:16px;gap:8px">
-      <input class="input" placeholder="Search by team, student, or action..." style="max-width:300px"/>
-      <select class="input" style="width:180px"><option>All Actions</option><option>submitted_document</option><option>booked_consultation</option><option>applied_expert</option><option>submitted_receipt</option><option>ran_duplication_check</option><option>updated_milestone</option></select>
-      <select class="input" style="width:160px"><option>All Teams</option><option>Team Nexus</option><option>Team Alpha</option><option>Team Prism</option><option>Team Syntax</option></select>
-      <select class="input" style="width:140px"><option>All Dates</option><option>Today</option><option>This Week</option><option>This Month</option></select>
-      <span style="flex:1"></span>
-    </div>
+    <form method="GET" class="row" style="margin-bottom:16px;gap:8px">
+      <input class="input" name="search" placeholder="Search by student or action..." style="max-width:300px" value="{{ request('search') }}"/>
+      <select class="input" name="type" style="width:180px" onchange="this.form.submit()">
+        <option value="">All Actions</option>
+        @foreach($types as $t)
+        <option value="{{ $t }}" {{ request('type') === $t ? 'selected' : '' }}>{{ $t }}</option>
+        @endforeach
+      </select>
+      <button class="btn btn-ghost" style="font-size:11px;padding:5px 12px">Filter</button>
+    </form>
     <div class="card" style="padding:0;overflow:hidden">
       <table class="table">
         <thead>
           <tr>
-            <th style="padding-left:20px">Time</th>
+            <th style="padding-left:20px">ID</th>
+            <th>Time</th>
             <th>Student</th>
             <th>Team</th>
             <th>Action</th>
-            <th>Reference</th>
+            <th>Description</th>
           </tr>
         </thead>
         <tbody>
+        @forelse($logs as $log)
           <tr>
-            <td style="padding-left:20px;font-family:'Space Mono',monospace;font-size:11px;color:var(--text3)">Apr 5 · 09:42</td>
-            <td class="td-main">Maria Andres</td>
-            <td><span class="badge badge-gold" style="font-size:10px">Team Nexus</span></td>
-            <td><span class="badge badge-green" style="font-size:10px">submitted_document</span></td>
-            <td style="font-size:12px;color:var(--text2)">Chapter 2 Draft · v1.0</td>
+            <td style="padding-left:20px"><a href="javascript:void(0)" onclick="openLogModal({{ $log->id }})" style="color:var(--accent);text-decoration:underline;font-size:12px;font-family:'Space Mono',monospace">#{{ $log->id }}</a></td>
+            <td style="font-family:'Space Mono',monospace;font-size:11px;color:var(--text3)">{{ $log->created_at->format('M j · H:i') }}</td>
+            <td class="td-main">{{ $log->student?->f_name }} {{ $log->student?->l_name }}</td>
+            <td><span class="badge badge-gold" style="font-size:10px">{{ $log->student?->currentTeam?->team_name ?? $log->metadata['team_name'] ?? 'N/A' }}</span></td>
+            <td><span class="badge badge-blue" style="font-size:10px">{{ $log->type }}</span></td>
+            <td style="font-size:12px;color:var(--text2)">{{ Str::limit($log->description, 60) }}</td>
           </tr>
-          <tr>
-            <td style="padding-left:20px;font-family:'Space Mono',monospace;font-size:11px;color:var(--text3)">Apr 5 · 08:15</td>
-            <td class="td-main">Juan Reyes</td>
-            <td><span class="badge badge-gold" style="font-size:10px">Team Nexus</span></td>
-            <td><span class="badge badge-blue" style="font-size:10px">booked_consultation</span></td>
-            <td style="font-size:12px;color:var(--text2)">Dr. Santos · May 12, 2PM</td>
-          </tr>
-          <tr>
-            <td style="padding-left:20px;font-family:'Space Mono',monospace;font-size:11px;color:var(--text3)">Apr 4 · 16:30</td>
-            <td class="td-main">Rico Peña</td>
-            <td><span class="badge badge-purple" style="font-size:10px">Team Prism</span></td>
-            <td><span class="badge badge-cyan" style="font-size:10px">applied_expert</span></td>
-            <td style="font-size:12px;color:var(--text2)">Applied for Dr. Lim as Consultant</td>
-          </tr>
-          <tr>
-            <td style="padding-left:20px;font-family:'Space Mono',monospace;font-size:11px;color:var(--text3)">Apr 4 · 14:10</td>
-            <td class="td-main">Lea Cruz</td>
-            <td><span class="badge badge-cyan" style="font-size:10px">Team Alpha</span></td>
-            <td><span class="badge badge-purple" style="font-size:10px">ran_duplication_check</span></td>
-            <td style="font-size:12px;color:var(--text2)">Pre-Proposal v2 · Result: 12%</td>
-          </tr>
-          <tr>
-            <td style="padding-left:20px;font-family:'Space Mono',monospace;font-size:11px;color:var(--text3)">Apr 4 · 11:00</td>
-            <td class="td-main">Maria Andres</td>
-            <td><span class="badge badge-gold" style="font-size:10px">Team Nexus</span></td>
-            <td><span class="badge badge-amber" style="font-size:10px">submitted_receipt</span></td>
-            <td style="font-size:12px;color:var(--text2)">Printing Fee · PHP 850.00</td>
-          </tr>
-          <tr>
-            <td style="padding-left:20px;font-family:'Space Mono',monospace;font-size:11px;color:var(--text3)">Apr 4 · 09:55</td>
-            <td class="td-main">Karl Torres</td>
-            <td><span class="badge badge-amber" style="font-size:10px">Team Syntax</span></td>
-            <td><span class="badge badge-green" style="font-size:10px">updated_milestone</span></td>
-            <td style="font-size:12px;color:var(--text2)">Chapter 2 → In Progress</td>
-          </tr>
-          <tr>
-            <td style="padding-left:20px;font-family:'Space Mono',monospace;font-size:11px;color:var(--text3)">Apr 3 · 15:20</td>
-            <td class="td-main">Anna Flores</td>
-            <td><span class="badge badge-purple" style="font-size:10px">Team Prism</span></td>
-            <td><span class="badge badge-green" style="font-size:10px">submitted_document</span></td>
-            <td style="font-size:12px;color:var(--text2)">Pre-Proposal Form · v1.0</td>
-          </tr>
-          <tr>
-            <td style="padding-left:20px;font-family:'Space Mono',monospace;font-size:11px;color:var(--text3)">Apr 3 · 10:40</td>
-            <td class="td-main">Lea Cruz</td>
-            <td><span class="badge badge-cyan" style="font-size:10px">Team Alpha</span></td>
-            <td><span class="badge badge-blue" style="font-size:10px">booked_consultation</span></td>
-            <td style="font-size:12px;color:var(--text2)">Prof. Medina · May 14, 10AM</td>
-          </tr>
-          <tr>
-            <td style="padding-left:20px;font-family:'Space Mono',monospace;font-size:11px;color:var(--text3)">Apr 3 · 08:30</td>
-            <td class="td-main">Rico Peña</td>
-            <td><span class="badge badge-purple" style="font-size:10px">Team Prism</span></td>
-            <td><span class="badge badge-amber" style="font-size:10px">submitted_receipt</span></td>
-            <td style="font-size:12px;color:var(--text2)">Transportation Fee · PHP 240.00</td>
-          </tr>
-          <tr>
-            <td style="padding-left:20px;font-family:'Space Mono',monospace;font-size:11px;color:var(--text3)">Apr 2 · 17:05</td>
-            <td class="td-main">Juan Reyes</td>
-            <td><span class="badge badge-gold" style="font-size:10px">Team Nexus</span></td>
-            <td><span class="badge badge-cyan" style="font-size:10px">applied_expert</span></td>
-            <td style="font-size:12px;color:var(--text2)">Applied for Prof. Ramos as Consultant</td>
-          </tr>
+        @empty
+          <tr><td colspan="6" style="text-align:center;padding:32px;color:var(--text3)">No activity logs found.</td></tr>
+        @endforelse
         </tbody>
       </table>
       <div style="padding:14px 20px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
-        <span style="font-size:12px;color:var(--text3)">Showing 10 of 284 records</span>
+        <span style="font-size:12px;color:var(--text3)">Showing {{ $logs->firstItem() }}–{{ $logs->lastItem() }} of {{ $logs->total() }} records</span>
         <div style="display:flex;gap:6px">
-          <button class="btn btn-ghost" style="font-size:11px;padding:5px 12px">← Prev</button>
-          <button class="btn btn-ghost" style="font-size:11px;padding:5px 12px">Next →</button>
+          @if($logs->onFirstPage())
+            <span class="btn btn-ghost" style="font-size:11px;padding:5px 12px;opacity:0.5">Prev</span>
+          @else
+            <a href="{{ $logs->previousPageUrl() }}" class="btn btn-ghost" style="font-size:11px;padding:5px 12px">Prev</a>
+          @endif
+          @if($logs->hasMorePages())
+            <a href="{{ $logs->nextPageUrl() }}" class="btn btn-ghost" style="font-size:11px;padding:5px 12px">Next</a>
+          @else
+            <span class="btn btn-ghost" style="font-size:11px;padding:5px 12px;opacity:0.5">Next</span>
+          @endif
         </div>
       </div>
     </div>
   </div>
 </div>
 
+<div class="modal-overlay" id="logModal" onclick="if(event.target===this)closeLogModal()">
+  <div class="modal-box" style="text-align:left;max-width:480px">
+    <div class="modal-title" style="text-align:center;margin-bottom:20px">Activity Log Details</div>
+    <div id="logModalBody" style="font-size:13px;color:var(--text2)">
+      <div style="margin-bottom:10px"><strong style="color:var(--text)">Time:</strong> <span id="modalTime"></span></div>
+      <div style="margin-bottom:10px"><strong style="color:var(--text)">Student:</strong> <span id="modalStudent"></span></div>
+      <div style="margin-bottom:10px"><strong style="color:var(--text)">Team:</strong> <span id="modalTeam"></span></div>
+      <div style="margin-bottom:10px"><strong style="color:var(--text)">Action:</strong> <span id="modalAction"></span></div>
+      <div style="margin-bottom:10px"><strong style="color:var(--text)">Description:</strong> <span id="modalDesc"></span></div>
+    </div>
+    <div class="modal-actions" style="margin-top:20px;justify-content:center">
+      <button class="btn btn-ghost" onclick="closeLogModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<style>
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1000;opacity:0;pointer-events:none;transition:opacity 0.2s}
+.modal-overlay.open{opacity:1;pointer-events:auto}
+.modal-box{background:#fff;border:1px solid var(--border);border-radius:16px;padding:32px;max-width:480px;width:90%}
+.modal-title{font-size:17px;font-weight:700;color:var(--text)}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end}
+</style>
+
+<script>
+const logData = {!! $logDataJson !!};
+
+function openLogModal(id) {
+    const log = logData.find(l => l.id === id);
+    if (!log) return;
+    document.getElementById('modalTime').textContent = log.time;
+    document.getElementById('modalStudent').textContent = log.student;
+    document.getElementById('modalTeam').textContent = log.team;
+    document.getElementById('modalAction').textContent = log.action;
+    document.getElementById('modalDesc').textContent = log.description;
+    document.getElementById('logModal').classList.add('open');
+}
+
+function closeLogModal() {
+    document.getElementById('logModal').classList.remove('open');
+}
+</script>
 </body>
 </html>

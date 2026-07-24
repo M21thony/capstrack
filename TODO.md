@@ -1,14 +1,11 @@
-- [x] Update request-account UI: Middle Initial -> Middle Name (review + submit payload formatting)
+# TODO - Capstrack
 
-- [x] Update request-account UI: Department -> Course (dropdown options: BSIT, BSCS, BSIS, BLIS; review + submit payload)
+- [x] Update `resources/views/admin/profile.blade.php`
+  - [x] Fix school year/semester dropdown labels so that when the system year becomes 2027, it shows `First Semester 2027-2028 (27-1)` and `Second Semester 2027-2028 (28-1)`.
+  - [x] Keep dropdown stored `value` format unchanged (e.g. `26-1`, `27-1`).
+- [x] Simplify admin profile information layout in `resources/views/admin/profile.blade.php` (more normal/simple + user-friendly).
+- [ ] Quick manual verification steps after changes (open admin profile, check dropdown and layout).
 
-- [x] Update request-account UI: Unlimited expertise tagging via input + Add button (prevent duplicates; becomes selected chip; included in submit + review)
-
-- [x] Update AccountRequestController: validate/store `course` request key but save into existing `department` DB column (DB column remains department)
-
-
-
-- [ ] Smoke test: load page, add custom expertise (Add button), submit, verify validation + stored fields
 
 
 

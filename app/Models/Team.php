@@ -15,6 +15,7 @@ class Team extends Model
     protected $fillable = [
         'team_name',
         'project_title',
+        'tags',
         'team_status',
         'leader_id',
         'is_confirmed',
@@ -24,6 +25,7 @@ class Team extends Model
     protected $casts = [
         'is_confirmed' => 'boolean',
         'member_count' => 'integer',
+        'tags' => 'array',
     ];
 
     public function members()
