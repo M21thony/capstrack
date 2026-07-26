@@ -27,6 +27,19 @@ class ScheduleController extends Controller
 
         $slots = DB::table('consultation_schedule')
             ->where('expert_id', Auth::guard('expert')->id())
+            ->leftJoin('consultation_booking', 'consultation_booking.schedule_id', '=', 'consultation_schedule.schedule_id')
+            ->leftJoin('students', 'students.student_id', '=', 'consultation_booking.student_id')
+            ->leftJoin('student_s_y', 'student_s_y.student_id', '=', 'students.student_id')
+            ->leftJoin('team', 'team.team_id', '=', 'student_s_y.team_id')
+            ->select(
+                'consultation_schedule.*',
+                'consultation_booking.booking_id',
+                'consultation_booking.booking_status',
+                'consultation_booking.created_at as booked_at',
+                'students.f_name as student_fname',
+                'students.l_name as student_lname',
+                'team.team_name'
+            )
             ->get();
 
         return response()->json($slots);
@@ -49,20 +62,27 @@ class ScheduleController extends Controller
 
         $nextDate = $this->getNextDateForDay($request->available_date);
 
+        $hasOverlap = DB::table('consultation_schedule')
+            ->where('expert_id', $expert->expert_id)
+            ->where('available_date', $request->available_date)
+            ->where('start_time', '<', $request->end_time)
+            ->where('end_time', '>', $request->start_time)
+            ->exists();
+
         $googleEventId = null;
 
-        if ($expert->google_token) {
+        if ($expert->google_token && ! $hasOverlap) {
             try {
                 $googleEventId = $this->calendar->createBookingEvent(
                     expertId: $expert->expert_id,
                     date: $nextDate,
                     startTime: $request->start_time,
                     endTime: $request->end_time,
-                    slotType: 'Consultation',
+                    slotType: $request->slot_type ? ucfirst($request->slot_type) : 'Consultation',
                     teamName: 'Available Slot',
                     studentEmail: $expert->email,
                     expertEmail: $expert->email,
-                    topic: "Weekly consultation slot — {$request->available_date}s",
+                    topic: "Weekly {$request->slot_type} slot — {$request->available_date}s",
                 );
             } catch (\Exception $e) {
                 \Log::warning('Google Calendar sync failed', ['error' => $e->getMessage()]);
@@ -75,7 +95,8 @@ class ScheduleController extends Controller
             'start_time' => $request->start_time,
             'end_time' => $request->end_time,
             'consultation_limit' => $request->consultation_limit,
-            'is_available' => true,
+            'slot_type' => $request->slot_type,
+            'is_available' => ! $hasOverlap,
             'google_event_id' => $googleEventId,
             'recur' => $request->recur ?? 'weekly',
             'specific_date' => $request->recur === 'once' ? $request->specific_date : null,
@@ -86,6 +107,7 @@ class ScheduleController extends Controller
         return response()->json([
             'schedule_id' => $id,
             'google_synced' => $googleEventId !== null,
+            'is_available' => ! $hasOverlap,
         ]);
     }
 
@@ -97,6 +119,7 @@ class ScheduleController extends Controller
             'start_time' => 'sometimes|date_format:H:i',
             'end_time' => 'sometimes|date_format:H:i|after:start_time',
             'consultation_limit' => 'sometimes|integer|min:1|max:10',
+            'slot_type' => 'sometimes|nullable|string',
             'is_available' => 'sometimes|boolean',
         ]);
 
@@ -116,6 +139,7 @@ class ScheduleController extends Controller
             'start_time' => $request->start_time,
             'end_time' => $request->end_time,
             'consultation_limit' => $request->consultation_limit,
+            'slot_type' => $request->slot_type,
             'is_available' => $request->has('is_available') ? $request->boolean('is_available') : null,
             'updated_at' => now(),
         ], fn ($v) => $v !== null);
@@ -140,11 +164,11 @@ class ScheduleController extends Controller
                     date: $nextDate,
                     startTime: $start,
                     endTime: $end,
-                    slotType: 'Consultation',
+                    slotType: ucfirst($request->slot_type ?? $slot->slot_type ?? 'Consultation'),
                     teamName: 'Available Slot',
                     studentEmail: $expert->email,
                     expertEmail: $expert->email,
-                    topic: "Weekly consultation slot — {$day}s",
+                    topic: "Weekly " . ($request->slot_type ?? $slot->slot_type ?? 'consultation') . " slot — {$day}s",
                 );
 
                 DB::table('consultation_schedule')

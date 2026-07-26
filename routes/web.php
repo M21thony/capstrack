@@ -22,6 +22,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RecruitmentController;
 use App\Http\Controllers\Student\ExpertController as StudentExpertController;
 use App\Http\Controllers\StudentResourcesController;
+use App\Http\Controllers\StudentConsultationController;
 use App\Http\Controllers\StudentFinancialController;
 use App\Http\Controllers\SubmissionController;
 use App\Http\Controllers\TeamController;
@@ -147,7 +148,9 @@ Route::middleware(['auth', 'no.cache', 'track.expert'])->group(function () {
             Route::post('/submission', [SubmissionController::class, 'store'])->name('student.submission.store');
             Route::view('/review', 'student.review')->name('student.review');
             Route::view('/duplication', 'student.duplication')->name('student.duplication');
-            Route::view('/consultation', 'student.consultation')->name('student.consultation');
+            Route::get('/consultation', [StudentConsultationController::class, 'index'])->name('student.consultation');
+            Route::post('/consultation/book', [StudentConsultationController::class, 'book'])->name('student.consultation.book');
+            Route::post('/consultation/cancel/{bookingId}', [StudentConsultationController::class, 'cancel'])->name('student.consultation.cancel');
             Route::view('/progress', 'student.progress')->name('student.progress');
             Route::get('/financial', [StudentFinancialController::class, 'index'])->name('student.financial');
             Route::post('/financial/submit', [StudentFinancialController::class, 'submitReceipt'])->name('student.financial.submit');

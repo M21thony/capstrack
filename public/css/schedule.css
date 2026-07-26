@@ -698,11 +698,13 @@ body.edit-mode-active .calendar-day.expert-view:hover {
 .cal-cell.is-blocked::before{content:'';position:absolute;inset:0;background:repeating-linear-gradient(-45deg,transparent,transparent 5px,rgba(220,38,38,0.08) 5px,rgba(220,38,38,0.08) 10px);pointer-events:none}
 .cal-cell.has-slot{background:rgba(201,168,44,0.03)}
 .cal-cell.past-day{opacity:0.45;cursor:not-allowed!important}
+.cal-cell.selected{background:rgba(29,78,216,0.06)!important;box-shadow:inset 0 0 0 2px rgba(29,78,216,0.35)!important}
 .cal-date-num{font-family:'Space Mono',monospace;font-size:11px;font-weight:700;color:var(--text3);line-height:1;margin-bottom:2px;width:22px;height:22px;display:flex;align-items:center;justify-content:center}
 
 /* ── ADD MODE INTERACTIONS ── */
 body.add-mode .cal-cell:not(.other-month):not(.is-blocked):not(.past-day){cursor:pointer}
 body.add-mode .cal-cell:not(.other-month):not(.is-blocked):not(.past-day):hover{background:rgba(201,168,44,0.08);box-shadow:inset 0 0 0 2px rgba(201,168,44,0.35)}
+body.add-mode .cal-cell.has-conflict{background:rgba(239,68,68,0.06)!important;box-shadow:inset 0 0 0 2px rgba(239,68,68,0.4)!important}
 body.block-mode .cal-cell:not(.other-month):not(.past-day){cursor:pointer}
 body.block-mode .cal-cell:not(.other-month):not(.past-day):hover{background:rgba(220,38,38,0.06);box-shadow:inset 0 0 0 2px rgba(220,38,38,0.3)}
 
@@ -712,7 +714,7 @@ body.block-mode .cal-cell:not(.other-month):not(.past-day):hover{background:rgba
 .cal-slot-pill.type-consult{background:rgba(29,78,216,0.1);color:var(--blue);border-left:2px solid var(--blue)}
 .cal-slot-pill.type-docreview{background:rgba(124,58,237,0.1);color:var(--purple);border-left:2px solid var(--purple)}
 .cal-slot-pill.type-defense{background:rgba(180,83,9,0.1);color:var(--amber);border-left:2px solid var(--amber)}
-.cal-slot-pill.is-booked{background:rgba(22,163,74,0.1)!important;color:var(--green)!important;border-left-color:var(--green)!important}
+.cal-slot-pill.is-booked{background:rgba(100,116,139,0.15)!important;color:#64748b!important;border-left-color:#64748b!important;text-decoration:line-through;text-decoration-color:rgba(100,116,139,0.4)}
 .blocked-label{font-size:9px;color:var(--red);font-weight:700;letter-spacing:0.5px;text-transform:uppercase;margin-top:auto}
 .cal-more{font-size:9px;color:var(--text3);font-weight:600;margin-top:2px}
 .cell-slot-count{position:absolute;top:6px;right:6px;width:16px;height:16px;border-radius:50%;background:var(--accent);color:#18191f;font-size:8px;font-weight:700;display:flex;align-items:center;justify-content:center;font-family:'Space Mono',monospace}
@@ -816,10 +818,12 @@ select.f-input{cursor:pointer}
 .recur-chip{display:inline-flex;align-items:center;gap:4px;font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;background:rgba(8,145,178,0.1);color:var(--cyan);border:1px solid rgba(8,145,178,0.2)}
 
 /* ── BLOCK CONFIRM ── */
-.block-confirm{background:#fff;border-radius:12px;width:340px;max-width:95vw;padding:22px;box-shadow:0 16px 48px rgba(0,0,0,0.2);border:1px solid var(--border);animation:schedModalIn 0.15s ease}
-.block-confirm-title{font-size:14px;font-weight:700;color:var(--text);margin-bottom:6px}
-.block-confirm-sub{font-size:13px;color:var(--text3);margin-bottom:18px;line-height:1.5}
+.block-confirm{background:#fff;border-radius:14px;width:380px;max-width:95vw;padding:22px;box-shadow:0 20px 60px rgba(0,0,0,0.25);border:1px solid var(--border);overflow:hidden;animation:schedModalIn 0.18s ease}
+.block-confirm-title{font-size:14px;font-weight:700;color:var(--text)}
+.block-confirm-sub{font-size:13px;color:var(--text3);line-height:1.5;margin-bottom:18px}
 .block-confirm-actions{display:flex;gap:8px;justify-content:flex-end}
+.block-confirm .btn-ghost{background:transparent;color:var(--text2);border:1.5px solid var(--border);font-family:'DM Sans',sans-serif}
+.block-confirm .btn-ghost:hover{background:var(--bg3);color:var(--text);border-color:var(--text3)}
 .btn-danger-solid{background:var(--red);color:#fff;border:none;font-weight:700}
 .btn-danger-solid:hover{background:#b91c1c}
 

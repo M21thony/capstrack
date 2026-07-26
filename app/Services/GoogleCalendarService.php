@@ -110,4 +110,18 @@ class GoogleCalendarService
             'sendNotifications' => true,
         ]);
     }
+
+    public function updateBookingEvent(int $expertId, string $googleEventId, string $teamName): void
+    {
+        $client = $this->getClient($expertId);
+        $service = new Calendar($client);
+
+        $event = $service->events->get('primary', $googleEventId);
+        $event->setSummary($teamName . ' — Booked');
+        $event->setDescription('Consultation booked by team: ' . $teamName);
+
+        $service->events->update('primary', $googleEventId, $event, [
+            'sendNotifications' => true,
+        ]);
+    }
 }
