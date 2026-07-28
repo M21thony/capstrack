@@ -156,7 +156,8 @@ Route::middleware(['auth', 'no.cache', 'track.expert'])->group(function () {
             Route::view('/duplication', 'student.duplication')->name('student.duplication');
             Route::view('/consultation', 'student.consultation')->name('student.consultation');
             Route::get('/progress', [StudentProgressController::class, 'index'])->name('student.progress');
-            Route::post('/progress/milestones', [StudentProgressController::class, 'store'])->name('student.progress.milestones.store');
+            Route::post('/progress/milestones/mark-done', [StudentProgressController::class, 'markDone'])->name('student.progress.milestones.mark-done');
+            Route::post('/progress/milestones/update-picture', [StudentProgressController::class, 'updatePicture'])->name('student.progress.milestones.update-picture');
             Route::get('/financial', [StudentFinancialController::class, 'index'])->name('student.financial');
             Route::post('/financial/submit', [StudentFinancialController::class, 'submitReceipt'])->name('student.financial.submit');
             Route::get('/resources', [StudentResourceController::class, 'index'])->name('student.resources');

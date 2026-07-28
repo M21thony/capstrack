@@ -13,6 +13,7 @@
 .target-opt:hover { border-color:var(--accent);color:var(--accent); }
 .target-opt.active { border-color:var(--accent);background:rgba(79,70,229,0.06);color:var(--accent);font-weight:600; }
 .target-opt input { display:none; }
+.target-opt.disabled { opacity:0.4;cursor:not-allowed;pointer-events:none; }
 
 /* @mention */
 .mention-wrapper { position:relative; }
@@ -43,8 +44,15 @@
 .modal-btn-cancel:hover{background:#f9fafb}
 .modal-btn-danger{background:#d92d20;color:#fff}
 .modal-btn-danger:hover{background:#b42318}
-#announcements-list::-webkit-scrollbar{width:4px}
-#announcements-list::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+/* Tabs */
+.tab-bar{display:flex;gap:4px;margin-left:12px}
+.tab-btn{padding:4px 14px;font-size:11px;font-weight:600;border:none;border-radius:6px;cursor:pointer;background:transparent;color:var(--text3);transition:all .15s}
+.tab-btn:hover{background:rgba(79,70,229,0.06);color:var(--accent)}
+.tab-btn.active{background:rgba(79,70,229,0.1);color:var(--accent)}
+.tab-content{display:none}
+.tab-content.active{display:block}
+.card.inactive{opacity:0.55;border-color:var(--border2)}.card.inactive:hover{opacity:0.75}
+.badge-gray{background:var(--bg4);color:var(--text3)}
 </style>
 </head>
 <body>
@@ -63,14 +71,51 @@
       <div style="display:flex;flex-direction:column;gap:14px">
         <div class="card" id="announcement-form-card">
           <div class="card-header">
-            <span class="card-title" id="ann-form-title">New Announcement</span>
-            <button onclick="resetAnnForm()" style="background:none;border:none;font-size:11px;color:var(--text3);cursor:pointer">Clear</button>
+            <span class="card-title">New Post</span>
+            <div class="tab-bar">
+              <button class="tab-btn active" data-tab="announcement" onclick="switchTab('announcement')">Announcement</button>
+              <button class="tab-btn" data-tab="milestone" onclick="switchTab('milestone')">Milestone</button>
+            </div>
+            <button onclick="resetForm()" style="background:none;border:none;font-size:11px;color:var(--text3);cursor:pointer">Clear</button>
           </div>
-          <div class="form-group">
-            <label class="label">Title</label>
-            <input class="input" id="ann-title" placeholder="e.g. Schedule for Title Defense" />
+
+          <div id="tab-announcement" class="tab-content active">
+            <div class="form-group">
+              <label class="label">Title</label>
+              <input class="input" id="ann-title" placeholder="e.g. Schedule for Title Defense" />
+            </div>
+            <div class="form-group">
+              <label class="label">Message</label>
+              <div class="mention-wrapper">
+                <textarea class="input" id="ann-message" style="min-height:220px" placeholder="Type your announcement here... Type @ to mention a team"></textarea>
+                <div class="mention-dropdown" id="mentionDropdown"></div>
+              </div>
+            </div>
           </div>
-          <div class="form-group">
+
+          <div id="tab-milestone" class="tab-content">
+            <div class="form-group">
+              <label class="label">Milestone</label>
+              <select class="input" id="ms-select" onchange="onMilestoneSelect()">
+                <option value="">-- Select Milestone --</option>
+                @foreach($milestones as $ms)
+                <option value="{{ $ms['title'] }}" data-desc="{{ $ms['description'] }}" data-due="{{ $ms['due_date_raw'] }}">
+                  {{ $ms['title'] }}
+                </option>
+                @endforeach
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="label">Due Date</label>
+              <input class="input" id="ms-due" type="date" />
+            </div>
+            <div class="form-group">
+              <label class="label">Message</label>
+              <textarea class="input" id="ms-message" style="min-height:220px" placeholder="Auto-filled from milestone description"></textarea>
+            </div>
+          </div>
+
+          <div class="form-group" id="priorityGroup">
             <label class="label">Priority</label>
             <select class="input" id="ann-priority">
               <option value="normal">Normal</option>
@@ -99,35 +144,46 @@
               <div class="target-group" id="sectionCheckboxes"></div>
             </div>
           </div>
-          <div class="form-group">
-            <label class="label">Message</label>
-            <div class="mention-wrapper">
-              <textarea class="input" id="ann-message" style="min-height:220px" placeholder="Type your announcement here... Type @ to mention a team"></textarea>
-              <div class="mention-dropdown" id="mentionDropdown"></div>
-            </div>
-          </div>
           <div style="display:flex;gap:8px;margin-top:16px">
-            <button class="btn" style="flex:1;justify-content:center;font-size:13px;background:var(--text);color:var(--navy-text);border:none" onclick="saveAnnouncement()">
+            <button class="btn" style="flex:1;justify-content:center;font-size:13px;background:var(--text);color:var(--navy-text);border:none" onclick="savePost()">
               <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
               <span id="ann-save-label">Post Announcement</span>
             </button>
-            <button class="btn btn-ghost" style="font-size:13px" id="ann-cancel-btn" onclick="resetAnnForm()">Cancel</button>
+            <button class="btn btn-ghost" style="font-size:13px" id="ann-cancel-btn" onclick="resetForm()">Cancel</button>
           </div>
         </div>
       </div>
 
-      <div style="display:flex;flex-direction:column;gap:12px;height:calc(100vh - 120px)">
-        <div style="display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
-          <span style="font-size:12px;color:var(--text3)">{{ $announcements->count() }} active announcements</span>
+      <div style="display:flex;flex-direction:column;gap:12px;height:calc(100vh - 120px);overflow-y:auto">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-shrink:0;gap:8px">
+          <span style="font-size:12px;color:var(--text3)">
+            @php $activeCount = $announcements->where('is_active', true)->count(); @endphp
+            {{ $activeCount }} active @if(!request()->query('show_all'))announcements @else(of {{ $announcements->count() }}) @endif
+          </span>
+          <a href="{{ request()->fullUrlWithQuery(['show_all' => request()->query('show_all') === '1' ? null : '1']) }}" class="btn btn-ghost" style="font-size:10px;padding:3px 10px">
+            {{ request()->query('show_all') === '1' ? 'Show Active Only' : 'Show All' }}
+          </a>
         </div>
 
-        <div id="announcements-list" style="flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:12px">
+        <div id="announcements-list" style="display:flex;flex-direction:column;gap:12px">
         @forelse($announcements as $announcement)
-          <div class="card announcement-card {{ $announcement->priority }}" data-id="{{ $announcement->id }}">
-            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:8px">
+          @php $annMs = $announcement->milestone; @endphp
+          <div class="card announcement-card {{ $announcement->priority }} {{ $announcement->is_active ? '' : 'inactive' }}" data-id="{{ $announcement->id }}"
+            @if($annMs)
+            data-ms-title="{{ $annMs->title }}" data-ms-due="{{ $annMs->due_date?->format('Y-m-d') }}" data-ms-id="{{ $annMs->id }}"
+            @endif
+          >
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:8px" @if($annMs) onclick="openReviewModal(this)" style="cursor:pointer" @endif>
               <div style="flex:1">
                 <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap">
+                  @if ($annMs)
+                  <span class="badge" style="font-size:10px;background:rgba(139,92,246,0.15);color:#7c3aed">Milestone</span>
+                  @else
                   <span class="badge {{ $announcement->priority === 'urgent' ? 'badge-red' : ($announcement->priority === 'important' ? 'badge-amber' : 'badge-gray') }}" style="font-size:10px">{{ ucfirst($announcement->priority) }}</span>
+                  @endif
+                  @if (!$announcement->is_active)
+                    <span class="badge" style="font-size:10px;background:var(--bg4);color:var(--text3)">Inactive</span>
+                  @endif
                   @if ($announcement->target_audience)
                     @foreach ((array) $announcement->target_audience as $ta)
                       @if (str_starts_with($ta, 'section:'))
@@ -142,6 +198,12 @@
                   @endif
                 </div>
                 <div class="ann-title" style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:4px">{{ $announcement->title }}</div>
+                @if ($annMs && $annMs->due_date)
+                  <div style="font-size:12px;color:var(--amber);font-weight:500;margin-bottom:4px">
+                    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="vertical-align:text-bottom;margin-right:2px"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                    Due {{ $annMs->due_date->format('M j, Y') }}
+                  </div>
+                @endif
                 <div class="ann-body" style="font-size:12px;color:var(--text2);line-height:1.5">{{ $announcement->body }}</div>
               </div>
             </div>
@@ -174,9 +236,26 @@
   </div>
 </div>
 
+{{-- Milestone Review Modal --}}
+<div class="modal-overlay" id="review-modal" onclick="if(event.target===this)closeReviewModal()">
+  <div class="modal-box" style="max-width:560px;max-height:80vh;overflow-y:auto">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px">
+      <div>
+        <div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:2px" id="review-post-title"></div>
+        <div style="font-size:11px;color:var(--text3)" id="review-post-meta"></div>
+      </div>
+      <button onclick="closeReviewModal()" style="background:none;border:none;font-size:18px;cursor:pointer;color:var(--text3);padding:0;line-height:1">&times;</button>
+    </div>
+    <div style="font-size:12px;color:var(--text2);line-height:1.5;white-space:pre-wrap;margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border)" id="review-post-body"></div>
+    <div id="review-submissions" style="display:flex;flex-direction:column;gap:14px"></div>
+  </div>
+</div>
+
 <script>
 var teamsList = @json($teams);
+var milestonesList = @json($milestones);
 var adminSections = @json($adminSections);
+var milestoneSubmissions = @json($milestoneSubmissions);
 var editingId = null;
 var deleteId = null;
 
@@ -419,26 +498,94 @@ mentionTextarea.addEventListener('blur', function() {
   setTimeout(closeMention, 200);
 });
 
+// ---- Tab Switching ----
+var currentTab = 'announcement';
+
+function switchTab(tab) {
+  editingId = null;
+  currentTab = tab;
+  document.querySelectorAll('.tab-btn').forEach(function(btn) {
+    btn.classList.toggle('active', btn.dataset.tab === tab);
+  });
+  document.querySelectorAll('.tab-content').forEach(function(el) {
+    el.classList.toggle('active', el.id === 'tab-' + tab);
+  });
+  var label = document.getElementById('ann-save-label');
+  label.textContent = tab === 'announcement' ? 'Post Announcement' : 'Post Milestone';
+
+  var isMilestone = tab === 'milestone';
+  document.getElementById('priorityGroup').style.display = isMilestone ? 'none' : '';
+  var disableAudience = isMilestone;
+  ['all', 'panel', 'expert'].forEach(function(v) {
+    var opt = document.querySelector('.target-opt[data-value="' + v + '"]');
+    if (!opt) return;
+    opt.classList.toggle('disabled', disableAudience);
+    var cb = opt.querySelector('input');
+    if (cb) cb.disabled = disableAudience;
+  });
+
+  if (tab === 'milestone') {
+    setTargetAudience(['student']);
+    document.getElementById('ms-select').value = '';
+    document.getElementById('ms-due').value = '';
+    document.getElementById('ms-message').value = '';
+  } else {
+    document.getElementById('ann-title').value = '';
+    document.getElementById('ann-message').value = '';
+    document.getElementById('ann-priority').value = 'normal';
+    setTargetAudience(['all']);
+  }
+}
+
+// ---- Milestone Tab ----
+function onMilestoneSelect() {
+  var sel = document.getElementById('ms-select');
+  var opt = sel.options[sel.selectedIndex];
+  if (!opt || !opt.value) {
+    document.getElementById('ms-due').value = '';
+    document.getElementById('ms-message').value = '';
+    return;
+  }
+  document.getElementById('ms-message').value = opt.dataset.desc || '';
+  document.getElementById('ms-due').value = opt.dataset.due || '';
+}
+
 // ---- Form ----
-function resetAnnForm() {
+function resetForm() {
   document.getElementById('ann-title').value = '';
-  document.getElementById('ann-priority').value = 'normal';
   document.getElementById('ann-message').value = '';
+  document.getElementById('ms-select').value = '';
+  document.getElementById('ms-due').value = '';
+  document.getElementById('ms-message').value = '';
+  document.getElementById('ann-priority').value = 'normal';
   setTargetAudience(['all']);
-  document.getElementById('ann-form-title').textContent = 'New Announcement';
   document.getElementById('ann-save-label').textContent = 'Post Announcement';
   document.getElementById('ann-cancel-btn').style.display = 'none';
   editingId = null;
+  switchTab('announcement');
 }
 
-function saveAnnouncement() {
-  var title = document.getElementById('ann-title').value.trim();
-  var body = document.getElementById('ann-message').value.trim();
+function savePost() {
   var priority = document.getElementById('ann-priority').value;
   var targetAudience = getTargetAudience();
+  var title, body;
 
-  if (!title) { document.getElementById('ann-title').focus(); return; }
-  if (!body) { document.getElementById('ann-message').focus(); return; }
+  var milestoneTitle, milestoneDueDate;
+
+  if (currentTab === 'announcement') {
+    title = document.getElementById('ann-title').value.trim();
+    body = document.getElementById('ann-message').value.trim();
+  } else {
+    var sel = document.getElementById('ms-select');
+    var opt = sel.options[sel.selectedIndex];
+    milestoneTitle = opt && opt.value ? opt.value : '';
+    title = milestoneTitle ? 'Milestone Reminder: ' + milestoneTitle : '';
+    body = document.getElementById('ms-message').value.trim();
+    milestoneDueDate = document.getElementById('ms-due').value || null;
+  }
+
+  if (!title) { return; }
+  if (!body) { return; }
   if (targetAudience.length === 0) { alert('Please select at least one target audience.'); return; }
 
   // Extract @mentions from body to determine team_id
@@ -453,6 +600,12 @@ function saveAnnouncement() {
   var url = editingId ? '/api/admin/announcements/' + editingId : '/api/admin/announcements';
   var method = editingId ? 'PUT' : 'POST';
 
+  var payload = { title: title, body: body, priority: priority, target_audience: targetAudience, team_id: teamId };
+  if (milestoneTitle) {
+    payload.milestone_title = milestoneTitle;
+    payload.milestone_due_date = milestoneDueDate;
+  }
+
   fetch(url, {
     method: method,
     headers: {
@@ -460,11 +613,11 @@ function saveAnnouncement() {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
     },
-    body: JSON.stringify({ title: title, body: body, priority: priority, target_audience: targetAudience, team_id: teamId }),
+    body: JSON.stringify(payload),
   })
     .then(function(r) { return r.json(); })
     .then(function() { location.reload(); })
-    .catch(function() { alert('Failed to save announcement.'); });
+    .catch(function() { alert('Failed to save post.'); });
 }
 
 function editAnnouncement(id) {
@@ -477,9 +630,27 @@ function editAnnouncement(id) {
   var audienceEls = card.querySelectorAll('.audience-badge');
   var teamMentionEl = card.querySelector('.team-mention-badge');
 
-  document.getElementById('ann-title').value = titleEl ? titleEl.textContent : '';
-  document.getElementById('ann-message').value = bodyEl ? bodyEl.textContent : '';
-  document.getElementById('ann-priority').value = badgeEl ? badgeEl.textContent.toLowerCase().trim() : 'normal';
+  var isMilestone = card.dataset.msTitle ? true : false;
+
+  if (isMilestone) {
+    switchTab('milestone');
+    var sel = document.getElementById('ms-select');
+    var msTitle = card.dataset.msTitle;
+    for (var i = 0; i < sel.options.length; i++) {
+      if (sel.options[i].value === msTitle) {
+        sel.selectedIndex = i;
+        break;
+      }
+    }
+    onMilestoneSelect();
+    document.getElementById('ms-due').value = card.dataset.msDue || '';
+    document.getElementById('ms-message').value = bodyEl ? bodyEl.textContent : '';
+  } else {
+    switchTab('announcement');
+    document.getElementById('ann-title').value = titleEl ? titleEl.textContent : '';
+    document.getElementById('ann-message').value = bodyEl ? bodyEl.textContent : '';
+    document.getElementById('ann-priority').value = badgeEl ? badgeEl.textContent.toLowerCase().trim() : 'normal';
+  }
 
   var audiences = [];
   audienceEls.forEach(function(el) { audiences.push(el.dataset.value || el.textContent.trim().toLowerCase()); });
@@ -490,15 +661,14 @@ function editAnnouncement(id) {
   if (teamName && bodyEl) {
     var bodyText = bodyEl.textContent;
     if (bodyText.indexOf('@' + teamName) === -1) {
-      document.getElementById('ann-message').value = bodyText + ' @' + teamName;
+      document.getElementById(isMilestone ? 'ms-message' : 'ann-message').value = bodyText + ' @' + teamName;
     }
   }
 
-  document.getElementById('ann-form-title').textContent = 'Edit Announcement';
-  document.getElementById('ann-save-label').textContent = 'Update Announcement';
+  document.getElementById('ann-save-label').textContent = isMilestone ? 'Update Milestone' : 'Update Announcement';
   document.getElementById('ann-cancel-btn').style.display = 'inline-flex';
   editingId = id;
-  document.getElementById('ann-title').scrollIntoView({ behavior: 'smooth' });
+  (isMilestone ? document.getElementById('ms-select') : document.getElementById('ann-title')).scrollIntoView({ behavior: 'smooth' });
 }
 
 function deleteAnnouncement(id) {
@@ -527,8 +697,97 @@ function confirmDelete() {
     .catch(function() { alert('Failed to delete.'); btn.textContent = 'Delete'; btn.disabled = false; });
 }
 
+// ---- Milestone Review Modal ----
+function openReviewModal(el) {
+  var card = el.closest('.announcement-card');
+  if (!card) return;
+  var msId = card.dataset.msId;
+  var msTitle = card.dataset.msTitle;
+  var due = card.dataset.msDue;
+  var annId = card.dataset.id;
+  var titleEl = card.querySelector('.ann-title');
+  var bodyEl = card.querySelector('.ann-body');
+
+  document.getElementById('review-post-title').textContent = msTitle || 'Milestone Post';
+  document.getElementById('review-post-meta').textContent = (due ? 'Due ' + due : '');
+  document.getElementById('review-post-body').textContent = bodyEl ? bodyEl.textContent.trim() : '';
+
+  var container = document.getElementById('review-submissions');
+  container.innerHTML = '';
+  var subs = msId && milestoneSubmissions[msId] ? milestoneSubmissions[msId] : [];
+  if (subs.length === 0) {
+    container.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text3);font-size:12px">No submissions yet.</div>';
+  } else {
+    subs.forEach(function(s) {
+      var div = document.createElement('div');
+      div.style.cssText = 'padding:10px 0;border-bottom:1px solid var(--border)';
+      if (subs.indexOf(s) === subs.length - 1) div.style.borderBottom = 'none';
+      var avatarHtml = s.student && s.student.avatar
+        ? '<img src="' + s.student.avatar + '" style="width:32px;height:32px;border-radius:50%;object-fit:cover;flex-shrink:0" />'
+        : '<div style="width:32px;height:32px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#18191f;flex-shrink:0">' + (s.student ? s.student.initials : '?') + '</div>';
+      var name = s.student ? s.student.f_name + ' ' + s.student.l_name : 'Unknown';
+      var team = s.team_name || 'Unknown Team';
+      var time = s.completed_at ? new Date(s.completed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+      var verifiedBadge = s.is_verified
+        ? '<span style="font-size:11px;font-weight:600;color:var(--green);white-space:nowrap">&#10003; Verified</span>'
+        : '<span style="font-size:11px;font-weight:600;color:var(--amber);white-space:nowrap">Pending</span>';
+      var verifyBtn = s.is_verified ? '' :
+        '<button onclick="verifySubmission(' + annId + ', ' + s.submission_id + ', true)" style="font-size:11px;padding:5px 12px;border-radius:6px;border:none;background:var(--green);color:#fff;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;flex-shrink:0">Mark as Verified</button>';
+      var imgHtml = s.file_url ? '<div style="margin-top:6px"><img src="' + s.file_url + '" style="max-width:200px;max-height:120px;object-fit:cover;border-radius:6px;border:1px solid var(--border);cursor:pointer" onclick="openSubmissionImage(\'' + s.file_url + '\')" /></div>' : '';
+      div.innerHTML =
+        '<div style="display:flex;align-items:center;gap:10px">' +
+          avatarHtml +
+          '<div style="flex:1;min-width:0;font-size:12px;color:var(--text);font-weight:500">' + name + ' <span style="font-weight:400;color:var(--text3)">&middot; ' + team + '</span>' + (time ? ' <span style="font-weight:400;color:var(--text3)">&middot; ' + time + '</span>' : '') + '</div>' +
+          verifiedBadge +
+          verifyBtn +
+        '</div>' +
+        imgHtml;
+      container.appendChild(div);
+    });
+  }
+  document.getElementById('review-modal').classList.add('open');
+}
+
+function verifySubmission(annId, submissionId, verified) {
+  fetch('/api/admin/announcements/' + annId + '/verify-submission', {
+    method: 'POST',
+    headers: {
+      'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    },
+    body: JSON.stringify({ submission_id: submissionId, verified: verified }),
+  })
+    .then(function(r) { return r.json(); })
+    .then(function() { location.reload(); })
+    .catch(function() { alert('Failed to verify submission.'); });
+}
+
+function closeReviewModal() {
+  document.getElementById('review-modal').classList.remove('open');
+}
+
+function openSubmissionImage(url) {
+  var overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;cursor:pointer';
+  overlay.onclick = function() { overlay.remove(); };
+  var img = document.createElement('img');
+  img.src = url;
+  img.style.cssText = 'max-width:90vw;max-height:90vh;object-fit:contain;border-radius:8px;box-shadow:0 8px 32px rgba(0,0,0,0.5)';
+  var closeBtn = document.createElement('button');
+  closeBtn.innerHTML = '&times;';
+  closeBtn.style.cssText = 'position:absolute;top:16px;right:16px;background:rgba(0,0,0,0.5);color:#fff;border:none;border-radius:50%;width:36px;height:36px;font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;padding:0';
+  closeBtn.onclick = function(e) { e.stopPropagation(); overlay.remove(); };
+  var wrapper = document.createElement('div');
+  wrapper.style.cssText = 'position:relative;display:inline-block';
+  wrapper.appendChild(img);
+  wrapper.appendChild(closeBtn);
+  overlay.appendChild(wrapper);
+  document.body.appendChild(overlay);
+}
+
 // Init
-setTargetAudience(['all']);
+resetForm();
 </script>
 </body>
 </html>

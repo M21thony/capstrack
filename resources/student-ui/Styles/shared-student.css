@@ -277,8 +277,12 @@
 [data-theme="dark"] .activity-item .act-icon{background:var(--bg4)!important}
 [data-theme="dark"] .activity-item .act-icon svg{stroke:var(--text2)!important}
 
-/* ── DARK MODE — milestone in-progress color ── */
-[data-theme="dark"] .gap-12 span[style*="8a6500"]{color:var(--text)!important}
+/* ── DARK MODE — milestone items ── */
+[data-theme="dark"] .m-item{border-bottom-color:var(--border2)!important}
+[data-theme="dark"] .m-icon-todo{background:var(--bg3)!important}
+[data-theme="dark"] .m-badge-todo{background:var(--bg3)!important;color:var(--text2)!important}
+[data-theme="dark"] .m-bar{background:var(--bg3)!important}
+[data-theme="dark"] .m-fill-todo{background:var(--border2)!important}
 
 /* ── DARK MODE — leader badge (soft highlight) ── */
 [data-theme="dark"] .badge[style*="#fef3c7"]{background:var(--bg4)!important;color:var(--accent)!important}

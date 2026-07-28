@@ -170,6 +170,17 @@ textarea.input{resize:vertical;min-height:80px}
 .act-body strong{color:var(--text);font-weight:600}
 .act-time{font-size:11px;color:var(--text3);margin-top:3px}
 
+/* ── ACTIVITY FEED (student style) ── */
+.activity-item{display:flex;align-items:flex-start;gap:14px;padding:12px 0;border-bottom:1px solid var(--border)}
+.activity-item:last-child{border-bottom:none}
+.act-scroll{max-height:260px;overflow-y:auto}
+.act-scroll::-webkit-scrollbar{width:4px}
+.act-scroll::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+.act-icon{width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.act-icon svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2.5}
+.act-text{flex:1;font-size:13px;color:var(--text2);line-height:1.5}
+.act-text strong{color:var(--text);font-weight:600}
+
 /* ── EXPERT CARD ── */
 .expert-row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)}
 .expert-row:last-child{border-bottom:none}
@@ -613,6 +624,17 @@ textarea.input{resize:vertical;min-height:80px}
 .act-body{flex:1;font-size:13px;color:var(--text2);line-height:1.5}
 .act-body strong{color:var(--text);font-weight:600}
 .act-time{font-size:11px;color:var(--text3);margin-top:3px}
+
+/* ── ACTIVITY FEED (student style) ── */
+.activity-item{display:flex;align-items:flex-start;gap:14px;padding:12px 0;border-bottom:1px solid var(--border)}
+.activity-item:last-child{border-bottom:none}
+.act-scroll{max-height:260px;overflow-y:auto}
+.act-scroll::-webkit-scrollbar{width:4px}
+.act-scroll::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+.act-icon{width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.act-icon svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2.5}
+.act-text{flex:1;font-size:13px;color:var(--text2);line-height:1.5}
+.act-text strong{color:var(--text);font-weight:600}
 
 /* ── EXPERT CARD ── */
 .expert-row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)}

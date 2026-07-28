@@ -7,6 +7,7 @@ use App\Models\Announcement;
 use App\Models\Milestone;
 use App\Models\Notification;
 use App\Models\Student;
+use App\Models\StudentMilestone;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
 use Illuminate\Http\Request;
@@ -151,15 +152,27 @@ class DashboardController extends Controller
             return 0;
         }
 
-        try {
-            $progressRecord = DB::table('capstone_progress')
-                ->where('team_id', $teamId)
-                ->first();
+        $titles = ['Capstone Team', 'Pre-Proposal', 'Title Defense', 'Pre-Oral Defense', 'Final Defense'];
 
-            return (int) ($progressRecord->progress_percentage ?? 0);
-        } catch (\Exception $e) {
+        // Get unique milestone IDs by title (take the first record per title)
+        $milestoneIds = Milestone::whereIn('title', $titles)
+            ->orderBy('id')
+            ->get()
+            ->groupBy('title')
+            ->map(fn ($group) => $group->first()->id)
+            ->values();
+
+        if ($milestoneIds->isEmpty()) {
             return 0;
         }
+
+        $doneCount = StudentMilestone::where('team_id', $teamId)
+            ->whereIn('milestone_id', $milestoneIds)
+            ->where('is_verified', true)
+            ->distinct('milestone_id')
+            ->count('milestone_id');
+
+        return (int) round(($doneCount / count($titles)) * 100);
     }
 
     private function buildActivities(Student $student, ?int $teamId): Collection
@@ -233,9 +246,46 @@ class DashboardController extends Controller
             return collect();
         }
 
-        return Milestone::where('team_id', $teamId)
-            ->orderBy('due_date')
-            ->get();
+        $titles = ['Capstone Team', 'Pre-Proposal', 'Title Defense', 'Pre-Oral Defense', 'Final Defense'];
+
+        // Get one milestone per title (take the first record per title)
+        $milestones = Milestone::whereIn('title', $titles)
+            ->orderBy('id')
+            ->get()
+            ->groupBy('title')
+            ->map(fn ($group) => $group->first())
+            ->values();
+
+        // Get completed (verified) milestone IDs for this team
+        $verifiedIds = StudentMilestone::where('team_id', $teamId)
+            ->whereIn('milestone_id', $milestones->pluck('id'))
+            ->where('is_verified', true)
+            ->pluck('milestone_id')
+            ->unique()
+            ->toArray();
+
+        // Get unverified (pending) milestone IDs for this team
+        $pendingIds = StudentMilestone::where('team_id', $teamId)
+            ->whereIn('milestone_id', $milestones->pluck('id'))
+            ->where('is_verified', false)
+            ->pluck('milestone_id')
+            ->unique()
+            ->toArray();
+
+        // Annotate each milestone with the actual status based on team submission
+        $milestones->each(function ($ms) use ($verifiedIds, $pendingIds) {
+            if (in_array($ms->id, $verifiedIds, true)) {
+                $ms->status = 'completed';
+            } elseif (in_array($ms->id, $pendingIds, true)) {
+                $ms->status = 'in_progress';
+            } elseif (! $ms->status || $ms->status === 'todo') {
+                $ms->status = 'todo';
+            }
+        });
+
+        return $milestones->sortBy(function ($ms) use ($titles) {
+            return array_search($ms->title, $titles, true);
+        })->values();
     }
 
     private function getAnnouncements(Student $student, ?StudentSchoolYear $studentSy): Collection
@@ -249,7 +299,7 @@ class DashboardController extends Controller
             return collect();
         }
 
-        return Announcement::with('admin', 'team')
+        return Announcement::with('admin', 'team', 'milestone')
             ->where('is_active', true)
             ->get()
             ->filter(function ($announcement) use ($studentSectionLabel, $student) {

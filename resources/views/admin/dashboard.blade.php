@@ -42,41 +42,45 @@
       <div class="card">
         <div class="card-header">
           <span class="card-title">Capstones Submitted per Year</span>
-          <span class="badge badge-gold">2018–2025</span>
+          <select onchange="window.location='?year='+this.value" style="font-family:'DM Sans',sans-serif;font-size:11px;font-weight:600;padding:4px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text2);outline:none;cursor:pointer;">
+            <option value="">All Years</option>
+            @foreach($years as $year)
+            <option value="{{ $year }}" @selected((string) $selectedYear === (string) $year)>{{ $year }}</option>
+            @endforeach
+          </select>
         </div>
         <div style="display:flex;align-items:flex-end;gap:6px;height:140px;padding-bottom:4px;position:relative">
-          <div style="display:flex;flex-direction:column;align-items:center;flex:1"><span style="font-size:9px;color:var(--text3);font-family:'Space Mono',monospace;margin-bottom:4px">28</span><div style="width:100%;max-width:30px;background:var(--bg4);border-radius:4px 4px 0 0;height:42px"></div><div style="font-size:9px;color:var(--text3);margin-top:4px">18</div></div>
-          <div style="display:flex;flex-direction:column;align-items:center;flex:1"><span style="font-size:9px;color:var(--text3);font-family:'Space Mono',monospace;margin-bottom:4px">34</span><div style="width:100%;max-width:30px;background:var(--bg4);border-radius:4px 4px 0 0;height:51px"></div><div style="font-size:9px;color:var(--text3);margin-top:4px">19</div></div>
-          <div style="display:flex;flex-direction:column;align-items:center;flex:1"><span style="font-size:9px;color:var(--text3);font-family:'Space Mono',monospace;margin-bottom:4px">22</span><div style="width:100%;max-width:30px;background:var(--bg4);border-radius:4px 4px 0 0;height:33px"></div><div style="font-size:9px;color:var(--text3);margin-top:4px">20</div></div>
-          <div style="display:flex;flex-direction:column;align-items:center;flex:1"><span style="font-size:9px;color:var(--text3);font-family:'Space Mono',monospace;margin-bottom:4px">41</span><div style="width:100%;max-width:30px;background:var(--bg4);border-radius:4px 4px 0 0;height:61px"></div><div style="font-size:9px;color:var(--text3);margin-top:4px">21</div></div>
-          <div style="display:flex;flex-direction:column;align-items:center;flex:1"><span style="font-size:9px;color:var(--text3);font-family:'Space Mono',monospace;margin-bottom:4px">45</span><div style="width:100%;max-width:30px;background:var(--bg4);border-radius:4px 4px 0 0;height:67px"></div><div style="font-size:9px;color:var(--text3);margin-top:4px">22</div></div>
-          <div style="display:flex;flex-direction:column;align-items:center;flex:1"><span style="font-size:9px;color:var(--text3);font-family:'Space Mono',monospace;margin-bottom:4px">52</span><div style="width:100%;max-width:30px;background:var(--bg4);border-radius:4px 4px 0 0;height:78px"></div><div style="font-size:9px;color:var(--text3);margin-top:4px">23</div></div>
-          <div style="display:flex;flex-direction:column;align-items:center;flex:1"><span style="font-size:9px;color:var(--text3);font-family:'Space Mono',monospace;margin-bottom:4px">58</span><div style="width:100%;max-width:30px;background:var(--bg4);border-radius:4px 4px 0 0;height:87px"></div><div style="font-size:9px;color:var(--text3);margin-top:4px">24</div></div>
-          <div style="display:flex;flex-direction:column;align-items:center;flex:1"><span style="font-size:9px;color:var(--accent3);font-family:'Space Mono',monospace;font-weight:700;margin-bottom:4px">48</span><div style="width:100%;max-width:30px;background:var(--accent);border-radius:4px 4px 0 0;height:72px"></div><div style="font-size:9px;color:var(--accent3);font-weight:700;margin-top:4px">25</div></div>
+          @forelse($yearlyArchive as $year => $count)
+          <div style="display:flex;flex-direction:column;align-items:center;flex:1">
+            <span style="font-size:9px;color:var(--text3);font-family:'Space Mono',monospace;margin-bottom:4px">{{ $count }}</span>
+            <div style="width:100%;max-width:30px;background:{{ (string) $selectedYear === (string) $year ? 'var(--accent)' : 'var(--bg4)' }};border-radius:4px 4px 0 0;height:{{ max(round(($count / $maxYearlyCount) * 90), 8) }}px"></div>
+            <div style="font-size:9px;color:{{ (string) $selectedYear === (string) $year ? 'var(--accent3)' : 'var(--text3)' }};font-weight:{{ (string) $selectedYear === (string) $year ? 700 : 400 }};margin-top:4px">{{ substr($year, 2) }}</div>
+          </div>
+          @empty
+          <div style="width:100%;text-align:center;font-size:12px;color:var(--text3);padding-bottom:20px;">No archived capstones yet.</div>
+          @endforelse
         </div>
       </div>
 
       <div class="card">
         <div class="card-header">
           <span class="card-title">Capstone Categories</span>
-          <span class="badge badge-gray">All Years</span>
+          <span class="badge badge-gray">Verified Teams</span>
         </div>
         <div class="donut-wrap" style="margin-top:8px">
           <svg class="donut" viewBox="0 0 36 36">
             <circle cx="18" cy="18" r="15.9" fill="none" stroke="#f0f2f5" stroke-width="3.8"/>
-            <circle cx="18" cy="18" r="15.9" fill="none" stroke="#1d4ed8" stroke-width="3.8" stroke-dasharray="30 70" stroke-dashoffset="25" transform="rotate(-90 18 18)"/>
-            <circle cx="18" cy="18" r="15.9" fill="none" stroke="#7c3aed" stroke-width="3.8" stroke-dasharray="22 78" stroke-dashoffset="-5" transform="rotate(-90 18 18)"/>
-            <circle cx="18" cy="18" r="15.9" fill="none" stroke="#16a34a" stroke-width="3.8" stroke-dasharray="18 82" stroke-dashoffset="-27" transform="rotate(-90 18 18)"/>
-            <circle cx="18" cy="18" r="15.9" fill="none" stroke="#b45309" stroke-width="3.8" stroke-dasharray="15 85" stroke-dashoffset="-45" transform="rotate(-90 18 18)"/>
-            <circle cx="18" cy="18" r="15.9" fill="none" stroke="#c9960c" stroke-width="3.8" stroke-dasharray="15 85" stroke-dashoffset="-60" transform="rotate(-90 18 18)"/>
-            <text x="18" y="20" text-anchor="middle" font-size="5" fill="#1e2128" font-family="Space Mono" font-weight="700">312</text>
+            @foreach($categories as $cat)
+            <circle cx="18" cy="18" r="15.9" fill="none" stroke="{{ $cat['color'] }}" stroke-width="3.8" stroke-dasharray="{{ $cat['dasharray'] }}" stroke-dashoffset="{{ $cat['dashoffset'] }}" transform="rotate(-90 18 18)"/>
+            @endforeach
+            <text x="18" y="20" text-anchor="middle" font-size="5" fill="#1e2128" font-family="Space Mono" font-weight="700">{{ $totalTags }}</text>
           </svg>
           <div class="donut-legend">
-            <div class="donut-item"><div class="donut-dot" style="background:#1d4ed8"></div><span style="flex:1">Web-Based</span><span style="font-family:'Space Mono',monospace;font-size:11px;color:var(--text2)">94 (30%)</span></div>
-            <div class="donut-item"><div class="donut-dot" style="background:#7c3aed"></div><span style="flex:1">Mobile</span><span style="font-family:'Space Mono',monospace;font-size:11px;color:var(--text2)">69 (22%)</span></div>
-            <div class="donut-item"><div class="donut-dot" style="background:#16a34a"></div><span style="flex:1">IoT</span><span style="font-family:'Space Mono',monospace;font-size:11px;color:var(--text2)">56 (18%)</span></div>
-            <div class="donut-item"><div class="donut-dot" style="background:#b45309"></div><span style="flex:1">AI / ML</span><span style="font-family:'Space Mono',monospace;font-size:11px;color:var(--text2)">47 (15%)</span></div>
-            <div class="donut-item"><div class="donut-dot" style="background:#c9960c"></div><span style="flex:1">Others</span><span style="font-family:'Space Mono',monospace;font-size:11px;color:var(--text2)">46 (15%)</span></div>
+            @forelse($categories as $cat)
+            <div class="donut-item"><div class="donut-dot" style="background:{{ $cat['color'] }}"></div><span style="flex:1">{{ $cat['name'] }}</span><span style="font-family:'Space Mono',monospace;font-size:11px;color:var(--text2)">{{ $cat['count'] }} ({{ $cat['percentage'] }}%)</span></div>
+            @empty
+            <div class="donut-item"><span style="color:var(--text3)">No verified team tags yet.</span></div>
+            @endforelse
           </div>
         </div>
       </div>

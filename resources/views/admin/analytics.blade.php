@@ -37,68 +37,23 @@
       <div class="card">
         <div class="card-header">
           <span class="card-title">Capstones Submitted Per Year</span>
-          <span class="badge badge-gold">8-Year Trend</span>
+          <select onchange="window.location='?year='+this.value" style="font-family:'DM Sans',sans-serif;font-size:11px;font-weight:600;padding:4px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text2);outline:none;cursor:pointer;">
+            <option value="">All Years</option>
+            @foreach($years as $year)
+            <option value="{{ $year }}" @selected((string) $selectedYear === (string) $year)>{{ $year }}</option>
+            @endforeach
+          </select>
         </div>
-        <!-- Removed center alignment and max-width constraints so bars fill the grid width -->
         <div style="display:flex;align-items:flex-end;width:100%;gap:10px;height:180px;padding:0 16px 8px 16px">
-          
-          <!-- 2018 -->
+          @forelse($yearlyArchive as $year => $count)
           <div style="display:flex;flex-direction:column;align-items:center;flex:1">
-            <span style="font-size:10px;color:var(--text3);font-family:'Space Mono',monospace;margin-bottom:2px">28</span>
-            <!-- Width is now 100% of the flex column -->
-            <div style="width:100%;background:var(--bg4);border-radius:4px 4px 0 0;height:63px"></div>
-            <div style="font-size:10px;color:var(--text3);margin-top:4px">18</div>
+            <span style="font-size:10px;color:var(--text3);font-family:'Space Mono',monospace;margin-bottom:2px">{{ $count }}</span>
+            <div style="width:100%;background:{{ (string) $selectedYear === (string) $year ? 'var(--accent)' : 'var(--bg4)' }};border-radius:4px 4px 0 0;height:{{ max(round(($count / $maxYearlyCount) * 130), 8) }}px"></div>
+            <div style="font-size:10px;color:{{ (string) $selectedYear === (string) $year ? 'var(--accent3)' : 'var(--text3)' }};font-weight:{{ (string) $selectedYear === (string) $year ? 700 : 400 }};margin-top:4px">{{ substr($year, 2) }}</div>
           </div>
-
-          <!-- 2019 -->
-          <div style="display:flex;flex-direction:column;align-items:center;flex:1">
-            <span style="font-size:10px;color:var(--text3);font-family:'Space Mono',monospace;margin-bottom:2px">34</span>
-            <div style="width:100%;background:var(--bg4);border-radius:4px 4px 0 0;height:76px"></div>
-            <div style="font-size:10px;color:var(--text3);margin-top:4px">19</div>
-          </div>
-
-          <!-- 2020 -->
-          <div style="display:flex;flex-direction:column;align-items:center;flex:1">
-            <span style="font-size:10px;color:var(--text3);font-family:'Space Mono',monospace;margin-bottom:2px">22</span>
-            <div style="width:100%;background:var(--bg4);border-radius:4px 4px 0 0;height:49px"></div>
-            <div style="font-size:10px;color:var(--text3);margin-top:4px">20</div>
-          </div>
-
-          <!-- 2021 -->
-          <div style="display:flex;flex-direction:column;align-items:center;flex:1">
-            <span style="font-size:10px;color:var(--text3);font-family:'Space Mono',monospace;margin-bottom:2px">41</span>
-            <div style="width:100%;background:var(--bg4);border-radius:4px 4px 0 0;height:92px"></div>
-            <div style="font-size:10px;color:var(--text3);margin-top:4px">21</div>
-          </div>
-
-          <!-- 2022 -->
-          <div style="display:flex;flex-direction:column;align-items:center;flex:1">
-            <span style="font-size:10px;color:var(--text3);font-family:'Space Mono',monospace;margin-bottom:2px">45</span>
-            <div style="width:100%;background:var(--bg4);border-radius:4px 4px 0 0;height:101px"></div>
-            <div style="font-size:10px;color:var(--text3);margin-top:4px">22</div>
-          </div>
-
-          <!-- 2023 -->
-          <div style="display:flex;flex-direction:column;align-items:center;flex:1">
-            <span style="font-size:10px;color:var(--text3);font-family:'Space Mono',monospace;margin-bottom:2px">52</span>
-            <div style="width:100%;background:var(--bg4);border-radius:4px 4px 0 0;height:116px"></div>
-            <div style="font-size:10px;color:var(--text3);margin-top:4px">23</div>
-          </div>
-
-          <!-- 2024 -->
-          <div style="display:flex;flex-direction:column;align-items:center;flex:1">
-            <span style="font-size:10px;color:var(--text3);font-family:'Space Mono',monospace;margin-bottom:2px">58</span>
-            <div style="width:100%;background:var(--bg4);border-radius:4px 4px 0 0;height:130px"></div>
-            <div style="font-size:10px;color:var(--text3);margin-top:4px">24</div>
-          </div>
-
-          <!-- 2025 (Current) -->
-          <div style="display:flex;flex-direction:column;align-items:center;flex:1">
-            <span style="font-size:10px;color:var(--accent3);font-family:'Space Mono',monospace;font-weight:700;margin-bottom:2px">48</span>
-            <div style="width:100%;background:var(--accent);border-radius:4px 4px 0 0;height:108px"></div>
-            <div style="font-size:10px;color:var(--accent3);font-weight:700;margin-top:4px">25</div>
-          </div>
-
+          @empty
+          <div style="width:100%;text-align:center;font-size:12px;color:var(--text3);padding-bottom:40px;">No archived capstones yet.</div>
+          @endforelse
         </div>
       </div>
     </div>

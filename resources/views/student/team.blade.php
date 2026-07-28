@@ -31,6 +31,24 @@
   [data-theme="dark"] #editTeamModal .edit-team-save-btn:hover { background: #343a47 !important; }
   [data-theme="dark"] #editTeamModal .edit-team-cancel-btn { background: #1e222b !important; color: #fff !important; border-color: rgba(255,255,255,0.08) !important; }
   [data-theme="dark"] #editTeamModal .edit-team-cancel-btn:hover { background: #262b36 !important; }
+
+  [data-theme="dark"] .expert-removed-item { border-bottom-color: var(--border) !important; }
+  [data-theme="dark"] #expertRemovedModal > div { background: var(--bg2) !important; box-shadow: 0 24px 60px rgba(0,0,0,0.5) !important; }
+  [data-theme="dark"] #expertRemovedModal h3 { color: var(--text) !important; }
+  [data-theme="dark"] #expertRemovedContent { color: var(--text2) !important; }
+  [data-theme="dark"] .expert-removed-item > div:first-child { color: var(--text) !important; }
+  [data-theme="dark"] .expert-removed-item > div:last-child { color: var(--text3) !important; }
+  [data-theme="dark"] #expertRemovedOkBtn { background: var(--bg4) !important; color: var(--text) !important; }
+
+  [data-theme="dark"] #ccm-card { background: var(--bg2) !important; box-shadow: 0 24px 60px rgba(0,0,0,0.5) !important; }
+  [data-theme="dark"] #ccm-title { color: var(--text) !important; }
+  [data-theme="dark"] #ccm-message { color: var(--text2) !important; }
+  [data-theme="dark"] #ccm-cancel { border-color: var(--border) !important; background: var(--bg3) !important; color: var(--text2) !important; }
+  [data-theme="dark"] #ccm-cancel:hover { background: var(--bg4) !important; }
+
+  [data-theme="dark"] #editTeamModal div[style*="background:#fef3c7"] { background: rgba(245,158,11,0.12) !important; border-color: rgba(245,158,11,0.25) !important; color: var(--amber) !important; }
+  [data-theme="dark"] #editTeamModal div[style*="color:#6b7280"] { color: var(--text2) !important; }
+
   .tag-suggestions-box { position: absolute; bottom: 100%; left: 0; width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; max-height: 160px; overflow-y: auto; z-index: 10; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 4px; }
   .tag-suggestion-item { padding: 10px 14px; font-size: 13px; color: var(--text); cursor: pointer; transition: background 0.1s; }
   .tag-suggestion-item:hover { background: var(--bg2); color: var(--blue); }
@@ -783,6 +801,8 @@
   #expertRemovedContent::-webkit-scrollbar { width:4px; }
   #expertRemovedContent::-webkit-scrollbar-thumb { background:#e5e7eb; border-radius:4px; }
   #expertRemovedOkBtn:hover { background:#374151; }
+  [data-theme="dark"] #expertRemovedContent::-webkit-scrollbar-thumb { background:var(--border) !important; }
+  [data-theme="dark"] #expertRemovedOkBtn:hover { background:var(--navy-hover) !important; }
   .selected-tag{display:inline-flex;align-items:center;gap:4px;padding:4px 8px;border-radius:6px;font-size:11px;font-weight:500;background:var(--blue-bg);border:1px solid rgba(29,78,216,0.2);color:var(--blue)}
   [data-theme="dark"] .google-btn{color:#fff!important;background:var(--bg3)!important}
   [data-theme="dark"] .google-btn:hover{color:#fff!important;background:var(--bg4)!important;border-color:var(--border)!important}

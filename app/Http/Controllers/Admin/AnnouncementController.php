@@ -4,18 +4,24 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Announcement;
+use App\Models\Milestone;
 use App\Models\Notification;
 use App\Models\Student;
+use App\Models\StudentMilestone;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class AnnouncementController extends Controller
 {
     public function index()
     {
-        $announcements = Announcement::with('admin', 'team')
+        $showAll = request()->query('show_all') === '1';
+
+        $announcements = Announcement::with('admin', 'team', 'milestone')
+            ->when(! $showAll, fn ($q) => $q->where('is_active', true))
             ->orderByDesc('created_at')
             ->get();
 
@@ -60,10 +66,50 @@ class AnnouncementController extends Controller
             $teams = $teams->unique('team_id')->values();
         }
 
+        $milestoneTitles = ['Capstone Team', 'Pre-Proposal', 'Title Defense', 'Pre-Oral Defense', 'Final Defense'];
+        $allMs = Milestone::whereIn('title', $milestoneTitles)
+            ->orderBy('due_date')
+            ->get(['id', 'title', 'description', 'due_date']);
+
+        $grouped = $allMs->groupBy('title');
+        $milestones = collect();
+        foreach ($milestoneTitles as $title) {
+            $first = $grouped->get($title)?->first();
+            $milestones->push([
+                'id' => $first?->id,
+                'title' => $title,
+                'description' => $first?->description,
+                'due_date' => $first?->due_date?->format('M j, Y'),
+                'due_date_raw' => $first?->due_date?->format('Y-m-d'),
+            ]);
+        }
+
+        $milestoneSubmissions = StudentMilestone::with('student', 'team')
+            ->get()
+            ->groupBy('milestone_id')
+            ->map(function ($items) {
+                return $items->map(fn ($sm) => [
+                    'milestone_id' => $sm->milestone_id,
+                    'file_url' => $sm->file_path ? Storage::url($sm->file_path) : null,
+                    'completed_at' => $sm->completed_at?->toISOString(),
+                    'submission_id' => $sm->id,
+                    'is_verified' => $sm->is_verified,
+                    'student' => $sm->student ? [
+                        'f_name' => $sm->student->f_name,
+                        'l_name' => $sm->student->l_name,
+                        'avatar' => $sm->student->avatarUrl(),
+                        'initials' => $sm->student->avatarInitials(),
+                    ] : null,
+                    'team_name' => $sm->team?->team_name,
+                ]);
+            });
+
         return view('admin.announcements', [
             'announcements' => $announcements,
             'teams' => $teams,
             'adminSections' => $adminSections,
+            'milestones' => $milestones,
+            'milestoneSubmissions' => $milestoneSubmissions,
         ]);
     }
 
@@ -76,7 +122,21 @@ class AnnouncementController extends Controller
             'target_audience' => 'required|array',
             'target_audience.*' => 'string',
             'team_id' => 'nullable|integer|exists:team,team_id',
+            'milestone_title' => 'nullable|string|max:255',
+            'milestone_due_date' => 'nullable|date',
         ]);
+
+        // Create milestone record if posting from Milestone tab
+        if ($data['milestone_title'] ?? null) {
+            $milestone = Milestone::create([
+                'title' => $data['milestone_title'],
+                'description' => $data['body'],
+                'due_date' => $data['milestone_due_date'] ?? null,
+                'status' => 'todo',
+                'team_id' => $data['team_id'] ?? null,
+            ]);
+            $data['milestone_id'] = $milestone->id;
+        }
 
         $announcement = Announcement::create([
             ...$data,
@@ -168,7 +228,33 @@ class AnnouncementController extends Controller
             'target_audience' => 'required|array',
             'target_audience.*' => 'string',
             'team_id' => 'nullable|integer|exists:team,team_id',
+            'milestone_title' => 'nullable|string|max:255',
+            'milestone_due_date' => 'nullable|date',
         ]);
+
+        if ($data['milestone_title'] ?? null) {
+            $data['title'] = 'Milestone Reminder: '.$data['milestone_title'];
+        }
+
+        $announcement->load('milestone');
+
+        if ($announcement->milestone && ($data['milestone_title'] ?? null)) {
+            $announcement->milestone->update([
+                'title' => $data['milestone_title'],
+                'description' => $data['body'],
+                'due_date' => $data['milestone_due_date'] ?? null,
+                'team_id' => $data['team_id'] ?? null,
+            ]);
+        } elseif ($data['milestone_title'] ?? null) {
+            $milestone = Milestone::create([
+                'title' => $data['milestone_title'],
+                'description' => $data['body'],
+                'due_date' => $data['milestone_due_date'] ?? null,
+                'status' => 'todo',
+                'team_id' => $data['team_id'] ?? null,
+            ]);
+            $data['milestone_id'] = $milestone->id;
+        }
 
         $announcement->update($data);
 
@@ -177,8 +263,38 @@ class AnnouncementController extends Controller
 
     public function destroy(Announcement $announcement)
     {
+        $announcement->load('milestone');
+
+        if ($announcement->milestone) {
+            $announcement->milestone->delete();
+        }
+
         $announcement->delete();
 
         return response()->json(['success' => true]);
+    }
+
+    public function verifySubmission(Request $request, Announcement $announcement)
+    {
+        $data = $request->validate([
+            'submission_id' => 'required|integer|exists:student_milestones,id',
+            'verified' => 'required|boolean',
+        ]);
+
+        $submission = StudentMilestone::findOrFail($data['submission_id']);
+
+        $submission->update([
+            'is_verified' => $data['verified'],
+            'verified_at' => $data['verified'] ? now() : null,
+        ]);
+
+        $milestone = $announcement->milestone;
+        if ($milestone && $data['verified']) {
+            $milestone->update(['status' => 'completed']);
+        } elseif ($milestone && ! $data['verified']) {
+            $milestone->update(['status' => 'in_progress']);
+        }
+
+        return response()->json(['success' => true, 'is_verified' => $data['verified']]);
     }
 }

@@ -32,6 +32,56 @@ class AdminDashboardController extends Controller
             ->count();
         $archivedCapstones = ArchivedDocument::count();
 
+        $selectedYear = request('year');
+        $years = ArchivedDocument::selectRaw('DISTINCT academic_year')
+            ->orderBy('academic_year', 'desc')
+            ->pluck('academic_year');
+        $yearlyQuery = ArchivedDocument::selectRaw('academic_year, COUNT(*) as total')
+            ->groupBy('academic_year')
+            ->orderBy('academic_year');
+        if ($selectedYear) {
+            $yearlyQuery->where('academic_year', $selectedYear);
+        }
+        $yearlyArchive = $yearlyQuery->pluck('total', 'academic_year');
+        $maxYearlyCount = $yearlyArchive->max() ?: 1;
+
+        $verifiedTeams = Team::where('is_confirmed', true)->get();
+        $tagCounts = [];
+        foreach ($verifiedTeams as $team) {
+            if ($team->tags && is_array($team->tags)) {
+                foreach ($team->tags as $tag) {
+                    $tag = trim($tag);
+                    if ($tag !== '') {
+                        $tagCounts[$tag] = ($tagCounts[$tag] ?? 0) + 1;
+                    }
+                }
+            }
+        }
+        arsort($tagCounts);
+        $totalTags = array_sum($tagCounts);
+        $colorPalette = ['#1d4ed8', '#7c3aed', '#16a34a', '#b45309', '#c9960c', '#0891b2', '#dc2626', '#ca8a04', '#9333ea', '#0d9488'];
+        $topTags = array_slice($tagCounts, 0, 10, true);
+        $otherCount = $totalTags - array_sum($topTags);
+        if ($otherCount > 0) {
+            $topTags['Others'] = $otherCount;
+        }
+        $categories = [];
+        $cumulativeOffset = 25;
+        $i = 0;
+        foreach ($topTags as $tag => $count) {
+            $pct = $totalTags > 0 ? round(($count / $totalTags) * 100) : 0;
+            $categories[] = [
+                'name' => $tag,
+                'count' => $count,
+                'percentage' => $pct,
+                'color' => $colorPalette[$i % count($colorPalette)],
+                'dasharray' => max($pct, 1).' '.max(100 - $pct, 0),
+                'dashoffset' => -$cumulativeOffset,
+            ];
+            $cumulativeOffset += $pct;
+            $i++;
+        }
+
         $pendingExperts = CapstoneExpert::where('approved_status', false)
             ->whereNull('rejection_reason')
             ->with(['roles', 'expertise'])
@@ -51,6 +101,12 @@ class AdminDashboardController extends Controller
             'pendingExperts',
             'recentActivity',
             'archivedCapstones',
+            'categories',
+            'totalTags',
+            'years',
+            'yearlyArchive',
+            'maxYearlyCount',
+            'selectedYear',
         ));
     }
 

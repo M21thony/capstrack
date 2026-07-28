@@ -113,15 +113,16 @@
             };
             $adminAvatar = $announcement->admin?->avatarUrl() ?? asset('images/default-avatar.jpg');
           @endphp
-          <div class="ann-item" data-priority="{{ $announcement->priority }}" onclick="openAnnModal(this)"
-               data-title="{{ $announcement->title }}"
-               data-body="{{ $announcement->body }}"
-               data-priority="{{ $announcement->priority }}"
-               data-admin-name="{{ $announcement->admin?->name ?? 'Admin' }}"
-               data-admin-avatar="{{ $adminAvatar }}"
-               data-date="{{ $announcement->created_at->format('M j, Y · g:i A') }}"
-               data-sections="{{ json_encode(array_values(array_filter(array_map(fn($ta) => str_starts_with((string) $ta, 'section:') ? substr((string) $ta, 8) : null, (array) $announcement->target_audience)))) }}"
-               data-team="{{ $announcement->team?->team_name ?? '' }}">
+           <div class="ann-item" data-priority="{{ $announcement->priority }}" onclick="openAnnModal(this)"
+                data-title="{{ $announcement->title }}"
+                data-body="{{ $announcement->body }}"
+                data-priority="{{ $announcement->priority }}"
+                data-admin-name="{{ $announcement->admin?->name ?? 'Admin' }}"
+                data-admin-avatar="{{ $adminAvatar }}"
+                data-date="{{ $announcement->created_at->format('M j, Y · g:i A') }}"
+                data-sections="{{ json_encode(array_values(array_filter(array_map(fn($ta) => str_starts_with((string) $ta, 'section:') ? substr((string) $ta, 8) : null, (array) $announcement->target_audience)))) }}"
+                data-team="{{ $announcement->team?->team_name ?? '' }}"
+                data-milestone-due="{{ $announcement->milestone?->due_date?->format('M j, Y') ?? '' }}">
             <div class="ann-priority-bar" style="background:{{ $priorityColor }}"></div>
             <div class="ann-content">
               <div class="ann-header">
@@ -132,6 +133,17 @@
                   @endif
                 </div>
               </div>
+              @if ($announcement->milestone)
+                <div style="display:flex;align-items:center;gap:6px;margin:4px 0 6px;font-size:12px;flex-wrap:wrap">
+                  <span class="ann-tag" style="background:rgba(139,92,246,0.15);color:#7c3aed">Milestone</span>
+                  @if ($announcement->milestone->due_date)
+                    <span style="color:var(--amber);font-weight:500">
+                      <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="vertical-align:text-bottom;margin-right:2px"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                      Due {{ $announcement->milestone->due_date->format('M j, Y') }}
+                    </span>
+                  @endif
+                </div>
+              @endif
               <div class="ann-body">{{ $announcement->body }}</div>
               <div class="ann-footer">
                 <div class="ann-sender">
@@ -162,13 +174,14 @@
 
     {{-- Announcement Modal --}}
     <div class="ann-modal-overlay" id="annModal" onclick="if(event.target===this)closeAnnModal()">
-      <div class="ann-modal-box">
-        <button class="ann-modal-close" onclick="closeAnnModal()">&times;</button>
-        <div class="ann-modal-priority" id="annModalPriority"></div>
-        <div class="ann-modal-title" id="annModalTitle"></div>
-        <div class="ann-modal-body" id="annModalBody"></div>
-        <div class="ann-modal-tags" id="annModalTags"></div>
-        <div class="ann-modal-footer">
+        <div class="ann-modal-box">
+          <button class="ann-modal-close" onclick="closeAnnModal()">&times;</button>
+          <div class="ann-modal-priority" id="annModalPriority"></div>
+          <div class="ann-modal-title" id="annModalTitle"></div>
+          <div class="ann-modal-due" id="annModalDue" style="font-size:13px;color:var(--amber);font-weight:500;margin-bottom:10px;display:none"></div>
+          <div class="ann-modal-body" id="annModalBody"></div>
+          <div class="ann-modal-tags" id="annModalTags"></div>
+          <div class="ann-modal-footer">
           <div class="ann-modal-sender">
             <img class="ann-avatar" id="annModalAvatar" src="" alt="">
             <span id="annModalName"></span>
@@ -184,23 +197,41 @@
       <x-dashboard.info-card
         title="Milestone Progress"
         :badge="$milestones->where('status', 'in_progress')->count() > 0 ? 'In Progress' : null"
-        :badgeClass="'badge-blue'"
+        :badgeClass="'badge-accent'"
         :empty="$milestones->isEmpty()"
         emptyMessage="No milestones yet. Track your progress from the Progress page."
       >
-        <div class="gap-12">
+        <div class="milestone-list">
           @foreach ($milestones->take(4) as $milestone)
             @php
               $pct = $milestone->status === 'completed' ? 100 : ($milestone->status === 'in_progress' ? 50 : 0);
-              $pctColor = $milestone->status === 'completed' ? 'var(--green)' : ($milestone->status === 'in_progress' ? '#8a6500' : 'var(--text3)');
-              $barColor = $milestone->status === 'completed' ? 'progress-green' : 'progress-blue';
+              $isDone = $milestone->status === 'completed';
+              $isActive = $milestone->status === 'in_progress';
             @endphp
-            <div>
-              <div class="row" style="margin-bottom:6px;justify-content:space-between">
-                <span style="font-size:12px;color:var(--text2)">{{ $milestone->title }}</span>
-                <span style="font-size:11px;color:{{ $pctColor }}">{{ $pct }}%</span>
+            <div class="m-item">
+              <div class="m-icon @if($isDone) m-icon-done @elseif($isActive) m-icon-active @else m-icon-todo @endif">
+                @if ($isDone)
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                @elseif ($isActive)
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                @else
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/></svg>
+                @endif
               </div>
-              <div class="progress-bar"><div class="progress-fill {{ $barColor }}" style="width:{{ $pct }}%"></div></div>
+              <div class="m-body">
+                <div class="m-top">
+                  <span class="m-title">{{ $milestone->title }}</span>
+                  <span class="m-badge @if($isDone) m-badge-done @elseif($isActive) m-badge-active @else m-badge-todo @endif">
+                    @if($isDone) Completed @elseif($isActive) In Progress @else To Do @endif
+                  </span>
+                </div>
+                <div class="m-bar-wrap">
+                  <div class="m-bar">
+                    <div class="m-fill @if($isDone) m-fill-done @elseif($isActive) m-fill-active @else m-fill-todo @endif" style="width:{{ $pct }}%"></div>
+                  </div>
+                  <span class="m-pct">{{ $pct }}%</span>
+                </div>
+              </div>
             </div>
           @endforeach
         </div>
@@ -310,6 +341,14 @@ function openAnnModal(el) {
   var pColor = priority === 'urgent' ? '#dc2626' : priority === 'important' ? '#d97706' : 'var(--text3)';
   priorityEl.textContent = priority === 'normal' ? '' : priority;
   priorityEl.style.color = pColor;
+
+  var dueEl = document.getElementById('annModalDue');
+  if (el.dataset.milestoneDue) {
+    dueEl.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="vertical-align:text-bottom;margin-right:4px"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Due ' + el.dataset.milestoneDue;
+    dueEl.style.display = 'block';
+  } else {
+    dueEl.style.display = 'none';
+  }
 
   var tagsEl = document.getElementById('annModalTags');
   tagsEl.innerHTML = '';

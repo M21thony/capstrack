@@ -19,7 +19,16 @@ class AnalyticsController extends Controller
         $totalStudents = Student::count();
         $totalTeams = Team::count();
 
-        $completedTeams = Team::whereIn('team_status', ['Done', 'complete', 'closed'])->count();
+        $completedTeams = Team::whereNotExists(function ($q) {
+            $q->select(DB::raw(1))
+                ->from('milestones')
+                ->whereColumn('milestones.team_id', 'team.team_id')
+                ->where('milestones.status', '!=', 'completed');
+        })->whereExists(function ($q) {
+            $q->select(DB::raw(1))
+                ->from('milestones')
+                ->whereColumn('milestones.team_id', 'team.team_id');
+        })->count();
         $activeTeams = Team::where('team_status', 'Active')->count();
         $completionRate = $totalTeams > 0 ? round(($completedTeams / $totalTeams) * 100) : 0;
 
@@ -32,10 +41,18 @@ class AnalyticsController extends Controller
             })
             ->count();
 
-        $yearlyArchive = ArchivedDocument::selectRaw('academic_year, COUNT(*) as total')
+        $selectedYear = request('year');
+        $years = ArchivedDocument::selectRaw('DISTINCT academic_year')
+            ->orderBy('academic_year', 'desc')
+            ->pluck('academic_year');
+        $yearlyQuery = ArchivedDocument::selectRaw('academic_year, COUNT(*) as total')
             ->groupBy('academic_year')
-            ->orderBy('academic_year')
-            ->pluck('total', 'academic_year');
+            ->orderBy('academic_year');
+        if ($selectedYear) {
+            $yearlyQuery->where('academic_year', $selectedYear);
+        }
+        $yearlyArchive = $yearlyQuery->pluck('total', 'academic_year');
+        $maxYearlyCount = $yearlyArchive->max() ?: 1;
 
         $programDistribution = StudentSchoolYear::selectRaw('program, COUNT(DISTINCT student_id) as total')
             ->whereNotNull('program')
@@ -52,6 +69,9 @@ class AnalyticsController extends Controller
             'activeTeams' => $activeTeams,
             'overdueTeams' => $overdueTeams,
             'yearlyArchive' => $yearlyArchive,
+            'maxYearlyCount' => $maxYearlyCount,
+            'years' => $years,
+            'selectedYear' => $selectedYear,
             'programDistribution' => $programDistribution,
         ]);
     }

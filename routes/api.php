@@ -39,6 +39,7 @@ Route::middleware(['web', 'expert.auth', 'expert.admin'])
         Route::post('/announcements', [AnnouncementController::class, 'store'])->name('api.admin.announcements.store');
         Route::put('/announcements/{announcement}', [AnnouncementController::class, 'update'])->name('api.admin.announcements.update');
         Route::delete('/announcements/{announcement}', [AnnouncementController::class, 'destroy'])->name('api.admin.announcements.destroy');
+        Route::post('/announcements/{announcement}/verify-submission', [AnnouncementController::class, 'verifySubmission'])->name('api.admin.announcements.verify-submission');
 
         Route::post('/rubrics', [RubricController::class, 'store'])->name('api.admin.rubrics.store');
         Route::put('/rubrics/{rubric}', [RubricController::class, 'update'])->name('api.admin.rubrics.update');

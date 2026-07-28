@@ -9,20 +9,6 @@
 </head>
 <body class="pi-page-body">
     <div class="pi-page">
-        <header class="pi-header">
-            <div class="pi-brand">
-                <div class="brand-icon">
-                    <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
-                </div>
-                <div>
-                    <div class="pi-brand-name">CapsTRACK</div>
-                    <div class="pi-brand-sub">Personal Information</div>
-                </div>
-            </div>
-            @if ($isEditing)
-                <a href="{{ route('student.dashboard') }}" class="pi-link-back">Back to Dashboard</a>
-            @endif
-        </header>
 
         <main class="pi-card">
             <div class="pi-hero">

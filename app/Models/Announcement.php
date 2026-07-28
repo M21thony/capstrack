@@ -13,6 +13,7 @@ class Announcement extends Model
         'priority',
         'target_audience',
         'team_id',
+        'milestone_id',
         'is_active',
     ];
 
@@ -30,5 +31,10 @@ class Announcement extends Model
     public function team()
     {
         return $this->belongsTo(Team::class, 'team_id', 'team_id');
+    }
+
+    public function milestone()
+    {
+        return $this->belongsTo(Milestone::class, 'milestone_id', 'id');
     }
 }
