@@ -37,7 +37,7 @@ class DashboardController extends Controller
                             ->from('student_s_y')
                             ->whereIn('team_id', function ($q) use ($expertId) {
                                 $q->select('team_id')
-                                    ->from('team_expert_assignments')
+                                    ->from('capstone_expert_application')
                                     ->where('expert_id', $expertId)
                                     ->where('status', 'approved');
                             });
@@ -54,7 +54,7 @@ class DashboardController extends Controller
                     ->whereIn('student_id', function ($q) use ($expertId) {
                         $q->select('student_id')->from('student_s_y')
                             ->whereIn('team_id', function ($q) use ($expertId) {
-                                $q->select('team_id')->from('team_expert_assignments')
+                                $q->select('team_id')->from('capstone_expert_application')
                                     ->where('expert_id', $expertId)->where('status', 'approved');
                             });
                     });
