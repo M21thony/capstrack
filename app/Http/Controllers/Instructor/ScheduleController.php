@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Instructor;
 use App\Http\Controllers\Controller;
 use App\Services\GoogleCalendarService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -62,12 +63,30 @@ class ScheduleController extends Controller
 
         $nextDate = $this->getNextDateForDay($request->available_date);
 
-        $hasOverlap = DB::table('consultation_schedule')
+        $newRecur = $request->recur ?? 'weekly';
+        $newDate  = $newRecur === 'once' ? $request->specific_date : null;
+
+        // available_date is only a weekday name, not a real date, so a plain
+        // weekday+time match here would flag a new one-time slot as
+        // "overlapping" against any unrelated once/biweekly slot that merely
+        // shares that weekday — even one whose actual occurrence never
+        // coincides with the date being added. Narrow it down to rows whose
+        // real occurrences can actually collide.
+        $candidates = DB::table('consultation_schedule')
             ->where('expert_id', $expert->expert_id)
             ->where('available_date', $request->available_date)
             ->where('start_time', '<', $request->end_time)
             ->where('end_time', '>', $request->start_time)
-            ->exists();
+            ->get(['recur', 'specific_date']);
+
+        $hasOverlap = $candidates->contains(
+            fn ($existing) => $this->occurrencesCanCollide(
+                $newRecur,
+                $newDate,
+                $existing->recur ?? 'weekly',
+                $existing->specific_date
+            )
+        );
 
         $googleEventId = null;
 
@@ -250,5 +269,34 @@ class ScheduleController extends Controller
         $diff = $diff === 0 ? 7 : $diff; // if today, use next week
 
         return now()->addDays($diff)->format('Y-m-d');
+    }
+
+    // Two slots on the same weekday+time only truly conflict if some real
+    // calendar date exists where both are actually active. Caller has
+    // already confirmed both share a weekday and overlapping time — this
+    // resolves whether their recur/specific_date combination can ever
+    // land on the same day.
+    private function occurrencesCanCollide(string $recurA, ?string $dateA, string $recurB, ?string $dateB): bool
+    {
+        if ($recurA === 'once' && $recurB === 'once') {
+            return $dateA !== null && $dateB !== null && $dateA === $dateB;
+        }
+
+        // A weekly slot recurs on that weekday indefinitely, so it will
+        // eventually coincide with any once/biweekly slot on the same day.
+        if ($recurA === 'weekly' || $recurB === 'weekly') {
+            return true;
+        }
+
+        // Remaining combinations involve at least one biweekly side —
+        // check whether the dates align on the same 14-day cadence.
+        $biweeklyDate = $recurA === 'biweekly' ? $dateA : $dateB;
+        $otherDate    = $recurA === 'biweekly' ? $dateB : $dateA;
+
+        if (! $biweeklyDate || ! $otherDate) {
+            return true; // can't verify alignment — fail safe
+        }
+
+        return Carbon::parse($otherDate)->diffInDays(Carbon::parse($biweeklyDate)) % 14 === 0;
     }
 }

@@ -178,6 +178,133 @@ class PdfAnnotationTest extends TestCase
         $response->assertJson([]);
     }
 
+    public function test_stores_selected_text_with_remarks(): void
+    {
+        $expert = $this->loginAsApprovedExpert();
+
+        $fileId = \DB::table('capstone_documents')->insertGetId([
+            'id' => 4,
+            'file_id' => 4,
+            'file_path' => 'submissions/remarks-selected.pdf',
+            'file_name' => 'doc.pdf',
+        ]);
+
+        $reviewId = \DB::table('capstone_document_review')->insertGetId([
+            'id' => 12,
+            'review_id' => 12,
+            'file_id' => $fileId,
+            'expert_id' => $expert->expert_id,
+            'role' => 'adviser',
+            'review_status' => 'pending',
+            'drive_status' => 'failed',
+        ]);
+
+        $payload = [
+            'comments' => [
+                [
+                    'page_number' => 1,
+                    'text' => 'Fix this grammar.',
+                    'selectedText' => 'The students are working hard.',
+                    'color' => 'yellow',
+                    'highlightRects' => [
+                        [
+                            'top_position' => 0.1,
+                            'left_position' => 0.2,
+                            'highlight_width' => 0.5,
+                            'highlight_height' => 0.05,
+                        ],
+                    ],
+                ],
+            ],
+        ];
+
+        $response = $this->postJson("/reviews/{$reviewId}/remarks", $payload);
+
+        $response->assertStatus(200);
+        $response->assertJson(['success' => true]);
+
+        $this->assertDatabaseHas('pdf_remarks', [
+            'review_id' => $reviewId,
+            'comment' => 'Fix this grammar.',
+            'selected_text' => 'The students are working hard.',
+        ]);
+    }
+
+    public function test_stores_and_lists_general_comments(): void
+    {
+        $expert = $this->loginAsApprovedExpert();
+
+        $fileId = \DB::table('capstone_documents')->insertGetId([
+            'id' => 5,
+            'file_id' => 5,
+            'file_path' => 'submissions/general.pdf',
+            'file_name' => 'doc.pdf',
+        ]);
+
+        $reviewId = \DB::table('capstone_document_review')->insertGetId([
+            'id' => 13,
+            'review_id' => 13,
+            'file_id' => $fileId,
+            'expert_id' => $expert->expert_id,
+            'role' => 'adviser',
+            'review_status' => 'pending',
+            'drive_status' => 'failed',
+        ]);
+
+        $response = $this->postJson("/reviews/{$reviewId}/general-remarks", [
+            'comment' => 'Overall the paper needs a stronger conclusion.',
+        ]);
+
+        $response->assertStatus(201);
+
+        $this->assertDatabaseHas('pdf_remarks', [
+            'review_id' => $reviewId,
+            'comment' => 'Overall the paper needs a stronger conclusion.',
+            'is_general' => true,
+        ]);
+
+        $index = $this->getJson("/reviews/{$reviewId}/general-remarks");
+        $index->assertStatus(200);
+        $index->assertJsonCount(1);
+    }
+
+    public function test_deletes_a_general_comment(): void
+    {
+        $expert = $this->loginAsApprovedExpert();
+
+        $fileId = \DB::table('capstone_documents')->insertGetId([
+            'id' => 6,
+            'file_id' => 6,
+            'file_path' => 'submissions/general-delete.pdf',
+            'file_name' => 'doc.pdf',
+        ]);
+
+        $reviewId = \DB::table('capstone_document_review')->insertGetId([
+            'id' => 14,
+            'review_id' => 14,
+            'file_id' => $fileId,
+            'expert_id' => $expert->expert_id,
+            'role' => 'adviser',
+            'review_status' => 'pending',
+            'drive_status' => 'failed',
+        ]);
+
+        $remarkId = \DB::table('pdf_remarks')->insertGetId([
+            'review_id' => $reviewId,
+            'is_general' => true,
+            'page_number' => 0,
+            'comment' => 'Please clarify the methodology.',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $response = $this->deleteJson("/reviews/{$reviewId}/general-remarks/{$remarkId}");
+
+        $response->assertStatus(200);
+        $response->assertJson(['success' => true]);
+        $this->assertDatabaseMissing('pdf_remarks', ['id' => $remarkId]);
+    }
+
     private function makeReview(int $id, int $expertId, string $status): int
     {
         return \DB::table('capstone_document_review')->insertGetId([

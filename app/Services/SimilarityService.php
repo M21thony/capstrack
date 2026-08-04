@@ -29,11 +29,13 @@ You are an academic research analyzer. Read this capstone pre-proposal and extra
 Return ONLY a valid JSON object. No explanation. No markdown fences.
 
 {
+  "title": "the pre-proposal's title, as written",
   "main_topic": "one sentence describing the core subject",
   "domain": "e.g. Web System, Mobile App, IoT, AI/ML, Desktop App, Management System",
   "keywords": ["up to 10 keywords"],
   "problem_statement": "2 sentences max about the problem being solved",
   "proposed_solution": "2 sentences max describing what the system will do",
+  "scope": "2 sentences max on what the system will and won't cover",
   "technologies": ["list of technologies mentioned"],
   "target_users": "who will use this system"
 }
@@ -42,7 +44,7 @@ Pre-proposal text:
 {$truncated}
 PROMPT;
 
-        $raw = $this->ollama->generate($prompt);
+        $raw = $this->ollama->generate($prompt, 700);
         $cleaned = trim(preg_replace('/```json|```/i', '', $raw));
         $data = json_decode($cleaned, true);
 
@@ -65,7 +67,9 @@ PROMPT;
 
             // Generic capstone words (appear in almost every title)
             'proposed', 'computerized', 'system', 'management', 'records',
-            'using', 'based', 'web', 'online', 'automated', 'digital', 'application',
+            'using', 'based', 'web', 'mobile', 'desktop', 'online', 'automated',
+            'digital', 'electronic', 'internet', 'android', 'ios', 'app',
+            'application', 'platform', 'portal',
             'information', 'technology', 'development', 'design', 'implementation',
 
             // Location noise
@@ -74,10 +78,19 @@ PROMPT;
 
             // School/dept noise
             'college', 'department', 'university', 'school', 'cict', 'bsit', 'bscs',
-            'institute', 'campus',
+            'institute', 'campus', 'high', 'national', 'junior', 'senior',
+            'elementary', 'secondary', 'tertiary', 'academy', 'learning',
+            'center', 'centre', 'colegio', 'graduate', 'provincial', 'vocational',
+            'technical', 'community',
         ];
 
-        $words = explode(' ', strtolower($text));
+        // Strip punctuation (including hyphens) before splitting, so a
+        // compound like "web-based" or "cross-platform" breaks into its
+        // individual words instead of surviving as one unmatched token —
+        // this is why "web-based" wasn't actually being filtered before.
+        $text = preg_replace('/[\/\\\,\.\(\)\[\]\{\}:;!?"\'\-_]/', ' ', $text);
+
+        $words = preg_split('/\s+/', strtolower(trim($text)));
         $filtered = array_filter($words, fn ($w) => ! in_array(trim($w), $stopWords) && strlen(trim($w)) > 2);
 
         return implode(' ', $filtered);
@@ -88,11 +101,13 @@ PROMPT;
     {
         // Build a rich text representation — strip stop words before embedding
         $rawQueryText = implode("\n", array_filter([
+            $concepts['title'] ?? '',
             $concepts['main_topic'] ?? '',
             $concepts['domain'] ?? '',
             implode(', ', $concepts['keywords'] ?? []),
             $concepts['problem_statement'] ?? '',
             $concepts['proposed_solution'] ?? '',
+            $concepts['scope'] ?? '',
         ]));
 
         // FIX: Apply stop words to query text for cleaner embedding
@@ -178,14 +193,14 @@ PROMPT;
         $prompt = 'You are an academic similarity checker. These archived capstones were flagged as '
                 ."potentially similar to the pre-proposal below using vector embeddings.\n\n"
                 ."STRICT RULES:\n"
-                ."- IGNORE generic words: proposed, computerized, system, management, records, web, online, automated, digital\n"
+                ."- IGNORE generic words: proposed, computerized, system, management, records, web, web-based, mobile, online, automated, digital\n"
                 ."- IGNORE location names: Camarines Sur, Nabua, CSPC, Iriga, Philippines\n"
-                ."- IGNORE school/dept names: college, department, polytechnic, CICT, BSIT\n"
+                ."- IGNORE school/dept names and specific institution names: college, department, polytechnic, CICT, BSIT, high school, national high school, elementary school, academy, institute, learning center\n"
                 ."- Focus ONLY on: core domain, problem being solved, target users, system purpose\n"
                 ."- If they are NOT actually similar in core concept, say so clearly\n\n"
-                ."For each, write ONE sentence explaining if and why the core concept matches or does not match.\n"
+                ."For each, decide whether the core concept genuinely matches, and write ONE sentence explaining why or why not.\n"
                 ."Return ONLY a JSON array. No markdown.\n"
-                .'[{"id":<id>,"reason":"one sentence about core concept match or mismatch"}]'
+                .'[{"id":<id>,"matches":true|false,"reason":"one sentence about core concept match or mismatch"}]'
                 ."\n\nPRE-PROPOSAL:"
                 ."\nTopic: {$concepts['main_topic']}"
                 ."\nDomain: {$concepts['domain']}"
@@ -193,22 +208,34 @@ PROMPT;
                 ."\n\nMATCHED DOCUMENTS:\n{$docsJson}";
 
         try {
-            $raw = $this->ollama->generate($prompt);
+            // Up to 20 candidates, each needing its own id/matches/reason —
+            // the default 512-token cap was truncating the JSON mid-response
+            // for anything past ~15 items, which is exactly why every match
+            // used to silently fall back to the generic reason text.
+            $raw = $this->ollama->generate($prompt, 2000);
             $cleaned = trim(preg_replace('/```json|```/i', '', $raw));
 
             preg_match('/\[.*\]/s', $cleaned, $matches);
             $reasons = json_decode($matches[0] ?? $cleaned, true);
 
             if (json_last_error() === JSON_ERROR_NONE && is_array($reasons)) {
-                $reasonMap = [];
+                $verdictMap = [];
                 foreach ($reasons as $r) {
-                    $reasonMap[(int) $r['id']] = $r['reason'] ?? '';
+                    $verdictMap[(int) $r['id']] = [
+                        'reason' => $r['reason'] ?? '',
+                        // Default true (rather than silently dropping it to the
+                        // bottom) if the model omits the field for a candidate —
+                        // an unknown verdict shouldn't be treated as a rejection.
+                        'matches' => array_key_exists('matches', $r) ? (bool) $r['matches'] : true,
+                    ];
                 }
 
                 foreach ($topCandidates as &$item) {
                     $id = $item['document']->archived_id;
-                    $item['reason'] = $reasonMap[$id]
+                    $verdict = $verdictMap[$id] ?? null;
+                    $item['reason'] = $verdict['reason']
                         ?? 'Semantically similar based on vector embedding analysis.';
+                    $item['is_relevant'] = $verdict['matches'] ?? true;
                 }
                 unset($item);
             }
@@ -216,9 +243,17 @@ PROMPT;
             Log::warning('enrichWithReasons failed', ['error' => $e->getMessage()]);
             foreach ($topCandidates as &$item) {
                 $item['reason'] = 'Semantically similar based on vector embedding analysis.';
+                $item['is_relevant'] = true;
             }
             unset($item);
         }
+
+        // Vector similarity alone ranks by phrasing overlap ("web-based
+        // management system") more than actual conceptual relevance — the AI
+        // verdict above catches cases the embedding score can't distinguish.
+        // Surface genuine matches first; within each group, keep the original
+        // score ordering (usort is stable in PHP 8+).
+        usort($topCandidates, fn ($a, $b) => ($b['is_relevant'] ?? true) <=> ($a['is_relevant'] ?? true));
 
         return $topCandidates;
     }
@@ -258,7 +293,7 @@ PROMPT;
                     .'["term1","term2",...]';
 
         try {
-            $raw = $this->ollama->generate($expandPrompt);
+            $raw = $this->ollama->generate($expandPrompt, 600);
             $cleaned = trim(preg_replace('/```json|```/i', '', $raw));
             preg_match('/\[.*\]/s', $cleaned, $m);
             $expandedTerms = json_decode($m[0] ?? $cleaned, true);
@@ -314,9 +349,9 @@ PROMPT;
             $prompt = 'You are an academic similarity checker. Compare this capstone pre-proposal '
                     ."against the archived capstones below.\n\n"
                     ."STRICT RULES:\n"
-                    ."- IGNORE generic words: proposed, computerized, system, management, records, web, online, automated, digital\n"
+                    ."- IGNORE generic words: proposed, computerized, system, management, records, web, web-based, mobile, online, automated, digital\n"
                     ."- IGNORE location names: Camarines Sur, Nabua, CSPC, Iriga, Philippines\n"
-                    ."- IGNORE school/dept names: college, department, polytechnic, CICT, BSIT\n"
+                    ."- IGNORE school/dept names and specific institution names: college, department, polytechnic, CICT, BSIT, high school, national high school, elementary school, academy, institute, learning center\n"
                     ."- Focus ONLY on: core domain, problem being solved, target users, and system purpose\n"
                     ."- Score 70-100 ONLY if the core domain AND purpose are the same\n"
                     ."- Score 40-69 if the domain matches but purpose differs\n"
@@ -331,21 +366,10 @@ PROMPT;
                     ."\nSolution: {$concepts['proposed_solution']}"
                     ."\n\nARCHIVED CAPSTONES:\n{$docsJson}";
 
-            $prompt = 'Perform semantic similarity analysis between this capstone pre-proposal '
-                    ."and the archived capstones below.\n"
-                    ."Consider meaning, intent, domain, technology, and problem being solved — not just keywords.\n"
-                    ."Score each 0-100. Return ONLY a JSON array. No markdown.\n"
-                    .'[{"id":<id>,"score":<0-100>,"reason":"one sentence semantic explanation"}]'
-                    ."\n\nPRE-PROPOSAL:"
-                    ."\nTopic: {$concepts['main_topic']}"
-                    ."\nDomain: {$concepts['domain']}"
-                    ."\nKeywords: {$conceptText}"
-                    ."\nProblem: {$concepts['problem_statement']}"
-                    ."\nSolution: {$concepts['proposed_solution']}"
-                    ."\n\nARCHIVED CAPSTONES:\n{$docsJson}";
-
             try {
-                $raw = $this->ollama->generate($prompt);
+                // Chunks of 10 docs, each needing id/score/reason — same
+                // truncation risk as enrichWithReasons().
+                $raw = $this->ollama->generate($prompt, 1200);
                 $cleaned = trim(preg_replace('/```json|```/i', '', $raw));
 
                 preg_match('/\[.*\]/s', $cleaned, $matches);
@@ -372,11 +396,6 @@ PROMPT;
             return [];
         }
 
-        usort($allScores, fn ($a, $b) => ($b['score'] ?? 0) <=> ($a['score'] ?? 0));
-        $topScores = array_slice($allScores, 0, $topN);
-
-        $docMap = $filtered->keyBy('archived_id');
-
         // Sort descending and take top N
         usort($allScores, fn ($a, $b) => ($b['score'] ?? 0) <=> ($a['score'] ?? 0));
         $topScores = array_slice($allScores, 0, $topN);
@@ -392,9 +411,6 @@ PROMPT;
             }
 
             $results[] = [
-                'document' => $doc,
-                'score' => (int) ($item['score'] ?? 0),
-                'reason' => $item['reason'] ?? '',
                 'document' => $doc,
                 'score' => (int) ($item['score'] ?? 0),
                 'reason' => $item['reason'] ?? '',
@@ -434,13 +450,6 @@ PROMPT;
         $listJson = json_encode($experts->map(fn ($e) => [
             'id' => $e->expert_id,
             'name' => $e->first_name.' '.$e->last_name,
-        ])->toArray());
-
-        $domain = $concepts['domain'];
-        $keywords = implode(', ', $concepts['keywords'] ?? []);
-        $listJson = json_encode($experts->map(fn ($e) => [
-            'id' => $e->expert_id,
-            'name' => $e->first_name.' '.$e->last_name,
             'expertise' => $e->expertise ?? 'General',
         ])->values()->toArray());
 
@@ -458,9 +467,7 @@ PROMPT;
                 ."\n\nINSTRUCTOR LIST (ONLY use these exact IDs):\n{$listJson}";
 
         try {
-            $raw = $this->ollama->generate($prompt);
-            $cleaned = trim(preg_replace('/```json|```/i', '', $raw));
-            $raw = $this->ollama->generate($prompt);
+            $raw = $this->ollama->generate($prompt, 800);
             $cleaned = trim(preg_replace('/```json|```/i', '', $raw));
 
             preg_match('/\[.*\]/s', $cleaned, $matches);

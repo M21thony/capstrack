@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\CapstoneDocumentReview;
+use App\Models\PdfRemark;
 use App\Services\GoogleDriveService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -43,7 +44,7 @@ class PdfAnnotationController extends Controller
     {
         $this->authorizeReview($review);
 
-        return $review->pdfRemarks()->get();
+        return $review->pdfRemarks()->where('is_general', false)->get();
     }
 
     public function store(Request $request, CapstoneDocumentReview $review)
@@ -55,6 +56,8 @@ class PdfAnnotationController extends Controller
             'comments.*.page_number' => 'required|integer|min:1',
             'comments.*.text' => 'nullable|string',
             'comments.*.comment' => 'nullable|string',
+            'comments.*.selectedText' => 'nullable|string',
+            'comments.*.section' => 'nullable|string|max:150',
             'comments.*.color' => 'nullable|string',
             'comments.*.highlightRects' => 'nullable|array',
             'comments.*.highlightRects.*.top_position' => 'nullable|numeric',
@@ -65,7 +68,7 @@ class PdfAnnotationController extends Controller
             'comments.*.x_position' => 'nullable|numeric',
         ]);
 
-        $review->pdfRemarks()->delete();
+        $review->pdfRemarks()->where('is_general', false)->delete();
 
         foreach ($validated['comments'] as $comment) {
             $rects = $comment['highlightRects'] ?? [];
@@ -84,6 +87,8 @@ class PdfAnnotationController extends Controller
                     'highlight_height' => $maxBottom - $minTop,
                     'color' => $comment['color'] ?? 'yellow',
                     'comment' => $comment['text'] ?? $comment['comment'] ?? '',
+                    'selected_text' => $comment['selectedText'] ?? null,
+                    'section' => $comment['section'] ?? null,
                 ]);
             } else {
                 $review->pdfRemarks()->create([
@@ -94,6 +99,8 @@ class PdfAnnotationController extends Controller
                     'highlight_height' => 0,
                     'color' => $comment['color'] ?? 'yellow',
                     'comment' => $comment['text'] ?? $comment['comment'] ?? '',
+                    'selected_text' => $comment['selectedText'] ?? null,
+                    'section' => $comment['section'] ?? null,
                 ]);
             }
         }
@@ -102,6 +109,52 @@ class PdfAnnotationController extends Controller
             'success' => true,
             'counts' => ['remarks' => count($validated['comments'])],
         ]);
+    }
+
+    /**
+     * General (paper-level) comments — not tied to a page or highlight.
+     */
+    public function generalIndex(CapstoneDocumentReview $review)
+    {
+        $this->authorizeReview($review);
+
+        return $review->pdfRemarks()
+            ->where('is_general', true)
+            ->orderBy('created_at')
+            ->get();
+    }
+
+    public function generalStore(Request $request, CapstoneDocumentReview $review)
+    {
+        $this->authorizeReview($review);
+
+        $validated = $request->validate([
+            'comment' => 'required|string',
+            'section' => 'nullable|string|max:150',
+        ]);
+
+        $remark = $review->pdfRemarks()->create([
+            'is_general' => true,
+            'page_number' => 0,
+            'comment' => $validated['comment'],
+            'section' => $validated['section'] ?? null,
+        ]);
+
+        return response()->json($remark, 201);
+    }
+
+    public function generalDestroy(CapstoneDocumentReview $review, PdfRemark $remark)
+    {
+        $this->authorizeReview($review);
+
+        abort_unless(
+            $remark->review_id === $review->review_id && $remark->is_general,
+            404
+        );
+
+        $remark->delete();
+
+        return response()->json(['success' => true]);
     }
 
     public function showStatus(CapstoneDocumentReview $review)
@@ -152,7 +205,17 @@ class PdfAnnotationController extends Controller
             return response()->json(['message' => 'This review has no Google Drive file to update.'], 422);
         }
 
-        $drive->updateFile($review->expert_id, $review->drive_file_id, $contents, 'application/pdf');
+        try {
+            $drive->updateFile($review->expert_id, $review->drive_file_id, $contents, 'application/pdf');
+        } catch (\Exception $e) {
+            Log::error('Drive sync failed', [
+                'review_id' => $review->review_id,
+                'expert_id' => $review->expert_id,
+                'message' => $e->getMessage(),
+            ]);
+
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
 
         return response()->json(['success' => true]);
     }

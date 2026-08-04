@@ -351,8 +351,13 @@ function renderMatchItem(m, dimmed) {
   const color = m.score >= 65 ? 'var(--red,#e5484d)'
               : m.score >= 55 ? 'var(--amber,#f5a623)'
               : 'var(--green,#30a46c)';
+  // Vector similarity alone ranks by phrasing overlap, not real relevance —
+  // items the AI itself judged as not a genuine conceptual match are still
+  // shown (the score wasn't wrong to flag them for review) but visually
+  // de-emphasized so the one real match doesn't read as "just another 84%".
+  const isRelevant = m.is_relevant !== false;
   return `
-    <div class="match-item" style="${dimmed ? 'opacity:0.55' : ''}">
+    <div class="match-item" style="${dimmed || !isRelevant ? 'opacity:0.55' : ''}">
       <div style="flex:1;min-width:0;margin-right:10px">
         <div style="font-size:12px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
           ${escapeHtml(m.title)}

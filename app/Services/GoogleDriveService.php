@@ -38,13 +38,28 @@ class GoogleDriveService
             throw new \Exception('Google Drive auth failed: '.($token['error_description'] ?? $token['error']));
         }
 
+        $this->storeToken($userId, $token);
+    }
+
+    /**
+     * Persist an already-fetched Google token response (shape: access_token,
+     * refresh_token, expires_in, token_type, ...) as this user's Drive
+     * connection. Shared by the dedicated "Connect Google Drive" callback
+     * above and by AuthController's login callback, which requests the same
+     * drive.file scope up front so most users never need the separate
+     * connect flow at all.
+     */
+    public function storeToken(int $userId, array $token): void
+    {
         $existing = GoogleDriveToken::where('user_id', $userId)->first();
 
         GoogleDriveToken::updateOrCreate(
             ['user_id' => $userId],
             [
                 'access_token' => json_encode($token),
-                // Google only sends refresh_token on first consent; keep the old one if it's missing this time.
+                // Google only sends refresh_token on first consent (or when
+                // prompt=consent is forced); keep the old one if it's missing
+                // this time rather than overwriting a working connection.
                 'refresh_token' => $token['refresh_token'] ?? optional($existing)->refresh_token,
                 'expires_at' => now()->addSeconds($token['expires_in'] ?? 3600),
             ]
@@ -82,7 +97,15 @@ class GoogleDriveService
             $newToken = $this->client->fetchAccessTokenWithRefreshToken($refreshToken);
 
             if (isset($newToken['error'])) {
-                throw new \Exception('Failed to refresh Google Drive token: '.($newToken['error_description'] ?? $newToken['error']));
+                // The refresh token itself is dead (expired, revoked, or the
+                // OAuth consent screen is still in "Testing" mode, where
+                // Google expires refresh tokens after 7 days). Clear the
+                // stored connection so isConnected() — and the "Connect
+                // Google Drive" banner — reflect reality instead of showing
+                // "connected" for a token that no longer works.
+                $record->delete();
+
+                throw new \Exception('Failed to refresh Google Drive token: '.($newToken['error_description'] ?? $newToken['error']).' Please reconnect Google Drive.');
             }
 
             $newToken['refresh_token'] = $newToken['refresh_token'] ?? $refreshToken;

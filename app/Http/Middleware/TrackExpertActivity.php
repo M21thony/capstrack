@@ -13,8 +13,15 @@ class TrackExpertActivity
     {
         if (Auth::guard('expert')->check()) {
             $expert = Auth::guard('expert')->user();
-            $expert->last_seen_at = now();
-            $expert->save();
+
+            // CapstoneExpert::isOnline only needs last_seen_at accurate to
+            // within 5 minutes, so skip the write unless it's actually stale
+            // — otherwise every single page navigation costs a DB round trip
+            // for no visible benefit.
+            if (! $expert->last_seen_at || $expert->last_seen_at->lt(now()->subMinute())) {
+                $expert->last_seen_at = now();
+                $expert->save();
+            }
         }
 
         return $next($request);

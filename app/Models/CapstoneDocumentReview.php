@@ -28,6 +28,11 @@ class CapstoneDocumentReview extends Model
         return $this->belongsTo(CapstoneDocument::class, 'file_id', 'file_id');
     }
 
+    public function expert()
+    {
+        return $this->belongsTo(CapstoneExpert::class, 'expert_id', 'expert_id');
+    }
+
     public function pdfRemarks()
     {
         return $this->hasMany(PdfRemark::class, 'review_id', 'review_id');

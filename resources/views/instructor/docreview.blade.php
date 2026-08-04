@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <meta name="csrf-token" content="{{ csrf_token() }}"/>
 <title>CapsTRACK — Expert Portal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="{{ asset('css/expert.css') }}" />
 </head>
@@ -16,6 +18,38 @@
     <div class="topbar-actions"><div class="notif-btn"><svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg><div class="notif-dot"></div></div></div>
   </div>
   <div class="content">
+    @if (session('success'))
+      <div class="card" style="padding:10px 16px;margin-bottom:14px;background:rgba(22,163,74,0.08);border:1px solid rgba(22,163,74,0.25);color:var(--green);font-size:13px">
+        {{ session('success') }}
+      </div>
+    @endif
+    @if (session('error'))
+      <div class="card" style="padding:10px 16px;margin-bottom:14px;background:rgba(220,38,38,0.08);border:1px solid rgba(220,38,38,0.25);color:#dc2626;font-size:13px">
+        {{ session('error') }}
+      </div>
+    @endif
+
+    <!-- GOOGLE DRIVE CONNECTION BANNER -->
+    <div class="card" style="padding:14px 16px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:12px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><path d="M12 15V3"/>
+        </svg>
+        @if ($driveConnected)
+          <span style="font-size:13px;color:var(--text2)">✓ Google Drive connected — annotated PDFs sync automatically.</span>
+        @else
+          <span style="font-size:13px;color:var(--text2)">Google Drive isn't connected — annotated PDFs won't sync until you connect your account.</span>
+        @endif
+      </div>
+      <div>
+        @if ($driveConnected)
+          <button class="btn btn-ghost" id="gdrive-disconnect-btn" style="font-size:12px" onclick="disconnectDrive()">Disconnect</button>
+        @else
+          <a href="{{ route('gdrive.connect') }}" class="btn btn-primary" style="font-size:12px">Connect Google Drive</a>
+        @endif
+      </div>
+    </div>
+
     <div class="row" style="margin-bottom:14px;gap:8px">
       <input class="input" placeholder="Search documents or teams..." style="max-width:280px"/>
       <select class="input" style="width:160px">
@@ -113,5 +147,18 @@
     </div>
   </div>
 </div>
+<script>
+function disconnectDrive(){
+  if (!confirm('Disconnect Google Drive? Annotated PDFs will stop syncing until you reconnect.')) return;
+
+  fetch("{{ route('gdrive.disconnect') }}", {
+    method: 'POST',
+    headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content },
+  })
+    .then((r) => r.json())
+    .then(() => window.location.reload())
+    .catch(() => alert('Could not disconnect Google Drive. Please try again.'));
+}
+</script>
 </body>
 </html>

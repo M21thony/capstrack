@@ -10,6 +10,8 @@ function CheckerNavbar({
   setSelectedHighlightColor,
   status = "To Review",
   saveState = "idle",
+  driveSyncState = "idle",
+  driveSyncError = null,
   onTurnIn,
   onSave,
   onExport,
@@ -51,7 +53,20 @@ function CheckerNavbar({
       {/* Left Section - Navigation */}
       <div style={styles.left}>
         <a
-          href="/instructor/docreview" style={styles.backLink}>← Back
+          href="/instructor/docreview"
+          style={styles.backLink}
+          onClick={(e) => {
+            if (
+              driveSyncState === "syncing" &&
+              !window.confirm(
+                "The annotated PDF is still uploading to Google Drive. Leave anyway? The upload will be canceled."
+              )
+            ) {
+              e.preventDefault();
+            }
+          }}
+        >
+          ← Back
         </a>
       </div>
 
@@ -149,6 +164,30 @@ function CheckerNavbar({
           {getStatusLabel(status)}
         </div>
 
+        {/* Background Google Drive sync indicator */}
+        {driveSyncState === "syncing" && (
+          <div style={styles.syncPill} title="Uploading the annotated PDF to Google Drive — stay on this page until this finishes.">
+            ☁ Syncing to Drive…
+          </div>
+        )}
+        {driveSyncState === "error" && (
+          <div
+            style={{ ...styles.syncPill, ...styles.syncPillError }}
+            title={
+              driveSyncError
+                ? `Drive sync failed: ${driveSyncError}`
+                : "Could not upload the annotated PDF to Google Drive. Click Save or Turn In again to retry."
+            }
+          >
+            ⚠ Drive sync failed{driveSyncError ? ` — ${driveSyncError}` : ""}
+          </div>
+        )}
+        {driveSyncState === "error" && needsDriveConnect(driveSyncError) && (
+          <a href="/admin/gdrive/connect" style={styles.connectDriveLink}>
+            Connect Google Drive →
+          </a>
+        )}
+
         {/* Action Buttons */}
         <button
           onClick={onSave}
@@ -176,6 +215,16 @@ function CheckerNavbar({
     </nav>
   );
 }
+
+// True when the Drive error is something a "Connect Google Drive" link can
+// actually fix (no account connected, or the connection went stale) — as
+// opposed to e.g. "this review has no Drive file to update", which connecting
+// again wouldn't help.
+const needsDriveConnect = (message) => {
+  if (!message) return false;
+  const m = message.toLowerCase();
+  return m.includes("not connected") || m.includes("reconnect") || m.includes("session expired");
+};
 
 const getStatusLabel = (status) => {
   if (status === "Reviewed") return "Reviewed";
@@ -349,6 +398,31 @@ const styles = {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
+  },
+  syncPill: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "4px",
+    padding: "6px 12px",
+    borderRadius: "20px",
+    fontSize: "12px",
+    fontWeight: "600",
+    whiteSpace: "nowrap",
+    backgroundColor: "#eff6ff",
+    color: "#1d4ed8",
+    border: "1px solid #bfdbfe",
+  },
+  syncPillError: {
+    backgroundColor: "#fef2f2",
+    color: "#991b1b",
+    border: "1px solid #fecaca",
+  },
+  connectDriveLink: {
+    fontSize: "12px",
+    fontWeight: "600",
+    color: "#2563eb",
+    textDecoration: "none",
+    whiteSpace: "nowrap",
   },
   saveButton: {
     display: "flex",

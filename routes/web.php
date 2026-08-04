@@ -24,6 +24,7 @@ use App\Http\Controllers\Student\ExpertController as StudentExpertController;
 use App\Http\Controllers\StudentResourcesController;
 use App\Http\Controllers\StudentConsultationController;
 use App\Http\Controllers\StudentFinancialController;
+use App\Http\Controllers\StudentReviewController;
 use App\Http\Controllers\SubmissionController;
 use App\Http\Controllers\TeamController;
 use App\Http\Controllers\Instructor\ConsultationLogController;
@@ -83,6 +84,9 @@ Route::middleware(['auth:expert', 'expert.approved', 'no.cache'])->prefix('revie
     Route::get('/{review}/pdf', [PdfAnnotationController::class, 'file'])->name('pdf');
     Route::get('/{review}/remarks', [PdfAnnotationController::class, 'index'])->name('remarks.index');
     Route::post('/{review}/remarks', [PdfAnnotationController::class, 'store'])->name('remarks.store');
+    Route::get('/{review}/general-remarks', [PdfAnnotationController::class, 'generalIndex'])->name('general-remarks.index');
+    Route::post('/{review}/general-remarks', [PdfAnnotationController::class, 'generalStore'])->name('general-remarks.store');
+    Route::delete('/{review}/general-remarks/{remark}', [PdfAnnotationController::class, 'generalDestroy'])->name('general-remarks.destroy');
     Route::get('/{review}/status', [PdfAnnotationController::class, 'showStatus'])->name('status.show');
     Route::post('/{review}/status', [PdfAnnotationController::class, 'updateStatus'])->name('status.update');
     Route::post('/{review}/sync-drive', [PdfAnnotationController::class, 'syncDrive'])->name('sync-drive');
@@ -146,7 +150,10 @@ Route::middleware(['auth', 'no.cache', 'track.expert'])->group(function () {
             Route::get('/submission', [SubmissionController::class, 'create'])->name('student.submission');
             // NEW: handles the actual file upload + multi-recipient Drive delivery
             Route::post('/submission', [SubmissionController::class, 'store'])->name('student.submission.store');
-            Route::view('/review', 'student.review')->name('student.review');
+            Route::get('/review', [StudentReviewController::class, 'index'])->name('student.review');
+            Route::get('/review/{review}/pdf', [StudentReviewController::class, 'file'])->name('student.review.pdf');
+            Route::get('/review/{review}/remarks', [StudentReviewController::class, 'remarks'])->name('student.review.remarks');
+            Route::get('/review/{reviewId}/clf', [ConsultationLogController::class, 'generate'])->name('student.review.clf');
             Route::view('/duplication', 'student.duplication')->name('student.duplication');
             Route::get('/consultation', [StudentConsultationController::class, 'index'])->name('student.consultation');
             Route::post('/consultation/book', [StudentConsultationController::class, 'book'])->name('student.consultation.book');

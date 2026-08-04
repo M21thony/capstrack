@@ -4,12 +4,32 @@ namespace App\Services;
 
 use Illuminate\Support\Facades\Log;
 use phpseclib3\Crypt\PublicKeyLoader;
-use phpseclib3\Net\SSH2;
+use phpseclib3\Net\SFTP;
 
 class OllamaSSHClient
 {
-    private function makeConnection(): SSH2
+    // Always SSH — this client only ever talks to Ollama through the tunnel.
+    // Requires: SSH server running + .env SSH_TUNNEL_* values.
+
+    // Reused across every call on this instance (it's bound as a singleton —
+    // see AppServiceProvider) instead of reconnecting per warmup/generate/embed
+    // call. A fresh SSH handshake + login per call was the reason a single
+    // duplication check (warmup + 3 generate calls + 1 embed call) took over
+    // two minutes — five separate connections instead of one.
+    private ?SFTP $connection = null;
+
+    private ?string $remoteTempDir = null;
+
+    // ─────────────────────────────────────────────────────────────────
+    // SSH INTERNALS
+    // ─────────────────────────────────────────────────────────────────
+
+    private function getConnection(): SFTP
     {
+        if ($this->connection !== null && $this->connection->isConnected() && $this->connection->isAuthenticated()) {
+            return $this->connection;
+        }
+
         $host = config('services.ssh_tunnel.host');
         $port = (int) config('services.ssh_tunnel.port', 22);
         $user = config('services.ssh_tunnel.user');
@@ -19,114 +39,71 @@ class OllamaSSHClient
             throw new \Exception("SSH key not found at: {$keyPath}");
         }
 
-        $ssh = new SSH2($host, $port);
+        // SFTP (a subclass of SSH2) so the same connection can both exec()
+        // commands and upload the request payload as a file, instead of
+        // embedding it base64-encoded inside the exec'd command line —
+        // that blew past Windows' command-length limit for any prompt of
+        // meaningful size (e.g. enrichWithReasons' ~20-document prompt),
+        // silently failing every "AI reason" and falling back to the
+        // generic "Semantically similar based on vector embedding analysis."
+        $ssh = new SFTP($host, $port);
+        $ssh->setTimeout(300);
         $key = PublicKeyLoader::load(file_get_contents($keyPath));
 
         if (! $ssh->login($user, $key)) {
             throw new \Exception('SSH login failed. Check host, user, and key.');
         }
 
+        $this->connection = $ssh;
+        $this->remoteTempDir = null;
+
         return $ssh;
     }
 
-    // ── Text generation ───────────────────────────────────
-    public function generate(string $prompt): string
+    private function getRemoteTempDir(SFTP $ssh): string
     {
-        $ssh = $this->makeConnection();
-        $model = config('services.ollama.model', 'qwen2.5:7B');
-
-        $payload = json_encode([
-            'model' => $model,
-            'prompt' => $prompt,
-            'stream' => false,
-            'options' => [
-                'num_predict' => 2048,
-                'temperature' => 0.2,
-            ],
-        ]);
-
-        $output = $this->runCurl($ssh, $payload, '/api/generate');
-
-        $encoded = base64_encode($payload);
-        $tmpFile = 'ollama_'.uniqid().'.json';
-
-        // Combine everything into ONE powershell command
-        $command = 'powershell -Command "'
-                .'$bytes = [System.Convert]::FromBase64String(\''.$encoded.'\'); '
-                .'$tmp = \"$env:TEMP\\'.$tmpFile.'\"; '
-                .'[System.IO.File]::WriteAllBytes($tmp, $bytes); '
-                .'$r = curl.exe -s -X POST http://localhost:11434/api/generate '
-                .'-H \"Content-Type: application/json\" '
-                .'-d \"@$tmp\"; '
-                .'Remove-Item $tmp; '
-                .'Write-Output $r'
-                .'"';
-
-        $output = $ssh->exec($command);
-        $ssh->disconnect();
-
-        $decoded = json_decode(trim($output), true);
-
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            Log::error('OllamaSSH generate raw output', ['output' => $output]);
-            throw new \Exception('Failed to decode Ollama JSON. Raw: '.substr($output, 0, 300));
-            Log::error('OllamaSSH raw output', ['output' => $output]);
-            throw new \Exception('Failed to decode Ollama JSON. Raw: '.substr($output, 0, 300));
+        if ($this->remoteTempDir !== null) {
+            return $this->remoteTempDir;
         }
 
-        return $decoded['response'] ?? '';
-    }
+        $dir = trim($ssh->exec('powershell -Command "Write-Output $env:TEMP"'));
 
-    // ── Embedding generation via nomic-embed-text ─────────────────────
-    /**
-     * Generate a vector embedding for the given text.
-     * Uses the /api/embeddings endpoint with nomic-embed-text.
-     *
-     * @param  string  $text  The text to embed (title + abstract recommended)
-     * @return float[] A float array of ~768 dimensions
-     */
-    public function embed(string $text): array
-    {
-        $ssh = $this->makeConnection();
-        $model = config('services.ollama.embed_model', 'nomic-embed-text');
-
-        // Truncate to avoid token limits — nomic-embed-text supports ~8192 tokens
-        $truncated = mb_substr($text, 0, 4000);
-
-        $payload = json_encode([
-            'model' => $model,
-            'prompt' => $truncated,
-        ]);
-
-        $output = $this->runCurl($ssh, $payload, '/api/embeddings');
-        $ssh->disconnect();
-
-        $decoded = json_decode(trim($output), true);
-
-        if (json_last_error() !== JSON_ERROR_NONE || ! isset($decoded['embedding'])) {
-            Log::error('OllamaSSH embed raw output', ['output' => $output]);
-            throw new \Exception('Failed to get embedding from Ollama. Raw: '.substr($output, 0, 300));
+        if ($dir === '') {
+            throw new \Exception('Could not resolve remote TEMP directory.');
         }
 
-        return $decoded['embedding']; // array of floats
+        return $this->remoteTempDir = $dir;
     }
 
-    // ── Shared cURL runner via SSH ────────────────────────────────────
-    private function runCurl(SSH2 $ssh, string $jsonPayload, string $endpoint): string
+    // Windows OpenSSH's exec() channel takes native paths (C:\Users\...),
+    // but its SFTP subsystem is POSIX-rooted and expects /C:/Users/...
+    // — passing the native form to put() fails with "No such file".
+    private function toSftpPath(string $windowsPath): string
     {
-        $encoded = base64_encode($jsonPayload);
-        $tmpFile = 'ollama_'.uniqid().'.json';
+        $posix = str_replace('\\', '/', $windowsPath);
 
+        return preg_match('/^[A-Za-z]:/', $posix) ? '/'.$posix : $posix;
+    }
+
+    private function runCurl(string $jsonPayload, string $endpoint): string
+    {
+        $ssh = $this->getConnection();
+        $tempDir = $this->getRemoteTempDir($ssh);
+        $remotePath = $tempDir.'\\ollama_'.uniqid().'.json';
+
+        if ($ssh->put($this->toSftpPath($remotePath), $jsonPayload) === false) {
+            throw new \Exception('Failed to upload request payload via SFTP.');
+        }
+
+        // The command itself now only ever references a short fixed-length
+        // file path, regardless of how large the payload is.
         $command = 'powershell -Command "'
-                .'$bytes = [System.Convert]::FromBase64String(\''.$encoded.'\'); '
-                .'$tmp = \"$env:TEMP\\'.$tmpFile.'\"; '
-                .'[System.IO.File]::WriteAllBytes($tmp, $bytes); '
-                .'$r = curl.exe -s --max-time 180 -X POST http://localhost:11434'.$endpoint.' '  // ← added --max-time 180
-                .'-H \"Content-Type: application/json\" '
-                .'--data-binary \"@$tmp\"; '
-                .'Remove-Item $tmp; '
-                .'Write-Output $r'
-                .'"';
+                 .'$r = curl.exe -s --max-time 240 -X POST http://localhost:11434'.$endpoint.' '
+                 .'-H \"Content-Type: application/json\" '
+                 .'--data-binary \"@'.$remotePath.'\"; '
+                 .'Remove-Item \"'.$remotePath.'\" -ErrorAction SilentlyContinue; '
+                 .'Write-Output $r'
+                 .'"';
 
         $output = $ssh->exec($command);
 
@@ -135,5 +112,68 @@ class OllamaSSHClient
         }
 
         return $output;
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // PUBLIC METHODS
+    // ─────────────────────────────────────────────────────────────────
+
+    public function warmup(): void
+    {
+        try {
+            $payload = [
+                'model' => config('services.ollama.model', 'qwen2.5:7b'),
+                'prompt' => 'hi',
+                'stream' => false,
+                'options' => ['num_predict' => 1],
+            ];
+
+            $this->runCurl(json_encode($payload), '/api/generate');
+
+            Log::info('Ollama warmup complete.');
+        } catch (\Exception $e) {
+            Log::warning('Ollama warmup failed', ['error' => $e->getMessage()]);
+        }
+    }
+
+    public function generate(string $prompt, int $maxTokens = 512): string
+    {
+        $payload = [
+            'model' => config('services.ollama.model', 'qwen2.5:7b'),
+            'prompt' => $prompt,
+            'stream' => false,
+            'options' => [
+                'num_predict' => $maxTokens,
+                'temperature' => 0.1,
+            ],
+        ];
+
+        $output = $this->runCurl(json_encode($payload), '/api/generate');
+        $decoded = json_decode(trim($output), true);
+
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            Log::error('OllamaSSH generate raw output', ['output' => $output]);
+            throw new \Exception('Failed to decode Ollama JSON. Raw: '.substr($output, 0, 300));
+        }
+
+        return $decoded['response'] ?? '';
+    }
+
+    public function embed(string $text): array
+    {
+        $payload = [
+            'model' => config('services.ollama.embed_model', 'nomic-embed-text'),
+            'prompt' => mb_substr($text, 0, 4000),
+        ];
+
+        $output = $this->runCurl(json_encode($payload), '/api/embeddings');
+        $decoded = json_decode(trim($output), true);
+
+        if (json_last_error() !== JSON_ERROR_NONE || ! isset($decoded['embedding'])) {
+            Log::error('OllamaSSH embed raw output', ['output' => $output]);
+            throw new \Exception('Failed to get embedding from Ollama. Raw: '.substr($output, 0, 300));
+        }
+
+        return $decoded['embedding'];
     }
 }

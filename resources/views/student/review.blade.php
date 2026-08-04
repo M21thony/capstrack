@@ -6,7 +6,7 @@
 <title>Review Viewer - CapsTRACK</title>
 <meta name="csrf-token" content="{{ csrf_token() }}">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
-@vite('resources/student-ui/styles.css')
+@vite(['resources/student-ui/styles.css', 'resources/js/student-review.jsx'])
 </head>
 <body>
 @include('student.partials.sidebar')
@@ -21,43 +21,101 @@
   </div>
   <div class="content">
     @include('student.partials.page-tutorial', ['page' => 'review'])
+
+@if ($turnedIn->isEmpty())
+    <div class="card" style="padding:24px;text-align:center;color:var(--text3)">
+        No turned-in reviews yet. Once a reviewer marks one of your submissions as reviewed, it'll show up here.
+    </div>
+@else
 <div class="row" style="margin-bottom:14px;gap:8px">
-  <select class="input" style="width:280px"><option>Chapter 2 Draft — May 3, 2025</option><option>Chapter 1 v2 — May 1, 2025</option></select>
-  <span class="badge badge-amber">3 Annotations</span>
+  <select class="input" style="width:320px" onchange="window.location.href='{{ route('student.review') }}?review_id=' + this.value">
+    @foreach ($turnedIn as $entry)
+      <option value="{{ $entry['review']->review_id }}" @selected($selected && $entry['review']->review_id === $selected['review']->review_id)>
+        {{ $entry['document']->file_name }} — {{ $entry['document']->chapter }} — {{ ucfirst($entry['review']->role) }}
+        by {{ optional($entry['review']->expert)->name ?? 'Unknown Reviewer' }}
+        ({{ optional($entry['review']->reviewed_at)->format('M j, Y') ?? '—' }})
+      </option>
+    @endforeach
+  </select>
+  <span class="badge badge-amber">{{ $totalAnnotations }} Annotation{{ $totalAnnotations === 1 ? '' : 's' }}</span>
+  @if ($selected)
+    <span class="badge badge-blue">Reviewed by {{ optional($selected['review']->expert)->name ?? 'Unknown Reviewer' }}</span>
+  @endif
   <span style="flex:1"></span>
-  <button class="btn btn-ghost" style="font-size:11px">Download Annotated PDF</button>
+  @if ($selected)
+    <a href="{{ route('student.review.clf', $selected['review']->review_id) }}" class="btn btn-ghost" style="font-size:11px;text-decoration:none">Download CLF</a>
+  @endif
+  @if ($selected && $selected['review']->drive_web_view_link)
+    <a href="{{ $selected['review']->drive_web_view_link }}" target="_blank" rel="noopener" class="btn btn-ghost" style="font-size:11px;text-decoration:none">Download Annotated PDF</a>
+  @endif
 </div>
 <div class="grid-2">
-  <div class="card" style="height:420px;overflow-y:auto">
-    <div class="card-title" style="margin-bottom:12px">Document Preview</div>
-    <div class="doc-preview">
-      <p style="margin-bottom:10px;font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:1px">Chapter 2 — Review of Related Literature</p>
-      <p style="margin-bottom:10px">Facial recognition technology has gained significant traction in recent years due to advancements in <span class="highlight">deep learning architectures, particularly convolutional neural networks (CNNs)</span>. These models have demonstrated remarkable accuracy in identifying individuals across diverse environmental conditions.</p>
-      <p style="margin-bottom:10px">Studies by Zhang et al. (2023) indicate that <span class="highlight">real-time facial recognition systems achieve upward of 98.7% accuracy under controlled lighting</span>, though performance degrades significantly in uncontrolled settings.</p>
-      <p>The integration of such systems in educational institutions presents both opportunities and <span class="highlight">ethical considerations that must be carefully addressed</span> through institutional policy frameworks...</p>
-    </div>
+  <div class="card" style="height:720px;overflow-y:auto;padding:0">
+    <div class="card-title" style="padding:16px 16px 0">Document Preview</div>
+    @if ($selected)
+      <div
+        id="student-pdf-viewer-root"
+        data-pdf-url="{{ route('student.review.pdf', $selected['review']->review_id) }}"
+        data-remarks-url="{{ route('student.review.remarks', $selected['review']->review_id) }}"
+      ></div>
+    @else
+      <div class="doc-preview" style="margin:16px">
+        No document to preview.
+      </div>
+    @endif
   </div>
-  <div class="card" style="height:420px;overflow-y:auto">
-    <div class="card-title" style="margin-bottom:12px">Expert Annotations</div>
-    <div class="annotation-box">
-      <div class="annotation-user">Dr. Cynthia Santos · Annotation 1</div>
-      <div class="annotation-text">Good foundation here. Please cite the specific CNN architectures used (ResNet, VGG, etc.) and include year of publication for each reference.</div>
+  <div class="card" style="height:720px;overflow-y:auto">
+    <div class="card-title" style="margin-bottom:12px">
+      Expert Annotations
+      @if ($selected)
+        &mdash; {{ optional($selected['review']->expert)->name ?? 'Unknown Reviewer' }}
+      @endif
     </div>
-    <div class="annotation-box" style="background:var(--red-bg);border-color:var(--red)">
-      <div class="annotation-user" style="color:var(--red)">Dr. Cynthia Santos · Annotation 2</div>
-      <div class="annotation-text">This statistic needs a proper citation. "Zhang et al." is vague — provide full author list and journal name. This is a critical claim.</div>
-    </div>
-    <div class="annotation-box" style="background:var(--accent-glow);border-color:var(--accent)">
-      <div class="annotation-user" style="color:var(--accent)">Dr. Cynthia Santos · Annotation 3</div>
-      <div class="annotation-text">Expand this section significantly. Discuss GDPR, data privacy laws in PH (RA 10173), and informed consent requirements for biometric data collection.</div>
-    </div>
-    <div>
-      <label class="label">Reply to Expert</label>
-      <textarea class="input" rows="3" placeholder="Type your response or clarification..." style="resize:none;height:72px"></textarea>
-      <button class="btn btn-primary" style="margin-top:8px;font-size:11px">Send Reply</button>
-    </div>
+
+    @if ($generalRemarks->isEmpty() && $remarksBySection->isEmpty() && $remarks->isEmpty())
+      <p style="font-size:13px;color:var(--text3)">No comments were left on this review.</p>
+    @endif
+
+    @if ($generalRemarks->isNotEmpty())
+      <div class="annotation-box" style="background:var(--blue-bg);border-color:var(--blue)">
+        <div class="annotation-user" style="color:var(--blue)">General Comment</div>
+        @foreach ($generalRemarks as $index => $comment)
+          <div class="annotation-text" style="margin-bottom:{{ $loop->last ? '0' : '8px' }}">{{ $loop->iteration }}. {{ $comment }}</div>
+        @endforeach
+      </div>
+    @endif
+
+    @foreach ($remarksBySection as $section => $items)
+      <div class="annotation-box">
+        <div class="annotation-user">{{ $section }}</div>
+        @foreach ($items as $item)
+          <div
+            class="annotation-text"
+            style="margin-bottom:{{ $loop->last ? '0' : '8px' }}{{ $item->is_general ? '' : ';cursor:pointer' }}"
+            @unless($item->is_general)
+              onclick="window.dispatchEvent(new CustomEvent('student-review:scroll-to-remark', { detail: { page: {{ $item->page_number }}, remarkId: {{ $item->id }} } }))"
+              title="Click to jump to this comment in the document"
+            @endunless
+          >&bull; {{ $item->comment }}</div>
+        @endforeach
+      </div>
+    @endforeach
+
+    @if ($remarks->isNotEmpty())
+      <div class="annotation-box">
+        @foreach ($remarks as $remark)
+          <div
+            class="annotation-text"
+            style="margin-bottom:{{ $loop->last ? '0' : '8px' }};cursor:pointer"
+            onclick="window.dispatchEvent(new CustomEvent('student-review:scroll-to-remark', { detail: { page: {{ $remark->page_number }}, remarkId: {{ $remark->id }} } }))"
+            title="Click to jump to this comment in the document"
+          >&bull; {{ $remark->comment }}</div>
+        @endforeach
+      </div>
+    @endif
   </div>
 </div>
+@endif
 </div>
 </div>
 
