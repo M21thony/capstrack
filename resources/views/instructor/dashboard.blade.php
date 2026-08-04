@@ -96,7 +96,7 @@
               <div class="consult-header">
                 <div>
                   <div class="consult-team">Schedule #{{ $consult->schedule_id }}</div>
-                  <div class="consult-meta">{{ $consult->specific_date?->format('M j, Y') ?? 'TBA' }} {{ $consult->start_time ? '· '.$consult->start_time->format('g:i A') : '' }}</div>
+                  <div class="consult-meta">{{ $consult->specific_date ? \Carbon\Carbon::parse($consult->specific_date)->format('M j, Y') : 'TBA' }} {{ $consult->start_time ? '· '.\Carbon\Carbon::parse($consult->start_time)->format('g:i A') : '' }}</div>
                 </div>
                 <span class="badge badge-blue">Upcoming</span>
               </div>
