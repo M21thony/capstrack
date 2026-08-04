@@ -64,4 +64,16 @@ class NotificationController extends Controller
 
         return response()->json(['success' => true]);
     }
+
+    public function markSeen(Request $request): JsonResponse
+    {
+        $ids = $request->input('ids', []);
+        if (! empty($ids)) {
+            $seen = session('student_seen_notification_ids', []);
+            $seen = array_unique(array_merge($seen, $ids));
+            session(['student_seen_notification_ids' => $seen]);
+        }
+
+        return response()->json(['success' => true]);
+    }
 }

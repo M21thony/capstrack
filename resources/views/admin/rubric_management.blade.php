@@ -1,9 +1,10 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Rubric Management - CapsTRACK Admin</title>
+<meta name="csrf-token" content="{{ csrf_token() }}"/>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="{{ asset('css/admin.css') }}"/>
 </head>
@@ -103,7 +104,7 @@
       </div>
       <div class="form-group" style="margin-bottom:0">
         <label class="label">Description <span style="color:var(--text3);font-weight:400">(optional)</span></label>
-        <textarea class="input" id="rb-desc" style="min-height:72px" placeholder="Brief description of this rubric's purpose and usage context…"></textarea>
+        <textarea class="input" id="rb-desc" style="min-height:72px" placeholder="Brief description of this rubric's purpose and usage context�"></textarea>
       </div>
       <div style="display:flex;justify-content:flex-end;margin-top:20px">
         <button class="btn btn-primary" onclick="goToStep2()">
@@ -151,10 +152,7 @@
   <div class="topbar">
     <div class="page-title">Grading Rubrics</div>
     <div class="topbar-actions">
-      <div class="notif-btn">
-        <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-        <div class="notif-dot"></div>
-      </div>
+      @include('admin.partials.notification-dropdown')
     </div>
   </div>
 
@@ -287,7 +285,7 @@ let activeFilter = "all";
 let editingId = null;
 let draftCriteria = [];
 
-// ── CRITERION BUILDER ─────────────────────────────────────────────────────────
+// -- CRITERION BUILDER ---------------------------------------------------------
 function addCriterion(preload=null){
   const crit = preload || {id:nextCritId++,name:"",maxScore:10,levels:[{score:"",desc:""},{score:"",desc:""},{score:"",desc:""},{score:"",desc:""}]};
   if(!preload) draftCriteria.push(crit);
@@ -350,7 +348,7 @@ function updateTotalPts(){
   }
 }
 
-// ── MODAL ─────────────────────────────────────────────────────────────────────
+// -- MODAL ---------------------------------------------------------------------
 function openNewRubricModal(){
   editingId=null;
   document.getElementById("rb-name").value="";
@@ -402,7 +400,7 @@ function selectRbType(radio){
   radio.closest(".rb-type-opt").classList.add("selected");
 }
 
-// ── SAVE ──────────────────────────────────────────────────────────────────────
+// -- SAVE ----------------------------------------------------------------------
 function saveRubric(){
   const name = document.getElementById("rb-name").value.trim();
   const type = document.getElementById("rb-type").value;
@@ -426,7 +424,7 @@ function saveRubric(){
   updateStats();
 }
 
-// ── EDIT ──────────────────────────────────────────────────────────────────────
+// -- EDIT ----------------------------------------------------------------------
 function editRubric(id){
   const rb = rubrics.find(r=>r.id===id);
   if(!rb) return;
@@ -447,7 +445,7 @@ function editRubric(id){
   document.getElementById("rubric-modal").classList.add("show");
 }
 
-// ── DELETE ────────────────────────────────────────────────────────────────────
+// -- DELETE --------------------------------------------------------------------
 let pendingDelId=null;
 function confirmDelete(id){
   pendingDelId=id;
@@ -462,7 +460,7 @@ function confirmDelete(id){
 }
 function closeDelModal(){ document.getElementById("del-modal").classList.remove("show"); }
 
-// ── FILTER ────────────────────────────────────────────────────────────────────
+// -- FILTER --------------------------------------------------------------------
 function filterType(type,btn){
   activeFilter=type; currentPage=1;
   document.querySelectorAll("#type-tabs .rb-tab-btn").forEach(b=>b.classList.remove("active"));
@@ -470,7 +468,7 @@ function filterType(type,btn){
   renderList();
 }
 
-// ── PAGINATION ────────────────────────────────────────────────────────────────
+// -- PAGINATION ----------------------------------------------------------------
 function getFiltered(){
   const q = (document.getElementById("rb-search").value||"").trim().toLowerCase();
   let list = activeFilter==="all" ? rubrics : rubrics.filter(r=>r.type===activeFilter);
@@ -487,7 +485,7 @@ function changePage(dir){
 
 function jumpPage(p){ currentPage=p; renderList(); }
 
-// ── RENDER LIST ───────────────────────────────────────────────────────────────
+// -- RENDER LIST ---------------------------------------------------------------
 function renderList(){
   const filtered=getFiltered();
   const totalPages=Math.max(1,Math.ceil(filtered.length/ITEMS_PER_PAGE));
@@ -566,7 +564,7 @@ function renderList(){
 function renderPagination(total,totalPages){
   const start=(currentPage-1)*ITEMS_PER_PAGE+1;
   const end=Math.min(currentPage*ITEMS_PER_PAGE,total);
-  document.getElementById("pg-info").textContent=total?`Showing ${start}–${end} of ${total}`:"No results";
+  document.getElementById("pg-info").textContent=total?`Showing ${start}�${end} of ${total}`:"No results";
   document.getElementById("pg-prev").disabled=currentPage<=1;
   document.getElementById("pg-next").disabled=currentPage>=totalPages;
   let html="";

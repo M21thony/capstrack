@@ -16,119 +16,48 @@
   </div>
   <div class="content">
     <div class="grid-4" style="margin-bottom:16px">
-      <div class="stat-chip"><div class="stat-n" style="color:var(--green)">6</div><div class="stat-l">Teams Monitored</div></div>
-      <div class="stat-chip"><div class="stat-n" style="color:var(--accent3)">68%</div><div class="stat-l">Avg. Completion</div></div>
-      <div class="stat-chip"><div class="stat-n" style="color:var(--red)">2</div><div class="stat-l">Overdue Milestones</div></div>
-      <div class="stat-chip"><div class="stat-n" style="color:var(--blue)">4</div><div class="stat-l">On Track</div></div>
+      <div class="stat-chip"><div class="stat-n" style="color:var(--green)">{{ $teamsMonitored }}</div><div class="stat-l">Teams Monitored</div></div>
+      <div class="stat-chip"><div class="stat-n" style="color:var(--accent3)">{{ $avgCompletion }}%</div><div class="stat-l">Avg. Completion</div></div>
+      <div class="stat-chip"><div class="stat-n" style="color:var(--red)">{{ $overdueMilestones }}</div><div class="stat-l">Overdue Milestones</div></div>
+      <div class="stat-chip"><div class="stat-n" style="color:var(--blue)">{{ $onTrack }}</div><div class="stat-l">On Track</div></div>
     </div>
 
     <div class="row" style="margin-bottom:14px;gap:8px">
       <input class="input" placeholder="Search teams..." style="max-width:260px"/>
       <select class="input" style="width:160px"><option>All Sections</option><option>BSCS-4A</option><option>BSIT-4A</option><option>BSIT-4B</option></select>
-      <select class="input" style="width:160px"><option>Sort: Progress â†“</option><option>Sort: Team Name</option><option>Sort: Overdue First</option></select>
+      <select class="input" style="width:160px"><option>Sort: Progress</option><option>Sort: Team Name</option><option>Sort: Overdue First</option></select>
     </div>
 
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+    @forelse($teams as $entry)
       <div class="team-progress-card">
         <div class="tp-header">
-          <div class="tp-avatar" style="background:linear-gradient(135deg,#c9a82c,#8a6e10)">TN</div>
+          <div class="tp-avatar" style="background:linear-gradient(135deg,#c9a82c,#8a6e10)">{{ substr($entry->team->team_name, 0, 2) }}</div>
           <div style="flex:1">
-            <div class="tp-team">Team Nexus <span class="badge badge-gold" style="font-size:10px;margin-left:4px;vertical-align:middle">BSCS-4A</span></div>
-            <div class="tp-title">AI-Powered Attendance System Using Facial Recognition</div>
+            <div class="tp-team">{{ $entry->team->team_name }} <span class="badge badge-gold" style="font-size:10px;margin-left:4px;vertical-align:middle">{{ $entry->section }}</span></div>
+            <div class="tp-title">{{ $entry->team->project_title ?? 'No title set' }}</div>
           </div>
           <div style="text-align:right">
-            <div style="font-family:'Space Mono',monospace;font-size:16px;font-weight:700;color:var(--accent3)">67%</div>
+            <div style="font-family:'Space Mono',monospace;font-size:16px;font-weight:700;color:{{ $entry->progress >= 70 ? 'var(--green)' : ($entry->progress >= 40 ? 'var(--accent3)' : 'var(--red)') }}">{{ $entry->progress }}%</div>
             <div style="font-size:10px;color:var(--text3)">overall</div>
           </div>
         </div>
         <div class="tp-milestones">
-          <div class="tp-m"><span class="tp-m-label">Title Defense</span><div class="tp-m-bar"><div class="tp-m-fill pf-green" style="width:100%"></div></div><span class="tp-m-pct" style="color:var(--green)">100</span></div>
-          <div class="tp-m"><span class="tp-m-label">Chapter 1</span><div class="tp-m-bar"><div class="tp-m-fill pf-green" style="width:100%"></div></div><span class="tp-m-pct" style="color:var(--green)">100</span></div>
-          <div class="tp-m"><span class="tp-m-label">Chapter 2</span><div class="tp-m-bar"><div class="tp-m-fill pf-gold" style="width:80%"></div></div><span class="tp-m-pct">80</span></div>
-          <div class="tp-m"><span class="tp-m-label">Chapter 3</span><div class="tp-m-bar"><div class="tp-m-fill pf-gold" style="width:45%"></div></div><span class="tp-m-pct">45</span></div>
-          <div class="tp-m"><span class="tp-m-label">Chapter 4</span><div class="tp-m-bar"><div class="tp-m-fill pf-blue" style="width:0%"></div></div><span class="tp-m-pct">0</span></div>
+          <div style="font-size:12px;color:var(--text2);padding:8px 0">
+            {{ $entry->completed }}/{{ $entry->total }} milestones completed
+          </div>
         </div>
         <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);display:flex;gap:6px">
-          <span class="badge badge-amber" style="font-size:10px">1 Overdue</span>
-          <button class="btn btn-ghost" style="font-size:10px;padding:3px 10px;margin-left:auto">View Full Report</button>
+          @if($entry->overdue > 0)
+            <span class="badge badge-amber" style="font-size:10px">{{ $entry->overdue }} Overdue</span>
+          @else
+            <span class="badge badge-green" style="font-size:10px">On Track</span>
+          @endif
         </div>
       </div>
-
-      <div class="team-progress-card">
-        <div class="tp-header">
-          <div class="tp-avatar" style="background:linear-gradient(135deg,#16a34a,#0891b2)">TA</div>
-          <div style="flex:1">
-            <div class="tp-team">Team Alpha <span class="badge badge-cyan" style="font-size:10px;margin-left:4px;vertical-align:middle">BSIT-4A</span></div>
-            <div class="tp-title">Plant Disease Detection Using Deep Learning Mobile App</div>
-          </div>
-          <div style="text-align:right">
-            <div style="font-family:'Space Mono',monospace;font-size:16px;font-weight:700;color:var(--green)">85%</div>
-            <div style="font-size:10px;color:var(--text3)">overall</div>
-          </div>
-        </div>
-        <div class="tp-milestones">
-          <div class="tp-m"><span class="tp-m-label">Title Defense</span><div class="tp-m-bar"><div class="tp-m-fill pf-green" style="width:100%"></div></div><span class="tp-m-pct" style="color:var(--green)">100</span></div>
-          <div class="tp-m"><span class="tp-m-label">Chapter 1</span><div class="tp-m-bar"><div class="tp-m-fill pf-green" style="width:100%"></div></div><span class="tp-m-pct" style="color:var(--green)">100</span></div>
-          <div class="tp-m"><span class="tp-m-label">Chapter 2</span><div class="tp-m-bar"><div class="tp-m-fill pf-green" style="width:100%"></div></div><span class="tp-m-pct" style="color:var(--green)">100</span></div>
-          <div class="tp-m"><span class="tp-m-label">Chapter 3</span><div class="tp-m-bar"><div class="tp-m-fill pf-gold" style="width:75%"></div></div><span class="tp-m-pct">75</span></div>
-          <div class="tp-m"><span class="tp-m-label">Chapter 4</span><div class="tp-m-bar"><div class="tp-m-fill pf-blue" style="width:30%"></div></div><span class="tp-m-pct" style="color:var(--blue)">30</span></div>
-        </div>
-        <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);display:flex;gap:6px">
-          <span class="badge badge-green" style="font-size:10px">On Track</span>
-          <button class="btn btn-ghost" style="font-size:10px;padding:3px 10px;margin-left:auto">View Full Report</button>
-        </div>
-      </div>
-
-      <div class="team-progress-card">
-        <div class="tp-header">
-          <div class="tp-avatar" style="background:linear-gradient(135deg,#1d4ed8,#7c3aed)">TP</div>
-          <div style="flex:1">
-            <div class="tp-team">Team Prism <span class="badge badge-purple" style="font-size:10px;margin-left:4px;vertical-align:middle">BSIT-4B</span></div>
-            <div class="tp-title">Blockchain-Based Document Verification for Academic Records</div>
-          </div>
-          <div style="text-align:right">
-            <div style="font-family:'Space Mono',monospace;font-size:16px;font-weight:700;color:var(--red)">42%</div>
-            <div style="font-size:10px;color:var(--text3)">overall</div>
-          </div>
-        </div>
-        <div class="tp-milestones">
-          <div class="tp-m"><span class="tp-m-label">Title Defense</span><div class="tp-m-bar"><div class="tp-m-fill pf-green" style="width:100%"></div></div><span class="tp-m-pct" style="color:var(--green)">100</span></div>
-          <div class="tp-m"><span class="tp-m-label">Chapter 1</span><div class="tp-m-bar"><div class="tp-m-fill pf-green" style="width:100%"></div></div><span class="tp-m-pct" style="color:var(--green)">100</span></div>
-          <div class="tp-m"><span class="tp-m-label">Chapter 2</span><div class="tp-m-bar"><div class="tp-m-fill pf-gold" style="width:60%"></div></div><span class="tp-m-pct">60</span></div>
-          <div class="tp-m"><span class="tp-m-label">Chapter 3</span><div class="tp-m-bar"><div class="tp-m-fill pf-blue" style="width:10%"></div></div><span class="tp-m-pct" style="color:var(--red)">10</span></div>
-          <div class="tp-m"><span class="tp-m-label">Chapter 4</span><div class="tp-m-bar"><div class="tp-m-fill pf-blue" style="width:0%"></div></div><span class="tp-m-pct">0</span></div>
-        </div>
-        <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);display:flex;gap:6px">
-          <span class="badge badge-red" style="font-size:10px">2 Overdue</span>
-          <span class="badge badge-amber" style="font-size:10px">Needs Attention</span>
-          <button class="btn btn-ghost" style="font-size:10px;padding:3px 10px;margin-left:auto">View Full Report</button>
-        </div>
-      </div>
-
-      <div class="team-progress-card">
-        <div class="tp-header">
-          <div class="tp-avatar" style="background:linear-gradient(135deg,#b45309,#dc2626)">TS</div>
-          <div style="flex:1">
-            <div class="tp-team">Team Syntax <span class="badge badge-amber" style="font-size:10px;margin-left:4px;vertical-align:middle">BSIT-4A</span></div>
-            <div class="tp-title">Smart Campus Energy Monitoring Using IoT Sensors</div>
-          </div>
-          <div style="text-align:right">
-            <div style="font-family:'Space Mono',monospace;font-size:16px;font-weight:700;color:var(--accent3)">55%</div>
-            <div style="font-size:10px;color:var(--text3)">overall</div>
-          </div>
-        </div>
-        <div class="tp-milestones">
-          <div class="tp-m"><span class="tp-m-label">Title Defense</span><div class="tp-m-bar"><div class="tp-m-fill pf-green" style="width:100%"></div></div><span class="tp-m-pct" style="color:var(--green)">100</span></div>
-          <div class="tp-m"><span class="tp-m-label">Chapter 1</span><div class="tp-m-bar"><div class="tp-m-fill pf-green" style="width:100%"></div></div><span class="tp-m-pct" style="color:var(--green)">100</span></div>
-          <div class="tp-m"><span class="tp-m-label">Chapter 2</span><div class="tp-m-bar"><div class="tp-m-fill pf-gold" style="width:90%"></div></div><span class="tp-m-pct">90</span></div>
-          <div class="tp-m"><span class="tp-m-label">Chapter 3</span><div class="tp-m-bar"><div class="tp-m-fill pf-gold" style="width:40%"></div></div><span class="tp-m-pct">40</span></div>
-          <div class="tp-m"><span class="tp-m-label">Chapter 4</span><div class="tp-m-bar"><div class="tp-m-fill pf-blue" style="width:0%"></div></div><span class="tp-m-pct">0</span></div>
-        </div>
-        <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);display:flex;gap:6px">
-          <span class="badge badge-amber" style="font-size:10px">1 Overdue</span>
-          <button class="btn btn-ghost" style="font-size:10px;padding:3px 10px;margin-left:auto">View Full Report</button>
-        </div>
-      </div>
+    @empty
+      <div style="grid-column:1/-1;text-align:center;padding:48px;color:var(--text3);font-size:13px">No teams assigned yet.</div>
+    @endforelse
     </div>
   </div>
 </div>

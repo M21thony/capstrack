@@ -170,6 +170,17 @@ textarea.input{resize:vertical;min-height:80px}
 .act-body strong{color:var(--text);font-weight:600}
 .act-time{font-size:11px;color:var(--text3);margin-top:3px}
 
+/* ── ACTIVITY FEED (student style) ── */
+.activity-item{display:flex;align-items:flex-start;gap:14px;padding:12px 0;border-bottom:1px solid var(--border)}
+.activity-item:last-child{border-bottom:none}
+.act-scroll{max-height:260px;overflow-y:auto}
+.act-scroll::-webkit-scrollbar{width:4px}
+.act-scroll::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+.act-icon{width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.act-icon svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2.5}
+.act-text{flex:1;font-size:13px;color:var(--text2);line-height:1.5}
+.act-text strong{color:var(--text);font-weight:600}
+
 /* ── EXPERT CARD ── */
 .expert-row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)}
 .expert-row:last-child{border-bottom:none}
@@ -613,6 +624,17 @@ textarea.input{resize:vertical;min-height:80px}
 .act-body{flex:1;font-size:13px;color:var(--text2);line-height:1.5}
 .act-body strong{color:var(--text);font-weight:600}
 .act-time{font-size:11px;color:var(--text3);margin-top:3px}
+
+/* ── ACTIVITY FEED (student style) ── */
+.activity-item{display:flex;align-items:flex-start;gap:14px;padding:12px 0;border-bottom:1px solid var(--border)}
+.activity-item:last-child{border-bottom:none}
+.act-scroll{max-height:260px;overflow-y:auto}
+.act-scroll::-webkit-scrollbar{width:4px}
+.act-scroll::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+.act-icon{width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.act-icon svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2.5}
+.act-text{flex:1;font-size:13px;color:var(--text2);line-height:1.5}
+.act-text strong{color:var(--text);font-weight:600}
 
 /* ── EXPERT CARD ── */
 .expert-row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)}
@@ -1147,6 +1169,9 @@ textarea.input{resize:vertical;min-height:80px}
   .experts-search{flex:1;min-width:160px}
   .experts-search input{max-width:100%!important;width:100%}
   .experts-count{margin-left:auto}
+  .grid-4{grid-template-columns:1fr 1fr}
+  .donut-wrap{gap:14px}
+  .card{padding:18px}
 }
 
 @media(max-width:480px){
@@ -1154,6 +1179,13 @@ textarea.input{resize:vertical;min-height:80px}
   .page-title{font-size:14px}
   .content{padding:10px}
   .sk-overlay{padding:10px}
+  .grid-4{grid-template-columns:1fr 1fr;gap:8px}
+  .grid-2{grid-template-columns:1fr}
+  .stat-chip{padding:12px 14px}
+  .stat-n{font-size:22px}
+  .card{padding:16px;border-radius:10px}
+  .donut-wrap{flex-direction:column;align-items:center;gap:12px}
+  .donut{width:90px;height:90px}
 
   /* ── Approval Toolbar (phone) ── */
   .approval-toolbar{display:flex;flex-direction:column;gap:8px;margin-bottom:14px}

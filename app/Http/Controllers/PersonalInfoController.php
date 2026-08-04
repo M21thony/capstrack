@@ -18,6 +18,8 @@ class PersonalInfoController extends Controller
             return redirect()->route('student.dashboard');
         }
 
+        $studentSy = StudentSchoolYear::where('student_id', $student->student_id)->first();
+
         return view('student.personal-info', [
             'student' => $student,
             'presets' => config('avatars.presets', []),
@@ -25,6 +27,7 @@ class PersonalInfoController extends Controller
             'hasTeam' => false,
             'autoFillFirstName' => $student->f_name,
             'autoFillLastName' => $student->l_name,
+            'studentSy' => $studentSy,
         ]);
     }
 
@@ -37,6 +40,7 @@ class PersonalInfoController extends Controller
         }
 
         $hasTeam = StudentSchoolYear::where('student_id', $student->student_id)->whereNotNull('team_id')->exists();
+        $studentSy = StudentSchoolYear::where('student_id', $student->student_id)->first();
 
         return view('student.personal-info', [
             'student' => $student,
@@ -45,6 +49,7 @@ class PersonalInfoController extends Controller
             'hasTeam' => $hasTeam,
             'autoFillFirstName' => $student->f_name,
             'autoFillLastName' => $student->l_name,
+            'studentSy' => $studentSy,
         ]);
     }
 
@@ -68,6 +73,7 @@ class PersonalInfoController extends Controller
         $student->f_name = $validated['first_name'];
         $student->m_name = $validated['middle_name'] ?? null;
         $student->l_name = $validated['last_name'];
+        $student->suffix = $validated['suffix'] ?? null;
         $student->student_number = $validated['student_id'];
         $student->course = $validated['course'];
         $student->year_section = $validated['year'].' · '.strtoupper(substr($validated['section'], 0, 1));
@@ -78,10 +84,15 @@ class PersonalInfoController extends Controller
         $program = Student::mapCourseToProgram($validated['course']);
 
         if ($program) {
+            $schoolYear = now()->month >= 8
+                ? now()->year.'-'.(now()->year + 1)
+                : (now()->year - 1).'-'.now()->year;
+
             StudentSchoolYear::updateOrCreate(
                 ['student_id' => $student->student_id],
                 [
                     'program' => $program,
+                    'school_year' => $schoolYear,
                     'student_status' => 'Active',
                 ]
             );

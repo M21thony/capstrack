@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Capstone Expert - CapsTRACK</title>
+<title>Capstone Expert - CapsTrack</title>
 <meta name="csrf-token" content="{{ csrf_token() }}">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
 @vite('resources/student-ui/Styles/experts.css')
@@ -84,10 +84,10 @@
 .modal-box .form-group label { font-size: 12px; font-weight: 600; color: var(--text2); display: block; margin-bottom: 6px; }
 .modal-box .form-group label .req { color: var(--red); margin-left: 2px; }
 .modal-box .form-group select,
-.modal-box .form-group textarea { width: 100%; padding: 10px 12px; border-radius: 8px; border: 1.5px solid var(--border); background: var(--bg2); color: var(--text); font-size: 13px; font-family: 'DM Sans', sans-serif; outline: none; box-sizing: border-box; transition: border 0.15s; }
+.modal-box .form-group textarea { width: 100%; padding: 12px 14px; border-radius: 8px; border: 2px solid var(--border); background: var(--bg); color: var(--text); font-size: 14px; font-family: 'DM Sans', sans-serif; outline: none; box-sizing: border-box; transition: border 0.15s; }
 .modal-box .form-group select:focus,
 .modal-box .form-group textarea:focus { border-color: var(--accent); }
-.modal-box .form-group textarea { resize: vertical; min-height: 80px; }
+.modal-box .form-group textarea { resize: vertical; min-height: 140px; line-height: 1.6; }
 .modal-box .form-group .file-input-wrap { position: relative; display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 8px; border: 1.5px solid var(--border); background: var(--bg3); cursor: pointer; transition: 0.15s; }
 .modal-box .form-group .file-input-wrap:hover { border-color: var(--accent); }
 .modal-box .form-group .file-input-wrap input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
@@ -577,7 +577,7 @@
 
 <!-- Apply Form Modal -->
 <div class="modal-overlay" id="apply-modal">
-  <div class="modal-box">
+  <div class="modal-box" style="width: 560px; max-width: 94vw;">
     <h3>Apply for Expert</h3>
     <div class="modal-sub" id="apply-expert-name"></div>
 
@@ -593,16 +593,16 @@
 
     <div class="form-group">
       <label>Message to Expert <span class="req">*</span></label>
-      <textarea id="apply-message" placeholder="Briefly introduce your team and why you're applying for this expert..." maxlength="500"></textarea>
+      <textarea id="apply-message" placeholder="Briefly introduce your team and why you're applying for this expert..." rows="5"></textarea>
       <div style="display: flex; justify-content: space-between; margin-top: 4px;">
         <div class="field-error" id="err-message">Please write a message.</div>
-        <span style="font-size: 11px; color: var(--text3);"><span id="msg-count">0</span>/500</span>
+        <span style="font-size: 11px; color: var(--text3);"><span id="msg-count">0</span>/500 words</span>
       </div>
     </div>
 
-    <div class="modal-actions">
-      <button class="btn btn-soft" onclick="closeModal('apply-modal')">Cancel</button>
-      <button class="btn btn-solid" id="btn-review-apply" onclick="reviewApply()">Review &amp; Submit</button>
+    <div class="modal-actions" style="justify-content:flex-end;">
+      <button class="btn btn-soft" onclick="closeModal('apply-modal')" style="flex:0 0 auto;">Cancel</button>
+      <button class="btn btn-solid" id="btn-review-apply" onclick="reviewApply()" style="flex:0 0 auto;">Review &amp; Submit</button>
     </div>
   </div>
 </div>
@@ -621,9 +621,9 @@
       <div class="review-label">Proposal</div>
       <div class="review-value" id="review-file"></div>
     </div>
-    <div class="review-row">
-      <div class="review-label">Message</div>
-      <div class="review-value" id="review-message" style="font-size: 12px; color: var(--text2);"></div>
+      <div class="review-row" style="align-items:flex-start;">
+      <div class="review-label" style="padding-top:2px;">Message</div>
+      <div class="review-value" id="review-message" style="font-size: 12px; color: var(--text2); display:block; white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere; line-height: 1.5; width: 100%; max-width: 100%; overflow-y: auto; max-height: 200px; border: 1px solid var(--border); border-radius: 6px; padding: 10px; background: var(--bg2);"></div>
     </div>
 
     <div class="modal-actions">
@@ -809,7 +809,14 @@ document.addEventListener('DOMContentLoaded', function() {
   var msgInput = document.getElementById('apply-message');
   if (msgInput) {
     msgInput.addEventListener('input', function() {
-      document.getElementById('msg-count').textContent = this.value.length;
+      var text = this.value.trim();
+      var words = text ? text.split(/\s+/).length : 0;
+      document.getElementById('msg-count').textContent = words;
+      if (words > 500) {
+        var trimmed = text.split(/\s+/).slice(0, 500).join(' ');
+        this.value = trimmed;
+        document.getElementById('msg-count').textContent = 500;
+      }
     });
   }
   var removeReason = document.getElementById('remove-reason');
@@ -834,6 +841,13 @@ function reviewApply() {
   if (!message) {
     document.getElementById('err-message').classList.add('show');
     valid = false;
+  } else {
+    var wordCount = message.split(/\s+/).length;
+    if (wordCount > 500) {
+      document.getElementById('err-message').textContent = 'Message exceeds 500 words.';
+      document.getElementById('err-message').classList.add('show');
+      valid = false;
+    }
   }
 
   if (!valid) return;
@@ -843,7 +857,7 @@ function reviewApply() {
 
   document.getElementById('review-expert').textContent = document.getElementById('apply-expert-name').textContent.replace('Apply to ', '');
   document.getElementById('review-file').textContent = currentFileName;
-  document.getElementById('review-message').textContent = message.length > 120 ? message.substring(0, 120) + '...' : message;
+  document.getElementById('review-message').textContent = message;
 
   closeModal('apply-modal');
   openModal('review-modal');

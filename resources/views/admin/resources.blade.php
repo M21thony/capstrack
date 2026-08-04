@@ -1,10 +1,10 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <meta name="csrf-token" content="{{ csrf_token() }}"/>
-<title>Resources – CapsTRACK Admin</title>
+<title>Resources � CapsTRACK Admin</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="{{ asset('css/admin.css') }}"/>
 </head>
@@ -44,10 +44,7 @@
   <div class="topbar">
     <div class="page-title">Templates &amp; Lessons</div>
     <div class="topbar-actions">
-      <div class="notif-btn">
-        <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-        <div class="notif-dot"></div>
-      </div>
+      @include('admin.partials.notification-dropdown')
     </div>
   </div>
 
@@ -59,7 +56,7 @@
         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><path d="M12 15V3"/>
         </svg>
-        <span id="gdrive-status-text" style="font-size:13px;color:var(--text2)">Checking Google Drive connection…</span>
+        <span id="gdrive-status-text" style="font-size:13px;color:var(--text2)">Checking Google Drive connection�</span>
       </div>
       <div>
         <a href="{{ route('gdrive.connect') }}" class="btn btn-primary" id="gdrive-connect-btn" style="font-size:12px;display:none">Connect Google Drive</a>
@@ -86,7 +83,7 @@
                 <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
               </div>
               <div class="dropzone-label">Drop file here or click to browse</div>
-              <div class="dropzone-sub">PDF, DOCX, PPTX — max 25 MB</div>
+              <div class="dropzone-sub">PDF, DOCX, PPTX � max 25 MB</div>
             </div>
             <div class="upload-preview" id="upload-preview">
               <div id="preview-ftype" class="ftype ftype-pdf" style="width:32px;height:32px;font-size:8px">PDF</div>
@@ -100,17 +97,17 @@
           <!-- Resource Name -->
           <div class="form-group">
             <label class="label">Resource Name</label>
-            <input class="input" id="res-name" placeholder="e.g. Chapter 1–3 Manuscript Template"/>
+            <input class="input" id="res-name" placeholder="e.g. Chapter 1�3 Manuscript Template"/>
           </div>
 
           <!-- Category -->
           <div class="form-group">
             <label class="label">Category</label>
             <select class="input" id="res-category">
-              <option value="">Select a category…</option>
+              <option value="">Select a category�</option>
               <option value="pre-proposal">Pre-Proposal Template</option>
-              <option value="ch1-3">Chapter 1–3 Template</option>
-              <option value="ch4-5">Chapter 4–5 Template</option>
+              <option value="ch1-3">Chapter 1�3 Template</option>
+              <option value="ch4-5">Chapter 4�5 Template</option>
               <option value="final">Final Manuscript Template</option>
               <option value="presentation">Presentation Template</option>
               <option value="lesson">Lesson / Reference Material</option>
@@ -184,8 +181,8 @@
             <select class="input" id="category-filter" style="width:170px;font-size:12px" onchange="renderCards()">
               <option value="all">All Categories</option>
               <option value="pre-proposal">Pre-Proposal</option>
-              <option value="ch1-3">Ch. 1–3</option>
-              <option value="ch4-5">Ch. 4–5</option>
+              <option value="ch1-3">Ch. 1�3</option>
+              <option value="ch4-5">Ch. 4�5</option>
               <option value="final">Final MS</option>
               <option value="presentation">Presentation</option>
               <option value="lesson">Lessons</option>
@@ -196,7 +193,7 @@
             </select>
           </div>
           <div style="display:flex;align-items:center;gap:8px">
-            <input class="input" id="search-input" placeholder="Search resources…" style="width:200px;font-size:12px" oninput="renderCards()"/>
+            <input class="input" id="search-input" placeholder="Search resources�" style="width:200px;font-size:12px" oninput="renderCards()"/>
             <select class="input" style="width:130px;font-size:12px" id="program-filter" onchange="renderCards()">
               <option value="all">All Programs</option>
               <option value="BSIT">BSIT</option>
@@ -215,7 +212,7 @@
 </div>
 
 <script>
-// ── SERVER DATA ─────────────────────────────────────────────────────────────
+// -- SERVER DATA -------------------------------------------------------------
 const CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]').content;
 let GDRIVE_CONNECTED = @json($driveConnected ?? false);
 let driveFolders = @json($folders->map(fn($f) => ['id' => $f->drive_folder_id, 'name' => $f->name])->values());
@@ -232,7 +229,7 @@ const ROUTES = {
   destroy: (id) => `{{ url('admin/gdrive/resources') }}/${id}`,
 };
 
-// ── NORMALIZE backend resource -> card display shape ──────────────────────
+// -- NORMALIZE backend resource -> card display shape ----------------------
 function mapResource(r) {
   const date = r.uploaded_at ? new Date(r.uploaded_at) : new Date();
   return {
@@ -241,7 +238,7 @@ function mapResource(r) {
     category: r.category || 'other',
     program: r.resource_for || '',
     ext: (r.file_type || 'pdf').toLowerCase(),
-    size: r.file_size ? formatSize(r.file_size) : '—',
+    size: r.file_size ? formatSize(r.file_size) : '�',
     driveLink: r.drive_web_view_link,
     driveFolderId: r.drive_folder_id || null,
     downloads: r.downloads || 0,
@@ -252,11 +249,11 @@ function mapResource(r) {
 let resources = rawResources.map(mapResource);
 let pendingDeleteId = null;
 
-// ── CATEGORY LABELS ──────────────────────────────────────────────────────────
+// -- CATEGORY LABELS ----------------------------------------------------------
 const CAT_LABELS = {
   'pre-proposal':'Pre-Proposal Template',
-  'ch1-3':'Chapter 1–3 Template',
-  'ch4-5':'Chapter 4–5 Template',
+  'ch1-3':'Chapter 1�3 Template',
+  'ch4-5':'Chapter 4�5 Template',
   'final':'Final Manuscript Template',
   'presentation':'Presentation Template',
   'lesson':'Lesson / Reference',
@@ -283,7 +280,7 @@ function formatSize(bytes){
   return (bytes/(1024*1024)).toFixed(1)+' MB';
 }
 
-// ── RENDER ────────────────────────────────────────────────────────────────────
+// -- RENDER --------------------------------------------------------------------
 function renderCards(){
   const q = document.getElementById('search-input').value.trim().toLowerCase();
   const pf = document.getElementById('program-filter').value;
@@ -322,12 +319,12 @@ function renderCards(){
             <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><path d="M12 15V3"/></svg>
             ${r.downloads} downloads
           </span>
-          <span>·</span>
+          <span>�</span>
           <span>
             <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
             ${r.date}
           </span>
-          <span>·</span>
+          <span>�</span>
           <span>${r.size}</span>
         </div>
         <div class="resource-actions">
@@ -354,7 +351,7 @@ function updateStats(){
   document.getElementById('stat-all-programs').textContent = resources.filter(r=>!r.program).length;
 }
 
-// ── FILE SELECT ───────────────────────────────────────────────────────────────
+// -- FILE SELECT ---------------------------------------------------------------
 let selectedFile = null;
 function onFileSelect(e){ handleFile(e.target.files[0]); }
 function onDragOver(e){ e.preventDefault(); document.getElementById('dropzone').classList.add('drag-over'); }
@@ -369,8 +366,8 @@ function handleFile(file){
   if(!file) return;
   const allowed=['pdf','doc','docx','ppt','pptx'];
   const ext = file.name.split('.').pop().toLowerCase();
-  if(!allowed.includes(ext)){ showToast('❌ Unsupported file type. Use PDF, DOCX, or PPTX.'); return; }
-  if(file.size>25*1024*1024){ showToast('❌ File too large. Max 25 MB.'); return; }
+  if(!allowed.includes(ext)){ showToast('? Unsupported file type. Use PDF, DOCX, or PPTX.'); return; }
+  if(file.size>25*1024*1024){ showToast('? File too large. Max 25 MB.'); return; }
   selectedFile = file;
   const prev = document.getElementById('upload-preview');
   prev.classList.add('show');
@@ -390,7 +387,7 @@ function clearFile(){
   document.getElementById('upload-preview').classList.remove('show');
 }
 
-// ── GOOGLE DRIVE CONNECTION STATUS ─────────────────────────────────────────
+// -- GOOGLE DRIVE CONNECTION STATUS -----------------------------------------
 function refreshDriveStatus(){
   fetch(ROUTES.status)
     .then(r => r.json())
@@ -401,7 +398,7 @@ function refreshDriveStatus(){
       const disconnectBtn = document.getElementById('gdrive-disconnect-btn');
 
       if (GDRIVE_CONNECTED) {
-        text.textContent = '✓ Google Drive connected — uploads sync automatically.';
+        text.textContent = '? Google Drive connected � uploads sync automatically.';
         connectBtn.style.display = 'none';
         disconnectBtn.style.display = 'inline-flex';
       } else {
@@ -427,7 +424,7 @@ function disconnectDrive(){
   });
 }
 
-// ── FOLDERS ────────────────────────────────────────────────────────────────
+// -- FOLDERS ----------------------------------------------------------------
 function populateFolderSelect(){
   const sel = document.getElementById('res-folder');
   sel.innerHTML = '<option value="">No folder (Drive root)</option>' +
@@ -446,7 +443,7 @@ function populateFolderFilter(){
 }
 
 function openFolderModal(){
-  if(!GDRIVE_CONNECTED){ showToast('⚠️ Connect Google Drive first.'); return; }
+  if(!GDRIVE_CONNECTED){ showToast('?? Connect Google Drive first.'); return; }
   document.getElementById('new-folder-name').value = '';
   document.getElementById('folder-modal-overlay').classList.add('show');
 }
@@ -455,11 +452,11 @@ function closeFolderModal(){
 }
 function submitNewFolder(){
   const name = document.getElementById('new-folder-name').value.trim();
-  if(!name){ showToast('⚠️ Enter a folder name.'); return; }
+  if(!name){ showToast('?? Enter a folder name.'); return; }
 
   const btn = document.getElementById('folder-modal-confirm-btn');
   btn.disabled = true;
-  btn.textContent = 'Creating…';
+  btn.textContent = 'Creating�';
 
   fetch(ROUTES.createFolder, {
     method: 'POST',
@@ -470,34 +467,34 @@ function submitNewFolder(){
   .then(data => {
     btn.disabled = false;
     btn.textContent = 'Create Folder';
-    if(!data.success){ showToast('❌ '+(data.message||'Failed to create folder.')); return; }
+    if(!data.success){ showToast('? '+(data.message||'Failed to create folder.')); return; }
 
     driveFolders.push({ id: data.folder.drive_folder_id, name: data.folder.name });
     populateFolderSelect();
     populateFolderFilter();
     document.getElementById('res-folder').value = data.folder.drive_folder_id;
     closeFolderModal();
-    showToast('✓ Folder created.');
+    showToast('? Folder created.');
   })
   .catch(() => {
     btn.disabled = false;
     btn.textContent = 'Create Folder';
-    showToast('❌ Failed to create folder.');
+    showToast('? Failed to create folder.');
   });
 }
 
-// ── UPLOAD ─────────────────────────────────────────────────────────────────────
+// -- UPLOAD ---------------------------------------------------------------------
 function uploadResource(){
-  if(!GDRIVE_CONNECTED){ showToast('⚠️ Connect Google Drive first.'); return; }
+  if(!GDRIVE_CONNECTED){ showToast('?? Connect Google Drive first.'); return; }
 
   const name = document.getElementById('res-name').value.trim();
   const category = document.getElementById('res-category').value;
   const program = document.getElementById('res-program').value;
   const folderId = document.getElementById('res-folder').value;
 
-  if(!selectedFile){ showToast('⚠️ Please select a file first.'); return; }
-  if(!name){ document.getElementById('res-name').focus(); showToast('⚠️ Please enter a resource name.'); return; }
-  if(!category){ document.getElementById('res-category').focus(); showToast('⚠️ Please choose a category.'); return; }
+  if(!selectedFile){ showToast('?? Please select a file first.'); return; }
+  if(!name){ document.getElementById('res-name').focus(); showToast('?? Please enter a resource name.'); return; }
+  if(!category){ document.getElementById('res-category').focus(); showToast('?? Please choose a category.'); return; }
 
   const fd = new FormData();
   fd.append('file', selectedFile);
@@ -509,7 +506,7 @@ function uploadResource(){
   const btn = document.getElementById('upload-btn');
   const originalHTML = btn.innerHTML;
   btn.disabled = true;
-  btn.textContent = 'Uploading…';
+  btn.textContent = 'Uploading�';
 
   fetch(ROUTES.upload, {
     method: 'POST',
@@ -520,19 +517,19 @@ function uploadResource(){
   .then(data => {
     btn.disabled = false;
     btn.innerHTML = originalHTML;
-    if(!data.success){ showToast('❌ '+(data.message||'Upload failed.')); return; }
+    if(!data.success){ showToast('? '+(data.message||'Upload failed.')); return; }
 
     resources.unshift(mapResource(data.resource));
     resetForm();
     document.getElementById('category-filter').value = 'all';
     document.getElementById('folder-filter').value = 'all';
     renderCards();
-    showToast('✓ Uploaded to Google Drive.');
+    showToast('? Uploaded to Google Drive.');
   })
   .catch(() => {
     btn.disabled = false;
     btn.innerHTML = originalHTML;
-    showToast('❌ Upload failed.');
+    showToast('? Upload failed.');
   });
 }
 
@@ -544,13 +541,13 @@ function resetForm(){
   document.getElementById('res-folder').value='';
 }
 
-// ── DOWNLOAD ───────────────────────────────────────────────────────────────────
+// -- DOWNLOAD -------------------------------------------------------------------
 function downloadResource(id, btn){
   const r = resources.find(x=>x.id===id);
-  if(!r || !r.driveLink){ showToast('❌ No file link available.'); return; }
+  if(!r || !r.driveLink){ showToast('? No file link available.'); return; }
 
   btn.classList.add('btn-downloading');
-  btn.textContent='Opening…';
+  btn.textContent='Opening�';
 
   fetch(ROUTES.download(id), {
     method: 'POST',
@@ -564,7 +561,7 @@ function downloadResource(id, btn){
   .catch(() => window.open(r.driveLink, '_blank'));
 }
 
-// ── DELETE ─────────────────────────────────────────────────────────────────────
+// -- DELETE ---------------------------------------------------------------------
 function confirmDelete(id, name){
   pendingDeleteId = id;
   document.getElementById('modal-sub').textContent = `"${name}" will be permanently removed from Google Drive and users will no longer be able to access it.`;
@@ -573,7 +570,7 @@ function confirmDelete(id, name){
   document.getElementById('modal-confirm-btn').onclick = () => {
     const confirmBtn = document.getElementById('modal-confirm-btn');
     confirmBtn.disabled = true;
-    confirmBtn.textContent = 'Removing…';
+    confirmBtn.textContent = 'Removing�';
 
     fetch(ROUTES.destroy(id), {
       method: 'DELETE',
@@ -583,17 +580,17 @@ function confirmDelete(id, name){
     .then(data => {
       confirmBtn.disabled = false;
       confirmBtn.textContent = 'Remove';
-      if(!data.success){ showToast('❌ '+(data.message||'Failed to remove resource.')); return; }
+      if(!data.success){ showToast('? '+(data.message||'Failed to remove resource.')); return; }
 
       resources = resources.filter(r=>r.id!==id);
       closeModal();
       renderCards();
-      showToast('🗑 Resource removed.');
+      showToast('?? Resource removed.');
     })
     .catch(() => {
       confirmBtn.disabled = false;
       confirmBtn.textContent = 'Remove';
-      showToast('❌ Failed to remove resource.');
+      showToast('? Failed to remove resource.');
     });
   };
 }
@@ -610,7 +607,7 @@ document.getElementById('folder-modal-overlay').addEventListener('click', e=>{
   if(e.target===e.currentTarget) closeFolderModal();
 });
 
-// ── TOAST ─────────────────────────────────────────────────────────────────────
+// -- TOAST ---------------------------------------------------------------------
 let toastTimer;
 function showToast(msg){
   const t = document.getElementById('toast');
@@ -620,7 +617,7 @@ function showToast(msg){
   toastTimer = setTimeout(()=>t.classList.remove('show'),2800);
 }
 
-// ── INIT ──────────────────────────────────────────────────────────────────────
+// -- INIT ----------------------------------------------------------------------
 populateFolderSelect();
 populateFolderFilter();
 renderCards();

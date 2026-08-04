@@ -1,7 +1,12 @@
+@php
+  $allUnreadIds = collect($unreadNotifications ?? [])->pluck('id')->toArray();
+  $seenNotifIds = session('student_seen_notification_ids', []);
+  $unseenNotifCount = count(array_diff($allUnreadIds, $seenNotifIds));
+@endphp
 <button class="notif-btn" id="notif-btn" type="button" aria-label="Notifications">
   <svg viewBox="0 0 24 24" style="pointer-events:none"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-  @if(isset($unreadCount) && $unreadCount > 0)
-    <div class="notif-dot">{{ $unreadCount > 9 ? '9+' : $unreadCount }}</div>
+  @if ($unseenNotifCount > 0)
+    <div class="notif-dot">{{ $unseenNotifCount > 9 ? '9+' : $unseenNotifCount }}</div>
   @endif
 </button>
 <!-- Notification Dropdown -->
@@ -25,6 +30,7 @@
           'invitation_received', 'request_received' => ['bg' => 'rgba(59,130,246,0.12)', 'fg' => '#3b82f6', 'svg' => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>'],
           'invitation_declined', 'request_declined' => ['bg' => 'rgba(245,158,11,0.12)', 'fg' => '#f59e0b', 'svg' => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>'],
           'leadership_transferred' => ['bg' => 'rgba(251,191,36,0.15)', 'fg' => '#fbbf24', 'svg' => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>'],
+          'announcement' => ['bg' => 'rgba(249,115,22,0.12)', 'fg' => '#f97316', 'svg' => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>'],
           default => ['bg' => 'rgba(100,116,139,0.12)', 'fg' => '#64748b', 'svg' => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>'],
         };
       @endphp
@@ -88,7 +94,21 @@ document.addEventListener('click', function(e) {
 
   if (btn) {
     e.stopPropagation();
+    var wasClosed = !dropdown.classList.contains('open');
     dropdown.classList.toggle('open');
+    if (wasClosed) {
+      var ids = [{{ collect($unreadNotifications ?? [])->pluck('id')->map(fn($id) => $id)->join(',') }}];
+      if (ids.length) {
+        fetch('/notifications/seen', {
+          method: 'POST',
+          headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ids: ids })
+        }).then(function() {
+          var dot = document.querySelector('.notif-dot');
+          if (dot) dot.remove();
+        });
+      }
+    }
     return;
   }
 
@@ -119,6 +139,11 @@ document.addEventListener('click', function(e) {
     if (data.success) {
       var dot = document.querySelector('.notif-dot');
       if (dot) dot.remove();
+      fetch('/notifications/seen', {
+        method: 'POST',
+        headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: data.ids || [] })
+      });
       var markBtn = document.getElementById('notif-mark-all-btn');
       if (markBtn) markBtn.remove();
       var list = document.querySelector('.notif-list');

@@ -22,4 +22,9 @@ class ActivityLog extends Model
         'metadata' => 'array',
         'created_at' => 'datetime',
     ];
+
+    public function student()
+    {
+        return $this->belongsTo(Student::class, 'student_id', 'student_id');
+    }
 }

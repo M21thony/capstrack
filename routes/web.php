@@ -1,17 +1,28 @@
 <?php
 
+use App\Http\Controllers\Admin\ActivityLogController as AdminActivityLogController;
+use App\Http\Controllers\Admin\AnalyticsController as AdminAnalyticsController;
+use App\Http\Controllers\Admin\AnnouncementController;
+use App\Http\Controllers\Admin\ArchiveController as AdminArchiveController;
 use App\Http\Controllers\Admin\GoogleDriveController;
 use App\Http\Controllers\Admin\ResourcesController;
+use App\Http\Controllers\Admin\RubricController;
 use App\Http\Controllers\AdminApprovalController;
 use App\Http\Controllers\AdminDashboardController;
 use App\Http\Controllers\AdminExpertsController;
 use App\Http\Controllers\AdminFinancialController;
+use App\Http\Controllers\AdminPanelAssignmentController;
+use App\Http\Controllers\AdminProfileController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DuplicationController;
 use App\Http\Controllers\ExpertController;
 use App\Http\Controllers\Instructor\AssignmentController as InstructorAssignmentController;
+use App\Http\Controllers\Instructor\DashboardController as InstructorDashboardController;
 use App\Http\Controllers\Instructor\DocReviewController;
+use App\Http\Controllers\Instructor\GradingController;
+use App\Http\Controllers\Instructor\ProfileController as InstructorProfileController;
+use App\Http\Controllers\Instructor\ProgressController as InstructorProgressController;
 use App\Http\Controllers\Instructor\ScheduleController;
 use App\Http\Controllers\Instructor\TeamController as InstructorTeamController;
 use App\Http\Controllers\InvitationController;
@@ -20,14 +31,18 @@ use App\Http\Controllers\PdfAnnotationController;
 use App\Http\Controllers\PersonalInfoController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RecruitmentController;
+use App\Http\Controllers\Student\ArchiveController as StudentArchiveController;
 use App\Http\Controllers\Student\ExpertController as StudentExpertController;
-use App\Http\Controllers\StudentResourcesController;
+use App\Http\Controllers\Instructor\ConsultationLogController;
+use App\Http\Controllers\Student\ProgressController as StudentProgressController;
+use App\Http\Controllers\Student\ResourceController as StudentResourceController;
 use App\Http\Controllers\StudentConsultationController;
 use App\Http\Controllers\StudentFinancialController;
 use App\Http\Controllers\StudentReviewController;
+use App\Http\Controllers\StudentSectionController;
 use App\Http\Controllers\SubmissionController;
 use App\Http\Controllers\TeamController;
-use App\Http\Controllers\Instructor\ConsultationLogController;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
@@ -39,35 +54,42 @@ Route::middleware(['expert.auth', 'expert.admin', 'no.cache', 'track.expert'])->
     Route::post('/approval/{expert_id}/reject', [AdminApprovalController::class, 'reject'])->name('approval.reject');
     Route::post('/turnover', [AdminExpertsController::class, 'transferRights'])->name('turnover');
     Route::delete('/experts/{expert}', [AdminExpertsController::class, 'destroy'])->name('experts.destroy');
-    Route::view('/panel_assignment', 'admin.panel_assignment')->name('panel_assignment');
-    Route::view('/analytics', 'admin.analytics')->name('analytics');
+    Route::get('/panel_assignment', [AdminPanelAssignmentController::class, 'index'])->name('panel_assignment');
+    Route::get('/profile', [AdminProfileController::class, 'index'])->name('profile');
+    Route::post('/profile', [AdminProfileController::class, 'update'])->name('profile.update');
+    Route::get('/sections', [StudentSectionController::class, 'index'])->name('sections');
+    Route::get('/analytics', [AdminAnalyticsController::class, 'index'])->name('analytics');
     Route::get('/financial', [AdminFinancialController::class, 'index'])->name('financial');
     Route::post('/financial/expense-post', [AdminFinancialController::class, 'storeExpensePost'])->name('financial.expense-post.store');
     Route::put('/financial/expense-post/{expensePost}', [AdminFinancialController::class, 'updateExpensePost'])->name('financial.expense-post.update');
     Route::delete('/financial/expense-post/{expensePost}', [AdminFinancialController::class, 'destroyExpensePost'])->name('financial.expense-post.destroy');
     Route::post('/financial/receipt/{financialRecord}/approve', [AdminFinancialController::class, 'approveReceipt'])->name('financial.receipt.approve');
     Route::post('/financial/receipt/{financialRecord}/reject', [AdminFinancialController::class, 'rejectReceipt'])->name('financial.receipt.reject');
-    Route::view('/archive', 'admin.archive')->name('archive');
-    Route::view('/announcements', 'admin.announcements')->name('announcements');
-    // NOTE: restored to controller-based route (was Route::view in your latest file) —
-    // resources.blade.php needs $driveConnected/$folders/$resources passed in by
-    // ResourcesController@index. Revert to Route::view(...) if this was intentional.
+    Route::get('/archive', [AdminArchiveController::class, 'index'])->name('archive');
+    Route::get('/announcements', [AnnouncementController::class, 'index'])->name('announcements');
     Route::get('/resources', [ResourcesController::class, 'index'])->name('resources');
-    Route::view('/rubric_management', 'admin.rubric_management')->name('rubric_management');
-    Route::view('/activitylog', 'admin.activitylog')->name('activitylog');
+    Route::get('/rubric_management', [RubricController::class, 'index'])->name('rubric_management');
+    Route::get('/activitylog', [AdminActivityLogController::class, 'index'])->name('activitylog');
+    Route::post('/notifications/seen', function (Request $request) {
+        $ids = $request->input('ids', []);
+        if (! empty($ids)) {
+            $seen = session('admin_notification_seen_ids', []);
+            $seen = array_unique(array_merge($seen, $ids));
+            session(['admin_notification_seen_ids' => $seen]);
+        }
+
+        return response()->json(['success' => true]);
+    })->name('notifications.seen');
 });
 
 Route::middleware(['expert.auth', 'expert.approved', 'no.cache', 'track.expert'])->prefix('instructor')->name('instructor.')->group(function () {
-    Route::view('/dashboard', 'instructor.dashboard')->name('dashboard');
-    Route::view('/applications', 'instructor.applications')->name('applications');
+    Route::get('/dashboard', [InstructorDashboardController::class, 'index'])->name('dashboard');
     Route::get('/teams', [InstructorTeamController::class, 'index'])->name('teams');
     Route::view('/consultations', 'instructor.consultations')->name('consultations');
-    Route::view('/progress', 'instructor.progress')->name('progress');
-    Route::view('/profile', 'instructor.profile')->name('profile');
+    Route::get('/progress', [InstructorProgressController::class, 'index'])->name('progress');
+    Route::get('/profile', [InstructorProfileController::class, 'index'])->name('profile');
     Route::view('/schedule', 'instructor.schedule')->name('schedule');
-    Route::view('/grading', 'instructor.grading')->name('grading');
-    // NOTE: now controller-based to show real capstone_document_review rows
-    // for the logged-in expert, instead of the static mock table.
+    Route::get('/grading', [GradingController::class, 'index'])->name('grading');
     Route::get('/docreview', [DocReviewController::class, 'index'])->name('docreview');
     Route::get('/docreview/{review}/annotate', [DocReviewController::class, 'annotate'])->name('docreview.annotate');
     Route::get('/assignments', [InstructorAssignmentController::class, 'index'])->name('assignments');
@@ -137,7 +159,7 @@ Route::middleware(['auth', 'no.cache', 'track.expert'])->group(function () {
     Route::get('/duplication', [DuplicationController::class, 'index'])->name('duplication.index');
     Route::post('/duplication/check', [DuplicationController::class, 'check'])->name('duplication.check');
 
-    Route::prefix('student')->group(function () {
+    Route::middleware(['track.student'])->prefix('student')->group(function () {
         Route::get('/personal-info', [PersonalInfoController::class, 'show'])->name('student.personal-info');
         Route::get('/personal-info/edit', [PersonalInfoController::class, 'edit'])->name('student.personal-info.edit');
         Route::post('/personal-info', [PersonalInfoController::class, 'store'])->name('student.personal-info.store');
@@ -148,7 +170,7 @@ Route::middleware(['auth', 'no.cache', 'track.expert'])->group(function () {
             Route::get('/team', [TeamController::class, 'index'])->name('student.team');
             Route::get('/experts', [StudentExpertController::class, 'index'])->name('student.experts');
             Route::get('/submission', [SubmissionController::class, 'create'])->name('student.submission');
-            // NEW: handles the actual file upload + multi-recipient Drive delivery
+            // Handles the actual file upload + multi-recipient Drive delivery
             Route::post('/submission', [SubmissionController::class, 'store'])->name('student.submission.store');
             Route::get('/review', [StudentReviewController::class, 'index'])->name('student.review');
             Route::get('/review/{review}/pdf', [StudentReviewController::class, 'file'])->name('student.review.pdf');
@@ -158,11 +180,13 @@ Route::middleware(['auth', 'no.cache', 'track.expert'])->group(function () {
             Route::get('/consultation', [StudentConsultationController::class, 'index'])->name('student.consultation');
             Route::post('/consultation/book', [StudentConsultationController::class, 'book'])->name('student.consultation.book');
             Route::post('/consultation/cancel/{bookingId}', [StudentConsultationController::class, 'cancel'])->name('student.consultation.cancel');
-            Route::view('/progress', 'student.progress')->name('student.progress');
+            Route::get('/progress', [StudentProgressController::class, 'index'])->name('student.progress');
+            Route::post('/progress/milestones/mark-done', [StudentProgressController::class, 'markDone'])->name('student.progress.milestones.mark-done');
+            Route::post('/progress/milestones/update-picture', [StudentProgressController::class, 'updatePicture'])->name('student.progress.milestones.update-picture');
             Route::get('/financial', [StudentFinancialController::class, 'index'])->name('student.financial');
             Route::post('/financial/submit', [StudentFinancialController::class, 'submitReceipt'])->name('student.financial.submit');
-            Route::get('/resources', [StudentResourcesController::class, 'index'])->name('student.resources');
-            Route::view('/archive', 'student.archive')->name('student.archive');
+            Route::get('/resources', [StudentResourceController::class, 'index'])->name('student.resources');
+            Route::get('/archive', [StudentArchiveController::class, 'index'])->name('student.archive');
             Route::redirect('/profile', '/student/personal-info/edit')->name('student.profile');
         });
     });
@@ -173,6 +197,7 @@ Route::middleware(['auth', 'no.cache', 'track.expert'])->group(function () {
     Route::get('/notifications/count', [NotificationController::class, 'count'])->name('notifications.count');
     Route::post('/notifications/{notification}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
     Route::post('/notifications/mark-all-read', [NotificationController::class, 'markAllRead'])->name('notifications.mark-all-read');
+    Route::post('/notifications/seen', [NotificationController::class, 'markSeen'])->name('notifications.seen');
 });
 Route::prefix('instructor/schedule')
     ->middleware(['expert.auth', 'no.cache', 'track.expert'])

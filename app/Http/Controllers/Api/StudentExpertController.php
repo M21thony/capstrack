@@ -79,7 +79,11 @@ class StudentExpertController extends Controller
             'expert_id' => ['required', 'integer', 'exists:capstone_experts,expert_id'],
             'role_id' => ['required', 'integer', 'exists:roles,role_id'],
             'proposal_file' => ['required', 'file', 'mimes:pdf', 'max:5120'],
-            'message' => ['required', 'string', 'max:500'],
+            'message' => ['required', 'string', function ($attribute, $value, $fail) {
+                if (str_word_count($value) > 500) {
+                    $fail('The message field must not be greater than 500 words.');
+                }
+            }],
         ]);
 
         $student = Auth::user();

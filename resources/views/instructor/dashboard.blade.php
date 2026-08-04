@@ -6,11 +6,12 @@
 <title>CapsTRACK Expert Portal</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="{{ asset('css/expert.css') }}" />
+<x-dashboard.styles />
 </head>
 <body>
 @include('instructor.partials.sidebar')
-<!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• MAIN â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
 @include('partials.welcome-modal')
+
 <div class="main">
   <div class="topbar">
     <div class="page-title">Dashboard</div>
@@ -24,133 +25,95 @@
 
   <div class="content">
     <div class="grid-4" style="margin-bottom:16px">
-      <div class="stat-chip">
-        <div class="stat-n" style="color:var(--accent3)">4</div>
-        <div class="stat-l">Pending Applications</div>
-        <div class="stat-sub">2 new this week</div>
-      </div>
-      <div class="stat-chip">
-        <div class="stat-n" style="color:var(--red)">5</div>
-        <div class="stat-l">Docs for Review</div>
-        <div class="stat-sub">Oldest: 3 days ago</div>
-      </div>
-      <div class="stat-chip">
-        <div class="stat-n" style="color:var(--blue)">2</div>
-        <div class="stat-l">Upcoming Consults</div>
-        <div class="stat-sub">Next: May 12 at 2 PM</div>
-      </div>
-      <div class="stat-chip">
-        <div class="stat-n" style="color:var(--green)">6</div>
-        <div class="stat-l">Teams Advised</div>
-        <div class="stat-sub">AY 2024â€“2025</div>
-      </div>
-    </div>
-    <div class="card" style="margin-bottom:16px">
-      <div class="card-header"><span class="card-title">Announcements</span><span class="badge badge-accent">New</span></div>
-      <div>
-        <div class="activity-item" style="border-bottom:1px solid var(--border)">
-          <div class="act-icon" style="background:var(--accent-glow)"><svg viewBox="0 0 24 24" style="stroke:var(--accent)"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="m18.5 2.5 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></div>
-          <div class="act-text"><strong>Capstone Defense Schedule Updated</strong><br>The final defense schedule has been revised. Check your email for the new dates.<div class="act-time">April 3, 2026</div></div>
-        </div>
-        <div class="activity-item" style="border-bottom:1px solid var(--border)">
-          <div class="act-icon" style="background:var(--green-bg)"><svg viewBox="0 0 24 24" style="stroke:var(--green)"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
-          <div class="act-text"><strong>You have been assigned as team nexus panel chair</strong><br>You are now the panel chair for Team Nexus.<div class="act-time">March 28, 2026</div></div>
-        </div>
-        <div class="activity-item">
-          <div class="act-icon" style="background:var(--amber-bg)"><svg viewBox="0 0 24 24" style="stroke:var(--amber)"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
-          <div class="act-text"><strong>Important: Document Submission Deadline</strong><br>All final documents must be submitted by May 20th. Late submissions will not be accepted.<div class="act-time">March 15, 2026</div></div>
-        </div>
-      </div>
-    </div>
-    <div class="grid-2" style="margin-bottom:16px">
-      <div class="card">
-        <div class="card-header"><span class="card-title">Pending Applications</span><a href="{{ route('instructor.applications') }}" class="btn btn-ghost" style="font-size:11px;padding:4px 10px">View All</a></div>
-        <table class="table">
-          <thead><tr><th>Team</th><th>Role</th><th>Date</th><th>Action</th></tr></thead>
-          <tbody>
-            <tr>
-              <td class="td-main">Team Nexus</td>
-              <td>Adviser</td>
-              <td>May 3</td>
-              <td><div style="display:flex;gap:4px">
-                <button class="btn btn-success" style="font-size:10px;padding:3px 8px">Accept</button>
-                <button class="btn btn-danger" style="font-size:10px;padding:3px 8px">Reject</button>
-              </div></td>
-            </tr>
-            <tr>
-              <td class="td-main">Team Prism</td>
-              <td>Panel</td>
-              <td>May 4</td>
-              <td><div style="display:flex;gap:4px">
-                <button class="btn btn-success" style="font-size:10px;padding:3px 8px">Accept</button>
-                <button class="btn btn-danger" style="font-size:10px;padding:3px 8px">Reject</button>
-              </div></td>
-            </tr>
-            <tr>
-              <td class="td-main">Team Syntax</td>
-              <td>Consultant</td>
-              <td>May 5</td>
-              <td><div style="display:flex;gap:4px">
-                <button class="btn btn-success" style="font-size:10px;padding:3px 8px">Accept</button>
-                <button class="btn btn-danger" style="font-size:10px;padding:3px 8px">Reject</button>
-              </div></td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-      <div class="card">
-        <div class="card-header"><span class="card-title">Upcoming Consultations</span><a href="{{ route('instructor.consultations') }}" class="btn btn-ghost" style="font-size:11px;padding:4px 10px">View All</a></div>
-        <div class="gap-12">
-          <div class="consult-card">
-            <div class="consult-header">
-              <div>
-                <div class="consult-team">Team Nexus</div>
-                <div class="consult-meta">May 12, 2025 Â· 2:00 PM Â· 1 hour</div>
-              </div>
-              <span class="badge badge-blue">Upcoming</span>
-            </div>
-            <div class="consult-topic">Chapter 3 Methodology Review â€” feedback on research design and sampling approach</div>
-            <div style="display:flex;gap:6px">
-              <button class="btn btn-ghost" style="font-size:10px;padding:4px 10px">Reschedule</button>
-              <button class="btn btn-primary" style="font-size:10px;padding:4px 10px">Join</button>
-            </div>
-          </div>
-          <div class="consult-card">
-            <div class="consult-header">
-              <div>
-                <div class="consult-team">Team Alpha</div>
-                <div class="consult-meta">May 16, 2025 Â· 10:00 AM Â· 45 min</div>
-              </div>
-              <span class="badge badge-gold">Confirmed</span>
-            </div>
-            <div class="consult-topic">Web Architecture Discussion â€” cloud deployment options for the system</div>
-          </div>
-        </div>
-      </div>
+      <x-dashboard.stat-chip value="{{ $pendingApplications }}" label="Pending Applications" sub="{{ $pendingApplicationsNew }} new this week" color="var(--accent3)" />
+      <x-dashboard.stat-chip
+        value="{{ $docsForReview }}"
+        label="Docs for Review"
+        sub="{{ $oldestDocReview ? 'Oldest: '.$oldestDocReview->reviewed_at?->diffForHumans() : 'No pending reviews' }}"
+        color="var(--red)"
+      />
+      <x-dashboard.stat-chip value="{{ $upcomingConsults }}" label="Upcoming Consults" sub="Available slots" color="var(--blue)" />
+      <x-dashboard.stat-chip value="{{ $teamsAdvised }}" label="Teams Advised" sub="Current" color="var(--green)" />
     </div>
 
-    <div class="card">
-      <div class="card-header"><span class="card-title">Recent Activity</span></div>
-      <div>
-        <div class="act-item">
-          <div class="act-dot" style="background:var(--green-bg)"><svg viewBox="0 0 24 24" style="stroke:var(--green)"><polyline points="20 6 9 17 4 12"/></svg></div>
-          <div class="act-body"><strong>Team Nexus</strong> submitted Chapter 2 Draft for review<div class="act-time">2 hours ago</div></div>
+    <div class="grid-2" style="margin-bottom:16px">
+      <x-dashboard.info-card
+        title="Announcements"
+        :badge="$announcements->isNotEmpty() ? 'New' : null"
+        :empty="$announcements->isEmpty()"
+        emptyMessage="No announcements."
+        scrollable
+        maxHeight="320"
+      >
+        @foreach ($announcements as $announcement)
+          @php
+            $priorityColor = match ($announcement->priority) {
+              'urgent' => '#dc2626',
+              'important' => '#d97706',
+              default => '#6b7280',
+            };
+            $priorityBg = match ($announcement->priority) {
+              'urgent' => 'rgba(220,38,38,0.08)',
+              'important' => 'rgba(217,119,6,0.08)',
+              default => 'transparent',
+            };
+          @endphp
+          <div class="activity-item" style="border-left:3px solid {{ $priorityColor }};padding-left:12px;margin-bottom:8px;border-bottom:1px solid var(--border);padding-bottom:10px;">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap;">
+              <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.3px;padding:1px 6px;border-radius:4px;background:{{ $priorityBg }};color:{{ $priorityColor }};">{{ ucfirst($announcement->priority) }}</span>
+              @if ($announcement->target_audience)
+                @foreach ((array) $announcement->target_audience as $ta)
+                  @if (str_starts_with($ta, 'section:'))
+                    <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:4px;background:rgba(16,185,129,0.1);color:#059669;">{{ substr($ta, 8) }}</span>
+                  @else
+                    <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:4px;background:rgba(99,102,241,0.1);color:#6366f1;">{{ $ta }}</span>
+                  @endif
+                @endforeach
+              @endif
+              @if ($announcement->team)
+                <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:4px;background:rgba(59,130,246,0.1);color:#2563eb;">@ {{ $announcement->team->team_name }}</span>
+              @endif
+            </div>
+            <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:2px;">{{ $announcement->title }}</div>
+            <div style="font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:4px;">{{ $announcement->body }}</div>
+            <div style="font-size:11px;color:var(--text3);display:flex;gap:8px;">
+              <span>{{ $announcement->created_at->format('M j, Y') }}</span>
+            </div>
+          </div>
+        @endforeach
+      </x-dashboard.info-card>
+
+      <x-dashboard.info-card
+        title="Upcoming Consultations"
+        :actionUrl="route('instructor.consultations')"
+        actionText="View All"
+        :empty="$consultations->isEmpty()"
+        emptyMessage="No upcoming consultations."
+      >
+        <div class="gap-12">
+          @foreach ($consultations as $consult)
+            <div class="consult-card">
+              <div class="consult-header">
+                <div>
+                  <div class="consult-team">Schedule #{{ $consult->schedule_id }}</div>
+                  <div class="consult-meta">{{ $consult->specific_date?->format('M j, Y') ?? 'TBA' }} {{ $consult->start_time ? '· '.$consult->start_time->format('g:i A') : '' }}</div>
+                </div>
+                <span class="badge badge-blue">Upcoming</span>
+              </div>
+            </div>
+          @endforeach
         </div>
-        <div class="act-item">
-          <div class="act-dot" style="background:rgba(201,168,44,0.1)"><svg viewBox="0 0 24 24" style="stroke:var(--accent3)"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/></svg></div>
-          <div class="act-body"><strong>Team Prism</strong> sent an application request â€” Panel role<div class="act-time">Yesterday, 4:10 PM</div></div>
-        </div>
-        <div class="act-item">
-          <div class="act-dot" style="background:var(--blue-bg)"><svg viewBox="0 0 24 24" style="stroke:var(--blue)"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg></div>
-          <div class="act-body"><strong>Team Alpha</strong> uploaded a receipt for verification<div class="act-time">2 days ago</div></div>
-        </div>
-        <div class="act-item">
-          <div class="act-dot" style="background:var(--red-bg)"><svg viewBox="0 0 24 24" style="stroke:var(--red)"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>
-          <div class="act-body"><strong>Team Syntax</strong> has an overdue milestone â€” Chapter 3<div class="act-time">3 days ago</div></div>
-        </div>
-      </div>
+      </x-dashboard.info-card>
     </div>
-</div>
+
+    <x-dashboard.info-card
+      title="Recent Activity"
+      :empty="empty($recentActivity)"
+      emptyMessage="No recent activity."
+    >
+      <x-dashboard.activity-feed :items="$recentActivity" emptyMessage="No recent activity." />
+    </x-dashboard.info-card>
+  </div>
 </div>
 
 @include('instructor.partials.expert-profile')
