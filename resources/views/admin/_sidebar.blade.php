@@ -1,16 +1,66 @@
 @php
     $admin = Auth::guard('expert')->user();
 
-    // Use the email of the currently logged-in admin/expert account.
-    // (This is the Gmail profile email they log in with.)
     $adminEmail = $admin?->email;
     $adminAvatar = $adminEmail ?: 'system';
     $adminName = $admin ? trim(($admin->first_name ?? '').' '.($admin->last_name ?? '')) : 'System Administrator';
 
-    // Render actual stored profile picture for the logged-in admin/expert.
     $adminProfilePicture = $admin ? ($admin->profile_picture ?: null) : null;
 
     $currentRoute = Route::currentRouteName();
+
+    $pendingExpertIds = App\Models\CapstoneExpert::where('approved_status', false)
+        ->whereNull('rejection_reason')
+        ->pluck('expert_id')
+        ->toArray();
+    $seenPendingExpertIds = session('admin_seen_pending_expert_ids', []);
+    $unseenPendingExpertCount = count(array_diff($pendingExpertIds, $seenPendingExpertIds));
+
+    if ($currentRoute === 'admin.approval') {
+        session()->put('admin_seen_pending_expert_ids', array_unique(array_merge($seenPendingExpertIds, $pendingExpertIds)));
+    }
+
+    $approvedExpertIds = App\Models\CapstoneExpert::where('approved_status', true)
+        ->pluck('expert_id')
+        ->toArray();
+    $seenExpertIds = session('admin_seen_expert_ids', []);
+    $unseenExpertCount = count(array_diff($approvedExpertIds, $seenExpertIds));
+
+    if ($currentRoute === 'admin.experts') {
+        session()->put('admin_seen_expert_ids', array_unique(array_merge($seenExpertIds, $approvedExpertIds)));
+    }
+
+    $verifiedTeamIds = App\Models\Team::where('is_confirmed', true)
+        ->where('team_status', '!=', 'closed')
+        ->pluck('team_id')
+        ->toArray();
+    $seenVerifiedTeamIds = session('admin_seen_verified_team_ids', []);
+    $unseenVerifiedTeamCount = count(array_diff($verifiedTeamIds, $seenVerifiedTeamIds));
+
+    if ($currentRoute === 'admin.panel_assignment') {
+        session()->put('admin_seen_verified_team_ids', array_unique(array_merge($seenVerifiedTeamIds, $verifiedTeamIds)));
+    }
+
+    $archivedCount = App\Models\ArchivedDocument::count();
+
+    $pendingReceiptIds = App\Models\FinancialRecord::whereNull('verified_at')
+        ->whereNotNull('receipt_image')
+        ->pluck('id')
+        ->toArray();
+    $seenPendingReceiptIds = session('admin_seen_pending_receipt_ids', []);
+    $unseenPendingReceiptCount = count(array_diff($pendingReceiptIds, $seenPendingReceiptIds));
+
+    if ($currentRoute === 'admin.financial') {
+        session()->put('admin_seen_pending_receipt_ids', array_unique(array_merge($seenPendingReceiptIds, $pendingReceiptIds)));
+    }
+
+    $activityIds = App\Models\ActivityLog::orderBy('id')->pluck('id')->toArray();
+    $seenActivityIds = session('admin_seen_activity_ids', []);
+    $unseenActivityCount = count(array_diff($activityIds, $seenActivityIds));
+
+    if ($currentRoute === 'admin.activitylog') {
+        session()->put('admin_seen_activity_ids', array_unique(array_merge($seenActivityIds, $activityIds)));
+    }
 @endphp
 
 
@@ -68,19 +118,35 @@
     <a href="{{ route('admin.approval') }}" class="nav-item {{ $currentRoute === 'admin.approval' ? 'active' : '' }}">
       <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/></svg>
       Account Approval
+      @if ($unseenPendingExpertCount > 0)
+        <span class="nav-badge red">{{ $unseenPendingExpertCount > 99 ? '99+' : $unseenPendingExpertCount }}</span>
+      @endif
     </a>
     <a href="{{ route('admin.experts') }}" class="nav-item {{ $currentRoute === 'admin.experts' ? 'active' : '' }}">
       <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
       Expert Management
+      @if ($unseenExpertCount > 0)
+        <span class="nav-badge red">{{ $unseenExpertCount > 99 ? '99+' : $unseenExpertCount }}</span>
+      @endif
     </a>
     <a href="{{ route('admin.panel_assignment') }}" class="nav-item {{ $currentRoute === 'admin.panel_assignment' ? 'active' : '' }}">
       <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="23" y1="11" x2="17" y2="11"/><line x1="20" y1="8" x2="20" y2="14"/></svg>
       Panel Assignment
+      @if ($unseenVerifiedTeamCount > 0)
+        <span class="nav-badge">{{ $unseenVerifiedTeamCount > 99 ? '99+' : $unseenVerifiedTeamCount }}</span>
+      @endif
+    </a>
+    <a href="{{ route('admin.sections') }}" class="nav-item {{ $currentRoute === 'admin.sections' ? 'active' : '' }}">
+      <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      Student Section List
     </a>
     <div class="nav-section">Capstone Archive</div>
     <a href="{{ route('admin.archive') }}" class="nav-item {{ $currentRoute === 'admin.archive' ? 'active' : '' }}">
       <svg viewBox="0 0 24 24"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
       Archived Capstones
+      @if ($archivedCount > 0)
+        <span class="nav-badge">{{ $archivedCount > 99 ? '99+' : $archivedCount }}</span>
+      @endif
     </a>
     <div class="nav-section">Resources</div>
     <a href="{{ route('admin.resources') }}" class="nav-item {{ $currentRoute === 'admin.resources' ? 'active' : '' }}">
@@ -104,11 +170,21 @@
     <a href="{{ route('admin.activitylog') }}" class="nav-item {{ $currentRoute === 'admin.activitylog' ? 'active' : '' }}">
       <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
       Activity Log
+      @if ($unseenActivityCount > 0)
+        <span class="nav-badge red">{{ $unseenActivityCount > 99 ? '99+' : $unseenActivityCount }}</span>
+      @endif
     </a>
     <div class="nav-section">Account</div>
+    <a href="{{ route('admin.profile') }}" class="nav-item {{ $currentRoute === 'admin.profile' ? 'active' : '' }}">
+      <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      Admin Profile
+    </a>
     <a href="{{ route('admin.financial') }}" class="nav-item {{ $currentRoute === 'admin.financial' ? 'active' : '' }}">
       <svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
       Financial Records
+      @if ($unseenPendingReceiptCount > 0)
+        <span class="nav-badge red">{{ $unseenPendingReceiptCount > 99 ? '99+' : $unseenPendingReceiptCount }}</span>
+      @endif
     </a>
     <form id="admin-logout-form" action="{{ route('expert.logout') }}" method="POST" style="display: none;">
       @csrf

@@ -8,6 +8,63 @@
     $sidebarYearNum = preg_replace('/[^0-9]/', '', $sidebarYear);
     $sidebarYearSection = $courseAbbr ? $courseAbbr . ' - ' . $sidebarYearNum . $sidebarSection : $student->year_section ?? '';
     $studentHasTeam = \App\Models\StudentSchoolYear::where('student_id', $student->student_id)->whereNotNull('team_id')->exists();
+
+    $currentRouteName = request()->route()?->getName();
+
+    $lastVisitTeam = session('last_visit_team', now()->subYear());
+    $lastVisitExperts = session('last_visit_experts', now()->subYear());
+    $lastVisitFinancial = session('last_visit_financial', now()->subYear());
+    $lastVisitConsultation = session('last_visit_consultation', now()->subYear());
+
+    if ($currentRouteName === 'student.team') {
+        session()->put('last_visit_team', now());
+        $lastVisitTeam = now();
+    }
+    if ($currentRouteName === 'student.experts') {
+        session()->put('last_visit_experts', now());
+        $lastVisitExperts = now();
+    }
+    if ($currentRouteName === 'student.financial') {
+        session()->put('last_visit_financial', now());
+        $lastVisitFinancial = now();
+    }
+    if ($currentRouteName === 'student.consultation') {
+        session()->put('last_visit_consultation', now());
+        $lastVisitConsultation = now();
+    }
+
+    $studentTeamId = $studentHasTeam ? \App\Models\StudentSchoolYear::where('student_id', $student->student_id)->whereNotNull('team_id')->value('team_id') : null;
+    $pendingExpertIds = $studentTeamId ? \App\Models\TeamExpertAssignment::where('team_id', $studentTeamId)->where('status', 'pending')->pluck('assignment_id')->toArray() : [];
+    $seenExpertIds = session('seen_expert_ids', []);
+    $unseenExpertCount = count(array_diff($pendingExpertIds, $seenExpertIds));
+
+    if ($currentRouteName === 'student.experts') {
+        session()->put('seen_expert_ids', array_unique(array_merge($seenExpertIds, $pendingExpertIds)));
+    }
+
+    $allPostIds = \App\Models\Recruitment::pluck('recruitment_id')->toArray();
+    $seenPostIds = session('seen_post_ids', []);
+    $newPostCount = count(array_diff($allPostIds, $seenPostIds));
+
+    if ($currentRouteName === 'student.team') {
+        session()->put('seen_post_ids', array_unique(array_merge($seenPostIds, $allPostIds)));
+    }
+
+    $pendingReceiptIds = $student ? \App\Models\FinancialRecord::where('student_id', $student->student_id)->whereNull('verified_at')->whereNotNull('receipt_image')->pluck('id')->toArray() : [];
+    $seenReceiptIds = session('seen_receipt_ids', []);
+    $unseenReceiptCount = count(array_diff($pendingReceiptIds, $seenReceiptIds));
+
+    if ($currentRouteName === 'student.financial') {
+        session()->put('seen_receipt_ids', array_unique(array_merge($seenReceiptIds, $pendingReceiptIds)));
+    }
+
+    $consultationIds = DB::table('consultation_schedule')->where('specific_date', '>=', now()->toDateString())->where('is_available', 1)->pluck('schedule_id')->toArray();
+    $seenConsultationIds = session('seen_consultation_ids', []);
+    $unseenConsultationCount = count(array_diff($consultationIds, $seenConsultationIds));
+
+    if ($currentRouteName === 'student.consultation') {
+        session()->put('seen_consultation_ids', array_unique(array_merge($seenConsultationIds, $consultationIds)));
+    }
 @endphp
 <!-- SIDEBAR -->
 <div class="sidebar">
@@ -66,11 +123,16 @@
     <a href="{{ route('student.team') }}" class="nav-item {{ request()->routeIs('student.team') ? 'active' : '' }}">
       <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
       Team Management
+      @if ($newPostCount > 0)
+        <span class="nav-badge">{{ $newPostCount > 99 ? '99+' : $newPostCount }}</span>
+      @endif
     </a>
     <a href="{{ route('student.experts') }}" class="nav-item {{ request()->routeIs('student.experts') ? 'active' : '' }}">
       <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 1 0-16 0"/></svg>
       Capstone Expert
-      <span class="nav-badge warn">2</span>
+      @if ($unseenExpertCount > 0)
+        <span class="nav-badge warn">{{ $unseenExpertCount > 99 ? '99+' : $unseenExpertCount }}</span>
+      @endif
     </a>
     <div class="nav-section">Documents</div>
     <a href="{{ route('student.submission') }}" class="nav-item {{ request()->routeIs('student.submission') ? 'active' : '' }}">
@@ -80,7 +142,6 @@
     <a href="{{ route('student.review') }}" class="nav-item {{ request()->routeIs('student.review') ? 'active' : '' }}">
       <svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
       Review Viewer
-      <span class="nav-badge">3</span>
     </a>
     <a href="{{ route('student.duplication') }}" class="nav-item {{ request()->routeIs('student.duplication') ? 'active' : '' }}">
       <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
@@ -90,6 +151,9 @@
     <a href="{{ route('student.consultation') }}" class="nav-item {{ request()->routeIs('student.consultation') ? 'active' : '' }}">
       <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
       Consultation
+      @if ($unseenConsultationCount > 0)
+        <span class="nav-badge red">{{ $unseenConsultationCount > 99 ? '99+' : $unseenConsultationCount }}</span>
+      @endif
     </a>
     <div class="nav-section">Tracking</div>
     <a href="{{ route('student.progress') }}" class="nav-item {{ request()->routeIs('student.progress') ? 'active' : '' }}">
@@ -99,12 +163,14 @@
     <a href="{{ route('student.financial') }}" class="nav-item {{ request()->routeIs('student.financial') ? 'active' : '' }}">
       <svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
       Financial Records
+      @if ($unseenReceiptCount > 0)
+        <span class="nav-badge warn">{{ $unseenReceiptCount > 99 ? '99+' : $unseenReceiptCount }}</span>
+      @endif
     </a>
     <div class="nav-section">Reference</div>
     <a href="{{ route('student.resources') }}" class="nav-item {{ request()->routeIs('student.resources') ? 'active' : '' }}">
       <svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
       Resources
-      <span class="nav-badge">2</span>
     </a>
     <a href="{{ route('student.archive') }}" class="nav-item {{ request()->routeIs('student.archive') ? 'active' : '' }}">
       <svg viewBox="0 0 24 24"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
@@ -150,7 +216,7 @@
         <div class="pm-avatar">{{ $student->avatarInitials() }}</div>
       @endif
       <div style="flex:1;min-width:0">
-        <div class="pm-header-name">{{ $student->f_name }} {{ $student->m_name }} {{ $student->l_name }}</div>
+        <div class="pm-header-name">{{ $student->f_name }} {{ $student->m_name }} {{ $student->l_name }}{{ $student->suffix ? ', ' . $student->suffix : '' }}</div>
         <div class="pm-header-role">{{ $student->role ?? 'Student' }}</div>
       </div>
       <button type="button" onclick="closeProfile()" class="pm-close-btn" aria-label="Close">
@@ -162,7 +228,7 @@
     <div class="pm-body" id="pm-body">
       <div class="pm-field">
         <div class="pm-label">Full Name</div>
-        <div class="pm-value">{{ trim($student->l_name . ', ' . $student->f_name . ($student->m_name ? ' ' . $student->m_name : '')) . '.' }}</div>
+        <div class="pm-value">{{ trim($student->l_name . ', ' . $student->f_name . ($student->m_name ? ' ' . $student->m_name : '') . ($student->suffix ? ' ' . $student->suffix : '')) . '.' }}</div>
       </div>
       <div class="pm-field">
         <div class="pm-label">Institutional Email</div>

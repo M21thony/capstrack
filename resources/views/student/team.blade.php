@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Team Management - CapsTrack</title>
+<title>Team Management - CapsTrack  </title>
 <meta name="csrf-token" content="{{ csrf_token() }}">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
 @vite('resources/student-ui/Styles/team.css')
@@ -13,12 +13,45 @@
   .pm-close-btn:hover { background-color: var(--border); color: var(--text); transform: scale(1.05); }
   .tag-input-field { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg2); min-height: 42px; box-sizing: border-box; cursor: text; }
   #tag-search-input { border: none !important; background: transparent !important; color: var(--text) !important; font-size: 13px !important; outline: none !important; flex: 1 !important; min-width: 60px !important; padding: 4px 0 !important; }
-  .custom-tag-chip { display: inline-flex; align-items: center; gap: 6px; background: var(--accent); color: #ffffff; font-size: 12px; font-weight: 500; padding: 4px 10px; border-radius: 6px; animation: tagFadeIn 0.15s ease-in-out; }
-  .custom-tag-chip-remove { display: inline-flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.2); border: none; color: #ffffff; border-radius: 50%; width: 14px; height: 14px; cursor: pointer; font-size: 10px; padding: 0; transition: background 0.1s; }
-  .custom-tag-chip-remove:hover { background: rgba(255,255,255,0.4); }
-  .tag-suggestions-box { position: absolute; top: 100%; left: 0; width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; max-height: 160px; overflow-y: auto; z-index: 10; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-top: 4px; }
+  .custom-tag-chip { display: inline-flex; align-items: center; gap: 6px; background: var(--blue-bg); color: var(--blue); font-size: 12px; font-weight: 500; padding: 4px 10px; border-radius: 6px; border: 1px solid rgba(29,78,216,0.25); animation: tagFadeIn 0.15s ease-in-out; }
+  .custom-tag-chip-remove { display: inline-flex; align-items: center; justify-content: center; background: rgba(29,78,216,0.15); border: none; color: var(--blue); border-radius: 50%; width: 14px; height: 14px; cursor: pointer; font-size: 10px; padding: 0; transition: background 0.1s; }
+  .custom-tag-chip-remove:hover { background: rgba(29,78,216,0.25); }
+  #editTeamModal #wordCountHint { color: var(--text2); }
+  #editTeamModal #wordCountBadge { background: var(--bg2); border-color: var(--border); color: #000000; }
+  #editTeamModal .edit-team-save-btn { background: var(--bg3) !important; color: var(--text) !important; border: 1px solid var(--border) !important; box-shadow: none !important; }
+  #editTeamModal .edit-team-save-btn:hover { background: var(--bg4) !important; transform: none !important; box-shadow: none !important; }
+  #editTeamModal .edit-team-cancel-btn { background: var(--navy-dark) !important; color: #fff !important; border: 1px solid var(--navy-dark) !important; }
+  #editTeamModal .edit-team-cancel-btn:hover { background: var(--navy-mid) !important; color: #fff !important; }
+  [data-theme="dark"] #editTeamModal #wordCountHint { background: #20232b; border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 10px 12px; }
+  [data-theme="dark"] #editTeamModal #wordCountRequirement { color: #c9ced9 !important; }
+  [data-theme="dark"] #editTeamModal #wordCountBadge { background: #e5e7eb; border-color: rgba(255,255,255,0.18); color: #000000; }
+
+  [data-theme="dark"] #editTeamModal #wordCountHint > span:last-child { color: #c9ced9 !important; }
+  [data-theme="dark"] #editTeamModal .edit-team-save-btn { background: #2a2f3a !important; color: #f3f4f6 !important; border-color: rgba(255,255,255,0.12) !important; }
+  [data-theme="dark"] #editTeamModal .edit-team-save-btn:hover { background: #343a47 !important; }
+  [data-theme="dark"] #editTeamModal .edit-team-cancel-btn { background: #1e222b !important; color: #fff !important; border-color: rgba(255,255,255,0.08) !important; }
+  [data-theme="dark"] #editTeamModal .edit-team-cancel-btn:hover { background: #262b36 !important; }
+
+  [data-theme="dark"] .expert-removed-item { border-bottom-color: var(--border) !important; }
+  [data-theme="dark"] #expertRemovedModal > div { background: var(--bg2) !important; box-shadow: 0 24px 60px rgba(0,0,0,0.5) !important; }
+  [data-theme="dark"] #expertRemovedModal h3 { color: var(--text) !important; }
+  [data-theme="dark"] #expertRemovedContent { color: var(--text2) !important; }
+  [data-theme="dark"] .expert-removed-item > div:first-child { color: var(--text) !important; }
+  [data-theme="dark"] .expert-removed-item > div:last-child { color: var(--text3) !important; }
+  [data-theme="dark"] #expertRemovedOkBtn { background: var(--bg4) !important; color: var(--text) !important; }
+
+  [data-theme="dark"] #ccm-card { background: var(--bg2) !important; box-shadow: 0 24px 60px rgba(0,0,0,0.5) !important; }
+  [data-theme="dark"] #ccm-title { color: var(--text) !important; }
+  [data-theme="dark"] #ccm-message { color: var(--text2) !important; }
+  [data-theme="dark"] #ccm-cancel { border-color: var(--border) !important; background: var(--bg3) !important; color: var(--text2) !important; }
+  [data-theme="dark"] #ccm-cancel:hover { background: var(--bg4) !important; }
+
+  [data-theme="dark"] #editTeamModal div[style*="background:#fef3c7"] { background: rgba(245,158,11,0.12) !important; border-color: rgba(245,158,11,0.25) !important; color: var(--amber) !important; }
+  [data-theme="dark"] #editTeamModal div[style*="color:#6b7280"] { color: var(--text2) !important; }
+
+  .tag-suggestions-box { position: absolute; bottom: 100%; left: 0; width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; max-height: 160px; overflow-y: auto; z-index: 10; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 4px; }
   .tag-suggestion-item { padding: 10px 14px; font-size: 13px; color: var(--text); cursor: pointer; transition: background 0.1s; }
-  .tag-suggestion-item:hover { background: var(--bg2); color: var(--accent); }
+  .tag-suggestion-item:hover { background: var(--bg2); color: var(--blue); }
   @keyframes tagFadeIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
   @keyframes shimmer { 0% { background-position: -400px 0; } 100% { background-position: calc(400px + 100%) 0; } }
   .skeleton-box { background: linear-gradient(90deg, var(--bg2) 25%, var(--bg) 50%, var(--bg2) 75%); background-size: 400px 100%; animation: shimmer 1.6s ease-in-out infinite; }
@@ -118,7 +151,7 @@
         </div>
         <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; padding-top: 10px; border-top: 1px solid var(--border);">
           <div class="skeleton-box" style="width: 100px; height: 32px; border-radius: 6px;"></div>
-          <div class="skeleton-box" style="width: 130px; height: 32px; border-radius: 6px;"></div>
+          <div class="skeleton-box" style="width: 130px; height: 62px; border-radius: 6px;"></div>
         </div>
       </div>
     </div>
@@ -263,7 +296,7 @@
 
       <div class="team-actions" style="margin-top: 18px; display: flex; justify-content: flex-end; gap: 8px; padding-top: 10px; border-top: 1px solid var(--border);">
         @if($isLeader && $myTeam->team_status === 'complete' && !$myTeam->is_confirmed)
-          <button type="button" onclick="showConfirmTeam()" style="padding: 5px 10px; border-radius: 6px; border: 1px solid #bbf7d0; background: #f0fdf4; color: #15803d; font-size: 10px; font-weight: 700; cursor: pointer;">Confirm Team</button>
+          <button type="button" onclick="showConfirmTeam()" style="padding: 5px 10px; border-radius: 6px; border: 1px solid var(--green); background: var(--green-bg); color: var(--green); font-size: 10px; font-weight: 700; cursor: pointer;">Confirm Team</button>
         @elseif($isLeader && $myTeam->is_confirmed)
           <span class="verified-badge-standalone" style="display:inline-flex;align-items:center;gap:6px;background:linear-gradient(135deg,#10b981,#059669);color:#fff;padding:6px 14px 6px 10px;border-radius:20px;font-size:11px;font-weight:600;box-shadow:0 2px 8px rgba(16,185,129,0.35);border:none;letter-spacing:0.2px;">
             <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
@@ -271,15 +304,15 @@
           </span>
         @endif
         @if($isLeader)
-          <button type="button" onclick="@if($teamMembers->count() > 1)openTransferModal()@else void(0)@endif" style="padding: 5px 10px; border-radius: 6px; border: 1px solid #fde68a; background: #fffbeb; color: #92400e; font-size: 10px; font-weight: 700; @if($teamMembers->count() <= 1)cursor: not-allowed; opacity: 0.5;@else cursor: pointer;@endif">Transfer Leadership</button>
+          <button type="button" onclick="@if($teamMembers->count() > 1)openTransferModal()@else void(0)@endif" style="padding: 5px 10px; border-radius: 6px; border: 1px solid var(--amber); background: var(--amber-bg); color: var(--amber); font-size: 10px; font-weight: 700; @if($teamMembers->count() <= 1)cursor: not-allowed; opacity: 0.5;@else cursor: pointer;@endif">Transfer Leadership</button>
         @endif
         @if($isLeader)
-          <button type="button" onclick="openEditTeamModal()" style="padding: 5px 10px; border-radius: 6px; border: 1px solid #bfdbfe; background: #eff6ff; color: #1d4ed8; font-size: 10px; font-weight: 700; cursor: pointer;">Update Team</button>
+          <button type="button" onclick="openEditTeamModal()" style="padding: 5px 10px; border-radius: 6px; border: 1px solid var(--blue); background: var(--blue-bg); color: var(--blue); font-size: 10px; font-weight: 700; cursor: pointer;">Update Team</button>
         @endif
         <form method="POST" action="{{ route('team.destroy') }}" id="leave-team-form" style="display: inline;">
           @csrf
           @method('DELETE')
-          <button type="button" onclick="confirmLeaveTeam()" style="padding: 5px 10px; border-radius: 6px; border: 1px solid #fecaca; background: #fef2f2; color: #ef4444; font-size: 10px; font-weight: 700; cursor: pointer;">Leave Team</button>
+          <button type="button" onclick="confirmLeaveTeam()" style="padding: 5px 10px; border-radius: 6px; border: 1px solid var(--red); background: var(--red-bg); color: var(--red); font-size: 10px; font-weight: 700; cursor: pointer;">Leave Team</button>
         </form>
       </div>
     </div>
@@ -312,14 +345,14 @@
       @if(!$myTeam)
       <div class="card" style="border-style: dashed; border-width: 2px; cursor: pointer;" onclick="openPostModal()">
         <div style="display: flex; gap: 12px; align-items: center;">
-          <div class="avatar" style="width: 40px; height: 40px; background: var(--accent); color: white;">+</div>
+            <div class="avatar" style="width: 40px; height: 40px; background: var(--blue-bg); color: var(--blue); border: 1.5px solid rgba(29,78,216,0.25);">+</div>
           <div style="color: var(--text3); font-size: 14px;">Looking for a team or members? Post your expertise here...</div>
         </div>
       </div>
       @endif
 
       <div class="profile-grid" id="recruitment-feed">
-          @if($myRecruitment)
+          @if($myRecruitment && ($myRecruitment->recruitment_goal !== 'build_a_team' || $myTeam))
             @php
               $recruitIsLeader = $myRecruitment->recruitment_goal === 'build_a_team';
               $goalLabel = $recruitIsLeader ? 'BUILD A TEAM' : 'Find a Team';
@@ -384,7 +417,7 @@
               <div class="goal-label">{{ $goalLabel }}</div>
             </div>
           @empty
-            @if(!$myRecruitment)
+            @if(!$myRecruitment || ($myRecruitment->recruitment_goal === 'build_a_team' && !$myTeam))
               <div style="grid-column: 1 / -1; text-align: center; padding: 30px; color: var(--text3); font-size: 13px;">
                 No recruitment posts yet. Be the first to post!
               </div>
@@ -561,7 +594,7 @@
   </div>
 
 <div class="modal-overlay" id="postModal" onclick="if(event.target==this) closePostModal()">
-  <div class="card" style="width: 480px; padding: 30px; border: 1px solid var(--accent); position: relative;">
+  <div class="card modal-card modal-card--recruitment" style="width: 480px; padding: 30px; border: 1px solid var(--accent); position: relative;">
     <button type="button" onclick="closePostModal()" class="pm-close-btn" aria-label="Close" style="position: absolute; top: 20px; right: 20px;">
       <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
     </button>
@@ -593,12 +626,12 @@
       <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 8px;">Expertise & Roles</label>
       <div class="tag-wrapper-box" style="position: relative; margin-bottom: 25px;">
         <div class="tag-input-field" id="tag-container" onclick="document.getElementById('tag-search-input').focus()">
-          <input type="text" id="tag-search-input" placeholder="Type roles (e.g., Web Dev, UI Designer)..." oninput="filterTagSuggestions()" onfocus="filterTagSuggestions()">
+          <input type="text" id="tag-search-input" placeholder="" oninput="filterTagSuggestions()" onfocus="filterTagSuggestions()">
         </div>
         <div class="tag-suggestions-box" id="tag-suggestions" style="display: none;"></div>
       </div>
-      <div style="display: flex; gap: 10px;">
-        <form method="POST" action="{{ route('recruitment.store') }}" style="flex: 1;" id="recruitment-form" onsubmit="publishPost(event)">
+      <div class="modal-actions modal-actions--dual" style="display:grid;grid-template-columns: 1fr 1fr;gap:12px;">
+        <form method="POST" action="{{ route('recruitment.store') }}" style="width:100%;" id="recruitment-form" onsubmit="publishPost(event)">
           @csrf
           <input type="hidden" name="_method" id="form-method-input" value="">
           <input type="hidden" name="recruitment_goal" id="recruitment-goal-input" value="build_a_team">
@@ -607,9 +640,9 @@
           <input type="hidden" name="team_name" id="team-name-hidden" value="">
           <input type="hidden" name="member_count" id="member-count-input" value="">
           <input type="hidden" name="tags" id="tags-hidden-input" value="">
-          <button type="submit" class="btn-primary" style="width: 100%;" id="form-submit-btn">Publish Post</button>
+          <button type="submit" class="btn-primary" style="width: 100%; background: var(--blue-bg); color: var(--blue); border: 1.5px solid rgba(29,78,216,0.25); box-shadow: none;" id="form-submit-btn">Publish Post</button>
         </form>
-        <button class="google-btn" style="flex: 1; border: none;" onclick="closePostModal()">Cancel</button>
+        <button class="google-btn" style="width:100%;border:none;background:transparent;color:var(--text);" onclick="closePostModal()">Cancel</button>
       </div>
     </div>
   </div>
@@ -645,12 +678,12 @@
 @if($myTeam && $isLeader)
 {{-- Edit Team Modal --}}
 <div class="modal-overlay" id="editTeamModal" onclick="if(event.target==this) closeEditTeamModal()">
-  <div class="card" style="width: 460px; padding: 30px; border: 1px solid var(--accent); position: relative;">
+  <div class="card modal-card modal-card--team" style="width: 460px; padding: 30px; border: 1px solid var(--accent); position: relative;">
     <button type="button" onclick="closeEditTeamModal()" class="pm-close-btn" aria-label="Close" style="position: absolute; top: 20px; right: 20px;">
       <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
     </button>
     <div class="section-title">Update Team</div>
-    <form method="POST" action="{{ route('team.update', $myTeam->team_id) }}" style="margin-top: 20px;">
+    <form method="POST" action="{{ route('team.update', $myTeam->team_id) }}" style="margin-top: 20px;" onsubmit="return validateForm(event)">
       @csrf
       @method('PUT')
       <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 8px;">Team Name</label>
@@ -658,10 +691,33 @@
       <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 8px;">Project Title</label>
       <textarea name="project_title" id="projectTitleInput" placeholder="Enter project title..." oninput="autoExpand(this); updateCompleteOption()" rows="2" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;margin-bottom:16px;box-sizing:border-box;resize:none;overflow:hidden;min-height:42px;font-family:inherit;">{{ $myTeam->project_title }}</textarea>
       <div id="wordCountHint" style="display:flex;align-items:center;gap:8px;margin:-10px 0 16px;font-size:12px;">
-        <span id="wordCountBadge" style="padding:3px 10px;border-radius:10px;font-size:11px;font-weight:600;background:var(--bg2);border:1px solid var(--border);transition:0.2s;">
+        <span id="wordCountBadge" style="padding:3px 10px;border-radius:10px;font-size:11px;font-weight:600;background:var(--bg2);border:1px solid var(--border);transition:0.2s; color: inherit;">
           Words: <span id="wordCountDisplay">0</span>/11–12
         </span>
-        <span style="color:var(--text3);">required for <strong>Complete</strong> (filler words excluded)</span>
+        <span id="wordCountRequirement" style="color:var(--text3);">required for <strong>Complete</strong> (filler words excluded)</span>
+      </div>
+
+      <div id="tagsSection" style="display:none;margin-bottom:16px;">
+        <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text3);margin-bottom:8px;">
+          Project Tags <span style="color:var(--red)">*</span>
+        </label>
+        <div style="position:relative;display:flex;gap:6px;margin-bottom:8px;">
+          <div style="position:relative;flex:1;">
+            <input type="text" id="tagSearchInput" placeholder="Search or type a tag..." autocomplete="off" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:12px;box-sizing:border-box;" oninput="filterCommonTags(this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault();addCustomTag();}if(event.key==='Escape'){closeTagDropdown();}" onblur="setTimeout(closeTagDropdown,180)" onfocus="filterCommonTags(this.value)">
+            <div id="tagDropdown" style="display:none;position:absolute;top:100%;left:0;width:100%;max-height:180px;overflow-y:auto;background:var(--bg2);border:1px solid var(--border);border-radius:8px;z-index:20;margin-top:4px;box-shadow:0 6px 20px rgba(0,0,0,0.1);">
+            </div>
+          </div>
+          <button type="button" onclick="addCustomTag()" style="padding:7px 14px;border-radius:7px;border:1px solid var(--border);background:var(--bg3);color:var(--text2);font-size:12px;cursor:pointer;font-family:inherit;">Add</button>
+        </div>
+        <input type="hidden" name="tags" id="tagsHiddenInput" value='{{ $myTeam->tags ? json_encode($myTeam->tags) : "[]" }}'>
+        <div id="selectedTagsDisplay" style="display:flex;flex-wrap:wrap;gap:6px;min-height:28px;">
+          @if($myTeam->tags)
+            @foreach($myTeam->tags as $tag)
+              <span class="selected-tag" data-tag="{{ $tag }}">{{ $tag }} <span onclick="removeProjectTag(this)" style="cursor:pointer;opacity:0.6;margin-left:4px;">&times;</span></span>
+            @endforeach
+          @endif
+        </div>
+        <div id="tagsError" style="font-size:11px;color:var(--red);margin-top:4px;display:none;">Please add at least 2 tags related to your project.</div>
       </div>
       <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 8px;">Team Members</label>
       <select name="member_count" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;margin-bottom:16px;box-sizing:border-box;">
@@ -687,9 +743,9 @@
       @else
       <div style="margin-bottom:20px;"></div>
       @endif
-      <div style="display:flex;gap:10px;">
-        <button type="submit" class="btn-primary" style="flex:1;">Save Changes</button>
-        <button type="button" class="google-btn" style="flex:1;border:none;" onclick="closeEditTeamModal()">Cancel</button>
+      <div class="modal-actions modal-actions--dual" style="display:grid;grid-template-columns: 1fr 1fr;gap:12px;">
+        <button type="submit" class="btn-primary edit-team-save-btn" style="width:100%;">Save Changes</button>
+        <button type="button" class="google-btn edit-team-cancel-btn" style="width:100%;border:none;background:transparent;" onclick="closeEditTeamModal()">Cancel</button>
       </div>
     </form>
   </div>
@@ -698,7 +754,7 @@
 
 {{-- Transfer Leadership Modal --}}
 <div class="modal-overlay" id="transferModal" onclick="if(event.target==this) closeTransferModal()">
-  <div class="card" style="width: 400px; padding: 30px;">
+  <div class="card modal-card modal-card--transfer" style="width: 400px; padding: 30px;">
     <div class="section-title">Transfer Leadership</div>
     <p style="margin-top: 8px; font-size: 13px; color: var(--text2);">Select a team member to become the new leader. You will be demoted to a regular member.</p>
     <form method="POST" action="{{ route('team.transfer-leadership') }}" style="margin-top: 20px;">
@@ -711,7 +767,7 @@
           @endif
         @endforeach
       </select>
-      <div style="display:flex;gap:10px;">
+      <div class="modal-actions modal-actions--dual" style="display:flex;gap:10px;">
         <button type="submit" class="btn-primary" style="flex:1;">Transfer</button>
         <button type="button" class="google-btn" style="flex:1;border:none;" onclick="closeTransferModal()">Cancel</button>
       </div>
@@ -745,8 +801,24 @@
   #expertRemovedContent::-webkit-scrollbar { width:4px; }
   #expertRemovedContent::-webkit-scrollbar-thumb { background:#e5e7eb; border-radius:4px; }
   #expertRemovedOkBtn:hover { background:#374151; }
+  [data-theme="dark"] #expertRemovedContent::-webkit-scrollbar-thumb { background:var(--border) !important; }
+  [data-theme="dark"] #expertRemovedOkBtn:hover { background:var(--navy-hover) !important; }
+  .selected-tag{display:inline-flex;align-items:center;gap:4px;padding:4px 8px;border-radius:6px;font-size:11px;font-weight:500;background:var(--blue-bg);border:1px solid rgba(29,78,216,0.2);color:var(--blue)}
+  [data-theme="dark"] .google-btn{color:#fff!important;background:var(--bg3)!important}
+  [data-theme="dark"] .google-btn:hover{color:#fff!important;background:var(--bg4)!important;border-color:var(--border)!important}
+  [data-theme="dark"] #form-submit-btn{color:#fff!important}
+  #form-submit-btn:hover{background:rgba(29,78,216,0.12)!important;transform:translateY(-1px)!important;box-shadow:none!important}
 </style>
 @endif
+
+<style>
+  .msg-toast{position:fixed;bottom:30px;right:30px;background:var(--navy-dark);color:#fff;padding:14px 22px;border-radius:12px;font-size:13px;font-weight:500;z-index:99999;display:none;align-items:center;gap:10px;box-shadow:0 8px 30px rgba(0,0,0,0.3);animation:slideUp 0.3s ease;max-width:380px}
+  .msg-toast.error{border-left:4px solid var(--red)}
+  .msg-toast.show{display:flex}
+  @keyframes slideUp{from{transform:translateY(16px);opacity:0}to{transform:translateY(0);opacity:1}}
+</style>
+
+<div class="msg-toast" id="msg-toast"></div>
 
 {{-- Custom Confirm Modal --}}
 <div id="customConfirmModal" style="display:none; position:fixed; inset:0; z-index:99999; align-items:center; justify-content:center; background:rgba(15,16,22,0.75); backdrop-filter:blur(6px); padding:20px;">
@@ -772,6 +844,22 @@ let isEditing = false;
 let editingId = null;
 const leaderPresets = ["UI Designer", "App Developer", "Backend Dev", "Documentation", "Fullstack Dev", "Web Dev", "Mobile Dev", "Project Manager"];
 const individualPresets = ["Leadership", "Research", "Design", "Testing", "Frontend Dev", "Database Admin", "QA Engineer", "Web Dev", "UI Designer", "Backend Dev"];
+
+function syncRecruitmentSelectLabels() {
+  const isMobile = window.innerWidth <= 480;
+  const goalSelect = document.getElementById('post-goal');
+  const memberSelect = document.getElementById('member-count');
+
+  if (goalSelect && goalSelect.options.length >= 2) {
+    goalSelect.options[0].text = isMobile ? 'Build Team' : 'Build a Team (Find Members)';
+    goalSelect.options[1].text = isMobile ? 'Find Team' : 'Find a Team (Join Others)';
+  }
+
+  if (memberSelect && memberSelect.options.length >= 2) {
+    memberSelect.options[0].text = isMobile ? '3' : '3 Members';
+    memberSelect.options[1].text = isMobile ? '5' : '5 Members';
+  }
+}
 
 @if($myTeam)
 function confirmLeaveTeam() {
@@ -903,11 +991,139 @@ function updateCompleteOption() {
         if (badge) {
             badge.style.background = canComplete ? '#d1fae5' : 'var(--bg2)';
             badge.style.borderColor = canComplete ? '#6ee7b7' : 'var(--border)';
+            // Ensure readability on both themes
+            badge.style.color = canComplete ? '#0f172a' : (document.documentElement.getAttribute('data-theme') === 'dark' ? '#ffffff' : '#000000');
         }
+    }
+
+    var tagsSection = document.getElementById('tagsSection');
+    if (tagsSection) {
+        tagsSection.style.display = wordCount >= 11 ? 'block' : 'none';
     }
 }
 
-// Override openEditTeamModal to run word count and auto-expand on open
+function addCustomTag() {
+    var input = document.getElementById('tagSearchInput');
+    var val = input.value.trim().replace(/\s+/g, ' ');
+    if (!val || isTagSelected(val)) {
+        input.value = '';
+        closeTagDropdown();
+        return;
+    }
+    var display = document.getElementById('selectedTagsDisplay');
+    var span = document.createElement('span');
+    span.className = 'selected-tag';
+    span.setAttribute('data-tag', val);
+    span.innerHTML = val + ' <span onclick="removeProjectTag(this)" style="cursor:pointer;opacity:0.6;margin-left:4px;">&times;</span>';
+    display.appendChild(span);
+    input.value = '';
+    closeTagDropdown();
+    updateTagsHiddenInput();
+}
+
+function getSelectedTags() {
+    var tags = [];
+    document.querySelectorAll('#selectedTagsDisplay .selected-tag').forEach(function(el) {
+        tags.push((el.getAttribute('data-tag') || el.textContent.trim().replace('\u00d7','').trim()).toLowerCase());
+    });
+    return tags;
+}
+
+function isTagSelected(val) {
+    var selected = getSelectedTags();
+    return selected.indexOf(val.toLowerCase().trim()) !== -1;
+}
+
+var COMMON_TAGS = [
+    'Artificial Intelligence', 'Machine Learning', 'Web Development',
+    'Mobile App', 'Data Analytics', 'Cybersecurity', 
+    'AI', 'Database Systems', 'UI/UX Design', 'Network Systems'
+];
+
+function filterCommonTags(query) {
+    var dropdown = document.getElementById('tagDropdown');
+    var q = query.toLowerCase().trim();
+    if (!q) {
+        dropdown.innerHTML = '';
+        dropdown.style.display = 'none';
+        return;
+    }
+    var selected = getSelectedTags();
+    var matches = COMMON_TAGS.filter(function(t) {
+        return t.toLowerCase().indexOf(q) !== -1 && selected.indexOf(t.toLowerCase()) === -1;
+    });
+    if (matches.length === 0) {
+        dropdown.innerHTML = '<div style="padding:10px 12px;font-size:12px;color:var(--text3);">' + (selected.indexOf(q) !== -1 ? 'Already added' : 'No matching tags') + '</div>';
+        dropdown.style.display = 'block';
+        return;
+    }
+    var html = '';
+    matches.forEach(function(t) {
+        html += '<div onclick="selectTagFromDropdown(\'' + t.replace(/'/g, "\\'") + '\')" style="padding:8px 12px;font-size:12px;color:var(--text);cursor:pointer;border-bottom:1px solid var(--border);" onmouseover="this.style.background=\'var(--bg3)\'" onmouseout="this.style.background=\'transparent\'">' + t + '</div>';
+    });
+    dropdown.innerHTML = html;
+    dropdown.style.display = 'block';
+}
+
+function closeTagDropdown() {
+    var dropdown = document.getElementById('tagDropdown');
+    if (dropdown) dropdown.style.display = 'none';
+}
+
+function selectTagFromDropdown(val) {
+    if (isTagSelected(val)) {
+        closeTagDropdown();
+        document.getElementById('tagSearchInput').value = '';
+        return;
+    }
+    var display = document.getElementById('selectedTagsDisplay');
+    var span = document.createElement('span');
+    span.className = 'selected-tag';
+    span.setAttribute('data-tag', val);
+    span.innerHTML = val + ' <span onclick="removeProjectTag(this)" style="cursor:pointer;opacity:0.6;margin-left:4px;">&times;</span>';
+    display.appendChild(span);
+    document.getElementById('tagSearchInput').value = '';
+    closeTagDropdown();
+    updateTagsHiddenInput();
+}
+
+function removeProjectTag(el) {
+    el.parentElement.remove();
+    updateTagsHiddenInput();
+}
+
+function updateTagsHiddenInput() {
+    var tags = [];
+    document.querySelectorAll('#selectedTagsDisplay .selected-tag').forEach(function(el) {
+        tags.push(el.getAttribute('data-tag') || el.textContent.trim().replace('\u00d7','').trim());
+    });
+    document.getElementById('tagsHiddenInput').value = JSON.stringify(tags);
+    document.getElementById('tagsError').style.display = tags.length >= 2 ? 'none' : 'block';
+}
+
+function validateTags() {
+    var tagsInput = document.getElementById('tagsHiddenInput');
+    var tags = [];
+    try { tags = JSON.parse(tagsInput.value || '[]'); } catch(e) {}
+    if (tags.length < 2) {
+        document.getElementById('tagsError').style.display = 'block';
+        return false;
+    }
+    return true;
+}
+
+function validateForm(event) {
+    var tagsSection = document.getElementById('tagsSection');
+    if (tagsSection && tagsSection.style.display !== 'none') {
+        if (!validateTags()) {
+            event.preventDefault();
+            return false;
+        }
+    }
+    return true;
+}
+
+// Override openEditTeamModal to run word count, auto-expand, and sync tags
 var origOpenTeamModal = openEditTeamModal;
 openEditTeamModal = function() {
     origOpenTeamModal();
@@ -915,8 +1131,39 @@ openEditTeamModal = function() {
         updateCompleteOption();
         var el = document.getElementById('projectTitleInput');
         if (el) autoExpand(el);
+        syncTagUI();
     }, 50);
 };
+
+function syncTagUI() {
+    var tagsInput = document.getElementById('tagsHiddenInput');
+    if (!tagsInput) return;
+    var tags = [];
+    try { tags = JSON.parse(tagsInput.value || '[]'); } catch(e) {}
+    var display = document.getElementById('selectedTagsDisplay');
+    var existing = display.querySelectorAll('.selected-tag');
+    existing.forEach(function(el) {
+        var txt = el.getAttribute('data-tag') || el.textContent.trim().replace('\u00d7','').trim();
+        if (tags.indexOf(txt) === -1) {
+            el.remove();
+        }
+    });
+    tags.forEach(function(t) {
+        var found = false;
+        display.querySelectorAll('.selected-tag').forEach(function(el) {
+            var txt = el.getAttribute('data-tag') || el.textContent.trim().replace('\u00d7','').trim();
+            if (txt.toLowerCase() === t.toLowerCase()) found = true;
+        });
+        if (!found) {
+            var span = document.createElement('span');
+            span.className = 'selected-tag';
+            span.setAttribute('data-tag', t);
+            span.innerHTML = t + ' <span onclick="removeProjectTag(this)" style="cursor:pointer;opacity:0.6;margin-left:4px;">&times;</span>';
+            display.appendChild(span);
+        }
+    });
+    document.getElementById('tagsError').style.display = tags.length >= 2 ? 'none' : 'block';
+}
 @endif
 
 // ── Custom Confirm Modal ──
@@ -1022,6 +1269,7 @@ function openEditModal() {
     activeTags = JSON.parse('{{ addslashes(json_encode($myRecruitment->roles ?? [])) }}'.replace(/&quot;/g, '"').replace(/&#039;/g, "'"));
     renderActiveTags();
 
+    syncRecruitmentSelectLabels();
     document.getElementById('postModal').classList.add('active');
     @endif
 }
@@ -1045,6 +1293,7 @@ function resetPostModal() {
 
 function openPostModal() {
     resetPostModal();
+    syncRecruitmentSelectLabels();
     document.getElementById('postModal').classList.add('active');
 }
 
@@ -1181,6 +1430,7 @@ function viewPostDetails(cardEl, name, skills, lookingFor, teamName, projectTitl
 }
 
 function updateModalUI() {
+  syncRecruitmentSelectLabels();
     const goal = document.getElementById('post-goal').value;
     const isLeader = (goal === 'leader');
     document.getElementById('modal-title').textContent = isLeader ? 'Build a Team' : 'Find a Team';
@@ -1195,6 +1445,9 @@ function updateModalUI() {
     activeTags = [];
     renderActiveTags();
 }
+
+  syncRecruitmentSelectLabels();
+  window.addEventListener('resize', syncRecruitmentSelectLabels);
 
 function filterTagSuggestions() {
     const goal = document.getElementById('post-goal').value;
@@ -1259,19 +1512,50 @@ function submitDeleteForm() {
     document.getElementById('delete-recruitment-form').submit();
 }
 
+function showToast(msg, type) {
+    var el = document.getElementById('msg-toast');
+    if (!el) return;
+    el.textContent = msg;
+    el.className = 'msg-toast show ' + (type || '');
+    setTimeout(function() { el.classList.remove('show'); }, 3000);
+}
+
 function publishPost(event) {
     if (activeTags.length === 0) {
         event.preventDefault();
-        alert('Please select at least one expertise/role.');
+        showToast('Please select at least one expertise/role.', 'error');
         return;
     }
     const goal = document.getElementById('post-goal').value;
+    if (goal === 'leader') {
+        var teamName = document.getElementById('team-name').value.trim();
+        var lookingFor = document.getElementById('leader-looking-for').value.trim();
+        if (!teamName) {
+            event.preventDefault();
+            showToast('Please enter your team name.', 'error');
+            document.getElementById('team-name').focus();
+            return;
+        }
+        if (!lookingFor) {
+            event.preventDefault();
+            showToast('Please introduce your capstone team.', 'error');
+            document.getElementById('leader-looking-for').focus();
+            return;
+        }
+    } else {
+        var intro = document.getElementById('individual-intro').value.trim();
+        if (!intro) {
+            event.preventDefault();
+            showToast('Please introduce yourself and what you contribute.', 'error');
+            document.getElementById('individual-intro').focus();
+            return;
+        }
+    }
     document.getElementById('member-count-input').value = document.getElementById('member-count').value;
     document.getElementById('tags-hidden-input').value = JSON.stringify(activeTags);
 
     if (isEditing) {
         event.preventDefault();
-        const goal = document.getElementById('post-goal').value;
         document.getElementById('recruitment-goal-input').value = goal === 'leader' ? 'build_a_team' : 'find_a_team';
         document.getElementById('member-count-input').value = document.getElementById('member-count').value;
         if (goal === 'leader') {

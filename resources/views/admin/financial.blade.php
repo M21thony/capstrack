@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
@@ -30,10 +30,7 @@
     </button>
     <div class="page-title">Financial Records</div>
     <div class="topbar-actions">
-      <div class="notif-btn">
-        <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-        <div class="notif-dot"></div>
-      </div>
+      @include('admin.partials.notification-dropdown')
       <button class="btn btn-ghost-nav">
         <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><path d="M12 15V3"/></svg>
         Export CSV
@@ -49,7 +46,7 @@
       </div>
     @endif
 
-    <!-- ── ANALYTICS OVERVIEW ── -->
+    <!-- -- ANALYTICS OVERVIEW -- -->
     <div class="fin-overview">
 
       <!-- LEFT: Team payment status ring -->
@@ -98,7 +95,7 @@
               <div class="fin-pbar">
                 <div class="fin-pbar-fill" style="width:{{ $teamPercentFull }}%;background:var(--green)"></div>
               </div>
-              <div style="font-size:10px;color:var(--text3);margin-top:2px">{{ $teamPercentFull }}% of all teams · All receipts verified</div>
+              <div style="font-size:10px;color:var(--text3);margin-top:2px">{{ $teamPercentFull }}% of all teams � All receipts verified</div>
             </div>
             <div class="fin-legend-row">
               <div class="fin-legend-top">
@@ -111,7 +108,7 @@
               <div class="fin-pbar">
                 <div class="fin-pbar-fill" style="width:{{ $teamPercentPending }}%;background:var(--amber)"></div>
               </div>
-              <div style="font-size:10px;color:var(--text3);margin-top:2px">{{ $teamPercentPending }}% · Submitted, awaiting verification</div>
+              <div style="font-size:10px;color:var(--text3);margin-top:2px">{{ $teamPercentPending }}% � Submitted, awaiting verification</div>
             </div>
             <div class="fin-legend-row">
               <div class="fin-legend-top">
@@ -124,7 +121,7 @@
               <div class="fin-pbar">
                 <div class="fin-pbar-fill" style="width:{{ $teamPercentNone }}%;background:var(--red)"></div>
               </div>
-              <div style="font-size:10px;color:var(--text3);margin-top:2px">{{ $teamPercentNone }}% · Have not submitted any receipt</div>
+              <div style="font-size:10px;color:var(--text3);margin-top:2px">{{ $teamPercentNone }}% � Have not submitted any receipt</div>
             </div>
           </div>
         </div>
@@ -164,29 +161,29 @@
           <div class="fin-quad-cell">
             <div class="fin-quad-n" style="color:var(--green)">{{ $paidStudents }}</div>
             <div class="fin-quad-l" style="color:var(--green)">Paid Students</div>
-            <div class="fin-quad-sub">{{ $studPercentPaid }}% · All receipts verified</div>
+            <div class="fin-quad-sub">{{ $studPercentPaid }}% � All receipts verified</div>
           </div>
           <div class="fin-quad-cell">
             <div class="fin-quad-n" style="color:var(--red)">{{ $noSubmissionStudents }}</div>
             <div class="fin-quad-l" style="color:var(--red)">Unpaid Students</div>
-            <div class="fin-quad-sub">{{ $studPercentNone }}% · No submissions yet</div>
+            <div class="fin-quad-sub">{{ $studPercentNone }}% � No submissions yet</div>
           </div>
           <div class="fin-quad-cell">
             <div class="fin-quad-n" style="color:var(--amber)">{{ $pendingStudents }}</div>
             <div class="fin-quad-l" style="color:var(--amber)">Pending Review</div>
-            <div class="fin-quad-sub">{{ $studPercentPending }}% · Awaiting verification</div>
+            <div class="fin-quad-sub">{{ $studPercentPending }}% � Awaiting verification</div>
           </div>
           <div class="fin-quad-cell">
             <div class="fin-quad-n" style="color:var(--blue)">{{ $paidStudents }}</div>
             <div class="fin-quad-l" style="color:var(--blue)">Partially Paid</div>
-            <div class="fin-quad-sub">Various · Some receipts verified</div>
+            <div class="fin-quad-sub">Various � Some receipts verified</div>
           </div>
         </div>
       </div>
 
     </div>
 
-    <!-- ── TEAM BREAKDOWN TABLE ── -->
+    <!-- -- TEAM BREAKDOWN TABLE -- -->
     <div class="card" style="margin-bottom:18px;padding:0;overflow:hidden" id="teamBreakdownCard">
       <div class="tb-header">
         <span class="card-title">Team Breakdown</span>
@@ -240,7 +237,7 @@
               $postIds = $stats['post_ids'];
 
               $teamTitles = $postIds->map(fn($id) => $expensePostTitles[$id] ?? null)->filter()->values()->toArray();
-              $teamTitleHtml = !empty($teamTitles) ? implode(',<br>', $teamTitles) : '—';
+              $teamTitleHtml = !empty($teamTitles) ? implode(',<br>', $teamTitles) : '�';
 
               $teamCourse = \App\Models\StudentSchoolYear::where('team_id', $team->team_id)->whereNotNull('program')->first()?->program ?? $team->members->first()?->course ?? 'N/A';
 
@@ -287,14 +284,14 @@
       <div style="padding:12px 20px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
         <span id="teamCount" style="font-size:12px;color:var(--text3)">Showing {{ $teams->count() }} teams</span>
         <div id="paginationControls" style="display:flex;gap:6px;align-items:center">
-          <button id="prevPageBtn" class="btn btn-ghost" style="font-size:11px;padding:5px 12px;display:none" onclick="prevPage()">← Prev</button>
+          <button id="prevPageBtn" class="btn btn-ghost" style="font-size:11px;padding:5px 12px;display:none" onclick="prevPage()">? Prev</button>
           <span id="pageIndicator" style="font-size:11px;color:var(--text3);font-weight:600;display:none">Page 1</span>
-          <button id="nextPageBtn" class="btn btn-ghost" style="font-size:11px;padding:5px 12px;display:none" onclick="nextPage()">Next →</button>
+          <button id="nextPageBtn" class="btn btn-ghost" style="font-size:11px;padding:5px 12px;display:none" onclick="nextPage()">Next ?</button>
         </div>
       </div>
     </div>
 
-    <!-- ── RECEIPT QUEUE + EXPENSE POSTS GRID ── -->
+    <!-- -- RECEIPT QUEUE + EXPENSE POSTS GRID -- -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">
     <div class="card" style="padding:0;overflow:hidden;min-width:0">
       <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 20px 14px;border-bottom:1px solid var(--border)">
@@ -343,7 +340,7 @@
           <div class="receipt-info">
             <div class="receipt-name">Expense Category: {{ $expenseTitle }}</div>
             @if ($record->receipt_number)<div style="font-size:11px;color:var(--text2);font-weight:600;margin-bottom:3px">Receipt Number: {{ $record->receipt_number }}</div>@endif
-            <div class="receipt-meta">Team {{ $teamName }} · <strong style="color:var(--text)">{{ $studentName }}</strong> · Uploaded {{ $record->uploaded_at ? \Carbon\Carbon::parse($record->uploaded_at)->format('M d, Y') : 'N/A' }}</div>
+            <div class="receipt-meta">Team {{ $teamName }} � <strong style="color:var(--text)">{{ $studentName }}</strong> � Uploaded {{ $record->uploaded_at ? \Carbon\Carbon::parse($record->uploaded_at)->format('M d, Y') : 'N/A' }}</div>
             <div class="receipt-amount">PHP {{ number_format($record->amount ?? 0, 2) }}</div>
             @if ($record->description)
               <div style="font-size:11px;color:var(--text3);margin-bottom:6px">Description: {{ $record->description }}</div>
@@ -386,7 +383,7 @@
       </div>
     </div>
 
-    <!-- ── EXPENSE POSTS LIST ── -->
+    <!-- -- EXPENSE POSTS LIST -- -->
     <div class="card" style="padding:0;overflow:hidden">
       <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 20px 14px;border-bottom:1px solid var(--border)">
         <div>
@@ -399,7 +396,7 @@
           <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)">
             <div style="flex:2;min-width:0">
               <div style="font-size:13px;font-weight:500;color:var(--text)">{{ $post->title }}</div>
-              <div style="font-size:11px;color:var(--text3)">{{ $post->course }} · {{ $post->year_level }}</div>
+              <div style="font-size:11px;color:var(--text3)">{{ $post->course }} � {{ $post->year_level }}</div>
             </div>
             <div style="flex:1;font-family:'Space Mono',monospace;font-size:13px;color:var(--text2)">PHP {{ number_format($post->amount, 2) }}</div>
             <div style="flex:2;font-size:11px;color:var(--text3);min-width:0">@if($post->description){{ Str::limit($post->description, 60) }}@else<span style="font-style:italic">No description</span>@endif</div>
@@ -425,12 +422,12 @@
       </div>
     </div>
     </div>
-    <!-- ── end grid ── -->
+    <!-- -- end grid -- -->
 
   </div>
 </div>
 
-<!-- ── ADD / EDIT POST MODAL ── -->
+<!-- -- ADD / EDIT POST MODAL -- -->
 <div id="addPostModal" class="modal-overlay">
   <div class="modal" style="max-width:480px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
@@ -475,7 +472,7 @@
   </div>
 </div>
 
-<!-- ── DELETE CONFIRM MODAL ── -->
+<!-- -- DELETE CONFIRM MODAL -- -->
 <div id="deleteModal" class="modal-overlay">
   <div class="modal" style="max-width:400px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
@@ -494,7 +491,7 @@
   </div>
 </div>
 
-<!-- ── REJECT RECEIPT MODAL ── -->
+<!-- -- REJECT RECEIPT MODAL -- -->
 <div id="rejectModal" class="modal-overlay">
   <div class="modal" style="max-width:440px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
@@ -516,7 +513,7 @@
   </div>
 </div>
 
-<!-- ── VIEW IMAGE MODAL ── -->
+<!-- -- VIEW IMAGE MODAL -- -->
 <div id="imageModal" class="modal-overlay">
   <div class="modal" style="max-width:600px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
@@ -530,7 +527,7 @@
   </div>
 </div>
 
-<!-- ── TEAM DETAILS MODAL ── -->
+<!-- -- TEAM DETAILS MODAL -- -->
 <div id="teamDetailsModal" class="modal-overlay">
   <div class="modal" style="max-width:680px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
@@ -539,10 +536,10 @@
     </div>
 
     <div id="tdSummary" style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px;padding:12px 14px;background:var(--bg1);border-radius:10px;font-size:12px">
-      <div><span style="color:var(--text3)">Leader:</span> <span style="color:var(--text);font-weight:600" id="tdLeader">—</span></div>
-      <div><span style="color:var(--text3)">Course:</span> <span style="color:var(--text);font-weight:600" id="tdCourse">—</span></div>
-      <div><span style="color:var(--text3)">Section:</span> <span style="color:var(--text);font-weight:600" id="tdSection">—</span></div>
-      <div><span style="color:var(--text3)">Members:</span> <span style="color:var(--text);font-weight:600" id="tdMemberCount">—</span></div>
+      <div><span style="color:var(--text3)">Leader:</span> <span style="color:var(--text);font-weight:600" id="tdLeader">�</span></div>
+      <div><span style="color:var(--text3)">Course:</span> <span style="color:var(--text);font-weight:600" id="tdCourse">�</span></div>
+      <div><span style="color:var(--text3)">Section:</span> <span style="color:var(--text);font-weight:600" id="tdSection">�</span></div>
+      <div><span style="color:var(--text3)">Members:</span> <span style="color:var(--text);font-weight:600" id="tdMemberCount">�</span></div>
     </div>
 
     <div style="font-size:12px;font-weight:600;color:var(--text3);margin-bottom:8px">TITLES</div>
@@ -565,7 +562,7 @@
 </div>
 
 <style>
-/* ── MODAL OVERLAY ── */
+/* -- MODAL OVERLAY -- */
 .modal-overlay {
   display: none;
   position: fixed;
@@ -586,7 +583,7 @@
   animation: modalSlideUp 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* ── MODAL CONTAINER ── */
+/* -- MODAL CONTAINER -- */
 .modal {
   background: var(--bg2);
   border: 1px solid var(--border);
@@ -600,7 +597,7 @@
 .modal::-webkit-scrollbar { width: 4px; }
 .modal::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 
-/* ── MODAL ANIMATIONS ── */
+/* -- MODAL ANIMATIONS -- */
 @keyframes overlayIn {
   from { opacity: 0; }
   to { opacity: 1; }
@@ -610,7 +607,7 @@
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-/* ── CONSISTENT ACTION BUTTON SYSTEM ── */
+/* -- CONSISTENT ACTION BUTTON SYSTEM -- */
 .btn-sm {
   display: inline-flex;
   align-items: center;
@@ -679,7 +676,7 @@
   box-shadow: 0 2px 10px rgba(201, 168, 44, 0.25);
 }
 
-/* ── MODAL ACTION BUTTONS ── */
+/* -- MODAL ACTION BUTTONS -- */
 .btn-cancel {
   display: inline-flex;
   align-items: center;
@@ -726,7 +723,7 @@
   transform: scale(0.97);
 }
 
-/* ── CLOSE BUTTON ── */
+/* -- CLOSE BUTTON -- */
 .btn-close {
   background: none;
   border: none;
@@ -747,7 +744,7 @@
   outline-offset: 2px;
 }
 
-/* ── HIDE NUMBER INPUT SPINNERS ── */
+/* -- HIDE NUMBER INPUT SPINNERS -- */
 input[type="number"]::-webkit-inner-spin-button,
 input[type="number"]::-webkit-outer-spin-button {
   -webkit-appearance: none;
@@ -757,7 +754,7 @@ input[type="number"] {
   -moz-appearance: textfield;
 }
 
-/* ── ADMIN API SUCCESS ALERT ── */
+/* -- ADMIN API SUCCESS ALERT -- */
 .admin-api-success {
   display: flex;
   align-items: center;
@@ -773,13 +770,13 @@ input[type="number"] {
   animation: fadeIn 0.3s ease;
 }
 
-/* ── UTILITY ANIMATIONS ── */
+/* -- UTILITY ANIMATIONS -- */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(6px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* ── TEAM BREAKDOWN HEADER ── */
+/* -- TEAM BREAKDOWN HEADER -- */
 .tb-header {
   display: grid;
   grid-template-columns: auto 1fr;
@@ -795,7 +792,7 @@ input[type="number"] {
 }
 .tb-scroll-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 
-/* ── HAMBURGER MENU ── */
+/* -- HAMBURGER MENU -- */
 .hamburger-btn {
   display: none;
   align-items: center;
@@ -811,7 +808,7 @@ input[type="number"] {
 }
 .hamburger-btn svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2.5; stroke-linecap: round; }
 
-/* ── SIDEBAR OVERLAY ── */
+/* -- SIDEBAR OVERLAY -- */
 .sidebar-overlay {
   display: none;
   position: fixed;
@@ -820,7 +817,7 @@ input[type="number"] {
   background: rgba(0,0,0,0.5);
 }
 
-/* ── RESPONSIVE BREAKPOINTS ── */
+/* -- RESPONSIVE BREAKPOINTS -- */
 @media (max-width: 1200px) {
   .fin-ring-wrap { flex-direction: column; align-items: flex-start; }
 }
@@ -831,7 +828,7 @@ input[type="number"] {
   .fin-split-card { padding: 18px; }
 }
 
-/* ── Transition gap: 769–795px (sidebar still visible, single-column cards need tighter sizing) ── */
+/* -- Transition gap: 769�795px (sidebar still visible, single-column cards need tighter sizing) -- */
 @media (min-width: 769px) and (max-width: 795px) {
   .fin-ring { width: 80px; height: 80px; }
   .fin-ring svg { width: 80px; height: 80px; }
@@ -942,7 +939,7 @@ input[type="number"] {
   .fin-split-label { font-size: 8px; }
 }
 
-/* ── TEAM DETAILS TITLE PILLS ── */
+/* -- TEAM DETAILS TITLE PILLS -- */
 .td-title-pill {
   display: inline-flex;
   align-items: center;
@@ -974,7 +971,7 @@ input[type="number"] {
   transform: scale(0.97);
 }
 
-/* ── RESPONSIVE ── */
+/* -- RESPONSIVE -- */
 @media (max-width: 640px) {
   .modal { padding: 18px; }
   .modal-overlay { padding: 12px; }
@@ -1003,7 +1000,7 @@ document.querySelectorAll('.modal-overlay').forEach(function(el) {
   });
 });
 
-// ── Expense Post Modal State ──
+// -- Expense Post Modal State --
 let editingPostId = null;
 
 function openEditModal(id, title, course, yearLevel, amount, description) {
@@ -1044,7 +1041,7 @@ function openRejectModal(recordId) {
   openModal('rejectModal');
 }
 
-// ── Approve Receipt via API ──
+// -- Approve Receipt via API --
 async function approveReceipt(recordId, btn) {
   btn.disabled = true;
   btn.textContent = 'Approving...';
@@ -1106,7 +1103,7 @@ function updateReceiptCardAfterApprove(recordId, data) {
   }
 }
 
-// ── Submit Reject via API ──
+// -- Submit Reject via API --
 document.getElementById('rejectForm')?.addEventListener('submit', async function(e) {
   e.preventDefault();
 
@@ -1179,7 +1176,7 @@ function updateReceiptCardAfterReject(recordId, reason) {
   }
 }
 
-// ── Submit Expense Post (Create/Update) via API ──
+// -- Submit Expense Post (Create/Update) via API --
 document.getElementById('postForm')?.addEventListener('submit', async function(e) {
   e.preventDefault();
 
@@ -1242,7 +1239,7 @@ document.getElementById('postForm')?.addEventListener('submit', async function(e
   }
 });
 
-// ── Delete Expense Post via API ──
+// -- Delete Expense Post via API --
 document.getElementById('deleteForm')?.addEventListener('submit', async function(e) {
   e.preventDefault();
 
@@ -1285,7 +1282,7 @@ document.getElementById('deleteForm')?.addEventListener('submit', async function
   }
 });
 
-// ── Refresh Expense Posts List ──
+// -- Refresh Expense Posts List --
 async function refreshExpensePosts() {
   try {
     const response = await fetch('/api/admin/financial/expense-posts', {
@@ -1323,7 +1320,7 @@ function renderExpensePosts(posts) {
     return '<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)">' +
       '<div style="flex:2;min-width:0">' +
       '<div style="font-size:13px;font-weight:500;color:var(--text)">' + post.title + '</div>' +
-      '<div style="font-size:11px;color:var(--text3)">' + post.course + ' · ' + post.year_level + '</div>' +
+      '<div style="font-size:11px;color:var(--text3)">' + post.course + ' � ' + post.year_level + '</div>' +
       '</div>' +
       '<div style="flex:1;font-family:\'Space Mono\',monospace;font-size:13px;color:var(--text2)">PHP ' + parseFloat(post.amount).toLocaleString('en-US', {minimumFractionDigits: 2}) + '</div>' +
       '<div style="flex:2;font-size:11px;color:var(--text3);min-width:0">' + desc + '</div>' +
@@ -1353,7 +1350,7 @@ function updateTeamBreakdownTitleFilter(posts) {
   });
 }
 
-// ── Show Admin Success Message ──
+// -- Show Admin Success Message --
 function showAdminSuccess(message) {
   const existing = document.querySelector('.admin-api-success');
   if (existing) existing.remove();
@@ -1367,12 +1364,12 @@ function showAdminSuccess(message) {
   setTimeout(function() { alertDiv.remove(); }, 5000);
 }
 
-// ── Pagination State ──
+// -- Pagination State --
 var currentPage = 1;
 var rowsPerPage = 10;
 var filteredRows = [];
 
-// ── Client-side Team Breakdown Filtering + Pagination ──
+// -- Client-side Team Breakdown Filtering + Pagination --
 function filterTeamBreakdown() {
   var titleId = document.querySelector('select[name="title_id"]').value;
   var course = document.querySelector('select[name="course"]').value;
@@ -1506,7 +1503,7 @@ document.querySelector('select[name="status"]')?.addEventListener('change', filt
 // Remove the filter form's native submit behavior
 document.getElementById('filterForm')?.addEventListener('submit', function(e) { e.preventDefault(); });
 
-// ── Team Details Modal ──
+// -- Team Details Modal --
 var tdCurrentTeamId = null;
 var tdCurrentTitleId = null;
 
@@ -1592,7 +1589,7 @@ function viewImage(recordId) {
   openModal('imageModal');
 }
 
-// ── Mobile Sidebar ──
+// -- Mobile Sidebar --
 function toggleSidebar() {
     document.body.classList.toggle('sidebar-open');
     document.body.style.overflow = document.body.classList.contains('sidebar-open') ? 'hidden' : '';

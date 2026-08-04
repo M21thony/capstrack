@@ -167,7 +167,7 @@ class AdminApprovalController extends Controller
         }
 
         $currentAttempts = (int) $expert->reject_attempts;
-        $cooldownUntil = $currentAttempts >= 2 ? now()->addSeconds(60) : null;
+        $cooldownUntil = $currentAttempts >= 2 ? now()->addDays(3) : null;
 
         DB::table('capstone_experts')->where('expert_id', $id)->update([
             'rejection_reason' => $validated['reason'],

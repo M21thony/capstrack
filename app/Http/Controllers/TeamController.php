@@ -166,7 +166,7 @@ class TeamController extends Controller
     public function store(Request $request): JsonResponse|RedirectResponse
     {
         $validated = $request->validate([
-            'team_name' => ['required', 'string', 'max:100'],
+            'team_name' => ['required', 'string', 'max:100', Rule::unique('team', 'team_name')],
             'project_title' => ['nullable', 'string', 'max:150'],
             'team_status' => ['nullable', Rule::in(['on-going', 'complete', 'closed'])],
         ]);
@@ -255,11 +255,27 @@ class TeamController extends Controller
         }
 
         $validated = $request->validate([
-            'team_name' => ['required', 'string', 'max:100'],
+            'team_name' => ['required', 'string', 'max:100', Rule::unique('team', 'team_name')->ignore($team->team_id, 'team_id')],
             'project_title' => ['nullable', 'string', 'max:150'],
             'team_status' => ['nullable', Rule::in(['on-going', 'complete', 'closed'])],
             'member_count' => ['nullable', 'integer', Rule::in([3, 5])],
+            'tags' => ['nullable', 'json'],
         ]);
+
+        $projectTitle = $validated['project_title'] ?? $team->project_title;
+        $wordCount = $this->countMeaningfulWords($projectTitle ?? '');
+
+        if ($wordCount >= 11) {
+            $tags = $request->input('tags');
+            $tagsArray = $tags ? json_decode($tags, true) : [];
+
+            if (! is_array($tagsArray) || count($tagsArray) < 2) {
+                return redirect()->route('student.team')
+                    ->with('error', 'Please add at least 2 tags related to your project.');
+            }
+
+            $validated['tags'] = $tagsArray;
+        }
 
         if ($validated['team_status'] === 'complete') {
             $request->validate([
@@ -282,6 +298,7 @@ class TeamController extends Controller
         $team->update([
             'team_name' => $validated['team_name'],
             'project_title' => $validated['project_title'] ?? null,
+            'tags' => $validated['tags'] ?? $team->tags,
             'team_status' => $validated['team_status'] ?? 'on-going',
             'member_count' => $validated['member_count'] ?? $team->member_count ?? 5,
         ]);
@@ -372,6 +389,9 @@ class TeamController extends Controller
                 's_role_id' => null,
             ]);
             $team->delete();
+
+            // Delete the leader's recruitment post since the team no longer exists
+            Recruitment::where('student_id', $studentId)->delete();
 
             $this->logActivity(
                 $studentId,

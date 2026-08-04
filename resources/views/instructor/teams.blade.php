@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>CapsTRACK — Team Overview</title>
+<title>CapsTRACK ï¿½ Team Overview</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="{{ asset('css/expert.css') }}" />
 <style>
@@ -365,7 +365,7 @@ const assignmentData = {{ Js::from($grouped->flatten()->mapWithKeys(function ($a
     return [$a->assignment_id => [
         'team' => $a->team?->team_name ?? 'Unknown',
         'project' => $a->team?->project_title ?? 'No project title',
-        'role' => ucfirst($a->role?->role_name ?? ''),
+        'role' => ucfirst($a->role->first()?->role_name ?? ''),
         'leader' => $leader ? trim(($leader->f_name ?? '') . ' ' . ($leader->l_name ?? '')) : 'N/A',
         'leader_email' => $leader?->email ?? '',
         'member_count' => $members->count(),
@@ -470,7 +470,7 @@ function openTeamInfoModal(id) {
   const d = assignmentData[id];
   if (!d) return;
 
-  document.getElementById('ti-sub').textContent = d.team + ' — ' + d.role;
+  document.getElementById('ti-sub').textContent = d.team + ' ï¿½ ' + d.role;
 
   let memberHtml = '';
   d.members.forEach(function(m) {

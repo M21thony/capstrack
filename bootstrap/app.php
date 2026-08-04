@@ -6,6 +6,7 @@ use App\Http\Middleware\EnsureExpertIsAuthenticated;
 use App\Http\Middleware\EnsureProfileIsComplete;
 use App\Http\Middleware\PreventBackHistory;
 use App\Http\Middleware\TrackExpertActivity;
+use App\Http\Middleware\TrackStudentActivity;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Application;
@@ -29,6 +30,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'expert.approved' => CheckExpertApproval::class,
             'no.cache' => PreventBackHistory::class,
             'track.expert' => TrackExpertActivity::class,
+            'track.student' => TrackStudentActivity::class,
         ]);
 
         $middleware->api(prepend: [

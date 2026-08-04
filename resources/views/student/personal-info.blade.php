@@ -3,26 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ $isEditing ? 'Edit' : 'Complete' }} Personal Information - CapsTRACK</title>
+    <title>{{ $isEditing ? 'Edit' : 'Complete' }} Personal Information - CapsTrack</title>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
     @vite('resources/student-ui/Styles/personal-info.css')
 </head>
 <body class="pi-page-body">
     <div class="pi-page">
-        <header class="pi-header">
-            <div class="pi-brand">
-                <div class="brand-icon">
-                    <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
-                </div>
-                <div>
-                    <div class="pi-brand-name">CapsTRACK</div>
-                    <div class="pi-brand-sub">Personal Information</div>
-                </div>
-            </div>
-            @if ($isEditing)
-                <a href="{{ route('student.dashboard') }}" class="pi-link-back">Back to Dashboard</a>
-            @endif
-        </header>
 
         <main class="pi-card">
             <div class="pi-hero">
@@ -43,7 +29,7 @@
                 <div class="pi-flash">{{ session('status') }}</div>
             @endif
 
-            @include('student.partials.personal-info-form', ['student' => $student, 'presets' => $presets, 'isEditing' => $isEditing, 'hasTeam' => $hasTeam ?? false])
+            @include('student.partials.personal-info-form', ['student' => $student, 'presets' => $presets, 'isEditing' => $isEditing, 'hasTeam' => $hasTeam ?? false, 'studentSy' => $studentSy ?? null])
         </main>
     </div>
 </body>

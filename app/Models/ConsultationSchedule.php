@@ -36,6 +36,11 @@ class ConsultationSchedule extends Model
     {
         return [
             'is_available' => 'boolean',
+            // specific_date deliberately stays a raw string, not a 'date' cast —
+            // nextOccurrenceOnOrAfter() below returns it directly as a string,
+            // and a Carbon cast would break that typed return.
+            'created_at' => 'datetime',
+            'updated_at' => 'datetime',
         ];
     }
 

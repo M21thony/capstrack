@@ -16,9 +16,11 @@ use Illuminate\Support\Str;
     'f_name',
     'm_name',
     'l_name',
+    'suffix',
     'p_picture',
     'course',
     'year_section',
+    'last_seen_at',
 ])]
 class Student extends Authenticatable
 {
@@ -35,7 +37,9 @@ class Student extends Authenticatable
 
     protected function casts(): array
     {
-        return [];
+        return [
+            'last_seen_at' => 'datetime',
+        ];
     }
 
     public function hasCompletedProfile(): bool
@@ -50,6 +54,11 @@ class Student extends Authenticatable
     public function hasValidAvatarPreset(): bool
     {
         return filled($this->p_picture) && array_key_exists($this->p_picture, config('avatars.presets', []));
+    }
+
+    public function isOnline(): bool
+    {
+        return $this->last_seen_at && $this->last_seen_at->gt(now()->subMinutes(5));
     }
 
     public function avatarUrl(): string
@@ -109,6 +118,36 @@ class Student extends Authenticatable
     }
 
     /**
+     * Compute a deterministic section label from a student's course and year_section.
+     *
+     * Handles both short formats ("4th · A") and long formats ("4th Year · BSCS-4A")
+     * by extracting only the trailing section letter from the second segment.
+     *
+     * Returns null when the course cannot be mapped or inputs are empty.
+     */
+    public static function computeSectionLabel(?string $course, ?string $yearSection): ?string
+    {
+        if (! $course || ! $yearSection) {
+            return null;
+        }
+
+        $program = self::mapCourseToProgram($course);
+        if (! $program) {
+            return null;
+        }
+
+        $parts = explode(' · ', $yearSection);
+        $year = isset($parts[0]) ? preg_replace('/[^0-9]/', '', $parts[0]) : '';
+        $secPart = $parts[1] ?? '';
+
+        // Extract only trailing letters — this handles both "A" and "BSCS-4A" inputs
+        preg_match('/[A-Za-z]+$/', $secPart, $matches);
+        $secLetter = $matches[0] ?? '';
+
+        return $program.'-'.$year.$secLetter;
+    }
+
+    /**
      * @return HasMany<StudentSchoolYear>
      */
     public function studentSchoolYear()
@@ -117,6 +156,18 @@ class Student extends Authenticatable
     }
 
     public function team()
+    {
+        return $this->hasOneThrough(
+            Team::class,
+            StudentSchoolYear::class,
+            'student_id',
+            'team_id',
+            'student_id',
+            'team_id'
+        );
+    }
+
+    public function currentTeam()
     {
         return $this->hasOneThrough(
             Team::class,
