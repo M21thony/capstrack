@@ -75,11 +75,14 @@ class AuthController extends Controller
             // safer than full 'drive' scope) alongside the existing calendar/profile scopes.
             'scope' => 'openid email profile https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/drive.file',
             'state' => $state,
-            // Required so Google actually returns a refresh_token — without these two,
-            // $response->json('refresh_token') below will always be null after the first login,
-            // and the stored Drive connection will silently stop working once the access
-            // token expires (usually within an hour).
-            'prompt' => 'consent',
+            // access_type=offline (without forcing prompt=consent) still gets
+            // a refresh_token on first-ever authorization, and again anytime
+            // Google has no valid grant on file (e.g. after a revoke) — it's
+            // only omitted on routine repeat logins, where handleGoogleCallback
+            // just keeps reusing the previously stored one. Forcing
+            // prompt=consent unconditionally used to make every single login
+            // show the full permissions screen again, which is exactly the
+            // "asked to continue and continue" friction this avoids.
             'access_type' => 'offline',
         ]);
 
@@ -182,6 +185,24 @@ class AuthController extends Controller
                         ]),
                         'google_token_expires_at' => now()->addSeconds($response->json('expires_in', 3600)),
                     ]);
+
+                    // Reuse this same login token as the Drive connection —
+                    // it already carries the drive.file scope, so most
+                    // experts never need the separate "Connect Google Drive"
+                    // step at all. Never let a hiccup here block login.
+                    try {
+                        app(\App\Services\GoogleDriveService::class)->storeToken($expert->expert_id, [
+                            'access_token' => $accessToken,
+                            'refresh_token' => $response->json('refresh_token'),
+                            'expires_in' => $response->json('expires_in', 3600),
+                            'token_type' => $response->json('token_type'),
+                        ]);
+                    } catch (\Exception $e) {
+                        logger()->warning('Could not store Drive token from login', [
+                            'expert_id' => $expert->expert_id,
+                            'message' => $e->getMessage(),
+                        ]);
+                    }
 
                     Auth::guard('expert')->login($expert);
 

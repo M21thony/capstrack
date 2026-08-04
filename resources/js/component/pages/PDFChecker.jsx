@@ -9,7 +9,6 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   import.meta.url
 ).toString();
 
-// Maps highlight color names to rgba strings used for the highlight overlay.
 const HIGHLIGHT_COLORS = {
   yellow: "rgba(255, 255, 0, 0.25)",
   green: "rgba(0, 255, 0, 0.25)",
@@ -18,8 +17,6 @@ const HIGHLIGHT_COLORS = {
   orange: "rgba(255, 165, 0, 0.25)",
 };
 
-// Merge selection fragments into one continuous rectangle per text line so the
-// highlight looks like a real highlighter instead of separate "correction tape" strips.
 const mergeRectsByLine = (rects) => {
   if (!rects.length) return [];
   const sorted = [...rects].sort((a, b) => a.top_position - b.top_position);
@@ -68,13 +65,14 @@ function PDFChecker({
   const [currentPage, setCurrentPage] = useState(1);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [selectionCommentIcon, setSelectionCommentIcon] = useState(null);
-  // Draft remark being composed inline (replaces the browser prompt)
   const [draft, setDraft] = useState(null);
   const [draftText, setDraftText] = useState("");
-  // Which comment's card is currently open (null = none). Only one shown at a time.
-  // Provided by the parent (App) so the sidebar and page markers stay in sync.
+  const [draftSection, setDraftSection] = useState("");
 
-  // Word-compatible page dimensions at 96 DPI (standard screen resolution)
+  // ── NEW: general (paper-level) comments, not tied to a page/paragraph ──
+  const [generalComments, setGeneralComments] = useState([]);
+  const [reviewId, setReviewId] = useState(null);
+
   const pageDimensions = { width: 816, height: 1056 };
   const containerRef = useRef(null);
   const isProcessingComment = useRef(false);
@@ -83,26 +81,22 @@ function PDFChecker({
   const [visiblePages, setVisiblePages] = useState(() => new Set([1, 2, 3, 4, 5]));
 
   useEffect(() => {
-    // Load PDF from URL params or use default test.pdf
     const params = new URLSearchParams(window.location.search);
     const fileID = params.get("fileID") || params.get("reviewId");
-
     if (fileID) {
       setPdfUrl({ url: `/reviews/${fileID}/pdf` });
     } else {
-      // Use default test.pdf for demonstration
       setPdfUrl("/test.pdf");
     }
   }, []);
 
-  // Load previously saved remarks for this review, so refreshing the page
-  // doesn't wipe out comments that were already saved to the database.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const reviewId = params.get("reviewId") || params.get("fileID");
-    if (!reviewId) return;
+    const id = params.get("reviewId") || params.get("fileID");
+    if (!id) return;
+    setReviewId(id);
 
-    fetch(`/reviews/${reviewId}/remarks`)
+    fetch(`/reviews/${id}/remarks`)
       .then((r) => r.json())
       .then((data) => {
         const mapped = data.map((r) => ({
@@ -113,7 +107,8 @@ function PDFChecker({
           text: r.comment,
           author: "Reviewer",
           timestamp: r.created_at,
-          selectedText: undefined,
+          selectedText: r.selected_text,
+          section: r.section,
           highlightRects: [
             {
               top_position: Number(r.top_position),
@@ -129,6 +124,21 @@ function PDFChecker({
         setComments(mapped);
       })
       .catch((e) => console.error("Failed to load remarks:", e));
+
+    // NEW: load general (paper-level) comments separately
+    fetch(`/reviews/${id}/general-remarks`)
+      .then((r) => r.json())
+      .then((data) => {
+        const mapped = data.map((r) => ({
+          id: r.id,
+          text: r.comment,
+          section: r.section,
+          author: "Reviewer",
+          timestamp: r.created_at,
+        }));
+        setGeneralComments(mapped);
+      })
+      .catch((e) => console.error("Failed to load general remarks:", e));
   }, [setComments]);
 
   useEffect(() => {
@@ -145,7 +155,10 @@ function PDFChecker({
         const pageHeight = pageDimensions.height * scale + 40;
 
         const startPage = Math.max(1, Math.floor(scrollTop / pageHeight) - 2);
-        const endPage = Math.min(numPages, Math.ceil((scrollTop + viewportHeight) / pageHeight) + 2);
+        const endPage = Math.min(
+          numPages,
+          Math.ceil((scrollTop + viewportHeight) / pageHeight) + 2
+        );
 
         const newVisible = new Set();
         for (let i = startPage; i <= endPage; i++) {
@@ -153,7 +166,10 @@ function PDFChecker({
         }
 
         setVisiblePages((prev) => {
-          if (prev.size === newVisible.size && [...prev].every((p) => newVisible.has(p))) {
+          if (
+            prev.size === newVisible.size &&
+            [...prev].every((p) => newVisible.has(p))
+          ) {
             return prev;
           }
           return newVisible;
@@ -178,88 +194,145 @@ function PDFChecker({
     setError(err.message);
   }
 
-  // Add a remark (comment merged with its highlight) to the list
-  const addRemark = ({ pageNumber, x, y, text, selectedText, highlightRects }) => {
-    setComments((prev) => [
-      ...prev,
-      {
-        id: Date.now(),
-        page_number: pageNumber,
-        x_position: x,
-        y_position: y,
-        text,
-        author: "Reviewer",
-        timestamp: new Date().toISOString(),
-        selectedText: selectedText,
-        highlightRects: highlightRects,
-        color: selectedHighlightColor,
-        resolved: false,
-        replies: [],
-      },
-    ]);
+  // ── Get global comment number (1-based, across all pages) ──────────
+  const getCommentNumber = (commentId) => {
+    const index = comments.findIndex((c) => c.id === commentId);
+    return index === -1 ? "?" : index + 1;
   };
 
-  // Delete a remark by id
+  const addRemark = ({ pageNumber, x, y, text, selectedText, highlightRects, section }) => {
+    const newComment = {
+      id: Date.now(),
+      page_number: pageNumber,
+      x_position: x,
+      y_position: y,
+      text,
+      author: "Reviewer",
+      timestamp: new Date().toISOString(),
+      selectedText: selectedText,
+      section: section || null,
+      highlightRects: highlightRects,
+      color: selectedHighlightColor,
+      resolved: false,
+      replies: [],
+    };
+
+    setComments((prev) => [...prev, newComment]);
+
+    if (reviewId) {
+      const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+      fetch(`/reviews/${reviewId}/remarks`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRF-TOKEN": csrfToken,
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          page_number: pageNumber,
+          top_position: y,
+          left_position: x,
+          comment: text,
+          selected_text: selectedText || null,
+          section: section || null,
+          highlight_width: highlightRects?.[0]?.highlight_width ?? null,
+          highlight_height: highlightRects?.[0]?.highlight_height ?? null,
+          color: selectedHighlightColor,
+        }),
+      }).catch((e) => console.error("Failed to save remark:", e));
+    }
+  };
+
+  // ── NEW: add a general, paper-level comment (no page/paragraph anchor) ──
+  const addGeneralComment = (text, section) => {
+    const newComment = {
+      id: Date.now(),
+      text,
+      section: section || null,
+      author: "Reviewer",
+      timestamp: new Date().toISOString(),
+    };
+
+    setGeneralComments((prev) => [...prev, newComment]);
+
+    if (reviewId) {
+      const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+      fetch(`/reviews/${reviewId}/general-remarks`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRF-TOKEN": csrfToken,
+          Accept: "application/json",
+        },
+        body: JSON.stringify({ comment: text, section: section || null }),
+      }).catch((e) => console.error("Failed to save general remark:", e));
+    }
+  };
+
+  const deleteGeneralComment = (id) => {
+    setGeneralComments((prev) => prev.filter((c) => c.id !== id));
+    if (reviewId) {
+      const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+      fetch(`/reviews/${reviewId}/general-remarks/${id}`, {
+        method: "DELETE",
+        headers: { "X-CSRF-TOKEN": csrfToken, Accept: "application/json" },
+      }).catch((e) => console.error("Failed to delete general remark:", e));
+    }
+  };
+
   const deleteComment = (id) => {
     setComments((prev) => prev.filter((c) => c.id !== id));
+    if (reviewId) {
+      fetch(`/reviews/${reviewId}/remarks/${id}`, {
+        method: "DELETE",
+      }).catch((e) => console.error("Failed to delete remark:", e));
+    }
   };
 
-  // Handle page click for comments
   const handlePageClick = (e, pageNumber) => {
-    if (activeTool !== "comment") {
-      // Clicking elsewhere closes any open comment card
-      if (openCommentId) setOpenCommentId(null);
+    // Existing anchored-comment tool: requires a text selection
+    if (activeTool === "comment") {
+      const pageEl = e.currentTarget;
+      const rect = pageEl.getBoundingClientRect();
+      const x = (e.clientX - rect.left) / rect.width;
+      const y = (e.clientY - rect.top) / rect.height;
+
+      const selection = window.getSelection();
+      const selectedText = selection?.toString().trim();
+
+      if (!selectedText) return;
+
+      const range = selection.getRangeAt(0);
+      const rects = Array.from(range.getClientRects());
+      const pageRect = pageEl.getBoundingClientRect();
+
+      const highlightRects = mergeRectsByLine(
+        rects
+          .filter((r) => r.width > 5 && r.height > 5)
+          .map((r) => ({
+            top_position: (r.top - pageRect.top) / pageRect.height,
+            left_position: (r.left - pageRect.left) / pageRect.width,
+            highlight_width: r.width / pageRect.width,
+            highlight_height: r.height / pageRect.height,
+          }))
+      );
+
+      setDraft({ pageNumber, x, y, selectedText, highlightRects });
+      setDraftText("");
+      setOpenCommentId(null);
       return;
     }
 
-    const pageEl = e.currentTarget;
-    const rect = pageEl.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / rect.width;
-    const y = (e.clientY - rect.top) / rect.height;
-
-    // Only prompt if there is selected text
-    const selection = window.getSelection();
-    const selectedText = selection?.toString().trim();
-
-    if (!selectedText) {
-      // No text selected, don't prompt
-      return;
-    }
-
-    // Get selection range for highlighting
-    const range = selection.getRangeAt(0);
-    const rects = Array.from(range.getClientRects());
-    const pageRect = pageEl.getBoundingClientRect();
-
-    // Calculate highlight positions
-    const highlightRects = mergeRectsByLine(
-      rects
-        .filter((r) => r.width > 5 && r.height > 5)
-        .map((r) => ({
-          top_position: (r.top - pageRect.top) / pageRect.height,
-          left_position: (r.left - pageRect.left) / pageRect.width,
-          highlight_width: r.width / pageRect.width,
-          highlight_height: r.height / pageRect.height,
-        }))
-    );
-
-    setDraft({ pageNumber, x, y, selectedText, highlightRects });
-    setDraftText("");
-    setOpenCommentId(null);
+    if (openCommentId) setOpenCommentId(null);
   };
 
-  // Zoom controls
   const zoomIn = () => setScale((prev) => Math.min(prev + 0.2, 2.0));
   const zoomOut = () => setScale((prev) => Math.max(prev - 0.2, 0.5));
   const resetZoom = () => setScale(1.0);
 
-  // Handle text selection for comment icon
   useEffect(() => {
     const handleSelection = () => {
-      // Don't show selection icon if we're in the process of adding a comment
-      if (isProcessingComment.current || activeTool === "comment") {
-        return;
-      }
+      if (isProcessingComment.current || activeTool === "comment") return;
 
       const selection = window.getSelection();
       if (!selection || selection.isCollapsed) {
@@ -281,7 +354,6 @@ function PDFChecker({
         return;
       }
 
-      // Get the last rect (end of selection)
       const lastRect = rects[rects.length - 1];
       const pageRect = pageEl.getBoundingClientRect();
 
@@ -293,13 +365,8 @@ function PDFChecker({
       });
     };
 
-    // Use mouseup instead of selectionchange to avoid triggering on deselect
     const handleMouseUp = (e) => {
-      // Don't process if we're adding a comment
-      if (isProcessingComment.current) {
-        return;
-      }
-      // Small delay to ensure selection is complete
+      if (isProcessingComment.current) return;
       setTimeout(handleSelection, 10);
     };
 
@@ -307,37 +374,35 @@ function PDFChecker({
     return () => document.removeEventListener("mouseup", handleMouseUp);
   }, [activeTool]);
 
-  // Handle adding comment from selection
   const handleSelectionComment = (e) => {
     e.preventDefault();
     e.stopPropagation();
 
     if (!selectionCommentIcon || isProcessingComment.current) return;
 
-    // Set processing flag to prevent re-triggering
     isProcessingComment.current = true;
     const savedSelection = { ...selectionCommentIcon };
 
-    // Clear selection state first to prevent re-triggering
     setSelectionCommentIcon(null);
 
-    // Build highlight rects from the selected text BEFORE clearing the selection
     let highlightRects = [];
-    const pageEl = document.querySelector(`.react-pdf__Page[data-page-number="${savedSelection.pageNumber}"]`);
+    const pageEl = document.querySelector(
+      `.react-pdf__Page[data-page-number="${savedSelection.pageNumber}"]`
+    );
     const pageRect = pageEl?.getBoundingClientRect();
     const selection = window.getSelection();
     if (pageRect && selection && !selection.isCollapsed) {
       const range = selection.getRangeAt(0);
-        highlightRects = mergeRectsByLine(
-          Array.from(range.getClientRects())
-            .filter((r) => r.width > 5 && r.height > 5)
-            .map((r) => ({
-              top_position: (r.top - pageRect.top) / pageRect.height,
-              left_position: (r.left - pageRect.left) / pageRect.width,
-              highlight_width: r.width / pageRect.width,
-              highlight_height: r.height / pageRect.height,
-            }))
-        );
+      highlightRects = mergeRectsByLine(
+        Array.from(range.getClientRects())
+          .filter((r) => r.width > 5 && r.height > 5)
+          .map((r) => ({
+            top_position: (r.top - pageRect.top) / pageRect.height,
+            left_position: (r.left - pageRect.left) / pageRect.width,
+            highlight_width: r.width / pageRect.width,
+            highlight_height: r.height / pageRect.height,
+          }))
+      );
     }
 
     window.getSelection()?.removeAllRanges();
@@ -354,13 +419,11 @@ function PDFChecker({
       setDraftText("");
       setOpenCommentId(null);
     }
-    // Reset processing flag after prompt is closed with longer delay
     setTimeout(() => {
       isProcessingComment.current = false;
     }, 500);
   };
 
-  // Submit the inline draft comment (merged with its highlight)
   const submitDraft = () => {
     if (!draft || !draftText.trim()) return;
     addRemark({
@@ -370,33 +433,38 @@ function PDFChecker({
       text: draftText.trim(),
       selectedText: draft.selectedText,
       highlightRects: draft.highlightRects,
+      section: draftSection.trim(),
     });
     setDraft(null);
     setDraftText("");
+    setDraftSection("");
   };
 
-  // Cancel the inline draft comment
   const cancelDraft = () => {
     setDraft(null);
     setDraftText("");
+    setDraftSection("");
   };
 
   return (
     <div style={styles.container}>
-      {/* Sidebar */}
       <Sidebar
         isOpen={sidebarOpen}
         toggleSidebar={() => setSidebarOpen(!sidebarOpen)}
         comments={comments}
         setComments={setComments}
+        onDeleteComment={deleteComment}
         numPages={numPages}
         currentPage={currentPage}
         setCurrentPage={setCurrentPage}
         selectedCommentId={openCommentId}
         onSelectComment={setOpenCommentId}
+        // NEW: general (paper-level) comments
+        generalComments={generalComments}
+        onAddGeneralComment={addGeneralComment}
+        onDeleteGeneralComment={deleteGeneralComment}
       />
 
-      {/* Main Content Area */}
       <div
         ref={containerRef}
         style={{
@@ -404,7 +472,6 @@ function PDFChecker({
           marginRight: sidebarOpen ? "280px" : "0",
         }}
       >
-        {/* Toolbar */}
         <div style={styles.toolbar}>
           <div style={styles.zoomControls}>
             <button onClick={zoomOut} style={styles.zoomButton}>−</button>
@@ -413,15 +480,16 @@ function PDFChecker({
             <button onClick={resetZoom} style={styles.resetButton}>Reset</button>
           </div>
 
-          <button onClick={() => setSidebarOpen(!sidebarOpen)} style={styles.toolbarButton}>
+          <button
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            style={styles.toolbarButton}
+          >
             {sidebarOpen ? "Hide Sidebar ▶" : "◀ Show Sidebar"}
           </button>
         </div>
 
-        {/* PDF and Comments Container */}
         <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
-          {/* PDF Display Area */}
-          <div style={styles.pdfArea}>
+          <div style={styles.pdfArea} ref={pdfAreaRef}>
             {error && (
               <div style={styles.errorContainer}>
                 <p style={styles.errorText}>Error: {error}</p>
@@ -450,9 +518,13 @@ function PDFChecker({
                       return (
                         <div
                           key={`page_${pageNum}`}
-                          style={{ display: "flex", flexDirection: "row", gap: "20px", marginBottom: "20px" }}
+                          style={{
+                            display: "flex",
+                            flexDirection: "row",
+                            gap: "20px",
+                            marginBottom: "20px",
+                          }}
                         >
-                          {/* PDF Page */}
                           <div style={styles.pageContainer}>
                             <div
                               style={{
@@ -471,16 +543,18 @@ function PDFChecker({
                                 />
                               )}
 
-                              {/* Remarks Layer (comment merged with its highlight) */}
+                              {/* Remarks Layer */}
                               {comments
                                 .filter((c) => Number(c.page_number) === pageNum)
                                 .map((comment) => {
                                   const bgColor =
-                                    HIGHLIGHT_COLORS[comment.color] || HIGHLIGHT_COLORS.yellow;
+                                    HIGHLIGHT_COLORS[comment.color] ||
+                                    HIGHLIGHT_COLORS.yellow;
+                                  const commentNumber = getCommentNumber(comment.id);
 
                                   return (
                                     <div key={comment.id}>
-                                      {/* Highlight for selected text, colored by the remark */}
+                                      {/* Highlight */}
                                       {comment.highlightRects &&
                                         comment.highlightRects.map((rect, idx) => (
                                           <div
@@ -498,12 +572,14 @@ function PDFChecker({
                                           />
                                         ))}
 
-                                      {/* Comment marker on the page at its true position */}
+                                      {/* Comment marker — shows #number */}
                                       <div
                                         onClick={(e) => {
                                           e.stopPropagation();
                                           setOpenCommentId(
-                                            openCommentId === comment.id ? null : comment.id
+                                            openCommentId === comment.id
+                                              ? null
+                                              : comment.id
                                           );
                                         }}
                                         style={{
@@ -530,15 +606,17 @@ function PDFChecker({
                                                 : "2px solid #eab308",
                                           }}
                                         >
-                                          <span style={{
-                                            color:
-                                              openCommentId === comment.id
-                                                ? "#ffffff"
-                                                : "#854d0e",
-                                            fontWeight: "bold",
-                                            fontSize: "12px",
-                                          }}>
-                                            C
+                                          <span
+                                            style={{
+                                              color:
+                                                openCommentId === comment.id
+                                                  ? "#ffffff"
+                                                  : "#854d0e",
+                                              fontWeight: "bold",
+                                              fontSize: "11px",
+                                            }}
+                                          >
+                                            #{commentNumber}
                                           </span>
                                         </div>
                                       </div>
@@ -547,28 +625,28 @@ function PDFChecker({
                                 })}
 
                               {/* Selection Comment Icon */}
-                              {selectionCommentIcon && selectionCommentIcon.pageNumber === pageNum && (
-                                <div
-                                  style={{
-                                    position: "absolute",
-                                    left: selectionCommentIcon.x,
-                                    top: selectionCommentIcon.y,
-                                    transform: "translate(0, -50%)",
-                                    zIndex: 100,
-                                  }}
-                                >
-                                  <button
-                                    onClick={handleSelectionComment}
-                                    style={styles.selectionCommentButton}
-                                    title="Add comment"
+                              {selectionCommentIcon &&
+                                selectionCommentIcon.pageNumber === pageNum && (
+                                  <div
+                                    style={{
+                                      position: "absolute",
+                                      left: selectionCommentIcon.x,
+                                      top: selectionCommentIcon.y,
+                                      transform: "translate(0, -50%)",
+                                      zIndex: 100,
+                                    }}
                                   >
-                                    💬
-                                  </button>
-                                </div>
-                              )}
+                                    <button
+                                      onClick={handleSelectionComment}
+                                      style={styles.selectionCommentButton}
+                                      title="Add comment"
+                                    >
+                                      💬
+                                    </button>
+                                  </div>
+                                )}
 
-                              {/* Open comment card - only the selected remark is shown,
-                                  so cards can never overlap each other */}
+                              {/* Open comment card */}
                               {comments
                                 .filter(
                                   (c) =>
@@ -596,6 +674,7 @@ function PDFChecker({
                                     >
                                       <CommentCard
                                         comment={comment}
+                                        commentNumber={getCommentNumber(comment.id)}
                                         onDelete={(id) => {
                                           deleteComment(id);
                                           setOpenCommentId(null);
@@ -605,9 +684,10 @@ function PDFChecker({
                                   </div>
                                 ))}
 
-                              {/* Draft highlight - show the selected text highlighted
-                                  while composing, since the native selection is cleared on click */}
-                              {draft && draft.pageNumber === pageNum && draft.highlightRects &&
+                              {/* Draft highlight */}
+                              {draft &&
+                                draft.pageNumber === pageNum &&
+                                draft.highlightRects &&
                                 draft.highlightRects.map((rect, idx) => (
                                   <div
                                     key={`draft-hl-${idx}`}
@@ -626,7 +706,7 @@ function PDFChecker({
                                   />
                                 ))}
 
-                              {/* Draft card - shown while composing a comment */}
+                              {/* Draft card */}
                               {draft && draft.pageNumber === pageNum && (
                                 <div
                                   style={{
@@ -649,15 +729,17 @@ function PDFChecker({
                                       draft={draft}
                                       text={draftText}
                                       setText={setDraftText}
+                                      section={draftSection}
+                                      setSection={setDraftSection}
                                       onSubmit={submitDraft}
                                       onCancel={cancelDraft}
+                                      commentNumber={comments.length + 1}
                                     />
                                   </div>
                                 </div>
                               )}
                             </div>
 
-                            {/* Page Number Label */}
                             <div style={styles.pageLabel}>
                               Page {pageNum} of {numPages}
                             </div>
@@ -675,17 +757,28 @@ function PDFChecker({
   );
 }
 
-function CommentCard({ comment, onDelete }) {
+function CommentCard({ comment, commentNumber, onDelete }) {
   return (
     <div style={styles.commentCard}>
       <div style={styles.cardHeader}>
-        <span style={styles.pageBadge}>Page {comment.page_number}</span>
+        <span style={styles.pageBadge}>
+          #{commentNumber} — Page {comment.page_number}
+        </span>
         <button onClick={() => onDelete(comment.id)} style={styles.deleteButton}>
           ×
         </button>
       </div>
+      {comment.section && (
+        <p style={styles.sectionBadge}>{comment.section}</p>
+      )}
       {comment.selectedText && (
-        <p style={styles.selectedText}>"{comment.selectedText}"</p>
+        <p style={styles.selectedText}>
+          &ldquo;
+          {comment.selectedText.length > 60
+            ? comment.selectedText.substring(0, 60) + "..."
+            : comment.selectedText}
+          &rdquo;
+        </p>
       )}
       <p style={styles.commentText}>{comment.text}</p>
       <div style={styles.cardFooter}>
@@ -695,12 +788,28 @@ function CommentCard({ comment, onDelete }) {
   );
 }
 
-function DraftCard({ draft, text, setText, onSubmit, onCancel }) {
+function DraftCard({ draft, text, setText, section, setSection, onSubmit, onCancel, commentNumber }) {
   return (
     <div style={styles.draftCard}>
+      <div style={{ fontSize: "11px", color: "#6b7280", marginBottom: "4px", fontWeight: "600" }}>
+        Comment #{commentNumber} — Page {draft.pageNumber}
+      </div>
       {draft.selectedText && (
-        <p style={styles.draftSelected}>"{draft.selectedText}"</p>
+        <p style={styles.draftSelected}>
+          &ldquo;
+          {draft.selectedText.length > 60
+            ? draft.selectedText.substring(0, 60) + "..."
+            : draft.selectedText}
+          &rdquo;
+        </p>
       )}
+      <input
+        type="text"
+        style={styles.draftSectionInput}
+        placeholder="Section (e.g. 3.1.2 Research Instruments)"
+        value={section}
+        onChange={(e) => setSection(e.target.value)}
+      />
       <textarea
         autoFocus
         style={styles.draftTextarea}
@@ -730,35 +839,25 @@ function DraftCard({ draft, text, setText, onSubmit, onCancel }) {
 const styles = {
   container: {
     display: "flex",
-    minHeight: "100vh",
-    backgroundColor: "#e5e7eb",
+    height: "100vh",
+    width: "100%",
+    overflow: "hidden",
+    background: "#f3f4f6",
   },
   mainContent: {
-    flex: 1,
     display: "flex",
     flexDirection: "column",
-    transition: "margin-right 0.3s ease",
+    flex: 1,
+    height: "100%",
+    transition: "margin-right 0.2s ease",
   },
   toolbar: {
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
-    padding: "12px 20px",
-    backgroundColor: "#ffffff",
-    borderBottom: "1px solid #d1d5db",
-    boxShadow: "0 2px 4px rgba(0, 0, 0, 0.05)",
-    position: "sticky",
-    top: 0,
-    zIndex: 100,
-  },
-  toolbarButton: {
     padding: "8px 16px",
-    borderRadius: "6px",
-    border: "1px solid #d1d5db",
-    backgroundColor: "#f9fafb",
-    cursor: "pointer",
-    fontSize: "14px",
-    fontWeight: "500",
+    background: "#ffffff",
+    borderBottom: "1px solid #e5e7eb",
   },
   zoomControls: {
     display: "flex",
@@ -766,50 +865,42 @@ const styles = {
     gap: "8px",
   },
   zoomButton: {
-    width: "32px",
-    height: "32px",
+    width: "28px",
+    height: "28px",
     borderRadius: "6px",
     border: "1px solid #d1d5db",
-    backgroundColor: "#ffffff",
+    background: "#fff",
     cursor: "pointer",
-    fontSize: "18px",
-    fontWeight: "bold",
+    fontSize: "14px",
   },
   zoomText: {
-    fontSize: "14px",
-    fontWeight: "500",
-    minWidth: "50px",
+    fontSize: "13px",
+    color: "#374151",
+    minWidth: "40px",
     textAlign: "center",
   },
   resetButton: {
-    padding: "6px 12px",
+    padding: "4px 10px",
     borderRadius: "6px",
     border: "1px solid #d1d5db",
-    backgroundColor: "#ffffff",
+    background: "#fff",
     cursor: "pointer",
     fontSize: "12px",
   },
-  pageControls: {
-    display: "flex",
-    alignItems: "center",
-    gap: "12px",
-  },
-  pageButton: {
+  toolbarButton: {
     padding: "6px 12px",
     borderRadius: "6px",
     border: "1px solid #d1d5db",
-    backgroundColor: "#ffffff",
+    background: "#fff",
     cursor: "pointer",
-    fontSize: "13px",
-  },
-  pageText: {
-    fontSize: "14px",
-    fontWeight: "500",
+    fontSize: "12px",
   },
   pdfArea: {
     flex: 1,
-    overflow: "auto",
+    overflowY: "auto",
     padding: "20px",
+    display: "flex",
+    justifyContent: "center",
   },
   documentContainer: {
     display: "flex",
@@ -817,197 +908,176 @@ const styles = {
     alignItems: "center",
   },
   pageContainer: {
-    marginBottom: "20px",
-    backgroundColor: "#ffffff",
-    boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
-    borderRadius: "4px",
-    overflow: "visible",
-  },
-  pageWrapper: {
-    position: "relative",
-  },
-  pageLabel: {
-    textAlign: "center",
-    padding: "8px",
-    backgroundColor: "#f3f4f6",
-    fontSize: "12px",
-    color: "#6b7280",
-    borderTop: "1px solid #e5e7eb",
-  },
-  errorContainer: {
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
-    justifyContent: "center",
-    height: "400px",
-    backgroundColor: "#fef2f2",
-    borderRadius: "8px",
-    padding: "40px",
   },
-  errorText: {
-    color: "#dc2626",
-    fontSize: "18px",
-    fontWeight: "600",
-    marginBottom: "8px",
+  pageWrapper: {
+    position: "relative",
+    background: "#fff",
+    boxShadow: "0 1px 4px rgba(0,0,0,0.15)",
   },
-  errorHint: {
-    color: "#7f1d1d",
-    fontSize: "14px",
+  pageLabel: {
+    fontSize: "11px",
+    color: "#6b7280",
+    marginTop: "6px",
   },
   loadingContainer: {
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
-    justifyContent: "center",
-    height: "400px",
+    gap: "8px",
+    padding: "40px",
+    color: "#6b7280",
   },
   spinner: {
-    width: "40px",
-    height: "40px",
-    border: "4px solid #e5e7eb",
-    borderTop: "4px solid #3b82f6",
+    width: "24px",
+    height: "24px",
+    border: "3px solid #e5e7eb",
+    borderTopColor: "#3b82f6",
     borderRadius: "50%",
-    animation: "spin 1s linear infinite",
+    animation: "spin 0.8s linear infinite",
   },
+  errorContainer: {
+    padding: "20px",
+    textAlign: "center",
+    color: "#b91c1c",
+  },
+  errorText: { fontWeight: "600", margin: 0 },
+  errorHint: { fontSize: "12px", color: "#6b7280", margin: "4px 0 0" },
   commentIcon: {
-    width: "28px",
-    height: "28px",
+    width: "22px",
+    height: "22px",
+    borderRadius: "50%",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: "4px",
-    cursor: "pointer",
-    boxShadow: "0 2px 4px rgba(0, 0, 0, 0.2)",
+    boxShadow: "0 1px 3px rgba(0,0,0,0.3)",
   },
-  commentCard: {
-    width: "250px",
-    backgroundColor: "#ffffff",
-    borderRadius: "8px",
-    boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
-    border: "1px solid #e5e7eb",
-    padding: "12px",
-    pointerEvents: "auto",
-  },
-  cardHeader: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: "8px",
-  },
-  pageBadge: {
-    fontSize: "11px",
-    backgroundColor: "#dbeafe",
-    color: "#1d4ed8",
-    padding: "2px 8px",
-    borderRadius: "12px",
-    fontWeight: "500",
-  },
-  deleteButton: {
-    width: "20px",
-    height: "20px",
-    borderRadius: "4px",
+  selectionCommentButton: {
+    width: "28px",
+    height: "28px",
+    borderRadius: "50%",
     border: "none",
-    backgroundColor: "#fee2e2",
-    color: "#dc2626",
+    background: "#fff",
+    boxShadow: "0 1px 4px rgba(0,0,0,0.3)",
     cursor: "pointer",
     fontSize: "14px",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
   },
-  commentText: {
+  commentCard: {
+    background: "#fff",
+    borderRadius: "8px",
+    boxShadow: "0 2px 10px rgba(0,0,0,0.2)",
+    padding: "10px",
     fontSize: "13px",
-    color: "#374151",
-    margin: "0 0 8px 0",
-    lineHeight: "1.4",
   },
-  selectedText: {
-    fontSize: "12px",
-    fontStyle: "italic",
-    color: "#6b7280",
-    margin: "0 0 8px 0",
-    lineHeight: "1.4",
-  },
-  cardFooter: {
-    display: "flex",
-    justifyContent: "space-between",
-    fontSize: "11px",
-    color: "#9ca3af",
-  },
-  author: {
-    fontWeight: "500",
-  },
-  selectionCommentButton: {
-    width: "32px",
-    height: "32px",
-    borderRadius: "50%",
-    border: "none",
-    backgroundColor: "#3b82f6",
-    cursor: "pointer",
-    fontSize: "16px",
+  cardHeader: {
     display: "flex",
     alignItems: "center",
-    justifyContent: "center",
-    boxShadow: "0 2px 8px rgba(59, 130, 246, 0.5)",
-    transition: "transform 0.2s, box-shadow 0.2s",
+    justifyContent: "space-between",
+    marginBottom: "6px",
   },
-  draftCard: {
-    width: "260px",
-    backgroundColor: "#ffffff",
-    borderRadius: "8px",
-    boxShadow: "0 4px 12px rgba(0, 0, 0, 0.2)",
-    border: "1px solid #3b82f6",
-    padding: "12px",
-    zIndex: 120,
-    pointerEvents: "auto",
+  pageBadge: {
+    fontSize: "11px",
+    fontWeight: "600",
+    color: "#374151",
   },
-  draftSelected: {
-    fontSize: "12px",
+  deleteButton: {
+    border: "none",
+    background: "none",
+    cursor: "pointer",
+    fontSize: "16px",
+    color: "#9ca3af",
+    lineHeight: 1,
+  },
+  selectedText: {
+    fontSize: "11px",
     fontStyle: "italic",
     color: "#6b7280",
-    margin: "0 0 8px 0",
-    lineHeight: "1.4",
-    maxHeight: "60px",
-    overflow: "auto",
+    margin: "0 0 6px",
+  },
+  sectionBadge: {
+    display: "inline-block",
+    fontSize: "10px",
+    fontWeight: "700",
+    color: "#1d4ed8",
+    background: "#dbeafe",
+    borderRadius: "4px",
+    padding: "2px 6px",
+    margin: "0 0 6px",
+  },
+  commentText: {
+    margin: 0,
+    color: "#111827",
+  },
+  cardFooter: {
+    marginTop: "6px",
+  },
+  author: {
+    fontSize: "10px",
+    color: "#9ca3af",
+  },
+  draftCard: {
+    background: "#fff",
+    borderRadius: "8px",
+    boxShadow: "0 2px 10px rgba(0,0,0,0.25)",
+    padding: "10px",
+    width: "100%",
+    boxSizing: "border-box",
+  },
+  draftSelected: {
+    fontSize: "11px",
+    fontStyle: "italic",
+    color: "#6b7280",
+    margin: "0 0 6px",
+  },
+  draftSectionInput: {
+    width: "100%",
+    fontSize: "12px",
+    border: "1px solid #d1d5db",
+    borderRadius: "6px",
+    padding: "6px",
+    boxSizing: "border-box",
+    fontFamily: "inherit",
+    marginBottom: "6px",
   },
   draftTextarea: {
     width: "100%",
-    padding: "8px",
-    borderRadius: "4px",
-    border: "1px solid #d1d5db",
+    minHeight: "60px",
     fontSize: "13px",
-    resize: "vertical",
-    minHeight: "70px",
+    border: "1px solid #d1d5db",
+    borderRadius: "6px",
+    padding: "6px",
     boxSizing: "border-box",
+    resize: "vertical",
+    fontFamily: "inherit",
   },
   draftActions: {
     display: "flex",
     justifyContent: "flex-end",
-    gap: "8px",
-    marginTop: "8px",
+    gap: "6px",
+    marginTop: "6px",
   },
   draftCancelButton: {
-    padding: "6px 12px",
-    borderRadius: "4px",
+    padding: "5px 10px",
+    borderRadius: "6px",
     border: "1px solid #d1d5db",
-    backgroundColor: "#ffffff",
+    background: "#fff",
     cursor: "pointer",
     fontSize: "12px",
-    color: "#374151",
-    fontWeight: "500",
   },
   draftSaveButton: {
-    padding: "6px 14px",
-    borderRadius: "4px",
+    padding: "5px 10px",
+    borderRadius: "6px",
     border: "none",
-    backgroundColor: "#2563eb",
-    color: "#ffffff",
+    background: "#3b82f6",
+    color: "#fff",
     cursor: "pointer",
     fontSize: "12px",
-    fontWeight: "600",
   },
 };
 
 export default PDFChecker;
-
-

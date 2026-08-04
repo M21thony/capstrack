@@ -28,9 +28,13 @@
         <label class="pm-label" style="margin-bottom:0">Target Expert:</label>
         <div class="expert-dropdown">
           <select id="expertSelect" onchange="onExpertChange()">
-            <option value="" disabled selected>Choose an Adviser/Expert...</option>
+            @if($experts->isEmpty())
+              <option value="" disabled selected>No adviser/expert assigned to your team yet</option>
+            @endif
             @foreach($experts as $expert)
-              <option value="{{ $expert->expert_id }}">{{ $expert->first_name }} {{ $expert->last_name }}</option>
+              <option value="{{ $expert->expert_id }}" @selected($expert->expert_id === $defaultExpertId)>
+                {{ $expert->first_name }} {{ $expert->last_name }} ({{ ucfirst($expert->role_name) }})
+              </option>
             @endforeach
           </select>
         </div>
@@ -57,65 +61,118 @@
           <div class="day-label">Sun</div><div class="day-label">Mon</div><div class="day-label">Tue</div>
           <div class="day-label">Wed</div><div class="day-label">Thu</div><div class="day-label">Fri</div><div class="day-label">Sat</div>
         </div>
+      </div>
 
-        <div class="cal-notes">
-          <h4 style="font-size: 12px; color: var(--text); text-transform: uppercase; margin-bottom: 10px; letter-spacing: 0.5px;">Consultation Legend & Guide</h4>
+      <div class="cal-notes">
+        <h4 style="font-size: 11px; color: var(--text); text-transform: uppercase; margin-bottom: 6px; letter-spacing: 0.5px;">Consultation Legend & Guide</h4>
 
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-            <div style="display: flex; flex-direction: column; gap: 8px;">
-              <div class="note-item">
-                <div style="width: 14px; height: 14px; background: var(--bg2); border: 1px solid var(--border); position: relative; overflow: hidden; border-radius: 3px;">
-                  <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(to top right, transparent 45%, var(--text3) 50%, transparent 55%); opacity: 0.5;"></div>
-                  <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(to top left, transparent 45%, var(--text3) 50%, transparent 55%); opacity: 0.5;"></div>
-                </div>
-                <span><strong>Unavailable:</strong> Expert is blocked or fully booked.</span>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+          <div style="display: flex; flex-direction: column; gap: 4px;">
+            <div class="note-item">
+              <div style="width: 12px; height: 12px; background: var(--bg2); border: 1px solid var(--border); position: relative; overflow: hidden; border-radius: 3px; flex-shrink: 0;">
+                <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(to top right, transparent 45%, var(--text3) 50%, transparent 55%); opacity: 0.5;"></div>
+                <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(to top left, transparent 45%, var(--text3) 50%, transparent 55%); opacity: 0.5;"></div>
               </div>
-              <div class="note-item">
-                <div style="width: 14px; height: 14px; background: #526D82; border-radius: 3px; opacity: 0.5;"></div>
-                <span><strong>Past Dates:</strong> Previous dates (Dark Gray) are disabled.</span>
-              </div>
+              <span><strong>Unavailable:</strong> Expert is blocked or fully booked.</span>
             </div>
-
-            <div style="display: flex; flex-direction: column; gap: 8px;">
-              <div class="note-item">
-                <span style="color: var(--accent2); font-weight: 700; font-size: 14px;">✔</span>
-                <span><strong>Available:</strong> Click a date to book a slot.</span>
-              </div>
-              <div class="note-item">
-                <div style="width: 6px; height: 6px; background: var(--accent); border-radius: 50%;"></div>
-                <span><strong>Your Booking:</strong> Pending appointments.</span>
-              </div>
+            <div class="note-item">
+              <div style="width: 12px; height: 12px; background: #526D82; border-radius: 3px; opacity: 0.5; flex-shrink: 0;"></div>
+              <span><strong>Past Dates:</strong> Previous dates (Dark Gray) are disabled.</span>
             </div>
           </div>
 
-          <div style="margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--border); font-size: 11px; color: var(--text3); font-style: italic;">
-            CapsTip: Select an expert, then click an available date to book a specific time slot.
+          <div style="display: flex; flex-direction: column; gap: 4px;">
+            <div class="note-item">
+              <span style="color: var(--accent2); font-weight: 700; font-size: 13px;">✔</span>
+              <span><strong>Available:</strong> Click a date to book a slot.</span>
+            </div>
+            <div class="note-item">
+              <div style="width: 6px; height: 6px; background: var(--accent); border-radius: 50%; flex-shrink: 0; margin-top: 3px;"></div>
+              <span><strong>Your Booking:</strong> Pending appointments.</span>
+            </div>
           </div>
+        </div>
+
+        <div style="margin-top: 6px; padding-top: 6px; border-top: 1px dashed var(--border); font-size: 10px; color: var(--text3); font-style: italic;">
+          CapsTip: Select an expert, then click an available date to book a specific time slot.
         </div>
       </div>
     </div>
 
+    @php
+      // Same type→color mapping as instructor/schedule's renderUpcoming() typeColors,
+      // so a slot's type badge looks identical on both pages.
+      $slotTypeColors = [
+        'consult'   => ['bg' => 'rgba(29,78,216,0.1)',  'color' => 'var(--blue)'],
+        'docreview' => ['bg' => 'rgba(124,58,237,0.1)', 'color' => 'var(--purple)'],
+        'defense'   => ['bg' => 'rgba(180,83,9,0.1)',   'color' => 'var(--amber)'],
+      ];
+    @endphp
+
     <div class="appt-sidebar">
-      <h3 class="overview-label">Recent Sessions</h3>
-      <div id="bookings-list">
-        @forelse($myBookings as $booking)
-          <div class="appt-card" style="border-left:3px solid var(--accent)">
-            <div class="appt-time">{{ \Carbon\Carbon::parse($booking->schedule->available_date)->format('M d Y') }} • {{ \Carbon\Carbon::parse($booking->schedule->start_time)->format('h:i A') }}</div>
-            <div class="appt-title">{{ ucfirst($booking->schedule->slot_type ?? 'consultation') }}</div>
-            <div class="appt-expert">{{ $booking->schedule->expert->first_name ?? 'Expert' }} {{ $booking->schedule->expert->last_name ?? '' }}</div>
-            <div class="appt-expert">Team: {{ $booking->team->team_name ?? 'N/A' }}</div>
-            <button class="btn-ghost" style="margin-top:8px;font-size:10px;padding:4px 8px" onclick="cancelBooking({{ $booking->booking_id }})">Cancel</button>
-          </div>
-        @empty
-          <div style="font-size:12px;color:var(--text3);padding:12px;text-align:center">No upcoming consultations.</div>
-        @endforelse
+      <div class="sessions-card">
+        <div class="sessions-card-header">
+          <h3 class="sessions-card-title">Ongoing / Booked Session</h3>
+          <span class="sessions-card-count">{{ $upcomingBookings->count() }}</span>
+        </div>
+        <div id="upcoming-bookings-list" class="session-list">
+          @forelse($upcomingBookings as $booking)
+            @php $tc = $slotTypeColors[$booking->schedule->slot_type ?? 'consult'] ?? $slotTypeColors['consult']; @endphp
+            <div class="session-list-item session-list-item-upcoming">
+              <div class="appt-row-top">
+                <div class="appt-expert">{{ $booking->schedule->expert->first_name ?? 'Expert' }} {{ $booking->schedule->expert->last_name ?? '' }}</div>
+                <div class="appt-badges">
+                  <span class="appt-type-badge" style="background:{{ $tc['bg'] }};color:{{ $tc['color'] }}">{{ ucfirst($booking->schedule->slot_type ?? 'Consult') }}</span>
+                  <span class="appt-status-badge appt-status-badge-upcoming">
+                    {{ $booking->session_date && $booking->session_date->isToday() ? 'Today' : 'Upcoming' }}
+                  </span>
+                </div>
+              </div>
+              <div class="appt-meta">
+                <span><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg>{{ $booking->session_date ? $booking->session_date->format('M d, Y') : $booking->schedule->available_date }}</span>
+                <span><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>{{ \Carbon\Carbon::parse($booking->schedule->start_time)->format('h:i A') }}</span>
+              </div>
+              <div class="appt-team">Team: {{ $booking->team->team_name ?? 'N/A' }}</div>
+            </div>
+          @empty
+            <div class="session-list-empty">No upcoming consultations.</div>
+          @endforelse
+        </div>
       </div>
 
-      <div class="legal-credits">
-        <div class="credits-title">System Developers</div>
-        <div class="credits-names">Jolina · John Kenneth · Mark Anthony · Ian Cyrus · Alexa Nicole</div>
+      <div class="sessions-card">
+        <div class="sessions-card-header">
+          <h3 class="sessions-card-title">Recent Sessions</h3>
+          <span class="sessions-card-count">{{ $recentBookings->count() }}</span>
+        </div>
+        <div id="bookings-list" class="session-list">
+          @forelse($recentBookings as $booking)
+            @php $tc = $slotTypeColors[$booking->schedule->slot_type ?? 'consult'] ?? $slotTypeColors['consult']; @endphp
+            <div class="session-list-item session-list-item-past">
+              <div class="appt-row-top">
+                <div class="appt-expert">{{ $booking->schedule->expert->first_name ?? 'Expert' }} {{ $booking->schedule->expert->last_name ?? '' }}</div>
+                <div class="appt-badges">
+                  <span class="appt-type-badge" style="background:{{ $tc['bg'] }};color:{{ $tc['color'] }}">{{ ucfirst($booking->schedule->slot_type ?? 'Consult') }}</span>
+                  <span class="appt-status-badge">Completed</span>
+                </div>
+              </div>
+              <div class="appt-meta">
+                <span><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg>{{ $booking->session_date ? $booking->session_date->format('M d, Y') : $booking->schedule->available_date }}</span>
+                <span><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>{{ \Carbon\Carbon::parse($booking->schedule->start_time)->format('h:i A') }}</span>
+              </div>
+              <div class="appt-team">Team: {{ $booking->team->team_name ?? 'N/A' }}</div>
+            </div>
+          @empty
+            <div class="session-list-empty">No past consultations.</div>
+          @endforelse
+        </div>
       </div>
     </div>
+  </div>
+
+  <div class="legal-credits">
+    <div class="credits-title">System Developers</div>
+    <div class="credits-names">Jolina · John Kenneth · Mark Anthony · Ian Cyrus · Alexa Nicole</div>
   </div>
 </div>
 
@@ -141,13 +198,25 @@ const MONTHS = ['January','February','March','April','May','June','July','August
 const DAY_NAMES = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 
 const expertSlots = @json($availableSlots);
+// This student's own scheduled sessions, by date — drives the "Your Booking" dot.
+const myBookedDates = @json($upcomingBookings->merge($recentBookings)->pluck('session_date')->filter()->map(fn ($d) => $d->format('Y-m-d'))->values());
 
 function getSlotsForExpert(expertId) {
   return expertSlots.filter(s => s.expert_id == expertId);
 }
 
-function getSlotsForDate(expertId, dayName) {
-  return getSlotsForExpert(expertId).filter(s => s.available_date === dayName && s.is_available);
+// A "once" slot is only ever valid on its specific calendar date — matching
+// it by weekday name (like weekly/biweekly slots) would make it recur
+// forever, showing as available on that weekday in every future month.
+function matchesDate(s, dayName, dateKey) {
+  if (s.recur === 'once') {
+    return s.specific_date === dateKey;
+  }
+  return s.available_date === dayName;
+}
+
+function getSlotsForDate(expertId, dayName, dateKey) {
+  return getSlotsForExpert(expertId).filter(s => matchesDate(s, dayName, dateKey) && s.is_available);
 }
 
 function formatTime(t) {
@@ -195,13 +264,21 @@ function renderCalendar() {
     const dateKey = currentYear + '-' + String(currentMonth+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
     const isToday = dateKey === todayKey;
     const isPast = dateObj < new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    const daySlots = getSlotsForDate(expertId, dayName);
+    const daySlots = getSlotsForDate(expertId, dayName, dateKey);
     const hasAvailableSlot = daySlots.length > 0;
-    const hasBookedSlot = slots.some(s => s.available_date === dayName && !s.is_available);
+    const hasBookedSlot = slots.some(s => matchesDate(s, dayName, dateKey) && !s.is_available);
+    const isMyBooking = myBookedDates.includes(dateKey);
 
+    // Matches the legend exactly: not-available (X pattern) for fully
+    // booked/blocked days, available for open ones, past for prior dates.
+    // A date the student booked themselves takes priority over
+    // not-available — that slot IS unavailable to other students, but to
+    // the person who booked it, showing an X/blocked pattern read as if
+    // something had gone wrong rather than "you're booked here."
     let cls = 'calendar-day';
     if (isPast) cls += ' past';
-    else if (hasBookedSlot && !hasAvailableSlot) cls += ' booked';
+    else if (isMyBooking) cls += ' my-booking';
+    else if (hasBookedSlot && !hasAvailableSlot) cls += ' not-available';
     else if (hasAvailableSlot) cls += ' available';
     if (isToday) cls += ' today';
 
@@ -215,8 +292,12 @@ function renderCalendar() {
       cellContent += '<div class="cal-slots">' + slotsHtml + moreHtml + '</div>';
     }
 
+    if (isMyBooking) {
+      cellContent += '<div class="event-dot" title="You have a booking on this date"></div>';
+    }
+
     if (hasAvailableSlot && !isPast) {
-      html += '<div class="' + cls + '" onclick="selectDate(' + d + ', \'' + dayName + '\')">' + cellContent + '</div>';
+      html += '<div class="' + cls + '" onclick="selectDate(' + d + ', \'' + dayName + '\', \'' + dateKey + '\')">' + cellContent + '</div>';
     } else if (hasBookedSlot && !isPast) {
       html += '<div class="' + cls + '" title="Fully booked">' + cellContent + '</div>';
     } else {
@@ -246,14 +327,14 @@ function onExpertChange() {
   renderCalendar();
 }
 
-function selectDate(d, dayName) {
+function selectDate(d, dayName, dateKey) {
   const expertId = document.getElementById('expertSelect').value;
   if (!expertId) {
     alert('Please select an expert first.');
     return;
   }
 
-  const daySlots = getSlotsForDate(expertId, dayName);
+  const daySlots = getSlotsForDate(expertId, dayName, dateKey);
   if (daySlots.length === 0) {
     return;
   }
@@ -312,29 +393,6 @@ async function bookSlot(scheduleId) {
       location.reload();
     } else {
       alert(data.message || 'Failed to book.');
-    }
-  } catch (e) {
-    alert('Error: ' + e.message);
-  }
-}
-
-async function cancelBooking(bookingId) {
-  if (!confirm('Cancel this booking?')) return;
-
-  try {
-    const res = await fetch('{{ route("student.consultation.cancel", ["bookingId" => ":id"]) }}'.replace(':id', bookingId), {
-      method: 'POST',
-      headers: {
-        'X-CSRF-TOKEN': CSRF,
-        'Accept': 'application/json',
-      },
-    });
-
-    const data = await res.json();
-    if (data.success) {
-      location.reload();
-    } else {
-      alert('Failed to cancel booking.');
     }
   } catch (e) {
     alert('Error: ' + e.message);

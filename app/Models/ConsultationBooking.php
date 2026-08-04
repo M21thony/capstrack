@@ -20,6 +20,7 @@ class ConsultationBooking extends Model
     protected $fillable = [
         'student_id',
         'schedule_id',
+        'session_date',
         'booking_status',
     ];
 
@@ -27,6 +28,7 @@ class ConsultationBooking extends Model
     {
         return [
             'booking_status' => 'string',
+            'session_date' => 'date',
         ];
     }
 

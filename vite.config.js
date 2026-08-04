@@ -11,6 +11,7 @@ export default defineConfig({
                 'resources/css/app.css',
                 'resources/js/legacy.js',
                 'resources/js/main.jsx',
+                'resources/js/student-review.jsx',
                 'resources/student-ui/styles.css',
                 'resources/student-ui/student.js',
                 'resources/student-ui/Styles/dashboard.css',

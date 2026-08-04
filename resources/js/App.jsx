@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 import CheckerNavbar from "./component/CheckerNavbar";
 import PDFChecker from "./component/pages/PDFChecker";
@@ -28,6 +28,18 @@ function App() {
   const [reviewStatus, setReviewStatus] = useState("To Review");
   // Transient "Saved" flash state for the save button.
   const [saveState, setSaveState] = useState("idle");
+  // Background Google Drive upload state: "idle" | "syncing" | "synced" | "error".
+  // Tracked separately from saveState because it finishes later — the DB
+  // save is quick, but rendering the annotated PDF and uploading it to
+  // Drive takes real time and shouldn't block the Save/Turn In button.
+  const [driveSyncState, setDriveSyncState] = useState("idle");
+  const [driveSyncError, setDriveSyncError] = useState(null);
+  // Coalesces overlapping sync requests: if Save then Turn In are clicked in
+  // quick succession, the second one no longer starts a second full render+
+  // upload on top of the first (which was doubling main-thread work and
+  // making everything else feel sluggish) — it just marks that another sync
+  // is needed once the current one finishes.
+  const driveSyncRef = useRef({ inFlight: false, pending: false });
 
   // Load the current review status on mount so the UI reflects saved state.
   useEffect(() => {
@@ -367,30 +379,76 @@ function App() {
     });
 
     if (!response.ok) {
-      throw new Error(`Drive sync failed: ${response.status}`);
+      // The backend sends a real reason ("Google Drive is not connected for
+      // this account.", "Google Drive session expired...", etc.) — surface
+      // it instead of just the HTTP status, or this fails silently with no
+      // way to tell why.
+      const body = await response.json().catch(() => null);
+      throw new Error(body?.message || `Drive sync failed: ${response.status}`);
     }
 
     return response.json();
   };
 
-  // Saves remarks + status, applies annotations to the Drive PDF, and flashes
-  // a "Saved" state on the save button for a brief moment.
-  const persistAndFlash = async (status) => {
-    await saveRemarks();
-    await updateReviewStatus(status);
-    setReviewStatus(status);
+  // Renders the annotated PDF and uploads it to Drive in the background.
+  // Safe to call repeatedly in quick succession (Save then Turn In): if a
+  // sync is already running, this just flags that another one is needed
+  // once it's done, instead of running two heavy renders concurrently.
+  const syncAnnotatedPdfToDrive = async () => {
+    if (driveSyncRef.current.inFlight) {
+      driveSyncRef.current.pending = true;
+      return;
+    }
+
+    driveSyncRef.current.inFlight = true;
+    setDriveSyncState("syncing");
+    setDriveSyncError(null);
 
     try {
       const pdfBytes = await renderAnnotatedPdf(getReviewId());
       await syncDrive(pdfBytes);
+      setDriveSyncState("synced");
       console.log("Annotations synced to Google Drive.");
     } catch (e) {
+      setDriveSyncState("error");
+      setDriveSyncError(e.message);
       console.warn("Could not sync annotations to Google Drive:", e);
+    } finally {
+      driveSyncRef.current.inFlight = false;
+      if (driveSyncRef.current.pending) {
+        driveSyncRef.current.pending = false;
+        syncAnnotatedPdfToDrive();
+      }
     }
+  };
+
+  // Warn before leaving the page while a Drive sync is still in flight —
+  // navigating away (including the "← Back" link) aborts any pending fetch,
+  // so without this the upload can silently never happen.
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (driveSyncState !== "syncing") return;
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [driveSyncState]);
+
+  // Saves remarks + status and flashes a "Saved" state on the save button.
+  // The annotated-PDF render (client-side pdf-lib) and the Google Drive
+  // upload are the slow part of this flow — a real network call to Google's
+  // API plus redrawing every annotation onto the PDF — so they're kicked off
+  // in the background afterward instead of blocking the button on them.
+  const persistAndFlash = async (status) => {
+    await Promise.all([saveRemarks(), updateReviewStatus(status)]);
+    setReviewStatus(status);
 
     setSaveState("saved");
     if (window.__saveTimer) clearTimeout(window.__saveTimer);
     window.__saveTimer = setTimeout(() => setSaveState("idle"), 2000);
+
+    syncAnnotatedPdfToDrive();
   };
 
   // Handle export action - downloads the annotated PDF locally.
@@ -425,6 +483,8 @@ function App() {
         setSelectedHighlightColor={setSelectedHighlightColor}
         status={reviewStatus}
         saveState={saveState}
+        driveSyncState={driveSyncState}
+        driveSyncError={driveSyncError}
         onTurnIn={handleTurnIn}
         onSave={handleSave}
         onExport={handleExport}

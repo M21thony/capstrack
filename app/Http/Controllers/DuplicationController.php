@@ -70,6 +70,7 @@ class DuplicationController extends Controller
                     'program' => $m['document']->program,
                     'score' => $m['score'],
                     'reason' => $m['reason'],
+                    'is_relevant' => $m['is_relevant'] ?? true,
                     'matched_on' => $m['matched_on'] ?? [],
                 ], $matches),
                 'instructors' => $instructors,

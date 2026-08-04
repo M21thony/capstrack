@@ -38,7 +38,9 @@ class GenerateEmbeddings extends Command
         // School/dept noise
         'college', 'department', 'university', 'school', 'cict', 'bsit',
         'bscs', 'institute', 'campus', 'high', 'national', 'junior', 'senior',
-        'elementary', 'secondary', 'tertiary', 'academy', 'institute',
+        'elementary', 'secondary', 'tertiary', 'academy', 'learning',
+        'center', 'centre', 'colegio', 'graduate', 'provincial', 'vocational',
+        'technical', 'community',
 
         // Common filler
         'version', 'study', 'case', 'research', 'project', 'capstone',

@@ -152,70 +152,83 @@ select.input{cursor:pointer}
 .edit-mode .pm-view-only{display:none}
 .edit-mode .pm-edit-only{display:block}
 
-/* ── SIGNATURE CREDENTIALS ── */
-.legal-credits{margin-top:60px;padding-top:20px;border-top:1px dashed var(--border);text-align:center;opacity:0.5;padding-bottom:20px}
-.credits-title{font-family:'Space Mono',monospace;font-size:8px;font-weight:600;letter-spacing:1px;color:var(--text3);text-transform:uppercase;margin-bottom:4px}
-.credits-names{font-size:9px;font-weight:500;color:var(--text3);letter-spacing:0.3px}
-
 /* RECRUITMENT BADGES */
 .team-container{display:grid;grid-template-columns:1fr 300px;gap:24px;margin-top:24px}
 .btn-primary{background:var(--accent);color:white;padding:12px 20px;border-radius:10px;font-weight:600;transition:all 0.3s cubic-bezier(0.16,1,0.3,1);display:inline-flex;align-items:center;justify-content:center;gap:10px;border:none;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:13px;box-shadow:0 4px 10px rgba(201,168,44,0.2)}
 .btn-primary:hover{background:var(--accent2);transform:translateY(-2px);box-shadow:0 8px 20px rgba(201,168,44,0.3)}
 
-/* ── CONSULTATION LAYOUT ── */
-.consultation-container{display:grid;grid-template-columns:1fr 320px;gap:24px;width:100%} /* Main split view */
-.calendar-card{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:24px} /* Main calendar container */
-/* ── REFINED CALENDAR ── */
-.calendar-card{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:24px;box-shadow:0 4px 12px rgba(0,0,0,0.02)} /* Card elevation */
-.calendar-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;padding:0 10px} /* Header spacing */
-.cal-nav{display:flex;gap:12px} /* Nav buttons container */
-.cal-btn{width:32px;height:32px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:0.2s;color:var(--text2)} /* Nav button style */
-.cal-btn:hover{background:var(--bg3);border-color:var(--accent2);color:var(--accent2)} /* Nav hover */
-
-/* ── CALENDAR GRID REFINEMENT ── */
-.calendar-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:12px;overflow:hidden} /* Grid lines using gap & background */
-.day-label{background:var(--bg3);text-align:center;font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;padding:12px 0;letter-spacing:1px} /* Weekday header */
-.calendar-day{aspect-ratio:1.1;background:var(--bg2);padding:10px;font-size:13px;font-weight:500;transition:0.2s;cursor:pointer;display:flex;flex-direction:column;justify-content:space-between} /* Day cell base */
-.calendar-day:hover{background:var(--bg3);color:var(--accent2)} /* Cell hover */
-.calendar-day.today{background:var(--accent-glow);color:var(--accent2);font-weight:700} /* Highlight today */
-.event-dot{width:4px;height:4px;background:var(--accent);border-radius:50%;margin-top:4px} /* Meeting indicator */
-
 /* ── TUTORIAL NOTES ── */
-.cal-notes{margin-top:24px;padding:20px;background:var(--bg3);border-radius:12px;border-left:4px solid var(--accent)} /* Tutorial box */
-.note-item{display:flex;gap:10px;margin-bottom:8px;font-size:12px;color:var(--text2);line-height:1.4} /* Note row */
 .note-icon{color:var(--accent2);font-weight:700} /* Small accent icon for notes */
 
-/* ── APPOINTMENT SIDEBAR ── */
-.appt-sidebar{display:flex;flex-direction:column;gap:16px} /* Right sidebar column */
-.appt-card{background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:16px;transition:0.2s} /* Individual appointment item */
-.appt-time{font-family:'Space Mono',monospace;font-size:11px;color:var(--accent2);font-weight:700;margin-bottom:4px} /* Time label */
-.appt-title{font-size:13px;font-weight:600;color:var(--text);margin-bottom:2px} /* Meeting name */
-.appt-expert{font-size:11px;color:var(--text3)} /* Expert/Adviser name */
+/* ── APPOINTMENT SIDEBAR ──
+   One outer card (matches .calendar-card's look) holding both session lists,
+   with plain list rows inside instead of each booking being its own
+   bordered/backgrounded box — the repeated card-in-card boxes were what
+   made the list read as one connected/merged block instead of clearly
+   separate items. */
+.appt-sidebar{display:flex;flex-direction:column;gap:16px;min-height:0;overflow-y:auto} /* Right sidebar column — scrolls on its own if the session list is long, instead of pushing the page taller */
+.sessions-card{background:var(--bg2);border:1px solid var(--border);border-radius:16px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.02)} /* Padding now lives on the header/list separately — mirrors instructor/schedule's .upcoming-card */
+.sessions-card-header{background:var(--navy-dark);padding:13px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid var(--accent)} /* Copied from instructor/schedule's .upcoming-header */
+.sessions-card-title{font-size:11px;font-weight:700;color:var(--navy-text);text-transform:uppercase;letter-spacing:0.8px}
+.sessions-card-count{font-size:10px;font-weight:700;padding:2px 7px;background:var(--accent);color:#18191f;border-radius:10px}
+.session-list{display:flex;flex-direction:column;gap:8px;padding:10px 16px}
+.session-list-empty{font-size:12px;color:var(--text3);padding:12px 4px;text-align:center}
+
+/* ── SESSION ROW — content UI copied from instructor/schedule's
+   .apt-row / .apt-row-top / .apt-team / .apt-type-badge / .apt-meta /
+   .apt-topic, so a booking reads the same way on both pages. */
+.session-list-item{padding:10px 12px;border-radius:9px;border:1.5px solid var(--border);background:var(--bg3);display:flex;flex-direction:column;gap:5px;transition:border-color 0.15s}
+.session-list-item-upcoming{border-left:3px solid var(--accent);background:var(--accent-glow)} /* Ongoing/booked — matches the calendar's own "available/booked" accent color */
+.session-list-item-past{opacity:0.6;filter:grayscale(0.3)} /* Recent (past) sessions — muted so they read as history, not something still actionable, matching the calendar's own past-date treatment */
+.appt-row-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.appt-expert{font-size:12px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis} /* Expert/Adviser name — plays the role of .apt-team */
+.appt-badges{display:flex;align-items:center;gap:4px;flex-shrink:0}
+.appt-type-badge{font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;white-space:nowrap}
+.appt-meta{font-size:11px;color:var(--text3);display:flex;align-items:center;gap:10px}
+.appt-meta span{display:flex;align-items:center;gap:3px}
+.appt-meta svg{width:10px;height:10px;stroke:currentColor;fill:none;stroke-width:2}
+.appt-team{font-size:11px;color:var(--text2);padding:5px 8px;background:var(--bg2);border-radius:5px;border-left:2px solid var(--accent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis} /* Team line — plays the role of .apt-topic */
+.appt-status-badge{font-size:9px;font-weight:700;padding:2px 7px;border-radius:4px;white-space:nowrap;text-transform:uppercase;letter-spacing:0.5px;background:var(--bg4);color:var(--text3)} /* Completed badge — neutral gray */
+.appt-status-badge-upcoming{background:var(--accent-light);color:var(--accent3)} /* Upcoming/Today badge — warm accent to draw the eye to what's still actionable */
 
 /* ── LEGAL CREDITS ── */
-.legal-credits{margin-top:auto;padding-top:20px;border-top:1px dashed var(--border);text-align:center;opacity:0.5;padding-bottom:20px} /* Standardized footer */
+.legal-credits{margin-top:24px;padding-top:20px;border-top:1px dashed var(--border);text-align:center;opacity:0.5;padding-bottom:20px} /* Now a sibling AFTER .consultation-container (not inside .appt-sidebar) — the two grid columns can be different heights (calendar column is usually taller than the sessions column), so a footer living inside the shorter column always ended up floating mid-page next to the taller column's content no matter how its own margin/alignment was tuned. Living below the whole grid guarantees it's beneath both columns, full stop. */
 .credits-title{font-family:'Space Mono',monospace;font-size:8px;font-weight:600;letter-spacing:1px;color:var(--text3);text-transform:uppercase;margin-bottom:4px} /* Title */
 .credits-names{font-size:9px;font-weight:500;color:var(--text3);letter-spacing:0.3px} /* Developer names */
-/* ── CONSULTATION LAYOUT ── */
-.consultation-container{display:grid;grid-template-columns:1fr 320px;gap:24px;width:100%} /* Main split view */
-.expert-filter-area{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:20px;margin-bottom:20px;display:flex;align-items:center;gap:20px} /* Top filter bar */
+/* ── CONSULTATION LAYOUT ──
+   Mirrors instructor/schedule.blade.php's .cal-grid/.cal-cell pattern
+   (public/css/schedule.css) — a plain grid with gap+background for lines
+   and a fixed min-height per cell, which is proven to render correctly.
+   The earlier attempt to fit everything into calc(100vh - Xpx) via flex/
+   1fr row fractions is what broke the row lines (fractional pixel row
+   heights don't reliably render shared grid-line borders/gaps in all
+   browsers) — not worth fighting for a few hundred px of vertical space. */
+.consultation-container{display:grid;grid-template-columns:1fr 320px;gap:16px;width:100%;align-items:start} /* Main split view — align-items:start so each column sizes to its own content instead of the default grid "stretch," which was forcing .appt-sidebar to match the (now much shorter) calendar column's height, leaving a big gap that .legal-credits' margin-top:auto then pushed the footer down into — landing it roughly level with the legend in the other column instead of at the natural end of the bookings list. */
+.left-panel{display:flex;flex-direction:column;gap:12px}
+.expert-filter-area{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:14px 20px;margin-bottom:0;display:flex;align-items:center;gap:20px;width:100%;box-sizing:border-box} /* Top filter bar */
 .expert-dropdown{flex:1;position:relative} /* Wrapper for select */
-.expert-dropdown select{width:100%;padding:12px 16px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:13px;font-weight:500;cursor:pointer;appearance:none} /* Styled select */
+.expert-dropdown select{width:100%;padding:10px 16px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:13px;font-weight:500;cursor:pointer;appearance:none} /* Styled select */
 .expert-dropdown::after{content:'▾';position:absolute;right:15px;top:50%;transform:translateY(-50%);color:var(--text3);pointer-events:none} /* Custom arrow */
 
 /* ── REFINED CALENDAR ── */
-.calendar-card{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:24px;box-shadow:0 4px 12px rgba(0,0,0,0.02)} /* Card base */
-.calendar-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;padding:0 5px} /* Header layout */
+.calendar-card{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:14px;box-shadow:0 4px 12px rgba(0,0,0,0.02);width:100%;box-sizing:border-box} /* Card base — full width, matching .cal-notes below it. Height is controlled separately via .calendar-day's fixed height, not tied to this width at all, so widening this no longer inflates row height. */
+.calendar-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;padding:0 5px} /* Header layout */
 .cal-nav-group{display:flex;gap:15px;align-items:center} /* Right controls */
 .cal-nav{display:flex;gap:8px;padding-right:15px;border-right:1px solid var(--border)} /* Nav divider */
 .cal-btn{width:32px;height:32px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:0.2s;color:var(--text2)} /* Nav button */
 .cal-btn:hover{background:var(--bg3);border-color:var(--accent2);color:var(--accent2)} /* Nav hover */
 
-/* ── CALENDAR GRID & STATES ── */
-.calendar-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:12px;overflow:hidden} /* Grid lines */
-.day-label{background:var(--bg3);text-align:center;font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;padding:12px 0;letter-spacing:1px} /* Weekday header */
-.calendar-day{min-height:100px;background:var(--bg2);padding:8px;font-size:12px;font-weight:500;transition:0.2s;cursor:pointer;display:flex;flex-direction:column;gap:3px;position:relative} /* Cell base — matches instructor */
+/* ── CALENDAR GRID & STATES ──
+   Copied 1:1 from .cal-grid/.cal-day-label/.cal-cell in
+   public/css/schedule.css (the working instructor calendar) — same
+   variable (--border), same border-radius, same padding, same
+   min-height. Exact match, not a resized recreation. */
+.calendar-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.day-label{background:var(--navy-dark);text-align:center;font-size:10px;font-weight:700;color:var(--navy-text2);text-transform:uppercase;padding:9px 4px;letter-spacing:0.8px;min-width:0} /* Matches instructor/schedule's .cal-day-label navy header row */
+.calendar-day{height:68px;min-width:0;background:var(--bg2);padding:8px;font-size:11px;font-weight:500;transition:0.15s;cursor:pointer;display:flex;flex-direction:column;gap:3px;position:relative;user-select:none;overflow:hidden} /* min-width:0 overrides the grid-item default of min-width:auto, which refuses to shrink an item below its own content's natural size — without it, cells were overflowing past their real 1fr column width and bleeding into the next track, showing as a white cell + gray gap pattern. Fixed height stays decoupled from width, as before. */
 .calendar-day:hover:not(.disabled){background:var(--bg3);color:var(--accent2)} /* Day hover */
+.calendar-day.available{background:var(--accent-glow);border-left:3px solid var(--accent2)} /* Has an open slot — matches the legend's checkmark color */
+.calendar-day.my-booking{background:var(--blue-bg);border-left:3px solid var(--blue);cursor:default} /* This student's own booking — distinct blue, not the not-available X-pattern, so it reads as "you're booked" rather than "blocked" */
 .calendar-day.today{background:var(--accent-glow);color:var(--accent2);font-weight:700} /* Today highlight */
 .calendar-day.disabled{background:var(--bg3);color:var(--text3);cursor:not-allowed;opacity:0.4;position:relative} /* Unavailable state */
 .calendar-day.disabled::after{content:'✕';position:absolute;top:5px;right:5px;font-size:8px;opacity:0.5} /* Unavailable mark */
@@ -224,13 +237,14 @@ select.input{cursor:pointer}
 /* ── MODAL & NOTES ── */
 .modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);display:none;align-items:center;justify-content:center;z-index:1000;backdrop-filter:blur(4px)} 
 .modal-content{background:var(--bg2);width:450px;border-radius:20px;padding:30px;box-shadow:0 20px 40px rgba(0,0,0,0.2)} /* Modal box */
-.cal-notes{margin-top:24px;padding:16px 20px;background:var(--bg3);border-radius:12px;border-left:4px solid var(--accent);display:flex;flex-direction:column;gap:6px} /* Tutorial box */
-.note-item{display:flex;gap:10px;font-size:11.5px;color:var(--text2);line-height:1.4} 
+.cal-notes{margin-top:10px;padding:10px 14px;background:var(--bg3);border-radius:12px;border-left:4px solid var(--accent);display:flex;flex-direction:column;gap:4px;flex-shrink:0;width:100%;box-sizing:border-box} /* Tutorial box — full width of .left-panel; .calendar-card is set to match this width exactly (see below) */
+.note-item{display:flex;gap:8px;font-size:10.5px;color:var(--text2);line-height:1.3}
 .pm-field textarea.input{resize:none;height:80px;padding-top:12px;font-family:inherit;line-height:1.5} 
 .modal-footer{margin-top:25px;display:flex;justify-content:center}
 
 /* ── CALENDAR LOGIC STATES ── */
 .calendar-day.past{background:var(--bg3);color:var(--text3);opacity:0.4;cursor:not-allowed} /* Past: Dark gray background */
+.calendar-day.other-month{background:var(--bg3);color:var(--text3);opacity:0.4;cursor:not-allowed} /* Prev/next month spillover days — no rule existed for this class at all before, so they rendered as plain, full-opacity white cells indistinguishable from real days in this month. */
 .calendar-day.not-available{background:var(--bg2);color:var(--text3);cursor:not-allowed;position:relative;overflow:hidden} /* Unavailable base */
 .calendar-day.not-available::before, .calendar-day.not-available::after{content:'';position:absolute;top:0;left:0;width:100%;height:100%;background:linear-gradient(to top right, transparent calc(50% - 1px), var(--text3) 50%, transparent calc(50% + 1px));opacity:0.3} /* First diagonal line */
 .calendar-day.not-available::after{background:linear-gradient(to top left, transparent calc(50% - 1px), var(--text3) 50%, transparent calc(50% + 1px))} /* Second diagonal line to form big X */

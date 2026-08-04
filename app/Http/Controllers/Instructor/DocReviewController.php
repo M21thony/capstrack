@@ -3,12 +3,15 @@
 namespace App\Http\Controllers\Instructor;
 
 use App\Http\Controllers\Controller;
+use App\Services\GoogleDriveService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class DocReviewController extends Controller
 {
+    public function __construct(private GoogleDriveService $drive) {}
+
     public function index()
     {
         $expertId = Auth::guard('expert')->id();
@@ -50,6 +53,7 @@ class DocReviewController extends Controller
         return view('instructor.docreview', [
             'reviews' => $reviews,
             'teams' => $teams,
+            'driveConnected' => $this->drive->isConnected($expertId),
         ]);
     }
 
