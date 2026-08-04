@@ -36,9 +36,14 @@ class ConsultationSchedule extends Model
     {
         return [
             'is_available' => 'boolean',
-            // specific_date deliberately stays a raw string, not a 'date' cast —
-            // nextOccurrenceOnOrAfter() below returns it directly as a string,
-            // and a Carbon cast would break that typed return.
+            // specific_date and start_time deliberately stay raw strings, not
+            // Carbon casts: they get JSON-serialized wholesale to the student
+            // consultation calendar's JS (@json($availableSlots)), which reads
+            // them as plain "HH:MM:SS"/"YYYY-MM-DD" strings. A Carbon cast
+            // serializes as a full timezone-shifted ISO datetime instead,
+            // silently corrupting both the displayed time and the date-key
+            // matching that calendar depends on. Consumers that want a Carbon
+            // instance should wrap with Carbon::parse() locally instead.
             'created_at' => 'datetime',
             'updated_at' => 'datetime',
         ];
