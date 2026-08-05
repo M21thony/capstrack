@@ -75,7 +75,7 @@ class DashboardController extends Controller
             ->distinct('team_id')
             ->count('team_id');
 
-        $announcements = Announcement::with('admin')
+        $announcements = Announcement::with('admin', 'team', 'milestone')
             ->where('is_active', true)
             ->get()
             ->filter(function ($announcement) {
@@ -88,8 +88,7 @@ class DashboardController extends Controller
 
                 return in_array('all', $audience)
                     || in_array('expert', $audience)
-                    || in_array('panel', $audience)
-                    || in_array('student', $audience);
+                    || in_array('panel', $audience);
             })
             ->sortByDesc('created_at')
             ->take(5)
