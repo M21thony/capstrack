@@ -81,7 +81,7 @@
 .match-item:last-child { border-bottom: none; }
 
   @keyframes sk-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
-  .sk-overlay { background: var(--bg); }
+  .sk-overlay { position: absolute; inset: 0; background: var(--bg); z-index: 10; }
   .sk { background: linear-gradient(90deg, var(--bg4) 25%, var(--bg2) 50%, var(--bg4) 75%); background-size: 200% 100%; animation: sk-shimmer 1.5s ease-in-out infinite; border-radius: 8px; }
 </style>
 <x-dashboard.styles />
@@ -97,7 +97,7 @@
     </div>
   </div>
 
-  <div class="content" style="height:calc(100vh - 56px);overflow:hidden;padding-bottom:0">
+  <div class="content" style="height:calc(100vh - 56px);overflow:hidden;padding-bottom:0;position: relative;">
     <div id="skeleton-content" class="sk-overlay">
       <div class="dup-layout">
         <div class="dup-left">
@@ -140,7 +140,7 @@
       </div>
     </div>
 
-    <div id="real-content" style="display:none">
+    <div id="real-content" style="opacity:0">
     <div class="dup-layout">
 
       <!-- LEFT COLUMN -->
@@ -239,8 +239,8 @@ document.addEventListener('DOMContentLoaded', function () {
       setTimeout(function () {
         sk.style.transition = 'opacity 0.3s ease';
         sk.style.opacity = '0';
-        rc.style.display = 'block';
         rc.style.transition = 'opacity 0.35s ease';
+        rc.style.opacity = '1';
         setTimeout(function () {
           sk.remove();
           rc.style.transition = '';

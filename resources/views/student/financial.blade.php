@@ -119,7 +119,7 @@
 .filter-search { flex: 1; min-width: 0; }
 
   @keyframes sk-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
-  .sk-overlay { background: var(--bg); }
+  .sk-overlay { position: absolute; inset: 0; background: var(--bg); z-index: 10; }
   .sk { background: linear-gradient(90deg, var(--bg4) 25%, var(--bg2) 50%, var(--bg4) 75%); background-size: 200% 100%; animation: sk-shimmer 1.5s ease-in-out infinite; border-radius: 8px; }
 
 /* ── HAMBURGER MENU ── */
@@ -220,7 +220,7 @@
       @include('student.partials.notification-dropdown')
     </div>
   </div>
-  <div class="content">
+  <div class="content" style="position: relative;">
     @include('student.partials.page-tutorial', ['page' => 'financial'])
     <div id="skeleton-content" class="sk-overlay">
       <div class="fin-grid">
@@ -250,7 +250,7 @@
       </div>
     </div>
 
-    <div id="real-content" style="display:none">
+    <div id="real-content" style="opacity:0">
     @if (session('success'))
       <div class="alert-success">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="16" height="16"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
@@ -604,8 +604,8 @@ document.addEventListener('DOMContentLoaded', function () {
       setTimeout(function () {
         sk.style.transition = 'opacity 0.3s ease';
         sk.style.opacity = '0';
-        rc.style.display = 'block';
         rc.style.transition = 'opacity 0.35s ease';
+        rc.style.opacity = '1';
         setTimeout(function () {
           sk.remove();
           rc.style.transition = '';
