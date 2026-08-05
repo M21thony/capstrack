@@ -12,6 +12,9 @@
   @keyframes sk-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
   .sk-overlay { position: absolute; inset: 0; background: var(--bg); z-index: 10; }
   .sk { background: linear-gradient(90deg, var(--bg4) 25%, var(--bg2) 50%, var(--bg4) 75%); background-size: 200% 100%; animation: sk-shimmer 1.5s ease-in-out infinite; border-radius: 8px; }
+
+  #consult-toast { position: fixed; bottom: 30px; right: 30px; background: var(--navy-dark); color: #fff; padding: 14px 22px; border-radius: 12px; font-size: 13px; font-weight: 500; z-index: 2000; box-shadow: 0 8px 30px rgba(0,0,0,0.3); opacity: 0; transform: translateY(12px); pointer-events: none; transition: opacity 0.25s ease, transform 0.25s ease; }
+  #consult-toast.show { opacity: 1; transform: translateY(0); }
 </style>
 </head>
 <body>
@@ -234,6 +237,8 @@
   </div>
 </div>
 
+<div id="consult-toast"></div>
+
 <script>
 document.addEventListener('DOMContentLoaded', function () {
   var sk = document.getElementById('skeleton-content');
@@ -264,6 +269,18 @@ const DAY_NAMES = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','
 const expertSlots = @json($availableSlots);
 // This student's own scheduled sessions, by date — drives the "Your Booking" dot.
 const myBookedDates = @json($upcomingBookings->merge($recentBookings)->pluck('session_date')->filter()->map(fn ($d) => $d->format('Y-m-d'))->values());
+const slotTypeColors = @json($slotTypeColors);
+
+// Weekly/biweekly slots share a single schedule row across every future
+// occurrence of that weekday, so "is this slot booked out" has to be tracked
+// per (schedule_id, date) rather than on the row itself — otherwise booking
+// one Monday would hide every other Monday too. "schedule_id|YYYY-MM-DD"
+// entries here mean that specific occurrence is full.
+let fullOccurrences = new Set(@json($fullOccurrences));
+
+function isOccurrenceFull(scheduleId, dateKey) {
+  return fullOccurrences.has(scheduleId + '|' + dateKey);
+}
 
 function getSlotsForExpert(expertId) {
   return expertSlots.filter(s => s.expert_id == expertId);
@@ -280,7 +297,7 @@ function matchesDate(s, dayName, dateKey) {
 }
 
 function getSlotsForDate(expertId, dayName, dateKey) {
-  return getSlotsForExpert(expertId).filter(s => matchesDate(s, dayName, dateKey) && s.is_available);
+  return getSlotsForExpert(expertId).filter(s => matchesDate(s, dayName, dateKey) && s.is_available && !isOccurrenceFull(s.schedule_id, dateKey));
 }
 
 function formatTime(t) {
@@ -330,7 +347,7 @@ function renderCalendar() {
     const isPast = dateObj < new Date(today.getFullYear(), today.getMonth(), today.getDate());
     const daySlots = getSlotsForDate(expertId, dayName, dateKey);
     const hasAvailableSlot = daySlots.length > 0;
-    const hasBookedSlot = slots.some(s => matchesDate(s, dayName, dateKey) && !s.is_available);
+    const hasBookedSlot = slots.some(s => matchesDate(s, dayName, dateKey) && (!s.is_available || isOccurrenceFull(s.schedule_id, dateKey)));
     const isMyBooking = myBookedDates.includes(dateKey);
 
     // Matches the legend exactly: not-available (X pattern) for fully
@@ -391,6 +408,8 @@ function onExpertChange() {
   renderCalendar();
 }
 
+let currentSlotModalDateKey = null;
+
 function selectDate(d, dayName, dateKey) {
   const expertId = document.getElementById('expertSelect').value;
   if (!expertId) {
@@ -402,6 +421,8 @@ function selectDate(d, dayName, dateKey) {
   if (daySlots.length === 0) {
     return;
   }
+
+  currentSlotModalDateKey = dateKey;
 
   const dateLabel = DAY_NAMES[new Date(currentYear, currentMonth, d).getDay()] + ', ' + MONTHS[currentMonth] + ' ' + d;
   document.getElementById('slot-modal-date').textContent = dateLabel;
@@ -436,7 +457,54 @@ function ucfirst(s) {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
+function formatDateLabel(dateKey) {
+  const [y, m, d] = dateKey.split('-').map(Number);
+  return MONTHS[m - 1].slice(0, 3) + ' ' + String(d).padStart(2, '0') + ', ' + y;
+}
+
+function showToast(message) {
+  const toast = document.getElementById('consult-toast');
+  if (!toast) { return; }
+  toast.textContent = message;
+  toast.classList.add('show');
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(() => toast.classList.remove('show'), 3500);
+}
+
+function prependUpcomingBooking(booking, dateKey) {
+  const list = document.getElementById('upcoming-bookings-list');
+  const empty = list.querySelector('.session-list-empty');
+  if (empty) { empty.remove(); }
+
+  const tc = slotTypeColors[booking.slot_type] || slotTypeColors['consult'];
+  const today = new Date();
+  const todayKey = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+  const statusLabel = dateKey === todayKey ? 'Today' : 'Upcoming';
+
+  const item = document.createElement('div');
+  item.className = 'session-list-item session-list-item-upcoming';
+  item.innerHTML = `
+    <div class="appt-row-top">
+      <div class="appt-expert">${booking.expert_name}</div>
+      <div class="appt-badges">
+        <span class="appt-type-badge" style="background:${tc.bg};color:${tc.color}">${ucfirst(booking.slot_type || 'Consult')}</span>
+        <span class="appt-status-badge appt-status-badge-upcoming">${statusLabel}</span>
+      </div>
+    </div>
+    <div class="appt-meta">
+      <span><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg>${formatDateLabel(dateKey)}</span>
+      <span><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>${formatTime(booking.start_time)}</span>
+    </div>
+    <div class="appt-team">Team: ${booking.team_name}</div>
+  `;
+  list.prepend(item);
+
+  const count = document.querySelector('#upcoming-bookings-list').closest('.sessions-card').querySelector('.sessions-card-count');
+  if (count) { count.textContent = String(Number(count.textContent || '0') + 1); }
+}
+
 async function bookSlot(scheduleId) {
+  const dateKey = currentSlotModalDateKey;
   try {
     const res = await fetch('{{ route("student.consultation.book") }}', {
       method: 'POST',
@@ -453,8 +521,17 @@ async function bookSlot(scheduleId) {
     const data = await res.json();
     if (data.success) {
       closeSlotModal();
-      alert('Booking request submitted successfully!');
-      location.reload();
+
+      fullOccurrences = new Set(data.fullOccurrences || []);
+      if (dateKey && ! myBookedDates.includes(dateKey)) {
+        myBookedDates.push(dateKey);
+      }
+      if (data.newBooking && dateKey) {
+        prependUpcomingBooking(data.newBooking, dateKey);
+      }
+      renderCalendar();
+
+      showToast('Booking request submitted successfully!');
     } else {
       alert(data.message || 'Failed to book.');
     }
