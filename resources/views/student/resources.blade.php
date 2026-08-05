@@ -10,7 +10,7 @@
 <x-dashboard.styles />
 <style>
   @keyframes sk-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
-  .sk-overlay { background: var(--bg); }
+  .sk-overlay { position: absolute; inset: 0; background: var(--bg); z-index: 10; }
   .sk { background: linear-gradient(90deg, var(--bg4) 25%, var(--bg2) 50%, var(--bg4) 75%); background-size: 200% 100%; animation: sk-shimmer 1.5s ease-in-out infinite; border-radius: 8px; }
 </style>
 </head>
@@ -27,7 +27,7 @@
     </div>
   </div>
 
-  <div class="content">
+  <div class="content" style="position: relative;">
     @include('student.partials.page-tutorial', ['page' => 'resources'])
     <div id="skeleton-content" class="sk-overlay">
       <div class="grid-4" style="margin-bottom:18px">
@@ -57,7 +57,7 @@
       </div>
     </div>
 
-    <div id="real-content" style="display:none">
+    <div id="real-content" style="opacity:0">
     <div class="grid-4" style="margin-bottom:18px">
       <div class="stat-chip">
         <div class="stat-n" style="color:var(--accent3)" id="stat-total">0</div>
@@ -116,8 +116,8 @@ document.addEventListener('DOMContentLoaded', function () {
       setTimeout(function () {
         sk.style.transition = 'opacity 0.3s ease';
         sk.style.opacity = '0';
-        rc.style.display = 'block';
         rc.style.transition = 'opacity 0.35s ease';
+        rc.style.opacity = '1';
         setTimeout(function () {
           sk.remove();
           rc.style.transition = '';
