@@ -9,8 +9,10 @@
 @vite('resources/student-ui/styles.css')
 <x-dashboard.styles />
 <style>
-  #pageSkeleton { position: absolute; inset: 0; z-index: 50; padding: 0; opacity: 1; transition: opacity 0.35s ease; pointer-events: auto; }
-  #pageSkeleton.loaded { opacity: 0; pointer-events: none; }
+  #pageSkeleton { position: fixed; inset: 0; z-index: 9999; background: var(--bg, #f2f3f5); transition: opacity 0.6s ease, visibility 0.6s ease; }
+  #pageSkeleton.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+  #contentWrapper { opacity: 1; transition: opacity 0.6s ease; }
+  #contentWrapper.loading { opacity: 0; }
 </style>
 </head>
 <body>
@@ -28,7 +30,7 @@
 
   <div class="content">
     @include('student.partials.page-tutorial', ['page' => 'resources'])
-    <div id="contentWrapper" style="position: relative;">
+    <div id="contentWrapper" class="loading">
 
     {{-- Skeleton loader --}}
     <div id="pageSkeleton">
@@ -111,8 +113,22 @@
 </div>
 
 <script>
-var skeleton = document.getElementById('pageSkeleton');
-if (skeleton) { setTimeout(function() { skeleton.classList.add('loaded'); }, 450); }
+var __skeleton = document.getElementById('pageSkeleton');
+var __content = document.getElementById('contentWrapper');
+if (__skeleton && __content) {
+  (function() {
+    function hideSkeleton() {
+      __skeleton.classList.add('hidden');
+      __content.classList.remove('loading');
+    }
+    if (document.readyState === 'complete') {
+      hideSkeleton();
+    } else {
+      var minDisplay = new Promise(function(resolve) { setTimeout(resolve, 450); });
+      Promise.all([minDisplay, new Promise(function(resolve) { window.addEventListener('load', resolve); })]).then(hideSkeleton);
+    }
+  })();
+}
 
 const CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]').content;
 const resources = @json($resources);
