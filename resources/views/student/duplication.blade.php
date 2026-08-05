@@ -80,7 +80,7 @@
 }
 .match-item:last-child { border-bottom: none; }
 
-  #pageSkeleton { position: fixed; inset: 0; z-index: 9999; background: var(--bg, #f2f3f5); transition: opacity 0.6s ease, visibility 0.6s ease; }
+  #pageSkeleton { position: absolute; inset: 0; z-index: 50; background: var(--bg, #f2f3f5); transition: opacity 0.6s ease, visibility 0.6s ease; }
   #pageSkeleton.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
   #contentWrapper { opacity: 1; transition: opacity 0.6s ease; }
   #contentWrapper.loading { opacity: 0; }
@@ -102,7 +102,7 @@
   </div>
 
   <div class="content" style="height:calc(100vh - 56px);overflow:hidden;padding-bottom:0">
-    <div id="contentWrapper" class="loading">
+    <div id="contentWrapper" class="loading" style="position: relative;">
 
     {{-- Skeleton loader --}}
     <div id="pageSkeleton">

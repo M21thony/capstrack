@@ -8,7 +8,7 @@
     @vite('resources/student-ui/Styles/personal-info.css')
     <x-dashboard.styles />
     <style>
-        #pageSkeleton { position: fixed; inset: 0; z-index: 9999; background: var(--bg2, #fff); transition: opacity 0.6s ease, visibility 0.6s ease; }
+        #pageSkeleton { position: absolute; inset: 0; z-index: 50; background: var(--bg2, #fff); transition: opacity 0.6s ease, visibility 0.6s ease; }
         #pageSkeleton.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
         #pi-realContent { opacity: 1; transition: opacity 0.6s ease; }
         #pi-realContent.loading { opacity: 0; }
@@ -20,7 +20,7 @@
 <body class="pi-page-body">
     <div class="pi-page">
 
-        <main class="pi-card">
+        <main class="pi-card" style="position: relative;">
 
             {{-- Skeleton loader --}}
             <div id="pageSkeleton" style="padding:40px">
