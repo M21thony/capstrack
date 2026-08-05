@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Instructor;
 
 use App\Http\Controllers\Controller;
+use App\Models\ConsultationBooking;
 use App\Services\GoogleCalendarService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -17,6 +18,8 @@ class ScheduleController extends Controller
     // GET /instructor/schedule/slots
     public function getSlots()
     {
+        ConsultationBooking::markPastAsDone();
+
         Log::info('getSlots reached');
 
         $expert = Auth::guard('expert')->user();
@@ -26,15 +29,28 @@ class ScheduleController extends Controller
             'expert' => $expert,
         ]);
 
+        // Scoped to booking_status in ('scheduled', 'done') in the join's ON
+        // clause (not a WHERE) so schedule rows with no booking, or only a
+        // cancelled one, still come through as a left join instead of being
+        // dropped. A recurring slot can have several distinct bookings — one
+        // per weekday occurrence it was booked on — so this intentionally
+        // returns one row per (schedule, booking) pair rather than one row
+        // per schedule; the frontend groups them back by schedule_id and
+        // keeps each booking's own session_date to know which specific
+        // calendar occurrence it belongs to.
         $slots = DB::table('consultation_schedule')
             ->where('expert_id', Auth::guard('expert')->id())
-            ->leftJoin('consultation_booking', 'consultation_booking.schedule_id', '=', 'consultation_schedule.schedule_id')
+            ->leftJoin('consultation_booking', function ($join) {
+                $join->on('consultation_booking.schedule_id', '=', 'consultation_schedule.schedule_id')
+                    ->whereIn('consultation_booking.booking_status', ['scheduled', 'done']);
+            })
             ->leftJoin('students', 'students.student_id', '=', 'consultation_booking.student_id')
             ->leftJoin('student_s_y', 'student_s_y.student_id', '=', 'students.student_id')
             ->leftJoin('team', 'team.team_id', '=', 'student_s_y.team_id')
             ->select(
                 'consultation_schedule.*',
                 'consultation_booking.booking_id',
+                'consultation_booking.session_date',
                 'consultation_booking.booking_status',
                 'consultation_booking.created_at as booked_at',
                 'students.f_name as student_fname',

@@ -17,6 +17,8 @@ class StudentConsultationController extends Controller
 
     public function index()
     {
+        ConsultationBooking::markPastAsDone();
+
         $student = Auth::user();
         $studentId = $student->student_id;
 
@@ -62,7 +64,7 @@ class StudentConsultationController extends Controller
             ->get();
 
         $myBookings = ConsultationBooking::where('student_id', $studentId)
-            ->where('booking_status', 'scheduled')
+            ->whereIn('booking_status', ['scheduled', 'done'])
             ->with(['schedule', 'student.studentSchoolYear.team'])
             ->get();
 
