@@ -95,7 +95,7 @@
               <div class="fin-pbar">
                 <div class="fin-pbar-fill" style="width:{{ $teamPercentFull }}%;background:var(--green)"></div>
               </div>
-              <div style="font-size:10px;color:var(--text3);margin-top:2px">{{ $teamPercentFull }}% of all teams · All receipts verified</div>
+              <div style="font-size:10px;color:var(--text3);margin-top:2px">{{ $teamPercentFull }}% of all teams Â· All receipts verified</div>
             </div>
             <div class="fin-legend-row">
               <div class="fin-legend-top">
@@ -108,7 +108,7 @@
               <div class="fin-pbar">
                 <div class="fin-pbar-fill" style="width:{{ $teamPercentPending }}%;background:var(--amber)"></div>
               </div>
-              <div style="font-size:10px;color:var(--text3);margin-top:2px">{{ $teamPercentPending }}% · Submitted, awaiting verification</div>
+              <div style="font-size:10px;color:var(--text3);margin-top:2px">{{ $teamPercentPending }}% Â· Submitted, awaiting verification</div>
             </div>
             <div class="fin-legend-row">
               <div class="fin-legend-top">
@@ -121,7 +121,7 @@
               <div class="fin-pbar">
                 <div class="fin-pbar-fill" style="width:{{ $teamPercentNone }}%;background:var(--red)"></div>
               </div>
-              <div style="font-size:10px;color:var(--text3);margin-top:2px">{{ $teamPercentNone }}% · Have not submitted any receipt</div>
+              <div style="font-size:10px;color:var(--text3);margin-top:2px">{{ $teamPercentNone }}% Â· Have not submitted any receipt</div>
             </div>
           </div>
         </div>
@@ -161,22 +161,22 @@
           <div class="fin-quad-cell">
             <div class="fin-quad-n" style="color:var(--green)">{{ $paidStudents }}</div>
             <div class="fin-quad-l" style="color:var(--green)">Paid Students</div>
-            <div class="fin-quad-sub">{{ $studPercentPaid }}% · All receipts verified</div>
+            <div class="fin-quad-sub">{{ $studPercentPaid }}% Â· All receipts verified</div>
           </div>
           <div class="fin-quad-cell">
             <div class="fin-quad-n" style="color:var(--red)">{{ $noSubmissionStudents }}</div>
             <div class="fin-quad-l" style="color:var(--red)">Unpaid Students</div>
-            <div class="fin-quad-sub">{{ $studPercentNone }}% · No submissions yet</div>
+            <div class="fin-quad-sub">{{ $studPercentNone }}% Â· No submissions yet</div>
           </div>
           <div class="fin-quad-cell">
             <div class="fin-quad-n" style="color:var(--amber)">{{ $pendingStudents }}</div>
             <div class="fin-quad-l" style="color:var(--amber)">Pending Review</div>
-            <div class="fin-quad-sub">{{ $studPercentPending }}% · Awaiting verification</div>
+            <div class="fin-quad-sub">{{ $studPercentPending }}% Â· Awaiting verification</div>
           </div>
           <div class="fin-quad-cell">
             <div class="fin-quad-n" style="color:var(--blue)">{{ $paidStudents }}</div>
             <div class="fin-quad-l" style="color:var(--blue)">Partially Paid</div>
-            <div class="fin-quad-sub">Various · Some receipts verified</div>
+            <div class="fin-quad-sub">Various Â· Some receipts verified</div>
           </div>
         </div>
       </div>
@@ -237,7 +237,7 @@
               $postIds = $stats['post_ids'];
 
               $teamTitles = $postIds->map(fn($id) => $expensePostTitles[$id] ?? null)->filter()->values()->toArray();
-              $teamTitleHtml = !empty($teamTitles) ? implode(',<br>', $teamTitles) : '—';
+              $teamTitleHtml = !empty($teamTitles) ? implode(',<br>', $teamTitles) : 'â€”';
 
               $teamCourse = \App\Models\StudentSchoolYear::where('team_id', $team->team_id)->whereNotNull('program')->first()?->program ?? $team->members->first()?->course ?? 'N/A';
 
@@ -340,7 +340,7 @@
           <div class="receipt-info">
             <div class="receipt-name">Expense Category: {{ $expenseTitle }}</div>
             @if ($record->receipt_number)<div style="font-size:11px;color:var(--text2);font-weight:600;margin-bottom:3px">Receipt Number: {{ $record->receipt_number }}</div>@endif
-            <div class="receipt-meta">Team {{ $teamName }} · <strong style="color:var(--text)">{{ $studentName }}</strong> · Uploaded {{ $record->uploaded_at ? \Carbon\Carbon::parse($record->uploaded_at)->format('M d, Y') : 'N/A' }}</div>
+            <div class="receipt-meta">Team {{ $teamName }} Â· <strong style="color:var(--text)">{{ $studentName }}</strong> Â· Uploaded {{ $record->uploaded_at ? \Carbon\Carbon::parse($record->uploaded_at)->format('M d, Y') : 'N/A' }}</div>
             <div class="receipt-amount">PHP {{ number_format($record->amount ?? 0, 2) }}</div>
             @if ($record->description)
               <div style="font-size:11px;color:var(--text3);margin-bottom:6px">Description: {{ $record->description }}</div>
@@ -396,7 +396,7 @@
           <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)">
             <div style="flex:2;min-width:0">
               <div style="font-size:13px;font-weight:500;color:var(--text)">{{ $post->title }}</div>
-              <div style="font-size:11px;color:var(--text3)">{{ $post->course }} · {{ $post->year_level }}</div>
+              <div style="font-size:11px;color:var(--text3)">{{ $post->course }} Â· {{ $post->year_level }}</div>
             </div>
             <div style="flex:1;font-family:'Space Mono',monospace;font-size:13px;color:var(--text2)">PHP {{ number_format($post->amount, 2) }}</div>
             <div style="flex:2;font-size:11px;color:var(--text3);min-width:0">@if($post->description){{ Str::limit($post->description, 60) }}@else<span style="font-style:italic">No description</span>@endif</div>
@@ -536,10 +536,10 @@
     </div>
 
     <div id="tdSummary" style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px;padding:12px 14px;background:var(--bg1);border-radius:10px;font-size:12px">
-      <div><span style="color:var(--text3)">Leader:</span> <span style="color:var(--text);font-weight:600" id="tdLeader">—</span></div>
-      <div><span style="color:var(--text3)">Course:</span> <span style="color:var(--text);font-weight:600" id="tdCourse">—</span></div>
-      <div><span style="color:var(--text3)">Section:</span> <span style="color:var(--text);font-weight:600" id="tdSection">—</span></div>
-      <div><span style="color:var(--text3)">Members:</span> <span style="color:var(--text);font-weight:600" id="tdMemberCount">—</span></div>
+      <div><span style="color:var(--text3)">Leader:</span> <span style="color:var(--text);font-weight:600" id="tdLeader">â€”</span></div>
+      <div><span style="color:var(--text3)">Course:</span> <span style="color:var(--text);font-weight:600" id="tdCourse">â€”</span></div>
+      <div><span style="color:var(--text3)">Section:</span> <span style="color:var(--text);font-weight:600" id="tdSection">â€”</span></div>
+      <div><span style="color:var(--text3)">Members:</span> <span style="color:var(--text);font-weight:600" id="tdMemberCount">â€”</span></div>
     </div>
 
     <div style="font-size:12px;font-weight:600;color:var(--text3);margin-bottom:8px">TITLES</div>
@@ -828,7 +828,7 @@ input[type="number"] {
   .fin-split-card { padding: 18px; }
 }
 
-/* -- Transition gap: 769–795px (sidebar still visible, single-column cards need tighter sizing) -- */
+/* -- Transition gap: 769â€“795px (sidebar still visible, single-column cards need tighter sizing) -- */
 @media (min-width: 769px) and (max-width: 795px) {
   .fin-ring { width: 80px; height: 80px; }
   .fin-ring svg { width: 80px; height: 80px; }
@@ -1320,7 +1320,7 @@ function renderExpensePosts(posts) {
     return '<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)">' +
       '<div style="flex:2;min-width:0">' +
       '<div style="font-size:13px;font-weight:500;color:var(--text)">' + post.title + '</div>' +
-      '<div style="font-size:11px;color:var(--text3)">' + post.course + ' · ' + post.year_level + '</div>' +
+      '<div style="font-size:11px;color:var(--text3)">' + post.course + ' Â· ' + post.year_level + '</div>' +
       '</div>' +
       '<div style="flex:1;font-family:\'Space Mono\',monospace;font-size:13px;color:var(--text2)">PHP ' + parseFloat(post.amount).toLocaleString('en-US', {minimumFractionDigits: 2}) + '</div>' +
       '<div style="flex:2;font-size:11px;color:var(--text3);min-width:0">' + desc + '</div>' +

@@ -4,7 +4,7 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <meta name="csrf-token" content="{{ csrf_token() }}"/>
-<title>Resources – CapsTRACK Admin</title>
+<title>Resources - CapsTRACK Admin</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="{{ asset('css/admin.css') }}"/>
 </head>
@@ -56,7 +56,7 @@
         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><path d="M12 15V3"/>
         </svg>
-        <span id="gdrive-status-text" style="font-size:13px;color:var(--text2)">Checking Google Drive connection…</span>
+        <span id="gdrive-status-text" style="font-size:13px;color:var(--text2)">Checking Google Drive connectionâ€¦</span>
       </div>
       <div>
         <a href="{{ route('gdrive.connect') }}" class="btn btn-primary" id="gdrive-connect-btn" style="font-size:12px;display:none">Connect Google Drive</a>
@@ -83,7 +83,7 @@
                 <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
               </div>
               <div class="dropzone-label">Drop file here or click to browse</div>
-              <div class="dropzone-sub">PDF, DOCX, PPTX — max 25 MB</div>
+              <div class="dropzone-sub">PDF, DOCX, PPTX â€” max 25 MB</div>
             </div>
             <div class="upload-preview" id="upload-preview">
               <div id="preview-ftype" class="ftype ftype-pdf" style="width:32px;height:32px;font-size:8px">PDF</div>
@@ -97,17 +97,17 @@
           <!-- Resource Name -->
           <div class="form-group">
             <label class="label">Resource Name</label>
-            <input class="input" id="res-name" placeholder="e.g. Chapter 1–3 Manuscript Template"/>
+            <input class="input" id="res-name" placeholder="e.g. Chapter 1â€“3 Manuscript Template"/>
           </div>
 
           <!-- Category -->
           <div class="form-group">
             <label class="label">Category</label>
             <select class="input" id="res-category">
-              <option value="">Select a category…</option>
+              <option value="">Select a categoryâ€¦</option>
               <option value="pre-proposal">Pre-Proposal Template</option>
-              <option value="ch1-3">Chapter 1–3 Template</option>
-              <option value="ch4-5">Chapter 4–5 Template</option>
+              <option value="ch1-3">Chapter 1â€“3 Template</option>
+              <option value="ch4-5">Chapter 4â€“5 Template</option>
               <option value="final">Final Manuscript Template</option>
               <option value="presentation">Presentation Template</option>
               <option value="lesson">Lesson / Reference Material</option>
@@ -181,8 +181,8 @@
             <select class="input" id="category-filter" style="width:170px;font-size:12px" onchange="renderCards()">
               <option value="all">All Categories</option>
               <option value="pre-proposal">Pre-Proposal</option>
-              <option value="ch1-3">Ch. 1–3</option>
-              <option value="ch4-5">Ch. 4–5</option>
+              <option value="ch1-3">Ch. 1â€“3</option>
+              <option value="ch4-5">Ch. 4â€“5</option>
               <option value="final">Final MS</option>
               <option value="presentation">Presentation</option>
               <option value="lesson">Lessons</option>
@@ -193,7 +193,7 @@
             </select>
           </div>
           <div style="display:flex;align-items:center;gap:8px">
-            <input class="input" id="search-input" placeholder="Search resources…" style="width:200px;font-size:12px" oninput="renderCards()"/>
+            <input class="input" id="search-input" placeholder="Search resourcesâ€¦" style="width:200px;font-size:12px" oninput="renderCards()"/>
             <select class="input" style="width:130px;font-size:12px" id="program-filter" onchange="renderCards()">
               <option value="all">All Programs</option>
               <option value="BSIT">BSIT</option>
@@ -238,7 +238,7 @@ function mapResource(r) {
     category: r.category || 'other',
     program: r.resource_for || '',
     ext: (r.file_type || 'pdf').toLowerCase(),
-    size: r.file_size ? formatSize(r.file_size) : '—',
+    size: r.file_size ? formatSize(r.file_size) : 'â€”',
     driveLink: r.drive_web_view_link,
     driveFolderId: r.drive_folder_id || null,
     downloads: r.downloads || 0,
@@ -252,8 +252,8 @@ let pendingDeleteId = null;
 // -- CATEGORY LABELS ----------------------------------------------------------
 const CAT_LABELS = {
   'pre-proposal':'Pre-Proposal Template',
-  'ch1-3':'Chapter 1–3 Template',
-  'ch4-5':'Chapter 4–5 Template',
+  'ch1-3':'Chapter 1â€“3 Template',
+  'ch4-5':'Chapter 4â€“5 Template',
   'final':'Final Manuscript Template',
   'presentation':'Presentation Template',
   'lesson':'Lesson / Reference',
@@ -319,12 +319,12 @@ function renderCards(){
             <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><path d="M12 15V3"/></svg>
             ${r.downloads} downloads
           </span>
-          <span>·</span>
+          <span>Â·</span>
           <span>
             <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
             ${r.date}
           </span>
-          <span>·</span>
+          <span>Â·</span>
           <span>${r.size}</span>
         </div>
         <div class="resource-actions">
@@ -398,7 +398,7 @@ function refreshDriveStatus(){
       const disconnectBtn = document.getElementById('gdrive-disconnect-btn');
 
       if (GDRIVE_CONNECTED) {
-        text.textContent = '? Google Drive connected — uploads sync automatically.';
+        text.textContent = '? Google Drive connected â€” uploads sync automatically.';
         connectBtn.style.display = 'none';
         disconnectBtn.style.display = 'inline-flex';
       } else {
@@ -456,7 +456,7 @@ function submitNewFolder(){
 
   const btn = document.getElementById('folder-modal-confirm-btn');
   btn.disabled = true;
-  btn.textContent = 'Creating…';
+  btn.textContent = 'Creatingâ€¦';
 
   fetch(ROUTES.createFolder, {
     method: 'POST',
@@ -506,7 +506,7 @@ function uploadResource(){
   const btn = document.getElementById('upload-btn');
   const originalHTML = btn.innerHTML;
   btn.disabled = true;
-  btn.textContent = 'Uploading…';
+  btn.textContent = 'Uploadingâ€¦';
 
   fetch(ROUTES.upload, {
     method: 'POST',
@@ -547,7 +547,7 @@ function downloadResource(id, btn){
   if(!r || !r.driveLink){ showToast('? No file link available.'); return; }
 
   btn.classList.add('btn-downloading');
-  btn.textContent='Opening…';
+  btn.textContent='Openingâ€¦';
 
   fetch(ROUTES.download(id), {
     method: 'POST',
@@ -570,7 +570,7 @@ function confirmDelete(id, name){
   document.getElementById('modal-confirm-btn').onclick = () => {
     const confirmBtn = document.getElementById('modal-confirm-btn');
     confirmBtn.disabled = true;
-    confirmBtn.textContent = 'Removing…';
+    confirmBtn.textContent = 'Removingâ€¦';
 
     fetch(ROUTES.destroy(id), {
       method: 'DELETE',
