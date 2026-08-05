@@ -86,6 +86,7 @@ class StudentConsultationController extends Controller
             'experts' => $experts,
             'defaultExpertId' => $defaultExpertId,
             'availableSlots' => $availableSlots,
+            'fullOccurrences' => $this->computeFullOccurrences($availableSlots),
             'upcomingBookings' => $upcomingBookings,
             'recentBookings' => $recentBookings,
             'teamId' => $teamId,
@@ -119,20 +120,42 @@ class StudentConsultationController extends Controller
             return response()->json(['success' => false, 'message' => 'This slot is no longer available.'], 422);
         }
 
+        // Captured once, at booking time — the slot's own available_date is
+        // just a weekday name for recurring slots, so re-deriving a date
+        // from it later (e.g. on every page load) drifts forward every week
+        // instead of staying fixed to the session actually booked.
+        $sessionDate = $slot->nextOccurrenceOnOrAfter();
+
+        // Recurring (weekly/biweekly) slots share a single schedule row
+        // across every future occurrence of that weekday, so capacity has
+        // to be checked per calendar date rather than per row — otherwise
+        // one booking would exhaust every future occurrence at once.
+        $limit = max(1, (int) ($slot->consultation_limit ?? 1));
+        $bookedCount = ConsultationBooking::where('schedule_id', $slot->schedule_id)
+            ->where('session_date', $sessionDate)
+            ->where('booking_status', 'scheduled')
+            ->count();
+
+        if ($bookedCount >= $limit) {
+            return response()->json(['success' => false, 'message' => 'This slot is fully booked for that date.'], 422);
+        }
+
         $booking = ConsultationBooking::create([
             'student_id' => $student->student_id,
             'schedule_id' => $request->schedule_id,
-            // Captured once, at booking time — the slot's own available_date
-            // is just a weekday name for recurring slots, so re-deriving a
-            // date from it later (e.g. on every page load) drifts forward
-            // every week instead of staying fixed to the session actually
-            // booked.
-            'session_date' => $slot->nextOccurrenceOnOrAfter(),
+            'session_date' => $sessionDate,
             'booking_status' => 'scheduled',
         ]);
 
-        ConsultationSchedule::where('schedule_id', $request->schedule_id)
-            ->update(['is_available' => false]);
+        // A "once" slot only ever has this single occurrence, so once it's
+        // full it's safe to flip the shared row off. Recurring slots must
+        // stay available — other future occurrences of the same weekday are
+        // still bookable — which is why they're deliberately left alone here
+        // and instead gated per-date via computeFullOccurrences().
+        if ($slot->recur === 'once' && $bookedCount + 1 >= $limit) {
+            ConsultationSchedule::where('schedule_id', $slot->schedule_id)
+                ->update(['is_available' => false]);
+        }
 
         $team = Team::where('team_id', $studentYear->team_id)->first();
 
@@ -148,7 +171,53 @@ class StudentConsultationController extends Controller
             }
         }
 
-        return response()->json(['success' => true, 'booking_id' => $booking->booking_id]);
+        // Fresh occurrence state so the frontend can update the calendar and
+        // booking lists in place instead of reloading the page.
+        $availableSlots = ConsultationSchedule::where('expert_id', $slot->expert_id)->get();
+
+        return response()->json([
+            'success' => true,
+            'booking_id' => $booking->booking_id,
+            'fullOccurrences' => $this->computeFullOccurrences($availableSlots),
+            'newBooking' => [
+                'expert_name' => trim(($slot->expert?->first_name ?? 'Expert').' '.($slot->expert?->last_name ?? '')),
+                'slot_type' => $slot->slot_type ?? 'consult',
+                'session_date' => $sessionDate,
+                'start_time' => $slot->start_time,
+                'end_time' => $slot->end_time,
+                'team_name' => $team->team_name ?? 'N/A',
+            ],
+        ]);
+    }
+
+    /**
+     * Which (schedule_id, session_date) pairs already have as many scheduled
+     * bookings as their consultation_limit allows. Used instead of the
+     * schedule row's own is_available for recurring slots, since that column
+     * is shared across every future occurrence of the same weekday.
+     */
+    private function computeFullOccurrences($slots): array
+    {
+        $scheduleIds = $slots->pluck('schedule_id');
+        if ($scheduleIds->isEmpty()) {
+            return [];
+        }
+
+        $limitsBySchedule = $slots->pluck('consultation_limit', 'schedule_id');
+
+        return ConsultationBooking::whereIn('schedule_id', $scheduleIds)
+            ->where('booking_status', 'scheduled')
+            ->get()
+            ->groupBy(fn ($b) => $b->schedule_id.'|'.optional($b->session_date)->format('Y-m-d'))
+            ->filter(function ($bookings, $key) use ($limitsBySchedule) {
+                [$scheduleId] = explode('|', $key);
+                $limit = max(1, (int) ($limitsBySchedule[$scheduleId] ?? 1));
+
+                return $bookings->count() >= $limit;
+            })
+            ->keys()
+            ->values()
+            ->all();
     }
 
     public function cancel(Request $request, $bookingId)
