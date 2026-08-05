@@ -48,12 +48,12 @@
     <div id="add-archive-modal" style="display:none;background:#fff;border:1.5px solid var(--accent);border-radius:12px;padding:20px;margin-bottom:16px;box-shadow:0 4px 16px rgba(201,150,12,0.12)">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
         <span style="font-size:13px;font-weight:600;color:var(--text)">Add Archived Capstone</span>
-        <button onclick="hideAddArchive()" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:18px;line-height:1">�</button>
+        <button onclick="hideAddArchive()" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:18px;line-height:1">&times;</button>
       </div>
       <div class="grid-2" style="gap:12px">
         <div>
           <div class="form-group"><label class="label">Capstone Title</label><input class="input" placeholder="Full title of the capstone study"/></div>
-          <div class="form-group"><label class="label">Proponents (comma-separated)</label><input class="input" placeholder="e.g. Dela Cruz, J. � Santos, M."/></div>
+          <div class="form-group"><label class="label">Proponents (comma-separated)</label><input class="input" placeholder="e.g. Dela Cruz, J., Santos, M."/></div>
           <div class="grid-2" style="gap:8px">
             <div class="form-group"><label class="label">Year</label><select class="input"><option>2025</option><option>2024</option><option>2023</option><option>2022</option></select></div>
             <div class="form-group"><label class="label">Program</label><select class="input"><option>BSIT</option><option>BSCS</option><option>BSIS</option><option>BLIS</option></select></div>

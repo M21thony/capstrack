@@ -50,7 +50,7 @@
             <td class="td-main">{{ $log->student?->f_name }} {{ $log->student?->l_name }}</td>
             <td><span class="badge badge-gold" style="font-size:10px">{{ $log->student?->currentTeam?->team_name ?? $log->metadata['team_name'] ?? 'N/A' }}</span></td>
             <td><span class="badge badge-blue" style="font-size:10px">{{ $log->type }}</span></td>
-            <td style="font-size:12px;color:var(--text2)">{{ Str::limit($log->description, 60) }}</td>
+            <td style="font-size:12px;color:var(--text2)">{!! Str::limit($log->description, 60) !!}</td>
           </tr>
         @empty
           <tr><td colspan="6" style="text-align:center;padding:32px;color:var(--text3)">No activity logs found.</td></tr>
@@ -110,7 +110,7 @@ function openLogModal(id) {
     document.getElementById('modalStudent').textContent = log.student;
     document.getElementById('modalTeam').textContent = log.team;
     document.getElementById('modalAction').textContent = log.action;
-    document.getElementById('modalDesc').textContent = log.description;
+    document.getElementById('modalDesc').innerHTML = log.description;
     document.getElementById('logModal').classList.add('open');
 }
 

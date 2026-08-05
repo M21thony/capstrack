@@ -46,7 +46,7 @@
               <div style="font-size:15px;font-weight:600;color:var(--text)" id="modal-team-name">Team</div>
               <div style="font-size:12px;color:var(--text3);margin-top:2px" id="modal-team-title">Project Title</div>
             </div>
-            <button onclick="closePanelModal()" style="background:none;border:none;font-size:22px;color:var(--text3);cursor:pointer;line-height:1">�</button>
+            <button onclick="closePanelModal()" style="background:none;border:none;font-size:22px;color:var(--text3);cursor:pointer;line-height:1">&times;</button>
           </div>
           <div style="background:rgba(201,168,44,0.06);border:1px solid rgba(201,168,44,0.2);border-radius:8px;padding:12px;margin-bottom:16px;font-size:12px;color:var(--text2)">
             <strong style="color:var(--accent3)">Note:</strong> Panel members are different from the team's adviser/consultant/grammarian. Assign experts specifically for defense evaluation.
@@ -54,7 +54,7 @@
           <div class="form-group">
             <label class="label">Panel Chair</label>
             <select class="input" id="modal-chair">
-              <option value="">� Select Panel Chair �</option>
+              <option value="">— Select Panel Chair —</option>
               @foreach ($experts as $expert)
                 <option value="{{ $expert->expert_id }}">{{ $expert->name }}</option>
               @endforeach
@@ -63,7 +63,7 @@
           <div class="form-group">
             <label class="label">Panel Member 1</label>
             <select class="input" id="modal-member1">
-              <option value="">� Select Panel Member 1 �</option>
+              <option value="">— Select Panel Member 1 —</option>
               @foreach ($experts as $expert)
                 <option value="{{ $expert->expert_id }}">{{ $expert->name }}</option>
               @endforeach
@@ -72,7 +72,7 @@
           <div class="form-group">
             <label class="label">Panel Member 2</label>
             <select class="input" id="modal-member2">
-              <option value="">� Select Panel Member 2 �</option>
+              <option value="">— Select Panel Member 2 —</option>
               @foreach ($experts as $expert)
                 <option value="{{ $expert->expert_id }}">{{ $expert->name }}</option>
               @endforeach
@@ -125,12 +125,12 @@
                     <span class="td-main">{{ $team->team_name }}</span>
                   </div>
                 </td>
-                <td style="font-size:12px;color:var(--text2);white-space:normal;word-break:break-word">{{ $team->project_title ?? '�' }}</td>
+                <td style="font-size:12px;color:var(--text2);white-space:normal;word-break:break-word">{{ $team->project_title ?? '—' }}</td>
                 <td>
                   @if ($section)
                     <span class="badge badge-gold" style="font-size:10px">{{ $section }}</span>
                   @else
-                    <span style="font-size:12px;color:var(--text3)">�</span>
+                    <span style="font-size:12px;color:var(--text3)">—</span>
                   @endif
                 </td>
                 <td style="font-size:12px;color:var(--text3);font-style:italic">Not assigned</td>

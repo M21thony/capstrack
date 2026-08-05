@@ -38,7 +38,7 @@
         <div class="notif-item-icon" style="background:{{ $logIcon['bg'] }};color:{{ $logIcon['fg'] }}">{!! $logIcon['svg'] !!}</div>
         <div class="notif-item-body">
           <div class="notif-item-title">{{ str_replace('_', ' ', ucwords($log->type, '_')) }}</div>
-          <div class="notif-item-msg">{{ $logDesc }}</div>
+          <div class="notif-item-msg">{!! $logDesc !!}</div>
           <div class="notif-item-time">{{ $log->created_at->diffForHumans() }}</div>
         </div>
       </div>
