@@ -9,13 +9,9 @@
 @vite(['resources/student-ui/styles.css', 'resources/js/student-review.jsx'])
 <x-dashboard.styles />
 <style>
-  #pageSkeleton { position: absolute; inset: 0; z-index: 50; background: var(--bg, #f2f3f5); transition: opacity 0.6s ease, visibility 0.6s ease; }
-  #pageSkeleton.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
-  #contentWrapper { opacity: 1; transition: opacity 0.6s ease; }
-  #contentWrapper.loading { opacity: 0; }
-  .sk-block { position: relative; overflow: hidden; background: rgba(0,0,0,0.06); }
-  .sk-shimmer { position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(0,0,0,0.08), transparent); animation: skShimmer 1.5s ease-in-out infinite; }
-  @keyframes skShimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+  @keyframes sk-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+  .sk-overlay { background: var(--bg); }
+  .sk { background: linear-gradient(90deg, var(--bg4) 25%, var(--bg2) 50%, var(--bg4) 75%); background-size: 200% 100%; animation: sk-shimmer 1.5s ease-in-out infinite; border-radius: 8px; }
 </style>
 </head>
 <body>
@@ -31,35 +27,31 @@
   </div>
   <div class="content">
     @include('student.partials.page-tutorial', ['page' => 'review'])
-    <div id="contentWrapper" class="loading" style="position: relative;">
-
-    {{-- Skeleton loader --}}
-    <div id="pageSkeleton">
+    <div id="skeleton-content" class="sk-overlay">
       <div class="row" style="margin-bottom:14px;gap:8px">
-        <div class="sk-block" style="width:320px;height:36px;border-radius:8px"><div class="sk-shimmer"></div></div>
-        <div class="sk-block" style="width:90px;height:20px;border-radius:12px"><div class="sk-shimmer"></div></div>
+        <div class="sk" style="width:320px;height:36px;border-radius:8px"></div>
+        <div class="sk" style="width:90px;height:20px;border-radius:12px"></div>
         <span style="flex:1"></span>
-        <div class="sk-block" style="width:100px;height:28px;border-radius:8px"><div class="sk-shimmer"></div></div>
+        <div class="sk" style="width:100px;height:28px;border-radius:8px"></div>
       </div>
       <div class="grid-2">
         <div class="card" style="height:720px;padding:16px">
-          <div class="sk-block" style="width:100%;height:100%;border-radius:8px"><div class="sk-shimmer"></div></div>
+          <div class="sk" style="width:100%;height:100%;border-radius:8px"></div>
         </div>
         <div class="card" style="height:720px">
-          <div class="sk-block" style="width:160px;height:14px;border-radius:4px;margin-bottom:16px"><div class="sk-shimmer"></div></div>
+          <div class="sk" style="width:160px;height:14px;border-radius:4px;margin-bottom:16px"></div>
           @for ($i = 0; $i < 4; $i++)
           <div class="annotation-box">
-            <div class="sk-block" style="width:40%;height:10px;border-radius:4px;margin-bottom:8px"><div class="sk-shimmer"></div></div>
-            <div class="sk-block" style="width:90%;height:11px;border-radius:4px;margin-bottom:6px"><div class="sk-shimmer"></div></div>
-            <div class="sk-block" style="width:70%;height:11px;border-radius:4px"><div class="sk-shimmer"></div></div>
+            <div class="sk" style="width:40%;height:10px;border-radius:4px;margin-bottom:8px"></div>
+            <div class="sk" style="width:90%;height:11px;border-radius:4px;margin-bottom:6px"></div>
+            <div class="sk" style="width:70%;height:11px;border-radius:4px"></div>
           </div>
           @endfor
         </div>
       </div>
     </div>
 
-    {{-- Content --}}
-
+    <div id="real-content" style="display:none">
 @if ($turnedIn->isEmpty())
     <div class="card" style="padding:24px;text-align:center;color:var(--text3)">
         No turned-in reviews yet. Once a reviewer marks one of your submissions as reviewed, it'll show up here.
@@ -159,21 +151,24 @@
 </div>
 
 <script>
-var __skeleton = document.getElementById('pageSkeleton');
-var __content = document.getElementById('contentWrapper');
-if (__skeleton && __content) {
-  (function() {
-    function hideSkeleton() {
-      __skeleton.classList.add('hidden');
-      __content.classList.remove('loading');
-    }
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', hideSkeleton);
-    } else {
-      hideSkeleton();
-    }
-  })();
-}
+document.addEventListener('DOMContentLoaded', function () {
+  var sk = document.getElementById('skeleton-content');
+  var rc = document.getElementById('real-content');
+  if (sk && rc) {
+    requestAnimationFrame(function () {
+      setTimeout(function () {
+        sk.style.transition = 'opacity 0.3s ease';
+        sk.style.opacity = '0';
+        rc.style.display = 'block';
+        rc.style.transition = 'opacity 0.35s ease';
+        setTimeout(function () {
+          sk.remove();
+          rc.style.transition = '';
+        }, 350);
+      }, 600);
+    });
+  }
+});
 </script>
 
 </body>

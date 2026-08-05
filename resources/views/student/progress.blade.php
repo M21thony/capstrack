@@ -9,13 +9,9 @@
 @vite('resources/student-ui/styles.css')
 <x-dashboard.styles />
 <style>
-  #pageSkeleton { position: absolute; inset: 0; z-index: 50; background: var(--bg, #f2f3f5); transition: opacity 0.6s ease, visibility 0.6s ease; }
-  #pageSkeleton.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
-  #contentWrapper { opacity: 1; transition: opacity 0.6s ease; }
-  #contentWrapper.loading { opacity: 0; }
-  .sk-block { position: relative; overflow: hidden; background: rgba(0,0,0,0.06); }
-  .sk-shimmer { position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(0,0,0,0.08), transparent); animation: skShimmer 1.5s ease-in-out infinite; }
-  @keyframes skShimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+  @keyframes sk-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+  .sk-overlay { background: var(--bg); }
+  .sk { background: linear-gradient(90deg, var(--bg4) 25%, var(--bg2) 50%, var(--bg4) 75%); background-size: 200% 100%; animation: sk-shimmer 1.5s ease-in-out infinite; border-radius: 8px; }
 </style>
 </head>
 <body>
@@ -30,34 +26,30 @@
   </div>
   <div class="content">
     @include('student.partials.page-tutorial', ['page' => 'progress'])
-    <div id="contentWrapper" class="loading" style="position: relative;">
-
-    {{-- Skeleton loader --}}
-    <div id="pageSkeleton">
+    <div id="skeleton-content" class="sk-overlay">
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;margin-bottom:16px">
         @for ($i = 0; $i < 4; $i++)
         <div class="stat-chip">
-          <div class="sk-block" style="width:30px;height:22px;border-radius:4px;margin-bottom:6px"><div class="sk-shimmer"></div></div>
-          <div class="sk-block" style="width:60px;height:9px;border-radius:4px"><div class="sk-shimmer"></div></div>
+          <div class="sk" style="width:30px;height:22px;border-radius:4px;margin-bottom:6px"></div>
+          <div class="sk" style="width:60px;height:9px;border-radius:4px"></div>
         </div>
         @endfor
       </div>
       <div class="card">
-        <div class="sk-block" style="width:140px;height:12px;border-radius:4px;margin-bottom:14px"><div class="sk-shimmer"></div></div>
+        <div class="sk" style="width:140px;height:12px;border-radius:4px;margin-bottom:14px"></div>
         @for ($i = 0; $i < 4; $i++)
         <div style="display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)">
-          <div class="sk-block" style="width:20px;height:20px;border-radius:50%;flex-shrink:0"><div class="sk-shimmer"></div></div>
+          <div class="sk" style="width:20px;height:20px;border-radius:50%;flex-shrink:0"></div>
           <div style="flex:1">
-            <div class="sk-block" style="width:35%;height:12px;border-radius:4px;margin-bottom:6px"><div class="sk-shimmer"></div></div>
-            <div class="sk-block" style="width:60%;height:9px;border-radius:4px"><div class="sk-shimmer"></div></div>
+            <div class="sk" style="width:35%;height:12px;border-radius:4px;margin-bottom:6px"></div>
+            <div class="sk" style="width:60%;height:9px;border-radius:4px"></div>
           </div>
         </div>
         @endfor
       </div>
     </div>
 
-    {{-- Content --}}
-
+    <div id="real-content" style="display:none">
 @if (session('success'))
 <div style="padding:10px 14px;background:rgba(16,185,129,0.1);color:#059669;border-radius:8px;font-size:13px;margin-bottom:12px">{{ session('success') }}</div>
 @endif
@@ -278,21 +270,24 @@
 </style>
 
 <script>
-var __skeleton = document.getElementById('pageSkeleton');
-var __content = document.getElementById('contentWrapper');
-if (__skeleton && __content) {
-  (function() {
-    function hideSkeleton() {
-      __skeleton.classList.add('hidden');
-      __content.classList.remove('loading');
-    }
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', hideSkeleton);
-    } else {
-      hideSkeleton();
-    }
-  })();
-}
+document.addEventListener('DOMContentLoaded', function () {
+  var sk = document.getElementById('skeleton-content');
+  var rc = document.getElementById('real-content');
+  if (sk && rc) {
+    requestAnimationFrame(function () {
+      setTimeout(function () {
+        sk.style.transition = 'opacity 0.3s ease';
+        sk.style.opacity = '0';
+        rc.style.display = 'block';
+        rc.style.transition = 'opacity 0.35s ease';
+        setTimeout(function () {
+          sk.remove();
+          rc.style.transition = '';
+        }, 350);
+      }, 600);
+    });
+  }
+});
 
 function openUploadModal(milestoneId, milestoneName) {
   document.getElementById('upload-milestone-id').value = milestoneId;
