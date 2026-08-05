@@ -79,7 +79,11 @@
   padding: 8px 0; border-bottom: 1px solid var(--border);
 }
 .match-item:last-child { border-bottom: none; }
+
+#pageSkeleton { position: absolute; inset: 0; z-index: 50; padding: 0; opacity: 1; transition: opacity 0.35s ease; pointer-events: auto; }
+#pageSkeleton.loaded { opacity: 0; pointer-events: none; }
 </style>
+<x-dashboard.styles />
 </head>
 <body>
 @include('student.partials.sidebar')
@@ -93,6 +97,52 @@
   </div>
 
   <div class="content" style="height:calc(100vh - 56px);overflow:hidden;padding-bottom:0">
+    <div id="contentWrapper" style="position: relative; height: 100%;">
+
+    {{-- Skeleton loader --}}
+    <div id="pageSkeleton">
+      <div class="dup-layout">
+        <div class="dup-left">
+          <div class="card" style="flex-shrink:0">
+            <div class="skeleton-box" style="width:120px;height:12px;border-radius:4px;margin-bottom:12px"></div>
+            <div class="skeleton-box" style="width:100%;height:90px;border-radius:8px;margin-bottom:10px"></div>
+            <div class="skeleton-box" style="width:100%;height:34px;border-radius:8px"></div>
+          </div>
+          <div class="card" style="flex:1">
+            <div class="skeleton-box" style="width:150px;height:12px;border-radius:4px;margin-bottom:12px"></div>
+            @for ($i = 0; $i < 3; $i++)
+            <div style="display:flex;gap:10px;padding:8px 0">
+              <div class="skeleton-box" style="width:28px;height:28px;border-radius:50%;flex-shrink:0"></div>
+              <div style="flex:1">
+                <div class="skeleton-box" style="width:70%;height:11px;border-radius:4px;margin-bottom:6px"></div>
+                <div class="skeleton-box" style="width:50%;height:9px;border-radius:4px"></div>
+              </div>
+            </div>
+            @endfor
+          </div>
+        </div>
+        <div class="card dup-right-top" style="padding:14px">
+          <div style="display:flex;align-items:center;gap:16px">
+            <div class="skeleton-box" style="width:72px;height:72px;border-radius:50%;flex-shrink:0"></div>
+            <div style="flex:1">
+              <div class="skeleton-box" style="width:60%;height:14px;border-radius:4px;margin-bottom:8px"></div>
+              <div class="skeleton-box" style="width:40%;height:10px;border-radius:4px"></div>
+            </div>
+          </div>
+        </div>
+        <div class="card dup-right-bottom">
+          <div class="skeleton-box" style="width:180px;height:12px;border-radius:4px;margin-bottom:14px"></div>
+          @for ($i = 0; $i < 5; $i++)
+          <div style="padding:8px 0">
+            <div class="skeleton-box" style="width:90%;height:11px;border-radius:4px;margin-bottom:6px"></div>
+            <div class="skeleton-box" style="width:60%;height:9px;border-radius:4px"></div>
+          </div>
+          @endfor
+        </div>
+      </div>
+    </div>
+
+    {{-- Content --}}
     <div class="dup-layout">
 
       <!-- LEFT COLUMN -->
@@ -169,6 +219,7 @@
       </div>
 
     </div>
+    </div>
   </div>
 </div>
 
@@ -182,6 +233,9 @@
 </div>
 
 <script>
+var skeleton = document.getElementById('pageSkeleton');
+if (skeleton) { setTimeout(function() { skeleton.classList.add('loaded'); }, 450); }
+
 const STEPS = [
   'Extracting PDF text...',
   'Analyzing key concepts via AI...',

@@ -118,6 +118,9 @@
 }
 .filter-search { flex: 1; min-width: 0; }
 
+#pageSkeleton { position: absolute; inset: 0; z-index: 50; padding: 0; opacity: 1; transition: opacity 0.35s ease; pointer-events: auto; }
+#pageSkeleton.loaded { opacity: 0; pointer-events: none; }
+
 /* ── HAMBURGER MENU ── */
 .hamburger-btn {
   display: none;
@@ -199,6 +202,7 @@
   .btn-submit { width: 100%; justify-content: center; }
 }
 </style>
+<x-dashboard.styles />
 </head>
 <body>
 @include('student.partials.sidebar')
@@ -217,6 +221,38 @@
   </div>
   <div class="content">
     @include('student.partials.page-tutorial', ['page' => 'financial'])
+    <div id="contentWrapper" style="position: relative;">
+
+    {{-- Skeleton loader --}}
+    <div id="pageSkeleton">
+      <div class="fin-grid">
+        <div class="card">
+          <div class="skeleton-box" style="width:120px;height:12px;border-radius:4px;margin-bottom:16px"></div>
+          @for ($i = 0; $i < 4; $i++)
+          <div style="margin-bottom:14px">
+            <div class="skeleton-box" style="width:100px;height:9px;border-radius:4px;margin-bottom:6px"></div>
+            <div class="skeleton-box" style="width:100%;height:38px;border-radius:8px"></div>
+          </div>
+          @endfor
+          <div class="skeleton-box" style="width:100%;height:140px;border-radius:10px;margin-bottom:14px"></div>
+          <div class="skeleton-box" style="width:100%;height:38px;border-radius:8px"></div>
+        </div>
+        <div class="card">
+          <div class="skeleton-box" style="width:140px;height:12px;border-radius:4px;margin-bottom:16px"></div>
+          @for ($i = 0; $i < 5; $i++)
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)">
+            <div style="flex:1">
+              <div class="skeleton-box" style="width:65%;height:11px;border-radius:4px;margin-bottom:6px"></div>
+              <div class="skeleton-box" style="width:40%;height:9px;border-radius:4px"></div>
+            </div>
+            <div class="skeleton-box" style="width:70px;height:20px;border-radius:12px"></div>
+          </div>
+          @endfor
+        </div>
+      </div>
+    </div>
+
+    {{-- Content --}}
 
     @if (session('success'))
       <div class="alert-success">
@@ -558,10 +594,14 @@
         </div>
       </div>
     </div>
+    </div>
   </div>
 </div>
 
 <script>
+var skeleton = document.getElementById('pageSkeleton');
+if (skeleton) { setTimeout(function() { skeleton.classList.add('loaded'); }, 450); }
+
 let prevFileName = '';
 
 document.getElementById('expenseCategory')?.addEventListener('change', function() {

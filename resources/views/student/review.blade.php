@@ -7,6 +7,11 @@
 <meta name="csrf-token" content="{{ csrf_token() }}">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
 @vite(['resources/student-ui/styles.css', 'resources/js/student-review.jsx'])
+<x-dashboard.styles />
+<style>
+  #pageSkeleton { position: absolute; inset: 0; z-index: 50; padding: 0; opacity: 1; transition: opacity 0.35s ease; pointer-events: auto; }
+  #pageSkeleton.loaded { opacity: 0; pointer-events: none; }
+</style>
 </head>
 <body>
 @include('student.partials.sidebar')
@@ -21,6 +26,34 @@
   </div>
   <div class="content">
     @include('student.partials.page-tutorial', ['page' => 'review'])
+    <div id="contentWrapper" style="position: relative;">
+
+    {{-- Skeleton loader --}}
+    <div id="pageSkeleton">
+      <div class="row" style="margin-bottom:14px;gap:8px">
+        <div class="skeleton-box" style="width:320px;height:36px;border-radius:8px"></div>
+        <div class="skeleton-box" style="width:90px;height:20px;border-radius:12px"></div>
+        <span style="flex:1"></span>
+        <div class="skeleton-box" style="width:100px;height:28px;border-radius:8px"></div>
+      </div>
+      <div class="grid-2">
+        <div class="card" style="height:720px;padding:16px">
+          <div class="skeleton-box" style="width:100%;height:100%;border-radius:8px"></div>
+        </div>
+        <div class="card" style="height:720px">
+          <div class="skeleton-box" style="width:160px;height:14px;border-radius:4px;margin-bottom:16px"></div>
+          @for ($i = 0; $i < 4; $i++)
+          <div class="annotation-box">
+            <div class="skeleton-box" style="width:40%;height:10px;border-radius:4px;margin-bottom:8px"></div>
+            <div class="skeleton-box" style="width:90%;height:11px;border-radius:4px;margin-bottom:6px"></div>
+            <div class="skeleton-box" style="width:70%;height:11px;border-radius:4px"></div>
+          </div>
+          @endfor
+        </div>
+      </div>
+    </div>
+
+    {{-- Content --}}
 
 @if ($turnedIn->isEmpty())
     <div class="card" style="padding:24px;text-align:center;color:var(--text3)">
@@ -116,8 +149,14 @@
   </div>
 </div>
 @endif
+    </div>
 </div>
 </div>
+
+<script>
+var skeleton = document.getElementById('pageSkeleton');
+if (skeleton) { setTimeout(function() { skeleton.classList.add('loaded'); }, 450); }
+</script>
 
 </body>
 </html>
