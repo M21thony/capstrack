@@ -104,7 +104,7 @@
       </div>
       <div class="form-group" style="margin-bottom:0">
         <label class="label">Description <span style="color:var(--text3);font-weight:400">(optional)</span></label>
-        <textarea class="input" id="rb-desc" style="min-height:72px" placeholder="Brief description of this rubric's purpose and usage context…"></textarea>
+        <textarea class="input" id="rb-desc" style="min-height:72px" placeholder="Brief description of this rubric's purpose and usage contextâ€¦"></textarea>
       </div>
       <div style="display:flex;justify-content:flex-end;margin-top:20px">
         <button class="btn btn-primary" onclick="goToStep2()">
@@ -564,7 +564,7 @@ function renderList(){
 function renderPagination(total,totalPages){
   const start=(currentPage-1)*ITEMS_PER_PAGE+1;
   const end=Math.min(currentPage*ITEMS_PER_PAGE,total);
-  document.getElementById("pg-info").textContent=total?`Showing ${start}–${end} of ${total}`:"No results";
+  document.getElementById("pg-info").textContent=total?`Showing ${start}â€“${end} of ${total}`:"No results";
   document.getElementById("pg-prev").disabled=currentPage<=1;
   document.getElementById("pg-next").disabled=currentPage>=totalPages;
   let html="";

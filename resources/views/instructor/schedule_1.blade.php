@@ -256,7 +256,7 @@
       <div class="ep-avatar">CS</div>
       <div style="flex:1;min-width:0">
         <div class="ep-header-name">Dr. Neil A. Inocencio</div>
-        <div class="ep-header-sub">Capstone Expert Â· Active</div>
+        <div class="ep-header-sub">Capstone Expert · Active</div>
       </div>
       <button class="ep-close" onclick="closeExpertProfile()">
         <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -308,7 +308,7 @@
         <div class="ep-label">Team Capacity</div>
         <div class="ep-value readonly">
           <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-          Max 4 teams Â· Currently advising 3
+          Max 4 teams · Currently advising 3
         </div>
       </div>
 
@@ -515,7 +515,7 @@ function renderCalendar() {
         pill.className = `cal-slot-pill ${cls}`;
         const hr12 = t => { const [h,m] = t.split(':'); const h12 = +h%12||12; return `${h12}:${m}${+h<12?'a':'p'}`; };
         pill.textContent = `${hr12(s.start)} ${TYPE_LABELS[s.type]}`;
-        pill.title = `${hr12(s.start)}â€“${hr12(s.end)} Â· ${TYPE_LABELS[s.type]} Â· Max ${s.maxBookings}`;
+        pill.title = `${hr12(s.start)}â€“${hr12(s.end)} · ${TYPE_LABELS[s.type]} · Max ${s.maxBookings}`;
         el.appendChild(pill);
       });
       if(daySlots.length > 2) {
@@ -698,7 +698,7 @@ function openSlotModal(key, dayNum) {
     daySlots.forEach((s, i) => {
       const row = document.createElement('div');
       row.className = 'slot-detail-row';
-      const bookedBadge = s.booked ? `<span class="badge badge-green" style="font-size:10px;padding:2px 7px">Booked Â· ${s.teamName}</span>` : `<span class="badge badge-gray" style="font-size:10px;padding:2px 7px">Open</span>`;
+      const bookedBadge = s.booked ? `<span class="badge badge-green" style="font-size:10px;padding:2px 7px">Booked · ${s.teamName}</span>` : `<span class="badge badge-gray" style="font-size:10px;padding:2px 7px">Open</span>`;
       const recurBadge = s.recur !== 'once' ? `<span class="recur-chip">${s.recur === 'weekly' ? 'â†º Weekly' : 'â†º Bi-weekly'}</span>` : '';
       row.innerHTML = `
         <div class="slot-detail-time">${hr12(s.start)}â€“${hr12(s.end)}</div>
