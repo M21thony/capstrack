@@ -227,17 +227,19 @@
       </div>
 
       <div class="overview-panel">
-        <div class="card" style="padding:16px;border-radius:12px;">
-          <div class="sk" style="height:13px;width:100px;margin-bottom:12px;"></div>
-          @for($i = 0; $i < 3; $i++)
-          <div class="sk" style="height:11px;width:90%;margin-bottom:10px;"></div>
-          @endfor
-        </div>
-        <div class="card" style="padding:16px;border-radius:12px;margin-top:15px;">
-          <div class="sk" style="height:13px;width:100px;margin-bottom:12px;"></div>
-          @for($i = 0; $i < 4; $i++)
-          <div class="sk" style="height:11px;width:85%;margin-bottom:8px;"></div>
-          @endfor
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: start;">
+          <div class="card" style="padding:14px;border-radius:12px;">
+            <div class="sk" style="height:13px;width:80px;margin-bottom:12px;"></div>
+            @for($i = 0; $i < 3; $i++)
+            <div class="sk" style="height:11px;width:90%;margin-bottom:10px;"></div>
+            @endfor
+          </div>
+          <div class="card" style="padding:14px;border-radius:12px;">
+            <div class="sk" style="height:13px;width:80px;margin-bottom:12px;"></div>
+            @for($i = 0; $i < 4; $i++)
+            <div class="sk" style="height:11px;width:85%;margin-bottom:8px;"></div>
+            @endfor
+          </div>
         </div>
       </div>
     </div>
@@ -525,34 +527,36 @@
     </div>
 
     <div class="overview-panel">
-      <div class="card" style="padding: 16px; border-radius: 12px; background: var(--bg2);">
-        <div class="section-title" style="font-size: 13px; margin-bottom: 12px;">Role Guide</div>
-        <div style="margin-bottom: 12px;">
-          <div style="font-size: 11px; font-weight: 600; color: var(--accent3); margin-bottom: 4px;">Adviser</div>
-          <div style="font-size: 10px; color: var(--text3); line-height: 1.4;">Guides capstone teams throughout their project journey</div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: start;">
+        <div class="card" style="padding: 14px; border-radius: 12px; background: var(--bg2);">
+          <div class="section-title" style="font-size: 13px; margin-bottom: 12px;">Role Guide</div>
+          <div style="margin-bottom: 12px;">
+            <div style="font-size: 11px; font-weight: 600; color: var(--accent3); margin-bottom: 4px;">Adviser</div>
+            <div style="font-size: 10px; color: var(--text3); line-height: 1.4;">Guides capstone teams throughout their project journey</div>
+          </div>
+          <div style="margin-bottom: 12px;">
+            <div style="font-size: 11px; font-weight: 600; color: #3b82f6; margin-bottom: 4px;">Consultant</div>
+            <div style="font-size: 10px; color: var(--text3); line-height: 1.4;">Provides subject-matter expertise and technical advice</div>
+          </div>
+          <div style="margin-bottom: 12px;">
+            <div style="font-size: 11px; font-weight: 600; color: #9333ea; margin-bottom: 4px;">Grammarian</div>
+            <div style="font-size: 10px; color: var(--text3); line-height: 1.4;">Reviews and ensures quality of written documentation</div>
+          </div>
+          <div class="divider" style="margin: 16px 0;"></div>
+          <p style="font-size: 10px; color: var(--text3); line-height: 1.4; opacity: 0.8;">
+            Request approval depends on the expert's current workload and availability.
+          </p>
         </div>
-        <div style="margin-bottom: 12px;">
-          <div style="font-size: 11px; font-weight: 600; color: #3b82f6; margin-bottom: 4px;">Consultant</div>
-          <div style="font-size: 10px; color: var(--text3); line-height: 1.4;">Provides subject-matter expertise and technical advice</div>
-        </div>
-        <div style="margin-bottom: 12px;">
-          <div style="font-size: 11px; font-weight: 600; color: #9333ea; margin-bottom: 4px;">Grammarian</div>
-          <div style="font-size: 10px; color: var(--text3); line-height: 1.4;">Reviews and ensures quality of written documentation</div>
-        </div>
-        <div class="divider" style="margin: 16px 0;"></div>
-        <p style="font-size: 10px; color: var(--text3); line-height: 1.4; opacity: 0.8;">
-          Request approval depends on the expert's current workload and availability.
-        </p>
-      </div>
 
-      <div class="card" style="padding: 16px; border-radius: 12px; background: var(--bg2); margin-top: 15px;">
-        <div class="section-title" style="font-size: 13px; margin-bottom: 12px;">Quick Tips</div>
-        <ul style="font-size: 11px; color: var(--text3); line-height: 1.6; padding-left: 16px;">
-          <li>Only the Team Leader can apply for experts</li>
-          <li>You can apply for multiple roles from the same expert</li>
-          <li>Attach your approved pre-proposal PDF when applying</li>
-          <li>Check the slot status before applying</li>
-        </ul>
+        <div class="card" style="padding: 14px; border-radius: 12px; background: var(--bg2);">
+          <div class="section-title" style="font-size: 13px; margin-bottom: 12px;">Quick Tips</div>
+          <ul style="font-size: 11px; color: var(--text3); line-height: 1.6; padding-left: 16px; margin: 0;">
+            <li>Only the Team Leader can apply for experts</li>
+            <li>You can apply for multiple roles from the same expert</li>
+            <li>Attach your approved pre-proposal PDF when applying</li>
+            <li>Check the slot status before applying</li>
+          </ul>
+        </div>
       </div>
 
       <div class="legal-credits">
