@@ -7,6 +7,11 @@
 <meta name="csrf-token" content="{{ csrf_token() }}">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
 @vite('resources/student-ui/styles.css')
+<x-dashboard.styles />
+<style>
+  #pageSkeleton { position: absolute; inset: 0; z-index: 50; padding: 0; opacity: 1; transition: opacity 0.35s ease; pointer-events: auto; }
+  #pageSkeleton.loaded { opacity: 0; pointer-events: none; }
+</style>
 </head>
 <body>
 
@@ -23,6 +28,38 @@
 
   <div class="content">
     @include('student.partials.page-tutorial', ['page' => 'resources'])
+    <div id="contentWrapper" style="position: relative;">
+
+    {{-- Skeleton loader --}}
+    <div id="pageSkeleton">
+      <div class="grid-4" style="margin-bottom:18px">
+        @for ($i = 0; $i < 4; $i++)
+        <div class="stat-chip">
+          <div class="skeleton-box" style="width:30px;height:22px;border-radius:4px;margin-bottom:6px"></div>
+          <div class="skeleton-box" style="width:70px;height:9px;border-radius:4px"></div>
+        </div>
+        @endfor
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:14px">
+        <div class="skeleton-box" style="width:160px;height:34px;border-radius:8px"></div>
+        <div class="skeleton-box" style="width:210px;height:34px;border-radius:8px"></div>
+        <div class="skeleton-box" style="width:180px;height:34px;border-radius:8px"></div>
+      </div>
+      <div class="gap-12">
+        @for ($i = 0; $i < 5; $i++)
+        <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:10px">
+          <div class="skeleton-box" style="width:36px;height:36px;border-radius:8px;flex-shrink:0"></div>
+          <div style="flex:1">
+            <div class="skeleton-box" style="width:55%;height:12px;border-radius:4px;margin-bottom:6px"></div>
+            <div class="skeleton-box" style="width:35%;height:9px;border-radius:4px"></div>
+          </div>
+          <div class="skeleton-box" style="width:70px;height:26px;border-radius:8px"></div>
+        </div>
+        @endfor
+      </div>
+    </div>
+
+    {{-- Content --}}
 
     <div class="grid-4" style="margin-bottom:18px">
       <div class="stat-chip">
@@ -69,10 +106,14 @@
     </div>
 
     <div id="res-list" class="gap-12"></div>
+    </div>
   </div>
 </div>
 
 <script>
+var skeleton = document.getElementById('pageSkeleton');
+if (skeleton) { setTimeout(function() { skeleton.classList.add('loaded'); }, 450); }
+
 const CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]').content;
 const resources = @json($resources);
 const folders = @json($folders);

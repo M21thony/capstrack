@@ -7,6 +7,11 @@
 <meta name="csrf-token" content="{{ csrf_token() }}">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
 @vite('resources/student-ui/styles.css')
+<x-dashboard.styles />
+<style>
+  #pageSkeleton { position: absolute; inset: 0; z-index: 50; padding: 0; opacity: 1; transition: opacity 0.35s ease; pointer-events: auto; }
+  #pageSkeleton.loaded { opacity: 0; pointer-events: none; }
+</style>
 </head>
 <body>
 @include('student.partials.sidebar')
@@ -20,6 +25,33 @@
   </div>
   <div class="content">
     @include('student.partials.page-tutorial', ['page' => 'progress'])
+    <div id="contentWrapper" style="position: relative;">
+
+    {{-- Skeleton loader --}}
+    <div id="pageSkeleton">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;margin-bottom:16px">
+        @for ($i = 0; $i < 4; $i++)
+        <div class="stat-chip">
+          <div class="skeleton-box" style="width:30px;height:22px;border-radius:4px;margin-bottom:6px"></div>
+          <div class="skeleton-box" style="width:60px;height:9px;border-radius:4px"></div>
+        </div>
+        @endfor
+      </div>
+      <div class="card">
+        <div class="skeleton-box" style="width:140px;height:12px;border-radius:4px;margin-bottom:14px"></div>
+        @for ($i = 0; $i < 4; $i++)
+        <div style="display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)">
+          <div class="skeleton-box" style="width:20px;height:20px;border-radius:50%;flex-shrink:0"></div>
+          <div style="flex:1">
+            <div class="skeleton-box" style="width:35%;height:12px;border-radius:4px;margin-bottom:6px"></div>
+            <div class="skeleton-box" style="width:60%;height:9px;border-radius:4px"></div>
+          </div>
+        </div>
+        @endfor
+      </div>
+    </div>
+
+    {{-- Content --}}
 
 @if (session('success'))
 <div style="padding:10px 14px;background:rgba(16,185,129,0.1);color:#059669;border-radius:8px;font-size:13px;margin-bottom:12px">{{ session('success') }}</div>
@@ -138,6 +170,7 @@
 </div>
 @endif
 @endif
+    </div>
 </div>
 </div>
 
@@ -240,6 +273,9 @@
 </style>
 
 <script>
+var skeleton = document.getElementById('pageSkeleton');
+if (skeleton) { setTimeout(function() { skeleton.classList.add('loaded'); }, 450); }
+
 function openUploadModal(milestoneId, milestoneName) {
   document.getElementById('upload-milestone-id').value = milestoneId;
   document.getElementById('upload-milestone-name').textContent = milestoneName;

@@ -7,6 +7,11 @@
 <meta name="csrf-token" content="{{ csrf_token() }}">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
 @vite('resources/student-ui/styles.css')
+<x-dashboard.styles />
+<style>
+  #pageSkeleton { position: absolute; inset: 0; z-index: 50; padding: 0; opacity: 1; transition: opacity 0.35s ease; pointer-events: auto; }
+  #pageSkeleton.loaded { opacity: 0; pointer-events: none; }
+</style>
 </head>
 <body>
 @include('student.partials.sidebar')
@@ -21,6 +26,29 @@
   </div>
   <div class="content">
     @include('student.partials.page-tutorial', ['page' => 'archive'])
+    <div id="contentWrapper" style="position: relative;">
+
+    {{-- Skeleton loader --}}
+    <div id="pageSkeleton">
+      <div class="row" style="margin-bottom:16px;gap:8px;flex-wrap:wrap">
+        <div class="skeleton-box" style="flex:1;min-width:200px;max-width:380px;height:36px;border-radius:8px"></div>
+        <div class="skeleton-box" style="width:120px;height:36px;border-radius:8px"></div>
+        <div class="skeleton-box" style="width:160px;height:36px;border-radius:8px"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+        @for ($i = 0; $i < 6; $i++)
+        <div class="archive-card">
+          <div class="skeleton-box" style="width:35%;height:10px;border-radius:4px;margin-bottom:8px"></div>
+          <div class="skeleton-box" style="width:90%;height:14px;border-radius:4px;margin-bottom:10px"></div>
+          <div class="skeleton-box" style="width:100%;height:11px;border-radius:4px;margin-bottom:4px"></div>
+          <div class="skeleton-box" style="width:75%;height:11px;border-radius:4px;margin-bottom:12px"></div>
+          <div class="skeleton-box" style="width:55%;height:18px;border-radius:10px"></div>
+        </div>
+        @endfor
+      </div>
+    </div>
+
+    {{-- Content --}}
 <div class="row" style="margin-bottom:16px;gap:8px;flex-wrap:wrap">
   <input class="input" id="archive-search" placeholder="Search by title or keyword..." style="flex:1;min-width:200px;max-width:380px" oninput="filterArchive()" />
   <select class="input" id="archive-year" style="width:120px" onchange="filterArchive()">
@@ -58,9 +86,14 @@
   @endforeach
 </div>
 <div id="archive-empty" style="display:none;text-align:center;padding:48px;color:var(--text3);font-size:13px">No archived capstones match your search.</div>
+    </div>
   </div>
 </div>
 
+<script>
+var skeleton = document.getElementById('pageSkeleton');
+if (skeleton) { setTimeout(function() { skeleton.classList.add('loaded'); }, 450); }
+</script>
 
 </body>
 </html>

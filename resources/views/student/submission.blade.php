@@ -7,6 +7,11 @@
 <meta name="csrf-token" content="{{ csrf_token() }}">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
 @vite('resources/student-ui/Styles/submission.css')
+<x-dashboard.styles />
+<style>
+  #pageSkeleton { position: absolute; inset: 0; z-index: 50; padding: 0; opacity: 1; transition: opacity 0.35s ease; pointer-events: auto; }
+  #pageSkeleton.loaded { opacity: 0; pointer-events: none; }
+</style>
 </head>
 <body>
 @include('student.partials.sidebar')
@@ -24,6 +29,39 @@
   </div>
   <div class="content">
     @include('student.partials.page-tutorial', ['page' => 'submission'])
+    <div id="contentWrapper" style="position: relative;">
+
+    {{-- Skeleton loader --}}
+    <div id="pageSkeleton">
+      <div class="submission-container">
+        <div class="upload-card">
+          <div style="display:flex;gap:14px;align-items:center;margin-bottom:20px">
+            <div class="skeleton-box" style="width:42px;height:42px;border-radius:10px;flex-shrink:0"></div>
+            <div style="flex:1">
+              <div class="skeleton-box" style="width:180px;height:16px;border-radius:4px;margin-bottom:8px"></div>
+              <div class="skeleton-box" style="width:240px;height:11px;border-radius:4px"></div>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px">
+            @for ($i = 0; $i < 3; $i++)
+            <div>
+              <div class="skeleton-box" style="width:90px;height:9px;border-radius:4px;margin-bottom:6px"></div>
+              <div class="skeleton-box" style="width:100%;height:38px;border-radius:8px"></div>
+            </div>
+            @endfor
+          </div>
+          <div class="skeleton-box" style="width:100%;height:70px;border-radius:8px;margin-bottom:20px"></div>
+          <div class="skeleton-box" style="width:130px;height:12px;border-radius:4px;margin-bottom:12px"></div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            @for ($i = 0; $i < 4; $i++)
+            <div class="skeleton-box" style="width:160px;height:44px;border-radius:8px"></div>
+            @endfor
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {{-- Content --}}
 <div class="submission-container">
 
     <div class="upload-card">
@@ -189,10 +227,14 @@
       </div>
     </div>
 
+    </div>
   </div>
 </div>
 
 <script>
+var skeleton = document.getElementById('pageSkeleton');
+if (skeleton) { setTimeout(function() { skeleton.classList.add('loaded'); }, 450); }
+
 const CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]').content;
 const SUBMIT_URL = "{{ route('student.submission.store') }}";
 

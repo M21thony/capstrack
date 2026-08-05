@@ -7,6 +7,11 @@
 <meta name="csrf-token" content="{{ csrf_token() }}">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
 @vite('resources/student-ui/Styles/consultation.css')
+<x-dashboard.styles />
+<style>
+  #pageSkeleton { position: absolute; inset: 0; z-index: 50; padding: 0; opacity: 1; transition: opacity 0.35s ease; pointer-events: auto; }
+  #pageSkeleton.loaded { opacity: 0; pointer-events: none; }
+</style>
 </head>
 <body>
 @include('student.partials.sidebar')
@@ -20,6 +25,47 @@
   </div>
   <div class="content">
     @include('student.partials.page-tutorial', ['page' => 'consultation'])
+    <div id="contentWrapper" style="position: relative;">
+
+    {{-- Skeleton loader --}}
+    <div id="pageSkeleton">
+      <div class="consultation-container">
+        <div class="left-panel">
+          <div class="expert-filter-area">
+            <div class="skeleton-box" style="width:110px;height:14px;border-radius:4px"></div>
+            <div class="skeleton-box" style="flex:1;height:36px;border-radius:8px"></div>
+          </div>
+          <div class="calendar-card">
+            <div class="skeleton-box" style="width:140px;height:16px;border-radius:4px;margin-bottom:14px"></div>
+            <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px">
+              @for ($i = 0; $i < 35; $i++)
+              <div class="skeleton-box" style="height:60px;border-radius:6px"></div>
+              @endfor
+            </div>
+          </div>
+        </div>
+        <div class="appt-sidebar">
+          <div class="sessions-card">
+            <div class="sessions-card-header">
+              <div class="skeleton-box" style="width:130px;height:12px;border-radius:4px"></div>
+            </div>
+            <div style="padding:12px">
+              <div class="skeleton-box" style="width:100%;height:60px;border-radius:8px"></div>
+            </div>
+          </div>
+          <div class="sessions-card">
+            <div class="sessions-card-header">
+              <div class="skeleton-box" style="width:100px;height:12px;border-radius:4px"></div>
+            </div>
+            <div style="padding:12px">
+              <div class="skeleton-box" style="width:100%;height:60px;border-radius:8px"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {{-- Content --}}
   <div class="consultation-container">
 
     <div class="left-panel">
@@ -174,6 +220,7 @@
     <div class="credits-title">System Developers</div>
     <div class="credits-names">Jolina · John Kenneth · Mark Anthony · Ian Cyrus · Alexa Nicole</div>
   </div>
+    </div>
 </div>
 
 <div class="modal-overlay" id="slotSelectModal" onclick="if(event.target === this) closeSlotModal()">
@@ -190,6 +237,9 @@
 </div>
 
 <script>
+var skeleton = document.getElementById('pageSkeleton');
+if (skeleton) { setTimeout(function() { skeleton.classList.add('loaded'); }, 450); }
+
 const CSRF = document.querySelector('meta[name="csrf-token"]')?.content ?? '';
 let currentMonth = new Date().getMonth();
 let currentYear = new Date().getFullYear();
