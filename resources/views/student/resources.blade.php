@@ -121,11 +121,10 @@ if (__skeleton && __content) {
       __skeleton.classList.add('hidden');
       __content.classList.remove('loading');
     }
-    if (document.readyState === 'complete') {
-      hideSkeleton();
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', hideSkeleton);
     } else {
-      var minDisplay = new Promise(function(resolve) { setTimeout(resolve, 450); });
-      Promise.all([minDisplay, new Promise(function(resolve) { window.addEventListener('load', resolve); })]).then(hideSkeleton);
+      hideSkeleton();
     }
   })();
 }
