@@ -481,8 +481,30 @@ async function apiFetch(url, options = {}) {
 async function loadSlots() {
   try {
     const data = await apiFetch('/instructor/schedule/slots');
-    slotsByDay = {};
+
+    // The API returns one row per (schedule, booking) pair — a recurring
+    // slot booked on several different weeks comes back as several rows
+    // sharing the same schedule_id. Collapse those back into one slot
+    // definition per schedule_id, keeping each booking's own session_date
+    // so fanOutSlots() can tell which specific calendar occurrence it
+    // belongs to instead of treating the whole recurring slot as booked.
+    const bySchedule = {};
     data.forEach(s => {
+      if (!bySchedule[s.schedule_id]) {
+        bySchedule[s.schedule_id] = { ...s, bookings: [] };
+      }
+      if (s.booking_id && s.session_date) {
+        bySchedule[s.schedule_id].bookings.push({
+          session_date: s.session_date,
+          team_name: s.team_name,
+          student_fname: s.student_fname,
+          student_lname: s.student_lname,
+        });
+      }
+    });
+
+    slotsByDay = {};
+    Object.values(bySchedule).forEach(s => {
       const day = s.available_date; // 'Monday', 'Tuesday', etc.
       if (!slotsByDay[day]) slotsByDay[day] = [];
       slotsByDay[day].push(s);
@@ -531,25 +553,38 @@ function fanOutSlots() {
     });
 
     if (matchingSlots.length > 0) {
-      slots[key] = matchingSlots.map(s => ({
-        schedule_id:        s.schedule_id,
-        google_event_id:    s.google_event_id ?? null,
-        id:                 s.schedule_id,
-        start:              s.start_time,
-        end:                s.end_time,
-        start_time:         s.start_time,
-        end_time:           s.end_time,
-        type:               s.slot_type ?? 'consult',
-        maxBookings:        s.consultation_limit ?? 1,
-        consultation_limit: s.consultation_limit ?? 1,
-        recur:              s.recur ?? 'weekly',
-        specific_date:      s.specific_date ?? null,
-        is_available:       s.is_available ?? true,
-        booked:             !(s.is_available ?? true),
-        teamName:           s.team_name ?? '',
-        topic:              s.topic ?? '',
-        available_date:     s.available_date,
-      }));
+      slots[key] = matchingSlots.map(s => {
+        // Recurring slots share one schedule row across every occurrence of
+        // that weekday — is_available is a manual "block this slot
+        // entirely" toggle, not a per-date booked flag. Whether THIS
+        // specific date is booked comes from matching a booking's own
+        // session_date instead, so booking one Monday doesn't hide every
+        // other Monday.
+        const dateBooking = (s.bookings || []).find(b => b.session_date === key);
+        const bookedName  = dateBooking
+          ? (dateBooking.team_name || [dateBooking.student_fname, dateBooking.student_lname].filter(Boolean).join(' ') || '—')
+          : '';
+
+        return {
+          schedule_id:        s.schedule_id,
+          google_event_id:    s.google_event_id ?? null,
+          id:                 s.schedule_id,
+          start:              s.start_time,
+          end:                s.end_time,
+          start_time:         s.start_time,
+          end_time:           s.end_time,
+          type:               s.slot_type ?? 'consult',
+          maxBookings:        s.consultation_limit ?? 1,
+          consultation_limit: s.consultation_limit ?? 1,
+          recur:              s.recur ?? 'weekly',
+          specific_date:      s.specific_date ?? null,
+          is_available:       s.is_available ?? true,
+          booked:             !!dateBooking || !(s.is_available ?? true),
+          teamName:           bookedName,
+          topic:              s.topic ?? '',
+          available_date:     s.available_date,
+        };
+      });
     }
   }
 }
@@ -1298,15 +1333,30 @@ function confirmBlock() {
 function renderUpcoming() {
   const list = document.getElementById('upcoming-list');
 
-  const today    = new Date();
-  const todayKey = formatKey(today.getFullYear(), today.getMonth(), today.getDate());
-  const upcoming = [];
+  const today       = new Date();
+  const todayKey    = formatKey(today.getFullYear(), today.getMonth(), today.getDate());
+  const nowMinutes  = today.getHours() * 60 + today.getMinutes();
+  const upcoming    = [];
 
   Object.entries(slots)
-    .filter(([k]) => k > todayKey)
+    // Today included, not just strictly-future dates — an appointment
+    // later today is still upcoming.
+    .filter(([k]) => k >= todayKey)
     .sort(([a], [b]) => a.localeCompare(b))
     .forEach(([k, daySlots]) => {
       daySlots.filter(s => s.booked || !s.is_available).forEach(s => {
+        // For today specifically, a slot whose end time has already
+        // passed is done, not upcoming (the backend marks its booking
+        // 'done' the same way — this just keeps the list in sync without
+        // waiting for the next full slot reload).
+        if (k === todayKey) {
+          const endTime = s.end || s.end_time;
+          if (endTime) {
+            const [eh, em] = endTime.split(':').map(Number);
+            if (eh * 60 + em <= nowMinutes) return;
+          }
+        }
+
         const [y, m1, d] = k.split('-').map(Number);
         upcoming.push({
           team:  s.teamName || '—',
