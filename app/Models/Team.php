@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 
 class Team extends Model
@@ -25,8 +26,28 @@ class Team extends Model
     protected $casts = [
         'is_confirmed' => 'boolean',
         'member_count' => 'integer',
-        'tags' => 'array',
     ];
+
+    // Some legacy rows have double-encoded JSON in `tags` (e.g. the literal
+    // string "[]" instead of an actual empty array), which crashes any
+    // foreach() over $team->tags. Decode defensively until we get an array.
+    protected function tags(): Attribute
+    {
+        return Attribute::make(
+            get: function ($value) {
+                while (is_string($value)) {
+                    $decoded = json_decode($value, true);
+                    if (json_last_error() !== JSON_ERROR_NONE) {
+                        return [];
+                    }
+                    $value = $decoded;
+                }
+
+                return is_array($value) ? $value : [];
+            },
+            set: fn ($value) => json_encode(is_array($value) ? $value : []),
+        );
+    }
 
     public function members()
     {
