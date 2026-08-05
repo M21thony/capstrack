@@ -53,10 +53,9 @@
   .tag-suggestion-item { padding: 10px 14px; font-size: 13px; color: var(--text); cursor: pointer; transition: background 0.1s; }
   .tag-suggestion-item:hover { background: var(--bg2); color: var(--blue); }
   @keyframes tagFadeIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
-  @keyframes shimmer { 0% { background-position: -400px 0; } 100% { background-position: calc(400px + 100%) 0; } }
-  .skeleton-box { background: linear-gradient(90deg, var(--bg2) 25%, var(--bg) 50%, var(--bg2) 75%); background-size: 400px 100%; animation: shimmer 1.6s ease-in-out infinite; }
-  #pageSkeleton { position: absolute; inset: 0; z-index: 50; padding: 0; opacity: 1; transition: opacity 0.35s ease; pointer-events: auto; }
-  #pageSkeleton.loaded { opacity: 0; pointer-events: none; }
+  @keyframes sk-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+  .sk-overlay { position: absolute; inset: 0; background: var(--bg); z-index: 10; }
+  .sk { background: linear-gradient(90deg, var(--bg4) 25%, var(--bg2) 50%, var(--bg4) 75%); background-size: 200% 100%; animation: sk-shimmer 1.5s ease-in-out infinite; border-radius: 8px; }
   .content { position: relative; }
 </style>
 <body>
@@ -77,85 +76,94 @@
     @include('student.partials.page-tutorial', ['page' => 'team'])
 
     <div id="contentWrapper" style="position: relative;">
-    <div id="pageSkeleton">
+    <div id="skeleton-content" class="sk-overlay">
+      @if($myTeam)
       <div class="card" style="margin-bottom: 20px;">
         <div style="display: flex; align-items: center; gap: 14px;">
-          <div class="skeleton-box" style="width: 56px; height: 56px; border-radius: 14px; flex-shrink: 0;"></div>
+          <div class="sk" style="width: 56px; height: 56px; border-radius: 14px; flex-shrink: 0;"></div>
           <div style="flex: 1; min-width: 0;">
-            <div class="skeleton-box" style="width: 60%; height: 20px; border-radius: 6px; margin-bottom: 8px;"></div>
-            <div class="skeleton-box" style="width: 40%; height: 14px; border-radius: 5px; margin-bottom: 6px;"></div>
-            <div class="skeleton-box" style="width: 30%; height: 11px; border-radius: 4px;"></div>
+            <div class="sk" style="width: 60%; height: 18px; border-radius: 6px; margin-bottom: 8px;"></div>
+            <div class="sk" style="width: 40%; height: 14px; border-radius: 5px;"></div>
           </div>
-          <div class="skeleton-box" style="width: 80px; height: 26px; border-radius: 20px; flex-shrink: 0;"></div>
+          <div class="sk" style="width: 80px; height: 24px; border-radius: 20px; flex-shrink: 0;"></div>
         </div>
-        <div class="team-dash-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 20px;">
+        <div class="team-dash-grid" style="margin-top: 20px;">
           <div style="background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 16px;">
-            <div class="skeleton-box" style="width: 110px; height: 11px; border-radius: 4px; margin-bottom: 14px;"></div>
-            <div style="display: flex; flex-direction: column; gap: 10px;">
-              <div style="display: flex; align-items: center; gap: 10px;">
-                <div class="skeleton-box" style="width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0;"></div>
-                <div style="flex: 1;">
-                  <div class="skeleton-box" style="width: 55%; height: 13px; border-radius: 5px; margin-bottom: 4px;"></div>
-                  <div class="skeleton-box" style="width: 35%; height: 10px; border-radius: 3px;"></div>
-                </div>
-                <div class="skeleton-box" style="width: 55px; height: 18px; border-radius: 6px;"></div>
+            <div class="sk" style="width: 110px; height: 11px; border-radius: 4px; margin-bottom: 14px;"></div>
+            @for ($i = 0; $i < 2; $i++)
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+              <div class="sk" style="width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0;"></div>
+              <div style="flex: 1;">
+                <div class="sk" style="width: 55%; height: 13px; border-radius: 5px; margin-bottom: 4px;"></div>
+                <div class="sk" style="width: 35%; height: 10px; border-radius: 3px;"></div>
               </div>
-              <div style="display: flex; align-items: center; gap: 10px;">
-                <div class="skeleton-box" style="width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0;"></div>
-                <div style="flex: 1;">
-                  <div class="skeleton-box" style="width: 45%; height: 13px; border-radius: 5px; margin-bottom: 4px;"></div>
-                  <div class="skeleton-box" style="width: 30%; height: 10px; border-radius: 3px;"></div>
-                </div>
-                <div class="skeleton-box" style="width: 55px; height: 18px; border-radius: 6px;"></div>
-              </div>
+              <div class="sk" style="width: 55px; height: 18px; border-radius: 6px;"></div>
             </div>
-            <div style="margin-top: 14px; display: flex; align-items: center; gap: 6px;">
-              <div class="skeleton-box" style="width: 14px; height: 4px; border-radius: 2px;"></div>
-              <div class="skeleton-box" style="width: 14px; height: 4px; border-radius: 2px;"></div>
-              <div class="skeleton-box" style="width: 14px; height: 4px; border-radius: 2px;"></div>
-              <div class="skeleton-box" style="width: 14px; height: 4px; border-radius: 2px;"></div>
-              <div class="skeleton-box" style="width: 65px; height: 10px; border-radius: 3px; margin-left: 4px;"></div>
-            </div>
+            @endfor
           </div>
-          <div style="display: flex; flex-direction: column; gap: 0;">
-            <div style="background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 16px;">
-              <div class="skeleton-box" style="width: 110px; height: 11px; border-radius: 4px; margin-bottom: 14px;"></div>
-              <div style="display: flex; flex-direction: column; gap: 10px;">
-                <div style="display: flex; justify-content: space-between;">
-                  <div class="skeleton-box" style="width: 50px; height: 12px; border-radius: 3px;"></div>
-                  <div class="skeleton-box" style="width: 130px; height: 12px; border-radius: 3px;"></div>
-                </div>
-                <div style="display: flex; justify-content: space-between;">
-                  <div class="skeleton-box" style="width: 50px; height: 12px; border-radius: 3px;"></div>
-                  <div class="skeleton-box" style="width: 110px; height: 12px; border-radius: 3px;"></div>
-                </div>
-                <div style="display: flex; justify-content: space-between;">
-                  <div class="skeleton-box" style="width: 50px; height: 12px; border-radius: 3px;"></div>
-                  <div class="skeleton-box" style="width: 90px; height: 12px; border-radius: 3px;"></div>
-                </div>
-                <div style="display: flex; justify-content: space-between;">
-                  <div class="skeleton-box" style="width: 50px; height: 12px; border-radius: 3px;"></div>
-                  <div class="skeleton-box" style="width: 70px; height: 12px; border-radius: 3px;"></div>
-                </div>
-                <div style="display: flex; justify-content: space-between;">
-                  <div class="skeleton-box" style="width: 50px; height: 12px; border-radius: 3px;"></div>
-                  <div class="skeleton-box" style="width: 80px; height: 12px; border-radius: 3px;"></div>
-                </div>
-                <div style="display: flex; justify-content: space-between;">
-                  <div class="skeleton-box" style="width: 50px; height: 12px; border-radius: 3px;"></div>
-                  <div class="skeleton-box" style="width: 120px; height: 12px; border-radius: 3px;"></div>
-                </div>
-              </div>
+          <div style="background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 16px;">
+            <div class="sk" style="width: 110px; height: 11px; border-radius: 4px; margin-bottom: 14px;"></div>
+            @for ($i = 0; $i < 5; $i++)
+            <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+              <div class="sk" style="width: 50px; height: 12px; border-radius: 3px;"></div>
+              <div class="sk" style="width: 100px; height: 12px; border-radius: 3px;"></div>
             </div>
+            @endfor
           </div>
         </div>
         <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; padding-top: 10px; border-top: 1px solid var(--border);">
-          <div class="skeleton-box" style="width: 100px; height: 32px; border-radius: 6px;"></div>
-          <div class="skeleton-box" style="width: 130px; height: 62px; border-radius: 6px;"></div>
+          <div class="sk" style="width: 100px; height: 32px; border-radius: 6px;"></div>
+          <div class="sk" style="width: 130px; height: 32px; border-radius: 6px;"></div>
         </div>
       </div>
+      @endif
+
+      <main class="main-content">
+        <div class="page-header">
+          <div class="sk" style="width: 220px; height: 22px; border-radius: 6px;"></div>
+        </div>
+        <div class="team-container">
+          <div style="display: flex; flex-direction: column; gap: 20px;">
+            <div class="profile-grid">
+              @for ($i = 0; $i < 6; $i++)
+              <div class="profile-card-compact">
+                <div class="sk" style="width: 56px; height: 56px; border-radius: 50%; margin: 0 auto;"></div>
+                <div class="sk" style="width: 70%; height: 12px; border-radius: 4px; margin: 10px auto 6px;"></div>
+                <div class="sk" style="width: 45%; height: 10px; border-radius: 4px; margin: 0 auto;"></div>
+              </div>
+              @endfor
+            </div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 20px;">
+            <div class="card">
+              <div class="sk" style="width: 120px; height: 14px; border-radius: 4px; margin-bottom: 15px;"></div>
+              @for ($i = 0; $i < 3; $i++)
+              <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
+                <div class="sk" style="width: 90px; height: 11px; border-radius: 3px;"></div>
+                <div class="sk" style="width: 30px; height: 11px; border-radius: 3px;"></div>
+              </div>
+              @endfor
+            </div>
+            <div class="card">
+              <div class="sk" style="width: 100px; height: 14px; border-radius: 4px; margin-bottom: 15px;"></div>
+              @for ($i = 0; $i < 2; $i++)
+              <div class="invitation-card">
+                <div style="display: flex; gap: 10px; align-items: center;">
+                  <div class="sk" style="width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0;"></div>
+                  <div style="flex: 1;">
+                    <div class="sk" style="width: 65%; height: 11px; border-radius: 3px; margin-bottom: 4px;"></div>
+                    <div class="sk" style="width: 40%; height: 9px; border-radius: 3px;"></div>
+                  </div>
+                </div>
+              </div>
+              @endfor
+            </div>
+          </div>
+        </div>
+      </main>
     </div>
 
+    <div id="real-content" style="opacity:0">
     @if($myTeam)
     <!-- TEAM DASHBOARD -->
     <div class="card" style="margin-bottom: 20px;">
@@ -508,6 +516,7 @@
   </div>
   </div>
 </main>
+    </div>
 
   @if ($otherRecruitments->hasPages())
   <div class="pagination-container">
@@ -1602,9 +1611,21 @@ document.addEventListener('DOMContentLoaded', function() {
     updateModalUI();
 
     // Skeleton fade-out
-    var skeleton = document.getElementById('pageSkeleton');
-    if (skeleton) {
-        setTimeout(function() { skeleton.classList.add('loaded'); }, 450);
+    var sk = document.getElementById('skeleton-content');
+    var rc = document.getElementById('real-content');
+    if (sk && rc) {
+        requestAnimationFrame(function () {
+            setTimeout(function () {
+                sk.style.transition = 'opacity 0.3s ease';
+                sk.style.opacity = '0';
+                rc.style.transition = 'opacity 0.35s ease';
+                rc.style.opacity = '1';
+                setTimeout(function () {
+                    sk.remove();
+                    rc.style.transition = '';
+                }, 350);
+            }, 600);
+        });
     }
 
     @if(isset($teamFull) && $teamFull)

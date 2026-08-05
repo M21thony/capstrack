@@ -56,22 +56,9 @@
 .btn-muted-amber { background: var(--amber-bg); color: var(--amber); border: 1px solid var(--amber); cursor: not-allowed; opacity: 0.8; }
 
 /* ── Skeleton Loading ── */
-@keyframes skel-shimmer {
-  0% { background-position: -600px 0; }
-  100% { background-position: 600px 0; }
-}
-@keyframes skel-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.85; }
-}
-.skel {
-  background: linear-gradient(90deg, #d4d7de 0%, #eaecf0 40%, #f4f5f7 50%, #eaecf0 60%, #d4d7de 100%);
-  background-size: 1200px 100%;
-  animation: skel-shimmer 2.2s ease-in-out infinite, skel-pulse 3s ease-in-out infinite;
-  border-radius: 6px;
-}
-#page-loader { position: absolute; inset: 0; z-index: 5; background: var(--bg2); overflow: hidden; }
-#page-loader.hidden { display: none; }
+@keyframes sk-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+.sk-overlay { position: absolute; inset: 0; background: var(--bg); z-index: 10; overflow-y: auto; }
+.sk { background: linear-gradient(90deg, var(--bg4) 25%, var(--bg2) 50%, var(--bg4) 75%); background-size: 200% 100%; animation: sk-shimmer 1.5s ease-in-out infinite; border-radius: 8px; }
 
 /* Modal base */
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 300; display: none; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
@@ -169,64 +156,94 @@
   <div class="content" style="position: relative;">
 
     <!-- ── SKELETON LOADER ── -->
-    <div id="page-loader">
-      <div class="stat-grid">
-        @for($i = 0; $i < 3; $i++)
-        <div class="stat-card">
-          <div class="skel" style="width:42px;height:42px;border-radius:12px;flex-shrink:0;"></div>
-          <div style="flex:1">
-            <div class="skel" style="height:26px;width:36px;margin-bottom:6px;"></div>
-            <div class="skel" style="height:13px;width:110px;"></div>
+    <div id="skeleton-content" class="sk-overlay">
+      <div class="experts-main">
+        <div class="stat-grid">
+          @for($i = 0; $i < 3; $i++)
+          <div class="stat-card">
+            <div class="sk" style="width:42px;height:42px;border-radius:12px;flex-shrink:0;"></div>
+            <div style="flex:1">
+              <div class="sk" style="height:24px;width:36px;margin-bottom:6px;"></div>
+              <div class="sk" style="height:12px;width:110px;"></div>
+            </div>
+          </div>
+          @endfor
+        </div>
+
+        @if($team)
+        <div class="role-overview">
+          <div class="sk" style="height:18px;width:180px;margin-bottom:14px;"></div>
+          @foreach(['','',''] as $r)
+          <div class="role-overview-row">
+            <div class="sk" style="width:10px;height:10px;border-radius:50%;"></div>
+            <div class="sk" style="height:13px;width:90px;"></div>
+            <div class="sk" style="width:16px;height:16px;border-radius:50%;margin-left:auto;"></div>
+          </div>
+          @endforeach
+        </div>
+        @endif
+
+        <div class="sticky-controls">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div class="sk" style="height:40px;flex:1;max-width:320px;border-radius:8px;"></div>
+            <div style="display:flex;gap:6px;">
+              @for($i = 0; $i < 4; $i++)
+              <div class="sk" style="height:28px;width:72px;border-radius:20px;"></div>
+              @endfor
+            </div>
           </div>
         </div>
-        @endfor
+
+        <div class="expert-grid">
+          @for($i = 0; $i < 6; $i++)
+          <div class="expert-card-compact">
+            <div class="expert-avatar-wrap" style="border:0;padding:0;">
+              <div class="sk" style="width:72px;height:72px;border-radius:50%;"></div>
+            </div>
+            <div class="sk" style="height:16px;width:120px;margin:12px auto;"></div>
+            <div style="display:flex;gap:6px;justify-content:center;margin-bottom:10px;">
+              <div class="sk" style="height:20px;width:60px;border-radius:20px;"></div>
+              <div class="sk" style="height:20px;width:75px;border-radius:20px;"></div>
+            </div>
+            <div class="sk" style="height:4px;width:100%;border-radius:2px;margin-bottom:6px;"></div>
+            <div class="sk" style="height:12px;width:100px;margin:0 auto 12px;"></div>
+            <div class="sk" style="height:38px;width:100%;border-radius:10px;"></div>
+          </div>
+          @endfor
+        </div>
+
+        <div class="req-section">
+          <div class="sk" style="height:15px;width:160px;margin-bottom:14px;"></div>
+          @for($i = 0; $i < 2; $i++)
+          <div class="req-card">
+            <div class="sk" style="width:36px;height:36px;border-radius:50%;flex-shrink:0;"></div>
+            <div style="flex:1">
+              <div class="sk" style="width:50%;height:12px;"></div>
+            </div>
+            <div class="sk" style="width:60px;height:18px;border-radius:20px;margin-left:auto;"></div>
+          </div>
+          @endfor
+        </div>
       </div>
 
-      @if($team)
-      <div class="role-overview">
-        <div class="skel" style="height:20px;width:180px;margin-bottom:14px;"></div>
-        @foreach(['','',''] as $r)
-        <div class="role-overview-row">
-          <div class="skel" style="width:12px;height:12px;border-radius:50%;"></div>
-          <div class="skel" style="height:14px;width:90px;"></div>
-          <div class="skel" style="width:18px;height:18px;border-radius:50%;margin-left:auto;"></div>
+      <div class="overview-panel">
+        <div class="card" style="padding:16px;border-radius:12px;">
+          <div class="sk" style="height:13px;width:100px;margin-bottom:12px;"></div>
+          @for($i = 0; $i < 3; $i++)
+          <div class="sk" style="height:11px;width:90%;margin-bottom:10px;"></div>
+          @endfor
         </div>
-        @endforeach
-      </div>
-      @endif
-
-      <div class="sticky-controls">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-          <div class="skel" style="height:44px;width:320px;border-radius:10px;"></div>
-          <div style="display:flex;gap:6px;">
-            @for($i = 0; $i < 4; $i++)
-            <div class="skel" style="height:30px;width:72px;border-radius:20px;"></div>
-            @endfor
-          </div>
+        <div class="card" style="padding:16px;border-radius:12px;margin-top:15px;">
+          <div class="sk" style="height:13px;width:100px;margin-bottom:12px;"></div>
+          @for($i = 0; $i < 4; $i++)
+          <div class="sk" style="height:11px;width:85%;margin-bottom:8px;"></div>
+          @endfor
         </div>
-      </div>
-
-      <div class="expert-grid" style="margin-top:0;">
-        @for($i = 0; $i < 6; $i++)
-        <div class="expert-card-compact">
-          <div class="skel" style="width:14px;height:14px;border-radius:50%;position:absolute;top:12px;right:12px;"></div>
-          <div class="expert-avatar-wrap" style="border:0;padding:0;">
-            <div class="skel" style="width:72px;height:72px;border-radius:50%;"></div>
-          </div>
-          <div class="skel" style="height:18px;width:130px;margin:12px auto;"></div>
-          <div style="display:flex;gap:6px;justify-content:center;margin-bottom:10px;">
-            <div class="skel" style="height:22px;width:65px;border-radius:20px;"></div>
-            <div class="skel" style="height:22px;width:80px;border-radius:20px;"></div>
-          </div>
-          <div class="skel" style="height:4px;width:100%;border-radius:2px;margin-bottom:6px;"></div>
-          <div class="skel" style="height:12px;width:110px;margin:0 auto 12px;"></div>
-          <div class="skel" style="height:42px;width:100%;border-radius:10px;"></div>
-        </div>
-        @endfor
       </div>
     </div>
 
     <!-- ── REAL CONTENT ── -->
+    <div id="real-content" style="opacity:0">
       @include('student.partials.page-tutorial', ['page' => 'experts'])
 
     <div class="experts-main">
@@ -542,6 +559,7 @@
         <div class="credits-title">System Developers</div>
         <div class="credits-names">Jolina · John Kenneth · Mark Anthony · Ian Cyrus · Alexa Nicole</div>
       </div>
+    </div>
     </div>
   </div>
 </div>
@@ -1032,10 +1050,23 @@ document.querySelectorAll('.nav-item').forEach(function(el) {
 </script>
 
 <script>
-window.addEventListener('load', function() {
-  setTimeout(function() {
-    document.getElementById('page-loader').classList.add('hidden');
-  }, 1000);
+document.addEventListener('DOMContentLoaded', function () {
+  var sk = document.getElementById('skeleton-content');
+  var rc = document.getElementById('real-content');
+  if (sk && rc) {
+    requestAnimationFrame(function () {
+      setTimeout(function () {
+        sk.style.transition = 'opacity 0.3s ease';
+        sk.style.opacity = '0';
+        rc.style.transition = 'opacity 0.35s ease';
+        rc.style.opacity = '1';
+        setTimeout(function () {
+          sk.remove();
+          rc.style.transition = '';
+        }, 350);
+      }, 600);
+    });
+  }
 });
 </script>
 </body>

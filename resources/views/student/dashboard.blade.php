@@ -9,8 +9,9 @@
 @vite('resources/student-ui/Styles/dashboard.css')
 <x-dashboard.styles />
 <style>
-  #pageSkeleton { position: absolute; inset: 0; z-index: 50; padding: 0; opacity: 1; transition: opacity 0.35s ease; pointer-events: auto; }
-  #pageSkeleton.loaded { opacity: 0; pointer-events: none; }
+  @keyframes sk-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+  .sk-overlay { position: absolute; inset: 0; background: var(--bg); z-index: 10; }
+  .sk { background: linear-gradient(90deg, var(--bg4) 25%, var(--bg2) 50%, var(--bg4) 75%); background-size: 200% 100%; animation: sk-shimmer 1.5s ease-in-out infinite; border-radius: 8px; }
 
   .ann-list { display:flex;flex-direction:column;gap:0;max-height:320px;overflow-y:auto; }
   .ann-list::-webkit-scrollbar { width:4px; }
@@ -69,12 +70,11 @@
       @include('student.partials.notification-dropdown')
     </div>
   </div>
-  <div class="content">
+  <div class="content" style="position: relative;">
     @include('student.partials.page-tutorial', ['page' => 'dashboard'])
-    <div id="contentWrapper" style="position: relative;">
 
     {{-- Skeleton loader --}}
-    <div id="pageSkeleton">
+    <div id="skeleton-content" class="sk-overlay">
       <div class="grid-4" style="margin-bottom:16px">
         <x-dashboard.stat-chip loading />
         <x-dashboard.stat-chip loading />
@@ -82,12 +82,78 @@
         <x-dashboard.stat-chip loading />
       </div>
       <div class="card" style="margin-bottom:16px">
-        <div class="card-header"><span class="skeleton-box" style="width:110px;height:12px;border-radius:4px;"></span><span class="skeleton-box" style="width:40px;height:18px;border-radius:12px;"></span></div>
-        <div><div class="skeleton-box" style="width:70%;height:13px;border-radius:4px;margin-bottom:6px;"></div><div class="skeleton-box" style="width:40%;height:11px;border-radius:4px;"></div></div>
+        <div class="card-header">
+          <span class="sk" style="width:130px;height:14px;border-radius:4px;"></span>
+          <span class="sk" style="width:40px;height:18px;border-radius:12px;"></span>
+        </div>
+        @for ($i = 0; $i < 3; $i++)
+        <div style="display:flex;gap:14px;padding:14px 16px;border-bottom:1px solid var(--border)">
+          <div class="sk" style="width:4px;height:44px;border-radius:4px;flex-shrink:0"></div>
+          <div style="flex:1">
+            <div class="sk" style="width:60%;height:13px;border-radius:4px;margin-bottom:8px"></div>
+            <div class="sk" style="width:90%;height:11px;border-radius:4px;margin-bottom:6px"></div>
+            <div class="sk" style="width:40%;height:11px;border-radius:4px"></div>
+          </div>
+        </div>
+        @endfor
+      </div>
+      <div style="height:16px"></div>
+      <div class="grid-2" style="margin-bottom:16px">
+        <div class="card">
+          <div class="card-header"><span class="sk" style="width:140px;height:14px;border-radius:4px;"></span></div>
+          @for ($i = 0; $i < 4; $i++)
+          <div style="display:flex;gap:10px;padding:10px 0;align-items:center">
+            <div class="sk" style="width:28px;height:28px;border-radius:50%;flex-shrink:0"></div>
+            <div style="flex:1">
+              <div class="sk" style="width:70%;height:12px;border-radius:4px;margin-bottom:6px"></div>
+              <div class="sk" style="width:100%;height:6px;border-radius:3px"></div>
+            </div>
+          </div>
+          @endfor
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="sk" style="width:120px;height:14px;border-radius:4px;"></span></div>
+          @for ($i = 0; $i < 4; $i++)
+          <div style="display:flex;gap:10px;padding:10px 0;align-items:center">
+            <div class="sk" style="width:26px;height:26px;border-radius:8px;flex-shrink:0"></div>
+            <div style="flex:1">
+              <div class="sk" style="width:85%;height:12px;border-radius:4px;margin-bottom:6px"></div>
+              <div class="sk" style="width:30%;height:10px;border-radius:4px"></div>
+            </div>
+          </div>
+          @endfor
+        </div>
+      </div>
+      <div class="dash-grid-v3">
+        <div class="card">
+          <div class="card-header"><span class="sk" style="width:130px;height:14px;border-radius:4px;"></span></div>
+          @for ($i = 0; $i < 2; $i++)
+          <div style="display:flex;gap:10px;padding:8px 0;align-items:center">
+            <div class="sk" style="width:8px;height:8px;border-radius:50%;flex-shrink:0"></div>
+            <div style="flex:1">
+              <div class="sk" style="width:50%;height:11px;border-radius:4px;margin-bottom:5px"></div>
+              <div class="sk" style="width:70%;height:12px;border-radius:4px"></div>
+            </div>
+          </div>
+          @endfor
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="sk" style="width:100px;height:14px;border-radius:4px;"></span></div>
+          @for ($i = 0; $i < 3; $i++)
+          <div style="display:flex;gap:10px;padding:8px 0;align-items:center">
+            <div class="sk" style="width:8px;height:8px;border-radius:50%;flex-shrink:0"></div>
+            <div style="flex:1">
+              <div class="sk" style="width:60%;height:12px;border-radius:4px;margin-bottom:5px"></div>
+              <div class="sk" style="width:40%;height:10px;border-radius:4px"></div>
+            </div>
+          </div>
+          @endfor
+        </div>
       </div>
     </div>
 
     {{-- Content --}}
+    <div id="real-content" style="opacity:0">
     <div class="grid-4" style="margin-bottom:16px">
       <x-dashboard.stat-chip value="{{ $overallProgress }}%" label="Overall Progress" color="var(--accent)" />
       <x-dashboard.stat-chip value="{{ $docsSubmitted }}" label="Docs Submitted" color="var(--green)" />
@@ -300,14 +366,29 @@
       <div class="credits-title">System Developers</div>
       <div class="credits-names">Jolina · John Kenneth · Mark Anthony · Ian Cyrus · Alexa Nicole</div>
     </div>
-
-  </div>
+    </div>
   </div>
 </div>
 
 <script>
-var skeleton = document.getElementById('pageSkeleton');
-if (skeleton) { setTimeout(function() { skeleton.classList.add('loaded'); }, 450); }
+document.addEventListener('DOMContentLoaded', function () {
+  var sk = document.getElementById('skeleton-content');
+  var rc = document.getElementById('real-content');
+  if (sk && rc) {
+    requestAnimationFrame(function () {
+      setTimeout(function () {
+        sk.style.transition = 'opacity 0.3s ease';
+        sk.style.opacity = '0';
+        rc.style.transition = 'opacity 0.35s ease';
+        rc.style.opacity = '1';
+        setTimeout(function () {
+          sk.remove();
+          rc.style.transition = '';
+        }, 350);
+      }, 600);
+    });
+  }
+});
 function toggleSidebar() { document.body.classList.toggle('sidebar-open'); }
 function closeSidebar() { document.body.classList.remove('sidebar-open'); }
 
