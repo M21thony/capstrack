@@ -84,6 +84,9 @@
   #pageSkeleton.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
   #contentWrapper { opacity: 1; transition: opacity 0.6s ease; }
   #contentWrapper.loading { opacity: 0; }
+  .sk-block { position: relative; overflow: hidden; background: rgba(0,0,0,0.06); }
+  .sk-shimmer { position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(0,0,0,0.08), transparent); animation: skShimmer 1.5s ease-in-out infinite; }
+  @keyframes skShimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
 </style>
 <x-dashboard.styles />
 </head>
@@ -106,18 +109,18 @@
       <div class="dup-layout">
         <div class="dup-left">
           <div class="card" style="flex-shrink:0">
-            <div class="skeleton-box" style="width:120px;height:12px;border-radius:4px;margin-bottom:12px"></div>
-            <div class="skeleton-box" style="width:100%;height:90px;border-radius:8px;margin-bottom:10px"></div>
-            <div class="skeleton-box" style="width:100%;height:34px;border-radius:8px"></div>
+            <div class="sk-block" style="width:120px;height:12px;border-radius:4px;margin-bottom:12px"><div class="sk-shimmer"></div></div>
+            <div class="sk-block" style="width:100%;height:90px;border-radius:8px;margin-bottom:10px"><div class="sk-shimmer"></div></div>
+            <div class="sk-block" style="width:100%;height:34px;border-radius:8px"><div class="sk-shimmer"></div></div>
           </div>
           <div class="card" style="flex:1">
-            <div class="skeleton-box" style="width:150px;height:12px;border-radius:4px;margin-bottom:12px"></div>
+            <div class="sk-block" style="width:150px;height:12px;border-radius:4px;margin-bottom:12px"><div class="sk-shimmer"></div></div>
             @for ($i = 0; $i < 3; $i++)
             <div style="display:flex;gap:10px;padding:8px 0">
-              <div class="skeleton-box" style="width:28px;height:28px;border-radius:50%;flex-shrink:0"></div>
+              <div class="sk-block" style="width:28px;height:28px;border-radius:50%;flex-shrink:0"><div class="sk-shimmer"></div></div>
               <div style="flex:1">
-                <div class="skeleton-box" style="width:70%;height:11px;border-radius:4px;margin-bottom:6px"></div>
-                <div class="skeleton-box" style="width:50%;height:9px;border-radius:4px"></div>
+                <div class="sk-block" style="width:70%;height:11px;border-radius:4px;margin-bottom:6px"><div class="sk-shimmer"></div></div>
+                <div class="sk-block" style="width:50%;height:9px;border-radius:4px"><div class="sk-shimmer"></div></div>
               </div>
             </div>
             @endfor
@@ -125,19 +128,19 @@
         </div>
         <div class="card dup-right-top" style="padding:14px">
           <div style="display:flex;align-items:center;gap:16px">
-            <div class="skeleton-box" style="width:72px;height:72px;border-radius:50%;flex-shrink:0"></div>
+            <div class="sk-block" style="width:72px;height:72px;border-radius:50%;flex-shrink:0"><div class="sk-shimmer"></div></div>
             <div style="flex:1">
-              <div class="skeleton-box" style="width:60%;height:14px;border-radius:4px;margin-bottom:8px"></div>
-              <div class="skeleton-box" style="width:40%;height:10px;border-radius:4px"></div>
+              <div class="sk-block" style="width:60%;height:14px;border-radius:4px;margin-bottom:8px"><div class="sk-shimmer"></div></div>
+              <div class="sk-block" style="width:40%;height:10px;border-radius:4px"><div class="sk-shimmer"></div></div>
             </div>
           </div>
         </div>
         <div class="card dup-right-bottom">
-          <div class="skeleton-box" style="width:180px;height:12px;border-radius:4px;margin-bottom:14px"></div>
+          <div class="sk-block" style="width:180px;height:12px;border-radius:4px;margin-bottom:14px"><div class="sk-shimmer"></div></div>
           @for ($i = 0; $i < 5; $i++)
           <div style="padding:8px 0">
-            <div class="skeleton-box" style="width:90%;height:11px;border-radius:4px;margin-bottom:6px"></div>
-            <div class="skeleton-box" style="width:60%;height:9px;border-radius:4px"></div>
+            <div class="sk-block" style="width:90%;height:11px;border-radius:4px;margin-bottom:6px"><div class="sk-shimmer"></div></div>
+            <div class="sk-block" style="width:60%;height:9px;border-radius:4px"><div class="sk-shimmer"></div></div>
           </div>
           @endfor
         </div>

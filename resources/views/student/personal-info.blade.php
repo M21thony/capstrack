@@ -12,6 +12,9 @@
         #pageSkeleton.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
         #pi-realContent { opacity: 1; transition: opacity 0.6s ease; }
         #pi-realContent.loading { opacity: 0; }
+          .sk-block { position: relative; overflow: hidden; background: rgba(0,0,0,0.06); }
+        .sk-shimmer { position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(0,0,0,0.08), transparent); animation: skShimmer 1.5s ease-in-out infinite; }
+        @keyframes skShimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
     </style>
 </head>
 <body class="pi-page-body">
@@ -21,20 +24,20 @@
 
             {{-- Skeleton loader --}}
             <div id="pageSkeleton" style="padding:40px">
-                <div class="skeleton-box" style="width:60%;height:22px;border-radius:6px;margin-bottom:10px"></div>
-                <div class="skeleton-box" style="width:40%;height:12px;border-radius:4px;margin-bottom:24px"></div>
+                <div class="sk-block" style="width:60%;height:22px;border-radius:6px;margin-bottom:10px"><div class="sk-shimmer"></div></div>
+                <div class="sk-block" style="width:40%;height:12px;border-radius:4px;margin-bottom:24px"><div class="sk-shimmer"></div></div>
                 @for ($s = 0; $s < 4; $s++)
-                <div class="skeleton-box" style="width:180px;height:14px;border-radius:4px;margin-bottom:14px"></div>
+                <div class="sk-block" style="width:180px;height:14px;border-radius:4px;margin-bottom:14px"><div class="sk-shimmer"></div></div>
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:26px">
                     @for ($i = 0; $i < 4; $i++)
                     <div>
-                        <div class="skeleton-box" style="width:90px;height:9px;border-radius:4px;margin-bottom:6px"></div>
-                        <div class="skeleton-box" style="width:100%;height:38px;border-radius:8px"></div>
+                        <div class="sk-block" style="width:90px;height:9px;border-radius:4px;margin-bottom:6px"><div class="sk-shimmer"></div></div>
+                        <div class="sk-block" style="width:100%;height:38px;border-radius:8px"><div class="sk-shimmer"></div></div>
                     </div>
                     @endfor
                 </div>
                 @endfor
-                <div class="skeleton-box" style="width:160px;height:40px;border-radius:8px"></div>
+                <div class="sk-block" style="width:160px;height:40px;border-radius:8px"><div class="sk-shimmer"></div></div>
             </div>
 
             {{-- Content --}}

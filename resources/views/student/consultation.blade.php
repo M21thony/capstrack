@@ -13,6 +13,9 @@
   #pageSkeleton.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
   #contentWrapper { opacity: 1; transition: opacity 0.6s ease; }
   #contentWrapper.loading { opacity: 0; }
+  .sk-block { position: relative; overflow: hidden; background: rgba(0,0,0,0.06); }
+  .sk-shimmer { position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(0,0,0,0.08), transparent); animation: skShimmer 1.5s ease-in-out infinite; }
+  @keyframes skShimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
 </style>
 </head>
 <body>
@@ -34,14 +37,14 @@
       <div class="consultation-container">
         <div class="left-panel">
           <div class="expert-filter-area">
-            <div class="skeleton-box" style="width:110px;height:14px;border-radius:4px"></div>
-            <div class="skeleton-box" style="flex:1;height:36px;border-radius:8px"></div>
+            <div class="sk-block" style="width:110px;height:14px;border-radius:4px"><div class="sk-shimmer"></div></div>
+            <div class="sk-block" style="flex:1;height:36px;border-radius:8px"><div class="sk-shimmer"></div></div>
           </div>
           <div class="calendar-card">
-            <div class="skeleton-box" style="width:140px;height:16px;border-radius:4px;margin-bottom:14px"></div>
+            <div class="sk-block" style="width:140px;height:16px;border-radius:4px;margin-bottom:14px"><div class="sk-shimmer"></div></div>
             <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px">
               @for ($i = 0; $i < 35; $i++)
-              <div class="skeleton-box" style="height:60px;border-radius:6px"></div>
+              <div class="sk-block" style="height:60px;border-radius:6px"><div class="sk-shimmer"></div></div>
               @endfor
             </div>
           </div>
@@ -49,18 +52,18 @@
         <div class="appt-sidebar">
           <div class="sessions-card">
             <div class="sessions-card-header">
-              <div class="skeleton-box" style="width:130px;height:12px;border-radius:4px"></div>
+              <div class="sk-block" style="width:130px;height:12px;border-radius:4px"><div class="sk-shimmer"></div></div>
             </div>
             <div style="padding:12px">
-              <div class="skeleton-box" style="width:100%;height:60px;border-radius:8px"></div>
+              <div class="sk-block" style="width:100%;height:60px;border-radius:8px"><div class="sk-shimmer"></div></div>
             </div>
           </div>
           <div class="sessions-card">
             <div class="sessions-card-header">
-              <div class="skeleton-box" style="width:100px;height:12px;border-radius:4px"></div>
+              <div class="sk-block" style="width:100px;height:12px;border-radius:4px"><div class="sk-shimmer"></div></div>
             </div>
             <div style="padding:12px">
-              <div class="skeleton-box" style="width:100%;height:60px;border-radius:8px"></div>
+              <div class="sk-block" style="width:100%;height:60px;border-radius:8px"><div class="sk-shimmer"></div></div>
             </div>
           </div>
         </div>
