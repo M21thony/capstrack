@@ -9,7 +9,7 @@
 <x-dashboard.styles />
 </head>
 <body>
-@include('instructor.partials.sidebar')
+@include('instructor.partials.sidebar', ['currentPage' => 'dashboard'])
 @include('partials.welcome-modal')
 
 <div class="main">
