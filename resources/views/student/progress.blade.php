@@ -24,9 +24,10 @@
       @include('student.partials.notification-dropdown')
     </div>
   </div>
-  <div class="content" style="position: relative;">
+  <div class="content">
     @include('student.partials.page-tutorial', ['page' => 'progress'])
-    <div id="skeleton-content" class="sk-overlay">
+    <div id="contentWrapper" style="position: relative;">
+<div id="skeleton-content" class="sk-overlay">
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;margin-bottom:16px">
         @for ($i = 0; $i < 4; $i++)
         <div class="stat-chip">
@@ -168,6 +169,7 @@
 @endif
 @endif
     </div>
+</div>
 </div>
 </div>
 

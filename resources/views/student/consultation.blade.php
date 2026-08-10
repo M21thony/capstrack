@@ -27,9 +27,10 @@
       @include('student.partials.notification-dropdown')
     </div>
   </div>
-  <div class="content" style="position: relative;">
+  <div class="content">
     @include('student.partials.page-tutorial', ['page' => 'consultation'])
-    <div id="skeleton-content" class="sk-overlay">
+    <div id="contentWrapper" style="position: relative;">
+<div id="skeleton-content" class="sk-overlay">
       <div class="consultation-container">
         <div class="left-panel">
           <div class="expert-filter-area">
@@ -222,6 +223,7 @@
     <div class="credits-names">Jolina · John Kenneth · Mark Anthony · Ian Cyrus · Alexa Nicole</div>
   </div>
     </div>
+</div>
 </div>
 
 <div class="modal-overlay" id="slotSelectModal" onclick="if(event.target === this) closeSlotModal()">

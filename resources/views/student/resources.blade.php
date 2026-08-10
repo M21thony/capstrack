@@ -27,9 +27,10 @@
     </div>
   </div>
 
-  <div class="content" style="position: relative;">
+  <div class="content">
     @include('student.partials.page-tutorial', ['page' => 'resources'])
-    <div id="skeleton-content" class="sk-overlay">
+    <div id="contentWrapper" style="position: relative;">
+<div id="skeleton-content" class="sk-overlay">
       <div class="grid-4" style="margin-bottom:18px">
         @for ($i = 0; $i < 4; $i++)
         <div class="stat-chip">
@@ -105,6 +106,7 @@
     <div id="res-list" class="gap-12"></div>
     </div>
   </div>
+</div>
 </div>
 
 <script>

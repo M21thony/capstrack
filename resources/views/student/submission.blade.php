@@ -28,9 +28,10 @@
       @include('student.partials.notification-dropdown')
     </div>
   </div>
-  <div class="content" style="position: relative;">
+  <div class="content">
     @include('student.partials.page-tutorial', ['page' => 'submission'])
-    <div id="skeleton-content" class="sk-overlay">
+    <div id="contentWrapper" style="position: relative;">
+<div id="skeleton-content" class="sk-overlay">
       <div class="submission-container">
         <div class="upload-card">
           <div style="display:flex;gap:14px;align-items:center;margin-bottom:20px">
@@ -227,6 +228,7 @@
 
     </div>
   </div>
+</div>
 </div>
 
 <script>

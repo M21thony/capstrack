@@ -153,10 +153,11 @@
     </div>
   </div>
 
-  <div class="content" style="position: relative;">
+  <div class="content">
 
     <!-- ── SKELETON LOADER ── -->
-    <div id="skeleton-content" class="sk-overlay">
+    <div id="contentWrapper" style="position: relative;">
+<div id="skeleton-content" class="sk-overlay">
       <div class="experts-main">
         <div class="stat-grid">
           @for($i = 0; $i < 3; $i++)
@@ -566,6 +567,7 @@
     </div>
     </div>
   </div>
+</div>
 </div>
 
 <!-- Expert Post Info Modal (responsive only) -->
