@@ -1063,13 +1063,25 @@ document.querySelectorAll('.nav-item').forEach(function(el) {
 document.addEventListener('DOMContentLoaded', function () {
   var sk = document.getElementById('skeleton-content');
   var rc = document.getElementById('real-content');
+  var scroller = document.querySelector('.content');
   if (sk && rc) {
+    // #real-content stays in normal flow at opacity:0 (not display:none, to
+    // avoid a layout jump on reveal) — but that means its full real height
+    // already counts toward .content's scrollable area while only the
+    // skeleton is visible. If real content is taller than the skeleton
+    // placeholder, that produced a scrollbar you could drag into blank
+    // space below the skeleton. Locking scroll during loading and
+    // restoring it on reveal avoids that.
+    var prevOverflow = scroller ? scroller.style.overflowY : '';
+    if (scroller) scroller.style.overflowY = 'hidden';
+
     requestAnimationFrame(function () {
       setTimeout(function () {
         sk.style.transition = 'opacity 0.3s ease';
         sk.style.opacity = '0';
         rc.style.transition = 'opacity 0.35s ease';
         rc.style.opacity = '1';
+        if (scroller) scroller.style.overflowY = prevOverflow || 'auto';
         setTimeout(function () {
           sk.remove();
           rc.style.transition = '';
