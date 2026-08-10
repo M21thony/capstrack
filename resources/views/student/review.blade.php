@@ -16,10 +16,14 @@
 </head>
 <body>
 @include('student.partials.sidebar')
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
 
 <!-- MAIN -->
 <div class="main">
   <div class="topbar">
+    <button class="hamburger-btn" id="hamburgerBtn" onclick="toggleSidebar()" aria-label="Toggle navigation">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
     <div class="page-title">Review Viewer</div>
     <div class="topbar-actions">
       @include('student.partials.notification-dropdown')
@@ -170,6 +174,21 @@ document.addEventListener('DOMContentLoaded', function () {
       }, 600);
     });
   }
+});
+
+// -- Mobile Sidebar --
+function toggleSidebar() {
+    document.body.classList.toggle('sidebar-open');
+    document.body.style.overflow = document.body.classList.contains('sidebar-open') ? 'hidden' : '';
+}
+function closeSidebar() {
+    document.body.classList.remove('sidebar-open');
+    document.body.style.overflow = '';
+}
+document.querySelectorAll('.nav-item').forEach(function(el) {
+    el.addEventListener('click', function() {
+        if (window.innerWidth <= 768) closeSidebar();
+    });
 });
 </script>
 

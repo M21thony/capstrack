@@ -16,6 +16,7 @@
 </head>
 <body>
 @include('student.partials.sidebar')
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
 
 <!-- MAIN -->
 <div class="main">
@@ -385,6 +386,21 @@ document.getElementById('submitBtn').addEventListener('click', function () {
       btn.disabled = false;
       btn.innerHTML = originalText;
       alert('❌ Submission failed. Please try again.');
+    });
+});
+
+// -- Mobile Sidebar --
+function toggleSidebar() {
+    document.body.classList.toggle('sidebar-open');
+    document.body.style.overflow = document.body.classList.contains('sidebar-open') ? 'hidden' : '';
+}
+function closeSidebar() {
+    document.body.classList.remove('sidebar-open');
+    document.body.style.overflow = '';
+}
+document.querySelectorAll('.nav-item').forEach(function(el) {
+    el.addEventListener('click', function() {
+        if (window.innerWidth <= 768) closeSidebar();
     });
 });
 </script>
