@@ -313,6 +313,7 @@ document.getElementById('duplication-form').addEventListener('submit', async (e)
     if (!data.success) throw new Error(data.message);
 
     renderResults(data, fileInput.files[0].name);
+    cacheResult(data, fileInput.files[0].name);
 
   } catch (err) {
     clearInterval(interval);
@@ -438,6 +439,34 @@ function escapeHtml(str) {
   div.textContent = str || '';
   return div.innerHTML;
 }
+
+// Results only ever lived in this page's JS state, so accidentally
+// clicking a different sidebar tab and coming back lost them entirely —
+// every navigation here is a full page reload. sessionStorage survives
+// that (and clears itself when the tab actually closes), so the last
+// check reappears instead of the page resetting to "No Check Yet."
+const DUPLICATION_CACHE_KEY = 'capstrack-duplication-last-result';
+
+function cacheResult(data, fileName) {
+  try {
+    sessionStorage.setItem(DUPLICATION_CACHE_KEY, JSON.stringify({ data, fileName }));
+  } catch (e) {
+    // Private/incognito browsing can disable storage — losing the cache isn't fatal.
+  }
+}
+
+function restoreCachedResult() {
+  try {
+    const cached = sessionStorage.getItem(DUPLICATION_CACHE_KEY);
+    if (!cached) return;
+    const { data, fileName } = JSON.parse(cached);
+    renderResults(data, fileName);
+  } catch (e) {
+    sessionStorage.removeItem(DUPLICATION_CACHE_KEY);
+  }
+}
+
+restoreCachedResult();
 </script>
 
 </body>
