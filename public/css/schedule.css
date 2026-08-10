@@ -50,6 +50,13 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
 /* ── MAIN ── */
 .main{flex:1;display:flex;flex-direction:column;height:100vh;overflow:hidden}
 .topbar{height:58px;min-height:58px;border-bottom:2px solid var(--accent);display:flex;align-items:center;padding:0 26px;gap:14px;background:var(--navy-mid)}
+
+/* ── MOBILE SIDEBAR (hidden on desktop) ── */
+.hamburger-btn{display:none;background:rgba(255,255,255,0.06);border:1px solid rgba(201,168,44,0.2);border-radius:9px;width:36px;height:36px;cursor:pointer;align-items:center;justify-content:center;flex-shrink:0}
+.hamburger-btn svg{width:16px;height:16px;stroke:rgba(255,255,200,0.7);fill:none;stroke-width:2}
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:400}
+.sidebar-overlay.open{display:block}
+.sidebar.mobile-open{display:flex;position:fixed;left:0;top:0;z-index:500;height:100vh}
 .page-title{font-size:17px;font-weight:500;color:var(--navy-text);flex:1}
 .topbar-actions{display:flex;align-items:center;gap:10px}
 .btn{display:inline-flex;align-items:center;gap:7px;padding:7px 16px;border-radius:9px;font-size:13px;font-weight:500;cursor:pointer;transition:all 0.15s;border:none;font-family:'DM Sans',sans-serif;text-decoration:none}
@@ -831,3 +838,31 @@ select.f-input{cursor:pointer}
 .sched-toast{position:fixed;bottom:24px;right:24px;background:var(--navy-dark);color:var(--navy-text);font-size:13px;font-weight:500;padding:12px 18px;border-radius:10px;border-left:3px solid var(--accent);box-shadow:0 8px 24px rgba(0,0,0,0.2);z-index:9999;transform:translateY(10px);opacity:0;transition:all 0.25s;pointer-events:none;display:flex;align-items:center;gap:8px}
 .sched-toast.show{transform:translateY(0);opacity:1}
 .sched-toast svg{width:14px;height:14px;stroke:var(--accent);fill:none;stroke-width:2.5}
+
+/* ── RESPONSIVE — this file had no @media queries at all before; every
+   grid below stayed at its full desktop column count regardless of
+   screen width. ── */
+@media (max-width: 1024px) {
+  /* .sched-layout's 300px sidebar column is a fixed width — the worst
+     offender, since it can't shrink at all no matter how narrow the
+     screen gets. */
+  .sched-layout { grid-template-columns: 1fr; }
+  .guide-tips-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 768px) {
+  .sidebar { display: none; }
+  .hamburger-btn { display: flex; }
+  .topbar { padding: 0 16px; }
+  .page-title { font-size: 15px; }
+  .content { padding: 16px; }
+  .legend-grid { grid-template-columns: repeat(2, 1fr); }
+  .time-row { grid-template-columns: 1fr; }
+}
+@media (max-width: 480px) {
+  /* Calendar is inherently 7 columns (one per weekday) — can't reduce
+     that, so compact the cell padding/sizing instead, same approach as
+     student/consultation's calendar. */
+  .cal-cell { min-height: 64px; padding: 4px; font-size: 9px; }
+  .cal-day-label { padding: 6px 2px; font-size: 9px; }
+  .legend-grid { grid-template-columns: 1fr; }
+}
