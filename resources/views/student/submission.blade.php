@@ -41,6 +41,9 @@
               <div class="sk" style="width:240px;height:11px;border-radius:4px"></div>
             </div>
           </div>
+
+          <!-- Document Details -->
+          <div class="sk" style="width:150px;height:11px;border-radius:4px;margin-bottom:14px"></div>
           <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px">
             @for ($i = 0; $i < 3; $i++)
             <div>
@@ -49,13 +52,24 @@
             </div>
             @endfor
           </div>
-          <div class="sk" style="width:100%;height:70px;border-radius:8px;margin-bottom:20px"></div>
-          <div class="sk" style="width:130px;height:12px;border-radius:4px;margin-bottom:12px"></div>
-          <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <div class="sk" style="width:130px;height:9px;border-radius:4px;margin-bottom:6px"></div>
+          <div class="sk" style="width:100%;height:76px;border-radius:8px;margin-bottom:24px"></div>
+
+          <!-- Send To -->
+          <div class="sk" style="width:70px;height:11px;border-radius:4px;margin-bottom:14px"></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
             @for ($i = 0; $i < 4; $i++)
-            <div class="sk" style="width:160px;height:44px;border-radius:8px"></div>
+            <div class="sk" style="width:100%;height:52px;border-radius:11px"></div>
             @endfor
           </div>
+          <div class="sk" style="width:220px;height:10px;border-radius:4px;margin-bottom:24px"></div>
+
+          <!-- Attach File -->
+          <div class="sk" style="width:90px;height:11px;border-radius:4px;margin-bottom:14px"></div>
+          <div class="sk" style="width:100%;height:96px;border-radius:14px;margin-bottom:20px"></div>
+
+          <!-- Submit -->
+          <div class="sk" style="width:100%;height:46px;border-radius:8px"></div>
         </div>
 
         <div class="overview-panel">
