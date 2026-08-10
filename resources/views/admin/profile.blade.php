@@ -406,8 +406,12 @@
 <body>
 
 @include('admin._sidebar')
+<div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
 <div class="main">
   <div class="topbar">
+    <button class="hamburger-btn" onclick="toggleSidebar()" aria-label="Toggle sidebar">
+      <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
     <div class="page-title">Admin Profile</div>
     <div class="topbar-actions">
       @include('admin.partials.notification-dropdown')
@@ -631,9 +635,6 @@
     </div>
   </div>
 </div>
-
-<div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
-
 
 <script>
 var sidebarEl = document.querySelector('.sidebar');
