@@ -11,8 +11,12 @@
 <body>
 
 @include('admin._sidebar')
+<div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
 <div class="main">
   <div class="topbar">
+    <button class="hamburger-btn" onclick="toggleSidebar()" aria-label="Toggle sidebar">
+      <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
     <div class="page-title">Panel Assignment</div>
     <div class="topbar-actions">
       @include('admin.partials.notification-dropdown')
@@ -191,6 +195,27 @@ function applyFilters() {
 
 document.getElementById('filter-section').addEventListener('change', applyFilters);
 document.getElementById('filter-status').addEventListener('change', applyFilters);
+
+
+/* Mobile sidebar toggle */
+var sidebarEl = document.querySelector('.sidebar');
+var sidebarOverlay = document.getElementById('sidebar-overlay');
+function toggleSidebar() {
+  if (!sidebarEl) return;
+  sidebarEl.classList.contains('mobile-open') ? closeSidebar() : openSidebar();
+}
+function openSidebar() {
+  if (!sidebarEl || !sidebarOverlay) return;
+  sidebarEl.classList.add('mobile-open');
+  sidebarOverlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeSidebar() {
+  if (!sidebarEl || !sidebarOverlay) return;
+  sidebarEl.classList.remove('mobile-open');
+  sidebarOverlay.classList.remove('open');
+  document.body.style.overflow = '';
+}
 </script>
 </body>
 </html>
