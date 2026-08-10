@@ -131,12 +131,12 @@
   height: 36px;
   border-radius: 9px;
   background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(245,193,0,0.2);
+  border: 1px solid rgba(201,168,44,0.2);
   cursor: pointer;
   color: var(--navy-text, #fff);
   flex-shrink: 0;
 }
-.hamburger-btn svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2.5; stroke-linecap: round; }
+.hamburger-btn svg { width: 16px; height: 16px; stroke: rgba(255,255,200,0.7); fill: none; stroke-width: 2; stroke-linecap: butt; }
 
 /* ── SIDEBAR OVERLAY ── */
 .sidebar-overlay {
