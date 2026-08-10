@@ -57,6 +57,23 @@
             @endfor
           </div>
         </div>
+
+        <div class="overview-panel">
+          <div class="guide-card">
+            <div class="sk" style="width:140px;height:16px;border-radius:4px;margin-bottom:16px"></div>
+            @for ($i = 0; $i < 3; $i++)
+            <div style="display:flex;gap:12px;margin-bottom:15px">
+              <div class="sk" style="width:24px;height:24px;border-radius:50%;flex-shrink:0"></div>
+              <div class="sk" style="flex:1;height:13px;border-radius:4px;margin-top:5px"></div>
+            </div>
+            @endfor
+          </div>
+          <div class="card activity-card">
+            <div class="sk" style="width:130px;height:16px;border-radius:4px;margin-bottom:14px"></div>
+            <div class="sk" style="width:70%;height:12px;border-radius:4px;margin-bottom:6px"></div>
+            <div class="sk" style="width:45%;height:10px;border-radius:4px"></div>
+          </div>
+        </div>
       </div>
     </div>
 
