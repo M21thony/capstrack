@@ -235,7 +235,7 @@
       </div>
 
       <div class="overview-panel">
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: start;">
+        <div class="rg-qt-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: start;">
           <div class="card" style="padding:14px;border-radius:12px;">
             <div class="sk" style="height:13px;width:80px;margin-bottom:12px;"></div>
             @for($i = 0; $i < 3; $i++)
@@ -535,7 +535,7 @@
     </div>
 
     <div class="overview-panel">
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: start;">
+      <div class="rg-qt-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: start;">
         <div class="card" style="padding: 14px; border-radius: 12px; background: var(--bg2);">
           <div class="section-title" style="font-size: 13px; margin-bottom: 12px;">Role Guide</div>
           <div style="margin-bottom: 12px;">

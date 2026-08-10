@@ -32,7 +32,7 @@
     @include('student.partials.page-tutorial', ['page' => 'progress'])
     <div id="contentWrapper" style="position: relative;">
 <div id="skeleton-content" class="sk-overlay">
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;margin-bottom:16px">
+      <div class="grid-4" style="margin-bottom:16px">
         @for ($i = 0; $i < 4; $i++)
         <div class="stat-chip">
           <div class="sk" style="width:30px;height:22px;border-radius:4px;margin-bottom:6px"></div>
@@ -69,7 +69,7 @@
   <div style="font-size:12px;color:var(--text3)">Join or create a team to start tracking milestones.</div>
 </div>
 @else
-<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;margin-bottom:16px">
+<div class="grid-4" style="margin-bottom:16px">
   <div class="stat-chip"><div class="stat-n" style="color:var(--green)">{{ $completed }}</div><div class="stat-l">Completed</div></div>
   <div class="stat-chip"><div class="stat-n" style="color:var(--amber)">{{ $pending }}</div><div class="stat-l">Pending</div></div>
   <div class="stat-chip"><div class="stat-n" style="color:var(--text3)">{{ $todo }}</div><div class="stat-l">To Do</div></div>
