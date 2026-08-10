@@ -853,6 +853,7 @@ input[type="number"] {
   .hamburger-btn { display: inline-flex; }
 
   .sidebar {
+    display: flex !important;
     position: fixed !important;
     z-index: 1000;
     transform: translateX(-100%);
