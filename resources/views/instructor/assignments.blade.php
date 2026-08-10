@@ -59,7 +59,7 @@
 /* ── Responsive: Tablet & below — sidebar fixed on left ── */
 @media(max-width:1024px){
   .hamburger-btn{display:inline-flex}
-  .sidebar{position:fixed!important;left:0!important;top:0!important;height:100vh!important;z-index:1000;transform:translateX(-100%);transition:transform 0.25s cubic-bezier(0.16,1,0.3,1)}
+  .sidebar{display:flex!important;position:fixed!important;left:0!important;top:0!important;height:100vh!important;z-index:1000;transform:translateX(-100%);transition:transform 0.25s cubic-bezier(0.16,1,0.3,1)}
   .sidebar-open .sidebar{transform:translateX(0)}
   .sidebar-open .sidebar-overlay{display:block}
   body.sidebar-open{overflow:hidden}
