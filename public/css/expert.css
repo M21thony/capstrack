@@ -50,6 +50,13 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
 /* ── MAIN ── */
 .main{flex:1;display:flex;flex-direction:column;height:100vh;overflow:hidden}
 .topbar{height:58px;min-height:58px;border-bottom:2px solid var(--accent);display:flex;align-items:center;padding:0 26px;gap:14px;background:var(--navy-mid)}
+
+/* ── MOBILE SIDEBAR (hidden on desktop) ── */
+.hamburger-btn{display:none;background:rgba(255,255,255,0.06);border:1px solid rgba(201,168,44,0.2);border-radius:9px;width:36px;height:36px;cursor:pointer;align-items:center;justify-content:center;flex-shrink:0}
+.hamburger-btn svg{width:16px;height:16px;stroke:rgba(255,255,200,0.7);fill:none;stroke-width:2}
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:400}
+.sidebar-overlay.open{display:block}
+.sidebar.mobile-open{display:flex;position:fixed;left:0;top:0;z-index:500;height:100vh}
 .page-title{font-size:17px;font-weight:500;color:var(--navy-text);flex:1}
 .topbar-actions{display:flex;align-items:center;gap:10px}
 .btn{display:inline-flex;align-items:center;gap:7px;padding:7px 16px;border-radius:9px;font-size:13px;font-weight:500;cursor:pointer;transition:all 0.15s;border:none;font-family:'DM Sans',sans-serif;text-decoration:none}
@@ -290,6 +297,8 @@ textarea.input{resize:vertical;min-height:80px}
 .criterion:last-child{border-bottom:none}
 .criterion-desc{font-size:13px;color:var(--text2);line-height:1.55;margin-bottom:12px}
 .score-options{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.app-cards-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.team-progress-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .score-option{position:relative;cursor:pointer}
 .score-option input[type="radio"]{position:absolute;opacity:0;width:0;height:0}
 .score-option-label{display:flex;flex-direction:column;gap:5px;padding:10px 12px;border-radius:10px;border:1.5px solid var(--border);background:var(--bg3);cursor:pointer;transition:all 0.13s}
@@ -642,6 +651,18 @@ body.edit-mode-active .calendar-day.expert-view:hover { background: var(--bg3); 
   .grid-4 { grid-template-columns: 1fr; }
   .grid-2 { grid-template-columns: 1fr; }
   .grid-3, .grid-5 { grid-template-columns: repeat(2, 1fr); }
+  .score-options { grid-template-columns: repeat(2, 1fr); }
+  .app-cards-grid { grid-template-columns: 1fr; }
+  .team-progress-grid { grid-template-columns: 1fr; }
+}
+
+/* ── MOBILE SIDEBAR TOGGLE ── */
+@media (max-width: 768px) {
+  .sidebar { display: none; }
+  .hamburger-btn { display: flex; }
+  .topbar { padding: 0 16px; }
+  .page-title { font-size: 15px; }
+  .content { padding: 16px; }
 }
 
 @keyframes fadeInPage { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }

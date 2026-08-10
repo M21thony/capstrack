@@ -9,8 +9,12 @@
 </head>
 <body>
 @include('instructor.partials.sidebar', ['currentPage' => 'progress'])
+<div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
 <div class="main">
   <div class="topbar">
+    <button class="hamburger-btn" onclick="toggleSidebar()" aria-label="Toggle sidebar">
+      <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
     <div class="page-title">Progress Monitoring</div>
     <div class="topbar-actions"><div class="notif-btn"><svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg><div class="notif-dot"></div></div></div>
   </div>
@@ -28,7 +32,7 @@
       <select class="input" style="width:160px"><option>Sort: Progress</option><option>Sort: Team Name</option><option>Sort: Overdue First</option></select>
     </div>
 
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+    <div class="team-progress-grid">
     @forelse($teams as $entry)
       <div class="team-progress-card">
         <div class="tp-header">
@@ -230,6 +234,29 @@ function saveExpertProfile(){
 document.addEventListener('keydown', e => {
   if(e.key === 'Escape') closeExpertProfile();
 });
+
+
+/* Mobile sidebar toggle */
+var sidebarEl = document.querySelector('.sidebar');
+var sidebarOverlay = document.getElementById('sidebar-overlay');
+
+function toggleSidebar() {
+  if (!sidebarEl) return;
+  var isOpen = sidebarEl.classList.contains('mobile-open');
+  if (isOpen) { closeSidebar(); } else { openSidebar(); }
+}
+function openSidebar() {
+  if (!sidebarEl || !sidebarOverlay) return;
+  sidebarEl.classList.add('mobile-open');
+  sidebarOverlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeSidebar() {
+  if (!sidebarEl || !sidebarOverlay) return;
+  sidebarEl.classList.remove('mobile-open');
+  sidebarOverlay.classList.remove('open');
+  document.body.style.overflow = '';
+}
 </script>
 </body>
 </html>

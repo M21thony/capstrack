@@ -3,14 +3,18 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>CapsTRACK â€” Expert Portal</title>
+<title>CapsTRACK — Expert Portal</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
-<link rel="stylesheet" href="schedule.css" />
+<link rel="stylesheet" href="{{ asset('css/schedule.css') }}" />
 </head>
 <body>
 @include('instructor.partials.sidebar', ['currentPage' => 'schedule_1'])
+<div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
   <div class="main">
   <div class="topbar">
+    <button class="hamburger-btn" onclick="toggleSidebar()" aria-label="Toggle sidebar">
+      <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
     <div class="page-title">Schedule Management</div>
     <div class="topbar-actions">
       <div class="notif-btn">
@@ -833,6 +837,29 @@ function showToast(msg, type = 'success') {
 
 // â”€â”€ INIT â”€â”€
 initCalendar();
+
+
+/* Mobile sidebar toggle */
+var sidebarEl = document.querySelector('.sidebar');
+var sidebarOverlay = document.getElementById('sidebar-overlay');
+
+function toggleSidebar() {
+  if (!sidebarEl) return;
+  var isOpen = sidebarEl.classList.contains('mobile-open');
+  if (isOpen) { closeSidebar(); } else { openSidebar(); }
+}
+function openSidebar() {
+  if (!sidebarEl || !sidebarOverlay) return;
+  sidebarEl.classList.add('mobile-open');
+  sidebarOverlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeSidebar() {
+  if (!sidebarEl || !sidebarOverlay) return;
+  sidebarEl.classList.remove('mobile-open');
+  sidebarOverlay.classList.remove('open');
+  document.body.style.overflow = '';
+}
 </script>
 </body>
 </html>
