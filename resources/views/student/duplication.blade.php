@@ -149,10 +149,6 @@
         <!-- Upload Card -->
         <div class="card" style="flex-shrink:0">
           <div class="card-header"><span class="card-title">Check Document</span></div>
-          <div class="form-group" style="margin-bottom:10px">
-            <label class="label">Document Type</label>
-            <select class="input"><option>Pre-Proposal</option></select>
-          </div>
           <form id="duplication-form">
             <div class="upload-zone" id="upload-zone" style="margin-bottom:10px;cursor:pointer;padding:14px">
               <div class="upload-icon" style="margin-bottom:6px">

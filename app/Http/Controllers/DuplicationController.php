@@ -40,6 +40,17 @@ class DuplicationController extends Controller
                 throw new \Exception('Could not extract text from this PDF. Make sure it is not a scanned image without a text layer.');
             }
 
+            // 2.5. Reject anything that isn't actually a pre-proposal before
+            // spending the rest of the pipeline (concept extraction, vector
+            // search, instructor matching) on a document that was never
+            // going to produce a meaningful result.
+            $gate = $this->service->isPreProposal($pdfText);
+
+            if (! ($gate['is_pre_proposal'] ?? true)) {
+                $reason = $gate['reason'] ?? 'it does not match the structure of a capstone pre-proposal';
+                throw new \Exception("This doesn't look like a pre-proposal document ({$reason}). Please upload your capstone pre-proposal.");
+            }
+
             // 3. Extract key concepts via Ollama
             $concepts = $this->service->extractKeyConcepts($pdfText);
 

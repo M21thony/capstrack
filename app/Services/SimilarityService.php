@@ -56,6 +56,49 @@ PROMPT;
         return $data;
     }
 
+    // ── 1.5. Reject uploads that aren't actually a pre-proposal ────────
+    // Kept as its own small call rather than folded into extractKeyConcepts'
+    // schema — that prompt's exact shape is what the fine-tuned local model
+    // was trained on, and adding a field it never saw in training would
+    // make it less reliable at the one thing it was specifically tuned for.
+    public function isPreProposal(string $pdfText): array
+    {
+        $truncated = mb_substr($pdfText, 0, 4000);
+
+        $prompt = <<<PROMPT
+You are a document classifier for a capstone project system. Determine whether
+the text below is a CAPSTONE PRE-PROPOSAL — an academic proposal document for
+an undergraduate capstone/thesis project. A genuine pre-proposal typically
+includes some combination of: a title, introduction/background, problem
+statement, project objectives, scope and limitations, or proposed methodology.
+
+It is NOT a pre-proposal if it is, for example: a resume/CV, an unrelated
+document, a completed full thesis manuscript, a form, a receipt, a scanned
+image with no real academic content, or blank/gibberish text.
+
+Return ONLY a valid JSON object. No explanation. No markdown fences.
+{"is_pre_proposal": true|false, "reason": "one sentence explaining the verdict"}
+
+Document text:
+{$truncated}
+PROMPT;
+
+        $raw = $this->ollama->generate($prompt, 150);
+        $cleaned = trim(preg_replace('/```json|```/i', '', $raw));
+        $data = json_decode($cleaned, true);
+
+        if (json_last_error() !== JSON_ERROR_NONE || ! is_array($data)) {
+            Log::warning('isPreProposal parse error — failing open (treating as a valid pre-proposal)', ['raw' => $raw]);
+
+            // A classifier hiccup shouldn't block a legitimate submission —
+            // same fail-open philosophy already used for missing "matches"
+            // verdicts in enrichWithReasons().
+            return ['is_pre_proposal' => true, 'reason' => ''];
+        }
+
+        return $data;
+    }
+
     // ── Stop words filter ─────────────────────────────────────────────
     private function removeStopWords(string $text): string
     {
