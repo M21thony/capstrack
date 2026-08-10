@@ -948,8 +948,15 @@ textarea.input{resize:vertical;min-height:80px}
 .modal-step.done .step-circle{border-color:var(--green);background:var(--green);color:#fff}
 .step-connector{flex:none;width:40px;height:2px;background:var(--border);margin:0 8px}
 
+/* ── ANNOUNCEMENTS: post form / feed split ── */
+.ann-post-feed-grid{display:grid;grid-template-columns:1fr 1.6fr}
+
+/* ── RESOURCES: upload form / list split (340px is fixed-width, worst offender for mobile) ── */
+.res-upload-list-grid{display:grid;grid-template-columns:340px 1fr}
+
 /* ── RUBRIC TYPE SELECTOR ── */
 .rb-type-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:6px}
+.rb-level-chips-grid{display:grid;grid-template-columns:repeat(4,1fr)}
 .rb-type-opt{cursor:pointer;display:block}
 .rb-type-opt input{display:none}
 .rb-type-opt-inner{display:flex;flex-direction:column;align-items:center;gap:7px;padding:12px 8px;border:2px solid var(--border);border-radius:10px;background:#fff;transition:all .15s;text-align:center}
@@ -1172,6 +1179,11 @@ textarea.input{resize:vertical;min-height:80px}
   .grid-4{grid-template-columns:1fr 1fr}
   .donut-wrap{gap:14px}
   .card{padding:18px}
+  .ann-post-feed-grid{grid-template-columns:1fr}
+  .res-upload-list-grid{grid-template-columns:1fr}
+  #arch-grid{grid-template-columns:repeat(2,1fr)}
+  .rb-type-grid{grid-template-columns:repeat(2,1fr)}
+  .rb-level-chips-grid{grid-template-columns:repeat(2,1fr)}
 }
 
 @media(max-width:480px){
@@ -1181,6 +1193,11 @@ textarea.input{resize:vertical;min-height:80px}
   .sk-overlay{padding:10px}
   .grid-4{grid-template-columns:1fr 1fr;gap:8px}
   .grid-2{grid-template-columns:1fr}
+  .alltime-grid{grid-template-columns:1fr}
+  #arch-grid{grid-template-columns:1fr}
+  .rb-type-grid{grid-template-columns:1fr}
+  .rb-levels-grid{grid-template-columns:1fr}
+  .rb-level-chips-grid{grid-template-columns:1fr 1fr}
   .stat-chip{padding:12px 14px}
   .stat-n{font-size:22px}
   .card{padding:16px;border-radius:10px}
