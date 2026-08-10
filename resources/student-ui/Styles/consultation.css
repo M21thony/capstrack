@@ -97,6 +97,21 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
   .day-label{padding:6px 2px!important;font-size:9px!important}
 }
 
+@media (max-width:480px){
+  /* Trying to fit actual slot-time text (e.g. "9:00 AM – 10:00 AM") into
+     a ~50px-wide column is what was making this look cramped/thin, not the
+     cell size itself — shrinking the font further just makes it unreadable
+     instead. Availability is already color-coded on the cell background
+     (.available/.not-available/.my-booking), and tapping a date opens the
+     slot-details modal with the actual times, so the pills aren't needed
+     here — hide them and let the cell shrink to just the date number. */
+  .cal-slots{display:none!important}
+  .calendar-day{height:34px!important;padding:2px!important}
+  .cal-date-num{font-size:11px!important}
+  .day-label{padding:4px 2px!important;font-size:8px!important}
+  .calendar-card{padding:8px!important}
+}
+
 /* CARDS */
 .card{background:#ffffff;border:1px solid var(--border);border-radius:14px;padding:24px;box-shadow:0 1px 4px rgba(0,0,0,0.05)}
 .card-sm{background:#ffffff;border:1px solid var(--border);border-radius:12px;padding:18px;box-shadow:0 1px 4px rgba(0,0,0,0.05)}
