@@ -159,9 +159,12 @@
     <!-- .content is a 2-column CSS grid (grid-template-columns:1fr 420px) and
          .experts-main/.overview-panel must be direct grid children to place
          correctly — #contentWrapper spans the whole grid as one cell, so
-         both layers inside it re-declare the same grid independently. -->
-    <div id="contentWrapper" style="position: relative; grid-column: 1 / -1; grid-row: 1 / -1;">
-<div id="skeleton-content" class="sk-overlay" style="display: grid; grid-template-columns: 1fr 420px; grid-template-rows: auto 1fr; gap: 30px;">
+         both layers inside it re-declare the same grid independently via
+         .content-grid (a real class, not inline styles, so the existing
+         @media(max-width:1024px) override that stacks .content to a single
+         column on mobile can reach them too). -->
+    <div id="contentWrapper" class="content-grid-wrap">
+<div id="skeleton-content" class="sk-overlay content-grid">
       <div class="experts-main">
         <div class="stat-grid">
           @for($i = 0; $i < 3; $i++)
@@ -250,7 +253,7 @@
     </div>
 
     <!-- ── REAL CONTENT ── -->
-    <div id="real-content" style="opacity:0; display: grid; grid-template-columns: 1fr 420px; grid-template-rows: auto 1fr; gap: 30px;">
+    <div id="real-content" class="content-grid" style="opacity:0">
       @include('student.partials.page-tutorial', ['page' => 'experts'])
 
     <div class="experts-main">
