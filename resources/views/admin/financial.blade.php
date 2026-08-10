@@ -806,7 +806,7 @@ input[type="number"] {
   color: var(--navy-text);
   flex-shrink: 0;
 }
-.hamburger-btn svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2.5; stroke-linecap: round; }
+.hamburger-btn svg { width: 16px; height: 16px; stroke: rgba(255,255,200,0.7); fill: none; stroke-width: 2; stroke-linecap: butt; }
 
 /* -- SIDEBAR OVERLAY -- */
 .sidebar-overlay {

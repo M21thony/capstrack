@@ -51,7 +51,7 @@
 /* Hamburger (hidden on desktop) */
 .hamburger-btn{display:none;align-items:center;justify-content:center;width:36px;height:36px;border-radius:9px;background:rgba(255,255,255,0.06);border:1px solid rgba(201,168,44,0.2);cursor:pointer;color:var(--navy-text);flex-shrink:0;transition:background 0.15s}
 .hamburger-btn:hover{background:rgba(201,168,44,0.12)}
-.hamburger-btn svg{width:18px;height:18px}
+.hamburger-btn svg{width:16px;height:16px;stroke:rgba(255,255,200,0.7);fill:none;stroke-width:2;stroke-linecap:butt}
 
 /* Sidebar overlay (mobile) */
 .sidebar-overlay{display:none;position:fixed;inset:0;z-index:999;background:rgba(0,0,0,0.5)}

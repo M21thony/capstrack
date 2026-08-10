@@ -225,9 +225,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
 .modal-overlay.active .modal-img{transform:scale(1)}
 
 /* ── HAMBURGER (hidden on desktop) ── */
-.hamburger-btn{display:none;align-items:center;justify-content:center;width:36px;height:36px;border-radius:9px;background:rgba(255,255,255,0.06);border:1px solid rgba(245,193,0,0.2);cursor:pointer;color:var(--navy-text);flex-shrink:0;transition:background 0.15s}
-.hamburger-btn:hover{background:rgba(245,193,0,0.12)}
-.hamburger-btn svg{width:18px;height:18px}
+.hamburger-btn{display:none;align-items:center;justify-content:center;width:36px;height:36px;border-radius:9px;background:rgba(255,255,255,0.06);border:1px solid rgba(201,168,44,0.2);cursor:pointer;color:var(--navy-text);flex-shrink:0;transition:background 0.15s}
+.hamburger-btn:hover{background:rgba(201,168,44,0.12)}
+.hamburger-btn svg{width:16px;height:16px;stroke:rgba(255,255,200,0.7);fill:none;stroke-width:2;stroke-linecap:butt}
 
 /* ── SIDEBAR OVERLAY (mobile backdrop) ── */
 .sidebar-overlay{display:none;position:fixed;inset:0;z-index:999;background:rgba(0,0,0,0.5)}
@@ -301,6 +301,4 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
   .card{padding:10px!important;border-radius:6px!important}
   .topbar{padding:0 8px!important;height:50px!important;min-height:50px!important}
   .topbar .page-title{font-size:13px!important}
-  .hamburger-btn{width:30px!important;height:30px!important}
-  .hamburger-btn svg{width:15px!important;height:15px!important}
 }
