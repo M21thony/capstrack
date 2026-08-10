@@ -45,7 +45,7 @@
 
           <!-- Document Details -->
           <div class="sk" style="width:150px;height:11px;border-radius:4px;margin-bottom:14px"></div>
-          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px">
+          <div class="doc-details-grid" style="margin-bottom:16px">
             @for ($i = 0; $i < 3; $i++)
             <div>
               <div class="sk" style="width:90px;height:9px;border-radius:4px;margin-bottom:6px"></div>
@@ -114,7 +114,7 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h7"/></svg>
           Document Details
         </div>
-        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;">
+        <div class="doc-details-grid">
             <div class="pm-field">
                 <label class="pm-label">Document Title</label>
                 <input type="text" class="input" id="doc-title" placeholder="e.g., Chapter 1-3 Final">

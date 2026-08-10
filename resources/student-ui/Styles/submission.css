@@ -180,6 +180,7 @@ select.input{cursor:pointer}
 .guide-card { background: var(--bg3); border: 1px solid var(--border); border-radius: 16px; padding: 20px; font-size: 13px; }
 .step-item { display: flex; gap: 12px; margin-bottom: 15px; }
 .step-num { width: 24px; height: 24px; background: var(--navy-dark); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; flex-shrink: 0; }
+.doc-details-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
 
 /* ══════════════════════════════════════════════ */
 /* ── SUBMISSION PAGE REDESIGN — full, complete   */
@@ -244,6 +245,11 @@ select.input{cursor:pointer}
   .sidebar-open .sidebar{transform:translateX(0)}
   .sidebar-open .sidebar-overlay{display:block}
   body.sidebar-open{overflow:hidden}
+  /* .submission-container (form + guide/activity sidebar) never had a
+     mobile override — the fixed 350px right column stayed forced next to
+     the form regardless of screen width. */
+  .submission-container{grid-template-columns:1fr!important}
+  .doc-details-grid{grid-template-columns:1fr!important}
 }
 
 .recipient-check{

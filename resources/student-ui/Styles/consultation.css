@@ -86,6 +86,15 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
      calendar (1fr) and sessions sidebar (fixed 320px) stayed side by side
      regardless of screen width, squeezing both into an unusable width. */
   .consultation-container{grid-template-columns:1fr!important}
+  /* Calendar is inherently 7 columns (one per weekday) — can't reduce the
+     column count, so compact the cell padding/fonts instead so each day
+     still gets a usable amount of its own narrow column. */
+  .calendar-card{padding:10px!important}
+  .calendar-day{padding:4px!important;height:56px!important;font-size:9px!important}
+  .cal-date-num{font-size:10px!important}
+  .cal-slot-pill{font-size:7px!important;padding:1px 3px!important}
+  .cal-more{font-size:7px!important}
+  .day-label{padding:6px 2px!important;font-size:9px!important}
 }
 
 /* CARDS */

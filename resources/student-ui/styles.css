@@ -603,6 +603,8 @@ mark{background:rgba(201,168,44,0.25);color:inherit;border-radius:2px;padding:0 
      never had a mobile override — two 1fr columns each got squeezed to
      roughly half the screen width instead of stacking. */
   .grid-2{grid-template-columns:1fr!important}
+  /* .grid-4 (stat-chip rows) never had a mobile override either. */
+  .grid-4{grid-template-columns:repeat(2,1fr)!important;gap:8px!important}
 }
 @media (max-width:640px){
   .filter-bar{flex-direction:column}
