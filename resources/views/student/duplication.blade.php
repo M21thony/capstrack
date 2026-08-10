@@ -97,8 +97,9 @@
     </div>
   </div>
 
-  <div class="content" style="height:calc(100vh - 56px);overflow:hidden;padding-bottom:0;position: relative;">
-    <div id="skeleton-content" class="sk-overlay">
+  <div class="content" style="height:calc(100vh - 56px);overflow:hidden;padding-bottom:0;">
+    <div id="contentWrapper" style="position: relative;">
+<div id="skeleton-content" class="sk-overlay">
       <div class="dup-layout">
         <div class="dup-left">
           <div class="card" style="flex-shrink:0">
@@ -215,6 +216,7 @@
     </div>
     </div>
   </div>
+</div>
 </div>
 
 <!-- Loading Overlay -->

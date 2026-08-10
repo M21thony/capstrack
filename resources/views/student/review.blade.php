@@ -25,9 +25,10 @@
       @include('student.partials.notification-dropdown')
     </div>
   </div>
-  <div class="content" style="position: relative;">
+  <div class="content">
     @include('student.partials.page-tutorial', ['page' => 'review'])
-    <div id="skeleton-content" class="sk-overlay">
+    <div id="contentWrapper" style="position: relative;">
+<div id="skeleton-content" class="sk-overlay">
       <div class="row" style="margin-bottom:14px;gap:8px">
         <div class="sk" style="width:320px;height:36px;border-radius:8px"></div>
         <div class="sk" style="width:90px;height:20px;border-radius:12px"></div>
@@ -147,6 +148,7 @@
 </div>
 @endif
     </div>
+</div>
 </div>
 </div>
 
