@@ -82,6 +82,10 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
   .sidebar-open .sidebar{transform:translateX(0)}
   .sidebar-open .sidebar-overlay{display:block}
   body.sidebar-open{overflow:hidden}
+  /* .consultation-container never had a mobile override at all — the
+     calendar (1fr) and sessions sidebar (fixed 320px) stayed side by side
+     regardless of screen width, squeezing both into an unusable width. */
+  .consultation-container{grid-template-columns:1fr!important}
 }
 
 /* CARDS */

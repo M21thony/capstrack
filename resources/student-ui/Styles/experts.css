@@ -143,6 +143,14 @@ select.input{cursor:pointer}
 .experts-main{grid-column:1;grid-row:2;display:flex;flex-direction:column;min-width:0} /* Main content in row 2, column 1 */
 .overview-panel{grid-column:2;grid-row:2;width:420px;flex-shrink:0;position:sticky;top:20px} /* Sidebar in row 2, column 2 */
 
+/* #contentWrapper spans .content's whole grid as one cell (skeleton/real-content
+   toggling needs a single positioned ancestor); .content-grid re-declares the
+   same 2-column grid one level deeper so .experts-main/.overview-panel resume
+   correct placement. Real classes, not inline styles, so the mobile override
+   below (and the existing @media(max-width:1024px) block) can reach them. */
+.content-grid-wrap{position:relative;grid-column:1 / -1;grid-row:1 / -1}
+.content-grid{display:grid;grid-template-columns:1fr 420px;grid-template-rows:auto 1fr;gap:30px}
+
 
 .sticky-controls{position:sticky;top:0;z-index:100;background:var(--bg);padding:20px 0;margin-top:-20px} /* Sticky filter and search bar */
 
@@ -226,6 +234,7 @@ select.input{cursor:pointer}
 /* ── TABLET LANDSCAPE (≤1024px) ── */
 @media (max-width:1024px){
   .content{display:flex!important;flex-direction:column!important;gap:24px!important;padding:20px!important}
+  .content-grid{display:flex!important;flex-direction:column!important;gap:24px!important}
   .overview-panel{position:static!important;width:auto!important;flex-shrink:0!important}
   .expert-grid{grid-template-columns:repeat(2,1fr)!important;gap:18px!important}
 }
