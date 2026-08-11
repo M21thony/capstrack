@@ -516,8 +516,7 @@ function App() {
           style={{
             position: "fixed",
             bottom: "24px",
-            left: "50%",
-            transform: "translateX(-50%)",
+            right: "300px",
             zIndex: 2000,
             display: "flex",
             alignItems: "center",
