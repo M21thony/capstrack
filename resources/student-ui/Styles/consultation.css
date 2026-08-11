@@ -216,7 +216,7 @@ select.input{cursor:pointer}
 .sessions-card-header{background:var(--navy-dark);padding:13px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid var(--accent)} /* Copied from instructor/schedule's .upcoming-header */
 .sessions-card-title{font-size:11px;font-weight:700;color:var(--navy-text);text-transform:uppercase;letter-spacing:0.8px}
 .sessions-card-count{font-size:10px;font-weight:700;padding:2px 7px;background:var(--accent);color:#18191f;border-radius:10px}
-.session-list{display:flex;flex-direction:column;gap:8px;padding:10px 16px}
+.session-list{display:flex;flex-direction:column;gap:8px;padding:10px 16px;max-height:360px;overflow-y:auto} /* Bounded so a long list scrolls inside its own card instead of stretching the whole page taller */
 .session-list-empty{font-size:12px;color:var(--text3);padding:12px 4px;text-align:center}
 
 /* ── SESSION ROW — content UI copied from instructor/schedule's
