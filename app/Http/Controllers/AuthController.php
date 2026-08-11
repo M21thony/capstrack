@@ -177,10 +177,17 @@ class AuthController extends Controller
 
             if ($expert) {
                 if ($expert->approved_status) {
+                    // Google only sends refresh_token on first consent (or when
+                    // prompt=consent is forced); keep the old one if it's missing
+                    // this time rather than overwriting a working connection with
+                    // null (see the same fix in GoogleDriveService::storeToken).
+                    $existingToken = json_decode($expert->google_token ?? '', true);
+                    $refreshToken = $response->json('refresh_token') ?? ($existingToken['refresh_token'] ?? null);
+
                     $expert->update([
                         'google_token' => json_encode([
                             'access_token' => $accessToken,
-                            'refresh_token' => $response->json('refresh_token'),
+                            'refresh_token' => $refreshToken,
                             'token_type' => $response->json('token_type'),
                         ]),
                         'google_token_expires_at' => now()->addSeconds($response->json('expires_in', 3600)),
