@@ -40,6 +40,16 @@ function App() {
   // making everything else feel sluggish) — it just marks that another sync
   // is needed once the current one finishes.
   const driveSyncRef = useRef({ inFlight: false, pending: false });
+  // Success/failure toast shown in place of browser alert()s. Auto-dismisses
+  // after a few seconds; a new toast replaces whatever's currently showing.
+  const [toast, setToast] = useState(null);
+  const toastTimerRef = useRef(null);
+
+  const showToast = (type, message) => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    setToast({ type, message });
+    toastTimerRef.current = setTimeout(() => setToast(null), 4000);
+  };
 
   // Load the current review status on mount so the UI reflects saved state.
   useEffect(() => {
@@ -114,10 +124,10 @@ function App() {
   const handleTurnIn = async () => {
     try {
       await persistAndFlash("Reviewed");
-      alert("Turned in successfully!");
+      showToast("success", "Turned in successfully!");
     } catch (error) {
       console.error("Turn in error:", error);
-      alert("Error turning in. Please try again.");
+      showToast("error", "Error turning in. Please try again.");
     }
   };
 
@@ -127,7 +137,7 @@ function App() {
       await persistAndFlash("Reviewing");
     } catch (error) {
       console.error("Save error:", error);
-      alert("Error saving annotations. Please try again.");
+      showToast("error", "Error saving annotations. Please try again.");
     }
   };
 
@@ -467,10 +477,10 @@ function App() {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
 
-      alert("PDF exported successfully!");
+      showToast("success", "PDF exported successfully!");
     } catch (error) {
       console.error("Export error:", error);
-      alert(`Error exporting PDF: ${error.message}`);
+      showToast("error", `Error exporting PDF: ${error.message}`);
     }
   };
 
@@ -500,6 +510,32 @@ function App() {
         openCommentId={openCommentId}
         setOpenCommentId={setOpenCommentId}
       />
+
+      {toast && (
+        <div
+          style={{
+            position: "fixed",
+            bottom: "24px",
+            left: "50%",
+            transform: "translateX(-50%)",
+            zIndex: 2000,
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            padding: "12px 20px",
+            borderRadius: "10px",
+            fontSize: "14px",
+            fontWeight: "600",
+            boxShadow: "0 4px 16px rgba(0, 0, 0, 0.15)",
+            ...(toast.type === "success"
+              ? { backgroundColor: "#dcfce7", color: "#166534", border: "1px solid #86efac" }
+              : { backgroundColor: "#fef2f2", color: "#991b1b", border: "1px solid #fecaca" }),
+          }}
+        >
+          <span>{toast.type === "success" ? "✓" : "✕"}</span>
+          <span>{toast.message}</span>
+        </div>
+      )}
     </div>
   );
 }
