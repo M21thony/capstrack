@@ -13,8 +13,10 @@
   .sk-overlay { position: absolute; inset: 0; background: var(--bg); z-index: 10; }
   .sk { background: linear-gradient(90deg, var(--bg4) 25%, var(--bg2) 50%, var(--bg4) 75%); background-size: 200% 100%; animation: sk-shimmer 1.5s ease-in-out infinite; border-radius: 8px; }
 
-  #consult-toast { position: fixed; bottom: 30px; right: 30px; background: var(--navy-dark); color: #fff; padding: 14px 22px; border-radius: 12px; font-size: 13px; font-weight: 500; z-index: 2000; box-shadow: 0 8px 30px rgba(0,0,0,0.3); opacity: 0; transform: translateY(12px); pointer-events: none; transition: opacity 0.25s ease, transform 0.25s ease; }
+  #consult-toast { position: fixed; bottom: 30px; right: 30px; background: var(--navy-dark); color: #fff; padding: 14px 22px; border-radius: 12px; font-size: 13px; font-weight: 500; z-index: 2000; box-shadow: 0 8px 30px rgba(0,0,0,0.3); opacity: 0; transform: translateY(12px); pointer-events: none; transition: opacity 0.25s ease, transform 0.25s ease; border-left: 4px solid transparent; display: flex; align-items: center; gap: 10px; }
   #consult-toast.show { opacity: 1; transform: translateY(0); }
+  #consult-toast.success { border-left-color: var(--green); }
+  #consult-toast.error { border-left-color: var(--red); }
 </style>
 </head>
 <body>
@@ -419,7 +421,7 @@ let currentSlotModalDateKey = null;
 function selectDate(d, dayName, dateKey) {
   const expertId = document.getElementById('expertSelect').value;
   if (!expertId) {
-    alert('Please select an expert first.');
+    showToast('Please select an expert first.', 'error');
     return;
   }
 
@@ -468,11 +470,13 @@ function formatDateLabel(dateKey) {
   return MONTHS[m - 1].slice(0, 3) + ' ' + String(d).padStart(2, '0') + ', ' + y;
 }
 
-function showToast(message) {
+function showToast(message, type) {
+  type = type || 'success';
   const toast = document.getElementById('consult-toast');
   if (!toast) { return; }
-  toast.textContent = message;
-  toast.classList.add('show');
+  toast.textContent = (type === 'error' ? '✕ ' : '✓ ') + message;
+  toast.classList.remove('success', 'error');
+  toast.classList.add('show', type);
   clearTimeout(showToast._t);
   showToast._t = setTimeout(() => toast.classList.remove('show'), 3500);
 }
@@ -537,12 +541,12 @@ async function bookSlot(scheduleId) {
       }
       renderCalendar();
 
-      showToast('Booking request submitted successfully!');
+      showToast('Booking request submitted successfully!', 'success');
     } else {
-      alert(data.message || 'Failed to book.');
+      showToast(data.message || 'Failed to book.', 'error');
     }
   } catch (e) {
-    alert('Error: ' + e.message);
+    showToast('Error: ' + e.message, 'error');
   }
 }
 
