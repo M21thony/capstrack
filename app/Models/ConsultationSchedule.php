@@ -84,4 +84,20 @@ class ConsultationSchedule extends Model
 
         return $reference->copy()->addDays($diff)->toDateString();
     }
+
+    /**
+     * Human-readable recurrence, e.g. "Every Monday", "Every other Friday",
+     * or "August 14, 2026" for a one-off slot. Used in notification emails
+     * so students see how often a slot repeats, not just its next date.
+     */
+    public function recurrenceDescription(): string
+    {
+        return match ($this->recur) {
+            'weekly' => "Every {$this->available_date}",
+            'biweekly' => "Every other {$this->available_date}",
+            default => $this->specific_date
+                ? Carbon::parse($this->specific_date)->format('F j, Y')
+                : $this->available_date,
+        };
+    }
 }

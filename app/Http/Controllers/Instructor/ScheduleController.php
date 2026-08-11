@@ -3,13 +3,18 @@
 namespace App\Http\Controllers\Instructor;
 
 use App\Http\Controllers\Controller;
+use App\Mail\NewConsultationSlotMail;
+use App\Models\CapstoneExpert;
 use App\Models\ConsultationBooking;
+use App\Models\ConsultationSchedule;
+use App\Models\TeamExpertAssignment;
 use App\Services\GoogleCalendarService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 
 class ScheduleController extends Controller
 {
@@ -140,11 +145,40 @@ class ScheduleController extends Controller
             'updated_at' => now(),
         ]);
 
+        $this->notifyTeamsOfNewSlot(ConsultationSchedule::find($id), $expert);
+
         return response()->json([
             'schedule_id' => $id,
             'google_synced' => $googleEventId !== null,
             'is_available' => ! $hasOverlap,
         ]);
+    }
+
+    // Emails every student on every team this expert handles that a new
+    // consultation slot just opened up, showing how often it recurs (e.g.
+    // "Every Monday") rather than just its next date.
+    private function notifyTeamsOfNewSlot(ConsultationSchedule $slot, CapstoneExpert $expert): void
+    {
+        $teams = TeamExpertAssignment::where('expert_id', $expert->expert_id)
+            ->where('status', 'accepted')
+            ->with('team.members')
+            ->get()
+            ->pluck('team')
+            ->filter();
+
+        foreach ($teams as $team) {
+            foreach ($team->members as $student) {
+                if (! $student->email) {
+                    continue;
+                }
+
+                try {
+                    Mail::to($student->email)->queue(new NewConsultationSlotMail($slot, $expert, $team));
+                } catch (\Exception $e) {
+                    Log::warning('New consultation slot email failed', ['error' => $e->getMessage()]);
+                }
+            }
+        }
     }
 
     // PATCH /instructor/schedule/slots/{id}

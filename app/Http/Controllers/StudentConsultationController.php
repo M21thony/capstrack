@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\ConsultationBookedMail;
 use App\Models\ConsultationSchedule;
 use App\Models\ConsultationBooking;
 use App\Models\StudentSchoolYear;
@@ -10,6 +11,7 @@ use App\Services\GoogleCalendarService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 
 class StudentConsultationController extends Controller
 {
@@ -203,6 +205,10 @@ class StudentConsultationController extends Controller
                 ->update(['is_available' => false]);
         }
 
+        if ($team && $slot->expert) {
+            $this->notifyTeamOfBooking($booking, $slot->expert, $team);
+        }
+
         // Fresh occurrence state so the frontend can update the calendar and
         // booking lists in place instead of reloading the page.
         $availableSlots = ConsultationSchedule::where('expert_id', $slot->expert_id)->get();
@@ -220,6 +226,21 @@ class StudentConsultationController extends Controller
                 'team_name' => $team->team_name ?? 'N/A',
             ],
         ]);
+    }
+
+    // Emails every student on the booking team plus the assigned expert that
+    // a consultation was booked, not just the one student who clicked book.
+    private function notifyTeamOfBooking(ConsultationBooking $booking, $expert, Team $team): void
+    {
+        $recipients = $team->members->pluck('email')->filter()->push($expert->email)->unique();
+
+        foreach ($recipients as $email) {
+            try {
+                Mail::to($email)->queue(new ConsultationBookedMail($booking, $expert, $team));
+            } catch (\Exception $e) {
+                \Log::warning('Consultation booked email failed', ['error' => $e->getMessage()]);
+            }
+        }
     }
 
     /**
