@@ -118,6 +118,7 @@ class ScheduleController extends Controller
                     studentEmail: $expert->email,
                     expertEmail: $expert->email,
                     topic: "Weekly {$request->slot_type} slot — {$request->available_date}s",
+                    recurrence: GoogleCalendarService::recurrenceRuleFor($request->recur ?? 'weekly'),
                 );
             } catch (\Exception $e) {
                 \Log::warning('Google Calendar sync failed', ['error' => $e->getMessage()]);
@@ -204,6 +205,7 @@ class ScheduleController extends Controller
                     studentEmail: $expert->email,
                     expertEmail: $expert->email,
                     topic: "Weekly " . ($request->slot_type ?? $slot->slot_type ?? 'consultation') . " slot — {$day}s",
+                    recurrence: GoogleCalendarService::recurrenceRuleFor($slot->recur ?? 'weekly'),
                 );
 
                 DB::table('consultation_schedule')
