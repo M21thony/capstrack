@@ -57,7 +57,8 @@ class GoogleCalendarService
         string $teamName,
         string $studentEmail,
         string $expertEmail,
-        string $topic = ''
+        string $topic = '',
+        ?array $recurrence = null
     ): string {
         $client = $this->getClient($expertId);
 
@@ -94,11 +95,30 @@ class GoogleCalendarService
             ],
         ]);
 
+        // RRULE so a weekly/biweekly slot's placeholder actually repeats on
+        // Google Calendar every future occurrence, instead of being a single
+        // one-off event pinned to whichever date it happened to be created on.
+        if ($recurrence) {
+            $event->setRecurrence($recurrence);
+        }
+
         $created = $service->events->insert('primary', $event, [
             'sendNotifications' => true,
         ]);
 
         return $created->getId();
+    }
+
+    // Maps this app's own recur values to a Google Calendar RRULE. Left
+    // unbounded (no UNTIL) — these slots recur indefinitely until the
+    // instructor deletes them, same as how the app itself treats them.
+    public static function recurrenceRuleFor(?string $recur): ?array
+    {
+        return match ($recur) {
+            'weekly' => ['RRULE:FREQ=WEEKLY'],
+            'biweekly' => ['RRULE:FREQ=WEEKLY;INTERVAL=2'],
+            default => null,
+        };
     }
 
     public function cancelBookingEvent(int $expertId, string $googleEventId): void
