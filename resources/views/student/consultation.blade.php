@@ -277,6 +277,10 @@ const DAY_NAMES = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','
 const expertSlots = @json($availableSlots);
 // This student's own scheduled sessions, by date — drives the "Your Booking" dot.
 const myBookedDates = @json($upcomingBookings->merge($recentBookings)->pluck('session_date')->filter()->map(fn ($d) => $d->format('Y-m-d'))->values());
+// One active booking per team at a time — mirrors the server-side check in
+// StudentConsultationController::book(), so clicking a date short-circuits
+// with a clear toast instead of opening the modal and failing on submit.
+let teamHasActiveBooking = @json($teamHasActiveBooking);
 const slotTypeColors = @json($slotTypeColors);
 
 // Weekly/biweekly slots share a single schedule row across every future
@@ -419,6 +423,11 @@ function onExpertChange() {
 let currentSlotModalDateKey = null;
 
 function selectDate(d, dayName, dateKey) {
+  if (teamHasActiveBooking) {
+    showToast('Your team already has an active consultation booking. You can book another once that session is finished.', 'error');
+    return;
+  }
+
   const expertId = document.getElementById('expertSelect').value;
   if (!expertId) {
     showToast('Please select an expert first.', 'error');
@@ -534,6 +543,7 @@ async function bookSlot(scheduleId) {
       closeSlotModal();
 
       fullOccurrences = new Set(data.fullOccurrences || []);
+      teamHasActiveBooking = true;
       if (dateKey && ! myBookedDates.includes(dateKey)) {
         myBookedDates.push(dateKey);
       }
