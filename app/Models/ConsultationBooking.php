@@ -23,6 +23,7 @@ class ConsultationBooking extends Model
         'schedule_id',
         'session_date',
         'booking_status',
+        'google_event_id',
     ];
 
     protected function casts(): array
