@@ -86,6 +86,14 @@ class StudentConsultationController extends Controller
             ->sortByDesc(fn ($b) => $b->session_date)
             ->values();
 
+        // Team-wide, not just this student's own bookings — one active
+        // booking is allowed per team at a time, across every expert/slot.
+        $teamHasActiveBooking = $teamId
+            ? ConsultationBooking::where('booking_status', 'scheduled')
+                ->whereIn('student_id', StudentSchoolYear::where('team_id', $teamId)->pluck('student_id'))
+                ->exists()
+            : false;
+
         return view('student.consultation', [
             'experts' => $experts,
             'defaultExpertId' => $defaultExpertId,
@@ -95,6 +103,7 @@ class StudentConsultationController extends Controller
             'recentBookings' => $recentBookings,
             'teamId' => $teamId,
             'student' => $student,
+            'teamHasActiveBooking' => $teamHasActiveBooking,
         ]);
     }
 
@@ -105,11 +114,35 @@ class StudentConsultationController extends Controller
             'session_date' => 'nullable|date',
         ]);
 
+        // Refresh statuses first so a session that just ended (but whose row
+        // hasn't been touched since) doesn't wrongly count as still active
+        // below.
+        ConsultationBooking::markPastAsDone();
+
         $student = Auth::user();
 
         $studentYear = StudentSchoolYear::where('student_id', $student->student_id)
             ->orderByDesc('school_year')
             ->first();
+
+        $team = $studentYear ? Team::where('team_id', $studentYear->team_id)->first() : null;
+
+        // One active booking per team at a time, across every expert/slot -
+        // not just this one. Frees up automatically once that booking is
+        // cancelled or its session has passed (markPastAsDone flips it to
+        // 'done' above), no separate "release" step needed.
+        if ($team) {
+            $teamHasActiveBooking = ConsultationBooking::where('booking_status', 'scheduled')
+                ->whereIn('student_id', StudentSchoolYear::where('team_id', $team->team_id)->pluck('student_id'))
+                ->exists();
+
+            if ($teamHasActiveBooking) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Your team already has an active consultation booking. You can book another once that session is finished.',
+                ], 422);
+            }
+        }
 
         $slot = ConsultationSchedule::find($request->schedule_id);
         if (! $slot || ! $slot->is_available) {
@@ -156,8 +189,6 @@ class StudentConsultationController extends Controller
         if ($bookedCount >= $limit) {
             return response()->json(['success' => false, 'message' => 'This slot is fully booked for that date.'], 422);
         }
-
-        $team = Team::where('team_id', $studentYear->team_id)->first();
 
         // Recurring slots share a single schedule row (and a single
         // placeholder Google event, pinned to whatever date it happened to
