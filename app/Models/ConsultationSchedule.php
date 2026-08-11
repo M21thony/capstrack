@@ -86,6 +86,29 @@ class ConsultationSchedule extends Model
     }
 
     /**
+     * Whether $date is actually a valid occurrence of this slot: for a
+     * "once" slot that's just an exact match to specific_date; for weekly/
+     * biweekly it's any on-or-after-today date that falls on the matching
+     * weekday. Used to validate the date a student actually picked in the
+     * calendar, instead of trusting the client or silently defaulting to
+     * "whichever occurrence is nearest today" regardless of what was clicked.
+     */
+    public function isValidOccurrenceDate(string $date): bool
+    {
+        if ($this->recur === 'once') {
+            // The slot's own is_available already governs whether it's
+            // still bookable - specific_date is its one and only occurrence
+            // regardless of how it relates to "today".
+            return $this->specific_date === $date;
+        }
+
+        $parsed = Carbon::parse($date)->startOfDay();
+
+        return ! $parsed->lt(now()->startOfDay())
+            && $parsed->format('l') === $this->available_date;
+    }
+
+    /**
      * Human-readable recurrence, e.g. "Every Monday", "Every other Friday",
      * or "August 14, 2026" for a one-off slot. Used in notification emails
      * so students see how often a slot repeats, not just its next date.

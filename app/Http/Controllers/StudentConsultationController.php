@@ -102,6 +102,7 @@ class StudentConsultationController extends Controller
     {
         $request->validate([
             'schedule_id' => 'required|integer|exists:consultation_schedule,schedule_id',
+            'session_date' => 'nullable|date',
         ]);
 
         $student = Auth::user();
@@ -110,25 +111,37 @@ class StudentConsultationController extends Controller
             ->orderByDesc('school_year')
             ->first();
 
-        $existing = ConsultationBooking::where('student_id', $student->student_id)
-            ->where('schedule_id', $request->schedule_id)
-            ->where('booking_status', 'scheduled')
-            ->exists();
-
-        if ($existing) {
-            return response()->json(['success' => false, 'message' => 'You already booked this slot.'], 422);
-        }
-
         $slot = ConsultationSchedule::find($request->schedule_id);
         if (! $slot || ! $slot->is_available) {
             return response()->json(['success' => false, 'message' => 'This slot is no longer available.'], 422);
         }
 
-        // Captured once, at booking time — the slot's own available_date is
-        // just a weekday name for recurring slots, so re-deriving a date
-        // from it later (e.g. on every page load) drifts forward every week
-        // instead of staying fixed to the session actually booked.
-        $sessionDate = $slot->nextOccurrenceOnOrAfter();
+        // The date the student actually clicked in the calendar. Recurring
+        // slots share one schedule row across every future occurrence of
+        // that weekday, so without this the booking always silently landed
+        // on "whichever occurrence is nearest today" regardless of which one
+        // was picked — falls back to that only for older clients that don't
+        // send it yet.
+        $sessionDate = $request->session_date ?? $slot->nextOccurrenceOnOrAfter();
+
+        if (! $sessionDate || ! $slot->isValidOccurrenceDate($sessionDate)) {
+            return response()->json(['success' => false, 'message' => 'That date is not a valid occurrence of this slot.'], 422);
+        }
+
+        // Scoped by session_date, not just schedule_id — a recurring slot's
+        // schedule_id is shared across every future occurrence, so a student
+        // booking a later date on the same weekly slot is a different
+        // booking, not a duplicate of one they already made for an earlier
+        // occurrence.
+        $existing = ConsultationBooking::where('student_id', $student->student_id)
+            ->where('schedule_id', $request->schedule_id)
+            ->whereDate('session_date', $sessionDate)
+            ->where('booking_status', 'scheduled')
+            ->exists();
+
+        if ($existing) {
+            return response()->json(['success' => false, 'message' => 'You already booked this date.'], 422);
+        }
 
         // Recurring (weekly/biweekly) slots share a single schedule row
         // across every future occurrence of that weekday, so capacity has
@@ -136,7 +149,7 @@ class StudentConsultationController extends Controller
         // one booking would exhaust every future occurrence at once.
         $limit = max(1, (int) ($slot->consultation_limit ?? 1));
         $bookedCount = ConsultationBooking::where('schedule_id', $slot->schedule_id)
-            ->where('session_date', $sessionDate)
+            ->whereDate('session_date', $sessionDate)
             ->where('booking_status', 'scheduled')
             ->count();
 

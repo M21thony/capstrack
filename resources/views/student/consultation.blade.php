@@ -525,6 +525,7 @@ async function bookSlot(scheduleId) {
       },
       body: JSON.stringify({
         schedule_id: scheduleId,
+        session_date: dateKey,
       }),
     });
 
