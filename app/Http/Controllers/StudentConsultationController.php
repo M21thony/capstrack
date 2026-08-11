@@ -142,11 +142,55 @@ class StudentConsultationController extends Controller
             return response()->json(['success' => false, 'message' => 'This slot is fully booked for that date.'], 422);
         }
 
+        $team = Team::where('team_id', $studentYear->team_id)->first();
+
+        // Recurring slots share a single schedule row (and a single
+        // placeholder Google event, pinned to whatever date it happened to
+        // be created on) across every future weekday occurrence. Relabeling
+        // that shared event on every booking would mis-date every occurrence
+        // after the first onto the placeholder's original date, so a
+        // recurring booking instead gets its own event on the actual date
+        // booked; a "once" slot only ever has this one occurrence, so its
+        // existing placeholder IS this session and just gets relabeled.
+        $googleEventId = null;
+
+        if ($slot->recur === 'once') {
+            if ($slot->google_event_id && $team) {
+                try {
+                    $this->calendar->updateBookingEvent(
+                        expertId: $slot->expert_id,
+                        googleEventId: $slot->google_event_id,
+                        teamName: $team->team_name
+                    );
+                    $googleEventId = $slot->google_event_id;
+                } catch (\Exception $e) {
+                    \Log::warning('Google Calendar update failed', ['error' => $e->getMessage()]);
+                }
+            }
+        } elseif ($team && $slot->expert && $slot->expert->google_token) {
+            try {
+                $googleEventId = $this->calendar->createBookingEvent(
+                    expertId: $slot->expert_id,
+                    date: $sessionDate,
+                    startTime: $slot->start_time,
+                    endTime: $slot->end_time,
+                    slotType: $slot->slot_type ? ucfirst($slot->slot_type) : 'Consultation',
+                    teamName: $team->team_name,
+                    studentEmail: $student->email,
+                    expertEmail: $slot->expert->email,
+                    topic: "Consultation booked by team: {$team->team_name}",
+                );
+            } catch (\Exception $e) {
+                \Log::warning('Google Calendar event creation failed', ['error' => $e->getMessage()]);
+            }
+        }
+
         $booking = ConsultationBooking::create([
             'student_id' => $student->student_id,
             'schedule_id' => $request->schedule_id,
             'session_date' => $sessionDate,
             'booking_status' => 'scheduled',
+            'google_event_id' => $googleEventId,
         ]);
 
         // A "once" slot only ever has this single occurrence, so once it's
@@ -157,20 +201,6 @@ class StudentConsultationController extends Controller
         if ($slot->recur === 'once' && $bookedCount + 1 >= $limit) {
             ConsultationSchedule::where('schedule_id', $slot->schedule_id)
                 ->update(['is_available' => false]);
-        }
-
-        $team = Team::where('team_id', $studentYear->team_id)->first();
-
-        if ($slot->google_event_id && $team) {
-            try {
-                $this->calendar->updateBookingEvent(
-                    expertId: $slot->expert_id,
-                    googleEventId: $slot->google_event_id,
-                    teamName: $team->team_name
-                );
-            } catch (\Exception $e) {
-                \Log::warning('Google Calendar update failed', ['error' => $e->getMessage()]);
-            }
         }
 
         // Fresh occurrence state so the frontend can update the calendar and
@@ -239,15 +269,30 @@ class StudentConsultationController extends Controller
             ConsultationSchedule::where('schedule_id', $booking->schedule_id)
                 ->update(['is_available' => true]);
 
-            if ($slot->google_event_id && $slot->expert && $slot->expert->google_token) {
+            if (! $slot->expert || ! $slot->expert->google_token) {
+                return response()->json(['success' => true]);
+            }
+
+            if ($slot->recur === 'once') {
+                if ($slot->google_event_id) {
+                    try {
+                        $this->calendar->updateBookingEvent(
+                            expertId: $slot->expert_id,
+                            googleEventId: $slot->google_event_id,
+                            teamName: 'Available Slot'
+                        );
+                    } catch (\Exception $e) {
+                        \Log::warning('Google Calendar update failed on cancel', ['error' => $e->getMessage()]);
+                    }
+                }
+            } elseif ($booking->google_event_id) {
+                // Recurring occurrence — this booking had its own event
+                // (there's no shared placeholder for this specific date to
+                // fall back to), so remove it entirely rather than relabeling.
                 try {
-                    $this->calendar->updateBookingEvent(
-                        expertId: $slot->expert_id,
-                        googleEventId: $slot->google_event_id,
-                        teamName: 'Available Slot'
-                    );
+                    $this->calendar->cancelBookingEvent($slot->expert_id, $booking->google_event_id);
                 } catch (\Exception $e) {
-                    \Log::warning('Google Calendar update failed on cancel', ['error' => $e->getMessage()]);
+                    \Log::warning('Google Calendar event deletion failed on cancel', ['error' => $e->getMessage()]);
                 }
             }
         }
