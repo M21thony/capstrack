@@ -25,7 +25,7 @@
 
 <!-- ADD/EDIT RUBRIC MODAL -->
 <div class="modal-overlay" id="rubric-modal">
-  <div class="modal-box modal-box-lg">
+  <div class="modal-box modal-box-lg" id="rb-modal-box">
     <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px">
       <div>
         <div class="modal-title" id="modal-form-title">New Rubric</div>
@@ -50,7 +50,7 @@
     </div>
 
     <!-- STEP 1: Rubric Info -->
-    <div id="modal-step-1" style="flex:1;overflow-y:auto;min-height:0">
+    <div id="modal-step-1" style="flex:1">
       <div class="form-group">
         <label class="label">Rubric Name <span class="required-star">*</span></label>
         <input class="input" id="rb-name" placeholder="e.g. Pre-Proposal Defense Rubric"/>
@@ -119,9 +119,17 @@
       <div class="rb-criteria-toolbar" style="flex-shrink:0">
         <div>
           <div style="font-size:13px;font-weight:600;color:var(--text)">Scoring Criteria</div>
-          <div style="font-size:11px;color:var(--text3);margin-top:1px">Each criterion has 4 performance levels. Total must equal 100 pts.</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:1px">Score-level points across all criteria must total exactly 100 pts.</div>
         </div>
-        <div class="rb-pts-badge" id="total-pts-label">0 / 100 pts</div>
+        <div class="rb-pts-status">
+          <div class="rb-pts-badge" id="total-pts-label">0 / 100 pts</div>
+          <div class="rb-pts-hint" id="total-pts-hint">Total points are valid.</div>
+        </div>
+      </div>
+
+      <div class="rb-pts-note" id="total-pts-note">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <span>Total score-level points must equal exactly 100 points before the rubric can be saved.</span>
       </div>
 
       <div id="criteria-list" style="display:flex;flex-direction:column;gap:10px;padding-right:4px;margin-bottom:12px;flex:1;overflow-y:auto;min-height:0;scroll-behavior:smooth"></div>
@@ -136,7 +144,7 @@
           <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
           Back
         </button>
-        <button class="btn btn-primary" onclick="saveRubric()">
+        <button class="btn btn-primary" id="form-save-btn" onclick="saveRubric()">
           <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
           <span id="form-save-label">Save Rubric</span>
         </button>
@@ -270,10 +278,21 @@ const LEVEL_COLORS = ["var(--green)","var(--blue)","var(--amber)","var(--red)"];
 const ITEMS_PER_PAGE = 3;
 let currentPage = 1;
 
+function escHtml(str) {
+  return String(str == null ? '' : str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 let rubrics = [];
 let activeFilter = "all";
 let editingId = null;
 let draftCriteria = [];
+let nameErrors = [];
+let descErrors = [];
 let _tt;
 
 const csrfToken = document.querySelector('meta[name="csrf-token"]');
@@ -313,16 +332,18 @@ function normalizeCriterion(c) {
     id: c.criterion_id,
     name: c.criterion_name,
     maxScore: c.max_points,
-    levels: (c.score_levels || []).map(function(lv) {
-      return { score: lv.score, desc: lv.desc || '' };
+    levels: (c.score_levels || []).map(function(lv, i) {
+      return { label: lv.label || LEVEL_LABELS[i] || '', score: lv.score, desc: lv.desc || '' };
     }),
   };
 }
 
 // ── CRITERION BUILDER ─────────────────────────────────────────────────────────
 function addCriterion(preload) {
-  var crit = preload || { name: '', maxScore: 10, levels: [{ score: '', desc: '' }, { score: '', desc: '' }, { score: '', desc: '' }, { score: '', desc: '' }] };
+  var crit = preload || { name: '', maxScore: 100, levels: LEVEL_LABELS.map(function(label) { return { label: label, score: '', desc: '' }; }) };
   if (!preload) draftCriteria.push(crit);
+  nameErrors = [];
+  descErrors = [];
   renderCriteriaBuilder();
   if (!preload) {
     var list = document.getElementById('criteria-list');
@@ -335,6 +356,8 @@ function addCriterion(preload) {
 
 function removeCriterion(idx) {
   draftCriteria.splice(idx, 1);
+  nameErrors = [];
+  descErrors = [];
   renderCriteriaBuilder();
 }
 
@@ -350,24 +373,29 @@ function renderCriteriaBuilder() {
     return;
   }
   el.innerHTML = draftCriteria.map(function(cr, i) {
-    return '<div class="rb-criterion-card" id="crc-' + i + '">' +
+    var hasNameErr = !!nameErrors[i];
+    return '<div class="rb-criterion-card' + (hasNameErr ? ' rb-card-error' : '') + '" id="crc-' + i + '">' +
       '<div class="rb-criterion-header">' +
       '<div class="rb-crit-num">' + (i + 1) + '</div>' +
-      '<input class="input rb-crit-name-input" value="' + cr.name + '" placeholder="Criterion name (e.g. Oral Presentation)&hellip;" oninput="draftCriteria[' + i + '].name=this.value"/>' +
-      '<div class="rb-maxpts-wrap">' +
-      '<span class="rb-maxpts-label">Max pts</span>' +
-      '<input type="number" class="input rb-maxpts-input" value="' + cr.maxScore + '" min="1" max="100" oninput="draftCriteria[' + i + '].maxScore=+this.value;updateTotalPts()"/>' +
-      '</div>' +
+      '<input class="input rb-crit-name-input' + (hasNameErr ? ' rb-error' : '') + '" value="' + escHtml(cr.name) + '" placeholder="Criterion name (e.g. Oral Presentation)&hellip;" oninput="draftCriteria[' + i + '].name=this.value;clearNameError(' + i + ',this)"/>' +
       '<button onclick="removeCriterion(' + i + ')" class="rb-remove-btn" title="Remove criterion">' +
       '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
       '</button>' +
       '</div>' +
+      (hasNameErr ? '<div class="rb-crit-name-error"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Criterion Name is required.</div>' : '') +
       '<div class="rb-levels-grid">' +
       cr.levels.map(function(lv, li) {
+        var hasDescErr = !!(descErrors[i] && descErrors[i][li]);
         return '<div class="rb-level-card">' +
-          '<div class="rb-level-badge" style="color:' + LEVEL_COLORS[li] + ';background:' + LEVEL_COLORS[li] + '1a">' + LEVEL_LABELS[li] + '</div>' +
-          '<input type="number" class="input rb-score-tiny" value="' + lv.score + '" placeholder="pts" oninput="draftCriteria[' + i + '].levels[' + li + '].score=+this.value" min="0" step="0.25"/>' +
-          '<textarea class="input rb-desc-area" placeholder="Describe this performance level&hellip;" oninput="draftCriteria[' + i + '].levels[' + li + '].desc=this.value">' + lv.desc + '</textarea>' +
+          '<div class="rb-level-label-wrap">' +
+          '<input type="text" class="input rb-level-label-input" style="color:' + LEVEL_COLORS[li] + '" value="' + escHtml(lv.label) + '" placeholder="' + LEVEL_LABELS[li] + '" maxlength="255" oninput="draftCriteria[' + i + '].levels[' + li + '].label=this.value"/>' +
+          '<div class="rb-level-input-wrap">' +
+          '<input type="number" class="input rb-score-tiny" value="' + lv.score + '" placeholder="0" oninput="draftCriteria[' + i + '].levels[' + li + '].score=+this.value;updateTotalPts()" min="0" step="0.25"/>' +
+          '<span class="rb-pts-unit">pts</span>' +
+          '</div>' +
+          '</div>' +
+          '<textarea class="input rb-desc-area' + (hasDescErr ? ' rb-error' : '') + '" placeholder="Describe this performance level&hellip;" oninput="draftCriteria[' + i + '].levels[' + li + '].desc=this.value;clearDescError(' + i + ',' + li + ',this)">' + lv.desc + '</textarea>' +
+          (hasDescErr ? '<div class="rb-level-desc-error" id="ldesc-err-' + i + '-' + li + '"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Performance level description is required.</div>' : '') +
           '</div>';
       }).join('') +
       '</div>' +
@@ -376,12 +404,72 @@ function renderCriteriaBuilder() {
   updateTotalPts();
 }
 
+function clearNameError(i, el) {
+  if (nameErrors[i]) {
+    nameErrors[i] = false;
+    if (el) el.classList.remove('rb-error');
+    var card = document.getElementById('crc-' + i);
+    if (card) {
+      card.classList.remove('rb-card-error');
+      var err = card.querySelector('.rb-crit-name-error');
+      if (err) err.remove();
+    }
+  }
+}
+
+function clearDescError(i, li, el) {
+  if (descErrors[i] && descErrors[i][li]) {
+    descErrors[i][li] = false;
+    if (el) el.classList.remove('rb-error');
+    var err = document.getElementById('ldesc-err-' + i + '-' + li);
+    if (err) err.remove();
+  }
+}
+
+function validateCriterionNames() {
+  nameErrors = draftCriteria.map(function(c) { return !(c.name || '').trim(); });
+  renderCriteriaBuilder();
+  return nameErrors.indexOf(true) === -1;
+}
+
+function validateLevelDescriptions() {
+  descErrors = draftCriteria.map(function(c) {
+    return (c.levels || []).map(function(lv) { return !(lv.desc || '').trim(); });
+  });
+  renderCriteriaBuilder();
+  return descErrors.some(function(errs) { return errs.some(Boolean); }) === false;
+}
+
 function updateTotalPts() {
-  var total = draftCriteria.reduce(function(s, c) { return s + (+c.maxScore || 0); }, 0);
+  var total = draftCriteria.reduce(function(s, c) {
+    return s + (c.levels || []).reduce(function(ss, lv) { return ss + (+lv.score || 0); }, 0);
+  }, 0);
   var lbl = document.getElementById('total-pts-label');
+  var hint = document.getElementById('total-pts-hint');
+  var note = document.getElementById('total-pts-note');
+  var saveBtn = document.getElementById('form-save-btn');
+  var diff = 100 - total;
   if (lbl) {
     lbl.textContent = total + ' / 100 pts';
-    lbl.className = 'rb-pts-badge' + (total === 100 ? ' rb-pts-ok' : total > 100 ? ' rb-pts-over' : '');
+    lbl.className = 'rb-pts-badge' + (total === 100 ? ' rb-pts-ok' : diff > 0 ? ' rb-pts-under' : ' rb-pts-over');
+  }
+  if (note) {
+    note.classList.toggle('show', total !== 100);
+  }
+  if (hint) {
+    if (total === 100) {
+      hint.textContent = 'Total points are valid.';
+      hint.className = 'rb-pts-hint rb-pts-hint-ok';
+    } else if (diff > 0) {
+      hint.textContent = 'Add ' + diff + ' more points.';
+      hint.className = 'rb-pts-hint rb-pts-hint-warn';
+    } else {
+      hint.textContent = 'Reduce ' + (-diff) + ' points.';
+      hint.className = 'rb-pts-hint rb-pts-hint-warn';
+    }
+  }
+  if (saveBtn) {
+    saveBtn.disabled = total !== 100;
   }
 }
 
@@ -397,6 +485,8 @@ function openNewRubricModal() {
   document.getElementById('modal-form-sub').textContent = 'Fill in the details below to create a grading rubric.';
   document.getElementById('form-save-label').textContent = 'Save Rubric';
   draftCriteria = [];
+  nameErrors = [];
+  descErrors = [];
   goToStep1();
   document.getElementById('rubric-modal').classList.add('show');
 }
@@ -413,6 +503,7 @@ document.getElementById('del-modal').addEventListener('click', function(e) {
 });
 
 function goToStep1() {
+  document.getElementById('rb-modal-box').classList.remove('modal-criteria-mode');
   document.getElementById('modal-step-1').style.display = '';
   document.getElementById('modal-step-2').style.display = 'none';
   document.getElementById('step-ind-1').className = 'modal-step active';
@@ -426,6 +517,7 @@ function goToStep2() {
   if (!type) { toast('Select a rubric type.'); return; }
   document.getElementById('modal-step-1').style.display = 'none';
   document.getElementById('modal-step-2').style.display = 'flex';
+  document.getElementById('rb-modal-box').classList.add('modal-criteria-mode');
   document.getElementById('step-ind-1').className = 'modal-step done';
   document.getElementById('step-ind-2').className = 'modal-step active';
   renderCriteriaBuilder();
@@ -445,8 +537,12 @@ async function saveRubric() {
   if (!name) { toast('Enter a rubric name.'); goToStep1(); return; }
   if (!type) { toast('Select a rubric type.'); goToStep1(); return; }
   if (!draftCriteria.length) { toast('Add at least one criterion.'); return; }
-  var total = draftCriteria.reduce(function(s, c) { return s + (+c.maxScore || 0); }, 0);
-  if (total !== 100) { toast('Total must be 100 pts (currently ' + total + ' pts).'); return; }
+  if (!validateCriterionNames()) { toast('Criterion Name is required for every criterion.'); return; }
+  if (!validateLevelDescriptions()) { toast('Performance level description is required for every performance level.'); return; }
+  var total = draftCriteria.reduce(function(s, c) {
+    return s + (c.levels || []).reduce(function(ss, lv) { return ss + (+lv.score || 0); }, 0);
+  }, 0);
+  if (total !== 100) { toast('Total score-level points must equal exactly 100 points (currently ' + total + ').'); return; }
 
   var url, method;
   if (editingId) {
@@ -477,9 +573,9 @@ async function saveRubric() {
       body: JSON.stringify({ criteria: draftCriteria.map(function(c) {
         return {
           criterion_name: c.name,
-          max_points: c.maxScore,
+          max_points: (c.levels || []).reduce(function(ss, lv) { return ss + (+lv.score || 0); }, 0),
           score_levels: JSON.stringify(c.levels.map(function(lv) {
-            return { score: lv.score, desc: lv.desc };
+            return { label: lv.label || '', score: lv.score, desc: lv.desc };
           })),
           sort_order: 0,
         };
@@ -516,22 +612,34 @@ function editRubric(id) {
     if (r.checked) r.closest('.rb-type-opt').classList.add('selected');
   });
   draftCriteria = JSON.parse(JSON.stringify(rb.criteria));
+  nameErrors = [];
+  descErrors = [];
   goToStep1();
   document.getElementById('rubric-modal').classList.add('show');
 }
 
 // ── DELETE via API ────────────────────────────────────────────────────────────
 var pendingDelId = null;
+var isDeleting = false;
 function confirmDelete(id) {
+  isDeleting = false;
   pendingDelId = id;
+  var btn = document.getElementById('del-confirm-btn');
+  btn.disabled = false;
+  btn.textContent = 'Delete';
   var rb = rubrics.find(function(r) { return r.id === id; });
   document.getElementById('del-modal-sub').textContent = '"' + (rb ? rb.name : '') + '" and all its criteria will be permanently deleted.';
   document.getElementById('del-modal').classList.add('show');
-  document.getElementById('del-confirm-btn').onclick = executeDelete;
+  btn.onclick = executeDelete;
 }
 
 async function executeDelete() {
+  if (isDeleting) return;
+  isDeleting = true;
   var id = pendingDelId;
+  var btn = document.getElementById('del-confirm-btn');
+  btn.disabled = true;
+  btn.textContent = 'Deleting...';
   try {
     var res = await fetch('/api/admin/grading-rubrics/' + id, {
       method: 'DELETE',
@@ -539,7 +647,16 @@ async function executeDelete() {
     });
     var json = await res.json();
     if (!res.ok) {
-      toast(json.message || 'Something went wrong.');
+      if (res.status === 404) {
+        closeDelModal();
+        await loadRubrics();
+        toast('Rubric not found. List refreshed.');
+      } else {
+        toast(json.message || 'Something went wrong.');
+        btn.disabled = false;
+        btn.textContent = 'Delete';
+      }
+      isDeleting = false;
       return;
     }
     closeDelModal();
@@ -547,10 +664,20 @@ async function executeDelete() {
     toast('Rubric deleted.');
   } catch (e) {
     toast('Something went wrong.');
+    btn.disabled = false;
+    btn.textContent = 'Delete';
   }
+  isDeleting = false;
 }
 
-function closeDelModal() { document.getElementById('del-modal').classList.remove('show'); }
+function closeDelModal() {
+  isDeleting = false;
+  pendingDelId = null;
+  var btn = document.getElementById('del-confirm-btn');
+  btn.disabled = false;
+  btn.textContent = 'Delete';
+  document.getElementById('del-modal').classList.remove('show');
+}
 
 // ── FILTER ────────────────────────────────────────────────────────────────────
 function filterType(type, btn) {
@@ -609,7 +736,9 @@ function renderList() {
   }
 
   el.innerHTML = paged.map(function(rb) {
-    var total = rb.criteria.reduce(function(s, c) { return s + (+c.maxScore || 0); }, 0);
+    var total = rb.criteria.reduce(function(s, c) {
+      return s + (c.levels || []).reduce(function(ss, lv) { return ss + (+lv.score || 0); }, 0);
+    }, 0);
     var col = TYPE_COLOR[rb.type] || 'var(--text3)';
     var bg = TYPE_BG[rb.type] || 'var(--bg4)';
     return '<div class="card rb-rubric-card" style="padding:0;overflow:hidden">' +
@@ -629,12 +758,12 @@ function renderList() {
         return '<div class="rb-crit-row">' +
           '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">' +
           '<div style="font-size:12px;font-weight:600;color:var(--text)">' + (i + 1) + '. ' + cr.name + '</div>' +
-          '<span style="font-family:\'Space Mono\',monospace;font-size:11px;color:' + col + ';font-weight:700">' + cr.maxScore + ' pts</span>' +
+          '<span style="font-family:\'Space Mono\',monospace;font-size:11px;color:' + col + ';font-weight:700">' + (cr.levels || []).reduce(function(ss, lv) { return ss + (+lv.score || 0); }, 0) + ' pts</span>' +
           '</div>' +
           '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:5px">' +
           cr.levels.map(function(lv, li) {
             return '<div class="rb-level-chip">' +
-              '<div style="font-size:9px;font-weight:700;color:' + LEVEL_COLORS[li] + ';margin-bottom:3px;text-transform:uppercase;letter-spacing:.4px">' + LEVEL_LABELS[li] + '</div>' +
+              '<div style="font-size:9px;font-weight:700;color:' + LEVEL_COLORS[li] + ';margin-bottom:3px;text-transform:uppercase;letter-spacing:.4px">' + escHtml(lv.label || LEVEL_LABELS[li]) + '</div>' +
               '<div class="rb-level-score">' + lv.score + ' pts</div>' +
               '<div class="rb-level-desc">' + lv.desc + '</div>' +
               '</div>';
@@ -925,6 +1054,7 @@ loadRubrics();
   .rb-type-opt-inner { padding: 10px 6px; }
   .rb-levels-grid { grid-template-columns: 1fr; gap: 6px; }
   .rb-criteria-toolbar { flex-direction: column; gap: 8px; align-items: flex-start; }
+  .rb-pts-status { align-items: flex-start; }
   .modal-steps { padding: 10px 12px; }
   .step-connector { width: 24px; margin: 0 4px; }
   .rb-pagination { flex-wrap: wrap; gap: 8px; }
@@ -1019,6 +1149,7 @@ loadRubrics();
   .rb-crit-name-input { font-size: 12px !important; }
   .rb-maxpts-input { width: 54px !important; font-size: 11px !important; }
   .rb-score-tiny { font-size: 11px !important; }
+  .rb-level-label-input { font-size: 11px !important; padding: 5px 7px !important; }
   .rb-desc-area { font-size: 11px !important; min-height: 44px; }
   .rb-level-badge { font-size: 9px; padding: 2px 6px; }
 }
