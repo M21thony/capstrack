@@ -422,6 +422,19 @@ function addMinutesToTime(t, mins) {
   return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
 }
 
+// Minutes since midnight for a 'HH:MM' or 'HH:MM:SS' time string. Overlap
+// checks below compare a slot's server-supplied time (always 'HH:MM:SS',
+// straight from a MySQL TIME column) against an <input type="time"> value
+// (always 'HH:MM', no seconds) — plain string '<'/'>' treats the longer
+// string as greater even when both represent the exact same instant (e.g.
+// '10:00:00' > '10:00'), which misread two back-to-back slots sharing a
+// boundary as overlapping. Comparing as numbers instead fixes that.
+function timeToMinutes(t) {
+  if (!t) return 0;
+  const [h, m] = t.split(':').map(Number);
+  return h * 60 + m;
+}
+
 // Returns true if `s` is happening right now — i.e. its date is today and
 // the current time falls within its start/end window.
 function isSlotOngoing(s, key) {
@@ -433,8 +446,8 @@ function isSlotOngoing(s, key) {
   const sEnd   = s.end_time || s.end;
   if (!sStart || !sEnd) return false;
 
-  const nowHM = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-  return sStart <= nowHM && nowHM < sEnd;
+  const nowMin = now.getHours() * 60 + now.getMinutes();
+  return timeToMinutes(sStart) <= nowMin && nowMin < timeToMinutes(sEnd);
 }
 
 // Returns true if the slot date/time has completely passed.
@@ -447,8 +460,8 @@ function isSlotDone(s, key) {
   const sEnd = s.end_time || s.end;
   if (!sEnd || key !== todayKey) return false;
 
-  const nowHM = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-  return nowHM >= sEnd;
+  const nowMin = now.getHours() * 60 + now.getMinutes();
+  return nowMin >= timeToMinutes(sEnd);
 }
 
 // A slot's display status. 'ongoing' (booked + time reached) takes
@@ -974,10 +987,12 @@ function checkTimeOverlap() {
   }
 
   const daySlots = slots[selectedDate] || [];
+  const startMin = timeToMinutes(start);
+  const endMin = timeToMinutes(end);
   const overlapping = daySlots.filter(s => {
     const sStart = s.start_time || s.start;
     const sEnd = s.end_time || s.end;
-    return sStart < end && sEnd > start;
+    return timeToMinutes(sStart) < endMin && timeToMinutes(sEnd) > startMin;
   });
 
   if (overlapping.length > 0) {
@@ -1026,10 +1041,12 @@ async function saveSlot() {
 
   // Prevent overlap with existing slots on the selected date
   const daySlots = slots[selectedDate] || [];
+  const startMin = timeToMinutes(start);
+  const endMin = timeToMinutes(end);
   const hasOverlap = daySlots.some(s => {
     const sStart = s.start_time || s.start;
     const sEnd = s.end_time || s.end;
-    return sStart < end && sEnd > start;
+    return timeToMinutes(sStart) < endMin && timeToMinutes(sEnd) > startMin;
   });
 
   if (hasOverlap) {
