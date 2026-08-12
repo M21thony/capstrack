@@ -55,6 +55,12 @@
           <div class="sk" style="width:90px;height:11px;border-radius:4px;margin-bottom:14px"></div>
           <div class="sk" style="width:100%;height:96px;border-radius:14px;margin-bottom:20px"></div>
 
+          <!-- File Name / Version -->
+          <div style="display:flex;gap:14px;margin-bottom:20px">
+            <div class="sk" style="flex:1;height:40px;border-radius:8px"></div>
+            <div class="sk" style="flex:1;height:40px;border-radius:8px"></div>
+          </div>
+
           <!-- Submit -->
           <div class="sk" style="width:100%;height:46px;border-radius:8px"></div>
         </div>
@@ -150,6 +156,19 @@
         </div>
       </div>
 
+      <div class="form-section">
+        <div class="doc-info-grid">
+          <div>
+            <label class="pm-label">File Name</label>
+            <div class="pm-value readonly" id="fileNameLabel">No file selected yet</div>
+          </div>
+          <div>
+            <label class="pm-label">Version</label>
+            <div class="pm-value readonly">Version {{ $nextVersion }}</div>
+          </div>
+        </div>
+      </div>
+
       <button class="btn-primary btn-submit" id="submitBtn">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 2 11 13M22 2 15 22l-4-9-9-4 20-7Z"/></svg>
           Submit for Review
@@ -226,6 +245,7 @@ const dropZone = document.getElementById('dropZone');
 const fileInput = document.getElementById('fileInput');
 const dropText = document.getElementById('dropText');
 const dropSub = document.getElementById('dropSub');
+const fileNameLabel = document.getElementById('fileNameLabel');
 
 dropZone.addEventListener('click', () => fileInput.click());
 dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); });
@@ -253,6 +273,7 @@ function handleFile(file) {
   dropZone.classList.add('has-file');
   dropText.textContent = file.name;
   dropSub.textContent = (file.size / (1024 * 1024)).toFixed(2) + ' MB — click to change';
+  fileNameLabel.textContent = file.name;
 }
 
 // -- Subject Adviser folder picker --
