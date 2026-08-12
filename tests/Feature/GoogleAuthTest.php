@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\CapstoneExpert;
 use App\Models\Student;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
@@ -72,6 +73,40 @@ class GoogleAuthTest extends TestCase
             'https://lh3.googleusercontent.com/a/new-photo=s96-c',
             $student->fresh()->p_picture
         );
+    }
+
+    public function test_real_google_callback_backfills_null_avatar_for_existing_expert(): void
+    {
+        $expert = CapstoneExpert::factory()->create([
+            'email' => 'existing.expert@gmail.com',
+            'approved_status' => true,
+            'profile_picture' => null,
+        ]);
+
+        $state = 'expert-backfill-state';
+        $this->withSession(['oauth_state' => $state]);
+
+        Http::fake([
+            'oauth2.googleapis.com/token' => Http::response([
+                'access_token' => 'fake-access-token',
+                'refresh_token' => 'fake-refresh-token',
+                'token_type' => 'Bearer',
+                'expires_in' => 3600,
+            ]),
+            'www.googleapis.com/oauth2/v3/userinfo*' => Http::response([
+                'email' => 'existing.expert@gmail.com',
+                'given_name' => 'Existing',
+                'family_name' => 'Expert',
+                'picture' => 'https://lh3.googleusercontent.com/a/expert-photo=s96-c',
+            ]),
+        ]);
+
+        $this->get("/login/google/callback?state={$state}&code=fake-code")
+            ->assertRedirect('/instructor/dashboard');
+
+        $expert->refresh();
+        $this->assertEquals('https://lh3.googleusercontent.com/a/expert-photo=s96-c', $expert->profile_picture);
+        $this->assertEquals('https://lh3.googleusercontent.com/a/expert-photo=s96-c', $expert->avatarUrl());
     }
 
     public function test_login_route_renders_the_sign_in_page(): void
