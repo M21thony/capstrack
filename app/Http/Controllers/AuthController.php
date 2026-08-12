@@ -104,19 +104,13 @@ class AuthController extends Controller
     {
         $state = $request->input('state');
         if (empty($state) || $state !== session('oauth_state')) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Invalid session state. Please try again.',
-            ], 422);
+            return redirect('/login')->withErrors(['message' => 'Invalid session state. Please try again.']);
         }
         session()->forget('oauth_state');
 
         $code = $request->input('code');
         if (! $code) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Authentication failed. No authorization code returned from Google.',
-            ], 422);
+            return redirect('/login')->withErrors(['message' => 'Authentication failed. No authorization code returned from Google.']);
         }
 
         $http = Http::asForm();
@@ -132,10 +126,7 @@ class AuthController extends Controller
         ]);
 
         if (! $response->successful()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to obtain access token from Google.',
-            ], 422);
+            return redirect('/login')->withErrors(['message' => 'Failed to obtain access token from Google.']);
         }
 
         $accessToken = $response->json('access_token');
@@ -149,10 +140,7 @@ class AuthController extends Controller
         ]);
 
         if (! $userInfoResponse->successful()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to retrieve user information from Google.',
-            ], 422);
+            return redirect('/login')->withErrors(['message' => 'Failed to retrieve user information from Google.']);
         }
 
         $userInfo = $userInfoResponse->json();
@@ -170,10 +158,7 @@ class AuthController extends Controller
         $isExpertDomain = Str::endsWith($email, '@gmail.com');
 
         if (! $isStudentDomain && ! $isExpertDomain) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Access denied. Use @my.cspc.edu.ph (student) or @gmail.com (instructor/admin).',
-            ], 403);
+            return redirect('/login')->withErrors(['message' => 'Access denied. Use @my.cspc.edu.ph (student) or @gmail.com (instructor/admin).']);
         }
 
         if ($isExpertDomain) {

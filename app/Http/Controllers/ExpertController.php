@@ -324,19 +324,13 @@ class ExpertController extends Controller
     {
         $state = $request->input('state');
         if (empty($state) || $state !== session('oauth_state')) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Invalid session state. Please try again.',
-            ], 422);
+            return redirect()->route('login')->withErrors(['message' => 'Invalid session state. Please try again.']);
         }
         session()->forget('oauth_state');
 
         $code = $request->input('code');
         if (! $code) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Authentication failed. No authorization code returned from Google.',
-            ], 422);
+            return redirect()->route('login')->withErrors(['message' => 'Authentication failed. No authorization code returned from Google.']);
         }
 
         $http = Http::asForm();
@@ -352,10 +346,7 @@ class ExpertController extends Controller
         ]);
 
         if (! $response->successful()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to obtain access token from Google.',
-            ], 422);
+            return redirect()->route('login')->withErrors(['message' => 'Failed to obtain access token from Google.']);
         }
 
         $accessToken = $response->json('access_token');
@@ -369,10 +360,7 @@ class ExpertController extends Controller
         ]);
 
         if (! $userInfoResponse->successful()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to retrieve user information from Google.',
-            ], 422);
+            return redirect()->route('login')->withErrors(['message' => 'Failed to retrieve user information from Google.']);
         }
 
         $userInfo = $userInfoResponse->json();
@@ -387,10 +375,7 @@ class ExpertController extends Controller
         }
 
         if (! $email || ! Str::endsWith($email, '@gmail.com')) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Access denied. Only Gmail accounts (@gmail.com) are allowed.',
-            ], 403);
+            return redirect()->route('login')->withErrors(['message' => 'Access denied. Only Gmail accounts (@gmail.com) are allowed.']);
         }
 
         $expert = CapstoneExpert::where('email', $email)->first();
