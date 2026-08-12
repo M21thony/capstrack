@@ -2,10 +2,10 @@
 
 use App\Http\Controllers\Admin\AnnouncementController;
 use App\Http\Controllers\Admin\ArchiveController;
-use App\Http\Controllers\Admin\RubricController;
 use App\Http\Controllers\Api\ActivityLogController;
 use App\Http\Controllers\Api\AdminExpertController;
 use App\Http\Controllers\Api\AdminFinancialController;
+use App\Http\Controllers\Api\AdminGradingRubricController;
 use App\Http\Controllers\Api\InvitationController;
 use App\Http\Controllers\Api\RecruitmentController;
 use App\Http\Controllers\Api\StudentExpertController;
@@ -20,6 +20,19 @@ Route::middleware(['web', 'expert.auth', 'expert.admin'])
         Route::get('/experts', [AdminExpertController::class, 'index'])->name('api.admin.experts.index');
         Route::delete('/experts/{expert}', [AdminExpertController::class, 'destroy'])->name('api.admin.experts.destroy');
         Route::post('/turnover', [AdminExpertController::class, 'transferRights'])->name('api.admin.turnover');
+
+        // Grading Rubrics
+        Route::prefix('grading-rubrics')->name('api.admin.grading-rubrics.')->group(function () {
+            Route::get('/', [AdminGradingRubricController::class, 'index'])->name('index');
+            Route::get('/{gradingRubric}', [AdminGradingRubricController::class, 'show'])->name('show');
+            Route::post('/', [AdminGradingRubricController::class, 'store'])->name('store');
+            Route::put('/{gradingRubric}', [AdminGradingRubricController::class, 'update'])->name('update');
+            Route::delete('/{gradingRubric}', [AdminGradingRubricController::class, 'destroy'])->name('destroy');
+            Route::post('/{gradingRubric}/criteria', [AdminGradingRubricController::class, 'storeCriterion'])->name('criteria.store');
+            Route::put('/{gradingRubric}/criteria/{rubricCriterion}', [AdminGradingRubricController::class, 'updateCriterion'])->name('criteria.update');
+            Route::delete('/{gradingRubric}/criteria/{rubricCriterion}', [AdminGradingRubricController::class, 'destroyCriterion'])->name('criteria.destroy');
+            Route::post('/{gradingRubric}/criteria/sync', [AdminGradingRubricController::class, 'syncCriteria'])->name('criteria.sync');
+        });
 
         // Financial Records
         Route::prefix('financial')->name('api.admin.financial.')->group(function () {
@@ -40,10 +53,6 @@ Route::middleware(['web', 'expert.auth', 'expert.admin'])
         Route::put('/announcements/{announcement}', [AnnouncementController::class, 'update'])->name('api.admin.announcements.update');
         Route::delete('/announcements/{announcement}', [AnnouncementController::class, 'destroy'])->name('api.admin.announcements.destroy');
         Route::post('/announcements/{announcement}/verify-submission', [AnnouncementController::class, 'verifySubmission'])->name('api.admin.announcements.verify-submission');
-
-        Route::post('/rubrics', [RubricController::class, 'store'])->name('api.admin.rubrics.store');
-        Route::put('/rubrics/{rubric}', [RubricController::class, 'update'])->name('api.admin.rubrics.update');
-        Route::delete('/rubrics/{rubric}', [RubricController::class, 'destroy'])->name('api.admin.rubrics.destroy');
 
         Route::post('/archive', [ArchiveController::class, 'store'])->name('api.admin.archive.store');
         Route::put('/archive/{archive}', [ArchiveController::class, 'update'])->name('api.admin.archive.update');

@@ -5,8 +5,8 @@ use App\Http\Controllers\Admin\AnalyticsController as AdminAnalyticsController;
 use App\Http\Controllers\Admin\AnnouncementController;
 use App\Http\Controllers\Admin\ArchiveController as AdminArchiveController;
 use App\Http\Controllers\Admin\GoogleDriveController;
+use App\Http\Controllers\Admin\GradingRubricController;
 use App\Http\Controllers\Admin\ResourcesController;
-use App\Http\Controllers\Admin\RubricController;
 use App\Http\Controllers\AdminApprovalController;
 use App\Http\Controllers\AdminDashboardController;
 use App\Http\Controllers\AdminExpertsController;
@@ -68,7 +68,7 @@ Route::middleware(['expert.auth', 'expert.admin', 'no.cache', 'track.expert'])->
     Route::get('/archive', [AdminArchiveController::class, 'index'])->name('archive');
     Route::get('/announcements', [AnnouncementController::class, 'index'])->name('announcements');
     Route::get('/resources', [ResourcesController::class, 'index'])->name('resources');
-    Route::get('/rubric_management', [RubricController::class, 'index'])->name('rubric_management');
+    Route::get('/rubric_management', [GradingRubricController::class, 'index'])->name('rubric_management');
     Route::get('/activitylog', [AdminActivityLogController::class, 'index'])->name('activitylog');
     Route::post('/notifications/seen', function (Request $request) {
         $ids = $request->input('ids', []);

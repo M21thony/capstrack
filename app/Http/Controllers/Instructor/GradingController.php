@@ -4,8 +4,8 @@ namespace App\Http\Controllers\Instructor;
 
 use App\Http\Controllers\Controller;
 use App\Models\CapstoneExpert;
+use App\Models\GradingRubric;
 use App\Models\Role;
-use App\Models\Rubric;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
 use App\Models\TeamExpertAssignment;
@@ -46,7 +46,7 @@ class GradingController extends Controller
                 ];
             });
 
-        $rubrics = Rubric::with('criteria')->orderByDesc('created_at')->get();
+        $rubrics = GradingRubric::with('criteria')->orderByDesc('created_at')->get();
 
         return view('instructor.grading', [
             'isPanel' => true,

@@ -424,7 +424,7 @@ textarea.input{resize:vertical;min-height:80px}
 .rb-crit-name-input{font-weight:600}
 
 /* Level input pair */
-.rb-level-input-wrap{display:flex;gap:5px;align-items:center}
+.rb-level-input-wrap{display:flex;gap:5px;align-items:center;flex-shrink:0}
 .rb-score-tiny{width:58px!important;flex-shrink:0;text-align:center;font-family:'Space Mono',monospace;font-size:11px!important;padding:6px 6px!important}
 .rb-desc-tiny{flex:1;font-size:11px!important;padding:6px 8px!important}
 
@@ -878,11 +878,11 @@ textarea.input{resize:vertical;min-height:80px}
 .tab-btn.active{background:#fff;color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.09);font-weight:600}
 
 /* ── PAGE HEADER ── */
-.rb-page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:12px}
-.rb-stat-strip{display:flex;align-items:center;gap:0;background:#fff;border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.04)}
-.rb-stat-item{padding:12px 20px;display:flex;flex-direction:column;gap:2px}
-.rb-stat-n{font-family:"Space Mono",monospace;font-size:20px;font-weight:700;line-height:1}
-.rb-stat-l{font-size:10px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap}
+.rb-page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px}
+.rb-stat-strip{display:flex;align-items:center;gap:0;background:#fff;border:1px solid var(--border);border-radius:14px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.05)}
+.rb-stat-item{padding:16px 24px;display:flex;flex-direction:column;gap:4px;transition:all .2s ease}
+.rb-stat-n{font-family:"Space Mono",monospace;font-size:24px;font-weight:700;line-height:1.1}
+.rb-stat-l{font-size:11px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.6px;white-space:nowrap}
 .rb-stat-divider{width:1px;height:36px;background:var(--border);flex-shrink:0}
 
 /* ── TAB HEADER (new rubric-specific tab row) ── */
@@ -895,26 +895,27 @@ textarea.input{resize:vertical;min-height:80px}
 .rb-tab-count{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;background:rgba(255,255,255,.15);border-radius:9px;font-size:10px;font-weight:700;font-family:"Space Mono",monospace}
 .rb-tab-btn:not(.active) .rb-tab-count{background:var(--bg4);color:var(--text3)}
 .rb-tab-search{display:flex;align-items:center;gap:8px;padding:10px 14px;border-left:1px solid var(--border);flex-shrink:0}
-.rb-search-input{border:none;outline:none;background:transparent;font-size:13px;font-family:"DM Sans",sans-serif;color:var(--text);width:190px}
+.rb-search-input{border:none;outline:none;background:transparent;font-size:13px;font-family:"DM Sans",sans-serif;color:var(--text);width:190px;transition:width .2s ease}
 .rb-search-input::placeholder{color:var(--text3)}
+.rb-search-input:focus{width:260px}
 
 /* ── PAGINATION ── */
-.rb-pagination{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-top:1px solid var(--border);background:var(--bg3)}
+.rb-pagination{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-top:1px solid var(--border);background:var(--bg3)}
 .rb-pg-btns{display:flex;align-items:center;gap:4px}
 .rb-pg-pages{display:flex;gap:3px}
-.rb-pg-btn{width:30px;height:30px;border-radius:7px;border:1.5px solid var(--border);background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text2);transition:all .15s}
-.rb-pg-btn:hover:not(:disabled){border-color:var(--accent);color:var(--accent3)}
+.rb-pg-btn{width:30px;height:30px;border-radius:8px;border:1.5px solid var(--border);background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text2);transition:all .2s ease}
+.rb-pg-btn:hover:not(:disabled){border-color:var(--accent);color:var(--accent3);transform:translateY(-1px);box-shadow:0 2px 8px rgba(0,0,0,.06)}
 .rb-pg-btn:disabled{opacity:.35;cursor:not-allowed}
-.rb-pg-num{width:30px;height:30px;border-radius:7px;border:1.5px solid var(--border);background:#fff;cursor:pointer;font-size:12px;font-weight:600;color:var(--text2);transition:all .15s;font-family:"Space Mono",monospace}
-.rb-pg-num:hover:not(.active){border-color:var(--accent);color:var(--accent3)}
-.rb-pg-num.active{background:var(--navy-dark);border-color:var(--navy-dark);color:#fff}
+.rb-pg-num{width:30px;height:30px;border-radius:8px;border:1.5px solid var(--border);background:#fff;cursor:pointer;font-size:12px;font-weight:600;color:var(--text2);transition:all .2s ease;font-family:"Space Mono",monospace}
+.rb-pg-num:hover:not(.active){border-color:var(--accent);color:var(--accent3);transform:translateY(-1px);box-shadow:0 2px 8px rgba(0,0,0,.06)}
+.rb-pg-num.active{background:var(--navy-dark);border-color:var(--navy-dark);color:#fff;box-shadow:0 2px 8px rgba(0,0,0,.15)}
 
 /* ── EMPTY STATE ── */
 .rb-empty-state{text-align:center;padding:48px 24px}
 
 /* ── RUBRIC CARD ── */
-.rb-rubric-card{transition:box-shadow .15s}
-.rb-rubric-card:hover{box-shadow:0 4px 18px rgba(0,0,0,.08)}
+.rb-rubric-card{border:1px solid var(--border);border-radius:14px;transition:box-shadow .25s ease,transform .25s ease}
+.rb-rubric-card:hover{box-shadow:0 8px 28px rgba(0,0,0,.1);transform:translateY(-2px)}
 .rb-rubric-header{display:flex;align-items:flex-start;gap:14px;padding:16px 18px;border-bottom:1px solid var(--border)}
 .rb-rubric-footer{display:flex;align-items:center;gap:8px;padding:10px 18px;border-top:1px solid var(--border);background:var(--bg3);border-radius:0 0 14px 14px}
 .rb-crit-row{padding:12px 0;border-bottom:1px solid var(--border)}
@@ -924,13 +925,18 @@ textarea.input{resize:vertical;min-height:80px}
 .rb-level-desc{font-size:10.5px;color:var(--text3);line-height:1.4}
 .rb-btn-danger{display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border-radius:9px;font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;border:1.5px solid rgba(220,38,38,0.2);background:transparent;color:var(--red);font-family:"DM Sans",sans-serif}
 .rb-btn-danger:hover{background:var(--red);color:#fff;border-color:var(--red)}
+.rb-btn-danger:disabled{opacity:.55;cursor:not-allowed}
+.rb-btn-danger:disabled:hover{background:transparent;color:var(--red);border-color:rgba(220,38,38,0.2)}
 .rb-btn-danger svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2.5}
 
 /* ── ADD/EDIT MODAL ── */
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:100;display:none;align-items:center;justify-content:center;padding:20px}
 .modal-overlay.show{display:flex}
-.modal-box{background:#fff;border-radius:16px;padding:24px;width:340px;box-shadow:0 20px 60px rgba(0,0,0,.2);border:1px solid var(--border)}
-.modal-box-lg{width:min(700px,100%);max-height:90vh;overflow-y:auto}
+.modal-box{background:#fff;border-radius:18px;padding:24px;width:340px;box-shadow:0 24px 80px rgba(0,0,0,.25);border:1px solid var(--border)}
+.modal-box-lg{width:min(720px,100%);display:flex;flex-direction:column}
+#rubric-modal{overflow-y:auto;align-items:flex-start}
+#rubric-modal .modal-box-lg{margin:auto}
+#rubric-modal .modal-box-lg.modal-criteria-mode{max-height:90vh;overflow:hidden}
 .modal-icon-wrap{width:40px;height:40px;background:var(--red-bg);border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:12px}
 .modal-title{font-size:15px;font-weight:700;color:var(--text);margin-bottom:6px}
 .modal-sub{font-size:13px;color:var(--text3);line-height:1.5;margin-bottom:20px}
@@ -972,16 +978,29 @@ textarea.input{resize:vertical;min-height:80px}
 
 /* ── CRITERIA TOOLBAR ── */
 .rb-criteria-toolbar{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--bg3);border-radius:9px;margin-bottom:12px}
+.rb-pts-status{display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0}
 .rb-pts-badge{font-family:"Space Mono",monospace;font-size:12px;font-weight:700;padding:4px 10px;border-radius:20px;background:var(--bg4);color:var(--text3);border:1.5px solid var(--border);transition:all .2s}
 .rb-pts-badge.rb-pts-ok{background:var(--green-bg);color:var(--green);border-color:rgba(22,163,74,.25)}
 .rb-pts-badge.rb-pts-over{background:var(--red-bg);color:var(--red);border-color:rgba(220,38,38,.25)}
+.rb-pts-badge.rb-pts-under{background:rgba(201,168,44,.12);color:var(--amber);border-color:rgba(201,168,44,.3)}
+.rb-pts-hint{font-size:11px;font-weight:500;line-height:1.2}
+.rb-pts-hint-ok{color:var(--green)}
+.rb-pts-hint-warn{color:var(--amber)}
+.rb-pts-note{display:none;align-items:flex-start;gap:8px;padding:10px 12px;border-radius:9px;background:var(--red-bg);border:1px solid rgba(220,38,38,.3);color:var(--red);font-size:12px;font-weight:600;line-height:1.45;margin-bottom:12px;flex-shrink:0}
+.rb-pts-note.show{display:flex}
+.rb-pts-note svg{flex-shrink:0;margin-top:2px}
+.btn:disabled{opacity:.55;cursor:not-allowed;pointer-events:none}
 
 /* ── CRITERION CARD (in modal) ── */
 .rb-criterion-card{background:var(--bg3);border:1.5px solid var(--border);border-radius:10px;padding:14px;transition:border-color .15s}
 .rb-criterion-card:focus-within{border-color:rgba(201,168,44,.4)}
+.rb-criterion-card.rb-card-error{border-color:rgba(220,38,38,.5)}
 .rb-criterion-header{display:flex;align-items:center;gap:8px;margin-bottom:12px}
 .rb-crit-num{width:22px;height:22px;border-radius:50%;background:var(--accent);color:#18191f;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .rb-crit-name-input{flex:1;font-size:13px;font-weight:600;padding:8px 10px!important}
+.rb-crit-name-input.rb-error{border-color:var(--red)!important}
+.rb-crit-name-error{display:flex;align-items:flex-start;gap:6px;margin:-6px 0 12px 30px;font-size:11px;font-weight:600;color:var(--red);line-height:1.35}
+.rb-crit-name-error svg{flex-shrink:0;margin-top:1px}
 .rb-maxpts-wrap{display:flex;align-items:center;gap:6px;flex-shrink:0}
 .rb-maxpts-label{font-size:11px;color:var(--text3);white-space:nowrap}
 .rb-maxpts-input{width:64px!important;font-size:12px!important;padding:8px 8px!important;text-align:center;font-family:"Space Mono",monospace}
@@ -993,8 +1012,15 @@ textarea.input{resize:vertical;min-height:80px}
 .rb-level-card{background:#fff;border:1.5px solid var(--border);border-radius:8px;padding:10px;display:flex;flex-direction:column;gap:6px;transition:border-color .15s}
 .rb-level-card:focus-within{border-color:rgba(201,168,44,.5)}
 .rb-level-badge{font-size:10px;font-weight:700;padding:3px 8px;border-radius:5px;width:fit-content;text-transform:uppercase;letter-spacing:.4px}
+.rb-level-label-wrap{display:flex;align-items:center;gap:8px;min-width:0}
+.rb-level-label-input{flex:1;min-width:0;font-size:12px!important;font-weight:600;padding:6px 9px!important;text-transform:uppercase;letter-spacing:.3px}
+.rb-level-label-input::placeholder{color:inherit;opacity:.65}
+.rb-pts-unit{font-size:10px;font-weight:600;color:var(--text3);flex-shrink:0;white-space:nowrap}
 .rb-score-tiny{font-family:"Space Mono",monospace;font-size:12px!important;padding:6px 8px!important;text-align:center}
 .rb-desc-area{font-size:12px!important;padding:7px 9px!important;min-height:56px;resize:vertical;line-height:1.4}
+.rb-desc-area.rb-error{border-color:var(--red)!important}
+.rb-level-desc-error{display:flex;align-items:flex-start;gap:5px;font-size:11px;font-weight:600;color:var(--red);line-height:1.35;margin-top:1px}
+.rb-level-desc-error svg{flex-shrink:0;margin-top:1px}
 
 /* ── EMPTY CRITERIA ── */
 .rb-empty-criteria{text-align:center;padding:28px;border:2px dashed var(--border);border-radius:10px}
