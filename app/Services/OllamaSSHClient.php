@@ -46,8 +46,18 @@ class OllamaSSHClient
         // meaningful size (e.g. enrichWithReasons' ~20-document prompt),
         // silently failing every "AI reason" and falling back to the
         // generic "Semantically similar based on vector embedding analysis."
+        // Must stay comfortably under PHP's own max_execution_time (120s on
+        // this server - confirmed via storage/logs/laravel.log entries like
+        // "Maximum execution time of 120 seconds exceeded" at SSH2.php).
+        // A longer SSH timeout than that is pointless: PHP's hard fatal
+        // fires first, and a FatalError isn't a \Throwable subtype that
+        // ordinary `catch (\Exception $e)` blocks can catch - it bypasses
+        // DuplicationController/AdminGradingRubricController's error
+        // handling entirely and Laravel serves its raw HTML error page,
+        // which the frontend then reports as "Server returned an error
+        // page" instead of a real message.
         $ssh = new SFTP($host, $port);
-        $ssh->setTimeout(300);
+        $ssh->setTimeout(90);
         $key = PublicKeyLoader::load(file_get_contents($keyPath));
 
         if (! $ssh->login($user, $key)) {
