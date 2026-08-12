@@ -21,7 +21,7 @@ class EnsureExpertIsAuthenticated
                 if ($removedData) {
                     cache()->forget('expert_removed_'.$storedExpertId);
 
-                    return redirect('/?removed_expert=1&name='.urlencode($removedData['name']).'&reason='.urlencode($removedData['reason']));
+                    return redirect('/login?removed_expert=1&name='.urlencode($removedData['name']).'&reason='.urlencode($removedData['reason']));
                 }
             }
 

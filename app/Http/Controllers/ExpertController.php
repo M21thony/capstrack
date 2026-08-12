@@ -15,7 +15,8 @@ class ExpertController extends Controller
 {
     public function login()
     {
-        return redirect('/');
+        // Experts and students share the same sign-in page.
+        return redirect()->route('login');
     }
 
     public function showRequestForm(Request $request)
