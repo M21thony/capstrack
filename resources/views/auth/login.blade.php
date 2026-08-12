@@ -507,7 +507,7 @@
   <div class="brand-mid">
     <p class="eyebrow">CSPC · College of Computer Studies</p>
     <h1 class="headline">Centralized <em>Capstone</em> Management</h1>
-    <p class="subhead">Form your team, get matched with an adviser, and track your capstone through to final defense.</p>
+    <p class="subhead">Form your team, apply to an adviser, and track your capstone through to final defense.</p>
 
     <div class="feature-grid">
       <div class="feature">
@@ -520,7 +520,7 @@
       <div class="feature">
         <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 1 0-16 0"/></svg>
         <div>
-          <p class="feature-label">Expert Matching</p>
+          <p class="feature-label">Expert Applications</p>
           <p class="feature-desc">Apply to advisers, consultants, and grammarians.</p>
         </div>
       </div>
