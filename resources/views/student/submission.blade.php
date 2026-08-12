@@ -257,7 +257,7 @@ function handleFile(file) {
 
 // -- Subject Adviser folder picker --
 // Only present when Subject Adviser is one of the assigned recipients (see
-// the @if in the blade above). Fetches the adviser's named folders and
+// the condition in the blade above). Fetches the adviser's named folders and
 // shows the picker only if they've actually set any up - otherwise the
 // submission just goes to the default per-team folder, same as any other
 // recipient.
