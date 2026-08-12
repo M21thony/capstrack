@@ -146,4 +146,98 @@ class SubmissionControllerTest extends TestCase
         $response->assertOk();
         $response->assertJson(['folders' => []]);
     }
+
+    public function test_version_only_increments_for_resubmissions_of_the_same_named_file(): void
+    {
+        Storage::fake('local');
+
+        $team = Team::create([
+            'team_name' => 'Team Gamma',
+            'project_title' => 'Gamma Project',
+            'team_status' => 'on-going',
+        ]);
+
+        $student = Student::factory()->withCompleteProfile()->create();
+
+        StudentSchoolYear::create([
+            'student_id' => $student->student_id,
+            'team_id' => $team->team_id,
+            'program' => 'BSCS',
+        ]);
+
+        $adviserRoleId = $this->makeRole('Adviser');
+        $adviserId = $this->makeExpert(['email' => 'adviser2@gmail.com', 'first_name' => 'Ada', 'last_name' => 'Adviser']);
+        DB::table('expert_roles')->insert(['expert_id' => $adviserId, 'role_id' => $adviserRoleId]);
+        DB::table('capstone_expert_application')->insert([
+            'team_id' => $team->team_id,
+            'expert_id' => $adviserId,
+            'status' => 'accepted',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $submit = fn (string $fileName) => $this->actingAs($student)->post(route('student.submission.store'), [
+            'file' => UploadedFile::fake()->create($fileName, 50, 'application/pdf'),
+            'recipients' => ['adviser'],
+        ]);
+
+        // Same file name resubmitted: version bumps to 2.
+        $submit('Chapter 1.pdf')->assertOk();
+        $submit('Chapter 1.pdf')->assertOk();
+
+        // A differently-named file: unrelated document, starts at version 1
+        // rather than continuing from Chapter 1's version 2.
+        $submit('Chapter 2.pdf')->assertOk();
+
+        $chapterOneVersions = CapstoneDocument::where('file_name', 'Chapter 1')->orderBy('file_version')->pluck('file_version')->all();
+        $this->assertSame([1, 2], $chapterOneVersions);
+
+        $chapterTwoVersion = CapstoneDocument::where('file_name', 'Chapter 2')->value('file_version');
+        $this->assertSame(1, $chapterTwoVersion);
+    }
+
+    public function test_next_version_endpoint_reflects_matching_filename_only(): void
+    {
+        Storage::fake('local');
+
+        $team = Team::create([
+            'team_name' => 'Team Delta',
+            'project_title' => 'Delta Project',
+            'team_status' => 'on-going',
+        ]);
+
+        $student = Student::factory()->withCompleteProfile()->create();
+
+        StudentSchoolYear::create([
+            'student_id' => $student->student_id,
+            'team_id' => $team->team_id,
+            'program' => 'BSCS',
+        ]);
+
+        $adviserRoleId = $this->makeRole('Adviser');
+        $adviserId = $this->makeExpert(['email' => 'adviser3@gmail.com', 'first_name' => 'Ada', 'last_name' => 'Adviser']);
+        DB::table('expert_roles')->insert(['expert_id' => $adviserId, 'role_id' => $adviserRoleId]);
+        DB::table('capstone_expert_application')->insert([
+            'team_id' => $team->team_id,
+            'expert_id' => $adviserId,
+            'status' => 'accepted',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->actingAs($student)->post(route('student.submission.store'), [
+            'file' => UploadedFile::fake()->create('Final Draft.pdf', 50, 'application/pdf'),
+            'recipients' => ['adviser'],
+        ])->assertOk();
+
+        $this->actingAs($student)
+            ->get(route('student.submission.next-version', ['title' => 'Final Draft']))
+            ->assertOk()
+            ->assertJson(['version' => 2]);
+
+        $this->actingAs($student)
+            ->get(route('student.submission.next-version', ['title' => 'Something Else']))
+            ->assertOk()
+            ->assertJson(['version' => 1]);
+    }
 }
