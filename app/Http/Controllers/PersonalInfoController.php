@@ -22,7 +22,6 @@ class PersonalInfoController extends Controller
 
         return view('student.personal-info', [
             'student' => $student,
-            'presets' => config('avatars.presets', []),
             'isEditing' => false,
             'hasTeam' => false,
             'autoFillFirstName' => $student->f_name,
@@ -44,7 +43,6 @@ class PersonalInfoController extends Controller
 
         return view('student.personal-info', [
             'student' => $student,
-            'presets' => config('avatars.presets', []),
             'isEditing' => true,
             'hasTeam' => $hasTeam,
             'autoFillFirstName' => $student->f_name,
@@ -62,12 +60,12 @@ class PersonalInfoController extends Controller
             && StudentSchoolYear::where('student_id', $student->student_id)->whereNotNull('team_id')->exists();
 
         if ($hasTeam) {
-            $student->p_picture = $validated['avatar'];
-            $student->save();
-
+            // Every field is locked while in a team (avatar included — it's
+            // synced automatically from Google at login), so there's
+            // nothing left for this submission to do.
             return redirect()
                 ->route('student.dashboard')
-                ->with('status', 'Your avatar has been updated.');
+                ->with('status', 'Your profile is locked while you\'re in a team.');
         }
 
         $student->f_name = $validated['first_name'];
@@ -77,7 +75,6 @@ class PersonalInfoController extends Controller
         $student->student_number = $validated['student_id'];
         $student->course = $validated['course'];
         $student->year_section = $validated['year'].' · '.strtoupper(substr($validated['section'], 0, 1));
-        $student->p_picture = $validated['avatar'];
 
         $student->save();
 

@@ -46,9 +46,7 @@ class Student extends Authenticatable
     {
         return filled($this->f_name)
             && filled($this->l_name)
-            && filled($this->student_number)
-            && filled($this->p_picture)
-            && $this->hasValidAvatarPreset();
+            && filled($this->student_number);
     }
 
     public function hasValidAvatarPreset(): bool
@@ -61,13 +59,24 @@ class Student extends Authenticatable
         return $this->last_seen_at && $this->last_seen_at->gt(now()->subMinutes(5));
     }
 
+    /**
+     * Normally the Google account photo captured at login. Older accounts
+     * may still carry a preset key from before avatars were tied to email
+     * — keep serving those locally until their next login refreshes it.
+     */
     public function avatarUrl(): string
     {
-        if ($this->hasValidAvatarPreset()) {
-            $path = public_path('images/avatars/'.$this->p_picture.'.svg');
+        if (filled($this->p_picture)) {
+            if (filter_var($this->p_picture, FILTER_VALIDATE_URL)) {
+                return $this->p_picture;
+            }
 
-            if (file_exists($path)) {
-                return asset('images/avatars/'.$this->p_picture.'.svg');
+            if ($this->hasValidAvatarPreset()) {
+                $path = public_path('images/avatars/'.$this->p_picture.'.svg');
+
+                if (file_exists($path)) {
+                    return asset('images/avatars/'.$this->p_picture.'.svg');
+                }
             }
         }
 

@@ -3,14 +3,12 @@
     $selectedYear = $yearParts[0] ?? '4th Year';
     $selectedSection = $yearParts[1] ?? '';
     $startStep = 1;
-    if ($errors->has('avatar')) {
+    if ($errors->hasAny(['first_name', 'last_name', 'student_id'])) {
         $startStep = 2;
-    } elseif ($errors->hasAny(['first_name', 'last_name', 'student_id'])) {
-        $startStep = 3;
     } elseif ($errors->hasAny(['course', 'year', 'section'])) {
-        $startStep = 4;
+        $startStep = 3;
     }
-    $totalSteps = 4;
+    $totalSteps = 3;
 @endphp
 
 <style>
@@ -87,43 +85,7 @@
         <section class="pi-wizard-panel {{ $startStep === 2 ? 'active' : '' }}" data-step="2" aria-labelledby="pi-section-2">
             <div class="pi-section-head">
                 <span class="pi-step" aria-hidden="true">2</span>
-                <h2 class="pi-section-title" id="pi-section-2">Choose your avatar</h2>
-            </div>
-            <p class="pi-hint">Tap a preset avatar. Custom uploads are not allowed.</p>
-            
-            <div class="tutorial-note {{ $hasTeam ? 'warn' : '' }}">
-                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="12" cy="12" r="10"></circle>
-                    <line x1="12" y1="16" x2="12" y2="12"></line>
-                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
-                </svg>
-                <div>
-                    @if ($hasTeam)
-                        <strong>Avatar is editable:</strong> Since you're in a capstone team, you can only update your avatar here. Other profile fields are locked — contact your program coordinator or registrar to update personal or academic records.
-                    @else
-                        <strong>Tip:</strong> Choose an avatar that represents you! This profile icon is visible to your capstone team members, panel, and advisers.
-                    @endif
-                </div>
-            </div>
-
-            <div class="pi-avatar-grid" role="radiogroup" aria-label="Preset avatar">
-                @foreach ($presets as $key => $preset)
-                    <label class="pi-avatar-option {{ old('avatar', $student->p_picture) === $key ? 'selected' : '' }}" aria-label="{{ $preset['label'] }} avatar">
-                        <input type="radio" name="avatar" value="{{ $key }}" {{ old('avatar', $student->p_picture) === $key ? 'checked' : '' }}>
-                        <img src="{{ asset('images/avatars/'.$key.'.svg') }}" alt="">
-                        <span>{{ $preset['label'] }}</span>
-                    </label>
-                @endforeach
-            </div>
-            @error('avatar')
-                <p class="pi-error">{{ $message }}</p>
-            @enderror
-        </section>
-
-        <section class="pi-wizard-panel {{ $startStep === 3 ? 'active' : '' }}" data-step="3" aria-labelledby="pi-section-3">
-            <div class="pi-section-head">
-                <span class="pi-step" aria-hidden="true">3</span>
-                <h2 class="pi-section-title" id="pi-section-3">Personal details</h2>
+                <h2 class="pi-section-title" id="pi-section-2">Personal details</h2>
             </div>
             @if ($hasTeam)
                 <div class="tutorial-note locked">
@@ -181,10 +143,10 @@
             </div>
         </section>
 
-        <section class="pi-wizard-panel {{ $startStep === 4 ? 'active' : '' }}" data-step="4" aria-labelledby="pi-section-4">
+        <section class="pi-wizard-panel {{ $startStep === 3 ? 'active' : '' }}" data-step="3" aria-labelledby="pi-section-3">
             <div class="pi-section-head">
-                <span class="pi-step" aria-hidden="true">4</span>
-                <h2 class="pi-section-title" id="pi-section-4">Academic information</h2>
+                <span class="pi-step" aria-hidden="true">3</span>
+                <h2 class="pi-section-title" id="pi-section-3">Academic information</h2>
             </div>
             @if ($hasTeam)
                 <div class="tutorial-note locked">
@@ -265,13 +227,12 @@
     if (!form) return;
 
     var hasTeam = @json($hasTeam);
-    var total = parseInt(form.dataset.totalSteps, 10) || 4;
+    var total = parseInt(form.dataset.totalSteps, 10) || 3;
     var step = parseInt(form.dataset.startStep, 10) || 1;
     var stepNames = {
         1: 'Account',
-        2: 'Avatar',
-        3: 'Personal details',
-        4: 'Academic info'
+        2: 'Personal details',
+        3: 'Academic info'
     };
 
     var panels = form.querySelectorAll('.pi-wizard-panel');
@@ -300,13 +261,6 @@
         showError('');
         if (n === 1) return true;
         if (n === 2) {
-            if (!form.querySelector('input[name="avatar"]:checked')) {
-                showError('Please choose an avatar to continue.');
-                return false;
-            }
-            return true;
-        }
-        if (n === 3) {
             if (hasTeam) return true;
             var fn = document.getElementById('first_name');
             var ln = document.getElementById('last_name');
@@ -316,7 +270,7 @@
             if (!sid.value.trim()) { showError('Student ID is required.'); sid.focus(); return false; }
             return true;
         }
-        if (n === 4) {
+        if (n === 3) {
             if (hasTeam) return true;
             var course = document.getElementById('course');
             var year = document.getElementById('year');
@@ -374,16 +328,6 @@
         });
     }
 
-    form.querySelectorAll('.pi-avatar-option input').forEach(function (input) {
-        input.addEventListener('change', function () {
-            form.querySelectorAll('.pi-avatar-option').forEach(function (el) {
-                el.classList.remove('selected');
-            });
-            input.closest('.pi-avatar-option').classList.add('selected');
-            showError('');
-        });
-    });
-
     form.addEventListener('submit', function (e) {
         if (step !== total) {
             e.preventDefault();
@@ -392,7 +336,7 @@
             }
             return;
         }
-        if (!validateStep(4)) {
+        if (!validateStep(total)) {
             e.preventDefault();
         }
     });

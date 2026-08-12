@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Student;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
@@ -11,20 +12,77 @@ class GoogleAuthTest extends TestCase
 {
     use RefreshDatabase;
 
-    /** @test */
-    public function login_route_returns_method_not_allowed(): void
+    public function test_real_google_callback_captures_avatar_from_google_account(): void
+    {
+        $state = 'real-state-token';
+        $this->withSession(['oauth_state' => $state]);
+
+        Http::fake([
+            'oauth2.googleapis.com/token' => Http::response([
+                'access_token' => 'fake-access-token',
+                'refresh_token' => 'fake-refresh-token',
+                'token_type' => 'Bearer',
+                'expires_in' => 3600,
+            ]),
+            'www.googleapis.com/oauth2/v3/userinfo*' => Http::response([
+                'email' => 'juan.delacruz@my.cspc.edu.ph',
+                'given_name' => 'Juan',
+                'family_name' => 'Dela Cruz',
+                'picture' => 'https://lh3.googleusercontent.com/a/fake-photo=s96-c',
+            ]),
+        ]);
+
+        $this->get("/login/google/callback?state={$state}&code=fake-code")
+            ->assertRedirect(route('student.personal-info'));
+
+        $student = Student::where('email', 'juan.delacruz@my.cspc.edu.ph')->first();
+        $this->assertNotNull($student);
+        $this->assertEquals('https://lh3.googleusercontent.com/a/fake-photo=s96-c', $student->p_picture);
+        $this->assertEquals('https://lh3.googleusercontent.com/a/fake-photo=s96-c', $student->avatarUrl());
+    }
+
+    public function test_real_google_callback_refreshes_avatar_on_repeat_login(): void
+    {
+        $student = Student::factory()->withCompleteProfile()->create([
+            'email' => 'returning.student@my.cspc.edu.ph',
+            'p_picture' => 'https://lh3.googleusercontent.com/a/old-photo=s96-c',
+        ]);
+
+        $state = 'repeat-login-state';
+        $this->withSession(['oauth_state' => $state]);
+
+        Http::fake([
+            'oauth2.googleapis.com/token' => Http::response([
+                'access_token' => 'fake-access-token',
+                'token_type' => 'Bearer',
+                'expires_in' => 3600,
+            ]),
+            'www.googleapis.com/oauth2/v3/userinfo*' => Http::response([
+                'email' => 'returning.student@my.cspc.edu.ph',
+                'given_name' => 'Returning',
+                'family_name' => 'Student',
+                'picture' => 'https://lh3.googleusercontent.com/a/new-photo=s96-c',
+            ]),
+        ]);
+
+        $this->get("/login/google/callback?state={$state}&code=fake-code")
+            ->assertRedirect(route('student.dashboard'));
+
+        $this->assertEquals(
+            'https://lh3.googleusercontent.com/a/new-photo=s96-c',
+            $student->fresh()->p_picture
+        );
+    }
+
+    public function test_login_route_renders_the_sign_in_page(): void
     {
         $response = $this->get('/login');
 
-        $response->assertStatus(405);
-        $response->assertJson([
-            'success' => false,
-            'message' => 'Use initiateGoogleLogin to start authentication.',
-        ]);
+        $response->assertOk();
+        $response->assertSee('Sign in to CapsTrack');
     }
 
-    /** @test */
-    public function initiate_google_login_requires_recaptcha_token(): void
+    public function test_initiate_google_login_requires_recaptcha_token(): void
     {
         $response = $this->postJson('/login/google', [
             'g-recaptcha-response' => '',
@@ -37,8 +95,7 @@ class GoogleAuthTest extends TestCase
         ]);
     }
 
-    /** @test */
-    public function initiate_google_login_fails_when_recaptcha_verification_fails(): void
+    public function test_initiate_google_login_fails_when_recaptcha_verification_fails(): void
     {
         Http::fake([
             'https://www.google.com/recaptcha/api/siteverify' => Http::response(['success' => false]),
@@ -55,8 +112,7 @@ class GoogleAuthTest extends TestCase
         ]);
     }
 
-    /** @test */
-    public function initiate_google_login_returns_auth_url_on_success(): void
+    public function test_initiate_google_login_returns_auth_url_on_success(): void
     {
         Http::fake([
             'https://www.google.com/recaptcha/api/siteverify' => Http::response(['success' => true]),
@@ -78,8 +134,7 @@ class GoogleAuthTest extends TestCase
         $this->assertStringContainsString('accounts.google.com', $response->json('auth_url'));
     }
 
-    /** @test */
-    public function mock_login_get_requires_valid_state(): void
+    public function test_mock_login_get_requires_valid_state(): void
     {
         $response = $this->getJson('/login/google/mock?state=invalid-state');
 
@@ -90,8 +145,7 @@ class GoogleAuthTest extends TestCase
         ]);
     }
 
-    /** @test */
-    public function mock_login_get_returns_info_with_valid_state(): void
+    public function test_mock_login_get_returns_info_with_valid_state(): void
     {
         $state = 'test-state-token';
         $this->withSession(['oauth_state' => $state]);
@@ -105,8 +159,7 @@ class GoogleAuthTest extends TestCase
         ]);
     }
 
-    /** @test */
-    public function mock_login_denies_non_institutional_email(): void
+    public function test_mock_login_redirects_unrecognized_gmail_to_request_account(): void
     {
         $state = 'test-state-token';
         $this->withSession(['oauth_state' => $state]);
@@ -117,6 +170,21 @@ class GoogleAuthTest extends TestCase
             'email' => 'john.doe@gmail.com',
         ]);
 
+        $response->assertRedirectContains('/request-account');
+        $this->assertFalse(Auth::check());
+    }
+
+    public function test_mock_login_denies_non_institutional_non_gmail_email(): void
+    {
+        $state = 'test-state-token';
+        $this->withSession(['oauth_state' => $state]);
+
+        $response = $this->postJson('/login/google/mock', [
+            'state' => $state,
+            'name' => 'John Doe',
+            'email' => 'john.doe@example.com',
+        ]);
+
         $response->assertStatus(403);
         $response->assertJson([
             'success' => false,
@@ -124,8 +192,7 @@ class GoogleAuthTest extends TestCase
         $this->assertFalse(Auth::check());
     }
 
-    /** @test */
-    public function mock_login_allows_institutional_email_and_logs_user_in(): void
+    public function test_mock_login_allows_institutional_email_and_logs_user_in(): void
     {
         $state = 'test-state-token';
         $this->withSession(['oauth_state' => $state]);

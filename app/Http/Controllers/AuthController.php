@@ -180,6 +180,7 @@ class AuthController extends Controller
                             'token_type' => $response->json('token_type'),
                         ]),
                         'google_token_expires_at' => now()->addSeconds($response->json('expires_in', 3600)),
+                        'profile_picture' => $userInfo['picture'] ?? $expert->profile_picture,
                     ]);
 
                     // Reuse this same login token as the Drive connection —
@@ -233,12 +234,19 @@ class AuthController extends Controller
             [
                 'f_name' => $firstName,
                 'l_name' => $lastName,
+                'p_picture' => $userInfo['picture'] ?? null,
             ]
         );
 
         Auth::login($student);
 
-        $student->update(['last_seen_at' => now()]);
+        // Keep the avatar in sync with their Google account on every login,
+        // not just at creation — picks up photo changes and backfills
+        // accounts created before this was tracked.
+        $student->update([
+            'last_seen_at' => now(),
+            'p_picture' => $userInfo['picture'] ?? $student->p_picture,
+        ]);
 
         $redirectUrl = $student->hasCompletedProfile() ? route('student.dashboard') : route('student.personal-info');
 

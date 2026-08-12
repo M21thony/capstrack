@@ -38,7 +38,6 @@ class ProfileController extends Controller
                 'Bachelor of Library and Information Science',
             ])],
             'year_section' => ['nullable', 'string', 'max:50'],
-            'avatar' => ['nullable', 'string', Rule::in(Student::allowedAvatarKeys())],
         ]);
 
         if ($validator->fails()) {
@@ -57,10 +56,6 @@ class ProfileController extends Controller
 
         if ($request->filled('year_section')) {
             $student->year_section = $request->input('year_section');
-        }
-
-        if ($request->filled('avatar')) {
-            $student->p_picture = $request->input('avatar');
         }
 
         if ($request->filled('course')) {
