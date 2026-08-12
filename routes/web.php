@@ -90,6 +90,9 @@ Route::middleware(['expert.auth', 'expert.approved', 'no.cache', 'track.expert']
     Route::get('/profile', [InstructorProfileController::class, 'index'])->name('profile');
     Route::view('/schedule', 'instructor.schedule')->name('schedule');
     Route::get('/grading', [GradingController::class, 'index'])->name('grading');
+    Route::get('/grading/{defense}', [GradingController::class, 'show'])->name('grading.show');
+    Route::post('/grading/{defense}/save', [GradingController::class, 'save'])->name('grading.save');
+    Route::post('/grading/{defense}/submit', [GradingController::class, 'submit'])->name('grading.submit');
     Route::get('/docreview', [DocReviewController::class, 'index'])->name('docreview');
     Route::get('/docreview/{review}/annotate', [DocReviewController::class, 'annotate'])->name('docreview.annotate');
     Route::get('/assignments', [InstructorAssignmentController::class, 'index'])->name('assignments');
