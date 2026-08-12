@@ -151,6 +151,19 @@
           @endfor
         </div>
       </div>
+      <div class="card" style="margin-top:16px">
+        <div class="card-header"><span class="sk" style="width:170px;height:14px;border-radius:4px;"></span></div>
+        @for ($i = 0; $i < 3; $i++)
+        <div style="display:flex;gap:12px;padding:12px 0;align-items:center">
+          <div class="sk" style="width:8px;height:8px;border-radius:50%;flex-shrink:0"></div>
+          <div style="flex:1">
+            <div class="sk" style="width:55%;height:12px;border-radius:4px;margin-bottom:6px"></div>
+            <div class="sk" style="width:35%;height:10px;border-radius:4px"></div>
+          </div>
+          <div class="sk" style="width:40px;height:40px;border-radius:6px;flex-shrink:0"></div>
+        </div>
+        @endfor
+      </div>
     </div>
 
     {{-- Content --}}
@@ -363,6 +376,54 @@
       </x-dashboard.info-card>
     </div>
 
+    <x-dashboard.info-card
+      title="Recent Expenses & Receipts"
+      :empty="$recentExpenses->isEmpty()"
+      emptyMessage="Submit your first receipt on the Financial Records page."
+    >
+      @foreach ($recentExpenses as $expense)
+        @php
+          $badgeClass = match ($expense->f_record_status) {
+            'pending' => 'badge badge-amber',
+            'verified' => 'badge badge-green',
+            'rejected' => 'badge badge-red',
+            default => 'badge',
+          };
+          $badgeText = match ($expense->f_record_status) {
+            'pending' => 'Pending',
+            'verified' => 'Verified',
+            'rejected' => 'Rejected',
+            default => $expense->f_record_status,
+          };
+          $expenseTitle = $expense->expensePost?->title ?? $expense->payment_for ?? 'N/A';
+          $receiptImageUrl = $expense->receipt_image ? asset('storage/'.$expense->receipt_image) : null;
+          $uploadedDt = $expense->uploaded_at ? \Carbon\Carbon::parse($expense->uploaded_at) : null;
+        @endphp
+        <div class="history-item">
+          <div style="flex:1;min-width:0;">
+            <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+              <span style="font-size:13px;font-weight:600;">{{ $expenseTitle }}</span>
+              <span class="{{ $badgeClass }}" style="font-size:9px;">{{ $badgeText }}</span>
+            </div>
+            <div class="activity-meta">
+              <span style="font-size:11px;color:var(--text3);">₱{{ number_format($expense->amount ?? 0, 2) }} · {{ $uploadedDt ? $uploadedDt->format('M d') : 'N/A' }}</span>
+            </div>
+          </div>
+          @if ($receiptImageUrl)
+            <img src="{{ $receiptImageUrl }}"
+                alt="Receipt for {{ $expenseTitle }}"
+                class="receipt-thumb"
+                title="Click to view full receipt"
+                onclick="openReceipt(this.src)">
+          @else
+            <div class="receipt-thumb receipt-thumb--empty" style="width:40px;height:40px;border-radius:6px;background:var(--bg2);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="var(--text3)" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            </div>
+          @endif
+        </div>
+      @endforeach
+    </x-dashboard.info-card>
+
     <div class="legal-credits">
       <div class="credits-title">System Developers</div>
       <div class="credits-names">Jolina · John Kenneth · Mark Anthony · Ian Cyrus · Alexa Nicole</div>
@@ -458,7 +519,21 @@ function openAnnModal(el) {
 function closeAnnModal() {
   document.getElementById('annModal').classList.remove('open');
 }
+
+function openReceipt(url) {
+  if (!url) return;
+  document.getElementById('receiptPreviewFull').src = url;
+  document.getElementById('receiptPreviewModal').classList.add('active');
+}
+
+function closeReceiptPreview() {
+  document.getElementById('receiptPreviewModal').classList.remove('active');
+}
 </script>
+
+<div class="modal-overlay" id="receiptPreviewModal" onclick="if(event.target===this)closeReceiptPreview()">
+  <img id="receiptPreviewFull" src="" alt="Receipt preview" class="modal-img" />
+</div>
 </body>
 </html>
 

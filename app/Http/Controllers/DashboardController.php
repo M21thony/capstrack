@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\ActivityLog;
 use App\Models\Announcement;
+use App\Models\FinancialRecord;
 use App\Models\Milestone;
 use App\Models\Notification;
 use App\Models\Student;
@@ -37,6 +38,14 @@ class DashboardController extends Controller
         $milestones = $this->getMilestones($teamId);
         $announcements = $this->getAnnouncements($student, $studentSy);
 
+        // Recent expense receipts for dashboard widget (from
+        // complete-grading-rubrics-crud's financial dashboard sync work).
+        $recentExpenses = FinancialRecord::with('expensePost')
+            ->where('student_id', $student->student_id)
+            ->orderByDesc('uploaded_at')
+            ->take(5)
+            ->get();
+
         $unreadNotifications = Notification::where('student_id', $student->student_id)
             ->where('is_read', false)
             ->latest('created_at')
@@ -55,6 +64,7 @@ class DashboardController extends Controller
             'docsSubmitted' => $docsSubmittedCount,
             'pendingReviews' => $pendingReviewsCount,
             'overallProgress' => $overallProgress,
+            'recentExpenses' => $recentExpenses,
             'activities' => $activities,
             'announcements' => $announcements,
             'milestones' => $milestones,

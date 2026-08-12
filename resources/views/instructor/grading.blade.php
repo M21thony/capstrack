@@ -50,7 +50,7 @@
       </div>
       <div style="text-align:right">
         <div style="font-size:11px;color:var(--text3);margin-bottom:4px">Rubric Type</div>
-        <span class="badge badge-gold">{{ optional($rubrics->first())->name ?? 'Pre-Proposal Defense' }}</span>
+        <span class="badge badge-gold">{{ optional($rubrics->first())->rubric_name ?? 'Pre-Proposal Defense' }}</span>
       </div>
       <div style="text-align:right">
         <div style="font-size:11px;color:var(--text3);margin-bottom:4px">Your Role</div>
