@@ -272,7 +272,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: clamp(32px, 5.5vw, 72px);
+    padding: clamp(24px, 4.5vw, 56px);
     overflow-y: auto;
   }
 
@@ -287,7 +287,7 @@
     font-size: 16px;
     letter-spacing: -0.01em;
     color: var(--ink);
-    margin-bottom: clamp(40px, 8vh, 80px);
+    margin-bottom: clamp(16px, 3vh, 40px);
   }
   .mini-wordmark span { color: var(--gold-dim); }
 
@@ -301,13 +301,13 @@
   .signin-sub {
     font-size: 15px;
     color: var(--ink-soft);
-    margin: 0 0 32px;
+    margin: 0 0 24px;
     line-height: 1.5;
   }
 
   .error-box {
-    margin-bottom: 20px;
-    padding: 13px 16px;
+    margin-bottom: 14px;
+    padding: 11px 16px;
     background: rgba(220,38,38,0.06);
     border: 1px solid rgba(220,38,38,0.2);
     border-radius: 11px;
@@ -323,7 +323,7 @@
     align-items: center;
     justify-content: center;
     gap: 11px;
-    padding: 15px 20px;
+    padding: 12px 20px;
     background: #fff;
     border: 1px solid #d7d2c4;
     border-radius: 11px;
@@ -347,8 +347,8 @@
   .google-btn svg { width: 19px; height: 19px; flex: none; }
 
   .note-box {
-    margin-top: 28px;
-    padding: 17px 18px;
+    margin-top: 16px;
+    padding: 12px 18px;
     background: #f3f0e8;
     border: 1px solid var(--line);
     border-radius: 11px;
@@ -393,7 +393,7 @@
     display: flex;
     align-items: center;
     gap: 14px;
-    margin: 26px 0 20px;
+    margin: 12px 0 12px;
     color: #a8a293;
     font-family: 'Space Mono', monospace;
     font-size: 10.5px;
@@ -412,6 +412,7 @@
     text-align: center;
     font-size: 13px;
     color: var(--ink-soft);
+    margin: 8px 0;
   }
   .request-link a {
     color: var(--ink);
@@ -423,7 +424,7 @@
   .request-link a:hover { color: var(--gold-dim); }
 
   .signin-footer {
-    margin-top: clamp(40px, 9vh, 80px);
+    margin-top: clamp(12px, 2.5vh, 32px);
     font-size: 11px;
     color: #a8a293;
     text-align: center;
@@ -506,7 +507,7 @@
   <div class="brand-mid">
     <p class="eyebrow">CSPC · College of Computer Studies</p>
     <h1 class="headline">Centralized <em>Capstone</em> Management</h1>
-    <p class="subhead">One workspace for students and instructors — from team formation and expert matching to final defense, in a single place built for tracking every stage.</p>
+    <p class="subhead">Form your team, get matched with an adviser, and track your capstone through to final defense.</p>
 
     <div class="feature-grid">
       <div class="feature">
