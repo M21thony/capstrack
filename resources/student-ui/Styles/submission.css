@@ -333,6 +333,14 @@ select.input{cursor:pointer}
 .recipient-summary{display:flex;flex-wrap:wrap;gap:8px}
 .recipient-chip{display:inline-flex;align-items:center;font-size:12px;font-weight:500;color:var(--accent3);background:rgba(201,168,44,0.1);border:1px solid rgba(201,168,44,0.25);border-radius:20px;padding:6px 12px}
 
+/* Read-only File Name / Version labels, shown between the drop-zone and
+   the submit button. Reuses .pm-label/.pm-value.readonly from the profile
+   modal for visual consistency. */
+.doc-info-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width: 480px){
+  .doc-info-grid{grid-template-columns:1fr}
+}
+
 /* Folder picker — shown only when Subject Adviser is an assigned recipient */
 .folder-select-wrap{margin-top:12px}
 .folder-select-wrap select{width:100%}

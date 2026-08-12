@@ -168,7 +168,9 @@ class SubmissionController extends Controller
             );
         }
 
-        return view('student.submission', compact('recipients'));
+        $nextVersion = (CapstoneDocument::where('student_id', $studentId)->max('file_version') ?? 0) + 1;
+
+        return view('student.submission', compact('recipients', 'nextVersion'));
     }
 
     private function deliverToDrive(
