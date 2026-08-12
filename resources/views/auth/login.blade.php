@@ -507,7 +507,7 @@
   <div class="brand-mid">
     <p class="eyebrow">CSPC · College of Computer Studies</p>
     <h1 class="headline">Centralized <em>Capstone</em> Management</h1>
-    <p class="subhead">Form your team, apply to an adviser, and track your capstone through to final defense.</p>
+    <p class="subhead">Form your team, apply to an expert of your choice, and track your capstone through to final defense.</p>
 
     <div class="feature-grid">
       <div class="feature">
