@@ -22,7 +22,6 @@ class PersonalInfoOnboardingTest extends TestCase
             'year' => '4th',
             'section' => 'A',
             'student_id' => '221001135',
-            'avatar' => 'avatar-01',
         ], $overrides);
     }
 
@@ -68,7 +67,6 @@ class PersonalInfoOnboardingTest extends TestCase
         $student->refresh();
 
         $this->assertTrue($student->hasCompletedProfile());
-        $this->assertEquals('avatar-01', $student->p_picture);
         $this->assertEquals('221001135', $student->student_number);
         $this->assertNotEquals('221001135', (string) $student->student_id);
         $this->assertEquals('4th · A', $student->year_section);
@@ -76,21 +74,6 @@ class PersonalInfoOnboardingTest extends TestCase
         $this->actingAs($student)
             ->get(route('student.dashboard'))
             ->assertOk();
-    }
-
-    public function test_invalid_avatar_preset_is_rejected(): void
-    {
-        $student = Student::factory()->create([
-            'email' => 'avatar.test@my.cspc.edu.ph',
-        ]);
-
-        $this->actingAs($student)
-            ->post(route('student.personal-info.store'), $this->validPersonalInfoPayload([
-                'avatar' => 'custom-upload.png',
-            ]))
-            ->assertSessionHasErrors(['avatar']);
-
-        $this->assertFalse($student->fresh()->hasCompletedProfile());
     }
 
     public function test_invalid_student_id_format_is_rejected(): void
@@ -145,11 +128,11 @@ class PersonalInfoOnboardingTest extends TestCase
         $this->assertEquals('221009999', $student->fresh()->student_number);
     }
 
-    public function test_profile_update_rejects_invalid_avatar_preset(): void
+    public function test_profile_update_does_not_let_avatar_be_tampered_with(): void
     {
         $student = Student::factory()->withCompleteProfile()->create([
             'email' => 'profile.api@my.cspc.edu.ph',
-            'p_picture' => 'avatar-03',
+            'p_picture' => 'https://lh3.googleusercontent.com/a/real-photo',
         ]);
 
         $this->actingAs($student)
@@ -158,10 +141,10 @@ class PersonalInfoOnboardingTest extends TestCase
                 'last_name' => 'Santos',
                 'avatar' => '../../storage/evil.jpg',
             ])
-            ->assertUnprocessable()
-            ->assertJson(['success' => false]);
+            ->assertOk()
+            ->assertJson(['success' => true]);
 
-        $this->assertEquals('avatar-03', $student->fresh()->p_picture);
+        $this->assertEquals('https://lh3.googleusercontent.com/a/real-photo', $student->fresh()->p_picture);
     }
 
     public function test_has_completed_profile_requires_student_number(): void
@@ -211,14 +194,14 @@ class PersonalInfoOnboardingTest extends TestCase
             ->assertSee('Locked while in a team');
     }
 
-    public function test_student_in_team_can_update_avatar_only(): void
+    public function test_student_in_team_submitting_form_is_a_no_op(): void
     {
         $student = Student::factory()->withCompleteProfile()->create([
-            'email' => 'update.avatar@my.cspc.edu.ph',
-            'p_picture' => 'avatar-01',
+            'email' => 'locked.student@my.cspc.edu.ph',
+            'p_picture' => 'https://lh3.googleusercontent.com/a/real-photo',
         ]);
 
-        $team = Team::create(['team_name' => 'Avatar Team']);
+        $team = Team::create(['team_name' => 'Locked Team']);
 
         StudentSchoolYear::create([
             'student_id' => $student->student_id,
@@ -228,12 +211,12 @@ class PersonalInfoOnboardingTest extends TestCase
         ]);
 
         $this->actingAs($student)
-            ->post(route('student.personal-info.store'), $this->validPersonalInfoPayload(['avatar' => 'avatar-03']))
+            ->post(route('student.personal-info.store'), $this->validPersonalInfoPayload())
             ->assertRedirect(route('student.dashboard'))
-            ->assertSessionHas('status', 'Your avatar has been updated.');
+            ->assertSessionHas('status', 'Your profile is locked while you\'re in a team.');
 
         $student->refresh();
-        $this->assertEquals('avatar-03', $student->p_picture);
+        $this->assertEquals('https://lh3.googleusercontent.com/a/real-photo', $student->p_picture);
     }
 
     public function test_student_in_team_cannot_change_other_fields(): void
@@ -243,7 +226,7 @@ class PersonalInfoOnboardingTest extends TestCase
             'f_name' => 'Original',
             'l_name' => 'Name',
             'course' => 'Bachelor of Science in Computer Science',
-            'p_picture' => 'avatar-01',
+            'p_picture' => 'https://lh3.googleusercontent.com/a/real-photo',
         ]);
 
         $team = Team::create(['team_name' => 'Locked Fields Team']);
@@ -259,14 +242,13 @@ class PersonalInfoOnboardingTest extends TestCase
             ->post(route('student.personal-info.store'), $this->validPersonalInfoPayload([
                 'first_name' => 'Hacked',
                 'last_name' => 'Changed',
-                'avatar' => 'avatar-02',
             ]))
             ->assertRedirect(route('student.dashboard'));
 
         $student->refresh();
         $this->assertEquals('Original', $student->f_name);
         $this->assertEquals('Name', $student->l_name);
-        $this->assertEquals('avatar-02', $student->p_picture);
+        $this->assertEquals('https://lh3.googleusercontent.com/a/real-photo', $student->p_picture);
     }
 
     public function test_student_in_team_cannot_ajax_update_profile(): void

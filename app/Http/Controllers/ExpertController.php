@@ -389,6 +389,7 @@ class ExpertController extends Controller
                         'token_type' => $response->json('token_type'),
                     ]),
                     'google_token_expires_at' => now()->addSeconds($response->json('expires_in', 3600)),
+                    'profile_picture' => $userInfo['picture'] ?? $expert->profile_picture,
                 ]);
 
                 Auth::guard('expert')->login($expert);

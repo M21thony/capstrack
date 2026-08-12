@@ -2,7 +2,6 @@
 
 namespace App\Http\Requests;
 
-use App\Models\Student;
 use App\Models\StudentSchoolYear;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -21,9 +20,10 @@ class StorePersonalInfoRequest extends FormRequest
         $hasTeam = StudentSchoolYear::where('student_id', $userId)->whereNotNull('team_id')->exists();
 
         if ($hasTeam) {
-            return [
-                'avatar' => ['required', 'string', Rule::in(Student::allowedAvatarKeys())],
-            ];
+            // Nothing is editable once a student has a team — every field
+            // on the form is locked, including the avatar (now synced
+            // automatically from their Google account at login).
+            return [];
         }
 
         return [
@@ -40,7 +40,6 @@ class StorePersonalInfoRequest extends FormRequest
             'course' => ['required', 'string', 'max:100'],
             'year' => ['required', 'string', 'max:20'],
             'section' => ['required', 'string', 'max:1', 'alpha'],
-            'avatar' => ['required', 'string', Rule::in(Student::allowedAvatarKeys())],
         ];
     }
 
