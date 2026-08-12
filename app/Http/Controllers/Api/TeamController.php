@@ -148,8 +148,8 @@ class TeamController extends Controller
             'member_count' => ['nullable', 'integer', Rule::in([3, 5])],
         ]);
 
-        if ($validated['team_status'] === 'complete') {
-            $validated = $request->validate([
+        if (($validated['team_status'] ?? null) === 'complete') {
+            $request->validate([
                 'project_title' => [
                     'required', 'string', 'max:150',
                     function ($attr, $value, $fail) {

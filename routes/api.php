@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\AnnouncementController;
 use App\Http\Controllers\Admin\ArchiveController;
+use App\Http\Controllers\AdminPanelAssignmentController;
 use App\Http\Controllers\Api\ActivityLogController;
 use App\Http\Controllers\Api\AdminExpertController;
 use App\Http\Controllers\Api\AdminFinancialController;
@@ -20,6 +21,21 @@ Route::middleware(['web', 'expert.auth', 'expert.admin'])
         Route::get('/experts', [AdminExpertController::class, 'index'])->name('api.admin.experts.index');
         Route::delete('/experts/{expert}', [AdminExpertController::class, 'destroy'])->name('api.admin.experts.destroy');
         Route::post('/turnover', [AdminExpertController::class, 'transferRights'])->name('api.admin.turnover');
+
+        // Panel Assignment (index() stays a web route since it returns a
+        // Blade view - these are the JSON-consuming endpoints the page's
+        // fetch() calls hit, which need to live under /api/* so validation
+        // failures render as JSON instead of a redirect - see
+        // bootstrap/app.php's shouldRenderJsonWhen(), which only renders
+        // JSON for api/* routes regardless of the request's Accept header.
+        Route::prefix('panel_assignment')->name('api.admin.panel_assignment.')->group(function () {
+            // Registered before /{team} so "windows" isn't swallowed by
+            // the team route-model-binding parameter.
+            Route::get('/windows', [AdminPanelAssignmentController::class, 'indexWindows'])->name('windows.index');
+            Route::put('/windows/{defenseType}', [AdminPanelAssignmentController::class, 'updateWindow'])->name('windows.update');
+            Route::post('/{team}', [AdminPanelAssignmentController::class, 'store'])->name('store');
+            Route::get('/{team}/suggest', [AdminPanelAssignmentController::class, 'suggestExperts'])->name('suggest');
+        });
 
         // Grading Rubrics
         Route::prefix('grading-rubrics')->name('api.admin.grading-rubrics.')->group(function () {

@@ -77,7 +77,6 @@ class StudentExpertController extends Controller
     {
         $validated = $request->validate([
             'expert_id' => ['required', 'integer', 'exists:capstone_experts,expert_id'],
-            'role_id' => ['required', 'integer', 'exists:roles,role_id'],
             'proposal_file' => ['required', 'file', 'mimes:pdf', 'max:5120'],
             'message' => ['required', 'string', function ($attribute, $value, $fail) {
                 if (str_word_count($value) > 500) {
@@ -128,27 +127,28 @@ class StudentExpertController extends Controller
             ], 422);
         }
 
-        $hasRole = DB::table('expert_roles')
-            ->where('expert_id', $expert->expert_id)
-            ->where('role_id', $validated['role_id'])
+        $offersQualifyingRole = DB::table('expert_roles')
+            ->join('roles', 'roles.role_id', '=', 'expert_roles.role_id')
+            ->where('expert_roles.expert_id', $expert->expert_id)
+            ->where('roles.role_name', '!=', 'capstone_adviser')
             ->exists();
 
-        if (! $hasRole) {
+        if (! $offersQualifyingRole) {
             return response()->json([
                 'success' => false,
-                'message' => 'The expert does not offer this role.',
+                'message' => 'This expert is not available for team applications.',
             ], 422);
         }
 
-        $roleLocked = TeamExpertAssignment::where('team_id', $team->team_id)
-            ->where('role_id', $validated['role_id'])
+        $alreadyApplied = TeamExpertAssignment::where('team_id', $team->team_id)
+            ->where('expert_id', $expert->expert_id)
             ->whereIn('status', ['pending', 'approved'])
             ->exists();
 
-        if ($roleLocked) {
+        if ($alreadyApplied) {
             return response()->json([
                 'success' => false,
-                'message' => 'Your team already has a pending or approved application for this role.',
+                'message' => 'Your team already has a pending or approved application with this expert.',
             ], 409);
         }
 
@@ -158,7 +158,6 @@ class StudentExpertController extends Controller
             $assignment = TeamExpertAssignment::create([
                 'team_id' => $team->team_id,
                 'expert_id' => $validated['expert_id'],
-                'role_id' => $validated['role_id'],
                 'status' => 'pending',
                 'proposal_file' => $filePath,
                 'message' => $validated['message'],
@@ -167,7 +166,7 @@ class StudentExpertController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Application sent successfully. Waiting for the expert to approve.',
-                'data' => new AssignmentResource($assignment->load('expert', 'role')),
+                'data' => new AssignmentResource($assignment->load('expert')),
             ]);
         } catch (\Throwable $e) {
             logger()->error('Expert apply error', [
@@ -213,12 +212,11 @@ class StudentExpertController extends Controller
             'student_id' => $student->student_id,
             'type' => 'expert_removed',
             'description' => $assignment->expert?->name
-                ? "Removed expert {$assignment->expert->name} ({$assignment->role->first()?->role_name}) — Reason: {$request->reason}"
+                ? "Removed expert {$assignment->expert->name} — Reason: {$request->reason}"
                 : "Removed expert assignment #{$assignment->assignment_id} — Reason: {$request->reason}",
             'metadata' => [
                 'assignment_id' => $assignment->assignment_id,
                 'expert_id' => $assignment->expert_id,
-                'role_id' => $assignment->role->first()?->role_id,
                 'reason' => $request->reason,
             ],
             'created_at' => now(),

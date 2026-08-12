@@ -277,7 +277,7 @@ class TeamController extends Controller
             $validated['tags'] = $tagsArray;
         }
 
-        if ($validated['team_status'] === 'complete') {
+        if (($validated['team_status'] ?? null) === 'complete') {
             $request->validate([
                 'project_title' => [
                     'required', 'string', 'max:150',

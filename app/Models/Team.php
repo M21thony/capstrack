@@ -70,4 +70,9 @@ class Team extends Model
     {
         return $this->hasMany(TeamExpertAssignment::class, 'team_id', 'team_id');
     }
+
+    public function defenseSchedules()
+    {
+        return $this->hasMany(DefenseSchedule::class, 'team_id', 'team_id');
+    }
 }

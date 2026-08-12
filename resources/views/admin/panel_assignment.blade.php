@@ -7,6 +7,18 @@
 <meta name="csrf-token" content="{{ csrf_token() }}"/>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="{{ asset('css/admin.css') }}"/>
+<style>
+.picker-slot { width:100%; text-align:left; background:#fff; border:1px solid var(--border); border-radius:8px; padding:9px 12px; font-size:13px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; gap:8px; color:var(--text3); font-family:inherit }
+.picker-slot:hover { border-color:var(--accent3) }
+.picker-slot.filled { color:var(--text) }
+.picker-slot .slot-change { font-size:11px; color:var(--accent3) }
+.expert-picker-option { padding:10px 12px; cursor:pointer; font-size:13px; display:flex; align-items:center; justify-content:space-between; gap:8px; border-radius:8px }
+.expert-picker-option:hover { background:rgba(201,168,44,0.08) }
+.expert-picker-option .opt-name { color:var(--text) }
+.expert-picker-option .opt-tags { font-size:10px; color:var(--text3) }
+.expert-picker-option.suggested .opt-name::before { content:"★ "; color:var(--accent3) }
+.expert-picker-empty { padding:16px 12px; font-size:12px; color:var(--text3); text-align:center }
+</style>
 </head>
 <body>
 
@@ -26,7 +38,7 @@
   <div class="content">
     <div id="page-panel" class="page active">
       <div class="row" style="margin-bottom:16px;gap:8px">
-        <input class="input" placeholder="Search team or capstone title..." style="max-width:300px"/>
+        <input class="input" id="team-search-input" placeholder="Search team or capstone title..." style="max-width:300px"/>
         <select class="input" id="filter-section" style="width:160px">
           <option value="">All Sections</option>
           @foreach ($allSections as $section)
@@ -38,8 +50,55 @@
           <option value="not_assigned">Not Assigned</option>
           <option value="complete">Complete</option>
         </select>
+        <button class="btn btn-ghost" style="font-size:12px;color:var(--text2);border-color:var(--border)" onclick="openWindowModal()">
+          <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          Defense Window
+        </button>
         <span style="flex:1"></span>
-        <span style="font-size:12px;color:var(--text3)">{{ $teams->count() }} teams</span>
+        <span style="font-size:12px;color:var(--text3)" id="team-count">{{ $teams->count() }} teams</span>
+      </div>
+
+      <!-- Defense window modal overlay -->
+      <div id="window-modal" style="display:none;position:fixed;inset:0;background:rgba(24,25,31,0.6);z-index:100;align-items:center;justify-content:center">
+        <div style="background:#fff;border-radius:14px;padding:24px;width:420px;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+            <div style="font-size:15px;font-weight:600;color:var(--text)">Defense Window</div>
+            <button onclick="closeWindowModal()" style="background:none;border:none;font-size:22px;color:var(--text3);cursor:pointer;line-height:1">&times;</button>
+          </div>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:16px">
+            The date range a defense stage is scheduled within. Panels are automatically assigned
+            a day and venue inside this window.
+          </div>
+          <div id="window-modal-msg" style="display:none;font-size:12px;border-radius:8px;padding:10px 12px;margin-bottom:14px"></div>
+
+          <div class="form-group">
+            <label class="label">Defense Type</label>
+            <select class="input" id="window-defense-type">
+              <option value="Pre-proposal Defense">Pre-proposal Defense</option>
+              <option value="Title Defense">Title Defense</option>
+              <option value="Pre Oral Defense">Pre Oral Defense</option>
+              <option value="Final Oral Defense">Final Oral Defense</option>
+            </select>
+          </div>
+          <div class="row" style="gap:10px">
+            <div class="form-group" style="flex:1">
+              <label class="label">Start Date</label>
+              <input class="input" type="date" id="window-start-date"/>
+            </div>
+            <div class="form-group" style="flex:1">
+              <label class="label">End Date</label>
+              <input class="input" type="date" id="window-end-date"/>
+            </div>
+          </div>
+
+          <div style="display:flex;gap:8px;margin-top:16px">
+            <button class="btn btn-primary" style="flex:1;justify-content:center;font-size:13px" id="window-save-btn" onclick="saveWindow()">
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              Save
+            </button>
+            <button class="btn btn-ghost" style="font-size:13px;color:var(--text2);border-color:var(--border)" onclick="closeWindowModal()">Close</button>
+          </div>
+        </div>
       </div>
 
       <!-- Panel assignment modal overlay -->
@@ -55,48 +114,71 @@
           <div style="background:rgba(201,168,44,0.06);border:1px solid rgba(201,168,44,0.2);border-radius:8px;padding:12px;margin-bottom:16px;font-size:12px;color:var(--text2)">
             <strong style="color:var(--accent3)">Note:</strong> Panel members are different from the team's adviser/consultant/grammarian. Assign experts specifically for defense evaluation.
           </div>
+          <div id="modal-error" style="display:none;background:rgba(220,38,38,0.08);border:1px solid rgba(220,38,38,0.25);color:#b91c1c;border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:12px"></div>
+
           <div class="form-group">
-            <label class="label">Panel Chair</label>
-            <select class="input" id="modal-chair">
-              <option value="">— Select Panel Chair —</option>
-              @foreach ($experts as $expert)
-                <option value="{{ $expert->expert_id }}">{{ $expert->name }}</option>
-              @endforeach
-            </select>
-          </div>
-          <div class="form-group">
-            <label class="label">Panel Member 1</label>
-            <select class="input" id="modal-member1">
-              <option value="">— Select Panel Member 1 —</option>
-              @foreach ($experts as $expert)
-                <option value="{{ $expert->expert_id }}">{{ $expert->name }}</option>
-              @endforeach
-            </select>
-          </div>
-          <div class="form-group">
-            <label class="label">Panel Member 2</label>
-            <select class="input" id="modal-member2">
-              <option value="">— Select Panel Member 2 —</option>
-              @foreach ($experts as $expert)
-                <option value="{{ $expert->expert_id }}">{{ $expert->name }}</option>
-              @endforeach
-            </select>
-          </div>
-          <div class="form-group" style="margin-bottom:0">
             <label class="label">Defense Type</label>
             <select class="input" id="modal-defense">
-              <option>Title Defense</option>
-              <option>Pre-oral Defense</option>
-              <option>Final Oral Defense</option>
+              <option value="Pre-proposal Defense">Pre-proposal Defense</option>
+              <option value="Title Defense">Title Defense</option>
+              <option value="Pre Oral Defense">Pre Oral Defense</option>
+              <option value="Final Oral Defense">Final Oral Defense</option>
             </select>
           </div>
+          <div id="modal-schedule-result" style="display:none;font-size:12px;color:var(--text2);background:rgba(22,163,74,0.08);border:1px solid rgba(22,163,74,0.2);border-radius:8px;padding:10px 12px;margin-bottom:16px">
+            Scheduled for <strong id="modal-schedule-result-text"></strong>
+          </div>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:16px">
+            Assign panels for every team first. Day and venue aren't set here - once everyone
+            has a panel, use the "Defense Window" button to generate the schedule for all of
+            them at once.
+          </div>
+
+          <div class="form-group" id="picker-chair">
+            <label class="label">Panel Chair</label>
+            <input type="hidden" class="picker-value"/>
+            <button type="button" class="picker-slot" onclick="openExpertPicker('chair')">
+              <span class="slot-text">Click to select an expert</span>
+              <span class="slot-change" style="display:none">Change</span>
+            </button>
+          </div>
+          <div class="form-group" id="picker-member1">
+            <label class="label">Panel Member 1</label>
+            <input type="hidden" class="picker-value"/>
+            <button type="button" class="picker-slot" onclick="openExpertPicker('member1')">
+              <span class="slot-text">Click to select an expert</span>
+              <span class="slot-change" style="display:none">Change</span>
+            </button>
+          </div>
+          <div class="form-group" id="picker-member2" style="margin-bottom:0">
+            <label class="label">Panel Member 2</label>
+            <input type="hidden" class="picker-value"/>
+            <button type="button" class="picker-slot" onclick="openExpertPicker('member2')">
+              <span class="slot-text">Click to select an expert</span>
+              <span class="slot-change" style="display:none">Change</span>
+            </button>
+          </div>
+
           <div style="display:flex;gap:8px;margin-top:16px">
-            <button class="btn btn-primary" style="flex:1;justify-content:center;font-size:13px" onclick="closePanelModal()">
+            <button class="btn btn-primary" style="flex:1;justify-content:center;font-size:13px" id="modal-save-btn" onclick="savePanelAssignment()">
               <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
               Save Panel Assignment
             </button>
             <button class="btn btn-ghost" style="font-size:13px;color:var(--text2);border-color:var(--border)" onclick="closePanelModal()">Cancel</button>
           </div>
+        </div>
+      </div>
+
+      <!-- Expert picker modal - opened from a picker-slot button, sits on
+           top of the panel-assignment modal (higher z-index) -->
+      <div id="expert-picker-modal" style="display:none;position:fixed;inset:0;background:rgba(24,25,31,0.6);z-index:200;align-items:center;justify-content:center">
+        <div style="background:#fff;border-radius:14px;padding:20px;width:420px;max-height:80vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+            <div style="font-size:15px;font-weight:600;color:var(--text)" id="expert-picker-title">Select Expert</div>
+            <button onclick="closeExpertPicker()" style="background:none;border:none;font-size:22px;color:var(--text3);cursor:pointer;line-height:1">&times;</button>
+          </div>
+          <input class="input" id="expert-picker-search" placeholder="Search by name or expertise..." autocomplete="off" style="margin-bottom:10px"/>
+          <div id="expert-picker-results" style="overflow-y:auto;flex:1"></div>
         </div>
       </div>
 
@@ -110,7 +192,8 @@
               <th>Panel Chair</th>
               <th>Member 1</th>
               <th>Member 2</th>
-              <th>Defense</th>
+              <th>Schedule</th>
+              <th>Status</th>
               <th>Action</th>
             </tr>
           </thead>
@@ -121,8 +204,13 @@
                 $section = $teamSections[$team->team_id] ?? '';
                 $colorMap = ['#c9a82c,#8a6e10', '#16a34a,#0891b2', '#1d4ed8,#7c3aed', '#b45309,#dc2626', '#0891b2,#16a34a'];
                 $gradient = $colorMap[$loop->index % count($colorMap)];
+                $latestSchedule = $team->defenseSchedules->sortByDesc('defense_id')->first();
+                $chair = $latestSchedule?->panels->firstWhere('panel_role', 'Panel Chair');
+                $member1 = $latestSchedule?->panels->firstWhere('panel_role', 'Panel Member 1');
+                $member2 = $latestSchedule?->panels->firstWhere('panel_role', 'Panel Member 2');
+                $status = $chair ? 'complete' : 'not_assigned';
               @endphp
-              <tr data-panel-status="not_assigned" data-section="{{ $section }}">
+              <tr data-panel-status="{{ $status }}" data-section="{{ $section }}" data-team-id="{{ $team->team_id }}" id="team-row-{{ $team->team_id }}">
                 <td style="padding-left:20px">
                   <div style="display:flex;align-items:center;gap:8px">
                     <div style="width:28px;height:28px;border-radius:7px;background:linear-gradient(135deg,{{ $gradient }});display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0">{{ $initials }}</div>
@@ -137,20 +225,21 @@
                     <span style="font-size:12px;color:var(--text3)">—</span>
                   @endif
                 </td>
-                <td style="font-size:12px;color:var(--text3);font-style:italic">Not assigned</td>
-                <td style="font-size:12px;color:var(--text3);font-style:italic">Not assigned</td>
-                <td style="font-size:12px;color:var(--text3);font-style:italic">Not assigned</td>
-                <td><span class="badge badge-red" style="font-size:10px">Unassigned</span></td>
+                <td class="cell-chair" style="font-size:12px;{{ $chair ? 'color:var(--text)' : 'color:var(--text3);font-style:italic' }}">{{ $chair?->expert?->name ?? 'Not assigned' }}</td>
+                <td class="cell-member1" style="font-size:12px;{{ $member1 ? 'color:var(--text)' : 'color:var(--text3);font-style:italic' }}">{{ $member1?->expert?->name ?? 'Not assigned' }}</td>
+                <td class="cell-member2" style="font-size:12px;{{ $member2 ? 'color:var(--text)' : 'color:var(--text3);font-style:italic' }}">{{ $member2?->expert?->name ?? 'Not assigned' }}</td>
+                <td class="cell-schedule" style="font-size:12px;color:var(--text2)">{{ $latestSchedule?->schedule_date ? $latestSchedule->schedule_date->format('M j, Y').' · '.$latestSchedule->venue : '—' }}</td>
+                <td class="cell-status"><span class="badge {{ $chair ? 'badge-green' : 'badge-red' }}" style="font-size:10px">{{ $chair ? 'Assigned' : 'Unassigned' }}</span></td>
                 <td>
-                  <button class="btn btn-primary" style="font-size:10px;padding:4px 10px" onclick="openPanelModal('{{ $team->team_name }}', '{{ $team->project_title ?? '' }}')">
+                  <button class="btn btn-primary cell-assign-btn" style="font-size:10px;padding:4px 10px" onclick="openPanelModal({{ $team->team_id }})">
                     <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                    Assign
+                    <span class="assign-btn-label">{{ $chair ? 'Update' : 'Assign' }}</span>
                   </button>
                 </td>
               </tr>
             @empty
               <tr>
-                <td colspan="8" style="text-align:center;padding:40px;color:var(--text3);font-size:13px">
+                <td colspan="9" style="text-align:center;padding:40px;color:var(--text3);font-size:13px">
                   No verified teams found. Teams must be confirmed before they can be assigned a panel.
                 </td>
               </tr>
@@ -166,33 +255,369 @@
 </div>
 
 <script>
-function openPanelModal(teamName, teamTitle) {
-  document.getElementById('modal-team-name').textContent = teamName;
-  document.getElementById('modal-team-title').textContent = teamTitle;
-  document.getElementById('panel-modal').style.display = 'flex';
-}
-function closePanelModal() {
-  document.getElementById('panel-modal').style.display = 'none';
+const csrfToken = document.querySelector('meta[name="csrf-token"]');
+const csrf = csrfToken ? csrfToken.getAttribute('content') : '';
+
+// ── Data from the server ────────────────────────────────────────────────
+const TEAMS = @json($teamsForJs);
+const EXPERTS = @json($expertsForJs);
+
+const TEAMS_BY_ID = Object.fromEntries(TEAMS.map(t => [t.team_id, t]));
+
+let currentTeamId = null;
+let currentSuggestedIds = [];
+
+// ── Expert picker (opens a dedicated modal, not an inline dropdown) ──────
+const PICKER_LABELS = { chair: 'Panel Chair', member1: 'Panel Member 1', member2: 'Panel Member 2' };
+let currentPickerRole = null;
+
+function escHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
+function getPickerSlot(role) {
+  return document.getElementById('picker-' + role);
+}
+
+function setPickerValue(role, id) {
+  const slot = getPickerSlot(role);
+  const hidden = slot.querySelector('.picker-value');
+  const btn = slot.querySelector('.picker-slot');
+  const textEl = btn.querySelector('.slot-text');
+  const changeEl = btn.querySelector('.slot-change');
+  const expert = EXPERTS.find(e => e.id === id);
+
+  hidden.value = id || '';
+
+  if (expert) {
+    textEl.textContent = expert.name;
+    btn.classList.add('filled');
+    changeEl.style.display = 'inline';
+  } else {
+    textEl.textContent = 'Click to select an expert';
+    btn.classList.remove('filled');
+    changeEl.style.display = 'none';
+  }
+}
+
+function getPickerValue(role) {
+  const v = getPickerSlot(role).querySelector('.picker-value').value;
+  return v ? parseInt(v, 10) : null;
+}
+
+function renderExpertPickerResults(term) {
+  const excluded = TEAMS_BY_ID[currentTeamId]?.excluded_expert_ids || [];
+  const otherRoles = Object.keys(PICKER_LABELS).filter(r => r !== currentPickerRole);
+  const takenByOtherRoles = otherRoles.map(r => getPickerValue(r)).filter(Boolean);
+
+  const normalizedTerm = (term || '').toLowerCase().trim();
+  const matches = EXPERTS.filter(e => {
+    if (excluded.includes(e.id) || takenByOtherRoles.includes(e.id)) return false;
+    if (!normalizedTerm) return true;
+    return e.name.toLowerCase().includes(normalizedTerm)
+      || e.tags.some(t => t.toLowerCase().includes(normalizedTerm));
+  });
+
+  const suggested = matches.filter(e => currentSuggestedIds.includes(e.id));
+  const rest = matches.filter(e => !currentSuggestedIds.includes(e.id));
+  const ordered = suggested.concat(rest);
+
+  const results = document.getElementById('expert-picker-results');
+
+  if (ordered.length === 0) {
+    results.innerHTML = '<div class="expert-picker-empty">No experts found.</div>';
+    return;
+  }
+
+  results.innerHTML = ordered.map(e => {
+    const isSuggested = currentSuggestedIds.includes(e.id);
+    return '<div class="expert-picker-option' + (isSuggested ? ' suggested' : '') + '" data-id="' + e.id + '">'
+      + '<span class="opt-name">' + escHtml(e.name) + '</span>'
+      + (e.tags.length ? '<span class="opt-tags">' + escHtml(e.tags.join(', ')) + '</span>' : '')
+      + '</div>';
+  }).join('');
+}
+
+function openExpertPicker(role) {
+  currentPickerRole = role;
+  document.getElementById('expert-picker-title').textContent = 'Select ' + PICKER_LABELS[role];
+  document.getElementById('expert-picker-search').value = '';
+  renderExpertPickerResults('');
+  document.getElementById('expert-picker-modal').style.display = 'flex';
+  document.getElementById('expert-picker-search').focus();
+}
+
+function closeExpertPicker() {
+  document.getElementById('expert-picker-modal').style.display = 'none';
+  currentPickerRole = null;
+}
+
+document.getElementById('expert-picker-search').addEventListener('input', (ev) => renderExpertPickerResults(ev.target.value));
+document.getElementById('expert-picker-results').addEventListener('click', (ev) => {
+  const opt = ev.target.closest('.expert-picker-option');
+  if (!opt || !currentPickerRole) return;
+  setPickerValue(currentPickerRole, parseInt(opt.getAttribute('data-id'), 10));
+  closeExpertPicker();
+});
+
+// ── Modal open/close ────────────────────────────────────────────────────
+function formatScheduleText(schedule) {
+  if (!schedule || !schedule.schedule_date) return null;
+  const d = new Date(schedule.schedule_date);
+  const dateLabel = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+  return dateLabel + ' · ' + schedule.venue;
+}
+
+function fillModalFromSchedule(defenseType) {
+  const team = TEAMS_BY_ID[currentTeamId];
+  const schedule = team.schedules.find(s => s.defense_type === defenseType);
+
+  setPickerValue('chair', schedule?.chair_expert_id ?? null);
+  setPickerValue('member1', schedule?.member1_expert_id ?? null);
+  setPickerValue('member2', schedule?.member2_expert_id ?? null);
+
+  const resultText = formatScheduleText(schedule);
+  const resultEl = document.getElementById('modal-schedule-result');
+  if (resultText) {
+    document.getElementById('modal-schedule-result-text').textContent = resultText;
+    resultEl.style.display = 'block';
+  } else {
+    resultEl.style.display = 'none';
+  }
+}
+
+function openPanelModal(teamId) {
+  currentTeamId = teamId;
+  const team = TEAMS_BY_ID[teamId];
+
+  document.getElementById('modal-team-name').textContent = team.team_name;
+  document.getElementById('modal-team-title').textContent = team.project_title || '';
+  document.getElementById('modal-error').style.display = 'none';
+
+  const defenseSelect = document.getElementById('modal-defense');
+  const latest = team.schedules[team.schedules.length - 1];
+  defenseSelect.value = latest ? latest.defense_type : 'Pre-proposal Defense';
+  fillModalFromSchedule(defenseSelect.value);
+
+  document.getElementById('panel-modal').style.display = 'flex';
+
+  currentSuggestedIds = [];
+  fetch(`/api/admin/panel_assignment/${teamId}/suggest`, {
+    headers: { 'Accept': 'application/json' },
+  })
+    .then(res => res.json())
+    .then(json => {
+      if (json.success) {
+        currentSuggestedIds = json.data.map(s => s.expert_id);
+      }
+    })
+    .catch(() => {});
+}
+
+document.getElementById('modal-defense').addEventListener('change', (ev) => fillModalFromSchedule(ev.target.value));
+
+function closePanelModal() {
+  document.getElementById('panel-modal').style.display = 'none';
+  currentTeamId = null;
+}
+
+function showModalError(message) {
+  const el = document.getElementById('modal-error');
+  el.textContent = message;
+  el.style.display = 'block';
+}
+
+// ── Save ─────────────────────────────────────────────────────────────────
+async function savePanelAssignment() {
+  if (!currentTeamId) return;
+
+  const chairId = getPickerValue('chair');
+  if (!chairId) {
+    showModalError('A Panel Chair is required.');
+    return;
+  }
+
+  const payload = {
+    defense_type: document.getElementById('modal-defense').value,
+    chair_expert_id: chairId,
+    member1_expert_id: getPickerValue('member1'),
+    member2_expert_id: getPickerValue('member2'),
+  };
+
+  const btn = document.getElementById('modal-save-btn');
+  btn.disabled = true;
+
+  try {
+    const res = await fetch(`/api/admin/panel_assignment/${currentTeamId}`, {
+      method: 'POST',
+      headers: { 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json', 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const json = await res.json();
+
+    if (!res.ok || !json.success) {
+      showModalError(json.message || 'Could not save this assignment. Please try again.');
+      return;
+    }
+
+    updateTeamRow(currentTeamId, json.data);
+    closePanelModal();
+  } catch (e) {
+    showModalError('Could not reach the server. Please try again.');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function updateTeamRow(teamId, scheduleData) {
+  const team = TEAMS_BY_ID[teamId];
+  const idx = team.schedules.findIndex(s => s.defense_type === scheduleData.defense_type);
+  const panelByRole = Object.fromEntries(scheduleData.panels.map(p => [p.panel_role, p]));
+  const updated = {
+    defense_type: scheduleData.defense_type,
+    schedule_date: scheduleData.schedule_date ? scheduleData.schedule_date.replace(' ', 'T').slice(0, 16) : null,
+    venue: scheduleData.venue,
+    chair_expert_id: panelByRole['Panel Chair']?.expert_id ?? null,
+    member1_expert_id: panelByRole['Panel Member 1']?.expert_id ?? null,
+    member2_expert_id: panelByRole['Panel Member 2']?.expert_id ?? null,
+  };
+  if (idx >= 0) team.schedules[idx] = updated; else team.schedules.push(updated);
+
+  const row = document.getElementById('team-row-' + teamId);
+  if (!row) return;
+
+  const chairName = panelByRole['Panel Chair']?.expert_name;
+  const m1Name = panelByRole['Panel Member 1']?.expert_name;
+  const m2Name = panelByRole['Panel Member 2']?.expert_name;
+
+  const chairCell = row.querySelector('.cell-chair');
+  chairCell.textContent = chairName || 'Not assigned';
+  chairCell.style.color = chairName ? 'var(--text)' : 'var(--text3)';
+  chairCell.style.fontStyle = chairName ? 'normal' : 'italic';
+
+  const m1Cell = row.querySelector('.cell-member1');
+  m1Cell.textContent = m1Name || 'Not assigned';
+  m1Cell.style.color = m1Name ? 'var(--text)' : 'var(--text3)';
+  m1Cell.style.fontStyle = m1Name ? 'normal' : 'italic';
+
+  const m2Cell = row.querySelector('.cell-member2');
+  m2Cell.textContent = m2Name || 'Not assigned';
+  m2Cell.style.color = m2Name ? 'var(--text)' : 'var(--text3)';
+  m2Cell.style.fontStyle = m2Name ? 'normal' : 'italic';
+
+  const scheduleCell = row.querySelector('.cell-schedule');
+  scheduleCell.textContent = formatScheduleText(updated) || '—';
+
+  const statusBadge = row.querySelector('.cell-status .badge');
+  statusBadge.textContent = chairName ? 'Assigned' : 'Unassigned';
+  statusBadge.className = 'badge ' + (chairName ? 'badge-green' : 'badge-red');
+  row.setAttribute('data-panel-status', chairName ? 'complete' : 'not_assigned');
+
+  const assignBtnLabel = row.querySelector('.assign-btn-label');
+  if (assignBtnLabel) assignBtnLabel.textContent = chairName ? 'Update' : 'Assign';
+}
+
+// ── Defense Window (single form, reused per defense type) ────────────────
+let WINDOWS_BY_TYPE = {};
+
+function showWindowMsg(text, isError) {
+  const el = document.getElementById('window-modal-msg');
+  el.textContent = text;
+  el.style.display = 'block';
+  el.style.background = isError ? 'rgba(220,38,38,0.08)' : 'rgba(22,163,74,0.08)';
+  el.style.border = '1px solid ' + (isError ? 'rgba(220,38,38,0.25)' : 'rgba(22,163,74,0.2)');
+  el.style.color = isError ? '#b91c1c' : 'var(--green, #16a34a)';
+}
+
+function fillWindowForm(defenseType) {
+  const w = WINDOWS_BY_TYPE[defenseType];
+  document.getElementById('window-start-date').value = w?.start_date || '';
+  document.getElementById('window-end-date').value = w?.end_date || '';
+}
+
+function openWindowModal() {
+  document.getElementById('window-modal-msg').style.display = 'none';
+  document.getElementById('window-modal').style.display = 'flex';
+
+  fetch('/api/admin/panel_assignment/windows', { headers: { 'Accept': 'application/json' } })
+    .then(res => res.json())
+    .then(json => {
+      if (!json.success) return;
+      WINDOWS_BY_TYPE = Object.fromEntries(json.data.map(w => [w.defense_type, w]));
+      fillWindowForm(document.getElementById('window-defense-type').value);
+    })
+    .catch(() => {});
+}
+
+function closeWindowModal() {
+  document.getElementById('window-modal').style.display = 'none';
+}
+
+document.getElementById('window-defense-type').addEventListener('change', (ev) => fillWindowForm(ev.target.value));
+
+async function saveWindow() {
+  const defenseType = document.getElementById('window-defense-type').value;
+  const start = document.getElementById('window-start-date').value;
+  const end = document.getElementById('window-end-date').value;
+
+  if (!start || !end) {
+    showWindowMsg('Pick both a start and end date.', true);
+    return;
+  }
+
+  const btn = document.getElementById('window-save-btn');
+  btn.disabled = true;
+
+  try {
+    const res = await fetch('/api/admin/panel_assignment/windows/' + encodeURIComponent(defenseType), {
+      method: 'PUT',
+      headers: { 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ start_date: start, end_date: end }),
+    });
+    const json = await res.json();
+
+    if (!res.ok || !json.success) {
+      showWindowMsg(json.message || 'Could not save.', true);
+      return;
+    }
+
+    WINDOWS_BY_TYPE[defenseType] = json.data;
+
+    const count = json.scheduled_count || 0;
+    if (count > 0) {
+      showWindowMsg(`Saved. Scheduled ${count} team${count === 1 ? '' : 's'} — refreshing...`, false);
+      setTimeout(() => window.location.reload(), 1200);
+    } else {
+      showWindowMsg('Saved. No unscheduled panels to assign yet.', false);
+    }
+  } catch (e) {
+    showWindowMsg('Could not reach the server.', true);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// ── Filters ──────────────────────────────────────────────────────────────
 function applyFilters() {
+  var searchVal = document.getElementById('team-search-input').value.toLowerCase().trim();
   var sectionVal = document.getElementById('filter-section').value;
   var statusVal = document.getElementById('filter-status').value;
   var visibleCount = 0;
-  document.querySelectorAll('#page-panel tbody tr').forEach(function (row) {
+  document.querySelectorAll('#page-panel tbody tr[data-team-id]').forEach(function (row) {
     var sectionMatch = !sectionVal || row.getAttribute('data-section') === sectionVal;
     var statusMatch = !statusVal || row.getAttribute('data-panel-status') === statusVal;
-    if (sectionMatch && statusMatch) {
+    var searchMatch = !searchVal || row.textContent.toLowerCase().includes(searchVal);
+    if (sectionMatch && statusMatch && searchMatch) {
       row.style.display = '';
       visibleCount++;
     } else {
       row.style.display = 'none';
     }
   });
-  var countEl = document.querySelector('#page-panel .row span:last-child');
-  if (countEl) countEl.textContent = visibleCount + ' teams';
+  document.getElementById('team-count').textContent = visibleCount + ' teams';
 }
 
+document.getElementById('team-search-input').addEventListener('input', applyFilters);
 document.getElementById('filter-section').addEventListener('change', applyFilters);
 document.getElementById('filter-status').addEventListener('change', applyFilters);
 
