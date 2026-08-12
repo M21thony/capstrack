@@ -4,9 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\ActivityLog;
 use App\Models\Announcement;
+use App\Models\DefenseSchedule;
 use App\Models\FinancialRecord;
 use App\Models\Milestone;
 use App\Models\Notification;
+use App\Models\PanelGrade;
 use App\Models\Student;
 use App\Models\StudentMilestone;
 use App\Models\StudentSchoolYear;
@@ -37,6 +39,7 @@ class DashboardController extends Controller
         $activities = $this->buildActivities($student, $teamId);
         $milestones = $this->getMilestones($teamId);
         $announcements = $this->getAnnouncements($student, $studentSy);
+        $defenseResults = $this->getDefenseResults($teamId);
 
         // Recent expense receipts for dashboard widget (from
         // complete-grading-rubrics-crud's financial dashboard sync work).
@@ -70,7 +73,40 @@ class DashboardController extends Controller
             'milestones' => $milestones,
             'unreadNotifications' => $unreadNotifications,
             'unreadCount' => $unreadCount,
+            'defenseResults' => $defenseResults,
         ]);
+    }
+
+    // Only counts grades a panelist has actually submitted (not drafts) -
+    // a student never sees a panelist's in-progress working copy.
+    private function getDefenseResults(?int $teamId): Collection
+    {
+        if (! $teamId) {
+            return collect();
+        }
+
+        $schedules = DefenseSchedule::where('team_id', $teamId)->with('panels')->get();
+
+        if ($schedules->isEmpty()) {
+            return collect();
+        }
+
+        $submittedGrades = PanelGrade::whereIn('defense_id', $schedules->pluck('defense_id'))
+            ->where('status', 'submitted')
+            ->get()
+            ->groupBy('defense_id');
+
+        return $schedules->map(function (DefenseSchedule $schedule) use ($submittedGrades) {
+            $grades = $submittedGrades->get($schedule->defense_id, collect());
+
+            return (object) [
+                'defense_type' => $schedule->defense_type,
+                'schedule_date' => $schedule->schedule_date,
+                'assigned_count' => $schedule->panels->count(),
+                'submitted_count' => $grades->count(),
+                'average_score' => $grades->isNotEmpty() ? round((float) $grades->avg('total_score'), 2) : null,
+            ];
+        })->sortBy(fn ($s) => $s->schedule_date ?? now()->addYears(10))->values();
     }
 
     private function loadTeamData(Student $student, ?int $teamId): array
