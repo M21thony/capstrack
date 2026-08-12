@@ -5,6 +5,9 @@ namespace Tests\Feature;
 use App\Models\ActivityLog;
 use App\Models\Announcement;
 use App\Models\CapstoneExpert;
+use App\Models\DefensePanel;
+use App\Models\DefenseSchedule;
+use App\Models\PanelGrade;
 use App\Models\Student;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
@@ -318,5 +321,109 @@ class StudentDashboardTest extends TestCase
 
         $response->assertOk();
         $response->assertDontSee('Beta Team Announcement');
+    }
+
+    public function test_dashboard_shows_defense_results_only_for_submitted_grades(): void
+    {
+        $student = Student::factory()->withCompleteProfile()->create([
+            'email' => 'grades.student@my.cspc.edu.ph',
+        ]);
+
+        $team = Team::create(['team_name' => 'Team Gradeworthy', 'team_status' => 'on-going']);
+
+        StudentSchoolYear::create([
+            'student_id' => $student->student_id,
+            'team_id' => $team->team_id,
+            'program' => 'BSCS',
+            'student_status' => 'Active',
+        ]);
+
+        $schedule = DefenseSchedule::create([
+            'team_id' => $team->team_id,
+            'defense_type' => 'Pre-proposal Defense',
+        ]);
+
+        $chair = CapstoneExpert::create([
+            'email' => 'chair@gmail.com',
+            'first_name' => 'Chair',
+            'last_name' => 'Expert',
+            'approved_status' => true,
+        ]);
+        $member = CapstoneExpert::create([
+            'email' => 'member@gmail.com',
+            'first_name' => 'Member',
+            'last_name' => 'Expert',
+            'approved_status' => true,
+        ]);
+
+        DefensePanel::create(['defense_id' => $schedule->defense_id, 'expert_id' => $chair->expert_id, 'panel_role' => 'Panel Chair', 'created_at' => now()]);
+        DefensePanel::create(['defense_id' => $schedule->defense_id, 'expert_id' => $member->expert_id, 'panel_role' => 'Panel Member 1', 'created_at' => now()]);
+
+        // Submitted grade - should count.
+        PanelGrade::create([
+            'defense_id' => $schedule->defense_id,
+            'expert_id' => $chair->expert_id,
+            'rubric_id' => $this->makeRubricId(),
+            'scores' => ['1' => 80],
+            'total_score' => 80,
+            'verdict' => 'approved',
+            'status' => 'submitted',
+            'submitted_at' => now(),
+        ]);
+
+        // Draft grade - should NOT count or be visible.
+        PanelGrade::create([
+            'defense_id' => $schedule->defense_id,
+            'expert_id' => $member->expert_id,
+            'rubric_id' => $this->makeRubricId(),
+            'scores' => ['1' => 60],
+            'total_score' => 60,
+            'status' => 'draft',
+        ]);
+
+        $response = $this->actingAs($student, 'web')->get(route('student.dashboard'));
+
+        $response->assertOk();
+        $response->assertSee('Defense Results');
+        $response->assertSee('Pre-proposal Defense');
+        $response->assertSee('1 of 2 panelists graded');
+        $response->assertSee('80 pts');
+
+        $results = $response->viewData('defenseResults');
+        $this->assertCount(1, $results);
+        $this->assertEquals(1, $results->first()->submitted_count);
+        $this->assertEquals(2, $results->first()->assigned_count);
+        $this->assertEquals(80.0, $results->first()->average_score);
+    }
+
+    public function test_dashboard_shows_no_defense_results_for_team_with_no_schedule(): void
+    {
+        $student = Student::factory()->withCompleteProfile()->create([
+            'email' => 'nogrades.student@my.cspc.edu.ph',
+        ]);
+
+        $team = Team::create(['team_name' => 'Team Fresh', 'team_status' => 'on-going']);
+
+        StudentSchoolYear::create([
+            'student_id' => $student->student_id,
+            'team_id' => $team->team_id,
+            'program' => 'BSCS',
+            'student_status' => 'Active',
+        ]);
+
+        $response = $this->actingAs($student, 'web')->get(route('student.dashboard'));
+
+        $response->assertOk();
+        $response->assertSee('No defense stages scheduled yet.');
+    }
+
+    private function makeRubricId(): int
+    {
+        return \App\Models\GradingRubric::create([
+            'rubric_name' => 'Test Rubric',
+            'rubric_type' => 'Pre-Proposal Defense',
+            'total_points' => 100,
+            'is_active' => true,
+        ])->rubric_id;
     }
 }

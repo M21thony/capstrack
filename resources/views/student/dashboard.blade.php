@@ -377,6 +377,50 @@
     </div>
 
     <x-dashboard.info-card
+      title="Defense Results"
+      :empty="$defenseResults->isEmpty()"
+      emptyMessage="No defense stages scheduled yet."
+    >
+      <div class="milestone-list">
+        @foreach ($defenseResults as $result)
+          @php
+            $allSubmitted = $result->submitted_count > 0 && $result->submitted_count >= $result->assigned_count;
+            $partialSubmitted = $result->submitted_count > 0 && ! $allSubmitted;
+          @endphp
+          <div class="m-item">
+            <div class="m-icon @if($allSubmitted) m-icon-done @elseif($partialSubmitted) m-icon-active @else m-icon-todo @endif">
+              @if ($allSubmitted)
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              @elseif ($partialSubmitted)
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              @else
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/></svg>
+              @endif
+            </div>
+            <div class="m-body">
+              <div class="m-top">
+                <span class="m-title">{{ $result->defense_type }}</span>
+                <span class="m-badge @if($allSubmitted) m-badge-done @elseif($partialSubmitted) m-badge-active @else m-badge-todo @endif">
+                  @if($result->average_score !== null)
+                    {{ rtrim(rtrim(number_format($result->average_score, 2), '0'), '.') }} pts
+                  @else
+                    Not graded yet
+                  @endif
+                </span>
+              </div>
+              <div style="font-size:11px;color:var(--text3);margin-top:2px">
+                {{ $result->submitted_count }} of {{ $result->assigned_count }} panelist{{ $result->assigned_count === 1 ? '' : 's' }} graded
+                @if($result->schedule_date)
+                  · {{ $result->schedule_date->format('M j, Y') }}
+                @endif
+              </div>
+            </div>
+          </div>
+        @endforeach
+      </div>
+    </x-dashboard.info-card>
+
+    <x-dashboard.info-card
       title="Recent Expenses & Receipts"
       :empty="$recentExpenses->isEmpty()"
       emptyMessage="Submit your first receipt on the Financial Records page."
