@@ -376,7 +376,7 @@
       </x-dashboard.info-card>
     </div>
 
-    <div class="grid-2" style="margin-bottom:16px">
+    <div class="grid-2" style="margin-top:16px;margin-bottom:16px">
     <x-dashboard.info-card
       title="Defense Results"
       :empty="$defenseResults->isEmpty()"
