@@ -172,13 +172,18 @@
               <input class="f-input" type="number" id="f-max" value="1" min="1" max="5"/>
             </div>
 
-            <div class="f-group" style="margin-bottom:0">
+            <div class="f-group" style="margin-bottom:0" id="f-recur-group">
               <label class="f-label">Recurrence</label>
               <select class="f-input" id="f-recur">
                 <option value="once">One-time only</option>
                 <option value="weekly">Every week (same day)</option>
                 <option value="biweekly">Every 2 weeks</option>
               </select>
+              <div id="f-recur-locked-note" style="display:none;font-size:11px;color:var(--text3);margin-top:4px">Recurrence can't be changed here — delete and re-add the slot instead.</div>
+            </div>
+
+            <div id="edit-mode-banner" style="display:none;padding:8px 12px;margin-bottom:11px;background:var(--accent-glow,rgba(0,229,255,0.08));border:1px solid var(--accent,#00e5ff);border-radius:8px;color:var(--accent,#00e5ff);font-size:12px;font-weight:600">
+              Editing existing slot
             </div>
 
             <div class="form-actions">
@@ -377,6 +382,8 @@ let selectedDate     = null;
 let currentMode      = 'normal';
 let pendingBlockDate = null;
 let isSaving         = false;   // FIX: guard against double-clicks
+let editingSlotId    = null;    // schedule_id currently being edited, or null when adding a new slot
+let editingSlotKey   = null;    // the 'YYYY-MM-DD' key the slot being edited lives under
 
 // slots[key] = [ { ...slot } ]  — keyed by 'YYYY-MM-DD'
 let slots      = {};
@@ -953,9 +960,19 @@ function renderSelectedDateSlots(key) {
         </svg>
       </button>` : '';
 
+    const editBtn = s.schedule_id ? `
+      <button onclick="editSlot(${s.schedule_id}, '${key}', ${i})"
+              style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:13px;line-height:1;padding:2px 4px;flex-shrink:0"
+              title="Edit slot">
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+        </svg>
+      </button>` : '';
+
     row.innerHTML = `
       <span>${startStr}–${endStr} · ${TYPE_LABELS[s.type] || 'Consultation'}${statusText}</span>
       <span style="display:flex;align-items:center;gap:2px;flex-shrink:0">
+        ${editBtn}
         ${toggleBtn}
         <button onclick="deleteSlot('${key}', ${i}${s.schedule_id ? ',' + s.schedule_id : ''})"
                 style="background:none;border:none;color:var(--red,#f87171);cursor:pointer;font-size:14px;line-height:1;padding:2px 4px"
@@ -1039,8 +1056,9 @@ async function saveSlot() {
   const end   = document.getElementById('f-end').value;
   if (start >= end) { showToast('End time must be after start time.', 'error'); return; }
 
-  // Prevent overlap with existing slots on the selected date
-  const daySlots = slots[selectedDate] || [];
+  // Prevent overlap with existing slots on the selected date — when
+  // editing, the slot being edited doesn't count as its own conflict.
+  const daySlots = (slots[selectedDate] || []).filter(s => !editingSlotId || s.schedule_id !== editingSlotId);
   const startMin = timeToMinutes(start);
   const endMin = timeToMinutes(end);
   const hasOverlap = daySlots.some(s => {
@@ -1065,7 +1083,51 @@ async function saveSlot() {
   // FIX: disable button while saving
   isSaving = true;
   const btn = document.getElementById('save-slot-btn');
-  if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+  if (btn) { btn.disabled = true; btn.textContent = editingSlotId ? 'Updating…' : 'Saving…'; }
+
+  if (editingSlotId) {
+    const scheduleId = editingSlotId;
+    try {
+      const data = await apiFetch(`/instructor/schedule/slots/${scheduleId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          available_date:     dayName,
+          start_time:         start,
+          end_time:           end,
+          consultation_limit: maxB,
+          slot_type:          type,
+        }),
+      });
+
+      // Mutate the matching raw record in place — slotsByDay is the
+      // single source of truth fanOutSlots() rebuilds slots[] from.
+      const raw = (slotsByDay[dayName] || []).find(s => s.schedule_id === scheduleId);
+      if (raw) {
+        raw.start_time         = start;
+        raw.end_time           = end;
+        raw.consultation_limit = maxB;
+        raw.slot_type          = type;
+      }
+
+      fanOutSlots();
+      renderCalendar();
+      renderSlotStats();
+      renderUpcoming();
+      renderSelectedDateSlots(selectedDate);
+      showToast('Slot updated.');
+      cancelEdit();
+
+    } catch (e) {
+      showToast('Failed to update slot: ' + e.message, 'error');
+    } finally {
+      isSaving = false;
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Save Slot';
+      }
+    }
+    return;
+  }
 
   try {
     const data = await apiFetch('/instructor/schedule/slots', {
@@ -1141,7 +1203,61 @@ async function saveSlot() {
   }
 }
 
+// ── Edit an existing slot ──────────────────────────────────────
+// Populates the same add-slot form with the slot's current values and
+// switches saveSlot() into update mode. Day and recurrence aren't
+// editable here (updateSlot() on the backend doesn't accept them, and
+// moving a slot to a different weekday/date is a bigger UX question
+// than "fix the time/capacity/type") — recur is disabled with a note
+// instead of silently doing nothing.
+function editSlot(scheduleId, key, index) {
+  const s = slots[key] && slots[key][index];
+  if (!s) return;
+
+  editingSlotId  = scheduleId;
+  editingSlotKey = key;
+
+  document.getElementById('f-start').value = (s.start_time || s.start || '').slice(0, 5);
+  document.getElementById('f-end').value   = (s.end_time || s.end || '').slice(0, 5);
+  document.getElementById('f-type').value  = s.slot_type || s.type || 'consult';
+  document.getElementById('f-max').value   = s.consultation_limit || 1;
+  document.getElementById('f-recur').value = s.recur || 'weekly';
+
+  const recurSelect = document.getElementById('f-recur');
+  const recurNote   = document.getElementById('f-recur-locked-note');
+  if (recurSelect) recurSelect.disabled = true;
+  if (recurNote) recurNote.style.display = 'block';
+
+  const banner = document.getElementById('edit-mode-banner');
+  if (banner) banner.style.display = 'block';
+
+  const btn = document.getElementById('save-slot-btn');
+  if (btn) btn.innerHTML = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Update Slot';
+
+  document.getElementById('add-slot-fields').style.display = 'block';
+  checkTimeOverlap();
+
+  document.getElementById('add-slot-form')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function cancelEdit() {
+  editingSlotId  = null;
+  editingSlotKey = null;
+
+  const recurSelect = document.getElementById('f-recur');
+  const recurNote   = document.getElementById('f-recur-locked-note');
+  if (recurSelect) recurSelect.disabled = false;
+  if (recurNote) recurNote.style.display = 'none';
+
+  const banner = document.getElementById('edit-mode-banner');
+  if (banner) banner.style.display = 'none';
+
+  const btn = document.getElementById('save-slot-btn');
+  if (btn) btn.innerHTML = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Save Slot';
+}
+
 function resetForm() {
+  cancelEdit();
   clearSelectedDate();
   document.getElementById('f-start').value = '09:00';
   document.getElementById('f-end').value   = '10:00';
@@ -1196,6 +1312,12 @@ async function deleteSlot(key, index, scheduleId) {
   try {
     if (scheduleId) {
       await apiFetch(`/instructor/schedule/slots/${scheduleId}`, { method: 'DELETE' });
+    }
+
+    // Deleting the slot currently open in the edit form would otherwise
+    // leave saveSlot() pointed at a schedule_id that no longer exists.
+    if (editingSlotId && editingSlotId === scheduleId) {
+      cancelEdit();
     }
 
     // Remove from slots[]
