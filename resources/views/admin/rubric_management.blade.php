@@ -102,6 +102,36 @@
         </div>
         <input type="hidden" id="rb-type" value=""/>
       </div>
+
+      <div class="rb-ai-panel">
+        <div class="rb-ai-panel-header">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="var(--accent3)" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/><circle cx="12" cy="12" r="3"/></svg>
+          <span>Draft with AI</span>
+        </div>
+        <div class="rb-ai-panel-row">
+          <div class="rb-ai-field rb-ai-field-topic">
+            <label class="rb-ai-field-label" for="rb-ai-topic">Focus Area <span style="font-weight:400">(optional)</span></label>
+            <input class="input" id="rb-ai-topic" placeholder="e.g. &quot;BSIT capstone systems&quot;"/>
+          </div>
+          <div class="rb-ai-field rb-ai-field-count">
+            <label class="rb-ai-field-label" for="rb-ai-count"># of Criteria</label>
+            <select class="input" id="rb-ai-count">
+              <option value="3">3</option>
+              <option value="4">4</option>
+              <option value="5" selected>5</option>
+              <option value="6">6</option>
+              <option value="7">7</option>
+              <option value="8">8</option>
+            </select>
+          </div>
+          <button type="button" class="rb-ai-generate-btn" id="rb-ai-btn" onclick="aiGenerateRubric()">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/><circle cx="12" cy="12" r="3"/></svg>
+            <span id="rb-ai-btn-label">Generate</span>
+          </button>
+        </div>
+        <div class="input-hint">Select a rubric type above, then generate a draft name, description, and criteria you can review and edit before saving. "# of Criteria" sets how many scoring criteria the draft will include.</div>
+      </div>
+
       <div class="form-group" style="margin-bottom:0">
         <label class="label">Description <span style="color:var(--text3);font-weight:400">(optional)</span></label>
         <textarea class="input" id="rb-desc" style="min-height:72px" placeholder="Brief description of this rubric's purpose and usage context…"></textarea>
@@ -331,6 +361,8 @@ function normalizeCriterion(c) {
   return {
     id: c.criterion_id,
     name: c.criterion_name,
+    category: c.category || '',
+    categoryMaxPoints: c.category_max_points,
     maxScore: c.max_points,
     levels: (c.score_levels || []).map(function(lv, i) {
       return { label: lv.label || LEVEL_LABELS[i] || '', score: lv.score, desc: lv.desc || '' };
@@ -340,7 +372,7 @@ function normalizeCriterion(c) {
 
 // ── CRITERION BUILDER ─────────────────────────────────────────────────────────
 function addCriterion(preload) {
-  var crit = preload || { name: '', maxScore: 100, levels: LEVEL_LABELS.map(function(label) { return { label: label, score: '', desc: '' }; }) };
+  var crit = preload || { name: '', category: '', categoryMaxPoints: null, maxScore: 100, levels: LEVEL_LABELS.map(function(label) { return { label: label, score: '', desc: '' }; }) };
   if (!preload) draftCriteria.push(crit);
   nameErrors = [];
   descErrors = [];
@@ -372,36 +404,62 @@ function renderCriteriaBuilder() {
     updateTotalPts();
     return;
   }
-  el.innerHTML = draftCriteria.map(function(cr, i) {
-    var hasNameErr = !!nameErrors[i];
-    return '<div class="rb-criterion-card' + (hasNameErr ? ' rb-card-error' : '') + '" id="crc-' + i + '">' +
-      '<div class="rb-criterion-header">' +
-      '<div class="rb-crit-num">' + (i + 1) + '</div>' +
-      '<input class="input rb-crit-name-input' + (hasNameErr ? ' rb-error' : '') + '" value="' + escHtml(cr.name) + '" placeholder="Criterion name (e.g. Oral Presentation)&hellip;" oninput="draftCriteria[' + i + '].name=this.value;clearNameError(' + i + ',this)"/>' +
-      '<button onclick="removeCriterion(' + i + ')" class="rb-remove-btn" title="Remove criterion">' +
-      '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
-      '</button>' +
-      '</div>' +
-      (hasNameErr ? '<div class="rb-crit-name-error"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Criterion Name is required.</div>' : '') +
-      '<div class="rb-levels-grid">' +
-      cr.levels.map(function(lv, li) {
-        var hasDescErr = !!(descErrors[i] && descErrors[i][li]);
-        return '<div class="rb-level-card">' +
-          '<div class="rb-level-label-wrap">' +
-          '<input type="text" class="input rb-level-label-input" style="color:' + LEVEL_COLORS[li] + '" value="' + escHtml(lv.label) + '" placeholder="' + LEVEL_LABELS[li] + '" maxlength="255" oninput="draftCriteria[' + i + '].levels[' + li + '].label=this.value"/>' +
-          '<div class="rb-level-input-wrap">' +
-          '<input type="number" class="input rb-score-tiny" value="' + lv.score + '" placeholder="0" oninput="draftCriteria[' + i + '].levels[' + li + '].score=+this.value;updateTotalPts()" min="0" step="0.25"/>' +
-          '<span class="rb-pts-unit">pts</span>' +
-          '</div>' +
-          '</div>' +
-          '<textarea class="input rb-desc-area' + (hasDescErr ? ' rb-error' : '') + '" placeholder="Describe this performance level&hellip;" oninput="draftCriteria[' + i + '].levels[' + li + '].desc=this.value;clearDescError(' + i + ',' + li + ',this)">' + lv.desc + '</textarea>' +
-          (hasDescErr ? '<div class="rb-level-desc-error" id="ldesc-err-' + i + '-' + li + '"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Performance level description is required.</div>' : '') +
-          '</div>';
-      }).join('') +
-      '</div>' +
-      '</div>';
-  }).join('');
+  // Draft criteria are grouped by category (AI-generated drafts arrive
+  // pre-grouped; manually-added criteria default to no category and just
+  // render under a plain "Ungrouped" heading). A header only renders when
+  // the category changes from the previous card, so criteria sharing a
+  // category stay visually clustered instead of repeating headers.
+  var html = '';
+  var lastCategory = undefined;
+
+  draftCriteria.forEach(function(cr, i) {
+    var cat = (cr.category || '').trim();
+    if (cat !== lastCategory) {
+      lastCategory = cat;
+      var catTotal = draftCriteria.reduce(function(s, c) {
+        return ((c.category || '').trim() === cat) ? s + (c.levels || []).reduce(function(ss, lv) { return ss + (+lv.score || 0); }, 0) : s;
+      }, 0);
+      html += '<div class="rb-category-header">' +
+        '<span>' + (cat ? escHtml(cat) : 'Ungrouped') + '</span>' +
+        '<span class="rb-category-header-pts">' + catTotal + ' pts</span>' +
+        '</div>';
+    }
+    html += renderCriterionCard(cr, i);
+  });
+
+  el.innerHTML = html;
   updateTotalPts();
+}
+
+function renderCriterionCard(cr, i) {
+  var hasNameErr = !!nameErrors[i];
+  return '<div class="rb-criterion-card' + (hasNameErr ? ' rb-card-error' : '') + '" id="crc-' + i + '">' +
+    '<div class="rb-criterion-header">' +
+    '<div class="rb-crit-num">' + (i + 1) + '</div>' +
+    '<input class="input rb-crit-name-input' + (hasNameErr ? ' rb-error' : '') + '" value="' + escHtml(cr.name) + '" placeholder="Criterion name (e.g. Oral Presentation)&hellip;" oninput="draftCriteria[' + i + '].name=this.value;clearNameError(' + i + ',this)"/>' +
+    '<button onclick="removeCriterion(' + i + ')" class="rb-remove-btn" title="Remove criterion">' +
+    '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
+    '</button>' +
+    '</div>' +
+    (hasNameErr ? '<div class="rb-crit-name-error"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Criterion Name is required.</div>' : '') +
+    '<input class="input rb-crit-category-input" value="' + escHtml(cr.category || '') + '" placeholder="Category (optional, e.g. Manuscript)&hellip;" oninput="draftCriteria[' + i + '].category=this.value" onchange="renderCriteriaBuilder()"/>' +
+    '<div class="rb-levels-grid">' +
+    cr.levels.map(function(lv, li) {
+      var hasDescErr = !!(descErrors[i] && descErrors[i][li]);
+      return '<div class="rb-level-card">' +
+        '<div class="rb-level-label-wrap">' +
+        '<input type="text" class="input rb-level-label-input" style="color:' + LEVEL_COLORS[li] + '" value="' + escHtml(lv.label) + '" placeholder="' + LEVEL_LABELS[li] + '" maxlength="255" oninput="draftCriteria[' + i + '].levels[' + li + '].label=this.value"/>' +
+        '<div class="rb-level-input-wrap">' +
+        '<input type="number" class="input rb-score-tiny" value="' + lv.score + '" placeholder="0" oninput="draftCriteria[' + i + '].levels[' + li + '].score=+this.value;updateTotalPts()" min="0" step="0.25"/>' +
+        '<span class="rb-pts-unit">pts</span>' +
+        '</div>' +
+        '</div>' +
+        '<textarea class="input rb-desc-area' + (hasDescErr ? ' rb-error' : '') + '" placeholder="Describe this performance level&hellip;" oninput="draftCriteria[' + i + '].levels[' + li + '].desc=this.value;clearDescError(' + i + ',' + li + ',this)">' + lv.desc + '</textarea>' +
+        (hasDescErr ? '<div class="rb-level-desc-error" id="ldesc-err-' + i + '-' + li + '"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Performance level description is required.</div>' : '') +
+        '</div>';
+    }).join('') +
+    '</div>' +
+    '</div>';
 }
 
 function clearNameError(i, el) {
@@ -529,6 +587,63 @@ function selectRbType(radio) {
   radio.closest('.rb-type-opt').classList.add('selected');
 }
 
+// ── AI DRAFT ──────────────────────────────────────────────────────────────────
+// Drafts name/description/criteria via the same Ollama model used by the
+// duplication checker, then drops the result straight into the Step 2
+// criteria builder so it's just a normal editable draft — nothing is saved
+// until the admin clicks Save/Update Rubric like any other rubric.
+async function aiGenerateRubric() {
+  var type = document.getElementById('rb-type').value;
+  if (!type) { toast('Select a rubric type first.'); return; }
+
+  var btn = document.getElementById('rb-ai-btn');
+  var label = document.getElementById('rb-ai-btn-label');
+  btn.disabled = true;
+  label.textContent = 'Generating…';
+
+  try {
+    var res = await fetch('/api/admin/grading-rubrics/ai-generate', {
+      method: 'POST',
+      headers: { 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json', 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        rubric_type: type,
+        topic: document.getElementById('rb-ai-topic').value.trim(),
+        criteria_count: +document.getElementById('rb-ai-count').value,
+      }),
+    });
+    var json = await res.json();
+    if (!res.ok || !json.success) {
+      toast(json.message || 'AI generation failed.');
+      return;
+    }
+
+    var data = json.data;
+    document.getElementById('rb-name').value = data.rubric_name || '';
+    document.getElementById('rb-desc').value = data.description || '';
+    draftCriteria = (data.criteria || []).map(function(c) {
+      return {
+        name: c.criterion_name || '',
+        category: c.category || '',
+        categoryMaxPoints: c.category_max_points,
+        maxScore: c.max_points,
+        levels: (c.levels || []).map(function(lv) {
+          return { label: lv.label || '', score: lv.score, desc: lv.desc || '' };
+        }),
+      };
+    });
+    nameErrors = [];
+    descErrors = [];
+
+    toast('Draft generated — review the criteria below before saving.');
+    goToStep2();
+  } catch (e) {
+    toast('AI generation failed. Please try again.');
+  } finally {
+    btn.disabled = false;
+    label.textContent = 'Generate';
+  }
+}
+
 // ── SAVE via API ──────────────────────────────────────────────────────────────
 async function saveRubric() {
   var name = document.getElementById('rb-name').value.trim();
@@ -573,6 +688,8 @@ async function saveRubric() {
       body: JSON.stringify({ criteria: draftCriteria.map(function(c) {
         return {
           criterion_name: c.name,
+          category: (c.category || '').trim() || null,
+          category_max_points: c.categoryMaxPoints || null,
           max_points: (c.levels || []).reduce(function(ss, lv) { return ss + (+lv.score || 0); }, 0),
           score_levels: JSON.stringify(c.levels.map(function(lv) {
             return { label: lv.label || '', score: lv.score, desc: lv.desc };
@@ -965,6 +1082,83 @@ loadRubrics();
 .rb-btn-add-criterion:hover {
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(201,168,44,.2);
+}
+
+/* ── AI DRAFT PANEL ── */
+.rb-ai-panel {
+  background: linear-gradient(135deg, rgba(201,168,44,.08), rgba(201,168,44,.03));
+  border: 1px dashed rgba(201,168,44,.4);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 16px;
+}
+.rb-ai-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent3);
+  margin-bottom: 10px;
+}
+.rb-ai-panel-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+.rb-ai-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.rb-ai-field-topic { flex: 1; min-width: 0; }
+.rb-ai-field-count { width: 90px; flex-shrink: 0; }
+.rb-ai-field-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text2);
+  text-transform: uppercase;
+  letter-spacing: .4px;
+}
+.rb-ai-panel-row .input {
+  padding: 8px 10px;
+  font-size: 12px;
+  background: #fff;
+}
+/* Own styling instead of .btn-ghost - that class is tuned for the dark
+   navy topbar/sidebar (near-white text on a near-transparent fill), which
+   is unreadable against this panel's near-white background. */
+.rb-ai-generate-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  white-space: nowrap;
+  gap: 6px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 9px 16px;
+  border-radius: 9px;
+  border: 1.5px solid var(--accent);
+  background: var(--accent);
+  color: #18191f;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.rb-ai-generate-btn:hover:not(:disabled) {
+  background: var(--accent2);
+  border-color: var(--accent2);
+}
+.rb-ai-generate-btn:disabled {
+  opacity: .6;
+  cursor: not-allowed;
+}
+@media (max-width: 480px) {
+  .rb-ai-panel-row { flex-wrap: wrap; }
+  .rb-ai-field-topic { flex: 1 1 100%; }
+  .rb-ai-field-count { flex: 1 1 auto; width: auto; }
+  .rb-ai-generate-btn { flex: 1 1 100%; justify-content: center; }
 }
 
 /* ── EMPTY STATE ── */

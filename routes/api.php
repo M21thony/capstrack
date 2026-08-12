@@ -23,6 +23,7 @@ Route::middleware(['web', 'expert.auth', 'expert.admin'])
 
         // Grading Rubrics
         Route::prefix('grading-rubrics')->name('api.admin.grading-rubrics.')->group(function () {
+            Route::post('/ai-generate', [AdminGradingRubricController::class, 'aiGenerate'])->name('ai-generate');
             Route::get('/', [AdminGradingRubricController::class, 'index'])->name('index');
             Route::get('/{gradingRubric}', [AdminGradingRubricController::class, 'show'])->name('show');
             Route::post('/', [AdminGradingRubricController::class, 'store'])->name('store');

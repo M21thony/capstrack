@@ -17,6 +17,8 @@ class RubricCriterion extends Model
         'rubric_id',
         'criterion_name',
         'description',
+        'category',
+        'category_max_points',
         'max_points',
         'score_levels',
         'sort_order',
@@ -26,6 +28,7 @@ class RubricCriterion extends Model
     {
         return [
             'max_points' => 'decimal:2',
+            'category_max_points' => 'decimal:2',
             'score_levels' => 'array',
             'sort_order' => 'integer',
         ];

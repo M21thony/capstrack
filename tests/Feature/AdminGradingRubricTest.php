@@ -4,8 +4,10 @@ namespace Tests\Feature;
 
 use App\Models\CapstoneExpert;
 use App\Models\GradingRubric;
+use App\Services\OllamaSSHClient;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Mockery;
 use Tests\TestCase;
 
 class AdminGradingRubricTest extends TestCase
@@ -71,6 +73,8 @@ class AdminGradingRubricTest extends TestCase
                 $table->unsignedBigInteger('rubric_id');
                 $table->string('criterion_name');
                 $table->text('description')->nullable();
+                $table->string('category')->nullable();
+                $table->decimal('category_max_points', 6, 2)->nullable();
                 $table->decimal('max_points', 6, 2);
                 $table->text('score_levels');
                 $table->integer('sort_order')->default(0);
@@ -1855,5 +1859,360 @@ class AdminGradingRubricTest extends TestCase
         $this->assertSame('Good performance.', $levels[1]['desc']);
         $this->assertSame('Fair performance.', $levels[2]['desc']);
         $this->assertSame('Poor performance.', $levels[3]['desc']);
+    }
+
+    public function test_ai_generate_requires_authentication(): void
+    {
+        // expert.auth redirects unauthenticated requests rather than
+        // returning a JSON 401, same as every other endpoint in this group.
+        $response = $this->postJson('/api/admin/grading-rubrics/ai-generate', [
+            'rubric_type' => 'title_defense',
+        ]);
+
+        $response->assertStatus(302);
+    }
+
+    public function test_ai_generate_validates_rubric_type(): void
+    {
+        $response = $this->actingAs($this->admin, 'expert')
+            ->postJson('/api/admin/grading-rubrics/ai-generate', []);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['rubric_type']);
+    }
+
+    public function test_ai_generate_rejects_invalid_rubric_type(): void
+    {
+        $response = $this->actingAs($this->admin, 'expert')
+            ->postJson('/api/admin/grading-rubrics/ai-generate', [
+                'rubric_type' => 'not_a_real_type',
+            ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['rubric_type']);
+    }
+
+    public function test_ai_generate_returns_draft_with_scores_totaling_exactly_100(): void
+    {
+        $fakeResponse = json_encode([
+            'rubric_name' => 'Title Defense Rubric',
+            'description' => 'Evaluates project title clarity and feasibility.',
+            'criteria' => [
+                [
+                    'criterion_name' => 'Title Clarity',
+                    'description' => 'How clear the title is.',
+                    'levels' => [
+                        'excellent' => 'Very clear title.',
+                        'good' => 'Clear title.',
+                        'fair' => 'Somewhat clear title.',
+                        'poor' => 'Unclear title.',
+                    ],
+                ],
+                [
+                    'criterion_name' => 'Feasibility',
+                    'description' => 'How feasible the project is.',
+                    'levels' => [
+                        'excellent' => 'Very feasible.',
+                        'good' => 'Feasible.',
+                        'fair' => 'Somewhat feasible.',
+                        'poor' => 'Not feasible.',
+                    ],
+                ],
+                [
+                    'criterion_name' => 'Originality',
+                    'description' => 'How original the idea is.',
+                    'levels' => [
+                        'excellent' => 'Highly original.',
+                        'good' => 'Original.',
+                        'fair' => 'Somewhat original.',
+                        'poor' => 'Not original.',
+                    ],
+                ],
+            ],
+        ]);
+
+        $mock = Mockery::mock(OllamaSSHClient::class);
+        $mock->shouldReceive('generate')
+            ->once()
+            ->andReturn("Here you go:\n```json\n{$fakeResponse}\n```");
+        $this->app->instance(OllamaSSHClient::class, $mock);
+
+        $response = $this->actingAs($this->admin, 'expert')
+            ->postJson('/api/admin/grading-rubrics/ai-generate', [
+                'rubric_type' => 'title_defense',
+                'criteria_count' => 3,
+            ]);
+
+        $response->assertStatus(200)
+            ->assertJson(['success' => true])
+            ->assertJsonPath('data.rubric_name', 'Title Defense Rubric')
+            ->assertJsonCount(3, 'data.criteria');
+
+        $criteria = $response->json('data.criteria');
+        $grandTotal = 0;
+
+        foreach ($criteria as $criterion) {
+            $this->assertCount(4, $criterion['levels']);
+            $levelSum = array_sum(array_column($criterion['levels'], 'score'));
+            $this->assertSame((float) $criterion['max_points'], (float) $levelSum);
+            $grandTotal += $levelSum;
+        }
+
+        $this->assertSame(100, $grandTotal);
+    }
+
+    public function test_ai_generate_respects_requested_criteria_count(): void
+    {
+        $fakeResponse = json_encode([
+            'rubric_name' => 'Final Oral Defense Rubric',
+            'description' => 'Evaluates the final defense.',
+            'criteria' => array_map(fn ($i) => [
+                'criterion_name' => "Criterion {$i}",
+                'description' => 'A criterion.',
+                'levels' => [
+                    'excellent' => 'Excellent.',
+                    'good' => 'Good.',
+                    'fair' => 'Fair.',
+                    'poor' => 'Poor.',
+                ],
+            ], range(1, 6)),
+        ]);
+
+        $mock = Mockery::mock(OllamaSSHClient::class);
+        $mock->shouldReceive('generate')->once()->andReturn($fakeResponse);
+        $this->app->instance(OllamaSSHClient::class, $mock);
+
+        $response = $this->actingAs($this->admin, 'expert')
+            ->postJson('/api/admin/grading-rubrics/ai-generate', [
+                'rubric_type' => 'final_oral_defense',
+                'criteria_count' => 6,
+            ]);
+
+        $response->assertStatus(200)
+            ->assertJsonCount(6, 'data.criteria');
+
+        $grandTotal = array_sum(array_map(
+            fn ($c) => array_sum(array_column($c['levels'], 'score')),
+            $response->json('data.criteria')
+        ));
+
+        $this->assertSame(100, $grandTotal);
+    }
+
+    public function test_ai_generate_returns_502_when_ollama_throws(): void
+    {
+        $mock = Mockery::mock(OllamaSSHClient::class);
+        $mock->shouldReceive('generate')->once()->andThrow(new \Exception('SSH connection refused'));
+        $this->app->instance(OllamaSSHClient::class, $mock);
+
+        $response = $this->actingAs($this->admin, 'expert')
+            ->postJson('/api/admin/grading-rubrics/ai-generate', [
+                'rubric_type' => 'pre_proposal',
+            ]);
+
+        $response->assertStatus(502)
+            ->assertJson(['success' => false]);
+    }
+
+    public function test_ai_generate_returns_502_when_response_is_unparseable(): void
+    {
+        $mock = Mockery::mock(OllamaSSHClient::class);
+        $mock->shouldReceive('generate')->once()->andReturn('Sorry, I cannot help with that.');
+        $this->app->instance(OllamaSSHClient::class, $mock);
+
+        $response = $this->actingAs($this->admin, 'expert')
+            ->postJson('/api/admin/grading-rubrics/ai-generate', [
+                'rubric_type' => 'pre_oral_defense',
+            ]);
+
+        $response->assertStatus(502)
+            ->assertJson(['success' => false]);
+    }
+
+    public function test_ai_generate_defaults_rubric_name_when_ai_omits_it(): void
+    {
+        $fakeResponse = json_encode([
+            'criteria' => [
+                [
+                    'criterion_name' => 'C1',
+                    'description' => 'desc',
+                    'levels' => ['excellent' => 'a', 'good' => 'b', 'fair' => 'c', 'poor' => 'd'],
+                ],
+            ],
+        ]);
+
+        $mock = Mockery::mock(OllamaSSHClient::class);
+        $mock->shouldReceive('generate')->once()->andReturn($fakeResponse);
+        $this->app->instance(OllamaSSHClient::class, $mock);
+
+        $response = $this->actingAs($this->admin, 'expert')
+            ->postJson('/api/admin/grading-rubrics/ai-generate', [
+                'rubric_type' => 'pre_proposal',
+                'criteria_count' => 3,
+            ]);
+
+        $response->assertStatus(200)
+            ->assertJsonPath('data.rubric_name', 'Pre-Proposal Defense Rubric');
+
+        // Only one criterion came back even though 3 were requested - the
+        // budget split still has to land on exactly 100 for what it got.
+        $this->assertSame(100, $response->json('data.criteria.0.max_points'));
+    }
+
+    public function test_ai_generate_uses_real_categories_for_pre_proposal(): void
+    {
+        $fakeResponse = json_encode([
+            'rubric_name' => 'Pre-Proposal Defense Rubric',
+            'description' => 'Evaluates the pre-proposal defense.',
+            'criteria' => [
+                ['criterion_name' => 'Oral Delivery', 'category' => 'Manuscript', 'description' => 'd', 'levels' => ['excellent' => 'a', 'good' => 'b', 'fair' => 'c', 'poor' => 'd']],
+                ['criterion_name' => 'Slide Usage', 'category' => 'Manuscript', 'description' => 'd', 'levels' => ['excellent' => 'a', 'good' => 'b', 'fair' => 'c', 'poor' => 'd']],
+                ['criterion_name' => 'Feasibility', 'category' => 'Topic Quality and Proposal Merit', 'description' => 'd', 'levels' => ['excellent' => 'a', 'good' => 'b', 'fair' => 'c', 'poor' => 'd']],
+                ['criterion_name' => 'Problem Statement', 'category' => 'Proposal Content and Clarity', 'description' => 'd', 'levels' => ['excellent' => 'a', 'good' => 'b', 'fair' => 'c', 'poor' => 'd']],
+                ['criterion_name' => 'Solution Scope', 'category' => 'Proposal Content and Clarity', 'description' => 'd', 'levels' => ['excellent' => 'a', 'good' => 'b', 'fair' => 'c', 'poor' => 'd']],
+            ],
+        ]);
+
+        $mock = Mockery::mock(OllamaSSHClient::class);
+        $mock->shouldReceive('generate')->once()->andReturn($fakeResponse);
+        $this->app->instance(OllamaSSHClient::class, $mock);
+
+        $response = $this->actingAs($this->admin, 'expert')
+            ->postJson('/api/admin/grading-rubrics/ai-generate', [
+                'rubric_type' => 'pre_proposal',
+                'criteria_count' => 5,
+            ]);
+
+        $response->assertStatus(200)->assertJson(['success' => true]);
+
+        $categories = $response->json('data.categories');
+        $this->assertSame([
+            ['name' => 'Manuscript', 'max_points' => 20],
+            ['name' => 'Topic Quality and Proposal Merit', 'max_points' => 30],
+            ['name' => 'Proposal Content and Clarity', 'max_points' => 50],
+        ], $categories);
+
+        $criteria = $response->json('data.criteria');
+
+        $manuscriptTotal = collect($criteria)->where('category', 'Manuscript')->sum('max_points');
+        $topicTotal = collect($criteria)->where('category', 'Topic Quality and Proposal Merit')->sum('max_points');
+        $contentTotal = collect($criteria)->where('category', 'Proposal Content and Clarity')->sum('max_points');
+
+        $this->assertSame(20, $manuscriptTotal);
+        $this->assertSame(30, $topicTotal);
+        $this->assertSame(50, $contentTotal);
+
+        $grandTotal = array_sum(array_map(
+            fn ($c) => array_sum(array_column($c['levels'], 'score')),
+            $criteria
+        ));
+        $this->assertSame(100, $grandTotal);
+    }
+
+    public function test_ai_generate_renormalizes_when_a_category_is_left_empty(): void
+    {
+        // Model only tags criteria into 2 of the 3 real categories - the
+        // 20/30 weights for Manuscript/Topic Quality should renormalize to
+        // fill the full 100 rather than leaving 50 points unaccounted for.
+        $fakeResponse = json_encode([
+            'rubric_name' => 'Pre-Proposal Defense Rubric',
+            'criteria' => [
+                ['criterion_name' => 'Oral Delivery', 'category' => 'Manuscript', 'description' => 'd', 'levels' => ['excellent' => 'a', 'good' => 'b', 'fair' => 'c', 'poor' => 'd']],
+                ['criterion_name' => 'Feasibility', 'category' => 'Topic Quality and Proposal Merit', 'description' => 'd', 'levels' => ['excellent' => 'a', 'good' => 'b', 'fair' => 'c', 'poor' => 'd']],
+            ],
+        ]);
+
+        $mock = Mockery::mock(OllamaSSHClient::class);
+        $mock->shouldReceive('generate')->once()->andReturn($fakeResponse);
+        $this->app->instance(OllamaSSHClient::class, $mock);
+
+        $response = $this->actingAs($this->admin, 'expert')
+            ->postJson('/api/admin/grading-rubrics/ai-generate', [
+                'rubric_type' => 'pre_proposal',
+            ]);
+
+        $response->assertStatus(200);
+
+        $categories = $response->json('data.categories');
+        $this->assertCount(2, $categories);
+        $this->assertSame(100, array_sum(array_column($categories, 'max_points')));
+
+        $criteria = $response->json('data.criteria');
+        $grandTotal = array_sum(array_map(
+            fn ($c) => array_sum(array_column($c['levels'], 'score')),
+            $criteria
+        ));
+        $this->assertSame(100, $grandTotal);
+    }
+
+    public function test_ai_generate_falls_back_to_flat_when_categories_missing_for_non_preproposal_type(): void
+    {
+        // No "categories" key at all in the response - should behave
+        // exactly like before categories existed (single implicit group).
+        $fakeResponse = json_encode([
+            'rubric_name' => 'Title Defense Rubric',
+            'criteria' => [
+                ['criterion_name' => 'C1', 'description' => 'd', 'levels' => ['excellent' => 'a', 'good' => 'b', 'fair' => 'c', 'poor' => 'd']],
+                ['criterion_name' => 'C2', 'description' => 'd', 'levels' => ['excellent' => 'a', 'good' => 'b', 'fair' => 'c', 'poor' => 'd']],
+            ],
+        ]);
+
+        $mock = Mockery::mock(OllamaSSHClient::class);
+        $mock->shouldReceive('generate')->once()->andReturn($fakeResponse);
+        $this->app->instance(OllamaSSHClient::class, $mock);
+
+        $response = $this->actingAs($this->admin, 'expert')
+            ->postJson('/api/admin/grading-rubrics/ai-generate', [
+                'rubric_type' => 'title_defense',
+            ]);
+
+        $response->assertStatus(200)
+            ->assertJson(['data' => ['categories' => []]]);
+
+        $this->assertNull($response->json('data.criteria.0.category'));
+        $this->assertSame(50, $response->json('data.criteria.0.max_points'));
+        $this->assertSame(50, $response->json('data.criteria.1.max_points'));
+    }
+
+    public function test_sync_criteria_persists_category_fields(): void
+    {
+        $rubric = GradingRubric::create([
+            'rubric_name' => 'Category Persist',
+            'rubric_type' => 'Pre-Proposal Defense',
+        ]);
+
+        $response = $this->actingAs($this->admin, 'expert')
+            ->postJson("/api/admin/grading-rubrics/{$rubric->rubric_id}/criteria/sync", [
+                'criteria' => [
+                    [
+                        'criterion_name' => 'Oral Delivery',
+                        'category' => 'Manuscript',
+                        'category_max_points' => 20,
+                        'score_levels' => json_encode([
+                            ['score' => 40, 'desc' => 'Valid performance description.'],
+                            ['score' => 30, 'desc' => 'Valid performance description.'],
+                            ['score' => 20, 'desc' => 'Valid performance description.'],
+                            ['score' => 10, 'desc' => 'Valid performance description.'],
+                        ]),
+                    ],
+                ],
+            ]);
+
+        $response->assertStatus(200)
+            ->assertJson([
+                'success' => true,
+                'data' => [
+                    'criteria' => [
+                        ['criterion_name' => 'Oral Delivery', 'category' => 'Manuscript', 'category_max_points' => 20.0],
+                    ],
+                ],
+            ]);
+
+        $this->assertDatabaseHas('rubric_criteria', [
+            'rubric_id' => $rubric->rubric_id,
+            'criterion_name' => 'Oral Delivery',
+            'category' => 'Manuscript',
+            'category_max_points' => 20.00,
+        ]);
     }
 }
