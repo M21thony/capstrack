@@ -88,6 +88,40 @@ class GoogleDriveController extends Controller
         }
     }
 
+    // ── Named "submission folders" — Subject Adviser names folders here so
+    //    students can pick one at submission time, instead of everything
+    //    landing in one fixed auto-created per-team folder. ────────────────
+    public function listSubmissionFolders()
+    {
+        return response()->json([
+            'folders' => $this->drive->listNamedFolders(Auth::guard('expert')->id()),
+        ]);
+    }
+
+    public function storeSubmissionFolder(Request $request)
+    {
+        $request->validate(['name' => 'required|string|max:150']);
+
+        try {
+            $folder = $this->drive->createNamedFolder(Auth::guard('expert')->id(), $request->input('name'));
+
+            return response()->json(['success' => true, 'folder' => $folder]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
+        }
+    }
+
+    public function destroySubmissionFolder(int $id)
+    {
+        $deleted = $this->drive->deleteNamedFolder(Auth::guard('expert')->id(), $id);
+
+        if (! $deleted) {
+            return response()->json(['success' => false, 'message' => 'Folder not found.'], 404);
+        }
+
+        return response()->json(['success' => true]);
+    }
+
     // ── Upload a file: pushes it to Drive, then saves a resources row ────
     public function upload(Request $request)
     {

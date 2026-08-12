@@ -22,13 +22,12 @@ class SubmissionController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'title' => 'required|string|max:50',
-            'chapter' => 'required|string|max:50',
-            'document_type' => 'nullable|string|max:100',
-            'message' => 'nullable|string',
+            'title' => 'nullable|string|max:50',
+            'chapter' => 'nullable|string|max:50',
             'file' => 'required|file|max:25600', // 25 MB
             'recipients' => 'required|array|min:1',
             'recipients.*' => 'in:adviser,consultant,grammarian,subject_adviser',
+            'subject_adviser_folder_id' => 'nullable|string',
         ]);
 
         $studentId = Auth::id(); // adjust guard if students use a named guard
@@ -55,9 +54,15 @@ class SubmissionController extends Controller
         // Determine next version number for this student (simple increment)
         $lastVersion = CapstoneDocument::where('student_id', $studentId)->max('file_version') ?? 0;
 
+        // No title/chapter form fields anymore - students just attach a file
+        // and submit. Falls back to the uploaded file's own name so every
+        // document still has something sensible to display everywhere else
+        // this field is read (review lists, instructor doc-review, etc).
+        $title = $request->input('title') ?: pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
+
         $document = CapstoneDocument::create([
             'student_id' => $studentId,
-            'file_name' => $request->input('title'),
+            'file_name' => $title,
             'chapter' => $request->input('chapter'),
             'file_path' => $storedPath,
             'file_version' => $lastVersion + 1,
@@ -98,7 +103,8 @@ class SubmissionController extends Controller
                 'drive_status' => 'pending',
             ]);
 
-            $this->deliverToDrive($review, $expertId, $studentYear->team_id, $team->team_name ?? 'Unknown Team', $file, $originalExt);
+            $explicitFolderId = $role === 'subject_adviser' ? $request->input('subject_adviser_folder_id') : null;
+            $this->deliverToDrive($review, $expertId, $studentYear->team_id, $team->team_name ?? 'Unknown Team', $file, $originalExt, $explicitFolderId);
 
             $results[] = [
                 'role' => $role,
@@ -110,6 +116,32 @@ class SubmissionController extends Controller
             'success' => true,
             'document' => $document,
             'recipients' => $results,
+        ]);
+    }
+
+    // GET /api/student/submission/subject-adviser-folders — named folders
+    // the resolved Subject Adviser has set up for students to pick from.
+    public function subjectAdviserFolders()
+    {
+        $studentId = Auth::id();
+
+        $studentYear = DB::table('student_s_y')
+            ->where('student_id', $studentId)
+            ->orderByDesc('school_year')
+            ->first();
+
+        if (! $studentYear || ! $studentYear->program) {
+            return response()->json(['folders' => []]);
+        }
+
+        $expertId = $this->resolver->resolveSubjectAdviserAdmin($studentYear->program);
+
+        if (! $expertId) {
+            return response()->json(['folders' => []]);
+        }
+
+        return response()->json([
+            'folders' => $this->drive->listNamedFolders($expertId),
         ]);
     }
 
@@ -145,7 +177,8 @@ class SubmissionController extends Controller
         int $teamId,
         string $teamName,
         $file,
-        string $ext
+        string $ext,
+        ?string $explicitFolderId = null
     ): void {
         $hasToken = GoogleDriveToken::where('user_id', $expertId)->exists();
 
@@ -168,7 +201,10 @@ class SubmissionController extends Controller
         $mimeType = $extensionMimeMap[$ext] ?? $file->getMimeType();
 
         try {
-            $folderId = $this->drive->getOrCreateSubmissionFolder($expertId, $teamId, $teamName);
+            // A student-chosen folder (currently only offered for the Subject
+            // Adviser recipient) takes priority over the default per-team
+            // auto-created one.
+            $folderId = $explicitFolderId ?? $this->drive->getOrCreateSubmissionFolder($expertId, $teamId, $teamName);
 
             $uploaded = $this->drive->uploadFile(
                 $expertId,
