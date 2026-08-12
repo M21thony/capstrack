@@ -12,11 +12,16 @@
   @keyframes sk-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
   .sk-overlay { position: absolute; inset: 0; background: var(--bg); z-index: 10; }
   .sk { background: linear-gradient(90deg, var(--bg4) 25%, var(--bg2) 50%, var(--bg4) 75%); background-size: 200% 100%; animation: sk-shimmer 1.5s ease-in-out infinite; border-radius: 8px; }
+  #submission-toast { position: fixed; bottom: 30px; right: 30px; background: var(--navy-dark); color: #fff; padding: 14px 22px; border-radius: 12px; font-size: 13px; font-weight: 500; z-index: 2000; box-shadow: 0 8px 30px rgba(0,0,0,0.3); opacity: 0; transform: translateY(12px); pointer-events: none; transition: opacity 0.25s ease, transform 0.25s ease; border-left: 4px solid transparent; display: flex; align-items: center; gap: 10px; max-width: 380px; white-space: pre-line; }
+  #submission-toast.show { opacity: 1; transform: translateY(0); }
+  #submission-toast.success { border-left-color: var(--green); }
+  #submission-toast.error { border-left-color: var(--red); }
 </style>
 </head>
 <body>
 @include('student.partials.sidebar')
 <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+<div id="submission-toast"></div>
 
 <!-- MAIN -->
 <div class="main">
@@ -266,6 +271,17 @@ document.addEventListener('DOMContentLoaded', function () {
 const CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]').content;
 const SUBMIT_URL = "{{ route('student.submission.store') }}";
 
+function showToast(message, type) {
+  type = type || 'success';
+  const toast = document.getElementById('submission-toast');
+  if (!toast) return;
+  toast.textContent = (type === 'error' ? '✕ ' : '✓ ') + message;
+  toast.classList.remove('success', 'error');
+  toast.classList.add('show', type);
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(() => toast.classList.remove('show'), 4000);
+}
+
 let selectedFile = null;
 
 const dropZone = document.getElementById('dropZone');
@@ -289,11 +305,11 @@ fileInput.addEventListener('change', (e) => {
 function handleFile(file) {
   const ext = file.name.split('.').pop().toLowerCase();
   if (ext !== 'pdf') {
-    alert('Only PDF files are accepted.');
+    showToast('Only PDF files are accepted.', 'error');
     return;
   }
   if (file.size > 25 * 1024 * 1024) {
-    alert('File too large. Max 25MB.');
+    showToast('File too large. Max 25MB.', 'error');
     return;
   }
   selectedFile = file;
@@ -339,17 +355,17 @@ if (folderWrap && folderSelect) {
 document.getElementById('submitBtn').addEventListener('click', function () {
   const checked = Array.from(document.querySelectorAll('#recipientGroup input[type="checkbox"]:checked')).map(cb => cb.value);
   if (checked.length === 0) {
-    alert('Please select at least one recipient before submitting.');
+    showToast('Please select at least one recipient before submitting.', 'error');
     return;
   }
 
   if (!selectedFile) {
-    alert('Please attach a PDF file before submitting.');
+    showToast('Please attach a PDF file before submitting.', 'error');
     return;
   }
 
   if (folderWrap && folderWrap.style.display !== 'none' && !folderSelect.value) {
-    alert('Please select which folder to submit to for your Subject Adviser.');
+    showToast('Please select which folder to submit to for your Subject Adviser.', 'error');
     return;
   }
 
@@ -376,23 +392,23 @@ document.getElementById('submitBtn').addEventListener('click', function () {
       btn.innerHTML = originalText;
 
       if (!data.success) {
-        alert('❌ ' + (data.message || 'Submission failed.'));
+        showToast(data.message || 'Submission failed.', 'error');
         return;
       }
 
       const failedRecipients = (data.recipients || []).filter(r => r.status === 'not_connected' || r.status === 'failed' || r.status === 'unresolved');
-      let msg = '✓ Document submitted successfully.';
+      let msg = 'Document submitted successfully.';
       if (failedRecipients.length) {
-        msg += '\n\nNote: some recipients could not receive a Drive copy:\n' +
-          failedRecipients.map(r => `- ${r.role}: ${r.status}`).join('\n');
+        msg += ' Some recipients could not receive a Drive copy: ' +
+          failedRecipients.map(r => `${r.role} (${r.status})`).join(', ');
       }
-      alert(msg);
-      window.location.reload();
+      showToast(msg, failedRecipients.length ? 'error' : 'success');
+      setTimeout(() => window.location.reload(), 1800);
     })
     .catch(() => {
       btn.disabled = false;
       btn.innerHTML = originalText;
-      alert('❌ Submission failed. Please try again.');
+      showToast('Submission failed. Please try again.', 'error');
     });
 });
 
