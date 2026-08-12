@@ -115,11 +115,7 @@ Route::middleware(['auth:expert', 'expert.approved', 'no.cache'])->prefix('revie
 });
 
 Route::get('/', function () {
-    return view('welcome', [
-        'removedExpert' => request()->has('removed_expert'),
-        'removedExpertName' => request('name', ''),
-        'removedExpertReason' => request('reason', ''),
-    ]);
+    return redirect()->route('login', request()->query());
 });
 
 Route::get('/login', [AuthController::class, 'login'])->name('login');

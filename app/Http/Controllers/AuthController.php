@@ -13,11 +13,15 @@ use Illuminate\Support\Str;
 class AuthController extends Controller
 {
     /**
-     * Redirect to landing page with login trigger query parameter.
+     * Show the sign-in page.
      */
     public function login()
     {
-        return redirect('/');
+        return view('auth.login', [
+            'removedExpert' => request()->has('removed_expert'),
+            'removedExpertName' => request('name', ''),
+            'removedExpertReason' => request('reason', ''),
+        ]);
     }
 
     /**
