@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Validator;
 
 class ScheduleController extends Controller
 {
@@ -70,7 +71,12 @@ class ScheduleController extends Controller
     // POST /instructor/schedule/slots
     public function addSlot(Request $request)
     {
-        $request->validate([
+        // Request::validate() would redirect on failure here — this app
+        // only auto-renders JSON exceptions for api/* routes
+        // (bootstrap/app.php's shouldRenderJsonWhen), and this endpoint is
+        // hit via fetch from an instructor/ page. Validate manually so a
+        // failure returns JSON instead of a redirect the JS can't handle.
+        $validator = Validator::make($request->all(), [
             'available_date' => 'required|in:Monday,Tuesday,Wednesday,Thursday,Friday,Saturday,Sunday',
             'start_time' => 'required|date_format:H:i',
             'end_time' => 'required|date_format:H:i|after:start_time',
@@ -79,6 +85,10 @@ class ScheduleController extends Controller
             'recur' => 'nullable|in:once,weekly,biweekly',
             'specific_date' => 'nullable|date',
         ]);
+
+        if ($validator->fails()) {
+            return response()->json(['error' => $validator->errors()->first()], 422);
+        }
 
         $expert = Auth::guard('expert')->user();
 
@@ -184,7 +194,10 @@ class ScheduleController extends Controller
     // PATCH /instructor/schedule/slots/{id}
     public function updateSlot(Request $request, int $id)
     {
-        $request->validate([
+        // See addSlot() — validate() here would try to redirect on
+        // failure instead of returning JSON, since this route isn't
+        // under api/*.
+        $validator = Validator::make($request->all(), [
             'available_date' => 'sometimes|in:Monday,Tuesday,Wednesday,Thursday,Friday,Saturday,Sunday',
             'start_time' => 'sometimes|date_format:H:i',
             'end_time' => 'sometimes|date_format:H:i|after:start_time',
@@ -192,6 +205,10 @@ class ScheduleController extends Controller
             'slot_type' => 'sometimes|nullable|string',
             'is_available' => 'sometimes|boolean',
         ]);
+
+        if ($validator->fails()) {
+            return response()->json(['error' => $validator->errors()->first()], 422);
+        }
 
         $expert = Auth::guard('expert')->user();
 
