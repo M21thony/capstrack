@@ -376,6 +376,7 @@
       </x-dashboard.info-card>
     </div>
 
+    <div class="grid-2" style="margin-bottom:16px">
     <x-dashboard.info-card
       title="Defense Results"
       :empty="$defenseResults->isEmpty()"
@@ -467,6 +468,7 @@
         </div>
       @endforeach
     </x-dashboard.info-card>
+    </div>
 
     <div class="legal-credits">
       <div class="credits-title">System Developers</div>
