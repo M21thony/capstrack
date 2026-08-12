@@ -38,4 +38,19 @@ class RubricCriterion extends Model
     {
         return $this->belongsTo(GradingRubric::class, 'rubric_id', 'rubric_id');
     }
+
+    // The 'array' cast on score_levels doesn't reliably decode it in every
+    // context (AdminGradingRubricController::formatCriterion() already
+    // works around the same thing) - always go through this instead of
+    // reading score_levels directly.
+    public function decodedScoreLevels(): array
+    {
+        $levels = $this->score_levels;
+
+        if (is_string($levels)) {
+            return json_decode($levels, true) ?? [];
+        }
+
+        return is_array($levels) ? $levels : [];
+    }
 }
