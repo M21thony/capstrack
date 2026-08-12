@@ -173,6 +173,8 @@
 
   <div class="content">
 
+    <div id="rb-main">
+
     <!-- Page Header: Stats + New Button -->
     <div class="rb-page-header">
       <div class="rb-stat-strip">
@@ -250,6 +252,68 @@
       </div>
 
     </div>
+    </div>
+
+    <!-- SKELETON LOADING -->
+    <div id="rb-skeleton" class="rb-skeleton" style="display:none">
+
+      <div class="rb-page-header">
+        <div class="rb-stat-strip">
+          <div class="rb-stat-item" style="align-items:center">
+            <div class="sk rb-sk-n"></div>
+            <div class="sk rb-sk-l"></div>
+          </div>
+          <div class="rb-stat-divider"></div>
+          <div class="rb-stat-item" style="align-items:center">
+            <div class="sk rb-sk-n"></div>
+            <div class="sk rb-sk-l"></div>
+          </div>
+          <div class="rb-stat-divider"></div>
+          <div class="rb-stat-item" style="align-items:center">
+            <div class="sk rb-sk-n"></div>
+            <div class="sk rb-sk-l"></div>
+          </div>
+          <div class="rb-stat-divider rb-mobile-divider"></div>
+          <div class="rb-stat-item rb-mobile-new-btn">
+            <div class="sk rb-sk-new-mobile"></div>
+          </div>
+        </div>
+        <div class="sk rb-sk-new-btn rb-desktop-new-btn" style="flex-shrink:0"></div>
+      </div>
+
+      <div class="card" style="padding:0;overflow:hidden">
+
+        <div class="rb-tab-header">
+          <div class="rb-tab-nav" style="pointer-events:none">
+            <div class="sk rb-sk-tab" style="width:52px"></div>
+            <div class="sk rb-sk-tab" style="width:96px"></div>
+            <div class="sk rb-sk-tab" style="width:98px"></div>
+            <div class="sk rb-sk-tab" style="width:76px"></div>
+            <div class="sk rb-sk-tab" style="width:78px"></div>
+            <div class="sk rb-sk-tab" style="width:86px"></div>
+          </div>
+          <div class="rb-tab-search">
+            <div class="sk rb-sk-searchbar"></div>
+          </div>
+        </div>
+
+        <div style="padding:20px 16px;display:flex;flex-direction:column;gap:12px">
+
+          <div class="sk rb-sk-line" style="width:100%"></div>
+          <div class="sk rb-sk-line" style="width:88%"></div>
+          <div class="sk rb-sk-line" style="width:72%"></div>
+          <div class="sk rb-sk-line" style="width:94%"></div>
+          <div class="sk rb-sk-line" style="width:64%"></div>
+
+        </div>
+
+        <div class="rb-pagination" style="justify-content:flex-start">
+          <div class="sk rb-sk-pginfo"></div>
+        </div>
+
+      </div>
+
+    </div>
   </div>
 </div>
 
@@ -300,6 +364,7 @@ const csrf = csrfToken ? csrfToken.getAttribute('content') : '';
 
 // ── API ──────────────────────────────────────────────────────────────────────
 async function loadRubrics() {
+  showSkeleton();
   try {
     const res = await fetch('/api/admin/grading-rubrics', {
       headers: { 'Accept': 'application/json' },
@@ -314,7 +379,23 @@ async function loadRubrics() {
   } catch (e) {
     console.error('Failed to load rubrics', e);
     toast('Failed to load rubrics.');
+  } finally {
+    hideSkeleton();
   }
+}
+
+function showSkeleton() {
+  var sk = document.getElementById('rb-skeleton');
+  var main = document.getElementById('rb-main');
+  if (sk) sk.style.display = 'block';
+  if (main) main.style.display = 'none';
+}
+
+function hideSkeleton() {
+  var sk = document.getElementById('rb-skeleton');
+  var main = document.getElementById('rb-main');
+  if (sk) sk.style.display = 'none';
+  if (main) main.style.display = '';
 }
 
 function normalizeRubric(r) {
@@ -395,7 +476,7 @@ function renderCriteriaBuilder() {
           '</div>' +
           '</div>' +
           '<textarea class="input rb-desc-area' + (hasDescErr ? ' rb-error' : '') + '" placeholder="Describe this performance level&hellip;" oninput="draftCriteria[' + i + '].levels[' + li + '].desc=this.value;clearDescError(' + i + ',' + li + ',this)">' + lv.desc + '</textarea>' +
-          (hasDescErr ? '<div class="rb-level-desc-error" id="ldesc-err-' + i + '-' + li + '"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Performance level description is required.</div>' : '') +
+          (hasDescErr ? '<div class="rb-level-desc-error" id="ldesc-err-' + i + '-' + li + '"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Performance level description is required for ' + escHtml(((lv.label || '').trim() || LEVEL_LABELS[li])) + '.</div>' : '') +
           '</div>';
       }).join('') +
       '</div>' +
@@ -447,7 +528,6 @@ function updateTotalPts() {
   var lbl = document.getElementById('total-pts-label');
   var hint = document.getElementById('total-pts-hint');
   var note = document.getElementById('total-pts-note');
-  var saveBtn = document.getElementById('form-save-btn');
   var diff = 100 - total;
   if (lbl) {
     lbl.textContent = total + ' / 100 pts';
@@ -468,9 +548,6 @@ function updateTotalPts() {
       hint.className = 'rb-pts-hint rb-pts-hint-warn';
     }
   }
-  if (saveBtn) {
-    saveBtn.disabled = total !== 100;
-  }
 }
 
 // ── MODAL ─────────────────────────────────────────────────────────────────────
@@ -484,6 +561,7 @@ function openNewRubricModal() {
   document.getElementById('modal-form-title').textContent = 'New Rubric';
   document.getElementById('modal-form-sub').textContent = 'Fill in the details below to create a grading rubric.';
   document.getElementById('form-save-label').textContent = 'Save Rubric';
+  document.getElementById('form-save-btn').disabled = false;
   draftCriteria = [];
   nameErrors = [];
   descErrors = [];
@@ -530,68 +608,78 @@ function selectRbType(radio) {
 }
 
 // ── SAVE via API ──────────────────────────────────────────────────────────────
+var isSavingRubric = false;
+
 async function saveRubric() {
+  if (isSavingRubric) return;
   var name = document.getElementById('rb-name').value.trim();
   var type = document.getElementById('rb-type').value;
   var desc = document.getElementById('rb-desc').value.trim();
   if (!name) { toast('Enter a rubric name.'); goToStep1(); return; }
   if (!type) { toast('Select a rubric type.'); goToStep1(); return; }
   if (!draftCriteria.length) { toast('Add at least one criterion.'); return; }
-  if (!validateCriterionNames()) { toast('Criterion Name is required for every criterion.'); return; }
-  if (!validateLevelDescriptions()) { toast('Performance level description is required for every performance level.'); return; }
+
+  var namesOk = validateCriterionNames();
+  var descsOk = validateLevelDescriptions();
   var total = draftCriteria.reduce(function(s, c) {
     return s + (c.levels || []).reduce(function(ss, lv) { return ss + (+lv.score || 0); }, 0);
   }, 0);
-  if (total !== 100) { toast('Total score-level points must equal exactly 100 points (currently ' + total + ').'); return; }
+  var pointsOk = total === 100;
 
-  var url, method;
-  if (editingId) {
-    url = '/api/admin/grading-rubrics/' + editingId;
-    method = 'PUT';
-  } else {
-    url = '/api/admin/grading-rubrics';
-    method = 'POST';
+  if (!namesOk || !descsOk || !pointsOk) {
+    showValidationSummary(namesOk, descsOk, pointsOk, total);
+    return;
   }
+
+  var url = editingId ? '/api/admin/grading-rubrics/' + editingId : '/api/admin/grading-rubrics';
+  var method = editingId ? 'PUT' : 'POST';
+  var criteriaPayload = draftCriteria.map(function(c) {
+    return {
+      criterion_name: c.name,
+      max_points: (c.levels || []).reduce(function(ss, lv) { return ss + (+lv.score || 0); }, 0),
+      score_levels: JSON.stringify(c.levels.map(function(lv) {
+        return { label: lv.label || '', score: lv.score, desc: lv.desc };
+      })),
+      sort_order: 0,
+    };
+  });
+
+  isSavingRubric = true;
+  var saveBtn = document.getElementById('form-save-btn');
+  var saveLabel = document.getElementById('form-save-label');
+  saveBtn.disabled = true;
+  saveLabel.textContent = editingId ? 'Updating...' : 'Saving...';
 
   try {
     var res = await fetch(url, {
       method: method,
       headers: { 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json', 'Content-Type': 'application/json' },
-      body: JSON.stringify({ rubric_name: name, rubric_type: type, description: desc, total_points: 100 }),
+      body: JSON.stringify({
+        rubric_name: name,
+        rubric_type: type,
+        description: desc,
+        total_points: 100,
+        criteria: criteriaPayload,
+      }),
     });
     var json = await res.json();
     if (!res.ok) {
-      toast(json.message || 'Something went wrong.');
+      var msgs = apiErrorMessages(json);
+      showErrorList(msgs.length ? msgs : ['Something went wrong.']);
       return;
     }
 
-    // Sync criteria
-    var rubricId = json.data.rubric_id;
-    var syncRes = await fetch('/api/admin/grading-rubrics/' + rubricId + '/criteria/sync', {
-      method: 'POST',
-      headers: { 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json', 'Content-Type': 'application/json' },
-      body: JSON.stringify({ criteria: draftCriteria.map(function(c) {
-        return {
-          criterion_name: c.name,
-          max_points: (c.levels || []).reduce(function(ss, lv) { return ss + (+lv.score || 0); }, 0),
-          score_levels: JSON.stringify(c.levels.map(function(lv) {
-            return { label: lv.label || '', score: lv.score, desc: lv.desc };
-          })),
-          sort_order: 0,
-        };
-      }) }),
-    });
-    var syncJson = await syncRes.json();
-    if (!syncRes.ok) {
-      toast(syncJson.message || 'Failed to save criteria.');
-      return;
-    }
-
+    upsertRubricInList(json.data);
     closeRubricModal();
-    await loadRubrics();
     toast(editingId ? 'Rubric updated.' : 'Rubric saved.');
   } catch (e) {
     toast('Something went wrong.');
+  } finally {
+    isSavingRubric = false;
+    if (document.getElementById('rubric-modal').classList.contains('show')) {
+      saveBtn.disabled = false;
+      saveLabel.textContent = editingId ? 'Update Rubric' : 'Save Rubric';
+    }
   }
 }
 
@@ -606,6 +694,7 @@ function editRubric(id) {
   document.getElementById('modal-form-title').textContent = 'Edit Rubric';
   document.getElementById('modal-form-sub').textContent = 'Update the rubric details and criteria below.';
   document.getElementById('form-save-label').textContent = 'Update Rubric';
+  document.getElementById('form-save-btn').disabled = false;
   document.querySelectorAll('.rb-type-opt').forEach(function(o) { o.classList.remove('selected'); });
   document.querySelectorAll('input[name=rb-type-radio]').forEach(function(r) {
     r.checked = (r.value === rb.type);
@@ -812,6 +901,58 @@ function toast(msg) {
   _tt = setTimeout(function() { t.classList.remove('show'); }, 2600);
 }
 
+function upsertRubricInList(rubricData) {
+  var rb = normalizeRubric(rubricData);
+  var idx = rubrics.findIndex(function(r) { return r.id === rb.id; });
+  if (idx >= 0) {
+    rubrics[idx] = rb;
+  } else {
+    rubrics.unshift(rb);
+  }
+  renderList();
+  updateStats();
+}
+
+function apiErrorMessages(json) {
+  var msgs = [];
+  if (json && json.errors && typeof json.errors === 'object') {
+    Object.keys(json.errors).forEach(function(k) {
+      var v = json.errors[k];
+      if (Array.isArray(v)) v.forEach(function(m) { msgs.push(m); });
+      else if (typeof v === 'string') msgs.push(v);
+    });
+  }
+  if (!msgs.length && json && json.message) msgs.push(json.message);
+  return msgs;
+}
+
+function showErrorList(msgs) {
+  var t = document.getElementById('toast');
+  if (!msgs.length) { toast('Something went wrong.'); return; }
+  t.innerHTML = msgs.map(function(m) { return '<div>' + escHtml(m) + '</div>'; }).join('');
+  t.classList.add('show');
+  clearTimeout(_tt);
+  _tt = setTimeout(function() { t.classList.remove('show'); t.innerHTML = ''; }, 3200);
+}
+
+function showValidationSummary(namesOk, descsOk, pointsOk, total) {
+  var msgs = [];
+  nameErrors.forEach(function(err, i) {
+    if (err) msgs.push('Criterion Name is required for criterion ' + (i + 1) + '.');
+  });
+  descErrors.forEach(function(errs, i) {
+    errs.forEach(function(err, li) {
+      if (err) {
+        var lv = draftCriteria[i] && draftCriteria[i].levels[li];
+        var lbl = ((lv && lv.label) || '').trim() || LEVEL_LABELS[li];
+        msgs.push('Performance level description is required for ' + lbl + '.');
+      }
+    });
+  });
+  if (!pointsOk) msgs.push('Total score-level points must equal exactly 100 points (currently ' + total + ').');
+  showErrorList(msgs);
+}
+
 // ── Mobile Sidebar ──
 function toggleSidebar() {
   document.body.classList.toggle('sidebar-open');
@@ -947,15 +1088,42 @@ loadRubrics();
 .modal-overlay.show { animation: modalFadeIn 0.2s ease; }
 .modal-actions .btn { padding: 8px 20px; border-radius: 10px; }
 .rb-close-btn {
-  transition: all 0.2s ease;
   border-radius: 8px;
+  transition: none;
 }
-.rb-close-btn:hover { background: var(--bg4); color: var(--text); transform: rotate(90deg); }
+.rb-close-btn:hover { background: var(--bg4); color: var(--text); }
 @keyframes modalFadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes modalSlideIn { from { opacity: 0; transform: translateY(12px) scale(.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
 
+/* ── SKELETON LOADING ── */
+.rb-skeleton { pointer-events: none; }
+.sk {
+  position: relative;
+  overflow: hidden;
+  background: rgba(148,163,184,.22);
+  border-radius: 6px;
+}
+.sk::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.55), transparent);
+  animation: rb-sk-shimmer 1.5s ease-in-out infinite;
+}
+@keyframes rb-sk-shimmer { 100% { transform: translateX(100%); } }
+.rb-sk-n { width: 46px; height: 20px; border-radius: 5px; }
+.rb-sk-l { width: 76px; height: 9px; border-radius: 4px; }
+.rb-sk-new-btn { width: 122px; height: 40px; border-radius: 10px; }
+.rb-sk-new-mobile { width: 100%; height: 52px; border-radius: 12px; }
+.rb-sk-tab { height: 28px; border-radius: 8px; }
+.rb-sk-searchbar { width: 176px; height: 30px; border-radius: 7px; }
+.rb-sk-line { height: 18px; border-radius: 6px; flex-shrink: 0; }
+.rb-sk-pginfo { width: 150px; height: 12px; border-radius: 4px; }
+
 /* ── TOAST ── */
 .toast { border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,.15); }
+#toast { flex-direction: column; align-items: flex-start; gap: 3px; white-space: normal; max-width: 360px; }
 
 /* ── ADD CRITERION ── */
 .rb-btn-add-criterion {

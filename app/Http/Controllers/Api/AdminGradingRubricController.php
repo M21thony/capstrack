@@ -53,23 +53,23 @@ class AdminGradingRubricController extends Controller
 
     public function store(Request $request): JsonResponse
     {
-        $validated = $request->validate([
-            'rubric_name' => ['required', 'string', 'max:255'],
-            'rubric_type' => ['required', 'string', 'in:'.implode(',', array_keys(self::TYPE_MAP))],
-            'description' => ['nullable', 'string', 'max:5000'],
-            'total_points' => $this->totalPointsRule(),
-            'is_active' => ['nullable', 'boolean'],
-        ]);
+        $validated = $request->validate($this->rubricRules());
 
         $dbType = self::TYPE_MAP[$validated['rubric_type']] ?? $validated['rubric_type'];
 
-        $rubric = GradingRubric::create([
-            'rubric_name' => $validated['rubric_name'],
-            'rubric_type' => $dbType,
-            'description' => $validated['description'] ?? null,
-            'total_points' => $validated['total_points'] ?? 100.00,
-            'is_active' => $validated['is_active'] ?? true,
-        ]);
+        $rubric = DB::transaction(function () use ($validated, $dbType): GradingRubric {
+            $rubric = GradingRubric::create([
+                'rubric_name' => $validated['rubric_name'],
+                'rubric_type' => $dbType,
+                'description' => $validated['description'] ?? null,
+                'total_points' => $validated['total_points'] ?? 100.00,
+                'is_active' => $validated['is_active'] ?? true,
+            ]);
+
+            $this->storeCriteria($rubric, $validated['criteria'] ?? null);
+
+            return $rubric->load('criteria');
+        });
 
         return response()->json([
             'success' => true,
@@ -80,25 +80,23 @@ class AdminGradingRubricController extends Controller
 
     public function update(Request $request, GradingRubric $gradingRubric): JsonResponse
     {
-        $validated = $request->validate([
-            'rubric_name' => ['required', 'string', 'max:255'],
-            'rubric_type' => ['required', 'string', 'in:'.implode(',', array_keys(self::TYPE_MAP))],
-            'description' => ['nullable', 'string', 'max:5000'],
-            'total_points' => $this->totalPointsRule(),
-            'is_active' => ['nullable', 'boolean'],
-        ]);
+        $validated = $request->validate($this->rubricRules());
 
         $dbType = self::TYPE_MAP[$validated['rubric_type']] ?? $validated['rubric_type'];
 
-        $gradingRubric->update([
-            'rubric_name' => $validated['rubric_name'],
-            'rubric_type' => $dbType,
-            'description' => $validated['description'] ?? null,
-            'total_points' => $validated['total_points'] ?? 100.00,
-            'is_active' => $validated['is_active'] ?? true,
-        ]);
+        $gradingRubric = DB::transaction(function () use ($gradingRubric, $validated, $dbType): GradingRubric {
+            $gradingRubric->update([
+                'rubric_name' => $validated['rubric_name'],
+                'rubric_type' => $dbType,
+                'description' => $validated['description'] ?? null,
+                'total_points' => $validated['total_points'] ?? 100.00,
+                'is_active' => $validated['is_active'] ?? true,
+            ]);
 
-        $gradingRubric->load('criteria');
+            $this->storeCriteria($gradingRubric, $validated['criteria'] ?? null);
+
+            return $gradingRubric->load('criteria');
+        });
 
         return response()->json([
             'success' => true,
@@ -255,6 +253,49 @@ class AdminGradingRubricController extends Controller
                 'data' => $this->formatRubric($gradingRubric),
             ]);
         });
+    }
+
+    private function rubricRules(): array
+    {
+        return [
+            'rubric_name' => ['required', 'string', 'max:255'],
+            'rubric_type' => ['required', 'string', 'in:'.implode(',', array_keys(self::TYPE_MAP))],
+            'description' => ['nullable', 'string', 'max:5000'],
+            'total_points' => $this->totalPointsRule(),
+            'is_active' => ['nullable', 'boolean'],
+            'criteria' => ['nullable', 'array'],
+            'criteria.*.criterion_name' => $this->criterionNameRule(),
+            'criteria.*.description' => ['nullable', 'string', 'max:5000'],
+            'criteria.*.max_points' => ['nullable', 'numeric', 'min:0', 'max:999999.99'],
+            'criteria.*.score_levels' => $this->scoreLevelsRule(),
+            'criteria.*.sort_order' => ['nullable', 'integer', 'min:0'],
+        ];
+    }
+
+    private function storeCriteria(GradingRubric $rubric, mixed $criteria): void
+    {
+        if (! is_array($criteria) || $criteria === []) {
+            return;
+        }
+
+        $total = collect($criteria)
+            ->sum(fn ($c) => $this->scoreLevelsTotal($c['score_levels'] ?? null));
+
+        if (abs($total - 100.0) > 0.0001) {
+            abort(422, 'Total score-level points must equal exactly 100 points.');
+        }
+
+        $rubric->criteria()->delete();
+
+        foreach ($criteria as $i => $c) {
+            $rubric->criteria()->create([
+                'criterion_name' => trim($c['criterion_name']),
+                'description' => $c['description'] ?? null,
+                'max_points' => $c['max_points'] ?? $this->scoreLevelsTotal($c['score_levels'] ?? null),
+                'score_levels' => $c['score_levels'] ?? '[]',
+                'sort_order' => $c['sort_order'] ?? $i,
+            ]);
+        }
     }
 
     private function totalPointsRule(): array

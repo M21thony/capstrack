@@ -98,6 +98,29 @@ class AdminGradingRubricTest extends TestCase
             ->assertJsonCount(1, 'data');
     }
 
+    public function test_index_returns_exactly_what_exists_in_database(): void
+    {
+        GradingRubric::create([
+            'rubric_name' => 'Database Rubric A',
+            'rubric_type' => 'Pre-Proposal Defense',
+        ]);
+
+        GradingRubric::create([
+            'rubric_name' => 'Database Rubric B',
+            'rubric_type' => 'Title Defense',
+        ]);
+
+        $response = $this->actingAs($this->admin, 'expert')
+            ->getJson('/api/admin/grading-rubrics');
+
+        $response->assertStatus(200)
+            ->assertJsonCount(2, 'data');
+
+        $names = collect($response->json('data'))->pluck('rubric_name')->sort()->values()->all();
+        $this->assertSame(['Database Rubric A', 'Database Rubric B'], $names);
+        $this->assertCount(2, GradingRubric::all());
+    }
+
     public function test_store_creates_rubric(): void
     {
         $response = $this->actingAs($this->admin, 'expert')
@@ -1855,5 +1878,158 @@ class AdminGradingRubricTest extends TestCase
         $this->assertSame('Good performance.', $levels[1]['desc']);
         $this->assertSame('Fair performance.', $levels[2]['desc']);
         $this->assertSame('Poor performance.', $levels[3]['desc']);
+    }
+
+    public function test_store_saves_rubric_and_criteria_in_one_request(): void
+    {
+        $response = $this->actingAs($this->admin, 'expert')
+            ->postJson('/api/admin/grading-rubrics', [
+                'rubric_name' => 'One Request Rubric',
+                'rubric_type' => 'pre_proposal',
+                'description' => 'Saved with criteria',
+                'total_points' => 100,
+                'criteria' => [
+                    [
+                        'criterion_name' => 'Oral Presentation',
+                        'score_levels' => json_encode([
+                            ['label' => 'Excellent', 'score' => 40, 'desc' => 'Exceptional presentation.'],
+                            ['label' => 'Good', 'score' => 30, 'desc' => 'Good presentation.'],
+                            ['label' => 'Fair', 'score' => 20, 'desc' => 'Fair presentation.'],
+                            ['label' => 'Poor', 'score' => 10, 'desc' => 'Poor presentation.'],
+                        ]),
+                    ],
+                ],
+            ]);
+
+        $response->assertStatus(201)
+            ->assertJson([
+                'success' => true,
+                'data' => [
+                    'rubric_name' => 'One Request Rubric',
+                    'rubric_type' => 'pre_proposal',
+                ],
+            ]);
+
+        $rubric = GradingRubric::where('rubric_name', 'One Request Rubric')->first();
+        $this->assertNotNull($rubric);
+        $this->assertCount(1, $rubric->criteria()->get());
+        $this->assertSame(1, $response->json('data.criteria_count'));
+        $this->assertSame('Oral Presentation', $response->json('data.criteria.0.criterion_name'));
+    }
+
+    public function test_store_with_criteria_rejects_total_not_100(): void
+    {
+        $response = $this->actingAs($this->admin, 'expert')
+            ->postJson('/api/admin/grading-rubrics', [
+                'rubric_name' => 'Bad Total With Criteria',
+                'rubric_type' => 'pre_proposal',
+                'total_points' => 100,
+                'criteria' => [
+                    [
+                        'criterion_name' => 'C1',
+                        'score_levels' => json_encode([
+                            ['label' => 'Excellent', 'score' => 40, 'desc' => 'Expert'],
+                            ['label' => 'Good', 'score' => 30, 'desc' => 'Good'],
+                            ['label' => 'Fair', 'score' => 20, 'desc' => 'Fair'],
+                            ['label' => 'Poor', 'score' => 9, 'desc' => 'Poor'],
+                        ]),
+                    ],
+                ],
+            ]);
+
+        $response->assertStatus(422)
+            ->assertJson(['message' => 'Total score-level points must equal exactly 100 points.']);
+
+        $this->assertDatabaseMissing('grading_rubrics', [
+            'rubric_name' => 'Bad Total With Criteria',
+        ]);
+    }
+
+    public function test_store_with_criteria_rejects_empty_criterion_name(): void
+    {
+        $response = $this->actingAs($this->admin, 'expert')
+            ->postJson('/api/admin/grading-rubrics', [
+                'rubric_name' => 'Empty Name With Criteria',
+                'rubric_type' => 'pre_proposal',
+                'criteria' => [
+                    [
+                        'criterion_name' => '',
+                        'score_levels' => json_encode([
+                            ['label' => 'Excellent', 'score' => 40, 'desc' => 'Expert'],
+                            ['label' => 'Good', 'score' => 30, 'desc' => 'Good'],
+                            ['label' => 'Fair', 'score' => 20, 'desc' => 'Fair'],
+                            ['label' => 'Poor', 'score' => 10, 'desc' => 'Poor'],
+                        ]),
+                    ],
+                ],
+            ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['criteria.0.criterion_name']);
+
+        $this->assertDatabaseMissing('grading_rubrics', [
+            'rubric_name' => 'Empty Name With Criteria',
+        ]);
+    }
+
+    public function test_update_replaces_criteria_in_one_request(): void
+    {
+        $rubric = GradingRubric::create([
+            'rubric_name' => 'Update With Criteria',
+            'rubric_type' => 'Title Defense',
+            'total_points' => 100,
+        ]);
+
+        $rubric->criteria()->create([
+            'criterion_name' => 'Old Criterion',
+            'max_points' => 100,
+            'score_levels' => json_encode([
+                ['label' => 'Excellent', 'score' => 40, 'desc' => 'Old expert'],
+                ['label' => 'Good', 'score' => 30, 'desc' => 'Old good'],
+                ['label' => 'Fair', 'score' => 20, 'desc' => 'Old fair'],
+                ['label' => 'Poor', 'score' => 10, 'desc' => 'Old poor'],
+            ]),
+        ]);
+
+        $response = $this->actingAs($this->admin, 'expert')
+            ->putJson("/api/admin/grading-rubrics/{$rubric->rubric_id}", [
+                'rubric_name' => 'Update With Criteria',
+                'rubric_type' => 'title_defense',
+                'total_points' => 100,
+                'criteria' => [
+                    [
+                        'criterion_name' => 'New Criterion 1',
+                        'score_levels' => json_encode([
+                            ['label' => 'Excellent', 'score' => 24, 'desc' => 'Expert'],
+                            ['label' => 'Good', 'score' => 18, 'desc' => 'Good'],
+                            ['label' => 'Fair', 'score' => 12, 'desc' => 'Fair'],
+                            ['label' => 'Poor', 'score' => 6, 'desc' => 'Poor'],
+                        ]),
+                    ],
+                    [
+                        'criterion_name' => 'New Criterion 2',
+                        'score_levels' => json_encode([
+                            ['label' => 'Excellent', 'score' => 16, 'desc' => 'Expert'],
+                            ['label' => 'Good', 'score' => 12, 'desc' => 'Good'],
+                            ['label' => 'Fair', 'score' => 8, 'desc' => 'Fair'],
+                            ['label' => 'Poor', 'score' => 4, 'desc' => 'Poor'],
+                        ]),
+                    ],
+                ],
+            ]);
+
+        $response->assertStatus(200)
+            ->assertJson(['success' => true]);
+
+        $this->assertCount(2, $rubric->criteria()->get());
+        $this->assertDatabaseMissing('rubric_criteria', [
+            'rubric_id' => $rubric->rubric_id,
+            'criterion_name' => 'Old Criterion',
+        ]);
+        $this->assertDatabaseHas('rubric_criteria', [
+            'rubric_id' => $rubric->rubric_id,
+            'criterion_name' => 'New Criterion 2',
+            'max_points' => 40.00,
+        ]);
     }
 }
