@@ -1,0 +1,35 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+class DefensePanel extends Model
+{
+    protected $table = 'defense_panels';
+
+    protected $primaryKey = 'defense_panel_id';
+
+    public $timestamps = false;
+
+    protected $fillable = [
+        'defense_id',
+        'expert_id',
+        'panel_role',
+        'created_at',
+    ];
+
+    protected $casts = [
+        'created_at' => 'datetime',
+    ];
+
+    public function schedule()
+    {
+        return $this->belongsTo(DefenseSchedule::class, 'defense_id', 'defense_id');
+    }
+
+    public function expert()
+    {
+        return $this->belongsTo(CapstoneExpert::class, 'expert_id', 'expert_id');
+    }
+}
