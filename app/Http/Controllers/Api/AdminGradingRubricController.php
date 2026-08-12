@@ -25,17 +25,166 @@ class AdminGradingRubricController extends Controller
 
     private const LEVEL_LABELS = ['Excellent', 'Good', 'Fair', 'Poor'];
 
-    // Descending share of each criterion's point budget assigned to each
-    // level, used to deterministically compute scores (see aiGenerate()) -
-    // never trust an LLM to do the arithmetic that has to sum to exactly
-    // 100, only its wording.
-    private const LEVEL_WEIGHTS = [0.4, 0.3, 0.2, 0.1];
-
     private const TYPE_MAP_REVERSE = [
         'Pre-Proposal Defense' => 'pre_proposal',
         'Title Defense' => 'title_defense',
         'Pre Oral Defense' => 'pre_oral_defense',
         'Final Oral Defense' => 'final_oral_defense',
+    ];
+
+    // Transcribed verbatim from the school's actual Pre-Proposal Defense
+    // Rubric (Manuscript / Topic Quality and Proposal Merit / Proposal
+    // Content and Clarity), points included. Where the source document
+    // repeats the exact same sentence across all four performance levels
+    // for a row (differing only by point value - true of every row under
+    // Topic Quality and Proposal Merit, and Proposal Content and Clarity),
+    // that repetition is preserved rather than invented, since the goal is
+    // reproducing the real document, not improving on it.
+    //
+    // The source scores each row by the panel picking ONE of its four
+    // point values - the "excellent" value is that row's ceiling
+    // (max_points), the other three are lower alternative scores for the
+    // same criterion, not additional points to add on top.
+    //
+    // NOTE ON "Study Design Methodology": the source document's Poor value
+    // for this row is (8.5pts), which is higher than its own Fair value
+    // (3pts) - almost certainly a typo in the original, since "Poor"
+    // scoring more than "Fair" defeats the point of the rubric. Using 1.5
+    // here (continuing that row's roughly-halving pattern: 10, 5, 3, 1.5)
+    // as a placeholder pending confirmation of the intended value.
+    private const PRE_PROPOSAL_CRITERIA = [
+        [
+            'criterion_name' => 'Team Readiness and Presentability',
+            'category' => 'Oral Examination/Presentation',
+            'description' => 'Assesses whether the team appeared ready and presentable for the defense.',
+            'levels' => [
+                'excellent' => ['desc' => 'All the team members appeared to be ready and presentable.', 'score' => 5],
+                'good' => ['desc' => 'All the team members appeared to be ready but not all are presentable.', 'score' => 3.75],
+                'fair' => ['desc' => 'Only 50% of the team members appeared to be ready and presentable.', 'score' => 2.5],
+                'poor' => ['desc' => 'Less than 50% of the team members appeared to be ready and not presentable.', 'score' => 1.25],
+            ],
+        ],
+        [
+            'criterion_name' => 'Slide Usage',
+            'category' => 'Oral Examination/Presentation',
+            'description' => 'Assesses how intelligently and strategically the presentation slides were used.',
+            'levels' => [
+                'excellent' => ['desc' => 'All the presentation slides were intelligently and strategically used.', 'score' => 5],
+                'good' => ['desc' => 'At least 75% of the presentation slides were intelligently and strategically used.', 'score' => 3.75],
+                'fair' => ['desc' => 'Only 50% of the presentation slides were intelligently and strategically used.', 'score' => 2.5],
+                'poor' => ['desc' => 'Less than 50% of the presentation slides were intelligently and strategically used.', 'score' => 1.25],
+            ],
+        ],
+        [
+            'criterion_name' => 'Oral Delivery',
+            'category' => 'Oral Examination/Presentation',
+            'description' => 'Assesses clarity, confidence, and command of language during the defense.',
+            'levels' => [
+                'excellent' => ['desc' => 'Delivery is clear, confident, and articulate; excellent command of language.', 'score' => 5],
+                'good' => ['desc' => 'Delivery is clear with minor lapses.', 'score' => 3.75],
+                'fair' => ['desc' => 'Delivery is understandable but lacks confidence or clarity.', 'score' => 2.5],
+                'poor' => ['desc' => 'Delivery is unclear and difficult to follow.', 'score' => 1.25],
+            ],
+        ],
+        [
+            'criterion_name' => 'Panel Q&A Handling',
+            'category' => 'Oral Examination/Presentation',
+            'description' => 'Assesses how confidently and satisfactorily the team answered panel questions and queries.',
+            'levels' => [
+                'excellent' => ['desc' => 'All panel questions and queries were confidently and satisfactorily answered.', 'score' => 5],
+                'good' => ['desc' => 'At least 75% of the panel questions and queries were confidently and satisfactorily answered.', 'score' => 3.75],
+                'fair' => ['desc' => 'Only 50% of the panel questions and queries were confidently and satisfactorily answered.', 'score' => 2.5],
+                'poor' => ['desc' => 'Less than 50% of the panel questions and queries were confidently and satisfactorily answered.', 'score' => 1.25],
+            ],
+        ],
+        [
+            'criterion_name' => 'Project Achievability',
+            'category' => 'Topic Quality and Proposal Merit',
+            'description' => 'Assesses whether the project is achievable within time, skills, and resources.',
+            'levels' => [
+                'excellent' => ['desc' => 'Project is clearly achievable within time, skills, and resources; risks are well-considered.', 'score' => 6],
+                'good' => ['desc' => 'Project is clearly achievable within time, skills, and resources; risks are well-considered.', 'score' => 4],
+                'fair' => ['desc' => 'Project is clearly achievable within time, skills, and resources; risks are well-considered.', 'score' => 2.5],
+                'poor' => ['desc' => 'Project is clearly achievable within time, skills, and resources; risks are well-considered.', 'score' => 1.25],
+            ],
+        ],
+        [
+            'criterion_name' => 'Topic Engagement and Value',
+            'category' => 'Topic Quality and Proposal Merit',
+            'description' => 'Assesses the academic and practical value of the chosen topic.',
+            'levels' => [
+                'excellent' => ['desc' => 'Topic is highly engaging with strong academic and practical value.', 'score' => 6],
+                'good' => ['desc' => 'Topic is highly engaging with strong academic and practical value.', 'score' => 4],
+                'fair' => ['desc' => 'Topic is highly engaging with strong academic and practical value.', 'score' => 2.5],
+                'poor' => ['desc' => 'Topic is highly engaging with strong academic and practical value.', 'score' => 1.25],
+            ],
+        ],
+        [
+            'criterion_name' => 'Originality and Innovation',
+            'category' => 'Topic Quality and Proposal Merit',
+            'description' => 'Assesses the originality or innovative approach demonstrated by the proposal.',
+            'levels' => [
+                'excellent' => ['desc' => 'Demonstrates strong originality or innovative approach.', 'score' => 6],
+                'good' => ['desc' => 'Demonstrates strong originality or innovative approach.', 'score' => 4],
+                'fair' => ['desc' => 'Demonstrates strong originality or innovative approach.', 'score' => 2.5],
+                'poor' => ['desc' => 'Demonstrates strong originality or innovative approach.', 'score' => 1.25],
+            ],
+        ],
+        [
+            'criterion_name' => 'Ethical and Privacy Considerations',
+            'category' => 'Topic Quality and Proposal Merit',
+            'description' => 'Assesses whether ethical issues and data privacy are identified and properly addressed.',
+            'levels' => [
+                'excellent' => ['desc' => 'Ethical issues and data privacy are clearly identified and properly addressed.', 'score' => 6],
+                'good' => ['desc' => 'Ethical issues and data privacy are clearly identified and properly addressed.', 'score' => 4],
+                'fair' => ['desc' => 'Ethical issues and data privacy are clearly identified and properly addressed.', 'score' => 2.5],
+                'poor' => ['desc' => 'Ethical issues and data privacy are clearly identified and properly addressed.', 'score' => 1.25],
+            ],
+        ],
+        [
+            'criterion_name' => 'Alignment with Research Agenda',
+            'category' => 'Topic Quality and Proposal Merit',
+            'description' => 'Assesses alignment with the research agenda, SDGs, and stakeholder needs.',
+            'levels' => [
+                'excellent' => ['desc' => 'Highly aligned with research agenda, SDGs, and stakeholder needs.', 'score' => 6],
+                'good' => ['desc' => 'Highly aligned with research agenda, SDGs, and stakeholder needs.', 'score' => 4],
+                'fair' => ['desc' => 'Highly aligned with research agenda, SDGs, and stakeholder needs.', 'score' => 2.5],
+                'poor' => ['desc' => 'Highly aligned with research agenda, SDGs, and stakeholder needs.', 'score' => 1.25],
+            ],
+        ],
+        [
+            'criterion_name' => 'Problem Clarity and Justification',
+            'category' => 'Proposal Content and Clarity',
+            'description' => 'Assesses whether the problem is clear, specific, well-justified, and evidence-based.',
+            'levels' => [
+                'excellent' => ['desc' => 'Problem is clear, specific, well-justified, and evidence-based.', 'score' => 20],
+                'good' => ['desc' => 'Problem is clear, specific, well-justified, and evidence-based.', 'score' => 12.5],
+                'fair' => ['desc' => 'Problem is clear, specific, well-justified, and evidence-based.', 'score' => 8.5],
+                'poor' => ['desc' => 'Problem is clear, specific, well-justified, and evidence-based.', 'score' => 4.25],
+            ],
+        ],
+        [
+            'criterion_name' => 'Solution Scope and Definition',
+            'category' => 'Proposal Content and Clarity',
+            'description' => 'Assesses whether the solution addresses the problem with well-defined scope and limitations.',
+            'levels' => [
+                'excellent' => ['desc' => 'Solution directly addresses the problem; scope and limitations are well-defined.', 'score' => 20],
+                'good' => ['desc' => 'Solution directly addresses the problem; scope and limitations are well-defined.', 'score' => 12.5],
+                'fair' => ['desc' => 'Solution directly addresses the problem; scope and limitations are well-defined.', 'score' => 8.5],
+                'poor' => ['desc' => 'Solution directly addresses the problem; scope and limitations are well-defined.', 'score' => 4.25],
+            ],
+        ],
+        [
+            'criterion_name' => 'Study Design Methodology',
+            'category' => 'Proposal Content and Clarity',
+            'description' => 'Assesses whether the study design methodology (SDM) is appropriate and clearly justified.',
+            'levels' => [
+                'excellent' => ['desc' => 'SDM is appropriate and clearly justified.', 'score' => 10],
+                'good' => ['desc' => 'SDM is appropriate and clearly justified.', 'score' => 5],
+                'fair' => ['desc' => 'SDM is appropriate and clearly justified.', 'score' => 3],
+                'poor' => ['desc' => 'SDM is appropriate and clearly justified.', 'score' => 1.5],
+            ],
+        ],
     ];
 
     public function __construct(private OllamaSSHClient $ollama) {}
@@ -52,19 +201,53 @@ class AdminGradingRubricController extends Controller
         $validated = $request->validate([
             'rubric_type' => ['required', 'string', 'in:'.implode(',', array_keys(self::TYPE_MAP))],
             'topic' => ['nullable', 'string', 'max:255'],
-            'criteria_count' => ['nullable', 'integer', 'min:3', 'max:8'],
+            'criteria_count' => ['nullable', 'integer', 'min:3', 'max:15'],
         ]);
 
         $typeLabel = self::TYPE_MAP[$validated['rubric_type']];
-        $criteriaCount = $validated['criteria_count'] ?? 5;
+        $isPreProposal = $validated['rubric_type'] === 'pre_proposal';
+        // Pre-Proposal Defense has a real reference rubric, so there's
+        // nothing to type and no count to pick - the AI is asked to
+        // reproduce all 12 of its actual criteria, not invent a subset.
+        $criteriaCount = $isPreProposal ? count(self::PRE_PROPOSAL_CRITERIA) : ($validated['criteria_count'] ?? 5);
         $topic = trim($validated['topic'] ?? '');
         $fixedCategories = $this->defaultCategoriesFor($validated['rubric_type']);
 
-        $prompt = $this->buildRubricPrompt($typeLabel, $criteriaCount, $topic, $fixedCategories);
+        $prompt = $isPreProposal
+            ? $this->buildPreProposalReproductionPrompt()
+            : $this->buildRubricPrompt($typeLabel, $criteriaCount, $topic, $fixedCategories);
+
+        // The pre-proposal reproduction prompt embeds all 12 real criteria
+        // and expects a similarly-sized echo back - needs more headroom
+        // than the shorter free-generation prompts for the other types.
+        // The free-generation budget scales with criteria_count (now up to
+        // 15) so a large request doesn't get truncated mid-JSON the way a
+        // fixed 1800-token cap would.
+        $maxTokens = $isPreProposal ? 3000 : max(1800, $criteriaCount * 250);
+
+        // PHP's default max_execution_time (120s on this server) doesn't
+        // leave room for a cold model load (~50s alone) plus warmup() and
+        // generate() as two sequential calls. 240s matches the same budget
+        // given to the (longer) duplication-check chain.
+        set_time_limit(240);
 
         try {
-            $raw = $this->ollama->generate($prompt, 1800);
-        } catch (\Exception $e) {
+            // Loading the model from cold can take ~50s on its own (seen
+            // directly in the Ollama server log). Warming up first spends
+            // that cost on a trivial 1-token prompt instead of eating into
+            // the real generate() call's own timeout budget - warmup()
+            // swallows its own failures internally, so a slow/failed
+            // warmup here doesn't abort the request; it just means the
+            // model wasn't pre-loaded and the real call pays the cost.
+            $this->ollama->warmup();
+
+            $raw = $this->ollama->generate($prompt, $maxTokens);
+        } catch (\Throwable $e) {
+            // \Throwable, not \Exception - a slow/dead SSH tunnel can hit
+            // PHP's max_execution_time and fatal with a Symfony FatalError
+            // (extends \Error, not \Exception), which `catch (\Exception)`
+            // doesn't catch - it would escape straight to Laravel's HTML
+            // error page instead of a clean JSON response.
             Log::error('Rubric AI generation failed', ['error' => $e->getMessage()]);
 
             return response()->json([
@@ -84,8 +267,12 @@ class AdminGradingRubricController extends Controller
             ], 502);
         }
 
-        $categories = $fixedCategories ?? $this->extractCategories($parsed['categories'] ?? null);
-        $criteria = $this->scoreCriteriaWithCategories(array_slice($parsed['criteria'], 0, $criteriaCount), $categories);
+        if ($isPreProposal) {
+            $criteria = $this->scorePreProposalCriteria(array_slice($parsed['criteria'], 0, $criteriaCount));
+        } else {
+            $categories = $fixedCategories ?? $this->extractCategories($parsed['categories'] ?? null);
+            $criteria = $this->scoreCriteriaWithCategories(array_slice($parsed['criteria'], 0, $criteriaCount), $categories);
+        }
 
         return response()->json([
             'success' => true,
@@ -112,34 +299,127 @@ class AdminGradingRubricController extends Controller
         }
 
         return [
-            ['name' => 'Manuscript', 'weight' => 20],
+            ['name' => 'Oral Examination/Presentation', 'weight' => 20],
             ['name' => 'Topic Quality and Proposal Merit', 'weight' => 30],
             ['name' => 'Proposal Content and Clarity', 'weight' => 50],
         ];
     }
 
-    // The excellent/good/fair/poor wording below is lifted near-verbatim
-    // from the school's actual Pre-Proposal Defense Rubric (indicator:
-    // "Oral Delivery" under Manuscript > Oral Examination/Presentation) so
-    // the model has a real example of the specificity and tone expected,
-    // instead of drifting toward generic filler descriptions.
-    private const EXAMPLE_CRITERION = <<<'JSON'
+    // Pulls real criteria straight from PRE_PROPOSAL_CRITERIA to use as
+    // few-shot style examples for the free-generation prompt (the other 3
+    // rubric types, which have no reference document of their own). Only
+    // the 4 Manuscript rows have genuinely differentiated per-level wording
+    // - the rest intentionally repeat one sentence across all 4 levels
+    // (see PRE_PROPOSAL_CRITERIA's note), which would teach the model the
+    // wrong lesson about *varying* wording per level. One example produced
+    // vague hedging like "while clear, there are minor areas where the
+    // presentation could be more concise" - multiple real anchors give it
+    // less room to drift back into generic LLM phrasing.
+    private function realStyleExamples(): array
     {
-      "criterion_name": "Oral Delivery",
-      "description": "Assesses clarity, confidence, and command of language during the defense.",
-      "levels": {
-        "excellent": "Delivery is clear, confident, and articulate; excellent command of language.",
-        "good": "Delivery is clear with minor lapses.",
-        "fair": "Delivery is understandable but lacks confidence or clarity.",
-        "poor": "Delivery is unclear and difficult to follow."
-      }
+        return array_map(fn ($c) => [
+            'criterion_name' => $c['criterion_name'],
+            'description' => $c['description'],
+            'levels' => array_map(fn ($lv) => $lv['desc'], $c['levels']),
+        ], array_slice(self::PRE_PROPOSAL_CRITERIA, 0, 4));
     }
-    JSON;
+
+    // Rather than asking the model to invent a Pre-Proposal Defense rubric,
+    // it's handed the real one (PRE_PROPOSAL_CRITERIA) as the answer and
+    // asked to reproduce it verbatim in the required JSON shape - a much
+    // easier, more reliable task than free generation, while still going
+    // through the same AI call as every other rubric type. Point values are
+    // deliberately left out of what's sent to the model (see
+    // scorePreProposalCriteria()) - wording is the model's job, the real
+    // numbers are looked up afterward from PRE_PROPOSAL_CRITERIA directly,
+    // never trusted to a model echo.
+    private function buildPreProposalReproductionPrompt(): string
+    {
+        $wordingOnly = array_map(fn ($c) => [
+            'criterion_name' => $c['criterion_name'],
+            'category' => $c['category'],
+            'description' => $c['description'],
+            'levels' => array_map(fn ($lv) => $lv['desc'], $c['levels']),
+        ], self::PRE_PROPOSAL_CRITERIA);
+
+        $reference = json_encode([
+            'rubric_name' => 'Pre-Proposal Defense Rubric',
+            'description' => "Evaluates a capstone team's pre-proposal defense across manuscript delivery, topic quality and proposal merit, and proposal content and clarity.",
+            'criteria' => $wordingOnly,
+        ], JSON_PRETTY_PRINT);
+
+        return <<<PROMPT
+        Reproduce the following capstone Pre-Proposal Defense Rubric exactly as given
+        below - do not change any wording, criterion names, or category names, and do
+        not add, remove, or reorder criteria. Some criteria intentionally repeat the
+        same sentence across all four performance levels; keep that repetition exactly
+        as given, do not invent varied wording for those.
+
+        {$reference}
+
+        Respond with ONLY this JSON object, no markdown code fences, no commentary.
+        PROMPT;
+    }
+
+    // The AI's echo is only trusted for wording. Point values always come
+    // straight from PRE_PROPOSAL_CRITERIA (matched by criterion name, or by
+    // position if a name doesn't match - the model was asked for all 12 in
+    // order), so the draft's numbers are guaranteed to be the school's real
+    // ones regardless of how faithfully the model reproduced them.
+    private function scorePreProposalCriteria(array $rawCriteria): array
+    {
+        $reference = self::PRE_PROPOSAL_CRITERIA;
+        $byName = [];
+
+        foreach ($reference as $ref) {
+            $byName[$this->normalizeCategoryName($ref['criterion_name'])] = $ref;
+        }
+
+        $result = [];
+
+        foreach (array_values($rawCriteria) as $i => $c) {
+            $name = $this->normalizeCategoryName($c['criterion_name'] ?? null);
+            $ref = ($name !== null ? $byName[$name] ?? null : null) ?? $reference[$i] ?? null;
+
+            if ($ref === null) {
+                continue;
+            }
+
+            $levels = array_map(fn ($key, $label) => [
+                'label' => $label,
+                'score' => $ref['levels'][$key]['score'],
+                'desc' => $ref['levels'][$key]['desc'],
+            ], self::LEVEL_KEYS, self::LEVEL_LABELS);
+
+            $result[] = [
+                'criterion_name' => $ref['criterion_name'],
+                'description' => $ref['description'],
+                'category' => $ref['category'],
+                'category_max_points' => $this->categoryMaxPointsFor($ref['category']),
+                'max_points' => $ref['levels']['excellent']['score'],
+                'levels' => $levels,
+                'sort_order' => $i,
+            ];
+        }
+
+        return $result;
+    }
+
+    private function categoryMaxPointsFor(string $categoryName): float
+    {
+        foreach ($this->defaultCategoriesFor('pre_proposal') as $cat) {
+            if ($cat['name'] === $categoryName) {
+                return (float) $cat['weight'];
+            }
+        }
+
+        return 0.0;
+    }
 
     private function buildRubricPrompt(string $typeLabel, int $criteriaCount, string $topic, ?array $fixedCategories): string
     {
         $topicLine = $topic !== '' ? "Focus area / program context: {$topic}\n" : '';
-        $example = self::EXAMPLE_CRITERION;
+        $examples = json_encode($this->realStyleExamples(), JSON_PRETTY_PRINT);
 
         if ($fixedCategories) {
             $categoryNames = implode(', ', array_map(fn ($c) => '"'.$c['name'].'"', $fixedCategories));
@@ -149,8 +429,20 @@ class AdminGradingRubricController extends Controller
             TXT;
             $categoriesShape = '';
         } else {
+            // A 3-criteria request paired with "2 to 4 categories" was
+            // confusing the model into just giving up and using 1 category
+            // for everything (confirmed by reproducing it directly against
+            // the real model). Scaling the requested range down to something
+            // achievable for the actual criteria count is still the right
+            // instruction to give - but re-testing showed the model can
+            // still ignore it and return 1 category anyway at low counts.
+            // extractCategories() no longer discards that single category to
+            // null when it happens, so the AI's real grouping (even if it's
+            // just one) is preserved and shown instead of hidden.
+            $minCategories = min(2, $criteriaCount);
+            $maxCategories = max($minCategories, min(4, $criteriaCount - 1));
             $categoryInstruction = <<<TXT
-            Group the criteria into 2 to 4 meaningful categories of your own choosing (broad themes this evaluation covers). Include a top-level "categories" array with each category's relative importance as a weight, and set each criterion's "category" field to match one of these names exactly.
+            Group the criteria into {$minCategories} to {$maxCategories} meaningful categories of your own choosing (broad themes this evaluation covers). You MUST use more than one category - even with only {$criteriaCount} criteria, do not put every criterion under a single category. Include a top-level "categories" array with each category's relative importance as a weight, and set each criterion's "category" field to match one of these names exactly.
             TXT;
             $categoriesShape = <<<'TXT'
 
@@ -166,9 +458,23 @@ class AdminGradingRubricController extends Controller
 
         {$categoryInstruction}
 
-        Here is a real criterion from this school's actual rubric - match this level of
-        specificity and academic tone for every criterion you write, not generic filler:
-        {$example}
+        Here are real criteria from this school's Pre-Proposal Defense rubric - a DIFFERENT
+        evaluation stage from the "{$typeLabel}" you are drafting now. They are a STYLE reference
+        only (match this level of specificity and academic tone), NOT content to reuse:
+        {$examples}
+
+        Do NOT copy these example criteria verbatim or near-verbatim (e.g. do not just reuse
+        "Slide Usage", "Oral Delivery", "Team Readiness and Presentability", or "Panel Q&A Handling"
+        as your own criteria names). Every criterion you write must be an ORIGINAL criterion
+        genuinely specific to what a "{$typeLabel}" evaluation assesses.
+
+        Do NOT write vague, hedging, AI-sounding filler. Specifically avoid patterns like:
+        - "While [X], there are [some/minor] areas where [Y] could be more [Z]"
+        - "could be more concise/specific/clear"
+        - "in general", "overall", "for the most part", "somewhat", "relatively"
+        - describing what's merely "acceptable" or "adequate" without saying what was actually observed
+        Instead, describe an observable, concrete outcome the way the real examples above do -
+        state what was or wasn't done/shown/covered, not a soft opinion about how it could be improved.
 
         Respond with ONLY raw JSON, no markdown code fences, no commentary, matching this exact shape:
         {
@@ -211,9 +517,13 @@ class AdminGradingRubricController extends Controller
     }
 
     // Validates the AI's proposed category list ({name, weight}); returns
-    // null (triggering the flat single-category fallback in
-    // scoreCriteriaWithCategories) if fewer than 2 categories survive
-    // validation - a single "category" isn't really grouping anything.
+    // null (triggering the flat, unnamed single-category fallback in
+    // scoreCriteriaWithCategories) only if NO valid category survives.
+    // Previously required >= 2, silently discarding the AI's real category
+    // name whenever it settled on just one (confirmed happening routinely
+    // with low criteria counts against the real model, regardless of prompt
+    // wording asking for more) - that turned "1 real category" into "0
+    // categories shown at all", which is strictly worse.
     private function extractCategories(mixed $categories): ?array
     {
         if (! is_array($categories) || empty($categories)) {
@@ -234,7 +544,7 @@ class AdminGradingRubricController extends Controller
             $clean[] = ['name' => trim($c['name']), 'weight' => (float) $c['weight']];
         }
 
-        return count($clean) >= 2 ? $clean : null;
+        return count($clean) >= 1 ? $clean : null;
     }
 
     // Groups the raw criteria under the given categories (or a single
@@ -304,7 +614,7 @@ class AdminGradingRubricController extends Controller
                     'category' => $categoryName,
                     'category_max_points' => $categoryName !== null ? $categoryBudget : null,
                     'max_points' => $budget,
-                    'levels' => $this->splitBudgetAcrossLevels($budget, $levels),
+                    'levels' => $this->levelsForBudget($budget, $levels),
                     'sort_order' => $sortOrder,
                 ];
                 $sortOrder++;
@@ -382,24 +692,23 @@ class AdminGradingRubricController extends Controller
         return $result;
     }
 
-    private function splitBudgetAcrossLevels(int $budget, array $levelDescriptions): array
+    // "Excellent" is the criterion's full budget (its max_points ceiling) -
+    // a panel picks exactly ONE of these four values as the criterion's
+    // score, so Good/Fair/Poor are lower ALTERNATIVE scores for the same
+    // criterion, not additional points stacked on top of it. Ratios match
+    // the pattern in the school's real rubric (Manuscript section: exactly
+    // 100/75/50/25% of each row's ceiling).
+    private function levelsForBudget(int $budget, array $levelDescriptions): array
     {
-        $raw = array_map(fn ($w) => (int) floor($budget * $w), self::LEVEL_WEIGHTS);
-        $leftover = $budget - array_sum($raw);
+        $ratios = [1.0, 0.75, 0.5, 0.25];
 
-        // Hand any rounding leftover to the top levels first, one point
-        // each, so "Excellent" never ends up worth less than "Good".
-        for ($i = 0; $i < $leftover; $i++) {
-            $raw[$i % count($raw)]++;
-        }
-
-        return array_map(function ($key, $label, $score) use ($levelDescriptions) {
+        return array_map(function ($key, $label, $ratio) use ($levelDescriptions, $budget) {
             return [
                 'label' => $label,
-                'score' => $score,
+                'score' => round($budget * $ratio, 2),
                 'desc' => trim((string) ($levelDescriptions[$key] ?? '')),
             ];
-        }, self::LEVEL_KEYS, self::LEVEL_LABELS, $raw);
+        }, self::LEVEL_KEYS, self::LEVEL_LABELS, $ratios);
     }
 
     public function index(): JsonResponse
@@ -506,13 +815,16 @@ class AdminGradingRubricController extends Controller
             'sort_order' => ['nullable', 'integer', 'min:0'],
         ]);
 
-        $total = $this->criteriaLevelTotal($gradingRubric->criteria()->get())
-            + $this->scoreLevelsTotal($validated['score_levels'] ?? null);
+        // max_points always comes from the levels themselves (never trusted
+        // as an independent client-supplied value) - it's the ceiling of
+        // whichever level scores highest, normally "Excellent".
+        $newMaxPoints = $this->scoreLevelsMax($validated['score_levels'] ?? null);
+        $total = $this->criteriaMaxPointsTotal($gradingRubric->criteria()->get()) + $newMaxPoints;
 
         if (abs($total - 100.0) > 0.0001) {
             return response()->json([
                 'success' => false,
-                'message' => 'Total score-level points must equal exactly 100 points.',
+                'message' => 'Total criterion points must equal exactly 100 points.',
             ], 422);
         }
 
@@ -521,7 +833,7 @@ class AdminGradingRubricController extends Controller
             'description' => $validated['description'] ?? null,
             'category' => $validated['category'] ?? null,
             'category_max_points' => $validated['category_max_points'] ?? null,
-            'max_points' => $validated['max_points'] ?? $this->scoreLevelsTotal($validated['score_levels'] ?? null),
+            'max_points' => $newMaxPoints,
             'score_levels' => $validated['score_levels'] ?? '[]',
             'sort_order' => $validated['sort_order'] ?? 0,
         ]);
@@ -552,14 +864,15 @@ class AdminGradingRubricController extends Controller
             'sort_order' => ['nullable', 'integer', 'min:0'],
         ]);
 
-        $total = $this->criteriaLevelTotal(
+        $newMaxPoints = $this->scoreLevelsMax($validated['score_levels'] ?? null);
+        $total = $this->criteriaMaxPointsTotal(
             $gradingRubric->criteria()->where('criterion_id', '!=', $rubricCriterion->criterion_id)->get()
-        ) + $this->scoreLevelsTotal($validated['score_levels'] ?? null);
+        ) + $newMaxPoints;
 
         if (abs($total - 100.0) > 0.0001) {
             return response()->json([
                 'success' => false,
-                'message' => 'Total score-level points must equal exactly 100 points.',
+                'message' => 'Total criterion points must equal exactly 100 points.',
             ], 422);
         }
 
@@ -568,7 +881,7 @@ class AdminGradingRubricController extends Controller
             'description' => $validated['description'] ?? null,
             'category' => $validated['category'] ?? null,
             'category_max_points' => $validated['category_max_points'] ?? null,
-            'max_points' => $validated['max_points'] ?? $this->scoreLevelsTotal($validated['score_levels'] ?? null),
+            'max_points' => $newMaxPoints,
             'score_levels' => $validated['score_levels'] ?? '[]',
             'sort_order' => $validated['sort_order'] ?? 0,
         ]);
@@ -611,12 +924,12 @@ class AdminGradingRubricController extends Controller
         ]);
 
         $total = collect($validated['criteria'])
-            ->sum(fn ($c) => $this->scoreLevelsTotal($c['score_levels'] ?? null));
+            ->sum(fn ($c) => $this->scoreLevelsMax($c['score_levels'] ?? null));
 
         if (abs($total - 100.0) > 0.0001) {
             return response()->json([
                 'success' => false,
-                'message' => 'Total score-level points must equal exactly 100 points.',
+                'message' => 'Total criterion points must equal exactly 100 points.',
             ], 422);
         }
 
@@ -629,7 +942,7 @@ class AdminGradingRubricController extends Controller
                     'description' => $c['description'] ?? null,
                     'category' => $c['category'] ?? null,
                     'category_max_points' => $c['category_max_points'] ?? null,
-                    'max_points' => $c['max_points'] ?? $this->scoreLevelsTotal($c['score_levels'] ?? null),
+                    'max_points' => $this->scoreLevelsMax($c['score_levels'] ?? null),
                     'score_levels' => $c['score_levels'] ?? '[]',
                     'sort_order' => $c['sort_order'] ?? $i,
                 ]);
@@ -703,21 +1016,30 @@ class AdminGradingRubricController extends Controller
         ];
     }
 
-    private function scoreLevelsTotal(mixed $scoreLevels): float
+    // A criterion is scored by picking exactly ONE of its performance
+    // levels - its max_points ceiling is the highest of those levels
+    // (normally "Excellent"), not their sum. Used to auto-derive max_points
+    // when a request doesn't supply it explicitly.
+    private function scoreLevelsMax(mixed $scoreLevels): float
     {
         $levels = is_array($scoreLevels) ? $scoreLevels : (json_decode((string) $scoreLevels, true) ?? []);
 
-        return (float) collect($levels)
+        $scores = collect($levels)
             ->filter(fn ($level) => is_array($level) && isset($level['score']) && is_numeric($level['score']))
-            ->sum(fn ($level) => (float) $level['score']);
+            ->map(fn ($level) => (float) $level['score']);
+
+        return $scores->isEmpty() ? 0.0 : (float) $scores->max();
     }
 
-    private function criteriaLevelTotal(iterable $criteria): float
+    // The rubric-wide "must total exactly 100" rule sums each criterion's
+    // own max_points ceiling - not every level of every criterion, since a
+    // panel only ever picks one level per criterion.
+    private function criteriaMaxPointsTotal(iterable $criteria): float
     {
         $total = 0.0;
 
         foreach ($criteria as $criterion) {
-            $total += $this->scoreLevelsTotal($criterion->score_levels);
+            $total += (float) $criterion->max_points;
         }
 
         return $total;

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Http\Controllers\Api\AdminGradingRubricController;
 use App\Models\CapstoneExpert;
 use App\Models\GradingRubric;
 use App\Services\OllamaSSHClient;
@@ -255,22 +256,20 @@ class AdminGradingRubricTest extends TestCase
                 'criteria' => [
                     [
                         'criterion_name' => 'New Criterion 1',
-                        'max_points' => 60,
                         'score_levels' => json_encode([
-                            ['score' => 24, 'desc' => 'Excellent'],
-                            ['score' => 18, 'desc' => 'Good'],
-                            ['score' => 12, 'desc' => 'Fair'],
-                            ['score' => 6, 'desc' => 'Poor'],
+                            ['score' => 60, 'desc' => 'Excellent'],
+                            ['score' => 45, 'desc' => 'Good'],
+                            ['score' => 30, 'desc' => 'Fair'],
+                            ['score' => 15, 'desc' => 'Poor'],
                         ]),
                     ],
                     [
                         'criterion_name' => 'New Criterion 2',
-                        'max_points' => 40,
                         'score_levels' => json_encode([
-                            ['score' => 16, 'desc' => 'Excellent'],
-                            ['score' => 12, 'desc' => 'Good'],
-                            ['score' => 8, 'desc' => 'Fair'],
-                            ['score' => 4, 'desc' => 'Poor'],
+                            ['score' => 40, 'desc' => 'Excellent'],
+                            ['score' => 30, 'desc' => 'Good'],
+                            ['score' => 20, 'desc' => 'Fair'],
+                            ['score' => 10, 'desc' => 'Poor'],
                         ]),
                     ],
                 ],
@@ -299,12 +298,12 @@ class AdminGradingRubricTest extends TestCase
         $response = $this->actingAs($this->admin, 'expert')
             ->postJson("/api/admin/grading-rubrics/{$rubric->rubric_id}/criteria", [
                 'criterion_name' => 'Oral Presentation',
-                'max_points' => 25,
+                'max_points' => 100,
                 'score_levels' => json_encode([
-                    ['score' => 40, 'desc' => 'Excellent'],
-                    ['score' => 30, 'desc' => 'Good'],
-                    ['score' => 20, 'desc' => 'Fair'],
-                    ['score' => 10, 'desc' => 'Poor'],
+                    ['score' => 100, 'desc' => 'Excellent'],
+                    ['score' => 75, 'desc' => 'Good'],
+                    ['score' => 50, 'desc' => 'Fair'],
+                    ['score' => 25, 'desc' => 'Poor'],
                 ]),
             ]);
 
@@ -329,19 +328,19 @@ class AdminGradingRubricTest extends TestCase
 
         $criterion = $rubric->criteria()->create([
             'criterion_name' => 'Original',
-            'max_points' => 50,
+            'max_points' => 100,
             'score_levels' => '[]',
         ]);
 
         $response = $this->actingAs($this->admin, 'expert')
             ->putJson("/api/admin/grading-rubrics/{$rubric->rubric_id}/criteria/{$criterion->criterion_id}", [
                 'criterion_name' => 'Updated',
-                'max_points' => 75,
+                'max_points' => 100,
                 'score_levels' => json_encode([
-                    ['score' => 40, 'desc' => 'Excellent'],
-                    ['score' => 30, 'desc' => 'Good'],
-                    ['score' => 20, 'desc' => 'Fair'],
-                    ['score' => 10, 'desc' => 'Poor'],
+                    ['score' => 100, 'desc' => 'Excellent'],
+                    ['score' => 75, 'desc' => 'Good'],
+                    ['score' => 50, 'desc' => 'Fair'],
+                    ['score' => 25, 'desc' => 'Poor'],
                 ]),
             ]);
 
@@ -351,14 +350,14 @@ class AdminGradingRubricTest extends TestCase
                 'message' => 'Criterion updated successfully.',
                 'data' => [
                     'criterion_name' => 'Updated',
-                    'max_points' => 75,
+                    'max_points' => 100,
                 ],
             ]);
 
         $this->assertDatabaseHas('rubric_criteria', [
             'criterion_id' => $criterion->criterion_id,
             'criterion_name' => 'Updated',
-            'max_points' => 75.00,
+            'max_points' => 100.00,
         ]);
     }
 
@@ -459,12 +458,12 @@ class AdminGradingRubricTest extends TestCase
         $response = $this->actingAs($this->admin, 'expert')
             ->postJson("/api/admin/grading-rubrics/{$rubric->rubric_id}/criteria", [
                 'criterion_name' => 'Oral Presentation',
-                'max_points' => 25,
+                'max_points' => 100,
                 'score_levels' => json_encode([
-                    ['label' => 'Outstanding', 'score' => 40, 'desc' => 'Exceeds all expectations'],
-                    ['label' => 'Very Good', 'score' => 30, 'desc' => 'Meets expectations'],
-                    ['label' => 'Needs Improvement', 'score' => 20, 'desc' => 'Below expectations'],
-                    ['label' => 'Unsatisfactory', 'score' => 10, 'desc' => 'Fails to meet expectations'],
+                    ['label' => 'Outstanding', 'score' => 100, 'desc' => 'Exceeds all expectations'],
+                    ['label' => 'Very Good', 'score' => 75, 'desc' => 'Meets expectations'],
+                    ['label' => 'Needs Improvement', 'score' => 50, 'desc' => 'Below expectations'],
+                    ['label' => 'Unsatisfactory', 'score' => 25, 'desc' => 'Fails to meet expectations'],
                 ]),
             ]);
 
@@ -474,10 +473,10 @@ class AdminGradingRubricTest extends TestCase
                 'data' => [
                     'criterion_name' => 'Oral Presentation',
                     'score_levels' => [
-                        ['label' => 'Outstanding', 'score' => 40, 'desc' => 'Exceeds all expectations'],
-                        ['label' => 'Very Good', 'score' => 30, 'desc' => 'Meets expectations'],
-                        ['label' => 'Needs Improvement', 'score' => 20, 'desc' => 'Below expectations'],
-                        ['label' => 'Unsatisfactory', 'score' => 10, 'desc' => 'Fails to meet expectations'],
+                        ['label' => 'Outstanding', 'score' => 100, 'desc' => 'Exceeds all expectations'],
+                        ['label' => 'Very Good', 'score' => 75, 'desc' => 'Meets expectations'],
+                        ['label' => 'Needs Improvement', 'score' => 50, 'desc' => 'Below expectations'],
+                        ['label' => 'Unsatisfactory', 'score' => 25, 'desc' => 'Fails to meet expectations'],
                     ],
                 ],
             ]);
@@ -501,24 +500,24 @@ class AdminGradingRubricTest extends TestCase
 
         $criterion = $rubric->criteria()->create([
             'criterion_name' => 'Presentation',
-            'max_points' => 50,
+            'max_points' => 100,
             'score_levels' => json_encode([
-                ['label' => 'Excellent', 'score' => 12.5, 'desc' => 'A'],
-                ['label' => 'Good', 'score' => 9.375, 'desc' => 'B'],
-                ['label' => 'Fair', 'score' => 6.25, 'desc' => 'C'],
-                ['label' => 'Poor', 'score' => 3.125, 'desc' => 'D'],
+                ['label' => 'Excellent', 'score' => 100, 'desc' => 'A'],
+                ['label' => 'Good', 'score' => 75, 'desc' => 'B'],
+                ['label' => 'Fair', 'score' => 50, 'desc' => 'C'],
+                ['label' => 'Poor', 'score' => 25, 'desc' => 'D'],
             ]),
         ]);
 
         $response = $this->actingAs($this->admin, 'expert')
             ->putJson("/api/admin/grading-rubrics/{$rubric->rubric_id}/criteria/{$criterion->criterion_id}", [
                 'criterion_name' => 'Presentation',
-                'max_points' => 50,
+                'max_points' => 100,
                 'score_levels' => json_encode([
-                    ['label' => 'Outstanding', 'score' => 40, 'desc' => 'A+'],
-                    ['label' => 'Very Good', 'score' => 30, 'desc' => 'B+'],
-                    ['label' => 'Needs Improvement', 'score' => 20, 'desc' => 'C+'],
-                    ['label' => 'Unsatisfactory', 'score' => 10, 'desc' => 'D+'],
+                    ['label' => 'Outstanding', 'score' => 100, 'desc' => 'A+'],
+                    ['label' => 'Very Good', 'score' => 75, 'desc' => 'B+'],
+                    ['label' => 'Needs Improvement', 'score' => 50, 'desc' => 'C+'],
+                    ['label' => 'Unsatisfactory', 'score' => 25, 'desc' => 'D+'],
                 ]),
             ]);
 
@@ -527,10 +526,10 @@ class AdminGradingRubricTest extends TestCase
                 'success' => true,
                 'data' => [
                     'score_levels' => [
-                        ['label' => 'Outstanding', 'score' => 40, 'desc' => 'A+'],
-                        ['label' => 'Very Good', 'score' => 30, 'desc' => 'B+'],
-                        ['label' => 'Needs Improvement', 'score' => 20, 'desc' => 'C+'],
-                        ['label' => 'Unsatisfactory', 'score' => 10, 'desc' => 'D+'],
+                        ['label' => 'Outstanding', 'score' => 100, 'desc' => 'A+'],
+                        ['label' => 'Very Good', 'score' => 75, 'desc' => 'B+'],
+                        ['label' => 'Needs Improvement', 'score' => 50, 'desc' => 'C+'],
+                        ['label' => 'Unsatisfactory', 'score' => 25, 'desc' => 'D+'],
                     ],
                 ],
             ]);
@@ -553,12 +552,11 @@ class AdminGradingRubricTest extends TestCase
                 'criteria' => [
                     [
                         'criterion_name' => 'Oral Defense',
-                        'max_points' => 100,
                         'score_levels' => json_encode([
-                            ['label' => 'Outstanding', 'score' => 40, 'desc' => 'Exceptional'],
-                            ['label' => 'Very Good', 'score' => 30, 'desc' => 'Above average'],
-                            ['label' => 'Needs Improvement', 'score' => 20, 'desc' => 'Average'],
-                            ['label' => 'Unsatisfactory', 'score' => 10, 'desc' => 'Below average'],
+                            ['label' => 'Outstanding', 'score' => 100, 'desc' => 'Exceptional'],
+                            ['label' => 'Very Good', 'score' => 75, 'desc' => 'Above average'],
+                            ['label' => 'Needs Improvement', 'score' => 50, 'desc' => 'Average'],
+                            ['label' => 'Unsatisfactory', 'score' => 25, 'desc' => 'Below average'],
                         ]),
                     ],
                 ],
@@ -572,10 +570,10 @@ class AdminGradingRubricTest extends TestCase
                         [
                             'criterion_name' => 'Oral Defense',
                             'score_levels' => [
-                                ['label' => 'Outstanding', 'score' => 40, 'desc' => 'Exceptional'],
-                                ['label' => 'Very Good', 'score' => 30, 'desc' => 'Above average'],
-                                ['label' => 'Needs Improvement', 'score' => 20, 'desc' => 'Average'],
-                                ['label' => 'Unsatisfactory', 'score' => 10, 'desc' => 'Below average'],
+                                ['label' => 'Outstanding', 'score' => 100, 'desc' => 'Exceptional'],
+                                ['label' => 'Very Good', 'score' => 75, 'desc' => 'Above average'],
+                                ['label' => 'Needs Improvement', 'score' => 50, 'desc' => 'Average'],
+                                ['label' => 'Unsatisfactory', 'score' => 25, 'desc' => 'Below average'],
                             ],
                         ],
                     ],
@@ -625,12 +623,11 @@ class AdminGradingRubricTest extends TestCase
                 'criteria' => [
                     [
                         'criterion_name' => 'Criterion 1',
-                        'max_points' => 100,
                         'score_levels' => json_encode([
-                            ['score' => 30, 'desc' => 'Excellent'],
-                            ['score' => 30, 'desc' => 'Good'],
-                            ['score' => 30, 'desc' => 'Fair'],
-                            ['score' => 10, 'desc' => 'Poor'],
+                            ['score' => 100, 'desc' => 'Excellent'],
+                            ['score' => 75, 'desc' => 'Good'],
+                            ['score' => 50, 'desc' => 'Fair'],
+                            ['score' => 25, 'desc' => 'Poor'],
                         ]),
                     ],
                 ],
@@ -654,42 +651,38 @@ class AdminGradingRubricTest extends TestCase
                 'criteria' => [
                     [
                         'criterion_name' => 'C1',
-                        'max_points' => 25,
                         'score_levels' => json_encode([
-                            ['score' => 10, 'desc' => 'Excellent'],
-                            ['score' => 8, 'desc' => 'Good'],
-                            ['score' => 5, 'desc' => 'Fair'],
-                            ['score' => 2, 'desc' => 'Poor'],
+                            ['score' => 25, 'desc' => 'Excellent'],
+                            ['score' => 20, 'desc' => 'Good'],
+                            ['score' => 12.5, 'desc' => 'Fair'],
+                            ['score' => 5, 'desc' => 'Poor'],
                         ]),
                     ],
                     [
                         'criterion_name' => 'C2',
-                        'max_points' => 25,
                         'score_levels' => json_encode([
-                            ['score' => 10, 'desc' => 'Excellent'],
-                            ['score' => 8, 'desc' => 'Good'],
-                            ['score' => 5, 'desc' => 'Fair'],
-                            ['score' => 2, 'desc' => 'Poor'],
+                            ['score' => 25, 'desc' => 'Excellent'],
+                            ['score' => 20, 'desc' => 'Good'],
+                            ['score' => 12.5, 'desc' => 'Fair'],
+                            ['score' => 5, 'desc' => 'Poor'],
                         ]),
                     ],
                     [
                         'criterion_name' => 'C3',
-                        'max_points' => 25,
                         'score_levels' => json_encode([
-                            ['score' => 10, 'desc' => 'Excellent'],
-                            ['score' => 8, 'desc' => 'Good'],
-                            ['score' => 5, 'desc' => 'Fair'],
-                            ['score' => 2, 'desc' => 'Poor'],
+                            ['score' => 25, 'desc' => 'Excellent'],
+                            ['score' => 20, 'desc' => 'Good'],
+                            ['score' => 12.5, 'desc' => 'Fair'],
+                            ['score' => 5, 'desc' => 'Poor'],
                         ]),
                     ],
                     [
                         'criterion_name' => 'C4',
-                        'max_points' => 25,
                         'score_levels' => json_encode([
-                            ['score' => 10, 'desc' => 'Excellent'],
-                            ['score' => 8, 'desc' => 'Good'],
-                            ['score' => 5, 'desc' => 'Fair'],
-                            ['score' => 2, 'desc' => 'Poor'],
+                            ['score' => 25, 'desc' => 'Excellent'],
+                            ['score' => 20, 'desc' => 'Good'],
+                            ['score' => 12.5, 'desc' => 'Fair'],
+                            ['score' => 5, 'desc' => 'Poor'],
                         ]),
                     ],
                 ],
@@ -713,32 +706,29 @@ class AdminGradingRubricTest extends TestCase
                 'criteria' => [
                     [
                         'criterion_name' => 'C1',
-                        'max_points' => 33.33,
                         'score_levels' => json_encode([
-                            ['score' => 10, 'desc' => 'Excellent'],
-                            ['score' => 10, 'desc' => 'Good'],
-                            ['score' => 10, 'desc' => 'Fair'],
-                            ['score' => 3.33, 'desc' => 'Poor'],
+                            ['score' => 33.33, 'desc' => 'Excellent'],
+                            ['score' => 25, 'desc' => 'Good'],
+                            ['score' => 16.67, 'desc' => 'Fair'],
+                            ['score' => 8.33, 'desc' => 'Poor'],
                         ]),
                     ],
                     [
                         'criterion_name' => 'C2',
-                        'max_points' => 33.33,
                         'score_levels' => json_encode([
-                            ['score' => 10, 'desc' => 'Excellent'],
-                            ['score' => 10, 'desc' => 'Good'],
-                            ['score' => 10, 'desc' => 'Fair'],
-                            ['score' => 3.33, 'desc' => 'Poor'],
+                            ['score' => 33.33, 'desc' => 'Excellent'],
+                            ['score' => 25, 'desc' => 'Good'],
+                            ['score' => 16.67, 'desc' => 'Fair'],
+                            ['score' => 8.33, 'desc' => 'Poor'],
                         ]),
                     ],
                     [
                         'criterion_name' => 'C3',
-                        'max_points' => 33.34,
                         'score_levels' => json_encode([
-                            ['score' => 10, 'desc' => 'Excellent'],
-                            ['score' => 10, 'desc' => 'Good'],
-                            ['score' => 10, 'desc' => 'Fair'],
-                            ['score' => 3.34, 'desc' => 'Poor'],
+                            ['score' => 33.34, 'desc' => 'Excellent'],
+                            ['score' => 25, 'desc' => 'Good'],
+                            ['score' => 16.67, 'desc' => 'Fair'],
+                            ['score' => 8.33, 'desc' => 'Poor'],
                         ]),
                     ],
                 ],
@@ -776,7 +766,7 @@ class AdminGradingRubricTest extends TestCase
         $response->assertStatus(422)
             ->assertJson([
                 'success' => false,
-                'message' => 'Total score-level points must equal exactly 100 points.',
+                'message' => 'Total criterion points must equal exactly 100 points.',
             ]);
 
         $this->assertCount(0, $rubric->criteria()->get());
@@ -808,7 +798,7 @@ class AdminGradingRubricTest extends TestCase
         $response->assertStatus(422)
             ->assertJson([
                 'success' => false,
-                'message' => 'Total score-level points must equal exactly 100 points.',
+                'message' => 'Total criterion points must equal exactly 100 points.',
             ]);
 
         $this->assertCount(0, $rubric->criteria()->get());
@@ -1008,22 +998,20 @@ class AdminGradingRubricTest extends TestCase
                 'criteria' => [
                     [
                         'criterion_name' => '  Knowledge  ',
-                        'max_points' => 60,
                         'score_levels' => json_encode([
-                            ['score' => 30, 'desc' => 'Excellent'],
-                            ['score' => 20, 'desc' => 'Good'],
-                            ['score' => 10, 'desc' => 'Fair'],
-                            ['score' => 5, 'desc' => 'Poor'],
+                            ['score' => 60, 'desc' => 'Excellent'],
+                            ['score' => 45, 'desc' => 'Good'],
+                            ['score' => 30, 'desc' => 'Fair'],
+                            ['score' => 15, 'desc' => 'Poor'],
                         ]),
                     ],
                     [
                         'criterion_name' => '  Skills  ',
-                        'max_points' => 40,
                         'score_levels' => json_encode([
-                            ['score' => 20, 'desc' => 'Excellent'],
-                            ['score' => 10, 'desc' => 'Good'],
-                            ['score' => 5, 'desc' => 'Fair'],
-                            ['score' => 0, 'desc' => 'Poor'],
+                            ['score' => 40, 'desc' => 'Excellent'],
+                            ['score' => 30, 'desc' => 'Good'],
+                            ['score' => 20, 'desc' => 'Fair'],
+                            ['score' => 10, 'desc' => 'Poor'],
                         ]),
                     ],
                 ],
@@ -1123,10 +1111,10 @@ class AdminGradingRubricTest extends TestCase
                     [
                         'criterion_name' => 'C1',
                         'score_levels' => json_encode([
-                            ['label' => 'Excellent', 'score' => 30, 'desc' => 'Valid performance description.'],
-                            ['label' => 'Good', 'score' => 30, 'desc' => 'Valid performance description.'],
-                            ['label' => 'Fair', 'score' => 30, 'desc' => 'Valid performance description.'],
-                            ['label' => 'Poor', 'score' => 10, 'desc' => 'Valid performance description.'],
+                            ['label' => 'Excellent', 'score' => 100, 'desc' => 'Valid performance description.'],
+                            ['label' => 'Good', 'score' => 75, 'desc' => 'Valid performance description.'],
+                            ['label' => 'Fair', 'score' => 50, 'desc' => 'Valid performance description.'],
+                            ['label' => 'Poor', 'score' => 25, 'desc' => 'Valid performance description.'],
                         ]),
                     ],
                 ],
@@ -1138,7 +1126,7 @@ class AdminGradingRubricTest extends TestCase
         $this->assertCount(1, $rubric->criteria()->get());
     }
 
-    public function test_sync_accepts_any_distribution_that_totals_100(): void
+    public function test_sync_accepts_any_lower_level_distribution_as_long_as_excellent_is_100(): void
     {
         $rubric = GradingRubric::create([
             'rubric_name' => 'Flexible Distribution',
@@ -1151,10 +1139,10 @@ class AdminGradingRubricTest extends TestCase
                     [
                         'criterion_name' => 'C1',
                         'score_levels' => json_encode([
-                            ['label' => 'Excellent', 'score' => 10, 'desc' => 'Valid performance description.'],
-                            ['label' => 'Good', 'score' => 20, 'desc' => 'Valid performance description.'],
-                            ['label' => 'Fair', 'score' => 30, 'desc' => 'Valid performance description.'],
-                            ['label' => 'Poor', 'score' => 40, 'desc' => 'Valid performance description.'],
+                            ['label' => 'Excellent', 'score' => 100, 'desc' => 'Valid performance description.'],
+                            ['label' => 'Good', 'score' => 60, 'desc' => 'Valid performance description.'],
+                            ['label' => 'Fair', 'score' => 35, 'desc' => 'Valid performance description.'],
+                            ['label' => 'Poor', 'score' => 15, 'desc' => 'Valid performance description.'],
                         ]),
                     ],
                 ],
@@ -1189,7 +1177,7 @@ class AdminGradingRubricTest extends TestCase
         $response->assertStatus(422)
             ->assertJson([
                 'success' => false,
-                'message' => 'Total score-level points must equal exactly 100 points.',
+                'message' => 'Total criterion points must equal exactly 100 points.',
             ]);
 
         $this->assertCount(0, $rubric->criteria()->get());
@@ -1220,7 +1208,7 @@ class AdminGradingRubricTest extends TestCase
         $response->assertStatus(422)
             ->assertJson([
                 'success' => false,
-                'message' => 'Total score-level points must equal exactly 100 points.',
+                'message' => 'Total criterion points must equal exactly 100 points.',
             ]);
 
         $this->assertCount(0, $rubric->criteria()->get());
@@ -1251,13 +1239,13 @@ class AdminGradingRubricTest extends TestCase
         $response->assertStatus(422)
             ->assertJson([
                 'success' => false,
-                'message' => 'Total score-level points must equal exactly 100 points.',
+                'message' => 'Total criterion points must equal exactly 100 points.',
             ]);
 
         $this->assertCount(0, $rubric->criteria()->get());
     }
 
-    public function test_sync_accepts_equal_25_per_level(): void
+    public function test_sync_accepts_equal_levels_across_all_four(): void
     {
         $rubric = GradingRubric::create([
             'rubric_name' => 'Equal Distribution',
@@ -1270,10 +1258,10 @@ class AdminGradingRubricTest extends TestCase
                     [
                         'criterion_name' => 'C1',
                         'score_levels' => json_encode([
-                            ['label' => 'Excellent', 'score' => 25, 'desc' => 'Valid performance description.'],
-                            ['label' => 'Good', 'score' => 25, 'desc' => 'Valid performance description.'],
-                            ['label' => 'Fair', 'score' => 25, 'desc' => 'Valid performance description.'],
-                            ['label' => 'Poor', 'score' => 25, 'desc' => 'Valid performance description.'],
+                            ['label' => 'Excellent', 'score' => 100, 'desc' => 'Valid performance description.'],
+                            ['label' => 'Good', 'score' => 100, 'desc' => 'Valid performance description.'],
+                            ['label' => 'Fair', 'score' => 100, 'desc' => 'Valid performance description.'],
+                            ['label' => 'Poor', 'score' => 100, 'desc' => 'Valid performance description.'],
                         ]),
                     ],
                 ],
@@ -1283,7 +1271,7 @@ class AdminGradingRubricTest extends TestCase
             ->assertJson(['success' => true]);
     }
 
-    public function test_sync_accepts_50_20_20_10_distribution(): void
+    public function test_sync_accepts_50_20_20_10_style_distribution(): void
     {
         $rubric = GradingRubric::create([
             'rubric_name' => 'Fifty Distribution',
@@ -1296,10 +1284,10 @@ class AdminGradingRubricTest extends TestCase
                     [
                         'criterion_name' => 'C1',
                         'score_levels' => json_encode([
-                            ['label' => 'Excellent', 'score' => 50, 'desc' => 'Valid performance description.'],
-                            ['label' => 'Good', 'score' => 20, 'desc' => 'Valid performance description.'],
-                            ['label' => 'Fair', 'score' => 20, 'desc' => 'Valid performance description.'],
-                            ['label' => 'Poor', 'score' => 10, 'desc' => 'Valid performance description.'],
+                            ['label' => 'Excellent', 'score' => 100, 'desc' => 'Valid performance description.'],
+                            ['label' => 'Good', 'score' => 40, 'desc' => 'Valid performance description.'],
+                            ['label' => 'Fair', 'score' => 40, 'desc' => 'Valid performance description.'],
+                            ['label' => 'Poor', 'score' => 20, 'desc' => 'Valid performance description.'],
                         ]),
                     ],
                 ],
@@ -1326,7 +1314,7 @@ class AdminGradingRubricTest extends TestCase
         $response->assertStatus(422)
             ->assertJson([
                 'success' => false,
-                'message' => 'Total score-level points must equal exactly 100 points.',
+                'message' => 'Total criterion points must equal exactly 100 points.',
             ]);
 
         $this->assertCount(0, $rubric->criteria()->get());
@@ -1345,19 +1333,19 @@ class AdminGradingRubricTest extends TestCase
                     [
                         'criterion_name' => 'C1',
                         'score_levels' => json_encode([
-                            ['label' => 'Excellent', 'score' => 40, 'desc' => 'Valid performance description.'],
-                            ['label' => 'Good', 'score' => 30, 'desc' => 'Valid performance description.'],
-                            ['label' => 'Fair', 'score' => 20, 'desc' => 'Valid performance description.'],
-                            ['label' => 'Poor', 'score' => 10, 'desc' => 'Valid performance description.'],
+                            ['label' => 'Excellent', 'score' => 60, 'desc' => 'Valid performance description.'],
+                            ['label' => 'Good', 'score' => 45, 'desc' => 'Valid performance description.'],
+                            ['label' => 'Fair', 'score' => 30, 'desc' => 'Valid performance description.'],
+                            ['label' => 'Poor', 'score' => 15, 'desc' => 'Valid performance description.'],
                         ]),
                     ],
                     [
                         'criterion_name' => 'C2',
                         'score_levels' => json_encode([
-                            ['label' => 'Excellent', 'score' => 0, 'desc' => 'Valid performance description.'],
-                            ['label' => 'Good', 'score' => 0, 'desc' => 'Valid performance description.'],
-                            ['label' => 'Fair', 'score' => 0, 'desc' => 'Valid performance description.'],
-                            ['label' => 'Poor', 'score' => 0, 'desc' => 'Valid performance description.'],
+                            ['label' => 'Excellent', 'score' => 40, 'desc' => 'Valid performance description.'],
+                            ['label' => 'Good', 'score' => 30, 'desc' => 'Valid performance description.'],
+                            ['label' => 'Fair', 'score' => 20, 'desc' => 'Valid performance description.'],
+                            ['label' => 'Poor', 'score' => 10, 'desc' => 'Valid performance description.'],
                         ]),
                     ],
                 ],
@@ -1403,7 +1391,7 @@ class AdminGradingRubricTest extends TestCase
         $response->assertStatus(422)
             ->assertJson([
                 'success' => false,
-                'message' => 'Total score-level points must equal exactly 100 points.',
+                'message' => 'Total criterion points must equal exactly 100 points.',
             ]);
 
         $this->assertCount(0, $rubric->criteria()->get());
@@ -1430,7 +1418,7 @@ class AdminGradingRubricTest extends TestCase
         $response->assertStatus(422)
             ->assertJson([
                 'success' => false,
-                'message' => 'Total score-level points must equal exactly 100 points.',
+                'message' => 'Total criterion points must equal exactly 100 points.',
             ]);
 
         $this->assertCount(0, $rubric->criteria()->get());
@@ -1468,7 +1456,7 @@ class AdminGradingRubricTest extends TestCase
         $response->assertStatus(422)
             ->assertJson([
                 'success' => false,
-                'message' => 'Total score-level points must equal exactly 100 points.',
+                'message' => 'Total criterion points must equal exactly 100 points.',
             ]);
     }
 
@@ -1494,10 +1482,10 @@ class AdminGradingRubricTest extends TestCase
             ->putJson("/api/admin/grading-rubrics/{$rubric->rubric_id}/criteria/{$criterion->criterion_id}", [
                 'criterion_name' => 'C1',
                 'score_levels' => json_encode([
-                    ['label' => 'Excellent', 'score' => 10, 'desc' => 'Valid performance description.'],
-                    ['label' => 'Good', 'score' => 20, 'desc' => 'Valid performance description.'],
-                    ['label' => 'Fair', 'score' => 30, 'desc' => 'Valid performance description.'],
-                    ['label' => 'Poor', 'score' => 40, 'desc' => 'Valid performance description.'],
+                    ['label' => 'Excellent', 'score' => 100, 'desc' => 'Valid performance description.'],
+                    ['label' => 'Good', 'score' => 75, 'desc' => 'Valid performance description.'],
+                    ['label' => 'Fair', 'score' => 50, 'desc' => 'Valid performance description.'],
+                    ['label' => 'Poor', 'score' => 25, 'desc' => 'Valid performance description.'],
                 ]),
             ]);
 
@@ -1518,10 +1506,10 @@ class AdminGradingRubricTest extends TestCase
                     [
                         'criterion_name' => 'C1',
                         'score_levels' => json_encode([
-                            ['label' => 'Excellent', 'score' => 30, 'desc' => 'Excellent performance.'],
-                            ['label' => 'Good', 'score' => 30, 'desc' => 'Good performance.'],
-                            ['label' => 'Fair', 'score' => 30, 'desc' => 'Fair performance.'],
-                            ['label' => 'Poor', 'score' => 10, 'desc' => 'Poor performance.'],
+                            ['label' => 'Excellent', 'score' => 100, 'desc' => 'Excellent performance.'],
+                            ['label' => 'Good', 'score' => 75, 'desc' => 'Good performance.'],
+                            ['label' => 'Fair', 'score' => 50, 'desc' => 'Fair performance.'],
+                            ['label' => 'Poor', 'score' => 25, 'desc' => 'Poor performance.'],
                         ]),
                     ],
                 ],
@@ -1841,10 +1829,10 @@ class AdminGradingRubricTest extends TestCase
                     [
                         'criterion_name' => 'C1',
                         'score_levels' => json_encode([
-                            ['label' => 'Excellent', 'score' => 30, 'desc' => 'Excellent performance.'],
-                            ['label' => 'Good', 'score' => 30, 'desc' => 'Good performance.'],
-                            ['label' => 'Fair', 'score' => 30, 'desc' => 'Fair performance.'],
-                            ['label' => 'Poor', 'score' => 10, 'desc' => 'Poor performance.'],
+                            ['label' => 'Excellent', 'score' => 100, 'desc' => 'Excellent performance.'],
+                            ['label' => 'Good', 'score' => 75, 'desc' => 'Good performance.'],
+                            ['label' => 'Fair', 'score' => 50, 'desc' => 'Fair performance.'],
+                            ['label' => 'Poor', 'score' => 25, 'desc' => 'Poor performance.'],
                         ]),
                     ],
                 ],
@@ -1932,6 +1920,7 @@ class AdminGradingRubricTest extends TestCase
         ]);
 
         $mock = Mockery::mock(OllamaSSHClient::class);
+        $mock->shouldReceive('warmup')->zeroOrMoreTimes();
         $mock->shouldReceive('generate')
             ->once()
             ->andReturn("Here you go:\n```json\n{$fakeResponse}\n```");
@@ -1953,9 +1942,11 @@ class AdminGradingRubricTest extends TestCase
 
         foreach ($criteria as $criterion) {
             $this->assertCount(4, $criterion['levels']);
-            $levelSum = array_sum(array_column($criterion['levels'], 'score'));
-            $this->assertSame((float) $criterion['max_points'], (float) $levelSum);
-            $grandTotal += $levelSum;
+            // max_points is the top (Excellent) level's score alone - a
+            // panel picks one level, the other three are lower alternatives
+            // for the same criterion, not additional points.
+            $this->assertSame((float) $criterion['max_points'], (float) $criterion['levels'][0]['score']);
+            $grandTotal += $criterion['max_points'];
         }
 
         $this->assertSame(100, $grandTotal);
@@ -1979,6 +1970,7 @@ class AdminGradingRubricTest extends TestCase
         ]);
 
         $mock = Mockery::mock(OllamaSSHClient::class);
+        $mock->shouldReceive('warmup')->zeroOrMoreTimes();
         $mock->shouldReceive('generate')->once()->andReturn($fakeResponse);
         $this->app->instance(OllamaSSHClient::class, $mock);
 
@@ -1991,10 +1983,7 @@ class AdminGradingRubricTest extends TestCase
         $response->assertStatus(200)
             ->assertJsonCount(6, 'data.criteria');
 
-        $grandTotal = array_sum(array_map(
-            fn ($c) => array_sum(array_column($c['levels'], 'score')),
-            $response->json('data.criteria')
-        ));
+        $grandTotal = array_sum(array_column($response->json('data.criteria'), 'max_points'));
 
         $this->assertSame(100, $grandTotal);
     }
@@ -2002,6 +1991,7 @@ class AdminGradingRubricTest extends TestCase
     public function test_ai_generate_returns_502_when_ollama_throws(): void
     {
         $mock = Mockery::mock(OllamaSSHClient::class);
+        $mock->shouldReceive('warmup')->zeroOrMoreTimes();
         $mock->shouldReceive('generate')->once()->andThrow(new \Exception('SSH connection refused'));
         $this->app->instance(OllamaSSHClient::class, $mock);
 
@@ -2017,6 +2007,7 @@ class AdminGradingRubricTest extends TestCase
     public function test_ai_generate_returns_502_when_response_is_unparseable(): void
     {
         $mock = Mockery::mock(OllamaSSHClient::class);
+        $mock->shouldReceive('warmup')->zeroOrMoreTimes();
         $mock->shouldReceive('generate')->once()->andReturn('Sorry, I cannot help with that.');
         $this->app->instance(OllamaSSHClient::class, $mock);
 
@@ -2031,6 +2022,9 @@ class AdminGradingRubricTest extends TestCase
 
     public function test_ai_generate_defaults_rubric_name_when_ai_omits_it(): void
     {
+        // Uses title_defense (not pre_proposal) - pre_proposal always goes
+        // through the exact-reproduction path regardless of what's mocked,
+        // so it wouldn't exercise this "AI omitted rubric_name" fallback.
         $fakeResponse = json_encode([
             'criteria' => [
                 [
@@ -2042,31 +2036,41 @@ class AdminGradingRubricTest extends TestCase
         ]);
 
         $mock = Mockery::mock(OllamaSSHClient::class);
+        $mock->shouldReceive('warmup')->zeroOrMoreTimes();
         $mock->shouldReceive('generate')->once()->andReturn($fakeResponse);
         $this->app->instance(OllamaSSHClient::class, $mock);
 
         $response = $this->actingAs($this->admin, 'expert')
             ->postJson('/api/admin/grading-rubrics/ai-generate', [
-                'rubric_type' => 'pre_proposal',
+                'rubric_type' => 'title_defense',
                 'criteria_count' => 3,
             ]);
 
         $response->assertStatus(200)
-            ->assertJsonPath('data.rubric_name', 'Pre-Proposal Defense Rubric');
+            ->assertJsonPath('data.rubric_name', 'Title Defense Rubric');
 
         // Only one criterion came back even though 3 were requested - the
         // budget split still has to land on exactly 100 for what it got.
         $this->assertSame(100, $response->json('data.criteria.0.max_points'));
     }
 
-    public function test_ai_generate_uses_real_categories_for_pre_proposal(): void
+    public function test_ai_generate_groups_criteria_by_ai_provided_categories(): void
     {
+        // final_oral_defense (not pre_proposal) - pre_proposal always uses
+        // the exact-reproduction path (name-matched against real data), so
+        // it wouldn't exercise the generic AI-provided-categories engine
+        // this test is actually about.
         $fakeResponse = json_encode([
-            'rubric_name' => 'Pre-Proposal Defense Rubric',
-            'description' => 'Evaluates the pre-proposal defense.',
+            'rubric_name' => 'Final Oral Defense Rubric',
+            'description' => 'Evaluates the final defense.',
+            'categories' => [
+                ['name' => 'Manuscript', 'weight' => 20],
+                ['name' => 'Topic Quality and Proposal Merit', 'weight' => 30],
+                ['name' => 'Proposal Content and Clarity', 'weight' => 50],
+            ],
             'criteria' => [
-                ['criterion_name' => 'Oral Delivery', 'category' => 'Manuscript', 'description' => 'd', 'levels' => ['excellent' => 'a', 'good' => 'b', 'fair' => 'c', 'poor' => 'd']],
-                ['criterion_name' => 'Slide Usage', 'category' => 'Manuscript', 'description' => 'd', 'levels' => ['excellent' => 'a', 'good' => 'b', 'fair' => 'c', 'poor' => 'd']],
+                ['criterion_name' => 'Delivery', 'category' => 'Manuscript', 'description' => 'd', 'levels' => ['excellent' => 'a', 'good' => 'b', 'fair' => 'c', 'poor' => 'd']],
+                ['criterion_name' => 'Slides', 'category' => 'Manuscript', 'description' => 'd', 'levels' => ['excellent' => 'a', 'good' => 'b', 'fair' => 'c', 'poor' => 'd']],
                 ['criterion_name' => 'Feasibility', 'category' => 'Topic Quality and Proposal Merit', 'description' => 'd', 'levels' => ['excellent' => 'a', 'good' => 'b', 'fair' => 'c', 'poor' => 'd']],
                 ['criterion_name' => 'Problem Statement', 'category' => 'Proposal Content and Clarity', 'description' => 'd', 'levels' => ['excellent' => 'a', 'good' => 'b', 'fair' => 'c', 'poor' => 'd']],
                 ['criterion_name' => 'Solution Scope', 'category' => 'Proposal Content and Clarity', 'description' => 'd', 'levels' => ['excellent' => 'a', 'good' => 'b', 'fair' => 'c', 'poor' => 'd']],
@@ -2074,12 +2078,13 @@ class AdminGradingRubricTest extends TestCase
         ]);
 
         $mock = Mockery::mock(OllamaSSHClient::class);
+        $mock->shouldReceive('warmup')->zeroOrMoreTimes();
         $mock->shouldReceive('generate')->once()->andReturn($fakeResponse);
         $this->app->instance(OllamaSSHClient::class, $mock);
 
         $response = $this->actingAs($this->admin, 'expert')
             ->postJson('/api/admin/grading-rubrics/ai-generate', [
-                'rubric_type' => 'pre_proposal',
+                'rubric_type' => 'final_oral_defense',
                 'criteria_count' => 5,
             ]);
 
@@ -2102,33 +2107,36 @@ class AdminGradingRubricTest extends TestCase
         $this->assertSame(30, $topicTotal);
         $this->assertSame(50, $contentTotal);
 
-        $grandTotal = array_sum(array_map(
-            fn ($c) => array_sum(array_column($c['levels'], 'score')),
-            $criteria
-        ));
+        $grandTotal = array_sum(array_column($criteria, 'max_points'));
         $this->assertSame(100, $grandTotal);
     }
 
     public function test_ai_generate_renormalizes_when_a_category_is_left_empty(): void
     {
-        // Model only tags criteria into 2 of the 3 real categories - the
+        // Model only tags criteria into 2 of 3 AI-provided categories - the
         // 20/30 weights for Manuscript/Topic Quality should renormalize to
         // fill the full 100 rather than leaving 50 points unaccounted for.
         $fakeResponse = json_encode([
-            'rubric_name' => 'Pre-Proposal Defense Rubric',
+            'rubric_name' => 'Final Oral Defense Rubric',
+            'categories' => [
+                ['name' => 'Manuscript', 'weight' => 20],
+                ['name' => 'Topic Quality and Proposal Merit', 'weight' => 30],
+                ['name' => 'Proposal Content and Clarity', 'weight' => 50],
+            ],
             'criteria' => [
-                ['criterion_name' => 'Oral Delivery', 'category' => 'Manuscript', 'description' => 'd', 'levels' => ['excellent' => 'a', 'good' => 'b', 'fair' => 'c', 'poor' => 'd']],
+                ['criterion_name' => 'Delivery', 'category' => 'Manuscript', 'description' => 'd', 'levels' => ['excellent' => 'a', 'good' => 'b', 'fair' => 'c', 'poor' => 'd']],
                 ['criterion_name' => 'Feasibility', 'category' => 'Topic Quality and Proposal Merit', 'description' => 'd', 'levels' => ['excellent' => 'a', 'good' => 'b', 'fair' => 'c', 'poor' => 'd']],
             ],
         ]);
 
         $mock = Mockery::mock(OllamaSSHClient::class);
+        $mock->shouldReceive('warmup')->zeroOrMoreTimes();
         $mock->shouldReceive('generate')->once()->andReturn($fakeResponse);
         $this->app->instance(OllamaSSHClient::class, $mock);
 
         $response = $this->actingAs($this->admin, 'expert')
             ->postJson('/api/admin/grading-rubrics/ai-generate', [
-                'rubric_type' => 'pre_proposal',
+                'rubric_type' => 'final_oral_defense',
             ]);
 
         $response->assertStatus(200);
@@ -2138,10 +2146,58 @@ class AdminGradingRubricTest extends TestCase
         $this->assertSame(100, array_sum(array_column($categories, 'max_points')));
 
         $criteria = $response->json('data.criteria');
-        $grandTotal = array_sum(array_map(
-            fn ($c) => array_sum(array_column($c['levels'], 'score')),
-            $criteria
-        ));
+        $grandTotal = array_sum(array_column($criteria, 'max_points'));
+        $this->assertSame(100, $grandTotal);
+    }
+
+    public function test_ai_generate_pre_proposal_uses_exact_real_points_regardless_of_ai_echo(): void
+    {
+        // The AI is only ever trusted for wording. Even if its echo were to
+        // drift (simulated here with a garbage "category" and no numbers at
+        // all, since real requests never send scores to it), the returned
+        // points must still be the school's exact real numbers, matched by
+        // criterion name.
+        $reference = (new \ReflectionClass(AdminGradingRubricController::class))
+            ->getConstant('PRE_PROPOSAL_CRITERIA');
+
+        $fakeResponse = json_encode([
+            'rubric_name' => 'Pre-Proposal Defense Rubric',
+            'criteria' => array_map(fn ($c) => [
+                'criterion_name' => $c['criterion_name'],
+                'category' => 'some-drifted-category-the-ai-made-up',
+                'description' => $c['description'],
+                'levels' => array_map(fn ($lv) => $lv['desc'], $c['levels']),
+            ], $reference),
+        ]);
+
+        $mock = Mockery::mock(OllamaSSHClient::class);
+        $mock->shouldReceive('warmup')->zeroOrMoreTimes();
+        $mock->shouldReceive('generate')->once()->andReturn($fakeResponse);
+        $this->app->instance(OllamaSSHClient::class, $mock);
+
+        $response = $this->actingAs($this->admin, 'expert')
+            ->postJson('/api/admin/grading-rubrics/ai-generate', [
+                'rubric_type' => 'pre_proposal',
+            ]);
+
+        $response->assertStatus(200)->assertJson(['success' => true]);
+
+        $categories = $response->json('data.categories');
+        $this->assertSame([
+            ['name' => 'Oral Examination/Presentation', 'max_points' => 20],
+            ['name' => 'Topic Quality and Proposal Merit', 'max_points' => 30],
+            ['name' => 'Proposal Content and Clarity', 'max_points' => 50],
+        ], $categories);
+
+        $criteria = $response->json('data.criteria');
+        $this->assertCount(12, $criteria);
+
+        $oralDelivery = collect($criteria)->firstWhere('criterion_name', 'Oral Delivery');
+        $this->assertSame('Oral Examination/Presentation', $oralDelivery['category']);
+        $this->assertSame(5, $oralDelivery['max_points']);
+        $this->assertSame([5, 3.75, 2.5, 1.25], array_column($oralDelivery['levels'], 'score'));
+
+        $grandTotal = array_sum(array_column($criteria, 'max_points'));
         $this->assertSame(100, $grandTotal);
     }
 
@@ -2158,6 +2214,7 @@ class AdminGradingRubricTest extends TestCase
         ]);
 
         $mock = Mockery::mock(OllamaSSHClient::class);
+        $mock->shouldReceive('warmup')->zeroOrMoreTimes();
         $mock->shouldReceive('generate')->once()->andReturn($fakeResponse);
         $this->app->instance(OllamaSSHClient::class, $mock);
 
@@ -2189,10 +2246,10 @@ class AdminGradingRubricTest extends TestCase
                         'category' => 'Manuscript',
                         'category_max_points' => 20,
                         'score_levels' => json_encode([
-                            ['score' => 40, 'desc' => 'Valid performance description.'],
-                            ['score' => 30, 'desc' => 'Valid performance description.'],
-                            ['score' => 20, 'desc' => 'Valid performance description.'],
-                            ['score' => 10, 'desc' => 'Valid performance description.'],
+                            ['score' => 100, 'desc' => 'Valid performance description.'],
+                            ['score' => 75, 'desc' => 'Valid performance description.'],
+                            ['score' => 50, 'desc' => 'Valid performance description.'],
+                            ['score' => 25, 'desc' => 'Valid performance description.'],
                         ]),
                     ],
                 ],

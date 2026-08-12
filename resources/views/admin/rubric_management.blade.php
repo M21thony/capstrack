@@ -109,11 +109,11 @@
           <span>Draft with AI</span>
         </div>
         <div class="rb-ai-panel-row">
-          <div class="rb-ai-field rb-ai-field-topic">
+          <div class="rb-ai-field rb-ai-field-topic" id="rb-ai-field-topic">
             <label class="rb-ai-field-label" for="rb-ai-topic">Focus Area <span style="font-weight:400">(optional)</span></label>
             <input class="input" id="rb-ai-topic" placeholder="e.g. &quot;BSIT capstone systems&quot;"/>
           </div>
-          <div class="rb-ai-field rb-ai-field-count">
+          <div class="rb-ai-field rb-ai-field-count" id="rb-ai-field-count">
             <label class="rb-ai-field-label" for="rb-ai-count"># of Criteria</label>
             <select class="input" id="rb-ai-count">
               <option value="3">3</option>
@@ -122,6 +122,13 @@
               <option value="6">6</option>
               <option value="7">7</option>
               <option value="8">8</option>
+              <option value="9">9</option>
+              <option value="10">10</option>
+              <option value="11">11</option>
+              <option value="12">12</option>
+              <option value="13">13</option>
+              <option value="14">14</option>
+              <option value="15">15</option>
             </select>
           </div>
           <button type="button" class="rb-ai-generate-btn" id="rb-ai-btn" onclick="aiGenerateRubric()">
@@ -129,7 +136,7 @@
             <span id="rb-ai-btn-label">Generate</span>
           </button>
         </div>
-        <div class="input-hint">Select a rubric type above, then generate a draft name, description, and criteria you can review and edit before saving. "# of Criteria" sets how many scoring criteria the draft will include.</div>
+        <div class="input-hint" id="rb-ai-hint">Select a rubric type above, then generate a draft name, description, and criteria you can review and edit before saving. "# of Criteria" sets how many scoring criteria the draft will include.</div>
       </div>
 
       <div class="form-group" style="margin-bottom:0">
@@ -149,7 +156,7 @@
       <div class="rb-criteria-toolbar" style="flex-shrink:0">
         <div>
           <div style="font-size:13px;font-weight:600;color:var(--text)">Scoring Criteria</div>
-          <div style="font-size:11px;color:var(--text3);margin-top:1px">Score-level points across all criteria must total exactly 100 pts.</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:1px">Each criterion's Excellent-level points across all criteria must total exactly 100 pts.</div>
         </div>
         <div class="rb-pts-status">
           <div class="rb-pts-badge" id="total-pts-label">0 / 100 pts</div>
@@ -159,7 +166,7 @@
 
       <div class="rb-pts-note" id="total-pts-note">
         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-        <span>Total score-level points must equal exactly 100 points before the rubric can be saved.</span>
+        <span>Total criterion points (Excellent level, one per criterion) must equal exactly 100 points before the rubric can be saved.</span>
       </div>
 
       <div id="criteria-list" style="display:flex;flex-direction:column;gap:10px;padding-right:4px;margin-bottom:12px;flex:1;overflow-y:auto;min-height:0;scroll-behavior:smooth"></div>
@@ -317,6 +324,14 @@ function escHtml(str) {
     .replace(/'/g, '&#39;');
 }
 
+// A criterion is scored by picking exactly ONE of its four performance
+// levels - its point value is the first (Excellent) level's score, not the
+// sum of all four. Good/Fair/Poor are lower alternative scores for the
+// same criterion, not additional points on top of it.
+function criterionScore(c) {
+  return +((c.levels && c.levels[0] && c.levels[0].score) || 0);
+}
+
 let rubrics = [];
 let activeFilter = "all";
 let editingId = null;
@@ -417,7 +432,7 @@ function renderCriteriaBuilder() {
     if (cat !== lastCategory) {
       lastCategory = cat;
       var catTotal = draftCriteria.reduce(function(s, c) {
-        return ((c.category || '').trim() === cat) ? s + (c.levels || []).reduce(function(ss, lv) { return ss + (+lv.score || 0); }, 0) : s;
+        return ((c.category || '').trim() === cat) ? s + criterionScore(c) : s;
       }, 0);
       html += '<div class="rb-category-header">' +
         '<span>' + (cat ? escHtml(cat) : 'Ungrouped') + '</span>' +
@@ -442,7 +457,7 @@ function renderCriterionCard(cr, i) {
     '</button>' +
     '</div>' +
     (hasNameErr ? '<div class="rb-crit-name-error"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Criterion Name is required.</div>' : '') +
-    '<input class="input rb-crit-category-input" value="' + escHtml(cr.category || '') + '" placeholder="Category (optional, e.g. Manuscript)&hellip;" oninput="draftCriteria[' + i + '].category=this.value" onchange="renderCriteriaBuilder()"/>' +
+    '<input class="input rb-crit-category-input" value="' + escHtml(cr.category || '') + '" placeholder="Category (optional, e.g. Oral Examination/Presentation)&hellip;" oninput="draftCriteria[' + i + '].category=this.value" onchange="renderCriteriaBuilder()"/>' +
     '<div class="rb-levels-grid">' +
     cr.levels.map(function(lv, li) {
       var hasDescErr = !!(descErrors[i] && descErrors[i][li]);
@@ -500,7 +515,7 @@ function validateLevelDescriptions() {
 
 function updateTotalPts() {
   var total = draftCriteria.reduce(function(s, c) {
-    return s + (c.levels || []).reduce(function(ss, lv) { return ss + (+lv.score || 0); }, 0);
+    return s + criterionScore(c);
   }, 0);
   var lbl = document.getElementById('total-pts-label');
   var hint = document.getElementById('total-pts-hint');
@@ -585,6 +600,24 @@ function selectRbType(radio) {
   document.getElementById('rb-type').value = radio.value;
   document.querySelectorAll('.rb-type-opt').forEach(function(o) { o.classList.remove('selected'); });
   radio.closest('.rb-type-opt').classList.add('selected');
+  updateAiPanelForType(radio.value);
+}
+
+// Pre-Proposal Defense reproduces the school's real rubric (all 12 of its
+// actual criteria) - there's nothing to type or choose a count for, so
+// those fields hide and Generate becomes a literal one-click action.
+function updateAiPanelForType(type) {
+  var isPreProposal = type === 'pre_proposal';
+  var topicField = document.getElementById('rb-ai-field-topic');
+  var countField = document.getElementById('rb-ai-field-count');
+  var hint = document.getElementById('rb-ai-hint');
+  if (topicField) topicField.style.display = isPreProposal ? 'none' : '';
+  if (countField) countField.style.display = isPreProposal ? 'none' : '';
+  if (hint) {
+    hint.textContent = isPreProposal
+      ? 'Generates the school\'s real Pre-Proposal Defense Rubric (all 12 criteria) — just click Generate.'
+      : 'Select a rubric type above, then generate a draft name, description, and criteria you can review and edit before saving. "# of Criteria" sets how many scoring criteria the draft will include.';
+  }
 }
 
 // ── AI DRAFT ──────────────────────────────────────────────────────────────────
@@ -655,9 +688,9 @@ async function saveRubric() {
   if (!validateCriterionNames()) { toast('Criterion Name is required for every criterion.'); return; }
   if (!validateLevelDescriptions()) { toast('Performance level description is required for every performance level.'); return; }
   var total = draftCriteria.reduce(function(s, c) {
-    return s + (c.levels || []).reduce(function(ss, lv) { return ss + (+lv.score || 0); }, 0);
+    return s + criterionScore(c);
   }, 0);
-  if (total !== 100) { toast('Total score-level points must equal exactly 100 points (currently ' + total + ').'); return; }
+  if (total !== 100) { toast('Total criterion points must equal exactly 100 points (currently ' + total + ').'); return; }
 
   var url, method;
   if (editingId) {
@@ -690,7 +723,7 @@ async function saveRubric() {
           criterion_name: c.name,
           category: (c.category || '').trim() || null,
           category_max_points: c.categoryMaxPoints || null,
-          max_points: (c.levels || []).reduce(function(ss, lv) { return ss + (+lv.score || 0); }, 0),
+          max_points: criterionScore(c),
           score_levels: JSON.stringify(c.levels.map(function(lv) {
             return { label: lv.label || '', score: lv.score, desc: lv.desc };
           })),
@@ -854,7 +887,7 @@ function renderList() {
 
   el.innerHTML = paged.map(function(rb) {
     var total = rb.criteria.reduce(function(s, c) {
-      return s + (c.levels || []).reduce(function(ss, lv) { return ss + (+lv.score || 0); }, 0);
+      return s + criterionScore(c);
     }, 0);
     var col = TYPE_COLOR[rb.type] || 'var(--text3)';
     var bg = TYPE_BG[rb.type] || 'var(--bg4)';
@@ -875,7 +908,7 @@ function renderList() {
         return '<div class="rb-crit-row">' +
           '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">' +
           '<div style="font-size:12px;font-weight:600;color:var(--text)">' + (i + 1) + '. ' + cr.name + '</div>' +
-          '<span style="font-family:\'Space Mono\',monospace;font-size:11px;color:' + col + ';font-weight:700">' + (cr.levels || []).reduce(function(ss, lv) { return ss + (+lv.score || 0); }, 0) + ' pts</span>' +
+          '<span style="font-family:\'Space Mono\',monospace;font-size:11px;color:' + col + ';font-weight:700">' + criterionScore(cr) + ' pts</span>' +
           '</div>' +
           '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:5px">' +
           cr.levels.map(function(lv, li) {

@@ -25,6 +25,15 @@ class DuplicationController extends Controller
 
         $path = null;
 
+        // This chains warmup + up to ~4 more Ollama calls (concept
+        // extraction, similarity search, instructor matching). PHP's
+        // default max_execution_time (120s on this server) was never
+        // raised for it, so a cold model load (~50s alone - confirmed from
+        // the Ollama server log) plus several real calls routinely blew
+        // past that and fataled uncatchably mid-request. 240s covers one
+        // cold-start plus the rest of the chain running warm.
+        set_time_limit(240);
+
         try {
             // 0. Warm up Ollama — loads model into GPU before real requests
             app(OllamaSSHClient::class)->warmup();
@@ -87,7 +96,13 @@ class DuplicationController extends Controller
                 'instructors' => $instructors,
             ]);
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
+            // \Throwable, not \Exception - a slow/dead SSH tunnel to Ollama
+            // can hit PHP's own max_execution_time and fatal with a
+            // Symfony FatalError, which extends \Error, not \Exception.
+            // Catching only \Exception let that escape uncaught straight to
+            // Laravel's HTML error page, which the frontend can't parse as
+            // JSON and reports as a generic "Server returned an error page".
             if ($path) {
                 Storage::delete($path);
             }
