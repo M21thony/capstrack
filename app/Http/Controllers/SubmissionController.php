@@ -51,14 +51,19 @@ class SubmissionController extends Controller
         $originalExt = strtolower($file->getClientOriginalExtension());
         $storedPath = $file->store('submissions', 'local'); // adjust disk as needed
 
-        // Determine next version number for this student (simple increment)
-        $lastVersion = CapstoneDocument::where('student_id', $studentId)->max('file_version') ?? 0;
-
         // No title/chapter form fields anymore - students just attach a file
         // and submit. Falls back to the uploaded file's own name so every
         // document still has something sensible to display everywhere else
         // this field is read (review lists, instructor doc-review, etc).
         $title = $request->input('title') ?: pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
+
+        // Version only increments for resubmissions of the *same* document -
+        // matched by file_name. A differently-named file is a new document
+        // and starts back at version 1, rather than inheriting whatever
+        // version the student's last unrelated submission happened to reach.
+        $lastVersion = CapstoneDocument::where('student_id', $studentId)
+            ->where('file_name', $title)
+            ->max('file_version') ?? 0;
 
         $document = CapstoneDocument::create([
             'student_id' => $studentId,
@@ -119,6 +124,24 @@ class SubmissionController extends Controller
         ]);
     }
 
+    // GET /student/submission/next-version?title=... — the version number
+    // this student's next submission would get, scoped to documents with a
+    // matching file_name so unrelated files don't inherit each other's
+    // version count. Used by the form to keep the read-only Version label
+    // accurate once a file is actually selected.
+    public function nextVersionForTitle(Request $request)
+    {
+        $request->validate(['title' => 'required|string|max:255']);
+
+        $studentId = Auth::id();
+
+        $lastVersion = CapstoneDocument::where('student_id', $studentId)
+            ->where('file_name', $request->input('title'))
+            ->max('file_version') ?? 0;
+
+        return response()->json(['version' => $lastVersion + 1]);
+    }
+
     // GET /api/student/submission/subject-adviser-folders — named folders
     // the resolved Subject Adviser has set up for students to pick from.
     public function subjectAdviserFolders()
@@ -168,7 +191,11 @@ class SubmissionController extends Controller
             );
         }
 
-        $nextVersion = (CapstoneDocument::where('student_id', $studentId)->max('file_version') ?? 0) + 1;
+        // Actual version depends on the file's name, which isn't known until
+        // one is selected client-side; the form fetches the real number via
+        // nextVersionForTitle() once a file is picked. This is just the
+        // before-a-file-is-chosen placeholder.
+        $nextVersion = 1;
 
         return view('student.submission', compact('recipients', 'nextVersion'));
     }

@@ -196,7 +196,7 @@
           </div>
           <div>
             <label class="pm-label">Version</label>
-            <div class="pm-value readonly">Version {{ $nextVersion }}</div>
+            <div class="pm-value readonly" id="versionLabel">Version {{ $nextVersion }}</div>
           </div>
         </div>
       </div>
@@ -284,11 +284,14 @@ function showToast(message, type) {
 
 let selectedFile = null;
 
+const NEXT_VERSION_URL = "{{ route('student.submission.next-version') }}";
+
 const dropZone = document.getElementById('dropZone');
 const fileInput = document.getElementById('fileInput');
 const dropText = document.getElementById('dropText');
 const dropSub = document.getElementById('dropSub');
 const fileNameLabel = document.getElementById('fileNameLabel');
+const versionLabel = document.getElementById('versionLabel');
 
 dropZone.addEventListener('click', () => fileInput.click());
 dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); });
@@ -317,6 +320,25 @@ function handleFile(file) {
   dropText.textContent = file.name;
   dropSub.textContent = (file.size / (1024 * 1024)).toFixed(2) + ' MB — click to change';
   fileNameLabel.textContent = file.name;
+  updateVersionLabel(file.name);
+}
+
+// Version only carries forward for a resubmission of the same-named
+// document (see SubmissionController::nextVersionForTitle) - a
+// differently-named file always starts at Version 1, it doesn't inherit
+// whatever version an unrelated prior submission reached.
+function updateVersionLabel(fileName) {
+  if (!versionLabel) return;
+  const title = fileName.replace(/\.[^/.]+$/, '');
+  versionLabel.textContent = 'Checking…';
+  fetch(NEXT_VERSION_URL + '?title=' + encodeURIComponent(title))
+    .then(r => r.json())
+    .then(data => {
+      versionLabel.textContent = 'Version ' + (data.version || 1);
+    })
+    .catch(() => {
+      versionLabel.textContent = 'Version 1';
+    });
 }
 
 // -- Subject Adviser folder picker --
