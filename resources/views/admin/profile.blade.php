@@ -632,6 +632,30 @@
         </div>
       </form>
 
+      @if ($admin->roles->pluck('role_name')->contains('capstone_adviser'))
+        <div class="pf-card" style="margin-top:24px">
+          <div class="pf-card-header" style="margin-bottom:0;padding-bottom:18px;border-bottom:1px solid var(--pf-border);display:flex;align-items:center;gap:12px">
+            <div style="flex:1">
+              <div class="pf-card-title" style="display:flex;align-items:center;gap:8px">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--pf-accent);flex-shrink:0"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                Submission Folders
+              </div>
+              <div class="pf-card-desc" style="margin-top:2px">Name folders here so students can pick the right one when they submit to you as Subject Adviser</div>
+            </div>
+          </div>
+
+          <div style="padding-top:16px">
+            <div style="display:flex;gap:8px;margin-bottom:16px">
+              <input type="text" id="newFolderName" placeholder="e.g. Batch 2026 - Section A" style="flex:1;padding:9px 12px;border:1.5px solid var(--pf-border);border-radius:8px;font-size:13.5px;font-family:'DM Sans',sans-serif" />
+              <button type="button" id="addFolderBtn" style="padding:9px 16px;border:none;border-radius:8px;background:var(--pf-accent);color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap">Add Folder</button>
+            </div>
+            <div id="folderListContainer" style="display:flex;flex-direction:column;gap:6px">
+              <div class="pf-empty" id="folderListEmpty">Loading…</div>
+            </div>
+          </div>
+        </div>
+      @endif
+
     </div>
   </div>
 </div>
@@ -832,6 +856,97 @@ if (expertiseSearch) {
       this.dispatchEvent(new Event('input'));
     }
   });
+}
+
+// -- Submission Folders (Subject Adviser only) --
+var folderListContainer = document.getElementById('folderListContainer');
+if (folderListContainer) {
+  var FOLDER_CSRF = document.querySelector('meta[name="csrf-token"]').content;
+  var folderListEmpty = document.getElementById('folderListEmpty');
+  var newFolderInput = document.getElementById('newFolderName');
+  var addFolderBtn = document.getElementById('addFolderBtn');
+
+  function renderFolders(folders) {
+    folderListContainer.querySelectorAll('.folder-row').forEach(function (el) { el.remove(); });
+    if (!folders.length) {
+      folderListEmpty.textContent = 'No folders yet — add one above.';
+      folderListEmpty.style.display = '';
+      return;
+    }
+    folderListEmpty.style.display = 'none';
+    folders.forEach(function (folder) {
+      var row = document.createElement('div');
+      row.className = 'folder-row';
+      row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px 12px;border:1.5px solid var(--pf-border);border-radius:10px;background:#fff';
+      row.innerHTML =
+        '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--pf-accent);flex-shrink:0"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>' +
+        '<span style="flex:1;font-size:13.5px;font-weight:500;color:var(--pf-text)">' + folder.name.replace(/</g, '&lt;') + '</span>' +
+        '<button type="button" class="folder-delete-btn" data-id="' + folder.id + '" style="border:none;background:none;color:var(--pf-text2);cursor:pointer;padding:4px" title="Delete folder">' +
+        '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>' +
+        '</button>';
+      folderListContainer.appendChild(row);
+    });
+  }
+
+  function loadFolders() {
+    fetch("{{ route('gdrive.submission-folders.index') }}")
+      .then(function (r) { return r.json(); })
+      .then(function (data) { renderFolders(data.folders || []); })
+      .catch(function () {
+        folderListEmpty.textContent = 'Could not load folders.';
+      });
+  }
+
+  addFolderBtn.addEventListener('click', function () {
+    var name = newFolderInput.value.trim();
+    if (!name) return;
+    addFolderBtn.disabled = true;
+    addFolderBtn.textContent = 'Adding…';
+    fetch("{{ route('gdrive.submission-folders.store') }}", {
+      method: 'POST',
+      headers: { 'X-CSRF-TOKEN': FOLDER_CSRF, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: name }),
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        addFolderBtn.disabled = false;
+        addFolderBtn.textContent = 'Add Folder';
+        if (!data.success) {
+          alert(data.message || 'Could not create folder.');
+          return;
+        }
+        newFolderInput.value = '';
+        loadFolders();
+      })
+      .catch(function () {
+        addFolderBtn.disabled = false;
+        addFolderBtn.textContent = 'Add Folder';
+        alert('Could not create folder.');
+      });
+  });
+
+  folderListContainer.addEventListener('click', function (e) {
+    var btn = e.target.closest('.folder-delete-btn');
+    if (!btn) return;
+    if (!confirm('Delete this folder? Students will no longer be able to pick it.')) return;
+    fetch("{{ url('/admin/gdrive/submission-folders') }}/" + btn.dataset.id, {
+      method: 'DELETE',
+      headers: { 'X-CSRF-TOKEN': FOLDER_CSRF },
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (!data.success) {
+          alert(data.message || 'Could not delete folder.');
+          return;
+        }
+        loadFolders();
+      })
+      .catch(function () {
+        alert('Could not delete folder.');
+      });
+  });
+
+  loadFolders();
 }
 </script>
 

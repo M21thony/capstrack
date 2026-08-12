@@ -328,6 +328,16 @@ select.input{cursor:pointer}
 .recipient-tag{font-size:9px;padding:2px 7px;flex-shrink:0}
 .recipient-hint{font-size:11.5px;color:var(--text3);margin-top:10px}
 
+/* Read-only "sending to" summary — replaces the old recipient checkboxes;
+   nothing here is interactive, just informational chips. */
+.recipient-summary{display:flex;flex-wrap:wrap;gap:8px}
+.recipient-chip{display:inline-flex;align-items:center;font-size:12px;font-weight:500;color:var(--accent3);background:rgba(201,168,44,0.1);border:1px solid rgba(201,168,44,0.25);border-radius:20px;padding:6px 12px}
+
+/* Folder picker — shown only when Subject Adviser is an assigned recipient */
+.folder-select-wrap{margin-top:12px}
+.folder-select-wrap select{width:100%}
+.folder-select-hint{font-size:11px;color:var(--text3);margin-top:6px}
+
 /* ── DROP ZONE — FULL definition ── */
 .drop-zone{
   border:2px dashed var(--border2);

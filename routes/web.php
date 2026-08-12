@@ -172,6 +172,7 @@ Route::middleware(['auth', 'no.cache', 'track.expert'])->group(function () {
             Route::get('/submission', [SubmissionController::class, 'create'])->name('student.submission');
             // Handles the actual file upload + multi-recipient Drive delivery
             Route::post('/submission', [SubmissionController::class, 'store'])->name('student.submission.store');
+            Route::get('/submission/subject-adviser-folders', [SubmissionController::class, 'subjectAdviserFolders'])->name('student.submission.subject-adviser-folders');
             Route::get('/review', [StudentReviewController::class, 'index'])->name('student.review');
             Route::get('/review/{review}/pdf', [StudentReviewController::class, 'file'])->name('student.review.pdf');
             Route::get('/review/{review}/remarks', [StudentReviewController::class, 'remarks'])->name('student.review.remarks');
@@ -234,6 +235,9 @@ Route::middleware(['expert.auth', 'track.expert'])->prefix('admin/gdrive')->name
     Route::post('/disconnect', [GoogleDriveController::class, 'disconnect'])->name('disconnect');
     Route::get('/folders', [GoogleDriveController::class, 'listFolders'])->name('folders.index');
     Route::post('/folders', [GoogleDriveController::class, 'createFolder'])->name('folders.store');
+    Route::get('/submission-folders', [GoogleDriveController::class, 'listSubmissionFolders'])->name('submission-folders.index');
+    Route::post('/submission-folders', [GoogleDriveController::class, 'storeSubmissionFolder'])->name('submission-folders.store');
+    Route::delete('/submission-folders/{id}', [GoogleDriveController::class, 'destroySubmissionFolder'])->name('submission-folders.destroy');
     Route::post('/upload', [GoogleDriveController::class, 'upload'])->name('upload');
     Route::post('/resources/{resource}/download', [GoogleDriveController::class, 'trackDownload'])->name('resources.download');
     Route::delete('/resources/{resource}', [GoogleDriveController::class, 'destroy'])->name('resources.destroy');

@@ -43,27 +43,13 @@
             </div>
           </div>
 
-          <!-- Document Details -->
-          <div class="sk" style="width:150px;height:11px;border-radius:4px;margin-bottom:14px"></div>
-          <div class="doc-details-grid" style="margin-bottom:16px">
-            @for ($i = 0; $i < 3; $i++)
-            <div>
-              <div class="sk" style="width:90px;height:9px;border-radius:4px;margin-bottom:6px"></div>
-              <div class="sk" style="width:100%;height:38px;border-radius:8px"></div>
-            </div>
+          <!-- Sending To -->
+          <div class="sk" style="width:90px;height:11px;border-radius:4px;margin-bottom:14px"></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:24px">
+            @for ($i = 0; $i < 2; $i++)
+            <div class="sk" style="width:150px;height:26px;border-radius:20px"></div>
             @endfor
           </div>
-          <div class="sk" style="width:130px;height:9px;border-radius:4px;margin-bottom:6px"></div>
-          <div class="sk" style="width:100%;height:76px;border-radius:8px;margin-bottom:24px"></div>
-
-          <!-- Send To -->
-          <div class="sk" style="width:70px;height:11px;border-radius:4px;margin-bottom:14px"></div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
-            @for ($i = 0; $i < 4; $i++)
-            <div class="sk" style="width:100%;height:52px;border-radius:11px"></div>
-            @endfor
-          </div>
-          <div class="sk" style="width:220px;height:10px;border-radius:4px;margin-bottom:24px"></div>
 
           <!-- Attach File -->
           <div class="sk" style="width:90px;height:11px;border-radius:4px;margin-bottom:14px"></div>
@@ -109,92 +95,40 @@
         </div>
       </div>
 
-      <div class="form-section">
-        <div class="section-label">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h7"/></svg>
-          Document Details
-        </div>
-        <div class="doc-details-grid">
-            <div class="pm-field">
-                <label class="pm-label">Document Title</label>
-                <input type="text" class="input" id="doc-title" placeholder="e.g., Chapter 1-3 Final">
-            </div>
-            <div class="pm-field">
-                <label class="pm-label">Chapter</label>
-                <select class="input" id="doc-chapter">
-                    <option value="" disabled selected>Select chapter</option>
-                    <option value="Chapter 1">Chapter 1</option>
-                    <option value="Chapter 2">Chapter 2</option>
-                    <option value="Chapter 3">Chapter 3</option>
-                    <option value="Chapter 4">Chapter 4</option>
-                    <option value="Chapter 5">Chapter 5</option>
-                </select>
-            </div>
-            <div class="pm-field">
-                <label class="pm-label">Document Type</label>
-                <select class="input" id="doc-type">
-                    <option value="Proposal Draft">Proposal Draft</option>
-                    <option value="Final Manuscript">Final Manuscript</option>
-                </select>
-            </div>
-        </div>
-
-        <div class="pm-field" style="margin-top: 16px;">
-            <label class="pm-label">Message to Adviser</label>
-            <textarea class="input" id="doc-message" rows="3" style="resize: none;" placeholder="Briefly describe your submission..."></textarea>
-        </div>
-      </div>
+      @php
+          $roleLabels = [
+              'adviser' => 'Adviser',
+              'consultant' => 'Consultant',
+              'grammarian' => 'Grammarian',
+              'subject_adviser' => 'Subject Adviser',
+          ];
+          $assignedRecipients = collect($roleLabels)->filter(fn ($label, $roleKey) => ! is_null(($recipients[$roleKey]['expert_id'] ?? null)));
+      @endphp
 
       <div class="form-section">
         <div class="section-label">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-          Send To
+          Sending To
         </div>
-        <div class="recipient-group" id="recipientGroup">
-
-            @php
-                $roleLabels = [
-                    'adviser' => 'Capstone Project Adviser',
-                    'consultant' => 'Consultant',
-                    'grammarian' => 'Grammarian',
-                    'subject_adviser' => 'Capstone Project Subject Adviser',
-                ];
-                $roleIcons = [
-                    'adviser' => 'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z',
-                    'consultant' => 'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z',
-                    'grammarian' => 'M4 19.5A2.5 2.5 0 0 1 6.5 17H20M4 4.5A2.5 2.5 0 0 1 6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15Z',
-                    'subject_adviser' => 'M12 2 3 7v6c0 5.25 3.75 9.75 9 11 5.25-1.25 9-5.75 9-11V7l-9-5Z',
-                ];
-            @endphp
-
-            @foreach ($roleLabels as $roleKey => $roleLabel)
-                @php
-                    $info = $recipients[$roleKey] ?? ['expert_id' => null, 'name' => null];
-                    $isAssigned = ! is_null($info['expert_id']);
-                @endphp
-                <label class="recipient-check {{ ! $isAssigned ? 'recipient-check--disabled' : '' }}">
-                    <input
-                        type="checkbox"
-                        name="recipients[]"
-                        value="{{ $roleKey }}"
-                        {{ $roleKey === 'adviser' ? 'checked' : '' }}
-                        {{ ! $isAssigned ? 'disabled' : '' }}
-                    >
-                    <span class="recipient-icon">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="{{ $roleIcons[$roleKey] }}"/></svg>
-                    </span>
-                    <span class="recipient-text">
-                        {{ $roleLabel }}
-                        <small>{{ $isAssigned ? $info['name'] : 'Not yet assigned' }}</small>
-                    </span>
-                    @if ($roleKey === 'adviser')
-                        <span class="badge badge-gold recipient-tag">Primary</span>
-                    @endif
-                </label>
+        @if ($assignedRecipients->isNotEmpty())
+          <div class="recipient-summary" id="recipientSummary">
+            @foreach ($assignedRecipients as $roleKey => $roleLabel)
+              <span class="recipient-chip" data-role="{{ $roleKey }}">{{ $roleLabel }} — {{ $recipients[$roleKey]['name'] }}</span>
             @endforeach
+          </div>
+        @else
+          <p class="recipient-hint">No adviser, consultant, or grammarian is assigned to your team yet — once one is, your submissions will be sent to them automatically.</p>
+        @endif
 
-        </div>
-        <p class="recipient-hint">Select at least one recipient for this submission.</p>
+        @if ($assignedRecipients->has('subject_adviser'))
+          <div class="folder-select-wrap" id="folderSelectWrap" style="display:none">
+            <label class="pm-label" for="subjectAdviserFolder">Folder for Subject Adviser</label>
+            <select class="input" id="subjectAdviserFolder">
+              <option value="">Loading folders…</option>
+            </select>
+            <p class="folder-select-hint">Pick the folder your Subject Adviser told you to submit to.</p>
+          </div>
+        @endif
       </div>
 
       <div class="form-section">
@@ -218,7 +152,7 @@
 
       <button class="btn-primary btn-submit" id="submitBtn">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 2 11 13M22 2 15 22l-4-9-9-4 20-7Z"/></svg>
-          Submit to Adviser
+          Submit for Review
       </button>
   </div>
 
@@ -321,22 +255,31 @@ function handleFile(file) {
   dropSub.textContent = (file.size / (1024 * 1024)).toFixed(2) + ' MB — click to change';
 }
 
+// -- Subject Adviser folder picker --
+// Only present when Subject Adviser is one of the assigned recipients (see
+// the @if in the blade above). Fetches the adviser's named folders and
+// shows the picker only if they've actually set any up - otherwise the
+// submission just goes to the default per-team folder, same as any other
+// recipient.
+const folderWrap = document.getElementById('folderSelectWrap');
+const folderSelect = document.getElementById('subjectAdviserFolder');
+if (folderWrap && folderSelect) {
+  fetch("{{ route('student.submission.subject-adviser-folders') }}")
+    .then(r => r.json())
+    .then(data => {
+      const folders = data.folders || [];
+      if (!folders.length) return;
+      folderSelect.innerHTML = '<option value="" disabled selected>Select a folder</option>' +
+        folders.map(f => `<option value="${f.drive_folder_id}">${f.name}</option>`).join('');
+      folderWrap.style.display = '';
+    })
+    .catch(() => {});
+}
+
 document.getElementById('submitBtn').addEventListener('click', function () {
-  const checked = document.querySelectorAll('#recipientGroup input[type="checkbox"]:checked');
-  if (checked.length === 0) {
-    alert('Please select at least one recipient before submitting.');
-    return;
-  }
-
-  const title = document.getElementById('doc-title').value.trim();
-  if (!title) {
-    alert('Please enter a document title.');
-    return;
-  }
-
-  const chapter = document.getElementById('doc-chapter').value;
-  if (!chapter) {
-    alert('Please select a chapter.');
+  const assignedRecipients = @json($assignedRecipients->keys());
+  if (assignedRecipients.length === 0) {
+    alert('No adviser, consultant, or grammarian is assigned to your team yet, so there\'s no one to send this to.');
     return;
   }
 
@@ -345,13 +288,17 @@ document.getElementById('submitBtn').addEventListener('click', function () {
     return;
   }
 
+  if (folderWrap && folderWrap.style.display !== 'none' && !folderSelect.value) {
+    alert('Please select which folder to submit to for your Subject Adviser.');
+    return;
+  }
+
   const fd = new FormData();
-  fd.append('title', title);
-  fd.append('chapter', chapter);
-  fd.append('document_type', document.getElementById('doc-type').value);
-  fd.append('message', document.getElementById('doc-message').value);
   fd.append('file', selectedFile);
-  checked.forEach(cb => fd.append('recipients[]', cb.value));
+  assignedRecipients.forEach(role => fd.append('recipients[]', role));
+  if (folderSelect && folderSelect.value) {
+    fd.append('subject_adviser_folder_id', folderSelect.value);
+  }
 
   const btn = this;
   const originalText = btn.innerHTML;

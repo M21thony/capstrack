@@ -45,7 +45,7 @@ class RecipientResolver
             ->join('roles as r', 'r.role_id', '=', 'er.role_id')
             ->where('e.is_admin', 1)
             ->where('e.department', $program)
-            ->where('r.role_name', 'Capstone Project Subject Adviser')
+            ->where('r.role_name', 'capstone_adviser')
             ->select('e.expert_id')
             ->first();
 
@@ -109,7 +109,7 @@ class RecipientResolver
             ->join('roles as r', 'r.role_id', '=', 'er.role_id')
             ->where('e.is_admin', 1)
             ->where('e.department', $program)
-            ->where('r.role_name', 'Capstone Project Subject Adviser')
+            ->where('r.role_name', 'capstone_adviser')
             ->select('e.expert_id', 'e.first_name', 'e.last_name')
             ->first();
 
