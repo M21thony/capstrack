@@ -43,11 +43,11 @@
             </div>
           </div>
 
-          <!-- Sending To -->
-          <div class="sk" style="width:90px;height:11px;border-radius:4px;margin-bottom:14px"></div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:24px">
-            @for ($i = 0; $i < 2; $i++)
-            <div class="sk" style="width:150px;height:26px;border-radius:20px"></div>
+          <!-- Send To -->
+          <div class="sk" style="width:70px;height:11px;border-radius:4px;margin-bottom:14px"></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:24px">
+            @for ($i = 0; $i < 4; $i++)
+            <div class="sk" style="width:100%;height:52px;border-radius:11px"></div>
             @endfor
           </div>
 
@@ -108,22 +108,49 @@
               'grammarian' => 'Grammarian',
               'subject_adviser' => 'Subject Adviser',
           ];
+          $roleIcons = [
+              'adviser' => 'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z',
+              'consultant' => 'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z',
+              'grammarian' => 'M4 19.5A2.5 2.5 0 0 1 6.5 17H20M4 4.5A2.5 2.5 0 0 1 6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15Z',
+              'subject_adviser' => 'M12 2 3 7v6c0 5.25 3.75 9.75 9 11 5.25-1.25 9-5.75 9-11V7l-9-5Z',
+          ];
           $assignedRecipients = collect($roleLabels)->filter(fn ($label, $roleKey) => ! is_null(($recipients[$roleKey]['expert_id'] ?? null)));
       @endphp
 
       <div class="form-section">
         <div class="section-label">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-          Sending To
+          Send To
         </div>
-        @if ($assignedRecipients->isNotEmpty())
-          <div class="recipient-summary" id="recipientSummary">
-            @foreach ($assignedRecipients as $roleKey => $roleLabel)
-              <span class="recipient-chip" data-role="{{ $roleKey }}">{{ $roleLabel }} — {{ $recipients[$roleKey]['name'] }}</span>
-            @endforeach
-          </div>
+        <div class="recipient-group" id="recipientGroup">
+          @foreach ($roleLabels as $roleKey => $roleLabel)
+            @php
+                $info = $recipients[$roleKey] ?? ['expert_id' => null, 'name' => null];
+                $isAssigned = ! is_null($info['expert_id']);
+            @endphp
+            <label class="recipient-check {{ ! $isAssigned ? 'recipient-check--disabled' : '' }}">
+                <input
+                    type="checkbox"
+                    name="recipients[]"
+                    value="{{ $roleKey }}"
+                    data-role="{{ $roleKey }}"
+                    {{ $isAssigned ? 'checked' : '' }}
+                    {{ ! $isAssigned ? 'disabled' : '' }}
+                >
+                <span class="recipient-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="{{ $roleIcons[$roleKey] }}"/></svg>
+                </span>
+                <span class="recipient-text">
+                    {{ $roleLabel }}
+                    <small>{{ $isAssigned ? $info['name'] : 'Not yet assigned' }}</small>
+                </span>
+            </label>
+          @endforeach
+        </div>
+        @if ($assignedRecipients->isEmpty())
+          <p class="recipient-hint">No adviser, consultant, grammarian, or subject adviser is assigned to your team yet — once one is, you'll be able to select them here.</p>
         @else
-          <p class="recipient-hint">No adviser, consultant, or grammarian is assigned to your team yet — once one is, your submissions will be sent to them automatically.</p>
+          <p class="recipient-hint">Uncheck anyone you don't want this particular submission sent to.</p>
         @endif
 
         @if ($assignedRecipients->has('subject_adviser'))
@@ -278,29 +305,41 @@ function handleFile(file) {
 
 // -- Subject Adviser folder picker --
 // Only present when Subject Adviser is one of the assigned recipients (see
-// the condition in the blade above). Fetches the adviser's named folders and
-// shows the picker only if they've actually set any up - otherwise the
-// submission just goes to the default per-team folder, same as any other
-// recipient.
+// the condition in the blade above). Fetches the adviser's named folders
+// once and shows the picker only while the Subject Adviser checkbox is
+// actually checked and they've set folders up - otherwise the submission
+// just goes to the default per-team folder, same as any other recipient.
 const folderWrap = document.getElementById('folderSelectWrap');
 const folderSelect = document.getElementById('subjectAdviserFolder');
+const subjectAdviserCheckbox = document.querySelector('#recipientGroup input[data-role="subject_adviser"]');
+let subjectAdviserFolders = [];
+
+function refreshFolderPickerVisibility() {
+  if (!folderWrap || !subjectAdviserCheckbox) return;
+  folderWrap.style.display = (subjectAdviserCheckbox.checked && subjectAdviserFolders.length) ? '' : 'none';
+}
+
 if (folderWrap && folderSelect) {
   fetch("{{ route('student.submission.subject-adviser-folders') }}")
     .then(r => r.json())
     .then(data => {
-      const folders = data.folders || [];
-      if (!folders.length) return;
+      subjectAdviserFolders = data.folders || [];
+      if (!subjectAdviserFolders.length) return;
       folderSelect.innerHTML = '<option value="" disabled selected>Select a folder</option>' +
-        folders.map(f => `<option value="${f.drive_folder_id}">${f.name}</option>`).join('');
-      folderWrap.style.display = '';
+        subjectAdviserFolders.map(f => `<option value="${f.drive_folder_id}">${f.name}</option>`).join('');
+      refreshFolderPickerVisibility();
     })
     .catch(() => {});
+
+  if (subjectAdviserCheckbox) {
+    subjectAdviserCheckbox.addEventListener('change', refreshFolderPickerVisibility);
+  }
 }
 
 document.getElementById('submitBtn').addEventListener('click', function () {
-  const assignedRecipients = @json($assignedRecipients->keys());
-  if (assignedRecipients.length === 0) {
-    alert('No adviser, consultant, or grammarian is assigned to your team yet, so there\'s no one to send this to.');
+  const checked = Array.from(document.querySelectorAll('#recipientGroup input[type="checkbox"]:checked')).map(cb => cb.value);
+  if (checked.length === 0) {
+    alert('Please select at least one recipient before submitting.');
     return;
   }
 
@@ -316,8 +355,8 @@ document.getElementById('submitBtn').addEventListener('click', function () {
 
   const fd = new FormData();
   fd.append('file', selectedFile);
-  assignedRecipients.forEach(role => fd.append('recipients[]', role));
-  if (folderSelect && folderSelect.value) {
+  checked.forEach(role => fd.append('recipients[]', role));
+  if (folderWrap && folderWrap.style.display !== 'none' && folderSelect.value) {
     fd.append('subject_adviser_folder_id', folderSelect.value);
   }
 
