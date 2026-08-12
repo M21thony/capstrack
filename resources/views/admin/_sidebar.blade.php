@@ -2,10 +2,7 @@
     $admin = Auth::guard('expert')->user();
 
     $adminEmail = $admin?->email;
-    $adminAvatar = $adminEmail ?: 'system';
     $adminName = $admin ? trim(($admin->first_name ?? '').' '.($admin->last_name ?? '')) : 'System Administrator';
-
-    $adminProfilePicture = $admin ? ($admin->profile_picture ?: null) : null;
 
     $currentRoute = Route::currentRouteName();
 
@@ -77,22 +74,13 @@
     </div>
   </div>
   <div class="sidebar-user">
-    <div class="avatar">
-      @php
-        $defaultAvatarUrl = asset('images/default-avatar.jpg');
-        $profilePictureUrl = null;
-        if (!empty($adminProfilePicture)) {
-          // capstrackdb shows profile_picture may be a filename like "avatar-07".
-          $profilePictureUrl = asset('images/avatars/'.$adminProfilePicture);
-        }
-      @endphp
-
+    <div class="avatar" style="padding:0;overflow:hidden;">
       <img
-        src="{{ $profilePictureUrl ?: $defaultAvatarUrl }}"
+        src="{{ $admin?->avatarUrl() ?? asset('images/default-avatar.jpg') }}"
         alt="Profile"
         style="width:100%;height:100%;object-fit:cover;border-radius:50%;display:block;"
         loading="lazy"
-        onerror="this.onerror=null; this.src='{{ $defaultAvatarUrl }}';"
+        onerror="this.onerror=null; this.src='{{ asset('images/default-avatar.jpg') }}';"
       />
     </div>
 

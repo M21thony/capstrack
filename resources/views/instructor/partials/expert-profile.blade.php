@@ -6,7 +6,9 @@
 
     <!-- Sticky Header -->
     <div class="ep-header">
-      <div class="ep-avatar">{{ strtoupper(substr($expert?->first_name ?? 'U', 0, 1) . substr($expert?->last_name ?? '', 0, 1)) }}</div>
+      <div class="ep-avatar" style="padding:0;overflow:hidden;">
+        <img src="{{ $expert?->avatarUrl() ?? asset('images/default-avatar.jpg') }}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;display:block;" loading="lazy">
+      </div>
       <div style="flex:1;min-width:0">
         <div class="ep-header-name">{{ $expert?->first_name }} {{ $expert?->last_name }}</div>
         <div class="ep-header-sub">Capstone Expert &middot; Active</div>

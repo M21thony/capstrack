@@ -187,4 +187,41 @@ class ExpertLoginTest extends TestCase
         $response->assertStatus(200);
         $response->assertSee('Expert Account Approval');
     }
+
+    public function test_instructor_sidebar_shows_real_avatar_photo_not_hardcoded_initials(): void
+    {
+        $expert = CapstoneExpert::create([
+            'email' => 'photo.instructor@gmail.com',
+            'first_name' => 'Photo',
+            'last_name' => 'Instructor',
+            'is_admin' => false,
+            'approved_status' => true,
+            'profile_picture' => 'https://lh3.googleusercontent.com/a/instructor-photo=s96-c',
+        ]);
+
+        $this->actingAs($expert, 'expert');
+
+        $response = $this->get('/instructor/dashboard');
+        $response->assertOk();
+        $response->assertSee('https://lh3.googleusercontent.com/a/instructor-photo=s96-c', false);
+    }
+
+    public function test_admin_sidebar_shows_real_avatar_photo_not_broken_preset_url(): void
+    {
+        $admin = CapstoneExpert::create([
+            'email' => 'photo.admin@gmail.com',
+            'first_name' => 'Photo',
+            'last_name' => 'Admin',
+            'is_admin' => true,
+            'approved_status' => true,
+            'profile_picture' => 'https://lh3.googleusercontent.com/a/admin-photo=s96-c',
+        ]);
+
+        $this->actingAs($admin, 'expert');
+
+        $response = $this->get('/admin/dashboard');
+        $response->assertOk();
+        $response->assertSee('https://lh3.googleusercontent.com/a/admin-photo=s96-c', false);
+        $response->assertDontSee('images/avatars/https://', false);
+    }
 }
