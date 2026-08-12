@@ -75,10 +75,38 @@
 }
 
 .match-item {
-  display: flex; justify-content: space-between; align-items: flex-start;
+  display: flex; flex-direction: column;
   padding: 8px 0; border-bottom: 1px solid var(--border);
 }
 .match-item:last-child { border-bottom: none; }
+.match-item-row { display: flex; justify-content: space-between; align-items: flex-start; }
+
+.match-abstract-toggle {
+  align-self: flex-start;
+  margin-top: 6px;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--primary, #5b5bd6);
+}
+.match-abstract-toggle:hover { text-decoration: underline; }
+
+.match-abstract {
+  display: none;
+  margin-top: 6px;
+  padding: 8px 10px;
+  background: var(--bg3);
+  border-radius: 8px;
+  font-size: 11px;
+  line-height: 1.55;
+  color: var(--text2);
+  white-space: pre-line;
+}
+.match-abstract.open { display: block; }
 
   @keyframes sk-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
   .sk-overlay { position: absolute; inset: 0; background: var(--bg); z-index: 10; }
@@ -429,15 +457,27 @@ function renderMatchItem(m, dimmed) {
   const isRelevant = m.is_relevant !== false;
   return `
     <div class="match-item" style="${dimmed || !isRelevant ? 'opacity:0.55' : ''}">
-      <div style="flex:1;min-width:0;margin-right:10px">
-        <div style="font-size:12px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
-          ${escapeHtml(m.title)}
+      <div class="match-item-row">
+        <div style="flex:1;min-width:0;margin-right:10px">
+          <div style="font-size:12px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+            ${escapeHtml(m.title)}
+          </div>
+          ${m.reason ? `<div style="font-size:10px;color:var(--text3);margin-top:2px;line-height:1.4">${escapeHtml(m.reason)}</div>` : ''}
+          <div style="font-size:10px;color:var(--text3);margin-top:2px">${m.academic_year || 'N/A'} · ${escapeHtml(m.program)}</div>
         </div>
-        ${m.reason ? `<div style="font-size:10px;color:var(--text3);margin-top:2px;line-height:1.4">${escapeHtml(m.reason)}</div>` : ''}
-        <div style="font-size:10px;color:var(--text3);margin-top:2px">${m.academic_year || 'N/A'} · ${escapeHtml(m.program)}</div>
+        <span style="font-family:'Space Mono',monospace;font-size:12px;font-weight:700;color:${color};white-space:nowrap;flex-shrink:0">${m.score}%</span>
       </div>
-      <span style="font-family:'Space Mono',monospace;font-size:12px;font-weight:700;color:${color};white-space:nowrap;flex-shrink:0">${m.score}%</span>
+      ${m.abstract ? `
+        <button type="button" class="match-abstract-toggle" onclick="toggleAbstract(this)">Show abstract to compare similarities ▾</button>
+        <div class="match-abstract">${escapeHtml(m.abstract)}</div>
+      ` : ''}
     </div>`;
+}
+
+function toggleAbstract(btn) {
+  const box = btn.nextElementSibling;
+  const isOpen = box.classList.toggle('open');
+  btn.textContent = isOpen ? 'Hide abstract ▴' : 'Show abstract to compare similarities ▾';
 }
 
 function escapeHtml(str) {
