@@ -56,19 +56,28 @@ class SubmissionController extends Controller
         // document still has something sensible to display everywhere else
         // this field is read (review lists, instructor doc-review, etc).
         $title = $request->input('title') ?: pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
+        $chapter = $request->input('chapter') ?: $this->detectChapter($title);
 
-        // Version only increments for resubmissions of the *same* document -
-        // matched by file_name. A differently-named file is a new document
-        // and starts back at version 1, rather than inheriting whatever
-        // version the student's last unrelated submission happened to reach.
+        // Version only increments for resubmissions of the *same* document.
+        // A student who names files "Thesis_2026-08-12.pdf" then
+        // "Thesis_2026-08-13.pdf" still wants those to count as the same
+        // document, so when a "Chapter N" reference is detectable in the
+        // name, that's used as the grouping key instead of the literal
+        // filename - it survives a changing date/suffix around it. Files
+        // with no detectable chapter fall back to exact filename matching,
+        // same as before.
         $lastVersion = CapstoneDocument::where('student_id', $studentId)
-            ->where('file_name', $title)
+            ->when(
+                $chapter,
+                fn ($query) => $query->where('chapter', $chapter),
+                fn ($query) => $query->where('file_name', $title)
+            )
             ->max('file_version') ?? 0;
 
         $document = CapstoneDocument::create([
             'student_id' => $studentId,
             'file_name' => $title,
-            'chapter' => $request->input('chapter'),
+            'chapter' => $chapter,
             'file_path' => $storedPath,
             'file_version' => $lastVersion + 1,
             'document_status' => 'Pending',
@@ -125,21 +134,48 @@ class SubmissionController extends Controller
     }
 
     // GET /student/submission/next-version?title=... — the version number
-    // this student's next submission would get, scoped to documents with a
-    // matching file_name so unrelated files don't inherit each other's
-    // version count. Used by the form to keep the read-only Version label
-    // accurate once a file is actually selected.
+    // this student's next submission would get, using the same chapter
+    // detection + grouping rules as store(), so the read-only Version (and
+    // Detected Chapter) labels on the form always match what actually
+    // happens on submit.
     public function nextVersionForTitle(Request $request)
     {
         $request->validate(['title' => 'required|string|max:255']);
 
         $studentId = Auth::id();
+        $title = $request->input('title');
+        $chapter = $this->detectChapter($title);
 
         $lastVersion = CapstoneDocument::where('student_id', $studentId)
-            ->where('file_name', $request->input('title'))
+            ->when(
+                $chapter,
+                fn ($query) => $query->where('chapter', $chapter),
+                fn ($query) => $query->where('file_name', $title)
+            )
             ->max('file_version') ?? 0;
 
-        return response()->json(['version' => $lastVersion + 1]);
+        return response()->json([
+            'version' => $lastVersion + 1,
+            'chapter' => $chapter,
+        ]);
+    }
+
+    // Looks for an explicit "chapter"/"chap"/"ch" + number reference in a
+    // file name (e.g. "Chapter1_2026-08-12", "Ch_2_Final") and normalizes it
+    // to "Chapter N". Anchored on that keyword rather than guessing at date
+    // formats - "ch"/"chapter" only ever means chapter, so it doesn't
+    // false-positive on unrelated numeric suffixes the way stripping "any
+    // trailing date-looking text" would.
+    private function detectChapter(string $name): ?string
+    {
+        // (?!\d) instead of a trailing \b: underscore is a "word" character
+        // to regex, so "Chapter1_2026-08-12" has no \b between the "1" and
+        // the "_" that follows it, and a trailing \b would fail to match.
+        if (! preg_match('/\b(?:chapter|chap|ch)[\s_-]*([0-9]{1,2})(?!\d)/i', $name, $matches)) {
+            return null;
+        }
+
+        return 'Chapter '.(int) $matches[1];
     }
 
     // GET /api/student/submission/subject-adviser-folders — named folders

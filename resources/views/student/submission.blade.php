@@ -60,8 +60,9 @@
           <div class="sk" style="width:90px;height:11px;border-radius:4px;margin-bottom:14px"></div>
           <div class="sk" style="width:100%;height:96px;border-radius:14px;margin-bottom:20px"></div>
 
-          <!-- File Name / Version -->
+          <!-- File Name / Detected Chapter / Version -->
           <div style="display:flex;gap:14px;margin-bottom:20px">
+            <div class="sk" style="flex:1;height:40px;border-radius:8px"></div>
             <div class="sk" style="flex:1;height:40px;border-radius:8px"></div>
             <div class="sk" style="flex:1;height:40px;border-radius:8px"></div>
           </div>
@@ -195,10 +196,15 @@
             <div class="pm-value readonly" id="fileNameLabel">No file selected yet</div>
           </div>
           <div>
+            <label class="pm-label">Detected Chapter</label>
+            <div class="pm-value readonly" id="chapterLabel">—</div>
+          </div>
+          <div>
             <label class="pm-label">Version</label>
             <div class="pm-value readonly" id="versionLabel">Version {{ $nextVersion }}</div>
           </div>
         </div>
+        <p class="recipient-hint" id="chapterHint">Name your file with "Chapter N" in it (e.g. Chapter1_2026-08-12.pdf) so resubmissions keep the same version count even if the rest of the file name changes.</p>
       </div>
 
       <button class="btn-primary btn-submit" id="submitBtn">
@@ -292,6 +298,7 @@ const dropText = document.getElementById('dropText');
 const dropSub = document.getElementById('dropSub');
 const fileNameLabel = document.getElementById('fileNameLabel');
 const versionLabel = document.getElementById('versionLabel');
+const chapterLabel = document.getElementById('chapterLabel');
 
 dropZone.addEventListener('click', () => fileInput.click());
 dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); });
@@ -323,18 +330,23 @@ function handleFile(file) {
   updateVersionLabel(file.name);
 }
 
-// Version only carries forward for a resubmission of the same-named
-// document (see SubmissionController::nextVersionForTitle) - a
-// differently-named file always starts at Version 1, it doesn't inherit
-// whatever version an unrelated prior submission reached.
+// Version only carries forward for a resubmission of the *same* document.
+// The server (SubmissionController::detectChapter) looks for a "Chapter N"
+// reference in the name and groups by that when present, so a changing
+// date/suffix around it doesn't reset the version count; otherwise it
+// falls back to matching the exact file name.
 function updateVersionLabel(fileName) {
   if (!versionLabel) return;
   const title = fileName.replace(/\.[^/.]+$/, '');
   versionLabel.textContent = 'Checking…';
+  if (chapterLabel) chapterLabel.textContent = '—';
   fetch(NEXT_VERSION_URL + '?title=' + encodeURIComponent(title))
     .then(r => r.json())
     .then(data => {
       versionLabel.textContent = 'Version ' + (data.version || 1);
+      if (chapterLabel) {
+        chapterLabel.textContent = data.chapter || 'Not detected (using exact file name)';
+      }
     })
     .catch(() => {
       versionLabel.textContent = 'Version 1';
