@@ -44,7 +44,9 @@
   @endphp
 
   <div class="sidebar-user" id="ep-trigger" onclick="openExpertProfile()">
-    <div class="avatar">{{ strtoupper(substr($expert?->email ?? 'E', 0, 2)) }}</div>
+    <div class="avatar" style="padding:0;overflow:hidden;">
+      <img src="{{ $expert?->avatarUrl() ?? asset('images/default-avatar.jpg') }}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;display:block;" loading="lazy">
+    </div>
 
     <div class="user-info">
       <div class="user-name">{{ $expert?->first_name }} {{ $expert?->last_name }}</div>
