@@ -47,14 +47,17 @@ class AppServiceProvider extends ServiceProvider
                 $unreadCount = Notification::where('student_id', $studentId)
                     ->where('is_read', false)
                     ->count();
+                // "Later" on a join-request popup stores its id in
+                // dismissed_invitations (see InvitationController::remindLater())
+                // rather than a persisted remind_me_at column - there's no
+                // such column on team_invitations.
+                $dismissedInvitationIds = (array) session('dismissed_invitations', []);
+
                 $joinRequestPopups = TeamInvitation::with(['sender', 'team'])
                     ->where('receiver_id', $studentId)
                     ->where('type', 'request')
                     ->where('status', 'pending')
-                    ->where(function ($query) {
-                        $query->whereNull('remind_me_at')
-                            ->orWhere('remind_me_at', '<=', now());
-                    })
+                    ->whereNotIn('id', $dismissedInvitationIds)
                     ->latest('created_at')
                     ->get();
                 $view->with(compact('unreadNotifications', 'unreadCount', 'joinRequestPopups'));
