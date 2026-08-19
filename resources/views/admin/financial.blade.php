@@ -38,6 +38,23 @@
     </div>
   </div>
 
+  <div id="skeleton-content" class="sk-overlay">
+    <div class="grid-2" style="margin-bottom:18px">
+      <div class="card"><div class="sk" style="height:220px;border-radius:12px"></div></div>
+      <div class="card"><div class="sk" style="height:220px;border-radius:12px"></div></div>
+    </div>
+    <div class="card" style="padding:16px;margin-bottom:18px">
+      <div class="sk" style="height:40px;border-radius:8px;margin-bottom:8px"></div>
+      <div class="sk" style="height:40px;border-radius:8px;margin-bottom:8px"></div>
+      <div class="sk" style="height:40px;border-radius:8px"></div>
+    </div>
+    <div class="grid-2">
+      <div class="card"><div class="sk" style="height:260px;border-radius:12px"></div></div>
+      <div class="card"><div class="sk" style="height:260px;border-radius:12px"></div></div>
+    </div>
+  </div>
+
+  <div id="real-content" style="display:none;flex:1;overflow:hidden;flex-direction:column;">
   <div class="content">
 
     @if (session('success'))
@@ -425,7 +442,9 @@
     <!-- -- end grid -- -->
 
   </div>
+  </div>
 </div>
+@include('admin.partials.skeleton-toggle')
 
 <!-- -- ADD / EDIT POST MODAL -- -->
 <div id="addPostModal" class="modal-overlay">

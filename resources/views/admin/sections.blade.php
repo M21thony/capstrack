@@ -23,6 +23,17 @@
     </div>
   </div>
 
+  <div id="skeleton-content" class="sk-overlay">
+    <div class="card">
+      <div class="sk" style="width:220px;height:18px;border-radius:4px;margin-bottom:18px"></div>
+      <div class="sk" style="height:40px;border-radius:8px;margin-bottom:8px"></div>
+      <div class="sk" style="height:40px;border-radius:8px;margin-bottom:8px"></div>
+      <div class="sk" style="height:40px;border-radius:8px;margin-bottom:8px"></div>
+      <div class="sk" style="height:40px;border-radius:8px"></div>
+    </div>
+  </div>
+
+  <div id="real-content" style="display:none;flex:1;overflow:hidden;flex-direction:column;">
   <div class="content">
     <div class="card">
       <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
@@ -121,7 +132,9 @@
       </div>
     </div>
   </div>
+  </div>
 </div>
+@include('admin.partials.skeleton-toggle')
 
 <script>
 var sidebarEl = document.querySelector('.sidebar');

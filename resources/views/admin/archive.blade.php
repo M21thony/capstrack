@@ -27,6 +27,23 @@
     </div>
   </div>
 
+  <div id="skeleton-content" class="sk-overlay">
+    <div class="row" style="margin-bottom:16px;gap:8px">
+      <div class="sk" style="flex:1;min-width:180px;height:34px;border-radius:8px"></div>
+      <div class="sk" style="width:120px;height:34px;border-radius:8px"></div>
+      <div class="sk" style="width:150px;height:34px;border-radius:8px"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+      <div class="sk" style="height:160px;border-radius:12px"></div>
+      <div class="sk" style="height:160px;border-radius:12px"></div>
+      <div class="sk" style="height:160px;border-radius:12px"></div>
+      <div class="sk" style="height:160px;border-radius:12px"></div>
+      <div class="sk" style="height:160px;border-radius:12px"></div>
+      <div class="sk" style="height:160px;border-radius:12px"></div>
+    </div>
+  </div>
+
+  <div id="real-content" style="display:none;flex:1;overflow:hidden;flex-direction:column;">
   <div class="content">
     <div class="grid-2" style="margin-bottom:16px;align-items:start">
       <div class="row" style="gap:8px;flex-wrap:wrap">
@@ -113,7 +130,9 @@
     </div>
     <div id="arch-empty" style="display:none;text-align:center;padding:48px;color:var(--text3);font-size:13px">No archived capstones match your search.</div>
   </div>
+  </div>
 </div>
+@include('admin.partials.skeleton-toggle')
 
 <script>
 const CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]').content;

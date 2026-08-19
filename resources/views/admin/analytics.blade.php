@@ -27,6 +27,30 @@
     </div>
   </div>
 
+  <div id="skeleton-content" class="sk-overlay">
+    <div class="grid-4" style="margin-bottom:16px">
+      <div class="sk" style="height:78px;border-radius:14px"></div>
+      <div class="sk" style="height:78px;border-radius:14px"></div>
+      <div class="sk" style="height:78px;border-radius:14px"></div>
+      <div class="sk" style="height:78px;border-radius:14px"></div>
+    </div>
+    <div class="card" style="margin-bottom:16px">
+      <div class="sk" style="width:220px;height:16px;border-radius:4px;margin-bottom:16px"></div>
+      <div class="sk" style="height:180px;border-radius:10px"></div>
+    </div>
+    <div class="grid-4" style="margin-bottom:16px">
+      <div class="sk" style="height:100px;border-radius:14px"></div>
+      <div class="sk" style="height:100px;border-radius:14px"></div>
+      <div class="sk" style="height:100px;border-radius:14px"></div>
+      <div class="sk" style="height:100px;border-radius:14px"></div>
+    </div>
+    <div class="card">
+      <div class="sk" style="width:220px;height:16px;border-radius:4px;margin-bottom:16px"></div>
+      <div class="sk" style="height:200px;border-radius:10px"></div>
+    </div>
+  </div>
+
+  <div id="real-content" style="display:none;flex:1;overflow:hidden;flex-direction:column;">
   <div class="content">
 
     <!-- TOP STAT CHIPS -->
@@ -335,7 +359,9 @@
     </div>
 
   </div>
+  </div>
 </div>
+@include('admin.partials.skeleton-toggle')
 
 <script>
 document.getElementById('defense-tabs').addEventListener('click', function(e) {

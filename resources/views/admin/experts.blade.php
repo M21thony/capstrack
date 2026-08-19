@@ -238,11 +238,7 @@
   }
   .ct-toast-close:hover { color: #475569; }
   @keyframes toastIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
-
-  /* ── Skeleton ── */
-  @keyframes sk-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
-  .sk-overlay { background: var(--bg); min-height: calc(100vh - 60px); padding: 20px; }
-  .sk { background: linear-gradient(90deg, var(--bg4) 25%, var(--bg2) 50%, var(--bg4) 75%); background-size: 200% 100%; animation: sk-shimmer 1.5s ease-in-out infinite; border-radius: 8px; }
+  /* Skeleton styles now live in admin.css, shared across every admin page */
 </style>
 </head>
 <body>

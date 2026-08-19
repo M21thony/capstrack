@@ -52,6 +52,23 @@
     </div>
   </div>
 
+  <div id="skeleton-content" class="sk-overlay">
+    <div class="sk" style="height:56px;border-radius:12px;margin-bottom:14px"></div>
+    <div class="res-upload-list-grid" style="gap:16px">
+      <div class="card" style="padding:16px">
+        <div class="sk" style="height:120px;border-radius:10px;margin-bottom:12px"></div>
+        <div class="sk" style="height:38px;border-radius:8px;margin-bottom:10px"></div>
+        <div class="sk" style="height:38px;border-radius:8px"></div>
+      </div>
+      <div class="card" style="padding:16px">
+        <div class="sk" style="height:56px;border-radius:8px;margin-bottom:10px"></div>
+        <div class="sk" style="height:56px;border-radius:8px;margin-bottom:10px"></div>
+        <div class="sk" style="height:56px;border-radius:8px"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="real-content" style="display:none;flex:1;overflow:hidden;flex-direction:column;">
   <div class="content">
 
     <!-- GOOGLE DRIVE CONNECTION BANNER -->
@@ -213,7 +230,9 @@
       </div>
     </div>
   </div>
+  </div>
 </div>
+@include('admin.partials.skeleton-toggle')
 
 <script>
 // -- SERVER DATA -------------------------------------------------------------

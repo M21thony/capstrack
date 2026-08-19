@@ -208,6 +208,17 @@
     </div>
   </div>
 
+  <div id="skeleton-content" class="sk-overlay">
+    <div class="sk" style="height:70px;border-radius:12px;margin-bottom:16px"></div>
+    <div class="card" style="padding:16px">
+      <div class="sk" style="height:36px;width:100%;border-radius:8px;margin-bottom:16px"></div>
+      <div class="sk" style="height:64px;border-radius:10px;margin-bottom:10px"></div>
+      <div class="sk" style="height:64px;border-radius:10px;margin-bottom:10px"></div>
+      <div class="sk" style="height:64px;border-radius:10px"></div>
+    </div>
+  </div>
+
+  <div id="real-content" style="display:none;flex:1;overflow:hidden;flex-direction:column;">
   <div class="content">
 
     <!-- Page Header: Stats + New Button -->
@@ -288,7 +299,9 @@
 
     </div>
   </div>
+  </div>
 </div>
+@include('admin.partials.skeleton-toggle')
 
 <script>
 const TYPE_LABEL = {
