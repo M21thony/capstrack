@@ -259,16 +259,105 @@ class AdminPanelAssignmentTest extends TestCase
 
         $this->assertNotNull($scheduleA->schedule_date);
         $this->assertNotNull($scheduleB->schedule_date);
-        // Same panel -> same day and venue, not two different bookings.
+        // Same panel -> same day and venue, but NOT the same block - the
+        // panel can't be in two rooms at once, and it can't judge two teams
+        // in the exact same 2-hour slot either. They must land back-to-back.
         $this->assertTrue($scheduleA->schedule_date->isSameDay($scheduleB->schedule_date));
         $this->assertSame($scheduleA->venue, $scheduleB->venue);
+        $this->assertFalse(
+            $scheduleA->schedule_date->equalTo($scheduleB->schedule_date),
+            'Two teams sharing a panel must not be scheduled into the identical time slot.'
+        );
 
-        // Auto-scheduling persists a real end_date, 2 hours after the start,
-        // including for the reused slot (team B).
+        // Auto-scheduling persists a real end_date, 2 hours after each
+        // team's own start - team B's block starts exactly when team A's ends.
         $this->assertNotNull($scheduleA->end_date);
         $this->assertNotNull($scheduleB->end_date);
         $this->assertEquals($scheduleA->schedule_date->copy()->addHours(2), $scheduleA->end_date);
-        $this->assertTrue($scheduleA->end_date->equalTo($scheduleB->end_date));
+        $this->assertEquals($scheduleB->schedule_date->copy()->addHours(2), $scheduleB->end_date);
+        $this->assertTrue($scheduleA->end_date->equalTo($scheduleB->schedule_date));
+    }
+
+    public function test_three_teams_sharing_a_panel_get_three_different_time_blocks_same_day_same_venue(): void
+    {
+        $chair = $this->makeExpert();
+        $member1 = $this->makeExpert();
+        $teamA = $this->makeTeam(['team_name' => 'Team Alpha']);
+        $teamB = $this->makeTeam(['team_name' => 'Team Beta']);
+        $teamC = $this->makeTeam(['team_name' => 'Team Gamma']);
+
+        $this->assignPanel($teamA, 'Title Defense', $chair, $member1);
+        $this->assignPanel($teamB, 'Title Defense', $chair, $member1);
+        $this->assignPanel($teamC, 'Title Defense', $chair, $member1);
+
+        $response = $this->saveWindow('Title Defense', '2026-09-01', '2026-09-05');
+        $response->assertStatus(200)->assertJson(['success' => true, 'scheduled_count' => 3]);
+
+        $schedules = DefenseSchedule::whereIn('team_id', [$teamA->team_id, $teamB->team_id, $teamC->team_id])
+            ->get()
+            ->sortBy('schedule_date')
+            ->values();
+
+        $this->assertCount(3, $schedules);
+
+        // Same day, same venue, for all three - this is the panel's one
+        // room for the whole day.
+        $day = $schedules[0]->schedule_date->toDateString();
+        $venue = $schedules[0]->venue;
+        foreach ($schedules as $schedule) {
+            $this->assertSame($day, $schedule->schedule_date->toDateString());
+            $this->assertSame($venue, $schedule->venue);
+        }
+
+        // Three genuinely different, back-to-back blocks - not the panel
+        // somehow judging all three teams at once.
+        $this->assertNotSame($schedules[0]->schedule_date->format('H:i'), $schedules[1]->schedule_date->format('H:i'));
+        $this->assertNotSame($schedules[1]->schedule_date->format('H:i'), $schedules[2]->schedule_date->format('H:i'));
+        $this->assertTrue($schedules[0]->end_date->equalTo($schedules[1]->schedule_date));
+        $this->assertTrue($schedules[1]->end_date->equalTo($schedules[2]->schedule_date));
+    }
+
+    public function test_resaving_the_window_fixes_teams_already_double_booked_into_the_identical_slot(): void
+    {
+        // Simulates real rows left over from before findSlotForPanel() was
+        // fixed (or any other way three teams ended up sharing one panel's
+        // exact block) - re-saving the window must be usable as a "fix
+        // conflicts" action without the admin having to manually touch the
+        // database.
+        $chair = $this->makeExpert();
+        $member1 = $this->makeExpert();
+        $teamA = $this->makeTeam(['team_name' => 'Team Alpha']);
+        $teamB = $this->makeTeam(['team_name' => 'Team Beta']);
+        $teamC = $this->makeTeam(['team_name' => 'Team Gamma']);
+
+        foreach ([$teamA, $teamB, $teamC] as $team) {
+            $this->assignPanel($team, 'Title Defense', $chair, $member1);
+        }
+
+        DefenseSchedule::whereIn('team_id', [$teamA->team_id, $teamB->team_id, $teamC->team_id])
+            ->update([
+                'schedule_date' => '2026-09-01 08:00:00',
+                'end_date' => '2026-09-01 10:00:00',
+                'venue' => 'Mac Lab',
+            ]);
+
+        $response = $this->saveWindow('Title Defense', '2026-09-01', '2026-09-05');
+        $response->assertStatus(200)->assertJson(['success' => true, 'scheduled_count' => 0, 'resolved_count' => 2]);
+
+        $schedules = DefenseSchedule::whereIn('team_id', [$teamA->team_id, $teamB->team_id, $teamC->team_id])
+            ->get()
+            ->sortBy('schedule_date')
+            ->values();
+
+        $day = $schedules[0]->schedule_date->toDateString();
+        $venue = $schedules[0]->venue;
+        $times = $schedules->pluck('schedule_date')->map(fn ($d) => $d->format('H:i'))->values();
+
+        foreach ($schedules as $schedule) {
+            $this->assertSame($day, $schedule->schedule_date->toDateString());
+            $this->assertSame($venue, $schedule->venue);
+        }
+        $this->assertSame($times->unique()->count(), 3, 'All three teams must end up in genuinely different blocks.');
     }
 
     public function test_generated_schedule_avoids_double_booking_venue_and_experts_on_the_same_day(): void
