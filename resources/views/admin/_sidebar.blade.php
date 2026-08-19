@@ -69,6 +69,34 @@
     if ($currentRoute === 'admin.activitylog') {
         session()->put('admin_seen_activity_ids', array_unique(array_merge($seenActivityIds, $activityIds)));
     }
+
+    // Admins who are ALSO registered as an adviser/consultant/grammarian
+    // (e.g. assigned to a team's panel) get the expert-facing nav items
+    // merged into this same sidebar, per the consultant's guidance that a
+    // CaPSA who is also an Adviser shouldn't have to juggle two separate
+    // portals - the instructor.* routes already let any is_admin account
+    // through regardless of approval status (see CheckExpertApproval).
+    $adminHasExpertRole = $admin && $admin->roles->pluck('role_name')->intersect(['adviser', 'consultant', 'grammarian'])->isNotEmpty();
+
+    if ($adminHasExpertRole) {
+        $expertPendingAssignmentIds = App\Models\TeamExpertAssignment::where('expert_id', $admin->expert_id)->where('status', 'pending')->pluck('assignment_id')->toArray();
+        $seenExpertAssignmentIds = session('instructor_seen_assignment_ids', []);
+        $unseenExpertAssignmentCount = count(array_diff($expertPendingAssignmentIds, $seenExpertAssignmentIds));
+
+        if ($currentRoute === 'instructor.assignments') {
+            session()->put('instructor_seen_assignment_ids', array_unique(array_merge($seenExpertAssignmentIds, $expertPendingAssignmentIds)));
+        }
+
+        $expertPendingDocReviewIds = Schema::hasTable('capstone_document_review')
+            ? DB::table('capstone_document_review')->where('expert_id', $admin->expert_id)->where('review_status', 'pending')->pluck('review_id')->toArray()
+            : [];
+        $seenExpertDocReviewIds = session('instructor_seen_doc_review_ids', []);
+        $unseenExpertDocReviewCount = count(array_diff($expertPendingDocReviewIds, $seenExpertDocReviewIds));
+
+        if ($currentRoute === 'instructor.docreview') {
+            session()->put('instructor_seen_doc_review_ids', array_unique(array_merge($seenExpertDocReviewIds, $expertPendingDocReviewIds)));
+        }
+    }
 @endphp
 
 
@@ -180,6 +208,39 @@
         <span class="nav-badge red">{{ $unseenActivityCount > 99 ? '99+' : $unseenActivityCount }}</span>
       @endif
     </a>
+    @if ($adminHasExpertRole)
+      <div class="nav-section">My Expert Duties</div>
+      <a href="{{ route('instructor.teams') }}" class="nav-item {{ $currentRoute === 'instructor.teams' ? 'active' : '' }}">
+        <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        My Teams
+      </a>
+      <a href="{{ route('instructor.assignments') }}" class="nav-item {{ $currentRoute === 'instructor.assignments' ? 'active' : '' }}">
+        <svg viewBox="0 0 24 24"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>
+        Team Assignments
+        @if ($unseenExpertAssignmentCount > 0)
+          <span class="nav-badge red">{{ $unseenExpertAssignmentCount > 99 ? '99+' : $unseenExpertAssignmentCount }}</span>
+        @endif
+      </a>
+      <a href="{{ route('instructor.schedule') }}" class="nav-item {{ $currentRoute === 'instructor.schedule' ? 'active' : '' }}">
+        <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        My Schedule
+      </a>
+      <a href="{{ route('instructor.consultations') }}" class="nav-item {{ $currentRoute === 'instructor.consultations' ? 'active' : '' }}">
+        <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        Consultation Logs
+      </a>
+      <a href="{{ route('instructor.docreview') }}" class="nav-item {{ $currentRoute === 'instructor.docreview' ? 'active' : '' }}">
+        <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        Document Review
+        @if ($unseenExpertDocReviewCount > 0)
+          <span class="nav-badge red">{{ $unseenExpertDocReviewCount > 99 ? '99+' : $unseenExpertDocReviewCount }}</span>
+        @endif
+      </a>
+      <a href="{{ route('instructor.progress') }}" class="nav-item {{ $currentRoute === 'instructor.progress' ? 'active' : '' }}">
+        <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        Progress Monitoring
+      </a>
+    @endif
     <div class="nav-section">Account</div>
     <a href="{{ route('admin.profile') }}" class="nav-item {{ $currentRoute === 'admin.profile' ? 'active' : '' }}">
       <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
