@@ -61,11 +61,10 @@ class TeamController extends Controller
         ]);
 
         DB::table('student_s_y')
-            ->where('student_id', $student->student_id)
-            ->update([
-                'team_id' => $team->team_id,
-                's_role_id' => StudentRole::leaderRoleId(),
-            ]);
+            ->updateOrInsert(
+                ['student_id' => $student->student_id],
+                ['team_id' => $team->team_id, 's_role_id' => StudentRole::leaderRoleId()]
+            );
 
         $recruitment = Recruitment::where('student_id', $student->student_id)
             ->where('recruitment_goal', 'build_a_team')
