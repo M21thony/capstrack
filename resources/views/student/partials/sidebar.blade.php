@@ -310,4 +310,5 @@
   }
   updateThemeUI();
 </script>
+@include('partials.sidebar-scroll-restore')
 
