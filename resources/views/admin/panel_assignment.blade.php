@@ -273,8 +273,8 @@
                 <td class="cell-schedule" style="font-size:12px;color:var(--text2)">
                   @if ($latestSchedule?->schedule_date)
                     <span class="cell-schedule-text">{{ $latestSchedule->schedule_date->format('M j, Y').' · '.$latestSchedule->venue }}</span>
-                    <button type="button" class="cell-schedule-edit" onclick="openScheduleModal({{ $team->team_id }}, {{ $latestSchedule->defense_id }}, '{{ $latestSchedule->schedule_date->toDateString() }}', '{{ $latestSchedule->venue }}')" title="Override day/venue" style="background:none;border:none;color:var(--text3);cursor:pointer;padding:2px 4px;vertical-align:middle">
-                      <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    <button type="button" class="cell-schedule-edit" onclick="openScheduleModal({{ $team->team_id }}, {{ $latestSchedule->defense_id }}, '{{ $latestSchedule->schedule_date->toDateString() }}', '{{ $latestSchedule->venue }}')" title="Override day/venue" style="background:rgba(201,168,44,0.12);border:1px solid rgba(201,168,44,0.35);color:var(--accent3);cursor:pointer;padding:4px 6px;border-radius:6px;vertical-align:middle;margin-left:6px;display:inline-flex;align-items:center">
+                      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.25"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                     </button>
                   @else
                     <span class="cell-schedule-text">—</span>
@@ -443,8 +443,8 @@ function scheduleCellHtml(teamId, schedule) {
   }
   const dateOnly = isoDateOnly(schedule);
   return `<span class="cell-schedule-text">${text}</span>` +
-    `<button type="button" class="cell-schedule-edit" onclick="openScheduleModal(${teamId}, ${schedule.defense_id}, '${dateOnly}', '${schedule.venue}')" title="Override day/venue" style="background:none;border:none;color:var(--text3);cursor:pointer;padding:2px 4px;vertical-align:middle">` +
-    `<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>` +
+    `<button type="button" class="cell-schedule-edit" onclick="openScheduleModal(${teamId}, ${schedule.defense_id}, '${dateOnly}', '${schedule.venue}')" title="Override day/venue" style="background:rgba(201,168,44,0.12);border:1px solid rgba(201,168,44,0.35);color:var(--accent3);cursor:pointer;padding:4px 6px;border-radius:6px;vertical-align:middle;margin-left:6px;display:inline-flex;align-items:center">` +
+    `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.25"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>` +
     `</button>`;
 }
 
