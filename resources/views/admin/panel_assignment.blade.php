@@ -60,6 +60,22 @@
     </div>
   </div>
 
+  <div id="skeleton-content" class="sk-overlay">
+    <div class="row" style="margin-bottom:16px;gap:8px">
+      <div class="sk" style="width:300px;height:34px;border-radius:8px"></div>
+      <div class="sk" style="width:160px;height:34px;border-radius:8px"></div>
+      <div class="sk" style="width:180px;height:34px;border-radius:8px"></div>
+      <div class="sk" style="width:150px;height:34px;border-radius:8px"></div>
+    </div>
+    <div class="card" style="padding:16px">
+      <div class="sk" style="height:44px;border-radius:8px;margin-bottom:10px"></div>
+      <div class="sk" style="height:44px;border-radius:8px;margin-bottom:10px"></div>
+      <div class="sk" style="height:44px;border-radius:8px;margin-bottom:10px"></div>
+      <div class="sk" style="height:44px;border-radius:8px"></div>
+    </div>
+  </div>
+
+  <div id="real-content" style="display:none;flex:1;overflow:hidden;flex-direction:column;">
   <div class="content">
     <div id="page-panel" class="page active">
       <div class="row" style="margin-bottom:16px;gap:8px">
@@ -358,7 +374,9 @@
       </div>
     </div>
   </div>
+  </div>
 </div>
+@include('admin.partials.skeleton-toggle')
 
 <div id="pa-toast" style="
   position:fixed;bottom:24px;right:24px;z-index:9999;

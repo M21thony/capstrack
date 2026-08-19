@@ -19,6 +19,17 @@
     </div>
   </div>
 
+  <div id="skeleton-content" class="sk-overlay">
+    <div class="card" style="padding:16px">
+      <div class="sk" style="width:280px;height:34px;border-radius:8px;margin-bottom:16px"></div>
+      <div class="sk" style="height:44px;border-radius:8px;margin-bottom:10px"></div>
+      <div class="sk" style="height:44px;border-radius:8px;margin-bottom:10px"></div>
+      <div class="sk" style="height:44px;border-radius:8px;margin-bottom:10px"></div>
+      <div class="sk" style="height:44px;border-radius:8px"></div>
+    </div>
+  </div>
+
+  <div id="real-content" style="display:none;flex:1;overflow:hidden;flex-direction:column;">
   <div class="content">
     @if($tab === 'pending')
       <div class="card" style="padding:14px 20px;margin-bottom:16px;display:flex;align-items:center;gap:12px;background:rgba(201,168,44,0.06);border:1px solid rgba(201,168,44,0.25)">
@@ -177,7 +188,9 @@
       </div>
     </div>
   </div>
+  </div>
 </div>
+@include('admin.partials.skeleton-toggle')
 
 <div class="modal-overlay" id="verify-modal" onclick="if(event.target===this)closeVerifyModal()">
   <div class="modal-box" style="max-width:560px;max-height:85vh;overflow-y:auto">

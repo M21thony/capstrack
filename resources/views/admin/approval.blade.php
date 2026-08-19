@@ -6,11 +6,6 @@
 <title>Account Approval - CapsTRACK Admin</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="{{ asset('css/admin.css') }}"/>
-<style>
-@keyframes sk-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
-.sk-overlay { background: var(--bg); min-height: calc(100vh - 60px); padding: 20px; }
-.sk { background: linear-gradient(90deg, var(--bg4) 25%, var(--bg2) 50%, var(--bg4) 75%); background-size: 200% 100%; animation: sk-shimmer 1.5s ease-in-out infinite; border-radius: 8px; }
-</style>
 </head>
 <body>
 
@@ -648,18 +643,9 @@ window.addEventListener('beforeunload', () => {
 
 </script>
 
-<script>
-(function() {
-  var sk = document.getElementById('skeleton-content');
-  var rc = document.getElementById('real-content');
-  if (sk && rc) {
-    setTimeout(function () {
-      sk.style.display = 'none';
-      rc.style.display = 'flex';
-    }, 400);
-  }
-})();
+@include('admin.partials.skeleton-toggle')
 
+<script>
 /* ── Mobile sidebar toggle ── */
 var sidebarEl = document.querySelector('.sidebar');
 var sidebarOverlay = document.getElementById('sidebar-overlay');

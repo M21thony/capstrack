@@ -70,6 +70,24 @@
     </div>
   </div>
 
+  <div id="skeleton-content" class="sk-overlay">
+    <div class="ann-post-feed-grid" style="gap:16px;align-items:start">
+      <div class="card">
+        <div class="sk" style="width:120px;height:16px;border-radius:4px;margin-bottom:16px"></div>
+        <div class="sk" style="height:38px;border-radius:8px;margin-bottom:10px"></div>
+        <div class="sk" style="height:120px;border-radius:8px;margin-bottom:10px"></div>
+        <div class="sk" style="height:38px;border-radius:8px"></div>
+      </div>
+      <div class="card">
+        <div class="sk" style="width:140px;height:16px;border-radius:4px;margin-bottom:16px"></div>
+        <div class="sk" style="height:72px;border-radius:10px;margin-bottom:10px"></div>
+        <div class="sk" style="height:72px;border-radius:10px;margin-bottom:10px"></div>
+        <div class="sk" style="height:72px;border-radius:10px"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="real-content" style="display:none;flex:1;overflow:hidden;flex-direction:column;">
   <div class="content">
     <div class="ann-post-feed-grid" style="gap:16px;align-items:start">
       <div style="display:flex;flex-direction:column;gap:14px">
@@ -226,7 +244,9 @@
       </div>
     </div>
   </div>
+  </div>
 </div>
+@include('admin.partials.skeleton-toggle')
 
 {{-- Delete confirmation modal --}}
 <div class="modal-overlay" id="confirm-modal" onclick="if(event.target===this)closeConfirmModal()">

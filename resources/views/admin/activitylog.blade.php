@@ -23,6 +23,22 @@
     </div>
   </div>
 
+  <div id="skeleton-content" class="sk-overlay">
+    <div class="row" style="margin-bottom:16px;gap:8px">
+      <div class="sk" style="width:300px;height:34px;border-radius:8px"></div>
+      <div class="sk" style="width:180px;height:34px;border-radius:8px"></div>
+      <div class="sk" style="width:80px;height:34px;border-radius:8px"></div>
+    </div>
+    <div class="card" style="padding:16px">
+      <div class="sk" style="height:36px;border-radius:8px;margin-bottom:8px"></div>
+      <div class="sk" style="height:36px;border-radius:8px;margin-bottom:8px"></div>
+      <div class="sk" style="height:36px;border-radius:8px;margin-bottom:8px"></div>
+      <div class="sk" style="height:36px;border-radius:8px;margin-bottom:8px"></div>
+      <div class="sk" style="height:36px;border-radius:8px"></div>
+    </div>
+  </div>
+
+  <div id="real-content" style="display:none;flex:1;overflow:hidden;flex-direction:column;">
   <div class="content">
     <form method="GET" class="row" style="margin-bottom:16px;gap:8px">
       <input class="input" name="search" placeholder="Search by student or action..." style="max-width:300px" value="{{ request('search') }}"/>
@@ -78,7 +94,9 @@
       </div>
     </div>
   </div>
+  </div>
 </div>
+@include('admin.partials.skeleton-toggle')
 
 <div class="modal-overlay" id="logModal" onclick="if(event.target===this)closeLogModal()">
   <div class="modal-box" style="text-align:left;max-width:480px">

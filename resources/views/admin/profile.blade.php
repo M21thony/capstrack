@@ -418,6 +418,29 @@
     </div>
   </div>
 
+  <div id="skeleton-content" class="sk-overlay">
+    <div class="sk" style="width:220px;height:24px;border-radius:4px;margin-bottom:20px"></div>
+    <div class="card" style="margin-bottom:16px;display:flex;align-items:center;gap:16px;padding:16px">
+      <div class="sk" style="width:64px;height:64px;border-radius:50%;flex-shrink:0"></div>
+      <div style="flex:1">
+        <div class="sk" style="width:160px;height:16px;border-radius:4px;margin-bottom:8px"></div>
+        <div class="sk" style="width:220px;height:12px;border-radius:4px"></div>
+      </div>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <div class="sk" style="height:40px;border-radius:8px;margin-bottom:10px"></div>
+        <div class="sk" style="height:40px;border-radius:8px;margin-bottom:10px"></div>
+        <div class="sk" style="height:40px;border-radius:8px"></div>
+      </div>
+      <div class="card">
+        <div class="sk" style="height:40px;border-radius:8px;margin-bottom:10px"></div>
+        <div class="sk" style="height:40px;border-radius:8px"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="real-content" style="display:none;flex:1;overflow:hidden;flex-direction:column;">
   <div class="content">
     <div class="profile-page">
 
@@ -658,7 +681,9 @@
 
     </div>
   </div>
+  </div>
 </div>
+@include('admin.partials.skeleton-toggle')
 
 <script>
 var sidebarEl = document.querySelector('.sidebar');

@@ -25,6 +25,37 @@
     </div>
   </div>
 
+  <div id="skeleton-content" class="sk-overlay">
+    <div class="grid-4" style="margin-bottom:16px">
+      <div class="sk" style="height:78px;border-radius:14px"></div>
+      <div class="sk" style="height:78px;border-radius:14px"></div>
+      <div class="sk" style="height:78px;border-radius:14px"></div>
+      <div class="sk" style="height:78px;border-radius:14px"></div>
+    </div>
+    <div class="grid-3" style="margin-bottom:16px">
+      <div class="sk" style="height:78px;border-radius:14px"></div>
+      <div class="sk" style="height:78px;border-radius:14px"></div>
+      <div class="sk" style="height:78px;border-radius:14px"></div>
+    </div>
+    <div class="grid-2" style="margin-bottom:16px">
+      <div class="card"><div class="sk" style="height:180px;border-radius:12px"></div></div>
+      <div class="card"><div class="sk" style="height:180px;border-radius:12px"></div></div>
+    </div>
+    <div class="dash-grid-v3">
+      <div class="card">
+        <div class="sk" style="width:160px;height:16px;border-radius:4px;margin-bottom:16px"></div>
+        <div class="sk" style="height:56px;border-radius:8px;margin-bottom:10px"></div>
+        <div class="sk" style="height:56px;border-radius:8px"></div>
+      </div>
+      <div class="card">
+        <div class="sk" style="width:130px;height:16px;border-radius:4px;margin-bottom:16px"></div>
+        <div class="sk" style="height:40px;border-radius:8px;margin-bottom:8px"></div>
+        <div class="sk" style="height:40px;border-radius:8px"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="real-content" style="display:none;flex:1;overflow:hidden;flex-direction:column;">
   <div class="content">
     <div class="grid-4" style="margin-bottom:16px">
       <x-dashboard.stat-chip value="{{ $totalStudents }}" label="Total Students" sub="Enrolled users" color="var(--blue)" />
@@ -127,7 +158,9 @@
       </x-dashboard.info-card>
     </div>
   </div>
+  </div>
 </div>
+@include('admin.partials.skeleton-toggle')
 
 <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
 

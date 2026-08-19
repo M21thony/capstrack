@@ -1189,6 +1189,11 @@ textarea.input{resize:vertical;min-height:80px}
 .sidebar-overlay.open{display:block}
 .sidebar.mobile-open{display:flex;position:fixed;left:0;top:0;z-index:500;height:100vh}
 
+/* Skeleton - shared by every admin page's loading state */
+@keyframes sk-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+.sk-overlay { background: var(--bg); min-height: calc(100vh - 60px); padding: 20px; }
+.sk { background: linear-gradient(90deg, var(--bg4) 25%, var(--bg2) 50%, var(--bg4) 75%); background-size: 200% 100%; animation: sk-shimmer 1.5s ease-in-out infinite; border-radius: 8px; }
+
 @media(max-width:768px){
   .sidebar{display:none}
   .hamburger-btn{display:flex}
