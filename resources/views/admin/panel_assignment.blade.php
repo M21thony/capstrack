@@ -18,22 +18,22 @@
 .expert-picker-option .opt-tags { font-size:10px; color:var(--text3) }
 .expert-picker-option.suggested .opt-name::before { content:"★ "; color:var(--accent3) }
 .expert-picker-empty { padding:16px 12px; font-size:12px; color:var(--text3); text-align:center }
-.win-cal-card { border:1px solid var(--border); border-radius:10px; padding:12px; margin-top:6px }
-.win-cal-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px }
-.win-cal-month-label { font-family:'Space Mono',monospace; font-size:12px; font-weight:700; color:var(--text) }
-.win-cal-nav { width:26px; height:26px; border-radius:6px; border:1px solid var(--border); background:var(--bg3); cursor:pointer; color:var(--text2); font-size:15px; line-height:1; display:flex; align-items:center; justify-content:center }
+.win-cal-card { border:1px solid var(--border); border-radius:10px; padding:18px; margin-top:6px }
+.win-cal-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px }
+.win-cal-month-label { font-family:'Space Mono',monospace; font-size:14px; font-weight:700; color:var(--text) }
+.win-cal-nav { width:30px; height:30px; border-radius:7px; border:1px solid var(--border); background:var(--bg3); cursor:pointer; color:var(--text2); font-size:17px; line-height:1; display:flex; align-items:center; justify-content:center }
 .win-cal-nav:hover { background:var(--accent-light); border-color:var(--accent); color:var(--accent3) }
-.win-cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:2px }
-.win-cal-daylabel { text-align:center; font-size:9px; font-weight:700; color:var(--text3); letter-spacing:0.5px; text-transform:uppercase; padding:4px 0 }
-.win-cal-cell { aspect-ratio:1; display:flex; align-items:center; justify-content:center; border-radius:6px; font-size:11px; color:var(--text2); cursor:pointer; position:relative; background:var(--bg3) }
+.win-cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:5px }
+.win-cal-daylabel { text-align:center; font-size:10px; font-weight:700; color:var(--text3); letter-spacing:0.5px; text-transform:uppercase; padding:4px 0 8px }
+.win-cal-cell { aspect-ratio:1; display:flex; align-items:center; justify-content:center; border-radius:8px; font-size:13px; color:var(--text2); cursor:pointer; position:relative; background:var(--bg3) }
 .win-cal-cell.other-month { visibility:hidden; cursor:default }
 .win-cal-cell:hover { background:var(--accent-light); color:var(--accent3) }
 .win-cal-cell.today { box-shadow:inset 0 0 0 1.5px var(--accent) }
 .win-cal-cell.in-range { background:rgba(201,168,44,0.14); color:var(--text) }
 .win-cal-cell.range-edge { background:var(--accent); color:#18191f; font-weight:700 }
-.win-cal-dot { position:absolute; bottom:3px; width:4px; height:4px; border-radius:50%; background:var(--blue) }
-.win-cal-legend { display:flex; align-items:center; gap:6px; font-size:10px; color:var(--text3); margin-top:8px }
-.win-cal-range-label { margin-top:6px; font-size:11px; color:var(--text3); text-align:center }
+.win-cal-dot { position:absolute; bottom:5px; width:5px; height:5px; border-radius:50%; background:var(--blue) }
+.win-cal-legend { display:flex; align-items:center; gap:6px; font-size:11px; color:var(--text3); margin-top:12px }
+.win-cal-range-label { margin-top:8px; font-size:12px; color:var(--text3); text-align:center }
 </style>
 </head>
 <body>
@@ -76,7 +76,7 @@
 
       <!-- Defense window modal overlay -->
       <div id="window-modal" style="display:none;position:fixed;inset:0;background:rgba(24,25,31,0.6);z-index:100;align-items:center;justify-content:center">
-        <div style="background:#fff;border-radius:14px;padding:24px;width:480px;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
+        <div style="background:#fff;border-radius:14px;padding:24px;width:600px;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
             <div style="font-size:15px;font-weight:600;color:var(--text)">Defense Window</div>
             <button onclick="closeWindowModal()" style="background:none;border:none;font-size:22px;color:var(--text3);cursor:pointer;line-height:1">&times;</button>
