@@ -77,7 +77,7 @@
         </select>
         <button class="btn btn-ghost" style="font-size:12px;color:var(--text2);border-color:var(--border)" onclick="openWindowModal()">
           <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-          Defense Window
+          Defense Schedule
         </button>
         <span style="flex:1"></span>
         <span style="font-size:12px;color:var(--text3)" id="team-count">{{ $teams->count() }} teams</span>
@@ -87,7 +87,7 @@
       <div id="window-modal" style="display:none;position:fixed;inset:0;background:rgba(24,25,31,0.6);z-index:100;align-items:center;justify-content:center">
         <div style="background:#fff;border-radius:14px;padding:24px;width:720px;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-            <div style="font-size:15px;font-weight:600;color:var(--text)">Defense Window</div>
+            <div style="font-size:15px;font-weight:600;color:var(--text)">Defense Schedule</div>
             <button onclick="closeWindowModal()" style="background:none;border:none;font-size:22px;color:var(--text3);cursor:pointer;line-height:1">&times;</button>
           </div>
           <div style="font-size:11px;color:var(--text3);margin-bottom:16px">
@@ -109,7 +109,7 @@
           <div class="cal-card">
             <div class="cal-header">
               <div class="cal-title-group">
-                <div class="cal-title">Defense Window</div>
+                <div class="cal-title">Defense Schedule</div>
                 <div class="cal-month-label" id="win-cal-month-label">–</div>
               </div>
               <div class="cal-controls">
@@ -218,7 +218,7 @@
           </div>
           <div style="font-size:11px;color:var(--text3);margin-bottom:16px">
             Assign panels for every team first. Day and venue aren't set here - once everyone
-            has a panel, use the "Defense Window" button to generate the schedule for all of
+            has a panel, use the "Defense Schedule" button to generate the schedule for all of
             them at once.
           </div>
 
