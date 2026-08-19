@@ -147,6 +147,7 @@
         'admin.dashboard', 'admin.approval', 'admin.experts', 'admin.panel_assignment',
         'admin.verify_teams', 'admin.sections', 'admin.archive', 'admin.resources',
         'admin.rubric_management', 'admin.announcements', 'admin.analytics', 'admin.activitylog',
+        'admin.profile', 'admin.financial',
       ];
       $adminDutiesActive = in_array($currentRoute, $adminDutiesRoutes, true);
     @endphp
@@ -230,6 +231,18 @@
         <span class="nav-badge red">{{ $unseenActivityCount > 99 ? '99+' : $unseenActivityCount }}</span>
       @endif
     </a>
+    <div class="nav-section">Account</div>
+    <a href="{{ route('admin.profile') }}" class="nav-item {{ $currentRoute === 'admin.profile' ? 'active' : '' }}">
+      <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      Admin Profile
+    </a>
+    <a href="{{ route('admin.financial') }}" class="nav-item {{ $currentRoute === 'admin.financial' ? 'active' : '' }}">
+      <svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+      Financial Records
+      @if ($unseenPendingReceiptCount > 0)
+        <span class="nav-badge red">{{ $unseenPendingReceiptCount > 99 ? '99+' : $unseenPendingReceiptCount }}</span>
+      @endif
+    </a>
     @if ($adminHasExpertRole)
       </div>
       @php
@@ -281,18 +294,6 @@
       </a>
       </div>
     @endif
-    <div class="nav-section">Account</div>
-    <a href="{{ route('admin.profile') }}" class="nav-item {{ $currentRoute === 'admin.profile' ? 'active' : '' }}">
-      <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-      Admin Profile
-    </a>
-    <a href="{{ route('admin.financial') }}" class="nav-item {{ $currentRoute === 'admin.financial' ? 'active' : '' }}">
-      <svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
-      Financial Records
-      @if ($unseenPendingReceiptCount > 0)
-        <span class="nav-badge red">{{ $unseenPendingReceiptCount > 99 ? '99+' : $unseenPendingReceiptCount }}</span>
-      @endif
-    </a>
     <form id="admin-logout-form" action="{{ route('expert.logout') }}" method="POST" style="display: none;">
       @csrf
     </form>
@@ -307,20 +308,22 @@
 <script>
 (function () {
   // "Admin Duties" / "My Expert Duties" collapse behind a chevron toggle,
-  // remembered across page loads via localStorage. Starts collapsed the
-  // first time (no stored preference yet) - after that it follows
-  // whatever the user last set it to. Either way, a group containing the
-  // currently active page always opens regardless of the stored
-  // preference, so navigating there never leaves you looking at a
-  // collapsed, seemingly-empty section.
-  ['admin-duties', 'expert-duties'].forEach(function (id) {
+  // remembered across page loads via localStorage. First time (no stored
+  // preference yet), Admin Duties starts collapsed and My Expert Duties
+  // starts open - after that each one follows whatever the user last set
+  // it to. Either way, a group containing the currently active page
+  // always opens regardless of the stored preference, so navigating
+  // there never leaves you looking at a collapsed, seemingly-empty
+  // section.
+  var defaultCollapsed = { 'admin-duties': true, 'expert-duties': false };
+  Object.keys(defaultCollapsed).forEach(function (id) {
     var body = document.getElementById('nav-group-' + id);
     var toggle = document.getElementById('nav-group-toggle-' + id);
     if (!body || !toggle) return;
 
     var isActive = body.getAttribute('data-active') === '1';
     var stored = localStorage.getItem('navGroupCollapsed_' + id);
-    var storedCollapsed = stored === null ? true : stored === '1';
+    var storedCollapsed = stored === null ? defaultCollapsed[id] : stored === '1';
     var collapsed = storedCollapsed && !isActive;
 
     body.classList.toggle('collapsed', collapsed);
