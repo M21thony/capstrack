@@ -275,8 +275,14 @@ const MONTHS = ['January','February','March','April','May','June','July','August
 const DAY_NAMES = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 
 const expertSlots = @json($availableSlots);
-// This student's own scheduled sessions, by date — drives the "Your Booking" dot.
-const myBookedDates = @json($upcomingBookings->merge($recentBookings)->pluck('session_date')->filter()->map(fn ($d) => $d->format('Y-m-d'))->values());
+// This student's own scheduled sessions, by date and which expert they were
+// booked with — drives the "Your Booking" dot. Kept per-expert (not just a
+// flat list of dates) so switching the Target Expert dropdown doesn't show
+// another expert's booking history as if it belonged to the one selected.
+const myBookedDates = @json($upcomingBookings->merge($recentBookings)->filter(fn ($b) => $b->session_date)->map(fn ($b) => [
+    'date' => $b->session_date->format('Y-m-d'),
+    'expert_id' => $b->schedule?->expert_id,
+])->values());
 // One active booking per team at a time — mirrors the server-side check in
 // StudentConsultationController::book(), so clicking a date short-circuits
 // with a clear toast instead of opening the modal and failing on submit.
@@ -360,7 +366,7 @@ function renderCalendar() {
     const daySlots = getSlotsForDate(expertId, dayName, dateKey);
     const hasAvailableSlot = daySlots.length > 0;
     const hasBookedSlot = slots.some(s => matchesDate(s, dayName, dateKey) && (!s.is_available || isOccurrenceFull(s.schedule_id, dateKey)));
-    const isMyBooking = myBookedDates.includes(dateKey);
+    const isMyBooking = myBookedDates.some(b => b.date === dateKey && String(b.expert_id) === String(expertId));
 
     // Matches the legend exactly: not-available (X pattern) for fully
     // booked/blocked days, available for open ones, past for prior dates.
@@ -544,8 +550,9 @@ async function bookSlot(scheduleId) {
 
       fullOccurrences = new Set(data.fullOccurrences || []);
       teamHasActiveBooking = true;
-      if (dateKey && ! myBookedDates.includes(dateKey)) {
-        myBookedDates.push(dateKey);
+      const bookedExpertId = document.getElementById('expertSelect').value;
+      if (dateKey && ! myBookedDates.some(b => b.date === dateKey && String(b.expert_id) === String(bookedExpertId))) {
+        myBookedDates.push({ date: dateKey, expert_id: bookedExpertId });
       }
       if (data.newBooking && dateKey) {
         prependUpcomingBooking(data.newBooking, dateKey);
