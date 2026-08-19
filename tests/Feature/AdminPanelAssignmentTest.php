@@ -262,6 +262,13 @@ class AdminPanelAssignmentTest extends TestCase
         // Same panel -> same day and venue, not two different bookings.
         $this->assertTrue($scheduleA->schedule_date->isSameDay($scheduleB->schedule_date));
         $this->assertSame($scheduleA->venue, $scheduleB->venue);
+
+        // Auto-scheduling persists a real end_date, 2 hours after the start,
+        // including for the reused slot (team B).
+        $this->assertNotNull($scheduleA->end_date);
+        $this->assertNotNull($scheduleB->end_date);
+        $this->assertEquals($scheduleA->schedule_date->copy()->addHours(2), $scheduleA->end_date);
+        $this->assertTrue($scheduleA->end_date->equalTo($scheduleB->end_date));
     }
 
     public function test_generated_schedule_avoids_double_booking_venue_and_experts_on_the_same_day(): void
@@ -459,6 +466,8 @@ class AdminPanelAssignmentTest extends TestCase
         $this->assertEquals('2027-03-15', $schedule->schedule_date->toDateString());
         $this->assertEquals('10:00', $schedule->schedule_date->format('H:i'));
         $this->assertEquals('Open Lab', $schedule->venue);
+        $this->assertEquals('12:00', $schedule->end_date->format('H:i'));
+        $this->assertEquals('2027-03-15', $schedule->end_date->toDateString());
     }
 
     public function test_override_rejects_start_time_outside_the_fixed_slots(): void

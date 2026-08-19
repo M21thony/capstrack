@@ -50,6 +50,7 @@ class GradingController extends Controller
                 'defense_type' => $schedule->defense_type,
                 'panel_role' => $panel->panel_role,
                 'schedule_date' => $schedule->schedule_date,
+                'end_date' => $schedule->end_date,
                 'venue' => $schedule->venue,
                 'status' => $grade?->status ?? 'not_started',
                 'total_score' => $grade?->total_score,

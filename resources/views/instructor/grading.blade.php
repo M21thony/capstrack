@@ -61,7 +61,11 @@
 
           <div style="font-size:12px;color:var(--text3);margin-bottom:10px">
             @if($row->schedule_date)
-              {{ $row->schedule_date->format('M j, Y') }} · {{ $row->venue }}
+              {{ $row->schedule_date->format('M j, Y') }}
+              @if($row->schedule_date->format('H:i') !== '00:00')
+                {{ $row->schedule_date->format('g:i A') }}–{{ ($row->end_date ?? $row->schedule_date->copy()->addHours(2))->format('g:i A') }}
+              @endif
+              · {{ $row->venue }}
             @else
               Not yet scheduled
             @endif

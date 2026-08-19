@@ -102,6 +102,7 @@ class DashboardController extends Controller
             return (object) [
                 'defense_type' => $schedule->defense_type,
                 'schedule_date' => $schedule->schedule_date,
+                'end_date' => $schedule->end_date,
                 'assigned_count' => $schedule->panels->count(),
                 'submitted_count' => $grades->count(),
                 'average_score' => $grades->isNotEmpty() ? round((float) $grades->avg('total_score'), 2) : null,

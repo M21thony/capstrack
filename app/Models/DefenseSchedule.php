@@ -16,11 +16,13 @@ class DefenseSchedule extends Model
         'team_id',
         'defense_type',
         'schedule_date',
+        'end_date',
         'venue',
     ];
 
     protected $casts = [
         'schedule_date' => 'datetime',
+        'end_date' => 'datetime',
     ];
 
     public function team()
