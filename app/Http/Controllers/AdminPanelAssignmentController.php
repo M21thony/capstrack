@@ -28,6 +28,16 @@ class AdminPanelAssignmentController extends Controller
 
     private const VENUES = ['Mac Lab', 'Open Lab'];
 
+    // Defense day runs 8am-5pm; each session is a fixed 2-hour block.
+    // Four blocks fit (8-10, 10-12, 12-2, 2-4) - a 4-6pm block would run
+    // past the 5pm cutoff, so the day's last hour (4-5pm) is never used.
+    // Both the automatic scheduler and the manual override snap to this
+    // same grid, so a day+venue can now host up to 4 different panels
+    // instead of just 1.
+    private const TIME_SLOTS = ['08:00', '10:00', '12:00', '14:00'];
+
+    private const SESSION_HOURS = 2;
+
     // Team tags are picked from a fixed list (see team.blade.php's
     // COMMON_TAGS); expert_expertise.expertise_field is free text an
     // expert typed themselves, so it won't always spell a tag exactly the
@@ -212,14 +222,15 @@ class AdminPanelAssignmentController extends Controller
     {
         $validated = $request->validate([
             'schedule_date' => ['required', 'date'],
+            'start_time' => ['required', 'string', 'in:'.implode(',', self::TIME_SLOTS)],
             'venue' => ['required', 'string', 'in:'.implode(',', self::VENUES)],
             'confirm' => ['nullable', 'boolean'],
         ]);
 
-        $newDate = Carbon::parse($validated['schedule_date'])->startOfDay();
+        $slotStart = Carbon::parse($validated['schedule_date'])->setTimeFromTimeString($validated['start_time']);
         $defense->loadMissing('panels.expert', 'team');
 
-        $conflicts = $this->conflictsForManualOverride($defense, $newDate, $validated['venue']);
+        $conflicts = $this->conflictsForManualOverride($defense, $slotStart, $validated['venue']);
 
         if (! empty($conflicts) && ! $request->boolean('confirm')) {
             return response()->json([
@@ -231,7 +242,7 @@ class AdminPanelAssignmentController extends Controller
         }
 
         $defense->update([
-            'schedule_date' => $newDate,
+            'schedule_date' => $slotStart,
             'venue' => $validated['venue'],
         ]);
 
@@ -242,31 +253,34 @@ class AdminPanelAssignmentController extends Controller
     }
 
     // Same two conflict types findSlotForPanel() avoids automatically:
-    // a venue double-booked by a different panel that day, and a
-    // panelist sitting on two different panels the same day. Scoped
-    // across every defense_type (not just this team's own stage) since
-    // a room/person conflict is real regardless of which stage it's for.
-    private function conflictsForManualOverride(DefenseSchedule $defense, Carbon $date, string $venue): array
+    // a venue double-booked by a different panel in the same 2-hour
+    // slot, and a panelist sitting on two different panels in that same
+    // slot. Scoped to the exact slot (not the whole day) - since the day
+    // is now split into 4 blocks, two different panels sharing a day is
+    // fine as long as they're not in the same block. Scoped across every
+    // defense_type (not just this team's own stage) since a room/person
+    // conflict is real regardless of which stage it's for.
+    private function conflictsForManualOverride(DefenseSchedule $defense, Carbon $slotStart, string $venue): array
     {
         $expertIds = $defense->panels->pluck('expert_id')->all();
 
-        $sameDayOthers = DefenseSchedule::whereDate('schedule_date', $date->toDateString())
+        $sameSlotOthers = DefenseSchedule::where('schedule_date', $slotStart)
             ->where('defense_id', '!=', $defense->defense_id)
             ->with(['panels.expert', 'team'])
             ->get();
 
         $conflicts = [];
 
-        foreach ($sameDayOthers as $other) {
+        foreach ($sameSlotOthers as $other) {
             $teamLabel = ($other->team?->team_name ?? 'Another team').' ('.$other->defense_type.')';
 
             if ($other->venue === $venue) {
-                $conflicts[] = "Venue \"{$venue}\" is already booked that day by {$teamLabel}.";
+                $conflicts[] = "Venue \"{$venue}\" is already booked at that time by {$teamLabel}.";
             }
 
             foreach ($other->panels->whereIn('expert_id', $expertIds) as $panel) {
                 $expertName = $panel->expert?->name ?? 'This panelist';
-                $conflicts[] = "{$expertName} is already on a panel that day for {$teamLabel}.";
+                $conflicts[] = "{$expertName} is already on a panel at that time for {$teamLabel}.";
             }
         }
 
@@ -350,18 +364,21 @@ class AdminPanelAssignmentController extends Controller
         return $scheduledCount;
     }
 
-    // Deterministic, no AI - this is a room/person conflict problem
-    // (is this venue or expert already booked that day), not a language
-    // one, so plain constraint-checking guarantees the rules hold every
-    // time instead of only "usually" holding.
+    // Deterministic, no AI - this is a room/person conflict problem (is
+    // this venue or expert already booked in this 2-hour block), not a
+    // language one, so plain constraint-checking guarantees the rules
+    // hold every time instead of only "usually" holding.
     //
     // 1. If this exact panel (same expert set) already has a slot booked
     //    within this defense_type's window, reuse it - this is what lets
-    //    one panel judge several teams back-to-back in the same room/day.
-    // 2. Otherwise scan each day in the window, each venue in order, and
-    //    return the first (date, venue) where no OTHER panel already holds
-    //    that venue that day and none of these experts already sit on a
-    //    different panel that day (any venue).
+    //    one panel judge several teams back-to-back in the same block.
+    // 2. Otherwise scan each day in the window, each of the day's four
+    //    fixed 2-hour blocks (self::TIME_SLOTS), each venue in order, and
+    //    return the first (date, time, venue) where no OTHER panel
+    //    already holds that venue in that exact block and none of these
+    //    experts already sit on a different panel in that exact block
+    //    (any venue). Two different panels CAN share the same day, just
+    //    not the same block.
     private function findSlotForPanel(DefenseWindow $window, array $expertIds, ?int $excludeScheduleId = null): array
     {
         $sortedExpertIds = collect($expertIds)->sort()->values()->all();
@@ -385,24 +402,28 @@ class AdminPanelAssignmentController extends Controller
         }
 
         foreach (CarbonPeriod::create($window->start_date, $window->end_date) as $date) {
-            $sameDay = $schedulesInWindow->filter(fn ($s) => $s->schedule_date->isSameDay($date));
+            foreach (self::TIME_SLOTS as $time) {
+                $slotStart = $date->copy()->setTimeFromTimeString($time);
 
-            $conflictingPanelsThatDay = $sameDay->filter(
-                fn ($s) => $s->panels->pluck('expert_id')->sort()->values()->all() !== $sortedExpertIds
-            );
+                $sameSlot = $schedulesInWindow->filter(fn ($s) => $s->schedule_date->equalTo($slotStart));
 
-            foreach (self::VENUES as $venue) {
-                $venueTaken = $conflictingPanelsThatDay->contains(fn ($s) => $s->venue === $venue);
-
-                $expertConflict = $conflictingPanelsThatDay->contains(
-                    fn ($s) => count(array_intersect($sortedExpertIds, $s->panels->pluck('expert_id')->all())) > 0
+                $conflictingPanelsThisSlot = $sameSlot->filter(
+                    fn ($s) => $s->panels->pluck('expert_id')->sort()->values()->all() !== $sortedExpertIds
                 );
 
-                if ($venueTaken || $expertConflict) {
-                    continue;
-                }
+                foreach (self::VENUES as $venue) {
+                    $venueTaken = $conflictingPanelsThisSlot->contains(fn ($s) => $s->venue === $venue);
 
-                return ['schedule_date' => $date->copy(), 'venue' => $venue];
+                    $expertConflict = $conflictingPanelsThisSlot->contains(
+                        fn ($s) => count(array_intersect($sortedExpertIds, $s->panels->pluck('expert_id')->all())) > 0
+                    );
+
+                    if ($venueTaken || $expertConflict) {
+                        continue;
+                    }
+
+                    return ['schedule_date' => $slotStart, 'venue' => $venue];
+                }
             }
         }
 
