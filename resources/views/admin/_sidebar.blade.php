@@ -136,6 +136,28 @@
     <div class="status-dot"></div>
   </div>
   <nav class="nav">
+    @php
+      // Admins who are also an expert (CaPSA + Adviser/Consultant/
+      // Grammarian) see two nav groups sharing this one sidebar, so
+      // collapsing between them is worth it. A plain admin only has this
+      // one group - collapsing it would just hide their entire nav behind
+      // a click with nothing else to fall back on, so it stays a normal,
+      // always-expanded section for them.
+      $adminDutiesRoutes = [
+        'admin.dashboard', 'admin.approval', 'admin.experts', 'admin.panel_assignment',
+        'admin.verify_teams', 'admin.sections', 'admin.archive', 'admin.resources',
+        'admin.rubric_management', 'admin.announcements', 'admin.analytics', 'admin.activitylog',
+      ];
+      $adminDutiesActive = in_array($currentRoute, $adminDutiesRoutes, true);
+    @endphp
+    @if ($adminHasExpertRole)
+      <button type="button" class="nav-group-toggle {{ $adminDutiesActive ? 'has-active' : '' }}" id="nav-group-toggle-admin-duties" onclick="toggleNavGroup('admin-duties')" aria-expanded="true">
+        <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+        Admin Duties
+        <svg class="nav-group-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <div class="nav-group-body" id="nav-group-admin-duties" data-active="{{ $adminDutiesActive ? '1' : '0' }}">
+    @endif
     <div class="nav-section">Overview</div>
     <a href="{{ route('admin.dashboard') }}" class="nav-item {{ $currentRoute === 'admin.dashboard' ? 'active' : '' }}">
       <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
@@ -209,7 +231,20 @@
       @endif
     </a>
     @if ($adminHasExpertRole)
-      <div class="nav-section">My Expert Duties</div>
+      </div>
+      @php
+        $expertDutiesRoutes = [
+          'instructor.teams', 'instructor.grading', 'instructor.grading.show', 'instructor.assignments',
+          'instructor.schedule', 'instructor.consultations', 'instructor.docreview', 'instructor.progress',
+        ];
+        $expertDutiesActive = in_array($currentRoute, $expertDutiesRoutes, true);
+      @endphp
+      <button type="button" class="nav-group-toggle {{ $expertDutiesActive ? 'has-active' : '' }}" id="nav-group-toggle-expert-duties" onclick="toggleNavGroup('expert-duties')" aria-expanded="true">
+        <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        My Expert Duties
+        <svg class="nav-group-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <div class="nav-group-body" id="nav-group-expert-duties" data-active="{{ $expertDutiesActive ? '1' : '0' }}">
       <a href="{{ route('instructor.teams') }}" class="nav-item {{ $currentRoute === 'instructor.teams' ? 'active' : '' }}">
         <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         My Teams
@@ -244,6 +279,7 @@
         <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
         Progress Monitoring
       </a>
+      </div>
     @endif
     <div class="nav-section">Account</div>
     <a href="{{ route('admin.profile') }}" class="nav-item {{ $currentRoute === 'admin.profile' ? 'active' : '' }}">
@@ -268,3 +304,34 @@
 </div>
 @include('partials.idle-timeout')
 @include('partials.sidebar-scroll-restore')
+<script>
+(function () {
+  // "Admin Duties" / "My Expert Duties" collapse behind a chevron toggle,
+  // remembered across page loads via localStorage - but a group containing
+  // the currently active page always opens regardless of the stored
+  // preference, so navigating there never leaves you looking at a
+  // collapsed, seemingly-empty section.
+  ['admin-duties', 'expert-duties'].forEach(function (id) {
+    var body = document.getElementById('nav-group-' + id);
+    var toggle = document.getElementById('nav-group-toggle-' + id);
+    if (!body || !toggle) return;
+
+    var isActive = body.getAttribute('data-active') === '1';
+    var storedCollapsed = localStorage.getItem('navGroupCollapsed_' + id) === '1';
+    var collapsed = storedCollapsed && !isActive;
+
+    body.classList.toggle('collapsed', collapsed);
+    toggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+  });
+})();
+
+function toggleNavGroup(id) {
+  var body = document.getElementById('nav-group-' + id);
+  var toggle = document.getElementById('nav-group-toggle-' + id);
+  if (!body || !toggle) return;
+
+  var collapsed = body.classList.toggle('collapsed');
+  toggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+  localStorage.setItem('navGroupCollapsed_' + id, collapsed ? '1' : '0');
+}
+</script>
