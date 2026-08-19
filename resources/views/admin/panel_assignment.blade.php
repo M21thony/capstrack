@@ -18,6 +18,22 @@
 .expert-picker-option .opt-tags { font-size:10px; color:var(--text3) }
 .expert-picker-option.suggested .opt-name::before { content:"★ "; color:var(--accent3) }
 .expert-picker-empty { padding:16px 12px; font-size:12px; color:var(--text3); text-align:center }
+.win-cal-card { border:1px solid var(--border); border-radius:10px; padding:12px; margin-top:6px }
+.win-cal-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px }
+.win-cal-month-label { font-family:'Space Mono',monospace; font-size:12px; font-weight:700; color:var(--text) }
+.win-cal-nav { width:26px; height:26px; border-radius:6px; border:1px solid var(--border); background:var(--bg3); cursor:pointer; color:var(--text2); font-size:15px; line-height:1; display:flex; align-items:center; justify-content:center }
+.win-cal-nav:hover { background:var(--accent-light); border-color:var(--accent); color:var(--accent3) }
+.win-cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:2px }
+.win-cal-daylabel { text-align:center; font-size:9px; font-weight:700; color:var(--text3); letter-spacing:0.5px; text-transform:uppercase; padding:4px 0 }
+.win-cal-cell { aspect-ratio:1; display:flex; align-items:center; justify-content:center; border-radius:6px; font-size:11px; color:var(--text2); cursor:pointer; position:relative; background:var(--bg3) }
+.win-cal-cell.other-month { visibility:hidden; cursor:default }
+.win-cal-cell:hover { background:var(--accent-light); color:var(--accent3) }
+.win-cal-cell.today { box-shadow:inset 0 0 0 1.5px var(--accent) }
+.win-cal-cell.in-range { background:rgba(201,168,44,0.14); color:var(--text) }
+.win-cal-cell.range-edge { background:var(--accent); color:#18191f; font-weight:700 }
+.win-cal-dot { position:absolute; bottom:3px; width:4px; height:4px; border-radius:50%; background:var(--blue) }
+.win-cal-legend { display:flex; align-items:center; gap:6px; font-size:10px; color:var(--text3); margin-top:8px }
+.win-cal-range-label { margin-top:6px; font-size:11px; color:var(--text3); text-align:center }
 </style>
 </head>
 <body>
@@ -60,7 +76,7 @@
 
       <!-- Defense window modal overlay -->
       <div id="window-modal" style="display:none;position:fixed;inset:0;background:rgba(24,25,31,0.6);z-index:100;align-items:center;justify-content:center">
-        <div style="background:#fff;border-radius:14px;padding:24px;width:420px;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
+        <div style="background:#fff;border-radius:14px;padding:24px;width:480px;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
             <div style="font-size:15px;font-weight:600;color:var(--text)">Defense Window</div>
             <button onclick="closeWindowModal()" style="background:none;border:none;font-size:22px;color:var(--text3);cursor:pointer;line-height:1">&times;</button>
@@ -80,16 +96,21 @@
               <option value="Final Oral Defense">Final Oral Defense</option>
             </select>
           </div>
-          <div class="row" style="gap:10px">
-            <div class="form-group" style="flex:1">
-              <label class="label">Start Date</label>
-              <input class="input" type="date" id="window-start-date"/>
+
+          <div class="win-cal-card">
+            <div class="win-cal-header">
+              <button type="button" class="win-cal-nav" onclick="winCalNav(-1)" aria-label="Previous month">&lsaquo;</button>
+              <div class="win-cal-month-label" id="win-cal-month-label">–</div>
+              <button type="button" class="win-cal-nav" onclick="winCalNav(1)" aria-label="Next month">&rsaquo;</button>
             </div>
-            <div class="form-group" style="flex:1">
-              <label class="label">End Date</label>
-              <input class="input" type="date" id="window-end-date"/>
+            <div class="win-cal-grid" id="win-cal-grid"></div>
+            <div class="win-cal-legend">
+              <span><span class="win-cal-dot" style="position:static;display:inline-block;margin-right:4px"></span>Has scheduled defense</span>
             </div>
+            <div class="win-cal-range-label" id="win-cal-range-label">Click a date to set the start, then another to set the end.</div>
           </div>
+          <input type="hidden" id="window-start-date"/>
+          <input type="hidden" id="window-end-date"/>
 
           <div style="display:flex;gap:8px;margin-top:16px">
             <button class="btn btn-primary" style="flex:1;justify-content:center;font-size:13px" id="window-save-btn" onclick="saveWindow()">
@@ -717,13 +738,108 @@ function showWindowMsg(text, isError) {
 
 function fillWindowForm(defenseType) {
   const w = WINDOWS_BY_TYPE[defenseType];
-  document.getElementById('window-start-date').value = w?.start_date || '';
-  document.getElementById('window-end-date').value = w?.end_date || '';
+  winCalRange = { start: w?.start_date || null, end: w?.end_date || null };
+  document.getElementById('window-start-date').value = winCalRange.start || '';
+  document.getElementById('window-end-date').value = winCalRange.end || '';
+
+  if (winCalRange.start) {
+    const [y, m] = winCalRange.start.split('-').map(Number);
+    winCalView = { year: y, month: m - 1 };
+  } else {
+    const now = new Date();
+    winCalView = { year: now.getFullYear(), month: now.getMonth() };
+  }
+  renderWinCal();
+}
+
+// ── Defense Window calendar ─────────────────────────────────────────────
+let winCalView = { year: new Date().getFullYear(), month: new Date().getMonth() };
+let winCalRange = { start: null, end: null };
+
+function pad2(n) { return String(n).padStart(2, '0'); }
+function winCalDateKey(y, m, d) { return `${y}-${pad2(m + 1)}-${pad2(d)}`; }
+
+function winCalFormatLabel(key) {
+  const [y, m, d] = key.split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function winCalScheduledDays() {
+  const map = {};
+  TEAMS.forEach(t => (t.schedules || []).forEach(s => {
+    if (!s.schedule_date) return;
+    const day = s.schedule_date.slice(0, 10);
+    (map[day] = map[day] || []).push(t.team_name);
+  }));
+  return map;
+}
+
+function winCalNav(delta) {
+  winCalView.month += delta;
+  if (winCalView.month < 0) { winCalView.month = 11; winCalView.year--; }
+  if (winCalView.month > 11) { winCalView.month = 0; winCalView.year++; }
+  renderWinCal();
+}
+
+function winCalPick(key) {
+  if (!winCalRange.start || (winCalRange.start && winCalRange.end)) {
+    winCalRange = { start: key, end: null };
+  } else if (key < winCalRange.start) {
+    winCalRange = { start: key, end: null };
+  } else {
+    winCalRange.end = key;
+  }
+  document.getElementById('window-start-date').value = winCalRange.start || '';
+  document.getElementById('window-end-date').value = winCalRange.end || '';
+  renderWinCal();
+}
+
+function renderWinCal() {
+  const grid = document.getElementById('win-cal-grid');
+  const label = document.getElementById('win-cal-month-label');
+  if (!grid || !label) return;
+
+  const { year, month } = winCalView;
+  label.textContent = new Date(year, month, 1).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+
+  const scheduled = winCalScheduledDays();
+  const firstDow = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const now = new Date();
+  const todayKey = winCalDateKey(now.getFullYear(), now.getMonth(), now.getDate());
+
+  let html = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+    .map(d => `<div class="win-cal-daylabel">${d}</div>`).join('');
+
+  for (let i = 0; i < firstDow; i++) html += `<div class="win-cal-cell other-month"></div>`;
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const key = winCalDateKey(year, month, d);
+    const classes = ['win-cal-cell'];
+    if (key === todayKey) classes.push('today');
+    if (winCalRange.start === key || winCalRange.end === key) classes.push('range-edge');
+    else if (winCalRange.start && winCalRange.end && key > winCalRange.start && key < winCalRange.end) classes.push('in-range');
+    const teams = scheduled[key];
+    const dot = teams ? `<span class="win-cal-dot" title="${teams.length} defense${teams.length === 1 ? '' : 's'} scheduled: ${teams.join(', ')}"></span>` : '';
+    html += `<div class="${classes.join(' ')}" onclick="winCalPick('${key}')">${d}${dot}</div>`;
+  }
+
+  grid.innerHTML = html;
+
+  const rangeLabelEl = document.getElementById('win-cal-range-label');
+  if (winCalRange.start && winCalRange.end) {
+    rangeLabelEl.textContent = winCalFormatLabel(winCalRange.start) + ' – ' + winCalFormatLabel(winCalRange.end);
+  } else if (winCalRange.start) {
+    rangeLabelEl.textContent = winCalFormatLabel(winCalRange.start) + ' – pick an end date';
+  } else {
+    rangeLabelEl.textContent = 'Click a date to set the start, then another to set the end.';
+  }
 }
 
 function openWindowModal() {
   document.getElementById('window-modal-msg').style.display = 'none';
   document.getElementById('window-modal').style.display = 'flex';
+  renderWinCal();
 
   fetch('/api/admin/panel_assignment/windows', { headers: { 'Accept': 'application/json' } })
     .then(res => res.json())
