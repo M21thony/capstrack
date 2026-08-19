@@ -261,6 +261,8 @@
 
 @include('partials.idle-timeout')
 
+@include('student.partials.join-request-popup')
+
 <script>
   function openProfile() {
     var overlay = document.getElementById('profile-overlay');

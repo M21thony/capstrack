@@ -75,4 +75,12 @@ class Team extends Model
     {
         return $this->hasMany(DefenseSchedule::class, 'team_id', 'team_id');
     }
+
+    public static function nameExists(string $name, ?int $ignoreTeamId = null): bool
+    {
+        return static::query()
+            ->when($ignoreTeamId, fn ($query) => $query->where('team_id', '!=', $ignoreTeamId))
+            ->whereRaw('LOWER(team_name) = ?', [mb_strtolower(trim($name))])
+            ->exists();
+    }
 }

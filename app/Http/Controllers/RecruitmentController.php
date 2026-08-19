@@ -20,9 +20,15 @@ class RecruitmentController extends Controller
             'recruitment_goal' => ['required', 'string', 'in:build_a_team,find_a_team'],
             'looking_for' => ['nullable', 'string', 'max:500'],
             'introduction' => ['nullable', 'string', 'max:500'],
-            'team_name' => ['nullable', 'string', 'max:100'],
+            'team_name' => [
+                'nullable', 'string', 'max:100',
+                function ($attribute, $value, $fail) {
+                    if ($value && Team::nameExists($value)) {
+                        $fail('The team name has already been taken.');
+                    }
+                },
+            ],
             'tags' => ['nullable', 'string'],
-            'member_count' => ['nullable', 'integer', 'min:3', 'max:5'],
         ]);
 
         $student = $request->user();
@@ -72,7 +78,7 @@ class RecruitmentController extends Controller
                 'roles' => $roles,
                 'looking_for' => $validated['looking_for'] ?? null,
                 'introduction' => $validated['introduction'] ?? null,
-                'member_count' => $validated['member_count'] ?? null,
+                'member_count' => 5,
             ]);
         });
 
@@ -120,7 +126,6 @@ class RecruitmentController extends Controller
             'introduction' => ['nullable', 'string', 'max:500'],
             'roles' => ['required', 'array', 'min:1'],
             'roles.*' => ['string', 'max:50'],
-            'member_count' => ['nullable', 'integer', 'min:3', 'max:5'],
         ]);
 
         $recruitment->update([
@@ -128,7 +133,7 @@ class RecruitmentController extends Controller
             'roles' => $validated['roles'],
             'looking_for' => $validated['looking_for'] ?? null,
             'introduction' => $validated['introduction'] ?? null,
-            'member_count' => $validated['member_count'] ?? null,
+            'member_count' => 5,
         ]);
 
         $this->logActivity(
