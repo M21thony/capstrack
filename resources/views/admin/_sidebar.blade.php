@@ -263,3 +263,4 @@
   </nav>
 </div>
 @include('partials.idle-timeout')
+@include('partials.sidebar-scroll-restore')
