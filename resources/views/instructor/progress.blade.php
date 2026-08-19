@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>CapsTRACK â€” Expert Portal</title>
+<title>CapsTRACK — Expert Portal</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="{{ asset('css/expert.css') }}" />
 </head>
@@ -111,7 +111,7 @@
     <!-- Scrollable Body -->
     <div class="ep-body">
 
-      <!-- Full Name â€” readonly -->
+      <!-- Full Name — readonly -->
       <div class="ep-field">
         <div class="ep-label">Full Name</div>
         <div class="ep-value readonly">
@@ -120,7 +120,7 @@
         </div>
       </div>
 
-      <!-- Email â€” readonly -->
+      <!-- Email — readonly -->
       <div class="ep-field">
         <div class="ep-label">Institutional Email</div>
         <div class="ep-value readonly">
@@ -131,7 +131,7 @@
 
       <div class="ep-divider"></div>
 
-        <!-- Roles â€” readonly, assigned by admin -->
+        <!-- Roles — readonly, assigned by admin -->
         <div class="ep-field">
           <div class="ep-label">Assigned Roles</div>
           <div class="ep-tags-wrap">
@@ -148,7 +148,7 @@
 
       <div class="ep-divider"></div>
 
-      <!-- Max Teams â€” readonly -->
+      <!-- Max Teams — readonly -->
       <div class="ep-field">
         <div class="ep-label">Team Capacity</div>
         <div class="ep-value readonly">
@@ -159,7 +159,7 @@
 
       <div class="ep-divider"></div>
 
-      <!-- Expertise Tags â€” editable -->
+      <!-- Expertise Tags — editable -->
       <div class="ep-field">
         <div class="ep-label">Areas of Expertise</div>
         <div class="ep-tags-wrap" id="ep-tags-wrap"></div>
@@ -168,13 +168,13 @@
             class="ep-tag-input"
             id="ep-tag-input"
             type="text"
-            placeholder="Add expertiseâ€¦"
+            placeholder="Add expertise…"
             onkeydown="handleTagKey(event)"
           />
           <button class="ep-tag-add-btn" onclick="addTag()">+ Add</button>
         </div>
         <div style="font-size:11px;color:var(--text3);margin-top:7px">
-          Press Enter or click Add. Click Ã— to remove.
+          Press Enter or click Add. Click × to remove.
         </div>
       </div>
 
