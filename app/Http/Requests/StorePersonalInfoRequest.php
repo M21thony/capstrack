@@ -17,7 +17,12 @@ class StorePersonalInfoRequest extends FormRequest
     {
         $userId = auth()->id();
 
-        $hasTeam = StudentSchoolYear::where('student_id', $userId)->whereNotNull('team_id')->exists();
+        // Must match PersonalInfoController::store()'s lock check exactly -
+        // a student who already has a team_id but hasn't finished their
+        // profile yet (e.g. added to a team before filling this out) still
+        // needs to fill it in; only an already-completed profile locks.
+        $hasTeam = auth()->user()?->hasCompletedProfile()
+            && StudentSchoolYear::where('student_id', $userId)->whereNotNull('team_id')->exists();
 
         if ($hasTeam) {
             // Nothing is editable once a student has a team — every field
