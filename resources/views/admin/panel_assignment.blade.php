@@ -264,7 +264,7 @@
                 $scheduleTimeValue = null;
                 if ($latestSchedule?->schedule_date && $latestSchedule->schedule_date->format('H:i') !== '00:00') {
                     $scheduleTimeValue = $latestSchedule->schedule_date->format('H:i');
-                    $scheduleEnd = $latestSchedule->schedule_date->copy()->addHours(2);
+                    $scheduleEnd = $latestSchedule->end_date ?? $latestSchedule->schedule_date->copy()->addHours(2);
                     $scheduleTimeLabel = ' · '.$latestSchedule->schedule_date->format('g:i A').'–'.$scheduleEnd->format('g:i A');
                 }
               @endphp
@@ -455,7 +455,7 @@ function formatScheduleTimeRange(schedule) {
   if (!schedule || !schedule.schedule_date) return null;
   const d = new Date(schedule.schedule_date);
   if (d.getHours() === 0 && d.getMinutes() === 0) return null;
-  const end = new Date(d.getTime() + 2 * 60 * 60 * 1000);
+  const end = schedule.end_date ? new Date(schedule.end_date) : new Date(d.getTime() + 2 * 60 * 60 * 1000);
   const fmt = (t) => t.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
   return fmt(d) + '–' + fmt(end);
 }

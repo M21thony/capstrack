@@ -120,6 +120,7 @@ class AdminPanelAssignmentController extends Controller
                 'defense_id' => $s->defense_id,
                 'defense_type' => $s->defense_type,
                 'schedule_date' => $s->schedule_date?->format('Y-m-d\TH:i'),
+                'end_date' => $s->end_date?->format('Y-m-d\TH:i'),
                 'venue' => $s->venue,
                 'chair_expert_id' => $s->panels->firstWhere('panel_role', 'Panel Chair')?->expert_id,
                 'member1_expert_id' => $s->panels->firstWhere('panel_role', 'Panel Member 1')?->expert_id,
@@ -180,7 +181,7 @@ class AdminPanelAssignmentController extends Controller
 
         $schedule = DefenseSchedule::updateOrCreate(
             ['team_id' => $team->team_id, 'defense_type' => $validated['defense_type']],
-            $panelUnchanged ? [] : ['schedule_date' => null, 'venue' => null]
+            $panelUnchanged ? [] : ['schedule_date' => null, 'end_date' => null, 'venue' => null]
         );
 
         $schedule->panels()->delete();
@@ -243,6 +244,7 @@ class AdminPanelAssignmentController extends Controller
 
         $defense->update([
             'schedule_date' => $slotStart,
+            'end_date' => $slotStart->copy()->addHours(self::SESSION_HOURS),
             'venue' => $validated['venue'],
         ]);
 
@@ -357,7 +359,11 @@ class AdminPanelAssignmentController extends Controller
                 continue;
             }
 
-            $schedule->update(['schedule_date' => $slot['schedule_date'], 'venue' => $slot['venue']]);
+            $schedule->update([
+                'schedule_date' => $slot['schedule_date'],
+                'end_date' => $slot['end_date'],
+                'venue' => $slot['venue'],
+            ]);
             $scheduledCount++;
         }
 
@@ -397,7 +403,11 @@ class AdminPanelAssignmentController extends Controller
             $existingExpertIds = $existing->panels->pluck('expert_id')->sort()->values()->all();
 
             if ($existingExpertIds === $sortedExpertIds) {
-                return ['schedule_date' => $existing->schedule_date, 'venue' => $existing->venue];
+                return [
+                    'schedule_date' => $existing->schedule_date,
+                    'end_date' => $existing->end_date,
+                    'venue' => $existing->venue,
+                ];
             }
         }
 
@@ -422,7 +432,11 @@ class AdminPanelAssignmentController extends Controller
                         continue;
                     }
 
-                    return ['schedule_date' => $slotStart, 'venue' => $venue];
+                    return [
+                        'schedule_date' => $slotStart,
+                        'end_date' => $slotStart->copy()->addHours(self::SESSION_HOURS),
+                        'venue' => $venue,
+                    ];
                 }
             }
         }
@@ -511,6 +525,7 @@ class AdminPanelAssignmentController extends Controller
             'defense_id' => $schedule->defense_id,
             'defense_type' => $schedule->defense_type,
             'schedule_date' => $schedule->schedule_date?->toDateTimeString(),
+            'end_date' => $schedule->end_date?->toDateTimeString(),
             'venue' => $schedule->venue,
             'panels' => $schedule->panels->map(fn ($p) => [
                 'panel_role' => $p->panel_role,

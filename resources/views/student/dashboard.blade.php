@@ -413,6 +413,9 @@
                 {{ $result->submitted_count }} of {{ $result->assigned_count }} panelist{{ $result->assigned_count === 1 ? '' : 's' }} graded
                 @if($result->schedule_date)
                   · {{ $result->schedule_date->format('M j, Y') }}
+                  @if($result->schedule_date->format('H:i') !== '00:00')
+                    {{ $result->schedule_date->format('g:i A') }}–{{ ($result->end_date ?? $result->schedule_date->copy()->addHours(2))->format('g:i A') }}
+                  @endif
                 @endif
               </div>
             </div>
