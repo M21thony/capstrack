@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Models\CapstoneDocumentReview;
 use App\Models\Notification;
+use App\Models\TeamInvitation;
 use App\Services\OllamaSSHClient;
 use App\Services\SimilarityService;
 use Illuminate\Support\Facades\Route;
@@ -46,7 +47,17 @@ class AppServiceProvider extends ServiceProvider
                 $unreadCount = Notification::where('student_id', $studentId)
                     ->where('is_read', false)
                     ->count();
-                $view->with(compact('unreadNotifications', 'unreadCount'));
+                $joinRequestPopups = TeamInvitation::with(['sender', 'team'])
+                    ->where('receiver_id', $studentId)
+                    ->where('type', 'request')
+                    ->where('status', 'pending')
+                    ->where(function ($query) {
+                        $query->whereNull('remind_me_at')
+                            ->orWhere('remind_me_at', '<=', now());
+                    })
+                    ->latest('created_at')
+                    ->get();
+                $view->with(compact('unreadNotifications', 'unreadCount', 'joinRequestPopups'));
             }
         });
 

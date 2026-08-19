@@ -13,6 +13,7 @@ use App\Http\Controllers\AdminExpertsController;
 use App\Http\Controllers\AdminFinancialController;
 use App\Http\Controllers\AdminPanelAssignmentController;
 use App\Http\Controllers\AdminProfileController;
+use App\Http\Controllers\AdminTeamVerificationController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DuplicationController;
@@ -55,6 +56,8 @@ Route::middleware(['expert.auth', 'expert.admin', 'no.cache', 'track.expert'])->
     Route::post('/turnover', [AdminExpertsController::class, 'transferRights'])->name('turnover');
     Route::delete('/experts/{expert}', [AdminExpertsController::class, 'destroy'])->name('experts.destroy');
     Route::get('/panel_assignment', [AdminPanelAssignmentController::class, 'index'])->name('panel_assignment');
+    Route::get('/verify-teams', [AdminTeamVerificationController::class, 'index'])->name('verify_teams');
+    Route::post('/verify-teams/{team}/verify', [AdminTeamVerificationController::class, 'verify'])->name('verify_teams.verify');
     Route::get('/profile', [AdminProfileController::class, 'index'])->name('profile');
     Route::post('/profile', [AdminProfileController::class, 'update'])->name('profile.update');
     Route::get('/sections', [StudentSectionController::class, 'index'])->name('sections');
@@ -143,10 +146,17 @@ Route::prefix('expert')->group(function () {
 Route::middleware(['auth', 'no.cache', 'track.expert'])->group(function () {
     Route::post('/team', [TeamController::class, 'store'])->name('team.store');
     Route::put('/team/{team}', [TeamController::class, 'update'])->name('team.update');
-    Route::post('/team/confirm', [TeamController::class, 'confirm'])->name('team.confirm');
+    Route::get('/team/check-name', [TeamController::class, 'checkName'])->name('team.check-name');
     Route::post('/team/transfer-leadership', [TeamController::class, 'transferLeadership'])->name('team.transfer-leadership');
+    Route::post('/team/leadership/{notification}/accept', [TeamController::class, 'acceptLeadership'])->name('team.leadership.accept');
+    Route::post('/team/leadership/{notification}/decline', [TeamController::class, 'declineLeadership'])->name('team.leadership.decline');
+    Route::post('/team/leadership/{notification}/remind-later', [TeamController::class, 'remindLeadershipLater'])->name('team.leadership.remind-later');
     Route::delete('/team/members/{student}', [TeamController::class, 'removeMember'])->name('team.members.remove');
     Route::delete('/team', [TeamController::class, 'destroy'])->name('team.destroy');
+    Route::post('/team/leave', [TeamController::class, 'requestLeave'])->name('team.leave-request');
+    Route::post('/team/leave/{approval}/approve', [TeamController::class, 'approveLeave'])->name('team.leave.approve');
+    Route::post('/team/leave/{approval}/decline', [TeamController::class, 'declineLeave'])->name('team.leave.decline');
+    Route::get('/team/leave/popups', [TeamController::class, 'leavePopups'])->name('team.leave.popups');
     Route::post('/recruitment', [RecruitmentController::class, 'store'])->name('recruitment.store');
     Route::put('/recruitment/{recruitment}', [RecruitmentController::class, 'update'])->name('recruitment.update');
     Route::delete('/recruitment/{recruitment}', [RecruitmentController::class, 'destroy'])->name('recruitment.destroy');
@@ -154,6 +164,8 @@ Route::middleware(['auth', 'no.cache', 'track.expert'])->group(function () {
     Route::post('/invitations', [InvitationController::class, 'store'])->name('invitations.store');
     Route::post('/invitations/{invitation}/accept', [InvitationController::class, 'accept'])->name('invitations.accept');
     Route::post('/invitations/{invitation}/decline', [InvitationController::class, 'decline'])->name('invitations.decline');
+    Route::post('/invitations/{invitation}/remind-later', [InvitationController::class, 'remindLater'])->name('invitations.remind-later');
+    Route::get('/invitations/popup', [InvitationController::class, 'popup'])->name('invitations.popup');
 
     Route::get('/duplication', [DuplicationController::class, 'index'])->name('duplication.index');
     Route::post('/duplication/check', [DuplicationController::class, 'check'])->name('duplication.check');

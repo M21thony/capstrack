@@ -2,10 +2,13 @@
 
 namespace Tests\Feature;
 
+use App\Models\LeaveApproval;
+use App\Models\Notification;
 use App\Models\Recruitment;
 use App\Models\Student;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -57,6 +60,7 @@ class TeamCreationTest extends TestCase
         $team = Team::create([
             'team_name' => 'Team Charmander',
             'team_status' => 'on-going',
+            'leader_id' => $student->student_id,
         ]);
 
         StudentSchoolYear::create([
@@ -77,7 +81,7 @@ class TeamCreationTest extends TestCase
         $response = $this->delete('/team');
 
         $response->assertRedirect(route('student.team'));
-        $response->assertSessionHas('status', 'You have left the team.');
+        $response->assertSessionHas('status', 'You have left the team and the team has been terminated.');
 
         // Verify team_id is set to null
         $sy = StudentSchoolYear::where('student_id', $student->student_id)->first();
@@ -138,6 +142,98 @@ class TeamCreationTest extends TestCase
         $this->assertDatabaseHas('team', ['team_id' => $team->team_id]);
     }
 
+    public function test_leader_sees_leave_approval_actions_and_member_is_forced_after_three_declines(): void
+    {
+        $leader = Student::create([
+            'email' => 'leave.leader@my.cspc.edu.ph',
+            'f_name' => 'Leah',
+            'l_name' => 'Leader',
+            'student_number' => '100000001',
+            'p_picture' => 'avatar-01',
+            'course' => 'Bachelor of Science in Computer Science',
+            'year_section' => '4th · A',
+        ]);
+
+        $member = Student::create([
+            'email' => 'leave.member@my.cspc.edu.ph',
+            'f_name' => 'Milo',
+            'l_name' => 'Member',
+        ]);
+
+        $team = Team::create([
+            'team_name' => 'Team Leave Flow',
+            'team_status' => 'on-going',
+            'leader_id' => $leader->student_id,
+        ]);
+
+        StudentSchoolYear::create([
+            'student_id' => $leader->student_id,
+            'team_id' => $team->team_id,
+        ]);
+
+        StudentSchoolYear::create([
+            'student_id' => $member->student_id,
+            'team_id' => $team->team_id,
+        ]);
+
+        $this->actingAs($member, 'web');
+
+        $response = $this->post('/team/leave');
+        $response->assertRedirect(route('student.team'));
+        $response->assertSessionHas('status');
+
+        $approval = LeaveApproval::where('student_id', $member->student_id)
+            ->where('team_id', $team->team_id)
+            ->latest('id')
+            ->first();
+
+        $this->assertNotNull($approval);
+        $this->assertSame('pending', $approval->status);
+
+        $this->actingAs($leader, 'web');
+        $teamPage = $this->get(route('student.team'));
+        $teamPage->assertOk();
+        $teamPage->assertSee('/team/leave/'.$approval->id.'/approve', false);
+        $teamPage->assertSee('/team/leave/'.$approval->id.'/decline', false);
+
+        $this->post('/team/leave/'.$approval->id.'/decline');
+        $approval->refresh();
+        $this->assertSame('declined', $approval->status);
+
+        $this->actingAs($member, 'web');
+        $this->post('/team/leave');
+        $secondApproval = LeaveApproval::where('student_id', $member->student_id)
+            ->where('team_id', $team->team_id)
+            ->latest('id')
+            ->first();
+        $this->assertNotNull($secondApproval);
+        $this->assertSame(2, $secondApproval->attempt);
+
+        $this->actingAs($leader, 'web');
+        $this->post('/team/leave/'.$secondApproval->id.'/decline');
+        $secondApproval->refresh();
+        $this->assertSame('declined', $secondApproval->status);
+
+        $this->actingAs($member, 'web');
+        $this->post('/team/leave');
+        $thirdApproval = LeaveApproval::where('student_id', $member->student_id)
+            ->where('team_id', $team->team_id)
+            ->latest('id')
+            ->first();
+        $this->assertNotNull($thirdApproval);
+        $this->assertSame(3, $thirdApproval->attempt);
+
+        $this->actingAs($leader, 'web');
+        $this->post('/team/leave/'.$thirdApproval->id.'/decline');
+
+        $memberSy = StudentSchoolYear::where('student_id', $member->student_id)->first();
+        $this->assertNull($memberSy->team_id);
+        $this->assertDatabaseHas('notifications', [
+            'student_id' => $member->student_id,
+            'type' => 'leave_force',
+        ]);
+    }
+
     public function test_leader_can_transfer_then_leave(): void
     {
         $leader = Student::create([
@@ -177,13 +273,47 @@ class TeamCreationTest extends TestCase
 
         $this->actingAs($leader, 'web');
 
-        // Transfer leadership
+        // Send leadership transfer request
         $response = $this->post('/team/transfer-leadership', [
             'new_leader_id' => $member->student_id,
         ]);
 
         $response->assertRedirect(route('student.team'));
-        $response->assertSessionHas('status', 'Leadership transferred successfully!');
+        $response->assertSessionHas('status');
+
+        // Leadership should NOT be transferred yet — pending approval
+        $this->assertDatabaseHas('team', [
+            'team_id' => $team->team_id,
+            'leader_id' => $leader->student_id,
+        ]);
+
+        // A pending request notification was sent to the member
+        $requestNotif = Notification::where('student_id', $member->student_id)
+            ->where('type', 'leadership_transfer_request')
+            ->where('is_read', false)
+            ->first();
+        $this->assertNotNull($requestNotif);
+
+        // The leader receives a "pending approval" notice — no "accepted" message yet
+        $pendingNotif = Notification::where('student_id', $leader->student_id)
+            ->where('type', 'leadership_transfer_pending')
+            ->where('is_read', false)
+            ->first();
+        $this->assertNotNull($pendingNotif, 'Leader should see a pending-approval notice.');
+
+        $this->assertNull(
+            Notification::where('type', 'leadership_transferred')
+                ->where('is_read', false)
+                ->first(),
+            'No "accepted" notification should exist before the member approves.'
+        );
+
+        // Member accepts the request
+        $this->actingAs($member, 'web');
+        $response = $this->post('/team/leadership/'.$requestNotif->id.'/accept');
+
+        $response->assertRedirect(route('student.team'));
+        $response->assertSessionHas('status');
 
         // Verify the team's leader_id was updated
         $this->assertDatabaseHas('team', [
@@ -192,14 +322,393 @@ class TeamCreationTest extends TestCase
         ]);
 
         // Now the original leader can leave (they are a regular member now)
+        $this->actingAs($leader, 'web');
         $response = $this->delete('/team');
         $response->assertRedirect(route('student.team'));
-        $response->assertSessionHas('status', 'You have left the team.');
+        $response->assertSessionHas('status', 'Your leave request has been sent to the team leader. It will auto-approve after '.LeaveApproval::EXPIRY_HOURS.' hours if unanswered.');
+
+        // A leave approval was created for the original leader, pending the new leader's response
+        $leaveApproval = LeaveApproval::where('student_id', $leader->student_id)
+            ->where('team_id', $team->team_id)
+            ->where('status', LeaveApproval::STATUS_PENDING)
+            ->latest('id')
+            ->first();
+        $this->assertNotNull($leaveApproval);
+
+        // New leader approves the leave request
+        $this->actingAs($member, 'web');
+        $this->post('/team/leave/'.$leaveApproval->id.'/approve');
 
         // Verify the original leader's team_id is null
         $this->assertNull(StudentSchoolYear::where('student_id', $leader->student_id)->value('team_id'));
 
-        // Team should still exist (member is still there)
+        // Team should still exist (new leader is still there)
         $this->assertDatabaseHas('team', ['team_id' => $team->team_id]);
+    }
+
+    public function test_leader_transfer_is_not_completed_before_approval(): void
+    {
+        $leader = Student::create([
+            'email' => 'pending.leader@example.com',
+            'f_name' => 'Eve',
+            'l_name' => 'Leader',
+            'student_number' => '2026-0001',
+            'p_picture' => 'avatar-01',
+            'course' => 'Bachelor of Science in Computer Science',
+            'year_section' => '4th · A',
+        ]);
+
+        $member = Student::create([
+            'email' => 'pending.member@example.com',
+            'f_name' => 'Frank',
+            'l_name' => 'Member',
+            'student_number' => '2026-0002',
+            'p_picture' => 'avatar-02',
+            'course' => 'Bachelor of Science in Computer Science',
+            'year_section' => '4th · A',
+        ]);
+
+        $team = Team::create([
+            'team_name' => 'Team Pending',
+            'team_status' => 'on-going',
+            'leader_id' => $leader->student_id,
+        ]);
+
+        StudentSchoolYear::create(['student_id' => $leader->student_id, 'team_id' => $team->team_id, 'school_year' => 2026]);
+        StudentSchoolYear::create(['student_id' => $member->student_id, 'team_id' => $team->team_id, 'school_year' => 2026]);
+
+        $this->actingAs($leader, 'web');
+
+        $this->post('/team/transfer-leadership', ['new_leader_id' => $member->student_id]);
+
+        // Leadership must NOT be transferred until the member approves
+        $this->assertDatabaseHas('team', ['team_id' => $team->team_id, 'leader_id' => $leader->student_id]);
+
+        // The member received a leadership transfer request notification (approve/decline lives there)
+        $requestNotif = Notification::where('student_id', $member->student_id)
+            ->where('type', 'leadership_transfer_request')
+            ->where('is_read', false)
+            ->first();
+        $this->assertNotNull($requestNotif);
+    }
+
+    public function test_api_leadership_transfer_requires_approval(): void
+    {
+        $leader = Student::create([
+            'email' => 'api.leader@example.com',
+            'f_name' => 'Ian',
+            'l_name' => 'Leader',
+        ]);
+
+        $member = Student::create([
+            'email' => 'api.member@example.com',
+            'f_name' => 'Jolina',
+            'l_name' => 'Member',
+        ]);
+
+        $team = Team::create([
+            'team_name' => 'Team API',
+            'team_status' => 'on-going',
+            'leader_id' => $leader->student_id,
+        ]);
+
+        StudentSchoolYear::create(['student_id' => $leader->student_id, 'team_id' => $team->team_id]);
+        StudentSchoolYear::create(['student_id' => $member->student_id, 'team_id' => $team->team_id]);
+
+        // Leader requests transfer via API
+        $this->actingAs($leader, 'web');
+        $response = $this->post('/api/teams/'.$team->team_id.'/transfer-leadership', [
+            'new_leader_id' => $member->student_id,
+        ]);
+        $response->assertOk();
+
+        // Leadership must NOT change yet
+        $this->assertDatabaseHas('team', ['team_id' => $team->team_id, 'leader_id' => $leader->student_id]);
+
+        // A request notification was created for the member
+        $requestNotif = Notification::where('student_id', $member->student_id)
+            ->where('type', 'leadership_transfer_request')
+            ->where('is_read', false)
+            ->first();
+        $this->assertNotNull($requestNotif);
+
+        // Member approves via API
+        $this->actingAs($member, 'web');
+        $this->post('/api/team/leadership/'.$requestNotif->id.'/accept');
+
+        $this->assertDatabaseHas('team', ['team_id' => $team->team_id, 'leader_id' => $member->student_id]);
+    }
+
+    public function test_api_leadership_transfer_can_be_declined(): void
+    {
+        $leader = Student::create([
+            'email' => 'api.decline.leader@example.com',
+            'f_name' => 'Kyla',
+            'l_name' => 'Leader',
+        ]);
+
+        $member = Student::create([
+            'email' => 'api.decline.member@example.com',
+            'f_name' => 'Leo',
+            'l_name' => 'Member',
+        ]);
+
+        $team = Team::create([
+            'team_name' => 'Team API Decline',
+            'team_status' => 'on-going',
+            'leader_id' => $leader->student_id,
+        ]);
+
+        StudentSchoolYear::create(['student_id' => $leader->student_id, 'team_id' => $team->team_id]);
+        StudentSchoolYear::create(['student_id' => $member->student_id, 'team_id' => $team->team_id]);
+
+        $this->actingAs($leader, 'web');
+        $this->post('/api/teams/'.$team->team_id.'/transfer-leadership', ['new_leader_id' => $member->student_id]);
+
+        $requestNotif = Notification::where('student_id', $member->student_id)
+            ->where('type', 'leadership_transfer_request')
+            ->where('is_read', false)
+            ->first();
+        $this->assertNotNull($requestNotif);
+
+        $this->actingAs($member, 'web');
+        $this->post('/api/team/leadership/'.$requestNotif->id.'/decline');
+
+        $this->assertDatabaseHas('team', ['team_id' => $team->team_id, 'leader_id' => $leader->student_id]);
+        $this->assertDatabaseHas('notifications', [
+            'student_id' => $leader->student_id,
+            'type' => 'leadership_transfer_declined',
+        ]);
+    }
+
+    public function test_leader_can_send_new_transfer_even_with_old_pending_request(): void
+    {
+        $leader = Student::create([
+            'email' => 'stuck.leader@example.com',
+            'f_name' => 'Stuck',
+            'l_name' => 'Leader',
+        ]);
+
+        $firstMember = Student::create([
+            'email' => 'stuck.member1@example.com',
+            'f_name' => 'First',
+            'l_name' => 'Member',
+        ]);
+
+        $secondMember = Student::create([
+            'email' => 'stuck.member2@example.com',
+            'f_name' => 'Second',
+            'l_name' => 'Member',
+        ]);
+
+        $team = Team::create([
+            'team_name' => 'Team Stuck',
+            'team_status' => 'on-going',
+            'leader_id' => $leader->student_id,
+        ]);
+
+        StudentSchoolYear::create(['student_id' => $leader->student_id, 'team_id' => $team->team_id]);
+        StudentSchoolYear::create(['student_id' => $firstMember->student_id, 'team_id' => $team->team_id]);
+        StudentSchoolYear::create(['student_id' => $secondMember->student_id, 'team_id' => $team->team_id]);
+
+        $this->actingAs($leader, 'web');
+
+        // First transfer attempt to member 1 (never approved/declined -> stuck)
+        $this->post('/team/transfer-leadership', ['new_leader_id' => $firstMember->student_id]);
+
+        $this->assertDatabaseHas('team', ['team_id' => $team->team_id, 'leader_id' => $leader->student_id]);
+
+        // Leader picks another member — must NOT be blocked by the stuck request
+        $response = $this->post('/team/transfer-leadership', ['new_leader_id' => $secondMember->student_id]);
+
+        $response->assertRedirect(route('student.team'));
+        $response->assertSessionHas('status');
+
+        // Leadership still requires approval — not transferred yet
+        $this->assertDatabaseHas('team', ['team_id' => $team->team_id, 'leader_id' => $leader->student_id]);
+
+        // A fresh pending request exists for member 2, and the old one was cancelled
+        $this->assertDatabaseHas('notifications', [
+            'student_id' => $secondMember->student_id,
+            'type' => 'leadership_transfer_request',
+            'is_read' => false,
+        ]);
+    }
+
+    public function test_member_can_decline_leadership_transfer(): void
+    {
+        $leader = Student::create([
+            'email' => 'decline.leader@example.com',
+            'f_name' => 'Grace',
+            'l_name' => 'Leader',
+        ]);
+
+        $member = Student::create([
+            'email' => 'decline.member@example.com',
+            'f_name' => 'Henry',
+            'l_name' => 'Member',
+        ]);
+
+        $team = Team::create([
+            'team_name' => 'Team Decline',
+            'team_status' => 'on-going',
+            'leader_id' => $leader->student_id,
+        ]);
+
+        StudentSchoolYear::create(['student_id' => $leader->student_id, 'team_id' => $team->team_id]);
+        StudentSchoolYear::create(['student_id' => $member->student_id, 'team_id' => $team->team_id]);
+
+        $this->actingAs($leader, 'web');
+        $this->post('/team/transfer-leadership', ['new_leader_id' => $member->student_id]);
+
+        $requestNotif = Notification::where('student_id', $member->student_id)
+            ->where('type', 'leadership_transfer_request')
+            ->where('is_read', false)
+            ->first();
+
+        $this->actingAs($member, 'web');
+        $this->post('/team/leadership/'.$requestNotif->id.'/decline');
+
+        // Leader remains unchanged
+        $this->assertDatabaseHas('team', ['team_id' => $team->team_id, 'leader_id' => $leader->student_id]);
+
+        // Old leader was notified about the decline
+        $this->assertDatabaseHas('notifications', [
+            'student_id' => $leader->student_id,
+            'type' => 'leadership_transfer_declined',
+        ]);
+    }
+
+    public function test_team_name_is_unique_case_insensitively_on_create(): void
+    {
+        $first = Student::create([
+            'email' => 'first@my.cspc.edu.ph',
+            'f_name' => 'First',
+            'l_name' => 'Leader',
+        ]);
+        Team::create([
+            'team_name' => 'HyperTest',
+            'team_status' => 'on-going',
+            'leader_id' => $first->student_id,
+        ]);
+
+        $second = Student::create([
+            'email' => 'second@my.cspc.edu.ph',
+            'f_name' => 'Second',
+            'l_name' => 'Leader',
+        ]);
+        $this->actingAs($second, 'web');
+        StudentSchoolYear::create([
+            'student_id' => $second->student_id,
+            'team_id' => null,
+        ]);
+
+        foreach (['HYPERTEST', 'hypertest'] as $attempt) {
+            $response = $this->post('/team', [
+                'team_name' => $attempt,
+                'team_status' => 'on-going',
+            ]);
+            $response->assertSessionHasErrors('team_name');
+        }
+
+        $this->assertDatabaseMissing('team', ['team_name' => 'HYPERTEST']);
+        $this->assertDatabaseMissing('team', ['team_name' => 'hypertest']);
+    }
+
+    public function test_duplicate_team_name_is_rejected_when_posting_build_a_team(): void
+    {
+        $first = Student::create([
+            'email' => 'first2@my.cspc.edu.ph',
+            'f_name' => 'First',
+            'l_name' => 'Leader',
+        ]);
+        Team::create([
+            'team_name' => 'Innovators',
+            'team_status' => 'on-going',
+            'leader_id' => $first->student_id,
+        ]);
+
+        $second = Student::create([
+            'email' => 'second2@my.cspc.edu.ph',
+            'f_name' => 'Second',
+            'l_name' => 'Leader',
+        ]);
+        $this->actingAs($second, 'web');
+        StudentSchoolYear::create([
+            'student_id' => $second->student_id,
+            'team_id' => null,
+        ]);
+
+        $response = $this->post('/recruitment', [
+            'recruitment_goal' => 'build_a_team',
+            'team_name' => 'INNOVATORS',
+            'looking_for' => 'Need members',
+        ]);
+
+        $this->assertDatabaseMissing('team', ['team_name' => 'INNOVATORS']);
+    }
+
+    public function test_member_can_remind_me_later_on_leadership_transfer(): void
+    {
+        $leader = Student::create([
+            'email' => 'remind.leader@example.com',
+            'f_name' => 'Ivy',
+            'l_name' => 'Leader',
+        ]);
+
+        $member = Student::create([
+            'email' => 'remind.member@example.com',
+            'f_name' => 'Jack',
+            'l_name' => 'Member',
+            'student_number' => '2026-0041',
+            'course' => 'Bachelor of Science in Computer Science',
+            'year_section' => '4th · A',
+            'p_picture' => 'avatar-01',
+        ]);
+
+        $team = Team::create([
+            'team_name' => 'Team Remind',
+            'team_status' => 'on-going',
+            'leader_id' => $leader->student_id,
+        ]);
+
+        StudentSchoolYear::create(['student_id' => $leader->student_id, 'team_id' => $team->team_id]);
+        StudentSchoolYear::create(['student_id' => $member->student_id, 'team_id' => $team->team_id]);
+
+        $this->actingAs($leader, 'web');
+        $this->post('/team/transfer-leadership', ['new_leader_id' => $member->student_id]);
+
+        $requestNotif = Notification::where('student_id', $member->student_id)
+            ->where('type', 'leadership_transfer_request')
+            ->where('is_read', false)
+            ->first();
+        $this->assertNotNull($requestNotif);
+        $this->assertArrayNotHasKey('remind_me_at', $requestNotif->data ?? []);
+
+        // The popup appears on the team page before any reminder is set
+        $this->actingAs($member, 'web');
+        $page = $this->get(route('student.team'));
+        $page->assertOk();
+        $page->assertSee('Leadership Transfer Request');
+        $page->assertSee(route('team.leadership.remind-later', $requestNotif->id));
+        $page->assertSee('Remind Me Later');
+
+        // Member chooses "Remind Me Later" — sets a 3-hour reminder, request stays pending
+        $response = $this->post('/team/leadership/'.$requestNotif->id.'/remind-later', [], ['Accept' => 'application/json']);
+        $response->assertOk();
+
+        $requestNotif->refresh();
+        $this->assertNotNull($requestNotif->data['remind_me_at'] ?? null);
+        $this->assertTrue(
+            now()->diffInHours(Carbon::parse($requestNotif->data['remind_me_at'])) >= 2
+        );
+
+        // Leadership unchanged, request still pending
+        $this->assertDatabaseHas('team', ['team_id' => $team->team_id, 'leader_id' => $leader->student_id]);
+        $this->assertDatabaseHas('notifications', [
+            'student_id' => $member->student_id,
+            'type' => 'leadership_transfer_request',
+            'is_read' => false,
+        ]);
     }
 }

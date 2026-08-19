@@ -38,7 +38,6 @@ class RecruitmentTest extends TestCase
             'team_name' => 'Innovators',
             'looking_for' => 'Need a Frontend Developer',
             'tags' => json_encode(['Web Dev', 'UI Designer']),
-            'member_count' => 4,
         ]);
 
         $response->assertRedirect(route('student.team'));
@@ -58,7 +57,7 @@ class RecruitmentTest extends TestCase
         $this->assertEquals('build_a_team', $recruitment->recruitment_goal);
         $this->assertEquals('Need a Frontend Developer', $recruitment->looking_for);
         $this->assertEquals(['Web Dev', 'UI Designer'], $recruitment->roles);
-        $this->assertEquals(4, $recruitment->member_count);
+        $this->assertEquals(5, $recruitment->member_count);
     }
 
     public function test_student_can_publish_find_a_team_post(): void
@@ -594,7 +593,7 @@ class RecruitmentTest extends TestCase
         $response->assertStatus(403);
     }
 
-    public function test_member_count_must_be_between_3_and_5(): void
+    public function test_member_count_is_always_forced_to_5(): void
     {
         $student = Student::create([
             'email' => 'membercount@my.cspc.edu.ph',
@@ -620,16 +619,10 @@ class RecruitmentTest extends TestCase
             'member_count' => 2,
         ]);
 
-        $response->assertSessionHasErrors(['member_count']);
+        $response->assertSessionHas('status', 'Recruitment post published!');
 
-        $response = $this->post('/recruitment', [
-            'recruitment_goal' => 'build_a_team',
-            'team_name' => 'Test Team 2',
-            'tags' => json_encode(['Web Dev']),
-            'member_count' => 6,
-        ]);
-
-        $response->assertSessionHasErrors(['member_count']);
+        $recruitment = Recruitment::where('student_id', $student->student_id)->first();
+        $this->assertEquals(5, $recruitment->member_count);
     }
 
     public function test_build_a_team_post_creates_student_school_year_if_missing(): void

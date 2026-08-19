@@ -85,8 +85,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/teams/{team}', [TeamController::class, 'show']);
     Route::put('/teams/{team}', [TeamController::class, 'update']);
     Route::delete('/teams/{team}', [TeamController::class, 'destroy']);
-    Route::post('/teams/{team}/confirm', [TeamController::class, 'confirm']);
     Route::post('/teams/{team}/transfer-leadership', [TeamController::class, 'transferLeadership']);
+    Route::post('/team/leadership/{notification}/accept', [TeamController::class, 'acceptLeadership']);
+    Route::post('/team/leadership/{notification}/decline', [TeamController::class, 'declineLeadership']);
     Route::delete('/teams/{team}/members/{student}', [TeamController::class, 'removeMember']);
 
     // Recruitment

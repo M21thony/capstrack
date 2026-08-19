@@ -91,12 +91,11 @@ class InvitationController extends Controller
                 ['team_id' => $validated['team_id']]
             );
             // Notify team leader (receiver)
-            $receiver = Student::find($validated['receiver_id']);
             Notification::create([
                 'student_id' => $validated['receiver_id'],
                 'type' => 'request_received',
                 'title' => 'Join Request',
-                'message' => ($receiver ? $receiver->f_name.' '.$receiver->l_name : 'A student').' wants to join your team.',
+                'message' => ($student ? $student->f_name.' '.$student->l_name : 'A student').' wants to join your team.',
                 'link' => route('student.team'),
             ]);
         }
@@ -291,5 +290,50 @@ class InvitationController extends Controller
         return redirect()
             ->route('student.team')
             ->with('status', 'Invitation declined.');
+    }
+
+    public function popup(Request $request): JsonResponse
+    {
+        $student = $request->user();
+        $studentId = $student ? $student->student_id : 8;
+
+        $dismissed = (array) $request->session()->get('dismissed_invitations', []);
+
+        $items = TeamInvitation::with(['sender', 'team'])
+            ->where('receiver_id', $studentId)
+            ->where('status', 'pending')
+            ->latest('created_at')
+            ->get()
+            ->reject(fn ($invitation) => in_array($invitation->id, $dismissed))
+            ->values()
+            ->map(function ($invitation) {
+                $person = $invitation->sender;
+
+                return [
+                    'id' => $invitation->id,
+                    'type' => $invitation->type,
+                    'name' => trim(($person?->f_name ?? '').' '.($person?->l_name ?? '')) ?: ($person?->email ?? 'A student'),
+                    'avatar' => $person?->avatarUrl() ?? '',
+                    'email' => $person?->email ?? '',
+                    'meta' => trim((($person?->course ?? '').' '.($person?->year_section ?? ''))) ?: '',
+                    'team_name' => $invitation->team?->team_name ?? ($invitation->type === 'request' ? 'your team' : 'a team'),
+                    'time_ago' => $invitation->created_at?->diffForHumans(),
+                ];
+            });
+
+        return response()->json(['items' => $items]);
+    }
+
+    public function remindLater(Request $request, TeamInvitation $invitation): JsonResponse|RedirectResponse
+    {
+        $dismissed = (array) $request->session()->get('dismissed_invitations', []);
+        $dismissed[] = $invitation->id;
+        $request->session()->put('dismissed_invitations', array_values(array_unique($dismissed)));
+
+        if ($request->expectsJson()) {
+            return response()->json(['success' => true]);
+        }
+
+        return back();
     }
 }
