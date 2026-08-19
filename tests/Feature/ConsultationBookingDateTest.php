@@ -234,4 +234,76 @@ class ConsultationBookingDateTest extends TestCase
         $afterCancel->assertOk();
         $afterCancel->assertJson(['success' => true]);
     }
+
+    public function test_consultation_page_renders_when_a_booking_schedule_no_longer_exists(): void
+    {
+        // A booking whose schedule relation resolves to null (e.g. the
+        // real MySQL database has 5 rows like this in production, despite
+        // the FK being declared onDelete('cascade') - some path bypasses
+        // it). The view must gracefully show a dash instead of crashing on
+        // ->schedule->start_time.
+        //
+        // Simulated by nulling the loaded relation directly rather than by
+        // deleting the referenced row: SQLite (used in tests) actually
+        // enforces that FK, and disabling enforcement requires toggling a
+        // pragma that SQLite refuses to change mid-transaction - which
+        // RefreshDatabase always has one of active.
+        $student = Student::factory()->withCompleteProfile()->create(['email' => 'orphaned@my.cspc.edu.ph']);
+        $team = DB::table('team')->insertGetId(['team_name' => 'Team Orphaned', 'team_status' => 'on-going']);
+        DB::table('student_s_y')->insert([
+            'student_id' => $student->student_id,
+            'team_id' => $team,
+            'program' => 'BSCS',
+            'student_status' => 'Active',
+        ]);
+
+        $expertId = $this->makeExpert();
+
+        $scheduleId = DB::table('consultation_schedule')->insertGetId([
+            'expert_id' => $expertId,
+            'available_date' => 'Wednesday',
+            'start_time' => '13:00:00',
+            'end_time' => '14:00:00',
+            'consultation_limit' => 1,
+            'is_available' => true,
+            'recur' => 'once',
+            'specific_date' => now()->addDay()->toDateString(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $bookingId = DB::table('consultation_booking')->insertGetId([
+            'student_id' => $student->student_id,
+            'schedule_id' => $scheduleId,
+            'session_date' => now()->addDay()->toDateString(),
+            'booking_status' => 'scheduled',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $booking = \App\Models\ConsultationBooking::find($bookingId);
+        $booking->setRelation('schedule', null);
+        $orphanedBookings = collect([$booking]);
+
+        $this->actingAs($student, 'web');
+
+        $html = view('student.consultation', [
+            'experts' => collect(),
+            'defaultExpertId' => null,
+            'availableSlots' => collect(),
+            'fullOccurrences' => collect(),
+            'upcomingBookings' => $orphanedBookings,
+            'recentBookings' => collect(),
+            'teamId' => $team,
+            'student' => $student,
+            'teamHasActiveBooking' => false,
+        ])->render();
+
+        // The literal formatted date can only come from the server-rendered
+        // @forelse loop (the page's JS template for this same markup uses a
+        // ${...} placeholder, not a real date string), proving the loop
+        // actually ran for this booking rather than silently skipping it.
+        $this->assertStringContainsString($booking->session_date->format('M d, Y'), $html);
+        $this->assertStringContainsString('Team Orphaned', $html);
+    }
 }
