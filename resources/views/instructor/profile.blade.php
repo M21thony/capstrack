@@ -26,6 +26,16 @@
     </div>
   </div>
 
+  <div id="skeleton-content" class="sk-overlay">
+    <div class="card" style="max-width:420px">
+      <div class="sk" style="width:150px;height:16px;border-radius:4px;margin-bottom:16px"></div>
+      <div class="sk" style="width:100%;height:12px;border-radius:4px;margin-bottom:6px"></div>
+      <div class="sk" style="width:70%;height:12px;border-radius:4px;margin-bottom:16px"></div>
+      <div class="sk" style="width:100%;height:38px;border-radius:8px"></div>
+    </div>
+  </div>
+
+  <div id="real-content" style="display:none">
   <div class="content">
     <div class="card" style="max-width:420px">
       <div class="card-header"><span class="card-title">Profile Information</span></div>
@@ -36,9 +46,11 @@
       </button>
     </div>
   </div>
+  </div>
 </div>
 
 @include('instructor.partials.expert-profile')
+@include('instructor.partials.skeleton-toggle')
 
 <script>
 /* Mobile sidebar toggle */

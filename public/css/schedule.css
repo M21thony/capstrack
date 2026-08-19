@@ -866,3 +866,7 @@ select.f-input{cursor:pointer}
   .cal-day-label { padding: 6px 2px; font-size: 9px; }
   .legend-grid { grid-template-columns: 1fr; }
 }
+/* Skeleton - matches the shared instructor-portal loading pattern in expert.css */
+@keyframes sk-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+.sk-overlay { background: var(--bg); min-height: calc(100vh - 60px); padding: 20px; }
+.sk { background: linear-gradient(90deg, var(--bg4) 25%, var(--bg2) 50%, var(--bg4) 75%); background-size: 200% 100%; animation: sk-shimmer 1.5s ease-in-out infinite; border-radius: 8px; }

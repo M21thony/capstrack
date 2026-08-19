@@ -21,6 +21,23 @@
     <div class="topbar-actions"><div class="notif-btn"><svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg><div class="notif-dot"></div></div></div>
   </div>
 
+  <div id="skeleton-content" class="sk-overlay">
+    <div class="row" style="margin-bottom:16px;gap:8px">
+      <div class="sk" style="width:160px;height:34px;border-radius:8px"></div>
+      <div class="sk" style="width:150px;height:34px;border-radius:8px"></div>
+      <div class="sk" style="width:160px;height:34px;border-radius:8px"></div>
+      <span style="flex:1"></span>
+      <div class="sk" style="width:110px;height:34px;border-radius:8px"></div>
+    </div>
+    <div class="gap-12">
+      <div class="sk" style="height:96px;border-radius:12px;margin-bottom:12px"></div>
+      <div class="sk" style="height:96px;border-radius:12px;margin-bottom:12px"></div>
+      <div class="sk" style="height:96px;border-radius:12px;margin-bottom:12px"></div>
+      <div class="sk" style="height:72px;border-radius:12px"></div>
+    </div>
+  </div>
+
+  <div id="real-content" style="display:none">
   <div class="content">
     <div class="row" style="margin-bottom:16px;gap:8px">
       <select class="input" style="width:160px"><option>All Teams</option><option>Team Nexus</option><option>Team Alpha</option><option>Team Prism</option></select>
@@ -78,9 +95,11 @@
       </div>
     </div>
   </div>
+  </div>
 </div>
 
 @include('instructor.partials.expert-profile')
+@include('instructor.partials.skeleton-toggle')
 
 <script>
 /* Mobile sidebar toggle */
