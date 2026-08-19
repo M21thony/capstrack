@@ -306,4 +306,57 @@ class ConsultationBookingDateTest extends TestCase
         $this->assertStringContainsString($booking->session_date->format('M d, Y'), $html);
         $this->assertStringContainsString('Team Orphaned', $html);
     }
+
+    public function test_my_booked_dates_are_tagged_with_expert_id_not_shared_across_experts(): void
+    {
+        // Regression: the "you have a booking here" calendar dot used to be
+        // driven by a flat list of dates with no expert attached, so it
+        // showed identically no matter which expert was selected in the
+        // Target Expert dropdown - switching from the expert you actually
+        // booked with to a completely different one still showed the same
+        // booked-date dots, making it look like that other expert somehow
+        // shared the first expert's schedule.
+        $student = Student::factory()->withCompleteProfile()->create(['email' => 'taggedbooking@my.cspc.edu.ph']);
+        $team = DB::table('team')->insertGetId(['team_name' => 'Team Tagged', 'team_status' => 'on-going']);
+        DB::table('student_s_y')->insert([
+            'student_id' => $student->student_id,
+            'team_id' => $team,
+            'program' => 'BSCS',
+            'student_status' => 'Active',
+        ]);
+
+        $expertId = $this->makeExpert();
+
+        $scheduleId = DB::table('consultation_schedule')->insertGetId([
+            'expert_id' => $expertId,
+            'available_date' => 'Wednesday',
+            'start_time' => '13:00:00',
+            'end_time' => '14:00:00',
+            'consultation_limit' => 1,
+            'is_available' => true,
+            'recur' => 'once',
+            'specific_date' => now()->addDay()->toDateString(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        DB::table('consultation_booking')->insert([
+            'student_id' => $student->student_id,
+            'schedule_id' => $scheduleId,
+            'session_date' => now()->addDay()->toDateString(),
+            'booking_status' => 'scheduled',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $response = $this->actingAs($student, 'web')->get(route('student.consultation'));
+        $response->assertOk();
+
+        preg_match('/const myBookedDates = (\[.*?\]);/s', $response->getContent(), $matches);
+        $this->assertNotEmpty($matches, 'myBookedDates must be present in the rendered page.');
+
+        $myBookedDates = json_decode($matches[1], true);
+        $this->assertCount(1, $myBookedDates);
+        $this->assertSame($expertId, $myBookedDates[0]['expert_id'], 'Each booked date must carry the expert_id it was actually booked with.');
+    }
 }
