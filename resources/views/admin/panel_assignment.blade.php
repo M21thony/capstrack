@@ -922,11 +922,16 @@ async function saveWindow() {
     WINDOWS_BY_TYPE[defenseType] = json.data;
 
     const count = json.scheduled_count || 0;
-    if (count > 0) {
-      showWindowMsg(`Saved. Scheduled ${count} team${count === 1 ? '' : 's'} — refreshing...`, false);
+    const resolved = json.resolved_count || 0;
+
+    if (count > 0 || resolved > 0) {
+      const parts = [];
+      if (count > 0) parts.push(`scheduled ${count} team${count === 1 ? '' : 's'}`);
+      if (resolved > 0) parts.push(`fixed ${resolved} conflicting schedule${resolved === 1 ? '' : 's'}`);
+      showWindowMsg(`Saved — ${parts.join(', ')}. Refreshing...`, false);
       setTimeout(() => window.location.reload(), 1200);
     } else {
-      showWindowMsg('Saved. No unscheduled panels to assign yet.', false);
+      showWindowMsg('Saved. No unscheduled panels or conflicts to fix.', false);
     }
   } catch (e) {
     showWindowMsg('Could not reach the server.', true);

@@ -320,6 +320,7 @@ class AdminPanelAssignmentController extends Controller
         $window = DefenseWindow::updateOrCreate(['defense_type' => $defenseType], $validated);
 
         $scheduledCount = $this->generateScheduleForWindow($window);
+        $resolvedCount = $this->resolveScheduleConflicts($window);
 
         return response()->json([
             'success' => true,
@@ -329,7 +330,53 @@ class AdminPanelAssignmentController extends Controller
                 'end_date' => $window->end_date->toDateString(),
             ],
             'scheduled_count' => $scheduledCount,
+            'resolved_count' => $resolvedCount,
         ]);
+    }
+
+    // Re-saving the window is also the admin's "fix any conflicts" button:
+    // finds schedules that ended up double-booked into the exact same
+    // (date, time, venue) - which the current findSlotForPanel() can no
+    // longer produce, but older rows saved before a bug fix (or a manual
+    // edit) can still be sitting on - and re-places every one of them
+    // except the earliest via the same conflict-aware algorithm used for
+    // brand-new teams.
+    private function resolveScheduleConflicts(DefenseWindow $window): int
+    {
+        $scheduled = DefenseSchedule::where('defense_type', $window->defense_type)
+            ->whereNotNull('schedule_date')
+            ->whereNotNull('venue')
+            ->with('panels')
+            ->orderBy('defense_id')
+            ->get();
+
+        $toReplace = $scheduled
+            ->groupBy(fn ($s) => $s->schedule_date->toDateTimeString().'|'.$s->venue)
+            ->filter(fn ($group) => $group->count() > 1)
+            ->flatMap(fn ($group) => $group->slice(1));
+
+        $resolvedCount = 0;
+
+        foreach ($toReplace as $schedule) {
+            $expertIds = $schedule->panels->pluck('expert_id')->all();
+
+            try {
+                $slot = $this->findSlotForPanel($window, $expertIds, $schedule->defense_id);
+            } catch (\RuntimeException $e) {
+                // Window's full - leave this one where it is rather than
+                // losing its schedule entirely.
+                continue;
+            }
+
+            $schedule->update([
+                'schedule_date' => $slot['schedule_date'],
+                'end_date' => $slot['end_date'],
+                'venue' => $slot['venue'],
+            ]);
+            $resolvedCount++;
+        }
+
+        return $resolvedCount;
     }
 
     // Assigning a panel to a team only ever clears its schedule to
@@ -376,15 +423,19 @@ class AdminPanelAssignmentController extends Controller
     // hold every time instead of only "usually" holding.
     //
     // 1. If this exact panel (same expert set) already has a slot booked
-    //    within this defense_type's window, reuse it - this is what lets
-    //    one panel judge several teams back-to-back in the same block.
-    // 2. Otherwise scan each day in the window, each of the day's four
-    //    fixed 2-hour blocks (self::TIME_SLOTS), each venue in order, and
-    //    return the first (date, time, venue) where no OTHER panel
-    //    already holds that venue in that exact block and none of these
-    //    experts already sit on a different panel in that exact block
-    //    (any venue). Two different panels CAN share the same day, just
-    //    not the same block.
+    //    within this defense_type's window, reuse that SAME day and venue
+    //    but find the next block on it this panel isn't already sitting in
+    //    - this is what lets one panel judge several teams back-to-back in
+    //    the same room without literally double-booking them into the same
+    //    block. Falls through to a later existing day of theirs, if they
+    //    have more than one, once the current day's four blocks are full.
+    // 2. Otherwise (or once every day this panel already has is full) scan
+    //    each day in the window, each of the day's four fixed 2-hour blocks
+    //    (self::TIME_SLOTS), each venue in order, and return the first
+    //    (date, time, venue) where no OTHER panel already holds that venue
+    //    in that exact block and none of these experts already sit on a
+    //    different panel in that exact block (any venue). Two different
+    //    panels CAN share the same day, just not the same block.
     private function findSlotForPanel(DefenseWindow $window, array $expertIds, ?int $excludeScheduleId = null): array
     {
         $sortedExpertIds = collect($expertIds)->sort()->values()->all();
@@ -399,15 +450,50 @@ class AdminPanelAssignmentController extends Controller
             ->with('panels')
             ->get();
 
-        foreach ($schedulesInWindow->where('defense_type', $window->defense_type) as $existing) {
-            $existingExpertIds = $existing->panels->pluck('expert_id')->sort()->values()->all();
+        // True when this exact panel could sit in $venue at $slotStart
+        // without literally overlapping a DIFFERENT panel (either that
+        // panel already holds the venue then, or one of these experts is
+        // already seated on that other panel then). This panel's own other
+        // bookings never count as a conflict with itself.
+        $isFree = function (Carbon $slotStart, string $venue) use ($schedulesInWindow, $sortedExpertIds): bool {
+            $conflictingPanelsThisSlot = $schedulesInWindow
+                ->filter(fn ($s) => $s->schedule_date->equalTo($slotStart))
+                ->filter(fn ($s) => $s->panels->pluck('expert_id')->sort()->values()->all() !== $sortedExpertIds);
 
-            if ($existingExpertIds === $sortedExpertIds) {
-                return [
-                    'schedule_date' => $existing->schedule_date,
-                    'end_date' => $existing->end_date,
-                    'venue' => $existing->venue,
-                ];
+            $venueTaken = $conflictingPanelsThisSlot->contains(fn ($s) => $s->venue === $venue);
+
+            $expertConflict = $conflictingPanelsThisSlot->contains(
+                fn ($s) => count(array_intersect($sortedExpertIds, $s->panels->pluck('expert_id')->all())) > 0
+            );
+
+            return ! $venueTaken && ! $expertConflict;
+        };
+
+        $panelSchedules = $schedulesInWindow->where('defense_type', $window->defense_type)
+            ->filter(fn ($s) => $s->panels->pluck('expert_id')->sort()->values()->all() === $sortedExpertIds)
+            ->sortBy('schedule_date');
+
+        foreach ($panelSchedules->groupBy(fn ($s) => $s->schedule_date->toDateString()) as $daySchedules) {
+            $day = $daySchedules->first()->schedule_date->copy()->startOfDay();
+            $venue = $daySchedules->first()->venue;
+
+            foreach (self::TIME_SLOTS as $time) {
+                $slotStart = $day->copy()->setTimeFromTimeString($time);
+
+                // $isFree only rules out OTHER panels sitting here (that's
+                // the point - this panel's own bookings must never count as
+                // a conflict with itself) - so a block this panel already
+                // occupies still needs its own explicit check, or every
+                // team sharing the panel would just land back in block one.
+                $alreadyUsedByThisPanel = $daySchedules->contains(fn ($s) => $s->schedule_date->equalTo($slotStart));
+
+                if (! $alreadyUsedByThisPanel && $isFree($slotStart, $venue)) {
+                    return [
+                        'schedule_date' => $slotStart,
+                        'end_date' => $slotStart->copy()->addHours(self::SESSION_HOURS),
+                        'venue' => $venue,
+                    ];
+                }
             }
         }
 
@@ -415,20 +501,8 @@ class AdminPanelAssignmentController extends Controller
             foreach (self::TIME_SLOTS as $time) {
                 $slotStart = $date->copy()->setTimeFromTimeString($time);
 
-                $sameSlot = $schedulesInWindow->filter(fn ($s) => $s->schedule_date->equalTo($slotStart));
-
-                $conflictingPanelsThisSlot = $sameSlot->filter(
-                    fn ($s) => $s->panels->pluck('expert_id')->sort()->values()->all() !== $sortedExpertIds
-                );
-
                 foreach (self::VENUES as $venue) {
-                    $venueTaken = $conflictingPanelsThisSlot->contains(fn ($s) => $s->venue === $venue);
-
-                    $expertConflict = $conflictingPanelsThisSlot->contains(
-                        fn ($s) => count(array_intersect($sortedExpertIds, $s->panels->pluck('expert_id')->all())) > 0
-                    );
-
-                    if ($venueTaken || $expertConflict) {
+                    if (! $isFree($slotStart, $venue)) {
                         continue;
                     }
 
