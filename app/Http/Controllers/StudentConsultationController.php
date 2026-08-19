@@ -41,7 +41,7 @@ class StudentConsultationController extends Controller
                 ->join('expert_roles as er', 'er.expert_id', '=', 'e.expert_id')
                 ->join('roles as r', 'r.role_id', '=', 'er.role_id')
                 ->where('a.team_id', $teamId)
-                ->where('a.status', 'accepted')
+                ->where('a.status', 'approved')
                 ->where('e.approved_status', true)
                 ->whereRaw('LOWER(r.role_name) IN (?, ?, ?)', ['adviser', 'consultant', 'grammarian'])
                 ->select('e.expert_id', 'e.first_name', 'e.last_name', 'r.role_name')
