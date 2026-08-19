@@ -33,6 +33,7 @@ Route::middleware(['web', 'expert.auth', 'expert.admin'])
             // the team route-model-binding parameter.
             Route::get('/windows', [AdminPanelAssignmentController::class, 'indexWindows'])->name('windows.index');
             Route::put('/windows/{defenseType}', [AdminPanelAssignmentController::class, 'updateWindow'])->name('windows.update');
+            Route::put('/schedule/{defense}', [AdminPanelAssignmentController::class, 'updateSchedule'])->name('schedule.update');
             Route::post('/{team}', [AdminPanelAssignmentController::class, 'store'])->name('store');
             Route::get('/{team}/suggest', [AdminPanelAssignmentController::class, 'suggestExperts'])->name('suggest');
         });

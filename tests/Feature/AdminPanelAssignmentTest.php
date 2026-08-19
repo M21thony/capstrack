@@ -422,4 +422,172 @@ class AdminPanelAssignmentTest extends TestCase
         $response->assertStatus(200)
             ->assertJson(['success' => true, 'data' => []]);
     }
+
+    private function scheduleWithPanel(Team $team, string $defenseType, CapstoneExpert $chair, string $date, string $venue): DefenseSchedule
+    {
+        $schedule = DefenseSchedule::create([
+            'team_id' => $team->team_id,
+            'defense_type' => $defenseType,
+            'schedule_date' => $date,
+            'venue' => $venue,
+        ]);
+
+        DefensePanel::create([
+            'defense_id' => $schedule->defense_id,
+            'expert_id' => $chair->expert_id,
+            'panel_role' => 'Panel Chair',
+            'created_at' => now(),
+        ]);
+
+        return $schedule;
+    }
+
+    public function test_admin_can_manually_override_schedule_without_conflict(): void
+    {
+        $team = $this->makeTeam();
+        $chair = $this->makeExpert();
+        $schedule = $this->scheduleWithPanel($team, 'Title Defense', $chair, '2027-03-10', 'Mac Lab');
+
+        $response = $this->actingAs($this->admin, 'expert')->putJson(
+            route('api.admin.panel_assignment.schedule.update', $schedule->defense_id),
+            ['schedule_date' => '2027-03-15', 'venue' => 'Open Lab']
+        );
+
+        $response->assertOk()->assertJson(['success' => true]);
+
+        $schedule->refresh();
+        $this->assertEquals('2027-03-15', $schedule->schedule_date->toDateString());
+        $this->assertEquals('Open Lab', $schedule->venue);
+    }
+
+    public function test_override_with_venue_conflict_requires_confirmation_and_does_not_save(): void
+    {
+        $chairA = $this->makeExpert();
+        $chairB = $this->makeExpert();
+        $teamA = $this->makeTeam(['team_name' => 'Team A']);
+        $teamB = $this->makeTeam(['team_name' => 'Team B']);
+
+        // Team B already booked into Mac Lab on 2027-03-15.
+        $this->scheduleWithPanel($teamB, 'Title Defense', $chairB, '2027-03-15', 'Mac Lab');
+        $scheduleA = $this->scheduleWithPanel($teamA, 'Title Defense', $chairA, '2027-03-10', 'Open Lab');
+
+        $response = $this->actingAs($this->admin, 'expert')->putJson(
+            route('api.admin.panel_assignment.schedule.update', $scheduleA->defense_id),
+            ['schedule_date' => '2027-03-15', 'venue' => 'Mac Lab']
+        );
+
+        $response->assertStatus(409);
+        $response->assertJson(['success' => false, 'requires_confirmation' => true]);
+        $this->assertNotEmpty($response->json('conflicts'));
+
+        $scheduleA->refresh();
+        $this->assertEquals('2027-03-10', $scheduleA->schedule_date->toDateString());
+        $this->assertEquals('Open Lab', $scheduleA->venue);
+    }
+
+    public function test_override_with_venue_conflict_confirmed_saves_anyway(): void
+    {
+        $chairA = $this->makeExpert();
+        $chairB = $this->makeExpert();
+        $teamA = $this->makeTeam(['team_name' => 'Team A']);
+        $teamB = $this->makeTeam(['team_name' => 'Team B']);
+
+        $this->scheduleWithPanel($teamB, 'Title Defense', $chairB, '2027-03-15', 'Mac Lab');
+        $scheduleA = $this->scheduleWithPanel($teamA, 'Title Defense', $chairA, '2027-03-10', 'Open Lab');
+
+        $response = $this->actingAs($this->admin, 'expert')->putJson(
+            route('api.admin.panel_assignment.schedule.update', $scheduleA->defense_id),
+            ['schedule_date' => '2027-03-15', 'venue' => 'Mac Lab', 'confirm' => true]
+        );
+
+        $response->assertOk()->assertJson(['success' => true]);
+
+        $scheduleA->refresh();
+        $this->assertEquals('2027-03-15', $scheduleA->schedule_date->toDateString());
+        $this->assertEquals('Mac Lab', $scheduleA->venue);
+    }
+
+    public function test_override_with_double_booked_panelist_requires_confirmation(): void
+    {
+        $sharedExpert = $this->makeExpert();
+        $teamA = $this->makeTeam(['team_name' => 'Team A']);
+        $teamB = $this->makeTeam(['team_name' => 'Team B']);
+
+        // Same expert already chairing Team B's panel on 2027-03-15.
+        $this->scheduleWithPanel($teamB, 'Title Defense', $sharedExpert, '2027-03-15', 'Mac Lab');
+        $scheduleA = $this->scheduleWithPanel($teamA, 'Title Defense', $sharedExpert, '2027-03-10', 'Open Lab');
+
+        $response = $this->actingAs($this->admin, 'expert')->putJson(
+            route('api.admin.panel_assignment.schedule.update', $scheduleA->defense_id),
+            ['schedule_date' => '2027-03-15', 'venue' => 'Open Lab']
+        );
+
+        $response->assertStatus(409);
+        $response->assertJson(['success' => false, 'requires_confirmation' => true]);
+        $conflicts = $response->json('conflicts');
+        $this->assertNotEmpty($conflicts);
+        $this->assertStringContainsString($sharedExpert->name, $conflicts[0]);
+    }
+
+    public function test_override_rejects_invalid_venue(): void
+    {
+        $team = $this->makeTeam();
+        $chair = $this->makeExpert();
+        $schedule = $this->scheduleWithPanel($team, 'Title Defense', $chair, '2027-03-10', 'Mac Lab');
+
+        $response = $this->actingAs($this->admin, 'expert')->putJson(
+            route('api.admin.panel_assignment.schedule.update', $schedule->defense_id),
+            ['schedule_date' => '2027-03-15', 'venue' => 'Broom Closet']
+        );
+
+        $response->assertStatus(422);
+    }
+
+    public function test_index_renders_override_edit_button_for_scheduled_team(): void
+    {
+        $team = $this->makeTeam();
+        $chair = $this->makeExpert();
+        $schedule = $this->scheduleWithPanel($team, 'Title Defense', $chair, '2027-03-10', 'Mac Lab');
+
+        $response = $this->actingAs($this->admin, 'expert')
+            ->get(route('admin.panel_assignment'));
+
+        $response->assertOk();
+        $response->assertSee("openScheduleModal({$team->team_id}, {$schedule->defense_id}, '2027-03-10', 'Mac Lab')", false);
+    }
+
+    public function test_index_omits_override_button_for_unscheduled_team(): void
+    {
+        $team = $this->makeTeam();
+
+        $response = $this->actingAs($this->admin, 'expert')
+            ->get(route('admin.panel_assignment'));
+
+        $response->assertOk();
+        // "cell-schedule-edit" and "openScheduleModal(" alone both always
+        // appear (the client-side re-render function's own JS source
+        // contains that exact markup as a template literal using
+        // ${teamId}, not a literal number) - the tell that Blade actually
+        // rendered a per-row button is the real numeric team_id baked in.
+        $response->assertDontSee("openScheduleModal({$team->team_id}, ", false);
+    }
+
+    public function test_non_admin_expert_cannot_override_schedule(): void
+    {
+        $team = $this->makeTeam();
+        $chair = $this->makeExpert();
+        $schedule = $this->scheduleWithPanel($team, 'Title Defense', $chair, '2027-03-10', 'Mac Lab');
+
+        $nonAdmin = $this->makeExpert(['is_admin' => false]);
+
+        $response = $this->actingAs($nonAdmin, 'expert')->putJson(
+            route('api.admin.panel_assignment.schedule.update', $schedule->defense_id),
+            ['schedule_date' => '2027-03-15', 'venue' => 'Open Lab']
+        );
+
+        $response->assertStatus(403);
+
+        $schedule->refresh();
+        $this->assertEquals('2027-03-10', $schedule->schedule_date->toDateString());
+    }
 }

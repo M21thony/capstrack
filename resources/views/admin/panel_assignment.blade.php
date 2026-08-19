@@ -101,6 +101,48 @@
         </div>
       </div>
 
+      <!-- Manual schedule override modal — lets the admin override the
+           auto-generated day/venue for one team's defense stage. A
+           conflict (double-booked venue or panelist) doesn't block the
+           save; it's shown so the admin can confirm and override anyway. -->
+      <div id="schedule-modal" style="display:none;position:fixed;inset:0;background:rgba(24,25,31,0.6);z-index:100;align-items:center;justify-content:center">
+        <div style="background:#fff;border-radius:14px;padding:24px;width:420px;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+            <div style="font-size:15px;font-weight:600;color:var(--text)">Override Schedule</div>
+            <button onclick="closeScheduleModal()" style="background:none;border:none;font-size:22px;color:var(--text3);cursor:pointer;line-height:1">&times;</button>
+          </div>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:16px">
+            Manually set this team's day and venue, overriding what the automatic scheduler assigned.
+          </div>
+          <div id="schedule-modal-conflicts" style="display:none;font-size:12px;background:rgba(220,38,38,0.08);border:1px solid rgba(220,38,38,0.25);color:#b91c1c;border-radius:8px;padding:10px 12px;margin-bottom:14px">
+            <div style="font-weight:600;margin-bottom:6px">This conflicts with an existing booking:</div>
+            <ul id="schedule-modal-conflicts-list" style="margin:0;padding-left:16px"></ul>
+          </div>
+
+          <div class="row" style="gap:10px">
+            <div class="form-group" style="flex:1">
+              <label class="label">Date</label>
+              <input class="input" type="date" id="schedule-modal-date"/>
+            </div>
+            <div class="form-group" style="flex:1">
+              <label class="label">Venue</label>
+              <select class="input" id="schedule-modal-venue">
+                <option value="Mac Lab">Mac Lab</option>
+                <option value="Open Lab">Open Lab</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="display:flex;gap:8px;margin-top:16px">
+            <button class="btn btn-primary" style="flex:1;justify-content:center;font-size:13px" id="schedule-save-btn" onclick="saveScheduleOverride()">
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              <span id="schedule-save-btn-label">Save</span>
+            </button>
+            <button class="btn btn-ghost" style="font-size:13px;color:var(--text2);border-color:var(--border)" onclick="closeScheduleModal()">Cancel</button>
+          </div>
+        </div>
+      </div>
+
       <!-- Panel assignment modal overlay -->
       <div id="panel-modal" style="display:none;position:fixed;inset:0;background:rgba(24,25,31,0.6);z-index:100;align-items:center;justify-content:center">
         <div style="background:#fff;border-radius:14px;padding:24px;width:520px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
@@ -228,7 +270,16 @@
                 <td class="cell-chair" style="font-size:12px;{{ $chair ? 'color:var(--text)' : 'color:var(--text3);font-style:italic' }}">{{ $chair?->expert?->name ?? 'Not assigned' }}</td>
                 <td class="cell-member1" style="font-size:12px;{{ $member1 ? 'color:var(--text)' : 'color:var(--text3);font-style:italic' }}">{{ $member1?->expert?->name ?? 'Not assigned' }}</td>
                 <td class="cell-member2" style="font-size:12px;{{ $member2 ? 'color:var(--text)' : 'color:var(--text3);font-style:italic' }}">{{ $member2?->expert?->name ?? 'Not assigned' }}</td>
-                <td class="cell-schedule" style="font-size:12px;color:var(--text2)">{{ $latestSchedule?->schedule_date ? $latestSchedule->schedule_date->format('M j, Y').' · '.$latestSchedule->venue : '—' }}</td>
+                <td class="cell-schedule" style="font-size:12px;color:var(--text2)">
+                  @if ($latestSchedule?->schedule_date)
+                    <span class="cell-schedule-text">{{ $latestSchedule->schedule_date->format('M j, Y').' · '.$latestSchedule->venue }}</span>
+                    <button type="button" class="cell-schedule-edit" onclick="openScheduleModal({{ $team->team_id }}, {{ $latestSchedule->defense_id }}, '{{ $latestSchedule->schedule_date->toDateString() }}', '{{ $latestSchedule->venue }}')" title="Override day/venue" style="background:none;border:none;color:var(--text3);cursor:pointer;padding:2px 4px;vertical-align:middle">
+                      <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    </button>
+                  @else
+                    <span class="cell-schedule-text">—</span>
+                  @endif
+                </td>
                 <td class="cell-status"><span class="badge {{ $chair ? 'badge-green' : 'badge-red' }}" style="font-size:10px">{{ $chair ? 'Assigned' : 'Unassigned' }}</span></td>
                 <td>
                   <button class="btn btn-primary cell-assign-btn" style="font-size:10px;padding:4px 10px" onclick="openPanelModal({{ $team->team_id }})">
@@ -253,6 +304,18 @@
     </div>
   </div>
 </div>
+
+<div id="pa-toast" style="
+  position:fixed;bottom:24px;right:24px;z-index:9999;
+  background:var(--bg2,#1e1e2e);color:var(--text,#e0e0e0);
+  padding:12px 18px;border-radius:10px;border-left:4px solid var(--accent,#c9a82c);
+  font-size:13px;font-family:'DM Sans',sans-serif;box-shadow:0 4px 24px rgba(0,0,0,.4);
+  display:flex;align-items:center;gap:10px;
+  opacity:0;transform:translateY(10px);transition:opacity .25s,transform .25s;
+  pointer-events:none;">
+  <span id="pa-toast-msg"></span>
+</div>
+<style>#pa-toast.show{opacity:1;transform:translateY(0);pointer-events:auto}</style>
 
 <script>
 const csrfToken = document.querySelector('meta[name="csrf-token"]');
@@ -368,6 +431,23 @@ function formatScheduleText(schedule) {
   return dateLabel + ' · ' + schedule.venue;
 }
 
+function isoDateOnly(schedule) {
+  // schedule_date comes through as 'YYYY-MM-DDTHH:MM' — just the date part.
+  return schedule && schedule.schedule_date ? schedule.schedule_date.slice(0, 10) : null;
+}
+
+function scheduleCellHtml(teamId, schedule) {
+  const text = formatScheduleText(schedule);
+  if (!text || !schedule.defense_id) {
+    return `<span class="cell-schedule-text">${text || '—'}</span>`;
+  }
+  const dateOnly = isoDateOnly(schedule);
+  return `<span class="cell-schedule-text">${text}</span>` +
+    `<button type="button" class="cell-schedule-edit" onclick="openScheduleModal(${teamId}, ${schedule.defense_id}, '${dateOnly}', '${schedule.venue}')" title="Override day/venue" style="background:none;border:none;color:var(--text3);cursor:pointer;padding:2px 4px;vertical-align:middle">` +
+    `<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>` +
+    `</button>`;
+}
+
 function fillModalFromSchedule(defenseType) {
   const team = TEAMS_BY_ID[currentTeamId];
   const schedule = team.schedules.find(s => s.defense_type === defenseType);
@@ -474,6 +554,7 @@ function updateTeamRow(teamId, scheduleData) {
   const idx = team.schedules.findIndex(s => s.defense_type === scheduleData.defense_type);
   const panelByRole = Object.fromEntries(scheduleData.panels.map(p => [p.panel_role, p]));
   const updated = {
+    defense_id: scheduleData.defense_id,
     defense_type: scheduleData.defense_type,
     schedule_date: scheduleData.schedule_date ? scheduleData.schedule_date.replace(' ', 'T').slice(0, 16) : null,
     venue: scheduleData.venue,
@@ -506,7 +587,7 @@ function updateTeamRow(teamId, scheduleData) {
   m2Cell.style.fontStyle = m2Name ? 'normal' : 'italic';
 
   const scheduleCell = row.querySelector('.cell-schedule');
-  scheduleCell.textContent = formatScheduleText(updated) || '—';
+  scheduleCell.innerHTML = scheduleCellHtml(teamId, updated);
 
   const statusBadge = row.querySelector('.cell-status .badge');
   statusBadge.textContent = chairName ? 'Assigned' : 'Unassigned';
@@ -515,6 +596,73 @@ function updateTeamRow(teamId, scheduleData) {
 
   const assignBtnLabel = row.querySelector('.assign-btn-label');
   if (assignBtnLabel) assignBtnLabel.textContent = chairName ? 'Update' : 'Assign';
+}
+
+// ── Manual schedule override ──────────────────────────────────────────────
+let currentScheduleTeamId = null;
+let currentScheduleDefenseId = null;
+let scheduleOverrideConfirmed = false;
+
+function openScheduleModal(teamId, defenseId, dateStr, venue) {
+  currentScheduleTeamId = teamId;
+  currentScheduleDefenseId = defenseId;
+  scheduleOverrideConfirmed = false;
+
+  document.getElementById('schedule-modal-date').value = dateStr || '';
+  document.getElementById('schedule-modal-venue').value = venue || 'Mac Lab';
+  document.getElementById('schedule-modal-conflicts').style.display = 'none';
+  document.getElementById('schedule-save-btn-label').textContent = 'Save';
+
+  document.getElementById('schedule-modal').style.display = 'flex';
+}
+
+function closeScheduleModal() {
+  document.getElementById('schedule-modal').style.display = 'none';
+  currentScheduleTeamId = null;
+  currentScheduleDefenseId = null;
+  scheduleOverrideConfirmed = false;
+}
+
+async function saveScheduleOverride() {
+  if (!currentScheduleDefenseId) return;
+
+  const date = document.getElementById('schedule-modal-date').value;
+  const venue = document.getElementById('schedule-modal-venue').value;
+  if (!date) { showToast('Please pick a date.', 'error'); return; }
+
+  const btn = document.getElementById('schedule-save-btn');
+  btn.disabled = true;
+
+  try {
+    const res = await fetch(`/api/admin/panel_assignment/schedule/${currentScheduleDefenseId}`, {
+      method: 'PUT',
+      headers: { 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ schedule_date: date, venue: venue, confirm: scheduleOverrideConfirmed }),
+    });
+    const json = await res.json();
+
+    if (res.status === 409 && json.requires_confirmation) {
+      const list = document.getElementById('schedule-modal-conflicts-list');
+      list.innerHTML = json.conflicts.map(c => `<li>${c}</li>`).join('');
+      document.getElementById('schedule-modal-conflicts').style.display = 'block';
+      document.getElementById('schedule-save-btn-label').textContent = 'Save Anyway';
+      scheduleOverrideConfirmed = true;
+      return;
+    }
+
+    if (!res.ok || !json.success) {
+      showToast(json.message || 'Could not save this schedule. Please try again.', 'error');
+      return;
+    }
+
+    updateTeamRow(currentScheduleTeamId, json.data);
+    showToast('Schedule updated.');
+    closeScheduleModal();
+  } catch (e) {
+    showToast('Could not reach the server. Please try again.', 'error');
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 // ── Defense Window (single form, reused per defense type) ────────────────
@@ -640,6 +788,16 @@ function closeSidebar() {
   sidebarEl.classList.remove('mobile-open');
   sidebarOverlay.classList.remove('open');
   document.body.style.overflow = '';
+}
+
+let paToastTimer;
+function showToast(msg, type = 'success') {
+  const toast = document.getElementById('pa-toast');
+  document.getElementById('pa-toast-msg').textContent = msg;
+  toast.style.borderLeftColor = type === 'error' ? 'var(--red,#dc2626)' : 'var(--accent,#c9a82c)';
+  toast.classList.add('show');
+  clearTimeout(paToastTimer);
+  paToastTimer = setTimeout(() => toast.classList.remove('show'), 3500);
 }
 </script>
 </body>
