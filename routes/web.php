@@ -91,6 +91,7 @@ Route::middleware(['expert.auth', 'expert.approved', 'no.cache', 'track.expert']
     Route::view('/consultations', 'instructor.consultations')->name('consultations');
     Route::get('/progress', [InstructorProgressController::class, 'index'])->name('progress');
     Route::get('/profile', [InstructorProfileController::class, 'index'])->name('profile');
+    Route::post('/profile', [InstructorProfileController::class, 'update'])->name('profile.update');
     Route::view('/schedule', 'instructor.schedule')->name('schedule');
     Route::get('/grading', [GradingController::class, 'index'])->name('grading');
     Route::get('/grading/{defense}', [GradingController::class, 'show'])->name('grading.show');

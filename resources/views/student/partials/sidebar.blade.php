@@ -199,9 +199,9 @@
 </div>
 
 <style>
-  .pm-close-btn { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; padding: 0; background-color: #f1f5f9; color: #64748b; border: none; border-radius: 50%; cursor: pointer; transition: all 0.15s ease-in-out; outline: none; }
-  .pm-close-btn:hover { background-color: #e2e8f0; color: #1e293b; transform: scale(1.05); }
-  .pm-close-btn:active { background-color: #cbd5e1; transform: scale(0.95); }
+  .pm-close-btn { display: inline-flex; align-items: center; justify-content: center; margin-left: auto; flex-shrink: 0; padding: 4px; background: none; color: rgba(255,255,255,0.4); border: none; line-height: 1; cursor: pointer; transition: color 0.13s ease-in-out; outline: none; }
+  .pm-close-btn:hover { color: rgba(255,255,255,0.85); }
+  .pm-close-btn svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 2.5; }
   .pm-edit-profile-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; flex: 1; padding: 10px 16px; background-color: #2563eb; color: #ffffff !important; font-size: 13px; font-weight: 600; text-decoration: none; border-radius: 8px; border: none; transition: background-color 0.15s ease, transform 0.1s ease; box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2); text-align: center; }
   .pm-edit-profile-btn:hover { background-color: #1d4ed8; box-shadow: 0 4px 6px rgba(37, 99, 235, 0.3); }
   .pm-edit-profile-btn:active { transform: scale(0.98); }
@@ -232,7 +232,10 @@
       </div>
       <div class="pm-field">
         <div class="pm-label">Institutional Email</div>
-        <div class="pm-value readonly">{{ $student->email }}</div>
+        <div class="pm-value readonly">
+          <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          {{ $student->email }}
+        </div>
       </div>
       <div class="pm-divider"></div>
       <div class="pm-field">
