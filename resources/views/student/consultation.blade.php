@@ -183,8 +183,8 @@
                 </div>
               </div>
               <div class="appt-meta">
-                <span><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg>{{ $booking->session_date ? $booking->session_date->format('M d, Y') : $booking->schedule->available_date }}</span>
-                <span><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>{{ \Carbon\Carbon::parse($booking->schedule->start_time)->format('h:i A') }}</span>
+                <span><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg>{{ $booking->session_date ? $booking->session_date->format('M d, Y') : ($booking->schedule?->available_date ?? '—') }}</span>
+                <span><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>{{ $booking->schedule?->start_time ? \Carbon\Carbon::parse($booking->schedule->start_time)->format('h:i A') : '—' }}</span>
               </div>
               <div class="appt-team">Team: {{ $booking->team->team_name ?? 'N/A' }}</div>
             </div>
@@ -211,8 +211,8 @@
                 </div>
               </div>
               <div class="appt-meta">
-                <span><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg>{{ $booking->session_date ? $booking->session_date->format('M d, Y') : $booking->schedule->available_date }}</span>
-                <span><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>{{ \Carbon\Carbon::parse($booking->schedule->start_time)->format('h:i A') }}</span>
+                <span><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg>{{ $booking->session_date ? $booking->session_date->format('M d, Y') : ($booking->schedule?->available_date ?? '—') }}</span>
+                <span><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>{{ $booking->schedule?->start_time ? \Carbon\Carbon::parse($booking->schedule->start_time)->format('h:i A') : '—' }}</span>
               </div>
               <div class="appt-team">Team: {{ $booking->team->team_name ?? 'N/A' }}</div>
             </div>
