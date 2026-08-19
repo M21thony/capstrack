@@ -114,7 +114,7 @@ class InvitationController extends Controller
         $student = $request->user();
         $studentId = $student->student_id;
 
-        $memberRoleId = StudentRole::where('s_role_name', 'Member')->value('s_role_id');
+        $memberRoleId = StudentRole::nextAvailableMemberRoleId($invitation->team_id);
 
         if ($invitation->type === 'invite') {
             if ($invitation->receiver_id !== $studentId) {

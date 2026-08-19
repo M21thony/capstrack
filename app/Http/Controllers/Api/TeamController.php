@@ -60,13 +60,11 @@ class TeamController extends Controller
             'leader_id' => $student->student_id,
         ]);
 
-        $leaderRoleId = StudentRole::where('s_role_name', 'Leader')->value('s_role_id');
-
         DB::table('student_s_y')
             ->where('student_id', $student->student_id)
             ->update([
                 'team_id' => $team->team_id,
-                's_role_id' => $leaderRoleId,
+                's_role_id' => StudentRole::leaderRoleId(),
             ]);
 
         $recruitment = Recruitment::where('student_id', $student->student_id)
@@ -459,11 +457,15 @@ class TeamController extends Controller
             ->where('recruitment_goal', '!=', 'build_a_team')
             ->delete();
 
-        $leaderRoleId = StudentRole::where('s_role_name', 'Leader')->value('s_role_id');
-        $memberRoleId = StudentRole::where('s_role_name', 'Member')->value('s_role_id');
+        // There's no separate "Leader" role - Project Head/Network Engineer
+        // is the leader role, and the other two are member roles. On
+        // transfer, the new leader takes the Project Head role and the
+        // outgoing leader takes over whatever specific role the new leader
+        // previously held (so nobody ends up with an undefined role).
+        $newLeaderPreviousRoleId = StudentSchoolYear::where('student_id', $newLeaderId)->value('s_role_id');
 
-        StudentSchoolYear::where('student_id', $oldLeaderId)->update(['s_role_id' => $memberRoleId]);
-        StudentSchoolYear::where('student_id', $newLeaderId)->update(['s_role_id' => $leaderRoleId]);
+        StudentSchoolYear::where('student_id', $oldLeaderId)->update(['s_role_id' => $newLeaderPreviousRoleId]);
+        StudentSchoolYear::where('student_id', $newLeaderId)->update(['s_role_id' => StudentRole::leaderRoleId()]);
 
         $oldLeader = Student::find($oldLeaderId);
         $newLeader = Student::find($newLeaderId);
