@@ -14,7 +14,7 @@
         <div class="ep-header-sub">Capstone Expert &middot; Active</div>
       </div>
       <button class="ep-close" onclick="closeExpertProfile()">
-        <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x="6" y1="6" x2="18" y2="18"/></svg>
+        <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
     </div>
 
@@ -60,10 +60,11 @@
       <!-- Max Teams -->
       <div class="ep-field">
         <div class="ep-label">Team Capacity</div>
-        <div class="ep-value readonly">
+        <div class="ep-value ep-editable">
           <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-          Max {{ $expert?->max_teams ?? 4 }} teams
+          Max <input type="number" id="ep-max-teams" class="ep-number-input" min="1" max="10" value="{{ $expert?->max_teams ?? 4 }}"> teams
         </div>
+        <div style="font-size:11px;color:var(--text3);margin-top:6px">How many teams you can be assigned to at once (1–10).</div>
       </div>
 
       <div class="ep-divider"></div>
@@ -104,12 +105,15 @@
     </div>
 
     <!-- Sticky Footer -->
-    <div class="ep-footer">
-      <button class="btn content btn-ghost" style="color: #FFFF00" onclick="closeExpertProfile()">Close</button>
-      <button class="btn btn-primary" onclick="saveExpertProfile()">
-        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-        Save
-      </button>
+    <div class="ep-footer" style="flex-direction:column;align-items:stretch;gap:8px">
+      <div id="ep-save-msg" style="display:none;font-size:11.5px;border-radius:8px;padding:8px 11px"></div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost" style="color:var(--text2);border-color:var(--border);background:transparent" onclick="closeExpertProfile()">Close</button>
+        <button class="btn btn-primary" id="ep-save-btn" onclick="saveExpertProfile()">
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          Save
+        </button>
+      </div>
     </div>
 
   </div>
@@ -153,6 +157,7 @@ function openExpertProfile(){
   EP_OVERLAY.classList.add('open');
   EP_TRIGGER.classList.add('ep-open');
   renderTags();
+  document.getElementById('ep-save-msg').style.display = 'none';
 }
 
 function closeExpertProfile(){
@@ -164,8 +169,47 @@ function handleEpOverlay(e){
   if(e.target === EP_OVERLAY) closeExpertProfile();
 }
 
-function saveExpertProfile(){
-  closeExpertProfile();
+function showEpSaveMsg(text, isError){
+  const el = document.getElementById('ep-save-msg');
+  el.textContent = text;
+  el.style.display = 'block';
+  el.style.background = isError ? 'rgba(220,38,38,0.08)' : 'rgba(22,163,74,0.08)';
+  el.style.border = '1px solid ' + (isError ? 'rgba(220,38,38,0.25)' : 'rgba(22,163,74,0.2)');
+  el.style.color = isError ? '#b91c1c' : '#15803d';
+}
+
+async function saveExpertProfile(){
+  const btn = document.getElementById('ep-save-btn');
+  const input = document.getElementById('ep-max-teams');
+  const msg = document.getElementById('ep-save-msg');
+  msg.style.display = 'none';
+  btn.disabled = true;
+
+  try {
+    const res = await fetch('{{ route('instructor.profile.update') }}', {
+      method: 'POST',
+      headers: {
+        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ max_teams: input.value }),
+    });
+    const json = await res.json();
+
+    if (!res.ok || !json.success) {
+      showEpSaveMsg(json.message || 'Could not save. Please try again.', true);
+      return;
+    }
+
+    input.value = json.max_teams;
+    showEpSaveMsg('Saved!', false);
+    setTimeout(closeExpertProfile, 700);
+  } catch (e) {
+    showEpSaveMsg('Could not reach the server. Please try again.', true);
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 document.addEventListener('keydown', e => {

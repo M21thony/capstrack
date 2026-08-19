@@ -557,6 +557,10 @@ textarea.input{resize:vertical;min-height:80px}
 .ep-value{font-size:13px;font-weight:500;color:var(--text);background:var(--bg3);border:1.5px solid var(--border);border-radius:8px;padding:8px 11px}
 .ep-value.readonly{color:var(--text2);background:var(--bg4);cursor:not-allowed;display:flex;align-items:center;gap:7px}
 .ep-value.readonly svg{width:12px;height:12px;stroke:var(--text3);fill:none;stroke-width:2;flex-shrink:0}
+.ep-value.ep-editable{display:flex;align-items:center;gap:7px}
+.ep-value.ep-editable svg{width:12px;height:12px;stroke:var(--text3);fill:none;stroke-width:2;flex-shrink:0}
+.ep-number-input{width:40px;border:1.5px solid var(--border);background:#fff;border-radius:6px;padding:3px 4px;font-family:inherit;font-size:13px;font-weight:700;color:var(--text);text-align:center;outline:none;transition:border 0.15s}
+.ep-number-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(201,168,44,0.1)}
 .ep-divider{height:1px;background:var(--border);margin:14px 0}
 .ep-roles{display:flex;flex-wrap:wrap;gap:5px}
 .ep-tags-wrap{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px;min-height:26px}
