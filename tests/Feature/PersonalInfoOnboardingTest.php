@@ -278,6 +278,34 @@ class PersonalInfoOnboardingTest extends TestCase
             ]);
     }
 
+    public function test_student_with_team_but_incomplete_profile_can_still_complete_onboarding(): void
+    {
+        // A student can be assigned a team_id before ever finishing their
+        // profile (e.g. added directly by an admin). The lock is meant for
+        // an ALREADY-completed profile, not just having a team_id - this
+        // student must still be able to submit the onboarding form.
+        $student = Student::factory()->create([
+            'email' => 'preassigned.team@my.cspc.edu.ph',
+        ]);
+
+        $team = Team::create(['team_name' => 'Pre-assigned Team']);
+
+        StudentSchoolYear::create([
+            'student_id' => $student->student_id,
+            'team_id' => $team->team_id,
+        ]);
+
+        $this->assertFalse($student->hasCompletedProfile());
+
+        $this->actingAs($student)
+            ->post(route('student.personal-info.store'), $this->validPersonalInfoPayload())
+            ->assertRedirect(route('student.dashboard'));
+
+        $student->refresh();
+        $this->assertTrue($student->hasCompletedProfile());
+        $this->assertEquals('221001135', $student->student_number);
+    }
+
     public function test_student_without_team_can_access_edit_page(): void
     {
         $student = Student::factory()->withCompleteProfile()->create([
