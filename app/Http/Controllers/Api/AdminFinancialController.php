@@ -103,7 +103,7 @@ class AdminFinancialController extends Controller
     public function approve(Request $request, FinancialRecord $financialRecord): JsonResponse
     {
         /** @var CapstoneExpert $admin */
-        $admin = $request->user();
+        $admin = auth('expert')->user();
 
         if ($financialRecord->f_record_status === 'verified') {
             return response()->json([
@@ -134,7 +134,7 @@ class AdminFinancialController extends Controller
         ]);
 
         /** @var CapstoneExpert $admin */
-        $admin = $request->user();
+        $admin = auth('expert')->user();
 
         if ($financialRecord->f_record_status === 'verified') {
             return response()->json([
@@ -189,7 +189,7 @@ class AdminFinancialController extends Controller
         ]);
 
         /** @var CapstoneExpert $admin */
-        $admin = $request->user();
+        $admin = auth('expert')->user();
 
         $post = ExpensePost::create([
             'admin_id' => $admin->expert_id,
