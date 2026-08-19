@@ -112,17 +112,26 @@
             <button onclick="closeScheduleModal()" style="background:none;border:none;font-size:22px;color:var(--text3);cursor:pointer;line-height:1">&times;</button>
           </div>
           <div style="font-size:11px;color:var(--text3);margin-bottom:16px">
-            Manually set this team's day and venue, overriding what the automatic scheduler assigned.
+            Manually set this team's day, time, and venue, overriding what the automatic scheduler assigned. Defense day runs 8am-5pm in fixed 2-hour sessions.
           </div>
           <div id="schedule-modal-conflicts" style="display:none;font-size:12px;background:rgba(220,38,38,0.08);border:1px solid rgba(220,38,38,0.25);color:#b91c1c;border-radius:8px;padding:10px 12px;margin-bottom:14px">
             <div style="font-weight:600;margin-bottom:6px">This conflicts with an existing booking:</div>
             <ul id="schedule-modal-conflicts-list" style="margin:0;padding-left:16px"></ul>
           </div>
 
+          <div class="form-group">
+            <label class="label">Date</label>
+            <input class="input" type="date" id="schedule-modal-date"/>
+          </div>
           <div class="row" style="gap:10px">
             <div class="form-group" style="flex:1">
-              <label class="label">Date</label>
-              <input class="input" type="date" id="schedule-modal-date"/>
+              <label class="label">Time</label>
+              <select class="input" id="schedule-modal-time">
+                <option value="08:00">8:00 AM – 10:00 AM</option>
+                <option value="10:00">10:00 AM – 12:00 PM</option>
+                <option value="12:00">12:00 PM – 2:00 PM</option>
+                <option value="14:00">2:00 PM – 4:00 PM</option>
+              </select>
             </div>
             <div class="form-group" style="flex:1">
               <label class="label">Venue</label>
@@ -251,6 +260,13 @@
                 $member1 = $latestSchedule?->panels->firstWhere('panel_role', 'Panel Member 1');
                 $member2 = $latestSchedule?->panels->firstWhere('panel_role', 'Panel Member 2');
                 $status = $chair ? 'complete' : 'not_assigned';
+                $scheduleTimeLabel = null;
+                $scheduleTimeValue = null;
+                if ($latestSchedule?->schedule_date && $latestSchedule->schedule_date->format('H:i') !== '00:00') {
+                    $scheduleTimeValue = $latestSchedule->schedule_date->format('H:i');
+                    $scheduleEnd = $latestSchedule->schedule_date->copy()->addHours(2);
+                    $scheduleTimeLabel = ' · '.$latestSchedule->schedule_date->format('g:i A').'–'.$scheduleEnd->format('g:i A');
+                }
               @endphp
               <tr data-panel-status="{{ $status }}" data-section="{{ $section }}" data-team-id="{{ $team->team_id }}" id="team-row-{{ $team->team_id }}">
                 <td style="padding-left:20px">
@@ -272,8 +288,8 @@
                 <td class="cell-member2" style="font-size:12px;{{ $member2 ? 'color:var(--text)' : 'color:var(--text3);font-style:italic' }}">{{ $member2?->expert?->name ?? 'Not assigned' }}</td>
                 <td class="cell-schedule" style="font-size:12px;color:var(--text2)">
                   @if ($latestSchedule?->schedule_date)
-                    <span class="cell-schedule-text">{{ $latestSchedule->schedule_date->format('M j, Y').' · '.$latestSchedule->venue }}</span>
-                    <button type="button" class="cell-schedule-edit" onclick="openScheduleModal({{ $team->team_id }}, {{ $latestSchedule->defense_id }}, '{{ $latestSchedule->schedule_date->toDateString() }}', '{{ $latestSchedule->venue }}')" title="Override day/venue" style="background:rgba(201,168,44,0.12);border:1px solid rgba(201,168,44,0.35);color:var(--accent3);cursor:pointer;padding:4px 6px;border-radius:6px;vertical-align:middle;margin-left:6px;display:inline-flex;align-items:center">
+                    <span class="cell-schedule-text">{{ $latestSchedule->schedule_date->format('M j, Y').$scheduleTimeLabel.' · '.$latestSchedule->venue }}</span>
+                    <button type="button" class="cell-schedule-edit" onclick="openScheduleModal({{ $team->team_id }}, {{ $latestSchedule->defense_id }}, '{{ $latestSchedule->schedule_date->toDateString() }}', '{{ $scheduleTimeValue ?? '08:00' }}', '{{ $latestSchedule->venue }}')" title="Override day/time/venue" style="background:rgba(201,168,44,0.12);border:1px solid rgba(201,168,44,0.35);color:var(--accent3);cursor:pointer;padding:4px 6px;border-radius:6px;vertical-align:middle;margin-left:6px;display:inline-flex;align-items:center">
                       <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.25"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                     </button>
                   @else
@@ -428,12 +444,31 @@ function formatScheduleText(schedule) {
   if (!schedule || !schedule.schedule_date) return null;
   const d = new Date(schedule.schedule_date);
   const dateLabel = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
-  return dateLabel + ' · ' + schedule.venue;
+  const timeLabel = formatScheduleTimeRange(schedule);
+  return dateLabel + (timeLabel ? ' · ' + timeLabel : '') + ' · ' + schedule.venue;
+}
+
+// A midnight (00:00) time means no real time was ever set for this slot
+// (legacy data from before sessions had a time component) - only show a
+// range when there's an actual time to show.
+function formatScheduleTimeRange(schedule) {
+  if (!schedule || !schedule.schedule_date) return null;
+  const d = new Date(schedule.schedule_date);
+  if (d.getHours() === 0 && d.getMinutes() === 0) return null;
+  const end = new Date(d.getTime() + 2 * 60 * 60 * 1000);
+  const fmt = (t) => t.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+  return fmt(d) + '–' + fmt(end);
 }
 
 function isoDateOnly(schedule) {
   // schedule_date comes through as 'YYYY-MM-DDTHH:MM' — just the date part.
   return schedule && schedule.schedule_date ? schedule.schedule_date.slice(0, 10) : null;
+}
+
+function isoTimeOnly(schedule) {
+  if (!schedule || !schedule.schedule_date) return '08:00';
+  const time = schedule.schedule_date.slice(11, 16);
+  return time === '00:00' || !time ? '08:00' : time;
 }
 
 function scheduleCellHtml(teamId, schedule) {
@@ -442,8 +477,9 @@ function scheduleCellHtml(teamId, schedule) {
     return `<span class="cell-schedule-text">${text || '—'}</span>`;
   }
   const dateOnly = isoDateOnly(schedule);
+  const timeOnly = isoTimeOnly(schedule);
   return `<span class="cell-schedule-text">${text}</span>` +
-    `<button type="button" class="cell-schedule-edit" onclick="openScheduleModal(${teamId}, ${schedule.defense_id}, '${dateOnly}', '${schedule.venue}')" title="Override day/venue" style="background:rgba(201,168,44,0.12);border:1px solid rgba(201,168,44,0.35);color:var(--accent3);cursor:pointer;padding:4px 6px;border-radius:6px;vertical-align:middle;margin-left:6px;display:inline-flex;align-items:center">` +
+    `<button type="button" class="cell-schedule-edit" onclick="openScheduleModal(${teamId}, ${schedule.defense_id}, '${dateOnly}', '${timeOnly}', '${schedule.venue}')" title="Override day/time/venue" style="background:rgba(201,168,44,0.12);border:1px solid rgba(201,168,44,0.35);color:var(--accent3);cursor:pointer;padding:4px 6px;border-radius:6px;vertical-align:middle;margin-left:6px;display:inline-flex;align-items:center">` +
     `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.25"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>` +
     `</button>`;
 }
@@ -603,12 +639,13 @@ let currentScheduleTeamId = null;
 let currentScheduleDefenseId = null;
 let scheduleOverrideConfirmed = false;
 
-function openScheduleModal(teamId, defenseId, dateStr, venue) {
+function openScheduleModal(teamId, defenseId, dateStr, timeStr, venue) {
   currentScheduleTeamId = teamId;
   currentScheduleDefenseId = defenseId;
   scheduleOverrideConfirmed = false;
 
   document.getElementById('schedule-modal-date').value = dateStr || '';
+  document.getElementById('schedule-modal-time').value = timeStr || '08:00';
   document.getElementById('schedule-modal-venue').value = venue || 'Mac Lab';
   document.getElementById('schedule-modal-conflicts').style.display = 'none';
   document.getElementById('schedule-save-btn-label').textContent = 'Save';
@@ -627,6 +664,7 @@ async function saveScheduleOverride() {
   if (!currentScheduleDefenseId) return;
 
   const date = document.getElementById('schedule-modal-date').value;
+  const time = document.getElementById('schedule-modal-time').value;
   const venue = document.getElementById('schedule-modal-venue').value;
   if (!date) { showToast('Please pick a date.', 'error'); return; }
 
@@ -637,7 +675,7 @@ async function saveScheduleOverride() {
     const res = await fetch(`/api/admin/panel_assignment/schedule/${currentScheduleDefenseId}`, {
       method: 'PUT',
       headers: { 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json', 'Content-Type': 'application/json' },
-      body: JSON.stringify({ schedule_date: date, venue: venue, confirm: scheduleOverrideConfirmed }),
+      body: JSON.stringify({ schedule_date: date, start_time: time, venue: venue, confirm: scheduleOverrideConfirmed }),
     });
     const json = await res.json();
 

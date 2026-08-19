@@ -302,15 +302,15 @@ class AdminPanelAssignmentTest extends TestCase
 
     public function test_window_generation_leaves_unschedulable_panels_unscheduled_instead_of_failing(): void
     {
-        // 1 day x 2 venues = 2 slots total for 3 unrelated panels.
-        for ($i = 0; $i < 3; $i++) {
+        // 1 day x 4 time slots x 2 venues = 8 slots total for 9 unrelated panels.
+        for ($i = 0; $i < 9; $i++) {
             $team = $this->makeTeam(['team_name' => "Team $i"]);
             $this->assignPanel($team, 'Title Defense', $this->makeExpert(), $this->makeExpert());
         }
 
         $response = $this->saveWindow('Title Defense', '2026-09-01', '2026-09-01');
 
-        $response->assertStatus(200)->assertJson(['success' => true, 'scheduled_count' => 2]);
+        $response->assertStatus(200)->assertJson(['success' => true, 'scheduled_count' => 8]);
         $this->assertSame(1, DefenseSchedule::where('defense_type', 'Title Defense')->whereNull('schedule_date')->count());
     }
 
@@ -423,12 +423,12 @@ class AdminPanelAssignmentTest extends TestCase
             ->assertJson(['success' => true, 'data' => []]);
     }
 
-    private function scheduleWithPanel(Team $team, string $defenseType, CapstoneExpert $chair, string $date, string $venue): DefenseSchedule
+    private function scheduleWithPanel(Team $team, string $defenseType, CapstoneExpert $chair, string $date, string $venue, string $time = '08:00'): DefenseSchedule
     {
         $schedule = DefenseSchedule::create([
             'team_id' => $team->team_id,
             'defense_type' => $defenseType,
-            'schedule_date' => $date,
+            'schedule_date' => "{$date} {$time}:00",
             'venue' => $venue,
         ]);
 
@@ -450,14 +450,29 @@ class AdminPanelAssignmentTest extends TestCase
 
         $response = $this->actingAs($this->admin, 'expert')->putJson(
             route('api.admin.panel_assignment.schedule.update', $schedule->defense_id),
-            ['schedule_date' => '2027-03-15', 'venue' => 'Open Lab']
+            ['schedule_date' => '2027-03-15', 'start_time' => '10:00', 'venue' => 'Open Lab']
         );
 
         $response->assertOk()->assertJson(['success' => true]);
 
         $schedule->refresh();
         $this->assertEquals('2027-03-15', $schedule->schedule_date->toDateString());
+        $this->assertEquals('10:00', $schedule->schedule_date->format('H:i'));
         $this->assertEquals('Open Lab', $schedule->venue);
+    }
+
+    public function test_override_rejects_start_time_outside_the_fixed_slots(): void
+    {
+        $team = $this->makeTeam();
+        $chair = $this->makeExpert();
+        $schedule = $this->scheduleWithPanel($team, 'Title Defense', $chair, '2027-03-10', 'Mac Lab');
+
+        $response = $this->actingAs($this->admin, 'expert')->putJson(
+            route('api.admin.panel_assignment.schedule.update', $schedule->defense_id),
+            ['schedule_date' => '2027-03-15', 'start_time' => '09:00', 'venue' => 'Open Lab']
+        );
+
+        $response->assertStatus(422);
     }
 
     public function test_override_with_venue_conflict_requires_confirmation_and_does_not_save(): void
@@ -467,13 +482,13 @@ class AdminPanelAssignmentTest extends TestCase
         $teamA = $this->makeTeam(['team_name' => 'Team A']);
         $teamB = $this->makeTeam(['team_name' => 'Team B']);
 
-        // Team B already booked into Mac Lab on 2027-03-15.
-        $this->scheduleWithPanel($teamB, 'Title Defense', $chairB, '2027-03-15', 'Mac Lab');
+        // Team B already booked into Mac Lab on 2027-03-15 at 8am.
+        $this->scheduleWithPanel($teamB, 'Title Defense', $chairB, '2027-03-15', 'Mac Lab', '08:00');
         $scheduleA = $this->scheduleWithPanel($teamA, 'Title Defense', $chairA, '2027-03-10', 'Open Lab');
 
         $response = $this->actingAs($this->admin, 'expert')->putJson(
             route('api.admin.panel_assignment.schedule.update', $scheduleA->defense_id),
-            ['schedule_date' => '2027-03-15', 'venue' => 'Mac Lab']
+            ['schedule_date' => '2027-03-15', 'start_time' => '08:00', 'venue' => 'Mac Lab']
         );
 
         $response->assertStatus(409);
@@ -485,6 +500,26 @@ class AdminPanelAssignmentTest extends TestCase
         $this->assertEquals('Open Lab', $scheduleA->venue);
     }
 
+    public function test_override_at_a_different_time_the_same_day_does_not_conflict(): void
+    {
+        $chairA = $this->makeExpert();
+        $chairB = $this->makeExpert();
+        $teamA = $this->makeTeam(['team_name' => 'Team A']);
+        $teamB = $this->makeTeam(['team_name' => 'Team B']);
+
+        // Team B booked into Mac Lab on 2027-03-15 at 8am.
+        $this->scheduleWithPanel($teamB, 'Title Defense', $chairB, '2027-03-15', 'Mac Lab', '08:00');
+        $scheduleA = $this->scheduleWithPanel($teamA, 'Title Defense', $chairA, '2027-03-10', 'Open Lab');
+
+        // Same day, same venue, but a different 2-hour block - not a conflict.
+        $response = $this->actingAs($this->admin, 'expert')->putJson(
+            route('api.admin.panel_assignment.schedule.update', $scheduleA->defense_id),
+            ['schedule_date' => '2027-03-15', 'start_time' => '10:00', 'venue' => 'Mac Lab']
+        );
+
+        $response->assertOk()->assertJson(['success' => true]);
+    }
+
     public function test_override_with_venue_conflict_confirmed_saves_anyway(): void
     {
         $chairA = $this->makeExpert();
@@ -492,12 +527,12 @@ class AdminPanelAssignmentTest extends TestCase
         $teamA = $this->makeTeam(['team_name' => 'Team A']);
         $teamB = $this->makeTeam(['team_name' => 'Team B']);
 
-        $this->scheduleWithPanel($teamB, 'Title Defense', $chairB, '2027-03-15', 'Mac Lab');
+        $this->scheduleWithPanel($teamB, 'Title Defense', $chairB, '2027-03-15', 'Mac Lab', '08:00');
         $scheduleA = $this->scheduleWithPanel($teamA, 'Title Defense', $chairA, '2027-03-10', 'Open Lab');
 
         $response = $this->actingAs($this->admin, 'expert')->putJson(
             route('api.admin.panel_assignment.schedule.update', $scheduleA->defense_id),
-            ['schedule_date' => '2027-03-15', 'venue' => 'Mac Lab', 'confirm' => true]
+            ['schedule_date' => '2027-03-15', 'start_time' => '08:00', 'venue' => 'Mac Lab', 'confirm' => true]
         );
 
         $response->assertOk()->assertJson(['success' => true]);
@@ -513,13 +548,13 @@ class AdminPanelAssignmentTest extends TestCase
         $teamA = $this->makeTeam(['team_name' => 'Team A']);
         $teamB = $this->makeTeam(['team_name' => 'Team B']);
 
-        // Same expert already chairing Team B's panel on 2027-03-15.
-        $this->scheduleWithPanel($teamB, 'Title Defense', $sharedExpert, '2027-03-15', 'Mac Lab');
+        // Same expert already chairing Team B's panel on 2027-03-15 at 8am.
+        $this->scheduleWithPanel($teamB, 'Title Defense', $sharedExpert, '2027-03-15', 'Mac Lab', '08:00');
         $scheduleA = $this->scheduleWithPanel($teamA, 'Title Defense', $sharedExpert, '2027-03-10', 'Open Lab');
 
         $response = $this->actingAs($this->admin, 'expert')->putJson(
             route('api.admin.panel_assignment.schedule.update', $scheduleA->defense_id),
-            ['schedule_date' => '2027-03-15', 'venue' => 'Open Lab']
+            ['schedule_date' => '2027-03-15', 'start_time' => '08:00', 'venue' => 'Open Lab']
         );
 
         $response->assertStatus(409);
@@ -537,7 +572,7 @@ class AdminPanelAssignmentTest extends TestCase
 
         $response = $this->actingAs($this->admin, 'expert')->putJson(
             route('api.admin.panel_assignment.schedule.update', $schedule->defense_id),
-            ['schedule_date' => '2027-03-15', 'venue' => 'Broom Closet']
+            ['schedule_date' => '2027-03-15', 'start_time' => '08:00', 'venue' => 'Broom Closet']
         );
 
         $response->assertStatus(422);
@@ -553,7 +588,7 @@ class AdminPanelAssignmentTest extends TestCase
             ->get(route('admin.panel_assignment'));
 
         $response->assertOk();
-        $response->assertSee("openScheduleModal({$team->team_id}, {$schedule->defense_id}, '2027-03-10', 'Mac Lab')", false);
+        $response->assertSee("openScheduleModal({$team->team_id}, {$schedule->defense_id}, '2027-03-10', '08:00', 'Mac Lab')", false);
     }
 
     public function test_index_omits_override_button_for_unscheduled_team(): void
@@ -582,7 +617,7 @@ class AdminPanelAssignmentTest extends TestCase
 
         $response = $this->actingAs($nonAdmin, 'expert')->putJson(
             route('api.admin.panel_assignment.schedule.update', $schedule->defense_id),
-            ['schedule_date' => '2027-03-15', 'venue' => 'Open Lab']
+            ['schedule_date' => '2027-03-15', 'start_time' => '10:00', 'venue' => 'Open Lab']
         );
 
         $response->assertStatus(403);
