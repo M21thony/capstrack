@@ -11,6 +11,7 @@ use App\Models\Student;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
 use App\Models\TeamExpertAssignment;
+use Carbon\Carbon;
 use Carbon\CarbonPeriod;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -106,6 +107,7 @@ class AdminPanelAssignmentController extends Controller
             'project_title' => $t->project_title,
             'excluded_expert_ids' => $this->teamAdviserConsultantIds($t)->values(),
             'schedules' => $t->defenseSchedules->map(fn ($s) => [
+                'defense_id' => $s->defense_id,
                 'defense_type' => $s->defense_type,
                 'schedule_date' => $s->schedule_date?->format('Y-m-d\TH:i'),
                 'venue' => $s->venue,
@@ -198,6 +200,77 @@ class AdminPanelAssignmentController extends Controller
             'success' => true,
             'data' => $this->formatSchedule($schedule),
         ]);
+    }
+
+    // The auto-scheduling algorithm's assignment isn't final — the admin
+    // can manually override a specific team's day/venue (e.g. a room
+    // freed up, or a panelist agreed to double up on short notice). A
+    // conflict (double-booked venue or a shared panelist already on a
+    // different panel that day) doesn't block the save; it's surfaced so
+    // the admin can decide, and only actually saved once confirmed.
+    public function updateSchedule(Request $request, DefenseSchedule $defense): JsonResponse
+    {
+        $validated = $request->validate([
+            'schedule_date' => ['required', 'date'],
+            'venue' => ['required', 'string', 'in:'.implode(',', self::VENUES)],
+            'confirm' => ['nullable', 'boolean'],
+        ]);
+
+        $newDate = Carbon::parse($validated['schedule_date'])->startOfDay();
+        $defense->loadMissing('panels.expert', 'team');
+
+        $conflicts = $this->conflictsForManualOverride($defense, $newDate, $validated['venue']);
+
+        if (! empty($conflicts) && ! $request->boolean('confirm')) {
+            return response()->json([
+                'success' => false,
+                'requires_confirmation' => true,
+                'conflicts' => $conflicts,
+                'message' => 'This schedule conflicts with an existing booking. Review and confirm to override anyway.',
+            ], 409);
+        }
+
+        $defense->update([
+            'schedule_date' => $newDate,
+            'venue' => $validated['venue'],
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'data' => $this->formatSchedule($defense->fresh(['panels.expert'])),
+        ]);
+    }
+
+    // Same two conflict types findSlotForPanel() avoids automatically:
+    // a venue double-booked by a different panel that day, and a
+    // panelist sitting on two different panels the same day. Scoped
+    // across every defense_type (not just this team's own stage) since
+    // a room/person conflict is real regardless of which stage it's for.
+    private function conflictsForManualOverride(DefenseSchedule $defense, Carbon $date, string $venue): array
+    {
+        $expertIds = $defense->panels->pluck('expert_id')->all();
+
+        $sameDayOthers = DefenseSchedule::whereDate('schedule_date', $date->toDateString())
+            ->where('defense_id', '!=', $defense->defense_id)
+            ->with(['panels.expert', 'team'])
+            ->get();
+
+        $conflicts = [];
+
+        foreach ($sameDayOthers as $other) {
+            $teamLabel = ($other->team?->team_name ?? 'Another team').' ('.$other->defense_type.')';
+
+            if ($other->venue === $venue) {
+                $conflicts[] = "Venue \"{$venue}\" is already booked that day by {$teamLabel}.";
+            }
+
+            foreach ($other->panels->whereIn('expert_id', $expertIds) as $panel) {
+                $expertName = $panel->expert?->name ?? 'This panelist';
+                $conflicts[] = "{$expertName} is already on a panel that day for {$teamLabel}.";
+            }
+        }
+
+        return array_values(array_unique($conflicts));
     }
 
     public function indexWindows(): JsonResponse
