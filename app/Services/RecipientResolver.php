@@ -26,7 +26,7 @@ class RecipientResolver
             ->join('expert_roles as er', 'er.expert_id', '=', 'a.expert_id')
             ->join('roles as r', 'r.role_id', '=', 'er.role_id')
             ->where('a.team_id', $teamId)
-            ->where('a.status', 'accepted')
+            ->where('a.status', 'approved')
             ->where('r.role_name', $roleNameMap[$role])
             ->select('a.expert_id')
             ->first();
@@ -92,7 +92,7 @@ class RecipientResolver
                 ->join('roles as r', 'r.role_id', '=', 'er.role_id')
                 ->join('capstone_experts as e', 'e.expert_id', '=', 'a.expert_id')
                 ->where('a.team_id', $teamId)
-                ->where('a.status', 'accepted')
+                ->where('a.status', 'approved')
                 ->where('r.role_name', $roleName)
                 ->select('e.expert_id', 'e.first_name', 'e.last_name')
                 ->first();

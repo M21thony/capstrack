@@ -32,7 +32,7 @@ class StudentConsultationExpertListTest extends TestCase
         ]);
     }
 
-    public function test_only_shows_experts_assigned_and_accepted_on_the_students_team_and_defaults_to_adviser(): void
+    public function test_only_shows_experts_assigned_and_approved_on_the_students_team_and_defaults_to_adviser(): void
     {
         $team = DB::table('team')->insertGetId([
             'team_name' => 'Team Alpha',
@@ -56,7 +56,7 @@ class StudentConsultationExpertListTest extends TestCase
         DB::table('capstone_expert_application')->insert([
             'team_id' => $team,
             'expert_id' => $adviserId,
-            'status' => 'accepted',
+            'status' => 'approved',
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -105,7 +105,7 @@ class StudentConsultationExpertListTest extends TestCase
         $response->assertOk();
 
         $experts = $response->viewData('experts');
-        $this->assertCount(1, $experts, 'Only the accepted adviser should be listed.');
+        $this->assertCount(1, $experts, 'Only the approved adviser should be listed.');
         $this->assertSame($adviserId, $experts->first()->expert_id);
         $this->assertSame($adviserId, $response->viewData('defaultExpertId'));
 

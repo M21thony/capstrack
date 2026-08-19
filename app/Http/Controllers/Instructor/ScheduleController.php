@@ -170,7 +170,7 @@ class ScheduleController extends Controller
     private function notifyTeamsOfNewSlot(ConsultationSchedule $slot, CapstoneExpert $expert): void
     {
         $teams = TeamExpertAssignment::where('expert_id', $expert->expert_id)
-            ->where('status', 'accepted')
+            ->where('status', 'approved')
             ->with('team.members')
             ->get()
             ->pluck('team')
