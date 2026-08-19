@@ -321,6 +321,7 @@ class AdminPanelAssignmentController extends Controller
 
         $scheduledCount = $this->generateScheduleForWindow($window);
         $resolvedCount = $this->resolveScheduleConflicts($window);
+        $compactedCount = $this->compactPanelSchedules($window);
 
         return response()->json([
             'success' => true,
@@ -331,7 +332,76 @@ class AdminPanelAssignmentController extends Controller
             ],
             'scheduled_count' => $scheduledCount,
             'resolved_count' => $resolvedCount,
+            'compacted_count' => $compactedCount,
         ]);
+    }
+
+    // A team whose panel changes gets its own schedule cleared and
+    // re-placed (see generateScheduleForWindow()), but any OTHER team still
+    // sharing that same panel keeps whatever block it already had - so if
+    // the reassigned team vacated an earlier block, the panel's remaining
+    // teams are left with a gap instead of sitting back-to-back from the
+    // start of the day. This closes that gap: for every panel/day/venue
+    // group, re-lays its teams onto the earliest blocks that panel can
+    // actually use that day (skipping only blocks a DIFFERENT panel holds),
+    // in defense_id order, moving anyone who's sitting later than they need
+    // to be. A no-op wherever nothing has moved.
+    private function compactPanelSchedules(DefenseWindow $window): int
+    {
+        $scheduled = DefenseSchedule::where('defense_type', $window->defense_type)
+            ->whereNotNull('schedule_date')
+            ->whereNotNull('venue')
+            ->with('panels')
+            ->orderBy('defense_id')
+            ->get();
+
+        $groups = $scheduled->groupBy(function ($s) {
+            $expertIds = $s->panels->pluck('expert_id')->sort()->values()->implode(',');
+
+            return $expertIds.'|'.$s->schedule_date->toDateString().'|'.$s->venue;
+        });
+
+        $compactedCount = 0;
+
+        foreach ($groups as $group) {
+            $sorted = $group->sortBy('defense_id')->values();
+            $day = $sorted->first()->schedule_date->copy()->startOfDay();
+            $venue = $sorted->first()->venue;
+            $expertIds = $sorted->first()->panels->pluck('expert_id')->sort()->values()->all();
+
+            // Which of this day's blocks does a DIFFERENT panel already
+            // hold (either this venue, or one of these experts sitting on
+            // that other panel)?
+            $blockedByOtherPanel = $scheduled
+                ->filter(fn ($s) => $s->schedule_date->isSameDay($day))
+                ->filter(fn ($s) => $s->panels->pluck('expert_id')->sort()->values()->all() !== $expertIds)
+                ->filter(fn ($s) => $s->venue === $venue
+                    || count(array_intersect($expertIds, $s->panels->pluck('expert_id')->all())) > 0)
+                ->map(fn ($s) => $s->schedule_date->format('H:i'))
+                ->unique();
+
+            $slotsForThisPanel = collect(self::TIME_SLOTS)->reject(fn ($t) => $blockedByOtherPanel->contains($t))->values();
+
+            foreach ($sorted as $i => $schedule) {
+                if (! isset($slotsForThisPanel[$i])) {
+                    continue;
+                }
+
+                $newStart = $day->copy()->setTimeFromTimeString($slotsForThisPanel[$i]);
+
+                if ($newStart->equalTo($schedule->schedule_date)) {
+                    continue;
+                }
+
+                $schedule->update([
+                    'schedule_date' => $newStart,
+                    'end_date' => $newStart->copy()->addHours(self::SESSION_HOURS),
+                ]);
+                $compactedCount++;
+            }
+        }
+
+        return $compactedCount;
     }
 
     // Re-saving the window is also the admin's "fix any conflicts" button:

@@ -923,15 +923,17 @@ async function saveWindow() {
 
     const count = json.scheduled_count || 0;
     const resolved = json.resolved_count || 0;
+    const compacted = json.compacted_count || 0;
 
-    if (count > 0 || resolved > 0) {
+    if (count > 0 || resolved > 0 || compacted > 0) {
       const parts = [];
       if (count > 0) parts.push(`scheduled ${count} team${count === 1 ? '' : 's'}`);
       if (resolved > 0) parts.push(`fixed ${resolved} conflicting schedule${resolved === 1 ? '' : 's'}`);
+      if (compacted > 0) parts.push(`closed ${compacted} schedule gap${compacted === 1 ? '' : 's'}`);
       showWindowMsg(`Saved — ${parts.join(', ')}. Refreshing...`, false);
       setTimeout(() => window.location.reload(), 1200);
     } else {
-      showWindowMsg('Saved. No unscheduled panels or conflicts to fix.', false);
+      showWindowMsg('Saved. No unscheduled panels, conflicts, or gaps to fix.', false);
     }
   } catch (e) {
     showWindowMsg('Could not reach the server.', true);

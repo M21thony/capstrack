@@ -360,6 +360,60 @@ class AdminPanelAssignmentTest extends TestCase
         $this->assertSame($times->unique()->count(), 3, 'All three teams must end up in genuinely different blocks.');
     }
 
+    public function test_resaving_the_window_closes_a_gap_left_when_a_teammate_panel_leaves(): void
+    {
+        // Reproduces the reported bug exactly: three teams share a panel
+        // across 8-10/10-12/12-2. The middle team's panel is then changed
+        // to someone else entirely (which only clears that ONE team's own
+        // schedule - see store()), leaving the original panel with a hole
+        // at 10-12 that its two remaining teams should close up, not leave
+        // sitting at 8-10 and 12-2 with a gap between them.
+        $chair = $this->makeExpert();
+        $member1 = $this->makeExpert();
+        $teamA = $this->makeTeam(['team_name' => 'Bulbasaurs']);
+        $teamB = $this->makeTeam(['team_name' => 'DebugTeam']);
+        $teamC = $this->makeTeam(['team_name' => 'TinkerTeam']);
+
+        foreach ([$teamA, $teamB, $teamC] as $team) {
+            $this->assignPanel($team, 'Title Defense', $chair, $member1);
+        }
+
+        $this->saveWindow('Title Defense', '2026-09-01', '2026-09-05')
+            ->assertJson(['success' => true, 'scheduled_count' => 3]);
+
+        $scheduleA = DefenseSchedule::where('team_id', $teamA->team_id)->first();
+        $scheduleB = DefenseSchedule::where('team_id', $teamB->team_id)->first();
+        $scheduleC = DefenseSchedule::where('team_id', $teamC->team_id)->first();
+
+        $this->assertSame('08:00', $scheduleA->schedule_date->format('H:i'));
+        $this->assertSame('10:00', $scheduleB->schedule_date->format('H:i'));
+        $this->assertSame('12:00', $scheduleC->schedule_date->format('H:i'));
+
+        // DebugTeam's panel changes to two completely different experts -
+        // its own schedule clears; Bulbasaurs and TinkerTeam are untouched.
+        $newChair = $this->makeExpert();
+        $newMember = $this->makeExpert();
+        $this->assignPanel($teamB, 'Title Defense', $newChair, $newMember);
+
+        $this->assertDatabaseHas('defense_schedule', ['team_id' => $teamB->team_id, 'schedule_date' => null]);
+        $scheduleC->refresh();
+        $this->assertSame('12:00', $scheduleC->schedule_date->format('H:i'), 'TinkerTeam must not move on its own.');
+
+        $response = $this->saveWindow('Title Defense', '2026-09-01', '2026-09-05');
+        $response->assertStatus(200)->assertJson(['success' => true]);
+        $this->assertGreaterThan(0, $response->json('compacted_count'));
+
+        $scheduleA->refresh();
+        $scheduleC->refresh();
+
+        // Bulbasaurs stays put; TinkerTeam pulls forward into the block
+        // DebugTeam vacated, still on the same day and venue as Bulbasaurs.
+        $this->assertSame('08:00', $scheduleA->schedule_date->format('H:i'));
+        $this->assertSame('10:00', $scheduleC->schedule_date->format('H:i'));
+        $this->assertTrue($scheduleA->schedule_date->isSameDay($scheduleC->schedule_date));
+        $this->assertSame($scheduleA->venue, $scheduleC->venue);
+    }
+
     public function test_generated_schedule_avoids_double_booking_venue_and_experts_on_the_same_day(): void
     {
         $panelA = [$this->makeExpert(), $this->makeExpert()];
