@@ -21,6 +21,22 @@
     <div class="page-title">Document Review</div>
     <div class="topbar-actions"><div class="notif-btn"><svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg><div class="notif-dot"></div></div></div>
   </div>
+  <div id="skeleton-content" class="sk-overlay">
+    <div class="sk" style="height:56px;border-radius:12px;margin-bottom:14px"></div>
+    <div class="row" style="margin-bottom:14px;gap:8px">
+      <div class="sk" style="width:280px;height:34px;border-radius:8px"></div>
+      <div class="sk" style="width:160px;height:34px;border-radius:8px"></div>
+      <div class="sk" style="width:150px;height:34px;border-radius:8px"></div>
+    </div>
+    <div class="card" style="padding:16px">
+      <div class="sk" style="height:44px;border-radius:8px;margin-bottom:10px"></div>
+      <div class="sk" style="height:44px;border-radius:8px;margin-bottom:10px"></div>
+      <div class="sk" style="height:44px;border-radius:8px;margin-bottom:10px"></div>
+      <div class="sk" style="height:44px;border-radius:8px"></div>
+    </div>
+  </div>
+
+  <div id="real-content" style="display:none">
   <div class="content">
     @if (session('success'))
       <div class="card" style="padding:10px 16px;margin-bottom:14px;background:rgba(22,163,74,0.08);border:1px solid rgba(22,163,74,0.25);color:var(--green);font-size:13px">
@@ -150,7 +166,9 @@
       </table>
     </div>
   </div>
+  </div>
 </div>
+@include('instructor.partials.skeleton-toggle')
 <script>
 function disconnectDrive(){
   if (!confirm('Disconnect Google Drive? Annotated PDFs will stop syncing until you reconnect.')) return;

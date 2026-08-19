@@ -70,6 +70,35 @@
     </div>
   </div>
 
+  <div id="skeleton-content" class="sk-overlay">
+    <div class="grid-4" style="margin-bottom:16px">
+      <div class="sk" style="height:78px;border-radius:14px"></div>
+      <div class="sk" style="height:78px;border-radius:14px"></div>
+      <div class="sk" style="height:78px;border-radius:14px"></div>
+      <div class="sk" style="height:78px;border-radius:14px"></div>
+    </div>
+    <div class="grid-2" style="margin-bottom:16px">
+      <div class="card">
+        <div class="sk" style="width:140px;height:16px;border-radius:4px;margin-bottom:16px"></div>
+        <div class="sk" style="height:56px;border-radius:8px;margin-bottom:10px"></div>
+        <div class="sk" style="height:56px;border-radius:8px;margin-bottom:10px"></div>
+        <div class="sk" style="height:56px;border-radius:8px"></div>
+      </div>
+      <div class="card">
+        <div class="sk" style="width:180px;height:16px;border-radius:4px;margin-bottom:16px"></div>
+        <div class="sk" style="height:56px;border-radius:8px;margin-bottom:10px"></div>
+        <div class="sk" style="height:56px;border-radius:8px"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="sk" style="width:150px;height:16px;border-radius:4px;margin-bottom:16px"></div>
+      <div class="sk" style="height:40px;border-radius:8px;margin-bottom:8px"></div>
+      <div class="sk" style="height:40px;border-radius:8px;margin-bottom:8px"></div>
+      <div class="sk" style="height:40px;border-radius:8px"></div>
+    </div>
+  </div>
+
+  <div id="real-content" style="display:none">
   <div class="content">
     <div class="grid-4" style="margin-bottom:16px">
       <x-dashboard.stat-chip value="{{ $pendingApplications }}" label="Pending Applications" sub="{{ $pendingApplicationsNew }} new this week" color="var(--accent3)" />
@@ -211,9 +240,11 @@
       <x-dashboard.activity-feed :items="$recentActivity" emptyMessage="No recent activity." />
     </x-dashboard.info-card>
   </div>
+  </div>
 </div>
 
 @include('instructor.partials.expert-profile')
+@include('instructor.partials.skeleton-toggle')
 <script>
 // Announcement modal
 function openAnnModal(el) {

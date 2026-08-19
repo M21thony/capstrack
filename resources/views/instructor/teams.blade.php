@@ -87,10 +87,7 @@
 .empty-state svg { width: 40px; height: 40px; stroke: var(--border2); margin-bottom: 10px; }
 .empty-state p { font-size: 14px; }
 
-/* Skeleton */
-@keyframes sk-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
-.sk-overlay { background: var(--bg); min-height: calc(100vh - 60px); padding: 20px; }
-.sk { background: linear-gradient(90deg, var(--bg4) 25%, var(--bg2) 50%, var(--bg4) 75%); background-size: 200% 100%; animation: sk-shimmer 1.5s ease-in-out infinite; border-radius: 8px; }
+/* Skeleton styles now live in expert.css, shared across every instructor page */
 
 /* -- RESPONSIVE -- */
 .hamburger-btn { display:none; background:rgba(255,255,255,0.06); border:1px solid rgba(201,168,44,0.2); border-radius:9px; width:36px; height:36px; cursor:pointer; align-items:center; justify-content:center; flex-shrink:0; }

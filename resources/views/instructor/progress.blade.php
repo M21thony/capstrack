@@ -18,6 +18,26 @@
     <div class="page-title">Progress Monitoring</div>
     <div class="topbar-actions"><div class="notif-btn"><svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg><div class="notif-dot"></div></div></div>
   </div>
+  <div id="skeleton-content" class="sk-overlay">
+    <div class="grid-4" style="margin-bottom:16px">
+      <div class="sk" style="height:78px;border-radius:14px"></div>
+      <div class="sk" style="height:78px;border-radius:14px"></div>
+      <div class="sk" style="height:78px;border-radius:14px"></div>
+      <div class="sk" style="height:78px;border-radius:14px"></div>
+    </div>
+    <div class="row" style="margin-bottom:14px;gap:8px">
+      <div class="sk" style="width:260px;height:34px;border-radius:8px"></div>
+      <div class="sk" style="width:160px;height:34px;border-radius:8px"></div>
+      <div class="sk" style="width:160px;height:34px;border-radius:8px"></div>
+    </div>
+    <div class="team-progress-grid">
+      <div class="sk" style="height:150px;border-radius:14px"></div>
+      <div class="sk" style="height:150px;border-radius:14px"></div>
+      <div class="sk" style="height:150px;border-radius:14px"></div>
+    </div>
+  </div>
+
+  <div id="real-content" style="display:none">
   <div class="content">
     <div class="grid-4" style="margin-bottom:16px">
       <div class="stat-chip"><div class="stat-n" style="color:var(--green)">{{ $teamsMonitored }}</div><div class="stat-l">Teams Monitored</div></div>
@@ -64,7 +84,9 @@
     @endforelse
     </div>
   </div>
+  </div>
 </div>
+@include('instructor.partials.skeleton-toggle')
 
 <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
      EXPERT PROFILE SIDE PANEL

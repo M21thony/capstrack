@@ -27,6 +27,22 @@
     </div>
   </div>
 
+  <div id="skeleton-content" class="sk-overlay">
+    <div class="sk" style="height:88px;border-radius:14px;margin-bottom:16px"></div>
+    <div class="sk" style="height:70px;border-radius:14px;margin-bottom:20px"></div>
+    <div class="card" style="margin-bottom:14px">
+      <div class="sk" style="width:140px;height:16px;border-radius:4px;margin-bottom:14px"></div>
+      <div class="sk" style="height:64px;border-radius:10px;margin-bottom:10px"></div>
+      <div class="sk" style="height:64px;border-radius:10px;margin-bottom:10px"></div>
+      <div class="sk" style="height:64px;border-radius:10px"></div>
+    </div>
+    <div class="card">
+      <div class="sk" style="width:100px;height:16px;border-radius:4px;margin-bottom:14px"></div>
+      <div class="sk" style="height:80px;border-radius:10px"></div>
+    </div>
+  </div>
+
+  <div id="real-content" style="display:none">
   <div class="content">
 
     <p class="pi-wizard-error" id="formError" role="alert" hidden style="color:var(--red);font-size:13px;margin-bottom:12px"></p>
@@ -165,9 +181,11 @@
     </form>
 
   </div>
+  </div>
 </div>
 
 @include('instructor.partials.expert-profile')
+@include('instructor.partials.skeleton-toggle')
 
 <script>
 const rubricTotalPoints = {{ (float) $rubric->total_points }};

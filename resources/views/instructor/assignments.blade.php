@@ -177,10 +177,7 @@
 .msg-toast.show { display: flex; }
 @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 
-/* Skeleton */
-@keyframes sk-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
-.sk-overlay { background: var(--bg); min-height: calc(100vh - 60px); padding: 20px; }
-.sk { background: linear-gradient(90deg, var(--bg4) 25%, var(--bg2) 50%, var(--bg4) 75%); background-size: 200% 100%; animation: sk-shimmer 1.5s ease-in-out infinite; border-radius: 8px; }
+/* Skeleton styles now live in expert.css, shared across every instructor page */
 </style>
 </head>
 <body>
@@ -471,26 +468,9 @@
 
 <div class="msg-toast" id="msg-toast"></div>
 
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-  const skel = document.getElementById('skeleton-content');
-  const real = document.getElementById('real-content');
-  if (skel && real) {
-    requestAnimationFrame(() => {
-      setTimeout(() => {
-        skel.style.transition = 'opacity 0.3s ease';
-        skel.style.opacity = '0';
-        real.style.display = 'block';
-        real.style.transition = 'opacity 0.35s ease';
-        setTimeout(() => {
-          skel.remove();
-          real.style.transition = '';
-        }, 350);
-      }, 600);
-    });
-  }
-});
+@include('instructor.partials.skeleton-toggle')
 
+<script>
 function openModal(id) { document.getElementById(id).classList.add('open'); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 

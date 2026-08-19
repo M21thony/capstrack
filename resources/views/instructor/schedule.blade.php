@@ -26,6 +26,29 @@
     </div>
   </div>
 
+  <div id="skeleton-content" class="sk-overlay">
+    <div class="sched-layout">
+      <div>
+        <div class="cal-card">
+          <div class="sk" style="width:220px;height:20px;border-radius:4px;margin-bottom:16px"></div>
+          <div class="sk" style="height:340px;border-radius:12px"></div>
+        </div>
+      </div>
+      <div class="side-col">
+        <div class="form-card">
+          <div class="sk" style="width:130px;height:16px;border-radius:4px;margin-bottom:14px"></div>
+          <div class="sk" style="height:60px;border-radius:8px"></div>
+        </div>
+        <div class="form-card" style="padding:16px">
+          <div class="sk" style="width:170px;height:16px;border-radius:4px;margin-bottom:12px"></div>
+          <div class="sk" style="height:38px;border-radius:8px;margin-bottom:8px"></div>
+          <div class="sk" style="height:38px;border-radius:8px"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="real-content" style="display:none">
   <div class="content">
 
     <!-- Mode Banner -->
@@ -224,7 +247,9 @@
       </div>
     </div>
   </div>
+  </div>
 </div>
+@include('instructor.partials.skeleton-toggle')
 
 <!-- ─── TOAST ─────────────────────────────────────────────────────────────── -->
 <div id="sched-toast" style="

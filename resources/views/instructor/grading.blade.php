@@ -26,6 +26,15 @@
     </div>
   </div>
 
+  <div id="skeleton-content" class="sk-overlay">
+    <div class="team-progress-grid">
+      <div class="sk" style="height:180px;border-radius:14px"></div>
+      <div class="sk" style="height:180px;border-radius:14px"></div>
+      <div class="sk" style="height:180px;border-radius:14px"></div>
+    </div>
+  </div>
+
+  <div id="real-content" style="display:none">
   <div class="content">
 
     @if (session('error'))
@@ -87,9 +96,11 @@
     @endif
 
   </div>
+  </div>
 </div>
 
 @include('instructor.partials.expert-profile')
+@include('instructor.partials.skeleton-toggle')
 
 <script>
 /* Mobile sidebar toggle */
