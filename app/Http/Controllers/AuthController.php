@@ -248,7 +248,11 @@ class AuthController extends Controller
             'p_picture' => $userInfo['picture'] ?? $student->p_picture,
         ]);
 
-        $redirectUrl = $student->hasCompletedProfile() ? route('student.dashboard') : route('student.personal-info');
+        // Personal-info is no longer forced on new sign-ins (per the
+        // panel's request) - straight to the dashboard regardless of
+        // profile completeness. The page is still reachable any time from
+        // the student's own profile settings.
+        $redirectUrl = route('student.dashboard');
 
         if ($request->expectsJson()) {
             return response()->json([
@@ -390,7 +394,7 @@ class AuthController extends Controller
             return response()->json([
                 'success' => true,
                 'status' => 'authenticated',
-                'redirect_url' => $student->hasCompletedProfile() ? route('student.dashboard') : route('student.personal-info'),
+                'redirect_url' => route('student.dashboard'),
                 'user' => [
                     'id' => $student->student_id,
                     'email' => $student->email,
@@ -400,7 +404,7 @@ class AuthController extends Controller
             ]);
         }
 
-        return redirect($student->hasCompletedProfile() ? route('student.dashboard') : route('student.personal-info'));
+        return redirect()->route('student.dashboard');
     }
 
     /**

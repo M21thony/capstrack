@@ -31,7 +31,13 @@ class PersonalInfoOnboardingTest extends TestCase
             ->assertRedirect(route('login'));
     }
 
-    public function test_incomplete_profile_redirected_from_dashboard_to_onboarding(): void
+    // Regression test: the dashboard (and every other student.* route
+    // behind the profile.complete middleware) used to redirect an
+    // incomplete profile to the onboarding form. That's intentionally
+    // disabled now - there's no way yet to determine a student's number
+    // from their institutional email alone, so new sign-ins go straight
+    // in instead of being blocked on a form the panel asked to drop.
+    public function test_incomplete_profile_can_access_dashboard_directly(): void
     {
         $student = Student::factory()->create([
             'email' => 'new.student@my.cspc.edu.ph',
@@ -39,7 +45,7 @@ class PersonalInfoOnboardingTest extends TestCase
 
         $this->actingAs($student)
             ->get(route('student.dashboard'))
-            ->assertRedirect(route('student.personal-info'));
+            ->assertOk();
     }
 
     public function test_incomplete_profile_can_access_personal_info_page(): void

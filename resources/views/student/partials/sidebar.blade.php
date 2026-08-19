@@ -79,41 +79,29 @@
       </div>
     </div>
   </div>
-  @if ($student->hasCompletedProfile())
-    <div class="sidebar-user" id="profile-trigger" onclick="openProfile()" role="button" tabindex="0" aria-label="Open profile">
-      <div class="sidebar-avatar">
-        @if ($student->avatarUrl())
-          <img src="{{ $student->avatarUrl() }}" alt="{{ $student->displayFirstName() }}" class="sidebar-avatar-img" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
-          <span class="sidebar-avatar-fallback" style="display:none">{{ $student->avatarInitials() }}</span>
+  <div class="sidebar-user" id="profile-trigger" onclick="openProfile()" role="button" tabindex="0" aria-label="Open profile">
+    <div class="sidebar-avatar">
+      @if ($student->avatarUrl())
+        <img src="{{ $student->avatarUrl() }}" alt="{{ $student->displayFirstName() }}" class="sidebar-avatar-img" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+        <span class="sidebar-avatar-fallback" style="display:none">{{ $student->avatarInitials() }}</span>
+      @else
+        <span class="sidebar-avatar-fallback">{{ $student->avatarInitials() }}</span>
+      @endif
+    </div>
+    <div class="user-info">
+      <div class="user-name">{{ $student->displayFirstName() }}</div>
+      <div class="user-role">
+        @if($student->hasCompletedProfile() && $sidebarYearSection)
+          {{ $sidebarYearSection }}
         @else
-          <span class="sidebar-avatar-fallback">{{ $student->avatarInitials() }}</span>
+          STUDENT
         @endif
       </div>
-      <div class="user-info">
-        <div class="user-name">{{ $student->displayFirstName() }}</div>
-        <div class="user-role">
-          @if($student->hasCompletedProfile() && $sidebarYearSection)
-            {{ $sidebarYearSection }}
-          @else
-            STUDENT
-          @endif
-        </div>
-      </div>
-      <div class="sidebar-user-caret">
-        <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
-      </div>
     </div>
-  @else
-    <a href="{{ route('student.personal-info') }}" class="sidebar-user sidebar-user-incomplete">
-      <div class="sidebar-avatar">
-        <span class="sidebar-avatar-fallback">!</span>
-      </div>
-      <div class="user-info">
-        <div class="user-name">Complete your profile</div>
-        <div class="user-role">Required before use</div>
-      </div>
-    </a>
-  @endif
+    <div class="sidebar-user-caret">
+      <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+    </div>
+  </div>
   <nav class="nav">
     <div class="nav-section">Main</div>
     <a href="{{ route('student.dashboard') }}" class="nav-item {{ request()->routeIs('student.dashboard') ? 'active' : '' }}">
@@ -175,13 +163,6 @@
     <a href="{{ route('student.archive') }}" class="nav-item {{ request()->routeIs('student.archive') ? 'active' : '' }}">
       <svg viewBox="0 0 24 24"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
       Archived Capstones
-    </a>
-    <div class="nav-section">Account</div>
-    <a href="{{ route('student.personal-info.edit') }}" class="nav-item {{ request()->routeIs('student.personal-info*') ? 'active' : '' }}">
-      <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-      Personal Information  
-      @if ($studentHasTeam)
-      @endif
     </a>
     <div class="nav-section">Appearance</div>
     <button class="nav-item nav-item-button" onclick="toggleTheme()" style="cursor:pointer">
