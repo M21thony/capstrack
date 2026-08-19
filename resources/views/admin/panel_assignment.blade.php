@@ -18,22 +18,31 @@
 .expert-picker-option .opt-tags { font-size:10px; color:var(--text3) }
 .expert-picker-option.suggested .opt-name::before { content:"★ "; color:var(--accent3) }
 .expert-picker-empty { padding:16px 12px; font-size:12px; color:var(--text3); text-align:center }
-.win-cal-card { border:1px solid var(--border); border-radius:10px; padding:18px; margin-top:6px }
-.win-cal-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px }
-.win-cal-month-label { font-family:'Space Mono',monospace; font-size:14px; font-weight:700; color:var(--text) }
-.win-cal-nav { width:30px; height:30px; border-radius:7px; border:1px solid var(--border); background:var(--bg3); cursor:pointer; color:var(--text2); font-size:17px; line-height:1; display:flex; align-items:center; justify-content:center }
-.win-cal-nav:hover { background:var(--accent-light); border-color:var(--accent); color:var(--accent3) }
-.win-cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:5px }
-.win-cal-daylabel { text-align:center; font-size:10px; font-weight:700; color:var(--text3); letter-spacing:0.5px; text-transform:uppercase; padding:4px 0 8px }
-.win-cal-cell { aspect-ratio:1; display:flex; align-items:center; justify-content:center; border-radius:8px; font-size:13px; color:var(--text2); cursor:pointer; position:relative; background:var(--bg3) }
-.win-cal-cell.other-month { visibility:hidden; cursor:default }
-.win-cal-cell:hover { background:var(--accent-light); color:var(--accent3) }
-.win-cal-cell.today { box-shadow:inset 0 0 0 1.5px var(--accent) }
-.win-cal-cell.in-range { background:rgba(201,168,44,0.14); color:var(--text) }
-.win-cal-cell.range-edge { background:var(--accent); color:#18191f; font-weight:700 }
-.win-cal-dot { position:absolute; bottom:5px; width:5px; height:5px; border-radius:50%; background:var(--blue) }
-.win-cal-legend { display:flex; align-items:center; gap:6px; font-size:11px; color:var(--text3); margin-top:12px }
-.win-cal-range-label { margin-top:8px; font-size:12px; color:var(--text3); text-align:center }
+/* Calendar - matches instructor/schedule's cal-* classes for visual parity */
+.cal-card { border:1px solid var(--border); border-radius:14px; padding:16px; margin-top:6px }
+.cal-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; flex-wrap:wrap; gap:10px }
+.cal-title-group { display:flex; flex-direction:column; gap:2px }
+.cal-title { font-size:13px; font-weight:700; color:var(--text) }
+.cal-month-label { font-family:'Space Mono',monospace; font-size:11px; color:var(--text3); letter-spacing:0.5px }
+.cal-controls { display:flex; align-items:center; gap:8px }
+.cal-nav-btn { width:30px; height:30px; border-radius:8px; border:1.5px solid var(--border); background:var(--bg3); cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.15s; color:var(--text2) }
+.cal-nav-btn:hover { background:var(--accent-light); border-color:var(--accent); color:var(--accent3) }
+.cal-nav-btn svg { width:14px; height:14px; stroke:currentColor; fill:none; stroke-width:2.5 }
+.cal-month-display { font-family:'Space Mono',monospace; font-size:13px; font-weight:700; color:var(--text); min-width:96px; text-align:center }
+.cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:1px; background:var(--border); border:1px solid var(--border); border-radius:10px; overflow:hidden }
+.cal-day-label { background:var(--navy-dark); padding:9px 4px; text-align:center; font-size:10px; font-weight:700; color:var(--navy-text2); letter-spacing:0.8px; text-transform:uppercase }
+.cal-cell { background:#fff; min-height:72px; padding:8px; display:flex; flex-direction:column; gap:3px; position:relative; cursor:pointer; transition:all 0.15s; user-select:none }
+.cal-cell.other-month { background:var(--bg3); opacity:0.5; cursor:default }
+.cal-cell:not(.other-month):hover { background:rgba(201,168,44,0.08) }
+.cal-cell.today { background:rgba(201,168,44,0.04) }
+.cal-cell.today .cal-date-num { background:var(--accent); color:#18191f; border-radius:50%; width:22px; height:22px; display:flex; align-items:center; justify-content:center; font-weight:700 }
+.cal-cell.in-range { background:rgba(201,168,44,0.08) }
+.cal-cell.selected { background:rgba(29,78,216,0.06)!important; box-shadow:inset 0 0 0 2px rgba(29,78,216,0.35)!important }
+.cal-date-num { font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:var(--text3); line-height:1; margin-bottom:2px; width:22px; height:22px; display:flex; align-items:center; justify-content:center }
+.cal-slot-pill { font-size:9px; font-weight:700; padding:2px 5px; border-radius:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; line-height:1.4 }
+.cal-slot-pill.type-defense { background:rgba(180,83,9,0.1); color:var(--amber); border-left:2px solid var(--amber) }
+.cal-more { font-size:9px; color:var(--text3); font-weight:600; margin-top:2px }
+.win-cal-range-label { margin-top:10px; font-size:12px; color:var(--text3); text-align:center }
 </style>
 </head>
 <body>
@@ -97,18 +106,25 @@
             </select>
           </div>
 
-          <div class="win-cal-card">
-            <div class="win-cal-header">
-              <button type="button" class="win-cal-nav" onclick="winCalNav(-1)" aria-label="Previous month">&lsaquo;</button>
-              <div class="win-cal-month-label" id="win-cal-month-label">–</div>
-              <button type="button" class="win-cal-nav" onclick="winCalNav(1)" aria-label="Next month">&rsaquo;</button>
+          <div class="cal-card">
+            <div class="cal-header">
+              <div class="cal-title-group">
+                <div class="cal-title">Defense Window</div>
+                <div class="cal-month-label" id="win-cal-month-label">–</div>
+              </div>
+              <div class="cal-controls">
+                <button type="button" class="cal-nav-btn" onclick="winCalNav(-1)" aria-label="Previous month">
+                  <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+                </button>
+                <div class="cal-month-display" id="win-cal-month-display">–</div>
+                <button type="button" class="cal-nav-btn" onclick="winCalNav(1)" aria-label="Next month">
+                  <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+                </button>
+              </div>
             </div>
-            <div class="win-cal-grid" id="win-cal-grid"></div>
-            <div class="win-cal-legend">
-              <span><span class="win-cal-dot" style="position:static;display:inline-block;margin-right:4px"></span>Has scheduled defense</span>
-            </div>
-            <div class="win-cal-range-label" id="win-cal-range-label">Click a date to set the start, then another to set the end.</div>
+            <div class="cal-grid" id="win-cal-grid"></div>
           </div>
+          <div class="win-cal-range-label" id="win-cal-range-label">Click a date to set the start, then another to set the end.</div>
           <input type="hidden" id="window-start-date"/>
           <input type="hidden" id="window-end-date"/>
 
@@ -797,31 +813,51 @@ function winCalPick(key) {
 function renderWinCal() {
   const grid = document.getElementById('win-cal-grid');
   const label = document.getElementById('win-cal-month-label');
+  const display = document.getElementById('win-cal-month-display');
   if (!grid || !label) return;
 
   const { year, month } = winCalView;
-  label.textContent = new Date(year, month, 1).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+  const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  label.textContent = `${MONTHS[month]} ${year}`;
+  display.textContent = `${MONTHS[month].substring(0, 3).toUpperCase()} ${year}`;
 
   const scheduled = winCalScheduledDays();
   const firstDow = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const daysInPrevMonth = new Date(year, month, 0).getDate();
   const now = new Date();
   const todayKey = winCalDateKey(now.getFullYear(), now.getMonth(), now.getDate());
 
   let html = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-    .map(d => `<div class="win-cal-daylabel">${d}</div>`).join('');
+    .map(d => `<div class="cal-day-label">${d}</div>`).join('');
 
-  for (let i = 0; i < firstDow; i++) html += `<div class="win-cal-cell other-month"></div>`;
+  // Leading padding — previous month
+  for (let i = firstDow - 1; i >= 0; i--) {
+    html += `<div class="cal-cell other-month"><div class="cal-date-num">${daysInPrevMonth - i}</div></div>`;
+  }
 
   for (let d = 1; d <= daysInMonth; d++) {
     const key = winCalDateKey(year, month, d);
-    const classes = ['win-cal-cell'];
+    const classes = ['cal-cell'];
     if (key === todayKey) classes.push('today');
-    if (winCalRange.start === key || winCalRange.end === key) classes.push('range-edge');
+    if (winCalRange.start === key || winCalRange.end === key) classes.push('selected');
     else if (winCalRange.start && winCalRange.end && key > winCalRange.start && key < winCalRange.end) classes.push('in-range');
-    const teams = scheduled[key];
-    const dot = teams ? `<span class="win-cal-dot" title="${teams.length} defense${teams.length === 1 ? '' : 's'} scheduled: ${teams.join(', ')}"></span>` : '';
-    html += `<div class="${classes.join(' ')}" onclick="winCalPick('${key}')">${d}${dot}</div>`;
+
+    const teams = scheduled[key] || [];
+    let extra = '';
+    teams.slice(0, 2).forEach(name => {
+      extra += `<div class="cal-slot-pill type-defense" title="${name}">${name}</div>`;
+    });
+    if (teams.length > 2) extra += `<div class="cal-more">+${teams.length - 2} more</div>`;
+
+    html += `<div class="${classes.join(' ')}" onclick="winCalPick('${key}')"><div class="cal-date-num">${d}</div>${extra}</div>`;
+  }
+
+  // Trailing padding — next month
+  const totalCells = firstDow + daysInMonth;
+  const remainder = totalCells % 7 === 0 ? 0 : 7 - (totalCells % 7);
+  for (let d = 1; d <= remainder; d++) {
+    html += `<div class="cal-cell other-month"><div class="cal-date-num">${d}</div></div>`;
   }
 
   grid.innerHTML = html;
