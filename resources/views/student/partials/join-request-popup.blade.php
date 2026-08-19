@@ -1,4 +1,18 @@
 <style>
+  /* This partial is included on every student page via the sidebar, but
+     several pages (submission, personal-info, archive, duplication,
+     resources, review, profile) never define .modal-overlay/.pm-close-btn
+     themselves - without a base rule here, these two overlays render as
+     plain unstyled, unpositioned, always-visible boxes stacked in normal
+     page flow instead of a centered fixed backdrop. Additive only: on
+     pages that already define .modal-overlay for their own modals, this
+     just adds the opacity/pointer-events toggle their JS doesn't already
+     provide - it never overrides their base display/background rules. */
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1000;opacity:0;pointer-events:none;transition:opacity .2s}
+  .modal-overlay.active{opacity:1;pointer-events:auto}
+  .pm-close-btn{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;padding:0;background-color:var(--bg2);color:var(--text3);border:none;border-radius:50%;cursor:pointer;transition:all .15s ease-in-out;outline:none}
+  .pm-close-btn:hover{background-color:var(--border);color:var(--text);transform:scale(1.05)}
+
   #jrp-overlay{background:rgba(24,25,31,0.5);backdrop-filter:blur(3px);cursor:default}
   #jrp-overlay .card{padding:0!important;border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,0.18),0 8px 24px rgba(0,0,0,0.12);overflow:hidden;display:flex;flex-direction:column;animation:jrpIn 0.2s ease forwards}
   @keyframes jrpIn{from{opacity:0;transform:translateY(10px) scale(0.985)}to{opacity:1;transform:translateY(0) scale(1)}}
