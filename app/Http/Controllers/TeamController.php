@@ -52,13 +52,14 @@ class TeamController extends Controller
 
         if ($teamId) {
             $myTeam = Team::find($teamId);
+            $teamLeaderId = (int) $myTeam?->leader_id;
             $teamMembers = Student::join('student_s_y', 'students.student_id', '=', 'student_s_y.student_id')
                 ->leftJoin('student_roles', 'student_s_y.s_role_id', '=', 'student_roles.s_role_id')
                 ->where('student_s_y.team_id', $teamId)
                 ->select('students.*', 'student_s_y.s_role_id', 'student_roles.s_role_name')
                 ->get()
-                ->sortBy(function ($member) use ($studentId) {
-                    $isLeader = $member->s_role_name === 'Leader';
+                ->sortBy(function ($member) use ($studentId, $teamLeaderId) {
+                    $isLeader = (int) $member->student_id === $teamLeaderId;
                     $isSelf = $member->student_id === $studentId;
 
                     if ($isLeader) {
@@ -102,7 +103,6 @@ class TeamController extends Controller
             ->toArray();
 
         $leaderIds = $myTeam ? [(int) $myTeam->leader_id] : [];
-        $leaderIds = $teamMembers->filter(fn ($m) => $m->s_role_name === 'Leader')->pluck('student_id')->toArray();
 
         $currentSchoolYear = $studentSy?->school_year;
 
@@ -260,12 +260,10 @@ class TeamController extends Controller
             'leader_id' => $student->student_id,
         ]);
 
-        $leaderRoleId = StudentRole::where('s_role_name', 'Leader')->value('s_role_id');
-
         DB::table('student_s_y')
             ->updateOrInsert(
                 ['student_id' => $student->student_id],
-                ['team_id' => $team->team_id, 's_role_id' => $leaderRoleId]
+                ['team_id' => $team->team_id, 's_role_id' => StudentRole::leaderRoleId()]
             );
 
         // Keep member count synced at the fixed 5-member limit
@@ -1071,11 +1069,15 @@ class TeamController extends Controller
             ->where('recruitment_goal', '!=', 'build_a_team')
             ->delete();
 
-        $leaderRoleId = StudentRole::where('s_role_name', 'Leader')->value('s_role_id');
-        $memberRoleId = StudentRole::where('s_role_name', 'Member')->value('s_role_id');
+        // There's no separate "Leader" role - Project Head/Network Engineer
+        // is the leader role, and the other two are member roles. On
+        // transfer, the new leader takes the Project Head role and the
+        // outgoing leader takes over whatever specific role the new leader
+        // previously held (so nobody ends up with an undefined role).
+        $newLeaderPreviousRoleId = StudentSchoolYear::where('student_id', $newLeaderId)->value('s_role_id');
 
-        StudentSchoolYear::where('student_id', $oldLeaderId)->update(['s_role_id' => $memberRoleId]);
-        StudentSchoolYear::where('student_id', $newLeaderId)->update(['s_role_id' => $leaderRoleId]);
+        StudentSchoolYear::where('student_id', $oldLeaderId)->update(['s_role_id' => $newLeaderPreviousRoleId]);
+        StudentSchoolYear::where('student_id', $newLeaderId)->update(['s_role_id' => StudentRole::leaderRoleId()]);
 
         $oldLeader = Student::find($oldLeaderId);
         $newLeader = Student::find($newLeaderId);
