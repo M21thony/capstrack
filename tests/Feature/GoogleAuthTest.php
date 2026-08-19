@@ -34,7 +34,7 @@ class GoogleAuthTest extends TestCase
         ]);
 
         $this->get("/login/google/callback?state={$state}&code=fake-code")
-            ->assertRedirect(route('student.personal-info'));
+            ->assertRedirect(route('student.dashboard'));
 
         $student = Student::where('email', 'juan.delacruz@my.cspc.edu.ph')->first();
         $this->assertNotNull($student);
@@ -242,7 +242,7 @@ class GoogleAuthTest extends TestCase
         $response->assertJson([
             'success' => true,
             'status' => 'authenticated',
-            'redirect_url' => route('student.personal-info'),
+            'redirect_url' => route('student.dashboard'),
         ]);
         $this->assertTrue(Auth::check());
 

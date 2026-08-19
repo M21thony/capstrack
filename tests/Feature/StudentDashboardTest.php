@@ -25,7 +25,9 @@ class StudentDashboardTest extends TestCase
         $response->assertRedirect(route('login'));
     }
 
-    public function test_student_dashboard_requires_completed_profile(): void
+    // The forced onboarding redirect is intentionally disabled - see
+    // PersonalInfoOnboardingTest::test_incomplete_profile_can_access_dashboard_directly.
+    public function test_student_dashboard_loads_with_incomplete_profile(): void
     {
         $student = Student::factory()->create([
             'email' => 'incomplete@my.cspc.edu.ph',
@@ -34,7 +36,7 @@ class StudentDashboardTest extends TestCase
         $response = $this->actingAs($student, 'web')
             ->get(route('student.dashboard'));
 
-        $response->assertRedirect(route('student.personal-info'));
+        $response->assertOk();
     }
 
     public function test_student_dashboard_loads_with_correct_team_groups_filter(): void
