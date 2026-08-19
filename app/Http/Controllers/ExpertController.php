@@ -53,7 +53,15 @@ class ExpertController extends Controller
                 'suffix' => ['nullable', 'string', 'max:50'],
                 'credentials' => ['nullable', 'string', 'max:50'],
                 'email' => ['required', 'email', 'regex:/@gmail\\.com$/i'],
-                'specialization' => ['required', 'array', 'min:1'],
+                'specialization' => ['required', 'array', 'min:1', function ($attribute, $value, $fail) {
+                    // An expert can only ever serve a team in one of these
+                    // three capacities - picking more than one is what let a
+                    // single expert show up as e.g. both a team's "adviser"
+                    // and "consultant" everywhere their role gets displayed.
+                    if (count(array_intersect($value, ['adviser', 'consultant', 'grammarian'])) > 1) {
+                        $fail('Please select only one of Adviser, Consultant, or Grammarian.');
+                    }
+                }],
                 'specialization.*' => ['string', 'in:adviser,consultant,grammarian,capstone_adviser'],
                 'expertise' => ['required', 'array', 'min:1'],
                 'expertise.*' => ['string', 'max:100'],
