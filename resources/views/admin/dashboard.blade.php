@@ -33,7 +33,8 @@
       <x-dashboard.stat-chip value="{{ $completedTeams }}" label="Completed Teams" sub="{{ $currentSchoolYearLabel }}" color="var(--accent3)" />
     </div>
 
-    <div class="grid-2" style="margin-bottom:16px">
+    <div class="grid-3" style="margin-bottom:16px">
+      <x-dashboard.stat-chip value="{{ $pendingVerificationTeams }}" label="Pending Verification" sub="Complete teams awaiting review" color="var(--amber)" />
       <x-dashboard.stat-chip value="{{ $pendingApprovals }}" label="Pending Approvals" sub="Expert accounts awaiting review" color="var(--red)" />
       <x-dashboard.stat-chip value="{{ $archivedCapstones }}" label="Archived Capstones" sub="All time" color="var(--blue)" />
     </div>

@@ -187,6 +187,23 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
 .modal-tutorial{background:rgba(181,148,31,0.05);border-left:3px solid var(--accent);padding:10px 14px;margin-bottom:20px;border-radius:4px;transition:0.3s}
 .modal-tutorial p{font-size:11px;color:var(--text3);line-height:1.4;margin:0}
 
+/* TRANSFER LEADERSHIP — MEMBER PICKER */
+.transfer-member-option{display:flex;align-items:center;gap:12px;width:100%;padding:11px 13px;border:1.5px solid var(--border);border-radius:12px;background:var(--bg2);cursor:pointer;transition:border-color 0.15s,background 0.15s,box-shadow 0.15s;font-family:inherit;text-align:left;box-sizing:border-box}
+.transfer-member-option:hover{border-color:var(--border2);background:var(--bg3)}
+.transfer-member-option.selected{border-color:var(--amber);background:var(--amber-bg);box-shadow:0 0 0 3px rgba(180,83,9,0.08)}
+.transfer-member-option .tmo-avatar{width:38px;height:38px;min-width:38px;border-radius:50%;background:var(--bg3);border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--text);overflow:hidden;flex-shrink:0}
+.transfer-member-option.selected .tmo-avatar{border-color:var(--amber)}
+.transfer-member-option .tmo-radio{width:18px;height:18px;min-width:18px;border-radius:50%;border:2px solid var(--border2);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.15s}
+.transfer-member-option.selected .tmo-radio{border-color:var(--amber);background:var(--amber)}
+.transfer-member-option.selected .tmo-radio::after{content:"";width:6px;height:6px;border-radius:50%;background:#fff}
+#transfer-member-list::-webkit-scrollbar{width:4px}
+#transfer-member-list::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px}
+#transfer-submit-btn:disabled{opacity:0.45;cursor:not-allowed;transform:none;box-shadow:none!important}
+[data-theme="dark"] .transfer-member-option.selected{background:rgba(245,158,11,0.12)}
+[data-theme="dark"] .transfer-member-option.selected .tmo-avatar{border-color:var(--amber)}
+[data-theme="dark"] .transfer-member-option .tmo-avatar{background:var(--bg4);border-color:var(--border)}
+[data-theme="dark"] .transfer-member-option.selected .tmo-radio{background:var(--amber)}
+
 /* INVITATION CARD */
 .invitation-card{background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:10px;transition:0.2s;display:flex;flex-direction:column;gap:10px}
 .invitation-card:hover{border-color:var(--accent);transform:translateX(-4px)}

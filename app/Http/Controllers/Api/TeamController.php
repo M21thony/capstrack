@@ -72,8 +72,9 @@ class TeamController extends Controller
         $recruitment = Recruitment::where('student_id', $student->student_id)
             ->where('recruitment_goal', 'build_a_team')
             ->first();
-        if ($recruitment?->member_count) {
-            $team->update(['member_count' => $recruitment->member_count]);
+        if ($recruitment) {
+            $recruitment->update(['member_count' => 5]);
+            $team->update(['member_count' => 5]);
         }
 
         Recruitment::where('student_id', $student->student_id)
@@ -145,7 +146,6 @@ class TeamController extends Controller
             'team_name' => ['required', 'string', 'max:100'],
             'project_title' => ['nullable', 'string', 'max:150'],
             'team_status' => ['nullable', Rule::in(['on-going', 'complete', 'closed'])],
-            'member_count' => ['nullable', 'integer', Rule::in([3, 5])],
         ]);
 
         if ($validated['team_status'] === 'complete') {
@@ -164,25 +164,22 @@ class TeamController extends Controller
         }
 
         $originalStatus = $team->team_status;
-        $originalMemberCount = $team->member_count;
 
         $team->update([
             'team_name' => $validated['team_name'],
             'project_title' => $validated['project_title'] ?? null,
             'team_status' => $validated['team_status'] ?? 'on-going',
-            'member_count' => $validated['member_count'] ?? $team->member_count ?? 5,
+            'member_count' => 5,
         ]);
 
-        if ($validated['member_count'] ?? false) {
-            Recruitment::where('student_id', $studentId)
-                ->where('recruitment_goal', 'build_a_team')
-                ->update(['member_count' => $validated['member_count']]);
-        }
+        Recruitment::where('student_id', $studentId)
+            ->where('recruitment_goal', 'build_a_team')
+            ->update(['member_count' => 5]);
 
         $autoClosed = false;
         if ($team->team_status === 'on-going') {
             $currentCount = StudentSchoolYear::where('team_id', $team->team_id)->count();
-            if ($currentCount >= $team->member_count) {
+            if ($currentCount >= 5) {
                 $team->update(['team_status' => 'closed']);
                 $autoClosed = true;
                 $this->logActivity(
@@ -203,13 +200,8 @@ class TeamController extends Controller
             );
         }
 
-        if ($team->member_count !== $originalMemberCount) {
-            $this->logActivity(
-                $studentId,
-                'member_count_changed',
-                'Updated team member limit to <strong>'.$team->member_count.'</strong>',
-                ['team_id' => $team->team_id, 'member_count' => $team->member_count]
-            );
+        if ($team->member_count !== 5) {
+            $team->update(['member_count' => 5]);
         }
 
         $this->logActivity(
@@ -287,50 +279,6 @@ class TeamController extends Controller
         return response()->json(['message' => 'You have left the team.']);
     }
 
-    public function confirm(Request $request, Team $team): JsonResponse
-    {
-        $student = $request->user();
-        $studentId = $student->student_id;
-
-        $isLeader = (int) $team->leader_id === (int) $studentId;
-
-        if (! $isLeader) {
-            return response()->json(['message' => 'Only the team leader can confirm the team.'], 403);
-        }
-
-        if ($team->is_confirmed) {
-            return response()->json(['message' => 'Team is already confirmed.'], 422);
-        }
-
-        $team->update(['is_confirmed' => true]);
-
-        $this->logActivity(
-            $studentId,
-            'team_confirmed',
-            'Confirmed team <strong>'.e($team->team_name).'</strong>',
-            ['team_id' => $team->team_id]
-        );
-
-        $memberIds = StudentSchoolYear::where('team_id', $team->team_id)
-            ->where('student_id', '!=', $studentId)
-            ->pluck('student_id');
-
-        foreach ($memberIds as $memberId) {
-            Notification::create([
-                'student_id' => $memberId,
-                'type' => 'team_confirmed',
-                'title' => 'Team Confirmed',
-                'message' => 'Your team <strong>'.e($team->team_name).'</strong> has been confirmed!',
-                'link' => route('student.team'),
-            ]);
-        }
-
-        return response()->json([
-            'message' => 'Team confirmed successfully!',
-            'team' => new TeamResource($team->load('leader', 'members')),
-        ]);
-    }
-
     public function transferLeadership(Request $request, Team $team): JsonResponse
     {
         $validated = $request->validate([
@@ -358,12 +306,155 @@ class TeamController extends Controller
             return response()->json(['message' => 'That student is not a member of your team.'], 422);
         }
 
+        // Cancel any existing pending transfer requests for this team so the leader is never stuck
+        $oldRequests = Notification::where('type', 'leadership_transfer_request')
+            ->where('is_read', false)
+            ->where('data->team_id', $team->team_id)
+            ->get();
+
+        foreach ($oldRequests as $oldRequest) {
+            $oldRequest->update(['is_read' => true]);
+            $oldData = $oldRequest->data ?? [];
+            $oldPendingLeaderId = (int) ($oldData['old_leader_id'] ?? 0);
+
+            Notification::where('type', 'leadership_transfer_pending')
+                ->where('student_id', $oldPendingLeaderId)
+                ->where('is_read', false)
+                ->where('data->team_id', $team->team_id)
+                ->update(['is_read' => true]);
+        }
+
+        $newLeader = Student::find($newLeaderId);
+
+        Notification::create([
+            'student_id' => $newLeaderId,
+            'type' => 'leadership_transfer_request',
+            'title' => 'Leadership Transfer Awaiting Approval',
+            'message' => '<strong>'.e($authUser->f_name.' '.$authUser->l_name).'</strong> wants to transfer leadership of <strong>'.e($team->team_name).'</strong> to you. Do you accept?',
+            'link' => route('student.team'),
+            'data' => [
+                'team_id' => $team->team_id,
+                'team_name' => $team->team_name,
+                'old_leader_id' => $authId,
+                'new_leader_id' => $newLeaderId,
+            ],
+        ]);
+
+        Notification::create([
+            'student_id' => $authId,
+            'type' => 'leadership_transfer_pending',
+            'title' => 'Leadership Transfer Pending Approval',
+            'message' => 'You requested to transfer leadership of <strong>'.e($team->team_name).'</strong> to <strong>'.e($newLeader?->f_name.' '.$newLeader?->l_name ?? 'another member').'</strong>. Your request is <strong>still pending</strong> until they approve it.',
+            'link' => route('student.team'),
+            'data' => [
+                'team_id' => $team->team_id,
+                'team_name' => $team->team_name,
+                'old_leader_id' => $authId,
+                'new_leader_id' => $newLeaderId,
+            ],
+        ]);
+
+        $this->logActivity(
+            $authId,
+            'leadership_transfer_requested',
+            'Requested to transfer leadership to <strong>'.e($newLeader?->f_name.' '.$newLeader?->l_name ?? 'another member').'</strong>',
+            ['new_leader_id' => $newLeaderId, 'team_id' => $team->team_id]
+        );
+
+        return response()->json([
+            'message' => 'Leadership transfer request sent to '.($newLeader?->f_name ?? 'the member').'. They must approve it first.',
+            'team' => new TeamResource($team->load('leader', 'members')),
+        ]);
+    }
+
+    public function acceptLeadership(Request $request, int $notificationId): JsonResponse
+    {
+        return $this->respondToLeadershipTransfer($request, $notificationId, true);
+    }
+
+    public function declineLeadership(Request $request, int $notificationId): JsonResponse
+    {
+        return $this->respondToLeadershipTransfer($request, $notificationId, false);
+    }
+
+    private function respondToLeadershipTransfer(Request $request, int $notificationId, bool $approve): JsonResponse
+    {
+        $notification = Notification::find($notificationId);
+        $authUser = $request->user();
+        $authId = $authUser->student_id;
+
+        if (! $notification || (int) $notification->student_id !== (int) $authId || $notification->type !== 'leadership_transfer_request') {
+            return response()->json(['message' => 'Invalid leadership transfer request.'], 403);
+        }
+
+        $data = $notification->data ?? [];
+        $teamId = (int) ($data['team_id'] ?? 0);
+        $oldLeaderId = (int) ($data['old_leader_id'] ?? 0);
+        $newLeaderId = (int) ($data['new_leader_id'] ?? 0);
+
+        if ($newLeaderId !== $authId) {
+            return response()->json(['message' => 'Invalid leadership transfer request.'], 403);
+        }
+
+        $team = Team::find($teamId);
+
+        if (! $team) {
+            return response()->json(['message' => 'The team no longer exists.'], 404);
+        }
+
+        $teamIdInt = (int) $team->team_id;
+
+        if (! $approve) {
+            $notification->update(['is_read' => true]);
+
+            Notification::where('type', 'leadership_transfer_pending')
+                ->where('student_id', $oldLeaderId)
+                ->where('is_read', false)
+                ->where('data->team_id', $teamIdInt)
+                ->update(['is_read' => true]);
+
+            $this->logActivity(
+                $authId,
+                'leadership_transfer_declined',
+                'Declined leadership of <strong>'.e($team->team_name).'</strong>',
+                ['old_leader_id' => $oldLeaderId, 'team_id' => $teamIdInt]
+            );
+
+            Notification::create([
+                'student_id' => $oldLeaderId,
+                'type' => 'leadership_transfer_declined',
+                'title' => 'Leadership Request Declined',
+                'message' => '<strong>'.e($authUser->f_name.' '.$authUser->l_name).'</strong> declined your request to transfer leadership of <strong>'.e($team->team_name).'</strong>.',
+                'link' => route('student.team'),
+            ]);
+
+            return response()->json(['message' => 'You declined the leadership transfer request.']);
+        }
+
+        // Make sure leadership hasn't already moved
+        if ((int) $team->leader_id !== $oldLeaderId) {
+            $notification->update(['is_read' => true]);
+
+            return response()->json(['message' => 'Leadership of this team has already changed.'], 422);
+        }
+
+        // Make sure the new leader is still a member
+        $isMember = StudentSchoolYear::where('student_id', $newLeaderId)
+            ->where('team_id', $teamIdInt)
+            ->exists();
+
+        if (! $isMember) {
+            $notification->update(['is_read' => true]);
+
+            return response()->json(['message' => 'You are no longer a member of this team.'], 422);
+        }
+
+        // Perform the transfer
         $team->update(['leader_id' => $newLeaderId]);
 
-        Recruitment::where('student_id', $authId)
+        Recruitment::where('student_id', $oldLeaderId)
             ->where('recruitment_goal', 'build_a_team')
             ->update(['student_id' => $newLeaderId]);
-
         Recruitment::where('student_id', $newLeaderId)
             ->where('recruitment_goal', '!=', 'build_a_team')
             ->delete();
@@ -371,16 +462,34 @@ class TeamController extends Controller
         $leaderRoleId = StudentRole::where('s_role_name', 'Leader')->value('s_role_id');
         $memberRoleId = StudentRole::where('s_role_name', 'Member')->value('s_role_id');
 
-        StudentSchoolYear::where('student_id', $authId)->update(['s_role_id' => $memberRoleId]);
+        StudentSchoolYear::where('student_id', $oldLeaderId)->update(['s_role_id' => $memberRoleId]);
         StudentSchoolYear::where('student_id', $newLeaderId)->update(['s_role_id' => $leaderRoleId]);
 
+        $oldLeader = Student::find($oldLeaderId);
         $newLeader = Student::find($newLeaderId);
         $this->logActivity(
-            $authId,
+            $oldLeaderId,
             'leadership_transferred',
             'Transferred leadership to <strong>'.e($newLeader?->f_name.' '.$newLeader?->l_name ?? 'another member').'</strong>',
-            ['new_leader_id' => $newLeaderId, 'team_id' => $team->team_id]
+            ['new_leader_id' => $newLeaderId, 'team_id' => $teamIdInt]
         );
+
+        // Mark request as read and notify both parties
+        $notification->update(['is_read' => true]);
+
+        Notification::where('type', 'leadership_transfer_pending')
+            ->where('student_id', $oldLeaderId)
+            ->where('is_read', false)
+            ->where('data->team_id', $teamIdInt)
+            ->update(['is_read' => true]);
+
+        Notification::create([
+            'student_id' => $oldLeaderId,
+            'type' => 'leadership_transferred',
+            'title' => 'Leadership Transferred',
+            'message' => '<strong>'.e($newLeader?->f_name.' '.$newLeader?->l_name ?? 'The member').'</strong> accepted your request and is now the team leader of <strong>'.e($team->team_name).'</strong>.',
+            'link' => route('student.team'),
+        ]);
 
         Notification::create([
             'student_id' => $newLeaderId,
@@ -391,7 +500,7 @@ class TeamController extends Controller
         ]);
 
         return response()->json([
-            'message' => 'Leadership transferred successfully!',
+            'message' => 'You are now the team leader of '.$team->team_name.'!',
             'team' => new TeamResource($team->load('leader', 'members')),
         ]);
     }

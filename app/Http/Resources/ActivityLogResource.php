@@ -38,6 +38,10 @@ class ActivityLogResource extends JsonResource
                 'bg' => 'rgba(22,163,74,0.1)',
                 'svg' => '<svg viewBox="0 0 24 24" style="stroke:#16a34a"><polyline points="20 6 9 17 4 12"/></svg>',
             ],
+            'team_verified' => [
+                'bg' => 'rgba(22,163,74,0.1)',
+                'svg' => '<svg viewBox="0 0 24 24" style="stroke:#16a34a"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>',
+            ],
             'member_removed' => [
                 'bg' => 'rgba(239,68,68,0.1)',
                 'svg' => '<svg viewBox="0 0 24 24" style="stroke:#ef4444"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>',

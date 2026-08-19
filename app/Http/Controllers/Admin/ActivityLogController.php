@@ -13,6 +13,7 @@ class ActivityLogController extends Controller
         'team_left',
         'team_status_changed',
         'team_confirmed',
+        'team_verified',
         'expert_removed',
     ];
 
