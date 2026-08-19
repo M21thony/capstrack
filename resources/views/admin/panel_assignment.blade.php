@@ -31,7 +31,7 @@
 .cal-month-display { font-family:'Space Mono',monospace; font-size:13px; font-weight:700; color:var(--text); min-width:96px; text-align:center }
 .cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:1px; background:var(--border); border:1px solid var(--border); border-radius:10px; overflow:hidden }
 .cal-day-label { background:var(--navy-dark); padding:9px 4px; text-align:center; font-size:10px; font-weight:700; color:var(--navy-text2); letter-spacing:0.8px; text-transform:uppercase }
-.cal-cell { background:#fff; min-height:72px; padding:8px; display:flex; flex-direction:column; gap:3px; position:relative; cursor:pointer; transition:all 0.15s; user-select:none }
+.cal-cell { background:#fff; min-height:86px; padding:8px; display:flex; flex-direction:column; gap:3px; position:relative; cursor:pointer; transition:all 0.15s; user-select:none }
 .cal-cell.other-month { background:var(--bg3); opacity:0.5; cursor:default }
 .cal-cell:not(.other-month):hover { background:rgba(201,168,44,0.08) }
 .cal-cell.today { background:rgba(201,168,44,0.04) }
@@ -85,7 +85,7 @@
 
       <!-- Defense window modal overlay -->
       <div id="window-modal" style="display:none;position:fixed;inset:0;background:rgba(24,25,31,0.6);z-index:100;align-items:center;justify-content:center">
-        <div style="background:#fff;border-radius:14px;padding:24px;width:600px;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
+        <div style="background:#fff;border-radius:14px;padding:24px;width:720px;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
             <div style="font-size:15px;font-weight:600;color:var(--text)">Defense Window</div>
             <button onclick="closeWindowModal()" style="background:none;border:none;font-size:22px;color:var(--text3);cursor:pointer;line-height:1">&times;</button>
