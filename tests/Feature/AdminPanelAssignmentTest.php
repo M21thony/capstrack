@@ -414,6 +414,48 @@ class AdminPanelAssignmentTest extends TestCase
         $this->assertSame($scheduleA->venue, $scheduleC->venue);
     }
 
+    public function test_auto_scheduling_pushes_a_shared_panelist_between_different_panels_to_a_different_day(): void
+    {
+        // Reported bug, reproduced through the automatic scheduler
+        // specifically (not just the manual override): a shared expert
+        // between two DIFFERENT panels landed on the same day in different
+        // venues/blocks with no conflict detected at all.
+        $bautista = $this->makeExpert();
+        $delaCruz = $this->makeExpert();
+        $mendoza = $this->makeExpert();
+        $anaReyes = $this->makeExpert();
+        $admin = $this->makeExpert();
+        $grom = $this->makeExpert();
+
+        $debugTeam = $this->makeTeam(['team_name' => 'DebugTeam']);
+        $tinkerTeam = $this->makeTeam(['team_name' => 'TinkerTeam']);
+
+        // DebugTeam's panel: Ana Reyes / Admin / Grom.
+        $this->assignPanel($debugTeam, 'Title Defense', $anaReyes, $admin);
+        DefensePanel::create(['defense_id' => DefenseSchedule::where('team_id', $debugTeam->team_id)->value('defense_id'), 'expert_id' => $grom->expert_id, 'panel_role' => 'Panel Member 2', 'created_at' => now()]);
+
+        // TinkerTeam's panel: Bautista / Grom / Mendoza - a DIFFERENT
+        // lineup that still shares Grom with DebugTeam's panel above.
+        $this->assignPanel($tinkerTeam, 'Title Defense', $bautista, $grom);
+        DefensePanel::create(['defense_id' => DefenseSchedule::where('team_id', $tinkerTeam->team_id)->value('defense_id'), 'expert_id' => $mendoza->expert_id, 'panel_role' => 'Panel Member 2', 'created_at' => now()]);
+
+        // Window is wide enough to have somewhere else to go, but narrow
+        // enough that "same day" really would be the only option if the
+        // conflict weren't caught.
+        $response = $this->saveWindow('Title Defense', '2026-09-01', '2026-09-05');
+        $response->assertStatus(200)->assertJson(['success' => true, 'scheduled_count' => 2]);
+
+        $debugSchedule = DefenseSchedule::where('team_id', $debugTeam->team_id)->first();
+        $tinkerSchedule = DefenseSchedule::where('team_id', $tinkerTeam->team_id)->first();
+
+        $this->assertNotNull($debugSchedule->schedule_date);
+        $this->assertNotNull($tinkerSchedule->schedule_date);
+        $this->assertFalse(
+            $debugSchedule->schedule_date->isSameDay($tinkerSchedule->schedule_date),
+            'Two different panels sharing Grom must never land on the same day, even in different blocks/venues.'
+        );
+    }
+
     public function test_generated_schedule_avoids_double_booking_venue_and_experts_on_the_same_day(): void
     {
         $panelA = [$this->makeExpert(), $this->makeExpert()];
@@ -670,6 +712,55 @@ class AdminPanelAssignmentTest extends TestCase
         );
 
         $response->assertOk()->assertJson(['success' => true]);
+    }
+
+    public function test_override_rejects_a_shared_panelist_on_a_different_panel_even_at_a_different_time_and_venue(): void
+    {
+        // Reported bug: an expert sitting on two DIFFERENT panels (only
+        // partially overlapping membership) on the same day, in different
+        // venues and different blocks, was allowed through with no
+        // conflict at all. Two different panels can never share a day once
+        // they share even one expert - unlike two teams on the exact SAME
+        // panel, which correctly CAN share a day across different blocks.
+        $sharedExpert = $this->makeExpert();
+        $memberX = $this->makeExpert();
+        $memberY = $this->makeExpert();
+        $teamA = $this->makeTeam(['team_name' => 'DebugTeam']);
+        $teamB = $this->makeTeam(['team_name' => 'TinkerTeam']);
+
+        // Team A's panel: sharedExpert + memberX, in Open Lab at 8am.
+        $scheduleA = DefenseSchedule::create([
+            'team_id' => $teamA->team_id,
+            'defense_type' => 'Title Defense',
+            'schedule_date' => '2027-03-15 08:00:00',
+            'venue' => 'Open Lab',
+        ]);
+        DefensePanel::create(['defense_id' => $scheduleA->defense_id, 'expert_id' => $sharedExpert->expert_id, 'panel_role' => 'Panel Chair', 'created_at' => now()]);
+        DefensePanel::create(['defense_id' => $scheduleA->defense_id, 'expert_id' => $memberX->expert_id, 'panel_role' => 'Panel Member 1', 'created_at' => now()]);
+
+        // Team B's panel is a DIFFERENT lineup (sharedExpert + memberY, not
+        // memberX) - trying to place them at 10am in Mac Lab, a completely
+        // different time and room, must still be flagged.
+        $scheduleB = DefenseSchedule::create([
+            'team_id' => $teamB->team_id,
+            'defense_type' => 'Title Defense',
+            'schedule_date' => '2027-03-10 08:00:00',
+            'venue' => 'Mac Lab',
+        ]);
+        DefensePanel::create(['defense_id' => $scheduleB->defense_id, 'expert_id' => $sharedExpert->expert_id, 'panel_role' => 'Panel Chair', 'created_at' => now()]);
+        DefensePanel::create(['defense_id' => $scheduleB->defense_id, 'expert_id' => $memberY->expert_id, 'panel_role' => 'Panel Member 1', 'created_at' => now()]);
+
+        $response = $this->actingAs($this->admin, 'expert')->putJson(
+            route('api.admin.panel_assignment.schedule.update', $scheduleB->defense_id),
+            ['schedule_date' => '2027-03-15', 'start_time' => '10:00', 'venue' => 'Mac Lab']
+        );
+
+        $response->assertStatus(409);
+        $response->assertJson(['success' => false, 'requires_confirmation' => true]);
+        $conflicts = $response->json('conflicts');
+        $this->assertNotEmpty($conflicts);
+        $this->assertStringContainsString($sharedExpert->name, $conflicts[0]);
+        $this->assertStringContainsString('different panel', $conflicts[0]);
     }
 
     public function test_override_with_venue_conflict_confirmed_saves_anyway(): void
