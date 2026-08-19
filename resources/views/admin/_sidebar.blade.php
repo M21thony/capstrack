@@ -307,8 +307,10 @@
 <script>
 (function () {
   // "Admin Duties" / "My Expert Duties" collapse behind a chevron toggle,
-  // remembered across page loads via localStorage - but a group containing
-  // the currently active page always opens regardless of the stored
+  // remembered across page loads via localStorage. Starts collapsed the
+  // first time (no stored preference yet) - after that it follows
+  // whatever the user last set it to. Either way, a group containing the
+  // currently active page always opens regardless of the stored
   // preference, so navigating there never leaves you looking at a
   // collapsed, seemingly-empty section.
   ['admin-duties', 'expert-duties'].forEach(function (id) {
@@ -317,7 +319,8 @@
     if (!body || !toggle) return;
 
     var isActive = body.getAttribute('data-active') === '1';
-    var storedCollapsed = localStorage.getItem('navGroupCollapsed_' + id) === '1';
+    var stored = localStorage.getItem('navGroupCollapsed_' + id);
+    var storedCollapsed = stored === null ? true : stored === '1';
     var collapsed = storedCollapsed && !isActive;
 
     body.classList.toggle('collapsed', collapsed);
