@@ -67,26 +67,29 @@ class AdminTeamVerificationController extends Controller
             $records = $syRecords->get($team->team_id, collect());
             $members = $records->map(fn ($sy) => $sy->student)->filter()->values();
 
-            $section = '';
-            foreach ($records as $sy) {
-                if ($sy->student) {
-                    $sectionLabel = Student::computeSectionLabel($sy->student->course, $sy->student->year_section);
-                    if ($sectionLabel) {
-                        $section = $sectionLabel;
-                        break;
-                    }
+            $section = $this->sectionLabelFromRecords($records);
+
+            // A team whose members haven't completed their profile (course /
+            // year_section) has no section to match against any admin's
+            // assignment - since the forced personal-info onboarding step
+            // was removed for new student sign-ins, this is now a real,
+            // reachable state, not just a data-migration edge case. Excluding
+            // it here would make it permanently invisible to every admin,
+            // with no one able to ever verify it - shown to every admin
+            // instead, distinctly labeled, rather than silently lost.
+            $hasSection = $section !== '';
+
+            if ($hasSection) {
+                if (! in_array($section, $adminSections, true)) {
+                    continue;
+                }
+
+                if ($selectedSection && $section !== $selectedSection) {
+                    continue;
                 }
             }
 
-            if (! in_array($section, $adminSections, true)) {
-                continue;
-            }
-
-            if ($selectedSection && $section !== $selectedSection) {
-                continue;
-            }
-
-            $teamSections[$team->team_id] = $section;
+            $teamSections[$team->team_id] = $hasSection ? $section : 'Unassigned (incomplete profile)';
             $teamMembers[$team->team_id] = $members;
             $teams->push($team);
         }
@@ -115,8 +118,14 @@ class AdminTeamVerificationController extends Controller
         }
 
         $adminSections = $admin->sections ?? [];
+        $section = $this->teamSection($team);
 
-        if (! in_array($this->teamSection($team), $adminSections, true)) {
+        // A team with no computed section (members haven't completed their
+        // profile) is shown to every admin on the listing page rather than
+        // being permanently invisible to all of them - the verify action
+        // has to allow the same team through, or it just becomes visible
+        // but permanently un-actionable instead.
+        if ($section !== '' && ! in_array($section, $adminSections, true)) {
             return redirect()->route('admin.verify_teams')
                 ->with('error', 'You can only verify teams assigned to your sections.');
         }
@@ -147,26 +156,37 @@ class AdminTeamVerificationController extends Controller
             ->with('status', 'Team <strong>'.e($team->team_name).'</strong> has been verified.');
     }
 
+    // Used by verify() to re-check a single team's section server-side. Must
+    // compute it identically to buildTeams() (which the admin's list view
+    // renders from) - a previous version fell back to the raw student_s_y
+    // "program" column when no full section label could be computed, which
+    // silently disagreed with what buildTeams() showed as "Unassigned":
+    // the team looked verifiable in the list but verify() rejected it with
+    // "You can only verify teams assigned to your sections" anyway.
     private function teamSection(Team $team): string
     {
         $records = StudentSchoolYear::where('team_id', $team->team_id)
             ->with('student')
             ->get();
 
+        return $this->sectionLabelFromRecords($records);
+    }
+
+    /**
+     * @param  Collection<int, StudentSchoolYear>  $records
+     */
+    private function sectionLabelFromRecords(Collection $records): string
+    {
         foreach ($records as $sy) {
-            if (! $sy->student) {
-                continue;
-            }
+            if ($sy->student) {
+                $sectionLabel = Student::computeSectionLabel($sy->student->course, $sy->student->year_section);
 
-            $sectionLabel = Student::computeSectionLabel($sy->student->course, $sy->student->year_section);
-
-            if ($sectionLabel) {
-                return $sectionLabel;
+                if ($sectionLabel) {
+                    return $sectionLabel;
+                }
             }
         }
 
-        $sy = $records->first();
-
-        return $sy->program ?? '';
+        return '';
     }
 }
