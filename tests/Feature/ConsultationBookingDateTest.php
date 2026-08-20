@@ -210,14 +210,24 @@ class ConsultationBookingDateTest extends TestCase
             'updated_at' => now(),
         ]);
 
+        // Pinned to "next Thursday"/"next Friday" (always strictly after
+        // today, even when today itself is a Thursday/Friday) rather than
+        // relying on nextOccurrenceOnOrAfter()'s default pick of "today" -
+        // if the suite runs after the slot's own end_time on a day that
+        // matches its weekday, markPastAsDone() correctly (by design) flips
+        // an already-ended "today" booking to 'done' before the second
+        // request, which frees up the team and makes this assertion flaky
+        // depending purely on what time of day the tests happen to run.
         $first = $this->actingAs($student, 'web')->postJson(route('student.consultation.book'), [
             'schedule_id' => $scheduleId,
+            'session_date' => \Illuminate\Support\Carbon::parse('next Thursday')->toDateString(),
         ]);
         $first->assertOk();
         $first->assertJson(['success' => true]);
 
         $blocked = $this->actingAs($student, 'web')->postJson(route('student.consultation.book'), [
             'schedule_id' => $otherScheduleId,
+            'session_date' => \Illuminate\Support\Carbon::parse('next Friday')->toDateString(),
         ]);
         $blocked->assertStatus(422);
         $blocked->assertJson([
@@ -352,7 +362,7 @@ class ConsultationBookingDateTest extends TestCase
         $response = $this->actingAs($student, 'web')->get(route('student.consultation'));
         $response->assertOk();
 
-        preg_match('/const myBookedDates = (\[.*?\]);/s', $response->getContent(), $matches);
+        preg_match('/let myBookedDates = (\[.*?\]);/s', $response->getContent(), $matches);
         $this->assertNotEmpty($matches, 'myBookedDates must be present in the rendered page.');
 
         $myBookedDates = json_decode($matches[1], true);

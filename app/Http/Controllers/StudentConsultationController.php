@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Mail\ConsultationBookedMail;
+use App\Mail\ConsultationCancelledMail;
 use App\Models\ConsultationSchedule;
 use App\Models\ConsultationBooking;
 use App\Models\StudentSchoolYear;
@@ -19,9 +20,64 @@ class StudentConsultationController extends Controller
 
     public function index()
     {
+        $student = Auth::user();
+        $data = $this->loadConsultationData($student);
+
+        return view('student.consultation', [
+            'experts' => $data['experts'],
+            'defaultExpertId' => $data['defaultExpertId'],
+            'availableSlots' => $data['availableSlots'],
+            'fullOccurrences' => $this->computeFullOccurrences($data['availableSlots']),
+            'upcomingBookings' => $data['upcomingBookings'],
+            'recentBookings' => $data['recentBookings'],
+            'teamId' => $data['teamId'],
+            'student' => $student,
+            'teamHasActiveBooking' => $data['teamHasActiveBooking'],
+        ]);
+    }
+
+    // Polled by the page every 30s (and on demand via a manual refresh
+    // button) so a new slot the expert adds, or a booking someone else on
+    // the team makes/cancels, shows up without the student needing to
+    // reload the whole page.
+    public function refreshData()
+    {
+        $student = Auth::user();
+        $data = $this->loadConsultationData($student);
+
+        return response()->json([
+            'availableSlots' => $data['availableSlots'],
+            'fullOccurrences' => $this->computeFullOccurrences($data['availableSlots']),
+            'teamHasActiveBooking' => $data['teamHasActiveBooking'],
+            'myBookedDates' => $data['upcomingBookings']->merge($data['recentBookings'])
+                ->filter(fn ($b) => $b->session_date)
+                ->map(fn ($b) => [
+                    'date' => $b->session_date->format('Y-m-d'),
+                    'expert_id' => $b->schedule?->expert_id,
+                ])->values(),
+            'upcomingBookings' => $data['upcomingBookings']->map(fn ($b) => $this->bookingCardData($b)),
+            'recentBookings' => $data['recentBookings']->map(fn ($b) => $this->bookingCardData($b)),
+        ]);
+    }
+
+    private function bookingCardData(ConsultationBooking $b): array
+    {
+        return [
+            'booking_id' => $b->booking_id,
+            'expert_name' => trim(($b->schedule?->expert?->first_name ?? 'Expert').' '.($b->schedule?->expert?->last_name ?? '')),
+            'slot_type' => $b->schedule?->slot_type ?? 'consult',
+            'session_date' => $b->session_date?->format('Y-m-d'),
+            'available_date' => $b->schedule?->available_date,
+            'start_time' => $b->schedule?->start_time,
+            'end_time' => $b->schedule?->end_time,
+            'team_name' => $b->team->team_name ?? 'N/A',
+        ];
+    }
+
+    private function loadConsultationData($student): array
+    {
         ConsultationBooking::markPastAsDone();
 
-        $student = Auth::user();
         $studentId = $student->student_id;
 
         $studentYear = StudentSchoolYear::where('student_id', $studentId)
@@ -65,9 +121,17 @@ class StudentConsultationController extends Controller
             ->orderBy('start_time')
             ->get();
 
-        $myBookings = ConsultationBooking::where('student_id', $studentId)
+        // Team-wide, not just this student's own bookings - a consultation
+        // is booked once per team (whoever happened to click "Book"), so
+        // every teammate needs to see it in their own Upcoming/Recent list
+        // too, not just the one member who made the booking.
+        $teamStudentIds = $teamId
+            ? StudentSchoolYear::where('team_id', $teamId)->pluck('student_id')
+            : collect([$studentId]);
+
+        $myBookings = ConsultationBooking::whereIn('student_id', $teamStudentIds)
             ->whereIn('booking_status', ['scheduled', 'done'])
-            ->with(['schedule', 'student.studentSchoolYear.team'])
+            ->with(['schedule.expert', 'student.studentSchoolYear.team'])
             ->get();
 
         $today = now()->startOfDay();
@@ -94,17 +158,7 @@ class StudentConsultationController extends Controller
                 ->exists()
             : false;
 
-        return view('student.consultation', [
-            'experts' => $experts,
-            'defaultExpertId' => $defaultExpertId,
-            'availableSlots' => $availableSlots,
-            'fullOccurrences' => $this->computeFullOccurrences($availableSlots),
-            'upcomingBookings' => $upcomingBookings,
-            'recentBookings' => $recentBookings,
-            'teamId' => $teamId,
-            'student' => $student,
-            'teamHasActiveBooking' => $teamHasActiveBooking,
-        ]);
+        return compact('experts', 'defaultExpertId', 'availableSlots', 'upcomingBookings', 'recentBookings', 'teamId', 'teamHasActiveBooking');
     }
 
     public function book(Request $request)
@@ -287,6 +341,21 @@ class StudentConsultationController extends Controller
         }
     }
 
+    // Emails the assigned expert immediately (not queued behind a worker)
+    // that a booked session was cancelled, including the student's reason -
+    // this is the only notification channel to instructors/experts at all,
+    // since there's no in-app notification system on that side.
+    private function notifyExpertOfCancellation(ConsultationBooking $booking, $expert, ?Team $team, $student, string $reason): void
+    {
+        $studentName = trim(($student->f_name ?? '').' '.($student->l_name ?? '')) ?: $student->email;
+
+        try {
+            Mail::to($expert->email)->send(new ConsultationCancelledMail($booking, $expert, $team, $studentName, $reason));
+        } catch (\Exception $e) {
+            \Log::warning('Consultation cancelled email failed', ['error' => $e->getMessage()]);
+        }
+    }
+
     /**
      * Which (schedule_id, session_date) pairs already have as many scheduled
      * bookings as their consultation_limit allows. Used instead of the
@@ -319,16 +388,55 @@ class StudentConsultationController extends Controller
 
     public function cancel(Request $request, $bookingId)
     {
+        // A plain $request->validate() would redirect-back on failure
+        // instead of returning JSON, since this app's exception handler
+        // only forces JSON rendering for /api/* routes - this endpoint is
+        // called via fetch() and can't follow a redirect, so the error is
+        // built manually here to match every other JSON response below.
+        $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
+            'reason' => 'required|string|max:1000',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => $validator->errors()->first('reason'),
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $validated = $validator->validated();
+
         $student = Auth::user();
 
+        // Any teammate can cancel it, not just whoever originally booked it
+        // - a consultation is booked once per team, and now that every
+        // member sees it in their own list too, only the original booker
+        // being able to cancel would be a confusing dead end for everyone
+        // else.
+        $studentYear = StudentSchoolYear::where('student_id', $student->student_id)
+            ->orderByDesc('school_year')
+            ->first();
+        $teamStudentIds = $studentYear?->team_id
+            ? StudentSchoolYear::where('team_id', $studentYear->team_id)->pluck('student_id')
+            : collect([$student->student_id]);
+
         $booking = ConsultationBooking::where('booking_id', $bookingId)
-            ->where('student_id', $student->student_id)
+            ->whereIn('student_id', $teamStudentIds)
             ->where('booking_status', 'scheduled')
             ->firstOrFail();
 
         $slot = ConsultationSchedule::find($booking->schedule_id);
+        $team = $booking->team;
 
-        $booking->update(['booking_status' => 'cancelled']);
+        $booking->update([
+            'booking_status' => 'cancelled',
+            'cancellation_reason' => $validated['reason'],
+        ]);
+
+        if ($slot && $slot->expert) {
+            $this->notifyExpertOfCancellation($booking, $slot->expert, $team, $student, $validated['reason']);
+        }
 
         if ($slot) {
             ConsultationSchedule::where('schedule_id', $booking->schedule_id)

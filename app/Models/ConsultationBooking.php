@@ -23,6 +23,7 @@ class ConsultationBooking extends Model
         'schedule_id',
         'session_date',
         'booking_status',
+        'cancellation_reason',
         'google_event_id',
     ];
 
@@ -72,15 +73,27 @@ class ConsultationBooking extends Model
         $now = now();
 
         $pastIds = DB::table('consultation_booking as b')
-            ->join('consultation_schedule as s', 's.schedule_id', '=', 'b.schedule_id')
+            ->leftJoin('consultation_schedule as s', 's.schedule_id', '=', 'b.schedule_id')
             ->where('b.booking_status', 'scheduled')
             ->whereNotNull('b.session_date')
             ->whereDate('b.session_date', '<=', $now->toDateString())
             ->select('b.booking_id', 'b.session_date', 's.end_time')
             ->get()
-            ->filter(fn ($row) => \Illuminate\Support\Carbon::parse($row->session_date)
-                ->setTimeFromTimeString($row->end_time)
-                ->lt($now))
+            ->filter(function ($row) use ($now) {
+                // A left join (not inner) - the referenced consultation_schedule
+                // row can be missing entirely if it was deleted while bookings
+                // still pointed at it. Without an end_time to check against,
+                // fall back to "the whole day has passed" so these don't get
+                // stuck as 'scheduled' forever, permanently blocking the team
+                // from booking anything else.
+                if (! $row->end_time) {
+                    return \Illuminate\Support\Carbon::parse($row->session_date)->lt($now->copy()->startOfDay());
+                }
+
+                return \Illuminate\Support\Carbon::parse($row->session_date)
+                    ->setTimeFromTimeString($row->end_time)
+                    ->lt($now);
+            })
             ->pluck('booking_id');
 
         if ($pastIds->isNotEmpty()) {

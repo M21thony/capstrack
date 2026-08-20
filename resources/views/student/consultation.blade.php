@@ -104,6 +104,9 @@
             <p style="font-size:11px; color:var(--text3)" id="cal-hint">Choose an expert above to view their available consultation slots.</p>
           </div>
           <div class="cal-nav-group">
+            <button class="cal-btn" id="consultRefreshBtn" title="Refresh availability and bookings" style="margin-right:4px">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><polyline points="21 3 21 9 15 9"/></svg>
+            </button>
             <div class="cal-nav">
               <button class="cal-btn" onclick="changeMonth(-1)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg></button>
               <button class="cal-btn" onclick="changeMonth(1)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 18l6-6-6-6"/></svg></button>
@@ -172,7 +175,7 @@
         <div id="upcoming-bookings-list" class="session-list">
           @forelse($upcomingBookings as $booking)
             @php $tc = $slotTypeColors[$booking->schedule->slot_type ?? 'consult'] ?? $slotTypeColors['consult']; @endphp
-            <div class="session-list-item session-list-item-upcoming">
+            <div class="session-list-item session-list-item-upcoming" data-booking-id="{{ $booking->booking_id }}">
               <div class="appt-row-top">
                 <div class="appt-expert">{{ $booking->schedule->expert->first_name ?? 'Expert' }} {{ $booking->schedule->expert->last_name ?? '' }}</div>
                 <div class="appt-badges">
@@ -187,6 +190,7 @@
                 <span><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>{{ $booking->schedule?->start_time ? \Carbon\Carbon::parse($booking->schedule->start_time)->format('h:i A') : '—' }}</span>
               </div>
               <div class="appt-team">Team: {{ $booking->team->team_name ?? 'N/A' }}</div>
+              <button type="button" class="appt-cancel-btn" data-cancel-booking-id="{{ $booking->booking_id }}">Cancel Booking</button>
             </div>
           @empty
             <div class="session-list-empty">No upcoming consultations.</div>
@@ -245,6 +249,21 @@
   </div>
 </div>
 
+<div id="cancelBookingModal" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:100000;display:none;align-items:center;justify-content:center;box-sizing:border-box;">
+  <div id="cancelBookingModalBox" style="background:var(--bg2);width:450px;max-width:90vw;border-radius:20px;padding:30px;box-shadow:0 20px 40px rgba(0,0,0,0.2);box-sizing:border-box;">
+    <div style="margin-bottom:20px;">
+      <h2 style="font-size:18px;font-weight:600;margin:0;">Cancel Booking</h2>
+      <p style="font-size:11px;color:var(--text3);margin:6px 0 0;">Let the expert know why you're cancelling this session.</p>
+    </div>
+    <textarea id="cancelReasonInput" rows="4" placeholder="Reason for cancellation..." style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;box-sizing:border-box;resize:vertical;font-family:inherit;"></textarea>
+    <div id="cancelReasonError" style="font-size:11px;color:var(--red);margin-top:6px;display:none;">Please enter a reason.</div>
+    <div style="display:flex;gap:10px;margin-top:20px;">
+      <button type="button" id="cancelBookingBackBtn" style="flex:1;padding:12px 16px;font-size:13px;font-weight:600;border-radius:10px;border:1.5px solid var(--border);background:transparent;color:var(--text2);box-sizing:border-box;">Back</button>
+      <button type="button" id="cancelBookingConfirmBtn" style="flex:1;padding:12px 16px;font-size:13px;font-weight:700;border-radius:10px;border:none;background:var(--accent);color:#18191f;box-sizing:border-box;">Confirm Cancellation</button>
+    </div>
+  </div>
+</div>
+
 <div id="consult-toast"></div>
 
 <script>
@@ -274,12 +293,12 @@ let currentYear = new Date().getFullYear();
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 const DAY_NAMES = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 
-const expertSlots = @json($availableSlots);
+let expertSlots = @json($availableSlots);
 // This student's own scheduled sessions, by date and which expert they were
 // booked with — drives the "Your Booking" dot. Kept per-expert (not just a
 // flat list of dates) so switching the Target Expert dropdown doesn't show
 // another expert's booking history as if it belonged to the one selected.
-const myBookedDates = @json($upcomingBookings->merge($recentBookings)->filter(fn ($b) => $b->session_date)->map(fn ($b) => [
+let myBookedDates = @json($upcomingBookings->merge($recentBookings)->filter(fn ($b) => $b->session_date)->map(fn ($b) => [
     'date' => $b->session_date->format('Y-m-d'),
     'expert_id' => $b->schedule?->expert_id,
 ])->values());
@@ -466,10 +485,21 @@ function selectDate(d, dayName, dateKey) {
     item.onmouseenter = () => { item.style.background = 'var(--bg4)'; item.style.borderLeftColor = 'var(--accent2)'; };
     item.onmouseleave = () => { item.style.background = 'var(--bg3)'; item.style.borderLeftColor = 'var(--accent)'; };
     item.onclick = () => bookSlot(s.schedule_id);
+    forceInteractive(item);
+    forceInteractive(item.querySelector('button'));
     slotList.appendChild(item);
   });
 
-  document.getElementById('slotSelectModal').style.display = 'flex';
+  // Same forced-visible/forced-interactive treatment as the cancel-booking
+  // modal - a plain display:flex toggle here was found to render invisible
+  // and unclickable in some browsers, with an external stylesheet zeroing
+  // its opacity and blocking pointer-events with no console error at all.
+  const modal = document.getElementById('slotSelectModal');
+  const content = modal.querySelector('.modal-content');
+  [modal, content].forEach(forceInteractive);
+  modal.style.setProperty('display', 'flex', 'important');
+  modal.style.setProperty('opacity', '1', 'important');
+  modal.style.setProperty('visibility', 'visible', 'important');
 }
 
 function closeSlotModal() {
@@ -496,37 +526,122 @@ function showToast(message, type) {
   showToast._t = setTimeout(() => toast.classList.remove('show'), 3500);
 }
 
+function todayKeyString() {
+  const today = new Date();
+  return today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+}
+
+// Shared by prependUpcomingBooking (one new card, right after booking) and
+// renderBookingLists (a full server-refreshed set) so both stay identical to
+// each other and to the Blade-rendered markup on first page load.
+function bookingCardHtml(booking, isUpcoming) {
+  const tc = slotTypeColors[booking.slot_type] || slotTypeColors['consult'];
+  const dateKey = booking.session_date;
+  const dateLabel = dateKey ? formatDateLabel(dateKey) : (booking.available_date || '—');
+  const statusBadge = isUpcoming
+    ? '<span class="appt-status-badge appt-status-badge-upcoming">' + (dateKey === todayKeyString() ? 'Today' : 'Upcoming') + '</span>'
+    : '<span class="appt-status-badge">Completed</span>';
+  const cancelBtn = isUpcoming
+    ? '<button type="button" class="appt-cancel-btn" data-cancel-booking-id="' + booking.booking_id + '">Cancel Booking</button>'
+    : '';
+
+  return `
+    <div class="appt-row-top">
+      <div class="appt-expert">${booking.expert_name}</div>
+      <div class="appt-badges">
+        <span class="appt-type-badge" style="background:${tc.bg};color:${tc.color}">${ucfirst(booking.slot_type || 'Consult')}</span>
+        ${statusBadge}
+      </div>
+    </div>
+    <div class="appt-meta">
+      <span><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg>${dateLabel}</span>
+      <span><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>${formatTime(booking.start_time)}</span>
+    </div>
+    <div class="appt-team">Team: ${booking.team_name}</div>
+    ${cancelBtn}
+  `;
+}
+
 function prependUpcomingBooking(booking, dateKey) {
   const list = document.getElementById('upcoming-bookings-list');
   const empty = list.querySelector('.session-list-empty');
   if (empty) { empty.remove(); }
 
-  const tc = slotTypeColors[booking.slot_type] || slotTypeColors['consult'];
-  const today = new Date();
-  const todayKey = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
-  const statusLabel = dateKey === todayKey ? 'Today' : 'Upcoming';
-
   const item = document.createElement('div');
   item.className = 'session-list-item session-list-item-upcoming';
-  item.innerHTML = `
-    <div class="appt-row-top">
-      <div class="appt-expert">${booking.expert_name}</div>
-      <div class="appt-badges">
-        <span class="appt-type-badge" style="background:${tc.bg};color:${tc.color}">${ucfirst(booking.slot_type || 'Consult')}</span>
-        <span class="appt-status-badge appt-status-badge-upcoming">${statusLabel}</span>
-      </div>
-    </div>
-    <div class="appt-meta">
-      <span><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg>${formatDateLabel(dateKey)}</span>
-      <span><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>${formatTime(booking.start_time)}</span>
-    </div>
-    <div class="appt-team">Team: ${booking.team_name}</div>
-  `;
+  item.dataset.bookingId = booking.booking_id;
+  item.innerHTML = bookingCardHtml(Object.assign({}, booking, {session_date: dateKey}), true);
   list.prepend(item);
 
   const count = document.querySelector('#upcoming-bookings-list').closest('.sessions-card').querySelector('.sessions-card-count');
   if (count) { count.textContent = String(Number(count.textContent || '0') + 1); }
 }
+
+// Fully rebuilds both booking lists from freshly fetched server data - used
+// after a poll/manual refresh, so a booking someone else on the team made or
+// cancelled (or that just finished) shows up without a page reload.
+function renderBookingLists(upcoming, recent) {
+  const upcomingList = document.getElementById('upcoming-bookings-list');
+  const recentList = document.getElementById('bookings-list');
+
+  upcomingList.innerHTML = upcoming.length
+    ? upcoming.map(b => '<div class="session-list-item session-list-item-upcoming" data-booking-id="' + b.booking_id + '">' + bookingCardHtml(b, true) + '</div>').join('')
+    : '<div class="session-list-empty">No upcoming consultations.</div>';
+
+  recentList.innerHTML = recent.length
+    ? recent.map(b => '<div class="session-list-item session-list-item-past" data-booking-id="' + b.booking_id + '">' + bookingCardHtml(b, false) + '</div>').join('')
+    : '<div class="session-list-empty">No past consultations.</div>';
+
+  const upcomingCount = upcomingList.closest('.sessions-card').querySelector('.sessions-card-count');
+  if (upcomingCount) { upcomingCount.textContent = String(upcoming.length); }
+  const recentCount = recentList.closest('.sessions-card').querySelector('.sessions-card-count');
+  if (recentCount) { recentCount.textContent = String(recent.length); }
+}
+
+let consultRefreshInFlight = false;
+
+async function refreshConsultationData(showFeedback) {
+  if (consultRefreshInFlight) { return; }
+  consultRefreshInFlight = true;
+
+  const refreshBtn = document.getElementById('consultRefreshBtn');
+  if (refreshBtn) { refreshBtn.style.opacity = '0.5'; }
+
+  try {
+    const res = await fetch('{{ route("student.consultation.refresh") }}', {
+      headers: { 'Accept': 'application/json' },
+    });
+    if (!res.ok) { throw new Error('Refresh failed (' + res.status + ')'); }
+    const data = await res.json();
+
+    expertSlots = data.availableSlots;
+    fullOccurrences = new Set(data.fullOccurrences || []);
+    teamHasActiveBooking = data.teamHasActiveBooking;
+    myBookedDates = data.myBookedDates;
+
+    renderCalendar();
+    renderBookingLists(data.upcomingBookings, data.recentBookings);
+
+    if (showFeedback) { showToast('Consultation data refreshed.', 'success'); }
+  } catch (e) {
+    if (showFeedback) { showToast('Could not refresh: ' + e.message, 'error'); }
+  } finally {
+    consultRefreshInFlight = false;
+    if (refreshBtn) { refreshBtn.style.opacity = '1'; }
+  }
+}
+
+document.getElementById('consultRefreshBtn')?.addEventListener('click', function () {
+  refreshConsultationData(true);
+});
+
+// Polls in the background so a new slot the expert adds, or a booking
+// someone else on the team makes/cancels, appears without a manual reload.
+// Paused while the tab is hidden so it doesn't fire fetches into a
+// backgrounded/inactive tab.
+setInterval(function () {
+  if (document.visibilityState === 'visible') { refreshConsultationData(false); }
+}, 30000);
 
 async function bookSlot(scheduleId) {
   const dateKey = currentSlotModalDateKey;
@@ -555,7 +670,7 @@ async function bookSlot(scheduleId) {
         myBookedDates.push({ date: dateKey, expert_id: bookedExpertId });
       }
       if (data.newBooking && dateKey) {
-        prependUpcomingBooking(data.newBooking, dateKey);
+        prependUpcomingBooking(Object.assign({}, data.newBooking, {booking_id: data.booking_id}), dateKey);
       }
       renderCalendar();
 
@@ -565,6 +680,121 @@ async function bookSlot(scheduleId) {
     }
   } catch (e) {
     showToast('Error: ' + e.message, 'error');
+  }
+}
+
+let cancelBookingId = null;
+
+// Forces an element to actually be interactive, overriding anything
+// external that may have set pointer-events/cursor/disabled on it.
+function forceInteractive(el) {
+  if (!el) return;
+  el.disabled = false;
+  el.removeAttribute('disabled');
+  el.removeAttribute('readonly');
+  el.readOnly = false;
+  el.style.setProperty('pointer-events', 'auto', 'important');
+  el.style.setProperty('user-select', 'auto', 'important');
+}
+
+function openCancelModal(bookingId) {
+  cancelBookingId = bookingId;
+  const modal = document.getElementById('cancelBookingModal');
+  const box = document.getElementById('cancelBookingModalBox');
+  const reasonInput = document.getElementById('cancelReasonInput');
+  const reasonError = document.getElementById('cancelReasonError');
+  const backBtn = document.getElementById('cancelBookingBackBtn');
+  const confirmBtn = document.getElementById('cancelBookingConfirmBtn');
+
+  reasonInput.value = '';
+  reasonError.style.display = 'none';
+
+  [modal, box, reasonInput, backBtn, confirmBtn].forEach(forceInteractive);
+
+  modal.style.setProperty('display', 'flex', 'important');
+  modal.style.setProperty('opacity', '1', 'important');
+  modal.style.setProperty('visibility', 'visible', 'important');
+  reasonInput.style.setProperty('cursor', 'text', 'important');
+  backBtn.style.setProperty('cursor', 'pointer', 'important');
+  confirmBtn.style.setProperty('cursor', 'pointer', 'important');
+
+  reasonInput.focus();
+}
+
+function closeCancelModal() {
+  document.getElementById('cancelBookingModal').style.display = 'none';
+  cancelBookingId = null;
+}
+
+// Bound via addEventListener (not inline onclick attributes) since inline
+// handlers can be silently stripped by some browsers/content filters with
+// no console error at all - this delegated listener is indistinguishable
+// from any other page script to that kind of filtering.
+document.addEventListener('click', function (event) {
+  const cancelBtn = event.target.closest('.appt-cancel-btn');
+  if (cancelBtn) {
+    openCancelModal(cancelBtn.dataset.cancelBookingId);
+    return;
+  }
+
+  if (event.target.id === 'cancelBookingBackBtn') {
+    closeCancelModal();
+    return;
+  }
+
+  if (event.target.id === 'cancelBookingConfirmBtn') {
+    submitCancelBooking();
+    return;
+  }
+
+  if (event.target.id === 'cancelBookingModal') {
+    closeCancelModal();
+  }
+});
+
+async function submitCancelBooking() {
+  const reasonInput = document.getElementById('cancelReasonInput');
+  const reason = reasonInput.value.trim();
+  if (!reason) {
+    document.getElementById('cancelReasonError').style.display = 'block';
+    return;
+  }
+
+  const btn = document.getElementById('cancelBookingConfirmBtn');
+  btn.disabled = true;
+
+  try {
+    const res = await fetch('{{ url("/student/consultation/cancel") }}/' + cancelBookingId, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-TOKEN': CSRF,
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify({ reason: reason }),
+    });
+
+    const data = await res.json();
+    if (data.success) {
+      const card = document.querySelector('.session-list-item[data-booking-id="' + cancelBookingId + '"]');
+      if (card) { card.remove(); }
+
+      const list = document.getElementById('upcoming-bookings-list');
+      if (list && !list.querySelector('.session-list-item')) {
+        list.innerHTML = '<div class="session-list-empty">No upcoming consultations.</div>';
+      }
+      const count = document.querySelector('#upcoming-bookings-list')?.closest('.sessions-card')?.querySelector('.sessions-card-count');
+      if (count) { count.textContent = String(Math.max(0, Number(count.textContent || '0') - 1)); }
+
+      closeCancelModal();
+      showToast('Booking cancelled. The expert has been notified.', 'success');
+    } else {
+      showToast(data.message || 'Failed to cancel booking.', 'error');
+    }
+  } catch (e) {
+    showToast('Error: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
   }
 }
 

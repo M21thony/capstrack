@@ -235,6 +235,8 @@ select.input{cursor:pointer}
 .appt-team{font-size:11px;color:var(--text2);padding:5px 8px;background:var(--bg2);border-radius:5px;border-left:2px solid var(--accent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis} /* Team line — plays the role of .apt-topic */
 .appt-status-badge{font-size:9px;font-weight:700;padding:2px 7px;border-radius:4px;white-space:nowrap;text-transform:uppercase;letter-spacing:0.5px;background:var(--bg4);color:var(--text3)} /* Completed badge — neutral gray */
 .appt-status-badge-upcoming{background:var(--accent-light);color:var(--accent3)} /* Upcoming/Today badge — warm accent to draw the eye to what's still actionable */
+.appt-cancel-btn{margin-top:4px;padding:6px 10px;font-size:11px;font-weight:600;border-radius:6px;border:1px solid var(--red);background:transparent;color:var(--red);cursor:pointer;font-family:inherit;transition:background 0.15s}
+.appt-cancel-btn:hover{background:rgba(220,38,38,0.08)}
 
 /* ── LEGAL CREDITS ── */
 .legal-credits{margin-top:24px;padding-top:20px;border-top:1px dashed var(--border);text-align:center;opacity:0.5;padding-bottom:20px} /* Now a sibling AFTER .consultation-container (not inside .appt-sidebar) — the two grid columns can be different heights (calendar column is usually taller than the sessions column), so a footer living inside the shorter column always ended up floating mid-page next to the taller column's content no matter how its own margin/alignment was tuned. Living below the whole grid guarantees it's beneath both columns, full stop. */
