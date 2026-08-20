@@ -738,8 +738,39 @@ let currentFileName = '';
 let currentMessage = '';
 let currentRemoveId = null;
 
-function openModal(id) { document.getElementById(id).classList.add('open'); }
-function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+// Forces an element to actually be interactive, overriding anything
+// external that may have set pointer-events/cursor/disabled on it - some
+// browsers/content filters silently zero the opacity and block
+// pointer-events of generic full-screen "modal-overlay" elements (mistaken
+// for cookie-consent/paywall dark patterns), with no console error at all,
+// so the .open class toggle alone isn't reliable.
+function forceInteractive(el) {
+  if (!el) return;
+  el.disabled = false;
+  el.removeAttribute('disabled');
+  el.removeAttribute('readonly');
+  el.readOnly = false;
+  el.style.setProperty('pointer-events', 'auto', 'important');
+  el.style.setProperty('user-select', 'auto', 'important');
+}
+
+function openModal(id) {
+  const modal = document.getElementById(id);
+  if (!modal) return;
+  modal.classList.add('open');
+  modal.style.setProperty('display', 'flex', 'important');
+  modal.style.setProperty('opacity', '1', 'important');
+  modal.style.setProperty('visibility', 'visible', 'important');
+  forceInteractive(modal);
+  modal.querySelectorAll('input, textarea, select, button, a').forEach(forceInteractive);
+}
+
+function closeModal(id) {
+  const modal = document.getElementById(id);
+  if (!modal) return;
+  modal.classList.remove('open');
+  modal.style.display = 'none';
+}
 
 function openExpertPostModal(el) {
   if (window.innerWidth >= 1024) return;
