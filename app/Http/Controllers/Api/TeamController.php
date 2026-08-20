@@ -165,7 +165,7 @@ class TeamController extends Controller
         $team->update([
             'team_name' => $validated['team_name'],
             'project_title' => $validated['project_title'] ?? null,
-            'team_status' => $validated['team_status'] ?? 'on-going',
+            'team_status' => $validated['team_status'] ?? $team->team_status,
             'member_count' => 5,
         ]);
 
