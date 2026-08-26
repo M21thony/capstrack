@@ -10,8 +10,10 @@
 <style>
 .picker-slot { width:100%; text-align:left; background:#fff; border:1px solid var(--border); border-radius:8px; padding:9px 12px; font-size:13px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; gap:8px; color:var(--text3); font-family:inherit }
 .picker-slot:hover { border-color:var(--accent3) }
+.picker-slot:focus-visible { outline:2px solid var(--accent3); outline-offset:1px }
 .picker-slot.filled { color:var(--text) }
-.picker-slot .slot-change { font-size:11px; color:var(--accent3) }
+.picker-slot .slot-clear { flex-shrink:0; background:none; border:none; color:var(--text3); cursor:pointer; font-size:16px; line-height:1; padding:2px 6px; border-radius:5px; font-family:inherit }
+.picker-slot .slot-clear:hover { background:rgba(220,38,38,0.1); color:#dc2626 }
 .expert-picker-option { padding:10px 12px; cursor:pointer; font-size:13px; display:flex; align-items:center; justify-content:space-between; gap:8px; border-radius:8px }
 .expert-picker-option:hover { background:rgba(201,168,44,0.08) }
 .expert-picker-option .opt-name { color:var(--text) }
@@ -31,7 +33,7 @@
 .cal-month-display { font-family:'Space Mono',monospace; font-size:13px; font-weight:700; color:var(--text); min-width:96px; text-align:center }
 .cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:1px; background:var(--border); border:1px solid var(--border); border-radius:10px; overflow:hidden }
 .cal-day-label { background:var(--navy-dark); padding:9px 4px; text-align:center; font-size:10px; font-weight:700; color:var(--navy-text2); letter-spacing:0.8px; text-transform:uppercase }
-.cal-cell { background:#fff; min-height:86px; padding:8px; display:flex; flex-direction:column; gap:3px; position:relative; cursor:pointer; transition:all 0.15s; user-select:none }
+.cal-cell { background:#fff; min-height:100px; padding:9px; display:flex; flex-direction:column; gap:4px; position:relative; cursor:pointer; transition:all 0.15s; user-select:none }
 .cal-cell.other-month { background:var(--bg3); opacity:0.5; cursor:default }
 .cal-cell:not(.other-month):hover { background:rgba(201,168,44,0.08) }
 .cal-cell.today { background:rgba(201,168,44,0.04) }
@@ -43,6 +45,13 @@
 .cal-slot-pill.type-defense { background:rgba(180,83,9,0.1); color:var(--amber); border-left:2px solid var(--amber) }
 .cal-more { font-size:9px; color:var(--text3); font-weight:600; margin-top:2px }
 .win-cal-range-label { margin-top:10px; font-size:12px; color:var(--text3); text-align:center }
+/* Payment-status tabs (Paid / Unpaid) */
+.pa-tabs { display:flex; gap:4px; border-bottom:1px solid var(--border); margin-bottom:16px }
+.pa-tab { appearance:none; background:none; border:none; border-bottom:2px solid transparent; padding:10px 16px; font-size:13px; font-family:inherit; color:var(--text3); cursor:pointer; display:flex; align-items:center; gap:6px; transform:translateY(1px) }
+.pa-tab:hover { color:var(--text2) }
+.pa-tab.active { color:var(--text); font-weight:600; border-bottom-color:var(--accent,#c9a82c) }
+.pa-tab .pa-tab-count { font-size:10px; font-weight:700; padding:1px 7px; border-radius:20px; background:var(--bg3); color:var(--text3) }
+.pa-tab.active .pa-tab-count { background:rgba(201,168,44,0.15); color:var(--accent3) }
 </style>
 </head>
 <body>
@@ -95,56 +104,99 @@
           <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
           Defense Schedule
         </button>
+        <button class="btn btn-ghost" style="font-size:12px;color:var(--text2);border-color:var(--border)" onclick="openSuggestTeamsModal()">
+          <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2l2.4 6.6L21 11l-6.6 2.4L12 20l-2.4-6.6L3 11l6.6-2.4L12 2z"/></svg>
+          Suggest Teams for Panel
+        </button>
         <span style="flex:1"></span>
         <span style="font-size:12px;color:var(--text3)" id="team-count">{{ $teams->count() }} teams</span>
       </div>
 
+      <div class="row" style="margin-bottom:16px;gap:8px;align-items:center">
+        <span style="font-size:12px;color:var(--text3)">Defense Stage:</span>
+        <select class="input" id="payment-defense-type" style="width:220px" onchange="window.location.href = '{{ url()->current() }}?defense_type=' + encodeURIComponent(this.value)">
+          @foreach ($defenseTypes as $type)
+            <option value="{{ $type }}" @selected($type === $defenseType)>{{ $type }}</option>
+          @endforeach
+        </select>
+        @if ($requiresPayment)
+          <span style="font-size:11px;color:var(--text3)">Assigning a panel is never blocked — only the automatic day/venue scheduling below skips unpaid teams for this stage.</span>
+        @else
+          <span style="font-size:11px;color:var(--text3)">Pre-proposal Defense has no fee — every confirmed team is shown and schedulable.</span>
+        @endif
+      </div>
+
+      <!-- Bulk-action bar - appears once at least one team is checked, in
+           either tab. Selections persist across the Paid/Unpaid tabs, so
+           the chip list below the summary row is what makes that visible -
+           without it there'd be no way to tell which teams (possibly from
+           BOTH tabs) are actually queued up before you commit. -->
+      <div id="bulk-action-bar" style="display:none;flex-direction:column;gap:10px;background:rgba(29,78,216,0.06);border:1px solid rgba(29,78,216,0.2);border-radius:10px;padding:10px 14px;margin-bottom:16px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:12px;color:var(--text2)"><strong id="bulk-selected-count">0</strong> team(s) selected</span>
+          <span style="flex:1"></span>
+          <button class="btn btn-primary" style="font-size:12px;padding:6px 12px" onclick="openBulkPanelModal()">Assign Panel to Selected</button>
+          <button class="btn btn-ghost" style="font-size:12px;padding:6px 12px;color:var(--text2);border-color:var(--border)" onclick="clearBulkSelection()">Clear</button>
+        </div>
+        <div id="bulk-selected-chips" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+      </div>
+
       <!-- Defense window modal overlay -->
       <div id="window-modal" style="display:none;position:fixed;inset:0;background:rgba(24,25,31,0.6);z-index:100;align-items:center;justify-content:center">
-        <div style="background:#fff;border-radius:14px;padding:24px;width:720px;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
+        <div style="background:#fff;border-radius:14px;padding:24px;width:1020px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
             <div style="font-size:15px;font-weight:600;color:var(--text)">Defense Schedule</div>
             <button onclick="closeWindowModal()" style="background:none;border:none;font-size:22px;color:var(--text3);cursor:pointer;line-height:1">&times;</button>
           </div>
-          <div style="font-size:11px;color:var(--text3);margin-bottom:16px">
-            The date range a defense stage is scheduled within. Panels are automatically assigned
-            a day and venue inside this window.
-          </div>
-          <div id="window-modal-msg" style="display:none;font-size:12px;border-radius:8px;padding:10px 12px;margin-bottom:14px"></div>
 
-          <div class="form-group">
-            <label class="label">Defense Type</label>
-            <select class="input" id="window-defense-type">
-              <option value="Pre-proposal Defense">Pre-proposal Defense</option>
-              <option value="Title Defense">Title Defense</option>
-              <option value="Pre Oral Defense">Pre Oral Defense</option>
-              <option value="Final Oral Defense">Final Oral Defense</option>
-            </select>
-          </div>
-
-          <div class="cal-card">
-            <div class="cal-header">
-              <div class="cal-title-group">
-                <div class="cal-title">Defense Schedule</div>
-                <div class="cal-month-label" id="win-cal-month-label">–</div>
+          <div style="display:flex;gap:20px;align-items:flex-start">
+            <!-- Left: what stage, what range -->
+            <div style="flex:0 0 200px;border-right:1px solid var(--border);padding-right:20px">
+              <div style="font-size:11px;color:var(--text3);margin-bottom:16px">
+                The date range a defense stage is scheduled within. Panels are automatically assigned
+                a day and venue inside this window.
               </div>
-              <div class="cal-controls">
-                <button type="button" class="cal-nav-btn" onclick="winCalNav(-1)" aria-label="Previous month">
-                  <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
-                </button>
-                <div class="cal-month-display" id="win-cal-month-display">–</div>
-                <button type="button" class="cal-nav-btn" onclick="winCalNav(1)" aria-label="Next month">
-                  <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
-                </button>
+              <div id="window-modal-msg" style="display:none;font-size:12px;border-radius:8px;padding:10px 12px;margin-bottom:14px"></div>
+
+              <div class="form-group" style="margin-bottom:0">
+                <label class="label">Defense Type</label>
+                <select class="input" id="window-defense-type">
+                  <option value="Pre-proposal Defense">Pre-proposal Defense</option>
+                  <option value="Title Defense">Title Defense</option>
+                  <option value="Pre Oral Defense">Pre Oral Defense</option>
+                  <option value="Final Oral Defense">Final Oral Defense</option>
+                </select>
+              </div>
+
+              <div class="win-cal-range-label" id="win-cal-range-label" style="text-align:left;margin-top:16px">Click a date to set the start, then another to set the end.</div>
+              <input type="hidden" id="window-start-date"/>
+              <input type="hidden" id="window-end-date"/>
+            </div>
+
+            <!-- Right: the calendar -->
+            <div style="flex:1;min-width:0">
+              <div class="cal-card" style="margin-top:0">
+                <div class="cal-header">
+                  <div class="cal-title-group">
+                    <div class="cal-title">Defense Schedule</div>
+                    <div class="cal-month-label" id="win-cal-month-label">–</div>
+                  </div>
+                  <div class="cal-controls">
+                    <button type="button" class="cal-nav-btn" onclick="winCalNav(-1)" aria-label="Previous month">
+                      <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+                    </button>
+                    <div class="cal-month-display" id="win-cal-month-display">–</div>
+                    <button type="button" class="cal-nav-btn" onclick="winCalNav(1)" aria-label="Next month">
+                      <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+                    </button>
+                  </div>
+                </div>
+                <div class="cal-grid" id="win-cal-grid"></div>
               </div>
             </div>
-            <div class="cal-grid" id="win-cal-grid"></div>
           </div>
-          <div class="win-cal-range-label" id="win-cal-range-label">Click a date to set the start, then another to set the end.</div>
-          <input type="hidden" id="window-start-date"/>
-          <input type="hidden" id="window-end-date"/>
 
-          <div style="display:flex;gap:8px;margin-top:16px">
+          <div style="display:flex;gap:8px;margin-top:20px">
             <button class="btn btn-primary" style="flex:1;justify-content:center;font-size:13px" id="window-save-btn" onclick="saveWindow()">
               <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
               Save
@@ -241,26 +293,26 @@
           <div class="form-group" id="picker-chair">
             <label class="label">Panel Chair</label>
             <input type="hidden" class="picker-value"/>
-            <button type="button" class="picker-slot" onclick="openExpertPicker('chair')">
+            <div class="picker-slot" tabindex="0" role="button" onclick="openExpertPicker('chair')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openExpertPicker('chair');}">
               <span class="slot-text">Click to select an expert</span>
-              <span class="slot-change" style="display:none">Change</span>
-            </button>
+              <button type="button" class="slot-clear" style="display:none" title="Remove selection" onclick="event.stopPropagation();clearPickerValue('chair')">&times;</button>
+            </div>
           </div>
           <div class="form-group" id="picker-member1">
             <label class="label">Panel Member 1</label>
             <input type="hidden" class="picker-value"/>
-            <button type="button" class="picker-slot" onclick="openExpertPicker('member1')">
+            <div class="picker-slot" tabindex="0" role="button" onclick="openExpertPicker('member1')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openExpertPicker('member1');}">
               <span class="slot-text">Click to select an expert</span>
-              <span class="slot-change" style="display:none">Change</span>
-            </button>
+              <button type="button" class="slot-clear" style="display:none" title="Remove selection" onclick="event.stopPropagation();clearPickerValue('member1')">&times;</button>
+            </div>
           </div>
           <div class="form-group" id="picker-member2" style="margin-bottom:0">
             <label class="label">Panel Member 2</label>
             <input type="hidden" class="picker-value"/>
-            <button type="button" class="picker-slot" onclick="openExpertPicker('member2')">
+            <div class="picker-slot" tabindex="0" role="button" onclick="openExpertPicker('member2')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openExpertPicker('member2');}">
               <span class="slot-text">Click to select an expert</span>
-              <span class="slot-change" style="display:none">Change</span>
-            </button>
+              <button type="button" class="slot-clear" style="display:none" title="Remove selection" onclick="event.stopPropagation();clearPickerValue('member2')">&times;</button>
+            </div>
           </div>
 
           <div style="display:flex;gap:8px;margin-top:16px">
@@ -269,6 +321,85 @@
               Save Panel Assignment
             </button>
             <button class="btn btn-ghost" style="font-size:13px;color:var(--text2);border-color:var(--border)" onclick="closePanelModal()">Cancel</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Suggest Teams for a Panel - the reverse of the normal flow: pick
+           the panel FIRST, then see which teams' tags best match the
+           panel's combined expertise, and bulk-assign to whichever of the
+           suggestions you pick. -->
+      <div id="suggest-teams-modal" style="display:none;position:fixed;inset:0;background:rgba(24,25,31,0.6);z-index:100;align-items:center;justify-content:center">
+        <div style="background:#fff;border-radius:14px;padding:24px;width:880px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+            <div style="font-size:15px;font-weight:600;color:var(--text)">Suggest Teams for a Panel</div>
+            <button onclick="closeSuggestTeamsModal()" style="background:none;border:none;font-size:22px;color:var(--text3);cursor:pointer;line-height:1">&times;</button>
+          </div>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:18px">
+            Pick a panel on the left, and teams whose tags match the panel's combined expertise are suggested on the right - matched the same way single-team suggestions are, just run in reverse.
+          </div>
+
+          <div style="display:flex;gap:24px;align-items:flex-start">
+            <!-- Left: build the panel -->
+            <div style="flex:0 0 260px;border-right:1px solid var(--border);padding-right:24px">
+              <div class="form-group">
+                <label class="label">Defense Type</label>
+                <select class="input" id="suggest-defense-type" onchange="refreshTeamSuggestions()">
+                  <option value="Pre-proposal Defense">Pre-proposal Defense</option>
+                  <option value="Title Defense">Title Defense</option>
+                  <option value="Pre Oral Defense">Pre Oral Defense</option>
+                  <option value="Final Oral Defense">Final Oral Defense</option>
+                </select>
+              </div>
+
+              <div class="form-group" id="picker-suggest-chair">
+                <label class="label">Panel Chair</label>
+                <input type="hidden" class="picker-value"/>
+                <div class="picker-slot" tabindex="0" role="button" onclick="openExpertPicker('suggest-chair')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openExpertPicker('suggest-chair');}">
+                  <span class="slot-text">Click to select an expert</span>
+                  <button type="button" class="slot-clear" style="display:none" title="Remove selection" onclick="event.stopPropagation();clearPickerValue('suggest-chair')">&times;</button>
+                </div>
+              </div>
+              <div class="form-group" id="picker-suggest-member1">
+                <label class="label">Panel Member 1</label>
+                <input type="hidden" class="picker-value"/>
+                <div class="picker-slot" tabindex="0" role="button" onclick="openExpertPicker('suggest-member1')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openExpertPicker('suggest-member1');}">
+                  <span class="slot-text">Click to select an expert</span>
+                  <button type="button" class="slot-clear" style="display:none" title="Remove selection" onclick="event.stopPropagation();clearPickerValue('suggest-member1')">&times;</button>
+                </div>
+              </div>
+              <div class="form-group" id="picker-suggest-member2" style="margin-bottom:0">
+                <label class="label">Panel Member 2</label>
+                <input type="hidden" class="picker-value"/>
+                <div class="picker-slot" tabindex="0" role="button" onclick="openExpertPicker('suggest-member2')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openExpertPicker('suggest-member2');}">
+                  <span class="slot-text">Click to select an expert</span>
+                  <button type="button" class="slot-clear" style="display:none" title="Remove selection" onclick="event.stopPropagation();clearPickerValue('suggest-member2')">&times;</button>
+                </div>
+              </div>
+
+              <div id="suggest-teams-error" style="display:none;background:rgba(220,38,38,0.08);border:1px solid rgba(220,38,38,0.25);color:#b91c1c;border-radius:8px;padding:10px 12px;margin-top:16px;font-size:12px"></div>
+            </div>
+
+            <!-- Right: the suggested teams -->
+            <div style="flex:1;min-width:0;display:flex;flex-direction:column">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+                <label class="label" style="margin:0">Suggested Teams</label>
+                <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text3);cursor:pointer">
+                  <input type="checkbox" id="suggest-select-all" onchange="toggleSelectAllSuggested(this.checked)"/> Select all
+                </label>
+              </div>
+              <div id="suggest-teams-results" style="border:1px solid var(--border);border-radius:8px;flex:1;min-height:320px;max-height:420px;overflow-y:auto">
+                <div style="padding:20px;text-align:center;font-size:12px;color:var(--text3)">Pick at least a Panel Chair to see suggested teams.</div>
+              </div>
+            </div>
+          </div>
+
+          <div style="display:flex;gap:8px;margin-top:20px">
+            <button class="btn btn-primary" style="flex:1;justify-content:center;font-size:13px" id="suggest-assign-btn" onclick="assignSuggestedPanel()">
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              <span id="suggest-assign-btn-label">Assign to Selected Teams</span>
+            </button>
+            <button class="btn btn-ghost" style="font-size:13px;color:var(--text2);border-color:var(--border)" onclick="closeSuggestTeamsModal()">Cancel</button>
           </div>
         </div>
       </div>
@@ -286,92 +417,121 @@
         </div>
       </div>
 
-      <div class="card" style="padding:0;overflow:hidden">
-        <table class="table">
-          <thead>
-            <tr>
-              <th style="padding-left:20px">Team</th>
-              <th>Capstone Title</th>
-              <th>Section</th>
-              <th>Panel Chair</th>
-              <th>Member 1</th>
-              <th>Member 2</th>
-              <th>Schedule</th>
-              <th>Status</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            @forelse ($teams as $team)
-              @php
-                $initials = collect(explode(' ', $team->team_name))->map(fn($w) => strtoupper(substr($w, 0, 1)))->take(2)->implode('');
-                $section = $teamSections[$team->team_id] ?? '';
-                $colorMap = ['#c9a82c,#8a6e10', '#16a34a,#0891b2', '#1d4ed8,#7c3aed', '#b45309,#dc2626', '#0891b2,#16a34a'];
-                $gradient = $colorMap[$loop->index % count($colorMap)];
-                $latestSchedule = $team->defenseSchedules->sortByDesc('defense_id')->first();
-                $chair = $latestSchedule?->panels->firstWhere('panel_role', 'Panel Chair');
-                $member1 = $latestSchedule?->panels->firstWhere('panel_role', 'Panel Member 1');
-                $member2 = $latestSchedule?->panels->firstWhere('panel_role', 'Panel Member 2');
-                $status = $chair ? 'complete' : 'not_assigned';
-                $scheduleTimeLabel = null;
-                $scheduleTimeValue = null;
-                if ($latestSchedule?->schedule_date && $latestSchedule->schedule_date->format('H:i') !== '00:00') {
-                    $scheduleTimeValue = $latestSchedule->schedule_date->format('H:i');
-                    $scheduleEnd = $latestSchedule->end_date ?? $latestSchedule->schedule_date->copy()->addHours(2);
-                    $scheduleTimeLabel = ' · '.$latestSchedule->schedule_date->format('g:i A').'–'.$scheduleEnd->format('g:i A');
-                }
-              @endphp
-              <tr data-panel-status="{{ $status }}" data-section="{{ $section }}" data-team-id="{{ $team->team_id }}" id="team-row-{{ $team->team_id }}">
-                <td style="padding-left:20px">
-                  <div style="display:flex;align-items:center;gap:8px">
-                    <div style="width:28px;height:28px;border-radius:7px;background:linear-gradient(135deg,{{ $gradient }});display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0">{{ $initials }}</div>
-                    <span class="td-main">{{ $team->team_name }}</span>
-                  </div>
-                </td>
-                <td style="font-size:12px;color:var(--text2);white-space:normal;word-break:break-word">{{ $team->project_title ?? '—' }}</td>
-                <td>
-                  @if ($section)
-                    <span class="badge badge-gold" style="font-size:10px">{{ $section }}</span>
-                  @else
-                    <span style="font-size:12px;color:var(--text3)">—</span>
-                  @endif
-                </td>
-                <td class="cell-chair" style="font-size:12px;{{ $chair ? 'color:var(--text)' : 'color:var(--text3);font-style:italic' }}">{{ $chair?->expert?->name ?? 'Not assigned' }}</td>
-                <td class="cell-member1" style="font-size:12px;{{ $member1 ? 'color:var(--text)' : 'color:var(--text3);font-style:italic' }}">{{ $member1?->expert?->name ?? 'Not assigned' }}</td>
-                <td class="cell-member2" style="font-size:12px;{{ $member2 ? 'color:var(--text)' : 'color:var(--text3);font-style:italic' }}">{{ $member2?->expert?->name ?? 'Not assigned' }}</td>
-                <td class="cell-schedule" style="font-size:12px;color:var(--text2)">
-                  @if ($latestSchedule?->schedule_date)
-                    <div style="display:flex;align-items:center;gap:6px;flex-wrap:nowrap">
-                      <span class="cell-schedule-text">{{ $latestSchedule->schedule_date->format('M j, Y').$scheduleTimeLabel.' · '.$latestSchedule->venue }}</span>
-                      <button type="button" class="cell-schedule-edit" onclick="openScheduleModal({{ $team->team_id }}, {{ $latestSchedule->defense_id }}, '{{ $latestSchedule->schedule_date->toDateString() }}', '{{ $scheduleTimeValue ?? '08:00' }}', '{{ $latestSchedule->venue }}')" title="Override day/time/venue" style="background:rgba(201,168,44,0.12);border:1px solid rgba(201,168,44,0.35);color:var(--accent3);cursor:pointer;padding:4px 6px;border-radius:6px;display:inline-flex;align-items:center;flex-shrink:0">
-                        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.25"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                      </button>
-                    </div>
-                  @else
-                    <span class="cell-schedule-text">—</span>
-                  @endif
-                </td>
-                <td class="cell-status"><span class="badge {{ $chair ? 'badge-green' : 'badge-red' }}" style="font-size:10px">{{ $chair ? 'Assigned' : 'Unassigned' }}</span></td>
-                <td>
-                  <button class="btn btn-primary cell-assign-btn" style="font-size:10px;padding:4px 10px" onclick="openPanelModal({{ $team->team_id }})">
-                    <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                    <span class="assign-btn-label">{{ $chair ? 'Update' : 'Assign' }}</span>
-                  </button>
-                </td>
-              </tr>
-            @empty
-              <tr>
-                <td colspan="9" style="text-align:center;padding:40px;color:var(--text3);font-size:13px">
-                  No verified teams found. Teams must be confirmed before they can be assigned a panel.
-                </td>
-              </tr>
-            @endforelse
-          </tbody>
-        </table>
-        <div style="padding:14px 20px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
-          <span style="font-size:12px;color:var(--text3)">Showing {{ $teams->count() }} of {{ $teams->count() }} teams</span>
+      @if ($requiresPayment)
+        <div class="pa-tabs">
+          <button type="button" class="pa-tab active" id="pa-tab-btn-paid" onclick="showPaymentTab('paid')">
+            Paid <span class="pa-tab-count">{{ $paidTeams->count() }}</span>
+          </button>
+          <button type="button" class="pa-tab" id="pa-tab-btn-unpaid" onclick="showPaymentTab('unpaid')">
+            Unpaid <span class="pa-tab-count">{{ $unpaidTeams->count() }}</span>
+          </button>
         </div>
-      </div>
+
+        <div id="paid-panel">
+          <div class="card" style="padding:0;overflow:hidden">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th style="padding-left:20px;width:34px"><input type="checkbox" id="bulk-select-all-paid" onchange="toggleSelectAll('paid', this.checked)"/></th>
+                  <th>Team</th>
+                  <th>Capstone Title</th>
+                  <th>Section</th>
+                  <th>Panel Chair</th>
+                  <th>Member 1</th>
+                  <th>Member 2</th>
+                  <th>Schedule</th>
+                  <th>Status</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                @forelse ($paidTeams as $team)
+                  @include('admin.partials.panel_team_row', ['team' => $team, 'teamSections' => $teamSections, 'rowIndex' => $loop->index, 'isPaid' => true, 'defenseType' => $defenseType])
+                @empty
+                  <tr>
+                    <td colspan="10" style="text-align:center;padding:40px;color:var(--text3);font-size:13px">
+                      No teams have paid for {{ $defenseType }} yet.
+                    </td>
+                  </tr>
+                @endforelse
+              </tbody>
+            </table>
+            <div style="padding:14px 20px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+              <span style="font-size:12px;color:var(--text3)">{{ $paidTeams->count() }} team(s) paid for {{ $defenseType }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div id="unpaid-panel" style="display:none">
+          <div class="card" style="padding:0;overflow:hidden">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th style="padding-left:20px;width:34px"><input type="checkbox" id="bulk-select-all-unpaid" onchange="toggleSelectAll('unpaid', this.checked)"/></th>
+                  <th>Team</th>
+                  <th>Capstone Title</th>
+                  <th>Section</th>
+                  <th>Panel Chair</th>
+                  <th>Member 1</th>
+                  <th>Member 2</th>
+                  <th>Schedule</th>
+                  <th>Status</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                @forelse ($unpaidTeams as $team)
+                  @include('admin.partials.panel_team_row', ['team' => $team, 'teamSections' => $teamSections, 'rowIndex' => $loop->index, 'isPaid' => false, 'defenseType' => $defenseType])
+                @empty
+                  <tr>
+                    <td colspan="10" style="text-align:center;padding:40px;color:var(--text3);font-size:13px">
+                      Every confirmed team has paid for {{ $defenseType }}.
+                    </td>
+                  </tr>
+                @endforelse
+              </tbody>
+            </table>
+            <div style="padding:14px 20px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+              <span style="font-size:12px;color:var(--text3)">{{ $unpaidTeams->count() }} team(s) still unpaid for {{ $defenseType }} — they can still be assigned a panel, but won't get a date/venue from "Defense Schedule" until they pay.</span>
+            </div>
+          </div>
+        </div>
+      @else
+        <div id="all-panel">
+          <div class="card" style="padding:0;overflow:hidden">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th style="padding-left:20px;width:34px"><input type="checkbox" id="bulk-select-all-all" onchange="toggleSelectAll('all', this.checked)"/></th>
+                  <th>Team</th>
+                  <th>Capstone Title</th>
+                  <th>Section</th>
+                  <th>Panel Chair</th>
+                  <th>Member 1</th>
+                  <th>Member 2</th>
+                  <th>Schedule</th>
+                  <th>Status</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                @forelse ($paidTeams as $team)
+                  @include('admin.partials.panel_team_row', ['team' => $team, 'teamSections' => $teamSections, 'rowIndex' => $loop->index, 'isPaid' => true, 'defenseType' => $defenseType])
+                @empty
+                  <tr>
+                    <td colspan="10" style="text-align:center;padding:40px;color:var(--text3);font-size:13px">
+                      No confirmed teams yet.
+                    </td>
+                  </tr>
+                @endforelse
+              </tbody>
+            </table>
+            <div style="padding:14px 20px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+              <span style="font-size:12px;color:var(--text3)">{{ $paidTeams->count() }} confirmed team(s) — {{ $defenseType }} has no fee, so every team is schedulable.</span>
+            </div>
+          </div>
+        </div>
+      @endif
     </div>
   </div>
   </div>
@@ -402,9 +562,25 @@ const TEAMS_BY_ID = Object.fromEntries(TEAMS.map(t => [t.team_id, t]));
 
 let currentTeamId = null;
 let currentSuggestedIds = [];
+let bulkMode = false;
+let bulkSelectedTeamIds = [];
 
 // ── Expert picker (opens a dedicated modal, not an inline dropdown) ──────
-const PICKER_LABELS = { chair: 'Panel Chair', member1: 'Panel Member 1', member2: 'Panel Member 2' };
+// Shared by the single/bulk assign modal (roles: chair/member1/member2) AND
+// the "Suggest Teams for a Panel" modal (roles: suggest-chair/suggest-
+// member1/suggest-member2) - ROLE_GROUPS keeps their "already taken by a
+// sibling slot" checks from leaking into each other.
+const PICKER_LABELS = {
+  chair: 'Panel Chair', member1: 'Panel Member 1', member2: 'Panel Member 2',
+  'suggest-chair': 'Panel Chair', 'suggest-member1': 'Panel Member 1', 'suggest-member2': 'Panel Member 2',
+};
+const ROLE_GROUPS = {
+  assign: ['chair', 'member1', 'member2'],
+  suggest: ['suggest-chair', 'suggest-member1', 'suggest-member2'],
+};
+function roleGroupOf(role) {
+  return role && role.startsWith('suggest-') ? 'suggest' : 'assign';
+}
 let currentPickerRole = null;
 
 function escHtml(s) {
@@ -420,7 +596,7 @@ function setPickerValue(role, id) {
   const hidden = slot.querySelector('.picker-value');
   const btn = slot.querySelector('.picker-slot');
   const textEl = btn.querySelector('.slot-text');
-  const changeEl = btn.querySelector('.slot-change');
+  const clearEl = btn.querySelector('.slot-clear');
   const expert = EXPERTS.find(e => e.id === id);
 
   hidden.value = id || '';
@@ -428,12 +604,20 @@ function setPickerValue(role, id) {
   if (expert) {
     textEl.textContent = expert.name;
     btn.classList.add('filled');
-    changeEl.style.display = 'inline';
+    clearEl.style.display = 'inline-flex';
   } else {
     textEl.textContent = 'Click to select an expert';
     btn.classList.remove('filled');
-    changeEl.style.display = 'none';
+    clearEl.style.display = 'none';
   }
+}
+
+// The × in a filled slot - clears that one slot back to empty without
+// having to reopen the picker (which only ever lets you pick a REPLACEMENT,
+// never "nobody").
+function clearPickerValue(role) {
+  setPickerValue(role, null);
+  if (roleGroupOf(role) === 'suggest') refreshTeamSuggestions();
 }
 
 function getPickerValue(role) {
@@ -443,7 +627,7 @@ function getPickerValue(role) {
 
 function renderExpertPickerResults(term) {
   const excluded = TEAMS_BY_ID[currentTeamId]?.excluded_expert_ids || [];
-  const otherRoles = Object.keys(PICKER_LABELS).filter(r => r !== currentPickerRole);
+  const otherRoles = ROLE_GROUPS[roleGroupOf(currentPickerRole)].filter(r => r !== currentPickerRole);
   const takenByOtherRoles = otherRoles.map(r => getPickerValue(r)).filter(Boolean);
 
   const normalizedTerm = (term || '').toLowerCase().trim();
@@ -492,8 +676,10 @@ document.getElementById('expert-picker-search').addEventListener('input', (ev) =
 document.getElementById('expert-picker-results').addEventListener('click', (ev) => {
   const opt = ev.target.closest('.expert-picker-option');
   if (!opt || !currentPickerRole) return;
-  setPickerValue(currentPickerRole, parseInt(opt.getAttribute('data-id'), 10));
+  const pickedRole = currentPickerRole;
+  setPickerValue(pickedRole, parseInt(opt.getAttribute('data-id'), 10));
   closeExpertPicker();
+  if (roleGroupOf(pickedRole) === 'suggest') refreshTeamSuggestions();
 });
 
 // ── Modal open/close ────────────────────────────────────────────────────
@@ -544,6 +730,7 @@ function scheduleCellHtml(teamId, schedule) {
 }
 
 function fillModalFromSchedule(defenseType) {
+  if (bulkMode) return;
   const team = TEAMS_BY_ID[currentTeamId];
   const schedule = team.schedules.find(s => s.defense_type === defenseType);
 
@@ -562,6 +749,8 @@ function fillModalFromSchedule(defenseType) {
 }
 
 function openPanelModal(teamId) {
+  bulkMode = false;
+  bulkSelectedTeamIds = [];
   currentTeamId = teamId;
   const team = TEAMS_BY_ID[teamId];
 
@@ -569,9 +758,12 @@ function openPanelModal(teamId) {
   document.getElementById('modal-team-title').textContent = team.project_title || '';
   document.getElementById('modal-error').style.display = 'none';
 
+  // Defaults to whichever stage the page is currently filtered to (same
+  // stage the row itself is showing) rather than the team's most-recently-
+  // created schedule - otherwise the modal can open on a different stage
+  // than what "Update" implied from the row.
   const defenseSelect = document.getElementById('modal-defense');
-  const latest = team.schedules[team.schedules.length - 1];
-  defenseSelect.value = latest ? latest.defense_type : 'Pre-proposal Defense';
+  defenseSelect.value = document.getElementById('payment-defense-type')?.value || 'Pre-proposal Defense';
   fillModalFromSchedule(defenseSelect.value);
 
   document.getElementById('panel-modal').style.display = 'flex';
@@ -594,6 +786,8 @@ document.getElementById('modal-defense').addEventListener('change', (ev) => fill
 function closePanelModal() {
   document.getElementById('panel-modal').style.display = 'none';
   currentTeamId = null;
+  bulkMode = false;
+  bulkSelectedTeamIds = [];
 }
 
 function showModalError(message) {
@@ -602,14 +796,141 @@ function showModalError(message) {
   el.style.display = 'block';
 }
 
+// ── Payment-status tabs ──────────────────────────────────────────────────
+function showPaymentTab(tab) {
+  const showPaid = tab === 'paid';
+  document.getElementById('paid-panel').style.display = showPaid ? '' : 'none';
+  document.getElementById('unpaid-panel').style.display = showPaid ? 'none' : '';
+  document.getElementById('pa-tab-btn-paid').classList.toggle('active', showPaid);
+  document.getElementById('pa-tab-btn-unpaid').classList.toggle('active', !showPaid);
+}
+
+// ── Bulk selection - available in both tabs; assigning a panel is never
+// blocked by payment, only the automatic day/venue scheduler is (see
+// AdminPanelAssignmentController::generateScheduleForWindow()) ───────────
+function onBulkCheckboxChange() {
+  updateSelectAllState('paid');
+  updateSelectAllState('unpaid');
+  updateSelectAllState('all');
+
+  const checked = document.querySelectorAll('.team-bulk-checkbox:checked');
+  const bar = document.getElementById('bulk-action-bar');
+
+  if (checked.length > 0) {
+    bar.style.display = 'flex';
+    document.getElementById('bulk-selected-count').textContent = checked.length;
+  } else {
+    bar.style.display = 'none';
+  }
+
+  renderBulkSelectedChips();
+}
+
+// Selections can span both the Paid and Unpaid tabs at once (only one tab's
+// rows are visible at a time, but checked boxes in the hidden tab stay
+// checked) - this chip list is the only place that makes the full
+// selection visible regardless of which tab you're currently looking at.
+function renderBulkSelectedChips() {
+  const container = document.getElementById('bulk-selected-chips');
+  if (!container) return;
+
+  const checked = Array.from(document.querySelectorAll('.team-bulk-checkbox:checked'));
+  container.innerHTML = checked.map(cb => {
+    const id = parseInt(cb.value, 10);
+    const name = TEAMS_BY_ID[id]?.team_name || ('Team #' + id);
+    return '<span style="display:inline-flex;align-items:center;gap:5px;background:#fff;border:1px solid rgba(29,78,216,0.25);border-radius:20px;padding:3px 6px 3px 10px;font-size:11px;color:var(--text2)">'
+      + escHtml(name)
+      + '<button type="button" onclick="removeBulkSelection(' + id + ')" title="Remove ' + escHtml(name) + '" style="background:rgba(29,78,216,0.12);border:none;border-radius:50%;width:16px;height:16px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#1d4ed8;font-size:11px;line-height:1;padding:0">&times;</button>'
+      + '</span>';
+  }).join('');
+}
+
+function removeBulkSelection(teamId) {
+  const cb = document.querySelector('.team-bulk-checkbox[value="' + teamId + '"]');
+  if (cb) cb.checked = false;
+  onBulkCheckboxChange();
+}
+
+function updateSelectAllState(scope) {
+  const panel = document.getElementById(scope + '-panel');
+  const selectAllCb = document.getElementById('bulk-select-all-' + scope);
+  if (!panel || !selectAllCb) return;
+
+  const all = panel.querySelectorAll('.team-bulk-checkbox');
+  const checked = panel.querySelectorAll('.team-bulk-checkbox:checked');
+  selectAllCb.checked = all.length > 0 && checked.length === all.length;
+  selectAllCb.indeterminate = checked.length > 0 && checked.length < all.length;
+}
+
+function toggleSelectAll(scope, checked) {
+  const panel = document.getElementById(scope + '-panel');
+  if (!panel) return;
+  panel.querySelectorAll('.team-bulk-checkbox').forEach(function (cb) { cb.checked = checked; });
+  onBulkCheckboxChange();
+}
+
+function clearBulkSelection() {
+  document.querySelectorAll('.team-bulk-checkbox').forEach(function (cb) { cb.checked = false; });
+  onBulkCheckboxChange();
+}
+
+function openBulkPanelModal() {
+  const selected = Array.from(document.querySelectorAll('.team-bulk-checkbox:checked')).map(cb => parseInt(cb.value, 10));
+  if (selected.length === 0) return;
+
+  bulkMode = true;
+  bulkSelectedTeamIds = selected;
+  currentTeamId = null;
+  currentSuggestedIds = [];
+
+  const names = selected.map(id => TEAMS_BY_ID[id]?.team_name).filter(Boolean);
+  document.getElementById('modal-team-name').textContent = `Assigning to ${selected.length} team${selected.length === 1 ? '' : 's'}`;
+  document.getElementById('modal-team-title').textContent = names.join(', ');
+  document.getElementById('modal-error').style.display = 'none';
+  document.getElementById('modal-schedule-result').style.display = 'none';
+
+  const defenseSelect = document.getElementById('modal-defense');
+  defenseSelect.value = document.getElementById('payment-defense-type')?.value || 'Pre-proposal Defense';
+  setPickerValue('chair', null);
+  setPickerValue('member1', null);
+  setPickerValue('member2', null);
+
+  document.getElementById('panel-modal').style.display = 'flex';
+
+  const query = selected.map(id => 'team_ids[]=' + encodeURIComponent(id)).join('&');
+  fetch(`/api/admin/panel_assignment/suggest-multi?${query}`, {
+    headers: { 'Accept': 'application/json' },
+  })
+    .then(res => res.json())
+    .then(json => {
+      if (json.success) {
+        currentSuggestedIds = json.data.map(s => s.expert_id);
+        if (currentPickerRole) renderExpertPickerResults(document.getElementById('expert-picker-search')?.value || '');
+      }
+    })
+    .catch(() => {});
+}
+
 // ── Save ─────────────────────────────────────────────────────────────────
 async function savePanelAssignment() {
+  if (bulkMode) {
+    return saveBulkPanelAssignment();
+  }
+
   if (!currentTeamId) return;
 
   const chairId = getPickerValue('chair');
+
+  // An empty Chair slot isn't an error to fix - it's how you remove a
+  // team's panel entirely for this stage (clear it via its × and save).
+  // Confirm first since it deletes the existing panel/schedule outright.
   if (!chairId) {
-    showModalError('A Panel Chair is required.');
-    return;
+    const team = TEAMS_BY_ID[currentTeamId];
+    const stage = document.getElementById('modal-defense').value;
+    const hasExisting = team.schedules.some(s => s.defense_type === stage && s.chair_expert_id);
+    if (hasExisting && !confirm(`Remove ${team.team_name}'s panel for ${stage} entirely? You'll need to assign a new panel to bring it back.`)) {
+      return;
+    }
   }
 
   const payload = {
@@ -636,9 +957,232 @@ async function savePanelAssignment() {
     }
 
     updateTeamRow(currentTeamId, json.data);
+    (json.propagated || []).forEach(s => updateTeamRow(currentTeamId, s));
     closePanelModal();
   } catch (e) {
     showModalError('Could not reach the server. Please try again.');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function saveBulkPanelAssignment() {
+  if (bulkSelectedTeamIds.length === 0) return;
+
+  const chairId = getPickerValue('chair');
+
+  // Same as the single-team flow: an empty Chair means "remove the panel"
+  // for whichever selected teams already have one for this stage (any
+  // team with no existing panel is just skipped and reported, same as any
+  // other per-team failure in this bulk flow).
+  if (!chairId) {
+    const stage = document.getElementById('modal-defense').value;
+    if (!confirm(`Remove the ${stage} panel for the ${bulkSelectedTeamIds.length} selected team(s) that already have one? You'll need to assign new panels to bring them back.`)) {
+      return;
+    }
+  }
+
+  const payload = {
+    team_ids: bulkSelectedTeamIds,
+    defense_type: document.getElementById('modal-defense').value,
+    chair_expert_id: chairId,
+    member1_expert_id: getPickerValue('member1'),
+    member2_expert_id: getPickerValue('member2'),
+  };
+
+  const btn = document.getElementById('modal-save-btn');
+  btn.disabled = true;
+
+  try {
+    const res = await fetch('/api/admin/panel_assignment/bulk', {
+      method: 'POST',
+      headers: { 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json', 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const json = await res.json();
+
+    if (!res.ok || !json.success) {
+      showModalError(json.message || 'Could not save these assignments. Please try again.');
+      return;
+    }
+
+    const assigned = json.data.assigned || [];
+    const skipped = json.data.skipped || [];
+
+    assigned.forEach(scheduleData => {
+      updateTeamRow(scheduleData.team_id, scheduleData);
+      (scheduleData.propagated || []).forEach(s => updateTeamRow(scheduleData.team_id, s));
+    });
+
+    let msg = `Assigned panel to ${assigned.length} team${assigned.length === 1 ? '' : 's'}.`;
+    if (skipped.length > 0) {
+      msg += ` Skipped ${skipped.length}: ` + skipped.map(s => `${s.team_name} (${s.reason})`).join('; ');
+    }
+    showToast(msg, skipped.length > 0 ? 'error' : 'success');
+
+    closePanelModal();
+    clearBulkSelection();
+  } catch (e) {
+    showModalError('Could not reach the server. Please try again.');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// ── Suggest Teams for a Panel (reverse flow: pick the panel, then see
+// which teams match it) ─────────────────────────────────────────────────
+let suggestedTeamsData = [];
+
+function openSuggestTeamsModal() {
+  setPickerValue('suggest-chair', null);
+  setPickerValue('suggest-member1', null);
+  setPickerValue('suggest-member2', null);
+  document.getElementById('suggest-defense-type').value = document.getElementById('payment-defense-type')?.value || 'Pre-proposal Defense';
+  document.getElementById('suggest-teams-error').style.display = 'none';
+  document.getElementById('suggest-select-all').checked = false;
+  suggestedTeamsData = [];
+  document.getElementById('suggest-teams-results').innerHTML =
+    '<div style="padding:20px;text-align:center;font-size:12px;color:var(--text3)">Pick at least a Panel Chair to see suggested teams.</div>';
+
+  document.getElementById('suggest-teams-modal').style.display = 'flex';
+}
+
+function closeSuggestTeamsModal() {
+  document.getElementById('suggest-teams-modal').style.display = 'none';
+}
+
+function showSuggestError(message) {
+  const el = document.getElementById('suggest-teams-error');
+  el.textContent = message;
+  el.style.display = 'block';
+}
+
+async function refreshTeamSuggestions() {
+  const chairId = getPickerValue('suggest-chair');
+  const results = document.getElementById('suggest-teams-results');
+
+  if (!chairId) {
+    suggestedTeamsData = [];
+    results.innerHTML = '<div style="padding:20px;text-align:center;font-size:12px;color:var(--text3)">Pick at least a Panel Chair to see suggested teams.</div>';
+    return;
+  }
+
+  // Suggestions are based purely on tag/expertise overlap - payment status
+  // isn't a factor (a panel is a team's panel for every stage, not scoped
+  // to one), so the Defense Type selector only matters later, for the
+  // actual assign step.
+  const expertIds = [chairId, getPickerValue('suggest-member1'), getPickerValue('suggest-member2')].filter(Boolean);
+  const query = expertIds.map(id => 'expert_ids[]=' + encodeURIComponent(id)).join('&');
+
+  results.innerHTML = '<div style="padding:20px;text-align:center;font-size:12px;color:var(--text3)">Loading suggestions...</div>';
+
+  try {
+    const res = await fetch(`/api/admin/panel_assignment/suggest-teams?${query}`, {
+      headers: { 'Accept': 'application/json' },
+    });
+    const json = await res.json();
+
+    if (!json.success) {
+      results.innerHTML = '<div style="padding:20px;text-align:center;font-size:12px;color:var(--text3)">Could not load suggestions.</div>';
+      return;
+    }
+
+    suggestedTeamsData = json.data;
+    renderSuggestedTeamsList();
+  } catch (e) {
+    results.innerHTML = '<div style="padding:20px;text-align:center;font-size:12px;color:var(--text3)">Could not reach the server.</div>';
+  }
+}
+
+function renderSuggestedTeamsList() {
+  const results = document.getElementById('suggest-teams-results');
+
+  if (suggestedTeamsData.length === 0) {
+    results.innerHTML = '<div style="padding:20px;text-align:center;font-size:12px;color:var(--text3)">No teams\' tags match this panel\'s expertise.</div>';
+    document.getElementById('suggest-select-all').checked = false;
+    return;
+  }
+
+  // Payment status isn't shown here - a panel assigned to a team is that
+  // team's panel for every defense stage, not tied to one stage's payment.
+  results.innerHTML = suggestedTeamsData.map(t => {
+    return '<label style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border-bottom:1px solid var(--border);cursor:pointer">'
+      + '<input type="checkbox" class="suggested-team-checkbox" value="' + t.team_id + '" onchange="onSuggestedCheckboxChange()" style="margin-top:2px"/>'
+      + '<div style="flex:1;min-width:0">'
+      + '<span style="font-size:12px;font-weight:600;color:var(--text)">' + escHtml(t.team_name) + '</span>'
+      + (t.project_title ? '<div style="font-size:11px;color:var(--text3);margin-top:1px">' + escHtml(t.project_title) + '</div>' : '')
+      + '<div style="font-size:10px;color:var(--accent3);margin-top:3px">Matched: ' + escHtml(t.matched_tags.join(', ')) + '</div>'
+      + '</div>'
+      + '</label>';
+  }).join('');
+
+  document.getElementById('suggest-select-all').checked = false;
+}
+
+function toggleSelectAllSuggested(checked) {
+  document.querySelectorAll('.suggested-team-checkbox').forEach(cb => { cb.checked = checked; });
+}
+
+function onSuggestedCheckboxChange() {
+  const all = document.querySelectorAll('.suggested-team-checkbox');
+  const checked = document.querySelectorAll('.suggested-team-checkbox:checked');
+  document.getElementById('suggest-select-all').checked = all.length > 0 && checked.length === all.length;
+}
+
+async function assignSuggestedPanel() {
+  const chairId = getPickerValue('suggest-chair');
+  if (!chairId) {
+    showSuggestError('A Panel Chair is required.');
+    return;
+  }
+
+  const teamIds = Array.from(document.querySelectorAll('.suggested-team-checkbox:checked')).map(cb => parseInt(cb.value, 10));
+  if (teamIds.length === 0) {
+    showSuggestError('Select at least one suggested team.');
+    return;
+  }
+
+  const payload = {
+    team_ids: teamIds,
+    defense_type: document.getElementById('suggest-defense-type').value,
+    chair_expert_id: chairId,
+    member1_expert_id: getPickerValue('suggest-member1'),
+    member2_expert_id: getPickerValue('suggest-member2'),
+  };
+
+  const btn = document.getElementById('suggest-assign-btn');
+  btn.disabled = true;
+
+  try {
+    const res = await fetch('/api/admin/panel_assignment/bulk', {
+      method: 'POST',
+      headers: { 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json', 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const json = await res.json();
+
+    if (!res.ok || !json.success) {
+      showSuggestError(json.message || 'Could not save these assignments. Please try again.');
+      return;
+    }
+
+    const assigned = json.data.assigned || [];
+    const skipped = json.data.skipped || [];
+
+    assigned.forEach(scheduleData => {
+      updateTeamRow(scheduleData.team_id, scheduleData);
+      (scheduleData.propagated || []).forEach(s => updateTeamRow(scheduleData.team_id, s));
+    });
+
+    let msg = `Assigned panel to ${assigned.length} team${assigned.length === 1 ? '' : 's'}.`;
+    if (skipped.length > 0) {
+      msg += ` Skipped ${skipped.length}: ` + skipped.map(s => `${s.team_name} (${s.reason})`).join('; ');
+    }
+    showToast(msg, skipped.length > 0 ? 'error' : 'success');
+
+    closeSuggestTeamsModal();
+  } catch (e) {
+    showSuggestError('Could not reach the server. Please try again.');
   } finally {
     btn.disabled = false;
   }
@@ -658,6 +1202,15 @@ function updateTeamRow(teamId, scheduleData) {
     member2_expert_id: panelByRole['Panel Member 2']?.expert_id ?? null,
   };
   if (idx >= 0) team.schedules[idx] = updated; else team.schedules.push(updated);
+
+  // A Pre-proposal Defense change propagates to the other 3 stages too
+  // (see assignPanelToTeam()) - that always updates this team's cached
+  // schedules above, but must only repaint the visible row's cells when
+  // the update is for the stage the page is CURRENTLY showing. Patching a
+  // propagated stage's data into a row that's displaying a different
+  // stage would silently show the wrong panel.
+  const currentPageStage = document.getElementById('payment-defense-type')?.value;
+  if (currentPageStage && scheduleData.defense_type !== currentPageStage) return;
 
   const row = document.getElementById('team-row-' + teamId);
   if (!row) return;
@@ -802,10 +1355,17 @@ function winCalFormatLabel(key) {
   return new Date(y, m - 1, d).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
+// A team can have a schedule for more than one defense stage at once (e.g.
+// an already-scheduled Pre-proposal Defense alongside a not-yet-scheduled
+// Title Defense) - only show dates for the stage this window modal is
+// currently editing, or an unrelated stage's booking bleeds into this
+// calendar and makes an unpaid team look like it's already scheduled for
+// the stage being generated.
 function winCalScheduledDays() {
+  const activeType = document.getElementById('window-defense-type').value;
   const map = {};
   TEAMS.forEach(t => (t.schedules || []).forEach(s => {
-    if (!s.schedule_date) return;
+    if (!s.schedule_date || s.defense_type !== activeType) return;
     const day = s.schedule_date.slice(0, 10);
     (map[day] = map[day] || []).push(t.team_name);
   }));
@@ -952,8 +1512,14 @@ async function saveWindow() {
       if (count > 0) parts.push(`scheduled ${count} team${count === 1 ? '' : 's'}`);
       if (resolved > 0) parts.push(`fixed ${resolved} conflicting schedule${resolved === 1 ? '' : 's'}`);
       if (compacted > 0) parts.push(`closed ${compacted} schedule gap${compacted === 1 ? '' : 's'}`);
-      showWindowMsg(`Saved — ${parts.join(', ')}. Refreshing...`, false);
-      setTimeout(() => window.location.reload(), 1200);
+      showWindowMsg(`Saved — ${parts.join(', ')}.`, false);
+
+      // Patch just the affected rows instead of reloading the whole page -
+      // updateTeamRow() also mutates the TEAMS array in place (same object
+      // references as TEAMS_BY_ID), so re-rendering the calendar picks up
+      // the new dates too.
+      (json.updated_schedules || []).forEach(s => updateTeamRow(s.team_id, s));
+      renderWinCal();
     } else {
       showWindowMsg('Saved. No unscheduled panels, conflicts, or gaps to fix.', false);
     }

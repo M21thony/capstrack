@@ -16,6 +16,7 @@ class DefensePanel extends Model
         'defense_id',
         'expert_id',
         'panel_role',
+        'google_event_id',
         'created_at',
     ];
 

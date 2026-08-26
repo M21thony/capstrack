@@ -17,6 +17,7 @@ class ExpensePost extends Model
         'title',
         'course',
         'year_level',
+        'defense_type',
         'amount',
         'description',
         'is_active',

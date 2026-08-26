@@ -412,14 +412,19 @@
         @forelse ($expensePosts as $post)
           <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)">
             <div style="flex:2;min-width:0">
-              <div style="font-size:13px;font-weight:500;color:var(--text)">{{ $post->title }}</div>
+              <div style="font-size:13px;font-weight:500;color:var(--text);display:flex;align-items:center;gap:6px">
+                {{ $post->title }}
+                @if($post->defense_type)
+                  <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.3px;padding:2px 6px;border-radius:4px;background:var(--accent-light,rgba(201,168,44,0.12));color:var(--accent3,#8a6e10)">{{ $post->defense_type }}</span>
+                @endif
+              </div>
               <div style="font-size:11px;color:var(--text3)">{{ $post->course }} · {{ $post->year_level }}</div>
             </div>
             <div style="flex:1;font-family:'Space Mono',monospace;font-size:13px;color:var(--text2)">PHP {{ number_format($post->amount, 2) }}</div>
             <div style="flex:2;font-size:11px;color:var(--text3);min-width:0">@if($post->description){{ Str::limit($post->description, 60) }}@else<span style="font-style:italic">No description</span>@endif</div>
             <div style="display:flex;gap:6px;flex-shrink:0">
               <button class="btn btn-sm btn-primary"
-                onclick="openEditModal({{ $post->id }}, '{{ addslashes($post->title) }}', '{{ $post->course }}', '{{ $post->year_level }}', '{{ $post->amount }}', '{{ addslashes($post->description ?? '') }}')">
+                onclick="openEditModal({{ $post->id }}, '{{ addslashes($post->title) }}', '{{ $post->course }}', '{{ $post->year_level }}', '{{ $post->defense_type ?? '' }}', '{{ $post->amount }}', '{{ addslashes($post->description ?? '') }}')">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                 Edit
               </button>
@@ -455,10 +460,7 @@
     </div>
     <form id="postForm">
       <div id="postFormErrors" style="display:none;padding:10px 14px;background:var(--red-bg);border:1px solid var(--red);border-radius:8px;color:var(--red);font-size:12px;margin-bottom:14px"></div>
-      <div class="form-group">
-        <label class="label">Title</label>
-        <input class="input" id="editTitle" name="title" placeholder="e.g. Capstone 1 Title Defense Fee", required />
-      </div>
+      <input type="hidden" id="editTitle" name="title"/>
       <div class="form-group">
         <label class="label">Course</label>
         <select class="input" id="editCourse" name="course" required>
@@ -474,6 +476,17 @@
           <option value="3rd">3rd Year</option>
           <option value="4th">4th Year</option>
         </select>
+      </div>
+      <div class="form-group">
+        <label class="label">Defense Stage</label>
+        <select class="input" id="editDefenseType" name="defense_type" onchange="updateAutoTitle()">
+          <option value="">— Not tied to a defense stage —</option>
+          <option value="Pre-proposal Defense">Pre-proposal Defense</option>
+          <option value="Title Defense">Title Defense</option>
+          <option value="Pre Oral Defense">Pre Oral Defense</option>
+          <option value="Final Oral Defense">Final Oral Defense</option>
+        </select>
+        <div style="font-size:11px;color:var(--text3);margin-top:4px">Tagging a post lets Panel Assignment tell which teams have paid for that stage. Title is generated automatically: <strong id="autoTitlePreview">General Payment</strong></div>
       </div>
       <div class="form-group">
         <label class="label">Amount (PHP)</label>
@@ -1023,16 +1036,36 @@ document.querySelectorAll('.modal-overlay').forEach(function(el) {
 // -- Expense Post Modal State --
 let editingPostId = null;
 
-function openEditModal(id, title, course, yearLevel, amount, description) {
+// Admins pick a defense stage, not type a title - the title is always
+// derived from that choice so nobody has to invent naming conventions by hand.
+function titleForDefenseType(defenseType) {
+  const labels = {
+    'Pre-proposal Defense': 'PPD Payment',
+    'Title Defense': 'TD Payment',
+    'Pre Oral Defense': 'POD Payment',
+    'Final Oral Defense': 'FOD Payment',
+  };
+  return labels[defenseType] || 'General Payment';
+}
+
+function updateAutoTitle() {
+  const title = titleForDefenseType(document.getElementById('editDefenseType').value);
+  document.getElementById('editTitle').value = title;
+  const preview = document.getElementById('autoTitlePreview');
+  if (preview) preview.textContent = title;
+}
+
+function openEditModal(id, title, course, yearLevel, defenseType, amount, description) {
   editingPostId = id;
   document.getElementById('modalTitle').textContent = 'Edit Expense Post';
-  document.getElementById('editTitle').value = title;
   document.getElementById('editCourse').value = course;
   document.getElementById('editYear').value = yearLevel;
+  document.getElementById('editDefenseType').value = defenseType || '';
   document.getElementById('editAmount').value = amount;
   document.getElementById('editDescription').value = description;
   document.getElementById('submitBtn').textContent = 'Update Expense';
   document.getElementById('postFormErrors').style.display = 'none';
+  updateAutoTitle();
   openModal('addPostModal');
 }
 
@@ -1050,6 +1083,7 @@ function resetModal() {
   document.getElementById('modalTitle').textContent = 'New Expense Post';
   document.getElementById('submitBtn').textContent = 'Post Expense';
   document.getElementById('postFormErrors').style.display = 'none';
+  updateAutoTitle();
 }
 
 let rejectingRecordId = null;
@@ -1209,6 +1243,7 @@ document.getElementById('postForm')?.addEventListener('submit', async function(e
     title: document.getElementById('editTitle').value,
     course: document.getElementById('editCourse').value,
     year_level: document.getElementById('editYear').value,
+    defense_type: document.getElementById('editDefenseType').value || null,
     amount: document.getElementById('editAmount').value,
     description: document.getElementById('editDescription').value,
   };
@@ -1336,16 +1371,19 @@ function renderExpensePosts(posts) {
       : '<span style="font-style:italic">No description</span>';
     const safeTitle = post.title.replace(/'/g, "\\'").replace(/"/g, '&quot;');
     const safeDesc = (post.description || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+    const defenseTypeBadge = post.defense_type
+      ? '<span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.3px;padding:2px 6px;border-radius:4px;background:var(--accent-light,rgba(201,168,44,0.12));color:var(--accent3,#8a6e10)">' + post.defense_type + '</span>'
+      : '';
 
     return '<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)">' +
       '<div style="flex:2;min-width:0">' +
-      '<div style="font-size:13px;font-weight:500;color:var(--text)">' + post.title + '</div>' +
+      '<div style="font-size:13px;font-weight:500;color:var(--text);display:flex;align-items:center;gap:6px">' + post.title + defenseTypeBadge + '</div>' +
       '<div style="font-size:11px;color:var(--text3)">' + post.course + ' · ' + post.year_level + '</div>' +
       '</div>' +
       '<div style="flex:1;font-family:\'Space Mono\',monospace;font-size:13px;color:var(--text2)">PHP ' + parseFloat(post.amount).toLocaleString('en-US', {minimumFractionDigits: 2}) + '</div>' +
       '<div style="flex:2;font-size:11px;color:var(--text3);min-width:0">' + desc + '</div>' +
       '<div style="display:flex;gap:6px;flex-shrink:0">' +
-      '<button class="btn btn-sm btn-primary" onclick="openEditModal(' + post.id + ', \'' + safeTitle + '\', \'' + post.course + '\', \'' + post.year_level + '\', \'' + post.amount + '\', \'' + safeDesc + '\')">' +
+      '<button class="btn btn-sm btn-primary" onclick="openEditModal(' + post.id + ', \'' + safeTitle + '\', \'' + post.course + '\', \'' + post.year_level + '\', \'' + (post.defense_type || '') + '\', \'' + post.amount + '\', \'' + safeDesc + '\')">' +
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>' +
       ' Edit</button>' +
       '<button class="btn btn-sm btn-danger" data-delete-url="/api/admin/financial/expense-posts/' + post.id + '" onclick="openDeleteModal(this, \'' + safeTitle + '\')">' +

@@ -171,6 +171,12 @@
 .info-box .info-value .proposal-link:hover { background: var(--accent); color: white; }
 .info-box .info-value .msg-text { font-size: 12px; color: var(--text2); line-height: 1.5; background: var(--bg3); border-radius: 6px; padding: 8px 10px; margin-top: 2px; }
 
+/* PDF preview modal - opens over whichever modal triggered it */
+.pdf-box { width: 900px; max-width: 95vw; height: 88vh; max-height: 88vh; display: flex; flex-direction: column; overflow: hidden; }
+.pdf-box .pdf-box-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; flex-shrink: 0; }
+.pdf-box .pdf-box-header h3 { margin: 0; }
+.pdf-box iframe { flex: 1; width: 100%; border: 1px solid var(--border); border-radius: 8px; min-height: 0; }
+
 .msg-toast { position: fixed; bottom: 30px; right: 30px; background: #1e2128; color: white; padding: 14px 22px; border-radius: 12px; font-size: 13px; font-weight: 500; z-index: 500; display: none; align-items: center; gap: 10px; box-shadow: 0 8px 30px rgba(0,0,0,0.3); animation: slideUp 0.3s ease; }
 .msg-toast.success { border-left: 4px solid var(--green); }
 .msg-toast.error { border-left: 4px solid var(--red); }
@@ -262,11 +268,11 @@
                   <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
                   View Details
                 </button>
-                <button class="btn btn-success" onclick="openApproveModal({{ $assignment->assignment_id }}, '{{ $assignment->team?->team_name ?? 'Unknown' }}', '{{ ucfirst($assignment->role->first()?->role_name ?? '') }}', '{{ $assignment->team?->leader?->f_name ?? '' }}')" title="Approve">
+                <button class="btn btn-success" onclick="openApproveModal({{ $assignment->assignment_id }})" title="Approve">
                   <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
                   Approve
                 </button>
-                <button class="btn btn-danger" onclick="openRejectModal({{ $assignment->assignment_id }}, '{{ $assignment->team?->team_name ?? 'Unknown' }}', '{{ ucfirst($assignment->role->first()?->role_name ?? '') }}')" title="Reject">
+                <button class="btn btn-danger" onclick="openRejectModal({{ $assignment->assignment_id }})" title="Reject">
                   <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                   Reject
                 </button>
@@ -300,7 +306,7 @@
                   <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
                   View Details
                 </button>
-                <button class="btn btn-danger" onclick="openInstructorRemoveModal({{ $assignment->assignment_id }}, '{{ $assignment->team?->team_name ?? 'Unknown' }}', '{{ ucfirst($assignment->role->first()?->role_name ?? '') }}')" title="Remove">
+                <button class="btn btn-danger" onclick="openInstructorRemoveModal({{ $assignment->assignment_id }})" title="Remove">
                   <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                   Remove
                 </button>
@@ -334,7 +340,7 @@
                   <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
                   View Details
                 </button>
-                <button class="btn btn-danger" onclick="openInstructorRemoveModal({{ $assignment->assignment_id }}, '{{ $assignment->team?->team_name ?? 'Unknown' }}', '{{ ucfirst($assignment->role->first()?->role_name ?? '') }}')" title="Remove">
+                <button class="btn btn-danger" onclick="openInstructorRemoveModal({{ $assignment->assignment_id }})" title="Remove">
                   <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                   Remove
                 </button>
@@ -402,6 +408,18 @@
     <div class="modal-actions">
       <button class="btn btn-soft" onclick="closeModal('team-modal')">Close</button>
     </div>
+  </div>
+</div>
+
+<!-- PDF Preview Modal - opened from the Proposal row above instead of
+     navigating to the file in a new tab -->
+<div class="modal-overlay" id="pdf-preview-modal">
+  <div class="modal-box pdf-box">
+    <div class="pdf-box-header">
+      <h3>Proposal Preview</h3>
+      <button onclick="closePdfPreview()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--text3);padding:0;line-height:1" title="Close" aria-label="Close">&times;</button>
+    </div>
+    <iframe id="pdf-preview-frame" src="about:blank" title="Proposal PDF preview"></iframe>
   </div>
 </div>
 
@@ -497,9 +515,23 @@ function openTeamModal(id) {
     ? d.members.map(m => '<span class="member-tag">' + m.name + (m.email ? '<br><span style="font-size:10px;color:var(--text3);">' + m.email + '</span>' : '') + '</span>').join('')
     : '<span style="color:var(--text3);">No members loaded</span>';
   document.getElementById('tm-message').innerHTML = '<div class="msg-text">' + d.message + '</div>';
-  document.getElementById('tm-proposal').innerHTML = d.proposal
-    ? '<a href="' + d.proposal + '" target="_blank" class="proposal-link"><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="12" y2="12"/><line x1="15" y1="15" x2="12" y2="12"/></svg> View Proposal</a>'
-    : '<span style="color:var(--text3);">No file attached</span>';
+
+  const proposalEl = document.getElementById('tm-proposal');
+  proposalEl.innerHTML = '';
+  if (d.proposal) {
+    // Built via DOM APIs rather than string concatenation so the file URL
+    // never has to be embedded inside an inline onclick/href string - see
+    // the Approve/Reject button fix earlier for why that's fragile.
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'proposal-link';
+    btn.style.cssText = 'border:none;cursor:pointer;font:inherit';
+    btn.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="12" y2="12"/><line x1="15" y1="15" x2="12" y2="12"/></svg> View Proposal';
+    btn.addEventListener('click', () => openPdfPreview(d.proposal));
+    proposalEl.appendChild(btn);
+  } else {
+    proposalEl.innerHTML = '<span style="color:var(--text3);">No file attached</span>';
+  }
   const reasonRow = document.getElementById('tm-reason-row');
   const reasonEl = document.getElementById('tm-reason');
   if (d.rejection_reason) {
@@ -512,11 +544,26 @@ function openTeamModal(id) {
   openModal('team-modal');
 }
 
+function openPdfPreview(url) {
+  // #toolbar=0&navpanes=0 hides Chrome/Edge's built-in PDF viewer chrome
+  // (download/print/zoom bar, thumbnail panel) - just the document itself.
+  document.getElementById('pdf-preview-frame').src = url + '#toolbar=0&navpanes=0';
+  openModal('pdf-preview-modal');
+}
+
+function closePdfPreview() {
+  closeModal('pdf-preview-modal');
+  // Stop the PDF from continuing to load/render in the background once closed.
+  document.getElementById('pdf-preview-frame').src = 'about:blank';
+}
+
 let currentApproveId = null;
-function openApproveModal(id, teamName, roleName, leaderName) {
+function openApproveModal(id) {
+  const d = assignmentData[id];
+  if (!d) return;
   currentApproveId = id;
   document.getElementById('approve-detail').innerHTML =
-    '<strong>' + teamName + '</strong> — ' + roleName + '<br>Leader: ' + (leaderName || 'N/A')
+    '<strong>' + d.team + '</strong> — ' + d.role + '<br>Leader: ' + (d.leader || 'N/A')
     + '<span class="slot-warn">This will use 1 of your ' + {{ $currentSlots }} + '/' + {{ $maxSlots }} + ' available slots.</span>';
   document.getElementById('btn-confirm-approve').disabled = false;
   document.getElementById('btn-confirm-approve').innerHTML =
@@ -525,9 +572,11 @@ function openApproveModal(id, teamName, roleName, leaderName) {
 }
 
 let currentRejectId = null;
-function openRejectModal(id, teamName, roleName) {
+function openRejectModal(id) {
+  const d = assignmentData[id];
+  if (!d) return;
   currentRejectId = id;
-  document.getElementById('reject-modal-sub').textContent = teamName + ' — ' + roleName;
+  document.getElementById('reject-modal-sub').textContent = d.team + ' — ' + d.role;
   document.getElementById('reject-reason').value = '';
   document.getElementById('btn-confirm-reject').disabled = false;
   document.getElementById('btn-confirm-reject').innerHTML =
@@ -606,10 +655,12 @@ function confirmReject() {
 
 let currentInstructorRemoveId = null;
 
-function openInstructorRemoveModal(id, teamName, roleName) {
+function openInstructorRemoveModal(id) {
+  const d = assignmentData[id];
+  if (!d) return;
   currentInstructorRemoveId = id;
   document.getElementById('instructor-remove-detail').innerHTML =
-    '<strong>' + teamName + '</strong> — ' + roleName + '<br><span style="font-size:11px;color:var(--red);">This action cannot be undone.</span>';
+    '<strong>' + d.team + '</strong> — ' + d.role + '<br><span style="font-size:11px;color:var(--red);">This action cannot be undone.</span>';
   closeModal('reject-modal');
   closeModal('approve-modal');
   openModal('instructor-remove-modal');

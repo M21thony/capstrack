@@ -56,7 +56,14 @@ class AssignmentController extends Controller
                     ->filter(fn ($m) => $m['name'] !== '')
                     ->values()
                 : [];
-            $proposalUrl = $a->proposal_file ? Storage::url($a->proposal_file) : null;
+            // proposal_file is stored via ->store('proposals', 'public') in
+            // Api\StudentExpertController - must resolve through that same
+            // 'public' disk explicitly. The bare Storage::url() facade call
+            // resolves against the DEFAULT disk (config('filesystems.default'),
+            // 'local' here) instead, which only "worked" by coincidence of
+            // the local driver's fallback URL logic - it breaks the moment
+            // the default disk is ever reconfigured.
+            $proposalUrl = $a->proposal_file ? Storage::disk('public')->url($a->proposal_file) : null;
             $message = $a->message ?? 'No message provided.';
 
             return [$a->assignment_id => [
