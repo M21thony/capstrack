@@ -34,22 +34,33 @@ class ExpertAccountRequestTest extends TestCase
         ], $overrides);
     }
 
-    // Regression test: an expert who registered under both Adviser and
-    // Consultant showed up twice everywhere their team role is displayed
-    // (e.g. student/consultation listed "2 advisers") because role was
-    // derived by joining expert_id -> expert_roles, which returned every
-    // role they'd registered under. An expert can only ever serve a team
-    // in one of these three capacities, so more than one must be rejected
-    // at signup.
-    public function test_rejects_more_than_one_team_role(): void
+    // An expert can legitimately hold more than one of these three roles at
+    // once (e.g. both Adviser and Consultant). This used to be rejected at
+    // signup because a display query elsewhere (student/consultation) that
+    // joined expert_id -> expert_roles wasn't deduplicating by expert,
+    // so a multi-role expert showed up as duplicate entries - see
+    // StudentConsultationController::loadConsultationData(), which now
+    // groups by expert_id and combines role names instead of rejecting
+    // multi-role signups in the first place.
+    public function test_accepts_more_than_one_team_role(): void
     {
         $response = $this->postJson(route('account.request.store'), $this->payload([
             'specialization' => ['adviser', 'consultant'],
         ]));
 
-        $response->assertStatus(422);
-        $response->assertJsonValidationErrors('specialization');
-        $this->assertDatabaseMissing('capstone_experts', ['email' => 'grom@gmail.com']);
+        $response->assertOk()->assertJson(['success' => true]);
+
+        $expertId = DB::table('capstone_experts')->where('email', 'grom@gmail.com')->value('expert_id');
+        $this->assertNotNull($expertId);
+
+        $roles = DB::table('expert_roles as er')
+            ->join('roles as r', 'r.role_id', '=', 'er.role_id')
+            ->where('er.expert_id', $expertId)
+            ->pluck('r.role_name')
+            ->sort()
+            ->values();
+
+        $this->assertSame(['adviser', 'consultant'], $roles->all());
     }
 
     public function test_accepts_a_single_team_role(): void
@@ -70,9 +81,8 @@ class ExpertAccountRequestTest extends TestCase
     }
 
     // The capstone_adviser (admin) flag is a separate axis from the three
-    // team roles and may still be combined with exactly one of them - e.g.
-    // the seeded CapsTrack Admin account is both capstone_adviser and
-    // adviser.
+    // team roles and may be combined with any of them - e.g. the seeded
+    // CapsTrack Admin account is both capstone_adviser and adviser.
     public function test_allows_capstone_adviser_alongside_one_team_role(): void
     {
         $response = $this->postJson(route('account.request.store'), $this->payload([

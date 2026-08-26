@@ -1408,25 +1408,11 @@ function req(id, errId, test) {
   return valid;
 }
 
-const TEAM_ROLES = ['adviser', 'consultant', 'grammarian'];
-
 function toggleRole(role) {
   const idx = selectedRoles.indexOf(role);
   if (idx >= 0) {
     selectedRoles.splice(idx, 1);
   } else {
-    // An expert only ever serves a team as one of Adviser/Consultant/
-    // Grammarian - picking a new one swaps out whichever of those was
-    // selected before, instead of stacking both.
-    if (TEAM_ROLES.includes(role)) {
-      TEAM_ROLES.filter(r => r !== role).forEach(r => {
-        const i = selectedRoles.indexOf(r);
-        if (i >= 0) {
-          selectedRoles.splice(i, 1);
-          document.getElementById(`role-${r}`).classList.remove('selected');
-        }
-      });
-    }
     selectedRoles.push(role);
   }
   document.getElementById(`role-${role}`).classList.toggle('selected', selectedRoles.includes(role));
