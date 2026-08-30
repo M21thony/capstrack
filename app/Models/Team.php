@@ -21,6 +21,7 @@ class Team extends Model
         'leader_id',
         'is_confirmed',
         'member_count',
+        'selected_pre_proposal_id',
     ];
 
     protected $casts = [
@@ -74,6 +75,16 @@ class Team extends Model
     public function defenseSchedules()
     {
         return $this->hasMany(DefenseSchedule::class, 'team_id', 'team_id');
+    }
+
+    public function preProposals()
+    {
+        return $this->hasMany(CapstonePreProposal::class, 'team_id', 'team_id')->orderBy('slot');
+    }
+
+    public function selectedPreProposal()
+    {
+        return $this->belongsTo(CapstonePreProposal::class, 'selected_pre_proposal_id');
     }
 
     public static function nameExists(string $name, ?int $ignoreTeamId = null): bool

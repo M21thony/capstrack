@@ -14,7 +14,7 @@ class ArchiveController extends Controller
         $archives = ArchivedDocument::with('tags')->orderByDesc('academic_year')->get();
         $tags = ArchivedDocTag::orderBy('tag_name')->get();
 
-        return view('admin.archive', [
+        return view('capsa.archive', [
             'archives' => $archives,
             'tags' => $tags,
         ]);

@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\CapstoneExpert;
+use App\Models\CapstonePreProposal;
+use App\Models\DuplicationCheck;
 use App\Models\Student;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
@@ -16,14 +18,14 @@ class AdminTeamVerificationTest extends TestCase
 
     private function createAdmin(array $sections = ['BSCS-4A']): CapstoneExpert
     {
-        $admin = CapstoneExpert::create([
+        $admin = $this->makeCapsa(CapstoneExpert::create([
             'email' => 'admin.verify@test.com',
             'first_name' => 'Admin',
             'last_name' => 'User',
             'is_admin' => true,
             'approved_status' => true,
             'sections' => $sections,
-        ]);
+        ]));
 
         $this->actingAs($admin, 'expert');
 
@@ -69,6 +71,47 @@ class AdminTeamVerificationTest extends TestCase
         return $team;
     }
 
+    // verify() now requires the title question to already be resolved -
+    // creates a minimal approved-and-selected pre-proposal for the team.
+    private function selectFinalTitleForTeam(Team $team, Student $leader): CapstonePreProposal
+    {
+        $sy = StudentSchoolYear::firstOrCreate([
+            'student_id' => $leader->student_id,
+            'team_id' => $team->team_id,
+        ]);
+
+        $check = DuplicationCheck::create([
+            'student_s_y_id' => $sy->s_y_id,
+            'document_path' => 'duplication-checks/test.pdf',
+            'concepts' => ['title' => 'Test'],
+            'top_score' => 20,
+            'verdict' => 'Passed',
+            'matches' => [],
+            'instructors_suggested' => [],
+        ]);
+
+        $proposal = CapstonePreProposal::create([
+            'team_id' => $team->team_id,
+            'duplication_check_id' => $check->id,
+            'slot' => 1,
+            'title' => self::PROJECT_TITLE,
+            'sdg_goals' => 'SDG 4 – Quality Education',
+            'research_agenda' => ['Applications and Systems Development'],
+            'problem_statement' => 'A problem.',
+            'proposed_solution' => 'A solution.',
+            'scope' => 'A scope.',
+            'limitations' => 'A limitation.',
+            'sdm' => 'Agile Development Methodology',
+            'duplication_status' => 'free',
+            'approved_status' => true,
+            'submitted_at' => now(),
+        ]);
+
+        $team->update(['selected_pre_proposal_id' => $proposal->id]);
+
+        return $proposal;
+    }
+
     private function updateTeam(Team $team, string $status): void
     {
         $this->put(route('team.update', $team->team_id), [
@@ -104,6 +147,7 @@ class AdminTeamVerificationTest extends TestCase
         $leader = $this->createLeader();
         $member = $this->createMember();
         $team = $this->createCompleteTeam($leader);
+        $this->selectFinalTitleForTeam($team, $leader);
 
         StudentSchoolYear::create([
             'student_id' => $member->student_id,
@@ -275,6 +319,7 @@ class AdminTeamVerificationTest extends TestCase
             'year_section' => '3rd · A',
         ]);
         $teamB = $this->createCompleteTeam($leaderB, 'Team BSIT');
+        $this->selectFinalTitleForTeam($teamB, $leaderB);
 
         $response = $this->post(route('admin.verify_teams.verify', $teamA->team_id));
 
@@ -331,19 +376,20 @@ class AdminTeamVerificationTest extends TestCase
 
     public function test_admin_can_verify_team_when_logged_in_via_expert_guard(): void
     {
-        $admin = CapstoneExpert::create([
+        $admin = $this->makeCapsa(CapstoneExpert::create([
             'email' => 'admin.guard@test.com',
             'first_name' => 'Admin',
             'last_name' => 'Guard',
             'is_admin' => true,
             'approved_status' => true,
             'sections' => ['BSCS-4A'],
-        ]);
+        ]));
 
         Auth::guard('expert')->login($admin);
 
         $leader = $this->createLeader();
         $team = $this->createCompleteTeam($leader);
+        $this->selectFinalTitleForTeam($team, $leader);
 
         $response = $this->post(route('admin.verify_teams.verify', $team->team_id));
 
@@ -393,5 +439,187 @@ class AdminTeamVerificationTest extends TestCase
         $response->assertOk();
         $response->assertSee($bsitTeam->team_name);
         $response->assertDontSee($bscsTeam->team_name);
+    }
+
+    // Same DuplicationCheck+CapstonePreProposal setup as selectFinalTitleForTeam(),
+    // but left pending (not pre-approved) so the approve/reject endpoints have
+    // something real to act on.
+    private function createPendingProposal(Team $team, Student $leader, int $slot, string $title): CapstonePreProposal
+    {
+        $sy = StudentSchoolYear::firstOrCreate([
+            'student_id' => $leader->student_id,
+            'team_id' => $team->team_id,
+        ]);
+
+        $check = DuplicationCheck::create([
+            'student_s_y_id' => $sy->s_y_id,
+            'document_path' => "duplication-checks/slot{$slot}.pdf",
+            'concepts' => ['title' => $title],
+            'top_score' => 20,
+            'verdict' => 'Passed',
+            'matches' => [],
+            'instructors_suggested' => [],
+        ]);
+
+        return CapstonePreProposal::create([
+            'team_id' => $team->team_id,
+            'duplication_check_id' => $check->id,
+            'slot' => $slot,
+            'title' => $title,
+            'sdg_goals' => 'SDG 4 – Quality Education',
+            'research_agenda' => ['Applications and Systems Development'],
+            'problem_statement' => 'A problem.',
+            'proposed_solution' => 'A solution.',
+            'scope' => 'A scope.',
+            'limitations' => 'A limitation.',
+            'sdm' => 'Agile Development Methodology',
+            'duplication_status' => 'free',
+            'approved_status' => false,
+            'submitted_at' => now(),
+        ]);
+    }
+
+    public function test_approving_the_only_approved_proposal_auto_selects_it_and_syncs_title(): void
+    {
+        $this->createAdmin();
+        $leader = $this->createLeader();
+        $team = $this->createCompleteTeam($leader);
+        $proposal = $this->createPendingProposal($team, $leader, 1, self::PROJECT_TITLE);
+
+        $response = $this->postJson(route('admin.verify_teams.pre_proposals.approve', $proposal->id));
+
+        $response->assertOk();
+        $response->assertJson(['success' => true]);
+
+        $team->refresh();
+        $this->assertSame($proposal->id, $team->selected_pre_proposal_id);
+        $this->assertSame(self::PROJECT_TITLE, $team->project_title);
+
+        $this->assertDatabaseHas('notifications', [
+            'student_id' => $leader->student_id,
+            'type' => 'title_approved',
+        ]);
+    }
+
+    public function test_approving_two_proposals_does_not_auto_select_and_notifies_the_student_to_choose(): void
+    {
+        $this->createAdmin();
+        $leader = $this->createLeader();
+        $team = $this->createCompleteTeam($leader);
+        $proposal1 = $this->createPendingProposal($team, $leader, 1, self::PROJECT_TITLE);
+        $proposal2 = $this->createPendingProposal($team, $leader, 2, 'Automated Smart Campus Energy Consumption Tracking and Optimization Dashboard System');
+
+        $this->postJson(route('admin.verify_teams.pre_proposals.approve', $proposal1->id))->assertOk();
+        $this->postJson(route('admin.verify_teams.pre_proposals.approve', $proposal2->id))->assertOk();
+
+        $team->refresh();
+        $this->assertNull($team->selected_pre_proposal_id);
+
+        $this->assertDatabaseHas('notifications', [
+            'student_id' => $leader->student_id,
+            'type' => 'title_pick_required',
+        ]);
+    }
+
+    public function test_rejecting_a_proposal_with_a_reason_sets_status(): void
+    {
+        $this->createAdmin();
+        $leader = $this->createLeader();
+        $team = $this->createCompleteTeam($leader);
+        $proposal = $this->createPendingProposal($team, $leader, 1, self::PROJECT_TITLE);
+
+        // Empty-reason validation is enforced client-side in the modal (same
+        // convention as AdminApprovalController's reject flow) - not
+        // exercised here for the same reason AdminApprovalApiTest doesn't
+        // either: this app's exception handler only renders JSON for
+        // /api/* routes, so a server-side validation failure on this
+        // web-group route doesn't produce a clean JSON response to assert on.
+        $response = $this->postJson(route('admin.verify_teams.pre_proposals.reject', $proposal->id), [
+            'reason' => 'Too similar to an existing capstone.',
+        ]);
+
+        $response->assertOk();
+        $this->assertSame('rejected', $proposal->fresh()->status);
+        $this->assertSame('Too similar to an existing capstone.', $proposal->fresh()->rejection_reason);
+    }
+
+    public function test_verify_is_rejected_until_a_final_title_is_selected(): void
+    {
+        $this->createAdmin();
+        $leader = $this->createLeader();
+        $team = $this->createCompleteTeam($leader);
+        $this->createPendingProposal($team, $leader, 1, self::PROJECT_TITLE);
+
+        $response = $this->post(route('admin.verify_teams.verify', $team->team_id));
+
+        $response->assertSessionHas('error');
+        $this->assertDatabaseHas('team', ['team_id' => $team->team_id, 'is_confirmed' => false]);
+    }
+
+    public function test_verify_modal_surfaces_pre_proposal_content(): void
+    {
+        $this->createAdmin();
+        $leader = $this->createLeader();
+        $team = $this->createCompleteTeam($leader);
+        $this->createPendingProposal($team, $leader, 1, self::PROJECT_TITLE);
+
+        $response = $this->get(route('admin.verify_teams'));
+
+        $response->assertOk();
+        $response->assertSee('A problem.');
+        $response->assertSee('Agile Development Methodology');
+    }
+
+    // "Include the submission of the full content of the Pre-proposal
+    // form" - the CAPSA should be able to open the exact PDF the team
+    // uploaded, not just the AI-extracted fields. Served inline (not as an
+    // attachment) so it renders in the preview modal instead of forcing a
+    // download.
+    public function test_admin_can_view_the_original_pre_proposal_document_inline(): void
+    {
+        \Illuminate\Support\Facades\Storage::fake();
+        $this->createAdmin();
+        $leader = $this->createLeader();
+        $team = $this->createCompleteTeam($leader);
+        $proposal = $this->createPendingProposal($team, $leader, 1, self::PROJECT_TITLE);
+        \Illuminate\Support\Facades\Storage::put($proposal->duplicationCheck->document_path, 'fake pdf contents');
+
+        $response = $this->get(route('admin.verify_teams.pre_proposals.document', $proposal->id));
+
+        $response->assertOk();
+        $this->assertStringContainsString('inline', $response->headers->get('content-disposition'));
+    }
+
+    public function test_download_document_404s_when_the_file_is_missing(): void
+    {
+        \Illuminate\Support\Facades\Storage::fake();
+        $this->createAdmin();
+        $leader = $this->createLeader();
+        $team = $this->createCompleteTeam($leader);
+        $proposal = $this->createPendingProposal($team, $leader, 1, self::PROJECT_TITLE);
+
+        $response = $this->get(route('admin.verify_teams.pre_proposals.document', $proposal->id));
+
+        $response->assertNotFound();
+    }
+
+    public function test_verify_modal_includes_a_document_link_for_each_proposal(): void
+    {
+        \Illuminate\Support\Facades\Storage::fake();
+        $this->createAdmin();
+        $leader = $this->createLeader();
+        $team = $this->createCompleteTeam($leader);
+        $proposal = $this->createPendingProposal($team, $leader, 1, self::PROJECT_TITLE);
+
+        $response = $this->get(route('admin.verify_teams'));
+
+        // The payload is embedded as an @json()-encoded string inside an
+        // HTML attribute, so its slashes come out backslash-escaped just
+        // like every other field in it - check for that literal fragment
+        // rather than a plain URL string.
+        $expectedFragment = str_replace('/', '\/', '/verify-teams/pre-proposals/'.$proposal->id.'/document');
+
+        $response->assertOk();
+        $response->assertSee($expectedFragment, false);
     }
 }

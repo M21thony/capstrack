@@ -2,7 +2,10 @@
 
 namespace Tests\Feature;
 
+use App\Models\CapstonePreProposal;
+use App\Models\DuplicationCheck;
 use App\Models\Student;
+use App\Models\StudentSchoolYear;
 use App\Models\Team;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -28,6 +31,45 @@ class TeamUpdateTest extends TestCase
         ], $teamOverrides));
 
         return [$student, $team];
+    }
+
+    // Reaching "complete" now requires all 3 required Pre-Proposal
+    // submissions (see PreProposalController::store()) - fills all 3 slots
+    // with minimal valid data.
+    private function fillAllThreeProposalSlots(Team $team, Student $student): void
+    {
+        $sy = StudentSchoolYear::firstOrCreate([
+            'student_id' => $student->student_id,
+            'team_id' => $team->team_id,
+        ]);
+
+        for ($slot = 1; $slot <= 3; $slot++) {
+            $check = DuplicationCheck::create([
+                'student_s_y_id' => $sy->s_y_id,
+                'document_path' => "duplication-checks/slot{$slot}.pdf",
+                'concepts' => ['title' => 'Test'],
+                'top_score' => 20,
+                'verdict' => 'Passed',
+                'matches' => [],
+                'instructors_suggested' => [],
+            ]);
+
+            CapstonePreProposal::create([
+                'team_id' => $team->team_id,
+                'duplication_check_id' => $check->id,
+                'slot' => $slot,
+                'title' => "Slot {$slot} Smart Automated Irrigation Monitoring System Development",
+                'sdg_goals' => 'SDG 4 – Quality Education',
+                'research_agenda' => ['Applications and Systems Development'],
+                'problem_statement' => 'A problem.',
+                'proposed_solution' => 'A solution.',
+                'scope' => 'A scope.',
+                'limitations' => 'A limitation.',
+                'sdm' => 'Agile Development Methodology',
+                'duplication_status' => 'free',
+                'submitted_at' => now(),
+            ]);
+        }
     }
 
     // Regression test: team_status is a nullable field, but the controller
@@ -73,13 +115,11 @@ class TeamUpdateTest extends TestCase
     {
         [$student, $team] = $this->makeLeaderWithTeam();
         $this->actingAs($student, 'web');
-
-        // 11 meaningful (non-filler) words - "For" is the only stop word.
-        $title = 'Smart Automated Irrigation Monitoring System Using Sensor Networks For Sustainable Agriculture Development';
+        $this->fillAllThreeProposalSlots($team, $student);
 
         $response = $this->putJson("/api/teams/{$team->team_id}", [
             'team_name' => 'Renamed Team',
-            'project_title' => $title,
+            'project_title' => 'A short title',
             'team_status' => 'complete',
         ]);
 
@@ -90,7 +130,22 @@ class TeamUpdateTest extends TestCase
         $this->assertSame('complete', $fresh->team_status);
     }
 
-    public function test_web_update_marking_complete_still_validates_project_title_length(): void
+    public function test_api_update_marking_complete_without_three_proposals_is_rejected(): void
+    {
+        [$student, $team] = $this->makeLeaderWithTeam();
+        $this->actingAs($student, 'web');
+
+        $response = $this->putJson("/api/teams/{$team->team_id}", [
+            'team_name' => 'Renamed Team',
+            'project_title' => 'A short title',
+            'team_status' => 'complete',
+        ]);
+
+        $response->assertStatus(422);
+        $this->assertSame('on-going', $team->fresh()->team_status);
+    }
+
+    public function test_web_update_marking_complete_without_three_proposals_is_rejected(): void
     {
         [$student, $team] = $this->makeLeaderWithTeam();
         $this->actingAs($student, 'web');
@@ -101,6 +156,24 @@ class TeamUpdateTest extends TestCase
             'team_status' => 'complete',
         ]);
 
-        $response->assertSessionHasErrors(['project_title']);
+        $response->assertSessionHas('error');
+        $this->assertSame('on-going', $team->fresh()->team_status);
+    }
+
+    public function test_web_update_marking_complete_succeeds_with_all_three_proposals(): void
+    {
+        [$student, $team] = $this->makeLeaderWithTeam();
+        $this->actingAs($student, 'web');
+        $this->fillAllThreeProposalSlots($team, $student);
+
+        $response = $this->put(route('team.update', $team->team_id), [
+            'team_name' => 'Renamed Team',
+            'project_title' => 'A short title',
+            'team_status' => 'complete',
+        ]);
+
+        $response->assertSessionHasNoErrors();
+        $response->assertSessionMissing('error');
+        $this->assertSame('complete', $team->fresh()->team_status);
     }
 }

@@ -12,7 +12,7 @@ class ResourcesController extends Controller
 {
     public function index(GoogleDriveService $drive)
     {
-        return view('admin.resources', [
+        return view('capsa.resources', [
             'resources' => Resource::orderByDesc('uploaded_at')->get(),
             'folders' => AdminDriveFolder::orderBy('name')->get(),
             'driveConnected' => $drive->isConnected(Auth::guard('expert')->id()),

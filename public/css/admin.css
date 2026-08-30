@@ -35,6 +35,12 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
 .nav::-webkit-scrollbar{width:3px}
 .nav::-webkit-scrollbar-thumb{background:rgba(201,168,44,0.15)}
 .nav-section{padding:12px 16px 6px;font-size:10px;font-weight:700;color:var(--navy-text3);letter-spacing:1.8px;text-transform:uppercase}
+.nav-section-role{display:flex;align-items:center;gap:6px;padding:14px 16px 6px;font-size:10px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase}
+.nav-section-role .role-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.nav-section-role.role-admin{color:#f87171}
+.nav-section-role.role-admin .role-dot{background:#f87171}
+.nav-section-role.role-capsa{color:#60a5fa}
+.nav-section-role.role-capsa .role-dot{background:#60a5fa}
 .nav-item{display:flex;align-items:center;gap:12px;padding:10px 16px;cursor:pointer;color:var(--navy-text2);transition:all 0.13s;font-size:14px;border-left:2px solid transparent;margin:1px 0;text-decoration:none}
 .nav-item:hover{background:var(--navy-hover);color:var(--navy-text)}
 .nav-item.active{background:rgba(201,168,44,0.1);color:var(--accent);border-left-color:var(--accent);font-weight:500}
@@ -498,6 +504,12 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
 .nav::-webkit-scrollbar{width:3px}
 .nav::-webkit-scrollbar-thumb{background:rgba(201,168,44,0.15)}
 .nav-section{padding:12px 16px 6px;font-size:10px;font-weight:700;color:var(--navy-text3);letter-spacing:1.8px;text-transform:uppercase}
+.nav-section-role{display:flex;align-items:center;gap:6px;padding:14px 16px 6px;font-size:10px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase}
+.nav-section-role .role-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.nav-section-role.role-admin{color:#f87171}
+.nav-section-role.role-admin .role-dot{background:#f87171}
+.nav-section-role.role-capsa{color:#60a5fa}
+.nav-section-role.role-capsa .role-dot{background:#60a5fa}
 .nav-item{display:flex;align-items:center;gap:12px;padding:10px 16px;cursor:pointer;color:var(--navy-text2);transition:all 0.13s;font-size:14px;border-left:2px solid transparent;margin:1px 0;text-decoration:none}
 .nav-item:hover{background:var(--navy-hover);color:var(--navy-text)}
 .nav-item.active{background:rgba(201,168,44,0.1);color:var(--accent);border-left-color:var(--accent);font-weight:500}

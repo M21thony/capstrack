@@ -50,7 +50,7 @@ class ActivityLogController extends Controller
             ];
         })->toJson();
 
-        return view('admin.activitylog', [
+        return view('capsa.activitylog', [
             'logs' => $logs,
             'types' => collect($this->allowedTypes),
             'logDataJson' => $logDataJson,

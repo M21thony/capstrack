@@ -170,7 +170,7 @@ class AdminPanelAssignmentController extends Controller
             'tags' => $e->expertise->pluck('expertise_field')->values(),
         ])->values();
 
-        return view('admin.panel_assignment', compact(
+        return view('capsa.panel_assignment', compact(
             'teams',
             'experts',
             'teamSections',

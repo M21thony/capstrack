@@ -352,18 +352,15 @@ class TeamController extends Controller
         }
 
         if (($validated['team_status'] ?? null) === 'complete') {
-            $request->validate([
-                'project_title' => [
-                    'required', 'string', 'max:150',
-                    function ($attr, $value, $fail) {
-                        $count = $this->countMeaningfulWords($value ?? '');
-
-                        if ($count < 11 || $count > 12) {
-                            $fail("Project title must contain 11–12 meaningful words (filler words like 'a', 'of', 'in' don't count). Current count: {$count}.");
-                        }
-                    },
-                ],
-            ]);
+            // Reaching "complete" (which is what makes a team appear in
+            // admin/verify-teams) now requires all 3 required Pre-Proposal
+            // submissions - see PreProposalController::store(), which itself
+            // enforces the title word count and a duplication check per
+            // proposal. A bare title here is no longer sufficient on its own.
+            if ($team->preProposals()->count() < 3) {
+                return redirect()->route('student.team')
+                    ->with('error', 'Submit all 3 Pre-Proposal titles (each with a duplication check) before marking your team complete.');
+            }
         }
 
         $originalStatus = $team->team_status;

@@ -92,7 +92,7 @@ class AdminDashboardController extends Controller
 
         $recentActivity = $this->buildRecentActivity();
 
-        return view('admin.dashboard', compact(
+        return view('capsa.dashboard', compact(
             'totalStudents',
             'totalExperts',
             'activeTeams',
@@ -141,7 +141,7 @@ class AdminDashboardController extends Controller
                 ]);
             });
 
-        TeamExpertAssignment::with(['team', 'expert', 'role'])
+        TeamExpertAssignment::with(['team', 'expert', 'role', 'expertRole.role'])
             ->latest('created_at')
             ->take(10)
             ->get()

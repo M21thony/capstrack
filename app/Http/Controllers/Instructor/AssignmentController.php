@@ -19,17 +19,17 @@ class AssignmentController extends Controller
 
         $pendingAssignments = TeamExpertAssignment::where('expert_id', $expert->expert_id)
             ->where('status', 'pending')
-            ->with(['team', 'team.leader', 'team.members', 'expert.roles'])
+            ->with(['team', 'team.leader', 'team.members', 'expert.roles', 'expertRole.role'])
             ->get();
 
         $approvedAssignments = TeamExpertAssignment::where('expert_id', $expert->expert_id)
             ->where('status', 'approved')
-            ->with(['team', 'team.leader', 'team.members', 'expert.roles'])
+            ->with(['team', 'team.leader', 'team.members', 'expert.roles', 'expertRole.role'])
             ->get();
 
         $rejectedAssignments = TeamExpertAssignment::where('expert_id', $expert->expert_id)
             ->where('status', 'rejected')
-            ->with(['team', 'team.leader', 'team.members', 'expert.roles'])
+            ->with(['team', 'team.leader', 'team.members', 'expert.roles', 'expertRole.role'])
             ->latest()
             ->take(10)
             ->get();
@@ -69,7 +69,11 @@ class AssignmentController extends Controller
             return [$a->assignment_id => [
                 'team' => $a->team?->team_name ?? 'Unknown',
                 'project' => $a->team?->project_title ?? 'No project title',
-                'role' => $a->expert?->roles->map(fn ($r) => ucfirst($r->role_name))->join(', ') ?: 'Expert',
+                // The role this team is asking for, not the list of every
+                // role this expert holds - which was the same string on every
+                // request and told the expert nothing about what they were
+                // being asked to do.
+                'role' => $a->engaged_role_name ? ucfirst($a->engaged_role_name) : 'Expert',
                 'leader' => $leaderName,
                 'leader_email' => $leaderEmail,
                 'members' => $members,

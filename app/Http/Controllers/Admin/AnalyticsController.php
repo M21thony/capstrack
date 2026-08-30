@@ -59,7 +59,7 @@ class AnalyticsController extends Controller
             ->groupBy('program')
             ->pluck('total', 'program');
 
-        return view('admin.analytics', [
+        return view('capsa.analytics', [
             'totalArchived' => $totalArchived,
             'totalExperts' => $totalExperts,
             'totalStudents' => $totalStudents,

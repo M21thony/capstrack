@@ -116,7 +116,7 @@ class SubmissionControllerTest extends TestCase
             'first_name' => 'Capstone',
             'last_name' => 'Admin',
             'is_admin' => true,
-            'department' => 'BSIT',
+            'program' => 'BSIT',
         ]);
         DB::table('expert_roles')->insert(['expert_id' => $adminId, 'role_id' => $capstoneAdviserRoleId]);
 

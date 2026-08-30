@@ -146,18 +146,14 @@ class TeamController extends Controller
         ]);
 
         if (($validated['team_status'] ?? null) === 'complete') {
-            $request->validate([
-                'project_title' => [
-                    'required', 'string', 'max:150',
-                    function ($attr, $value, $fail) {
-                        $count = $this->countMeaningfulWords($value ?? '');
-
-                        if ($count < 11 || $count > 12) {
-                            $fail("Project title must contain 11–12 meaningful words (filler words like 'a', 'of', 'in' don't count). Current count: {$count}.");
-                        }
-                    },
-                ],
-            ]);
+            // Same gate as the web TeamController::update() - reaching
+            // "complete" requires all 3 required Pre-Proposal submissions,
+            // not just a title string submitted here.
+            if ($team->preProposals()->count() < 3) {
+                return response()->json([
+                    'message' => 'Submit all 3 Pre-Proposal titles (each with a duplication check) before marking your team complete.',
+                ], 422);
+            }
         }
 
         $originalStatus = $team->team_status;
