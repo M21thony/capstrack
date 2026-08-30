@@ -339,7 +339,7 @@
           @foreach ($myTeam->expertAssignments as $assignment)
             @php
               // role() is belongsToMany — always a collection, never a single model
-              $roleKey = strtolower($assignment->role->first()?->role_name ?? '');
+              $roleKey = strtolower($assignment->engaged_role_name ?? '');
               $dotColor = match ($roleKey) { 'adviser' => 'var(--accent)', 'consultant' => '#3b82f6', 'grammarian' => '#9333ea', 'panel' => '#f59e0b', default => '#6b7280' };
               $fgColor = match ($roleKey) { 'adviser' => 'var(--accent3)', 'consultant' => 'var(--blue)', 'grammarian' => 'var(--purple)', 'panel' => '#d97706', default => '#6b7280' };
               $isApproved = $assignment->status === 'approved';
@@ -348,7 +348,7 @@
               <div style="width:8px;height:8px;border-radius:50%;background:{{ $dotColor }};flex-shrink:0;"></div>
               <div style="flex:1;min-width:0;">
                 <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-                  <span style="font-size:11px;font-weight:700;color:{{ $fgColor }};text-transform:uppercase;letter-spacing:0.3px;">{{ $assignment->role->first()?->role_name ?? 'Unknown' }}</span>
+                  <span style="font-size:11px;font-weight:700;color:{{ $fgColor }};text-transform:uppercase;letter-spacing:0.3px;">{{ $assignment->engaged_role_name ?? 'Unknown' }}</span>
                   <span style="font-size:9px;padding:1px 6px;border-radius:4px;background:{{ $isApproved ? 'rgba(16,185,129,0.1)' : 'rgba(245,158,11,0.1)' }};color:{{ $isApproved ? '#059669' : '#d97706' }};font-weight:700;">{{ $isApproved ? 'Approved' : ucfirst($assignment->status) }}</span>
                 </div>
                 <div style="font-size:12px;font-weight:600;margin-top:1px;">{{ $assignment->expert?->name ?? 'Unassigned' }}</div>

@@ -27,10 +27,10 @@ class AdminPanelAssignmentTest extends TestCase
     {
         parent::setUp();
 
-        $this->admin = CapstoneExpert::factory()->create([
+        $this->admin = $this->makeCapsa(CapstoneExpert::factory()->create([
             'is_admin' => true,
             'approved_status' => true,
-        ]);
+        ]));
     }
 
     // Payment gating (see paidTeamIds()) means every team used by the

@@ -6,83 +6,32 @@ use App\Http\Controllers\Api\AdminGradingRubricController;
 use App\Models\CapstoneExpert;
 use App\Models\GradingRubric;
 use App\Services\OllamaSSHClient;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Mockery;
 use Tests\TestCase;
 
 class AdminGradingRubricTest extends TestCase
 {
+    // Real migrations rather than a hand-built subset of tables: the web
+    // route renders the full admin sidebar, which queries team,
+    // archived_documents, financial_records and more.
+    use RefreshDatabase;
+
     private CapstoneExpert $admin;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->ensureSchema();
-
-        $this->admin = CapstoneExpert::create([
+        $this->admin = $this->makeCapsa(CapstoneExpert::create([
             'email' => 'admin.rubric@test.com',
             'first_name' => 'Admin',
             'last_name' => 'Rubric',
             'is_admin' => true,
             'approved_status' => true,
-        ]);
+        ]));
     }
 
-    protected function ensureSchema(): void
-    {
-        if (! Schema::hasTable('capstone_experts')) {
-            Schema::create('capstone_experts', function (Blueprint $table): void {
-                $table->id('expert_id');
-                $table->string('email')->unique();
-                $table->string('first_name')->nullable();
-                $table->string('last_name')->nullable();
-                $table->string('middle_name')->nullable();
-                $table->string('suffix')->nullable();
-                $table->string('credentials')->nullable();
-                $table->string('profile_picture')->nullable();
-                $table->boolean('is_admin')->default(false);
-                $table->boolean('approved_status')->default(false);
-                $table->unsignedInteger('max_teams')->nullable();
-                $table->string('department')->nullable();
-                $table->text('rejection_reason')->nullable();
-                $table->unsignedInteger('reject_attempts')->default(0);
-                $table->timestamp('reject_cooldown_until')->nullable();
-                $table->string('google_token')->nullable();
-                $table->timestamp('google_token_expires_at')->nullable();
-                $table->timestamp('last_seen_at')->nullable();
-                $table->timestamp('created_at')->nullable();
-            });
-        }
-
-        if (! Schema::hasTable('grading_rubrics')) {
-            Schema::create('grading_rubrics', function (Blueprint $table): void {
-                $table->id('rubric_id');
-                $table->string('rubric_name');
-                $table->string('rubric_type');
-                $table->text('description')->nullable();
-                $table->decimal('total_points', 6, 2)->default(100.00);
-                $table->boolean('is_active')->default(true);
-                $table->timestamps();
-            });
-        }
-
-        if (! Schema::hasTable('rubric_criteria')) {
-            Schema::create('rubric_criteria', function (Blueprint $table): void {
-                $table->id('criterion_id');
-                $table->unsignedBigInteger('rubric_id');
-                $table->string('criterion_name');
-                $table->text('description')->nullable();
-                $table->string('category')->nullable();
-                $table->decimal('category_max_points', 6, 2)->nullable();
-                $table->decimal('max_points', 6, 2);
-                $table->text('score_levels');
-                $table->integer('sort_order')->default(0);
-                $table->timestamp('created_at')->nullable();
-            });
-        }
-    }
 
     public function test_index_returns_all_rubrics(): void
     {
@@ -394,7 +343,9 @@ class AdminGradingRubricTest extends TestCase
             ->get(route('admin.rubric_management'));
 
         $response->assertStatus(200);
-        $response->assertViewIs('admin.rubric_management');
+        // The route name is still admin.rubric_management; the view moved to
+        // the capsa/ folder when the Admin/CaPSA views were split.
+        $response->assertViewIs('capsa.rubric_management');
     }
 
     public function test_index_empty_when_no_rubrics(): void
@@ -1882,8 +1833,12 @@ class AdminGradingRubricTest extends TestCase
 
     public function test_ai_generate_returns_draft_with_scores_totaling_exactly_100(): void
     {
+        // pre_oral_defense (not title_defense) - title_defense now has a
+        // real reference rubric and goes through exact-reproduction
+        // (scoreTitleDefenseCriteria), so it wouldn't exercise the generic
+        // free-generation budget-split engine this test is actually about.
         $fakeResponse = json_encode([
-            'rubric_name' => 'Title Defense Rubric',
+            'rubric_name' => 'Pre Oral Defense Rubric',
             'description' => 'Evaluates project title clarity and feasibility.',
             'criteria' => [
                 [
@@ -1928,13 +1883,13 @@ class AdminGradingRubricTest extends TestCase
 
         $response = $this->actingAs($this->admin, 'expert')
             ->postJson('/api/admin/grading-rubrics/ai-generate', [
-                'rubric_type' => 'title_defense',
+                'rubric_type' => 'pre_oral_defense',
                 'criteria_count' => 3,
             ]);
 
         $response->assertStatus(200)
             ->assertJson(['success' => true])
-            ->assertJsonPath('data.rubric_name', 'Title Defense Rubric')
+            ->assertJsonPath('data.rubric_name', 'Pre Oral Defense Rubric')
             ->assertJsonCount(3, 'data.criteria');
 
         $criteria = $response->json('data.criteria');
@@ -2022,9 +1977,10 @@ class AdminGradingRubricTest extends TestCase
 
     public function test_ai_generate_defaults_rubric_name_when_ai_omits_it(): void
     {
-        // Uses title_defense (not pre_proposal) - pre_proposal always goes
-        // through the exact-reproduction path regardless of what's mocked,
-        // so it wouldn't exercise this "AI omitted rubric_name" fallback.
+        // Uses pre_oral_defense (not pre_proposal or title_defense) - those
+        // two always go through their own exact-reproduction path
+        // regardless of what's mocked, so neither would exercise this "AI
+        // omitted rubric_name" fallback.
         $fakeResponse = json_encode([
             'criteria' => [
                 [
@@ -2042,12 +1998,12 @@ class AdminGradingRubricTest extends TestCase
 
         $response = $this->actingAs($this->admin, 'expert')
             ->postJson('/api/admin/grading-rubrics/ai-generate', [
-                'rubric_type' => 'title_defense',
+                'rubric_type' => 'pre_oral_defense',
                 'criteria_count' => 3,
             ]);
 
         $response->assertStatus(200)
-            ->assertJsonPath('data.rubric_name', 'Title Defense Rubric');
+            ->assertJsonPath('data.rubric_name', 'Pre Oral Defense Rubric');
 
         // Only one criterion came back even though 3 were requested - the
         // budget split still has to land on exactly 100 for what it got.
@@ -2201,12 +2157,85 @@ class AdminGradingRubricTest extends TestCase
         $this->assertSame(100, $grandTotal);
     }
 
+    public function test_ai_generate_title_defense_returns_all_27_criteria_without_calling_ai(): void
+    {
+        // Title Defense skips the AI call entirely (unlike Pre-Proposal,
+        // which still echoes wording through the model) - a real
+        // reproduction call was tested against the live model and silently
+        // dropped 16 of 27 criteria, so the draft is now built directly
+        // from TITLE_DEFENSE_CRITERIA. ->never() on both methods proves
+        // that bypass actually happens, not just that the numbers end up
+        // right.
+        $mock = Mockery::mock(OllamaSSHClient::class);
+        $mock->shouldReceive('warmup')->never();
+        $mock->shouldReceive('generate')->never();
+        $this->app->instance(OllamaSSHClient::class, $mock);
+
+        $response = $this->actingAs($this->admin, 'expert')
+            ->postJson('/api/admin/grading-rubrics/ai-generate', [
+                'rubric_type' => 'title_defense',
+            ]);
+
+        $response->assertStatus(200)->assertJson(['success' => true]);
+
+        $criteria = $response->json('data.criteria');
+        $this->assertCount(27, $criteria);
+
+        $categories = $response->json('data.categories');
+        $this->assertSame([
+            ['name' => 'Chapter 1', 'max_points' => 20],
+            ['name' => 'Chapter 2', 'max_points' => 15],
+            ['name' => 'Chapter 3', 'max_points' => 20],
+            ['name' => 'Grammar and Spelling', 'max_points' => 10],
+            ['name' => 'Oral Examination/Presentation', 'max_points' => 20],
+            ['name' => 'Research Instrument', 'max_points' => 10],
+            ['name' => 'Timeliness', 'max_points' => 5],
+        ], $categories);
+
+        $grandTotal = array_sum(array_column($criteria, 'max_points'));
+        $this->assertSame(100.0, $grandTotal);
+
+        foreach ($criteria as $c) {
+            $this->assertCount(3, $c['levels']);
+            $this->assertSame(['Excellent', 'Fair', 'Poor'], array_column($c['levels'], 'label'));
+        }
+    }
+
+    public function test_ai_generate_title_defense_keeps_duplicate_named_criteria_in_their_own_category(): void
+    {
+        // Regression test: TITLE_DEFENSE_CRITERIA legitimately reuses
+        // "Notes Page" as a criterion name in Chapter 1, 2, AND 3 (each
+        // chapter ends with its own notes-page row). An earlier version of
+        // scoreTitleDefenseCriteria() matched by criterion name alone,
+        // which collapsed all three into whichever was listed last -
+        // confirmed directly to skew Chapter 1/2/3 totals to 19/13/22
+        // instead of 20/15/20. Matching is now scoped by category+name.
+        $response = $this->actingAs($this->admin, 'expert')
+            ->postJson('/api/admin/grading-rubrics/ai-generate', [
+                'rubric_type' => 'title_defense',
+            ]);
+
+        $response->assertStatus(200);
+
+        $notesPages = collect($response->json('data.criteria'))
+            ->filter(fn ($c) => $c['criterion_name'] === 'Notes Page')
+            ->values();
+
+        $this->assertCount(3, $notesPages);
+        $this->assertSame(['Chapter 1', 'Chapter 2', 'Chapter 3'], $notesPages->pluck('category')->all());
+        $this->assertSame([1, 2, 1], $notesPages->pluck('max_points')->all());
+    }
+
     public function test_ai_generate_falls_back_to_flat_when_categories_missing_for_non_preproposal_type(): void
     {
-        // No "categories" key at all in the response - should behave
-        // exactly like before categories existed (single implicit group).
+        // pre_oral_defense (not title_defense) - title_defense now has its
+        // own fixed real categories (Chapter 1, Chapter 2, ...), so it
+        // would no longer fall back to a flat/uncategorized draft the way
+        // this test expects. No "categories" key at all in the response -
+        // should behave exactly like before categories existed (single
+        // implicit group).
         $fakeResponse = json_encode([
-            'rubric_name' => 'Title Defense Rubric',
+            'rubric_name' => 'Pre Oral Defense Rubric',
             'criteria' => [
                 ['criterion_name' => 'C1', 'description' => 'd', 'levels' => ['excellent' => 'a', 'good' => 'b', 'fair' => 'c', 'poor' => 'd']],
                 ['criterion_name' => 'C2', 'description' => 'd', 'levels' => ['excellent' => 'a', 'good' => 'b', 'fair' => 'c', 'poor' => 'd']],
@@ -2220,7 +2249,7 @@ class AdminGradingRubricTest extends TestCase
 
         $response = $this->actingAs($this->admin, 'expert')
             ->postJson('/api/admin/grading-rubrics/ai-generate', [
-                'rubric_type' => 'title_defense',
+                'rubric_type' => 'pre_oral_defense',
             ]);
 
         $response->assertStatus(200)

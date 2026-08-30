@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Team Verification - CapsTRACK Admin</title>
+<meta name="csrf-token" content="{{ csrf_token() }}"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="{{ asset('css/admin.css') }}"/>
+</head>
+<body>
+
+@include('capsa._sidebar')
+<div class="main">
+  <div class="topbar">
+    <div class="page-title">Team Verification</div>
+    <div class="topbar-actions">
+      @include('capsa.partials.notification-dropdown')
+    </div>
+  </div>
+
+  <div id="skeleton-content" class="sk-overlay">
+    <div class="card" style="padding:16px">
+      <div class="sk" style="width:280px;height:34px;border-radius:8px;margin-bottom:16px"></div>
+      <div class="sk" style="height:44px;border-radius:8px;margin-bottom:10px"></div>
+      <div class="sk" style="height:44px;border-radius:8px;margin-bottom:10px"></div>
+      <div class="sk" style="height:44px;border-radius:8px;margin-bottom:10px"></div>
+      <div class="sk" style="height:44px;border-radius:8px"></div>
+    </div>
+  </div>
+
+  <div id="real-content" style="display:none;flex:1;overflow:hidden;flex-direction:column;">
+  <div class="content">
+    @if($tab === 'pending')
+      <div class="card" style="padding:14px 20px;margin-bottom:16px;display:flex;align-items:center;gap:12px;background:rgba(201,168,44,0.06);border:1px solid rgba(201,168,44,0.25)">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="var(--accent3)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        <div style="font-size:13px;color:var(--text2)">
+          These teams are marked <strong style="color:var(--accent3)">Complete</strong> by their team leaders and are awaiting your verification. Verify them to mark them as <strong>Verified</strong> and unlock panel assignment.
+        </div>
+      </div>
+    @endif
+
+    @if(session('status'))
+      <div style="background:#f0fdf4;border:1px solid #bbf7d0;color:#15803d;padding:12px 16px;border-radius:10px;margin-bottom:16px;font-size:13px">
+        {!! session('status') !!}
+      </div>
+    @endif
+
+    @if(session('error'))
+      <div style="background:#fef2f2;border:1px solid #fecaca;color:#ef4444;padding:12px 16px;border-radius:10px;margin-bottom:16px;font-size:13px">
+        {!! session('error') !!}
+      </div>
+    @endif
+
+    <div class="card" style="padding:0;overflow:hidden">
+      <div style="padding:16px 20px 0;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+        <div style="display:flex;gap:4px">
+          <a href="{{ route('admin.verify_teams', ['tab' => 'pending'] + ($selectedSection ? ['section' => $selectedSection] : [])) }}"
+             class="btn {{ $tab === 'pending' ? 'btn-primary' : '' }}"
+             style="{{ $tab === 'pending' ? '' : 'background:transparent;color:var(--text2);border:1px solid var(--border)' }};font-size:12px;padding:7px 14px;border-radius:8px;text-decoration:none">
+            Pending Verification
+            <span style="opacity:0.8;font-weight:600;margin-left:4px">{{ $pendingCount }}</span>
+          </a>
+          <a href="{{ route('admin.verify_teams', ['tab' => 'verified'] + ($selectedSection ? ['section' => $selectedSection] : [])) }}"
+             class="btn {{ $tab === 'verified' ? 'btn-primary' : '' }}"
+             style="{{ $tab === 'verified' ? '' : 'background:transparent;color:var(--text2);border:1px solid var(--border)' }};font-size:12px;padding:7px 14px;border-radius:8px;text-decoration:none">
+            Verified
+            <span style="opacity:0.8;font-weight:600;margin-left:4px">{{ $verifiedCount }}</span>
+          </a>
+        </div>
+
+        <form method="get" action="{{ route('admin.verify_teams') }}" style="display:flex;align-items:center;gap:8px;padding-bottom:16px">
+          <input type="hidden" name="tab" value="{{ $tab }}"/>
+          <label for="section-filter" style="font-size:12px;color:var(--text2)">Section</label>
+          <select name="section" id="section-filter" onchange="this.form.submit()"
+                  style="padding:6px 10px;border-radius:8px;border:1px solid var(--muted);background:#fff;font-size:12px">
+            <option value="">All Sections</option>
+            @foreach ($allSections as $sectionOption)
+              <option value="{{ $sectionOption }}" {{ $selectedSection === $sectionOption ? 'selected' : '' }}>{{ $sectionOption }}</option>
+            @endforeach
+          </select>
+        </form>
+      </div>
+
+      <table class="table">
+        <thead>
+          <tr>
+            <th style="padding-left:20px">Team</th>
+            <th>Capstone Title</th>
+            <th>Tags</th>
+            <th>Section</th>
+            <th>Members</th>
+            <th>Team Leader</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          @forelse ($teams as $team)
+            @php
+              $initials = collect(explode(' ', $team->team_name))->map(fn($w) => strtoupper(substr($w, 0, 1)))->take(2)->implode('');
+              $section = $teamSections[$team->team_id] ?? '';
+              $colorMap = ['#c9a82c,#8a6e10', '#16a34a,#0891b2', '#1d4ed8,#7c3aed', '#b45309,#dc2626', '#0891b2,#16a34a'];
+              $gradient = $colorMap[$loop->index % count($colorMap)];
+              $tags = is_array($team->tags) ? array_slice(array_filter(array_map('trim', $team->tags)), 0, 3) : [];
+              $members = $teamMembers[$team->team_id] ?? collect();
+              $preProposalsPayload = $team->preProposals->map(fn ($p) => [
+                  'id' => $p->id,
+                  'slot' => $p->slot,
+                  'title' => $p->title,
+                  'status' => $p->status,
+                  'rejection_reason' => $p->rejection_reason,
+                  'sdg_goals' => $p->sdg_goals,
+                  'research_agenda' => $p->research_agenda,
+                  'problem_statement' => $p->problem_statement,
+                  'proposed_solution' => $p->proposed_solution,
+                  'scope' => $p->scope,
+                  'limitations' => $p->limitations,
+                  'sdm' => $p->sdm,
+                  'duplication' => $p->duplicationCheck ? [
+                      'verdict' => $p->duplicationCheck->verdict,
+                      'top_score' => $p->duplicationCheck->top_score,
+                      'matches' => array_slice($p->duplicationCheck->matches ?? [], 0, 3),
+                  ] : null,
+                  'document_url' => $p->duplicationCheck ? route('admin.verify_teams.pre_proposals.document', $p->id) : null,
+                  'approve_url' => route('admin.verify_teams.pre_proposals.approve', $p->id),
+                  'reject_url' => route('admin.verify_teams.pre_proposals.reject', $p->id),
+              ])->values();
+            @endphp
+            <tr>
+              <td style="padding-left:20px">
+                <div style="display:flex;align-items:center;gap:8px">
+                  <div style="width:28px;height:28px;border-radius:7px;background:linear-gradient(135deg,{{ $gradient }});display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0">{{ $initials }}</div>
+                  <span class="td-main">{{ $team->team_name }}</span>
+                </div>
+              </td>
+              <td style="font-size:12px;color:var(--text2);white-space:normal;word-break:break-word">{{ $team->project_title ?? '—' }}</td>
+              <td>
+                @forelse ($tags as $tag)
+                  <span class="badge badge-gold" style="font-size:10px;margin-right:4px">{{ $tag }}</span>
+                @empty
+                  <span style="font-size:12px;color:var(--text3)">—</span>
+                @endforelse
+              </td>
+              <td>
+                @if ($section)
+                  <span class="badge badge-gold" style="font-size:10px">{{ $section }}</span>
+                @else
+                  <span style="font-size:12px;color:var(--text3)">—</span>
+                @endif
+              </td>
+              <td style="font-size:12px;color:var(--text3)">{{ $members->count() }} / 5</td>
+              <td style="font-size:12px;color:var(--text2)">
+                {{ $team->leader ? trim(($team->leader->f_name ?? '').' '.($team->leader->l_name ?? '')) : '—' }}
+              </td>
+              <td>
+                @if ($tab === 'pending')
+                  <button type="button" class="btn btn-primary" style="font-size:10px;padding:4px 10px"
+                    onclick='openVerifyModal({{ json_encode([
+                        'team_id' => $team->team_id,
+                        'team_name' => $team->team_name,
+                        'initials' => $initials,
+                        'gradient' => $gradient,
+                        'project_title' => $team->project_title ?? '—',
+                        'tags' => $tags,
+                        'section' => $section ?: '—',
+                        'leader' => $team->leader ? trim(($team->leader->f_name ?? '').' '.($team->leader->l_name ?? '')) : '—',
+                        'members' => $members->map(fn ($m) => trim(($m->f_name ?? '').' '.($m->l_name ?? '')))->filter()->values(),
+                        'member_count' => $members->count(),
+                        'pre_proposals' => $preProposalsPayload,
+                        'selected_pre_proposal_id' => $team->selected_pre_proposal_id,
+                        'verify_url' => route('admin.verify_teams.verify', $team->team_id),
+                    ], JSON_HEX_APOS | JSON_HEX_QUOT) }})'>
+                    <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    View &amp; Verify
+                  </button>
+                @else
+                  <button type="button" class="btn" style="font-size:10px;padding:4px 10px;background:transparent;color:var(--text2);border:1px solid var(--border)"
+                    onclick='openVerifyModal({{ json_encode([
+                        'team_id' => $team->team_id,
+                        'team_name' => $team->team_name,
+                        'initials' => $initials,
+                        'gradient' => $gradient,
+                        'project_title' => $team->project_title ?? '—',
+                        'tags' => $tags,
+                        'section' => $section ?: '—',
+                        'leader' => $team->leader ? trim(($team->leader->f_name ?? '').' '.($team->leader->l_name ?? '')) : '—',
+                        'members' => $members->map(fn ($m) => trim(($m->f_name ?? '').' '.($m->l_name ?? '')))->filter()->values(),
+                        'member_count' => $members->count(),
+                        'pre_proposals' => $preProposalsPayload,
+                        'selected_pre_proposal_id' => $team->selected_pre_proposal_id,
+                        'verified' => true,
+                    ], JSON_HEX_APOS | JSON_HEX_QUOT) }})'>
+                    <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                    View
+                  </button>
+                @endif
+              </td>
+            </tr>
+          @empty
+            <tr>
+              <td colspan="7" style="text-align:center;padding:40px;color:var(--text3);font-size:13px">
+                @if ($tab === 'pending')
+                  No teams awaiting verification. Teams appear here once a team leader marks them as <strong>Complete</strong>.
+                @else
+                  No verified teams found for the selected section.
+                @endif
+              </td>
+            </tr>
+          @endforelse
+        </tbody>
+      </table>
+      <div style="padding:14px 20px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+        <span style="font-size:12px;color:var(--text3)">{{ $teams->count() }} team(s) {{ $tab === 'pending' ? 'awaiting verification' : 'verified' }}</span>
+      </div>
+    </div>
+  </div>
+  </div>
+</div>
+@include('capsa.partials.skeleton-toggle')
+
+<div class="modal-overlay" id="verify-modal" onclick="if(event.target===this)closeVerifyModal()">
+  <div class="modal-box" style="max-width:720px;max-height:85vh;overflow-y:auto">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div id="vm-avatar" style="width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0">--</div>
+        <div>
+          <div style="font-size:16px;font-weight:700;color:var(--text)" id="vm-name"></div>
+          <div style="font-size:11px;color:var(--text3)" id="vm-section"></div>
+        </div>
+      </div>
+      <button onclick="closeVerifyModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text3);padding:0;line-height:1">&times;</button>
+    </div>
+
+    <div style="font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border)">
+      <strong style="color:var(--text)">Capstone Title:</strong> <span id="vm-title"></span>
+    </div>
+
+    <div style="margin-bottom:16px">
+      <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:8px">Tags</div>
+      <div id="vm-tags" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+    </div>
+
+    <div style="margin-bottom:16px">
+      <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:8px">Team Leader</div>
+      <div style="font-size:13px;color:var(--text)" id="vm-leader"></div>
+    </div>
+
+    <div style="margin-bottom:16px">
+      <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:8px">
+        Members <span id="vm-member-count" style="color:var(--accent3)"></span>
+      </div>
+      <div id="vm-members" style="display:flex;flex-direction:column;gap:6px"></div>
+    </div>
+
+    <div style="margin-bottom:16px">
+      <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:8px">Submitted Pre-Proposals</div>
+      <div id="vm-preproposals" style="display:flex;flex-direction:column;gap:10px"></div>
+    </div>
+
+    <div id="vm-verify-note" style="display:none;font-size:12px;color:#92400e;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px 12px;margin-bottom:12px">
+      Approve one of the pre-proposals above before this team can be verified.
+    </div>
+
+    <form id="vm-form" method="POST" style="border-top:1px solid var(--border);padding-top:16px">
+      @csrf
+      <button type="submit" class="btn btn-primary" id="vm-verify-btn" style="width:100%;padding:10px;font-size:13px">
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:-2px;margin-right:6px"><polyline points="20 6 9 17 4 12"/></svg>
+        Verify Team
+      </button>
+    </form>
+  </div>
+</div>
+
+<div class="modal-overlay" id="pp-reject-modal" onclick="if(event.target===this)closePpRejectModal()">
+  <div class="modal-box" style="max-width:420px">
+    <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:12px">Reject this proposal</div>
+    <textarea id="pp-reject-reason" placeholder="Reason (required)" style="width:100%;min-height:80px;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;box-sizing:border-box;font-family:inherit"></textarea>
+    <div id="pp-reject-error" style="display:none;font-size:11px;color:#991b1b;margin-top:4px">A reason is required.</div>
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button type="button" class="btn" style="flex:1;background:transparent;border:1px solid var(--border);color:var(--text2)" onclick="closePpRejectModal()">Cancel</button>
+      <button type="button" class="btn" style="flex:1;background:#dc3545;color:#fff;border:none" onclick="confirmPpReject()">Reject</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="pdf-preview-modal" onclick="if(event.target===this)closePdfPreview()">
+  <div class="modal-box" style="max-width:900px;width:95%;height:85vh;display:flex;flex-direction:column;padding:16px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-shrink:0">
+      <span style="font-size:14px;font-weight:700;color:var(--text)">Original Pre-Proposal PDF</span>
+      <button type="button" onclick="closePdfPreview()" style="border:none;background:none;font-size:20px;line-height:1;cursor:pointer;color:var(--text3)" aria-label="Close">&times;</button>
+    </div>
+    <iframe id="pdf-preview-frame" src="" style="flex:1;width:100%;border:1px solid var(--border);border-radius:8px"></iframe>
+  </div>
+</div>
+
+<style>
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1000;opacity:0;pointer-events:none;transition:opacity 0.2s}
+.modal-overlay.open{opacity:1;pointer-events:auto}
+.modal-box{background:#fff;border:1px solid var(--border);border-radius:16px;padding:28px;max-width:560px;width:90%}
+.vm-member-row{display:flex;align-items:center;gap:10px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 12px}
+.vm-member-row .vm-member-avatar{width:26px;height:26px;border-radius:6px;background:linear-gradient(135deg,#c9a82c,#8a6e10);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff;flex-shrink:0}
+.vm-member-row .vm-member-name{font-size:13px;color:var(--text)}
+.vm-member-row .vm-member-role{font-size:11px;color:var(--text3)}
+</style>
+
+<script>
+var vmData = null;
+function openVerifyModal(data) {
+  vmData = data;
+  document.getElementById('vm-avatar').style.background = 'linear-gradient(135deg,' + data.gradient + ')';
+  document.getElementById('vm-avatar').textContent = data.initials;
+  document.getElementById('vm-name').textContent = data.team_name;
+  document.getElementById('vm-section').textContent = 'Section: ' + data.section;
+  document.getElementById('vm-title').textContent = data.project_title;
+
+  var tagsEl = document.getElementById('vm-tags');
+  tagsEl.innerHTML = '';
+  if (data.tags && data.tags.length) {
+    data.tags.forEach(function (tag) {
+      var s = document.createElement('span');
+      s.className = 'badge badge-gold';
+      s.style.cssText = 'font-size:10px';
+      s.textContent = tag;
+      tagsEl.appendChild(s);
+    });
+  } else {
+    tagsEl.innerHTML = '<span style="font-size:12px;color:var(--text3)">—</span>';
+  }
+
+  document.getElementById('vm-leader').textContent = data.leader;
+  document.getElementById('vm-member-count').textContent = '(' + data.member_count + ' / 5)';
+
+  var membersEl = document.getElementById('vm-members');
+  membersEl.innerHTML = '';
+  if (data.members && data.members.length) {
+    data.members.forEach(function (name) {
+      var row = document.createElement('div');
+      row.className = 'vm-member-row';
+      var av = document.createElement('div');
+      av.className = 'vm-member-avatar';
+      av.textContent = name.split(' ').filter(Boolean).map(function (w) { return w[0].toUpperCase(); }).slice(0, 2).join('');
+      var nm = document.createElement('div');
+      nm.className = 'vm-member-name';
+      nm.textContent = name;
+      row.appendChild(av);
+      row.appendChild(nm);
+      membersEl.appendChild(row);
+    });
+  } else {
+    membersEl.innerHTML = '<span style="font-size:12px;color:var(--text3)">No members yet</span>';
+  }
+
+  renderPreProposals(data.pre_proposals || [], data.selected_pre_proposal_id);
+
+  var form = document.getElementById('vm-form');
+  form.style.display = data.verified ? 'none' : 'block';
+  form.action = data.verify_url;
+
+  var verifyBtn = document.getElementById('vm-verify-btn');
+  var verifyNote = document.getElementById('vm-verify-note');
+  var resolved = !!data.selected_pre_proposal_id;
+  verifyBtn.disabled = !resolved;
+  verifyBtn.style.opacity = resolved ? '1' : '0.5';
+  verifyBtn.style.cursor = resolved ? 'pointer' : 'not-allowed';
+  verifyNote.style.display = resolved ? 'none' : 'block';
+
+  document.getElementById('verify-modal').classList.add('open');
+}
+function closeVerifyModal() {
+  document.getElementById('verify-modal').classList.remove('open');
+}
+
+// ── Per-proposal approve/reject (mirrors admin/approval.blade.php) ────────
+var ppActiveId = null;
+
+function renderPreProposals(proposals, selectedId) {
+  var wrap = document.getElementById('vm-preproposals');
+  wrap.innerHTML = '';
+
+  if (!proposals.length) {
+    wrap.innerHTML = '<span style="font-size:12px;color:var(--text3)">No pre-proposals submitted yet.</span>';
+    return;
+  }
+
+  proposals.forEach(function (p) {
+    var card = document.createElement('div');
+    card.id = 'pp-card-' + p.id;
+    card.style.cssText = 'border:1px solid var(--border);border-radius:10px;padding:12px 14px;background:var(--bg3)';
+
+    var badgeClass = p.status === 'approved' ? 'badge-green' : (p.status === 'rejected' ? 'badge-red' : 'badge-amber');
+    var isSelected = selectedId && p.id === selectedId;
+
+    var dup = p.duplication;
+    var dupBadgeClass = dup ? (dup.verdict === 'High Similarity' ? 'badge-red' : (dup.verdict === 'Moderate Similarity' ? 'badge-amber' : 'badge-green')) : '';
+    // The actual duplication REPORT, not just a bare score - this is the
+    // whole point of the adviser's requirement (a report that "travels
+    // with the submission"), so the CAPSA can see what was flagged and why
+    // instead of trusting a percentage blind.
+    var matchesHtml = (dup && dup.matches && dup.matches.length)
+      ? dup.matches.map(function (m, i) {
+          var mTone = m.score >= 65 ? 'red' : (m.score >= 55 ? 'amber' : 'green');
+          return '<div style="border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-top:6px;background:#fff">'
+            + '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">'
+            + '<span style="font-size:11.5px;font-weight:600;color:var(--text)">' + escapeHtml(m.title || '') + '</span>'
+            + '<span class="badge badge-' + mTone + '" style="font-family:\'Space Mono\',monospace;font-weight:700;flex-shrink:0">' + m.score + '%</span>'
+            + '</div>'
+            + (m.reason ? '<div style="font-size:11px;color:var(--text3);margin-top:3px">' + escapeHtml(m.reason) + '</div>' : '')
+            + '</div>';
+        }).join('')
+      : '';
+    var dupHtml = dup
+      ? '<div style="margin-top:8px">'
+        + '<div style="font-size:12px"><span class="badge ' + dupBadgeClass + '">' + dup.verdict + '</span> <span style="font-family:\'Space Mono\',monospace;font-weight:700;margin-left:6px">' + dup.top_score + '%</span></div>'
+        + matchesHtml
+        + '</div>'
+      : '';
+
+    var contentHtml = '<div style="font-size:12px;color:var(--text2);line-height:1.5;margin-top:8px">'
+      + '<div><strong style="color:var(--text)">SDG:</strong> ' + escapeHtml(p.sdg_goals || '—') + '</div>'
+      + '<div><strong style="color:var(--text)">Research Agenda:</strong> ' + escapeHtml(joinStringList(p.research_agenda) || '—') + '</div>'
+      + '<div><strong style="color:var(--text)">Problem Statement:</strong> ' + escapeHtml(p.problem_statement || '—') + '</div>'
+      + '<div><strong style="color:var(--text)">Proposed Solution:</strong> ' + escapeHtml(p.proposed_solution || '—') + '</div>'
+      + '<div><strong style="color:var(--text)">Scope:</strong> ' + escapeHtml(p.scope || '—') + '</div>'
+      + '<div><strong style="color:var(--text)">Limitations:</strong> ' + escapeHtml(p.limitations || '—') + '</div>'
+      + '<div><strong style="color:var(--text)">SDM:</strong> ' + escapeHtml(p.sdm || '—') + '</div>'
+      + '</div>';
+
+    var actionsHtml = p.status === 'pending'
+      ? '<div style="display:flex;gap:8px;margin-top:10px" id="pp-actions-' + p.id + '">'
+        + '<button type="button" class="btn btn-primary" style="font-size:11px;padding:5px 12px" onclick="ppApprove(' + p.id + ', \'' + p.approve_url + '\')">Approve</button>'
+        + '<button type="button" class="btn" style="font-size:11px;padding:5px 12px;background:transparent;border:1px solid var(--border);color:var(--text2)" onclick="openPpRejectModal(' + p.id + ', \'' + p.reject_url + '\')">Reject</button>'
+        + '</div>'
+      : (p.status === 'rejected' ? '<div style="font-size:11px;color:#991b1b;margin-top:6px">Rejected: ' + escapeHtml(p.rejection_reason || '') + '</div>' : '');
+
+    var documentLinkHtml = p.document_url
+      ? '<button type="button" onclick="openPdfPreview(\'' + p.document_url + '\')" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;color:var(--primary,#5b5bd6);background:none;border:none;padding:0;cursor:pointer;margin-top:6px">📄 View Original PDF</button>'
+      : '';
+
+    card.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px">'
+      + '<span style="font-size:13px;font-weight:600;color:var(--text)">Proposal ' + p.slot + (isSelected ? ' ⭐ Final Title' : '') + '</span>'
+      + '<span class="badge ' + badgeClass + '">' + p.status.charAt(0).toUpperCase() + p.status.slice(1) + '</span>'
+      + '</div>'
+      + '<div style="font-size:13px;font-weight:500;color:var(--text);margin-top:4px">' + escapeHtml(p.title) + '</div>'
+      + documentLinkHtml
+      + dupHtml + contentHtml + actionsHtml;
+
+    wrap.appendChild(card);
+  });
+}
+
+function escapeHtml(str) {
+  var div = document.createElement('div');
+  div.textContent = str || '';
+  return div.innerHTML;
+}
+
+// Defends against a stray non-string entry (e.g. the AI extractor returning
+// a nested object instead of plain text) rendering as the literal
+// "[object Object]" instead of being silently dropped.
+function joinStringList(list) {
+  return (list || [])
+    .map(function (item) { return typeof item === 'string' ? item : ''; })
+    .filter(function (s) { return s.length > 0; })
+    .join(', ');
+}
+
+function ppApprove(id, url) {
+  fetch(url, {
+    method: 'POST',
+    headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' },
+  })
+    .then(function (r) { return r.json(); })
+    .then(function (res) {
+      if (!res.success) { alert(res.message || 'Failed.'); return; }
+      // Reload the modal's data from the page - simplest correct way to
+      // reflect a possible auto-selected final title or new notification
+      // without duplicating that resolution logic in JS.
+      window.location.reload();
+    })
+    .catch(function () { alert('Failed to process request.'); });
+}
+
+function openPpRejectModal(id, url) {
+  ppActiveId = { id: id, url: url };
+  document.getElementById('pp-reject-reason').value = '';
+  document.getElementById('pp-reject-error').style.display = 'none';
+  document.getElementById('pp-reject-modal').classList.add('open');
+}
+function closePpRejectModal() {
+  document.getElementById('pp-reject-modal').classList.remove('open');
+}
+
+function openPdfPreview(url) {
+  document.getElementById('pdf-preview-frame').src = url;
+  document.getElementById('pdf-preview-modal').classList.add('open');
+}
+function closePdfPreview() {
+  document.getElementById('pdf-preview-modal').classList.remove('open');
+  document.getElementById('pdf-preview-frame').src = '';
+}
+function confirmPpReject() {
+  var reason = document.getElementById('pp-reject-reason').value.trim();
+  if (!reason) {
+    document.getElementById('pp-reject-error').style.display = 'block';
+    return;
+  }
+
+  fetch(ppActiveId.url, {
+    method: 'POST',
+    headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json', 'Content-Type': 'application/json' },
+    body: JSON.stringify({ reason: reason }),
+  })
+    .then(function (r) { return r.json(); })
+    .then(function (res) {
+      closePpRejectModal();
+      if (!res.success) { alert(res.message || 'Failed.'); return; }
+      window.location.reload();
+    })
+    .catch(function () { alert('Failed to process request.'); });
+}
+</script>
+</body>
+</html>

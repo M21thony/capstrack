@@ -188,7 +188,7 @@ class AdminFinancialController extends Controller
 
         $teamDetailsJson = json_encode($teamDetails);
 
-        return view('admin.financial', compact(
+        return view('capsa.financial', compact(
             'teams',
             'teamStats',
             'expensePostTitles',

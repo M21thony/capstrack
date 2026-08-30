@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\CapstoneExpert;
+use App\Models\Student;
 use App\Services\GoogleDriveService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Schema;
@@ -12,6 +13,8 @@ use Tests\TestCase;
 class PdfAnnotationTest extends TestCase
 {
     use RefreshDatabase;
+
+    private ?Student $documentOwner = null;
 
     protected function setUp(): void
     {
@@ -58,6 +61,24 @@ class PdfAnnotationTest extends TestCase
         }
     }
 
+    /**
+     * A real student to own the fixture documents - capstone_documents
+     * requires one, and these tests only care that the document belongs to
+     * somebody, not to whom.
+     */
+    private function documentOwnerId(): int
+    {
+        if ($this->documentOwner === null) {
+            $this->documentOwner = Student::create([
+                'email' => 'doc.owner@my.cspc.edu.ph',
+                'f_name' => 'Doc',
+                'l_name' => 'Owner',
+            ]);
+        }
+
+        return $this->documentOwner->student_id;
+    }
+
     private function loginAsApprovedExpert(): CapstoneExpert
     {
         $expert = CapstoneExpert::create([
@@ -68,17 +89,23 @@ class PdfAnnotationTest extends TestCase
             'approved_status' => true,
         ]);
 
-        $state = 'test-state-token';
-        $this->withSession(['oauth_state' => $state]);
-        $this->post('/expert/login/google/mock', [
-            'state' => $state,
-            'email' => 'drive.expert@gmail.com',
-        ]);
+        // Authenticate directly on the expert guard rather than replaying the
+        // Google OAuth mock - these tests are about the annotation endpoints,
+        // and the mock's route path had drifted, silently logging nobody in
+        // and turning every assertion into a redirect to /login.
+        $this->actingAs($expert, 'expert');
 
         return $expert;
     }
 
-    public function test_streams_pdf_from_google_drive_when_uploaded(): void
+    // The annotator must always be handed the clean local PDF, never the
+    // Google Drive copy - that copy is a flattened export produced by
+    // syncDrive() for viewing elsewhere, and reading it back would burn the
+    // annotations into the page pixels and then draw the overlay on top of
+    // them again on every save. This test used to assert the opposite (that
+    // an uploaded Drive copy is streamed), which is the behaviour the
+    // controller deliberately dropped.
+    public function test_always_serves_the_local_copy_even_when_a_drive_copy_exists(): void
     {
         $expert = $this->loginAsApprovedExpert();
 
@@ -89,37 +116,35 @@ class PdfAnnotationTest extends TestCase
             'expires_at' => now()->addHour(),
         ]);
 
+        Storage::disk('local')->put('submissions/clean-copy.pdf', '%PDF-1.4 local-content-marker');
+
         $fileId = \DB::table('capstone_documents')->insertGetId([
-            'id' => 1,
             'file_id' => 1,
-            'file_path' => 'submissions/local-fallback.pdf',
+            'student_id' => $this->documentOwnerId(),
+            'file_path' => 'submissions/clean-copy.pdf',
             'file_name' => 'doc.pdf',
         ]);
 
         $reviewId = \DB::table('capstone_document_review')->insertGetId([
-            'id' => 9,
             'review_id' => 9,
             'file_id' => $fileId,
             'expert_id' => $expert->expert_id,
             'role' => 'adviser',
-            'review_status' => 'pending',
+            'review_status' => 'To Review',
             'drive_file_id' => 'DRIVE_FILE_123',
             'drive_status' => 'uploaded',
         ]);
 
-        $pdfBytes = '%PDF-1.4 fake-drive-content-marker';
+        // Drive must not be touched at all, however healthy the copy looks.
         $mock = $this->createMock(GoogleDriveService::class);
-        $mock->expects($this->once())
-            ->method('downloadFile')
-            ->with($expert->expert_id, 'DRIVE_FILE_123')
-            ->willReturn($pdfBytes);
+        $mock->expects($this->never())->method('downloadFile');
         $this->instance(GoogleDriveService::class, $mock);
 
         $response = $this->get("/reviews/{$reviewId}/pdf");
 
         $response->assertStatus(200);
         $response->assertHeader('Content-Type', 'application/pdf');
-        $this->assertStringContainsString('fake-drive-content-marker', $response->getContent());
+        $this->assertStringContainsString('local-content-marker', $response->streamedContent());
     }
 
     public function test_falls_back_to_local_storage_when_no_drive_copy(): void
@@ -129,14 +154,13 @@ class PdfAnnotationTest extends TestCase
         Storage::disk('local')->put('submissions/local-only.pdf', '%PDF-1.4 local-content-marker');
 
         $fileId = \DB::table('capstone_documents')->insertGetId([
-            'id' => 2,
             'file_id' => 2,
+            'student_id' => $this->documentOwnerId(),
             'file_path' => 'submissions/local-only.pdf',
             'file_name' => 'doc.pdf',
         ]);
 
         $reviewId = \DB::table('capstone_document_review')->insertGetId([
-            'id' => 10,
             'review_id' => 10,
             'file_id' => $fileId,
             'expert_id' => $expert->expert_id,
@@ -156,14 +180,13 @@ class PdfAnnotationTest extends TestCase
         $expert = $this->loginAsApprovedExpert();
 
         $fileId = \DB::table('capstone_documents')->insertGetId([
-            'id' => 3,
             'file_id' => 3,
+            'student_id' => $this->documentOwnerId(),
             'file_path' => 'submissions/remarks.pdf',
             'file_name' => 'doc.pdf',
         ]);
 
         $reviewId = \DB::table('capstone_document_review')->insertGetId([
-            'id' => 11,
             'review_id' => 11,
             'file_id' => $fileId,
             'expert_id' => $expert->expert_id,
@@ -183,14 +206,13 @@ class PdfAnnotationTest extends TestCase
         $expert = $this->loginAsApprovedExpert();
 
         $fileId = \DB::table('capstone_documents')->insertGetId([
-            'id' => 4,
             'file_id' => 4,
+            'student_id' => $this->documentOwnerId(),
             'file_path' => 'submissions/remarks-selected.pdf',
             'file_name' => 'doc.pdf',
         ]);
 
         $reviewId = \DB::table('capstone_document_review')->insertGetId([
-            'id' => 12,
             'review_id' => 12,
             'file_id' => $fileId,
             'expert_id' => $expert->expert_id,
@@ -235,14 +257,13 @@ class PdfAnnotationTest extends TestCase
         $expert = $this->loginAsApprovedExpert();
 
         $fileId = \DB::table('capstone_documents')->insertGetId([
-            'id' => 5,
             'file_id' => 5,
+            'student_id' => $this->documentOwnerId(),
             'file_path' => 'submissions/general.pdf',
             'file_name' => 'doc.pdf',
         ]);
 
         $reviewId = \DB::table('capstone_document_review')->insertGetId([
-            'id' => 13,
             'review_id' => 13,
             'file_id' => $fileId,
             'expert_id' => $expert->expert_id,
@@ -273,14 +294,13 @@ class PdfAnnotationTest extends TestCase
         $expert = $this->loginAsApprovedExpert();
 
         $fileId = \DB::table('capstone_documents')->insertGetId([
-            'id' => 6,
             'file_id' => 6,
+            'student_id' => $this->documentOwnerId(),
             'file_path' => 'submissions/general-delete.pdf',
             'file_name' => 'doc.pdf',
         ]);
 
         $reviewId = \DB::table('capstone_document_review')->insertGetId([
-            'id' => 14,
             'review_id' => 14,
             'file_id' => $fileId,
             'expert_id' => $expert->expert_id,
@@ -307,10 +327,18 @@ class PdfAnnotationTest extends TestCase
 
     private function makeReview(int $id, int $expertId, string $status): int
     {
+        // A review points at a real document - hardcoding file_id 1 with no
+        // matching row left this failing the foreign key.
+        $fileId = \DB::table('capstone_documents')->insertGetId([
+            'file_id' => $id,
+            'student_id' => $this->documentOwnerId(),
+            'file_path' => 'submissions/review-'.$id.'.pdf',
+            'file_name' => 'doc.pdf',
+        ]);
+
         return \DB::table('capstone_document_review')->insertGetId([
-            'id' => $id,
             'review_id' => $id,
-            'file_id' => 1,
+            'file_id' => $fileId,
             'expert_id' => $expertId,
             'role' => 'adviser',
             'review_status' => $status,
@@ -357,7 +385,16 @@ class PdfAnnotationTest extends TestCase
     public function test_blocks_access_to_another_experts_review(): void
     {
         $this->loginAsApprovedExpert();
-        $reviewId = $this->makeReview(23, 999, 'To Review');
+
+        $otherExpert = CapstoneExpert::create([
+            'email' => 'other.expert@gmail.com',
+            'first_name' => 'Other',
+            'last_name' => 'Expert',
+            'is_admin' => false,
+            'approved_status' => true,
+        ]);
+
+        $reviewId = $this->makeReview(23, $otherExpert->expert_id, 'To Review');
 
         $response = $this->get("/reviews/{$reviewId}/status");
 
@@ -367,10 +404,16 @@ class PdfAnnotationTest extends TestCase
     public function test_syncs_annotated_pdf_to_drive(): void
     {
         $expert = $this->loginAsApprovedExpert();
+        $syncFileId = \DB::table('capstone_documents')->insertGetId([
+            'file_id' => 24,
+            'student_id' => $this->documentOwnerId(),
+            'file_path' => 'submissions/sync-24.pdf',
+            'file_name' => 'doc.pdf',
+        ]);
+
         $reviewId = \DB::table('capstone_document_review')->insertGetId([
-            'id' => 24,
             'review_id' => 24,
-            'file_id' => 1,
+            'file_id' => $syncFileId,
             'expert_id' => $expert->expert_id,
             'role' => 'adviser',
             'review_status' => 'To Review',

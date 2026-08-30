@@ -262,7 +262,7 @@
               </div>
             </div>
             <div class="req-card-right">
-              <span class="req-role-badge">{{ ucfirst($assignment->role->first()?->role_name ?? '') }}</span>
+              <span class="req-role-badge">{{ ucfirst($assignment->engaged_role_name ?? '') }}</span>
               <div class="req-actions">
                 <button class="btn btn-ghost" onclick="openTeamModal({{ $assignment->assignment_id }})" title="View Details">
                   <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
@@ -299,7 +299,7 @@
               </div>
             </div>
             <div class="req-card-right">
-              <span class="req-role-badge">{{ ucfirst($assignment->role->first()?->role_name ?? '') }}</span>
+              <span class="req-role-badge">{{ ucfirst($assignment->engaged_role_name ?? '') }}</span>
               <span class="status-dot-sm" style="background:var(--green);" title="Approved"></span>
               <div class="req-actions">
                 <button class="btn btn-ghost" onclick="openTeamModal({{ $assignment->assignment_id }})" title="View Details">
@@ -333,7 +333,7 @@
               </div>
             </div>
             <div class="req-card-right">
-              <span class="req-role-badge">{{ ucfirst($assignment->role->first()?->role_name ?? '') }}</span>
+              <span class="req-role-badge">{{ ucfirst($assignment->engaged_role_name ?? '') }}</span>
               <span class="status-dot-sm" style="background:var(--red);" title="Rejected"></span>
               <div class="req-actions">
                 <button class="btn btn-ghost" onclick="openTeamModal({{ $assignment->assignment_id }})" title="View Details">

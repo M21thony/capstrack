@@ -7,6 +7,8 @@ use App\Http\Controllers\Admin\ArchiveController as AdminArchiveController;
 use App\Http\Controllers\Admin\GoogleDriveController;
 use App\Http\Controllers\Admin\GradingRubricController;
 use App\Http\Controllers\Admin\ResourcesController;
+use App\Http\Controllers\Admin\SettingsController as AdminSettingsController;
+use App\Http\Controllers\Admin\StudentAccountsController;
 use App\Http\Controllers\AdminApprovalController;
 use App\Http\Controllers\AdminDashboardController;
 use App\Http\Controllers\AdminExpertsController;
@@ -15,8 +17,11 @@ use App\Http\Controllers\AdminPanelAssignmentController;
 use App\Http\Controllers\AdminProfileController;
 use App\Http\Controllers\AdminTeamVerificationController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\Capsa\ExpertRosterController;
+use App\Http\Controllers\Capsa\StudentRosterController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DuplicationController;
+use App\Http\Controllers\PreProposalController;
 use App\Http\Controllers\ExpertController;
 use App\Http\Controllers\Instructor\AssignmentController as InstructorAssignmentController;
 use App\Http\Controllers\Instructor\DashboardController as InstructorDashboardController;
@@ -47,42 +52,94 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
-Route::middleware(['expert.auth', 'expert.admin', 'no.cache', 'track.expert'])->prefix('admin')->name('admin.')->group(function () {
-    Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
-    Route::get('/experts', [AdminExpertsController::class, 'index'])->name('experts');
-    Route::get('/approval', [AdminApprovalController::class, 'index'])->name('approval');
-    Route::post('/approval/{expert_id}/approve', [AdminApprovalController::class, 'approve'])->name('approval.approve');
-    Route::post('/approval/{expert_id}/reject', [AdminApprovalController::class, 'reject'])->name('approval.reject');
-    Route::post('/turnover', [AdminExpertsController::class, 'transferRights'])->name('turnover');
-    Route::delete('/experts/{expert}', [AdminExpertsController::class, 'destroy'])->name('experts.destroy');
-    Route::get('/panel_assignment', [AdminPanelAssignmentController::class, 'index'])->name('panel_assignment');
-    Route::get('/verify-teams', [AdminTeamVerificationController::class, 'index'])->name('verify_teams');
-    Route::post('/verify-teams/{team}/verify', [AdminTeamVerificationController::class, 'verify'])->name('verify_teams.verify');
-    Route::get('/profile', [AdminProfileController::class, 'index'])->name('profile');
-    Route::post('/profile', [AdminProfileController::class, 'update'])->name('profile.update');
-    Route::get('/sections', [StudentSectionController::class, 'index'])->name('sections');
-    Route::get('/analytics', [AdminAnalyticsController::class, 'index'])->name('analytics');
-    Route::get('/financial', [AdminFinancialController::class, 'index'])->name('financial');
-    Route::post('/financial/expense-post', [AdminFinancialController::class, 'storeExpensePost'])->name('financial.expense-post.store');
-    Route::put('/financial/expense-post/{expensePost}', [AdminFinancialController::class, 'updateExpensePost'])->name('financial.expense-post.update');
-    Route::delete('/financial/expense-post/{expensePost}', [AdminFinancialController::class, 'destroyExpensePost'])->name('financial.expense-post.destroy');
-    Route::post('/financial/receipt/{financialRecord}/approve', [AdminFinancialController::class, 'approveReceipt'])->name('financial.receipt.approve');
-    Route::post('/financial/receipt/{financialRecord}/reject', [AdminFinancialController::class, 'rejectReceipt'])->name('financial.receipt.reject');
-    Route::get('/archive', [AdminArchiveController::class, 'index'])->name('archive');
-    Route::get('/announcements', [AnnouncementController::class, 'index'])->name('announcements');
-    Route::get('/resources', [ResourcesController::class, 'index'])->name('resources');
-    Route::get('/rubric_management', [GradingRubricController::class, 'index'])->name('rubric_management');
-    Route::get('/activitylog', [AdminActivityLogController::class, 'index'])->name('activitylog');
-    Route::post('/notifications/seen', function (Request $request) {
-        $ids = $request->input('ids', []);
-        if (! empty($ids)) {
-            $seen = session('admin_notification_seen_ids', []);
-            $seen = array_unique(array_merge($seen, $ids));
-            session(['admin_notification_seen_ids' => $seen]);
-        }
+// Same /admin URL and route-name space as before - only the middleware on
+// each sub-group changed, so no existing route('admin.xxx') link anywhere
+// needed touching. See app/Models/CapstoneExpert.php's is_admin/is_capsa/
+// is_staff for what each bucket means.
+Route::middleware(['expert.auth', 'no.cache', 'track.expert'])->prefix('admin')->name('admin.')->group(function () {
 
-        return response()->json(['success' => true]);
-    })->name('notifications.seen');
+    // ---- Admin only: creating a CAPSA, student accounts, system config ----
+    Route::middleware('expert.admin')->group(function () {
+        Route::post('/experts/{expert}/toggle-capsa', [AdminExpertsController::class, 'toggleCapsa'])->name('experts.toggle-capsa');
+        Route::get('/students', [StudentAccountsController::class, 'index'])->name('students');
+        Route::post('/students', [StudentAccountsController::class, 'store'])->name('students.store');
+        Route::put('/students/{student}', [StudentAccountsController::class, 'update'])->name('students.update');
+        Route::delete('/students/{student}', [StudentAccountsController::class, 'destroy'])->name('students.destroy');
+        Route::get('/settings', [AdminSettingsController::class, 'index'])->name('settings');
+        Route::post('/settings', [AdminSettingsController::class, 'update'])->name('settings.update');
+    });
+
+    // ---- CAPSA: review/approve/assign, bulk rosters ----
+    Route::middleware('expert.capsa')->group(function () {
+        // Approving an account also assigns that expert's role(s) - approve()
+        // requires role_ids - so this stays CaPSA-only: assigning expert
+        // categories is CaPSA's call, not Admin's.
+        Route::get('/approval', [AdminApprovalController::class, 'index'])->name('approval');
+        Route::post('/approval/{expert_id}/approve', [AdminApprovalController::class, 'approve'])->name('approval.approve');
+        Route::post('/approval/{expert_id}/reject', [AdminApprovalController::class, 'reject'])->name('approval.reject');
+        Route::get('/panel_assignment', [AdminPanelAssignmentController::class, 'index'])->name('panel_assignment');
+        Route::get('/verify-teams', [AdminTeamVerificationController::class, 'index'])->name('verify_teams');
+        Route::post('/verify-teams/{team}/verify', [AdminTeamVerificationController::class, 'verify'])->name('verify_teams.verify');
+        Route::post('/verify-teams/pre-proposals/{preProposal}/approve', [AdminTeamVerificationController::class, 'approvePreProposal'])->name('verify_teams.pre_proposals.approve');
+        Route::post('/verify-teams/pre-proposals/{preProposal}/reject', [AdminTeamVerificationController::class, 'rejectPreProposal'])->name('verify_teams.pre_proposals.reject');
+        Route::get('/verify-teams/pre-proposals/{preProposal}/document', [AdminTeamVerificationController::class, 'viewPreProposalDocument'])->name('verify_teams.pre_proposals.document');
+        Route::get('/rubric_management', [GradingRubricController::class, 'index'])->name('rubric_management');
+        Route::get('/financial', [AdminFinancialController::class, 'index'])->name('financial');
+        Route::post('/financial/expense-post', [AdminFinancialController::class, 'storeExpensePost'])->name('financial.expense-post.store');
+        Route::put('/financial/expense-post/{expensePost}', [AdminFinancialController::class, 'updateExpensePost'])->name('financial.expense-post.update');
+        Route::delete('/financial/expense-post/{expensePost}', [AdminFinancialController::class, 'destroyExpensePost'])->name('financial.expense-post.destroy');
+        Route::post('/financial/receipt/{financialRecord}/approve', [AdminFinancialController::class, 'approveReceipt'])->name('financial.receipt.approve');
+        Route::post('/financial/receipt/{financialRecord}/reject', [AdminFinancialController::class, 'rejectReceipt'])->name('financial.receipt.reject');
+        // Upload is a modal on Student Section List itself, not its own page.
+        Route::post('/rosters/students', [StudentRosterController::class, 'store'])->name('rosters.students.store');
+
+        // Archive/Announcements/Resources are academic-process content
+        // (archived capstones, lesson templates, student-facing
+        // announcements) - CaPSA's territory, not Admin's.
+        Route::get('/archive', [AdminArchiveController::class, 'index'])->name('archive');
+        Route::get('/announcements', [AnnouncementController::class, 'index'])->name('announcements');
+        Route::get('/resources', [ResourcesController::class, 'index'])->name('resources');
+    });
+
+    // ---- Either Admin or CAPSA ----
+    Route::middleware('expert.staff')->group(function () {
+        // Expert List upload is shared. It only creates approved accounts
+        // with NO roles attached (see Capsa\ExpertRosterController), so it
+        // hands Admin no role-assignment power - it just gets people into
+        // the system. That matters on a fresh install: Admin can populate
+        // the list from the .xlsx without hand-typing anyone's email, then
+        // make one of them CaPSA, who assigns everyone's roles from there.
+        Route::post('/rosters/experts', [ExpertRosterController::class, 'store'])->name('rosters.experts.store');
+
+        Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
+        Route::get('/profile', [AdminProfileController::class, 'index'])->name('profile');
+        Route::post('/profile', [AdminProfileController::class, 'update'])->name('profile.update');
+        Route::get('/sections', [StudentSectionController::class, 'index'])->name('sections');
+        Route::get('/analytics', [AdminAnalyticsController::class, 'index'])->name('analytics');
+        Route::get('/activitylog', [AdminActivityLogController::class, 'index'])->name('activitylog');
+
+        // Managing the expert ROSTER (viewing, editing, removing accounts)
+        // is shared - both Admin and CAPSA need it day to day. Student
+        // ACCOUNT management stays Admin-only (below) since CAPSA already
+        // has Student Section List for their section-scoped student view -
+        // a second, unscoped "manage every student" page on top of that
+        // would just be a confusing duplicate.
+        Route::get('/experts', [AdminExpertsController::class, 'index'])->name('experts');
+        Route::post('/experts', [AdminExpertsController::class, 'store'])->name('experts.store');
+        Route::put('/experts/{expert}', [AdminExpertsController::class, 'update'])->name('experts.update');
+        Route::put('/experts/{expert}/roles', [AdminExpertsController::class, 'updateRoles'])->name('experts.update-roles');
+        Route::delete('/experts/{expert}', [AdminExpertsController::class, 'destroy'])->name('experts.destroy');
+        Route::post('/notifications/seen', function (Request $request) {
+            $ids = $request->input('ids', []);
+            if (! empty($ids)) {
+                $seen = session('admin_notification_seen_ids', []);
+                $seen = array_unique(array_merge($seen, $ids));
+                session(['admin_notification_seen_ids' => $seen]);
+            }
+
+            return response()->json(['success' => true]);
+        })->name('notifications.seen');
+    });
 });
 
 Route::middleware(['expert.auth', 'expert.approved', 'no.cache', 'track.expert'])->prefix('instructor')->name('instructor.')->group(function () {
@@ -136,11 +193,13 @@ Route::post('/request-account', [ExpertController::class, 'storeRequest'])->name
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 Route::prefix('expert')->group(function () {
-    Route::get('/login', [ExpertController::class, 'login'])->name('expert.login');
-    Route::post('/login/google', [ExpertController::class, 'initiateGoogleLogin'])->name('expert.login.google.initiate');
-    Route::get('/login/google/callback', [ExpertController::class, 'handleGoogleCallback'])->name('expert.login.google.callback');
-    Route::get('/login/google/mock', [ExpertController::class, 'showMockLogin'])->name('expert.login.google.mock');
-    Route::post('/login/google/mock', [ExpertController::class, 'handleMockLogin'])->name('expert.login.google.mock.post');
+    // login()/initiateGoogleLogin()/handleGoogleCallback()/showMockLogin()/
+    // handleMockLogin() used to live here too - a second, near-duplicate
+    // OAuth implementation nothing in the app ever linked to (the real
+    // expert login path is AuthController's, above). Removed rather than
+    // kept in sync, since it had drifted to only accept @gmail.com and
+    // would need updating alongside AuthController's domain check forever
+    // otherwise.
     Route::post('/logout', [ExpertController::class, 'logout'])->name('expert.logout');
 });
 
@@ -168,8 +227,17 @@ Route::middleware(['auth', 'no.cache', 'track.expert'])->group(function () {
     Route::post('/invitations/{invitation}/remind-later', [InvitationController::class, 'remindLater'])->name('invitations.remind-later');
     Route::get('/invitations/popup', [InvitationController::class, 'popup'])->name('invitations.popup');
 
-    Route::get('/duplication', [DuplicationController::class, 'index'])->name('duplication.index');
+    // NOTE: DuplicationController's index/check are now dead code - the
+    // standalone casual checker was retired in favor of student.duplication
+    // (below) always being tied to a real proposal submission. Left in place
+    // rather than deleted in case something elsewhere still references it.
+    Route::get('/duplication-legacy', [DuplicationController::class, 'index'])->name('duplication.index');
     Route::post('/duplication/check', [DuplicationController::class, 'check'])->name('duplication.check');
+
+    Route::post('/pre-proposal/check', [PreProposalController::class, 'runCheck'])->name('student.pre-proposal.check');
+    Route::post('/pre-proposal', [PreProposalController::class, 'store'])->name('student.pre-proposal.store');
+    Route::post('/pre-proposal/{preProposal}/choose', [PreProposalController::class, 'choose'])->name('student.pre-proposal.choose');
+    Route::delete('/pre-proposal/{preProposal}', [PreProposalController::class, 'destroy'])->name('student.pre-proposal.destroy');
 
     Route::middleware(['track.student'])->prefix('student')->group(function () {
         Route::get('/personal-info', [PersonalInfoController::class, 'show'])->name('student.personal-info');
@@ -190,7 +258,7 @@ Route::middleware(['auth', 'no.cache', 'track.expert'])->group(function () {
             Route::get('/review/{review}/pdf', [StudentReviewController::class, 'file'])->name('student.review.pdf');
             Route::get('/review/{review}/remarks', [StudentReviewController::class, 'remarks'])->name('student.review.remarks');
             Route::get('/review/{reviewId}/clf', [ConsultationLogController::class, 'generate'])->name('student.review.clf');
-            Route::view('/duplication', 'student.duplication')->name('student.duplication');
+            Route::get('/duplication', [PreProposalController::class, 'edit'])->name('student.duplication');
             Route::get('/consultation', [StudentConsultationController::class, 'index'])->name('student.consultation');
             Route::get('/consultation/refresh', [StudentConsultationController::class, 'refreshData'])->name('student.consultation.refresh');
             Route::post('/consultation/book', [StudentConsultationController::class, 'book'])->name('student.consultation.book');
@@ -256,3 +324,15 @@ Route::middleware(['expert.auth', 'track.expert'])->prefix('admin/gdrive')->name
     Route::post('/resources/{resource}/download', [GoogleDriveController::class, 'trackDownload'])->name('resources.download');
     Route::delete('/resources/{resource}', [GoogleDriveController::class, 'destroy'])->name('resources.destroy');
 });
+
+// TEMPORARY - local-only, for visually verifying the student/duplication
+// redesign via Playwright. Logs in as the real student behind tonight's
+// actual testing (id 11) and redirects straight to the page. Remove
+// after the visual check is done - never enable outside local.
+if (app()->environment('local')) {
+    Route::get('/__dev-login-student', function () {
+        Auth::guard('web')->loginUsingId(11);
+
+        return redirect()->route('student.duplication');
+    });
+}

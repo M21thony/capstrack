@@ -1,6 +1,6 @@
 @php
     $expert = auth('expert')->user();
-    $isAdmin = $expert && $expert->is_admin;
+    $isAdmin = $expert && $expert->is_staff;
 @endphp
 
 @if (session('show_welcome'))
