@@ -745,12 +745,16 @@
           </ul>
         </div>
       </div>
+    </div>
 
+      {{-- Sits along the bottom of the page, spanning both columns. It used
+           to be inside .overview-panel - the 420px right-hand column holding
+           the Role Guide and Quick Tips - so it was drawn tucked under those
+           at the right instead of under the page. --}}
       <div class="legal-credits">
         <div class="credits-title">System Developers</div>
         <div class="credits-names">Jolina · John Kenneth · Mark Anthony · Ian Cyrus · Alexa Nicole</div>
       </div>
-    </div>
     </div>
   </div>
 </div>

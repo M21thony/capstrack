@@ -122,7 +122,9 @@ select.input{cursor:pointer}
 .edit-mode .pm-edit-only{display:block}
 
 /* ── SIGNATURE CREDENTIALS ── */
-.legal-credits{margin-top:60px;padding-top:20px;border-top:1px dashed var(--border);text-align:center;opacity:0.5;padding-bottom:20px}
+/* Spans the full width under both columns. It is a direct child of the
+   two-column grid, so without this it would be placed into one column. */
+.legal-credits{grid-column:1 / -1;grid-row:3;margin-top:60px;padding-top:20px;border-top:1px dashed var(--border);text-align:center;opacity:0.5;padding-bottom:20px}
 .credits-title{font-family:'Space Mono',monospace;font-size:8px;font-weight:600;letter-spacing:1px;color:var(--text3);text-transform:uppercase;margin-bottom:4px}
 .credits-names{font-size:9px;font-weight:500;color:var(--text3);letter-spacing:0.3px}
 
@@ -334,9 +336,9 @@ select.input{cursor:pointer}
   .overview-panel .card div[style*="margin: 16px 0"]{margin:8px 0!important}
   .overview-panel .card p[style*="line-height: 1.4"]{font-size:9px!important;line-height:1.3!important}
   .overview-panel .card ul[style*="font-size"]{font-size:10px!important;line-height:1.4!important;padding-left:14px!important}
-  .overview-panel .legal-credits{grid-column:1/-1!important;margin-top:0!important;padding:6px 0!important}
-  .overview-panel .legal-credits .credits-title{font-size:7px!important}
-  .overview-panel .legal-credits .credits-names{font-size:8px!important}
+  .legal-credits{margin-top:0!important;padding:6px 0!important}
+  .legal-credits .credits-title{font-size:7px!important}
+  .legal-credits .credits-names{font-size:8px!important}
 
   /* ── Pagination ── */
   .pagination-container{gap:6px!important;margin-top:16px!important}
@@ -414,9 +416,9 @@ select.input{cursor:pointer}
   .overview-panel .card div[style*="margin: 16px 0"]{margin:5px 0!important}
   .overview-panel .card p[style*="line-height: 1.4"]{font-size:8px!important;line-height:1.2!important}
   .overview-panel .card ul[style*="font-size"]{font-size:9px!important;line-height:1.3!important;padding-left:12px!important}
-  .overview-panel .legal-credits{grid-column:1/-1!important;margin-top:0!important;padding:4px 0!important}
-  .overview-panel .legal-credits .credits-title{font-size:6px!important}
-  .overview-panel .legal-credits .credits-names{font-size:7px!important}
+  .legal-credits{margin-top:0!important;padding:4px 0!important}
+  .legal-credits .credits-title{font-size:6px!important}
+  .legal-credits .credits-names{font-size:7px!important}
   .overview-panel .card>div>div:first-child{font-size:10px!important}
   .overview-panel .card>div>div:nth-child(2){font-size:9px!important}
 
