@@ -212,8 +212,6 @@
 
       <x-dashboard.info-card
         title="Upcoming Consultations"
-        :actionUrl="route('instructor.consultations')"
-        actionText="View All"
         :empty="$consultations->isEmpty()"
         emptyMessage="No upcoming consultations."
         scrollable

@@ -166,7 +166,6 @@ Route::middleware(['expert.auth', 'no.cache', 'track.expert'])->prefix('admin')-
 Route::middleware(['expert.auth', 'expert.approved', 'no.cache', 'track.expert'])->prefix('instructor')->name('instructor.')->group(function () {
     Route::get('/dashboard', [InstructorDashboardController::class, 'index'])->name('dashboard');
     Route::get('/teams', [InstructorTeamController::class, 'index'])->name('teams');
-    Route::view('/consultations', 'instructor.consultations')->name('consultations');
     Route::get('/progress', [InstructorProgressController::class, 'index'])->name('progress');
     Route::get('/profile', [InstructorProfileController::class, 'index'])->name('profile');
     Route::post('/profile', [InstructorProfileController::class, 'update'])->name('profile.update');
