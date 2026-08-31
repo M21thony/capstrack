@@ -790,4 +790,54 @@ class AdminTeamVerificationTest extends TestCase
             ->assertJsonPath('project_title', 'First Title')
             ->assertJsonPath('selected_pre_proposal_id', $first->id);
     }
+
+    /**
+     * A draft is not the CaPSA's to read.
+     *
+     * The Pre-Proposals tab has always counted only turned-in titles, but the
+     * review modal was built from every row on the team - so a title the team
+     * was still writing showed up in it, and could be approved, before they
+     * had ever pressed submit.
+     */
+    public function test_a_draft_is_not_shown_to_the_capsa(): void
+    {
+        $this->createAdmin();
+        $leader = $this->createLeader();
+        $team = $this->createCompleteTeam($leader);
+        $team->update(['project_title' => null]);
+
+        [$turnedIn, , $third] = $this->threeSubmittedTitles($team, $leader);
+
+        // The team is still writing this one - never submitted.
+        $third->update(['submitted_at' => null, 'title' => 'A Draft Nobody Has Turned In Yet']);
+
+        $html = $this->get(route('admin.team_management', ['tab' => 'pre_proposals']))
+            ->assertOk()->getContent();
+
+        $this->assertStringNotContainsString(
+            'A Draft Nobody Has Turned In Yet',
+            $html,
+            'A title the team never submitted was handed to the CaPSA.',
+        );
+        $this->assertStringContainsString($turnedIn->title, $html);
+    }
+
+    /** And a decision on a turned-in title does not hand one back either. */
+    public function test_a_decision_does_not_hand_back_a_draft(): void
+    {
+        $this->createAdmin();
+        $leader = $this->createLeader();
+        $team = $this->createCompleteTeam($leader);
+        $team->update(['project_title' => null]);
+
+        [$first, , $third] = $this->threeSubmittedTitles($team, $leader);
+        $third->update(['submitted_at' => null, 'title' => 'Still A Draft']);
+
+        $response = $this->postJson(route('admin.verify_teams.pre_proposals.approve', $first))->assertOk();
+
+        $titles = collect($response->json('proposals'))->pluck('title');
+
+        $this->assertFalse($titles->contains('Still A Draft'), 'The redraw handed back a draft.');
+        $this->assertTrue($titles->contains($first->title));
+    }
 }

@@ -704,7 +704,6 @@ function closeSidebar() {
 // Avatar preview & reset
 var avatarInput = document.getElementById('avatar');
 var avatarPreviewRoot = document.getElementById('avatar-preview');
-var avatarInitialEl = document.getElementById('avatar-initial');
 function readAvatar(file) {
   var reader = new FileReader();
   reader.onload = function(e) {

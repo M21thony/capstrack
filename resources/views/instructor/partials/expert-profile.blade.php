@@ -447,7 +447,9 @@ function epUpdateSlotTotal(){
 
 function openExpertProfile(){
   EP_OVERLAY.classList.add('open');
-  EP_TRIGGER.classList.add('ep-open');
+  // On a CaPSA sidebar the trigger is only rendered when that admin also
+  // holds an expert role, so it is not always there.
+  if (EP_TRIGGER) EP_TRIGGER.classList.add('ep-open');
   renderTags();
   epUpdateSlotTotal();
   document.getElementById('ep-save-msg').style.display = 'none';
@@ -455,7 +457,7 @@ function openExpertProfile(){
 
 function closeExpertProfile(){
   EP_OVERLAY.classList.remove('open');
-  EP_TRIGGER.classList.remove('ep-open');
+  if (EP_TRIGGER) EP_TRIGGER.classList.remove('ep-open');
 }
 
 function handleEpOverlay(e){
