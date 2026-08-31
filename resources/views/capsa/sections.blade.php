@@ -197,10 +197,13 @@ function closeSidebar() {
     <h3 class="ct-modal-title">Upload Student List</h3>
     <p class="ct-modal-desc" style="text-align:left;">
       One .xlsx file, one sheet. Columns are read by their headings, in any order:
-      <strong>Email</strong> (required), Name, Student No., Course/Program, Year, Section.
-      Fills in any <strong>blank</strong> student number, course or section on accounts that
-      already exist, and prepares an account for anyone who has not signed in yet, so their
-      profile is ready when they do. Anything a student already has is left alone.
+      <strong>Email</strong> (required), Student No., Course/Program, Year, Section, School Year, and
+      either <strong>Name</strong> ("Cruz, Juan B.") or <strong>Last Name / First Name / Middle Initial</strong>.
+      Leave School Year out and the term that is running is used; write it as <strong>2026-2027</strong>.
+      <strong>Course, year &amp; section and school year are taken from this list</strong> and replace
+      what is on the account &mdash; the list is the record of them. Name and student number are only
+      filled in when missing. An account is prepared for anyone who has not signed in yet, so their
+      profile is ready when they do.
       Emails must be <strong>@my.cspc.edu.ph</strong> &mdash; nothing else can sign in.
     </p>
     <input type="file" id="studentRosterFile" class="ct-modal-input" accept=".xlsx">

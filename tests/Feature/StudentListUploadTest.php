@@ -5,6 +5,8 @@ namespace Tests\Feature;
 use App\Models\CapstoneExpert;
 use App\Models\Student;
 use App\Models\StudentRoster;
+use App\Models\Term;
+use App\Models\StudentSchoolYear;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
@@ -243,18 +245,25 @@ class StudentListUploadTest extends TestCase
         $this->assertSame(1, StudentRoster::where('email', 'again@my.cspc.edu.ph')->count());
         $this->assertSame('221000006', StudentRoster::where('email', 'again@my.cspc.edu.ph')->value('student_number'));
 
-        // The account keeps what the first upload filled in.
+        // The student number is kept - once set, a re-upload should not
+        // churn it - but the section follows the list, because the list is
+        // the record of which section a student is in.
         $this->assertSame('221000005', $student->fresh()->student_number);
-        $this->assertSame('4th '.json_decode('"·"').' B', $student->fresh()->year_section);
+        $this->assertSame('4th '.json_decode('"·"').' A', $student->fresh()->year_section);
     }
 
-    /** Nothing a student already has is touched, and the count says so. */
-    public function test_an_account_that_is_already_complete_is_left_alone(): void
+    /**
+     * Course and section come from the department's list, so the list wins:
+     * a student can pick their course wrongly at sign-up, and a section
+     * changes between terms. The name and student number they already have
+     * are left where they are.
+     */
+    public function test_the_list_corrects_the_course_and_section(): void
     {
         $this->actingAs($this->capsa(), 'expert');
 
         $student = Student::create([
-            'email' => 'complete@my.cspc.edu.ph',
+            'email' => 'wrong@my.cspc.edu.ph',
             'f_name' => 'Al',
             'l_name' => 'Ready',
             'student_number' => '221000007',
@@ -264,16 +273,213 @@ class StudentListUploadTest extends TestCase
 
         $response = $this->post(route('admin.rosters.students.store'), [
             'file' => $this->listFile(self::HEADER, [
-                ['complete@my.cspc.edu.ph', 'Ready, Al B.', '999999999', 'BSIT', 4, 'B'],
+                ['wrong@my.cspc.edu.ph', 'Ready, Al B.', '999999999', 'BSIT', 4, 'B'],
             ]),
         ]);
 
         $response->assertOk();
-        $response->assertJson(['matched' => 1, 'filled' => 0, 'already_complete' => 1]);
+        $response->assertJson(['matched' => 1, 'filled' => 2]);
 
         $student->refresh();
+        $this->assertSame('Bachelor of Science in Information Technology', $student->course);
+        $this->assertSame('4th '.json_decode('"·"').' B', $student->year_section);
+
+        // Not these: the name came from their own sign-in, and the number is
+        // not something a re-upload should churn.
         $this->assertSame('221000007', $student->student_number);
-        $this->assertSame('Bachelor of Science in Computer Science', $student->course);
-        $this->assertSame('3rd '.json_decode('"·"').' A', $student->year_section);
+        $this->assertSame('Al', $student->f_name);
+        $this->assertSame('Ready', $student->l_name);
+    }
+
+    /** A row that changes nothing is reported as changing nothing. */
+    public function test_a_row_that_matches_the_account_changes_nothing(): void
+    {
+        $this->actingAs($this->capsa(), 'expert');
+
+        Student::create([
+            'email' => 'same@my.cspc.edu.ph',
+            'f_name' => 'Same',
+            'l_name' => 'Same',
+            'student_number' => '221000011',
+            'course' => 'Bachelor of Science in Information Technology',
+            'year_section' => '4th '.json_decode('"·"').' B',
+        ]);
+
+        $this->post(route('admin.rosters.students.store'), [
+            'file' => $this->listFile(self::HEADER, [
+                ['same@my.cspc.edu.ph', 'Same, Same', '221000011', 'BSIT', 4, 'B'],
+            ]),
+        ])->assertOk()->assertJson(['matched' => 1, 'filled' => 0, 'already_complete' => 1]);
+    }
+
+    // -- A list that keeps the parts of a name apart -----------------------
+
+    private const HEADER_SPLIT = ['Email', 'Last Name', 'First Name', 'Middle Initial', 'Student No.', 'Course/Program', 'Year', 'Section'];
+
+    /** Last Name, First Name and Middle Initial are read straight. */
+    public function test_a_list_can_keep_the_name_in_separate_columns(): void
+    {
+        $this->actingAs($this->capsa(), 'expert');
+
+        $this->post(route('admin.rosters.students.store'), [
+            'file' => $this->listFile(self::HEADER_SPLIT, [
+                ['split@my.cspc.edu.ph', 'Aurillas', 'John Kenneth', 'B.', '221001135', 'BSIT', 4, 'B'],
+            ]),
+        ])->assertOk()->assertJson(['created' => 1]);
+
+        $student = Student::where('email', 'split@my.cspc.edu.ph')->first();
+
+        $this->assertSame('John Kenneth', $student->f_name);
+        $this->assertSame('B.', $student->m_name);
+        $this->assertSame('Aurillas', $student->l_name);
+    }
+
+    /** The stored list row still reads as a name. */
+    public function test_the_stored_row_keeps_a_readable_name(): void
+    {
+        $this->actingAs($this->capsa(), 'expert');
+
+        $this->post(route('admin.rosters.students.store'), [
+            'file' => $this->listFile(self::HEADER_SPLIT, [
+                ['readable@my.cspc.edu.ph', 'Balilla', 'Mark Anthony', 'B.', '221001145', 'BSIT', 4, 'B'],
+            ]),
+        ])->assertOk();
+
+        $this->assertSame(
+            'Balilla, Mark Anthony B.',
+            StudentRoster::where('email', 'readable@my.cspc.edu.ph')->value('name')
+        );
+    }
+
+    /** A middle initial is optional. */
+    public function test_the_middle_initial_can_be_left_out(): void
+    {
+        $this->actingAs($this->capsa(), 'expert');
+
+        $this->post(route('admin.rosters.students.store'), [
+            'file' => $this->listFile(self::HEADER_SPLIT, [
+                ['nomi@my.cspc.edu.ph', 'Cruz', 'Juan', '', '221000050', 'BSIT', 4, 'B'],
+            ]),
+        ])->assertOk()->assertJson(['created' => 1]);
+
+        $student = Student::where('email', 'nomi@my.cspc.edu.ph')->first();
+
+        $this->assertSame('Juan', $student->f_name);
+        $this->assertSame('Cruz', $student->l_name);
+        $this->assertNull($student->m_name);
+    }
+
+    // -- School Year column ------------------------------------------------
+
+    private const HEADER_SY = ['Email', 'Name', 'Student No.', 'Course/Program', 'Year', 'Section', 'School Year'];
+
+    /**
+     * The school year on the list has to reach student_s_y, not just the
+     * stored roster row: that column is what the classmate picker and every
+     * section lookup filter on. Writing it only to the roster left them
+     * untouched, so a list could import and change nothing anyone sees.
+     */
+    public function test_the_school_year_lands_on_the_enrolment_row(): void
+    {
+        $this->actingAs($this->capsa(), 'expert');
+
+        $student = Student::create(['email' => 'sy@my.cspc.edu.ph', 'f_name' => 'S', 'l_name' => 'Y']);
+        StudentSchoolYear::create(['student_id' => $student->student_id, 'school_year' => '2020-2021']);
+
+        $this->post(route('admin.rosters.students.store'), [
+            'file' => $this->listFile(self::HEADER_SY, [
+                ['sy@my.cspc.edu.ph', 'Why, Ess B.', '221000020', 'BSIT', 4, 'B', '2026-2027'],
+            ]),
+        ])->assertOk();
+
+        $this->assertSame(
+            '2026-2027',
+            StudentSchoolYear::where('student_id', $student->student_id)->value('school_year')
+        );
+    }
+
+    /** A prepared account has no enrolment row yet, so one is made for it. */
+    public function test_a_prepared_account_gets_an_enrolment_row_with_the_year(): void
+    {
+        $this->actingAs($this->capsa(), 'expert');
+
+        $this->post(route('admin.rosters.students.store'), [
+            'file' => $this->listFile(self::HEADER_SY, [
+                ['fresh@my.cspc.edu.ph', 'Fresh, New B.', '221000021', 'BSIT', 4, 'B', '2026-2027'],
+            ]),
+        ])->assertOk()->assertJson(['created' => 1]);
+
+        $student = Student::where('email', 'fresh@my.cspc.edu.ph')->first();
+
+        $this->assertSame(
+            '2026-2027',
+            StudentSchoolYear::where('student_id', $student->student_id)->value('school_year')
+        );
+    }
+
+    /** The forms a person actually types all come to the one written form. */
+    public function test_a_hand_typed_school_year_is_brought_to_one_form(): void
+    {
+        $this->actingAs($this->capsa(), 'expert');
+
+        foreach ([['2026-2027', 'a'], ['2026-27', 'b'], ['26-27', 'c'], ['2026', 'd']] as [$written, $tag]) {
+            $email = "sy{$tag}@my.cspc.edu.ph";
+
+            $this->post(route('admin.rosters.students.store'), [
+                'file' => $this->listFile(self::HEADER_SY, [
+                    [$email, 'Typed, Various B.', '22100002'.$tag, 'BSIT', 4, 'B', $written],
+                ]),
+            ])->assertOk();
+
+            $student = Student::where('email', $email)->first();
+
+            $this->assertSame(
+                '2026-2027',
+                StudentSchoolYear::where('student_id', $student->student_id)->value('school_year'),
+                "'{$written}' did not come out as 2026-2027.",
+            );
+        }
+    }
+
+    /**
+     * Anything else is refused by row. A year nothing can match is worse than
+     * none: it looks imported, then quietly excludes the student from every
+     * lookup that filters on it.
+     */
+    public function test_a_school_year_that_makes_no_sense_is_refused(): void
+    {
+        $this->actingAs($this->capsa(), 'expert');
+
+        $response = $this->post(route('admin.rosters.students.store'), [
+            'file' => $this->listFile(self::HEADER_SY, [
+                ['junk@my.cspc.edu.ph', 'Junk, Year B.', '221000030', 'BSIT', 4, 'B', '26-1'],
+                ['gap@my.cspc.edu.ph', 'Gap, Year B.', '221000031', 'BSIT', 4, 'B', '2026-2028'],
+            ]),
+        ]);
+
+        $response->assertOk();
+        $response->assertJson(['skipped' => 2, 'created' => 0, 'inserted' => 0]);
+        $this->assertStringContainsString('2026-2027', $response->json('errors.0'));
+
+        $this->assertSame(0, Student::where('email', 'junk@my.cspc.edu.ph')->count());
+    }
+
+    /** With no School Year column it falls back to the term that is running. */
+    public function test_without_the_column_the_current_term_is_used(): void
+    {
+        $this->actingAs($this->capsa(), 'expert');
+
+        $this->post(route('admin.rosters.students.store'), [
+            'file' => $this->listFile(self::HEADER, [
+                ['noyear@my.cspc.edu.ph', 'No, Year B.', '221000040', 'BSIT', 4, 'B'],
+            ]),
+        ])->assertOk();
+
+        $student = Student::where('email', 'noyear@my.cspc.edu.ph')->first();
+
+        $this->assertSame(
+            Term::currentSchoolYear(),
+            StudentSchoolYear::where('student_id', $student->student_id)->value('school_year')
+        );
     }
 }
