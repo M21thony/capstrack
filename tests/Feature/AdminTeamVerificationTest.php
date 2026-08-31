@@ -663,4 +663,93 @@ class AdminTeamVerificationTest extends TestCase
         $response->assertOk();
         $response->assertSee($expectedFragment, false);
     }
+
+    // -- The title is not settled until the review is over -----------------
+
+    /** Three submitted titles for one team, none of them decided yet. */
+    private function threeSubmittedTitles(Team $team, Student $leader): array
+    {
+        return collect(['First Title', 'Second Title', 'Third Title'])
+            ->map(fn ($title, $i) => $this->createPendingProposal($team, $leader, $i + 1, $title))
+            ->all();
+    }
+
+    /**
+     * Approving one while the others are still unread used to hand the team
+     * a final title. The CaPSA is mid-review; nothing is decided yet.
+     */
+    public function test_approving_one_title_settles_nothing_while_others_are_unreviewed(): void
+    {
+        $this->createAdmin();
+        $leader = $this->createLeader();
+        $team = $this->createCompleteTeam($leader);
+        $team->update(['project_title' => null]);
+        [$first] = $this->threeSubmittedTitles($team, $leader);
+
+        $this->postJson(route('admin.verify_teams.pre_proposals.approve', $first))->assertOk();
+
+        $team->refresh();
+        $this->assertNull($team->project_title, 'The team was given a title while two were still unreviewed.');
+        $this->assertNull($team->selected_pre_proposal_id);
+    }
+
+    /** Once every title has a decision and only one got through, it wins. */
+    public function test_the_title_settles_when_the_last_one_is_decided(): void
+    {
+        $this->createAdmin();
+        $leader = $this->createLeader();
+        $team = $this->createCompleteTeam($leader);
+        $team->update(['project_title' => null]);
+        [$first, $second, $third] = $this->threeSubmittedTitles($team, $leader);
+
+        $this->postJson(route('admin.verify_teams.pre_proposals.approve', $first))->assertOk();
+        $this->postJson(route('admin.verify_teams.pre_proposals.reject', $second), ['reason' => 'Too broad'])->assertOk();
+
+        $this->assertNull($team->fresh()->project_title, 'Settled with one still undecided.');
+
+        $this->postJson(route('admin.verify_teams.pre_proposals.reject', $third), ['reason' => 'Duplicate'])->assertOk();
+
+        $team->refresh();
+        $this->assertSame('First Title', $team->project_title);
+        $this->assertSame($first->id, $team->selected_pre_proposal_id);
+    }
+
+    /**
+     * Two approved means the team picks - and the title has to come off the
+     * team, not just the selection. Leaving it is how an approved-but-not-
+     * chosen title kept showing on student/team.
+     */
+    public function test_two_approved_titles_leave_the_team_with_no_title_until_they_pick(): void
+    {
+        $this->createAdmin();
+        $leader = $this->createLeader();
+        $team = $this->createCompleteTeam($leader);
+        $team->update(['project_title' => null]);
+        [$first, $second, $third] = $this->threeSubmittedTitles($team, $leader);
+
+        $this->postJson(route('admin.verify_teams.pre_proposals.approve', $first))->assertOk();
+        $this->postJson(route('admin.verify_teams.pre_proposals.approve', $second))->assertOk();
+        $this->postJson(route('admin.verify_teams.pre_proposals.reject', $third), ['reason' => 'No'])->assertOk();
+
+        $team->refresh();
+        $this->assertNull($team->project_title, 'The first approval is still showing as the team title.');
+        $this->assertNull($team->selected_pre_proposal_id);
+    }
+
+    /** Everything rejected leaves no title behind either. */
+    public function test_rejecting_every_title_leaves_the_team_without_one(): void
+    {
+        $this->createAdmin();
+        $leader = $this->createLeader();
+        $team = $this->createCompleteTeam($leader);
+        [$first, $second, $third] = $this->threeSubmittedTitles($team, $leader);
+
+        foreach ([$first, $second, $third] as $p) {
+            $this->postJson(route('admin.verify_teams.pre_proposals.reject', $p), ['reason' => 'No'])->assertOk();
+        }
+
+        $team->refresh();
+        $this->assertNull($team->project_title);
+        $this->assertNull($team->selected_pre_proposal_id);
+    }
 }
