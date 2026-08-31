@@ -28,7 +28,7 @@ class ConsultationBookingDateTest extends TestCase
     public function test_booking_a_weekly_slot_stores_a_fixed_session_date_instead_of_a_weekday_name(): void
     {
         $student = Student::factory()->withCompleteProfile()->create(['email' => 'booker@my.cspc.edu.ph']);
-        $team = DB::table('team')->insertGetId(['team_name' => 'Team Book', 'team_status' => 'Active']);
+        $team = DB::table('team')->insertGetId(['team_name' => 'Team Book', 'team_status' => 'on-going']);
         DB::table('student_s_y')->insert([
             'student_id' => $student->student_id,
             'team_id' => $team,
@@ -70,7 +70,7 @@ class ConsultationBookingDateTest extends TestCase
     public function test_booking_a_once_slot_stores_its_exact_specific_date(): void
     {
         $student = Student::factory()->withCompleteProfile()->create(['email' => 'booker2@my.cspc.edu.ph']);
-        $team = DB::table('team')->insertGetId(['team_name' => 'Team Once', 'team_status' => 'Active']);
+        $team = DB::table('team')->insertGetId(['team_name' => 'Team Once', 'team_status' => 'on-going']);
         DB::table('student_s_y')->insert([
             'student_id' => $student->student_id,
             'team_id' => $team,
@@ -106,7 +106,7 @@ class ConsultationBookingDateTest extends TestCase
     public function test_booking_a_later_occurrence_of_a_recurring_slot_succeeds_once_the_first_is_done(): void
     {
         $student = Student::factory()->withCompleteProfile()->create(['email' => 'booker3@my.cspc.edu.ph']);
-        $team = DB::table('team')->insertGetId(['team_name' => 'Team Recur', 'team_status' => 'Active']);
+        $team = DB::table('team')->insertGetId(['team_name' => 'Team Recur', 'team_status' => 'on-going']);
         DB::table('student_s_y')->insert([
             'student_id' => $student->student_id,
             'team_id' => $team,
@@ -168,7 +168,7 @@ class ConsultationBookingDateTest extends TestCase
     public function test_team_cannot_book_a_new_slot_while_it_has_an_active_booking(): void
     {
         $student = Student::factory()->withCompleteProfile()->create(['email' => 'booker4@my.cspc.edu.ph']);
-        $team = DB::table('team')->insertGetId(['team_name' => 'Team OneAtATime', 'team_status' => 'Active']);
+        $team = DB::table('team')->insertGetId(['team_name' => 'Team OneAtATime', 'team_status' => 'on-going']);
         DB::table('student_s_y')->insert([
             'student_id' => $student->student_id,
             'team_id' => $team,
@@ -261,7 +261,7 @@ class ConsultationBookingDateTest extends TestCase
         // pragma that SQLite refuses to change mid-transaction - which
         // RefreshDatabase always has one of active.
         $student = Student::factory()->withCompleteProfile()->create(['email' => 'orphaned@my.cspc.edu.ph']);
-        $team = DB::table('team')->insertGetId(['team_name' => 'Team Orphaned', 'team_status' => 'Active']);
+        $team = DB::table('team')->insertGetId(['team_name' => 'Team Orphaned', 'team_status' => 'on-going']);
         DB::table('student_s_y')->insert([
             'student_id' => $student->student_id,
             'team_id' => $team,
@@ -329,7 +329,7 @@ class ConsultationBookingDateTest extends TestCase
         // booked-date dots, making it look like that other expert somehow
         // shared the first expert's schedule.
         $student = Student::factory()->withCompleteProfile()->create(['email' => 'taggedbooking@my.cspc.edu.ph']);
-        $team = DB::table('team')->insertGetId(['team_name' => 'Team Tagged', 'team_status' => 'Active']);
+        $team = DB::table('team')->insertGetId(['team_name' => 'Team Tagged', 'team_status' => 'on-going']);
         DB::table('student_s_y')->insert([
             'student_id' => $student->student_id,
             'team_id' => $team,

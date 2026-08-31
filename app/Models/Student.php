@@ -115,45 +115,15 @@ class Student extends Authenticatable
         return array_keys(config('avatars.presets', []));
     }
 
-    /**
-     * Program code => the full course name it is stored as.
-     *
-     * The course column holds whichever of the two a given record happened
-     * to be created with - Google sign-up and the roster upload write the
-     * full name, but some rows (and some hand-entered data) hold just the
-     * code. Both are valid data, so both map.
-     */
-    public const PROGRAM_COURSES = [
-        'BSCS' => 'Bachelor of Science in Computer Science',
-        'BSIT' => 'Bachelor of Science in Information Technology',
-        'BSIS' => 'Bachelor of Science in Information Systems',
-        'BLIS' => 'Bachelor of Library and Information Science',
-    ];
-
-    /**
-     * Resolve a course to its program code, accepting either the full course
-     * name ("Bachelor of Science in Information Systems") or the code itself
-     * ("BSIS").
-     *
-     * This used to only match the full name, so any record storing the short
-     * code resolved to null - which silently dropped those students out of
-     * section labels and every section-scoped list built on them.
-     */
     public static function mapCourseToProgram(string $course): ?string
     {
-        $course = trim($course);
-
-        if ($course === '') {
-            return null;
-        }
-
-        foreach (self::PROGRAM_COURSES as $code => $fullName) {
-            if (strcasecmp($course, $code) === 0 || strcasecmp($course, $fullName) === 0) {
-                return $code;
-            }
-        }
-
-        return null;
+        return match ($course) {
+            'Bachelor of Science in Computer Science' => 'BSCS',
+            'Bachelor of Science in Information Technology' => 'BSIT',
+            'Bachelor of Science in Information Systems' => 'BSIS',
+            'Bachelor of Library and Information Science' => 'BLIS',
+            default => null,
+        };
     }
 
     /**

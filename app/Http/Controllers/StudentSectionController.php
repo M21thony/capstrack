@@ -70,6 +70,6 @@ class StudentSectionController extends Controller
             ];
         }
 
-        return view('capsa.sections', compact('students', 'adminSections', 'allSections', 'debug'));
+        return view('admin.sections', compact('students', 'adminSections', 'allSections', 'debug'));
     }
 }

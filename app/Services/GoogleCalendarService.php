@@ -121,59 +121,6 @@ class GoogleCalendarService
         };
     }
 
-    // One event per connected panelist's own calendar - see
-    // AdminPanelAssignmentController::syncDefensePanelToGoogleCalendar()
-    // for why (an unconnected panelist can't own or receive an event, so
-    // each connected panelist gets their own copy via their own client).
-    public function createDefensePanelEvent(
-        int $organizerExpertId,
-        string $date,
-        string $startTime,
-        string $endTime,
-        string $defenseType,
-        string $teamName,
-        string $venue,
-        array $attendeeEmails,
-    ): string {
-        $client = $this->getClient($organizerExpertId);
-
-        $service = new Calendar($client);
-
-        $start = Carbon::parse("{$date} {$startTime}", 'Asia/Manila')
-            ->format('Y-m-d\TH:i:sP');
-
-        $end = Carbon::parse("{$date} {$endTime}", 'Asia/Manila')
-            ->format('Y-m-d\TH:i:sP');
-
-        $event = new Event([
-            'summary' => "{$defenseType} — {$teamName}",
-            'description' => "{$defenseType} panel for {$teamName}.",
-            'location' => $venue,
-            'start' => new EventDateTime([
-                'dateTime' => $start,
-                'timeZone' => 'GMT+08:00',
-            ]),
-            'end' => new EventDateTime([
-                'dateTime' => $end,
-                'timeZone' => 'GMT+08:00',
-            ]),
-            'attendees' => array_map(fn ($email) => new EventAttendee(['email' => $email]), $attendeeEmails),
-            'reminders' => [
-                'useDefault' => false,
-                'overrides' => [
-                    ['method' => 'email', 'minutes' => 1440],
-                    ['method' => 'popup', 'minutes' => 30],
-                ],
-            ],
-        ]);
-
-        $created = $service->events->insert('primary', $event, [
-            'sendNotifications' => true,
-        ]);
-
-        return $created->getId();
-    }
-
     public function cancelBookingEvent(int $expertId, string $googleEventId): void
     {
         $client = $this->getClient($expertId);

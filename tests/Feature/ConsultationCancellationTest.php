@@ -27,7 +27,7 @@ class ConsultationCancellationTest extends TestCase
 
     private function makeBooking(Student $student, string $teamName = 'Team Cancel'): array
     {
-        $team = DB::table('team')->insertGetId(['team_name' => $teamName, 'team_status' => 'Active']);
+        $team = DB::table('team')->insertGetId(['team_name' => $teamName, 'team_status' => 'on-going']);
         DB::table('student_s_y')->insert([
             'student_id' => $student->student_id,
             'team_id' => $team,

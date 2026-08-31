@@ -1,9 +1,9 @@
-@if (auth('expert')->user()?->is_staff)
-  {{-- An Admin or CAPSA who is also an Adviser/Consultant/Grammarian gets
-       the same merged sidebar as the admin portal (admin nav + a "My Expert
-       Duties" section) instead of a separate expert-only one - see
-       admin/_sidebar for where that section is built. --}}
-  @include('capsa._sidebar')
+@if (auth('expert')->user()?->is_admin)
+  {{-- A CaPSA who is also an Adviser/Consultant/Grammarian gets the same
+       merged sidebar as the admin portal (admin nav + a "My Expert Duties"
+       section) instead of a separate expert-only one - see admin/_sidebar
+       for where that section is built. --}}
+  @include('admin._sidebar')
 @else
 <div class="sidebar">
   @if(!isset($showBrand) || $showBrand)

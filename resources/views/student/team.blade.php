@@ -16,18 +16,6 @@
   .custom-tag-chip { display: inline-flex; align-items: center; gap: 6px; background: var(--blue-bg); color: var(--blue); font-size: 12px; font-weight: 500; padding: 4px 10px; border-radius: 6px; border: 1px solid rgba(29,78,216,0.25); animation: tagFadeIn 0.15s ease-in-out; }
   .custom-tag-chip-remove { display: inline-flex; align-items: center; justify-content: center; background: rgba(29,78,216,0.15); border: none; color: var(--blue); border-radius: 50%; width: 14px; height: 14px; cursor: pointer; font-size: 10px; padding: 0; transition: background 0.1s; }
   .custom-tag-chip-remove:hover { background: rgba(29,78,216,0.25); }
-<<<<<<< HEAD
-  #editTeamModal .edit-team-save-btn { background: var(--bg3) !important; color: var(--text) !important; border: 1px solid var(--border) !important; box-shadow: none !important; }
-  #editTeamModal .edit-team-save-btn:hover { background: var(--bg4) !important; transform: none !important; box-shadow: none !important; }
-  #editTeamModal .edit-team-cancel-btn { background: var(--navy-dark) !important; color: #fff !important; border: 1px solid var(--navy-dark) !important; }
-  #editTeamModal .edit-team-cancel-btn:hover { background: var(--navy-mid) !important; color: #fff !important; }
-
-  [data-theme="dark"] #editTeamModal .edit-team-save-btn { background: #2a2f3a !important; color: #f3f4f6 !important; border-color: rgba(255,255,255,0.12) !important; }
-  [data-theme="dark"] #editTeamModal .edit-team-save-btn:hover { background: #343a47 !important; }
-  [data-theme="dark"] #editTeamModal .edit-team-cancel-btn { background: #1e222b !important; color: #fff !important; border-color: rgba(255,255,255,0.08) !important; }
-  [data-theme="dark"] #editTeamModal .edit-team-cancel-btn:hover { background: #262b36 !important; }
-=======
->>>>>>> updatedTeamManagement
 
   [data-theme="dark"] .expert-removed-item { border-bottom-color: var(--border) !important; }
   [data-theme="dark"] #expertRemovedModal > div { background: var(--bg2) !important; box-shadow: 0 24px 60px rgba(0,0,0,0.5) !important; }
@@ -468,7 +456,7 @@
       @endif
 
       <div class="team-actions" style="margin-top: 18px; display: flex; justify-content: flex-end; gap: 8px; padding-top: 10px; border-top: 1px solid var(--border);">
-        @if($isLeader && $myTeam->hasSubmittedPreProposals() && !$myTeam->is_confirmed)
+        @if($isLeader && $myTeam->team_status === 'complete' && !$myTeam->is_confirmed)
           <span class="pending-badge-standalone" style="display:inline-flex;align-items:center;gap:6px;background:linear-gradient(135deg,#d97706,#b45309);color:#fff;padding:6px 14px 6px 10px;border-radius:20px;font-size:11px;font-weight:600;box-shadow:0 2px 8px rgba(217,119,6,0.35);border:none;letter-spacing:0.2px;">
             <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
             Pending Verification
@@ -1020,50 +1008,6 @@
 </div>
 @endif
 
-<<<<<<< HEAD
-@if($myTeam && $isLeader)
-{{-- Edit Team Modal --}}
-<div class="modal-overlay" id="editTeamModal" onclick="if(event.target==this) closeEditTeamModal()">
-  <div class="card modal-card modal-card--team" style="width: 460px; padding: 30px; border: 1px solid var(--accent); position: relative;">
-    <button type="button" onclick="closeEditTeamModal()" class="pm-close-btn" aria-label="Close" style="position: absolute; top: 20px; right: 20px;">
-      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-    </button>
-    <div class="section-title">Update Team</div>
-    <form method="POST" action="{{ route('team.update', $myTeam->team_id) }}" style="margin-top: 20px;" onsubmit="return validateForm(event)">
-      @csrf
-      @method('PUT')
-      <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 8px;">Team Name</label>
-      <input type="text" name="team_name" id="edit-team-name" value="{{ $myTeam->team_name }}" placeholder="Enter team name..." autocomplete="off" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;margin-bottom:0;box-sizing:border-box;">
-      <div id="edit-team-name-msg" style="font-size: 11px; color: var(--red); margin: 6px 0 16px; display: none;"></div>
-      {{-- Project Title is not typed here any more. It is whichever
-           pre-proposal the CAPSA approves - and when two are approved, the
-           one the team then picks - so it is shown, not edited. --}}
-      <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 8px;">Project Title</label>
-      @php
-        $approvedProposalCount = $myTeam->preProposals()->where('approved_status', true)->count();
-      @endphp
-      <div style="padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);font-size:13px;margin-bottom:16px;box-sizing:border-box;line-height:1.5;">
-        @if ($myTeam->project_title)
-          <span style="color:var(--text);font-weight:600;">{{ $myTeam->project_title }}</span>
-        @elseif ($approvedProposalCount >= 2)
-          <span style="color:var(--text2);">{{ $approvedProposalCount }} of your titles were approved &mdash; choose the one you want on the <a href="{{ route('student.duplication') }}" style="color:var(--accent3);font-weight:600;">Duplication Checker</a> page.</span>
-        @else
-          <span style="color:var(--text3);">Set once your CaPSA approves one of your pre-proposal titles.</span>
-        @endif
-      </div>
-
-      <div id="tagsSection" style="margin-bottom:16px;">
-        <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text3);margin-bottom:8px;">
-          Project Tags <span style="font-weight:400;text-transform:none;color:var(--text3);">(optional)</span>
-        </label>
-        <div style="position:relative;display:flex;gap:6px;margin-bottom:8px;">
-          <div style="position:relative;flex:1;">
-            <input type="text" id="tagSearchInput" placeholder="Search or type a tag..." autocomplete="off" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:12px;box-sizing:border-box;" oninput="filterCommonTags(this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault();addCustomTag();}if(event.key==='Escape'){closeTagDropdown();}" onblur="setTimeout(closeTagDropdown,180)" onfocus="filterCommonTags(this.value)">
-            <div id="tagDropdown" style="display:none;position:absolute;top:100%;left:0;width:100%;max-height:180px;overflow-y:auto;background:var(--bg2);border:1px solid var(--border);border-radius:8px;z-index:20;margin-top:4px;box-shadow:0 6px 20px rgba(0,0,0,0.1);">
-            </div>
-          </div>
-          <button type="button" onclick="addCustomTag()" style="padding:7px 14px;border-radius:7px;border:1px solid var(--border);background:var(--bg3);color:var(--text2);font-size:12px;cursor:pointer;font-family:inherit;">Add</button>
-=======
 {{-- Open Slot Invite Modal --}}
 <div class="modal-overlay" id="openSlotInviteModal" onclick="if(event.target===this) closeOpenSlotInviteModal()">
   <div class="card modal-card modal-card--team" style="width: 460px; padding: 0; overflow: hidden; max-height: 80vh; display: flex; flex-direction: column;">
@@ -1102,59 +1046,16 @@
         <div id="open-slot-loading" style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 20px; color: var(--text3); font-size: 13px;">
           <div class="sk" style="width: 32px; height: 32px; border-radius: 50%; border: 2px solid var(--border); border-top-color: var(--blue); animation: spin 1s linear infinite; margin-bottom: 12px;"></div>
           Loading classmates...
->>>>>>> updatedTeamManagement
         </div>
         <div id="open-slot-empty" style="display: none; text-align: center; padding: 40px 20px; color: var(--text3); font-size: 13px; border: 1px dashed var(--border2); border-radius: 12px;">
           No available classmates found in your section.
         </div>
-<<<<<<< HEAD
-        <div style="font-size:11px;color:var(--text3);margin-top:6px;">Tags help other students find your project in the recruitment feed.</div>
-      </div>
-      <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 8px;">Team Members</label>
-      <div style="padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text3);font-size:12px;margin-bottom:16px;box-sizing:border-box;">
-        Fixed at 5 members (including the leader). Slots fill automatically as members join.
-      </div>
-      <input type="hidden" name="member_count" value="5">
-      <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 8px;">Team Status</label>
-      @if($isTeamFull)
-      <div style="background:#fef3c7;border:1px solid #fde68a;border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:12px;color:#92400e;">
-        <strong>Team is now full!</strong> Your team has reached {{ $teamMembers->count() }}/5 members. You can now update the status to <strong>Complete</strong> or <strong>Closed</strong>.
-      </div>
-      @endif
-      <select name="team_status" id="teamStatusSelect" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;margin-bottom:8px;box-sizing:border-box;@if($myTeam->is_confirmed) cursor:not-allowed;opacity:0.6;@endif" @if($myTeam->is_confirmed) disabled @endif>
-        <option value="on-going" id="ongoingStatusOption" @if($myTeam->team_status === 'on-going') selected @endif @if($isTeamFull) disabled @endif>On-going</option>
-        {{-- Complete is not set by hand any more: submitting your
-             pre-proposals for checking is what marks the team complete, so
-             there is one way to turn in rather than two. It stays listed,
-             disabled, while it IS the current status, so the dropdown does
-             not silently show the wrong thing. --}}
-        @if($myTeam->team_status === 'complete')
-          <option value="complete" id="completeStatusOption" selected disabled>Complete</option>
-        @endif
-        <option value="closed" id="closedStatusOption" @if($myTeam->team_status === 'closed') selected @endif>Closed</option>
-      </select>
-      <div id="completeGateHint" style="display:none;font-size:11px;color:var(--text3);margin-bottom:8px;line-height:1.5;"></div>
-      @if($myTeam->is_confirmed)
-      <div style="display:flex;align-items:center;gap:6px;margin-bottom:20px;font-size:12px;color:#6b7280;">
-        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-        <span>Team is verified — status cannot be changed.</span>
-      </div>
-      @else
-      <div style="margin-bottom:20px;"></div>
-      @endif
-      <div class="modal-actions modal-actions--dual" style="display:grid;grid-template-columns: 1fr 1fr;gap:12px;">
-        <button type="submit" class="btn-primary edit-team-save-btn" style="width:100%;">Save Changes</button>
-        <button type="button" class="google-btn edit-team-cancel-btn" style="width:100%;border:none;background:transparent;" onclick="closeEditTeamModal()">Cancel</button>
-      </div>
-    </form>
-=======
       </div>
     </div>
 
     <div style="padding: 16px 26px 22px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 10px;">
       <button type="button" class="google-btn" style="border: none;" onclick="closeOpenSlotInviteModal()">Cancel</button>
     </div>
->>>>>>> updatedTeamManagement
   </div>
 </div>
 
@@ -1406,13 +1307,6 @@
 </div>
 
 <script>
-@if($myTeam)
-// How many pre-proposal titles this team has submitted - the real gate on
-// marking the team Complete, mirrored from TeamController::update().
-window.PRE_PROPOSAL_COUNT = {{ $myTeam->preProposals()->count() }};
-window.PRE_PROPOSAL_MINIMUM = {{ \App\Http\Controllers\PreProposalController::MINIMUM_PROPOSALS }};
-@endif
-
 const currentStudentTeamId = {{ auth()->user()->studentSchoolYear()->first()?->team_id ?? 'null' }};
 const currentStudentId = {{ auth()->user()->student_id }};
 const myRecruitmentGoal = '{{ $myRecruitmentGoal ?? '' }}';
@@ -1660,35 +1554,6 @@ function submitDecline() {
 
 @if($myTeam && $isLeader)
 
-<<<<<<< HEAD
-function autoExpand(el) {
-    el.style.height = 'auto';
-    el.style.height = Math.max(el.scrollHeight, 42) + 'px';
-}
-
-function countMeaningfulWords(text) {
-    if (!text.trim()) return 0;
-    return text.trim().split(/\s+/).filter(function(w) {
-        var cleaned = w.replace(/[^a-zA-Z0-9']/g, '');
-        return cleaned.length > 0 && !stopWords.has(cleaned.toLowerCase());
-    }).length;
-}
-
-// Complete is reached by submitting your pre-proposals for checking, not by
-// picking it here, so this only explains where it comes from.
-function updateCompleteOption() {
-    var hint = document.getElementById('completeGateHint');
-    if (!hint) return;
-
-    var saved = window.PRE_PROPOSAL_COUNT || 0;
-    var minimum = window.PRE_PROPOSAL_MINIMUM || 3;
-
-    hint.style.display = '';
-    hint.textContent = saved >= minimum
-        ? 'Your team is marked Complete by submitting your pre-proposals for checking, on the Duplication Checker page.'
-        : saved + ' of ' + minimum + ' pre-proposal titles saved. Save at least ' + minimum +
-          ', then submit them for checking on the Duplication Checker page to mark your team Complete.';
-=======
 // Open Slot Invite Modal Functions
 function openOpenSlotInviteModal() {
     var modal = document.getElementById('openSlotInviteModal');
@@ -1696,7 +1561,6 @@ function openOpenSlotInviteModal() {
         modal.classList.add('active');
         loadOpenSlotClassmates();
     }
->>>>>>> updatedTeamManagement
 }
 
 function closeOpenSlotInviteModal() {
@@ -1712,118 +1576,12 @@ function loadOpenSlotClassmates() {
     var loadingEl = document.getElementById('open-slot-loading');
     var emptyEl = document.getElementById('open-slot-empty');
 
-<<<<<<< HEAD
-function isTagSelected(val) {
-    var selected = getSelectedTags();
-    return selected.indexOf(val.toLowerCase().trim()) !== -1;
-}
-
-var COMMON_TAGS = [
-    'Artificial Intelligence', 'Machine Learning', 'Web Development',
-    'Mobile App', 'Data Analytics', 'Cybersecurity', 
-    'AI', 'Database Systems', 'UI/UX Design', 'Network Systems'
-];
-
-function filterCommonTags(query) {
-    var dropdown = document.getElementById('tagDropdown');
-    var q = query.toLowerCase().trim();
-    if (!q) {
-        dropdown.innerHTML = '';
-        dropdown.style.display = 'none';
-        return;
-    }
-    var selected = getSelectedTags();
-    var matches = COMMON_TAGS.filter(function(t) {
-        return t.toLowerCase().indexOf(q) !== -1 && selected.indexOf(t.toLowerCase()) === -1;
-    });
-    if (matches.length === 0) {
-        dropdown.innerHTML = '<div style="padding:10px 12px;font-size:12px;color:var(--text3);">' + (selected.indexOf(q) !== -1 ? 'Already added' : 'No matching tags') + '</div>';
-        dropdown.style.display = 'block';
-        return;
-    }
-    var html = '';
-    matches.forEach(function(t) {
-        html += '<div onclick="selectTagFromDropdown(\'' + t.replace(/'/g, "\\'") + '\')" style="padding:8px 12px;font-size:12px;color:var(--text);cursor:pointer;border-bottom:1px solid var(--border);" onmouseover="this.style.background=\'var(--bg3)\'" onmouseout="this.style.background=\'transparent\'">' + t + '</div>';
-    });
-    dropdown.innerHTML = html;
-    dropdown.style.display = 'block';
-}
-
-function closeTagDropdown() {
-    var dropdown = document.getElementById('tagDropdown');
-    if (dropdown) dropdown.style.display = 'none';
-}
-
-function selectTagFromDropdown(val) {
-    if (isTagSelected(val)) {
-        closeTagDropdown();
-        document.getElementById('tagSearchInput').value = '';
-        return;
-    }
-    var display = document.getElementById('selectedTagsDisplay');
-    var span = document.createElement('span');
-    span.className = 'selected-tag';
-    span.setAttribute('data-tag', val);
-    span.innerHTML = val + ' <span onclick="removeProjectTag(this)" style="cursor:pointer;opacity:0.6;margin-left:4px;">&times;</span>';
-    display.appendChild(span);
-    document.getElementById('tagSearchInput').value = '';
-    closeTagDropdown();
-    updateTagsHiddenInput();
-}
-
-function removeProjectTag(el) {
-    el.parentElement.remove();
-    updateTagsHiddenInput();
-}
-
-function updateTagsHiddenInput() {
-    var tags = [];
-    document.querySelectorAll('#selectedTagsDisplay .selected-tag').forEach(function(el) {
-        tags.push(el.getAttribute('data-tag') || el.textContent.trim().replace('\u00d7','').trim());
-    });
-    document.getElementById('tagsHiddenInput').value = JSON.stringify(tags);
-}
-
-function validateForm(event) {
-    var editName = document.getElementById('edit-team-name');
-    if (editName && editName.dataset.nameTaken === '1') {
-        event.preventDefault();
-        showToast('This team name is already taken.', 'error');
-        editName.focus();
-        return false;
-    }
-    return true;
-}
-
-// Override openEditTeamModal to refresh the status gate and sync tags
-var origOpenTeamModal = openEditTeamModal;
-openEditTeamModal = function() {
-    origOpenTeamModal();
-    setTimeout(function() {
-        updateCompleteOption();
-        syncTagUI();
-    }, 50);
-};
-
-function syncTagUI() {
-    var tagsInput = document.getElementById('tagsHiddenInput');
-    if (!tagsInput) return;
-    var tags = [];
-    try { tags = JSON.parse(tagsInput.value || '[]'); } catch(e) {}
-    var display = document.getElementById('selectedTagsDisplay');
-    var existing = display.querySelectorAll('.selected-tag');
-    existing.forEach(function(el) {
-        var txt = el.getAttribute('data-tag') || el.textContent.trim().replace('\u00d7','').trim();
-        if (tags.indexOf(txt) === -1) {
-            el.remove();
-=======
     if (loadingEl) loadingEl.style.display = 'flex';
     if (emptyEl) emptyEl.style.display = 'none';
     // Clear existing classmate items (keep loading and empty)
     Array.from(listEl.children).forEach(function(child) {
         if (child.id !== 'open-slot-loading' && child.id !== 'open-slot-empty') {
             child.remove();
->>>>>>> updatedTeamManagement
         }
     });
 

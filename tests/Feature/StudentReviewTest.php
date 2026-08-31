@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Models\CapstoneExpert;
 use App\Models\Student;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -12,9 +11,6 @@ use Tests\TestCase;
 class StudentReviewTest extends TestCase
 {
     use RefreshDatabase;
-
-    /** @var array<string, CapstoneExpert> */
-    private array $reviewers = [];
 
     protected function setUp(): void
     {
@@ -57,28 +53,10 @@ class StudentReviewTest extends TestCase
         });
     }
 
-    /**
-     * A real expert to own a fixture review - capstone_document_review has a
-     * foreign key to capstone_experts, so a hardcoded id matches no row.
-     */
-    private function reviewerId(string $email = 'reviewer@gmail.com'): int
-    {
-        if (! isset($this->reviewers[$email])) {
-            $this->reviewers[$email] = CapstoneExpert::create([
-                'email' => $email,
-                'first_name' => 'Review',
-                'last_name' => 'Expert',
-                'is_admin' => false,
-                'approved_status' => true,
-            ]);
-        }
-
-        return $this->reviewers[$email]->expert_id;
-    }
-
     private function makeDocument(int $id, int $studentId, string $name, string $chapter): int
     {
         return DB::table('capstone_documents')->insertGetId([
+            'id' => $id,
             'file_id' => $id,
             'student_id' => $studentId,
             'file_name' => $name,
@@ -117,9 +95,10 @@ class StudentReviewTest extends TestCase
         $docId = $this->makeDocument(1, $student->student_id, 'Chapter 3 Final', 'Chapter 3');
 
         $reviewedId = DB::table('capstone_document_review')->insertGetId([
+            'id' => 1,
             'review_id' => 1,
             'file_id' => $docId,
-            'expert_id' => $this->reviewerId(),
+            'expert_id' => 1,
             'role' => 'adviser',
             'review_status' => 'Reviewed',
             'reviewed_at' => now(),
@@ -129,9 +108,10 @@ class StudentReviewTest extends TestCase
 
         // A second, still-pending review on the same document should not show up.
         DB::table('capstone_document_review')->insertGetId([
+            'id' => 2,
             'review_id' => 2,
             'file_id' => $docId,
-            'expert_id' => $this->reviewerId('second.reviewer@gmail.com'),
+            'expert_id' => 2,
             'role' => 'grammarian',
             'review_status' => 'To Review',
         ]);
@@ -163,9 +143,10 @@ class StudentReviewTest extends TestCase
         $otherDocId = $this->makeDocument(1, $other->student_id, 'Someone Elses Paper', 'Chapter 1');
 
         DB::table('capstone_document_review')->insertGetId([
+            'id' => 1,
             'review_id' => 1,
             'file_id' => $otherDocId,
-            'expert_id' => $this->reviewerId(),
+            'expert_id' => 1,
             'role' => 'adviser',
             'review_status' => 'Reviewed',
             'reviewed_at' => now(),
@@ -185,9 +166,10 @@ class StudentReviewTest extends TestCase
         $otherDocId = $this->makeDocument(1, $other->student_id, 'Not Mine', 'Chapter 1');
 
         $reviewId = DB::table('capstone_document_review')->insertGetId([
+            'id' => 1,
             'review_id' => 1,
             'file_id' => $otherDocId,
-            'expert_id' => $this->reviewerId(),
+            'expert_id' => 1,
             'role' => 'adviser',
             'review_status' => 'Reviewed',
             'reviewed_at' => now(),
@@ -204,9 +186,10 @@ class StudentReviewTest extends TestCase
         $docId = $this->makeDocument(1, $student->student_id, 'Chapter 5', 'Chapter 5');
 
         $reviewId = DB::table('capstone_document_review')->insertGetId([
+            'id' => 1,
             'review_id' => 1,
             'file_id' => $docId,
-            'expert_id' => $this->reviewerId(),
+            'expert_id' => 1,
             'role' => 'adviser',
             'review_status' => 'Reviewed',
             'reviewed_at' => now(),
@@ -224,9 +207,10 @@ class StudentReviewTest extends TestCase
         $docId = $this->makeDocument(1, $student->student_id, 'Chapter 4', 'Chapter 4');
 
         $reviewId = DB::table('capstone_document_review')->insertGetId([
+            'id' => 1,
             'review_id' => 1,
             'file_id' => $docId,
-            'expert_id' => $this->reviewerId(),
+            'expert_id' => 1,
             'role' => 'adviser',
             'review_status' => 'Reviewed',
             'reviewed_at' => now(),

@@ -277,7 +277,7 @@
               $leader = $team?->leader;
               $members = $team?->members ?? collect();
               $initials = $team ? strtoupper(substr($team->team_name ?? 'T', 0, 2)) : 'T';
-              $roleName = $assignment->engaged_role_name ?? '';
+              $roleName = $assignment->role->first()?->role_name ?? '';
             @endphp
             <div class="team-card-modern">
               <div class="team-card-top">

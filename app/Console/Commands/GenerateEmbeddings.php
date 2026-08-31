@@ -12,14 +12,6 @@ class GenerateEmbeddings extends Command
 
     protected $description = 'Generate vector embeddings for all archived documents';
 
-    // IMPORTANT: only true filler goes here - grammar, delivery-platform
-    // words, and institution/location names. Domain-descriptive words like
-    // "management", "system", "monitoring", "capstone", or "thesis" must
-    // NOT be added even though they appear in almost every title: testing
-    // against the real archive showed that stripping them made a
-    // genuinely-related document score the same as a completely unrelated
-    // one - the embedding model needs those words to tell projects apart.
-    // Must match SimilarityService::removeStopWords()'s list exactly.
     private array $stopWords = [
         // Articles & prepositions
         'a', 'an', 'the', 'of', 'for', 'and', 'or', 'in', 'to', 'is', 'are',
@@ -27,10 +19,16 @@ class GenerateEmbeddings extends Command
         'as', 'was', 'were', 'has', 'have', 'had', 'do', 'does', 'did', 'not',
         'its', 'their', 'our', 'your', 'his', 'her',
 
-        // Delivery-platform words (how it's delivered, not what it does)
-        'using', 'based', 'web', 'mobile', 'desktop', 'online',
-        'electronic', 'digital', 'internet', 'android', 'ios', 'app',
-        'application', 'platform', 'portal',
+        // Platform words — must match SimilarityService stop words
+        'web', 'mobile', 'desktop', 'online', 'electronic', 'digital',
+        'internet', 'android', 'ios', 'app', 'application', 'platform', 'portal',
+
+        // Generic capstone/academic words
+        'proposed', 'computerized', 'system', 'management', 'records', 'record',
+        'using', 'based', 'automated', 'implementation', 'development', 'design',
+        'modified', 'integrated', 'centralized', 'computer', 'computing',
+        'software', 'hardware', 'database', 'information', 'technology',
+        'generation', 'data', 'file', 'document', 'report', 'form',
 
         // Location noise
         'camarines', 'sur', 'nabua', 'cspc', 'iriga', 'city', 'colleges',
@@ -44,8 +42,9 @@ class GenerateEmbeddings extends Command
         'center', 'centre', 'colegio', 'graduate', 'provincial', 'vocational',
         'technical', 'community',
 
-        // Common filler (not domain content)
-        'pre', 'post',
+        // Common filler
+        'version', 'study', 'case', 'research', 'project', 'capstone',
+        'thesis', 'proposal', 'pre', 'post', 'new', 'old', 'local', 'global',
     ];
 
     public function handle(OllamaSSHClient $ollama): void

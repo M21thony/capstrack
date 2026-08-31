@@ -45,7 +45,7 @@ class AdminProfileController extends Controller
 
         $expertiseList = $admin->expertise->pluck('expertise_field')->toArray();
 
-        return view('capsa.profile', compact('admin', 'sectionList', 'allAvailableSections', 'schoolYear', 'expertiseList'));
+        return view('admin.profile', compact('admin', 'sectionList', 'allAvailableSections', 'schoolYear', 'expertiseList'));
     }
 
     public function update(Request $request): RedirectResponse

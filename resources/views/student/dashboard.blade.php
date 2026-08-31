@@ -339,7 +339,7 @@
           @foreach ($myTeam->expertAssignments as $assignment)
             @php
               // role() is belongsToMany — always a collection, never a single model
-              $roleKey = strtolower($assignment->engaged_role_name ?? '');
+              $roleKey = strtolower($assignment->role->first()?->role_name ?? '');
               $dotColor = match ($roleKey) { 'adviser' => 'var(--accent)', 'consultant' => '#3b82f6', 'grammarian' => '#9333ea', 'panel' => '#f59e0b', default => '#6b7280' };
               $fgColor = match ($roleKey) { 'adviser' => 'var(--accent3)', 'consultant' => 'var(--blue)', 'grammarian' => 'var(--purple)', 'panel' => '#d97706', default => '#6b7280' };
               $isApproved = $assignment->status === 'approved';
@@ -348,7 +348,7 @@
               <div style="width:8px;height:8px;border-radius:50%;background:{{ $dotColor }};flex-shrink:0;"></div>
               <div style="flex:1;min-width:0;">
                 <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-                  <span style="font-size:11px;font-weight:700;color:{{ $fgColor }};text-transform:uppercase;letter-spacing:0.3px;">{{ $assignment->engaged_role_name ?? 'Unknown' }}</span>
+                  <span style="font-size:11px;font-weight:700;color:{{ $fgColor }};text-transform:uppercase;letter-spacing:0.3px;">{{ $assignment->role->first()?->role_name ?? 'Unknown' }}</span>
                   <span style="font-size:9px;padding:1px 6px;border-radius:4px;background:{{ $isApproved ? 'rgba(16,185,129,0.1)' : 'rgba(245,158,11,0.1)' }};color:{{ $isApproved ? '#059669' : '#d97706' }};font-weight:700;">{{ $isApproved ? 'Approved' : ucfirst($assignment->status) }}</span>
                 </div>
                 <div style="font-size:12px;font-weight:600;margin-top:1px;">{{ $assignment->expert?->name ?? 'Unassigned' }}</div>
@@ -400,15 +400,10 @@
             </div>
             <div class="m-body">
               <div class="m-top">
-                <span class="m-title">{{ $result->defense_type }}@if(($result->attempt ?? 1) > 1) <span style="font-weight:500;color:var(--text3)">&middot; Redefense {{ $result->attempt }}</span>@endif</span>
+                <span class="m-title">{{ $result->defense_type }}</span>
                 <span class="m-badge @if($allSubmitted) m-badge-done @elseif($partialSubmitted) m-badge-active @else m-badge-todo @endif">
-                  {{-- The score only appears once every panelist has graded:
-                       it is their totals divided by the size of the panel, so
-                       a partial one would read as final and then move. --}}
                   @if($result->average_score !== null)
                     {{ rtrim(rtrim(number_format($result->average_score, 2), '0'), '.') }} pts
-                  @elseif($partialSubmitted)
-                    Awaiting the rest of the panel
                   @else
                     Not graded yet
                   @endif

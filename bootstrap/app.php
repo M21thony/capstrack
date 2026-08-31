@@ -3,8 +3,6 @@
 use App\Http\Middleware\CheckExpertApproval;
 use App\Http\Middleware\EnsureExpertIsAdmin;
 use App\Http\Middleware\EnsureExpertIsAuthenticated;
-use App\Http\Middleware\EnsureExpertIsCapsa;
-use App\Http\Middleware\EnsureExpertIsStaff;
 use App\Http\Middleware\EnsureProfileIsComplete;
 use App\Http\Middleware\PreventBackHistory;
 use App\Http\Middleware\TrackExpertActivity;
@@ -29,8 +27,6 @@ return Application::configure(basePath: dirname(__DIR__))
             'profile.complete' => EnsureProfileIsComplete::class,
             'expert.auth' => EnsureExpertIsAuthenticated::class,
             'expert.admin' => EnsureExpertIsAdmin::class,
-            'expert.capsa' => EnsureExpertIsCapsa::class,
-            'expert.staff' => EnsureExpertIsStaff::class,
             'expert.approved' => CheckExpertApproval::class,
             'no.cache' => PreventBackHistory::class,
             'track.expert' => TrackExpertActivity::class,
