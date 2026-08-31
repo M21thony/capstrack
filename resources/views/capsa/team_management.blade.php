@@ -55,7 +55,16 @@
   .ms-grid thead th{position:sticky;background:var(--bg3);z-index:3;text-align:center}
   .ms-phaserow th{top:0;height:26px;padding:0 6px;font-size:11px;font-weight:600;color:var(--text);
                   border-bottom:1px solid var(--border);white-space:nowrap}
-  .ms-namerow th{top:26px;height:56px;vertical-align:bottom;padding:0 3px 7px;border-bottom:1px solid var(--border2)}
+  .ms-namerow th{top:26px;height:70px;vertical-align:bottom;padding:0 3px 6px;border-bottom:1px solid var(--border2)}
+  /* A deliverable's deadline belongs on the deliverable, not on the
+     checklist: the Chapter 1 draft and the approval of it are weeks
+     apart. The header is where one date is set for the whole section. */
+  .ms-namerow th.ms-set{cursor:pointer}
+  .ms-namerow th.ms-set:hover{background:var(--bg4)}
+  .ms-due{display:block;font-size:9.5px;line-height:1;margin-top:4px;color:var(--text2);
+          font-variant-numeric:tabular-nums;white-space:nowrap}
+  .ms-due.none{color:var(--text3);opacity:.55}
+  .ms-due.mixed{color:var(--amber);font-weight:600}
   /* Short, because the band above already says which chapter it is - which is
      what lets nineteen labels sit flat rather than on their side. */
   .ms-lab{font-size:11px;color:var(--text);font-weight:500;line-height:1.3;text-align:center;
@@ -170,7 +179,7 @@
         'teams' => 'All Teams',
         'pre_proposals' => 'Pre-Proposals',
         'verification' => 'Verification',
-        'papers' => 'Paper Format Check',
+        'papers' => 'Document Review',
         'milestones' => 'Milestones',
       ];
       $qs = fn (string $t) => ['tab' => $t] + ($selectedSection ? ['section' => $selectedSection] : []);

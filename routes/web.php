@@ -95,6 +95,7 @@ Route::middleware(['expert.auth', 'no.cache', 'track.expert'])->prefix('admin')-
         // milestone in the database ended up with no team and no way to be
         // changed or removed.
         Route::post('/milestones', [MilestoneController::class, 'store'])->name('milestones.store');
+        Route::post('/milestones/deliverable-due', [MilestoneController::class, 'setDeliverableDue'])->name('milestones.deliverable_due');
         Route::put('/milestones/{milestone}', [MilestoneController::class, 'update'])->name('milestones.update');
         Route::delete('/milestones/{milestone}', [MilestoneController::class, 'destroy'])->name('milestones.destroy');
         Route::post('/milestones/{milestone}/template', [MilestoneController::class, 'applyTemplate'])->name('milestones.template');

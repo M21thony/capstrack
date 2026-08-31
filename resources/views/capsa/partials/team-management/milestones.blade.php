@@ -73,10 +73,19 @@
             </th>
             @forelse ($grid->columns as $col)
               @php $ph = $phaseOf[$col->key] ?? 0; @endphp
-              <th class="{{ $ph % 2 ? 'ms-band' : '' }} {{ isset($firstOfPhase[$col->key]) ? 'ms-grp' : '' }}"
-                  data-ph="{{ $ph }}" title="{{ $col->full }}">
+              @php
+                $due = $col->due === 'mixed' ? null : $col->due;
+                $dueLabel = $col->due === 'mixed'
+                    ? 'mixed'
+                    : ($due ? \Carbon\Carbon::parse($due)->format('M j') : 'set date');
+              @endphp
+              <th class="ms-set {{ $ph % 2 ? 'ms-band' : '' }} {{ isset($firstOfPhase[$col->key]) ? 'ms-grp' : '' }}"
+                  data-ph="{{ $ph }}"
+                  title="{{ $col->full }}{{ $col->due === 'mixed' ? ' — teams have different dates for this' : '' }}"
+                  onclick="openDueModal(@js($col->key), @js($col->full), @js($due))">
                 <div class="ms-lab">{{ $col->label }}</div>
                 <span class="ms-kdot ms-k-{{ $col->kind }}"></span>
+                <span class="ms-due {{ $col->due === 'mixed' ? 'mixed' : ($due ? '' : 'none') }}">{{ $dueLabel }}</span>
               </th>
             @empty
               <th class="ms-lab" style="text-align:left;padding-left:14px;font-weight:400">
@@ -187,6 +196,21 @@
   <div class="modal-box" style="max-width:440px">
     <div class="modal-title">New checklist</div>
     <form onsubmit="createMilestone(event)">
+      {{-- The form asks which section rather than reading the page filter.
+           Clicking New checklist and being told to go back out and set a
+           filter first is a dead end, and it is the one thing the form
+           cannot do without. --}}
+      <label class="ms-label">Section</label>
+      <select class="input" name="section" id="ms-section">
+        @forelse ($sectionChoices as $section => $count)
+          <option value="{{ $section }}" @selected($section === $selectedSection) @disabled(! $count)>
+            {{ $section }} &mdash; {{ $count ?: 'no' }} confirmed {{ Str::plural('team', $count) }}
+          </option>
+        @empty
+          <option value="">You have no sections yet</option>
+        @endforelse
+      </select>
+
       <label class="ms-label">Checklist</label>
       <select class="input" name="template" id="ms-template" onchange="onTemplateChange()">
         @foreach ($templates as $key => $template)
@@ -200,28 +224,46 @@
         <input class="input" name="title" id="ms-title" placeholder="e.g. Capstone 2" maxlength="255"/>
       </div>
 
-      <label class="ms-label">Due date <span style="font-weight:400;color:var(--text3)">(optional)</span></label>
+      {{-- Each line gets its own deadline from the grid header, because they
+           fall weeks apart - the Chapter 1 draft long before the approval of
+           it. This is only what a line falls back to until it is given one. --}}
+      <label class="ms-label">Fallback due date <span style="font-weight:400;color:var(--text3)">(optional)</span></label>
       <input class="input" type="date" name="due_date"/>
+      <div class="ms-hint" style="margin-top:6px">
+        Set each deliverable's own deadline afterwards by clicking its column heading.
+      </div>
 
       {{-- Always the whole section. Every team in a section works from the
            same checklist, so handing them out one team at a time was work
            with no purpose. --}}
       <div class="ms-hint">
-        @if ($selectedSection && $sectionTeamCount)
-          Goes to the <strong>{{ $sectionTeamCount }} confirmed {{ Str::plural('team', $sectionTeamCount) }}</strong>
-          in <strong>{{ $selectedSection }}</strong>. A team still forming does not get one until it is
-          confirmed. Teams that already have this checklist keep whatever is ticked.
-        @elseif ($selectedSection)
-          No confirmed team in <strong>{{ $selectedSection }}</strong> yet, so there is nobody to give
-          this to. A team gets its checklist once it is confirmed.
-        @else
-          Choose a section above first &mdash; a checklist goes to the whole section.
-        @endif
+        Goes to every confirmed team in the section you picked. A team still forming
+        does not get one until it is confirmed, and teams that already have this
+        checklist keep whatever is ticked.
       </div>
 
       <div class="modal-actions">
         <button type="button" class="btn btn-ghost" onclick="closeMilestoneModal()">Cancel</button>
-        <button type="submit" class="btn btn-primary" @disabled(! $selectedSection || ! $sectionTeamCount)>Create</button>
+        <button type="submit" class="btn btn-primary" @disabled(! collect($sectionChoices)->filter()->count())>Create</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="modal-overlay" id="ms-due-modal" onclick="if(event.target===this) closeDueModal()">
+  <div class="modal-box" style="max-width:400px">
+    <div class="modal-title">Deadline</div>
+    <form onsubmit="saveDue(event)">
+      <div class="ms-hint" style="margin:0 0 12px">
+        <strong id="ms-due-what"></strong> &mdash; due on this date for every team in
+        <strong>{{ $selectedSection ?: 'the section' }}</strong>.
+      </div>
+      <label class="ms-label">Due date</label>
+      <input class="input" type="date" id="ms-due-date"/>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" onclick="closeDueModal()">Cancel</button>
+        <button type="button" class="btn btn-ghost" onclick="saveDue(event, true)">Clear</button>
+        <button type="submit" class="btn btn-primary">Save</button>
       </div>
     </form>
   </div>
@@ -229,6 +271,31 @@
 
 <script>
 const MS_SECTION = @json($selectedSection);
+let MS_DUE_KEY = null;
+
+/* A deliverable is due on the same day for the whole section, so the date is
+   set once from its column heading rather than team by team. */
+function openDueModal(key, full, due) {
+  if (!MS_SECTION) {
+    alert('Pick a single section above first - a deadline is set for one section at a time.');
+    return;
+  }
+  MS_DUE_KEY = key;
+  document.getElementById('ms-due-what').textContent = full;
+  document.getElementById('ms-due-date').value = due || '';
+  document.getElementById('ms-due-modal').classList.add('open');
+}
+function closeDueModal() { document.getElementById('ms-due-modal').classList.remove('open'); }
+
+function saveDue(e, clear = false) {
+  e.preventDefault();
+  msPost('{{ route('admin.milestones.deliverable_due') }}', {
+    section: MS_SECTION,
+    key: MS_DUE_KEY,
+    due_date: clear ? null : (document.getElementById('ms-due-date').value || null),
+  }).then(msReload).catch((err) => alert(err.message));
+}
+
 
 function msPost(url, body, method = 'POST') {
   return fetch(url, {
@@ -253,9 +320,9 @@ function msPost(url, body, method = 'POST') {
 function msReload() { window.location.reload(); }
 
 function openMilestoneModal() {
-  document.getElementById('ms-modal').classList.add('show');
+  document.getElementById('ms-modal').classList.add('open');
 }
-function closeMilestoneModal() { document.getElementById('ms-modal').classList.remove('show'); }
+function closeMilestoneModal() { document.getElementById('ms-modal').classList.remove('open'); }
 
 function onTemplateChange() {
   const empty = document.getElementById('ms-template').value === '';
@@ -266,15 +333,16 @@ function onTemplateChange() {
 function createMilestone(e) {
   e.preventDefault();
 
-  if (!MS_SECTION) {
-    alert('Choose a section above first.');
+  const form = new FormData(e.target);
+  const section = form.get('section');
+
+  if (!section) {
+    alert('You have no sections to give a checklist to.');
     return;
   }
 
-  const form = new FormData(e.target);
-
   msPost('{{ route('admin.milestones.store') }}', {
-    section: MS_SECTION,
+    section,
     template: form.get('template') || null,
     title: form.get('title') || null,
     due_date: form.get('due_date') || null,

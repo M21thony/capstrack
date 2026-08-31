@@ -67,6 +67,7 @@ class MilestoneGrid
                     // reordered checklist on one team does not shuffle the
                     // whole grid.
                     $seen[$key]['position'] = min($seen[$key]['position'], (int) $item->position);
+                    $seen[$key]['dates'][] = $item->due_date?->toDateString();
 
                     continue;
                 }
@@ -79,6 +80,11 @@ class MilestoneGrid
                     'phase' => $item->phase ?: self::OWN_PHASE,
                     'position' => (int) $item->position,
                     'ticked_by_hand' => $item->isTickedByHand(),
+                    // Every date this deliverable carries across the section.
+                    // A deliverable has one deadline for everyone, so if these
+                    // ever disagree the header has to say so rather than pick
+                    // one and quietly hide the others.
+                    'dates' => [$item->due_date?->toDateString()],
                 ];
             }
         }
@@ -92,7 +98,18 @@ class MilestoneGrid
                 $c['position'],
             ))
             ->values()
-            ->map(fn ($c) => (object) $c);
+            ->map(function (array $c) {
+                $dates = array_values(array_unique($c['dates']));
+
+                // One agreed date, or none at all. Anything else is 'mixed',
+                // which the header shows as such - a deliverable whose
+                // deadline differs team to team is a mistake to surface, not
+                // an average to compute.
+                $c['due'] = count($dates) === 1 ? $dates[0] : 'mixed';
+                unset($c['dates']);
+
+                return (object) $c;
+            });
     }
 
     /** The phase bands above the columns, each knowing how many it spans. */
@@ -140,7 +157,8 @@ class MilestoneGrid
         ];
     }
 
-    private static function keyFor(MilestoneItem $item): string
+    /** How one deliverable is addressed across every team that carries it. */
+    public static function keyFor(MilestoneItem $item): string
     {
         return $item->template_key ?: 'own:'.mb_strtolower(trim($item->title));
     }
