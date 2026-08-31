@@ -74,6 +74,8 @@ class MilestoneTemplate
 
             $attributes = [
                 'title' => $item['title'],
+                'short_label' => $item['short'] ?? null,
+                'phase' => $item['phase'] ?? null,
                 'kind' => $item['kind'],
                 'position' => $position,
                 'chapter' => $item['chapter'] ?? null,
@@ -96,43 +98,49 @@ class MilestoneTemplate
     /**
      * CAPSTONE PROJECT 1 CHECKLIST, in order.
      *
+     * Beyond its title each line carries the phase it belongs to and a short
+     * label. Both exist for the grid, where nineteen columns only fit if the
+     * header stops repeating what the phase band above it already says -
+     * "Chapter 1 / Draft" rather than "Chapter 1 Draft" three times over.
+     *
      * The paper pairs each chapter draft with the CLF approving it as two
      * separate lines, which is why a draft closes on being handed in and the
-     * approval is its own item - handing something in and having it accepted
-     * are different events, and the checklist already treats them that way.
-     *
-     * The Revised Proposal Manuscript is the one draft with no approval line
-     * after it on the paper. Left as written rather than inventing one.
+     * approval is its own item. The Revised Proposal Manuscript is the one
+     * draft with no approval line after it; left as written rather than
+     * inventing one.
      */
     private static function capstone1Items(): array
     {
+        $F = MilestoneItem::FORM;
+        $D = MilestoneItem::DOCUMENT;
+        $A = MilestoneItem::APPROVAL;
+        $X = MilestoneItem::DEFENSE;
+
         return [
-            ['template_key' => 'team_assignment_form', 'title' => 'Signed Project Team Assignment Form', 'kind' => MilestoneItem::FORM],
-            ['template_key' => 'pre_proposal_title_form', 'title' => 'Recommended Pre-Proposal Title Form', 'kind' => MilestoneItem::FORM],
-            ['template_key' => 'role_acceptance_adviser', 'title' => 'Role Acceptance Form (Adviser/CaPA)', 'kind' => MilestoneItem::FORM],
-            ['template_key' => 'role_acceptance_consultant', 'title' => 'Role Acceptance Form (Consultant)', 'kind' => MilestoneItem::FORM],
-            ['template_key' => 'role_acceptance_grammarian', 'title' => 'Role Acceptance Form (Grammarian)', 'kind' => MilestoneItem::FORM],
+            ['template_key' => 'team_assignment_form', 'title' => 'Signed Project Team Assignment Form', 'short' => 'Team Assignment', 'phase' => 'Getting started', 'kind' => $F],
+            ['template_key' => 'pre_proposal_title_form', 'title' => 'Recommended Pre-Proposal Title Form', 'short' => 'Pre-Proposal Title', 'phase' => 'Getting started', 'kind' => $F],
+            ['template_key' => 'role_acceptance_adviser', 'title' => 'Role Acceptance Form (Adviser/CaPA)', 'short' => 'Adviser', 'phase' => 'Getting started', 'kind' => $F],
+            ['template_key' => 'role_acceptance_consultant', 'title' => 'Role Acceptance Form (Consultant)', 'short' => 'Consultant', 'phase' => 'Getting started', 'kind' => $F],
+            ['template_key' => 'role_acceptance_grammarian', 'title' => 'Role Acceptance Form (Grammarian)', 'short' => 'Grammarian', 'phase' => 'Getting started', 'kind' => $F],
 
-            ['template_key' => 'pre_proposal_defense', 'title' => 'Pre-Proposal Oral Presentation', 'kind' => MilestoneItem::DEFENSE, 'defense_type' => DefenseOutcome::PRE_PROPOSAL],
+            ['template_key' => 'pre_proposal_defense', 'title' => 'Pre-Proposal Oral Presentation', 'short' => 'Oral Defense', 'phase' => 'Pre-proposal', 'kind' => $X, 'defense_type' => DefenseOutcome::PRE_PROPOSAL],
+            ['template_key' => 'final_title_form', 'title' => 'Signed Final Project Title Form', 'short' => 'Final Title', 'phase' => 'Pre-proposal', 'kind' => $F],
 
-            ['template_key' => 'final_title_form', 'title' => 'Signed Final Project Title Form', 'kind' => MilestoneItem::FORM],
+            ['template_key' => 'chapter_1_draft', 'title' => 'Chapter 1 Draft', 'short' => 'Draft', 'phase' => 'Chapter 1', 'kind' => $D, 'chapter' => '1'],
+            ['template_key' => 'clf_chapter_1', 'title' => 'Signed CLF Approving Chapter 1 (CaPA/Adviser)', 'short' => 'Approved CLF', 'phase' => 'Chapter 1', 'kind' => $A, 'role' => 'adviser', 'chapter' => '1'],
 
-            ['template_key' => 'chapter_1_draft', 'title' => 'Chapter 1 Draft', 'kind' => MilestoneItem::DOCUMENT, 'chapter' => '1'],
-            ['template_key' => 'clf_chapter_1', 'title' => 'Signed CLF Approving Chapter 1 (CaPA/Adviser)', 'kind' => MilestoneItem::APPROVAL, 'role' => 'adviser', 'chapter' => '1'],
+            ['template_key' => 'chapter_2_draft', 'title' => 'Chapter 2 Draft', 'short' => 'Draft', 'phase' => 'Chapter 2', 'kind' => $D, 'chapter' => '2'],
+            ['template_key' => 'clf_chapter_2', 'title' => 'Signed CLF Approving Chapter 2 (CaPA/Adviser)', 'short' => 'Approved CLF', 'phase' => 'Chapter 2', 'kind' => $A, 'role' => 'adviser', 'chapter' => '2'],
 
-            ['template_key' => 'chapter_2_draft', 'title' => 'Chapter 2 Draft', 'kind' => MilestoneItem::DOCUMENT, 'chapter' => '2'],
-            ['template_key' => 'clf_chapter_2', 'title' => 'Signed CLF Approving Chapter 2 (CaPA/Adviser)', 'kind' => MilestoneItem::APPROVAL, 'role' => 'adviser', 'chapter' => '2'],
+            ['template_key' => 'chapter_3_draft', 'title' => 'Chapter 3 Draft', 'short' => 'Draft', 'phase' => 'Chapter 3', 'kind' => $D, 'chapter' => '3'],
+            ['template_key' => 'clf_chapter_3', 'title' => 'Signed CLF Approving Chapter 3 (CaPA/Adviser)', 'short' => 'Approved CLF', 'phase' => 'Chapter 3', 'kind' => $A, 'role' => 'adviser', 'chapter' => '3'],
 
-            ['template_key' => 'chapter_3_draft', 'title' => 'Chapter 3 Draft', 'kind' => MilestoneItem::DOCUMENT, 'chapter' => '3'],
-            ['template_key' => 'clf_chapter_3', 'title' => 'Signed CLF Approving Chapter 3 (CaPA/Adviser)', 'kind' => MilestoneItem::APPROVAL, 'role' => 'adviser', 'chapter' => '3'],
-
-            ['template_key' => 'clf_recommend_td_adviser', 'title' => 'Signed CLF Recommending for Title Defense (CaPA/Adviser)', 'kind' => MilestoneItem::APPROVAL, 'role' => 'adviser'],
-            ['template_key' => 'clf_recommend_td_consultant', 'title' => 'Signed CLF Recommending for Title Defense (Consultant)', 'kind' => MilestoneItem::APPROVAL, 'role' => 'consultant'],
-
-            ['template_key' => 'td_hearing_notice', 'title' => 'Signed Title Defense Hearing Notice', 'kind' => MilestoneItem::FORM],
-            ['template_key' => 'title_defense', 'title' => 'Title Defense', 'kind' => MilestoneItem::DEFENSE, 'defense_type' => 'Title Defense'],
-            ['template_key' => 'revised_manuscript', 'title' => 'Revised Proposal Manuscript', 'kind' => MilestoneItem::DOCUMENT, 'chapter' => 'revised'],
-            ['template_key' => 'td_rsc', 'title' => 'Signed (Noted) TD RSC', 'kind' => MilestoneItem::FORM],
+            ['template_key' => 'clf_recommend_td_adviser', 'title' => 'Signed CLF Recommending for Title Defense (CaPA/Adviser)', 'short' => 'Adviser CLF', 'phase' => 'Title Defense', 'kind' => $A, 'role' => 'adviser'],
+            ['template_key' => 'clf_recommend_td_consultant', 'title' => 'Signed CLF Recommending for Title Defense (Consultant)', 'short' => 'Consultant CLF', 'phase' => 'Title Defense', 'kind' => $A, 'role' => 'consultant'],
+            ['template_key' => 'td_hearing_notice', 'title' => 'Signed Title Defense Hearing Notice', 'short' => 'Hearing Notice', 'phase' => 'Title Defense', 'kind' => $F],
+            ['template_key' => 'title_defense', 'title' => 'Title Defense', 'short' => 'Defense', 'phase' => 'Title Defense', 'kind' => $X, 'defense_type' => 'Title Defense'],
+            ['template_key' => 'revised_manuscript', 'title' => 'Revised Proposal Manuscript', 'short' => 'Manuscript', 'phase' => 'Title Defense', 'kind' => $D, 'chapter' => 'revised'],
+            ['template_key' => 'td_rsc', 'title' => 'Signed (Noted) TD RSC', 'short' => 'TD RSC', 'phase' => 'Title Defense', 'kind' => $F],
         ];
     }
 }

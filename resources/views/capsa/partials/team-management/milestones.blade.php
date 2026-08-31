@@ -1,14 +1,22 @@
-{{-- Milestones: where a checklist is built AND where the papers get ticked.
-     Deliberately one screen - a CaPSA working down a team's deliverables is
-     doing both at once, and splitting them would mean two places to look. --}}
+{{-- Milestones: every team in the CaPSA's sections against every deliverable
+     on their checklist.
+
+     Deliverables run across and teams run down, because the nineteen are a
+     fixed list and the teams are not - a CaPSA with three sections has around
+     two dozen, and a page grows downwards far more gracefully than sideways.
+     It also puts a team's name on its own row, so which team a cell belongs to
+     never has to be counted across.
+
+     One screen builds the checklist and ticks the papers off it, because a
+     CaPSA working down a section does both in the same sitting. --}}
 
 <div class="ms-intro">
   <div>
     <div class="ms-intro-title">Checklists</div>
     <div class="ms-intro-note">
-      Only the <strong>signed forms</strong> are ticked here. A chapter draft closes when the team
-      uploads it, a CLF when the adviser or consultant approves it, and a defense when the panel's
-      decision is recorded &mdash; so those show what they are waiting on instead.
+      Only the <strong>forms</strong> are ticked here. A draft closes when the team uploads it, a CLF
+      when the adviser or consultant approves it, and a defense when the panel's decision is
+      recorded &mdash; those are drawn dashed and say what they are waiting on.
     </div>
   </div>
   <button type="button" class="btn btn-primary" style="font-size:12px;padding:8px 14px;white-space:nowrap"
@@ -18,117 +26,162 @@
   </button>
 </div>
 
-@forelse ($milestoneBoards as $board)
-  <div class="card ms-team">
-    <div class="ms-team-head">
-      <div>
-        <div class="ms-team-name">{{ $board->team->team_name }}</div>
-        <div class="ms-team-sub">{{ $board->team->project_title ?: 'No title yet' }}</div>
-      </div>
-      @if ($board->milestones->isEmpty())
-        <button type="button" class="btn btn-ghost" style="font-size:11px;padding:5px 12px"
-                onclick="openMilestoneModal({{ $board->team->team_id }})">Give this team a checklist</button>
-      @endif
+@php
+  // Which phase each column sits under, so a column and its band can be shown
+  // or hidden together on a narrow screen.
+  $phaseOf = [];
+  $firstOfPhase = [];
+  foreach (($grid?->phases ?? collect()) as $i => $phase) {
+      foreach ($phase->keys as $k => $key) {
+          $phaseOf[$key] = $i;
+          if ($k === 0) {
+              $firstOfPhase[$key] = true;
+          }
+      }
+  }
+@endphp
+
+@if ($grid && $grid->rows->isNotEmpty() && $grid->columns->isNotEmpty())
+  <div class="card" style="padding:0;overflow:hidden">
+
+    {{-- Below the width where nineteen columns can breathe, one phase at a
+         time. Same table; the other phases are simply not drawn. --}}
+    <div class="ms-phases" id="ms-phases">
+      @foreach ($grid->phases as $i => $phase)
+        <button type="button" class="ms-ptab {{ $i === 0 ? 'on' : '' }}" data-ph="{{ $i }}">
+          {{ $phase->name }}<span class="ms-pc">{{ $phase->span }}</span>
+        </button>
+      @endforeach
     </div>
 
-    @forelse ($board->milestones as $entry)
-      @php $m = $entry->model; $p = $entry->progress; @endphp
-      <div class="ms-block" id="ms-{{ $m->id }}">
-        <div class="ms-block-head">
-          <button type="button" class="ms-toggle" onclick="toggleMilestone({{ $m->id }})" aria-expanded="false">
-            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
-          </button>
-          <div style="flex:1;min-width:0">
-            <div class="ms-name">
-              {{ $m->title }}
-              @if ($m->due_date)
-                <span class="ms-due">due {{ $m->due_date->format('j M Y') }}</span>
-              @endif
-            </div>
-            <div class="ms-meta">
-              <strong>{{ $p->completed }} of {{ $p->total }} complete</strong>
-              @if ($p->handed_in) &middot; {{ $p->handed_in }} waiting @endif
-              @if ($p->late) &middot; {{ $p->late }} late @endif
-              @if ($p->overdue) &middot; <span class="ms-overdue">{{ $p->overdue }} overdue</span> @endif
-            </div>
-          </div>
-          <div class="ms-bar" title="{{ $p->percent }}%">
-            <div class="ms-bar-fill" style="width:{{ $p->percent }}%"></div>
-          </div>
-          <button type="button" class="ms-del" title="Delete this checklist" onclick="deleteMilestone({{ $m->id }}, '{{ addslashes($m->title) }}')">
-            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.4"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-          </button>
-        </div>
+    <div class="ms-scroll">
+      <table class="ms-grid" id="ms-grid">
+        <thead>
+          {{-- Each header row carries its own Team cell. Hanging it off a
+               rowspan meant hiding the band row on a narrow screen took the
+               Team header with it and shifted every column one to the left. --}}
+          <tr class="ms-phaserow">
+            <th class="ms-team"></th>
+            @foreach ($grid->phases as $i => $phase)
+              <th class="ms-grp {{ $i % 2 ? 'ms-band' : '' }}" data-ph="{{ $i }}" colspan="{{ $phase->span }}">{{ $phase->name }}</th>
+            @endforeach
+          </tr>
+          <tr class="ms-namerow">
+            <th class="ms-team">
+              <div class="ms-th">Team</div>
+              <div class="ms-count">{{ $grid->rows->count() }} in your sections</div>
+            </th>
+            @foreach ($grid->columns as $col)
+              @php $ph = $phaseOf[$col->key] ?? 0; @endphp
+              <th class="{{ $ph % 2 ? 'ms-band' : '' }} {{ isset($firstOfPhase[$col->key]) ? 'ms-grp' : '' }}"
+                  data-ph="{{ $ph }}" title="{{ $col->full }}">
+                <div class="ms-lab">{{ $col->label }}</div>
+                <span class="ms-kdot ms-k-{{ $col->kind }}"></span>
+              </th>
+            @endforeach
+          </tr>
+        </thead>
 
-        <div class="ms-items">
-          @forelse ($p->items as $row)
-            @php $i = $row->item; @endphp
-            <div class="ms-item ms-{{ $row->state }}">
-              @if ($i->isTickedByHand())
-                <button type="button" class="ms-tick {{ in_array($row->state, ['done', 'done_late'], true) ? 'on' : '' }}"
-                        onclick="toggleItem({{ $i->id }}, {{ in_array($row->state, ['done', 'done_late'], true) ? 'false' : 'true' }})"
-                        title="{{ in_array($row->state, ['done', 'done_late'], true) ? 'Mark as not done' : 'Mark as sighted' }}">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4"><polyline points="20 6 9 17 4 12"/></svg>
-                </button>
-              @else
-                {{-- Closes itself, so there is nothing to press. --}}
-                <span class="ms-tick auto {{ in_array($row->state, ['done', 'done_late'], true) ? 'on' : '' }}"
-                      title="Closes on its own when the {{ $i->kind }} happens">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4"><polyline points="20 6 9 17 4 12"/></svg>
-                </span>
-              @endif
+        <tbody>
+          @php $lastSection = null; @endphp
+          @foreach ($grid->rows as $row)
+            @if ($row->section !== $lastSection)
+              @php
+                $lastSection = $row->section;
+                $inSection = $grid->rows->where('section', $row->section);
+                $secTotal = $inSection->sum('total');
+                $secDone = $inSection->sum('completed');
+              @endphp
+              <tr class="ms-sec">
+                <td class="ms-team">
+                  {{ $row->section }}
+                  <span class="ms-secmeta">{{ $inSection->count() }} {{ Str::plural('team', $inSection->count()) }}@if ($secTotal) &middot; {{ (int) round($secDone / $secTotal * 100) }}%@endif</span>
+                </td>
+                @foreach ($grid->columns as $col)
+                  @php $ph = $phaseOf[$col->key] ?? 0; @endphp
+                  <td data-ph="{{ $ph }}" class="{{ $ph % 2 ? 'ms-band' : '' }} {{ isset($firstOfPhase[$col->key]) ? 'ms-grp' : '' }}"></td>
+                @endforeach
+              </tr>
+            @endif
 
-              <div class="ms-item-name">
-                {{ $i->title }}
-                @if ($row->state === 'done_late')
-                  <span class="ms-flag">{{ $row->days_late }} {{ Str::plural('day', $row->days_late) }} late</span>
+            <tr>
+              <td class="ms-team">
+                <div class="ms-tname">{{ $row->team->team_name }}</div>
+                @if ($row->milestone)
+                  <div class="ms-tprog">
+                    <span class="ms-tbar"><i style="width:{{ $row->percent }}%"></i></span>
+                    <span class="ms-count">{{ $row->completed }}/{{ $row->total }}</span>
+                  </div>
                 @endif
-              </div>
+              </td>
 
-              <span class="ms-kind ms-kind-{{ $i->kind }}">{{ $i->kind }}</span>
-
-              <span class="ms-when">
-                @if ($row->closed_at)
-                  {{ $row->closed_at->format('j M') }}
-                @elseif ($row->state === 'handed_in')
-                  <span class="ms-waiting">{{ $row->waiting_on ? 'with the '.$row->waiting_on : 'in progress' }}</span>
-                @elseif ($row->state === 'overdue')
-                  <span class="ms-overdue">overdue</span>
-                @else
-                  &mdash;
-                @endif
-              </span>
-
-              @if ($i->template_key === null)
-                <button type="button" class="ms-del" title="Remove this line" onclick="deleteItem({{ $i->id }})">
-                  <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.4"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                </button>
+              @if (! $row->milestone)
+                {{-- Nineteen empty cells said nothing except "this row is
+                     blank". One line says why, and offers the fix. --}}
+                <td class="ms-none" colspan="{{ $grid->columns->count() }}">
+                  No checklist yet &mdash;
+                  <button type="button" class="ms-give" onclick="openMilestoneModal({{ $row->team->team_id }})">give this team one</button>
+                </td>
               @else
-                <span style="width:22px"></span>
+              @foreach ($grid->columns as $col)
+                @php
+                  $ph = $phaseOf[$col->key] ?? 0;
+                  $cell = $row->cells[$col->key] ?? null;
+                  $done = $cell && in_array($cell->state, ['done', 'done_late'], true);
+                @endphp
+                <td class="ms-cell {{ $ph % 2 ? 'ms-band' : '' }} {{ isset($firstOfPhase[$col->key]) ? 'ms-grp' : '' }}"
+                    data-ph="{{ $ph }}"
+                    @if ($cell) title="{{ $col->full }} — {{ $row->team->team_name }}" @endif>
+                  @if (! $cell)
+                    {{-- This team's checklist does not carry that line at all,
+                         which is not the same as having it and not doing it. --}}
+                    <span class="ms-na">&middot;</span>
+                  @elseif ($col->ticked_by_hand)
+                    <button type="button"
+                            class="ms-mk {{ $done ? 'on' : '' }} {{ $cell->state === 'overdue' ? 'over' : '' }}"
+                            onclick="toggleItem({{ $cell->item->id }}, {{ $done ? 'false' : 'true' }})"
+                            title="{{ $done ? 'Mark as not sighted' : 'Mark as sighted' }}">
+                      @include('capsa.partials.team-management.milestone-mark', ['state' => $cell->state])
+                    </button>
+                  @else
+                    {{-- Closes itself, so there is nothing to press. --}}
+                    <span class="ms-mk auto {{ $done ? 'on' : '' }} {{ $cell->state === 'overdue' ? 'over' : '' }} {{ $cell->state === 'handed_in' ? 'wait' : '' }}"
+                          title="{{ $cell->state === 'handed_in' ? ($cell->waiting_on ? 'With the '.$cell->waiting_on : 'In progress') : 'Closes on its own when the '.$col->kind.' happens' }}">
+                      @include('capsa.partials.team-management.milestone-mark', ['state' => $cell->state])
+                    </span>
+                  @endif
+                </td>
+              @endforeach
               @endif
-            </div>
-          @empty
-            <div class="ms-empty">
-              Nothing on this checklist yet.
-              <button type="button" class="ms-link" onclick="applyTemplate({{ $m->id }})">Use the Capstone 1 checklist</button>
-            </div>
-          @endforelse
+            </tr>
+          @endforeach
+        </tbody>
+      </table>
+    </div>
 
-          <form class="ms-add" onsubmit="addItem(event, {{ $m->id }})">
-            <input class="input" name="title" placeholder="Add a line of your own&hellip;" maxlength="255" required/>
-            <button type="submit" class="btn btn-ghost" style="font-size:11px;padding:6px 12px">Add</button>
-          </form>
-        </div>
-      </div>
-    @empty
-      <div class="ms-none">No checklist yet.</div>
-    @endforelse
+    <div class="ms-key">
+      <span><span class="ms-mk on">@include('capsa.partials.team-management.milestone-mark', ['state' => 'done'])</span> Done</span>
+      <span><span class="ms-mk wait"></span> With an adviser, consultant or panel</span>
+      <span><span class="ms-mk over"></span> Overdue</span>
+      <span><span class="ms-mk"></span> Not started</span>
+      <span><span class="ms-mk auto"></span> Dashed &mdash; closes itself</span>
+      <span class="ms-kinds">
+        <span class="ms-kdot ms-k-form"></span>form
+        <span class="ms-kdot ms-k-document"></span>document
+        <span class="ms-kdot ms-k-approval"></span>approval
+        <span class="ms-kdot ms-k-defense"></span>defense
+      </span>
+    </div>
   </div>
-@empty
+@else
   <div class="card"><div class="tm-empty">
-    No teams in {{ $selectedSection ? 'section '.$selectedSection : 'your sections' }} yet.
+    @if (! $grid || $grid->rows->isEmpty())
+      No teams in {{ $selectedSection ? 'section '.$selectedSection : 'your sections' }} yet.
+    @else
+      No checklist yet. Make one and every team in the section gets it.
+    @endif
   </div></div>
-@endforelse
+@endif
 
 {{-- New checklist --}}
 <div class="modal-overlay" id="ms-modal" onclick="if(event.target===this) closeMilestoneModal()">
@@ -189,9 +242,10 @@ function msPost(url, body, method = 'POST') {
   });
 }
 
-// The whole tab re-renders after a change rather than patching rows by hand:
-// an item's state is worked out from records elsewhere, so guessing at the
-// new state in the browser would eventually disagree with the server.
+// The page re-renders after a change rather than the browser guessing at the
+// new state: a cell is worked out from documents, verdicts and outcomes
+// recorded elsewhere, so a guess here would eventually disagree with the
+// server.
 function msReload() { window.location.reload(); }
 
 function openMilestoneModal(teamId) {
@@ -232,31 +286,42 @@ function createMilestone(e) {
   }).then(msReload).catch((err) => alert(err.message));
 }
 
-function toggleMilestone(id) {
-  document.getElementById('ms-' + id).classList.toggle('open');
-}
-
 function toggleItem(itemId, done) {
-  msPost('/admin/milestone-items/' + itemId + '/toggle', { done }).then(msReload).catch((err) => alert(err.message));
-}
-
-function addItem(e, milestoneId) {
-  e.preventDefault();
-  const title = new FormData(e.target).get('title');
-  msPost('/admin/milestones/' + milestoneId + '/items', { title }).then(msReload).catch((err) => alert(err.message));
-}
-
-function deleteItem(itemId) {
-  msPost('/admin/milestone-items/' + itemId, null, 'DELETE').then(msReload).catch((err) => alert(err.message));
-}
-
-function applyTemplate(milestoneId) {
-  msPost('/admin/milestones/' + milestoneId + '/template', { template: 'capstone_1' })
+  msPost('/admin/milestone-items/' + itemId + '/toggle', { done })
     .then(msReload).catch((err) => alert(err.message));
 }
 
-function deleteMilestone(id, title) {
-  if (!confirm('Delete "' + title + '"? Everything ticked on it goes too.')) return;
-  msPost('/admin/milestones/' + id, null, 'DELETE').then(msReload).catch((err) => alert(err.message));
-}
+// ── one phase at a time on a narrow screen ─────────────────────────────
+(function () {
+  const tabs = document.getElementById('ms-phases');
+  const grid = document.getElementById('ms-grid');
+  if (!tabs || !grid) return;
+
+  const narrow = window.matchMedia('(max-width: 1279px)');
+  let active = 0;
+
+  function apply() {
+    const on = narrow.matches;
+    grid.querySelectorAll('[data-ph]').forEach((el) => {
+      el.classList.toggle('ms-hide', on && Number(el.dataset.ph) !== active);
+    });
+    tabs.querySelectorAll('.ms-ptab').forEach((b) => {
+      b.classList.toggle('on', Number(b.dataset.ph) === active);
+    });
+  }
+
+  tabs.addEventListener('click', (e) => {
+    const tab = e.target.closest('.ms-ptab');
+    if (!tab) return;
+    active = Number(tab.dataset.ph);
+    apply();
+  });
+
+  // matchMedia's change event is not always delivered when a window is
+  // dragged across the breakpoint, which left every column drawn in tab mode
+  // until a tab was clicked.
+  narrow.addEventListener('change', apply);
+  window.addEventListener('resize', apply);
+  apply();
+})();
 </script>

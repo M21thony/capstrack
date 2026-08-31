@@ -38,6 +38,8 @@ class MilestoneItem extends Model
         'milestone_id',
         'template_key',
         'title',
+        'short_label',
+        'phase',
         'kind',
         'position',
         'due_date',
@@ -62,6 +64,12 @@ class MilestoneItem extends Model
     public function dueOn(): ?\Illuminate\Support\Carbon
     {
         return $this->due_date ?? $this->milestone?->due_date;
+    }
+
+    /** What the grid puts in a column header, under its phase band. */
+    public function columnLabel(): string
+    {
+        return $this->short_label ?: $this->title;
     }
 
     public function isTickedByHand(): bool
