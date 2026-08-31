@@ -400,10 +400,15 @@
             </div>
             <div class="m-body">
               <div class="m-top">
-                <span class="m-title">{{ $result->defense_type }}</span>
+                <span class="m-title">{{ $result->defense_type }}@if(($result->attempt ?? 1) > 1) <span style="font-weight:500;color:var(--text3)">&middot; Redefense {{ $result->attempt }}</span>@endif</span>
                 <span class="m-badge @if($allSubmitted) m-badge-done @elseif($partialSubmitted) m-badge-active @else m-badge-todo @endif">
+                  {{-- The score only appears once every panelist has graded:
+                       it is their totals divided by the size of the panel, so
+                       a partial one would read as final and then move. --}}
                   @if($result->average_score !== null)
                     {{ rtrim(rtrim(number_format($result->average_score, 2), '0'), '.') }} pts
+                  @elseif($partialSubmitted)
+                    Awaiting the rest of the panel
                   @else
                     Not graded yet
                   @endif

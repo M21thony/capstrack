@@ -152,9 +152,16 @@ class AdminPanelAssignmentController extends Controller
             'project_title' => $t->project_title,
             'is_paid' => $paidTeamIds->contains($t->team_id),
             'excluded_expert_ids' => $this->teamAdviserConsultantIds($t)->values(),
-            'schedules' => $t->defenseSchedules->map(fn ($s) => [
+            // One row per stage: the attempt in play. Earlier attempts are
+            // kept in the table as a record, but this page assigns panels for
+            // the current try, and the JS looks a stage up by defense_type.
+            'schedules' => $t->defenseSchedules
+                ->sortByDesc('attempt')
+                ->unique('defense_type')
+                ->map(fn ($s) => [
                 'defense_id' => $s->defense_id,
                 'defense_type' => $s->defense_type,
+                'attempt' => $s->attempt,
                 'schedule_date' => $s->schedule_date?->format('Y-m-d\TH:i'),
                 'end_date' => $s->end_date?->format('Y-m-d\TH:i'),
                 'venue' => $s->venue,
@@ -332,8 +339,11 @@ class AdminPanelAssignmentController extends Controller
         // workflow: assign panels for everyone first, then generate the
         // schedule once, rather than each assignment racing to grab a slot
         // before a window even exists.
+        // A stage can have more than one attempt now, so "this team's Title
+        // Defense" means the current one - the latest attempt.
         $existing = DefenseSchedule::where('team_id', $team->team_id)
             ->where('defense_type', $validated['defense_type'])
+            ->latestAttempt()
             ->with('panels')
             ->first();
 
@@ -343,8 +353,14 @@ class AdminPanelAssignmentController extends Controller
             : [];
         $panelUnchanged = $existing && $previousExpertIds === $sortedNewExpertIds;
 
+        // Keyed on the attempt too, so assigning a panel edits the attempt in
+        // play rather than silently reaching back over an earlier one.
         $schedule = DefenseSchedule::updateOrCreate(
-            ['team_id' => $team->team_id, 'defense_type' => $validated['defense_type']],
+            [
+                'team_id' => $team->team_id,
+                'defense_type' => $validated['defense_type'],
+                'attempt' => $existing->attempt ?? 1,
+            ],
             $panelUnchanged ? [] : ['schedule_date' => null, 'end_date' => null, 'venue' => null]
         );
 
@@ -386,6 +402,7 @@ class AdminPanelAssignmentController extends Controller
     {
         $schedule = DefenseSchedule::where('team_id', $team->team_id)
             ->where('defense_type', $defenseType)
+            ->latestAttempt()
             ->with('panels')
             ->first();
 

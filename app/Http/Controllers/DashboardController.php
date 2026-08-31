@@ -8,7 +8,6 @@ use App\Models\DefenseSchedule;
 use App\Models\FinancialRecord;
 use App\Models\Milestone;
 use App\Models\Notification;
-use App\Models\PanelGrade;
 use App\Models\Student;
 use App\Models\StudentMilestone;
 use App\Models\StudentSchoolYear;
@@ -91,23 +90,25 @@ class DashboardController extends Controller
             return collect();
         }
 
-        $submittedGrades = PanelGrade::whereIn('defense_id', $schedules->pluck('defense_id'))
-            ->where('status', 'submitted')
-            ->get()
-            ->groupBy('defense_id');
+        $schedules->load('grades');
 
-        return $schedules->map(function (DefenseSchedule $schedule) use ($submittedGrades) {
-            $grades = $submittedGrades->get($schedule->defense_id, collect());
+        return $schedules->map(function (DefenseSchedule $schedule) {
+            $grades = $schedule->submittedGrades();
 
             return (object) [
                 'defense_type' => $schedule->defense_type,
+                // A stage can be defended more than once. Both attempts are
+                // listed - a team should see their redefense - so the number
+                // is carried through to tell them apart.
+                'attempt' => (int) $schedule->attempt,
                 'schedule_date' => $schedule->schedule_date,
                 'end_date' => $schedule->end_date,
-                'assigned_count' => $schedule->panels->count(),
+                'assigned_count' => $schedule->panelSize(),
                 'submitted_count' => $grades->count(),
-                'average_score' => $grades->isNotEmpty() ? round((float) $grades->avg('total_score'), 2) : null,
+                // Null until every panelist has graded - see panelAverage().
+                'average_score' => $schedule->panelAverage(),
             ];
-        })->sortBy(fn ($s) => $s->schedule_date ?? now()->addYears(10))->values();
+        })->sortBy(fn ($s) => [$s->schedule_date ?? now()->addYears(10), $s->attempt])->values();
     }
 
     private function loadTeamData(Student $student, ?int $teamId): array

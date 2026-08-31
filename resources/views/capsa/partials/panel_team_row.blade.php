@@ -8,7 +8,12 @@
   // Defense alongside a not-yet-assigned Title Defense), and this row must
   // always reflect whichever stage is currently selected above, not
   // whichever stage happens to have the newest row.
-  $latestSchedule = $team->defenseSchedules->firstWhere('defense_type', $defenseType);
+  // ...and the attempt in play: a stage can have several rows now (a
+  // redefense is its own), so firstWhere() would keep returning the first.
+  $latestSchedule = $team->defenseSchedules
+      ->where('defense_type', $defenseType)
+      ->sortByDesc('attempt')
+      ->first();
   $chair = $latestSchedule?->panels->firstWhere('panel_role', 'Panel Chair');
   $member1 = $latestSchedule?->panels->firstWhere('panel_role', 'Panel Member 1');
   $member2 = $latestSchedule?->panels->firstWhere('panel_role', 'Panel Member 2');
