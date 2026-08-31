@@ -274,7 +274,11 @@ function renderPreProposals(proposals, selectedId) {
             + (m.abstract
                 ? '<button type="button" class="ppdup-toggle" onclick="togglePpDup(\'' + absId + '\', this, \'abstract\')">Show abstract</button>'
                   + '<div id="' + absId + '" class="ppdup-panel ppdup-abstract">' + highlightWords(m.abstract, highlight) + '</div>'
-                : '');
+                : '')
+            // The card's own closing div. Without it each match nested inside
+            // the one before, so ten matches drew ten boxes stepping further
+            // right down the report instead of ten cards in a list.
+            + '</div>';
         }).join('')
       : (dup ? '<div style="font-size:11.5px;color:var(--green);margin-top:8px">No similar capstones were found.</div>' : '');
 
