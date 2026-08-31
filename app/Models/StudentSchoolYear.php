@@ -62,6 +62,15 @@ class StudentSchoolYear extends Model
 
         static::creating(function (self $row) {
             $row->term_id ??= Term::activeId();
+
+            // The table is named for this column, and plenty of readers
+            // filter on it - the classmate picker among them - yet most
+            // writers never set it, so rows arrived null and matched
+            // nothing. A row belongs to the term it was written in, so it
+            // takes that term's year, or the current one when it has no term.
+            $row->school_year ??= $row->term_id
+                ? (Term::find($row->term_id)?->school_year ?? Term::currentSchoolYear())
+                : Term::currentSchoolYear();
         });
     }
 

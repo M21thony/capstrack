@@ -82,6 +82,46 @@ class Term extends Model
         return self::$activeIdMemo;
     }
 
+    /**
+     * What school year it is, in one place.
+     *
+     * Four answers to this used to be in circulation: the active term's, an
+     * admin setting, a guess from the month, and whatever a CSV import
+     * happened to carry. They disagreed - every student_s_y row on the live
+     * database read null or "0000" while the active term read 2026-2027 -
+     * and anything filtering on school_year matched nothing.
+     *
+     * The active term wins, because a school declares its year rather than
+     * having it inferred. The setting is next, for an install with no term
+     * set up. The month rule is last and is only a guess: August onwards
+     * starts the new year, which is when the first semester begins here.
+     */
+    public static function currentSchoolYear(): string
+    {
+        try {
+            if ($fromTerm = static::where('is_active', true)->value('school_year')) {
+                return $fromTerm;
+            }
+
+            if ($fromSetting = Setting::get('current_school_year')) {
+                return $fromSetting;
+            }
+        } catch (\Throwable) {
+            // Neither table is there yet - during migrations, or in a test
+            // that builds its own schema. Fall through to the guess.
+        }
+
+        return static::guessSchoolYear();
+    }
+
+    /** The month rule, kept separate so it is obvious where a guess is used. */
+    public static function guessSchoolYear(): string
+    {
+        return now()->month >= 8
+            ? now()->year.'-'.(now()->year + 1)
+            : (now()->year - 1).'-'.now()->year;
+    }
+
     /** Drop the memo - after activating a term, or between tests. */
     public static function forgetActive(): void
     {

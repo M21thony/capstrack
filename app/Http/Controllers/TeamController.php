@@ -271,7 +271,15 @@ class TeamController extends Controller
                 // TERM, so keying on the student alone would overwrite last
                 // semester's record instead of starting this one.
                 ['student_id' => $student->student_id, 'term_id' => \App\Models\Term::activeId()],
-                ['team_id' => $team->team_id, 's_role_id' => StudentRole::leaderRoleId()]
+                [
+                    'team_id' => $team->team_id,
+                    's_role_id' => StudentRole::leaderRoleId(),
+                    // Written straight through the query builder, so the
+                    // model's creating hook never fires - the year has to be
+                    // named here or the row lands with none, which is how
+                    // every row on the live database ended up null.
+                    'school_year' => \App\Models\Term::currentSchoolYear(),
+                ]
             );
 
         // Keep member count synced at the fixed 5-member limit
@@ -1216,12 +1224,11 @@ class TeamController extends Controller
 
         $availableSlots = $maxMembers - $currentCount;
 
-        // Compute the current academic year the same way PersonalInfoController does.
-        // This is used as a fallback when the leader's stored school_year is
-        // null, corrupted, or doesn't match any classmates (e.g. legacy "26-1" data).
-        $computedSchoolYear = now()->month >= 8
-            ? now()->year.'-'.(now()->year + 1)
-            : (now()->year - 1).'-'.now()->year;
+        // The fallback for a leader whose stored year is null, corrupted, or
+        // simply matches nobody (legacy "26-1" data). Asked of the term
+        // rather than guessed from the month, so it agrees with what the
+        // rest of the app writes.
+        $computedSchoolYear = \App\Models\Term::currentSchoolYear();
 
         $classmates = Student::join('student_s_y', 'students.student_id', '=', 'student_s_y.student_id')
             ->where('student_s_y.school_year', $currentSchoolYear)
