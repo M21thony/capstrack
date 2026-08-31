@@ -5,10 +5,12 @@ namespace App\Http\Controllers\Capsa;
 use App\Http\Controllers\AdminProfileController;
 use App\Http\Controllers\Controller;
 use App\Models\CapstoneExpert;
+use App\Models\DefenseSchedule;
 use App\Models\Milestone;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
 use App\Models\TeamExpertAssignment;
+use App\Support\DefenseProgress;
 use App\Support\SectionScope;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -35,7 +37,10 @@ class TeamManagementController extends Controller
     /** Shown where a value is genuinely absent rather than empty. */
     private const DASH = '—';
 
-    public function __construct(private SectionScope $sections) {}
+    public function __construct(
+        private SectionScope $sections,
+        private DefenseProgress $progress,
+    ) {}
 
     public function index(Request $request): View
     {
@@ -54,6 +59,7 @@ class TeamManagementController extends Controller
         $teamIds = $teams->pluck('team_id');
 
         $milestones = $this->milestoneProgress($teamIds);
+        $defenseSchedules = DefenseSchedule::whereIn('team_id', $teamIds)->get()->groupBy('team_id');
         $engagedRoles = $this->engagedRoles($teamIds);
         $papers = $this->paperChecks($capsa->expert_id, $teamIds);
 
@@ -64,6 +70,7 @@ class TeamManagementController extends Controller
             $milestones[$team->team_id] ?? null,
             $engagedRoles[$team->team_id] ?? collect(),
             $papers[$team->team_id] ?? collect(),
+            $defenseSchedules[$team->team_id] ?? collect(),
         ));
 
         return view('capsa.team_management', [
@@ -92,14 +99,19 @@ class TeamManagementController extends Controller
      */
     private function scopedTeams(array $capsaSections, ?string $selectedSection): array
     {
-        $candidates = Team::with(['leader', 'preProposals.duplicationCheck'])
-            ->orderByDesc('created_at')
-            ->get();
-
-        $syRecords = StudentSchoolYear::whereIn('team_id', $candidates->pluck('team_id'))
+        // Scoped to the term that is running - StudentSchoolYear does that by
+        // default - so last semester's teams do not reappear alongside this
+        // semester's, and a team retaking Capstone 1 is here on its new
+        // enrolment rather than its old one.
+        $syRecords = StudentSchoolYear::whereNotNull('team_id')
             ->with('student')
             ->get()
             ->groupBy('team_id');
+
+        $candidates = Team::with(['leader', 'preProposals.duplicationCheck'])
+            ->whereIn('team_id', $syRecords->keys())
+            ->orderByDesc('created_at')
+            ->get();
 
         return $this->sections->filterTeams($candidates, $syRecords, $capsaSections, $selectedSection);
     }
@@ -209,6 +221,7 @@ class TeamManagementController extends Controller
         ?object $milestones,
         Collection $engagedRoles,
         Collection $papers,
+        Collection $defenseSchedules,
     ): object {
         $submitted = $team->hasSubmittedPreProposals();
 
@@ -245,10 +258,19 @@ class TeamManagementController extends Controller
             ? trim(($team->leader->f_name ?? '').' '.($team->leader->l_name ?? ''))
             : self::DASH;
 
+        // Where they stand at each defense stage. Failing is running out of
+        // window rather than a verdict, so it is worked out from the dates
+        // and the recorded outcomes - which also means the CAPSA extending a
+        // deadline un-fails everyone it covers, with nothing to reset.
+        $stages = $this->progress->allStages($team, $defenseSchedules);
+
         return (object) [
             'team' => $team,
             'section' => $section,
             'members' => $members,
+            'stages' => $stages,
+            'currentStage' => $this->progress->currentStage($team, $defenseSchedules),
+            'failedStage' => collect($stages)->filter(fn ($s) => $s === DefenseProgress::FAILED)->keys()->first(),
             'initials' => $initials,
             'gradient' => $gradient,
             'tags' => $tags,

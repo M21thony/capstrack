@@ -87,6 +87,16 @@
             @if ($row->papersToCheck > 0)
               <div style="font-size:11px;color:var(--text3);margin-top:3px">{{ $row->papersToCheck }} paper(s) to check</div>
             @endif
+            {{-- Where they are in the capstone, and whether a stage's window
+                 has closed on them. Extending that window in Panel Assignment
+                 clears this on its own. --}}
+            @if ($row->failedStage)
+              <div class="tm-pill tm-pill-red" style="margin-top:4px">Missed {{ \Illuminate\Support\Str::before($row->failedStage, ' Defense') }} deadline</div>
+            @elseif ($row->currentStage)
+              <div style="font-size:11px;color:var(--text3);margin-top:3px">{{ $row->currentStage }}</div>
+            @else
+              <div class="tm-pill tm-pill-green" style="margin-top:4px">All defenses passed</div>
+            @endif
           </td>
 
           <td>

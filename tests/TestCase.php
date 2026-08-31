@@ -3,11 +3,24 @@
 namespace Tests;
 
 use App\Models\CapstoneExpert;
+use App\Models\Term;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 use Illuminate\Support\Facades\DB;
 
 abstract class TestCase extends BaseTestCase
 {
+    /**
+     * Term::activeId() memoises, and the memo is static - so it would carry
+     * from one test into the next even though RefreshDatabase has rebuilt
+     * the database underneath it.
+     */
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        Term::forgetActive();
+    }
+
     /**
      * Make an expert a CaPSA.
      *
