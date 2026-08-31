@@ -193,10 +193,18 @@ function openVerifyModal(data) {
 }
 function closeVerifyModal() {
   document.getElementById('verify-modal').classList.remove('open');
+
+  // The table behind still shows the counts from before. Refresh it once, on
+  // the way out, instead of after every decision - which is what used to shut
+  // the modal and send you back to click Review again.
+  if (ppDecided) {
+    window.location.reload();
+  }
 }
 
 // ── Per-proposal approve/reject (mirrors admin/approval.blade.php) ────────
 var ppActiveId = null;
+var ppDecided = false;
 
 function renderPreProposals(proposals, selectedId) {
   var wrap = document.getElementById('vm-preproposals');
@@ -323,12 +331,41 @@ function ppApprove(id, url) {
     .then(function (r) { return r.json(); })
     .then(function (res) {
       if (!res.success) { alert(res.message || 'Failed.'); return; }
-      // Reload the modal's data from the page - simplest correct way to
-      // reflect a possible auto-selected final title or new notification
-      // without duplicating that resolution logic in JS.
-      window.location.reload();
+      ppApplyDecision(res);
     })
     .catch(function () { alert('Failed to process request.'); });
+}
+
+/**
+ * Draw a decision into the open modal.
+ *
+ * The endpoints hand back the team's proposals in the same shape the modal
+ * was opened with, so the list, the title and the Verify button can all be
+ * redrawn where they stand. A CaPSA gets through all three titles in one
+ * sitting instead of reopening the modal after each one.
+ */
+function ppApplyDecision(res) {
+  ppDecided = true;
+
+  if (res.proposals) {
+    renderPreProposals(res.proposals, res.selected_pre_proposal_id || null);
+  }
+
+  var title = document.getElementById('vm-title');
+  if (title) {
+    // No title until the review is over and one of them has won it.
+    title.textContent = res.project_title || '—';
+  }
+
+  var verifyBtn = document.getElementById('vm-verify-btn');
+  var verifyNote = document.getElementById('vm-verify-note');
+  if (verifyBtn) {
+    var resolved = !!res.selected_pre_proposal_id;
+    verifyBtn.disabled = !resolved;
+    verifyBtn.style.opacity = resolved ? '1' : '0.5';
+    verifyBtn.style.cursor = resolved ? 'pointer' : 'not-allowed';
+    if (verifyNote) verifyNote.style.display = resolved ? 'none' : 'block';
+  }
 }
 
 function openPpRejectModal(id, url) {
@@ -365,7 +402,7 @@ function confirmPpReject() {
     .then(function (res) {
       closePpRejectModal();
       if (!res.success) { alert(res.message || 'Failed.'); return; }
-      window.location.reload();
+      ppApplyDecision(res);
     })
     .catch(function () { alert('Failed to process request.'); });
 }
