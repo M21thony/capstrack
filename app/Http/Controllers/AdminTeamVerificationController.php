@@ -6,6 +6,7 @@ use App\Models\CapstonePreProposal;
 use App\Models\Notification;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
+use App\Support\PreProposalPayload;
 use App\Support\SectionScope;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -97,7 +98,10 @@ class AdminTeamVerificationController extends Controller
 
         $this->resolveTitleIfSettled($preProposal->team);
 
-        return response()->json(['success' => true, 'message' => 'Proposal approved.']);
+        return response()->json([
+            'success' => true,
+            'message' => 'Proposal approved.',
+        ] + $this->reviewState($preProposal->team));
     }
 
     // Lets the CAPSA open the exact PDF the team uploaded for this title,
@@ -139,12 +143,32 @@ class AdminTeamVerificationController extends Controller
         // proposal is what settles the title, so this has to run here too.
         $this->resolveTitleIfSettled($preProposal->team);
 
-        return response()->json(['success' => true, 'message' => 'Proposal rejected.']);
+        return response()->json([
+            'success' => true,
+            'message' => 'Proposal rejected.',
+        ] + $this->reviewState($preProposal->team));
     }
 
     // After every approve/reject, check whether the title question is now
     // settled: exactly one approved auto-resolves it; two or more means the
     // student has to pick, so they're notified instead.
+    /**
+     * What the review modal needs to redraw itself after a decision.
+     *
+     * It used to reload the page instead, which closed the modal - so a CaPSA
+     * with three titles to get through had to reopen it after each one.
+     */
+    private function reviewState(Team $team): array
+    {
+        $team->refresh()->load('preProposals.duplicationCheck');
+
+        return [
+            'proposals' => PreProposalPayload::forTeam($team),
+            'selected_pre_proposal_id' => $team->selected_pre_proposal_id,
+            'project_title' => $team->project_title,
+        ];
+    }
+
     /**
      * Settle the team's title, but only once the review is actually over.
      *

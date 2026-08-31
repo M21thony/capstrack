@@ -752,4 +752,37 @@ class AdminTeamVerificationTest extends TestCase
         $this->assertNull($team->project_title);
         $this->assertNull($team->selected_pre_proposal_id);
     }
+
+    /**
+     * The modal used to be refreshed by reloading the page, which closed it -
+     * so a CaPSA with three titles reopened it after every decision. The
+     * endpoints hand back what the modal needs to redraw itself instead.
+     */
+    public function test_a_decision_returns_what_the_modal_needs_to_redraw(): void
+    {
+        $this->createAdmin();
+        $leader = $this->createLeader();
+        $team = $this->createCompleteTeam($leader);
+        $team->update(['project_title' => null]);
+        [$first, $second, $third] = $this->threeSubmittedTitles($team, $leader);
+
+        $response = $this->postJson(route('admin.verify_teams.pre_proposals.approve', $first))->assertOk();
+
+        $response->assertJsonPath('success', true);
+        $response->assertJsonCount(3, 'proposals');
+        $response->assertJsonPath('proposals.0.status', 'approved');
+        // Still mid-review, so no title and nothing to verify yet.
+        $response->assertJsonPath('project_title', null);
+        $response->assertJsonPath('selected_pre_proposal_id', null);
+
+        $this->postJson(route('admin.verify_teams.pre_proposals.reject', $second), ['reason' => 'Too broad'])
+            ->assertOk()
+            ->assertJsonPath('proposals.1.status', 'rejected')
+            ->assertJsonPath('proposals.1.rejection_reason', 'Too broad');
+
+        $this->postJson(route('admin.verify_teams.pre_proposals.reject', $third), ['reason' => 'Duplicate'])
+            ->assertOk()
+            ->assertJsonPath('project_title', 'First Title')
+            ->assertJsonPath('selected_pre_proposal_id', $first->id);
+    }
 }
