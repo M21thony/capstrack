@@ -13,8 +13,15 @@
 .expertise-tags { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; margin-bottom: 8px; }
 .expertise-tag { font-size: 10px; color: var(--text3); background: var(--bg3); padding: 2px 8px; border-radius: 4px; }
 
-/* The list of applications this team has out. */
-.req-section { margin-top: 8px; }
+/* The list of applications this team has out.
+
+   The bottom margin is not decoration: .sticky-controls below is pulled up
+   20px (margin-top:-20px) and paints an opaque background at z-index 100, so
+   whatever sits directly above it loses its last 20px underneath. Every other
+   block up there - .team-slots, .req-notice - already carries margin-bottom
+   20px for exactly that reason. This one did not, so the last application
+   card was clipped along its bottom edge. */
+.req-section { margin-top: 8px; margin-bottom: 20px; }
 
 /* The team's three role slots - see the markup above for why these
    replaced the stat cards and the panel that used to list them. */
