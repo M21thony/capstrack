@@ -203,7 +203,7 @@
                 <option value="weekly">Every week (same day)</option>
                 <option value="biweekly">Every 2 weeks</option>
               </select>
-              <div id="f-recur-locked-note" style="display:none;font-size:11px;color:var(--text3);margin-top:4px">Recurrence can't be changed here — delete and re-add the slot instead.</div>
+              <div id="f-recur-locked-note" style="display:none;font-size:11px;color:var(--text3);margin-top:4px">Switching to a single date? Pick the date above.</div>
             </div>
 
             <div id="edit-mode-banner" style="display:none;padding:8px 12px;margin-bottom:11px;background:var(--accent-glow,rgba(0,229,255,0.08));border:1px solid var(--accent,#00e5ff);border-radius:8px;color:var(--accent,#00e5ff);font-size:12px;font-weight:600">
@@ -1036,6 +1036,8 @@ async function saveSlot() {
           end_time:           end,
           consultation_limit: maxB,
           slot_type:          type,
+          recur:              recur,
+          specific_date:      recur === 'once' ? selectedDate : null,
         }),
       });
 
@@ -1047,6 +1049,8 @@ async function saveSlot() {
         raw.end_time           = end;
         raw.consultation_limit = maxB;
         raw.slot_type          = type;
+        raw.recur              = recur;
+        raw.specific_date      = recur === 'once' ? selectedDate : null;
       }
 
       fanOutSlots();
@@ -1163,9 +1167,12 @@ function editSlot(scheduleId, key, index) {
   document.getElementById('f-max').value   = s.consultation_limit || 1;
   document.getElementById('f-recur').value = s.recur || 'weekly';
 
+  // Recurrence is editable now: updateSlot took neither recur nor
+  // specific_date, so changing it here did nothing and the field was
+  // disabled to hide that. Both are accepted, so it is a real control.
   const recurSelect = document.getElementById('f-recur');
   const recurNote   = document.getElementById('f-recur-locked-note');
-  if (recurSelect) recurSelect.disabled = true;
+  if (recurSelect) recurSelect.disabled = false;
   if (recurNote) recurNote.style.display = 'block';
 
   const banner = document.getElementById('edit-mode-banner');

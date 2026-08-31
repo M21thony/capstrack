@@ -1,0 +1,84 @@
+<?php
+
+namespace App\Jobs;
+
+use App\Mail\ConsultationCancelledMail;
+use App\Models\ConsultationBooking;
+use App\Models\ConsultationSchedule;
+use App\Services\GoogleCalendarService;
+use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
+
+/**
+ * Tell the expert, and tidy Google Calendar, after a consultation is cancelled.
+ *
+ * Both of these used to run inside the request. Sending the mail waits on an
+ * SMTP round trip and the calendar call waits on Google, so cancelling sat
+ * there for about three seconds before the page came back - for work the
+ * student is not waiting on and cannot see the result of.
+ *
+ * The booking is already cancelled and the slot already freed by the time
+ * this runs; nothing here decides anything, it only announces it.
+ */
+class SyncConsultationCancellation implements ShouldQueue
+{
+    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+
+    public function __construct(
+        public int $bookingId,
+        public string $reason,
+        public string $studentName,
+    ) {}
+
+    public function handle(GoogleCalendarService $calendar): void
+    {
+        $booking = ConsultationBooking::find($this->bookingId);
+
+        if (! $booking) {
+            return;
+        }
+
+        $slot = ConsultationSchedule::find($booking->schedule_id);
+        $expert = $slot?->expert;
+
+        if (! $expert) {
+            return;
+        }
+
+        try {
+            Mail::to($expert->email)->send(
+                new ConsultationCancelledMail($booking, $expert, $booking->team, $this->studentName, $this->reason)
+            );
+        } catch (\Throwable $e) {
+            Log::warning('Consultation cancelled email failed', ['error' => $e->getMessage()]);
+        }
+
+        if (! $expert->google_token) {
+            return;
+        }
+
+        try {
+            if ($slot->recur === 'once') {
+                if ($slot->google_event_id) {
+                    $calendar->updateBookingEvent(
+                        expertId: $slot->expert_id,
+                        googleEventId: $slot->google_event_id,
+                        teamName: 'Available Slot'
+                    );
+                }
+            } elseif ($booking->google_event_id) {
+                // A recurring occurrence had an event of its own - there is no
+                // shared placeholder for this one date to fall back to - so it
+                // is removed rather than relabelled.
+                $calendar->cancelBookingEvent($slot->expert_id, $booking->google_event_id);
+            }
+        } catch (\Throwable $e) {
+            Log::warning('Google Calendar sync failed on cancel', ['error' => $e->getMessage()]);
+        }
+    }
+}
