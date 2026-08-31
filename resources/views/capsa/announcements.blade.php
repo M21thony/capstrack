@@ -44,11 +44,10 @@
 .modal-btn-cancel:hover{background:#f9fafb}
 .modal-btn-danger{background:#d92d20;color:#fff}
 .modal-btn-danger:hover{background:#b42318}
-/* Tabs */
-.tab-bar{display:flex;gap:4px;margin-left:12px}
-.tab-btn{padding:4px 14px;font-size:11px;font-weight:600;border:none;border-radius:6px;cursor:pointer;background:transparent;color:var(--text3);transition:all .15s}
-.tab-btn:hover{background:rgba(79,70,229,0.06);color:var(--accent)}
-.tab-btn.active{background:rgba(79,70,229,0.1);color:var(--accent)}
+/* Tabs: the look is the shared .tab-bar/.tab-btn component; only the spot
+   this page puts the strip in is set here. */
+.tab-bar{margin-left:12px}
+.tab-btn{font-size:11.5px;padding:8px 13px}
 .tab-content{display:none}
 .tab-content.active{display:block}
 .card.inactive{opacity:0.55;border-color:var(--border2)}.card.inactive:hover{opacity:0.75}

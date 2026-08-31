@@ -1446,7 +1446,6 @@ loadRubrics();
 
 /* ── TABS ── */
 .rb-tab-btn { padding: 8px 16px; font-size: 13px; }
-.rb-tab-btn.active { background: var(--navy-dark); color: #fff; font-weight: 600; }
 .rb-search-input:focus { width: 260px; }
 
 /* ── RUBRIC CARDS ── */
