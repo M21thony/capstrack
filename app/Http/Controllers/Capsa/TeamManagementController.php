@@ -11,6 +11,7 @@ use App\Models\StudentSchoolYear;
 use App\Models\Team;
 use App\Models\TeamExpertAssignment;
 use App\Support\DefenseProgress;
+use App\Support\MilestoneGrid;
 use App\Support\SectionScope;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -78,7 +79,8 @@ class TeamManagementController extends Controller
             'rows' => $rows,
             // Only the Milestones tab needs the items themselves; every other
             // tab is served by the counts already in $rows.
-            'milestoneBoards' => $tab === 'milestones' ? $this->milestoneBoards($teams) : collect(),
+            // The Milestones tab is a grid: deliverables across, teams down.
+            'grid' => $tab === 'milestones' ? $this->milestoneGrid($teams, $rows) : null,
             'templates' => \App\Support\MilestoneTemplate::all(),
             'selectedSection' => $selectedSection,
             'allSections' => $capsaSections,
@@ -125,28 +127,25 @@ class TeamManagementController extends Controller
     }
 
     /**
-     * Each team with its milestones and every item's worked-out state, for
-     * the Milestones tab - which is both where a checklist is built and where
-     * a CaPSA ticks off the papers she has sighted.
+     * The Milestones tab: every team in the CaPSA's sections against every
+     * deliverable on their checklist.
      *
-     * @return \Illuminate\Support\Collection<int, object>
+     * It is both where a checklist gets built and where the papers get ticked
+     * off, because a CaPSA working down a section is doing the two together.
      */
-    private function milestoneBoards(Collection $teams): Collection
+    private function milestoneGrid(Collection $teams, Collection $rows): object
     {
-        $byTeam = Milestone::whereIn('team_id', $teams->pluck('team_id'))
+        $milestones = Milestone::whereIn('team_id', $teams->pluck('team_id'))
             ->with('items')
             ->orderBy('due_date')
             ->orderBy('id')
-            ->get()
-            ->groupBy('team_id');
+            ->get();
 
-        return $teams->map(fn (Team $team) => (object) [
-            'team' => $team,
-            'milestones' => ($byTeam[$team->team_id] ?? collect())->map(fn (Milestone $milestone) => (object) [
-                'model' => $milestone,
-                'progress' => $milestone->progress(),
-            ]),
-        ]);
+        // One checklist per team is the shape this grid reads. If a team
+        // somehow has several, the earliest is the one shown.
+        $primary = $milestones->groupBy('team_id')->map->first()->values();
+
+        return MilestoneGrid::build($primary, $rows);
     }
 
     /** @return array<int, object{total: int, completed: int, overdue: int, percent: int}> */

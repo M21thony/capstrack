@@ -238,10 +238,9 @@ class CapsaMilestoneEditorTest extends TestCase
     }
 
     /**
-     * The tab renders, and shows what each line is waiting on rather than a
-     * bare unticked box.
+     * The tab renders as a grid: deliverables across, teams down.
      */
-    public function test_the_milestones_tab_renders_the_checklist(): void
+    public function test_the_milestones_tab_renders_the_grid(): void
     {
         $this->makeCapsaWithSections();
         [$team] = $this->makeTeamInSection('Team One');
@@ -253,16 +252,47 @@ class CapsaMilestoneEditorTest extends TestCase
         ])->assertOk();
 
         $response = $this->get(route('admin.team_management', ['tab' => 'milestones']));
-
         $response->assertOk();
+
+        // The team is a row, with its score.
         $response->assertSee('Team One');
-        $response->assertSee('Capstone 1');
-        $response->assertSee('0 of 19 complete');
-        $response->assertSee('Signed Project Team Assignment Form');
-        $response->assertSee('Signed CLF Approving Chapter 1 (CaPA/Adviser)');
-        // The kinds are labelled, so it is obvious which ones close themselves.
-        $response->assertSee('approval');
-        $response->assertSee('document');
+        $response->assertSee('0/19');
+
+        // Columns carry the short label, with the paper's full wording kept
+        // on the cell so the exact name is never lost.
+        $response->assertSee('Team Assignment');
+        $response->assertSee('Approved CLF');
+        $response->assertSee('Signed CLF Approving Chapter 1 (CaPA/Adviser)', false);
+
+        // Grouped by phase, and the narrow-screen tabs are rendered for them.
+        $response->assertSee('Getting started');
+        $response->assertSee('Title Defense');
+        $response->assertSee('ms-ptab', false);
+    }
+
+    /**
+     * Only the eight forms are pressable. A draft, a CLF and a defense are
+     * answered elsewhere, so they must not look like something to click.
+     */
+    public function test_only_the_hand_ticked_lines_are_buttons_in_the_grid(): void
+    {
+        $this->makeCapsaWithSections();
+        [$team] = $this->makeTeamInSection('Team One');
+
+        $this->postJson(route('admin.milestones.store'), [
+            'scope' => 'team',
+            'team_id' => $team->team_id,
+            'template' => MilestoneTemplate::CAPSTONE_1,
+        ])->assertOk();
+
+        $html = $this->get(route('admin.team_management', ['tab' => 'milestones']))->getContent();
+
+        // Counted inside the table body only - the key at the foot draws one
+        // of each mark to explain them, and those are not cells.
+        $body = substr($html, strpos($html, '<tbody>'), strpos($html, '</tbody>') - strpos($html, '<tbody>'));
+
+        $this->assertSame(8, substr_count($body, '<button'), 'the eight forms are pressable');
+        $this->assertSame(11, substr_count($body, 'ms-mk auto'), 'the other eleven are not');
     }
 
     /** A CaPSA has no business touching a team outside her own sections. */

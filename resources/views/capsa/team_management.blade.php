@@ -28,69 +28,111 @@
   .tm-role-off{background:var(--bg4);color:var(--text3);opacity:.75}
 
 
-  /* ── Milestones tab ─────────────────────────────────────────────────
-     One screen for building a checklist and for ticking the papers off
-     it, because a CaPSA does both in the same sitting. */
-  .ms-intro{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:16px;flex-wrap:wrap}
+  /* ── Milestones: the section checklist grid ────────────────────────
+     Deliverables across, teams down. The nineteen are a fixed list and the
+     teams are not, so the growing side is the one that scrolls. */
+  .ms-intro{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:14px;flex-wrap:wrap}
   .ms-intro-title{font-size:15px;font-weight:600;color:var(--text);margin-bottom:3px}
-  .ms-intro-note{font-size:12px;color:var(--text3);line-height:1.6;max-width:74ch}
+  .ms-intro-note{font-size:12px;color:var(--text3);line-height:1.6;max-width:82ch}
 
-  .ms-team{padding:0;overflow:hidden;margin-bottom:14px}
-  .ms-team-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 18px;border-bottom:1px solid var(--border);flex-wrap:wrap}
-  .ms-team-name{font-size:14px;font-weight:600;color:var(--text)}
-  .ms-team-sub{font-size:11.5px;color:var(--text3);margin-top:2px}
-  .ms-none{padding:14px 18px;font-size:12px;color:var(--text3)}
+  /* Shown only when the grid falls back to one phase at a time. */
+  .ms-phases{display:none;padding:0 12px;border-bottom:1px solid var(--border);overflow-x:auto}
+  .ms-ptab{border:none;background:none;font-family:inherit;font-size:12px;font-weight:600;color:var(--text2);
+           padding:9px 12px;border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap}
+  .ms-ptab:hover{color:var(--text)}
+  .ms-ptab.on{color:var(--accent3);border-bottom-color:var(--accent)}
+  .ms-pc{font-family:'Space Mono',monospace;font-size:9.5px;color:var(--text3);margin-left:5px}
+  .ms-ptab.on .ms-pc{color:var(--accent3)}
+  .ms-hide{display:none}
 
-  .ms-block{border-bottom:1px solid var(--border)}
-  .ms-block:last-child{border-bottom:none}
-  .ms-block-head{display:flex;align-items:center;gap:11px;padding:12px 18px}
-  .ms-toggle{background:none;border:none;cursor:pointer;color:var(--text3);padding:3px;display:flex;transition:transform .15s}
-  .ms-block.open .ms-toggle{transform:rotate(90deg)}
-  .ms-name{font-size:13.5px;font-weight:600;color:var(--text)}
-  .ms-due{font-family:'Space Mono',monospace;font-size:10.5px;font-weight:400;color:var(--text3);margin-left:8px}
-  .ms-meta{font-size:11.5px;color:var(--text3);margin-top:2px}
-  .ms-meta strong{color:var(--text2);font-weight:600}
-  .ms-overdue{color:var(--red);font-weight:600}
-  .ms-bar{width:110px;height:6px;border-radius:999px;background:var(--bg4);overflow:hidden;flex-shrink:0}
-  .ms-bar-fill{height:100%;border-radius:999px;background:var(--green)}
-  .ms-del{background:none;border:none;cursor:pointer;color:var(--text3);padding:4px;border-radius:5px;display:flex;flex-shrink:0}
-  .ms-del:hover{color:var(--red);background:var(--red-bg)}
+  /* The bar is hidden; scrolling still works. */
+  .ms-scroll{overflow:auto;max-height:620px;scrollbar-width:none;-ms-overflow-style:none}
+  .ms-scroll::-webkit-scrollbar{width:0;height:0;display:none}
 
-  /* The items only appear when a milestone is opened - nineteen lines per
-     team would otherwise bury the page. */
-  .ms-items{display:none;padding:0 18px 14px 44px}
-  .ms-block.open .ms-items{display:block}
+  .ms-grid{border-collapse:separate;border-spacing:0;font-size:12px;table-layout:fixed;width:100%}
+  .ms-grid th,.ms-grid td{padding:0}
 
-  .ms-item{display:grid;grid-template-columns:22px 1fr auto 92px 22px;gap:10px;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);font-size:12.5px}
-  .ms-item:last-of-type{border-bottom:none}
-  .ms-item-name{color:var(--text2);min-width:0}
-  .ms-done .ms-item-name,.ms-done_late .ms-item-name{color:var(--text3)}
-  .ms-overdue .ms-item-name{color:var(--text2)}
+  .ms-grid thead th{position:sticky;background:var(--bg3);z-index:3;text-align:center}
+  .ms-phaserow th{top:0;height:26px;padding:0 6px;font-size:11px;font-weight:600;color:var(--text);
+                  border-bottom:1px solid var(--border);white-space:nowrap}
+  .ms-namerow th{top:26px;height:56px;vertical-align:bottom;padding:0 3px 7px;border-bottom:1px solid var(--border2)}
+  /* Short, because the band above already says which chapter it is - which is
+     what lets nineteen labels sit flat rather than on their side. */
+  .ms-lab{font-size:11px;color:var(--text);font-weight:500;line-height:1.3;text-align:center;
+          word-break:normal;overflow-wrap:break-word;hyphens:auto}
+  /* Just enough to separate one phase from the next; at --bg4 whole groups
+     read as grey blocks. */
+  .ms-band{background:rgba(125,130,145,0.045)}
+  .ms-grid thead th.ms-band{background:rgba(125,130,145,0.055)}
+  .ms-grp{border-left:1px solid var(--border2)}
 
-  .ms-tick{width:17px;height:17px;border-radius:5px;border:1.5px solid var(--border-strong,#c9ccd6);background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;flex-shrink:0}
-  .ms-tick svg{width:10px;height:10px;opacity:0}
-  .ms-tick.on{background:var(--green);border-color:var(--green)}
-  .ms-tick.on svg{opacity:1;stroke:#fff}
-  /* Nothing to press on a line that closes itself. */
-  .ms-tick.auto{cursor:default;border-style:dashed;opacity:.75}
-  .ms-tick.auto.on{border-style:solid;opacity:1}
+  .ms-kdot{display:inline-block;width:5px;height:5px;border-radius:50%;margin-top:5px}
+  .ms-namerow .ms-kdot{display:block;margin:5px auto 0}
+  .ms-k-form,.ms-k-custom{background:var(--text3)}
+  .ms-k-document{background:#3b82f6}
+  .ms-k-approval{background:#9333ea}
+  .ms-k-defense{background:var(--accent)}
 
-  .ms-kind{font-family:'Space Mono',monospace;font-size:8.5px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;padding:2px 7px;border-radius:4px;white-space:nowrap}
-  .ms-kind-form,.ms-kind-custom{background:var(--bg4);color:var(--text3)}
-  .ms-kind-document{background:var(--blue-bg);color:var(--blue)}
-  .ms-kind-approval{background:var(--purple-bg);color:var(--purple)}
-  .ms-kind-defense{background:var(--accent-light);color:var(--accent3)}
+  .ms-grid th.ms-team,.ms-grid td.ms-team{position:sticky;left:0;z-index:2;background:var(--bg2);
+    text-align:left;width:158px;border-right:1px solid var(--border2);padding:9px 12px}
+  .ms-grid thead th.ms-team{z-index:5;background:var(--bg3);vertical-align:bottom}
+  .ms-phaserow th.ms-team{top:0;height:26px}
+  .ms-namerow th.ms-team{top:26px}
+  .ms-th{font-size:11px;font-weight:600;color:var(--text3);letter-spacing:.3px;text-transform:uppercase}
+  .ms-count{font-family:'Space Mono',monospace;font-size:10.5px;color:var(--text3);white-space:nowrap}
 
-  .ms-when{font-family:'Space Mono',monospace;font-size:10.5px;color:var(--text3);text-align:right}
-  .ms-waiting{color:var(--amber)}
-  .ms-flag{font-family:'Space Mono',monospace;font-size:8.5px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:1px 6px;border-radius:3px;background:var(--red-bg);color:var(--red);margin-left:7px}
+  .ms-tname{font-size:13.5px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ms-tprog{display:flex;align-items:center;gap:6px;margin-top:4px}
+  .ms-tbar{flex:1;height:4px;border-radius:2px;background:var(--bg4);overflow:hidden}
+  .ms-tbar i{display:block;height:100%;background:var(--green)}
+  .ms-give{background:none;border:none;padding:0;font:inherit;font-size:12px;
+           color:var(--accent3);cursor:pointer;text-decoration:underline}
 
-  .ms-empty{font-size:12px;color:var(--text3);padding:10px 0}
-  .ms-link{background:none;border:none;padding:0;color:var(--accent3);font:inherit;font-size:12px;cursor:pointer;text-decoration:underline}
-  .ms-add{display:flex;gap:8px;margin-top:11px}
-  .ms-add .input{flex:1;font-size:12px;padding:6px 10px}
-  .ms-label{display:block;font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin:14px 0 5px}
+  .ms-grid tbody tr td{border-bottom:1px solid var(--border)}
+  .ms-sec td{background:var(--bg3);padding:7px 12px;position:sticky;top:82px;z-index:1;
+             border-bottom:1px solid var(--border2)}
+  .ms-sec td.ms-team{background:var(--bg3);z-index:3;font-size:12px;font-weight:600;color:var(--text2)}
+  .ms-secmeta{font-size:11.5px;color:var(--text3);font-weight:400;margin-left:7px}
+
+  .ms-cell{text-align:center;padding:5px 3px;width:70px}
+  .ms-grid tbody tr:hover td{background:var(--accent-light)}
+  .ms-na{color:var(--text3);opacity:.45}
+  .ms-none{padding:9px 14px;font-size:12px;color:var(--text3)}
+
+  .ms-mk{width:21px;height:21px;border-radius:5px;display:inline-flex;align-items:center;justify-content:center;
+         border:1.5px solid var(--text3);background:var(--bg2);padding:0;cursor:pointer}
+  .ms-mk svg{width:11px;height:11px}
+  .ms-mk.on{background:var(--green);border-color:var(--green);color:#fff}
+  .ms-mk.wait{border-color:var(--amber);color:var(--amber);background:var(--amber-bg)}
+  .ms-mk.over{border-color:var(--red);color:var(--red);background:var(--red-bg)}
+  /* Closes itself, so it is not a button and does not invite a press. */
+  .ms-mk.auto{border-style:dashed;cursor:default}
+  button.ms-mk:hover{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-light)}
+
+  .ms-key{display:flex;gap:14px;flex-wrap:wrap;align-items:center;padding:11px 15px;
+          border-top:1px solid var(--border);background:var(--bg3);font-size:11.5px;color:var(--text3)}
+  .ms-key > span{display:flex;align-items:center;gap:6px}
+  .ms-key .ms-mk{width:15px;height:15px;cursor:default}
+  .ms-key .ms-mk svg{width:9px;height:9px}
+  .ms-kinds{margin-left:auto;gap:5px}
+  .ms-kinds .ms-kdot{margin:0 2px 0 8px}
+
+  .ms-label{display:block;font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;
+            letter-spacing:.4px;margin:14px 0 5px}
   .ms-hint{font-size:11px;color:var(--text3);margin-top:5px}
+
+  @media (max-width:1279px){
+    .ms-phases{display:flex}
+    /* The tab already names the phase, so the band would say it twice. Safe
+       because each header row carries its own Team cell. */
+    .ms-phaserow{display:none}
+    .ms-namerow th{top:0}
+    .ms-sec td{top:56px}
+    .ms-grid th.ms-team,.ms-grid td.ms-team{width:142px;padding:8px 10px}
+    .ms-tname{font-size:12.5px}
+    .ms-secmeta{display:block;margin-left:0;margin-top:1px}
+    .ms-cell{width:auto}
+  }
 
   .tm-empty{text-align:center;padding:44px 20px;color:var(--text3);font-size:13px;line-height:1.6}
 </style>
