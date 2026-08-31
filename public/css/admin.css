@@ -248,9 +248,13 @@ textarea.input{resize:vertical;min-height:80px}
 .analytics-bar-label.highlight{color:var(--accent3);font-weight:700}
 
 /* ── TAB UI ── */
-.tab-bar{display:flex;gap:4px;background:var(--bg3);padding:4px;border-radius:10px;width:fit-content}
-.tab-btn{font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;padding:5px 14px;border:none;border-radius:7px;cursor:pointer;background:transparent;color:var(--text3);transition:all .18s}
-.tab-btn.active{background:#fff;color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.10)}
+.tab-bar{display:flex;flex-wrap:wrap;width:fit-content;max-width:100%;border-bottom:1px solid var(--border)}
+.tab-bar-wide{width:100%}
+.tab-btn{display:inline-flex;align-items:center;gap:7px;font-family:'DM Sans',sans-serif;font-size:12.5px;font-weight:600;padding:10px 16px;border:none;border-bottom:2px solid transparent;margin-bottom:-1px;cursor:pointer;background:transparent;color:var(--text2);text-decoration:none;white-space:nowrap;transition:.13s}
+.tab-btn:hover{background:var(--bg4);color:var(--text)}
+.tab-btn:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.tab-btn.active{color:var(--accent3);border-bottom-color:var(--accent)}
+.tab-count{font-size:10px;font-weight:700;padding:1px 7px;border-radius:999px;background:var(--red);color:#fff}
 .tab-panel{display:none}
 .tab-panel.active{display:block}
 
@@ -346,9 +350,10 @@ textarea.input{resize:vertical;min-height:80px}
 .cat-ch6{background:rgba(220,38,38,0.08);color:var(--red);border:1px solid rgba(220,38,38,0.15)}
 
 /* ── RESOURCES: FILTER TABS ── */
-.filter-tabs{display:flex;gap:4px;background:var(--bg3);padding:3px;border-radius:8px;width:fit-content}
-.filter-tab{font-size:11px;font-weight:600;padding:5px 12px;border:none;border-radius:6px;cursor:pointer;background:transparent;color:var(--text3);transition:all .15s;font-family:'DM Sans',sans-serif;white-space:nowrap}
-.filter-tab.active{background:#fff;color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.09)}
+.filter-tabs{display:flex;flex-wrap:wrap;width:fit-content;max-width:100%;border-bottom:1px solid var(--border)}
+.filter-tab{font-size:11.5px;font-weight:600;padding:8px 13px;border:none;border-bottom:2px solid transparent;margin-bottom:-1px;cursor:pointer;background:transparent;color:var(--text2);transition:.13s;font-family:'DM Sans',sans-serif;white-space:nowrap}
+.filter-tab:hover{background:var(--bg4);color:var(--text)}
+.filter-tab.active{color:var(--accent3);border-bottom-color:var(--accent)}
 
 /* ── RESOURCES: UPLOAD PREVIEW ── */
 .upload-preview{display:none;align-items:center;gap:10px;padding:10px 12px;background:var(--bg3);border-radius:8px;border:1px solid var(--border);margin-top:10px}
@@ -709,9 +714,13 @@ textarea.input{resize:vertical;min-height:80px}
 .analytics-bar-label.highlight{color:var(--accent3);font-weight:700}
 
 /* ── TAB UI ── */
-.tab-bar{display:flex;gap:4px;background:var(--bg3);padding:4px;border-radius:10px;width:fit-content}
-.tab-btn{font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;padding:5px 14px;border:none;border-radius:7px;cursor:pointer;background:transparent;color:var(--text3);transition:all .18s}
-.tab-btn.active{background:#fff;color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.10)}
+.tab-bar{display:flex;flex-wrap:wrap;width:fit-content;max-width:100%;border-bottom:1px solid var(--border)}
+.tab-bar-wide{width:100%}
+.tab-btn{display:inline-flex;align-items:center;gap:7px;font-family:'DM Sans',sans-serif;font-size:12.5px;font-weight:600;padding:10px 16px;border:none;border-bottom:2px solid transparent;margin-bottom:-1px;cursor:pointer;background:transparent;color:var(--text2);text-decoration:none;white-space:nowrap;transition:.13s}
+.tab-btn:hover{background:var(--bg4);color:var(--text)}
+.tab-btn:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.tab-btn.active{color:var(--accent3);border-bottom-color:var(--accent)}
+.tab-count{font-size:10px;font-weight:700;padding:1px 7px;border-radius:999px;background:var(--red);color:#fff}
 .tab-panel{display:none}
 .tab-panel.active{display:block}
 
@@ -807,9 +816,10 @@ textarea.input{resize:vertical;min-height:80px}
 .cat-ch6{background:rgba(220,38,38,0.08);color:var(--red);border:1px solid rgba(220,38,38,0.15)}
 
 /* ── RESOURCES: FILTER TABS ── */
-.filter-tabs{display:flex;gap:4px;background:var(--bg3);padding:3px;border-radius:8px;width:fit-content}
-.filter-tab{font-size:11px;font-weight:600;padding:5px 12px;border:none;border-radius:6px;cursor:pointer;background:transparent;color:var(--text3);transition:all .15s;font-family:'DM Sans',sans-serif;white-space:nowrap}
-.filter-tab.active{background:#fff;color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.09)}
+.filter-tabs{display:flex;flex-wrap:wrap;width:fit-content;max-width:100%;border-bottom:1px solid var(--border)}
+.filter-tab{font-size:11.5px;font-weight:600;padding:8px 13px;border:none;border-bottom:2px solid transparent;margin-bottom:-1px;cursor:pointer;background:transparent;color:var(--text2);transition:.13s;font-family:'DM Sans',sans-serif;white-space:nowrap}
+.filter-tab:hover{background:var(--bg4);color:var(--text)}
+.filter-tab.active{color:var(--accent3);border-bottom-color:var(--accent)}
 
 /* ── RESOURCES: UPLOAD PREVIEW ── */
 .upload-preview{display:none;align-items:center;gap:10px;padding:10px 12px;background:var(--bg3);border-radius:8px;border:1px solid var(--border);margin-top:10px}
@@ -893,9 +903,13 @@ textarea.input{resize:vertical;min-height:80px}
    ═══════════════════════════════════════════════════════════════════ */
 
 /* ── TAB BAR (existing .tab-btn override for rubric tabs) ── */
-.tab-bar{display:flex;gap:4px;background:var(--bg3);padding:4px;border-radius:10px;width:fit-content}
-.tab-btn{font-size:12px;font-weight:500;padding:6px 14px;border:none;border-radius:7px;cursor:pointer;background:transparent;color:var(--text3);transition:all .15s;font-family:"DM Sans",sans-serif}
-.tab-btn.active{background:#fff;color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.09);font-weight:600}
+.tab-bar{display:flex;flex-wrap:wrap;width:fit-content;max-width:100%;border-bottom:1px solid var(--border)}
+.tab-bar-wide{width:100%}
+.tab-btn{display:inline-flex;align-items:center;gap:7px;font-family:'DM Sans',sans-serif;font-size:12.5px;font-weight:600;padding:10px 16px;border:none;border-bottom:2px solid transparent;margin-bottom:-1px;cursor:pointer;background:transparent;color:var(--text2);text-decoration:none;white-space:nowrap;transition:.13s}
+.tab-btn:hover{background:var(--bg4);color:var(--text)}
+.tab-btn:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.tab-btn.active{color:var(--accent3);border-bottom-color:var(--accent)}
+.tab-count{font-size:10px;font-weight:700;padding:1px 7px;border-radius:999px;background:var(--red);color:#fff}
 
 /* ── PAGE HEADER ── */
 .rb-page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px}
@@ -907,13 +921,14 @@ textarea.input{resize:vertical;min-height:80px}
 
 /* ── TAB HEADER (new rubric-specific tab row) ── */
 .rb-tab-header{display:flex;align-items:stretch;border-bottom:1px solid var(--border);overflow:hidden}
-.rb-tab-nav{display:flex;align-items:center;gap:2px;padding:10px 12px;flex:1;overflow-x:auto;min-width:0}
+.rb-tab-nav{display:flex;align-items:stretch;gap:2px;padding:0 12px;flex:1;overflow-x:auto;min-width:0}
 .rb-tab-nav::-webkit-scrollbar{height:0}
-.rb-tab-btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border:none;border-radius:8px;cursor:pointer;background:transparent;color:var(--text3);font-size:12px;font-weight:500;font-family:"DM Sans",sans-serif;transition:all .15s;white-space:nowrap;flex-shrink:0}
-.rb-tab-btn:hover{background:var(--bg4);color:var(--text2)}
-.rb-tab-btn.active{background:var(--navy-dark);color:#fff;font-weight:600}
-.rb-tab-count{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;background:rgba(255,255,255,.15);border-radius:9px;font-size:10px;font-weight:700;font-family:"Space Mono",monospace}
-.rb-tab-btn:not(.active) .rb-tab-count{background:var(--bg4);color:var(--text3)}
+.rb-tab-btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border:none;cursor:pointer;background:transparent;color:var(--text2);font-size:12.5px;font-weight:600;font-family:"DM Sans",sans-serif;transition:.13s;white-space:nowrap;flex-shrink:0}
+.rb-tab-btn:hover{background:var(--bg4);color:var(--text)}
+.rb-tab-btn:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.rb-tab-btn.active{color:var(--accent3);box-shadow:inset 0 -2px 0 var(--accent)}
+.rb-tab-count{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;background:var(--bg4);color:var(--text3);border-radius:9px;font-size:10px;font-weight:700;font-family:"Space Mono",monospace}
+.rb-tab-btn.active .rb-tab-count{background:var(--accent-light);color:var(--accent3)}
 .rb-tab-search{display:flex;align-items:center;gap:8px;padding:10px 14px;border-left:1px solid var(--border);flex-shrink:0}
 .rb-search-input{border:none;outline:none;background:transparent;font-size:13px;font-family:"DM Sans",sans-serif;color:var(--text);width:190px;transition:width .2s ease}
 .rb-search-input::placeholder{color:var(--text3)}

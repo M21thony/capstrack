@@ -8,10 +8,8 @@
 <link rel="stylesheet" href="{{ asset('css/expert.css') }}" />
 <meta name="csrf-token" content="{{ csrf_token() }}">
 <style>
-.tab-bar { display: flex; gap: 4px; margin-bottom: 20px; background: var(--bg2); border-radius: 12px; padding: 4px; border: 1px solid var(--border); width: fit-content; }
-.tab-btn { padding: 8px 20px; border-radius: 8px; border: none; background: transparent; color: var(--text3); font-size: 13px; font-weight: 500; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: 0.15s; }
-.tab-btn.active { background: var(--accent); color: white; }
-.tab-btn:hover:not(.active) { color: var(--text); }
+/* Tabs: the look is the shared .tab-bar/.tab-btn component. */
+.tab-bar { margin-bottom: 20px; }
 .tab-content { display: none; }
 .tab-content.active { display: block; }
 .stat-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 24px; }

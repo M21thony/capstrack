@@ -8,10 +8,11 @@
 <link rel="stylesheet" href="{{ asset('css/expert.css') }}" />
 <style>
 .team-overview-stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 24px; }
-.team-role-tabs { display: flex; gap: 4px; background: var(--bg2); border-radius: 12px; padding: 4px; border: 1px solid var(--border); width: fit-content; margin-bottom: 20px; flex-wrap: wrap; }
-.team-role-tab { padding: 8px 20px; border-radius: 8px; border: none; background: transparent; color: var(--text3); font-size: 13px; font-weight: 500; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: 0.15s; white-space: nowrap; }
-.team-role-tab.active { background: var(--accent); color: #18191f; font-weight: 600; }
-.team-role-tab:hover:not(.active) { color: var(--text); background: var(--bg3); }
+.team-role-tabs { display: flex; flex-wrap: wrap; width: fit-content; max-width: 100%; border-bottom: 1px solid var(--border); margin-bottom: 20px; }
+.team-role-tab { padding: 10px 16px; border: none; border-bottom: 2px solid transparent; margin-bottom: -1px; background: transparent; color: var(--text2); font-size: 12.5px; font-weight: 600; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: 0.13s; white-space: nowrap; }
+.team-role-tab.active { color: var(--accent3); border-bottom-color: var(--accent); }
+.team-role-tab:hover:not(.active) { color: var(--text); background: var(--bg4); }
+.team-role-tab:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .team-role-panel { display: none; }
 .team-role-panel.active { display: block; }
 
@@ -131,7 +132,7 @@
   .stat-sub { font-size:9px; }
 
   /* Tabs */
-  .team-role-tabs { padding:3px; }
+  .team-role-tab { padding:8px 12px; }
   .team-role-tab { padding:6px 10px; font-size:11px; }
 
   /* -- Team Cards -- */
