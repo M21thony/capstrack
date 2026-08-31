@@ -1203,8 +1203,10 @@ function reviewApply() {
 
   if (!valid) return;
 
+  // '+' here, not PHP's '.': this is JavaScript by the time the browser
+  // sees it, and the directive below has already rendered a quoted string.
   currentFileName = APPLY_HAS_APPROVED_PROPOSAL
-    ? @json($approvedProposal?->title ?? '').' (approved pre-proposal)'
+    ? @json($approvedProposal?->title ?? '') + ' (approved pre-proposal)'
     : fileInput.files[0].name;
   currentMessage = message;
 
