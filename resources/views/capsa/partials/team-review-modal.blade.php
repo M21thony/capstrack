@@ -44,12 +44,23 @@
       <div id="vm-preproposals" style="display:flex;flex-direction:column;gap:10px"></div>
     </div>
 
+    {{-- Verify Team is the switch that makes a team official for the
+         semester, and nothing said so - it read as a second, mystery button
+         next to the approvals. Say what it does, and what is still in the
+         way. --}}
     <div id="vm-verify-note" style="display:none;font-size:12px;color:#92400e;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px 12px;margin-bottom:12px">
-      Approve one of the pre-proposals above before this team can be verified.
+      Finish reviewing every title first. This team has a final title once you have
+      decided on all of them &mdash; approve or reject each one &mdash; and if you
+      approve more than one, once the team has picked between them.
     </div>
 
     <form id="vm-form" method="POST" style="border-top:1px solid var(--border);padding-top:16px">
       @csrf
+      <div style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:12px">
+        <strong style="color:var(--text)">Verifying</strong> confirms this team for the semester.
+        Its members and title are settled from then on, and it becomes eligible for
+        a panel, its checklist, and announcements sent to confirmed teams.
+      </div>
       <button type="submit" class="btn btn-primary" id="vm-verify-btn" style="width:100%;padding:10px;font-size:13px">
         <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:-2px;margin-right:6px"><polyline points="20 6 9 17 4 12"/></svg>
         Verify Team
