@@ -81,60 +81,6 @@
 .modal-box .form-group .file-input-wrap .file-icon { width: 20px; height: 20px; stroke: var(--accent); fill: none; stroke-width: 2; flex-shrink: 0; }
 .modal-box .form-group .file-input-wrap .file-label { font-size: 13px; color: var(--text3); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .modal-box .form-group .file-input-wrap .file-label.has-file { color: var(--text); }
-/* An expert's own photo, laid over their initials so a failed load (an
-   expired Google URL) simply reveals the initials again. */
-.avatar { position: relative; overflow: hidden; }
-.avatar .avatar-photo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: inherit; display: block; }
-
-/* Skill filter - a grouped, searchable picker in the controls bar. */
-.skill-filter { position: relative; display: flex; align-items: center; gap: 8px; }
-.skill-filter-trigger { display: inline-flex; align-items: center; gap: 8px; min-width: 190px; max-width: 260px; padding: 8px 11px; font-size: 13px; font-weight: 600; color: var(--text2); cursor: pointer; text-align: left; }
-.skill-filter-trigger span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.skill-filter-trigger svg { flex-shrink: 0; }
-.skill-filter-caret { transition: transform .15s; }
-.skill-filter.open .skill-filter-caret { transform: rotate(180deg); }
-.skill-filter.open .skill-filter-trigger { border-color: var(--accent); }
-
-.skill-picker { display: none; position: absolute; top: calc(100% + 6px); left: 0; z-index: 60; width: 320px; max-width: 92vw; background: var(--bg2); border: 1.5px solid var(--border); border-radius: 10px; box-shadow: 0 14px 32px -8px rgba(0,0,0,0.22); overflow: hidden; }
-.skill-filter.open .skill-picker { display: block; }
-.skill-picker-search { display: flex; align-items: center; gap: 7px; padding: 9px 11px; border-bottom: 1px solid var(--border); }
-.skill-picker-search svg { width: 13px; height: 13px; stroke: var(--text3); fill: none; stroke-width: 2; flex-shrink: 0; }
-.skill-picker-search input { flex: 1; border: none; outline: none; background: none; font-family: 'DM Sans', sans-serif; font-size: 13px; color: var(--text); }
-.skill-picker-search input::placeholder { color: var(--text3); }
-.skill-picker-list { max-height: 300px; overflow-y: auto; padding: 7px; display: flex; flex-direction: column; gap: 4px; }
-.skill-picker-empty { font-size: 12px; color: var(--text3); padding: 10px 8px; margin: 0; }
-
-.skill-group { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; flex-shrink: 0; }
-.skill-group-header { display: flex; align-items: center; gap: 8px; padding: 8px 10px; cursor: pointer; background: var(--bg3); user-select: none; }
-.skill-group-header:hover { background: var(--bg4); }
-.skill-chevron { width: 11px; height: 11px; stroke: var(--text3); fill: none; stroke-width: 2.4; flex-shrink: 0; transition: transform .15s; }
-.skill-group.open .skill-chevron { transform: rotate(90deg); }
-.skill-group-name { font-size: 12px; font-weight: 700; color: var(--text); }
-.skill-group-count { margin-left: auto; font-size: 10px; font-weight: 700; color: var(--text3); background: var(--bg4); padding: 2px 7px; border-radius: 999px; }
-.skill-group-body { display: none; flex-direction: column; gap: 2px; padding: 5px; }
-.skill-group.open .skill-group-body { display: flex; }
-
-.skill-opt { display: flex; align-items: center; gap: 8px; padding: 6px 9px; border-radius: 6px; font-size: 12.5px; color: var(--text2); text-decoration: none; border: 1px solid transparent; }
-.skill-opt:hover { background: var(--bg3); color: var(--text); }
-.skill-opt.selected { border-color: var(--accent); background: var(--accent-light); color: var(--accent3); font-weight: 600; }
-.skill-opt-name { flex: 1; }
-.skill-opt-count { font-size: 10px; font-weight: 700; color: var(--text3); }
-.skill-opt-all { font-weight: 600; }
-.skill-opt-group { font-style: italic; color: var(--text3); }
-
-.skill-filter-active { font-size: 12px; color: var(--text2); margin-top: 10px; }
-.skill-filter-active strong { color: var(--text); }
-.skill-filter-clear { font-size: 12px; font-weight: 600; color: var(--text3); text-decoration: none; margin-left: 6px; }
-.skill-filter-clear:hover { color: var(--accent3); text-decoration: underline; }
-
-/* Role picker in the apply modal - one card per role the expert holds. */
-.role-choice-list { display: flex; flex-wrap: wrap; gap: 8px; }
-.role-choice { display: inline-flex; align-items: center; gap: 8px; padding: 9px 14px; border-radius: 8px; border: 2px solid var(--border); background: var(--bg); color: var(--text2); font-size: 13px; font-weight: 600; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: 0.15s; }
-.role-choice:hover { border-color: var(--accent); }
-.role-choice .role-choice-mark { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--border2, var(--border)); flex-shrink: 0; transition: 0.15s; }
-.role-choice.selected { border-color: var(--accent); background: var(--accent-light); color: var(--accent3); }
-.role-choice.selected .role-choice-mark { border-color: var(--accent); background: var(--accent); box-shadow: inset 0 0 0 2px var(--bg); }
-.role-choice-note { font-size: 11px; color: var(--text3); margin-top: 8px; line-height: 1.5; }
 .modal-box .form-group .field-error { font-size: 11px; color: var(--red); margin-top: 4px; display: none; }
 .modal-box .form-group .field-error.show { display: block; }
 .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
@@ -347,29 +293,11 @@
           <svg viewBox="0 0 24 24"><path d="M9 12l2 2 4-4"/><path d="M12 2a10 10 0 1 0 10 10"/></svg>
           Your Team's Experts
         </div>
-        @php
-          $approvedAssignments = $assignments->where('status', 'approved');
-          // Same colours the role chips use on the expert cards, so a
-          // consultant reads as a consultant in both places.
-          $roleColors = [
-            'adviser' => ['dot' => 'var(--accent)', 'bg' => 'var(--accent-light)', 'text' => 'var(--accent3)'],
-            'consultant' => ['dot' => '#3b82f6', 'bg' => 'var(--blue-bg)', 'text' => 'var(--blue)'],
-            'grammarian' => ['dot' => '#9333ea', 'bg' => 'var(--purple-bg)', 'text' => 'var(--purple)'],
-          ];
-        @endphp
+        @php $approvedAssignments = $assignments->where('status', 'approved'); @endphp
         @forelse($approvedAssignments as $a)
-          @php
-            $engagedRole = $a->engaged_role_name;
-            $rc = $roleColors[$engagedRole] ?? ['dot' => 'var(--text3)', 'bg' => 'var(--bg3)', 'text' => 'var(--text3)'];
-          @endphp
           <div class="role-overview-row">
-            <div class="role-overview-dot" style="background: {{ $rc['dot'] }};"></div>
-            <div class="role-overview-role">
-              {{ $a->expert?->name ?? 'Unknown' }}
-              @if($engagedRole)
-                <span class="role-chip" style="background: {{ $rc['bg'] }}; color: {{ $rc['text'] }}; margin-left: 6px;">{{ ucfirst($engagedRole) }}</span>
-              @endif
-            </div>
+            <div class="role-overview-dot" style="background: var(--accent);"></div>
+            <div class="role-overview-role">{{ $a->expert?->name ?? 'Unknown' }}</div>
             <div class="role-overview-status">
               <svg class="check" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
               <span class="assigned-name">Assigned</span>
@@ -387,75 +315,8 @@
       @endif
 
       <div class="sticky-controls">
-        <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;">
-          <input class="input" id="search-input" placeholder="Search experts..." style="flex: 1; min-width: 180px; max-width: 320px;" oninput="filterExperts()" />
-
-          {{-- Reloads the page rather than hiding cards: the list is
-               paginated, so filtering in the browser would only ever search
-               the experts already on screen. --}}
-          {{-- Grouped, searchable skill picker - the same shape as the
-               "Make CaPSA" section list. Experts write their own skills, so
-               the roster runs to dozens of entries and several spellings of
-               the same thing; grouping them into a handful of areas keeps
-               that browsable, and picking a whole area covers every wording
-               filed under it. --}}
-          <div class="skill-filter">
-            <button type="button" class="input skill-filter-trigger" id="skill-filter-trigger" onclick="toggleSkillPicker(event)"
-                    aria-haspopup="true" aria-expanded="false">
-              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/></svg>
-              <span id="skill-filter-label">
-                @if($activeSkill !== '') {{ $activeSkill }}
-                @elseif($activeGroup !== '') {{ $activeGroup }}
-                @else All skills @endif
-              </span>
-              <svg class="skill-filter-caret" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.4"><polyline points="6 9 12 15 18 9"/></svg>
-            </button>
-
-            <div class="skill-picker" id="skill-picker">
-              <div class="skill-picker-search">
-                <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
-                <input id="skillSearch" placeholder="Search skills…" autocomplete="off" oninput="filterSkillPicker(this.value)">
-              </div>
-
-              <div class="skill-picker-list" id="skillPickerList">
-                <a class="skill-opt skill-opt-all {{ $activeSkill === '' && $activeGroup === '' ? 'selected' : '' }}"
-                   href="{{ route('student.experts') }}">All skills</a>
-
-                @forelse($skillGroups as $groupName => $groupSkills)
-                  @php $groupCount = $groupSkills->sum('expert_count'); @endphp
-                  <div class="skill-group {{ $activeGroup === $groupName ? 'open' : '' }}" data-name="{{ mb_strtolower($groupName) }}">
-                    <div class="skill-group-header" onclick="toggleSkillGroup(this)">
-                      <svg class="skill-chevron" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
-                      <span class="skill-group-name">{{ $groupName }}</span>
-                      <span class="skill-group-count">{{ $groupSkills->count() }}</span>
-                    </div>
-                    <div class="skill-group-body">
-                      {{-- Pick the whole area without needing to know which
-                           wording each expert happened to use. --}}
-                      <a class="skill-opt skill-opt-group {{ $activeGroup === $groupName && $activeSkill === '' ? 'selected' : '' }}"
-                         data-name="{{ mb_strtolower($groupName) }}"
-                         href="{{ route('student.experts', ['skill_group' => $groupName]) }}">
-                        Anything in this area
-                      </a>
-                      @foreach($groupSkills as $skill)
-                        <a class="skill-opt {{ mb_strtolower($activeSkill) === mb_strtolower($skill->skill_name) ? 'selected' : '' }}"
-                           data-name="{{ mb_strtolower($skill->skill_name) }}"
-                           href="{{ route('student.experts', ['skill' => $skill->skill_name]) }}">
-                          <span class="skill-opt-name">{{ $skill->skill_name }}</span>
-                          <span class="skill-opt-count">{{ $skill->expert_count }}</span>
-                        </a>
-                      @endforeach
-                    </div>
-                  </div>
-                @empty
-                  <p class="skill-picker-empty">No skills recorded yet — they appear here once experts fill in their expertise.</p>
-                @endforelse
-
-                <p class="skill-picker-empty" id="skillPickerNoMatch" style="display:none;">No skill matches that.</p>
-              </div>
-            </div>
-          </div>
-
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <input class="input" id="search-input" placeholder="Search experts..." style="flex: 1; max-width: 320px;" oninput="filterExperts()" />
           <div class="filter-bar" style="margin-bottom: 0;">
             <div class="filter-chip active" data-role="all" onclick="setFilter('all', this)">All</div>
             <div class="filter-chip" data-role="adviser" onclick="setFilter('adviser', this)">Advisers</div>
@@ -463,18 +324,6 @@
             <div class="filter-chip" data-role="grammarian" onclick="setFilter('grammarian', this)">Grammarian</div>
           </div>
         </div>
-
-        @if($activeSkill !== '' || $activeGroup !== '')
-          <div class="skill-filter-active">
-            @if($activeSkill !== '')
-              Experts whose skills mention <strong>{{ $activeSkill }}</strong>
-            @else
-              Experts with any skill in <strong>{{ $activeGroup }}</strong>
-            @endif
-            — {{ $experts->total() }} {{ Str::plural('expert', $experts->total()) }} found.
-            <a href="{{ route('student.experts') }}" class="skill-filter-clear">Clear</a>
-          </div>
-        @endif
       </div>
 
       <div id="expert-grid" class="expert-grid">
@@ -501,20 +350,11 @@
             $_expertiseTags = $expert->expertise->pluck('expertise_field')->toArray();
             $_expertiseMore = max(0, $expert->expertise->count() - 3);
           @endphp
-          <div class="expert-card-compact" data-expert-id="{{ $expert->expert_id }}" style="--accent-clr:{{ $dotColors[$firstRole?->role_name ?? 'adviser'] ?? 'var(--accent)' }}" data-roles="{{ $visibleRoles->pluck('role_name')->join(',') }}" data-name="{{ $expert->name }}" data-initials="{{ $expert->avatarInitials() }}" data-avatar="{{ $expert->hasAvatarImage() ? $expert->avatarUrl() : '' }}" data-chips='{{ json_encode($_chips) }}' data-tags='{{ json_encode($_expertiseTags) }}' data-tags-more="{{ $_expertiseMore }}" data-slots="{{ $_slotsUsed }}/{{ $_maxSlots }}" data-slots-pct="{{ $_slotPercent }}" data-slots-color="{{ $_barColor }}" onclick="openExpertPostModal(this)">
+          <div class="expert-card-compact" style="--accent-clr:{{ $dotColors[$firstRole?->role_name ?? 'adviser'] ?? 'var(--accent)' }}" data-roles="{{ $visibleRoles->pluck('role_name')->join(',') }}" data-name="{{ $expert->name }}" data-initials="{{ $expert->avatarInitials() }}" data-chips='{{ json_encode($_chips) }}' data-tags='{{ json_encode($_expertiseTags) }}' data-tags-more="{{ $_expertiseMore }}" data-slots="{{ $_slotsUsed }}/{{ $_maxSlots }}" data-slots-pct="{{ $_slotPercent }}" data-slots-color="{{ $_barColor }}" onclick="openExpertPostModal(this)">
             <div class="role-dot" style="background: {{ $dotColors[$firstRole?->role_name ?? 'adviser'] ?? 'var(--accent)' }};"></div>
             <div class="card-accent" style="background:{{ $dotColors[$firstRole?->role_name ?? 'adviser'] ?? 'var(--accent)' }};"></div>
             <div class="expert-avatar-wrap">
-              {{-- Experts sign in with Google, so most have a real photo on
-                   file. If it fails to load (an expired Google URL, say) the
-                   initials underneath show through. --}}
-              <div class="avatar" style="width:100%; height:100%; font-size:18px;">
-                {{ $expert->avatarInitials() }}
-                @if ($expert->hasAvatarImage())
-                  <img class="avatar-photo" src="{{ $expert->avatarUrl() }}" alt="" loading="lazy"
-                       referrerpolicy="no-referrer" onerror="this.remove()">
-                @endif
-              </div>
+              <div class="avatar" style="width:100%; height:100%; font-size:18px;">{{ $expert->avatarInitials() }}</div>
             </div>
             <div style="font-size: 15px; font-weight: 700; color: var(--text);">{{ $expert->name }}</div>
 
@@ -570,17 +410,7 @@
                   Pending
                 </button>
               @elseif(!$_isFull)
-                @php
-                  // Each role the leader can apply for, carrying the pivot key
-                  // the application records - so "as our consultant" is stored,
-                  // not guessed at later.
-                  $_roleChoices = $visibleRoles->map(fn($r) => [
-                      'expert_role_id' => $r->pivot->expert_role_id,
-                      'name' => $r->role_name,
-                      'label' => ucfirst($r->role_name),
-                  ])->values();
-                @endphp
-                <button class="btn btn-sm btn-full btn-solid" data-apply-expert="{{ $expert->expert_id }}" onclick="openApplyModal({{ $expert->expert_id }}, {{ Js::from($expert->name) }}, {{ Js::from($_roleChoices) }})">
+                <button class="btn btn-sm btn-full btn-solid" onclick="openApplyModal({{ $expert->expert_id }}, '{{ $expert->name }}')">
                   <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><polyline points="17 11 19 13 23 9"/></svg>
                   Apply Now
                 </button>
@@ -610,12 +440,7 @@
         @empty
           <div class="empty-state" style="grid-column: 1 / -1;">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 1 0-16 0"/></svg>
-            @if($activeSkill !== '' || $activeGroup !== '')
-              <p>No expert lists a skill matching <strong>{{ $activeSkill !== '' ? $activeSkill : $activeGroup }}</strong>.</p>
-              <a href="{{ route('student.experts') }}" class="btn btn-sm btn-soft" style="margin-top:10px;">Show all experts</a>
-            @else
-              <p>No approved experts available yet.</p>
-            @endif
+            <p>No approved experts available yet.</p>
           </div>
         @endforelse
       </div>
@@ -664,26 +489,20 @@
         @forelse($assignments as $assignment)
           @php
             $propUrl = $assignment->proposal_file ? Storage::url($assignment->proposal_file) : null;
-            $reqRole = $assignment->engaged_role_name;
           @endphp
           <div class="req-card">
             <div class="avatar" style="width: 36px; height: 36px; font-size: 12px; background: var(--accent); color: white;">
               {{ $assignment->expert?->avatarInitials() ?? 'NA' }}
-              @if ($assignment->expert?->hasAvatarImage())
-                <img class="avatar-photo" src="{{ $assignment->expert->avatarUrl() }}" alt="" loading="lazy"
-                     referrerpolicy="no-referrer" onerror="this.remove()">
-              @endif
             </div>
             <div style="flex: 1; min-width: 0;">
               <div style="font-size: 13px; font-weight: 600; color: var(--text);">{{ $assignment->expert?->name ?? 'Unknown Expert' }}</div>
-              <div style="font-size: 11px; color: var(--text3); text-transform: uppercase;">{{ $reqRole ? 'Applied as '.$reqRole : ucfirst($assignment->status) }}</div>
+              <div style="font-size: 11px; color: var(--text3); text-transform: uppercase;">{{ ucfirst($assignment->status) }}</div>
             </div>
             <span class="status-badge" style="background: {{ $assignment->status === 'approved' ? 'var(--green-bg)' : ($assignment->status === 'pending' ? 'var(--amber-bg)' : 'var(--red-bg)') }}; color: {{ $assignment->status === 'approved' ? 'var(--green)' : ($assignment->status === 'pending' ? 'var(--amber)' : 'var(--red)') }};">
               {{ ucfirst($assignment->status) }}
             </span>
             <button class="btn btn-sm btn-soft" onclick="openReqInfoModal({{ json_encode([
               'name' => $assignment->expert?->name ?? 'Unknown',
-              'role' => $reqRole ? ucfirst($reqRole) : null,
               'status' => ucfirst($assignment->status),
               'message' => $assignment->message ?? 'No message provided.',
               'proposal' => $propUrl,
@@ -739,7 +558,7 @@
           <div class="section-title" style="font-size: 13px; margin-bottom: 12px;">Quick Tips</div>
           <ul style="font-size: 11px; color: var(--text3); line-height: 1.6; padding-left: 16px; margin: 0;">
             <li>Only the Team Leader can apply for experts</li>
-            <li>An expert can hold only one role per team - pick which role you need them for</li>
+            <li>You can apply for multiple roles from the same expert</li>
             <li>Attach your approved pre-proposal PDF when applying</li>
             <li>Check the slot status before applying</li>
           </ul>
@@ -791,13 +610,6 @@
     <h3>Apply for Expert</h3>
     <div class="modal-sub" id="apply-expert-name"></div>
 
-    <div class="form-group" id="apply-role-group">
-      <label>Apply as <span class="req">*</span></label>
-      <div class="role-choice-list" id="apply-role-choices"></div>
-      <div class="role-choice-note">An expert can take only one role per team. Once they are your adviser, you cannot also engage them as your consultant or grammarian.</div>
-      <div class="field-error" id="err-role">Please choose the role you are applying for.</div>
-    </div>
-
     <div class="form-group">
       <label>Approved Pre-Proposal <span class="req">*</span></label>
       <div class="file-input-wrap">
@@ -833,10 +645,6 @@
     <div class="review-row">
       <div class="review-label">Expert</div>
       <div class="review-value" id="review-expert"></div>
-    </div>
-    <div class="review-row">
-      <div class="review-label">Applying as</div>
-      <div class="review-value" id="review-role"></div>
     </div>
     <div class="review-row">
       <div class="review-label">Proposal</div>
@@ -895,8 +703,8 @@
       <div class="review-label">Expert</div>
       <div class="review-value" id="req-info-expert"></div>
     </div>
-    <div class="review-row" id="req-info-role-row">
-      <div class="review-label">Applied as</div>
+    <div class="review-row">
+      <div class="review-label">Status</div>
       <div class="review-value" id="req-info-role"></div>
     </div>
     <div class="review-row">
@@ -925,7 +733,6 @@
 
 <script>
 let currentExpertId = null;
-let currentRoleId = null;
 let currentRoleName = '';
 let currentFileName = '';
 let currentMessage = '';
@@ -975,17 +782,7 @@ function openExpertPostModal(el) {
   var slotsPct = parseFloat(el.dataset.slotsPct) || 0;
   var slotsColor = el.dataset.slotsColor || 'var(--accent)';
 
-  var epAvatar = document.getElementById('ep-avatar');
-  epAvatar.textContent = initials;
-  if (el.dataset.avatar) {
-    var img = document.createElement('img');
-    img.className = 'avatar-photo';
-    img.src = el.dataset.avatar;
-    img.alt = '';
-    img.referrerPolicy = 'no-referrer';
-    img.onerror = function () { img.remove(); };
-    epAvatar.appendChild(img);
-  }
+  document.getElementById('ep-avatar').textContent = initials;
   document.getElementById('ep-name').textContent = name;
 
   var chipsContainer = document.getElementById('ep-chips');
@@ -1044,47 +841,8 @@ function openExpertPostModal(el) {
   openModal('expert-post-modal');
 }
 
-function renderRoleChoices(roles) {
-  const list = document.getElementById('apply-role-choices');
-  const group = document.getElementById('apply-role-group');
-  list.innerHTML = '';
-  currentRoleId = null;
-  currentRoleName = '';
-
-  // With only one role on offer there is nothing to decide, so it is
-  // selected up front and shown as a statement rather than a question.
-  const single = roles.length === 1;
-  group.querySelector('label').innerHTML = single
-    ? 'Applying as'
-    : 'Apply as <span class="req">*</span>';
-
-  roles.forEach(function (role) {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'role-choice';
-    btn.dataset.roleId = role.expert_role_id;
-    btn.dataset.roleName = role.label;
-    btn.innerHTML = '<span class="role-choice-mark"></span>' + role.label;
-    btn.onclick = function () { selectRoleChoice(btn); };
-    list.appendChild(btn);
-  });
-
-  if (single && list.firstChild) selectRoleChoice(list.firstChild);
-}
-
-function selectRoleChoice(btn) {
-  document.querySelectorAll('#apply-role-choices .role-choice').forEach(function (b) {
-    b.classList.remove('selected');
-  });
-  btn.classList.add('selected');
-  currentRoleId = btn.dataset.roleId;
-  currentRoleName = btn.dataset.roleName;
-  document.getElementById('err-role').classList.remove('show');
-}
-
-function openApplyModal(expertId, expertName, roles) {
+function openApplyModal(expertId, expertName) {
   currentExpertId = expertId;
-  renderRoleChoices(roles || []);
   document.getElementById('apply-expert-name').textContent = 'Apply to ' + expertName;
   document.getElementById('file-label').textContent = 'Choose PDF file...';
   document.getElementById('file-label').classList.remove('has-file');
@@ -1136,10 +894,6 @@ function reviewApply() {
 
   document.querySelectorAll('#apply-modal .field-error').forEach(e => e.classList.remove('show'));
 
-  if (!currentRoleId) {
-    document.getElementById('err-role').classList.add('show');
-    valid = false;
-  }
   if (!fileInput.files || !fileInput.files[0]) {
     document.getElementById('err-file').classList.add('show');
     valid = false;
@@ -1162,7 +916,6 @@ function reviewApply() {
   currentMessage = message;
 
   document.getElementById('review-expert').textContent = document.getElementById('apply-expert-name').textContent.replace('Apply to ', '');
-  document.getElementById('review-role').textContent = currentRoleName;
   document.getElementById('review-file').textContent = currentFileName;
   document.getElementById('review-message').textContent = message;
 
@@ -1177,7 +930,6 @@ function confirmApply() {
 
   const formData = new FormData();
   formData.append('expert_id', currentExpertId);
-  formData.append('expert_role_id', currentRoleId);
   formData.append('proposal_file', document.getElementById('proposal-file').files[0]);
   formData.append('message', currentMessage);
 
@@ -1212,8 +964,7 @@ function confirmApply() {
 function openReqInfoModal(data) {
   document.getElementById('req-info-sub').textContent = 'Information about this expert request.';
   document.getElementById('req-info-expert').textContent = data.name;
-  document.getElementById('req-info-role').textContent = data.role || '';
-  document.getElementById('req-info-role-row').style.display = data.role ? '' : 'none';
+  document.getElementById('req-info-role').textContent = data.status;
   const statusColors = { Approved: 'var(--green)', Pending: 'var(--amber)', Rejected: 'var(--red)' };
   document.getElementById('req-info-status').innerHTML = '<span style="color:' + (statusColors[data.status] || 'var(--text3)') + ';font-weight:600;">' + data.status + '</span>';
   document.getElementById('req-info-message').textContent = data.message;
@@ -1323,103 +1074,6 @@ function filterExperts() {
     card.style.display = (matchesSearch && matchesRole) ? '' : 'none';
   });
 }
-
-// ── Skill picker ──
-function toggleSkillPicker(event) {
-  if (event) event.stopPropagation();
-  var wrap = document.querySelector('.skill-filter');
-  if (!wrap) return;
-  var opening = !wrap.classList.contains('open');
-  wrap.classList.toggle('open', opening);
-  document.getElementById('skill-filter-trigger').setAttribute('aria-expanded', opening ? 'true' : 'false');
-  if (opening) document.getElementById('skillSearch').focus();
-}
-
-function toggleSkillGroup(header) {
-  header.closest('.skill-group').classList.toggle('open');
-}
-
-// Typing here narrows the picker itself. It does not filter the expert grid -
-// that only changes when a skill is chosen, so the page never half-applies a
-// search the student is still typing.
-function filterSkillPicker(query) {
-  var q = (query || '').trim().toLowerCase();
-  var anyVisible = false;
-
-  document.querySelectorAll('#skillPickerList .skill-group').forEach(function (group) {
-    var groupMatches = q !== '' && (group.dataset.name || '').includes(q);
-    var shown = 0;
-
-    group.querySelectorAll('.skill-opt').forEach(function (opt) {
-      // "Anything in this area" belongs to the group, not to a skill name.
-      var isGroupOpt = opt.classList.contains('skill-opt-group');
-      var match = q === '' || groupMatches || (opt.dataset.name || '').includes(q);
-      if (isGroupOpt) match = q === '' || groupMatches;
-      opt.style.display = match ? '' : 'none';
-      if (match && !isGroupOpt) shown++;
-    });
-
-    var visible = shown > 0 || groupMatches;
-    group.style.display = visible ? '' : 'none';
-    group.classList.toggle('open', q !== '' ? visible : group.classList.contains('open'));
-    if (visible) anyVisible = true;
-  });
-
-  var all = document.querySelector('#skillPickerList .skill-opt-all');
-  if (all) all.style.display = q === '' ? '' : 'none';
-
-  var none = document.getElementById('skillPickerNoMatch');
-  if (none) none.style.display = anyVisible || q === '' ? 'none' : '';
-}
-
-document.addEventListener('click', function (e) {
-  var wrap = document.querySelector('.skill-filter');
-  if (wrap && wrap.classList.contains('open') && !wrap.contains(e.target)) {
-    wrap.classList.remove('open');
-    document.getElementById('skill-filter-trigger').setAttribute('aria-expanded', 'false');
-  }
-});
-
-document.addEventListener('keydown', function (e) {
-  if (e.key !== 'Escape') return;
-  var wrap = document.querySelector('.skill-filter');
-  if (wrap) {
-    wrap.classList.remove('open');
-    var t = document.getElementById('skill-filter-trigger');
-    if (t) t.setAttribute('aria-expanded', 'false');
-  }
-});
-
-// Arriving from the duplication report's "Apply" link: find that expert's
-// card and open the apply modal on it. The card may not have an apply button
-// (already engaged, full, or the team isn't verified yet), in which case the
-// card itself explains why - so scroll to it and say so rather than failing
-// silently.
-document.addEventListener('DOMContentLoaded', function () {
-  var wanted = new URLSearchParams(window.location.search).get('apply');
-  if (!wanted) return;
-
-  var card = document.querySelector('.expert-card-compact[data-expert-id="' + CSS.escape(wanted) + '"]');
-  var btn = card ? card.querySelector('[data-apply-expert]') : null;
-
-  if (!card) {
-    // Not on this page of results - a skill filter or pagination can hide it.
-    showToast('That expert is not in the current list. Clear any filters to find them.', 'error');
-    return;
-  }
-
-  card.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  card.style.outline = '2px solid var(--accent)';
-  card.style.outlineOffset = '3px';
-  setTimeout(function () { card.style.outline = ''; }, 2600);
-
-  if (btn && !btn.disabled) {
-    setTimeout(function () { btn.click(); }, 450);
-  } else {
-    var why = card.querySelector('button[disabled]');
-    showToast(why ? 'You cannot apply to this expert right now: ' + why.textContent.trim() : 'You cannot apply to this expert right now.', 'error');
-  }
-});
 
 // ── Mobile Sidebar ──
 function toggleSidebar() {

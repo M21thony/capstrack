@@ -10,6 +10,7 @@ use App\Models\Milestone;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
 use App\Models\TeamExpertAssignment;
+use App\Services\SimilarityService;
 use App\Support\DefenseProgress;
 use App\Support\SectionScope;
 use Illuminate\Http\Request;
@@ -351,7 +352,7 @@ class TeamManagementController extends Controller
                         'differences' => $m['differences'] ?? null,
                         'suggestion' => $m['suggestion'] ?? null,
                     ])->values(),
-                    'highlight_words' => app(\App\Services\SimilarityService::class)
+                    'highlight_words' => app(SimilarityService::class)
                         ->extractHighlightWords($p->duplicationCheck->concepts ?? []),
                 ] : null,
                 'document_url' => $p->duplicationCheck ? route('admin.verify_teams.pre_proposals.document', $p->id) : null,

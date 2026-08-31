@@ -22,8 +22,11 @@ namespace App\Support;
 class DefenseOutcome
 {
     public const PASSED = 'passed';
+
     public const PASSED_WITH_REVISION = 'passed_with_revision';
+
     public const REDEFENSE = 'redefense';
+
     public const REDEFENSE_NEW_TITLE = 'redefense_new_title';
 
     public const PRE_PROPOSAL = 'Pre-proposal Defense';

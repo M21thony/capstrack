@@ -108,7 +108,7 @@ class OllamaSSHClient
         // The command itself now only ever references a short fixed-length
         // file path, regardless of how large the payload is.
         $command = 'powershell -Command "'
-                 .'$r = curl.exe -s --max-time 300 -X POST http://localhost:11434'.$endpoint.' '
+                 .'$r = curl.exe -s --max-time 240 -X POST http://localhost:11434'.$endpoint.' '
                  .'-H \"Content-Type: application/json\" '
                  .'--data-binary \"@'.$remotePath.'\"; '
                  .'Remove-Item \"'.$remotePath.'\" -ErrorAction SilentlyContinue; '
@@ -148,25 +148,13 @@ class OllamaSSHClient
 
     public function generate(string $prompt, int $maxTokens = 512): string
     {
-        // The custom "capstrack-duplication" model's own Modelfile bakes in
-        // `temperature 1.5` (confirmed via `ollama show --modelfile`) - a
-        // previous `temperature: 0.1` here did NOT reliably override that,
-        // confirmed by sending the exact same prompt three times and getting
-        // three different scores/reasons for an unambiguous comparison. That
-        // was the real cause of duplication-check results changing between
-        // otherwise-identical runs. Forcing every sampling knob to its most
-        // deterministic value (not just temperature) reproducibly gives byte-
-        // identical output for the same prompt.
         $payload = [
             'model' => config('services.ollama.model', 'qwen2.5:7b'),
             'prompt' => $prompt,
             'stream' => false,
             'options' => [
                 'num_predict' => $maxTokens,
-                'temperature' => 0,
-                'min_p' => 0,
-                'top_p' => 1,
-                'top_k' => 1,
+                'temperature' => 0.1,
             ],
         ];
 

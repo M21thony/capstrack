@@ -16,11 +16,7 @@ class AssignmentResource extends JsonResource
             'expert_id' => $this->expert_id,
             'status' => $this->status,
             'message' => $this->message,
-            // Stored via ->store('proposals', 'public') in
-            // Api\StudentExpertController - must resolve through that same
-            // disk explicitly rather than the bare Storage::url() facade
-            // call, which resolves against the app's DEFAULT disk instead.
-            'proposal_file' => $this->proposal_file ? Storage::disk('public')->url($this->proposal_file) : null,
+            'proposal_file' => $this->proposal_file ? Storage::url($this->proposal_file) : null,
             'created_at' => $this->created_at?->format('Y-m-d H:i:s'),
             'expert' => new ExpertResource($this->whenLoaded('expert')),
         ];

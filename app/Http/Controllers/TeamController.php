@@ -87,7 +87,7 @@ class TeamController extends Controller
         $teamFull = $myTeam && ! $myTeam->is_confirmed && $isLeader && $teamMembers->count() >= $memberCount;
         $isTeamFull = $myTeam && $teamMembers->count() >= $memberCount;
         $isConfirmed = $myTeam && $myTeam->is_confirmed;
-        $postHidden = $myTeam && ($myTeam->team_status === 'Full' || $myTeam->hasSubmittedPreProposals());
+        $postHidden = $myTeam && in_array($myTeam->team_status, ['complete', 'closed']);
 
         $fullTeamStudentIds = Recruitment::where('recruitment_goal', 'build_a_team')
             ->with('student.team')
@@ -135,11 +135,7 @@ class TeamController extends Controller
             ->where('student_id', '!=', $studentId)
             ->whereNotIn('student_id', $fullTeamStudentIds)
             ->whereDoesntHave('student.team', function ($q) {
-                // Off the feed once the team stops taking members OR has
-                // turned its pre-proposals in - two separate reasons, which
-                // is exactly what one status column used to blur.
-                $q->where('team_status', 'Full')
-                    ->orWhereHas('preProposals', fn ($p) => $p->whereNotNull('submitted_at'));
+                $q->whereIn('team_status', ['complete', 'closed']);
             })
             ->whereIn('student_id', function ($query) use ($student, $currentSchoolYear) {
                 $query->select('student_s_y.student_id')
@@ -245,7 +241,8 @@ class TeamController extends Controller
                     $fail('The team name has already been taken.');
                 }
             }],
-            'team_status' => ['nullable', Rule::in(['Active', 'Full'])],
+            'project_title' => ['nullable', 'string', 'max:150'],
+            'team_status' => ['nullable', Rule::in(['on-going', 'complete', 'closed'])],
         ]);
 
         $student = $request->user();
@@ -258,12 +255,10 @@ class TeamController extends Controller
             return redirect()->route('student.team')->with('error', 'You are already in a team.');
         }
 
-        // No project_title here: a team's title is not typed, it is whichever
-        // pre-proposal gets approved (see AdminTeamVerificationController's
-        // resolveTitleIfSettled), so a new team simply has none yet.
         $team = Team::create([
             'team_name' => $validated['team_name'],
-            'team_status' => $validated['team_status'] ?? 'Active',
+            'project_title' => $validated['project_title'] ?? null,
+            'team_status' => $validated['team_status'] ?? 'on-going',
             'leader_id' => $student->student_id,
         ]);
 
@@ -273,20 +268,12 @@ class TeamController extends Controller
 
         DB::table('student_s_y')
             ->updateOrInsert(
-<<<<<<< HEAD
-                // Keyed on the term too: this table is one row per student PER
-                // TERM, so keying on the student alone would overwrite last
-                // semester's record instead of starting this one.
-                ['student_id' => $student->student_id, 'term_id' => \App\Models\Term::activeId()],
-                ['team_id' => $team->team_id, 's_role_id' => StudentRole::leaderRoleId()]
-=======
                 ['student_id' => $student->student_id],
                 [
                     'team_id' => $team->team_id,
                     's_role_id' => StudentRole::leaderRoleId(),
                     'school_year' => $computedSchoolYear,
                 ]
->>>>>>> updatedTeamManagement
             );
 
         // Keep member count synced at the fixed 5-member limit
@@ -354,27 +341,46 @@ class TeamController extends Controller
                     $fail('The team name has already been taken.');
                 }
             }],
-            'team_status' => ['nullable', Rule::in(['Active', 'Full'])],
+            'project_title' => ['nullable', 'string', 'max:150'],
+            'team_status' => ['nullable', Rule::in(['on-going', 'complete', 'closed'])],
             'tags' => ['nullable', 'json'],
         ]);
 
-        // The title used to be typed here, and tags were demanded once it ran
-        // past 11 words. Both are gone: the title is now whichever pre-proposal
-        // the CAPSA approves (or, when two are approved, whichever the team
-        // then picks), so a title typed here could only ever contradict it.
-        // Tags survive on their own terms - they describe the project for the
-        // recruitment feed - and are simply optional.
-        $tags = $request->input('tags');
-        $tagsArray = $tags ? json_decode($tags, true) : null;
+        $projectTitle = $validated['project_title'] ?? $team->project_title;
+        $wordCount = $this->countMeaningfulWords($projectTitle ?? '');
 
-        if (is_array($tagsArray)) {
+        if ($wordCount >= 11) {
+            $tags = $request->input('tags');
+            $tagsArray = $tags ? json_decode($tags, true) : [];
+
+            if (! is_array($tagsArray) || count($tagsArray) < 2) {
+                return redirect()->route('student.team')
+                    ->with('error', 'Please add at least 2 tags related to your project.');
+            }
+
             $validated['tags'] = $tagsArray;
+        }
+
+        if (($validated['team_status'] ?? null) === 'complete') {
+            $request->validate([
+                'project_title' => [
+                    'required', 'string', 'max:150',
+                    function ($attr, $value, $fail) {
+                        $count = $this->countMeaningfulWords($value ?? '');
+
+                        if ($count < 11 || $count > 12) {
+                            $fail("Project title must contain 11–12 meaningful words (filler words like 'a', 'of', 'in' don't count). Current count: {$count}.");
+                        }
+                    },
+                ],
+            ]);
         }
 
         $originalStatus = $team->team_status;
 
         $team->update([
             'team_name' => $validated['team_name'],
+            'project_title' => $validated['project_title'] ?? null,
             'tags' => $validated['tags'] ?? $team->tags,
             'team_status' => $validated['team_status'] ?? $team->team_status,
             'member_count' => 5,
@@ -387,10 +393,10 @@ class TeamController extends Controller
 
         // Auto-close team if it has reached full capacity
         $autoClosed = false;
-        if ($team->team_status === 'Active') {
+        if ($team->team_status === 'on-going') {
             $currentCount = StudentSchoolYear::where('team_id', $team->team_id)->count();
             if ($currentCount >= 5) {
-                $team->update(['team_status' => 'Full']);
+                $team->update(['team_status' => 'closed']);
                 $autoClosed = true;
                 $this->logActivity(
                     $studentId,

@@ -4,11 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\CapstoneExpert;
 use App\Models\Student;
-<<<<<<< HEAD
-use App\Models\StudentRoster;
-=======
 use App\Services\GoogleDriveService;
->>>>>>> updatedTeamManagement
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -160,15 +156,10 @@ class AuthController extends Controller
         }
 
         $isStudentDomain = Str::endsWith($email, '@my.cspc.edu.ph');
-        // '@cspc.edu.ph' (faculty) is a DIFFERENT domain than the student
-        // '@my.cspc.edu.ph' subdomain above - Str::endsWith only matches the
-        // literal suffix, so there's no overlap risk despite how similar
-        // they look. Lets CAPSA-uploaded Adviser/Consultant/Grammarian
-        // accounts sign in with their real CSPC email, not just @gmail.com.
-        $isExpertDomain = Str::endsWith($email, '@gmail.com') || Str::endsWith($email, '@cspc.edu.ph');
+        $isExpertDomain = Str::endsWith($email, '@gmail.com');
 
         if (! $isStudentDomain && ! $isExpertDomain) {
-            return redirect('/login')->withErrors(['message' => 'Access denied. Use @my.cspc.edu.ph (student) or @cspc.edu.ph/@gmail.com (instructor/admin).']);
+            return redirect('/login')->withErrors(['message' => 'Access denied. Use @my.cspc.edu.ph (student) or @gmail.com (instructor/admin).']);
         }
 
         if ($isExpertDomain) {
@@ -215,7 +206,7 @@ class AuthController extends Controller
 
                     $expert->markFirstLogin();
 
-                    $redirectUrl = $expert->is_staff ? '/admin/dashboard' : '/instructor/dashboard';
+                    $redirectUrl = $expert->is_admin ? '/admin/dashboard' : '/instructor/dashboard';
 
                     return redirect($redirectUrl);
                 }
@@ -239,26 +230,12 @@ class AuthController extends Controller
             return redirect('/request-account?email='.urlencode($email).'&first_name='.urlencode($firstName).'&last_name='.urlencode($lastName));
         }
 
-        // Students can register and use the site immediately, whether or
-        // not CAPSA has uploaded the official roster yet - it's never a
-        // gate on account creation or access. If a roster row already
-        // exists for this email (CAPSA uploaded it before this student's
-        // first login), pre-fill their academic fields from it now; if
-        // not, those fields just start null and get filled in later by
-        // StudentRosterController's email-match sync whenever CAPSA's
-        // roster does arrive - see that controller for the other half of
-        // this.
-        $roster = StudentRoster::where('email', $email)->first();
-
         $student = Student::firstOrCreate(
             ['email' => $email],
             [
                 'f_name' => $firstName,
                 'l_name' => $lastName,
                 'p_picture' => $userInfo['picture'] ?? null,
-                'student_number' => $roster->student_number ?? null,
-                'course' => $roster->program ?? null,
-                'year_section' => $roster->section ?? null,
             ]
         );
 
@@ -363,7 +340,7 @@ class AuthController extends Controller
 
                     $expert->markFirstLogin();
 
-                    $redirectUrl = $expert->is_staff ? '/admin/dashboard' : '/instructor/dashboard';
+                    $redirectUrl = $expert->is_admin ? '/admin/dashboard' : '/instructor/dashboard';
 
                     if ($request->expectsJson()) {
                         return response()->json([

@@ -38,11 +38,7 @@ class RecruitmentController extends Controller
             ->where('student_id', '!=', $student->student_id)
             ->whereNotIn('student_id', $fullTeamStudentIds)
             ->whereDoesntHave('student.team', function ($q) {
-                // Off the feed once the team stops taking members OR has
-                // turned its pre-proposals in - two separate reasons, which
-                // is exactly what one status column used to blur.
-                $q->where('team_status', 'Full')
-                    ->orWhereHas('preProposals', fn ($p) => $p->whereNotNull('submitted_at'));
+                $q->whereIn('team_status', ['complete', 'closed']);
             })
             ->whereIn('student_id', function ($query) use ($student) {
                 $query->select('student_s_y.student_id')
@@ -94,16 +90,13 @@ class RecruitmentController extends Controller
             if ($validated['recruitment_goal'] === 'build_a_team' && ! empty($validated['team_name'])) {
                 $team = Team::create([
                     'team_name' => $validated['team_name'],
-                    'team_status' => 'Active',
+                    'team_status' => 'on-going',
                     'leader_id' => $studentId,
                 ]);
 
                 DB::table('student_s_y')
                     ->updateOrInsert(
-                        // Keyed on the term too: this table is one row per student PER
-                // TERM, so keying on the student alone would overwrite last
-                // semester's record instead of starting this one.
-                ['student_id' => $studentId, 'term_id' => \App\Models\Term::activeId()],
+                        ['student_id' => $studentId],
                         ['team_id' => $team->team_id, 's_role_id' => StudentRole::leaderRoleId()]
                     );
             }

@@ -104,7 +104,7 @@ class AnnouncementController extends Controller
                 ]);
             });
 
-        return view('capsa.announcements', [
+        return view('admin.announcements', [
             'announcements' => $announcements,
             'teams' => $teams,
             'adminSections' => $adminSections,

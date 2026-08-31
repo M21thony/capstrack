@@ -18,7 +18,7 @@ class ExpertResource extends JsonResource
             'middle_name' => $this->middle_name,
             'suffix' => $this->suffix,
             'credentials' => $this->credentials,
-            'program' => $this->program,
+            'department' => $this->department,
             'profile_picture' => $this->profile_picture,
             'max_teams' => $this->max_teams,
             'avatar_initials' => $this->avatarInitials(),

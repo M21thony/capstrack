@@ -45,7 +45,7 @@ class SubmissionControllerTest extends TestCase
         $team = Team::create([
             'team_name' => 'Team Alpha',
             'project_title' => 'Alpha Project',
-            'team_status' => 'Active',
+            'team_status' => 'on-going',
         ]);
 
         $student = Student::factory()->withCompleteProfile()->create();
@@ -99,7 +99,7 @@ class SubmissionControllerTest extends TestCase
         $team = Team::create([
             'team_name' => 'Team Beta',
             'project_title' => 'Beta Project',
-            'team_status' => 'Active',
+            'team_status' => 'on-going',
         ]);
 
         $student = Student::factory()->withCompleteProfile()->create();
@@ -116,7 +116,7 @@ class SubmissionControllerTest extends TestCase
             'first_name' => 'Capstone',
             'last_name' => 'Admin',
             'is_admin' => true,
-            'program' => 'BSIT',
+            'department' => 'BSIT',
         ]);
         DB::table('expert_roles')->insert(['expert_id' => $adminId, 'role_id' => $capstoneAdviserRoleId]);
 
@@ -154,7 +154,7 @@ class SubmissionControllerTest extends TestCase
         $team = Team::create([
             'team_name' => 'Team Gamma',
             'project_title' => 'Gamma Project',
-            'team_status' => 'Active',
+            'team_status' => 'on-going',
         ]);
 
         $student = Student::factory()->withCompleteProfile()->create();
@@ -205,7 +205,7 @@ class SubmissionControllerTest extends TestCase
         $team = Team::create([
             'team_name' => 'Team Epsilon',
             'project_title' => 'Epsilon Project',
-            'team_status' => 'Active',
+            'team_status' => 'on-going',
         ]);
 
         $student = Student::factory()->withCompleteProfile()->create();
@@ -254,7 +254,7 @@ class SubmissionControllerTest extends TestCase
         $team = Team::create([
             'team_name' => 'Team Delta',
             'project_title' => 'Delta Project',
-            'team_status' => 'Active',
+            'team_status' => 'on-going',
         ]);
 
         $student = Student::factory()->withCompleteProfile()->create();

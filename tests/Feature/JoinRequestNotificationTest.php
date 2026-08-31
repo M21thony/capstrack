@@ -28,7 +28,7 @@ class JoinRequestNotificationTest extends TestCase
 
         $team = Team::create([
             'team_name' => 'Team Alpha',
-            'team_status' => 'Active',
+            'team_status' => 'on-going',
             'leader_id' => $leader->student_id,
         ]);
 
@@ -82,7 +82,7 @@ class JoinRequestNotificationTest extends TestCase
 
         $team = Team::create([
             'team_name' => 'Team Alpha',
-            'team_status' => 'Active',
+            'team_status' => 'on-going',
             'leader_id' => $leader->student_id,
         ]);
 

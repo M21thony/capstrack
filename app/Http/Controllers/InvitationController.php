@@ -157,10 +157,10 @@ class InvitationController extends Controller
         $joiningStudent = Student::find($joinedStudentId);
 
         // Auto-close team if it has reached full capacity
-        if ($team && $team->team_status === 'Active') {
+        if ($team && $team->team_status === 'on-going') {
             $currentCount = StudentSchoolYear::where('team_id', $team->team_id)->count();
             if ($currentCount >= $team->member_count) {
-                $team->update(['team_status' => 'Full']);
+                $team->update(['team_status' => 'closed']);
                 $this->logActivity(
                     $team->leader_id,
                     'team_auto_closed',

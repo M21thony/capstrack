@@ -21,7 +21,6 @@ class Team extends Model
         'leader_id',
         'is_confirmed',
         'member_count',
-        'selected_pre_proposal_id',
     ];
 
     protected $casts = [
@@ -50,43 +49,6 @@ class Team extends Model
         );
     }
 
-    /**
-     * Whether this team has turned their pre-proposals in for checking.
-     *
-     * This is the real question behind most of the old `team_status ===
-     * 'complete'` checks. Reading it off team_status conflated two unrelated
-     * things - whether a team is still recruiting, and whether they have
-     * submitted - in one column, so a recruitment change could silently
-     * affect verification and vice versa.
-     *
-     * Submitting is recorded on the pre-proposals themselves
-     * (PreProposalController::submit), which is the only place that knows.
-     */
-    public function hasSubmittedPreProposals(): bool
-    {
-        return $this->relationLoaded('preProposals')
-            ? $this->preProposals->whereNotNull('submitted_at')->isNotEmpty()
-            : $this->preProposals()->whereNotNull('submitted_at')->exists();
-    }
-
-    /**
-     * Query-scope form, for filtering a list of teams.
-     *
-     * Named differently from hasSubmittedPreProposals() on purpose: a scope
-     * is reached statically (Team::submittedForChecking()), and PHP resolves
-     * that to a same-named instance method - called statically, which is a
-     * fatal error - instead of routing it through Eloquent's __callStatic.
-     */
-    public function scopeSubmittedForChecking($query)
-    {
-        return $query->whereHas('preProposals', fn ($q) => $q->whereNotNull('submitted_at'));
-    }
-
-    public function scopeNotSubmittedForChecking($query)
-    {
-        return $query->whereDoesntHave('preProposals', fn ($q) => $q->whereNotNull('submitted_at'));
-    }
-
     public function members()
     {
         return $this->hasManyThrough(
@@ -112,16 +74,6 @@ class Team extends Model
     public function defenseSchedules()
     {
         return $this->hasMany(DefenseSchedule::class, 'team_id', 'team_id');
-    }
-
-    public function preProposals()
-    {
-        return $this->hasMany(CapstonePreProposal::class, 'team_id', 'team_id')->orderBy('slot');
-    }
-
-    public function selectedPreProposal()
-    {
-        return $this->belongsTo(CapstonePreProposal::class, 'selected_pre_proposal_id');
     }
 
     public static function nameExists(string $name, ?int $ignoreTeamId = null): bool

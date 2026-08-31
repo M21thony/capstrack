@@ -25,9 +25,9 @@ class AdminDashboardController extends Controller
 
         $totalStudents = Student::count();
         $totalExperts = CapstoneExpert::where('approved_status', true)->count();
-        $activeTeams = Team::where('is_confirmed', false)->where('team_status', '!=', 'Full')->count();
+        $activeTeams = Team::where('is_confirmed', false)->where('team_status', '!=', 'closed')->count();
         $completedTeams = Team::where('is_confirmed', true)->count();
-        $pendingVerificationTeams = Team::submittedForChecking()->where('is_confirmed', false)->count();
+        $pendingVerificationTeams = Team::where('team_status', 'complete')->where('is_confirmed', false)->count();
         $pendingApprovals = CapstoneExpert::where('approved_status', false)
             ->whereNull('rejection_reason')
             ->count();
@@ -92,7 +92,7 @@ class AdminDashboardController extends Controller
 
         $recentActivity = $this->buildRecentActivity();
 
-        return view('capsa.dashboard', compact(
+        return view('admin.dashboard', compact(
             'totalStudents',
             'totalExperts',
             'activeTeams',
@@ -141,7 +141,7 @@ class AdminDashboardController extends Controller
                 ]);
             });
 
-        TeamExpertAssignment::with(['team', 'expert', 'role', 'expertRole.role'])
+        TeamExpertAssignment::with(['team', 'expert', 'role'])
             ->latest('created_at')
             ->take(10)
             ->get()

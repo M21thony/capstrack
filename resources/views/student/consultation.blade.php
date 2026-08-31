@@ -87,7 +87,7 @@
             @endif
             @foreach($experts as $expert)
               <option value="{{ $expert->expert_id }}" @selected($expert->expert_id === $defaultExpertId)>
-                {{ $expert->first_name }} {{ $expert->last_name }} ({{ $expert->role_name }})
+                {{ $expert->first_name }} {{ $expert->last_name }} ({{ ucfirst($expert->role_name) }})
               </option>
             @endforeach
           </select>

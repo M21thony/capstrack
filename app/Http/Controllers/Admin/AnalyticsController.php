@@ -32,7 +32,7 @@ class AnalyticsController extends Controller
         $activeTeams = Team::where('team_status', 'Active')->count();
         $completionRate = $totalTeams > 0 ? round(($completedTeams / $totalTeams) * 100) : 0;
 
-        $overdueTeams = Team::where('team_status', 'Active')
+        $overdueTeams = Team::where('team_status', 'on-going')
             ->whereExists(function ($q) {
                 $q->select(DB::raw(1))
                     ->from('milestones')
@@ -59,7 +59,7 @@ class AnalyticsController extends Controller
             ->groupBy('program')
             ->pluck('total', 'program');
 
-        return view('capsa.analytics', [
+        return view('admin.analytics', [
             'totalArchived' => $totalArchived,
             'totalExperts' => $totalExperts,
             'totalStudents' => $totalStudents,

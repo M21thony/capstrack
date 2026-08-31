@@ -194,11 +194,7 @@ class GradingTest extends TestCase
         $response->assertJson(['success' => false]);
     }
 
-    // A panelist submits scores and remarks; the verdict is no longer theirs
-    // to give. The panel agrees one outcome in a briefing and the chair
-    // records it, so requiring each panelist to pick one made three verdicts
-    // where the process only ever produces one.
-    public function test_submit_does_not_require_a_verdict_from_each_panelist(): void
+    public function test_submit_requires_verdict(): void
     {
         $expert = $this->makeExpert();
         $defense = $this->makeAssignedDefense($expert);
@@ -214,12 +210,7 @@ class GradingTest extends TestCase
             ['scores' => $scores]
         );
 
-        $response->assertStatus(200);
-        $this->assertDatabaseHas('panel_grades', [
-            'defense_id' => $defense->defense_id,
-            'expert_id' => $expert->expert_id,
-            'status' => 'submitted',
-        ]);
+        $response->assertStatus(422);
     }
 
     public function test_submit_saves_complete_grade_and_marks_submitted(): void

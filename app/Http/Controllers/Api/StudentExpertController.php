@@ -7,7 +7,6 @@ use App\Http\Resources\AssignmentResource;
 use App\Http\Resources\ExpertResource;
 use App\Models\ActivityLog;
 use App\Models\CapstoneExpert;
-use App\Models\Student;
 use App\Models\StudentSchoolYear;
 use App\Models\TeamExpertAssignment;
 use Illuminate\Http\JsonResponse;
@@ -22,10 +21,7 @@ class StudentExpertController extends Controller
     {
         $student = Auth::user();
 
-        $studentProgram = Student::mapCourseToProgram($student->course ?? '');
-
         $experts = CapstoneExpert::where('approved_status', true)
-            ->acceptsProgram($studentProgram)
             ->whereHas('roles', function ($q) {
                 $q->where('role_name', '!=', 'capstone_adviser');
             })
@@ -81,7 +77,6 @@ class StudentExpertController extends Controller
     {
         $validated = $request->validate([
             'expert_id' => ['required', 'integer', 'exists:capstone_experts,expert_id'],
-            'expert_role_id' => ['required', 'integer', 'exists:expert_roles,expert_role_id'],
             'proposal_file' => ['required', 'file', 'mimes:pdf', 'max:5120'],
             'message' => ['required', 'string', function ($attribute, $value, $fail) {
                 if (str_word_count($value) > 500) {
@@ -121,41 +116,6 @@ class StudentExpertController extends Controller
             ], 404);
         }
 
-        // Enforced here too, not just hidden from the list - otherwise a
-        // hand-crafted request could still apply to an expert who doesn't
-        // take this program.
-        $studentProgram = Student::mapCourseToProgram($student->course ?? '');
-
-        if (! $expert->acceptsProgram($studentProgram)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'This expert does not accept teams from your program.',
-            ], 422);
-        }
-
-        // Per-program cap first, when the expert set one. "1 - BSIT, 5 - BSIS"
-        // has to mean one BSIT team, not just six teams in total - the overall
-        // count alone would happily let all six be BSIT.
-        $programCap = $expert->slotsForProgram($studentProgram);
-
-        if ($programCap !== null) {
-            if ($programCap < 1) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'This expert does not accept teams from your program.',
-                ], 422);
-            }
-
-            if ($expert->approvedTeamCountForProgram($studentProgram) >= $programCap) {
-                return response()->json([
-                    'success' => false,
-                    'message' => "This expert has already reached their limit of {$programCap} {$studentProgram} team(s).",
-                ], 422);
-            }
-        }
-
-        // Overall cap still applies on top - an expert with no per-program
-        // split has only this, and one with a split shouldn't exceed the sum.
         $slotsUsed = TeamExpertAssignment::where('expert_id', $expert->expert_id)
             ->where('status', 'approved')
             ->count();
@@ -167,40 +127,28 @@ class StudentExpertController extends Controller
             ], 422);
         }
 
-        // The chosen role has to be one this expert actually holds, and one a
-        // team may engage them for. Validation only proved the id exists in
-        // expert_roles - it could belong to any other expert entirely.
-        $chosenRole = DB::table('expert_roles')
+        $offersQualifyingRole = DB::table('expert_roles')
             ->join('roles', 'roles.role_id', '=', 'expert_roles.role_id')
-            ->where('expert_roles.expert_role_id', $validated['expert_role_id'])
             ->where('expert_roles.expert_id', $expert->expert_id)
-            ->whereIn('roles.role_name', CapstoneExpert::STUDENT_FACING_ROLES)
-            ->first(['roles.role_name']);
+            ->where('roles.role_name', '!=', 'capstone_adviser')
+            ->exists();
 
-        if (! $chosenRole) {
+        if (! $offersQualifyingRole) {
             return response()->json([
                 'success' => false,
-                'message' => 'That role is not available for this expert.',
+                'message' => 'This expert is not available for team applications.',
             ], 422);
         }
 
-        // One role per expert per team: engaging someone as your adviser
-        // takes them off the table as your consultant or grammarian. Another
-        // team is unaffected - they can still take this expert in whichever
-        // role they haven't used them for.
-        $existing = TeamExpertAssignment::where('team_id', $team->team_id)
+        $alreadyApplied = TeamExpertAssignment::where('team_id', $team->team_id)
             ->where('expert_id', $expert->expert_id)
             ->whereIn('status', ['pending', 'approved'])
-            ->first();
+            ->exists();
 
-        if ($existing) {
-            $heldAs = $existing->engaged_role_name;
-
+        if ($alreadyApplied) {
             return response()->json([
                 'success' => false,
-                'message' => $heldAs
-                    ? "Your team already has a {$existing->status} application with this expert as your ".ucfirst($heldAs).'. An expert can only take one role per team.'
-                    : 'Your team already has a pending or approved application with this expert.',
+                'message' => 'Your team already has a pending or approved application with this expert.',
             ], 409);
         }
 
@@ -210,7 +158,6 @@ class StudentExpertController extends Controller
             $assignment = TeamExpertAssignment::create([
                 'team_id' => $team->team_id,
                 'expert_id' => $validated['expert_id'],
-                'expert_role_id' => $validated['expert_role_id'],
                 'status' => 'pending',
                 'proposal_file' => $filePath,
                 'message' => $validated['message'],
