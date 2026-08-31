@@ -7,6 +7,7 @@ use App\Models\CapstoneExpert;
 use App\Models\Milestone;
 use App\Models\MilestoneItem;
 use App\Models\Team;
+use App\Support\MilestoneGrid;
 use App\Support\MilestoneTemplate;
 use App\Support\SectionScope;
 use Illuminate\Http\JsonResponse;
@@ -90,6 +91,46 @@ class MilestoneController extends Controller
         }
 
         return response()->json(['success' => true, 'data' => $created]);
+    }
+
+    /**
+     * Set one deliverable's deadline for a whole section.
+     *
+     * A checklist does not have a deadline - its lines do, and they fall
+     * weeks apart: the Chapter 1 draft is due long before the approval of it
+     * is. The milestone's own due date is only the fallback for a line that
+     * has not been given one, so this writes the date onto the item itself,
+     * on every team's copy at once, because a deliverable is due on the same
+     * day for the whole section.
+     */
+    public function setDeliverableDue(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'section' => ['required', 'string'],
+            'key' => ['required', 'string'],
+            'due_date' => ['nullable', 'date'],
+        ]);
+
+        $teams = $this->targetTeams($validated);
+
+        if ($teams->isEmpty()) {
+            return response()->json(['message' => 'No teams of yours are in that section.'], 422);
+        }
+
+        $items = MilestoneItem::whereIn(
+            'milestone_id',
+            Milestone::whereIn('team_id', $teams->pluck('team_id'))->pluck('id')
+        )->get()->filter(fn (MilestoneItem $item) => MilestoneGrid::keyFor($item) === $validated['key']);
+
+        if ($items->isEmpty()) {
+            return response()->json(['message' => 'No checklist in that section carries that line.'], 422);
+        }
+
+        foreach ($items as $item) {
+            $item->update(['due_date' => $validated['due_date'] ?? null]);
+        }
+
+        return response()->json(['success' => true, 'updated' => $items->count()]);
     }
 
     public function update(Request $request, Milestone $milestone): JsonResponse

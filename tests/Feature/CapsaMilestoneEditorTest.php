@@ -325,11 +325,13 @@ class CapsaMilestoneEditorTest extends TestCase
     }
 
     /**
-     * The New checklist button opened the modal by adding a class the
-     * stylesheet never defined, so the modal stayed hidden and nothing
-     * happened when you clicked - the form was never reachable at all.
+     * The New checklist button toggles a class on the modal, and whether the
+     * modal actually appears depends on a rule defined further down the page
+     * than the shared stylesheet - the page overrides .modal-overlay with its
+     * own opacity:0, so a class the page itself does not define leaves the
+     * modal invisible and unclickable with nothing in the console.
      */
-    public function test_the_new_checklist_button_opens_the_modal(): void
+    public function test_the_class_that_opens_the_modal_is_one_the_page_defines(): void
     {
         $this->makeCapsaWithSections();
         $this->makeTeamInSection('Team One');
@@ -341,15 +343,95 @@ class CapsaMilestoneEditorTest extends TestCase
 
         $this->assertNotEmpty($m[1], 'Nothing toggles the milestone modal.');
 
-        $css = file_get_contents(public_path('css/admin.css'));
-
         foreach (array_unique($m[1]) as $class) {
-            $this->assertStringContainsString(
-                ".modal-overlay.{$class}",
-                $css,
-                "The modal is opened with .{$class}, which admin.css does not style - it would stay hidden."
+            $this->assertMatchesRegularExpression(
+                '/\.modal-overlay\.'.$class.'\s*\{[^}]*opacity\s*:\s*1/',
+                $html,
+                "The modal is opened with .{$class}, which this page never makes visible - it would stay transparent."
             );
         }
+    }
+
+    /**
+     * Clicking New checklist used to open a form whose only submit button was
+     * dead unless the page happened to be filtered to a section, with no way
+     * to pick one from inside - so the button opened a dead end.
+     */
+    public function test_the_new_checklist_form_can_be_submitted_without_filtering_first(): void
+    {
+        $this->makeCapsaWithSections();
+        $this->makeTeamInSection('Team One');
+
+        $html = $this->get(route('admin.team_management', ['tab' => 'milestones']))
+            ->assertOk()->getContent();
+
+        $this->assertStringContainsString('id="ms-section"', $html, 'The form has no section to pick.');
+
+        preg_match('/<button type="submit"[^>]*>Create<\/button>/', $html, $btn);
+        $this->assertNotEmpty($btn, 'No Create button.');
+        $this->assertStringNotContainsString('disabled', $btn[0], 'Create is dead even though a section has teams.');
+    }
+
+    /**
+     * A checklist does not have one deadline - its lines do, and they fall
+     * weeks apart. The Chapter 1 draft is due long before the approval of it,
+     * so a single date on the milestone was never going to describe the work.
+     */
+    public function test_each_deliverable_carries_its_own_deadline(): void
+    {
+        $this->makeCapsaWithSections();
+        $this->makeTeamInSection('Team One');
+
+        $this->postJson(route('admin.milestones.store'), [
+            'section' => self::SECTION,
+            'template' => 'capstone_1',
+        ])->assertOk();
+
+        $this->postJson(route('admin.milestones.deliverable_due'), [
+            'section' => self::SECTION,
+            'key' => 'chapter_1_draft',
+            'due_date' => '2026-09-07',
+        ])->assertOk();
+
+        $this->postJson(route('admin.milestones.deliverable_due'), [
+            'section' => self::SECTION,
+            'key' => 'clf_chapter_1',
+            'due_date' => '2026-09-21',
+        ])->assertOk();
+
+        $this->assertSame(
+            '2026-09-07',
+            MilestoneItem::where('template_key', 'chapter_1_draft')->first()->due_date->toDateString()
+        );
+        $this->assertSame(
+            '2026-09-21',
+            MilestoneItem::where('template_key', 'clf_chapter_1')->first()->due_date->toDateString(),
+            'The approval took the draft date - the two are not independent.'
+        );
+        $this->assertNull(
+            MilestoneItem::where('template_key', 'chapter_2_draft')->first()->due_date,
+            'Setting one line deadline dated a line nobody touched.'
+        );
+    }
+
+    /** A deadline is set section-wide, so it must not reach another section. */
+    public function test_a_capsa_cannot_date_a_deliverable_outside_her_sections(): void
+    {
+        $this->makeCapsaWithSections();
+        $this->makeTeamInSection('Team One');
+
+        $this->postJson(route('admin.milestones.store'), [
+            'section' => self::SECTION,
+            'template' => 'capstone_1',
+        ])->assertOk();
+
+        $this->postJson(route('admin.milestones.deliverable_due'), [
+            'section' => 'BSIT-4Z',
+            'key' => 'chapter_1_draft',
+            'due_date' => '2026-09-07',
+        ])->assertStatus(422);
+
+        $this->assertNull(MilestoneItem::where('template_key', 'chapter_1_draft')->first()->due_date);
     }
 
     /** A CaPSA has no business touching a team outside her own sections. */

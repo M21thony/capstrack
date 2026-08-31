@@ -89,6 +89,16 @@ class TeamManagementController extends Controller
             'sectionTeamCount' => $tab === 'milestones' && $selectedSection
                 ? $this->confirmedTeamsIn($selectedSection)
                 : null,
+            // Every section the CaPSA runs, with the number of confirmed teams
+            // in each. The New checklist form asks for the section itself
+            // rather than borrowing whatever the page happens to be filtered
+            // to - a CaPSA who lands on the tab and clicks the button should
+            // be able to finish, not be sent back out to set a filter first.
+            'sectionChoices' => $tab === 'milestones'
+                ? collect($capsaSections)->mapWithKeys(
+                    fn ($section) => [$section => $this->confirmedTeamsIn($section)]
+                )->all()
+                : [],
             'selectedSection' => $selectedSection,
             'allSections' => $capsaSections,
             'sectionOptions' => collect(AdminProfileController::getAllAvailableSections())

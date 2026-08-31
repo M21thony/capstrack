@@ -1,4 +1,4 @@
-{{-- Paper Format Check: papers students sent to their Subject Adviser, which
+{{-- Document Review: papers students sent to their Subject Adviser, which
      is her CaPSA hat. This is the layout pass - margins, spacing, how the
      paper looks - not a read of what it argues.
 
