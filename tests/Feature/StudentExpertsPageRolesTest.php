@@ -116,6 +116,52 @@ class StudentExpertsPageRolesTest extends TestCase
         );
     }
 
+    /**
+     * The Request Experts section is only rendered when there is something in
+     * it, so a pending request has to be what puts it there - otherwise a
+     * student who has applied to someone has nowhere on this page to see it.
+     */
+    public function test_a_pending_request_is_visible_on_the_page(): void
+    {
+        [$student, $team] = $this->makeLeaderWithTeam();
+        $expert = $this->makeExpertWithRoles(['consultant']);
+
+        TeamExpertAssignment::create([
+            'team_id' => $team->team_id,
+            'expert_id' => $expert->expert_id,
+            'expert_role_id' => $this->expertRoleId($expert, 'consultant'),
+            'status' => 'pending',
+        ]);
+
+        $response = $this->actingAs($student, 'web')->get('/student/experts');
+
+        $response->assertStatus(200);
+
+        // The request itself, named and labelled, not merely counted.
+        $response->assertSee('class="req-section"', false);
+        $response->assertSee($expert->name, false);
+        $response->assertSee('Applied as consultant');
+        $response->assertSee('Pending');
+
+        // And the summary line above it agrees.
+        $response->assertSee('request waiting on a reply');
+    }
+
+    /**
+     * The counterpart: with nothing requested the section stays away, which is
+     * the whole reason it became conditional.
+     */
+    public function test_the_request_section_is_absent_when_there_is_nothing_in_it(): void
+    {
+        [$student] = $this->makeLeaderWithTeam();
+
+        $response = $this->actingAs($student, 'web')->get('/student/experts');
+
+        $response->assertStatus(200);
+        $response->assertDontSee('class="req-section"', false);
+        $response->assertDontSee('waiting on a reply');
+    }
+
     /** The "Your Team's Experts" panel only. */
     private function teamExpertsSection(string $html): string
     {

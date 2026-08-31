@@ -13,7 +13,7 @@
 .expertise-tags { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; margin-bottom: 8px; }
 .expertise-tag { font-size: 10px; color: var(--text3); background: var(--bg3); padding: 2px 8px; border-radius: 4px; }
 
-/* My Team / Request Experts cards */
+/* The list of applications this team has out. */
 .req-section { margin-top: 8px; }
 
 /* The team's three role slots - see the markup above for why these
