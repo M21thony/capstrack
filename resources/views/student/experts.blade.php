@@ -245,6 +245,19 @@
         </div>
         @endif
 
+        <div class="req-section">
+          <div class="sk" style="height:15px;width:160px;margin-bottom:14px;"></div>
+          @for($i = 0; $i < 2; $i++)
+          <div class="req-card">
+            <div class="sk" style="width:36px;height:36px;border-radius:50%;flex-shrink:0;"></div>
+            <div style="flex:1">
+              <div class="sk" style="width:50%;height:12px;"></div>
+            </div>
+            <div class="sk" style="width:60px;height:18px;border-radius:20px;margin-left:auto;"></div>
+          </div>
+          @endfor
+        </div>
+
         <div class="sticky-controls">
           <div style="display:flex;justify-content:space-between;align-items:center;">
             <div class="sk" style="height:40px;flex:1;max-width:320px;border-radius:8px;"></div>
@@ -274,18 +287,6 @@
           @endfor
         </div>
 
-        <div class="req-section">
-          <div class="sk" style="height:15px;width:160px;margin-bottom:14px;"></div>
-          @for($i = 0; $i < 2; $i++)
-          <div class="req-card">
-            <div class="sk" style="width:36px;height:36px;border-radius:50%;flex-shrink:0;"></div>
-            <div style="flex:1">
-              <div class="sk" style="width:50%;height:12px;"></div>
-            </div>
-            <div class="sk" style="width:60px;height:18px;border-radius:20px;margin-left:auto;"></div>
-          </div>
-          @endfor
-        </div>
       </div>
 
       <div class="overview-panel">
@@ -385,6 +386,64 @@
         @endforelse
       </div>
       @endif
+
+      {{-- Your own outstanding requests sit above the browse list, not below
+           it. They used to be the last thing on the page, so finding them
+           meant scrolling past every expert card - and the further the list
+           grew, the further down they went. --}}
+      <div class="req-section">
+        <div class="section-title" style="font-size: 15px; font-weight: 600; margin-bottom: 14px; display: flex; align-items: center; gap: 8px;">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+          Request Experts
+          @if($assignments->isNotEmpty())
+            <span style="font-size: 12px; color: var(--text3); font-weight: 400;">({{ $assignments->count() }})</span>
+          @endif
+        </div>
+
+        @forelse($assignments as $assignment)
+          @php
+            $propUrl = $assignment->proposal_file ? Storage::url($assignment->proposal_file) : null;
+            $reqRole = $assignment->engaged_role_name;
+          @endphp
+          <div class="req-card">
+            <div class="avatar" style="width: 36px; height: 36px; font-size: 12px; background: var(--accent); color: white;">
+              {{ $assignment->expert?->avatarInitials() ?? 'NA' }}
+              @if ($assignment->expert?->hasAvatarImage())
+                <img class="avatar-photo" src="{{ $assignment->expert->avatarUrl() }}" alt="" loading="lazy"
+                     referrerpolicy="no-referrer" onerror="this.remove()">
+              @endif
+            </div>
+            <div style="flex: 1; min-width: 0;">
+              <div style="font-size: 13px; font-weight: 600; color: var(--text);">{{ $assignment->expert?->name ?? 'Unknown Expert' }}</div>
+              <div style="font-size: 11px; color: var(--text3); text-transform: uppercase;">{{ $reqRole ? 'Applied as '.$reqRole : ucfirst($assignment->status) }}</div>
+            </div>
+            <span class="status-badge" style="background: {{ $assignment->status === 'approved' ? 'var(--green-bg)' : ($assignment->status === 'pending' ? 'var(--amber-bg)' : 'var(--red-bg)') }}; color: {{ $assignment->status === 'approved' ? 'var(--green)' : ($assignment->status === 'pending' ? 'var(--amber)' : 'var(--red)') }};">
+              {{ ucfirst($assignment->status) }}
+            </span>
+            <button class="btn btn-sm btn-soft" onclick="openReqInfoModal({{ json_encode([
+              'name' => $assignment->expert?->name ?? 'Unknown',
+              'role' => $reqRole ? ucfirst($reqRole) : null,
+              'status' => ucfirst($assignment->status),
+              'message' => $assignment->message ?? 'No message provided.',
+              'proposal' => $propUrl,
+              'date' => $assignment->created_at ? $assignment->created_at->format('M d, Y g:i A') : 'N/A',
+            ]) }})" title="View details">View</button>
+            @if($isLeader && $assignment->status !== 'approved')
+              <button class="btn btn-sm btn-soft-red" onclick="openRemoveModal({{ $assignment->assignment_id }}, '{{ $assignment->expert?->name ?? '' }}')" title="Remove">
+                <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+              </button>
+            @endif
+          </div>
+        @empty
+          <div style="text-align: center; padding: 24px; color: var(--text3); font-size: 13px; background: var(--bg3); border-radius: 10px; border: 1px dashed var(--border);">
+            @if($team)
+              No experts requested yet. Browse and apply for experts below.
+            @else
+              You need to join or create a team first before applying for experts.
+            @endif
+          </div>
+        @endforelse
+      </div>
 
       <div class="sticky-controls">
         <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;">
@@ -651,60 +710,6 @@
         @endif
       </div>
       @endif
-
-      <div class="req-section">
-        <div class="section-title" style="font-size: 15px; font-weight: 600; margin-bottom: 14px; display: flex; align-items: center; gap: 8px;">
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
-          Request Experts
-          @if($assignments->isNotEmpty())
-            <span style="font-size: 12px; color: var(--text3); font-weight: 400;">({{ $assignments->count() }})</span>
-          @endif
-        </div>
-
-        @forelse($assignments as $assignment)
-          @php
-            $propUrl = $assignment->proposal_file ? Storage::url($assignment->proposal_file) : null;
-            $reqRole = $assignment->engaged_role_name;
-          @endphp
-          <div class="req-card">
-            <div class="avatar" style="width: 36px; height: 36px; font-size: 12px; background: var(--accent); color: white;">
-              {{ $assignment->expert?->avatarInitials() ?? 'NA' }}
-              @if ($assignment->expert?->hasAvatarImage())
-                <img class="avatar-photo" src="{{ $assignment->expert->avatarUrl() }}" alt="" loading="lazy"
-                     referrerpolicy="no-referrer" onerror="this.remove()">
-              @endif
-            </div>
-            <div style="flex: 1; min-width: 0;">
-              <div style="font-size: 13px; font-weight: 600; color: var(--text);">{{ $assignment->expert?->name ?? 'Unknown Expert' }}</div>
-              <div style="font-size: 11px; color: var(--text3); text-transform: uppercase;">{{ $reqRole ? 'Applied as '.$reqRole : ucfirst($assignment->status) }}</div>
-            </div>
-            <span class="status-badge" style="background: {{ $assignment->status === 'approved' ? 'var(--green-bg)' : ($assignment->status === 'pending' ? 'var(--amber-bg)' : 'var(--red-bg)') }}; color: {{ $assignment->status === 'approved' ? 'var(--green)' : ($assignment->status === 'pending' ? 'var(--amber)' : 'var(--red)') }};">
-              {{ ucfirst($assignment->status) }}
-            </span>
-            <button class="btn btn-sm btn-soft" onclick="openReqInfoModal({{ json_encode([
-              'name' => $assignment->expert?->name ?? 'Unknown',
-              'role' => $reqRole ? ucfirst($reqRole) : null,
-              'status' => ucfirst($assignment->status),
-              'message' => $assignment->message ?? 'No message provided.',
-              'proposal' => $propUrl,
-              'date' => $assignment->created_at ? $assignment->created_at->format('M d, Y g:i A') : 'N/A',
-            ]) }})" title="View details">View</button>
-            @if($isLeader && $assignment->status !== 'approved')
-              <button class="btn btn-sm btn-soft-red" onclick="openRemoveModal({{ $assignment->assignment_id }}, '{{ $assignment->expert?->name ?? '' }}')" title="Remove">
-                <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-              </button>
-            @endif
-          </div>
-        @empty
-          <div style="text-align: center; padding: 24px; color: var(--text3); font-size: 13px; background: var(--bg3); border-radius: 10px; border: 1px dashed var(--border);">
-            @if($team)
-              No experts requested yet. Browse and apply for experts above.
-            @else
-              You need to join or create a team first before applying for experts.
-            @endif
-          </div>
-        @endforelse
-      </div>
 
       <div class="tutorial-note" style="justify-content: flex-start; border-top:none; margin-top:15px;">
         <div class="tutorial-item"><div class="dot-guide" style="background:var(--accent)"></div><span>Adviser</span></div>
