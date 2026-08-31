@@ -78,7 +78,7 @@
 
         <div style="display:flex;align-items:center;gap:8px">
           @if ($viewerIsCapsa)
-          <button type="button" class="btn" onclick="openStudentRosterModal()">Upload Roster</button>
+          <button type="button" class="btn" onclick="openStudentRosterModal()">Upload List</button>
           @endif
           <form method="get" id="sectionFilterForm">
             <label for="section" style="font-size:13px;color:var(--text2);margin-right:8px">Section</label>
@@ -194,10 +194,13 @@ function closeSidebar() {
 <div id="ct-toast-container"></div>
 <div id="studentRosterModal" class="ct-modal-overlay">
   <div class="ct-modal-card">
-    <h3 class="ct-modal-title">Upload Student Roster</h3>
+    <h3 class="ct-modal-title">Upload Student List</h3>
     <p class="ct-modal-desc" style="text-align:left;">
-      One .xlsx file, one sheet, columns: Name, Email, Student Number, Section, Program, School Year.
-      Matches by email against existing student accounts and fills in their academic info - a student never has to wait for this to sign up and use the site.
+      One .xlsx file, one sheet. Columns are read by their headings, in any order:
+      <strong>Email</strong> (required), Name, Student No., Course/Program, Year, Section.
+      Matches by email against existing accounts and fills in any <strong>blank</strong> student
+      number, course or section. Anything a student has already got is left alone, and a student
+      never has to wait for this to sign up and use the site.
     </p>
     <input type="file" id="studentRosterFile" class="ct-modal-input" accept=".xlsx">
     <div id="studentRosterResult" style="display:none;font-size:12px;text-align:left;margin:-6px 0 16px;"></div>
@@ -271,13 +274,25 @@ function uploadStudentRoster() {
         return;
       }
 
-      let html = `<strong>${data.inserted}</strong> added, <strong>${data.matched}</strong> matched to an existing account, <strong>${data.skipped}</strong> skipped.`;
+      let html = `<strong>${data.inserted}</strong> read, <strong>${data.matched}</strong> matched to an existing account, <strong>${data.skipped}</strong> skipped.`;
+      if (data.filled) {
+        html += `<div style="margin-top:6px;color:#15803d"><strong>${data.filled}</strong> blank field${data.filled === 1 ? '' : 's'} filled in.</div>`;
+      }
+      if (data.already_complete) {
+        html += `<div style="margin-top:4px;color:var(--text3)">${data.already_complete} already had everything &mdash; nothing on those was changed.</div>`;
+      }
+      if (data.unmatched && data.unmatched.length) {
+        html += `<div style="margin-top:8px;color:#b45309"><strong>${data.unmatched.length}</strong> on the list have no account yet ` +
+          `(their profile fills in when they first sign in):` +
+          '<div style="max-height:120px;overflow-y:auto;margin-top:4px">' +
+          data.unmatched.map(e => `<div>${e}</div>`).join('') + '</div></div>';
+      }
       if (data.errors && data.errors.length) {
         html += '<div style="max-height:160px;overflow-y:auto;color:var(--text3);margin-top:6px">' +
           data.errors.map(e => `<div>${e}</div>`).join('') + '</div>';
       }
       resultBox.innerHTML = html;
-      showToast('Student roster uploaded.', 'success');
+      showToast('Student list uploaded.', 'success');
       setTimeout(() => window.location.reload(), 1200);
     })
     .catch(() => {
