@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\CapstoneDocumentReview;
 use App\Models\CapstoneExpert;
 use App\Models\Student;
 use App\Services\GoogleDriveService;
@@ -368,6 +369,57 @@ class PdfAnnotationTest extends TestCase
         $response->assertStatus(200);
         $response->assertJson(['success' => true, 'review_status' => 'Reviewed']);
         $this->assertDatabaseHas('capstone_document_review', ['review_id' => 21, 'review_status' => 'Reviewed']);
+    }
+
+    /**
+     * reviewed_at was only ever read, never written, so every row held null -
+     * including the ones marked Reviewed. Two orderings sorted on nothing and
+     * the dashboard's "Oldest:" label rendered blank.
+     */
+    public function test_finishing_a_review_stamps_when_it_was_finished(): void
+    {
+        $expert = $this->loginAsApprovedExpert();
+        $reviewId = $this->makeReview(23, $expert->expert_id, 'To Review');
+
+        $this->assertNull(CapstoneDocumentReview::find($reviewId)->reviewed_at);
+
+        $this->post("/reviews/{$reviewId}/status", ['review_status' => 'Reviewed'])
+            ->assertStatus(200);
+
+        $this->assertNotNull(CapstoneDocumentReview::find($reviewId)->reviewed_at);
+    }
+
+    /** Undoing it must not leave a finish time behind on an unfinished review. */
+    public function test_moving_a_review_back_clears_the_finish_time(): void
+    {
+        $expert = $this->loginAsApprovedExpert();
+        $reviewId = $this->makeReview(24, $expert->expert_id, 'To Review');
+
+        $this->post("/reviews/{$reviewId}/status", ['review_status' => 'Reviewed']);
+        $this->assertNotNull(CapstoneDocumentReview::find($reviewId)->reviewed_at);
+
+        $this->post("/reviews/{$reviewId}/status", ['review_status' => 'Reviewing']);
+        $this->assertNull(CapstoneDocumentReview::find($reviewId)->reviewed_at);
+    }
+
+    /**
+     * The scopes have to match what the screen actually writes. Four queries
+     * filtered on 'pending' and 'approved' - values nothing has ever written -
+     * so they could never match a row.
+     */
+    public function test_the_scopes_match_the_statuses_the_screen_writes(): void
+    {
+        $expert = $this->loginAsApprovedExpert();
+        $this->makeReview(25, $expert->expert_id, CapstoneDocumentReview::AWAITING);
+        $this->makeReview(26, $expert->expert_id, CapstoneDocumentReview::IN_PROGRESS);
+        $this->makeReview(27, $expert->expert_id, CapstoneDocumentReview::REVIEWED);
+
+        $this->assertSame(2, CapstoneDocumentReview::awaitingReview()->count());
+        $this->assertSame(1, CapstoneDocumentReview::reviewed()->count());
+
+        // The values that used to be filtered on match nothing, which is the bug.
+        $this->assertSame(0, CapstoneDocumentReview::where('review_status', 'pending')->count());
+        $this->assertSame(0, CapstoneDocumentReview::where('review_status', 'approved')->count());
     }
 
     public function test_rejects_invalid_status_value(): void

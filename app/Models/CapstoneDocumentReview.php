@@ -10,6 +10,44 @@ class CapstoneDocumentReview extends Model
 
     protected $primaryKey = 'review_id';
 
+    /**
+     * The review states, named once.
+     *
+     * These three are the only values the review screen can set
+     * (PdfAnnotationController::updateStatus) and the only three in the
+     * table. Two other vocabularies were being queried for - 'pending' and
+     * 'approved' - which nothing has ever written, so those queries could
+     * never match a row. Anything filtering on review_status should go
+     * through the scopes below rather than spell a string again.
+     *
+     * Note what these do NOT say: none of them means the reviewer approved
+     * the document. REVIEWED means they finished looking at it. Recording an
+     * actual verdict is separate work.
+     */
+    public const AWAITING = 'To Review';
+
+    public const IN_PROGRESS = 'Reviewing';
+
+    public const REVIEWED = 'Reviewed';
+
+    public const STATUSES = [self::AWAITING, self::IN_PROGRESS, self::REVIEWED];
+
+    protected $casts = [
+        'reviewed_at' => 'datetime',
+    ];
+
+    /** Still on someone's plate - not yet finished with. */
+    public function scopeAwaitingReview($query)
+    {
+        return $query->whereIn('review_status', [self::AWAITING, self::IN_PROGRESS]);
+    }
+
+    /** Finished with. Says nothing about whether the reviewer was happy. */
+    public function scopeReviewed($query)
+    {
+        return $query->where('review_status', self::REVIEWED);
+    }
+
     protected $fillable = [
         'file_id',
         'expert_id',
