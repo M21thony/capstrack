@@ -1131,9 +1131,18 @@ function openApplyModal(expertId, expertName, roles) {
   currentExpertId = expertId;
   renderRoleChoices(roles || []);
   document.getElementById('apply-expert-name').textContent = 'Apply to ' + expertName;
-  document.getElementById('file-label').textContent = 'Choose PDF file...';
-  document.getElementById('file-label').classList.remove('has-file');
-  document.getElementById('proposal-file').value = '';
+
+  // Only there when the team still has to attach a PDF. A team whose
+  // pre-proposal the CaPSA approved sends that one instead, so the whole
+  // upload field is off the page and every line below it used to throw.
+  const fileLabel = document.getElementById('file-label');
+  const fileField = document.getElementById('proposal-file');
+  if (fileLabel) {
+    fileLabel.textContent = 'Choose PDF file...';
+    fileLabel.classList.remove('has-file');
+  }
+  if (fileField) fileField.value = '';
+
   document.getElementById('apply-message').value = '';
   document.getElementById('msg-count').textContent = '0';
   document.querySelectorAll('#apply-modal .field-error').forEach(e => e.classList.remove('show'));
@@ -1143,6 +1152,7 @@ function openApplyModal(expertId, expertName, roles) {
 
 function handleFileSelect(input) {
   const label = document.getElementById('file-label');
+  if (!label) return;
   if (input.files && input.files[0]) {
     label.textContent = input.files[0].name;
     label.classList.add('has-file');
@@ -1186,7 +1196,8 @@ function reviewApply() {
     valid = false;
   }
   if (!APPLY_HAS_APPROVED_PROPOSAL && (!fileInput || !fileInput.files || !fileInput.files[0])) {
-    document.getElementById('err-file').classList.add('show');
+    const fileError = document.getElementById('err-file');
+    if (fileError) fileError.classList.add('show');
     valid = false;
   }
   if (!message) {
