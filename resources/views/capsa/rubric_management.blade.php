@@ -447,9 +447,40 @@ function fitOnScoreCommitted(index) {
   // Written straight into the inputs already on the page rather than
   // re-rendering - rebuilding the list destroyed the very box being typed in,
   // which is what made the Excellent field impossible to change.
+  splitLowerLevels(index);
   fitCriteriaTo100(index);
   syncScoreInputs();
   updateTotalPts();
+}
+
+// Setting the top level fills in the ones below it: three quarters, a half
+// and a quarter of it, snapped to a quarter point.
+//
+// Only ever fills levels that are still blank or zero. A level you have
+// actually written a number into is yours, and is left exactly as it is -
+// the point is to save typing the obvious ones, not to overwrite judgement.
+function splitLowerLevels(index) {
+  var cr = draftCriteria[index];
+  if (!cr || !cr.levels || cr.levels.length < 2) return false;
+
+  var top = +cr.levels[0].score || 0;
+  if (!top) return false;
+
+  var shares = [1, 0.75, 0.5, 0.25];
+  var filled = false;
+
+  for (var li = 1; li < cr.levels.length; li++) {
+    var lvl = cr.levels[li];
+    var current = (lvl.score === '' || lvl.score === null) ? 0 : +lvl.score;
+
+    if (current !== 0) continue;
+
+    var share = shares[li] !== undefined ? shares[li] : (shares[shares.length - 1] / (li - shares.length + 2));
+    lvl.score = snapToQuarter(top * share);
+    filled = true;
+  }
+
+  return filled;
 }
 
 // Push the draft's score values back into the inputs already on the page,
@@ -791,8 +822,23 @@ function updateTotalPts() {
     lbl.textContent = formatPts(total) + ' / 100 pts';
     lbl.className = 'rb-pts-badge' + (atHundred ? ' rb-pts-ok' : diff > 0 ? ' rb-pts-under' : ' rb-pts-over');
   }
+  // The banner waits until you have stopped typing.
+  //
+  // It used to toggle on every keystroke, so ramping a number up one press at
+  // a time made it blink in and out as the total crossed 100. The small
+  // badge above stays live - that is the useful running feedback - while the
+  // banner only settles in once a score box no longer has focus.
   if (note) {
-    note.classList.toggle('show', !atHundred);
+    var editingAScore = document.activeElement && document.activeElement.classList
+      && document.activeElement.classList.contains('rb-score-tiny');
+
+    if (!editingAScore) {
+      note.classList.toggle('show', !atHundred);
+    } else if (atHundred) {
+      // Landing on 100 mid-edit is worth reflecting straight away - that is
+      // the banner going away, never appearing.
+      note.classList.remove('show');
+    }
   }
   if (hint) {
     if (atHundred) {
