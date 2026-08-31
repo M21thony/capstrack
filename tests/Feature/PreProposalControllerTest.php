@@ -129,47 +129,56 @@ class PreProposalControllerTest extends TestCase
         $this->post(route('student.pre-proposal.store'), $this->payload($checkId));
     }
 
-    public function test_store_auto_assigns_slots_in_order_and_only_marks_complete_once_all_three_are_in(): void
+    // Saving keeps a draft. It used to stamp submitted_at and, on the third
+    // one, silently flip the team to complete - so a team was in front of
+    // their CAPSA before they had said they were ready.
+    public function test_saving_a_proposal_keeps_it_as_a_draft(): void
     {
         [$student, $team] = $this->makeLeaderWithTeam();
         $this->mockSimilarityPipeline();
         $this->actingAs($student, 'web');
 
         $this->checkAndStore('p1.pdf');
-        $this->assertSame('on-going', $team->fresh()->team_status);
+        $this->checkAndStore('p2.pdf');
+        $this->checkAndStore('p3.pdf');
+
+        $this->assertSame('Active', $team->fresh()->team_status);
+        $this->assertSame(3, $team->preProposals()->count());
+        $this->assertSame(0, $team->preProposals()->whereNotNull('submitted_at')->count());
+    }
+
+    public function test_slots_are_assigned_in_order(): void
+    {
+        [$student, $team] = $this->makeLeaderWithTeam();
+        $this->mockSimilarityPipeline();
+        $this->actingAs($student, 'web');
+
+        $this->checkAndStore('p1.pdf');
         $this->assertDatabaseHas('capstone_pre_proposals', ['team_id' => $team->team_id, 'slot' => 1, 'duplication_status' => 'free']);
 
         $this->checkAndStore('p2.pdf');
-        $this->assertSame('on-going', $team->fresh()->team_status);
         $this->assertDatabaseHas('capstone_pre_proposals', ['team_id' => $team->team_id, 'slot' => 2]);
-
-        // Third one auto-assigns slot 3 and flips team_status to complete.
-        $this->checkAndStore('p3.pdf');
-        $this->assertDatabaseHas('capstone_pre_proposals', ['team_id' => $team->team_id, 'slot' => 3]);
-        $this->assertSame('complete', $team->fresh()->team_status);
-        $this->assertSame(3, $team->preProposals()->count());
     }
 
-    public function test_store_rejects_a_fourth_proposal_once_three_are_awaiting_review(): void
+    // Three is the minimum, not a cap - a team may keep as many candidate
+    // titles as they like.
+    public function test_a_team_may_save_more_than_the_minimum(): void
     {
         [$student, $team] = $this->makeLeaderWithTeam();
         $this->mockSimilarityPipeline();
         $this->actingAs($student, 'web');
 
-        $this->checkAndStore('p1.pdf');
-        $this->checkAndStore('p2.pdf');
-        $this->checkAndStore('p3.pdf');
+        foreach (['p1.pdf', 'p2.pdf', 'p3.pdf', 'p4.pdf'] as $file) {
+            $this->checkAndStore($file);
+        }
 
-        $checkId = $this->post(route('student.pre-proposal.check'), [
-            'document' => UploadedFile::fake()->create('p4.pdf', 10, 'application/pdf'),
-        ])->json('duplication_check_id');
-        $response = $this->post(route('student.pre-proposal.store'), $this->payload($checkId));
-
-        $response->assertSessionHas('error');
-        $this->assertSame(3, $team->preProposals()->count());
+        $this->assertSame(4, $team->preProposals()->count());
+        $this->assertDatabaseHas('capstone_pre_proposals', ['team_id' => $team->team_id, 'slot' => 4]);
     }
 
-    public function test_store_replaces_a_rejected_proposal_instead_of_adding_a_fourth(): void
+    // A rejected title used to be written over by the next save. It now stays
+    // put as a record, and the replacement is saved alongside it.
+    public function test_a_rejected_proposal_is_kept_rather_than_overwritten(): void
     {
         [$student, $team] = $this->makeLeaderWithTeam();
         $this->mockSimilarityPipeline();
@@ -181,19 +190,128 @@ class PreProposalControllerTest extends TestCase
 
         $team->preProposals()->where('slot', 2)->first()->update(['rejection_reason' => 'Too similar to an archived project.']);
 
-        $checkId = $this->post(route('student.pre-proposal.check'), [
-            'document' => UploadedFile::fake()->create('p2-revised.pdf', 10, 'application/pdf'),
-        ])->json('duplication_check_id');
-        $response = $this->post(route('student.pre-proposal.store'), $this->payload($checkId));
+        $this->checkAndStore('p2-revised.pdf');
 
-        $response->assertSessionHas('status');
-        $this->assertSame(3, $team->preProposals()->count());
-        $slot2 = $team->preProposals()->where('slot', 2)->first();
-        $this->assertNull($slot2->rejection_reason);
-        $this->assertSame($checkId, $slot2->duplication_check_id);
+        $this->assertSame(4, $team->preProposals()->count());
+        $this->assertSame(
+            'Too similar to an archived project.',
+            $team->preProposals()->where('slot', 2)->first()->rejection_reason,
+        );
     }
 
-    public function test_team_update_still_rejects_complete_without_three_proposals(): void
+    public function test_submitting_requires_the_minimum_number_of_titles(): void
+    {
+        [$student, $team] = $this->makeLeaderWithTeam();
+        $this->mockSimilarityPipeline();
+        $this->actingAs($student, 'web');
+
+        $this->checkAndStore('p1.pdf');
+        $this->checkAndStore('p2.pdf');
+
+        $this->post(route('student.pre-proposal.submit'))->assertSessionHas('error');
+
+        $this->assertSame(0, $team->preProposals()->whereNotNull('submitted_at')->count());
+        $this->assertSame('Active', $team->fresh()->team_status);
+    }
+
+    // Submitting is the one act that hands the team to their CAPSA. It is
+    // recorded on the pre-proposals, NOT by moving team_status - that column
+    // answers "is this team still recruiting?" and nothing else now.
+    public function test_submitting_turns_every_title_in(): void
+    {
+        [$student, $team] = $this->makeLeaderWithTeam();
+        $this->mockSimilarityPipeline();
+        $this->actingAs($student, 'web');
+
+        $this->checkAndStore('p1.pdf');
+        $this->checkAndStore('p2.pdf');
+        $this->checkAndStore('p3.pdf');
+
+        $this->post(route('student.pre-proposal.submit'))->assertSessionHas('status');
+
+        $this->assertSame(3, $team->preProposals()->whereNotNull('submitted_at')->count());
+        $this->assertTrue($team->fresh()->hasSubmittedPreProposals());
+        $this->assertSame('Active', $team->fresh()->team_status, 'turning in is not a recruitment change');
+    }
+
+    public function test_only_the_leader_can_submit_for_checking(): void
+    {
+        [, $team] = $this->makeLeaderWithTeam();
+        $this->mockSimilarityPipeline();
+
+        $member = Student::factory()->withCompleteProfile()->create(['email' => 'member.pp@my.cspc.edu.ph']);
+        StudentSchoolYear::create(['student_id' => $member->student_id, 'team_id' => $team->team_id]);
+
+        $this->actingAs($member, 'web');
+        $this->checkAndStore('p1.pdf');
+        $this->checkAndStore('p2.pdf');
+        $this->checkAndStore('p3.pdf');
+
+        $this->post(route('student.pre-proposal.submit'))->assertSessionHas('error');
+        $this->assertSame(0, $team->preProposals()->whereNotNull('submitted_at')->count());
+    }
+
+    public function test_a_team_can_unsubmit_before_the_capsa_acts(): void
+    {
+        [$student, $team] = $this->makeLeaderWithTeam();
+        $this->mockSimilarityPipeline();
+        $this->actingAs($student, 'web');
+
+        $this->checkAndStore('p1.pdf');
+        $this->checkAndStore('p2.pdf');
+        $this->checkAndStore('p3.pdf');
+        $this->post(route('student.pre-proposal.submit'));
+
+        $this->post(route('student.pre-proposal.unsubmit'))->assertSessionHas('status');
+
+        $this->assertSame(0, $team->preProposals()->whereNotNull('submitted_at')->count());
+        $this->assertSame('Active', $team->fresh()->team_status);
+    }
+
+    // Pulling the set back mid-review would change what the CAPSA is part-way
+    // through reading, so her decision stands.
+    public function test_a_team_cannot_unsubmit_once_the_capsa_has_acted(): void
+    {
+        [$student, $team] = $this->makeLeaderWithTeam();
+        $this->mockSimilarityPipeline();
+        $this->actingAs($student, 'web');
+
+        $this->checkAndStore('p1.pdf');
+        $this->checkAndStore('p2.pdf');
+        $this->checkAndStore('p3.pdf');
+        $this->post(route('student.pre-proposal.submit'));
+
+        $team->preProposals()->where('slot', 1)->first()->update(['approved_status' => true]);
+
+        $this->post(route('student.pre-proposal.unsubmit'))->assertSessionHas('error');
+        $this->assertSame(3, $team->preProposals()->whereNotNull('submitted_at')->count());
+    }
+
+    public function test_a_turned_in_set_cannot_be_added_to(): void
+    {
+        [$student, $team] = $this->makeLeaderWithTeam();
+        $this->mockSimilarityPipeline();
+        $this->actingAs($student, 'web');
+
+        $this->checkAndStore('p1.pdf');
+        $this->checkAndStore('p2.pdf');
+        $this->checkAndStore('p3.pdf');
+        $this->post(route('student.pre-proposal.submit'));
+
+        $checkId = $this->post(route('student.pre-proposal.check'), [
+            'document' => UploadedFile::fake()->create('p4.pdf', 10, 'application/pdf'),
+        ])->json('duplication_check_id');
+
+        $this->post(route('student.pre-proposal.store'), $this->payload($checkId))
+            ->assertSessionHas('error');
+
+        $this->assertSame(3, $team->preProposals()->count());
+    }
+
+    // team_status only carries recruitment now, so "complete" is not a value
+    // it accepts at all - the request fails validation rather than needing a
+    // guard to catch it.
+    public function test_team_update_refuses_complete_as_a_status(): void
     {
         [$student, $team] = $this->makeLeaderWithTeam();
         $this->actingAs($student, 'web');
@@ -203,8 +321,8 @@ class PreProposalControllerTest extends TestCase
             'team_status' => 'complete',
         ]);
 
-        $response->assertSessionHas('error');
-        $this->assertSame('on-going', $team->fresh()->team_status);
+        $response->assertSessionHasErrors('team_status');
+        $this->assertSame('Active', $team->fresh()->team_status);
     }
 
     // Direct regression for a user report of seeing another, unrelated
@@ -311,7 +429,9 @@ class PreProposalControllerTest extends TestCase
         $response->assertSee('Choose This One');
     }
 
-    public function test_a_pending_proposal_can_be_removed_and_frees_its_slot(): void
+    // A team is only ever "complete" by having submitted, and a submitted set
+    // is locked, so removing a title is now purely a draft-stage action.
+    public function test_a_draft_proposal_can_be_removed(): void
     {
         [$student, $team] = $this->makeLeaderWithTeam();
         $sy = StudentSchoolYear::where('student_id', $student->student_id)->first();
@@ -326,14 +446,31 @@ class PreProposalControllerTest extends TestCase
             'problem_statement' => 'p', 'proposed_solution' => 's', 'scope' => 'sc', 'limitations' => 'l',
             'sdm' => 'Agile', 'approved_status' => false,
         ]);
-        $team->update(['team_status' => 'complete']);
-
         $this->actingAs($student, 'web');
         $response = $this->delete(route('student.pre-proposal.destroy', $proposal->id));
 
         $response->assertSessionHas('status');
         $this->assertDatabaseMissing('capstone_pre_proposals', ['id' => $proposal->id]);
-        $this->assertSame('on-going', $team->fresh()->team_status);
+        $this->assertSame('Active', $team->fresh()->team_status);
+    }
+
+    public function test_a_turned_in_proposal_cannot_be_removed(): void
+    {
+        [$student, $team] = $this->makeLeaderWithTeam();
+        $this->mockSimilarityPipeline();
+        $this->actingAs($student, 'web');
+
+        $this->checkAndStore('p1.pdf');
+        $this->checkAndStore('p2.pdf');
+        $this->checkAndStore('p3.pdf');
+        $this->post(route('student.pre-proposal.submit'));
+
+        $proposal = $team->preProposals()->where('slot', 1)->first();
+
+        $this->delete(route('student.pre-proposal.destroy', $proposal->id))
+            ->assertSessionHas('error');
+
+        $this->assertDatabaseHas('capstone_pre_proposals', ['id' => $proposal->id]);
     }
 
     public function test_an_approved_proposal_cannot_be_removed(): void

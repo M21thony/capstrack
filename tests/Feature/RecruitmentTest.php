@@ -112,7 +112,7 @@ class RecruitmentTest extends TestCase
 
         $team = Team::create([
             'team_name' => 'Already A Team',
-            'team_status' => 'on-going',
+            'team_status' => 'Active',
         ]);
 
         StudentSchoolYear::create([
@@ -302,7 +302,7 @@ class RecruitmentTest extends TestCase
 
         $team = Team::create([
             'team_name' => 'Invitation Team',
-            'team_status' => 'on-going',
+            'team_status' => 'Active',
         ]);
 
         $this->actingAs($sender);
@@ -345,7 +345,7 @@ class RecruitmentTest extends TestCase
 
         $team = Team::create([
             'team_name' => 'Request Team',
-            'team_status' => 'on-going',
+            'team_status' => 'Active',
         ]);
 
         $this->actingAs($sender);
@@ -388,7 +388,7 @@ class RecruitmentTest extends TestCase
 
         $team = Team::create([
             'team_name' => 'Accept Invite Team',
-            'team_status' => 'on-going',
+            'team_status' => 'Active',
         ]);
 
         StudentSchoolYear::create([
@@ -442,7 +442,7 @@ class RecruitmentTest extends TestCase
 
         $team = Team::create([
             'team_name' => 'Decline Invite Team',
-            'team_status' => 'on-going',
+            'team_status' => 'Active',
         ]);
 
         $invitation = TeamInvitation::create([

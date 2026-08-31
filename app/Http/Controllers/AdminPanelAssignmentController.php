@@ -82,7 +82,7 @@ class AdminPanelAssignmentController extends Controller
         $requiresPayment = in_array($defenseType, self::PAID_DEFENSE_TYPES, true);
 
         $teams = Team::where('is_confirmed', true)
-            ->where('team_status', '!=', 'closed')
+            ->where('team_status', '!=', 'Full')
             ->with(['members', 'defenseSchedules' => function ($q) {
                 $q->with(['panels.expert']);
             }])
@@ -1045,7 +1045,7 @@ class AdminPanelAssignmentController extends Controller
             ->all();
 
         $teams = Team::where('is_confirmed', true)
-            ->where('team_status', '!=', 'closed')
+            ->where('team_status', '!=', 'Full')
             ->orderBy('team_name')
             ->get();
 

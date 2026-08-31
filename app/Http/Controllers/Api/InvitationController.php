@@ -146,10 +146,10 @@ class InvitationController extends Controller
         $team = Team::find($invitation->team_id);
         $joiningStudent = Student::find($joinedStudentId);
 
-        if ($team && $team->team_status === 'on-going') {
+        if ($team && $team->team_status === 'Active') {
             $currentCount = StudentSchoolYear::where('team_id', $team->team_id)->count();
             if ($currentCount >= $team->member_count) {
-                $team->update(['team_status' => 'closed']);
+                $team->update(['team_status' => 'Full']);
                 $this->logActivity(
                     $team->leader_id,
                     'team_auto_closed',

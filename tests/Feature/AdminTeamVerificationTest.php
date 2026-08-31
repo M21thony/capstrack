@@ -56,7 +56,7 @@ class AdminTeamVerificationTest extends TestCase
     {
         $team = Team::create([
             'team_name' => $teamName,
-            'team_status' => 'complete',
+            'team_status' => 'Active',
             'is_confirmed' => false,
             'leader_id' => $leader->student_id,
             'project_title' => self::PROJECT_TITLE,
@@ -68,12 +68,21 @@ class AdminTeamVerificationTest extends TestCase
             'team_id' => $team->team_id,
         ]);
 
+        // What actually puts a team in front of the CAPSA is having turned
+        // its pre-proposals in - the status string alone no longer does.
+        $this->submittedProposalFor($team, $leader);
+
         return $team;
     }
 
-    // verify() now requires the title question to already be resolved -
-    // creates a minimal approved-and-selected pre-proposal for the team.
-    private function selectFinalTitleForTeam(Team $team, Student $leader): CapstonePreProposal
+    /**
+     * A turned-in pre-proposal for this team, created or upgraded in place.
+     *
+     * Shared by createCompleteTeam() and selectFinalTitleForTeam() so both
+     * work on the same slot-1 proposal instead of colliding on the
+     * (team_id, slot) unique key.
+     */
+    private function submittedProposalFor(Team $team, Student $leader, array $overrides = []): CapstonePreProposal
     {
         $sy = StudentSchoolYear::firstOrCreate([
             'student_id' => $leader->student_id,
@@ -90,22 +99,30 @@ class AdminTeamVerificationTest extends TestCase
             'instructors_suggested' => [],
         ]);
 
-        $proposal = CapstonePreProposal::create([
-            'team_id' => $team->team_id,
-            'duplication_check_id' => $check->id,
-            'slot' => 1,
-            'title' => self::PROJECT_TITLE,
-            'sdg_goals' => 'SDG 4 – Quality Education',
-            'research_agenda' => ['Applications and Systems Development'],
-            'problem_statement' => 'A problem.',
-            'proposed_solution' => 'A solution.',
-            'scope' => 'A scope.',
-            'limitations' => 'A limitation.',
-            'sdm' => 'Agile Development Methodology',
-            'duplication_status' => 'free',
-            'approved_status' => true,
-            'submitted_at' => now(),
-        ]);
+        return CapstonePreProposal::updateOrCreate(
+            ['team_id' => $team->team_id, 'slot' => 1],
+            array_merge([
+                'duplication_check_id' => $check->id,
+                'title' => self::PROJECT_TITLE,
+                'sdg_goals' => 'SDG 4 - Quality Education',
+                'research_agenda' => ['Applications and Systems Development'],
+                'problem_statement' => 'A problem.',
+                'proposed_solution' => 'A solution.',
+                'scope' => 'A scope.',
+                'limitations' => 'A limitation.',
+                'sdm' => 'Agile Development Methodology',
+                'duplication_status' => 'free',
+                'approved_status' => false,
+                'submitted_at' => now(),
+            ], $overrides),
+        );
+    }
+
+    // verify() now requires the title question to already be resolved -
+    // creates a minimal approved-and-selected pre-proposal for the team.
+    private function selectFinalTitleForTeam(Team $team, Student $leader): CapstonePreProposal
+    {
+        $proposal = $this->submittedProposalFor($team, $leader, ['approved_status' => true]);
 
         $team->update(['selected_pre_proposal_id' => $proposal->id]);
 
@@ -130,11 +147,11 @@ class AdminTeamVerificationTest extends TestCase
 
         $onGoing = Team::create([
             'team_name' => 'Team Ongoing',
-            'team_status' => 'on-going',
+            'team_status' => 'Active',
             'leader_id' => $leader->student_id,
         ]);
 
-        $response = $this->get(route('admin.verify_teams'));
+        $response = $this->get(route('admin.team_management', ['tab' => 'verification']));
 
         $response->assertOk();
         $response->assertSee($team->team_name);
@@ -186,7 +203,7 @@ class AdminTeamVerificationTest extends TestCase
         $leader = $this->createLeader();
         $team = Team::create([
             'team_name' => 'Team Not Complete',
-            'team_status' => 'on-going',
+            'team_status' => 'Active',
             'leader_id' => $leader->student_id,
         ]);
 
@@ -201,40 +218,46 @@ class AdminTeamVerificationTest extends TestCase
         ]);
     }
 
-    public function test_team_no_longer_ready_to_verify_after_status_changes_away_from_complete(): void
+    // A team waits for verification because it turned its pre-proposals in,
+    // so unsubmitting - not a team_status change - is what withdraws it.
+    public function test_unsubmitting_takes_a_team_out_of_the_verification_queue(): void
     {
         $this->createAdmin();
         $leader = $this->createLeader();
         $team = $this->createCompleteTeam($leader);
 
-        $this->assertDatabaseHas('team', ['team_id' => $team->team_id, 'team_status' => 'complete']);
-
         $this->actingAs($leader, 'web');
-        $this->updateTeam($team, 'on-going');
+        $this->post(route('student.pre-proposal.unsubmit'))->assertSessionHas('status');
 
-        $team->refresh();
-        $this->assertSame('on-going', $team->team_status);
+        $this->assertSame(0, $team->preProposals()->whereNotNull('submitted_at')->count());
 
-        $this->actingAs($admin = CapstoneExpert::find(1), 'expert');
-        $response = $this->get(route('admin.verify_teams'));
+        $this->actingAs(CapstoneExpert::find(1), 'expert');
+        $response = $this->get(route('admin.team_management', ['tab' => 'verification']));
 
         $response->assertOk();
         $response->assertSee('No teams awaiting verification');
     }
 
-    public function test_team_becomes_ready_to_verify_again_after_changing_back_to_complete(): void
+    public function test_resubmitting_puts_a_team_back_in_the_verification_queue(): void
     {
         $this->createAdmin();
         $leader = $this->createLeader();
         $team = $this->createCompleteTeam($leader);
 
         $this->actingAs($leader, 'web');
-        $this->updateTeam($team, 'on-going');
+        $this->post(route('student.pre-proposal.unsubmit'));
 
-        $this->updateTeam($team, 'complete');
+        // Submitting needs the minimum number of titles kept, so top the set
+        // back up before turning it in again.
+        $this->submittedProposalFor($team, $leader, ['submitted_at' => null]);
+        $this->createPendingProposal($team, $leader, 2, 'A Second Candidate Title For This Team To Consider Fully');
+        $this->createPendingProposal($team, $leader, 3, 'A Third Candidate Title For This Team To Consider Fully');
+        $team->preProposals()->update(['submitted_at' => null]);
 
-        $this->actingAs($admin = CapstoneExpert::find(1), 'expert');
-        $response = $this->get(route('admin.verify_teams'));
+        $this->post(route('student.pre-proposal.submit'))->assertSessionHas('status');
+
+        $this->actingAs(CapstoneExpert::find(1), 'expert');
+        $response = $this->get(route('admin.team_management', ['tab' => 'verification']));
 
         $response->assertOk();
         $response->assertSee($team->team_name);
@@ -299,7 +322,7 @@ class AdminTeamVerificationTest extends TestCase
         ]);
         $teamB = $this->createCompleteTeam($leaderB, 'Team BSIT');
 
-        $response = $this->get(route('admin.verify_teams'));
+        $response = $this->get(route('admin.team_management', ['tab' => 'verification']));
 
         $response->assertOk();
         $response->assertDontSee($teamA->team_name);
@@ -349,11 +372,11 @@ class AdminTeamVerificationTest extends TestCase
         $leader = $this->createLeader();
         $team = $this->createCompleteTeam($leader);
 
-        $response = $this->get(route('admin.verify_teams'));
+        $response = $this->get(route('admin.team_management', ['tab' => 'verification']));
 
         $response->assertOk();
         $response->assertDontSee($team->team_name);
-        $response->assertSee('No teams awaiting verification');
+        $response->assertSee('You have no sections assigned yet');
     }
 
     public function test_admin_without_assigned_sections_cannot_verify_team(): void
@@ -402,7 +425,11 @@ class AdminTeamVerificationTest extends TestCase
         ]);
     }
 
-    public function test_verified_tab_shows_confirmed_teams_only(): void
+    // The Verification tab carries both states at once, under their own
+    // headings, rather than the two separate tabs Team Verification used -
+    // splitting them meant clicking away to answer "did I already do that
+    // one?". What matters is that each team lands under the right heading.
+    public function test_verification_separates_teams_awaiting_from_teams_already_verified(): void
     {
         $this->createAdmin();
 
@@ -413,11 +440,21 @@ class AdminTeamVerificationTest extends TestCase
         $verifiedTeam = $this->createCompleteTeam($leaderB, 'Team Done');
         $verifiedTeam->update(['is_confirmed' => true]);
 
-        $response = $this->get(route('admin.verify_teams', ['tab' => 'verified']));
+        $response = $this->get(route('admin.team_management', ['tab' => 'verification']));
 
         $response->assertOk();
-        $response->assertSee($verifiedTeam->team_name);
-        $response->assertDontSee($pendingTeam->team_name);
+
+        $html = $response->getContent();
+        $awaitingAt = strpos($html, 'Awaiting verification');
+        $verifiedAt = strpos($html, '>Verified<');
+
+        $this->assertNotFalse($awaitingAt);
+        $this->assertNotFalse($verifiedAt);
+
+        // Each name falls between the heading it belongs under and the next.
+        $this->assertGreaterThan($awaitingAt, strpos($html, $pendingTeam->team_name));
+        $this->assertLessThan($verifiedAt, strpos($html, $pendingTeam->team_name));
+        $this->assertGreaterThan($verifiedAt, strpos($html, $verifiedTeam->team_name));
     }
 
     public function test_section_filter_limits_teams_in_both_tabs(): void
@@ -434,7 +471,7 @@ class AdminTeamVerificationTest extends TestCase
         ]);
         $bsitTeam = $this->createCompleteTeam($leaderB, 'Team BSIT');
 
-        $response = $this->get(route('admin.verify_teams', ['section' => 'BSIT-3A']));
+        $response = $this->get(route('admin.team_management', ['tab' => 'verification', 'section' => 'BSIT-3A']));
 
         $response->assertOk();
         $response->assertSee($bsitTeam->team_name);
@@ -461,10 +498,14 @@ class AdminTeamVerificationTest extends TestCase
             'instructors_suggested' => [],
         ]);
 
-        return CapstonePreProposal::create([
+        // updateOrCreate, not create: createCompleteTeam() already puts a
+        // turned-in proposal in slot 1, and a test asking for slot 1 here
+        // means "make that one look like this", not "add a second".
+        return CapstonePreProposal::updateOrCreate([
             'team_id' => $team->team_id,
-            'duplication_check_id' => $check->id,
             'slot' => $slot,
+        ], [
+            'duplication_check_id' => $check->id,
             'title' => $title,
             'sdg_goals' => 'SDG 4 – Quality Education',
             'research_agenda' => ['Applications and Systems Development'],
@@ -563,7 +604,7 @@ class AdminTeamVerificationTest extends TestCase
         $team = $this->createCompleteTeam($leader);
         $this->createPendingProposal($team, $leader, 1, self::PROJECT_TITLE);
 
-        $response = $this->get(route('admin.verify_teams'));
+        $response = $this->get(route('admin.team_management', ['tab' => 'verification']));
 
         $response->assertOk();
         $response->assertSee('A problem.');
@@ -611,7 +652,7 @@ class AdminTeamVerificationTest extends TestCase
         $team = $this->createCompleteTeam($leader);
         $proposal = $this->createPendingProposal($team, $leader, 1, self::PROJECT_TITLE);
 
-        $response = $this->get(route('admin.verify_teams'));
+        $response = $this->get(route('admin.team_management', ['tab' => 'verification']));
 
         // The payload is embedded as an @json()-encoded string inside an
         // HTML attribute, so its slashes come out backslash-escaped just

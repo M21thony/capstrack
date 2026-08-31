@@ -31,7 +31,7 @@ class DuplicationReportApplyLockTest extends TestCase
 
         $team = Team::create([
             'team_name' => 'Reporting Team',
-            'team_status' => 'on-going',
+            'team_status' => 'Active',
             'leader_id' => $student->student_id,
             'is_confirmed' => true,
             'member_count' => 5,

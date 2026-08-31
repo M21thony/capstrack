@@ -64,7 +64,7 @@ class StudentDashboardTest extends TestCase
 
         $team1 = Team::create([
             'team_name' => 'Team Alpha',
-            'team_status' => 'on-going',
+            'team_status' => 'Active',
         ]);
 
         StudentSchoolYear::create([
@@ -83,7 +83,7 @@ class StudentDashboardTest extends TestCase
 
         $team2 = Team::create([
             'team_name' => 'Team Beta',
-            'team_status' => 'on-going',
+            'team_status' => 'Active',
         ]);
 
         StudentSchoolYear::create([
@@ -117,7 +117,7 @@ class StudentDashboardTest extends TestCase
 
         $team = Team::create([
             'team_name' => 'Team Omega',
-            'team_status' => 'on-going',
+            'team_status' => 'Active',
         ]);
 
         StudentSchoolYear::create([
@@ -246,7 +246,7 @@ class StudentDashboardTest extends TestCase
 
         $team = Team::create([
             'team_name' => 'Team Alpha',
-            'team_status' => 'on-going',
+            'team_status' => 'Active',
         ]);
 
         StudentSchoolYear::create([
@@ -288,12 +288,12 @@ class StudentDashboardTest extends TestCase
 
         $team = Team::create([
             'team_name' => 'Team Beta',
-            'team_status' => 'on-going',
+            'team_status' => 'Active',
         ]);
 
         $otherTeam = Team::create([
             'team_name' => 'Other Team',
-            'team_status' => 'on-going',
+            'team_status' => 'Active',
         ]);
 
         StudentSchoolYear::create([
@@ -331,7 +331,7 @@ class StudentDashboardTest extends TestCase
             'email' => 'grades.student@my.cspc.edu.ph',
         ]);
 
-        $team = Team::create(['team_name' => 'Team Gradeworthy', 'team_status' => 'on-going']);
+        $team = Team::create(['team_name' => 'Team Gradeworthy', 'team_status' => 'Active']);
 
         StudentSchoolYear::create([
             'student_id' => $student->student_id,
@@ -404,7 +404,7 @@ class StudentDashboardTest extends TestCase
             'email' => 'nogrades.student@my.cspc.edu.ph',
         ]);
 
-        $team = Team::create(['team_name' => 'Team Fresh', 'team_status' => 'on-going']);
+        $team = Team::create(['team_name' => 'Team Fresh', 'team_status' => 'Active']);
 
         StudentSchoolYear::create([
             'student_id' => $student->student_id,

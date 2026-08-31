@@ -43,8 +43,7 @@ class TeamController extends Controller
     {
         $validated = $request->validate([
             'team_name' => ['required', 'string', 'max:100'],
-            'project_title' => ['nullable', 'string', 'max:150'],
-            'team_status' => ['nullable', Rule::in(['on-going', 'complete', 'closed'])],
+            'team_status' => ['nullable', Rule::in(['Active', 'Full'])],
         ]);
 
         $student = $request->user();
@@ -53,10 +52,11 @@ class TeamController extends Controller
             return response()->json(['message' => 'You are already in a team.'], 422);
         }
 
+        // No project_title: the title is whichever pre-proposal is approved,
+        // not something typed at team creation. Same as the web controller.
         $team = Team::create([
             'team_name' => $validated['team_name'],
-            'project_title' => $validated['project_title'] ?? null,
-            'team_status' => $validated['team_status'] ?? 'on-going',
+            'team_status' => $validated['team_status'] ?? 'Active',
             'leader_id' => $student->student_id,
         ]);
 
@@ -141,26 +141,13 @@ class TeamController extends Controller
 
         $validated = $request->validate([
             'team_name' => ['required', 'string', 'max:100'],
-            'project_title' => ['nullable', 'string', 'max:150'],
-            'team_status' => ['nullable', Rule::in(['on-going', 'complete', 'closed'])],
+            'team_status' => ['nullable', Rule::in(['Active', 'Full'])],
         ]);
-
-        if (($validated['team_status'] ?? null) === 'complete') {
-            // Same gate as the web TeamController::update() - reaching
-            // "complete" requires all 3 required Pre-Proposal submissions,
-            // not just a title string submitted here.
-            if ($team->preProposals()->count() < 3) {
-                return response()->json([
-                    'message' => 'Submit all 3 Pre-Proposal titles (each with a duplication check) before marking your team complete.',
-                ], 422);
-            }
-        }
 
         $originalStatus = $team->team_status;
 
         $team->update([
             'team_name' => $validated['team_name'],
-            'project_title' => $validated['project_title'] ?? null,
             'team_status' => $validated['team_status'] ?? $team->team_status,
             'member_count' => 5,
         ]);
@@ -170,10 +157,10 @@ class TeamController extends Controller
             ->update(['member_count' => 5]);
 
         $autoClosed = false;
-        if ($team->team_status === 'on-going') {
+        if ($team->team_status === 'Active') {
             $currentCount = StudentSchoolYear::where('team_id', $team->team_id)->count();
             if ($currentCount >= 5) {
-                $team->update(['team_status' => 'closed']);
+                $team->update(['team_status' => 'Full']);
                 $autoClosed = true;
                 $this->logActivity(
                     $studentId,

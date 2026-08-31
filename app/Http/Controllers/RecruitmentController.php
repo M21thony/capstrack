@@ -59,7 +59,7 @@ class RecruitmentController extends Controller
             if ($validated['recruitment_goal'] === 'build_a_team' && ! empty($validated['team_name'])) {
                 $team = Team::create([
                     'team_name' => $validated['team_name'],
-                    'team_status' => 'on-going',
+                    'team_status' => 'Active',
                     'leader_id' => $studentId,
                 ]);
 

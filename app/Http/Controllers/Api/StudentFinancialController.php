@@ -137,12 +137,17 @@ class StudentFinancialController extends Controller
 
         $team = $student->team;
 
-        if (! $team || $team->team_status !== 'complete') {
+        // is_confirmed carries the teams that were verified before the
+        // pre-proposal flow existed - they have no proposals to have
+        // submitted, and were able to file receipts under the old
+        // team_status gate. Verification is the later milestone anyway, so a
+        // verified team is past this bar by definition.
+        if (! $team || ! ($team->hasSubmittedPreProposals() || $team->is_confirmed)) {
             return response()->json([
                 'success' => false,
                 'message' => 'Validation failed.',
                 'errors' => [
-                    'team_status' => ['Your Team Leader must first mark your team as Complete in Team Management before any team member can submit a receipt.'],
+                    'team_status' => ['Your team has to be marked Complete before anyone can submit a receipt. Your team leader does that by submitting your pre-proposals for checking on the Duplication Checker page.'],
                 ],
             ], 422);
         }
