@@ -468,11 +468,15 @@ function syncScoreInputs() {
 
   draftCriteria.forEach(function (c, i) {
     (c.levels || []).forEach(function (lvl, li) {
-      var el = document.getElementById('sc-' + i + '-' + li);
-      if (!el || el === focused) return;
-
       var next = String(lvl.score === '' || lvl.score === null ? '' : lvl.score);
-      if (el.value !== next) el.value = next;
+
+      // The top level shows in two places - the collapsed row and the open
+      // body - so both are written, and whichever has focus is left alone.
+      [document.getElementById('sc-' + i + '-' + li), document.getElementById('scb-' + i + '-' + li)]
+        .forEach(function (el) {
+          if (!el || el === focused) return;
+          if (el.value !== next) el.value = next;
+        });
     });
   });
 
@@ -560,6 +564,9 @@ function addCriterion(preload) {
   if (!preload) {
     draftCriteria.push(crit);
     newCriterionIndex = draftCriteria.length - 1;
+    // Open it: a new criterion is the one case where the levels do need
+    // filling in straight away.
+    openCriterion = newCriterionIndex;
   }
   nameErrors = [];
   descErrors = [];
@@ -620,37 +627,78 @@ function renderCriteriaBuilder() {
   updateTotalPts();
 }
 
+// One row per criterion, collapsed.
+//
+// Every criterion used to render as a full card with its four performance
+// levels open - about 400px each, so a 27-criterion rubric was a 10,000-pixel
+// scroll to change one number. The row carries what you usually want (the
+// name and what it is worth, both editable in place), and the level
+// descriptions open only when you ask for them.
 function renderCriterionCard(cr, i) {
   var hasNameErr = !!nameErrors[i];
-  return '<div class="rb-criterion-card' + (hasNameErr ? ' rb-card-error' : '') + '" id="crc-' + i + '">' +
-    '<div class="rb-criterion-header">' +
-    '<div class="rb-crit-num">' + (i + 1) + '</div>' +
-    '<input class="input rb-crit-name-input' + (hasNameErr ? ' rb-error' : '') + '" value="' + escHtml(cr.name) + '" placeholder="Criterion name (e.g. Oral Presentation)&hellip;" oninput="draftCriteria[' + i + '].name=this.value;clearNameError(' + i + ',this)"/>' +
-    '<button onclick="removeCriterion(' + i + ')" class="rb-remove-btn" title="Remove criterion">' +
-    '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
-    '</button>' +
-    '</div>' +
-    (hasNameErr ? '<div class="rb-crit-name-error"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Criterion Name is required.</div>' : '') +
-    '<input class="input rb-crit-category-input" value="' + escHtml(cr.category || '') + '" placeholder="Category (optional, e.g. Oral Examination/Presentation)&hellip;" oninput="draftCriteria[' + i + '].category=this.value" onchange="renderCriteriaBuilder()"/>' +
-    '<div class="rb-levels-grid">' +
-    cr.levels.map(function(lv, li) {
-      var hasDescErr = !!(descErrors[i] && descErrors[i][li]);
-      return '<div class="rb-level-card">' +
-        '<div class="rb-level-label-wrap">' +
-        '<input type="text" class="input rb-level-label-input" style="color:' + LEVEL_COLORS[li] + '" value="' + escHtml(lv.label) + '" placeholder="' + LEVEL_LABELS[li] + '" maxlength="255" oninput="draftCriteria[' + i + '].levels[' + li + '].label=this.value"/>' +
-        '<div class="rb-level-input-wrap">' +
-        '<input type="number" class="input rb-score-tiny" id="sc-' + i + '-' + li + '" value="' + lv.score + '" placeholder="0" oninput="draftCriteria[' + i + '].levels[' + li + '].score=+this.value;updateTotalPts()"' +
-          (li === 0 ? ' onchange="fitOnNewCriterionScored(' + i + ')"' : '') +
-          ' min="0" step="0.25"/>' +
+  var hasDescErr = !!(descErrors[i] && descErrors[i].some(Boolean));
+  var open = openCriterion === i;
+
+  return '<div class="rb-criterion-card' + (open ? ' open' : '') + (hasNameErr || hasDescErr ? ' rb-card-error' : '') + '" id="crc-' + i + '">' +
+
+    // ---- the row that is always visible ----
+    '<div class="rb-crit-row">' +
+      '<button type="button" class="rb-crit-toggle" onclick="toggleCriterion(' + i + ')" title="Show performance levels" aria-expanded="' + (open ? 'true' : 'false') + '">' +
+        '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>' +
+      '</button>' +
+      '<div class="rb-crit-num">' + (i + 1) + '</div>' +
+      '<input class="input rb-crit-name-input' + (hasNameErr ? ' rb-error' : '') + '" value="' + escHtml(cr.name) + '" placeholder="Criterion name (e.g. Oral Presentation)&hellip;" oninput="draftCriteria[' + i + '].name=this.value;clearNameError(' + i + ',this)"/>' +
+      '<div class="rb-crit-row-pts">' +
+        '<input type="number" class="input rb-score-tiny" id="sc-' + i + '-0" value="' + cr.levels[0].score + '" placeholder="0" title="What this criterion is worth" oninput="draftCriteria[' + i + '].levels[0].score=+this.value;updateTotalPts()" onchange="fitOnNewCriterionScored(' + i + ')" min="0" step="0.25"/>' +
         '<span class="rb-pts-unit">pts</span>' +
-        '</div>' +
-        '</div>' +
-        '<textarea class="input rb-desc-area' + (hasDescErr ? ' rb-error' : '') + '" placeholder="Describe this performance level&hellip;" oninput="draftCriteria[' + i + '].levels[' + li + '].desc=this.value;clearDescError(' + i + ',' + li + ',this)">' + lv.desc + '</textarea>' +
-        (hasDescErr ? '<div class="rb-level-desc-error" id="ldesc-err-' + i + '-' + li + '"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Performance level description is required.</div>' : '') +
-        '</div>';
-    }).join('') +
+      '</div>' +
+      '<button onclick="removeCriterion(' + i + ')" class="rb-remove-btn" title="Remove criterion">' +
+        '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
+      '</button>' +
+    '</div>' +
+
+    (hasNameErr ? '<div class="rb-crit-name-error"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Criterion Name is required.</div>' : '') +
+    (!open && hasDescErr ? '<div class="rb-crit-name-error"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>A performance level still needs a description &mdash; open this criterion to fill it in.</div>' : '') +
+
+    // ---- the part that opens ----
+    '<div class="rb-crit-body">' +
+      '<input class="input rb-crit-category-input" value="' + escHtml(cr.category || '') + '" placeholder="Category (optional, e.g. Oral Examination/Presentation)&hellip;" oninput="draftCriteria[' + i + '].category=this.value" onchange="renderCriteriaBuilder()"/>' +
+      '<div class="rb-levels-grid">' +
+      cr.levels.map(function(lv, li) {
+        var levelErr = !!(descErrors[i] && descErrors[i][li]);
+        return '<div class="rb-level-card">' +
+          '<div class="rb-level-label-wrap">' +
+          '<input type="text" class="input rb-level-label-input" style="color:' + LEVEL_COLORS[li] + '" value="' + escHtml(lv.label) + '" placeholder="' + LEVEL_LABELS[li] + '" maxlength="255" oninput="draftCriteria[' + i + '].levels[' + li + '].label=this.value"/>' +
+          '<div class="rb-level-input-wrap">' +
+          // The top level also appears on the collapsed row, so both write to
+          // the same value and each refreshes the other.
+          '<input type="number" class="input rb-score-tiny" id="scb-' + i + '-' + li + '" value="' + lv.score + '" placeholder="0" oninput="draftCriteria[' + i + '].levels[' + li + '].score=+this.value;syncScoreInputs();updateTotalPts()"' +
+            (li === 0 ? ' onchange="fitOnNewCriterionScored(' + i + ')"' : '') +
+            ' min="0" step="0.25"/>' +
+          '<span class="rb-pts-unit">pts</span>' +
+          '</div>' +
+          '</div>' +
+          '<textarea class="input rb-desc-area' + (levelErr ? ' rb-error' : '') + '" placeholder="Describe this performance level&hellip;" oninput="draftCriteria[' + i + '].levels[' + li + '].desc=this.value;clearDescError(' + i + ',' + li + ',this)">' + lv.desc + '</textarea>' +
+          (levelErr ? '<div class="rb-level-desc-error" id="ldesc-err-' + i + '-' + li + '"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Performance level description is required.</div>' : '') +
+          '</div>';
+      }).join('') +
+      '</div>' +
     '</div>' +
     '</div>';
+}
+
+// Which criterion is open. One at a time - opening them all is the scroll
+// this replaced.
+let openCriterion = null;
+
+function toggleCriterion(i) {
+  openCriterion = (openCriterion === i) ? null : i;
+  renderCriteriaBuilder();
+
+  if (openCriterion === i) {
+    var card = document.getElementById('crc-' + i);
+    if (card) card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
 }
 
 function clearNameError(i, el) {
@@ -679,6 +727,20 @@ function validateCriterionNames() {
   nameErrors = draftCriteria.map(function(c) { return !(c.name || '').trim(); });
   renderCriteriaBuilder();
   return nameErrors.indexOf(true) === -1;
+}
+
+// Open the first criterion with a problem, so an error is never hidden
+// inside a collapsed row.
+function openFirstProblemCriterion() {
+  for (var i = 0; i < draftCriteria.length; i++) {
+    if (nameErrors[i] || (descErrors[i] && descErrors[i].some(Boolean))) {
+      openCriterion = i;
+      renderCriteriaBuilder();
+      var card = document.getElementById('crc-' + i);
+      if (card) card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+  }
 }
 
 function validateLevelDescriptions() {
@@ -907,8 +969,8 @@ async function saveRubric() {
   if (!name) { toast('Enter a rubric name.'); goToStep1(); return; }
   if (!type) { toast('Select a rubric type.'); goToStep1(); return; }
   if (!draftCriteria.length) { toast('Add at least one criterion.'); return; }
-  if (!validateCriterionNames()) { toast('Criterion Name is required for every criterion.'); return; }
-  if (!validateLevelDescriptions()) { toast('Performance level description is required for every performance level.'); return; }
+  if (!validateCriterionNames()) { toast('Criterion Name is required for every criterion.'); openFirstProblemCriterion(); return; }
+  if (!validateLevelDescriptions()) { toast('Performance level description is required for every performance level.'); openFirstProblemCriterion(); return; }
   var total = draftTotal();
   // Off 100 is allowed - the rubric is saved as it stands and the total is
   // shown wherever it is used. Warned once, not blocked.
