@@ -443,6 +443,10 @@
               'role' => $reqRole ? ucfirst($reqRole) : null,
               'status' => ucfirst($assignment->status),
               'message' => $assignment->message ?? 'No message provided.',
+              // Why the expert said no. It was written down and sent in a
+              // notification, then never shown again - so a team that missed
+              // the notification had a rejected application and no idea why.
+              'rejection_reason' => $assignment->rejection_reason,
               'proposal' => $propUrl,
               'date' => $assignment->created_at ? $assignment->created_at->format('M d, Y g:i A') : 'N/A',
             ]) }})" title="View details">View</button>
@@ -817,6 +821,22 @@
       <div class="field-error" id="err-role">Please choose the role you are applying for.</div>
     </div>
 
+    {{-- A team whose pre-proposal the CaPSA has approved sends that one. It
+         is the document that got through, so re-uploading it was busywork -
+         and nothing stopped a different, unapproved file being attached in
+         its place. Teams still waiting on a decision attach a PDF as before. --}}
+    @if($approvedProposal)
+    <div class="form-group">
+      <label>Approved Pre-Proposal</label>
+      <div style="display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border:1px solid var(--green);background:var(--green-bg);border-radius:10px">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="var(--green)" stroke-width="2.4" style="flex-shrink:0;margin-top:1px"><polyline points="20 6 9 17 4 12"/></svg>
+        <div style="min-width:0">
+          <div style="font-size:12.5px;font-weight:600;color:var(--text);line-height:1.4">{{ $approvedProposal->title }}</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:3px">Approved by your CaPSA &mdash; sent with this application, so there is nothing to upload.</div>
+        </div>
+      </div>
+    </div>
+    @else
     <div class="form-group">
       <label>Approved Pre-Proposal <span class="req">*</span></label>
       <div class="file-input-wrap">
@@ -826,6 +846,7 @@
       </div>
       <div class="field-error" id="err-file">Please upload your approved pre-proposal (PDF).</div>
     </div>
+    @endif
 
     <div class="form-group">
       <label>Message to Expert <span class="req">*</span></label>
@@ -922,6 +943,10 @@
       <div class="review-label">Status</div>
       <div class="review-value" id="req-info-status"></div>
     </div>
+    <div class="review-row" id="req-info-reason-row" style="display:none">
+      <div class="review-label">Reason</div>
+      <div class="review-value" id="req-info-reason" style="font-size:12px;color:var(--red);"></div>
+    </div>
     <div class="review-row">
       <div class="review-label">Message</div>
       <div class="review-value" id="req-info-message" style="font-size:12px;color:var(--text2);"></div>
@@ -943,6 +968,7 @@
 <div class="msg-toast" id="msg-toast"></div>
 
 <script>
+const APPLY_HAS_APPROVED_PROPOSAL = @json((bool) $approvedProposal);
 let currentExpertId = null;
 let currentRoleId = null;
 let currentRoleName = '';
@@ -1159,7 +1185,7 @@ function reviewApply() {
     document.getElementById('err-role').classList.add('show');
     valid = false;
   }
-  if (!fileInput.files || !fileInput.files[0]) {
+  if (!APPLY_HAS_APPROVED_PROPOSAL && (!fileInput || !fileInput.files || !fileInput.files[0])) {
     document.getElementById('err-file').classList.add('show');
     valid = false;
   }
@@ -1177,7 +1203,9 @@ function reviewApply() {
 
   if (!valid) return;
 
-  currentFileName = fileInput.files[0].name;
+  currentFileName = APPLY_HAS_APPROVED_PROPOSAL
+    ? @json($approvedProposal?->title ?? '').' (approved pre-proposal)'
+    : fileInput.files[0].name;
   currentMessage = message;
 
   document.getElementById('review-expert').textContent = document.getElementById('apply-expert-name').textContent.replace('Apply to ', '');
@@ -1197,7 +1225,10 @@ function confirmApply() {
   const formData = new FormData();
   formData.append('expert_id', currentExpertId);
   formData.append('expert_role_id', currentRoleId);
-  formData.append('proposal_file', document.getElementById('proposal-file').files[0]);
+  var pf = document.getElementById('proposal-file');
+  if (pf && pf.files && pf.files[0]) {
+    formData.append('proposal_file', pf.files[0]);
+  }
   formData.append('message', currentMessage);
 
   fetch('{{ route("api.student.assignments.store") }}', {
@@ -1235,6 +1266,13 @@ function openReqInfoModal(data) {
   document.getElementById('req-info-role-row').style.display = data.role ? '' : 'none';
   const statusColors = { Approved: 'var(--green)', Pending: 'var(--amber)', Rejected: 'var(--red)' };
   document.getElementById('req-info-status').innerHTML = '<span style="color:' + (statusColors[data.status] || 'var(--text3)') + ';font-weight:600;">' + data.status + '</span>';
+  var reasonRow = document.getElementById('req-info-reason-row');
+  if (data.rejection_reason) {
+    document.getElementById('req-info-reason').textContent = data.rejection_reason;
+    reasonRow.style.display = '';
+  } else {
+    reasonRow.style.display = 'none';
+  }
   document.getElementById('req-info-message').textContent = data.message;
   document.getElementById('req-info-proposal').innerHTML = data.proposal
     ? '<a href="' + data.proposal + '" target="_blank" style="color:var(--accent);">View Proposal <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" fill="none" stroke-width="2" style="display:inline;vertical-align:middle;"><path d="M7 17l9.2-9.2M17 17V7H7"/></svg></a>'

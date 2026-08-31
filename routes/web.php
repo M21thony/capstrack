@@ -182,6 +182,9 @@ Route::middleware(['expert.auth', 'expert.approved', 'no.cache', 'track.expert']
     Route::post('/assignments/{assignment}/approve', [InstructorAssignmentController::class, 'approve'])->name('assignments.approve');
     Route::post('/assignments/{assignment}/reject', [InstructorAssignmentController::class, 'reject'])->name('assignments.reject');
     Route::delete('/assignments/{assignment}', [InstructorAssignmentController::class, 'remove'])->name('assignments.remove');
+    // The pre-proposal PDF a team applied with, when they used the one
+    // their CaPSA approved instead of attaching a file.
+    Route::get('/assignments/{assignment}/pre-proposal', [InstructorAssignmentController::class, 'preProposalDocument'])->name('assignments.pre_proposal');
     Route::view('/pending', 'instructor.pending')->name('pending');
     Route::view('/rejected', 'instructor.rejected')->name('rejected');
     Route::get('/docreview/{reviewId}/clf', [ConsultationLogController::class, 'generate'])->name('docreview.clf');
