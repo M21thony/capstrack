@@ -226,9 +226,11 @@
     <a href="{{ route('admin.approval') }}" class="nav-item {{ $currentRoute === 'admin.approval' ? 'active' : '' }}">
       <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/></svg>
       Account Approval
-      @if ($unseenPendingExpertCount > 0)
-        <span class="nav-badge red">{{ $unseenPendingExpertCount > 99 ? '99+' : $unseenPendingExpertCount }}</span>
-      @endif
+      {{-- Always rendered, hidden when there is nothing to show. The approval
+           page keeps this in step as accounts are approved or rejected
+           without a reload, and it cannot fill in a span that is not there. --}}
+      <span class="nav-badge red" id="sidebar-pending-badge"
+            @if ($unseenPendingExpertCount < 1) style="display:none" @endif>{{ $unseenPendingExpertCount > 99 ? '99+' : $unseenPendingExpertCount }}</span>
     </a>
     <a href="{{ route('admin.panel_assignment') }}" class="nav-item {{ $currentRoute === 'admin.panel_assignment' ? 'active' : '' }}">
       <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="23" y1="11" x2="17" y2="11"/><line x1="20" y1="8" x2="20" y2="14"/></svg>

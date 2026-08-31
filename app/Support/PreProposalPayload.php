@@ -17,7 +17,12 @@ class PreProposalPayload
 {
     public static function forTeam(Team $team): array
     {
-        return $team->preProposals->map(fn ($p) => [
+        // Only titles the team has turned in for checking. A draft they are
+        // still writing is not the CaPSA's to read - the counts on the
+        // Pre-Proposals tab have always filtered on this, but the review
+        // modal was built from every row, so opening it showed drafts that
+        // had never been submitted.
+        return $team->preProposals->whereNotNull('submitted_at')->map(fn ($p) => [
                 'id' => $p->id,
                 'slot' => $p->slot,
                 'title' => $p->title,

@@ -1018,11 +1018,15 @@ function renderResult(data, fileName) {
 }
 
 function openPpFormModal() {
-  document.getElementById('pp-form-modal-overlay').classList.add('show');
+  // Not on the page once a team has turned their titles in - the checker
+  // stays open to them, the form does not.
+  const ppOverlay = document.getElementById('pp-form-modal-overlay');
+  if (ppOverlay) ppOverlay.classList.add('show');
 }
 
 function closePpFormModal() {
-  document.getElementById('pp-form-modal-overlay').classList.remove('show');
+  const ppOverlay = document.getElementById('pp-form-modal-overlay');
+  if (ppOverlay) ppOverlay.classList.remove('show');
 }
 
 // Wraps any of the pre-proposal's own significant words wherever they occur

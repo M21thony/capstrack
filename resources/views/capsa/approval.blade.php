@@ -350,9 +350,14 @@ function filterCards(){
 function updatePendingCount(){
   const count = Object.values(experts).filter(e => e.status==='pending').length;
   document.getElementById('pending-count').textContent = count + ' pending account' + (count!==1?'s':'');
-  const badge = document.getElementById('sidebar-badge');
-  if(count > 0){ badge.textContent = count; badge.style.display=''; }
-  else badge.style.display='none';
+  // #sidebar-badge has not existed since the sidebar was rewritten, so this
+  // threw on every call - and it is called on load, which took the rest of
+  // the script with it.
+  const badge = document.getElementById('sidebar-pending-badge');
+  if (badge) {
+    badge.textContent = count > 99 ? '99+' : count;
+    badge.style.display = count > 0 ? '' : 'none';
+  }
 }
 
 // ── REVIEW MODAL ──────────────────────────────────────────────────────────
