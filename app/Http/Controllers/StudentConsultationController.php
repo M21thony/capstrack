@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\SyncConsultationCancellation;
 use App\Mail\ConsultationBookedMail;
 use App\Mail\ConsultationCancelledMail;
 use App\Models\ConsultationSchedule;
@@ -16,6 +17,9 @@ use Illuminate\Support\Facades\Mail;
 
 class StudentConsultationController extends Controller
 {
+    /** How near a session can get before it is too late to call it off. */
+    private const CANCEL_CUTOFF_DAYS = 3;
+
     public function __construct(private GoogleCalendarService $calendar) {}
 
     public function index()
@@ -446,6 +450,22 @@ class StudentConsultationController extends Controller
             ->where('booking_status', 'scheduled')
             ->firstOrFail();
 
+        // Too close to call off. An expert who has kept the time free
+        // deserves more notice than a day, and a team pulling out the night
+        // before leaves a slot nobody else can take.
+        $daysAway = now()->startOfDay()->diffInDays(
+            \Illuminate\Support\Carbon::parse($booking->session_date)->startOfDay(),
+            false
+        );
+
+        if ($daysAway < self::CANCEL_CUTOFF_DAYS) {
+            return response()->json([
+                'success' => false,
+                'message' => 'This consultation is in '.($daysAway <= 0 ? 'less than a day' : $daysAway.' day'.($daysAway === 1 ? '' : 's'))
+                    .'. It can only be cancelled more than '.self::CANCEL_CUTOFF_DAYS.' days ahead - message your expert instead.',
+            ], 422);
+        }
+
         $slot = ConsultationSchedule::find($booking->schedule_id);
         $team = $booking->team;
 
@@ -454,41 +474,20 @@ class StudentConsultationController extends Controller
             'cancellation_reason' => $validated['reason'],
         ]);
 
-        if ($slot && $slot->expert) {
-            $this->notifyExpertOfCancellation($booking, $slot->expert, $team, $student, $validated['reason']);
-        }
-
         if ($slot) {
             ConsultationSchedule::where('schedule_id', $booking->schedule_id)
                 ->update(['is_available' => true]);
-
-            if (! $slot->expert || ! $slot->expert->google_token) {
-                return response()->json(['success' => true]);
-            }
-
-            if ($slot->recur === 'once') {
-                if ($slot->google_event_id) {
-                    try {
-                        $this->calendar->updateBookingEvent(
-                            expertId: $slot->expert_id,
-                            googleEventId: $slot->google_event_id,
-                            teamName: 'Available Slot'
-                        );
-                    } catch (\Exception $e) {
-                        \Log::warning('Google Calendar update failed on cancel', ['error' => $e->getMessage()]);
-                    }
-                }
-            } elseif ($booking->google_event_id) {
-                // Recurring occurrence — this booking had its own event
-                // (there's no shared placeholder for this specific date to
-                // fall back to), so remove it entirely rather than relabeling.
-                try {
-                    $this->calendar->cancelBookingEvent($slot->expert_id, $booking->google_event_id);
-                } catch (\Exception $e) {
-                    \Log::warning('Google Calendar event deletion failed on cancel', ['error' => $e->getMessage()]);
-                }
-            }
         }
+
+        // The email and the calendar tidy-up are the reason cancelling used
+        // to sit for about three seconds: one waits on SMTP, the other on
+        // Google. Neither decides anything and the student cannot see either
+        // result, so they happen after the answer goes back.
+        SyncConsultationCancellation::dispatch(
+            $booking->booking_id,
+            $validated['reason'],
+            trim(($student->f_name ?? '').' '.($student->l_name ?? '')) ?: $student->email,
+        );
 
         return response()->json(['success' => true]);
     }
