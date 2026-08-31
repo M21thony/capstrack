@@ -420,7 +420,13 @@
 
         @foreach($assignments as $assignment)
           @php
-            $propUrl = $assignment->proposal_file ? Storage::url($assignment->proposal_file) : null;
+            // Through the public disk explicitly: the file was stored with
+            // ->store("proposals", "public"), and a bare Storage::url() call
+            // resolves against the DEFAULT disk instead - the same fix the
+            // expert side of this link already carries.
+            $propUrl = $assignment->proposal_file
+                ? Storage::disk("public")->url($assignment->proposal_file)
+                : null;
             $reqRole = $assignment->engaged_role_name;
           @endphp
           <div class="req-card">
@@ -447,6 +453,11 @@
               // notification, then never shown again - so a team that missed
               // the notification had a rejected application and no idea why.
               'rejection_reason' => $assignment->rejection_reason,
+              // An application made with the CaPSA-approved pre-proposal has
+              // no uploaded file, and the details said "None attached" - as
+              // though nothing had been sent, when what was sent is the one
+              // document the CaPSA had already passed.
+              'pre_proposal_title' => $assignment->preProposal?->title,
               'proposal' => $propUrl,
               'date' => $assignment->created_at ? $assignment->created_at->format('M d, Y g:i A') : 'N/A',
             ]) }})" title="View details">View</button>
@@ -1272,6 +1283,14 @@ function confirmApply() {
   });
 }
 
+/** Titles are written by students, so they are escaped before going in. */
+function escapeHtmlText(value) {
+  const div = document.createElement('div');
+  div.textContent = value == null ? '' : String(value);
+
+  return div.innerHTML;
+}
+
 function openReqInfoModal(data) {
   document.getElementById('req-info-sub').textContent = 'Information about this expert request.';
   document.getElementById('req-info-expert').textContent = data.name;
@@ -1287,9 +1306,18 @@ function openReqInfoModal(data) {
     reasonRow.style.display = 'none';
   }
   document.getElementById('req-info-message').textContent = data.message;
-  document.getElementById('req-info-proposal').innerHTML = data.proposal
-    ? '<a href="' + data.proposal + '" target="_blank" style="color:var(--accent);">View Proposal <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" fill="none" stroke-width="2" style="display:inline;vertical-align:middle;"><path d="M7 17l9.2-9.2M17 17V7H7"/></svg></a>'
-    : 'None attached';
+  const proposalEl = document.getElementById('req-info-proposal');
+  if (data.pre_proposal_title) {
+    // Named, not linked: the team already has this on their Duplication
+    // Checker page, and there is no student-facing route to the file.
+    proposalEl.innerHTML =
+      '<div style="color:var(--green);font-weight:600;font-size:12px">&#10003; CaPSA-approved pre-proposal</div>'
+      + '<div style="font-size:12px;color:var(--text2);margin-top:2px">' + escapeHtmlText(data.pre_proposal_title) + '</div>';
+  } else if (data.proposal) {
+    proposalEl.innerHTML = '<a href="' + data.proposal + '" target="_blank" style="color:var(--accent);">View Proposal <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" fill="none" stroke-width="2" style="display:inline;vertical-align:middle;"><path d="M7 17l9.2-9.2M17 17V7H7"/></svg></a>';
+  } else {
+    proposalEl.textContent = 'None attached';
+  }
   document.getElementById('req-info-date').textContent = data.date;
   openModal('req-info-modal');
 }
