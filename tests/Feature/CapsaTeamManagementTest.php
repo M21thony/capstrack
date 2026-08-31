@@ -286,4 +286,64 @@ class CapsaTeamManagementTest extends TestCase
         $this->get(route('admin.verify_teams'))
             ->assertRedirect(route('admin.team_management', ['tab' => 'verification']));
     }
+
+    // The CaPSA decides whether a title is too close to something already
+    // done, so she needs the report the team saw - the matched abstracts and
+    // what the check made of them - not a title and a percentage.
+    public function test_the_review_modal_carries_the_whole_duplication_report(): void
+    {
+        $this->makeCapsaWithSections();
+        [$team, , $sy] = $this->makeTeamInSection('Team Checked');
+
+        $check = DuplicationCheck::create([
+            'student_s_y_id' => $sy->s_y_id,
+            'document_path' => 'checks/full.pdf',
+            'concepts' => ['title' => 'Solar Monitoring', 'keywords' => ['solar', 'monitoring']],
+            'top_score' => 71,
+            'verdict' => 'High Similarity',
+            'matches' => [
+                [
+                    'title' => 'An Earlier Solar Monitoring Capstone',
+                    'score' => 71,
+                    'reason' => 'Same domain and approach.',
+                    'program' => 'BSIT',
+                    'academic_year' => '2023-2024',
+                    'abstract' => 'This study built a solar monitoring platform for rural sites.',
+                    'similarities' => 'Both monitor solar output remotely.',
+                    'differences' => 'The earlier one had no mobile client.',
+                    'suggestion' => 'Narrow the scope to the mobile side.',
+                ],
+                ['title' => 'A Fourth Match', 'score' => 40],
+                ['title' => 'A Fifth Match', 'score' => 35],
+                ['title' => 'A Sixth Match', 'score' => 30],
+            ],
+            'instructors_suggested' => [],
+        ]);
+
+        CapstonePreProposal::create([
+            'team_id' => $team->team_id,
+            'duplication_check_id' => $check->id,
+            'slot' => 1,
+            'title' => 'Slot 1 Smart Automated Irrigation Monitoring System',
+            'sdg_goals' => 'SDG 4',
+            'research_agenda' => ['Applications and Systems Development'],
+            'problem_statement' => 'p', 'proposed_solution' => 's', 'scope' => 'sc', 'limitations' => 'l',
+            'sdm' => 'Agile',
+            'approved_status' => false,
+            'submitted_at' => now(),
+        ]);
+
+        $response = $this->get(route('admin.team_management', ['tab' => 'pre_proposals']));
+
+        $response->assertOk();
+
+        // The abstract and the check's notes, not just the title and score.
+        $response->assertSee('This study built a solar monitoring platform', false);
+        $response->assertSee('Both monitor solar output remotely.', false);
+        $response->assertSee('Narrow the scope to the mobile side.', false);
+        $response->assertSee('2023-2024', false);
+
+        // Every match, not the first three.
+        $response->assertSee('A Sixth Match', false);
+    }
 }

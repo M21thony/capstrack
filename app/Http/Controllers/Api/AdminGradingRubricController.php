@@ -1368,15 +1368,11 @@ class AdminGradingRubricController extends Controller
             'criteria.*.sort_order' => ['nullable', 'integer', 'min:0'],
         ]);
 
-        $total = collect($validated['criteria'])
-            ->sum(fn ($c) => $this->scoreLevelsMax($c['score_levels'] ?? null));
-
-        if (abs($total - 100.0) > 0.0001) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Total criterion points must equal exactly 100 points.',
-            ], 422);
-        }
+        // Not a hard 100 any more. Refusing the save was what made a real
+        // rubric painful to enter: a 27-criterion rubric is typed one
+        // criterion at a time, so it is under 100 for the entire time it is
+        // being built, and there was no way to stop halfway. The total is
+        // recorded as-is and the page says when it is off.
 
         return DB::transaction(function () use ($gradingRubric, $validated): JsonResponse {
             $gradingRubric->criteria()->delete();
@@ -1395,7 +1391,13 @@ class AdminGradingRubricController extends Controller
 
             $gradingRubric->load('criteria');
 
-            return response()->json([
+            // Keep the rubric's declared total honest - it is the denominator a
+        // score is out of, so it has to be what the criteria really sum to.
+        $gradingRubric->update([
+            'total_points' => round($this->criteriaMaxPointsTotal($gradingRubric->criteria()->get()), 2),
+        ]);
+
+        return response()->json([
                 'success' => true,
                 'message' => 'Criteria synced successfully.',
                 'data' => $this->formatRubric($gradingRubric),
@@ -1504,7 +1506,10 @@ class AdminGradingRubricController extends Controller
 
             foreach ($levels as $i => $level) {
                 if (is_array($level) && isset($level['score']) && is_numeric($level['score'])) {
-                    $levels[$i]['score'] = round((float) $level['score'] * $factor, 2);
+                    // Snapped to a quarter point, the same step the score
+                    // inputs use. Plain scaling turned a tidy 3 / 5 / 10
+                    // rubric into 3.07 / 5.12 / 10.23.
+                    $levels[$i]['score'] = round((float) $level['score'] * $factor * 4) / 4;
                 }
             }
 
@@ -1515,21 +1520,29 @@ class AdminGradingRubricController extends Controller
             ];
         }
 
-        // Put whatever rounding lost or gained onto the biggest criterion,
-        // where it is proportionally the smallest distortion.
-        $sum = array_sum(array_column($scaled, 'max'));
-        $drift = round($targetTotal - $sum, 2);
+        // Hand out whatever the rounding left over a quarter at a time,
+        // largest first, rather than dumping it all on one criterion - which
+        // sent a single criterion from 10 to 11.75 absorbing everyone else's.
+        $drift = round($targetTotal - array_sum(array_column($scaled, 'max')), 2);
+        $step = $drift > 0 ? 0.25 : -0.25;
+        $guard = 0;
 
-        if (abs($drift) >= 0.01) {
-            $biggest = 0;
-            foreach ($scaled as $i => $row) {
-                if ($row['max'] > $scaled[$biggest]['max']) {
-                    $biggest = $i;
-                }
+        // Largest first, and the order is stable across passes.
+        $order = array_keys($scaled);
+        usort($order, fn ($a, $b) => $scaled[$b]['max'] <=> $scaled[$a]['max']);
+
+        $cursor = 0;
+        while (abs($drift) >= 0.01 && $guard++ < 2000) {
+            $i = $order[$cursor % count($order)];
+            $cursor++;
+
+            if ($step < 0 && $scaled[$i]['max'] <= 0.25) {
+                continue;
             }
 
-            $scaled[$biggest]['levels'] = $this->shiftTopLevel($scaled[$biggest]['levels'], $drift);
-            $scaled[$biggest]['max'] = $this->scoreLevelsMax($scaled[$biggest]['levels']);
+            $scaled[$i]['levels'] = $this->shiftTopLevel($scaled[$i]['levels'], $step);
+            $scaled[$i]['max'] = $this->scoreLevelsMax($scaled[$i]['levels']);
+            $drift = round($drift - $step, 2);
         }
 
         foreach ($scaled as $row) {
