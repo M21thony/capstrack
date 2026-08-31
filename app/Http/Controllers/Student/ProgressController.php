@@ -54,6 +54,14 @@ class ProgressController extends Controller
                 ->orderBy('due_date')
                 ->orderBy('id')
                 ->get()
+                // A checklist with no lines on it yet says nothing a team can
+                // act on - it reads "0 of 0 complete", which looks like a
+                // fault rather than a checklist still being written. A CaPSA
+                // building one by hand should not be pushing an empty card at
+                // their students in the meantime; it appears once it has
+                // something on it.
+                ->filter(fn (Milestone $milestone) => $milestone->items->isNotEmpty())
+                ->values()
                 ->map(fn (Milestone $milestone) => (object) [
                     'model' => $milestone,
                     'progress' => $milestone->progress(),

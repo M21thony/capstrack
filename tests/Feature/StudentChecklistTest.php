@@ -149,4 +149,36 @@ class StudentChecklistTest extends TestCase
         $response->assertDontSee('Mark as Done');
         $response->assertDontSee('openUploadModal');
     }
+
+    /**
+     * A checklist a CaPSA has started but not written any lines onto reads
+     * "0 of 0 complete", which looks like a fault rather than a checklist in
+     * progress. It has nothing a team can act on, so it waits until it does.
+     */
+    public function test_a_checklist_with_no_lines_stays_off_the_tracker(): void
+    {
+        Milestone::create([
+            'team_id' => $this->team->team_id,
+            'title' => 'Capstone 2',
+            'status' => 'todo',
+            'due_date' => '2026-12-31',
+        ]);
+
+        $response = $this->get('/student/progress');
+
+        $response->assertOk();
+        $response->assertDontSee('Capstone 2');
+        $response->assertDontSee('0 of 0');
+    }
+
+    /** A checklist that does have lines is exactly what the tracker is for. */
+    public function test_a_checklist_with_lines_shows_on_the_tracker(): void
+    {
+        $this->milestoneWithChecklist();
+
+        $response = $this->get('/student/progress');
+
+        $response->assertOk();
+        $response->assertDontSee('0 of 0');
+    }
 }
