@@ -9,6 +9,7 @@
 @vite('resources/student-ui/Styles/team.css')
 </head>
 <style>
+@keyframes spin { to { transform: rotate(360deg); } }
   .pm-close-btn { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; padding: 0; background-color: var(--bg2); color: var(--text3); border: none; border-radius: 50%; cursor: pointer; transition: all 0.15s ease-in-out; outline: none; }
   .pm-close-btn:hover { background-color: var(--border); color: var(--text); transform: scale(1.05); }
   .tag-input-field { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg2); min-height: 42px; box-sizing: border-box; cursor: text; }
@@ -350,6 +351,15 @@
                   @endif
                 </div>
               @else
+                @if($isLeader && !$myTeam->is_confirmed)
+                <button type="button" onclick="openOpenSlotInviteModal()" style="display: flex; align-items: center; gap: 10px; border: 1px dashed var(--border2); border-radius: 10px; padding: 6px 12px; opacity: 0.75; background: transparent; cursor: pointer; width: 100%; text-align: left; transition: all 0.2s;" onmouseover="this.style.opacity='1'; this.style.borderColor='var(--blue)'; this.style.background='var(--blue-bg)'" onmouseout="this.style.opacity='0.75'; this.style.borderColor='var(--border2)'; this.style.background='transparent'">
+                  <div style="width: 36px; height: 36px; border-radius: 50%; background: var(--bg2); border: 1.5px dashed var(--border2); display: flex; align-items: center; justify-content: center; font-size: 13px; color: var(--text3); flex-shrink: 0;">+</div>
+                  <div style="flex: 1;">
+                    <div style="font-size: 12.5px; font-weight: 600; color: var(--text3);">Open Slot</div>
+                    <div style="font-size: 11px; color: var(--text3);">Click to invite a classmate</div>
+                  </div>
+                </button>
+                @else
                 <div style="display: flex; align-items: center; gap: 10px; border: 1px dashed var(--border2); border-radius: 10px; padding: 6px 12px; opacity: 0.75;">
                   <div style="width: 36px; height: 36px; border-radius: 50%; background: var(--bg2); border: 1.5px dashed var(--border2); display: flex; align-items: center; justify-content: center; font-size: 13px; color: var(--text3); flex-shrink: 0;">+</div>
                   <div style="flex: 1;">
@@ -357,6 +367,7 @@
                     <div style="font-size: 11px; color: var(--text3);">Waiting for a member...</div>
                   </div>
                 </div>
+                @endif
               @endif
             @endfor
           </div>
@@ -1106,6 +1117,57 @@
 </div>
 @endif
 
+{{-- Open Slot Invite Modal --}}
+<div class="modal-overlay" id="openSlotInviteModal" onclick="if(event.target===this) closeOpenSlotInviteModal()">
+  <div class="card modal-card modal-card--team" style="width: 460px; padding: 0; overflow: hidden; max-height: 80vh; display: flex; flex-direction: column;">
+    <div style="background: linear-gradient(135deg, rgba(29,78,216,0.10), rgba(29,78,216,0.02)); border-bottom: 1px solid var(--border); padding: 22px 26px 18px; position: relative;">
+      <button type="button" onclick="closeOpenSlotInviteModal()" class="pm-close-btn" aria-label="Close" style="position: absolute; top: 16px; right: 16px;">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+      <div style="display: flex; align-items: center; gap: 14px;">
+        <div style="width: 46px; height: 46px; border-radius: 12px; background: rgba(29,78,216,0.14); color: var(--blue); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </div>
+        <div>
+          <div style="font-size: 17px; font-weight: 700; color: var(--text); letter-spacing: -0.2px;">Invite Classmate</div>
+          <div style="font-size: 12px; color: var(--text3); margin-top: 2px;">{{ $myTeam?->team_name }}</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="padding: 22px 26px 18px; border-bottom: 1px solid var(--border);">
+      <div style="display: flex; align-items: center; gap: 8px; padding: 10px 14px; background: var(--blue-bg); border: 1px solid rgba(29,78,216,0.2); border-radius: 10px; color: var(--blue); font-size: 12px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+        <span>Classmates in your section appear here. Only those without a team can be invited.</span>
+      </div>
+    </div>
+
+    <div style="flex: 1; overflow-y: auto; padding: 18px 26px 26px; min-height: 0;">
+      <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px;">
+        <div style="position: relative; flex: 1;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text3); pointer-events: none;"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+          <input type="text" id="open-slot-search" placeholder="Search classmates..." oninput="filterOpenSlotClassmates()" style="width: 100%; padding: 10px 12px 10px 40px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg2); color: var(--text); font-size: 13px; box-sizing: border-box;">
+        </div>
+      </div>
+
+      <div id="open-slot-classmates-list" style="display: flex; flex-direction: column; gap: 8px; max-height: 400px; overflow-y: auto; padding-right: 4px;">
+        {{-- Classmates will be loaded dynamically --}}
+        <div id="open-slot-loading" style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 20px; color: var(--text3); font-size: 13px;">
+          <div class="sk" style="width: 32px; height: 32px; border-radius: 50%; border: 2px solid var(--border); border-top-color: var(--blue); animation: spin 1s linear infinite; margin-bottom: 12px;"></div>
+          Loading classmates...
+        </div>
+        <div id="open-slot-empty" style="display: none; text-align: center; padding: 40px 20px; color: var(--text3); font-size: 13px; border: 1px dashed var(--border2); border-radius: 12px;">
+          No available classmates found in your section.
+        </div>
+      </div>
+    </div>
+
+    <div style="padding: 16px 26px 22px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 10px;">
+      <button type="button" class="google-btn" style="border: none;" onclick="closeOpenSlotInviteModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
 {{-- Transfer Leadership Modal --}}
 <div class="modal-overlay" id="transferModal" onclick="if(event.target==this) closeTransferModal()">
   <div class="card modal-card modal-card--transfer" style="width: 440px; padding: 0; overflow: hidden;">
@@ -1799,6 +1861,208 @@ function syncTagUI() {
             display.appendChild(span);
         }
     });
+}
+
+function openOpenSlotInviteModal() {
+    var modal = document.getElementById('openSlotInviteModal');
+    if (modal) {
+        modal.classList.add('active');
+        loadOpenSlotClassmates();
+    }
+}
+
+function closeOpenSlotInviteModal() {
+    var modal = document.getElementById('openSlotInviteModal');
+    if (modal) modal.classList.remove('active');
+    // Reset search
+    var searchInput = document.getElementById('open-slot-search');
+    if (searchInput) searchInput.value = '';
+}
+
+function loadOpenSlotClassmates() {
+    var listEl = document.getElementById('open-slot-classmates-list');
+    var loadingEl = document.getElementById('open-slot-loading');
+    var emptyEl = document.getElementById('open-slot-empty');
+
+    if (loadingEl) loadingEl.style.display = 'flex';
+    if (emptyEl) emptyEl.style.display = 'none';
+    // Clear existing classmate items (keep loading and empty)
+    Array.from(listEl.children).forEach(function(child) {
+        if (child.id !== 'open-slot-loading' && child.id !== 'open-slot-empty') {
+            child.remove();
+        }
+    });
+
+    fetch('{{ route('team.available-classmates') }}', {
+        headers: { 'Accept': 'application/json' }
+    })
+    .then(function(r) {
+        if (!r.ok) {
+            return r.text().then(function(text) { 
+                throw new Error('HTTP ' + r.status + ': ' + text); 
+            });
+        }
+        return r.json();
+    })
+    .then(function(data) {
+        if (loadingEl) loadingEl.style.display = 'none';
+
+        if (data.error) {
+            showToast(data.error, 'error');
+            if (emptyEl) {
+                emptyEl.textContent = data.error;
+                emptyEl.style.display = 'block';
+            }
+            return;
+        }
+
+        var classmates = data.classmates || [];
+        if (classmates.length === 0) {
+            if (emptyEl) emptyEl.style.display = 'block';
+            return;
+        }
+
+        classmates.forEach(function(classmate) {
+            var item = document.createElement('button');
+            item.type = 'button';
+            item.className = 'open-slot-classmate-option';
+            item.setAttribute('data-id', classmate.student_id);
+            item.setAttribute('data-name', classmate.name);
+            item.setAttribute('data-email', classmate.email);
+            item.setAttribute('data-avatar', classmate.avatar);
+            item.setAttribute('data-student-number', classmate.student_number || '');
+            item.setAttribute('data-has-team', classmate.has_team ? '1' : '0');
+            var hasTeam = !!classmate.has_team;
+            var cursorStyle = hasTeam ? 'not-allowed' : 'pointer';
+            item.style.cssText = 'display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--border);border-radius:12px;background:var(--bg2);cursor:' + cursorStyle + ';text-align:left;transition:all 0.15s;' + (hasTeam ? 'opacity:0.55;' : '');
+            if (!hasTeam) {
+                item.onmouseover = function() { this.style.borderColor = 'var(--blue)'; this.style.background = 'var(--blue-bg)'; };
+                item.onmouseout = function() { this.style.borderColor = 'var(--border)'; this.style.background = 'var(--bg2)'; };
+                item.onclick = function() { selectOpenSlotClassmate(this); };
+            } else {
+                item.onclick = function() { showToast('This classmate already has a team.', 'error'); };
+            }
+
+            var avatarHtml = classmate.avatar
+                ? '<img src="' + classmate.avatar + '" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">'
+                : (classmate.name || 'U').charAt(0).toUpperCase();
+
+            var indicatorHtml = hasTeam
+                ? '<span style="font-size:10px;font-weight:700;color:#f59e0b;white-space:nowrap;">Has Team</span>'
+                : '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;transition:all 0.15s;" class="osl-radio"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4" style="opacity:0;transform:scale(0);transition:all 0.15s;" class="osl-radio-inner"/></svg>';
+
+            item.innerHTML =
+                '<div style="width:40px;height:40px;border-radius:50%;background:#7c3aed;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#1a1a1a;overflow:hidden;flex-shrink:0;">' + avatarHtml + '</div>' +
+                '<div style="flex:1;min-width:0;">' +
+                '  <div style="font-size:13.5px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + classmate.name + '</div>' +
+                '  <div style="font-size:11px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + (classmate.student_number || '') + ' · ' + (classmate.course || '') + (classmate.year_section ? ' · ' + classmate.year_section : '') + '</div>' +
+                '</div>' +
+                indicatorHtml;
+
+            listEl.appendChild(item);
+        });
+    })
+    .catch(function(err) {
+        if (loadingEl) loadingEl.style.display = 'none';
+        if (err.message) {
+            showToast(err.message, 'error');
+        }
+        if (emptyEl) {
+            emptyEl.textContent = 'Error: ' + (err.message || 'Unknown error');
+            emptyEl.style.display = 'block';
+        }
+    });
+}
+
+function selectOpenSlotClassmate(el) {
+    var studentId = el.getAttribute('data-id');
+    var name = el.getAttribute('data-name');
+    var email = el.getAttribute('data-email');
+    var avatar = el.getAttribute('data-avatar');
+    var hasTeam = el.getAttribute('data-has-team') === '1';
+
+    if (hasTeam) {
+        showToast('This classmate already has a team.', 'error');
+        return;
+    }
+
+    // Update UI
+    document.querySelectorAll('.open-slot-classmate-option').forEach(function(opt) {
+        opt.classList.remove('selected');
+        var radio = opt.querySelector('.osl-radio-inner');
+        if (radio) { radio.style.opacity = '0'; radio.style.transform = 'scale(0)'; }
+    });
+    el.classList.add('selected');
+    var radio = el.querySelector('.osl-radio-inner');
+    if (radio) { radio.style.opacity = '1'; radio.style.transform = 'scale(1)'; radio.style.stroke = 'var(--blue)'; }
+
+    // Show confirmation and send invite
+    showConfirm({
+        title: 'Invite ' + name + '?',
+        message: 'Send a team invitation to <strong>' + name + '</strong>? They will receive a notification and can accept or decline.',
+        icon: 'invite',
+        confirmText: 'Send Invite',
+        confirmClass: 'primary',
+        onConfirm: function() { sendOpenSlotInvite(studentId, name, email, avatar); }
+    });
+}
+
+function sendOpenSlotInvite(studentId, name, email, avatar) {
+    var teamId = {{ $myTeam?->team_id ?? 'null' }};
+    if (!teamId) {
+        showToast('No team found.', 'error');
+        return;
+    }
+
+    var csrf = document.querySelector('meta[name="csrf-token"]');
+    fetch('{{ route('invitations.store') }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'X-CSRF-TOKEN': csrf ? csrf.getAttribute('content') : '{{ csrf_token() }}'
+        },
+        body: JSON.stringify({
+            receiver_id: studentId,
+            team_id: teamId,
+            type: 'invite'
+        })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.success) {
+            showToast('Invitation sent to ' + name + '!', 'success');
+            closeOpenSlotInviteModal();
+        } else {
+            showToast(data.message || 'Failed to send invitation.', 'error');
+        }
+    })
+    .catch(function() {
+        showToast('Failed to send invitation. Please try again.', 'error');
+    });
+}
+
+function filterOpenSlotClassmates() {
+    var query = document.getElementById('open-slot-search').value.toLowerCase().trim();
+    var items = document.querySelectorAll('.open-slot-classmate-option');
+    var visibleCount = 0;
+
+    items.forEach(function(item) {
+        var name = (item.getAttribute('data-name') || '').toLowerCase();
+        var email = (item.getAttribute('data-email') || '').toLowerCase();
+        var studentNumber = (item.getAttribute('data-student-number') || '').toLowerCase();
+        var show = !query || name.includes(query) || email.includes(query) || studentNumber.includes(query);
+        item.style.display = show ? 'flex' : 'none';
+        if (show) visibleCount++;
+    });
+
+    var emptyEl = document.getElementById('open-slot-empty');
+    if (emptyEl && items.length > 0) {
+        emptyEl.style.display = visibleCount === 0 ? 'block' : 'none';
+        if (visibleCount === 0) {
+            emptyEl.textContent = 'No classmates match "' + query + '"';
+        }
+    }
 }
 @endif
 
