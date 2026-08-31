@@ -123,17 +123,30 @@ class TeamManagementController extends Controller
             return [];
         }
 
+        // Counted from the items, not from milestones.status. That column was
+        // written once as 'todo' when a milestone was created and never moved
+        // again, so 'completed' and 'overdue' matched nothing and this column
+        // showed a dash for every team however far along they were.
         return Milestone::whereIn('team_id', $teamIds)
+            ->with('items')
             ->get()
             ->groupBy('team_id')
             ->map(function ($rows) {
-                $total = $rows->count();
-                $completed = $rows->where('status', 'completed')->count();
+                $total = 0;
+                $completed = 0;
+                $overdue = 0;
+
+                foreach ($rows as $milestone) {
+                    $progress = $milestone->progress();
+                    $total += $progress->total;
+                    $completed += $progress->completed;
+                    $overdue += $progress->overdue;
+                }
 
                 return (object) [
                     'total' => $total,
                     'completed' => $completed,
-                    'overdue' => $rows->where('status', 'overdue')->count(),
+                    'overdue' => $overdue,
                     'percent' => $total > 0 ? (int) round($completed / $total * 100) : 0,
                 ];
             })
