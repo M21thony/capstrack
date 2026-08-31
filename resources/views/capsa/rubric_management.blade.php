@@ -156,18 +156,17 @@
       <div class="rb-criteria-toolbar" style="flex-shrink:0">
         <div>
           <div style="font-size:13px;font-weight:600;color:var(--text)">Scoring Criteria</div>
-          <div style="font-size:11px;color:var(--text3);margin-top:1px">Each criterion's Excellent-level points across all criteria must total exactly 100 pts.</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:1px">Set what a criterion is worth and the others give up the points to match. A criterion is worth its highest-scoring level.</div>
         </div>
         <div class="rb-pts-status">
           <div class="rb-pts-badge" id="total-pts-label">0 / 100 pts</div>
           <div class="rb-pts-hint" id="total-pts-hint">Total points are valid.</div>
-          <button type="button" class="rb-fit-btn" id="fit-to-100-btn" onclick="fitAllTo100()">Fit to 100</button>
         </div>
       </div>
 
       <div class="rb-pts-note" id="total-pts-note">
         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-        <span>A rubric totals 100 points across its criteria, each worth its highest-scoring level. Add a criterion and the others give up the points &mdash; or press <strong>Fit to 100</strong> any time.</span>
+        <span>A rubric totals 100 points across its criteria, each worth its highest-scoring level. Set what one is worth and the others give up the points to match.</span>
       </div>
 
       <div id="criteria-list" style="display:flex;flex-direction:column;gap:10px;padding-right:4px;margin-bottom:12px;flex:1;overflow-y:auto;min-height:0;scroll-behavior:smooth"></div>
@@ -434,31 +433,23 @@ function round2(n) {
   return Math.round(n * 100) / 100;
 }
 
-// Giving a NEWLY ADDED criterion its points takes those points off the
-// existing ones, so the rubric stays at 100 without anyone subtracting by
-// hand - which was the whole complaint.
+// Setting what a criterion is worth takes those points off the others, so
+// the rubric stays at 100 without anyone subtracting by hand.
 //
-// Only for a criterion that is being added. Doing this whenever ANY score
-// changed meant editing one criterion moved all the others, so the next edit
-// undid the last and a 27-criterion rubric could never be typed in.
-function fitOnNewCriterionScored(index) {
-  var isNew = newCriterionIndex === index;
+// Runs for ANY criterion, not just a newly added one, and on commit (blur or
+// Enter) rather than each keystroke - so the rest of the rubric does not
+// shuffle about while a number is half typed.
+function fitOnScoreCommitted(index) {
   newCriterionIndex = null;
 
-  if (!isNew || draftCriteria.length < 2) { updateTotalPts(); return; }
-  if (!criterionScore(draftCriteria[index])) { updateTotalPts(); return; }
+  if (draftCriteria.length < 2) { updateTotalPts(); return; }
 
-  if (fitCriteriaTo100(index)) {
-    // Written straight into the existing inputs rather than re-rendering.
-    // Rebuilding the list destroyed the very box being typed in, so the
-    // Excellent field - the only one with this handler - could not be
-    // changed at all, while Good, Fair and Poor worked fine.
-    syncScoreInputs();
-    updateTotalPts();
-    toast('Took those points off the other criteria to keep the rubric at 100.');
-  } else {
-    updateTotalPts();
-  }
+  // Written straight into the inputs already on the page rather than
+  // re-rendering - rebuilding the list destroyed the very box being typed in,
+  // which is what made the Excellent field impossible to change.
+  fitCriteriaTo100(index);
+  syncScoreInputs();
+  updateTotalPts();
 }
 
 // Push the draft's score values back into the inputs already on the page,
@@ -481,25 +472,6 @@ function syncScoreInputs() {
   });
 
   refreshCategoryTotals();
-}
-
-// Rescaling every criterion to total 100, on demand only.
-//
-// This deliberately does NOT happen while you type. Rescaling on each entry
-// meant that setting one criterion's points moved all the others, so the
-// next entry undid the last - a 27-criterion rubric could never converge.
-// You enter the points you actually want, and press this if you want the
-// tool to do the arithmetic.
-function fitAllTo100() {
-  var total = draftTotal();
-
-  if (!draftCriteria.length || total <= 0) { toast('Add a criterion with points first.'); return; }
-  if (isAtHundred(total)) { toast('Already adds up to 100.'); return; }
-
-  fitCriteriaTo100(null);
-  // Safe to rebuild here: this is a button press, not a field being typed in.
-  renderCriteriaBuilder();
-  toast('Scaled every criterion to total 100 points.');
 }
 
 let rubrics = [];
@@ -572,7 +544,7 @@ function addCriterion(preload) {
   descErrors = [];
   renderCriteriaBuilder();
   // Nothing to make room for until it is given points - that happens in
-  // fitOnNewCriterionScored() when the Excellent score is committed.
+  // fitOnScoreCommitted() when the score is committed.
   if (!preload) {
     var list = document.getElementById('criteria-list');
     var cards = list.querySelectorAll('.rb-criterion-card');
@@ -649,7 +621,7 @@ function renderCriterionCard(cr, i) {
       '<div class="rb-crit-num">' + (i + 1) + '</div>' +
       '<input class="input rb-crit-name-input' + (hasNameErr ? ' rb-error' : '') + '" value="' + escHtml(cr.name) + '" placeholder="Criterion name (e.g. Oral Presentation)&hellip;" oninput="draftCriteria[' + i + '].name=this.value;clearNameError(' + i + ',this)"/>' +
       '<div class="rb-crit-row-pts">' +
-        '<input type="number" class="input rb-score-tiny" id="sc-' + i + '-0" value="' + cr.levels[0].score + '" placeholder="0" title="What this criterion is worth" oninput="draftCriteria[' + i + '].levels[0].score=+this.value;updateTotalPts()" onchange="fitOnNewCriterionScored(' + i + ')" min="0" step="0.25"/>' +
+        '<input type="number" class="input rb-score-tiny" id="sc-' + i + '-0" value="' + cr.levels[0].score + '" placeholder="0" title="What this criterion is worth" oninput="draftCriteria[' + i + '].levels[0].score=+this.value;updateTotalPts()" onchange="fitOnScoreCommitted(' + i + ')" min="0" step="0.25"/>' +
         '<span class="rb-pts-unit">pts</span>' +
       '</div>' +
       '<button onclick="removeCriterion(' + i + ')" class="rb-remove-btn" title="Remove criterion">' +
@@ -657,6 +629,13 @@ function renderCriterionCard(cr, i) {
       '</button>' +
     '</div>' +
 
+    (topLevelOutranked(cr)
+      ? '<div class="rb-crit-warn">' +
+          '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>' +
+          escHtml(highestLevel(cr).label || 'A lower level') + ' is worth ' + formatPts(highestLevel(cr).score) + ' pts, more than ' +
+          escHtml(cr.levels[0].label || 'Excellent') + ' at ' + formatPts(+cr.levels[0].score || 0) + '. This criterion counts as ' + formatPts(criterionScore(cr)) + ' pts.' +
+        '</div>'
+      : '') +
     (hasNameErr ? '<div class="rb-crit-name-error"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Criterion Name is required.</div>' : '') +
     (!open && hasDescErr ? '<div class="rb-crit-name-error"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>A performance level still needs a description &mdash; open this criterion to fill it in.</div>' : '') +
 
@@ -673,8 +652,10 @@ function renderCriterionCard(cr, i) {
           // The top level also appears on the collapsed row, so both write to
           // the same value and each refreshes the other.
           '<input type="number" class="input rb-score-tiny" id="scb-' + i + '-' + li + '" value="' + lv.score + '" placeholder="0" oninput="draftCriteria[' + i + '].levels[' + li + '].score=+this.value;syncScoreInputs();updateTotalPts()"' +
-            (li === 0 ? ' onchange="fitOnNewCriterionScored(' + i + ')"' : '') +
-            ' min="0" step="0.25"/>' +
+            // Every level, not only the top one: a criterion is worth
+            // its highest, so raising Good above Excellent changes what it
+            // is worth and the rest of the rubric moves with it.
+            ' onchange="fitOnScoreCommitted(' + i + ')" min="0" step="0.25"/>' +
           '<span class="rb-pts-unit">pts</span>' +
           '</div>' +
           '</div>' +
@@ -685,6 +666,26 @@ function renderCriterionCard(cr, i) {
       '</div>' +
     '</div>' +
     '</div>';
+}
+
+// A criterion is worth its highest level, so a Good scored above Excellent
+// quietly decides the criterion's worth - which reads as the Excellent box
+// "not working" when the number you type there is not the one that counts.
+function highestLevel(cr) {
+  return (cr.levels || []).reduce(function (top, lvl) {
+    var score = (lvl && lvl.score !== '' && lvl.score !== null && !isNaN(+lvl.score)) ? +lvl.score : 0;
+    var best = (top && top.score !== '' && top.score !== null && !isNaN(+top.score)) ? +top.score : 0;
+
+    return score > best ? lvl : top;
+  }, cr.levels && cr.levels[0]);
+}
+
+function topLevelOutranked(cr) {
+  if (!cr || !cr.levels || cr.levels.length < 2) return false;
+
+  var top = +cr.levels[0].score || 0;
+
+  return criterionScore(cr) > top + 0.001;
 }
 
 // Which criterion is open. One at a time - opening them all is the scroll
@@ -811,11 +812,6 @@ function updateTotalPts() {
   if (saveBtn) {
     saveBtn.disabled = false;
   }
-  var fitBtn = document.getElementById('fit-to-100-btn');
-  if (fitBtn) {
-    fitBtn.style.display = (!atHundred && draftCriteria.length && total > 0) ? '' : 'none';
-  }
-
   refreshCategoryTotals();
 }
 
@@ -984,7 +980,7 @@ async function saveRubric() {
   // Off 100 is allowed - the rubric is saved as it stands and the total is
   // shown wherever it is used. Warned once, not blocked.
   if (!isAtHundred(total)) {
-    toast('Saved with ' + formatPts(total) + ' points, not 100. Use "Fit to 100" if you want them scaled.');
+    toast('Saved with ' + formatPts(total) + ' points, not 100.');
   }
 
   var url, method;
@@ -1598,8 +1594,6 @@ loadRubrics();
   .rb-criteria-toolbar { flex-direction: column; gap: 8px; align-items: flex-start; }
   .rb-pts-status { align-items: flex-start; }
   /* Only appears while the rubric is off 100 - see updateTotalPts(). */
-  .rb-fit-btn { margin-top: 6px; padding: 4px 11px; border-radius: 6px; border: 1px solid var(--accent); background: transparent; color: var(--accent3); font-family: inherit; font-size: 11px; font-weight: 700; cursor: pointer; transition: 0.13s; }
-  .rb-fit-btn:hover { background: var(--accent); color: #18191f; }
   .modal-steps { padding: 10px 12px; }
   .step-connector { width: 24px; margin: 0 4px; }
   .rb-pagination { flex-wrap: wrap; gap: 8px; }
