@@ -135,6 +135,7 @@ class OllamaSSHClient
                 'model' => config('services.ollama.model', 'qwen2.5:7b'),
                 'prompt' => 'hi',
                 'stream' => false,
+                'keep_alive' => config('services.ollama.keep_alive', '30m'),
                 'options' => ['num_predict' => 1],
             ];
 
@@ -161,6 +162,11 @@ class OllamaSSHClient
             'model' => config('services.ollama.model', 'qwen2.5:7b'),
             'prompt' => $prompt,
             'stream' => false,
+            // Without this Ollama drops the model five minutes after the last
+            // call and reads it back off disk on the next one. A check runs
+            // one call per candidate, so the model was being reloaded partway
+            // through a single run - that reload is the wait, not the work.
+            'keep_alive' => config('services.ollama.keep_alive', '30m'),
             'options' => [
                 'num_predict' => $maxTokens,
                 'temperature' => 0,
@@ -186,6 +192,8 @@ class OllamaSSHClient
         $payload = [
             'model' => config('services.ollama.embed_model', 'nomic-embed-text'),
             'prompt' => mb_substr($text, 0, 4000),
+            // The embedding model pays the same reload cost as the big one.
+            'keep_alive' => config('services.ollama.keep_alive', '30m'),
         ];
 
         $output = $this->runCurl(json_encode($payload), '/api/embeddings');
