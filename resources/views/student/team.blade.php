@@ -16,21 +16,6 @@
   .custom-tag-chip { display: inline-flex; align-items: center; gap: 6px; background: var(--blue-bg); color: var(--blue); font-size: 12px; font-weight: 500; padding: 4px 10px; border-radius: 6px; border: 1px solid rgba(29,78,216,0.25); animation: tagFadeIn 0.15s ease-in-out; }
   .custom-tag-chip-remove { display: inline-flex; align-items: center; justify-content: center; background: rgba(29,78,216,0.15); border: none; color: var(--blue); border-radius: 50%; width: 14px; height: 14px; cursor: pointer; font-size: 10px; padding: 0; transition: background 0.1s; }
   .custom-tag-chip-remove:hover { background: rgba(29,78,216,0.25); }
-  #editTeamModal #wordCountHint { color: var(--text2); }
-  #editTeamModal #wordCountBadge { background: var(--bg2); border-color: var(--border); color: #000000; }
-  #editTeamModal .edit-team-save-btn { background: var(--bg3) !important; color: var(--text) !important; border: 1px solid var(--border) !important; box-shadow: none !important; }
-  #editTeamModal .edit-team-save-btn:hover { background: var(--bg4) !important; transform: none !important; box-shadow: none !important; }
-  #editTeamModal .edit-team-cancel-btn { background: var(--navy-dark) !important; color: #fff !important; border: 1px solid var(--navy-dark) !important; }
-  #editTeamModal .edit-team-cancel-btn:hover { background: var(--navy-mid) !important; color: #fff !important; }
-  [data-theme="dark"] #editTeamModal #wordCountHint { background: #20232b; border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 10px 12px; }
-  [data-theme="dark"] #editTeamModal #wordCountRequirement { color: #c9ced9 !important; }
-  [data-theme="dark"] #editTeamModal #wordCountBadge { background: #e5e7eb; border-color: rgba(255,255,255,0.18); color: #000000; }
-
-  [data-theme="dark"] #editTeamModal #wordCountHint > span:last-child { color: #c9ced9 !important; }
-  [data-theme="dark"] #editTeamModal .edit-team-save-btn { background: #2a2f3a !important; color: #f3f4f6 !important; border-color: rgba(255,255,255,0.12) !important; }
-  [data-theme="dark"] #editTeamModal .edit-team-save-btn:hover { background: #343a47 !important; }
-  [data-theme="dark"] #editTeamModal .edit-team-cancel-btn { background: #1e222b !important; color: #fff !important; border-color: rgba(255,255,255,0.08) !important; }
-  [data-theme="dark"] #editTeamModal .edit-team-cancel-btn:hover { background: #262b36 !important; }
 
   [data-theme="dark"] .expert-removed-item { border-bottom-color: var(--border) !important; }
   [data-theme="dark"] #expertRemovedModal > div { background: var(--bg2) !important; box-shadow: 0 24px 60px rgba(0,0,0,0.5) !important; }
@@ -45,9 +30,6 @@
   [data-theme="dark"] #ccm-message { color: var(--text2) !important; }
   [data-theme="dark"] #ccm-cancel { border-color: var(--border) !important; background: var(--bg3) !important; color: var(--text2) !important; }
   [data-theme="dark"] #ccm-cancel:hover { background: var(--bg4) !important; }
-
-  [data-theme="dark"] #editTeamModal div[style*="background:#fef3c7"] { background: rgba(245,158,11,0.12) !important; border-color: rgba(245,158,11,0.25) !important; color: var(--amber) !important; }
-  [data-theme="dark"] #editTeamModal div[style*="color:#6b7280"] { color: var(--text2) !important; }
 
   .tag-suggestions-box { position: absolute; bottom: 100%; left: 0; width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; max-height: 160px; overflow-y: auto; z-index: 10; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 4px; }
   .tag-suggestion-item { padding: 10px 14px; font-size: 13px; color: var(--text); cursor: pointer; transition: background 0.1s; }
@@ -348,14 +330,23 @@
                   </div>
                   <div style="flex: 1;">
                     <div style="font-size: 13px; font-weight: 600; color: var(--text);">{{ trim(($member->f_name ?? '') . ' ' . ($member->l_name ?? '')) ?: $member->email ?? 'Member' }}</div>
-                    <div style="font-size: 11px; color: var(--text3);">{{ $member->s_role_name === 'Leader' ? 'Team Leader' : 'Team Member' }}</div>
+                    <div style="font-size: 11px; color: var(--text3);">{{ $member->student_id === $myTeam->leader_id ? 'Team Leader' : 'Team Member' }}</div>
                   </div>
-                  <div style="background: {{ $member->s_role_name === 'Leader' ? '#fef3c7' : 'var(--bg2)' }}; color: {{ $member->s_role_name === 'Leader' ? '#92400e' : 'var(--text3)' }}; padding: 3px 8px; border-radius: 6px; font-size: 10px; font-weight: 700;">{{ $member->s_role_name ?? 'MEMBER' }}</div>
+                  <div style="background: {{ $member->student_id === $myTeam->leader_id ? '#fef3c7' : 'var(--bg2)' }}; color: {{ $member->student_id === $myTeam->leader_id ? '#92400e' : 'var(--text3)' }}; padding: 3px 8px; border-radius: 6px; font-size: 10px; font-weight: 700;">{{ $member->student_id === $myTeam->leader_id ? 'LEADER' : ($member->s_role_name ?? 'MEMBER') }}</div>
                   @if($isLeader && !$isThisUser && !$myTeam->is_confirmed)
                     <button type="button" onclick="openRemoveMemberModal({{ $member->student_id }}, '{{ addslashes($member->f_name . ' ' . $member->l_name) }}', '{{ addslashes($member->email ?? '') }}', '{{ addslashes(($member->course ?? '') . ($member->year_section ? ' · ' . $member->year_section : '')) }}', '{{ addslashes($member->avatarUrl()) }}')" style="background:none;border:none;color:#ef4444;cursor:pointer;padding:4px;font-size:14px;line-height:1;" title="Remove member">✕</button>
                   @endif
                 </div>
               @else
+                @if($isLeader && !$myTeam->is_confirmed)
+                <button type="button" onclick="openOpenSlotInviteModal()" style="display: flex; align-items: center; gap: 10px; border: 1px dashed var(--border2); border-radius: 10px; padding: 6px 12px; opacity: 0.75; background: transparent; cursor: pointer; width: 100%; text-align: left; transition: all 0.2s;" onmouseover="this.style.opacity='1'; this.style.borderColor='var(--blue)'; this.style.background='var(--blue-bg)'" onmouseout="this.style.opacity='0.75'; this.style.borderColor='var(--border2)'; this.style.background='transparent'">
+                  <div style="width: 36px; height: 36px; border-radius: 50%; background: var(--bg2); border: 1.5px dashed var(--border2); display: flex; align-items: center; justify-content: center; font-size: 13px; color: var(--text3); flex-shrink: 0;">+</div>
+                  <div style="flex: 1;">
+                    <div style="font-size: 12.5px; font-weight: 600; color: var(--text3);">Open Slot</div>
+                    <div style="font-size: 11px; color: var(--text3);">Click to invite a classmate</div>
+                  </div>
+                </button>
+                @else
                 <div style="display: flex; align-items: center; gap: 10px; border: 1px dashed var(--border2); border-radius: 10px; padding: 6px 12px; opacity: 0.75;">
                   <div style="width: 36px; height: 36px; border-radius: 50%; background: var(--bg2); border: 1.5px dashed var(--border2); display: flex; align-items: center; justify-content: center; font-size: 13px; color: var(--text3); flex-shrink: 0;">+</div>
                   <div style="flex: 1;">
@@ -363,6 +354,7 @@
                     <div style="font-size: 11px; color: var(--text3);">Waiting for a member...</div>
                   </div>
                 </div>
+                @endif
               @endif
             @endfor
           </div>
@@ -477,9 +469,6 @@
         @endif
         @if($isLeader)
           <button type="button" onclick="@if($teamMembers->count() > 1)openTransferModal()@else void(0)@endif" style="padding: 5px 10px; border-radius: 6px; border: 1px solid var(--amber); background: var(--amber-bg); color: var(--amber); font-size: 10px; font-weight: 700; @if($teamMembers->count() <= 1)cursor: not-allowed; opacity: 0.5;@else cursor: pointer;@endif">Transfer Leadership</button>
-        @endif
-        @if($isLeader)
-          <button type="button" onclick="openEditTeamModal()" style="padding: 5px 10px; border-radius: 6px; border: 1px solid var(--blue); background: var(--blue-bg); color: var(--blue); font-size: 10px; font-weight: 700; cursor: pointer;">Update Team</button>
         @endif
         @if($isLeader)
           <form method="POST" action="{{ route('team.destroy') }}" id="leave-team-form" style="display: inline;">
@@ -1019,82 +1008,56 @@
 </div>
 @endif
 
-@if($myTeam && $isLeader)
-{{-- Edit Team Modal --}}
-<div class="modal-overlay" id="editTeamModal" onclick="if(event.target==this) closeEditTeamModal()">
-  <div class="card modal-card modal-card--team" style="width: 460px; padding: 30px; border: 1px solid var(--accent); position: relative;">
-    <button type="button" onclick="closeEditTeamModal()" class="pm-close-btn" aria-label="Close" style="position: absolute; top: 20px; right: 20px;">
-      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-    </button>
-    <div class="section-title">Update Team</div>
-    <form method="POST" action="{{ route('team.update', $myTeam->team_id) }}" style="margin-top: 20px;" onsubmit="return validateForm(event)">
-      @csrf
-      @method('PUT')
-      <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 8px;">Team Name</label>
-      <input type="text" name="team_name" id="edit-team-name" value="{{ $myTeam->team_name }}" placeholder="Enter team name..." autocomplete="off" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;margin-bottom:0;box-sizing:border-box;">
-      <div id="edit-team-name-msg" style="font-size: 11px; color: var(--red); margin: 6px 0 16px; display: none;"></div>
-      <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 8px;">Project Title</label>
-      <textarea name="project_title" id="projectTitleInput" placeholder="Enter project title..." oninput="autoExpand(this); updateCompleteOption()" rows="2" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;margin-bottom:16px;box-sizing:border-box;resize:none;overflow:hidden;min-height:42px;font-family:inherit;">{{ $myTeam->project_title }}</textarea>
-      <div id="wordCountHint" style="display:flex;align-items:center;gap:8px;margin:-10px 0 16px;font-size:12px;">
-        <span id="wordCountBadge" style="padding:3px 10px;border-radius:10px;font-size:11px;font-weight:600;background:var(--bg2);border:1px solid var(--border);transition:0.2s; color: inherit;">
-          Words: <span id="wordCountDisplay">0</span>/11–12
-        </span>
-        <span id="wordCountRequirement" style="color:var(--text3);">required for <strong>Complete</strong> (filler words excluded)</span>
+{{-- Open Slot Invite Modal --}}
+<div class="modal-overlay" id="openSlotInviteModal" onclick="if(event.target===this) closeOpenSlotInviteModal()">
+  <div class="card modal-card modal-card--team" style="width: 460px; padding: 0; overflow: hidden; max-height: 80vh; display: flex; flex-direction: column;">
+    <div style="background: linear-gradient(135deg, rgba(29,78,216,0.10), rgba(29,78,216,0.02)); border-bottom: 1px solid var(--border); padding: 22px 26px 18px; position: relative;">
+      <button type="button" onclick="closeOpenSlotInviteModal()" class="pm-close-btn" aria-label="Close" style="position: absolute; top: 16px; right: 16px;">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+      <div style="display: flex; align-items: center; gap: 14px;">
+        <div style="width: 46px; height: 46px; border-radius: 12px; background: rgba(29,78,216,0.14); color: var(--blue); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </div>
+        <div>
+          <div style="font-size: 17px; font-weight: 700; color: var(--text); letter-spacing: -0.2px;">Invite Classmate</div>
+          <div style="font-size: 12px; color: var(--text3); margin-top: 2px;">{{ $myTeam?->team_name }}</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="padding: 22px 26px 18px; border-bottom: 1px solid var(--border);">
+      <div style="display: flex; align-items: center; gap: 8px; padding: 10px 14px; background: var(--blue-bg); border: 1px solid rgba(29,78,216,0.2); border-radius: 10px; color: var(--blue); font-size: 12px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+        <span>Classmates in your section appear here. Only those without a team can be invited.</span>
+      </div>
+    </div>
+
+    <div style="flex: 1; overflow-y: auto; padding: 18px 26px 26px; min-height: 0;">
+      <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px;">
+        <div style="position: relative; flex: 1;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text3); pointer-events: none;"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+          <input type="text" id="open-slot-search" placeholder="Search classmates..." oninput="filterOpenSlotClassmates()" style="width: 100%; padding: 10px 12px 10px 40px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg2); color: var(--text); font-size: 13px; box-sizing: border-box;">
+        </div>
       </div>
 
-      <div id="tagsSection" style="display:none;margin-bottom:16px;">
-        <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text3);margin-bottom:8px;">
-          Project Tags <span style="color:var(--red)">*</span>
-        </label>
-        <div style="position:relative;display:flex;gap:6px;margin-bottom:8px;">
-          <div style="position:relative;flex:1;">
-            <input type="text" id="tagSearchInput" placeholder="Search or type a tag..." autocomplete="off" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:12px;box-sizing:border-box;" oninput="filterCommonTags(this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault();addCustomTag();}if(event.key==='Escape'){closeTagDropdown();}" onblur="setTimeout(closeTagDropdown,180)" onfocus="filterCommonTags(this.value)">
-            <div id="tagDropdown" style="display:none;position:absolute;top:100%;left:0;width:100%;max-height:180px;overflow-y:auto;background:var(--bg2);border:1px solid var(--border);border-radius:8px;z-index:20;margin-top:4px;box-shadow:0 6px 20px rgba(0,0,0,0.1);">
-            </div>
-          </div>
-          <button type="button" onclick="addCustomTag()" style="padding:7px 14px;border-radius:7px;border:1px solid var(--border);background:var(--bg3);color:var(--text2);font-size:12px;cursor:pointer;font-family:inherit;">Add</button>
+      <div id="open-slot-classmates-list" style="display: flex; flex-direction: column; gap: 8px; max-height: 400px; overflow-y: auto; padding-right: 4px;">
+        {{-- Classmates will be loaded dynamically --}}
+        <div id="open-slot-loading" style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 20px; color: var(--text3); font-size: 13px;">
+          <div class="sk" style="width: 32px; height: 32px; border-radius: 50%; border: 2px solid var(--border); border-top-color: var(--blue); animation: spin 1s linear infinite; margin-bottom: 12px;"></div>
+          Loading classmates...
         </div>
-        @php $teamTags = is_array($myTeam->tags) ? $myTeam->tags : []; @endphp
-        <input type="hidden" name="tags" id="tagsHiddenInput" value='{{ json_encode($teamTags) }}'>
-        <div id="selectedTagsDisplay" style="display:flex;flex-wrap:wrap;gap:6px;min-height:28px;">
-          @foreach($teamTags as $tag)
-            <span class="selected-tag" data-tag="{{ $tag }}">{{ $tag }} <span onclick="removeProjectTag(this)" style="cursor:pointer;opacity:0.6;margin-left:4px;">&times;</span></span>
-          @endforeach
+        <div id="open-slot-empty" style="display: none; text-align: center; padding: 40px 20px; color: var(--text3); font-size: 13px; border: 1px dashed var(--border2); border-radius: 12px;">
+          No available classmates found in your section.
         </div>
-        <div id="tagsError" style="font-size:11px;color:var(--red);margin-top:4px;display:none;">Please add at least 2 tags related to your project.</div>
       </div>
-      <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 8px;">Team Members</label>
-      <div style="padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text3);font-size:12px;margin-bottom:16px;box-sizing:border-box;">
-        Fixed at 5 members (including the leader). Slots fill automatically as members join.
-      </div>
-      <input type="hidden" name="member_count" value="5">
-      <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 8px;">Team Status</label>
-      @if($isTeamFull)
-      <div style="background:#fef3c7;border:1px solid #fde68a;border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:12px;color:#92400e;">
-        <strong>Team is now full!</strong> Your team has reached {{ $teamMembers->count() }}/5 members. You can now update the status to <strong>Complete</strong> or <strong>Closed</strong>.
-      </div>
-      @endif
-      <select name="team_status" id="teamStatusSelect" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;margin-bottom:8px;box-sizing:border-box;@if($myTeam->is_confirmed) cursor:not-allowed;opacity:0.6;@endif" @if($myTeam->is_confirmed) disabled @endif>
-        <option value="on-going" id="ongoingStatusOption" @if($myTeam->team_status === 'on-going') selected @endif @if($isTeamFull) disabled @endif>On-going</option>
-        <option value="complete" id="completeStatusOption" @if($myTeam->team_status === 'complete') selected @endif>Complete</option>
-        <option value="closed" id="closedStatusOption" @if($myTeam->team_status === 'closed') selected @endif>Closed</option>
-      </select>
-      @if($myTeam->is_confirmed)
-      <div style="display:flex;align-items:center;gap:6px;margin-bottom:20px;font-size:12px;color:#6b7280;">
-        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-        <span>Team is verified — status cannot be changed.</span>
-      </div>
-      @else
-      <div style="margin-bottom:20px;"></div>
-      @endif
-      <div class="modal-actions modal-actions--dual" style="display:grid;grid-template-columns: 1fr 1fr;gap:12px;">
-        <button type="submit" class="btn-primary edit-team-save-btn" style="width:100%;">Save Changes</button>
-        <button type="button" class="google-btn edit-team-cancel-btn" style="width:100%;border:none;background:transparent;" onclick="closeEditTeamModal()">Cancel</button>
-      </div>
-    </form>
+    </div>
+
+    <div style="padding: 16px 26px 22px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 10px;">
+      <button type="button" class="google-btn" style="border: none;" onclick="closeOpenSlotInviteModal()">Cancel</button>
+    </div>
   </div>
 </div>
-@endif
 
 {{-- Transfer Leadership Modal --}}
 <div class="modal-overlay" id="transferModal" onclick="if(event.target==this) closeTransferModal()">
@@ -1395,7 +1358,6 @@ function initTeamNameCheck() {
     });
   }
   bind('team-name', 'team-name-msg', null);
-  bind('edit-team-name', 'edit-team-name-msg', myTeamId);
 }
 
 function teamNameTaken() {
@@ -1560,13 +1522,6 @@ function confirmTransferLeadership() {
     });
 }
 
-function openEditTeamModal() {
-    document.getElementById('editTeamModal').classList.add('active');
-}
-
-function closeEditTeamModal() {
-    document.getElementById('editTeamModal').classList.remove('active');
-}
 @endif
 
 var declineInvitationId = null;
@@ -1598,231 +1553,213 @@ function submitDecline() {
 }
 
 @if($myTeam && $isLeader)
-const stopWords = new Set(['a','an','the','and','or','but','in','on','at','to','for',
-    'of','by','with','from','is','are','was','were','be','been','being','have','has',
-    'had','do','does','did','will','would','can','could','shall','should','may','might',
-    'must','about','above','after','again','all','also','any','as','before','between',
-    'both','each','few','more','most','other','some','such','no','nor','not','only',
-    'own','same','so','than','that','then','there','these','they','this','those',
-    'through','too','very','etc','up','down','out','off','over','under','here','what',
-    'when','where','why','how','which','who','whom','whose']);
 
-function autoExpand(el) {
-    el.style.height = 'auto';
-    el.style.height = Math.max(el.scrollHeight, 42) + 'px';
-}
-
-function countMeaningfulWords(text) {
-    if (!text.trim()) return 0;
-    return text.trim().split(/\s+/).filter(function(w) {
-        var cleaned = w.replace(/[^a-zA-Z0-9']/g, '');
-        return cleaned.length > 0 && !stopWords.has(cleaned.toLowerCase());
-    }).length;
-}
-
-function updateCompleteOption() {
-    var titleInput = document.getElementById('projectTitleInput');
-    if (!titleInput) return;
-    var wordCount = countMeaningfulWords(titleInput.value);
-    var completeOpt = document.getElementById('completeStatusOption');
-    var wordDisplay = document.getElementById('wordCountDisplay');
-
-    if (wordDisplay) wordDisplay.textContent = wordCount;
-
-    if (completeOpt) {
-        var canComplete = wordCount >= 11 && wordCount <= 12;
-        completeOpt.disabled = !canComplete;
-        if (!canComplete && completeOpt.selected) {
-            var ongoingOpt = document.getElementById('ongoingStatusOption');
-            if (ongoingOpt) ongoingOpt.selected = true;
-        }
-        completeOpt.style.opacity = canComplete ? '1' : '0.4';
-        completeOpt.title = canComplete ? '' : 'Requires 11\u201312 meaningful words in project title';
-
-        var badge = document.getElementById('wordCountBadge');
-        if (badge) {
-            badge.style.background = canComplete ? '#d1fae5' : 'var(--bg2)';
-            badge.style.borderColor = canComplete ? '#6ee7b7' : 'var(--border)';
-            // Ensure readability on both themes
-            badge.style.color = canComplete ? '#0f172a' : (document.documentElement.getAttribute('data-theme') === 'dark' ? '#ffffff' : '#000000');
-        }
-    }
-
-    var tagsSection = document.getElementById('tagsSection');
-    if (tagsSection) {
-        tagsSection.style.display = wordCount >= 11 ? 'block' : 'none';
+// Open Slot Invite Modal Functions
+function openOpenSlotInviteModal() {
+    var modal = document.getElementById('openSlotInviteModal');
+    if (modal) {
+        modal.classList.add('active');
+        loadOpenSlotClassmates();
     }
 }
 
-function addCustomTag() {
-    var input = document.getElementById('tagSearchInput');
-    var val = input.value.trim().replace(/\s+/g, ' ');
-    if (!val || isTagSelected(val)) {
-        input.value = '';
-        closeTagDropdown();
-        return;
-    }
-    var display = document.getElementById('selectedTagsDisplay');
-    var span = document.createElement('span');
-    span.className = 'selected-tag';
-    span.setAttribute('data-tag', val);
-    span.innerHTML = val + ' <span onclick="removeProjectTag(this)" style="cursor:pointer;opacity:0.6;margin-left:4px;">&times;</span>';
-    display.appendChild(span);
-    input.value = '';
-    closeTagDropdown();
-    updateTagsHiddenInput();
+function closeOpenSlotInviteModal() {
+    var modal = document.getElementById('openSlotInviteModal');
+    if (modal) modal.classList.remove('active');
+    // Reset search
+    var searchInput = document.getElementById('open-slot-search');
+    if (searchInput) searchInput.value = '';
 }
 
-function getSelectedTags() {
-    var tags = [];
-    document.querySelectorAll('#selectedTagsDisplay .selected-tag').forEach(function(el) {
-        tags.push((el.getAttribute('data-tag') || el.textContent.trim().replace('\u00d7','').trim()).toLowerCase());
-    });
-    return tags;
-}
+function loadOpenSlotClassmates() {
+    var listEl = document.getElementById('open-slot-classmates-list');
+    var loadingEl = document.getElementById('open-slot-loading');
+    var emptyEl = document.getElementById('open-slot-empty');
 
-function isTagSelected(val) {
-    var selected = getSelectedTags();
-    return selected.indexOf(val.toLowerCase().trim()) !== -1;
-}
-
-var COMMON_TAGS = [
-    'Artificial Intelligence', 'Machine Learning', 'Web Development',
-    'Mobile App', 'Data Analytics', 'Cybersecurity', 
-    'AI', 'Database Systems', 'UI/UX Design', 'Network Systems'
-];
-
-function filterCommonTags(query) {
-    var dropdown = document.getElementById('tagDropdown');
-    var q = query.toLowerCase().trim();
-    if (!q) {
-        dropdown.innerHTML = '';
-        dropdown.style.display = 'none';
-        return;
-    }
-    var selected = getSelectedTags();
-    var matches = COMMON_TAGS.filter(function(t) {
-        return t.toLowerCase().indexOf(q) !== -1 && selected.indexOf(t.toLowerCase()) === -1;
-    });
-    if (matches.length === 0) {
-        dropdown.innerHTML = '<div style="padding:10px 12px;font-size:12px;color:var(--text3);">' + (selected.indexOf(q) !== -1 ? 'Already added' : 'No matching tags') + '</div>';
-        dropdown.style.display = 'block';
-        return;
-    }
-    var html = '';
-    matches.forEach(function(t) {
-        html += '<div onclick="selectTagFromDropdown(\'' + t.replace(/'/g, "\\'") + '\')" style="padding:8px 12px;font-size:12px;color:var(--text);cursor:pointer;border-bottom:1px solid var(--border);" onmouseover="this.style.background=\'var(--bg3)\'" onmouseout="this.style.background=\'transparent\'">' + t + '</div>';
-    });
-    dropdown.innerHTML = html;
-    dropdown.style.display = 'block';
-}
-
-function closeTagDropdown() {
-    var dropdown = document.getElementById('tagDropdown');
-    if (dropdown) dropdown.style.display = 'none';
-}
-
-function selectTagFromDropdown(val) {
-    if (isTagSelected(val)) {
-        closeTagDropdown();
-        document.getElementById('tagSearchInput').value = '';
-        return;
-    }
-    var display = document.getElementById('selectedTagsDisplay');
-    var span = document.createElement('span');
-    span.className = 'selected-tag';
-    span.setAttribute('data-tag', val);
-    span.innerHTML = val + ' <span onclick="removeProjectTag(this)" style="cursor:pointer;opacity:0.6;margin-left:4px;">&times;</span>';
-    display.appendChild(span);
-    document.getElementById('tagSearchInput').value = '';
-    closeTagDropdown();
-    updateTagsHiddenInput();
-}
-
-function removeProjectTag(el) {
-    el.parentElement.remove();
-    updateTagsHiddenInput();
-}
-
-function updateTagsHiddenInput() {
-    var tags = [];
-    document.querySelectorAll('#selectedTagsDisplay .selected-tag').forEach(function(el) {
-        tags.push(el.getAttribute('data-tag') || el.textContent.trim().replace('\u00d7','').trim());
-    });
-    document.getElementById('tagsHiddenInput').value = JSON.stringify(tags);
-    document.getElementById('tagsError').style.display = tags.length >= 2 ? 'none' : 'block';
-}
-
-function validateTags() {
-    var tagsInput = document.getElementById('tagsHiddenInput');
-    var tags = [];
-    try { tags = JSON.parse(tagsInput.value || '[]'); } catch(e) {}
-    if (tags.length < 2) {
-        document.getElementById('tagsError').style.display = 'block';
-        return false;
-    }
-    return true;
-}
-
-function validateForm(event) {
-    var editName = document.getElementById('edit-team-name');
-    if (editName && editName.dataset.nameTaken === '1') {
-        event.preventDefault();
-        showToast('This team name is already taken.', 'error');
-        editName.focus();
-        return false;
-    }
-    var tagsSection = document.getElementById('tagsSection');
-    if (tagsSection && tagsSection.style.display !== 'none') {
-        if (!validateTags()) {
-            event.preventDefault();
-            return false;
-        }
-    }
-    return true;
-}
-
-// Override openEditTeamModal to run word count, auto-expand, and sync tags
-var origOpenTeamModal = openEditTeamModal;
-openEditTeamModal = function() {
-    origOpenTeamModal();
-    setTimeout(function() {
-        updateCompleteOption();
-        var el = document.getElementById('projectTitleInput');
-        if (el) autoExpand(el);
-        syncTagUI();
-    }, 50);
-};
-
-function syncTagUI() {
-    var tagsInput = document.getElementById('tagsHiddenInput');
-    if (!tagsInput) return;
-    var tags = [];
-    try { tags = JSON.parse(tagsInput.value || '[]'); } catch(e) {}
-    var display = document.getElementById('selectedTagsDisplay');
-    var existing = display.querySelectorAll('.selected-tag');
-    existing.forEach(function(el) {
-        var txt = el.getAttribute('data-tag') || el.textContent.trim().replace('\u00d7','').trim();
-        if (tags.indexOf(txt) === -1) {
-            el.remove();
+    if (loadingEl) loadingEl.style.display = 'flex';
+    if (emptyEl) emptyEl.style.display = 'none';
+    // Clear existing classmate items (keep loading and empty)
+    Array.from(listEl.children).forEach(function(child) {
+        if (child.id !== 'open-slot-loading' && child.id !== 'open-slot-empty') {
+            child.remove();
         }
     });
-    tags.forEach(function(t) {
-        var found = false;
-        display.querySelectorAll('.selected-tag').forEach(function(el) {
-            var txt = el.getAttribute('data-tag') || el.textContent.trim().replace('\u00d7','').trim();
-            if (txt.toLowerCase() === t.toLowerCase()) found = true;
+
+    console.log('Fetching available classmates from:', '{{ route('team.available-classmates') }}');
+    fetch('{{ route('team.available-classmates') }}', {
+        headers: { 'Accept': 'application/json' }
+    })
+    .then(function(r) {
+        console.log('Response status:', r.status, r.statusText);
+        if (!r.ok) {
+            return r.text().then(function(text) { 
+                console.error('Server error response:', text);
+                throw new Error('HTTP ' + r.status + ': ' + text); 
+            });
+        }
+        return r.json();
+    })
+    .then(function(data) {
+        if (loadingEl) loadingEl.style.display = 'none';
+
+        if (data.error) {
+            showToast(data.error, 'error');
+            if (emptyEl) {
+                emptyEl.textContent = data.error;
+                emptyEl.style.display = 'block';
+            }
+            return;
+        }
+
+        var classmates = data.classmates || [];
+        if (classmates.length === 0) {
+            if (emptyEl) emptyEl.style.display = 'block';
+            return;
+        }
+
+        classmates.forEach(function(classmate) {
+            var item = document.createElement('button');
+            item.type = 'button';
+            item.className = 'open-slot-classmate-option';
+            item.setAttribute('data-id', classmate.student_id);
+            item.setAttribute('data-name', classmate.name);
+            item.setAttribute('data-email', classmate.email);
+            item.setAttribute('data-avatar', classmate.avatar);
+            item.setAttribute('data-student-number', classmate.student_number || '');
+            item.setAttribute('data-has-team', classmate.has_team ? '1' : '0');
+            var hasTeam = !!classmate.has_team;
+            var cursorStyle = hasTeam ? 'not-allowed' : 'pointer';
+            item.style.cssText = 'display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--border);border-radius:12px;background:var(--bg2);cursor:' + cursorStyle + ';text-align:left;transition:all 0.15s;' + (hasTeam ? 'opacity:0.55;' : '');
+            if (!hasTeam) {
+                item.onmouseover = function() { this.style.borderColor = 'var(--blue)'; this.style.background = 'var(--blue-bg)'; };
+                item.onmouseout = function() { this.style.borderColor = 'var(--border)'; this.style.background = 'var(--bg2)'; };
+                item.onclick = function() { selectOpenSlotClassmate(this); };
+            } else {
+                item.onclick = function() { showToast('This classmate already has a team.', 'error'); };
+            }
+
+            var avatarHtml = classmate.avatar
+                ? '<img src="' + classmate.avatar + '" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">'
+                : (classmate.name || 'U').charAt(0).toUpperCase();
+
+            var indicatorHtml = hasTeam
+                ? '<span style="font-size:10px;font-weight:700;color:#f59e0b;white-space:nowrap;">Has Team</span>'
+                : '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;transition:all 0.15s;" class="osl-radio"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4" style="opacity:0;transform:scale(0);transition:all 0.15s;" class="osl-radio-inner"/></svg>';
+
+            item.innerHTML =
+                '<div style="width:40px;height:40px;border-radius:50%;background:#7c3aed;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#1a1a1a;overflow:hidden;flex-shrink:0;">' + avatarHtml + '</div>' +
+                '<div style="flex:1;min-width:0;">' +
+                '  <div style="font-size:13.5px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + classmate.name + '</div>' +
+                '  <div style="font-size:11px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + (classmate.student_number || '') + ' · ' + (classmate.course || '') + (classmate.year_section ? ' · ' + classmate.year_section : '') + '</div>' +
+                '</div>' +
+                indicatorHtml;
+
+            listEl.appendChild(item);
         });
-        if (!found) {
-            var span = document.createElement('span');
-            span.className = 'selected-tag';
-            span.setAttribute('data-tag', t);
-            span.innerHTML = t + ' <span onclick="removeProjectTag(this)" style="cursor:pointer;opacity:0.6;margin-left:4px;">&times;</span>';
-            display.appendChild(span);
+    })
+    .catch(function(err) {
+        if (loadingEl) loadingEl.style.display = 'none';
+        if (err.message) {
+            showToast(err.message, 'error');
+        }
+        if (emptyEl) {
+            emptyEl.textContent = 'Error: ' + (err.message || 'Unknown error');
+            emptyEl.style.display = 'block';
         }
     });
-    document.getElementById('tagsError').style.display = tags.length >= 2 ? 'none' : 'block';
 }
+
+function selectOpenSlotClassmate(el) {
+    var studentId = el.getAttribute('data-id');
+    var name = el.getAttribute('data-name');
+    var email = el.getAttribute('data-email');
+    var avatar = el.getAttribute('data-avatar');
+    var hasTeam = el.getAttribute('data-has-team') === '1';
+
+    if (hasTeam) {
+        showToast('This classmate already has a team.', 'error');
+        return;
+    }
+
+    // Update UI
+    document.querySelectorAll('.open-slot-classmate-option').forEach(function(opt) {
+        opt.classList.remove('selected');
+        var radio = opt.querySelector('.osl-radio-inner');
+        if (radio) { radio.style.opacity = '0'; radio.style.transform = 'scale(0)'; }
+    });
+    el.classList.add('selected');
+    var radio = el.querySelector('.osl-radio-inner');
+    if (radio) { radio.style.opacity = '1'; radio.style.transform = 'scale(1)'; radio.style.stroke = 'var(--blue)'; }
+
+    // Show confirmation and send invite
+    showConfirm({
+        title: 'Invite ' + name + '?',
+        message: 'Send a team invitation to <strong>' + name + '</strong>? They will receive a notification and can accept or decline.',
+        icon: 'invite',
+        confirmText: 'Send Invite',
+        confirmClass: 'primary',
+        onConfirm: function() { sendOpenSlotInvite(studentId, name, email, avatar); }
+    });
+}
+
+function sendOpenSlotInvite(studentId, name, email, avatar) {
+    var teamId = {{ $myTeam?->team_id ?? 'null' }};
+    if (!teamId) {
+        showToast('No team found.', 'error');
+        return;
+    }
+
+    var csrf = document.querySelector('meta[name="csrf-token"]');
+    fetch('{{ route('invitations.store') }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'X-CSRF-TOKEN': csrf ? csrf.getAttribute('content') : '{{ csrf_token() }}'
+        },
+        body: JSON.stringify({
+            receiver_id: studentId,
+            team_id: teamId,
+            type: 'invite'
+        })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.success) {
+            showToast('Invitation sent to ' + name + '!', 'success');
+            closeOpenSlotInviteModal();
+        } else {
+            showToast(data.message || 'Failed to send invitation.', 'error');
+        }
+    })
+    .catch(function() {
+        showToast('Failed to send invitation. Please try again.', 'error');
+    });
+}
+
+function filterOpenSlotClassmates() {
+    var query = document.getElementById('open-slot-search').value.toLowerCase().trim();
+    var items = document.querySelectorAll('.open-slot-classmate-option');
+    var visibleCount = 0;
+
+    items.forEach(function(item) {
+        var name = (item.getAttribute('data-name') || '').toLowerCase();
+        var email = (item.getAttribute('data-email') || '').toLowerCase();
+        var studentNumber = (item.getAttribute('data-student-number') || '').toLowerCase();
+        var show = !query || name.includes(query) || email.includes(query) || studentNumber.includes(query);
+        item.style.display = show ? 'flex' : 'none';
+        if (show) visibleCount++;
+    });
+
+    var emptyEl = document.getElementById('open-slot-empty');
+    if (emptyEl && items.length > 0) {
+        emptyEl.style.display = visibleCount === 0 ? 'block' : 'none';
+        if (visibleCount === 0) {
+            emptyEl.textContent = 'No classmates match "' + query + '"';
+        }
+    }
+}
+
 @endif
 
 // ── Custom Confirm Modal ──

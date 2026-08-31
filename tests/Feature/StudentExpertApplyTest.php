@@ -94,7 +94,7 @@ class StudentExpertApplyTest extends TestCase
         [$student, $team] = $this->makeLeaderWithTeam();
         $expert = $this->makeAdviserExpert();
 
-        $assignment = new TeamExpertAssignment();
+        $assignment = new TeamExpertAssignment;
         $assignment->team_id = $team->team_id;
         $assignment->expert_id = $expert->expert_id;
         $assignment->status = 'pending';
@@ -120,7 +120,7 @@ class StudentExpertApplyTest extends TestCase
         [$student, $team] = $this->makeLeaderWithTeam();
         $expert = $this->makeAdviserExpert();
 
-        $assignment = new TeamExpertAssignment();
+        $assignment = new TeamExpertAssignment;
         $assignment->team_id = $team->team_id;
         $assignment->expert_id = $expert->expert_id;
         $assignment->status = 'pending';

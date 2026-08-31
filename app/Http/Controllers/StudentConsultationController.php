@@ -4,8 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Mail\ConsultationBookedMail;
 use App\Mail\ConsultationCancelledMail;
-use App\Models\ConsultationSchedule;
 use App\Models\ConsultationBooking;
+use App\Models\ConsultationSchedule;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
 use App\Services\GoogleCalendarService;
@@ -13,6 +13,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Validator;
 
 class StudentConsultationController extends Controller
 {
@@ -393,7 +394,7 @@ class StudentConsultationController extends Controller
         // only forces JSON rendering for /api/* routes - this endpoint is
         // called via fetch() and can't follow a redirect, so the error is
         // built manually here to match every other JSON response below.
-        $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
+        $validator = Validator::make($request->all(), [
             'reason' => 'required|string|max:1000',
         ]);
 

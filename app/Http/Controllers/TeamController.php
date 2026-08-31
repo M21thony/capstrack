@@ -44,7 +44,9 @@ class TeamController extends Controller
             $studentId = $student ? $student->student_id : 8;
         }
 
-        $studentSy = StudentSchoolYear::where('student_id', $studentId)->first();
+        $studentSy = StudentSchoolYear::where('student_id', $studentId)
+            ->latest('school_year')
+            ->first();
         $teamId = $studentSy?->team_id;
 
         $myTeam = null;
@@ -260,10 +262,18 @@ class TeamController extends Controller
             'leader_id' => $student->student_id,
         ]);
 
+        $computedSchoolYear = now()->month >= 8
+            ? now()->year.'-'.(now()->year + 1)
+            : (now()->year - 1).'-'.now()->year;
+
         DB::table('student_s_y')
             ->updateOrInsert(
                 ['student_id' => $student->student_id],
-                ['team_id' => $team->team_id, 's_role_id' => StudentRole::leaderRoleId()]
+                [
+                    'team_id' => $team->team_id,
+                    's_role_id' => StudentRole::leaderRoleId(),
+                    'school_year' => $computedSchoolYear,
+                ]
             );
 
         // Keep member count synced at the fixed 5-member limit
@@ -1183,5 +1193,98 @@ class TeamController extends Controller
         }
 
         return back();
+    }
+
+    public function getAvailableClassmates(Request $request): JsonResponse
+    {
+        $student = $request->user();
+        $studentId = $student ? $student->student_id : 8;
+
+        $studentSy = StudentSchoolYear::where('student_id', $studentId)
+            ->latest('school_year')
+            ->first();
+
+        if (! $studentSy) {
+            return response()->json(['classmates' => []]);
+        }
+
+        $myTeam = Team::find($studentSy->team_id);
+
+        if (! $myTeam) {
+            return response()->json(['classmates' => []]);
+        }
+
+        if ((int) $myTeam->leader_id !== (int) $studentId) {
+            return response()->json(['classmates' => [], 'error' => 'Only the team leader can invite members.'], 403);
+        }
+
+        $currentSchoolYear = $studentSy->school_year;
+
+        $currentCount = StudentSchoolYear::where('team_id', $myTeam->team_id)->count();
+        $maxMembers = $myTeam->member_count ?? 5;
+
+        if ($currentCount >= $maxMembers) {
+            return response()->json(['classmates' => [], 'error' => 'Team is already full.']);
+        }
+
+        $availableSlots = $maxMembers - $currentCount;
+
+        // Compute the current academic year the same way PersonalInfoController does.
+        // This is used as a fallback when the leader's stored school_year is
+        // null, corrupted, or doesn't match any classmates (e.g. legacy "26-1" data).
+        $computedSchoolYear = now()->month >= 8
+            ? now()->year.'-'.(now()->year + 1)
+            : (now()->year - 1).'-'.now()->year;
+
+        $classmates = Student::join('student_s_y', 'students.student_id', '=', 'student_s_y.student_id')
+            ->where('student_s_y.school_year', $currentSchoolYear)
+            ->where('students.course', $student->course)
+            ->where('students.year_section', $student->year_section)
+            ->where('students.student_id', '!=', $studentId)
+            ->select('students.student_id', 'students.f_name', 'students.l_name', 'students.email', 'students.p_picture', 'students.course', 'students.year_section', 'students.student_number', 'student_s_y.team_id')
+            ->orderBy('students.l_name')
+            ->get();
+
+        // Fallback: if no classmates matched the stored school_year (e.g. corrupted
+        // data like "26-1"), retry with the computed current academic year.
+        if ($classmates->isEmpty() && $currentSchoolYear !== $computedSchoolYear) {
+            $classmates = Student::join('student_s_y', 'students.student_id', '=', 'student_s_y.student_id')
+                ->where('student_s_y.school_year', $computedSchoolYear)
+                ->where('students.course', $student->course)
+                ->where('students.year_section', $student->year_section)
+                ->where('students.student_id', '!=', $studentId)
+                ->select('students.student_id', 'students.f_name', 'students.l_name', 'students.email', 'students.p_picture', 'students.course', 'students.year_section', 'students.student_number', 'student_s_y.team_id')
+                ->orderBy('students.l_name')
+                ->get();
+        }
+
+        $classmates = $classmates->map(function ($classmate) {
+            $avatar = '';
+            if (filled($classmate->p_picture)) {
+                if (filter_var($classmate->p_picture, FILTER_VALIDATE_URL)) {
+                    $avatar = $classmate->p_picture;
+                } elseif (array_key_exists($classmate->p_picture, config('avatars.presets', []))) {
+                    $avatar = asset('images/avatars/'.$classmate->p_picture.'.svg');
+                }
+            }
+
+            return [
+                'student_id' => $classmate->student_id,
+                'name' => trim(($classmate->f_name ?? '').' '.($classmate->l_name ?? '')),
+                'email' => $classmate->email,
+                'avatar' => $avatar,
+                'course' => $classmate->course,
+                'year_section' => $classmate->year_section,
+                'student_number' => $classmate->student_number,
+                'has_team' => $classmate->team_id !== null,
+            ];
+        });
+
+        return response()->json([
+            'classmates' => $classmates,
+            'available_slots' => $availableSlots,
+            'current_count' => $currentCount,
+            'max_members' => $maxMembers,
+        ]);
     }
 }

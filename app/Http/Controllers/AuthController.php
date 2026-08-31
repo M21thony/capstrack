@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\CapstoneExpert;
 use App\Models\Student;
+use App\Services\GoogleDriveService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -188,7 +189,7 @@ class AuthController extends Controller
                     // experts never need the separate "Connect Google Drive"
                     // step at all. Never let a hiccup here block login.
                     try {
-                        app(\App\Services\GoogleDriveService::class)->storeToken($expert->expert_id, [
+                        app(GoogleDriveService::class)->storeToken($expert->expert_id, [
                             'access_token' => $accessToken,
                             'refresh_token' => $response->json('refresh_token'),
                             'expires_in' => $response->json('expires_in', 3600),
