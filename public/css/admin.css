@@ -1019,6 +1019,22 @@ textarea.input{resize:vertical;min-height:80px}
 .rb-criterion-card:focus-within{border-color:rgba(201,168,44,.4)}
 .rb-criterion-card.rb-card-error{border-color:rgba(220,38,38,.5)}
 .rb-criterion-header{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+
+/* ── COLLAPSED CRITERION ROW ──
+   Each criterion is one row: name and points editable in place, the four
+   performance levels folded away. 27 criteria used to render as 10,000px of
+   open cards, so changing one number meant scrolling past everything. */
+.rb-criterion-card{padding:8px 10px}
+.rb-crit-row{display:flex;align-items:center;gap:8px}
+.rb-crit-toggle{width:22px;height:22px;flex-shrink:0;display:flex;align-items:center;justify-content:center;border:none;background:none;color:var(--text3);cursor:pointer;border-radius:5px;transition:transform .15s,color .13s,background .13s}
+.rb-crit-toggle:hover{color:var(--text);background:var(--bg4)}
+.rb-criterion-card.open .rb-crit-toggle{transform:rotate(90deg);color:var(--accent3)}
+.rb-crit-row-pts{display:flex;align-items:center;gap:4px;flex-shrink:0}
+.rb-crit-row .rb-crit-name-input{flex:1;min-width:0}
+.rb-crit-body{display:none;padding-top:10px;margin-top:10px;border-top:1px solid var(--border)}
+.rb-criterion-card.open .rb-crit-body{display:block}
+.rb-criterion-card.open{border-color:var(--accent);background:var(--bg2)}
+.rb-crit-category-input{margin-bottom:8px}
 .rb-crit-num{width:22px;height:22px;border-radius:50%;background:var(--accent);color:#18191f;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .rb-crit-name-input{flex:1;font-size:13px;font-weight:600;padding:8px 10px!important}
 .rb-crit-name-input.rb-error{border-color:var(--red)!important}
