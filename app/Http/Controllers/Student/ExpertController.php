@@ -136,7 +136,7 @@ class ExpertController extends Controller
         if ($team) {
             $isLeader = $team->leader_id === $student->student_id;
             $assignments = TeamExpertAssignment::where('team_id', $team->team_id)
-                ->with(['expert.roles', 'expert.expertise', 'expertRole.role'])
+                ->with(['expert.roles', 'expert.expertise', 'expertRole.role', 'preProposal'])
                 ->get();
 
             // Keyed by the role the team actually engaged each expert as,
