@@ -263,26 +263,26 @@
     @if ($teamNotComplete)
       <div class="alert-info">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-        Your Team Leader must first mark your team as <strong>Complete</strong> in <strong>Team Management</strong> before you can upload receipts.
+        Your team leader has to submit your pre-proposals for checking on the <strong>Duplication Checker</strong> page before anyone can upload receipts.
       </div>
     @endif
 
     <!-- Main Content Grid -->
     <div class="fin-grid">
       <!-- Upload Receipt Card -->
-      <div class="card upload-card @if ($teamStatus !== 'complete') upload-card--disabled @endif">
-        @if ($teamStatus !== 'complete')
+      <div class="card upload-card @if (! $canSubmitReceipts) upload-card--disabled @endif">
+        @if (! $canSubmitReceipts)
           <div class="upload-card__lock">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-            <span>Team must be marked as Complete by the Team Leader before uploading receipts.</span>
+            <span>Your team leader has to submit your pre-proposals for checking before anyone can upload receipts.</span>
           </div>
         @endif
         <div class="card-header"><span class="card-title">Upload Receipt</span></div>
-        <form method="POST" action="{{ route('student.financial.submit') }}" enctype="multipart/form-data" data-team-status="{{ $teamStatus }}" id="receiptForm">
+        <form method="POST" action="{{ route('student.financial.submit') }}" enctype="multipart/form-data" data-can-submit="{{ $canSubmitReceipts ? '1' : '0' }}" id="receiptForm">
           @csrf
           <div class="form-group">
             <label class="label">Expense Category</label>
-            <select class="input" name="expense_post_id" id="expenseCategory" required {{ $teamStatus !== 'complete' ? 'disabled' : '' }}>
+            <select class="input" name="expense_post_id" id="expenseCategory" required {{ $canSubmitReceipts ? '' : 'disabled' }}>
               <option value="">Select Expense</option>
               @foreach ($expensePosts as $post)
                 <option value="{{ $post->id }}"
@@ -298,7 +298,7 @@
           </div>
           <div class="form-group">
             <label class="label">Receipt Number</label>
-            <input class="input" name="receipt_number" id="receiptNumber" type="text" maxlength="100" placeholder="Enter Receipt Number" value="{{ old('receipt_number') }}" required {{ $teamStatus !== 'complete' ? 'disabled' : '' }} />
+            <input class="input" name="receipt_number" id="receiptNumber" type="text" maxlength="100" placeholder="Enter Receipt Number" value="{{ old('receipt_number') }}" required {{ $canSubmitReceipts ? '' : 'disabled' }} />
             @error('receipt_number')
               <div class="field-error">{{ $message }}</div>
             @enderror
@@ -311,7 +311,7 @@
             <label class="label">Description</label>
             <input class="input" id="expenseDescription" name="description" readonly placeholder="Select an expense category" />
           </div>
-          <div class="upload-zone" id="uploadZone" onclick="@if($teamStatus === 'complete')if(event.target===this||event.target.closest('#uploadPlaceholder'))document.getElementById('receiptInput').click()@endif">
+          <div class="upload-zone" id="uploadZone" onclick="@if($canSubmitReceipts)if(event.target===this||event.target.closest('#uploadPlaceholder'))document.getElementById('receiptInput').click()@endif">
             <div id="uploadPreviewContainer" style="display:none;position:relative">
               <button type="button" id="removeBtn" onclick="event.stopPropagation(); removeFile()" style="position:absolute;top:6px;right:6px;width:24px;height:24px;border-radius:50%;border:none;background:rgba(0,0,0,0.5);color:#fff;font-size:14px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:2" title="Remove">✕</button>
               <img id="uploadPreview" src="" alt="Receipt preview" class="upload-preview-img" onclick="event.stopPropagation(); openImagePreview(this.src)" />
@@ -322,12 +322,12 @@
               <div class="upload-label">Upload receipt image</div>
               <div class="upload-hint">JPG, PNG up to 10MB</div>
             </div>
-            <input type="file" name="receipt_image" id="receiptInput" accept="image/jpeg,image/png" style="display:none" required {{ $teamStatus !== 'complete' ? 'disabled' : '' }} />
+            <input type="file" name="receipt_image" id="receiptInput" accept="image/jpeg,image/png" style="display:none" required {{ $canSubmitReceipts ? '' : 'disabled' }} />
           </div>
           @error('receipt_image')
             <div class="field-error" style="margin-bottom:12px">{{ $message }}</div>
           @enderror
-          <button type="submit" class="btn btn-primary btn-submit" {{ $teamStatus !== 'complete' ? 'disabled' : '' }}>Submit Receipt</button>
+          <button type="submit" class="btn btn-primary btn-submit" {{ $canSubmitReceipts ? '' : 'disabled' }}>Submit Receipt</button>
         </form>
 
         <!-- Submission Guidelines -->
@@ -779,8 +779,7 @@ window.closeConfirmReceiptModal = function() {
 document.getElementById('receiptForm')?.addEventListener('submit', function(e) {
   e.preventDefault();
 
-  const teamStatus = this.dataset.teamStatus;
-  if (teamStatus !== 'complete') {
+  if (this.dataset.canSubmit !== '1') {
     openTeamNotCompleteModal();
     return;
   }
