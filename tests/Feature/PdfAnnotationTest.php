@@ -364,7 +364,10 @@ class PdfAnnotationTest extends TestCase
         $expert = $this->loginAsApprovedExpert();
         $reviewId = $this->makeReview(21, $expert->expert_id, 'To Review');
 
-        $response = $this->post("/reviews/{$reviewId}/status", ['review_status' => 'Reviewed']);
+        $response = $this->post("/reviews/{$reviewId}/status", [
+            'review_status' => 'Reviewed',
+            'verdict' => CapstoneDocumentReview::APPROVED,
+        ]);
 
         $response->assertStatus(200);
         $response->assertJson(['success' => true, 'review_status' => 'Reviewed']);
@@ -383,8 +386,10 @@ class PdfAnnotationTest extends TestCase
 
         $this->assertNull(CapstoneDocumentReview::find($reviewId)->reviewed_at);
 
-        $this->post("/reviews/{$reviewId}/status", ['review_status' => 'Reviewed'])
-            ->assertStatus(200);
+        $this->post("/reviews/{$reviewId}/status", [
+            'review_status' => 'Reviewed',
+            'verdict' => CapstoneDocumentReview::APPROVED,
+        ])->assertStatus(200);
 
         $this->assertNotNull(CapstoneDocumentReview::find($reviewId)->reviewed_at);
     }
@@ -395,7 +400,10 @@ class PdfAnnotationTest extends TestCase
         $expert = $this->loginAsApprovedExpert();
         $reviewId = $this->makeReview(24, $expert->expert_id, 'To Review');
 
-        $this->post("/reviews/{$reviewId}/status", ['review_status' => 'Reviewed']);
+        $this->post("/reviews/{$reviewId}/status", [
+            'review_status' => 'Reviewed',
+            'verdict' => CapstoneDocumentReview::APPROVED,
+        ]);
         $this->assertNotNull(CapstoneDocumentReview::find($reviewId)->reviewed_at);
 
         $this->post("/reviews/{$reviewId}/status", ['review_status' => 'Reviewing']);
@@ -420,6 +428,103 @@ class PdfAnnotationTest extends TestCase
         // The values that used to be filtered on match nothing, which is the bug.
         $this->assertSame(0, CapstoneDocumentReview::where('review_status', 'pending')->count());
         $this->assertSame(0, CapstoneDocumentReview::where('review_status', 'approved')->count());
+    }
+
+    /**
+     * The point of the whole change: a reviewer cannot finish without saying
+     * what they decided. Before this, "Reviewed" meant they stopped reading,
+     * and whether they were happy went into a remark nothing could query.
+     */
+    public function test_a_review_cannot_be_turned_in_without_a_verdict(): void
+    {
+        $expert = $this->loginAsApprovedExpert();
+        $reviewId = $this->makeReview(30, $expert->expert_id, 'Reviewing');
+
+        $this->post("/reviews/{$reviewId}/status", ['review_status' => 'Reviewed'], [
+            'Accept' => 'application/json',
+        ])->assertStatus(422);
+
+        // and nothing moved
+        $review = CapstoneDocumentReview::find($reviewId);
+        $this->assertSame('Reviewing', $review->review_status);
+        $this->assertNull($review->verdict);
+    }
+
+    public function test_a_made_up_verdict_is_refused(): void
+    {
+        $expert = $this->loginAsApprovedExpert();
+        $reviewId = $this->makeReview(31, $expert->expert_id, 'Reviewing');
+
+        $this->post("/reviews/{$reviewId}/status", [
+            'review_status' => 'Reviewed',
+            'verdict' => 'looks_fine_i_guess',
+        ], ['Accept' => 'application/json'])->assertStatus(422);
+
+        $this->assertNull(CapstoneDocumentReview::find($reviewId)->verdict);
+    }
+
+    public function test_turning_in_records_the_verdict_and_when(): void
+    {
+        $expert = $this->loginAsApprovedExpert();
+        $reviewId = $this->makeReview(32, $expert->expert_id, 'Reviewing');
+
+        $this->post("/reviews/{$reviewId}/status", [
+            'review_status' => 'Reviewed',
+            'verdict' => CapstoneDocumentReview::NEEDS_REVISION,
+        ])->assertStatus(200)->assertJson(['verdict' => 'needs_revision']);
+
+        $review = CapstoneDocumentReview::find($reviewId);
+        $this->assertSame(CapstoneDocumentReview::NEEDS_REVISION, $review->verdict);
+        $this->assertNotNull($review->verdict_at);
+    }
+
+    /** Reopening a review withdraws the decision rather than leaving it standing. */
+    public function test_reopening_a_review_clears_the_verdict(): void
+    {
+        $expert = $this->loginAsApprovedExpert();
+        $reviewId = $this->makeReview(33, $expert->expert_id, 'Reviewing');
+
+        $this->post("/reviews/{$reviewId}/status", [
+            'review_status' => 'Reviewed',
+            'verdict' => CapstoneDocumentReview::APPROVED,
+        ]);
+        $this->assertSame(CapstoneDocumentReview::APPROVED, CapstoneDocumentReview::find($reviewId)->verdict);
+
+        $this->post("/reviews/{$reviewId}/status", ['review_status' => 'Reviewing']);
+
+        $review = CapstoneDocumentReview::find($reviewId);
+        $this->assertNull($review->verdict);
+        $this->assertNull($review->verdict_at);
+    }
+
+    /**
+     * The checklist wants Chapter 1 approved by the adviser AND the
+     * consultant, as two separate lines. role is already on the review, so
+     * the two are told apart without a join.
+     */
+    public function test_adviser_and_consultant_approvals_are_told_apart(): void
+    {
+        $expert = $this->loginAsApprovedExpert();
+        $adviserReview = $this->makeReview(34, $expert->expert_id, 'Reviewing');
+        $consultantReview = $this->makeReview(35, $expert->expert_id, 'Reviewing');
+
+        CapstoneDocumentReview::whereKey($adviserReview)->update(['role' => 'adviser']);
+        CapstoneDocumentReview::whereKey($consultantReview)->update(['role' => 'consultant']);
+
+        $this->post("/reviews/{$adviserReview}/status", [
+            'review_status' => 'Reviewed',
+            'verdict' => CapstoneDocumentReview::APPROVED,
+        ]);
+
+        $this->assertSame(1, CapstoneDocumentReview::approvedAs('adviser')->count());
+        $this->assertSame(0, CapstoneDocumentReview::approvedAs('consultant')->count());
+
+        $this->post("/reviews/{$consultantReview}/status", [
+            'review_status' => 'Reviewed',
+            'verdict' => CapstoneDocumentReview::APPROVED,
+        ]);
+
+        $this->assertSame(1, CapstoneDocumentReview::approvedAs('consultant')->count());
     }
 
     public function test_rejects_invalid_status_value(): void

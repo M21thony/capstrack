@@ -21,8 +21,8 @@ class CapstoneDocumentReview extends Model
      * through the scopes below rather than spell a string again.
      *
      * Note what these do NOT say: none of them means the reviewer approved
-     * the document. REVIEWED means they finished looking at it. Recording an
-     * actual verdict is separate work.
+     * the document. REVIEWED means they finished looking at it. What they
+     * decided lives in the verdict below.
      */
     public const AWAITING = 'To Review';
 
@@ -32,8 +32,24 @@ class CapstoneDocumentReview extends Model
 
     public const STATUSES = [self::AWAITING, self::IN_PROGRESS, self::REVIEWED];
 
+    /**
+     * What the reviewer decided, which is a different question from how far
+     * along they are.
+     *
+     * Null means undecided, and that is every row written before this
+     * existed - no attempt is made to read approval out of the old remarks.
+     * A verdict only ever accompanies REVIEWED: it is recorded when the
+     * review is turned in, and cleared if it is reopened.
+     */
+    public const APPROVED = 'approved';
+
+    public const NEEDS_REVISION = 'needs_revision';
+
+    public const VERDICTS = [self::APPROVED, self::NEEDS_REVISION];
+
     protected $casts = [
         'reviewed_at' => 'datetime',
+        'verdict_at' => 'datetime',
     ];
 
     /** Still on someone's plate - not yet finished with. */
@@ -48,12 +64,37 @@ class CapstoneDocumentReview extends Model
         return $query->where('review_status', self::REVIEWED);
     }
 
+    /** The reviewer accepted the document. */
+    public function scopeApproved($query)
+    {
+        return $query->where('verdict', self::APPROVED);
+    }
+
+    /** The reviewer wants it changed. */
+    public function scopeNeedsRevision($query)
+    {
+        return $query->where('verdict', self::NEEDS_REVISION);
+    }
+
+    /**
+     * Approved by the expert engaged in this role - 'adviser' or
+     * 'consultant'. The Capstone 1 checklist asks for both separately, and
+     * the role is already on the row, so no join is needed to tell them
+     * apart.
+     */
+    public function scopeApprovedAs($query, string $role)
+    {
+        return $query->approved()->where('role', $role);
+    }
+
     protected $fillable = [
         'file_id',
         'expert_id',
         'role',
         'review_status',
+        'verdict',
         'reviewed_at',
+        'verdict_at',
         'version',
         'drive_file_id',
         'drive_web_view_link',
