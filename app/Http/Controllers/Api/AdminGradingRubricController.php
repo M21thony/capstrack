@@ -1245,14 +1245,21 @@ class AdminGradingRubricController extends Controller
         // as an independent client-supplied value) - it's the ceiling of
         // whichever level scores highest, normally "Excellent".
         $newMaxPoints = $this->scoreLevelsMax($validated['score_levels'] ?? null);
-        $total = $this->criteriaMaxPointsTotal($gradingRubric->criteria()->get()) + $newMaxPoints;
 
-        if (abs($total - 100.0) > 0.0001) {
+        // Exactly 100 is fine - a rubric may be one all-or-nothing criterion.
+        // Over 100 is not, since the rest could only be scaled to negatives.
+        if ($newMaxPoints > 100.0) {
             return response()->json([
                 'success' => false,
-                'message' => 'Total criterion points must equal exactly 100 points.',
+                'message' => 'A criterion cannot be worth more than the 100 points a rubric totals.',
             ], 422);
         }
+
+        // Adding a criterion used to be refused unless the rubric already
+        // added up to 100 with it, which meant hand-reducing other criteria
+        // first just to be allowed to save. The existing criteria are now
+        // scaled down to make room instead.
+        $rebalanced = $this->rebalanceCriteria($gradingRubric->criteria()->get(), 100.0 - $newMaxPoints);
 
         $criterion = $gradingRubric->criteria()->create([
             'criterion_name' => trim($validated['criterion_name']),
@@ -1266,8 +1273,12 @@ class AdminGradingRubricController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Criterion created successfully.',
+            'message' => $rebalanced > 0
+                ? "Criterion created. {$rebalanced} existing criteria were scaled down to keep the rubric at 100 points."
+                : 'Criterion created successfully.',
             'data' => $this->formatCriterion($criterion),
+            'rebalanced_count' => $rebalanced,
+            'criteria' => $this->formatCriteria($gradingRubric->criteria()->orderBy('sort_order')->get()),
         ], 201);
     }
 
@@ -1291,16 +1302,20 @@ class AdminGradingRubricController extends Controller
         ]);
 
         $newMaxPoints = $this->scoreLevelsMax($validated['score_levels'] ?? null);
-        $total = $this->criteriaMaxPointsTotal(
-            $gradingRubric->criteria()->where('criterion_id', '!=', $rubricCriterion->criterion_id)->get()
-        ) + $newMaxPoints;
 
-        if (abs($total - 100.0) > 0.0001) {
+        // Exactly 100 is fine - a rubric may be one all-or-nothing criterion.
+        // Over 100 is not, since the rest could only be scaled to negatives.
+        if ($newMaxPoints > 100.0) {
             return response()->json([
                 'success' => false,
-                'message' => 'Total criterion points must equal exactly 100 points.',
+                'message' => 'A criterion cannot be worth more than the 100 points a rubric totals.',
             ], 422);
         }
+
+        // Changing what a criterion is worth makes room the same way adding
+        // one does: everything else scales to fill the remaining points.
+        $others = $gradingRubric->criteria()->where('criterion_id', '!=', $rubricCriterion->criterion_id)->get();
+        $rebalanced = $this->rebalanceCriteria($others, 100.0 - $newMaxPoints);
 
         $rubricCriterion->update([
             'criterion_name' => trim($validated['criterion_name']),
@@ -1314,8 +1329,12 @@ class AdminGradingRubricController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Criterion updated successfully.',
-            'data' => $this->formatCriterion($rubricCriterion),
+            'message' => $rebalanced > 0
+                ? "Criterion updated. {$rebalanced} other criteria were scaled to keep the rubric at 100 points."
+                : 'Criterion updated successfully.',
+            'data' => $this->formatCriterion($rubricCriterion->fresh()),
+            'rebalanced_count' => $rebalanced,
+            'criteria' => $this->formatCriteria($gradingRubric->criteria()->orderBy('sort_order')->get()),
         ]);
     }
 
@@ -1446,6 +1465,106 @@ class AdminGradingRubricController extends Controller
     // levels - its max_points ceiling is the highest of those levels
     // (normally "Excellent"), not their sum. Used to auto-derive max_points
     // when a request doesn't supply it explicitly.
+    /**
+     * Scale a set of criteria so their ceilings add up to $targetTotal.
+     *
+     * Each criterion's max_points is the highest of its own score levels, so
+     * the levels are what actually move - scaling the number alone would
+     * leave a criterion claiming a ceiling none of its levels can reach, and
+     * grading validates every submitted score against those level values.
+     *
+     * Rounding is to 2dp (the column's precision) and the remainder is
+     * absorbed by the largest criterion, so the rubric lands on exactly
+     * $targetTotal rather than 99.98.
+     *
+     * @param  \Illuminate\Support\Collection<int, RubricCriterion>  $criteria
+     * @return int  how many criteria were changed
+     */
+    private function rebalanceCriteria($criteria, float $targetTotal): int
+    {
+        $current = $this->criteriaMaxPointsTotal($criteria);
+
+        // Nothing to scale, or already right. A rubric whose criteria total
+        // zero has no proportions to preserve, so leave it be rather than
+        // divide by zero.
+        if ($criteria->isEmpty() || $current <= 0.0 || abs($current - $targetTotal) < 0.0001) {
+            return 0;
+        }
+
+        if ($targetTotal <= 0.0) {
+            return 0;
+        }
+
+        $factor = $targetTotal / $current;
+        $changed = 0;
+        $scaled = [];
+
+        foreach ($criteria as $criterion) {
+            $levels = $criterion->decodedScoreLevels();
+
+            foreach ($levels as $i => $level) {
+                if (is_array($level) && isset($level['score']) && is_numeric($level['score'])) {
+                    $levels[$i]['score'] = round((float) $level['score'] * $factor, 2);
+                }
+            }
+
+            $scaled[] = [
+                'criterion' => $criterion,
+                'levels' => $levels,
+                'max' => $this->scoreLevelsMax($levels),
+            ];
+        }
+
+        // Put whatever rounding lost or gained onto the biggest criterion,
+        // where it is proportionally the smallest distortion.
+        $sum = array_sum(array_column($scaled, 'max'));
+        $drift = round($targetTotal - $sum, 2);
+
+        if (abs($drift) >= 0.01) {
+            $biggest = 0;
+            foreach ($scaled as $i => $row) {
+                if ($row['max'] > $scaled[$biggest]['max']) {
+                    $biggest = $i;
+                }
+            }
+
+            $scaled[$biggest]['levels'] = $this->shiftTopLevel($scaled[$biggest]['levels'], $drift);
+            $scaled[$biggest]['max'] = $this->scoreLevelsMax($scaled[$biggest]['levels']);
+        }
+
+        foreach ($scaled as $row) {
+            $row['criterion']->update([
+                'score_levels' => $row['levels'],
+                'max_points' => $row['max'],
+            ]);
+            $changed++;
+        }
+
+        return $changed;
+    }
+
+    /** Nudge the highest-scoring level by $delta, keeping the rest as they are. */
+    private function shiftTopLevel(array $levels, float $delta): array
+    {
+        $topIndex = null;
+
+        foreach ($levels as $i => $level) {
+            if (! is_array($level) || ! isset($level['score']) || ! is_numeric($level['score'])) {
+                continue;
+            }
+
+            if ($topIndex === null || (float) $level['score'] > (float) $levels[$topIndex]['score']) {
+                $topIndex = $i;
+            }
+        }
+
+        if ($topIndex !== null) {
+            $levels[$topIndex]['score'] = max(0, round((float) $levels[$topIndex]['score'] + $delta, 2));
+        }
+
+        return $levels;
+    }
+
     private function scoreLevelsMax(mixed $scoreLevels): float
     {
         $levels = is_array($scoreLevels) ? $scoreLevels : (json_decode((string) $scoreLevels, true) ?? []);
@@ -1487,9 +1606,31 @@ class AdminGradingRubricController extends Controller
                 ? $rubric->criteria->map(fn ($c) => $this->formatCriterion($c))->values()->toArray()
                 : [],
             'criteria_count' => $rubric->relationLoaded('criteria') ? $rubric->criteria->count() : 0,
+            // What the criteria actually add up to. Adding or editing a
+            // criterion rebalances the rest back to 100, but deleting one
+            // deliberately does not - silently inflating what everyone else
+            // is worth would change grades behind the CAPSA's back - so a
+            // rubric can sit below 100 and the page needs to be able to say so.
+            'criteria_total' => $rubric->relationLoaded('criteria')
+                ? round($this->criteriaMaxPointsTotal($rubric->criteria), 2)
+                : null,
             'created_at' => $rubric->created_at?->format('Y-m-d H:i:s'),
             'updated_at' => $rubric->updated_at?->format('Y-m-d H:i:s'),
         ];
+    }
+
+    /**
+     * Every criterion of a rubric, formatted.
+     *
+     * Returned alongside a create or update because rebalancing rewrites the
+     * OTHER criteria too - the page would otherwise still be showing their
+     * old point values.
+     *
+     * @param  \Illuminate\Support\Collection<int, RubricCriterion>  $criteria
+     */
+    private function formatCriteria($criteria): array
+    {
+        return $criteria->map(fn (RubricCriterion $c) => $this->formatCriterion($c))->values()->all();
     }
 
     private function formatCriterion(RubricCriterion $criterion): array

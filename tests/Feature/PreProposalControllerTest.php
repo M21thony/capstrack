@@ -610,4 +610,20 @@ class PreProposalControllerTest extends TestCase
         $response->assertSee('2023-2024');
         $response->assertSee('Ana Reyes, MIT');
     }
+
+    // The locked Submit button has to say what unlocks it, not just sit there
+    // greyed out.
+    public function test_the_locked_submit_button_says_how_many_titles_are_needed(): void
+    {
+        [$student, $team] = $this->makeLeaderWithTeam();
+        $this->mockSimilarityPipeline();
+        $this->actingAs($student, 'web');
+
+        $this->checkAndStore('p1.pdf');
+
+        $response = $this->get(route('student.duplication'));
+
+        $response->assertStatus(200);
+        $response->assertSee('Have at least 3 pre-proposal titles saved before you can submit. You have 1.');
+    }
 }

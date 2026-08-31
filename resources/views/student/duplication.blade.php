@@ -228,6 +228,33 @@
 .pp-submit-state-title { font-size: 12px; font-weight: 700; }
 .pp-submit-state-sub { font-size: 10.5px; opacity: 0.85; margin-top: 1px; }
 .pp-badge-draft { background: var(--bg4); color: var(--text3); }
+
+/* Tooltip on the locked Submit button, on a wrapper because a disabled
+   button emits no hover events of its own. */
+.pp-submit-wrap { position: relative; display: block; outline: none; }
+.pp-submit-wrap::after {
+  content: attr(data-tip);
+  position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translate(-50%, 3px); z-index: 40;
+  width: max-content; max-width: 230px; padding: 7px 10px; border-radius: 6px;
+  background: var(--text, #1e2128); color: #fff; font-size: 11px; font-weight: 500;
+  line-height: 1.45; text-align: left; white-space: normal;
+  box-shadow: 0 6px 18px -4px rgba(0,0,0,0.35);
+  opacity: 0; visibility: hidden; pointer-events: none;
+  transition: opacity .13s ease, transform .13s ease, visibility .13s;
+}
+.pp-submit-wrap::before {
+  content: ''; position: absolute; bottom: calc(100% + 3px); left: 50%; margin-left: -5px; z-index: 41;
+  border: 5px solid transparent; border-top-color: var(--text, #1e2128);
+  opacity: 0; visibility: hidden; pointer-events: none;
+  transition: opacity .13s ease, visibility .13s;
+}
+.pp-submit-wrap:hover::after, .pp-submit-wrap:focus-visible::after {
+  opacity: 1; visibility: visible; transform: translate(-50%, 0);
+}
+.pp-submit-wrap:hover::before, .pp-submit-wrap:focus-visible::before { opacity: 1; visibility: visible; }
+@media (prefers-reduced-motion: reduce) {
+  .pp-submit-wrap::after, .pp-submit-wrap::before { transition: none; }
+}
 .pp-tag-list { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
 .pp-tag { display: inline-flex; align-items: center; gap: 6px; background: var(--bg3); border: 1px solid var(--border); border-radius: 6px; padding: 4px 10px; font-size: 12px; color: var(--text2); }
 .pp-tag button { border: none; background: none; color: var(--text3); cursor: pointer; font-size: 12px; padding: 0; }
@@ -576,10 +603,17 @@
               </form>
               <div class="pp-submit-note">Hands all {{ $proposals->count() }} titles to your CaPSA to review.</div>
             @else
-              <button type="button" class="btn pp-btn-submit" disabled>
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                Submit for Checking
-              </button>
+              {{-- The wrapper carries the tooltip: a disabled button fires
+                   no hover events of its own. --}}
+              <span class="pp-submit-wrap"
+                    data-tip="Have at least {{ $minimumProposals }} pre-proposal titles saved before you can submit. You have {{ $proposals->count() }}."
+                    tabindex="0" role="note"
+                    aria-label="Have at least {{ $minimumProposals }} pre-proposal titles saved before you can submit. You have {{ $proposals->count() }}.">
+                <button type="button" class="btn pp-btn-submit" disabled>
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                  Submit for Checking
+                </button>
+              </span>
               <div class="pp-submit-note">
                 {{ $proposals->count() }} of {{ $minimumProposals }} saved &mdash; save
                 {{ $minimumProposals - $proposals->count() }} more
