@@ -19,19 +19,23 @@ use Illuminate\Validation\Rule;
  * A milestone used to appear only as a side effect of posting an
  * announcement, came out with team_id null - so every reader that looks them
  * up by team could not see it - and had no way to be edited or deleted
- * afterwards. Everything here is deliberate: a milestone is created for a
- * team, on purpose, and can be changed or removed.
+ * afterwards. Everything here is deliberate: a checklist is given to a
+ * section, on purpose, and can be changed or removed.
  *
- * The section-wide create is the one that matters in practice. A CaPSA runs a
- * section and every team in it works from the same checklist, so making
- * nineteen items for one team at a time would be the wrong unit of work.
+ * A section is the unit. A CaPSA runs sections, and every team in one works
+ * from the same checklist, so handing them out a team at a time was work with
+ * no purpose behind it.
  */
 class MilestoneController extends Controller
 {
     public function __construct(private SectionScope $sections) {}
 
     /**
-     * Create a milestone, for one team or for every team in a section.
+     * Give a section its checklist.
+     *
+     * A section is the unit, not a team: every team in one works from the
+     * same checklist, so handing them out a team at a time was work with no
+     * purpose behind it.
      *
      * Applying a template is the normal path; a bare milestone with no items
      * is allowed so a CaPSA can build Capstone 2 by hand, which is exactly
@@ -40,9 +44,7 @@ class MilestoneController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'scope' => ['required', Rule::in(['team', 'section'])],
-            'team_id' => ['required_if:scope,team', 'nullable', 'integer', 'exists:team,team_id'],
-            'section' => ['required_if:scope,section', 'nullable', 'string'],
+            'section' => ['required', 'string'],
             'title' => ['required_without:template', 'nullable', 'string', 'max:255'],
             'template' => ['nullable', 'string'],
             'due_date' => ['nullable', 'date'],
@@ -56,7 +58,7 @@ class MilestoneController extends Controller
         $teams = $this->targetTeams($validated);
 
         if ($teams->isEmpty()) {
-            return response()->json(['message' => 'No teams of yours matched that.'], 422);
+            return response()->json(['message' => 'No teams of yours are in that section.'], 422);
         }
 
         $title = $validated['title']
@@ -233,20 +235,13 @@ class MilestoneController extends Controller
         return response()->json(['success' => true, 'data' => $this->present($milestone->fresh())]);
     }
 
-    /** The teams this create applies to, always inside the CaPSA's sections. */
+    /** Every team in the section, and only if it is one of the CaPSA's. */
     private function targetTeams(array $validated): \Illuminate\Support\Collection
     {
         /** @var CapstoneExpert $capsa */
         $capsa = auth('expert')->user();
-        $capsaSections = $capsa->sections ?? [];
 
-        if ($validated['scope'] === 'team') {
-            $team = Team::find($validated['team_id']);
-
-            return $team && $this->canSee($team, $capsaSections) ? collect([$team]) : collect();
-        }
-
-        if (! $this->sections->covers($capsaSections, $validated['section'])) {
+        if (! $this->sections->covers($capsa->sections ?? [], $validated['section'])) {
             return collect();
         }
 

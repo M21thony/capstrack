@@ -72,14 +72,13 @@ class CapsaMilestoneEditorTest extends TestCase
         return [$team, $leader];
     }
 
-    public function test_a_milestone_is_created_for_a_team_with_the_checklist_on_it(): void
+    public function test_a_section_gets_its_checklist(): void
     {
         $this->makeCapsaWithSections();
         [$team] = $this->makeTeamInSection('Team One');
 
         $response = $this->postJson(route('admin.milestones.store'), [
-            'scope' => 'team',
-            'team_id' => $team->team_id,
+            'section' => $this->section(),
             'template' => MilestoneTemplate::CAPSTONE_1,
             'due_date' => now()->addMonth()->toDateString(),
         ]);
@@ -94,10 +93,7 @@ class CapsaMilestoneEditorTest extends TestCase
         $response->assertJsonPath('data.0.completed', 0);
     }
 
-    /**
-     * The unit of work that matters: every team in a section works from the
-     * same checklist, so it is made for the section in one go.
-     */
+    /** Every team in the section gets it, not just one. */
     public function test_a_checklist_can_be_given_to_a_whole_section_at_once(): void
     {
         $this->makeCapsaWithSections();
@@ -105,7 +101,6 @@ class CapsaMilestoneEditorTest extends TestCase
         [$b] = $this->makeTeamInSection('Team B');
 
         $this->postJson(route('admin.milestones.store'), [
-            'scope' => 'section',
             'section' => $this->section(),
             'template' => MilestoneTemplate::CAPSTONE_1,
         ])->assertOk();
@@ -122,7 +117,6 @@ class CapsaMilestoneEditorTest extends TestCase
         [$team] = $this->makeTeamInSection('Team One');
 
         $payload = [
-            'scope' => 'section',
             'section' => $this->section(),
             'template' => MilestoneTemplate::CAPSTONE_1,
         ];
@@ -141,8 +135,7 @@ class CapsaMilestoneEditorTest extends TestCase
         [$team] = $this->makeTeamInSection('Team One');
 
         $this->postJson(route('admin.milestones.store'), [
-            'scope' => 'team',
-            'team_id' => $team->team_id,
+            'section' => $this->section(),
             'title' => 'Capstone 2',
         ])->assertOk();
 
@@ -246,8 +239,7 @@ class CapsaMilestoneEditorTest extends TestCase
         [$team] = $this->makeTeamInSection('Team One');
 
         $this->postJson(route('admin.milestones.store'), [
-            'scope' => 'team',
-            'team_id' => $team->team_id,
+            'section' => $this->section(),
             'template' => MilestoneTemplate::CAPSTONE_1,
         ])->assertOk();
 
@@ -280,8 +272,7 @@ class CapsaMilestoneEditorTest extends TestCase
         [$team] = $this->makeTeamInSection('Team One');
 
         $this->postJson(route('admin.milestones.store'), [
-            'scope' => 'team',
-            'team_id' => $team->team_id,
+            'section' => $this->section(),
             'template' => MilestoneTemplate::CAPSTONE_1,
         ])->assertOk();
 

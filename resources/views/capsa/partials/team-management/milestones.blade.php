@@ -118,10 +118,7 @@
               @if (! $row->milestone)
                 {{-- Nineteen empty cells said nothing except "this row is
                      blank". One line says why, and offers the fix. --}}
-                <td class="ms-none" colspan="{{ $grid->columns->count() }}">
-                  No checklist yet &mdash;
-                  <button type="button" class="ms-give" onclick="openMilestoneModal({{ $row->team->team_id }})">give this team one</button>
-                </td>
+                <td class="ms-none" colspan="{{ $grid->columns->count() }}">No checklist yet</td>
               @else
               @foreach ($grid->columns as $col)
                 @php
@@ -188,8 +185,6 @@
   <div class="modal-box" style="max-width:440px">
     <div class="modal-title">New checklist</div>
     <form onsubmit="createMilestone(event)">
-      <input type="hidden" name="team_id" id="ms-team-id"/>
-
       <label class="ms-label">Checklist</label>
       <select class="input" name="template" id="ms-template" onchange="onTemplateChange()">
         @foreach ($templates as $key => $template)
@@ -206,18 +201,21 @@
       <label class="ms-label">Due date <span style="font-weight:400;color:var(--text3)">(optional)</span></label>
       <input class="input" type="date" name="due_date"/>
 
-      <label class="ms-label">Give it to</label>
-      <select class="input" name="scope" id="ms-scope">
-        <option value="team">This team only</option>
-        <option value="section">Every team in {{ $selectedSection ?: 'the section' }}</option>
-      </select>
-      @unless ($selectedSection)
-        <div class="ms-hint">Pick a section above to give a checklist to every team at once.</div>
-      @endunless
+      {{-- Always the whole section. Every team in a section works from the
+           same checklist, so handing them out one team at a time was work
+           with no purpose. --}}
+      <div class="ms-hint">
+        @if ($selectedSection)
+          Goes to every team in <strong>{{ $selectedSection }}</strong>. Teams that already have
+          this checklist keep whatever is ticked.
+        @else
+          Choose a section above first &mdash; a checklist goes to the whole section.
+        @endif
+      </div>
 
       <div class="modal-actions">
         <button type="button" class="btn btn-ghost" onclick="closeMilestoneModal()">Cancel</button>
-        <button type="submit" class="btn btn-primary">Create</button>
+        <button type="submit" class="btn btn-primary" @disabled(! $selectedSection)>Create</button>
       </div>
     </form>
   </div>
@@ -248,9 +246,7 @@ function msPost(url, body, method = 'POST') {
 // server.
 function msReload() { window.location.reload(); }
 
-function openMilestoneModal(teamId) {
-  document.getElementById('ms-team-id').value = teamId || '';
-  document.getElementById('ms-scope').value = teamId ? 'team' : (MS_SECTION ? 'section' : 'team');
+function openMilestoneModal() {
   document.getElementById('ms-modal').classList.add('open');
 }
 function closeMilestoneModal() { document.getElementById('ms-modal').classList.remove('open'); }
@@ -263,22 +259,15 @@ function onTemplateChange() {
 
 function createMilestone(e) {
   e.preventDefault();
-  const form = new FormData(e.target);
-  const scope = form.get('scope');
-  const teamId = form.get('team_id');
 
-  if (scope === 'team' && !teamId) {
-    alert('Use the button on a team to give that team a checklist.');
+  if (!MS_SECTION) {
+    alert('Choose a section above first.');
     return;
   }
-  if (scope === 'section' && !MS_SECTION) {
-    alert('Pick a section above first.');
-    return;
-  }
+
+  const form = new FormData(e.target);
 
   msPost('{{ route('admin.milestones.store') }}', {
-    scope,
-    team_id: teamId || null,
     section: MS_SECTION,
     template: form.get('template') || null,
     title: form.get('title') || null,
