@@ -372,15 +372,24 @@ function criterionScore(c) {
 //
 // Mirrors rebalanceCriteria() in Api\AdminGradingRubricController.
 function fitCriteriaTo100(exceptIndex) {
-  var target = 100;
-  var fixed = 0;
+  // What is left for the adjustable ones: 100 minus the criterion just
+  // edited, minus every other figure already set by hand. Leaving the other
+  // set figures out of this sum was what pushed the rubric past 100.
+  var fixed = draftCriteria.reduce(function (sum, c, i) {
+    if (i === exceptIndex || c.pinned) return sum + criterionScore(c);
+    return sum;
+  }, 0);
 
-  if (typeof exceptIndex === 'number' && draftCriteria[exceptIndex]) {
-    fixed = criterionScore(draftCriteria[exceptIndex]);
-    target = round2(100 - fixed);
-  }
+  var target = round2(100 - fixed);
 
-  var others = draftCriteria.filter(function (c, i) { return i !== exceptIndex; });
+  // The points come out of criteria you have NOT set yourself.
+  //
+  // Taking them from everything meant setting the second criterion to 10
+  // clawed points back off the first one you had just set to 10 - so nothing
+  // ever stayed where it was put and the rubric could not be typed in. A
+  // figure you have entered is now left alone, and only the ones still
+  // holding their default absorb the difference.
+  var others = draftCriteria.filter(function (c, i) { return i !== exceptIndex && !c.pinned; });
   var current = others.reduce(function (sum, c) { return sum + criterionScore(c); }, 0);
 
   if (!others.length || current <= 0 || target <= 0) return false;
@@ -442,15 +451,40 @@ function round2(n) {
 function fitOnScoreCommitted(index) {
   newCriterionIndex = null;
 
-  if (draftCriteria.length < 2) { updateTotalPts(); return; }
+  // You typed this figure, so it stops being something the rubric can take
+  // points from. Click the marker on the row to release it again.
+  if (draftCriteria[index]) draftCriteria[index].pinned = true;
+
+  if (draftCriteria.length < 2) { updateTotalPts(); refreshPinMarkers(); return; }
 
   // Written straight into the inputs already on the page rather than
   // re-rendering - rebuilding the list destroyed the very box being typed in,
   // which is what made the Excellent field impossible to change.
   splitLowerLevels(index);
-  fitCriteriaTo100(index);
+  var moved = fitCriteriaTo100(index);
   syncScoreInputs();
   updateTotalPts();
+  refreshPinMarkers();
+
+  if (!moved && !isAtHundred(draftTotal())) {
+    toast('Every other criterion is set too, so there is nothing left to adjust.');
+  }
+}
+
+// Paint the "you set this" markers without rebuilding the list, so the box
+// being typed in survives.
+function refreshPinMarkers() {
+  draftCriteria.forEach(function (c, i) {
+    var card = document.getElementById('crc-' + i);
+    if (card) card.classList.toggle('pinned', !!c.pinned);
+  });
+}
+
+// Let a figure go back to being adjustable.
+function unpinCriterion(i) {
+  if (!draftCriteria[i]) return;
+  draftCriteria[i].pinned = false;
+  refreshPinMarkers();
 }
 
 // Setting what a criterion is worth spreads that down its lower levels.
@@ -651,7 +685,7 @@ function renderCriterionCard(cr, i) {
   var hasDescErr = !!(descErrors[i] && descErrors[i].some(Boolean));
   var open = openCriterion === i;
 
-  return '<div class="rb-criterion-card' + (open ? ' open' : '') + (hasNameErr || hasDescErr ? ' rb-card-error' : '') + '" id="crc-' + i + '">' +
+  return '<div class="rb-criterion-card' + (open ? ' open' : '') + (cr.pinned ? ' pinned' : '') + (hasNameErr || hasDescErr ? ' rb-card-error' : '') + '" id="crc-' + i + '">' +
 
     // ---- the row that is always visible ----
     '<div class="rb-crit-row">' +
@@ -660,6 +694,7 @@ function renderCriterionCard(cr, i) {
       '</button>' +
       '<div class="rb-crit-num">' + (i + 1) + '</div>' +
       '<input class="input rb-crit-name-input' + (hasNameErr ? ' rb-error' : '') + '" value="' + escHtml(cr.name) + '" placeholder="Criterion name (e.g. Oral Presentation)&hellip;" oninput="draftCriteria[' + i + '].name=this.value;clearNameError(' + i + ',this)"/>' +
+      '<button type="button" class="rb-pin" onclick="unpinCriterion(' + i + ')" title="You set this, so its points are left alone. Click to let it adjust again."><svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></button>' +
       '<div class="rb-crit-row-pts">' +
         '<input type="number" class="input rb-score-tiny" id="sc-' + i + '-0" value="' + cr.levels[0].score + '" placeholder="0" title="What this criterion is worth" oninput="draftCriteria[' + i + '].levels[0].score=+this.value;updateTotalPts()" onchange="fitOnScoreCommitted(' + i + ')" min="0" step="0.25"/>' +
         '<span class="rb-pts-unit">pts</span>' +
@@ -902,6 +937,9 @@ function openNewRubricModal() {
   document.getElementById('modal-form-sub').textContent = 'Fill in the details below to create a grading rubric.';
   document.getElementById('form-save-label').textContent = 'Save Rubric';
   draftCriteria = [];
+  // A rubric arrives with nothing pinned - only figures set in this sitting
+  // are held.
+  draftCriteria.forEach(function (c) { c.pinned = false; });
   nameErrors = [];
   descErrors = [];
   goToStep1();
@@ -1108,6 +1146,9 @@ function editRubric(id) {
     if (r.checked) r.closest('.rb-type-opt').classList.add('selected');
   });
   draftCriteria = JSON.parse(JSON.stringify(rb.criteria));
+  // A rubric arrives with nothing pinned - only figures set in this sitting
+  // are held.
+  draftCriteria.forEach(function (c) { c.pinned = false; });
   nameErrors = [];
   descErrors = [];
   goToStep1();
