@@ -47,12 +47,22 @@ class StudentFinancialController extends Controller
         $team = $student->team;
         $teamStatus = $team?->team_status;
 
-        $teamNotComplete = $team && $teamStatus !== 'complete';
+        // The page asked whether team_status was 'complete'. That value no
+        // longer exists - a team is Active or Full now - so the lock could
+        // never come off, while the submit endpoint had already moved on to
+        // asking whether the team has turned its pre-proposals in. One rule,
+        // and it is the endpoint's, so the form is open exactly when a
+        // receipt would be accepted.
+        $canSubmitReceipts = (bool) $team
+            && ($team->hasSubmittedPreProposals() || $team->is_confirmed);
+
+        $teamNotComplete = $team && ! $canSubmitReceipts;
 
         return view('student.financial', compact(
             'expensePosts',
             'submissions',
             'teamStatus',
+            'canSubmitReceipts',
             'teamNotComplete',
         ));
     }
