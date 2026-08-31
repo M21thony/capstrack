@@ -8,6 +8,7 @@ use App\Models\Recruitment;
 use App\Models\Student;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
+use App\Models\Term;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -913,5 +914,61 @@ class TeamCreationTest extends TestCase
         $this->assertContains($studentWithTeam->student_id, $ids, 'Classmate with team should appear despite corrupted leader school_year');
         $this->assertContains($studentWithoutTeam->student_id, $ids, 'Classmate without team should appear despite corrupted leader school_year');
         $this->assertNotContains($leader->student_id, $ids, 'Leader should not appear in their own list');
+    }
+
+    // -- School year: one answer, written everywhere ----------------------
+
+    /**
+     * student_s_y.school_year was declared year(), which holds one four-digit
+     * year and nothing else, so every write of "2026-2027" was truncated
+     * away - the live table held nineteen nulls and a "0000". The classmate
+     * picker filters on that column, so it could never match anybody.
+     */
+    public function test_creating_a_team_records_a_usable_school_year(): void
+    {
+        $leader = Student::factory()->withCompleteProfile()->create([
+            'email' => 'leader@my.cspc.edu.ph', 'course' => 'BSIT', 'year_section' => '3 . B',
+        ]);
+
+        $this->actingAs($leader, 'web')
+            ->post(route('team.store'), ['team_name' => 'Year Team'])
+            ->assertRedirect();
+
+        $row = StudentSchoolYear::where('student_id', $leader->student_id)->first();
+
+        $this->assertNotNull($row, 'Team creation wrote no school-year row at all.');
+        $this->assertMatchesRegularExpression(
+            '/^\d{4}-\d{4}$/',
+            (string) $row->school_year,
+            'The row landed with no usable school year, so nothing filtering on it can match.'
+        );
+        $this->assertSame(Term::currentSchoolYear(), $row->school_year);
+    }
+
+    /** And with a year that means something, the picker can find people. */
+    public function test_a_new_leader_can_see_a_classmate_straight_away(): void
+    {
+        $leader = Student::factory()->withCompleteProfile()->create([
+            'email' => 'newleader@my.cspc.edu.ph', 'course' => 'BSIT', 'year_section' => '3 . B', 'l_name' => 'Leader',
+        ]);
+        $mate = Student::factory()->withCompleteProfile()->create([
+            'email' => 'newmate@my.cspc.edu.ph', 'course' => 'BSIT', 'year_section' => '3 . B', 'l_name' => 'Classmate',
+        ]);
+
+        // The classmate's own row, written the same way a profile setup does.
+        StudentSchoolYear::create(['student_id' => $mate->student_id, 'team_id' => null]);
+
+        $this->actingAs($leader, 'web')
+            ->post(route('team.store'), ['team_name' => 'Picker Team'])
+            ->assertRedirect();
+
+        $names = collect(
+            $this->actingAs($leader, 'web')
+                ->getJson(route('team.available-classmates'))
+                ->assertOk()
+                ->json('classmates')
+        )->pluck('student_id');
+
+        $this->assertContains($mate->student_id, $names->all());
     }
 }
