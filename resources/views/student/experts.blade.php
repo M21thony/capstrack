@@ -35,6 +35,7 @@
 .slot-remove { background: none; border: none; cursor: pointer; color: var(--text3); padding: 3px; border-radius: 5px; flex-shrink: 0; display: flex; }
 .slot-remove:hover { color: var(--red); background: var(--red-bg); }
 .slot-pending { margin-top: 11px; padding-top: 11px; border-top: 1px solid var(--border); font-size: 12px; color: var(--text2); display: flex; align-items: center; gap: 7px; }
+.slot-pending-none { background: var(--bg4); color: var(--text3); }
 .slot-pending-n { font-family: 'Space Mono', monospace; font-size: 10px; font-weight: 700; padding: 1px 7px; border-radius: 999px; background: var(--amber-bg); color: var(--amber); }
 .req-notice { font-size: 12.5px; color: var(--text2); background: var(--bg3); border: 1px dashed var(--border); border-radius: 10px; padding: 12px 14px; margin-bottom: 20px; }
 .rg-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
@@ -371,12 +372,22 @@
           </div>
         @endforeach
 
-        @if($pendingCount > 0)
-          <div class="slot-pending">
+        {{-- Always drawn, even at nothing. Hiding it when the team had made
+             no applications meant the page said nothing at all about
+             requests, so there was no way to learn where they would appear
+             before you had one - the Request Experts section below is
+             conditional too, so both vanished together. --}}
+        <div class="slot-pending">
+          @if($pendingCount > 0)
             <span class="slot-pending-n">{{ $pendingCount }}</span>
             {{ $pendingCount === 1 ? 'request waiting on a reply' : 'requests waiting on a reply' }}
-          </div>
-        @endif
+          @elseif($assignments->isNotEmpty())
+            No requests waiting &mdash; see the list below.
+          @else
+            <span class="slot-pending-n slot-pending-none">0</span>
+            No requests out yet.
+          @endif
+        </div>
       </div>
       @endif
 

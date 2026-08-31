@@ -148,10 +148,11 @@ class StudentExpertsPageRolesTest extends TestCase
     }
 
     /**
-     * The counterpart: with nothing requested the section stays away, which is
-     * the whole reason it became conditional.
+     * With nothing requested the section stays away - but the page still has
+     * to say so somewhere, or there is no way to find out where requests
+     * appear before you have made one.
      */
-    public function test_the_request_section_is_absent_when_there_is_nothing_in_it(): void
+    public function test_the_request_section_is_absent_but_still_accounted_for(): void
     {
         [$student] = $this->makeLeaderWithTeam();
 
@@ -160,6 +161,9 @@ class StudentExpertsPageRolesTest extends TestCase
         $response->assertStatus(200);
         $response->assertDontSee('class="req-section"', false);
         $response->assertDontSee('waiting on a reply');
+
+        // The signpost stays put at zero.
+        $response->assertSee('No requests out yet.');
     }
 
     /** The "Your Team's Experts" panel only. */
