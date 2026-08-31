@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Http\Controllers\PreProposalController;
 use App\Models\ArchivedDocument;
 use App\Models\CapstonePreProposal;
 use App\Models\DuplicationCheck;
@@ -129,6 +130,20 @@ class PreProposalControllerTest extends TestCase
         $this->post(route('student.pre-proposal.store'), $this->payload($checkId));
     }
 
+    /**
+     * Keep exactly as many drafts as submitting currently requires.
+     *
+     * Written against the constant rather than a literal count: these tests
+     * all seeded three, so raising the minimum to four failed seven of them
+     * for no reason other than the number being spelled out in each one.
+     */
+    private function saveTheMinimum(): void
+    {
+        foreach (range(1, PreProposalController::MINIMUM_PROPOSALS) as $n) {
+            $this->checkAndStore("p{$n}.pdf");
+        }
+    }
+
     // Saving keeps a draft. It used to stamp submitted_at and, on the third
     // one, silently flip the team to complete - so a team was in front of
     // their CAPSA before they had said they were ready.
@@ -138,12 +153,10 @@ class PreProposalControllerTest extends TestCase
         $this->mockSimilarityPipeline();
         $this->actingAs($student, 'web');
 
-        $this->checkAndStore('p1.pdf');
-        $this->checkAndStore('p2.pdf');
-        $this->checkAndStore('p3.pdf');
+        $this->saveTheMinimum();
 
         $this->assertSame('Active', $team->fresh()->team_status);
-        $this->assertSame(3, $team->preProposals()->count());
+        $this->assertSame(PreProposalController::MINIMUM_PROPOSALS, $team->preProposals()->count());
         $this->assertSame(0, $team->preProposals()->whereNotNull('submitted_at')->count());
     }
 
@@ -168,12 +181,13 @@ class PreProposalControllerTest extends TestCase
         $this->mockSimilarityPipeline();
         $this->actingAs($student, 'web');
 
-        foreach (['p1.pdf', 'p2.pdf', 'p3.pdf', 'p4.pdf'] as $file) {
-            $this->checkAndStore($file);
-        }
+        $this->saveTheMinimum();
+        $this->checkAndStore('one-more.pdf');
 
-        $this->assertSame(4, $team->preProposals()->count());
-        $this->assertDatabaseHas('capstone_pre_proposals', ['team_id' => $team->team_id, 'slot' => 4]);
+        $beyond = PreProposalController::MINIMUM_PROPOSALS + 1;
+
+        $this->assertSame($beyond, $team->preProposals()->count());
+        $this->assertDatabaseHas('capstone_pre_proposals', ['team_id' => $team->team_id, 'slot' => $beyond]);
     }
 
     // A rejected title used to be written over by the next save. It now stays
@@ -184,15 +198,17 @@ class PreProposalControllerTest extends TestCase
         $this->mockSimilarityPipeline();
         $this->actingAs($student, 'web');
 
-        $this->checkAndStore('p1.pdf');
-        $this->checkAndStore('p2.pdf');
-        $this->checkAndStore('p3.pdf');
+        $this->saveTheMinimum();
 
         $team->preProposals()->where('slot', 2)->first()->update(['rejection_reason' => 'Too similar to an archived project.']);
 
         $this->checkAndStore('p2-revised.pdf');
 
-        $this->assertSame(4, $team->preProposals()->count());
+        $this->assertSame(
+            PreProposalController::MINIMUM_PROPOSALS + 1,
+            $team->preProposals()->count(),
+            'The rejected title should be kept and the replacement saved beside it.',
+        );
         $this->assertSame(
             'Too similar to an archived project.',
             $team->preProposals()->where('slot', 2)->first()->rejection_reason,
@@ -223,13 +239,11 @@ class PreProposalControllerTest extends TestCase
         $this->mockSimilarityPipeline();
         $this->actingAs($student, 'web');
 
-        $this->checkAndStore('p1.pdf');
-        $this->checkAndStore('p2.pdf');
-        $this->checkAndStore('p3.pdf');
+        $this->saveTheMinimum();
 
         $this->post(route('student.pre-proposal.submit'))->assertSessionHas('status');
 
-        $this->assertSame(3, $team->preProposals()->whereNotNull('submitted_at')->count());
+        $this->assertSame(PreProposalController::MINIMUM_PROPOSALS, $team->preProposals()->whereNotNull('submitted_at')->count());
         $this->assertTrue($team->fresh()->hasSubmittedPreProposals());
         $this->assertSame('Active', $team->fresh()->team_status, 'turning in is not a recruitment change');
     }
@@ -243,9 +257,7 @@ class PreProposalControllerTest extends TestCase
         StudentSchoolYear::create(['student_id' => $member->student_id, 'team_id' => $team->team_id]);
 
         $this->actingAs($member, 'web');
-        $this->checkAndStore('p1.pdf');
-        $this->checkAndStore('p2.pdf');
-        $this->checkAndStore('p3.pdf');
+        $this->saveTheMinimum();
 
         $this->post(route('student.pre-proposal.submit'))->assertSessionHas('error');
         $this->assertSame(0, $team->preProposals()->whereNotNull('submitted_at')->count());
@@ -257,9 +269,7 @@ class PreProposalControllerTest extends TestCase
         $this->mockSimilarityPipeline();
         $this->actingAs($student, 'web');
 
-        $this->checkAndStore('p1.pdf');
-        $this->checkAndStore('p2.pdf');
-        $this->checkAndStore('p3.pdf');
+        $this->saveTheMinimum();
         $this->post(route('student.pre-proposal.submit'));
 
         $this->post(route('student.pre-proposal.unsubmit'))->assertSessionHas('status');
@@ -276,15 +286,13 @@ class PreProposalControllerTest extends TestCase
         $this->mockSimilarityPipeline();
         $this->actingAs($student, 'web');
 
-        $this->checkAndStore('p1.pdf');
-        $this->checkAndStore('p2.pdf');
-        $this->checkAndStore('p3.pdf');
+        $this->saveTheMinimum();
         $this->post(route('student.pre-proposal.submit'));
 
         $team->preProposals()->where('slot', 1)->first()->update(['approved_status' => true]);
 
         $this->post(route('student.pre-proposal.unsubmit'))->assertSessionHas('error');
-        $this->assertSame(3, $team->preProposals()->whereNotNull('submitted_at')->count());
+        $this->assertSame(PreProposalController::MINIMUM_PROPOSALS, $team->preProposals()->whereNotNull('submitted_at')->count());
     }
 
     public function test_a_turned_in_set_cannot_be_added_to(): void
@@ -293,9 +301,7 @@ class PreProposalControllerTest extends TestCase
         $this->mockSimilarityPipeline();
         $this->actingAs($student, 'web');
 
-        $this->checkAndStore('p1.pdf');
-        $this->checkAndStore('p2.pdf');
-        $this->checkAndStore('p3.pdf');
+        $this->saveTheMinimum();
         $this->post(route('student.pre-proposal.submit'));
 
         $checkId = $this->post(route('student.pre-proposal.check'), [
@@ -305,7 +311,7 @@ class PreProposalControllerTest extends TestCase
         $this->post(route('student.pre-proposal.store'), $this->payload($checkId))
             ->assertSessionHas('error');
 
-        $this->assertSame(3, $team->preProposals()->count());
+        $this->assertSame(PreProposalController::MINIMUM_PROPOSALS, $team->preProposals()->count());
     }
 
     // team_status only carries recruitment now, so "complete" is not a value
@@ -460,9 +466,7 @@ class PreProposalControllerTest extends TestCase
         $this->mockSimilarityPipeline();
         $this->actingAs($student, 'web');
 
-        $this->checkAndStore('p1.pdf');
-        $this->checkAndStore('p2.pdf');
-        $this->checkAndStore('p3.pdf');
+        $this->saveTheMinimum();
         $this->post(route('student.pre-proposal.submit'));
 
         $proposal = $team->preProposals()->where('slot', 1)->first();
@@ -624,6 +628,6 @@ class PreProposalControllerTest extends TestCase
         $response = $this->get(route('student.duplication'));
 
         $response->assertStatus(200);
-        $response->assertSee('Have at least 3 pre-proposal titles saved before you can submit. You have 1.');
+        $response->assertSee('Have at least '.PreProposalController::MINIMUM_PROPOSALS.' pre-proposal titles saved before you can submit. You have 1.');
     }
 }
