@@ -60,13 +60,26 @@ class TeamController extends Controller
             'leader_id' => $student->student_id,
         ]);
 
+        $computedSchoolYear = now()->month >= 8
+            ? now()->year.'-'.(now()->year + 1)
+            : (now()->year - 1).'-'.now()->year;
+
         DB::table('student_s_y')
             ->updateOrInsert(
+<<<<<<< HEAD
                 // Keyed on the term too: this table is one row per student PER
                 // TERM, so keying on the student alone would overwrite last
                 // semester's record instead of starting this one.
                 ['student_id' => $student->student_id, 'term_id' => \App\Models\Term::activeId()],
                 ['team_id' => $team->team_id, 's_role_id' => StudentRole::leaderRoleId()]
+=======
+                ['student_id' => $student->student_id],
+                [
+                    'team_id' => $team->team_id,
+                    's_role_id' => StudentRole::leaderRoleId(),
+                    'school_year' => $computedSchoolYear,
+                ]
+>>>>>>> updatedTeamManagement
             );
 
         $recruitment = Recruitment::where('student_id', $student->student_id)

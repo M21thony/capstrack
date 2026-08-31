@@ -7,6 +7,7 @@ use App\Models\Announcement;
 use App\Models\CapstoneExpert;
 use App\Models\DefensePanel;
 use App\Models\DefenseSchedule;
+use App\Models\GradingRubric;
 use App\Models\PanelGrade;
 use App\Models\Student;
 use App\Models\StudentSchoolYear;
@@ -517,7 +518,7 @@ class StudentDashboardTest extends TestCase
 
     private function makeRubricId(): int
     {
-        return \App\Models\GradingRubric::create([
+        return GradingRubric::create([
             'rubric_name' => 'Test Rubric',
             'rubric_type' => 'Pre-Proposal Defense',
             'total_points' => 100,

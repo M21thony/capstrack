@@ -19,7 +19,10 @@ use Carbon\CarbonPeriod;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+<<<<<<< HEAD
 use Illuminate\Support\Facades\Log;
+=======
+>>>>>>> updatedTeamManagement
 use Illuminate\View\View;
 
 class AdminPanelAssignmentController extends Controller
@@ -918,7 +921,7 @@ class AdminPanelAssignmentController extends Controller
 
     // A team's own adviser/consultant can't also evaluate them on the
     // defense panel - conflict of interest.
-    private function teamAdviserConsultantIds(Team $team): \Illuminate\Support\Collection
+    private function teamAdviserConsultantIds(Team $team): Collection
     {
         return TeamExpertAssignment::where('team_id', $team->team_id)
             ->where('status', 'approved')
@@ -1112,6 +1115,7 @@ class AdminPanelAssignmentController extends Controller
                 foreach ($candidates as $candidate) {
                     if (str_contains($field, $candidate) || str_contains($candidate, $field)) {
                         $matched[] = $tag;
+
                         continue 3;
                     }
                 }

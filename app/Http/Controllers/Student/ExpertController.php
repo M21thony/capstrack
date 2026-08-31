@@ -180,6 +180,7 @@ class ExpertController extends Controller
             'engagedExpertIds' => $engagedExpertIds,
         ]);
     }
+<<<<<<< HEAD
 
     /**
      * Neutralise LIKE's own wildcards so a skill containing % or _ is
@@ -190,4 +191,6 @@ class ExpertController extends Controller
     {
         return str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $value);
     }
+=======
+>>>>>>> updatedTeamManagement
 }

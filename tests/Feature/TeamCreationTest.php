@@ -711,4 +711,230 @@ class TeamCreationTest extends TestCase
             'is_read' => false,
         ]);
     }
+
+    public function test_leader_sees_all_classmates_in_invite_modal_including_those_with_teams(): void
+    {
+        $course = 'Bachelor of Science in Information Technology';
+        $yearSection = '3rd · B';
+        $schoolYear = 2026;
+
+        $leader = Student::create([
+            'email' => 'leader.invite@example.com',
+            'f_name' => 'Leader',
+            'l_name' => 'Alpha',
+            'student_number' => '2026-1001',
+            'course' => $course,
+            'year_section' => $yearSection,
+        ]);
+
+        $team1 = Team::create([
+            'team_name' => 'Team One',
+            'team_status' => 'on-going',
+            'leader_id' => $leader->student_id,
+        ]);
+
+        // Student2 — already in a DIFFERENT team
+        $studentWithTeam = Student::create([
+            'email' => 'withteam.invite@example.com',
+            'f_name' => 'Bravo',
+            'l_name' => 'Beta',
+            'student_number' => '2026-1002',
+            'course' => $course,
+            'year_section' => $yearSection,
+        ]);
+
+        $team2 = Team::create([
+            'team_name' => 'Team Two',
+            'team_status' => 'on-going',
+            'leader_id' => $studentWithTeam->student_id,
+        ]);
+
+        // Student3 — no team yet
+        $studentWithoutTeam = Student::create([
+            'email' => 'withoutteam.invite@example.com',
+            'f_name' => 'Charlie',
+            'l_name' => 'Gamma',
+            'student_number' => '2026-1003',
+            'course' => $course,
+            'year_section' => $yearSection,
+        ]);
+
+        // Create student_s_y records for all three
+        StudentSchoolYear::create(['student_id' => $leader->student_id, 'team_id' => $team1->team_id, 'school_year' => $schoolYear]);
+        StudentSchoolYear::create(['student_id' => $studentWithTeam->student_id, 'team_id' => $team2->team_id, 'school_year' => $schoolYear]);
+        StudentSchoolYear::create(['student_id' => $studentWithoutTeam->student_id, 'team_id' => null, 'school_year' => $schoolYear]);
+
+        $this->actingAs($leader, 'web');
+
+        $response = $this->get('/team/available-classmates');
+        $response->assertOk();
+
+        $data = $response->json();
+        $this->assertIsArray($data['classmates']);
+
+        $ids = array_column($data['classmates'], 'student_id');
+
+        // Leader should see both classmates (same course + year_section + school_year)
+        $this->assertContains($studentWithTeam->student_id, $ids, 'Classmate with existing team should appear in list');
+        $this->assertContains($studentWithoutTeam->student_id, $ids, 'Classmate without team should appear in list');
+        $this->assertNotContains($leader->student_id, $ids, 'Leader should not appear in their own list');
+
+        // Verify has_team flags
+        $withTeam = collect($data['classmates'])->firstWhere('student_id', $studentWithTeam->student_id);
+        $withoutTeam = collect($data['classmates'])->firstWhere('student_id', $studentWithoutTeam->student_id);
+
+        $this->assertTrue($withTeam['has_team'], 'Classmate with team should have has_team = true');
+        $this->assertFalse($withoutTeam['has_team'], 'Classmate without team should have has_team = false');
+    }
+
+    public function test_non_leader_cannot_access_available_classmates(): void
+    {
+        $course = 'Bachelor of Science in Information Technology';
+        $yearSection = '3rd · B';
+        $schoolYear = 2026;
+
+        $leader = Student::create([
+            'email' => 'leader.noleader@example.com',
+            'f_name' => 'Delta',
+            'l_name' => 'Leader',
+            'student_number' => '2026-2001',
+            'course' => $course,
+            'year_section' => $yearSection,
+        ]);
+
+        $member = Student::create([
+            'email' => 'member.noleader@example.com',
+            'f_name' => 'Echo',
+            'l_name' => 'Member',
+            'student_number' => '2026-2002',
+            'course' => $course,
+            'year_section' => $yearSection,
+        ]);
+
+        $team = Team::create([
+            'team_name' => 'Team NoLeader Access',
+            'team_status' => 'on-going',
+            'leader_id' => $leader->student_id,
+        ]);
+
+        StudentSchoolYear::create(['student_id' => $leader->student_id, 'team_id' => $team->team_id, 'school_year' => $schoolYear]);
+        StudentSchoolYear::create(['student_id' => $member->student_id, 'team_id' => $team->team_id, 'school_year' => $schoolYear]);
+
+        $this->actingAs($member, 'web');
+
+        $response = $this->get('/team/available-classmates');
+        $response->assertStatus(403);
+        $response->assertJson(['error' => 'Only the team leader can invite members.']);
+    }
+
+    public function test_leader_sees_classmates_even_with_corrupted_school_year(): void
+    {
+        $course = 'Bachelor of Science in Information Technology';
+        $yearSection = '3rd · B';
+
+        $leader = Student::create([
+            'email' => 'leader.corrupt@example.com',
+            'f_name' => 'Zeta',
+            'l_name' => 'Leader',
+            'student_number' => '2026-3001',
+            'course' => $course,
+            'year_section' => $yearSection,
+        ]);
+
+        $team1 = Team::create([
+            'team_name' => 'Team Corrupt',
+            'team_status' => 'on-going',
+            'leader_id' => $leader->student_id,
+        ]);
+
+        // Leader has corrupted school_year "26-1" (legacy data)
+        StudentSchoolYear::create([
+            'student_id' => $leader->student_id,
+            'team_id' => $team1->team_id,
+            'school_year' => '26-1',
+        ]);
+
+        // Classmate with team — has correct school_year
+        $studentWithTeam = Student::create([
+            'email' => 'withteam.corrupt@example.com',
+            'f_name' => 'Eta',
+            'l_name' => 'Teamed',
+            'student_number' => '2026-3002',
+            'course' => $course,
+            'year_section' => $yearSection,
+        ]);
+
+        $team2 = Team::create([
+            'team_name' => 'Team Other',
+            'team_status' => 'on-going',
+            'leader_id' => $studentWithTeam->student_id,
+        ]);
+
+        StudentSchoolYear::create([
+            'student_id' => $studentWithTeam->student_id,
+            'team_id' => $team2->team_id,
+            'school_year' => '2026-2027',
+        ]);
+
+        // Classmate without team — has correct school_year
+        $studentWithoutTeam = Student::create([
+            'email' => 'withoutteam.corrupt@example.com',
+            'f_name' => 'Theta',
+            'l_name' => 'NoTeam',
+            'student_number' => '2026-3003',
+            'course' => $course,
+            'year_section' => $yearSection,
+        ]);
+
+        StudentSchoolYear::create([
+            'student_id' => $studentWithoutTeam->student_id,
+            'team_id' => null,
+            'school_year' => '2026-2027',
+        ]);
+
+        $this->actingAs($leader, 'web');
+
+        // The fallback should kick in: leader has "26-1", classmates have "2026-2027"
+        $response = $this->get('/team/available-classmates');
+        $response->assertOk();
+
+        $data = $response->json();
+        $this->assertIsArray($data['classmates']);
+
+        $ids = array_column($data['classmates'], 'student_id');
+
+        // Both classmates should appear despite the school_year mismatch
+        $this->assertContains($studentWithTeam->student_id, $ids, 'Classmate with team should appear despite corrupted leader school_year');
+        $this->assertContains($studentWithoutTeam->student_id, $ids, 'Classmate without team should appear despite corrupted leader school_year');
+        $this->assertNotContains($leader->student_id, $ids, 'Leader should not appear in their own list');
+    }
+
+    public function test_team_creation_sets_school_year_on_student_s_y(): void
+    {
+        $student = Student::create([
+            'email' => 'teamstore.sy@example.com',
+            'f_name' => 'Iota',
+            'l_name' => 'Creator',
+            'student_number' => '2026-4001',
+            'course' => 'Bachelor of Science in Computer Science',
+            'year_section' => '4th · A',
+        ]);
+
+        $this->actingAs($student, 'web');
+
+        // Ensure no student_s_y record exists yet
+        $this->assertDatabaseMissing('student_s_y', ['student_id' => $student->student_id]);
+
+        $response = $this->post('/team', [
+            'team_name' => 'Auto SY Team',
+            'team_status' => 'on-going',
+        ]);
+
+        $response->assertRedirect(route('student.team'));
+
+        // The student_s_y record should have school_year set
+        $sy = StudentSchoolYear::where('student_id', $student->student_id)->first();
+        $this->assertNotNull($sy, 'student_s_y record should exist');
+        $this->assertNotNull($sy->school_year, 'school_year should be set after team creation');
+    }
 }
