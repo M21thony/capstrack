@@ -1001,9 +1001,6 @@ textarea.input{resize:vertical;min-height:80px}
 .rb-pts-status{display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0}
 .rb-pts-badge{font-family:"Space Mono",monospace;font-size:12px;font-weight:700;padding:4px 10px;border-radius:20px;background:var(--bg4);color:var(--text3);border:1.5px solid var(--border);transition:all .2s}
 .rb-pts-badge.rb-pts-ok{background:var(--green-bg);color:var(--green);border-color:rgba(22,163,74,.25)}
-/* Rebalances the rubric back to 100. Only shown while it is off - see updateTotalPts(). */
-.rb-fit-btn{margin-top:6px;padding:4px 11px;border-radius:6px;border:1px solid var(--accent);background:transparent;color:var(--accent3);font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;transition:.13s}
-.rb-fit-btn:hover{background:var(--accent);color:#18191f}
 .rb-pts-badge.rb-pts-over{background:var(--red-bg);color:var(--red);border-color:rgba(220,38,38,.25)}
 .rb-pts-badge.rb-pts-under{background:rgba(201,168,44,.12);color:var(--amber);border-color:rgba(201,168,44,.3)}
 .rb-pts-hint{font-size:11px;font-weight:500;line-height:1.2}
@@ -1033,6 +1030,11 @@ textarea.input{resize:vertical;min-height:80px}
 .rb-rubric-card.open .rb-preview-toggle svg{transform:rotate(180deg)}
 .rb-rubric-preview{display:none}
 .rb-rubric-card.open .rb-rubric-preview{display:block}
+
+/* A criterion whose lower level outscores its top one - the number in the
+   Excellent box is then not the number that counts. */
+.rb-crit-warn{display:flex;align-items:flex-start;gap:6px;margin-top:7px;padding:6px 9px;border-radius:6px;background:var(--amber-bg);color:var(--amber);font-size:11px;line-height:1.45}
+.rb-crit-warn svg{flex-shrink:0;margin-top:1px}
 
 /* ── COLLAPSED CRITERION ROW ──
    Each criterion is one row: name and points editable in place, the four
