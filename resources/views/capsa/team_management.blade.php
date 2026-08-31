@@ -85,8 +85,6 @@
   .ms-tprog{display:flex;align-items:center;gap:6px;margin-top:4px}
   .ms-tbar{flex:1;height:4px;border-radius:2px;background:var(--bg4);overflow:hidden}
   .ms-tbar i{display:block;height:100%;background:var(--green)}
-  .ms-give{background:none;border:none;padding:0;font:inherit;font-size:12px;
-           color:var(--accent3);cursor:pointer;text-decoration:underline}
 
   .ms-grid tbody tr td{border-bottom:1px solid var(--border)}
   .ms-sec td{background:var(--bg3);padding:7px 12px;position:sticky;top:82px;z-index:1;
