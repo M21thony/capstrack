@@ -60,10 +60,18 @@ class TeamController extends Controller
             'leader_id' => $student->student_id,
         ]);
 
+        $computedSchoolYear = now()->month >= 8
+            ? now()->year.'-'.(now()->year + 1)
+            : (now()->year - 1).'-'.now()->year;
+
         DB::table('student_s_y')
             ->updateOrInsert(
                 ['student_id' => $student->student_id],
-                ['team_id' => $team->team_id, 's_role_id' => StudentRole::leaderRoleId()]
+                [
+                    'team_id' => $team->team_id,
+                    's_role_id' => StudentRole::leaderRoleId(),
+                    'school_year' => $computedSchoolYear,
+                ]
             );
 
         $recruitment = Recruitment::where('student_id', $student->student_id)
