@@ -7,6 +7,7 @@ use App\Models\CapstonePreProposal;
 use App\Models\DuplicationCheck;
 use App\Models\ExpertRole;
 use App\Models\Milestone;
+use App\Models\MilestoneItem;
 use App\Models\Role;
 use App\Models\Student;
 use App\Models\StudentSchoolYear;
@@ -141,12 +142,26 @@ class CapsaTeamManagementTest extends TestCase
         $this->makeCapsaWithSections();
         [$team] = $this->makeTeamInSection('Team Progress');
 
-        foreach (['completed', 'completed', 'pending', 'overdue'] as $i => $status) {
-            Milestone::create([
-                'team_id' => $team->team_id,
-                'title' => "Milestone {$i}",
-                'status' => $status,
-                'order' => $i,
+        // Progress is counted from a milestone's items now, not from
+        // milestones.status - that column was written once as 'todo' and never
+        // moved, so it reported no progress for every team however far along
+        // they were.
+        $milestone = Milestone::create([
+            'team_id' => $team->team_id,
+            'title' => 'Capstone 1',
+            'due_date' => now()->subWeek()->toDateString(),
+            'status' => 'todo',
+        ]);
+
+        foreach (['done', 'done', 'open', 'open'] as $i => $state) {
+            $milestone->items()->create([
+                'title' => "Deliverable {$i}",
+                'kind' => MilestoneItem::FORM,
+                'position' => $i,
+                // The two open ones are past the milestone's due date, so they
+                // are overdue - worked out, not stored.
+                'due_date' => $i === 3 ? now()->addWeek()->toDateString() : null,
+                'completed_at' => $state === 'done' ? now()->subDays(10) : null,
             ]);
         }
 
