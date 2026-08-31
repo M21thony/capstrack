@@ -76,10 +76,10 @@ class StudentRosterController extends Controller
 
         $inserted = 0;
         $matched = 0;
+        $created = 0;
         $filled = 0;
         $alreadyComplete = 0;
         $skipped = 0;
-        $unmatched = [];
         $errors = [];
 
         foreach ($rows as $i => $row) {
@@ -96,6 +96,19 @@ class StudentRosterController extends Controller
             if (! filter_var($email, FILTER_VALIDATE_EMAIL)) {
                 $skipped++;
                 $errors[] = "Row {$rowNum}: '".($email ?: '(blank)')."' is not a valid email - skipped.";
+
+                continue;
+            }
+
+            // A student can only ever sign in from this domain, so an address
+            // outside it is one nobody will be able to use. Saying so here is
+            // the point: the list is typed by hand, and a row reading
+            // "my.cpsc" for "my.cspc" would otherwise be stored, counted as
+            // imported, and never match anybody.
+            if (! str_ends_with($email, Student::EMAIL_DOMAIN)) {
+                $skipped++;
+                $errors[] = "Row {$rowNum}: '{$email}' is not a ".Student::EMAIL_DOMAIN
+                    .' address, so nobody could sign in with it - skipped.';
 
                 continue;
             }
@@ -122,8 +135,24 @@ class StudentRosterController extends Controller
             // their profile. Fill them in from the official list.
             $student = Student::whereRaw('LOWER(email) = ?', [$email])->first();
 
+            // Nobody has signed in on this address yet. Make the account now,
+            // ready and filled in, rather than storing the row and waiting -
+            // the list has everything the account needs, and a student who
+            // has not arrived yet is exactly who this is for. Signing in
+            // later matches on email, so this is the account they land in.
             if (! $student) {
-                $unmatched[] = $email;
+                [$first, $last] = $this->splitName($name, null);
+
+                $student = Student::create([
+                    'email' => $email,
+                    'f_name' => $first,
+                    'l_name' => $last,
+                    'student_number' => $get('student_number') ?: null,
+                    'course' => $courseCode ? Student::PROGRAM_COURSES[$courseCode] : null,
+                    'year_section' => $yearSection ?: null,
+                ]);
+
+                $created++;
 
                 continue;
             }
@@ -157,10 +186,10 @@ class StudentRosterController extends Controller
             'success' => true,
             'inserted' => $inserted,
             'matched' => $matched,
+            'created' => $created,
             'filled' => $filled,
             'already_complete' => $alreadyComplete,
             'skipped' => $skipped,
-            'unmatched' => $unmatched,
             'errors' => $errors,
         ]);
     }
@@ -219,16 +248,16 @@ class StudentRosterController extends Controller
      * first, then given names. Split on the comma, not the first space, which
      * would have made "Balilla," the first name.
      */
-    private function splitName(string $name, Student $student): array
+    private function splitName(string $name, ?Student $student): array
     {
         if ($name === '') {
-            return [$student->f_name, $student->l_name];
+            return [$student?->f_name, $student?->l_name];
         }
 
         if (str_contains($name, ',')) {
             [$last, $first] = array_map('trim', explode(',', $name, 2));
 
-            return [$first !== '' ? $first : $student->f_name, $last];
+            return [$first !== '' ? $first : $student?->f_name, $last];
         }
 
         $parts = preg_split('/\s+/', $name, 2);

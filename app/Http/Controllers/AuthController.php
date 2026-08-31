@@ -155,7 +155,7 @@ class AuthController extends Controller
             $lastName = $nameParts[1] ?? $nameParts[0];
         }
 
-        $isStudentDomain = Str::endsWith($email, '@my.cspc.edu.ph');
+        $isStudentDomain = Str::endsWith($email, Student::EMAIL_DOMAIN);
         // '@cspc.edu.ph' (faculty) is a DIFFERENT domain than the student
         // '@my.cspc.edu.ph' subdomain above - Str::endsWith only matches the
         // literal suffix, so there's no overlap risk despite how similar
@@ -253,7 +253,12 @@ class AuthController extends Controller
                 'l_name' => $lastName,
                 'p_picture' => $userInfo['picture'] ?? null,
                 'student_number' => $roster->student_number ?? null,
-                'course' => $roster->program ?? null,
+                // The roster stores the program code; everywhere else stores
+                // the course's full name, and a mix of the two means two
+                // students on the same course never match each other.
+                'course' => isset($roster->program)
+                    ? (Student::PROGRAM_COURSES[$roster->program] ?? $roster->program)
+                    : null,
                 'year_section' => $roster->section ?? null,
             ]
         );
@@ -336,7 +341,7 @@ class AuthController extends Controller
         $email = $request->input('email');
         $fullName = $request->input('name', 'Mock User');
 
-        $isStudent = Str::endsWith($email, '@my.cspc.edu.ph');
+        $isStudent = Str::endsWith($email, Student::EMAIL_DOMAIN);
         $isExpert = Str::endsWith($email, '@gmail.com');
 
         if (! $isStudent && ! $isExpert) {
