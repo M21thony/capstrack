@@ -320,6 +320,7 @@ function isOccurrenceFull(scheduleId, dateKey) {
 }
 
 function getSlotsForExpert(expertId) {
+  if (!expertId) return [];
   return expertSlots.filter(s => s.expert_id == expertId);
 }
 
@@ -350,16 +351,18 @@ function renderCalendar() {
   const monthLabel = document.getElementById('cal-month');
   const hint = document.getElementById('cal-hint');
 
+  // The month is drawn whether or not an expert has been picked. It used to
+  // stop here and render nothing but the seven weekday headings, which read
+  // as a calendar that had failed to load rather than one waiting for a
+  // choice. With no expert chosen every lookup below finds no slots, so the
+  // dates come out plain - the month is there to look at, and picking an
+  // expert fills in their availability.
   const expertId = document.getElementById('expertSelect').value;
-  if (!expertId) {
-    monthLabel.textContent = 'Select an Expert';
-    hint.textContent = 'Choose an expert above to view their available slots.';
-    grid.innerHTML = '<div class="day-label">Sun</div><div class="day-label">Mon</div><div class="day-label">Tue</div><div class="day-label">Wed</div><div class="day-label">Thu</div><div class="day-label">Fri</div><div class="day-label">Sat</div>';
-    return;
-  }
 
   monthLabel.textContent = MONTHS[currentMonth] + ' ' + currentYear;
-  hint.textContent = 'Click an available date to book a slot.';
+  hint.textContent = expertId
+    ? 'Click an available date to book a slot.'
+    : 'Choose an expert above to see which of these dates they are free.';
 
   const slots = getSlotsForExpert(expertId);
 
