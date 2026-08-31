@@ -167,7 +167,7 @@
 
       <div class="rb-pts-note" id="total-pts-note">
         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-        <span>A rubric totals 100 points across its criteria (the Excellent level, one per criterion). Set what a criterion is worth and the others scale to fit &mdash; or press <strong>Fit to 100</strong>.</span>
+        <span>A rubric totals 100 points across its criteria, each worth its highest-scoring level. Add a criterion and the others give up the points &mdash; or press <strong>Fit to 100</strong> any time.</span>
       </div>
 
       <div id="criteria-list" style="display:flex;flex-direction:column;gap:10px;padding-right:4px;margin-bottom:12px;flex:1;overflow-y:auto;min-height:0;scroll-behavior:smooth"></div>
@@ -342,8 +342,21 @@ function escHtml(str) {
 // levels - its point value is the first (Excellent) level's score, not the
 // sum of all four. Good/Fair/Poor are lower alternative scores for the
 // same criterion, not additional points on top of it.
+// What a criterion is worth: its highest-scoring level.
+//
+// This used to read levels[0] - the Excellent box - on the assumption that
+// it is always the biggest. Nothing enforces that, so a criterion with
+// Excellent 0.25 and Good 1.25 was counted as 0.25 here while the server's
+// scoreLevelsMax() stored it as 1.25, and the total on screen disagreed with
+// the total that got saved.
 function criterionScore(c) {
-  return +((c.levels && c.levels[0] && c.levels[0].score) || 0);
+  if (!c || !c.levels || !c.levels.length) return 0;
+
+  return c.levels.reduce(function (max, lvl) {
+    var score = (lvl && lvl.score !== '' && lvl.score !== null && !isNaN(+lvl.score)) ? +lvl.score : 0;
+
+    return score > max ? score : max;
+  }, 0);
 }
 
 // A criterion is worth its top level, so making room for a new one means
@@ -436,11 +449,34 @@ function fitOnNewCriterionScored(index) {
   if (!criterionScore(draftCriteria[index])) { updateTotalPts(); return; }
 
   if (fitCriteriaTo100(index)) {
-    renderCriteriaBuilder();
+    // Written straight into the existing inputs rather than re-rendering.
+    // Rebuilding the list destroyed the very box being typed in, so the
+    // Excellent field - the only one with this handler - could not be
+    // changed at all, while Good, Fair and Poor worked fine.
+    syncScoreInputs();
+    updateTotalPts();
     toast('Took those points off the other criteria to keep the rubric at 100.');
   } else {
     updateTotalPts();
   }
+}
+
+// Push the draft's score values back into the inputs already on the page,
+// leaving whichever one has focus alone so an edit in progress survives.
+function syncScoreInputs() {
+  var focused = document.activeElement;
+
+  draftCriteria.forEach(function (c, i) {
+    (c.levels || []).forEach(function (lvl, li) {
+      var el = document.getElementById('sc-' + i + '-' + li);
+      if (!el || el === focused) return;
+
+      var next = String(lvl.score === '' || lvl.score === null ? '' : lvl.score);
+      if (el.value !== next) el.value = next;
+    });
+  });
+
+  refreshCategoryTotals();
 }
 
 // Rescaling every criterion to total 100, on demand only.
@@ -457,6 +493,7 @@ function fitAllTo100() {
   if (isAtHundred(total)) { toast('Already adds up to 100.'); return; }
 
   fitCriteriaTo100(null);
+  // Safe to rebuild here: this is a button press, not a field being typed in.
   renderCriteriaBuilder();
   toast('Scaled every criterion to total 100 points.');
 }
@@ -602,7 +639,7 @@ function renderCriterionCard(cr, i) {
         '<div class="rb-level-label-wrap">' +
         '<input type="text" class="input rb-level-label-input" style="color:' + LEVEL_COLORS[li] + '" value="' + escHtml(lv.label) + '" placeholder="' + LEVEL_LABELS[li] + '" maxlength="255" oninput="draftCriteria[' + i + '].levels[' + li + '].label=this.value"/>' +
         '<div class="rb-level-input-wrap">' +
-        '<input type="number" class="input rb-score-tiny" value="' + lv.score + '" placeholder="0" oninput="draftCriteria[' + i + '].levels[' + li + '].score=+this.value;updateTotalPts()"' +
+        '<input type="number" class="input rb-score-tiny" id="sc-' + i + '-' + li + '" value="' + lv.score + '" placeholder="0" oninput="draftCriteria[' + i + '].levels[' + li + '].score=+this.value;updateTotalPts()"' +
           (li === 0 ? ' onchange="fitOnNewCriterionScored(' + i + ')"' : '') +
           ' min="0" step="0.25"/>' +
         '<span class="rb-pts-unit">pts</span>' +
@@ -707,6 +744,23 @@ function updateTotalPts() {
   if (fitBtn) {
     fitBtn.style.display = (!atHundred && draftCriteria.length && total > 0) ? '' : 'none';
   }
+
+  refreshCategoryTotals();
+}
+
+// Each category's running subtotal. Redrawn on every change, not only on a
+// full re-render, or the header keeps showing what it was worth before.
+function refreshCategoryTotals() {
+  document.querySelectorAll('.rb-category-header').forEach(function (header) {
+    var name = (header.firstElementChild && header.firstElementChild.textContent || '').trim();
+    var cat = name === 'Ungrouped' ? '' : name;
+    var total = round2(draftCriteria.reduce(function (sum, c) {
+      return ((c.category || '').trim() === cat) ? sum + criterionScore(c) : sum;
+    }, 0));
+
+    var ptsEl = header.querySelector('.rb-category-header-pts');
+    if (ptsEl) ptsEl.textContent = formatPts(total) + ' pts';
+  });
 }
 
 // Drop trailing zeros so a whole number reads as "25", not "25.00".
