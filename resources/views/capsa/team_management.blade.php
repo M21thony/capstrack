@@ -8,14 +8,16 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="{{ asset('css/admin.css') }}"/>
 <style>
-  /* Tab strip. Counts are what each tab is actually asking of the CaPSA,
+  /* Tab strip: the tabs sit on one rule and the open one is underlined,
+     so the strip reads as one row of choices rather than four loose
+     buttons. Counts are what each tab is actually asking of the CaPSA,
      so a zero count renders no badge rather than a "0". */
-  .tm-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px}
-  .tm-tab{display:inline-flex;align-items:center;gap:7px;padding:8px 14px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--text2);font-size:12px;font-weight:600;text-decoration:none;transition:.13s}
-  .tm-tab:hover{border-color:var(--accent);color:var(--text)}
-  .tm-tab.active{background:var(--accent);border-color:var(--accent);color:#18191f}
+  .tm-tabs{display:flex;flex-wrap:wrap;margin-bottom:18px;border-bottom:1px solid var(--border)}
+  .tm-tab{display:inline-flex;align-items:center;gap:7px;padding:11px 18px;border:none;border-bottom:2px solid transparent;margin-bottom:-1px;background:transparent;color:var(--text2);font-size:12.5px;font-weight:600;text-decoration:none;transition:.13s}
+  .tm-tab:hover{background:var(--bg4);color:var(--text)}
+  .tm-tab:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+  .tm-tab.active{color:var(--accent3);border-bottom-color:var(--accent)}
   .tm-tab-count{font-size:10px;font-weight:700;padding:1px 7px;border-radius:999px;background:var(--red);color:#fff}
-  .tm-tab.active .tm-tab-count{background:rgba(0,0,0,0.22);color:#18191f}
 
   .tm-note{font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:16px}
 
@@ -31,7 +33,7 @@
   .tm-bar-fill{height:100%;border-radius:999px;background:var(--accent)}
   .tm-bar-label{font-size:11px;color:var(--text3);font-family:'Space Mono',monospace}
 
-  .tm-roles{display:flex;gap:4px;flex-wrap:wrap}
+  .tm-roles{display:flex;gap:4px;flex-wrap:nowrap}
   .tm-role{font-size:9.5px;font-weight:700;padding:2px 7px;border-radius:5px;text-transform:uppercase;letter-spacing:0.3px}
   .tm-role-on{background:var(--accent-light);color:var(--accent3)}
   .tm-role-off{background:var(--bg4);color:var(--text3);opacity:.75}
