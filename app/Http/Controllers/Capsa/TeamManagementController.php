@@ -32,7 +32,7 @@ use Illuminate\View\View;
  */
 class TeamManagementController extends Controller
 {
-    public const TABS = ['teams', 'pre_proposals', 'verification', 'papers'];
+    public const TABS = ['teams', 'pre_proposals', 'verification', 'papers', 'milestones'];
 
     /** Shown where a value is genuinely absent rather than empty. */
     private const DASH = '—';
@@ -76,6 +76,10 @@ class TeamManagementController extends Controller
         return view('capsa.team_management', [
             'tab' => $tab,
             'rows' => $rows,
+            // Only the Milestones tab needs the items themselves; every other
+            // tab is served by the counts already in $rows.
+            'milestoneBoards' => $tab === 'milestones' ? $this->milestoneBoards($teams) : collect(),
+            'templates' => \App\Support\MilestoneTemplate::all(),
             'selectedSection' => $selectedSection,
             'allSections' => $capsaSections,
             'sectionOptions' => collect(AdminProfileController::getAllAvailableSections())
@@ -83,6 +87,10 @@ class TeamManagementController extends Controller
                 ->values(),
             'counts' => [
                 'teams' => $rows->count(),
+                // What the CaPSA still has to tick herself. The other kinds
+                // close themselves, so counting them here would ask her to
+                // chase something she cannot act on.
+                'milestones' => $tab === 'milestones' ? 0 : null,
                 'pre_proposals' => $rows->sum(fn ($r) => $r->pendingProposalCount),
                 'verification' => $rows->where('awaitingVerification', true)->count(),
                 'papers' => $rows->sum(fn ($r) => $r->papersToCheck),
@@ -114,6 +122,31 @@ class TeamManagementController extends Controller
             ->get();
 
         return $this->sections->filterTeams($candidates, $syRecords, $capsaSections, $selectedSection);
+    }
+
+    /**
+     * Each team with its milestones and every item's worked-out state, for
+     * the Milestones tab - which is both where a checklist is built and where
+     * a CaPSA ticks off the papers she has sighted.
+     *
+     * @return \Illuminate\Support\Collection<int, object>
+     */
+    private function milestoneBoards(Collection $teams): Collection
+    {
+        $byTeam = Milestone::whereIn('team_id', $teams->pluck('team_id'))
+            ->with('items')
+            ->orderBy('due_date')
+            ->orderBy('id')
+            ->get()
+            ->groupBy('team_id');
+
+        return $teams->map(fn (Team $team) => (object) [
+            'team' => $team,
+            'milestones' => ($byTeam[$team->team_id] ?? collect())->map(fn (Milestone $milestone) => (object) [
+                'model' => $milestone,
+                'progress' => $milestone->progress(),
+            ]),
+        ]);
     }
 
     /** @return array<int, object{total: int, completed: int, overdue: int, percent: int}> */

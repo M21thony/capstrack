@@ -16,6 +16,7 @@ use App\Http\Controllers\AdminFinancialController;
 use App\Http\Controllers\AdminPanelAssignmentController;
 use App\Http\Controllers\AdminProfileController;
 use App\Http\Controllers\AdminTeamVerificationController;
+use App\Http\Controllers\Capsa\MilestoneController;
 use App\Http\Controllers\Capsa\TeamManagementController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Capsa\ExpertRosterController;
@@ -89,6 +90,19 @@ Route::middleware(['expert.auth', 'no.cache', 'track.expert'])->prefix('admin')-
         Route::post('/verify-teams/pre-proposals/{preProposal}/approve', [AdminTeamVerificationController::class, 'approvePreProposal'])->name('verify_teams.pre_proposals.approve');
         Route::post('/verify-teams/pre-proposals/{preProposal}/reject', [AdminTeamVerificationController::class, 'rejectPreProposal'])->name('verify_teams.pre_proposals.reject');
         Route::get('/verify-teams/pre-proposals/{preProposal}/document', [AdminTeamVerificationController::class, 'viewPreProposalDocument'])->name('verify_teams.pre_proposals.document');
+        // Milestones are created and edited deliberately here, rather than
+        // falling out of posting an announcement - which is how the one
+        // milestone in the database ended up with no team and no way to be
+        // changed or removed.
+        Route::post('/milestones', [MilestoneController::class, 'store'])->name('milestones.store');
+        Route::put('/milestones/{milestone}', [MilestoneController::class, 'update'])->name('milestones.update');
+        Route::delete('/milestones/{milestone}', [MilestoneController::class, 'destroy'])->name('milestones.destroy');
+        Route::post('/milestones/{milestone}/template', [MilestoneController::class, 'applyTemplate'])->name('milestones.template');
+        Route::post('/milestones/{milestone}/items', [MilestoneController::class, 'storeItem'])->name('milestones.items.store');
+        Route::post('/milestones/{milestone}/items/reorder', [MilestoneController::class, 'reorderItems'])->name('milestones.items.reorder');
+        Route::put('/milestone-items/{item}', [MilestoneController::class, 'updateItem'])->name('milestones.items.update');
+        Route::delete('/milestone-items/{item}', [MilestoneController::class, 'destroyItem'])->name('milestones.items.destroy');
+        Route::post('/milestone-items/{item}/toggle', [MilestoneController::class, 'toggleItem'])->name('milestones.items.toggle');
         Route::get('/rubric_management', [GradingRubricController::class, 'index'])->name('rubric_management');
         Route::get('/financial', [AdminFinancialController::class, 'index'])->name('financial');
         Route::post('/financial/expense-post', [AdminFinancialController::class, 'storeExpensePost'])->name('financial.expense-post.store');

@@ -27,6 +27,71 @@
   .tm-role-on{background:var(--accent-light);color:var(--accent3)}
   .tm-role-off{background:var(--bg4);color:var(--text3);opacity:.75}
 
+
+  /* ── Milestones tab ─────────────────────────────────────────────────
+     One screen for building a checklist and for ticking the papers off
+     it, because a CaPSA does both in the same sitting. */
+  .ms-intro{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:16px;flex-wrap:wrap}
+  .ms-intro-title{font-size:15px;font-weight:600;color:var(--text);margin-bottom:3px}
+  .ms-intro-note{font-size:12px;color:var(--text3);line-height:1.6;max-width:74ch}
+
+  .ms-team{padding:0;overflow:hidden;margin-bottom:14px}
+  .ms-team-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 18px;border-bottom:1px solid var(--border);flex-wrap:wrap}
+  .ms-team-name{font-size:14px;font-weight:600;color:var(--text)}
+  .ms-team-sub{font-size:11.5px;color:var(--text3);margin-top:2px}
+  .ms-none{padding:14px 18px;font-size:12px;color:var(--text3)}
+
+  .ms-block{border-bottom:1px solid var(--border)}
+  .ms-block:last-child{border-bottom:none}
+  .ms-block-head{display:flex;align-items:center;gap:11px;padding:12px 18px}
+  .ms-toggle{background:none;border:none;cursor:pointer;color:var(--text3);padding:3px;display:flex;transition:transform .15s}
+  .ms-block.open .ms-toggle{transform:rotate(90deg)}
+  .ms-name{font-size:13.5px;font-weight:600;color:var(--text)}
+  .ms-due{font-family:'Space Mono',monospace;font-size:10.5px;font-weight:400;color:var(--text3);margin-left:8px}
+  .ms-meta{font-size:11.5px;color:var(--text3);margin-top:2px}
+  .ms-meta strong{color:var(--text2);font-weight:600}
+  .ms-overdue{color:var(--red);font-weight:600}
+  .ms-bar{width:110px;height:6px;border-radius:999px;background:var(--bg4);overflow:hidden;flex-shrink:0}
+  .ms-bar-fill{height:100%;border-radius:999px;background:var(--green)}
+  .ms-del{background:none;border:none;cursor:pointer;color:var(--text3);padding:4px;border-radius:5px;display:flex;flex-shrink:0}
+  .ms-del:hover{color:var(--red);background:var(--red-bg)}
+
+  /* The items only appear when a milestone is opened - nineteen lines per
+     team would otherwise bury the page. */
+  .ms-items{display:none;padding:0 18px 14px 44px}
+  .ms-block.open .ms-items{display:block}
+
+  .ms-item{display:grid;grid-template-columns:22px 1fr auto 92px 22px;gap:10px;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);font-size:12.5px}
+  .ms-item:last-of-type{border-bottom:none}
+  .ms-item-name{color:var(--text2);min-width:0}
+  .ms-done .ms-item-name,.ms-done_late .ms-item-name{color:var(--text3)}
+  .ms-overdue .ms-item-name{color:var(--text2)}
+
+  .ms-tick{width:17px;height:17px;border-radius:5px;border:1.5px solid var(--border-strong,#c9ccd6);background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;flex-shrink:0}
+  .ms-tick svg{width:10px;height:10px;opacity:0}
+  .ms-tick.on{background:var(--green);border-color:var(--green)}
+  .ms-tick.on svg{opacity:1;stroke:#fff}
+  /* Nothing to press on a line that closes itself. */
+  .ms-tick.auto{cursor:default;border-style:dashed;opacity:.75}
+  .ms-tick.auto.on{border-style:solid;opacity:1}
+
+  .ms-kind{font-family:'Space Mono',monospace;font-size:8.5px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;padding:2px 7px;border-radius:4px;white-space:nowrap}
+  .ms-kind-form,.ms-kind-custom{background:var(--bg4);color:var(--text3)}
+  .ms-kind-document{background:var(--blue-bg);color:var(--blue)}
+  .ms-kind-approval{background:var(--purple-bg);color:var(--purple)}
+  .ms-kind-defense{background:var(--accent-light);color:var(--accent3)}
+
+  .ms-when{font-family:'Space Mono',monospace;font-size:10.5px;color:var(--text3);text-align:right}
+  .ms-waiting{color:var(--amber)}
+  .ms-flag{font-family:'Space Mono',monospace;font-size:8.5px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:1px 6px;border-radius:3px;background:var(--red-bg);color:var(--red);margin-left:7px}
+
+  .ms-empty{font-size:12px;color:var(--text3);padding:10px 0}
+  .ms-link{background:none;border:none;padding:0;color:var(--accent3);font:inherit;font-size:12px;cursor:pointer;text-decoration:underline}
+  .ms-add{display:flex;gap:8px;margin-top:11px}
+  .ms-add .input{flex:1;font-size:12px;padding:6px 10px}
+  .ms-label{display:block;font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin:14px 0 5px}
+  .ms-hint{font-size:11px;color:var(--text3);margin-top:5px}
+
   .tm-empty{text-align:center;padding:44px 20px;color:var(--text3);font-size:13px;line-height:1.6}
 </style>
 </head>
@@ -66,6 +131,7 @@
         'pre_proposals' => 'Pre-Proposals',
         'verification' => 'Verification',
         'papers' => 'Paper Format Check',
+        'milestones' => 'Milestones',
       ];
       $qs = fn (string $t) => ['tab' => $t] + ($selectedSection ? ['section' => $selectedSection] : []);
     @endphp
