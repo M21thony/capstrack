@@ -1020,6 +1020,20 @@ textarea.input{resize:vertical;min-height:80px}
 .rb-criterion-card.rb-card-error{border-color:rgba(220,38,38,.5)}
 .rb-criterion-header{display:flex;align-items:center;gap:8px;margin-bottom:12px}
 
+/* ── RUBRIC LIST CARD ──
+   Edit and Delete sit in the header beside the name. They used to be in a
+   footer below every criterion, so acting on a 27-criterion rubric meant
+   scrolling past all 27 and then back up. The criteria preview folds away -
+   this page is for finding a rubric and doing something with it. */
+.rb-card-side{display:flex;align-items:flex-start;gap:14px;flex-shrink:0}
+.rb-card-actions{display:flex;gap:6px;flex-shrink:0}
+.rb-preview-toggle{display:flex;align-items:center;gap:6px;width:100%;padding:8px 18px;border:none;border-top:1px solid var(--border);background:none;font-family:inherit;font-size:11.5px;font-weight:600;color:var(--text3);cursor:pointer;text-align:left;transition:color .13s,background .13s}
+.rb-preview-toggle:hover{color:var(--text);background:var(--bg3)}
+.rb-preview-toggle svg{transition:transform .15s;flex-shrink:0}
+.rb-rubric-card.open .rb-preview-toggle svg{transform:rotate(180deg)}
+.rb-rubric-preview{display:none}
+.rb-rubric-card.open .rb-rubric-preview{display:block}
+
 /* ── COLLAPSED CRITERION ROW ──
    Each criterion is one row: name and points editable in place, the four
    performance levels folded away. 27 criteria used to render as 10,000px of
