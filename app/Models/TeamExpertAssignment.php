@@ -28,6 +28,7 @@ class TeamExpertAssignment extends Model
         'team_id',
         'expert_id',
         'expert_role_id',
+        'pre_proposal_id',
         'status',
         'rejection_reason',
         'proposal_file',
@@ -59,6 +60,16 @@ class TeamExpertAssignment extends Model
     /**
      * The single role this team engaged the expert as.
      */
+    /**
+     * The approved pre-proposal this application was made with, when the team
+     * had one - so an expert can see the CaPSA already passed it rather than
+     * take a re-uploaded PDF on trust.
+     */
+    public function preProposal()
+    {
+        return $this->belongsTo(CapstonePreProposal::class, 'pre_proposal_id');
+    }
+
     public function expertRole()
     {
         return $this->belongsTo(ExpertRole::class, 'expert_role_id', 'expert_role_id');

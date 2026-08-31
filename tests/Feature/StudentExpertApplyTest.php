@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\CapstoneExpert;
+use App\Models\CapstonePreProposal;
+use App\Models\DuplicationCheck;
 use App\Models\ExpertRole;
 use App\Models\Role;
 use App\Models\Student;
@@ -261,5 +263,169 @@ class StudentExpertApplyTest extends TestCase
 
         $response->assertStatus(200)->assertJson(['success' => true]);
         $this->assertDatabaseMissing('capstone_expert_application', ['assignment_id' => $assignment->assignment_id]);
+    }
+
+    /**
+     * A role a team has already filled is filled. Applying to a second
+     * adviser once one has accepted could only end with two people holding
+     * one role, or a rejection the team waited on for nothing.
+     */
+    public function test_a_team_cannot_apply_for_a_role_it_has_already_filled(): void
+    {
+        [$student, $team] = $this->makeLeaderWithTeam();
+        $taken = $this->makeAdviserExpert();
+        $another = $this->makeAdviserExpert();
+
+        TeamExpertAssignment::create([
+            'team_id' => $team->team_id,
+            'expert_id' => $taken->expert_id,
+            'expert_role_id' => $this->expertRoleId($taken, 'adviser'),
+            'status' => 'approved',
+        ]);
+
+        $this->actingAs($student, 'web');
+
+        $response = $this->postJson('/api/assignments', [
+            'expert_id' => $another->expert_id,
+            'expert_role_id' => $this->expertRoleId($another, 'adviser'),
+            'proposal_file' => UploadedFile::fake()->create('proposal.pdf', 100, 'application/pdf'),
+            'message' => 'Be our adviser too.',
+        ]);
+
+        $response->assertStatus(409);
+        $this->assertStringContainsString('already has an approved', $response->json('message'));
+    }
+
+    /** A different role is still open, though. */
+    public function test_an_approved_adviser_does_not_block_applying_for_a_consultant(): void
+    {
+        [$student, $team] = $this->makeLeaderWithTeam();
+        $adviser = $this->makeAdviserExpert();
+        $consultant = $this->makeAdviserExpert();
+
+        TeamExpertAssignment::create([
+            'team_id' => $team->team_id,
+            'expert_id' => $adviser->expert_id,
+            'expert_role_id' => $this->expertRoleId($adviser, 'adviser'),
+            'status' => 'approved',
+        ]);
+
+        $this->actingAs($student, 'web');
+
+        $this->postJson('/api/assignments', [
+            'expert_id' => $consultant->expert_id,
+            'expert_role_id' => $this->expertRoleId($consultant, 'consultant'),
+            'proposal_file' => UploadedFile::fake()->create('proposal.pdf', 100, 'application/pdf'),
+            'message' => 'Be our consultant.',
+        ])->assertOk();
+    }
+
+    /**
+     * Only an accepted one takes the seat. A team may have applications out
+     * to several advisers and take whoever says yes first.
+     */
+    public function test_a_pending_application_does_not_block_applying_elsewhere(): void
+    {
+        [$student, $team] = $this->makeLeaderWithTeam();
+        $first = $this->makeAdviserExpert();
+        $second = $this->makeAdviserExpert();
+
+        TeamExpertAssignment::create([
+            'team_id' => $team->team_id,
+            'expert_id' => $first->expert_id,
+            'expert_role_id' => $this->expertRoleId($first, 'adviser'),
+            'status' => 'pending',
+        ]);
+
+        $this->actingAs($student, 'web');
+
+        $this->postJson('/api/assignments', [
+            'expert_id' => $second->expert_id,
+            'expert_role_id' => $this->expertRoleId($second, 'adviser'),
+            'proposal_file' => UploadedFile::fake()->create('proposal.pdf', 100, 'application/pdf'),
+            'message' => 'Be our adviser.',
+        ])->assertOk();
+    }
+
+    /** An approved pre-proposal for a team, the way the CaPSA leaves one. */
+    private function approvedPreProposal(Team $team, Student $leader): CapstonePreProposal
+    {
+        $sy = StudentSchoolYear::firstOrCreate([
+            'student_id' => $leader->student_id,
+            'team_id' => $team->team_id,
+        ]);
+
+        $check = DuplicationCheck::create([
+            'student_s_y_id' => $sy->s_y_id,
+            'document_path' => 'duplication-checks/approved.pdf',
+            'concepts' => ['title' => 'Approved Title'],
+            'top_score' => 20,
+            'verdict' => 'Passed',
+            'matches' => [],
+            'instructors_suggested' => [],
+        ]);
+
+        $proposal = CapstonePreProposal::create([
+            'team_id' => $team->team_id,
+            'duplication_check_id' => $check->id,
+            'slot' => 1,
+            'title' => 'Approved Title',
+            'sdg_goals' => 'SDG 4 - Quality Education',
+            'research_agenda' => ['Applications and Systems Development'],
+            'problem_statement' => 'A problem.',
+            'proposed_solution' => 'A solution.',
+            'scope' => 'A scope.',
+            'limitations' => 'A limitation.',
+            'sdm' => 'Agile Development Methodology',
+            'approved_status' => true,
+            'submitted_at' => now(),
+        ]);
+
+        $team->update(['selected_pre_proposal_id' => $proposal->id, 'project_title' => $proposal->title]);
+
+        return $proposal;
+    }
+
+    /**
+     * A team whose pre-proposal the CaPSA approved should not have to find
+     * and re-upload the same PDF - and re-uploading invited a different,
+     * unapproved file to be sent instead.
+     */
+    public function test_a_team_with_an_approved_pre_proposal_applies_without_attaching_a_file(): void
+    {
+        [$student, $team] = $this->makeLeaderWithTeam();
+        $proposal = $this->approvedPreProposal($team, $student);
+        $expert = $this->makeAdviserExpert();
+
+        $this->actingAs($student, 'web');
+
+        $this->postJson('/api/assignments', [
+            'expert_id' => $expert->expert_id,
+            'expert_role_id' => $this->expertRoleId($expert, 'adviser'),
+            'message' => 'Please be our adviser.',
+        ])->assertOk();
+
+        $assignment = TeamExpertAssignment::where('team_id', $team->team_id)->first();
+
+        $this->assertSame($proposal->id, $assignment->pre_proposal_id, 'The approved pre-proposal was not carried across.');
+        $this->assertNull($assignment->proposal_file);
+    }
+
+    /** Without one, there is nothing to send, so a file is still required. */
+    public function test_a_team_with_no_approved_pre_proposal_must_still_attach_one(): void
+    {
+        [$student, $team] = $this->makeLeaderWithTeam();
+        $expert = $this->makeAdviserExpert();
+
+        $this->actingAs($student, 'web');
+
+        $response = $this->postJson('/api/assignments', [
+            'expert_id' => $expert->expert_id,
+            'expert_role_id' => $this->expertRoleId($expert, 'adviser'),
+            'message' => 'Please be our adviser.',
+        ]);
+
+        $response->assertStatus(422);
+        $this->assertStringContainsString('Attach your proposal', $response->json('message'));
     }
 }

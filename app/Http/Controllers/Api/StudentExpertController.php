@@ -7,6 +7,7 @@ use App\Http\Resources\AssignmentResource;
 use App\Http\Resources\ExpertResource;
 use App\Models\ActivityLog;
 use App\Models\CapstoneExpert;
+use App\Models\CapstonePreProposal;
 use App\Models\Student;
 use App\Models\StudentSchoolYear;
 use App\Models\TeamExpertAssignment;
@@ -82,7 +83,11 @@ class StudentExpertController extends Controller
         $validated = $request->validate([
             'expert_id' => ['required', 'integer', 'exists:capstone_experts,expert_id'],
             'expert_role_id' => ['required', 'integer', 'exists:expert_roles,expert_role_id'],
-            'proposal_file' => ['required', 'file', 'mimes:pdf', 'max:5120'],
+            // Optional when the team already has an approved pre-proposal:
+            // that PDF is the one the CaPSA read and approved, so making the
+            // team hunt down and re-upload the same file only invited them to
+            // attach a different, unapproved one.
+            'proposal_file' => ['nullable', 'file', 'mimes:pdf', 'max:5120'],
             'message' => ['required', 'string', function ($attribute, $value, $fail) {
                 if (str_word_count($value) > 500) {
                     $fail('The message field must not be greater than 500 words.');
@@ -184,6 +189,27 @@ class StudentExpertController extends Controller
             ], 422);
         }
 
+        // One expert per role per team. Once a team's adviser has accepted,
+        // that seat is taken - applying to a second adviser can only end in
+        // two people holding one role, or a rejection the team waited on for
+        // nothing. A role still only pending is left alone: a team may have
+        // applications out to several and take whoever says yes first.
+        $filledBy = TeamExpertAssignment::with('expertRole.role')
+            ->where('team_id', $team->team_id)
+            ->where('status', 'approved')
+            ->get()
+            ->first(fn ($a) => strcasecmp((string) $a->engaged_role_name, $chosenRole->role_name) === 0);
+
+        if ($filledBy) {
+            $heldByName = $filledBy->expert?->name ?? 'another expert';
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Your team already has an approved '.ucfirst($chosenRole->role_name).
+                    ' ('.$heldByName.'). Remove them first if you want a different one.',
+            ], 409);
+        }
+
         // One role per expert per team: engaging someone as your adviser
         // takes them off the table as your consultant or grammarian. Another
         // team is unaffected - they can still take this expert in whichever
@@ -204,8 +230,24 @@ class StudentExpertController extends Controller
             ], 409);
         }
 
+        // The pre-proposal the CaPSA settled on, when there is one. It is
+        // what the team is actually being advised on, and an expert can trust
+        // it was approved rather than take the team's word for it.
+        $approvedProposal = $team->selected_pre_proposal_id
+            ? CapstonePreProposal::find($team->selected_pre_proposal_id)
+            : null;
+
+        if (! $request->hasFile('proposal_file') && ! $approvedProposal) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Attach your proposal, or get a pre-proposal approved first and it will be sent for you.',
+            ], 422);
+        }
+
         try {
-            $filePath = $request->file('proposal_file')->store('proposals', 'public');
+            $filePath = $request->hasFile('proposal_file')
+                ? $request->file('proposal_file')->store('proposals', 'public')
+                : null;
 
             $assignment = TeamExpertAssignment::create([
                 'team_id' => $team->team_id,
@@ -213,6 +255,7 @@ class StudentExpertController extends Controller
                 'expert_role_id' => $validated['expert_role_id'],
                 'status' => 'pending',
                 'proposal_file' => $filePath,
+                'pre_proposal_id' => $approvedProposal?->id,
                 'message' => $validated['message'],
             ]);
 

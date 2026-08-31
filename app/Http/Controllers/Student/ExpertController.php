@@ -170,6 +170,13 @@ class ExpertController extends Controller
             'experts' => $experts,
             'assignments' => $assignments,
             'team' => $team,
+            // The pre-proposal the CaPSA settled on. When a team has one,
+            // applying does not need a PDF - that document already went
+            // through the CaPSA, and asking for it again only invited a
+            // different, unapproved file to be attached instead.
+            'approvedProposal' => $team?->selected_pre_proposal_id
+                ? \App\Models\CapstonePreProposal::find($team->selected_pre_proposal_id)
+                : null,
             'isLeader' => $isLeader,
             'teamConfirmed' => $team?->is_confirmed ?? false,
             'stats' => $stats,

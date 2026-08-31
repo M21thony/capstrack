@@ -391,6 +391,13 @@
       <div class="info-label">Message</div>
       <div class="info-value" id="tm-message"></div>
     </div>
+    {{-- When the team applied with the pre-proposal their CaPSA approved,
+         name it. An expert should be able to see the title got through
+         rather than take the team's word for a PDF they attached. --}}
+    <div class="info-row" id="tm-approved-row" style="display:none;">
+      <div class="info-label">Approved title</div>
+      <div class="info-value" id="tm-approved"></div>
+    </div>
     <div class="info-row">
       <div class="info-label">Proposal</div>
       <div class="info-value" id="tm-proposal"></div>
@@ -514,6 +521,15 @@ function openTeamModal(id) {
     ? d.members.map(m => '<span class="member-tag">' + m.name + (m.email ? '<br><span style="font-size:10px;color:var(--text3);">' + m.email + '</span>' : '') + '</span>').join('')
     : '<span style="color:var(--text3);">No members loaded</span>';
   document.getElementById('tm-message').innerHTML = '<div class="msg-text">' + d.message + '</div>';
+
+  const approvedRow = document.getElementById('tm-approved-row');
+  if (d.approved_title) {
+    document.getElementById('tm-approved').innerHTML =
+      '<span style="color:var(--green);font-weight:600">✓ CaPSA-approved</span> &middot; ' + d.approved_title;
+    approvedRow.style.display = 'flex';
+  } else {
+    approvedRow.style.display = 'none';
+  }
 
   const proposalEl = document.getElementById('tm-proposal');
   proposalEl.innerHTML = '';

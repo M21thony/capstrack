@@ -19,17 +19,17 @@ class AssignmentController extends Controller
 
         $pendingAssignments = TeamExpertAssignment::where('expert_id', $expert->expert_id)
             ->where('status', 'pending')
-            ->with(['team', 'team.leader', 'team.members', 'expert.roles', 'expertRole.role'])
+            ->with(['team', 'team.leader', 'team.members', 'expert.roles', 'expertRole.role', 'preProposal'])
             ->get();
 
         $approvedAssignments = TeamExpertAssignment::where('expert_id', $expert->expert_id)
             ->where('status', 'approved')
-            ->with(['team', 'team.leader', 'team.members', 'expert.roles', 'expertRole.role'])
+            ->with(['team', 'team.leader', 'team.members', 'expert.roles', 'expertRole.role', 'preProposal'])
             ->get();
 
         $rejectedAssignments = TeamExpertAssignment::where('expert_id', $expert->expert_id)
             ->where('status', 'rejected')
-            ->with(['team', 'team.leader', 'team.members', 'expert.roles', 'expertRole.role'])
+            ->with(['team', 'team.leader', 'team.members', 'expert.roles', 'expertRole.role', 'preProposal'])
             ->latest()
             ->take(10)
             ->get();
@@ -78,7 +78,14 @@ class AssignmentController extends Controller
                 'leader_email' => $leaderEmail,
                 'members' => $members,
                 'message' => $message,
-                'proposal' => $proposalUrl,
+                'proposal' => $proposalUrl
+                    ?? ($a->preProposal?->duplication_check_id
+                        ? route('instructor.assignments.pre_proposal', $a->assignment_id)
+                        : null),
+                // When the team applied with the pre-proposal their CaPSA
+                // approved, say so: the expert is looking at the document
+                // that got through, not a PDF the team chose to attach.
+                'approved_title' => $a->preProposal?->title,
                 'date' => $a->created_at ? $a->created_at->format('M d, Y g:i A') : 'N/A',
                 'rejection_reason' => $a->rejection_reason ?? null,
                 'status' => $a->status ?? 'pending',
@@ -147,6 +154,37 @@ class AssignmentController extends Controller
                 'message' => 'Server error: '.$e->getMessage(),
             ], 500);
         }
+    }
+
+    /**
+     * The PDF behind an application made with an approved pre-proposal.
+     *
+     * The file lives on the duplication check the team ran, on the private
+     * disk - so it is served through here, and only to the expert the
+     * application was addressed to.
+     */
+    public function preProposalDocument($id)
+    {
+        $expert = Auth::guard('expert')->user();
+
+        $assignment = TeamExpertAssignment::with('preProposal.duplicationCheck')
+            ->where('assignment_id', $id)
+            ->where('expert_id', $expert->expert_id)
+            ->first();
+
+        abort_if(! $assignment, 404);
+
+        $check = $assignment->preProposal?->duplicationCheck;
+
+        abort_if(! $check || ! $check->document_path, 404);
+        abort_unless(Storage::exists($check->document_path), 404);
+
+        return Storage::response(
+            $check->document_path,
+            'pre-proposal.pdf',
+            [],
+            'inline'
+        );
     }
 
     public function reject(Request $request, $id): JsonResponse
