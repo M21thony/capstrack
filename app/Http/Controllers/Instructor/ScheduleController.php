@@ -95,7 +95,7 @@ class ScheduleController extends Controller
         $nextDate = $this->getNextDateForDay($request->available_date);
 
         $newRecur = $request->recur ?? 'weekly';
-        $newDate  = $newRecur === 'once' ? $request->specific_date : null;
+        $newDate = $newRecur === 'once' ? $request->specific_date : null;
 
         // available_date is only a weekday name, not a real date, so a plain
         // weekday+time match here would flag a new one-time slot as
@@ -255,7 +255,7 @@ class ScheduleController extends Controller
                     teamName: 'Available Slot',
                     studentEmail: $expert->email,
                     expertEmail: $expert->email,
-                    topic: "Weekly " . ($request->slot_type ?? $slot->slot_type ?? 'consultation') . " slot — {$day}s",
+                    topic: 'Weekly '.($request->slot_type ?? $slot->slot_type ?? 'consultation')." slot — {$day}s",
                     recurrence: GoogleCalendarService::recurrenceRuleFor($slot->recur ?? 'weekly'),
                 );
 
@@ -360,7 +360,7 @@ class ScheduleController extends Controller
         // Remaining combinations involve at least one biweekly side —
         // check whether the dates align on the same 14-day cadence.
         $biweeklyDate = $recurA === 'biweekly' ? $dateA : $dateB;
-        $otherDate    = $recurA === 'biweekly' ? $dateB : $dateA;
+        $otherDate = $recurA === 'biweekly' ? $dateB : $dateA;
 
         if (! $biweeklyDate || ! $otherDate) {
             return true; // can't verify alignment — fail safe

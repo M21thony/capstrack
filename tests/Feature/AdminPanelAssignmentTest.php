@@ -12,6 +12,7 @@ use App\Models\Student;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
 use App\Models\TeamExpertAssignment;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -395,7 +396,7 @@ class AdminPanelAssignmentTest extends TestCase
 
         DefenseSchedule::create(['team_id' => $team->team_id, 'defense_type' => 'Title Defense']);
 
-        $this->expectException(\Illuminate\Database\QueryException::class);
+        $this->expectException(QueryException::class);
         DefenseSchedule::create(['team_id' => $team->team_id, 'defense_type' => 'Title Defense']);
     }
 
@@ -412,7 +413,7 @@ class AdminPanelAssignmentTest extends TestCase
             'created_at' => now(),
         ]);
 
-        $this->expectException(\Illuminate\Database\QueryException::class);
+        $this->expectException(QueryException::class);
         DefensePanel::create([
             'defense_id' => $schedule->defense_id,
             'expert_id' => $expert->expert_id,
@@ -789,7 +790,7 @@ class AdminPanelAssignmentTest extends TestCase
         $team = $this->makeTeam();
         $adviser = $this->makeExpert();
 
-        $assignment = new TeamExpertAssignment();
+        $assignment = new TeamExpertAssignment;
         $assignment->team_id = $team->team_id;
         $assignment->expert_id = $adviser->expert_id;
         $assignment->status = 'approved';
@@ -811,7 +812,7 @@ class AdminPanelAssignmentTest extends TestCase
         $adviser = $this->makeExpert();
         ExpertExpertise::create(['expert_id' => $adviser->expert_id, 'expertise_field' => 'Artificial Intelligence']);
 
-        $assignment = new TeamExpertAssignment();
+        $assignment = new TeamExpertAssignment;
         $assignment->team_id = $team->team_id;
         $assignment->expert_id = $adviser->expert_id;
         $assignment->status = 'approved';
