@@ -229,6 +229,9 @@ Route::middleware(['auth', 'no.cache', 'track.expert'])->group(function () {
     Route::post('/team', [TeamController::class, 'store'])->name('team.store');
     Route::put('/team/{team}', [TeamController::class, 'update'])->name('team.update');
     Route::get('/team/check-name', [TeamController::class, 'checkName'])->name('team.check-name');
+    // Before anything matching /team/{something}, so the literal path is not
+    // swallowed by a route-model-binding parameter.
+    Route::get('/team/available-classmates', [TeamController::class, 'getAvailableClassmates'])->name('team.available-classmates');
     Route::post('/team/transfer-leadership', [TeamController::class, 'transferLeadership'])->name('team.transfer-leadership');
     Route::post('/team/leadership/{notification}/accept', [TeamController::class, 'acceptLeadership'])->name('team.leadership.accept');
     Route::post('/team/leadership/{notification}/decline', [TeamController::class, 'declineLeadership'])->name('team.leadership.decline');
