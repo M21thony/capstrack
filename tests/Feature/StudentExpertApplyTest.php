@@ -6,6 +6,7 @@ use App\Models\CapstoneExpert;
 use App\Models\CapstonePreProposal;
 use App\Models\DuplicationCheck;
 use App\Models\ExpertRole;
+use App\Models\Notification;
 use App\Models\Role;
 use App\Models\Student;
 use App\Models\StudentSchoolYear;
@@ -427,5 +428,65 @@ class StudentExpertApplyTest extends TestCase
 
         $response->assertStatus(422);
         $this->assertStringContainsString('Attach your proposal', $response->json('message'));
+    }
+
+    /**
+     * Dropping a team went through on one click with nothing recorded and
+     * nobody told - a team simply lost its adviser. It now needs a reason and
+     * the word typed, and the team is told why.
+     */
+    public function test_an_expert_cannot_drop_a_team_without_a_reason(): void
+    {
+        [$student, $team] = $this->makeLeaderWithTeam();
+        $expert = $this->makeAdviserExpert();
+
+        $assignment = TeamExpertAssignment::create([
+            'team_id' => $team->team_id,
+            'expert_id' => $expert->expert_id,
+            'expert_role_id' => $this->expertRoleId($expert, 'adviser'),
+            'status' => 'approved',
+        ]);
+
+        $this->actingAs($expert, 'expert');
+
+        $this->deleteJson(route('instructor.assignments.remove', $assignment->assignment_id), [])
+            ->assertStatus(422);
+
+        $this->deleteJson(route('instructor.assignments.remove', $assignment->assignment_id), [
+            'reason' => 'Schedule clash this semester.',
+            'confirm' => 'nope',
+        ])->assertStatus(422);
+
+        $this->assertNotNull($assignment->fresh(), 'The assignment was dropped anyway.');
+    }
+
+    /** With both, it goes through and the team is told why. */
+    public function test_dropping_a_team_tells_them_why(): void
+    {
+        [$student, $team] = $this->makeLeaderWithTeam();
+        $expert = $this->makeAdviserExpert();
+
+        $assignment = TeamExpertAssignment::create([
+            'team_id' => $team->team_id,
+            'expert_id' => $expert->expert_id,
+            'expert_role_id' => $this->expertRoleId($expert, 'adviser'),
+            'status' => 'approved',
+        ]);
+
+        $this->actingAs($expert, 'expert');
+
+        $this->deleteJson(route('instructor.assignments.remove', $assignment->assignment_id), [
+            'reason' => 'Schedule clash this semester.',
+            'confirm' => 'remove',
+        ])->assertOk();
+
+        $this->assertNull($assignment->fresh());
+
+        $note = Notification::where('student_id', $student->student_id)
+            ->where('type', 'expert_removed')
+            ->first();
+
+        $this->assertNotNull($note, 'The team was never told.');
+        $this->assertStringContainsString('Schedule clash this semester.', $note->message);
     }
 }

@@ -480,6 +480,24 @@
     <h3>Remove Assignment?</h3>
     <div class="confirm-desc">This will permanently remove this assignment and free up a slot.</div>
     <div class="confirm-detail" id="instructor-remove-detail"></div>
+
+    {{-- Dropping a team used to be one click, with nothing written down and
+         the team never told. Same two steps their own side asks for: say why,
+         and type the word. --}}
+    <div style="text-align:left;margin-top:16px">
+      <label style="display:block;font-size:12px;font-weight:600;color:var(--text);margin-bottom:6px">Reason <span style="color:var(--red)">*</span></label>
+      <textarea id="instructor-remove-reason" rows="3" maxlength="500" oninput="validateInstructorRemove()"
+                placeholder="Why are you no longer working with this team? They will be told."
+                style="width:100%;box-sizing:border-box;padding:9px 11px;border:1px solid var(--border);border-radius:8px;background:var(--bg2);color:var(--text);font:inherit;font-size:13px;resize:vertical"></textarea>
+
+      <label style="display:block;font-size:12px;font-weight:600;color:var(--text);margin:12px 0 6px">Type <strong>remove</strong> to confirm <span style="color:var(--red)">*</span></label>
+      <input type="text" id="instructor-remove-confirm" autocomplete="off" oninput="validateInstructorRemove()"
+             placeholder='type "remove" here'
+             style="width:100%;box-sizing:border-box;padding:9px 11px;border:1px solid var(--border);border-radius:8px;background:var(--bg2);color:var(--text);font:inherit;font-size:13px" />
+
+      <div id="instructor-remove-error" style="display:none;font-size:11.5px;color:var(--red);margin-top:6px"></div>
+    </div>
+
     <div class="modal-actions" style="margin-top: 18px;">
       <button class="btn btn-soft" onclick="closeModal('instructor-remove-modal')">Cancel</button>
       <button class="btn btn-danger" id="btn-confirm-instructor-remove" onclick="confirmInstructorRemove()">
@@ -676,13 +694,38 @@ function openInstructorRemoveModal(id) {
   currentInstructorRemoveId = id;
   document.getElementById('instructor-remove-detail').innerHTML =
     '<strong>' + d.team + '</strong> — ' + d.role + '<br><span style="font-size:11px;color:var(--red);">This action cannot be undone.</span>';
+  document.getElementById('instructor-remove-reason').value = '';
+  document.getElementById('instructor-remove-confirm').value = '';
+  document.getElementById('instructor-remove-error').style.display = 'none';
+  validateInstructorRemove();
   closeModal('reject-modal');
   closeModal('approve-modal');
   openModal('instructor-remove-modal');
 }
 
+/** Both fields have to be filled in before Remove does anything. */
+function validateInstructorRemove() {
+  const reason = document.getElementById('instructor-remove-reason').value.trim();
+  const typed = document.getElementById('instructor-remove-confirm').value.trim();
+  const ok = reason.length >= 3 && typed.toLowerCase() === 'remove';
+  const btn = document.getElementById('btn-confirm-instructor-remove');
+  btn.disabled = !ok;
+  btn.style.opacity = ok ? '1' : '0.5';
+  btn.style.cursor = ok ? 'pointer' : 'not-allowed';
+
+  return ok;
+}
+
 function confirmInstructorRemove() {
   if (!currentInstructorRemoveId) return;
+  if (!validateInstructorRemove()) {
+    const err = document.getElementById('instructor-remove-error');
+    err.textContent = 'Give a reason and type "remove" to confirm.';
+    err.style.display = 'block';
+
+    return;
+  }
+
   const btn = document.getElementById('btn-confirm-instructor-remove');
   btn.disabled = true;
   btn.innerHTML = 'Removing...';
@@ -692,7 +735,12 @@ function confirmInstructorRemove() {
     headers: {
       'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
       'Accept': 'application/json',
+      'Content-Type': 'application/json',
     },
+    body: JSON.stringify({
+      reason: document.getElementById('instructor-remove-reason').value.trim(),
+      confirm: document.getElementById('instructor-remove-confirm').value.trim(),
+    }),
   })
   .then(r => r.json())
   .then(data => {

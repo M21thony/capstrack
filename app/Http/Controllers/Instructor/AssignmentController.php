@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
 
 class AssignmentController extends Controller
 {
@@ -252,8 +253,44 @@ class AssignmentController extends Controller
         }
     }
 
-    public function remove($id): JsonResponse
+    /**
+     * Drop a team an expert has already taken on.
+     *
+     * This used to go through on one click, with nothing recorded and nobody
+     * told - a team simply lost its adviser and had no way of knowing why.
+     * It now asks for a reason and for the word to be typed, the same as the
+     * team's own side of this, and the reason reaches the team.
+     */
+    public function remove(Request $request, $id): JsonResponse
     {
+        // Checked by hand rather than through $request->validate(): this is
+        // only ever called by fetch(), and a failed validate() redirects,
+        // which reaches the browser as a page of HTML where JSON was
+        // expected and fails silently.
+        $validator = Validator::make($request->all(), [
+            'reason' => ['required', 'string', 'min:3', 'max:500'],
+            'confirm' => ['required', 'string'],
+        ], [
+            'reason.required' => 'Say why you are no longer working with this team.',
+            'reason.min' => 'Say why you are no longer working with this team.',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => $validator->errors()->first(),
+            ], 422);
+        }
+
+        $validated = $validator->validated();
+
+        if (strcasecmp(trim($validated['confirm']), 'remove') !== 0) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Type "remove" to confirm.',
+            ], 422);
+        }
+
         $expert = Auth::guard('expert')->user();
 
         $assignment = TeamExpertAssignment::where('assignment_id', $id)
@@ -274,11 +311,29 @@ class AssignmentController extends Controller
             ], 422);
         }
 
+        $team = $assignment->team;
+        $expertName = $expert->name;
+
         if ($assignment->proposal_file) {
             Storage::disk('public')->delete($assignment->proposal_file);
         }
 
         $assignment->delete();
+
+        // The team finds out from this, so it is sent after the row is gone
+        // rather than in place of it - the assignment itself is what frees
+        // the slot, and the reason is what the team is owed.
+        if ($team && $team->leader_id) {
+            Notification::create([
+                'student_id' => $team->leader_id,
+                'type' => 'expert_removed',
+                'title' => 'Expert Withdrew',
+                'message' => e($expertName).' is no longer working with your team. Reason: '.e($validated['reason']),
+                'link' => route('student.experts'),
+                'is_read' => false,
+                'created_at' => now(),
+            ]);
+        }
 
         return response()->json([
             'success' => true,
