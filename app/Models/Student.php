@@ -123,6 +123,16 @@ class Student extends Authenticatable
      * full name, but some rows (and some hand-entered data) hold just the
      * code. Both are valid data, so both map.
      */
+    /**
+     * The only domain a student can sign in from.
+     *
+     * Sign-in has always enforced this; the student list upload now checks it
+     * too, because an address outside it is one nobody will ever be able to
+     * use - and a list is typed by hand, so "my.cpsc" for "my.cspc" is the
+     * mistake it exists to catch.
+     */
+    public const EMAIL_DOMAIN = '@my.cspc.edu.ph';
+
     public const PROGRAM_COURSES = [
         'BSCS' => 'Bachelor of Science in Computer Science',
         'BSIT' => 'Bachelor of Science in Information Technology',

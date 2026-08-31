@@ -198,9 +198,10 @@ function closeSidebar() {
     <p class="ct-modal-desc" style="text-align:left;">
       One .xlsx file, one sheet. Columns are read by their headings, in any order:
       <strong>Email</strong> (required), Name, Student No., Course/Program, Year, Section.
-      Matches by email against existing accounts and fills in any <strong>blank</strong> student
-      number, course or section. Anything a student has already got is left alone, and a student
-      never has to wait for this to sign up and use the site.
+      Fills in any <strong>blank</strong> student number, course or section on accounts that
+      already exist, and prepares an account for anyone who has not signed in yet, so their
+      profile is ready when they do. Anything a student already has is left alone.
+      Emails must be <strong>@my.cspc.edu.ph</strong> &mdash; nothing else can sign in.
     </p>
     <input type="file" id="studentRosterFile" class="ct-modal-input" accept=".xlsx">
     <div id="studentRosterResult" style="display:none;font-size:12px;text-align:left;margin:-6px 0 16px;"></div>
@@ -274,18 +275,15 @@ function uploadStudentRoster() {
         return;
       }
 
-      let html = `<strong>${data.inserted}</strong> read, <strong>${data.matched}</strong> matched to an existing account, <strong>${data.skipped}</strong> skipped.`;
+      let html = `<strong>${data.inserted}</strong> read, <strong>${data.skipped}</strong> skipped.`;
+      if (data.created) {
+        html += `<div style="margin-top:6px;color:#15803d"><strong>${data.created}</strong> account${data.created === 1 ? '' : 's'} prepared for students who have not signed in yet.</div>`;
+      }
       if (data.filled) {
-        html += `<div style="margin-top:6px;color:#15803d"><strong>${data.filled}</strong> blank field${data.filled === 1 ? '' : 's'} filled in.</div>`;
+        html += `<div style="margin-top:4px;color:#15803d"><strong>${data.filled}</strong> blank field${data.filled === 1 ? '' : 's'} filled in on ${data.matched} existing account${data.matched === 1 ? '' : 's'}.</div>`;
       }
       if (data.already_complete) {
         html += `<div style="margin-top:4px;color:var(--text3)">${data.already_complete} already had everything &mdash; nothing on those was changed.</div>`;
-      }
-      if (data.unmatched && data.unmatched.length) {
-        html += `<div style="margin-top:8px;color:#b45309"><strong>${data.unmatched.length}</strong> on the list have no account yet ` +
-          `(their profile fills in when they first sign in):` +
-          '<div style="max-height:120px;overflow-y:auto;margin-top:4px">' +
-          data.unmatched.map(e => `<div>${e}</div>`).join('') + '</div></div>';
       }
       if (data.errors && data.errors.length) {
         html += '<div style="max-height:160px;overflow-y:auto;color:var(--text3);margin-top:6px">' +
