@@ -49,6 +49,14 @@ return [
     'ollama' => [
         'model' => env('OLLAMA_MODEL', 'qwen2.5:7B'),
         'embed_model' => env('OLLAMA_EMBED_MODEL', 'nomic-embed-text'),
+
+        // How long Ollama holds a model in memory after answering. Its own
+        // default is five minutes, and a duplication check takes longer than
+        // that to work through a team's titles - so the model was being
+        // unloaded partway and read back off disk again, repeatedly, which is
+        // where the minutes went. '-1' keeps it resident until something
+        // else needs the memory.
+        'keep_alive' => env('OLLAMA_KEEP_ALIVE', '30m'),
     ],
 
     'ssh_tunnel' => [
