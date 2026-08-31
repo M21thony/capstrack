@@ -267,7 +267,10 @@ class TeamController extends Controller
 
         DB::table('student_s_y')
             ->updateOrInsert(
-                ['student_id' => $student->student_id],
+                // Keyed on the term too: this table is one row per student PER
+                // TERM, so keying on the student alone would overwrite last
+                // semester's record instead of starting this one.
+                ['student_id' => $student->student_id, 'term_id' => \App\Models\Term::activeId()],
                 ['team_id' => $team->team_id, 's_role_id' => StudentRole::leaderRoleId()]
             );
 

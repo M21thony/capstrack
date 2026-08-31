@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\DefenseOutcome;
 use Illuminate\Database\Eloquent\Model;
 
 class DefenseSchedule extends Model
@@ -19,12 +20,17 @@ class DefenseSchedule extends Model
         'schedule_date',
         'end_date',
         'venue',
+        'outcome',
+        'outcome_remarks',
+        'outcome_recorded_by',
+        'outcome_recorded_at',
     ];
 
     protected $casts = [
         'schedule_date' => 'datetime',
         'end_date' => 'datetime',
         'attempt' => 'integer',
+        'outcome_recorded_at' => 'datetime',
     ];
 
     /**
@@ -101,5 +107,34 @@ class DefenseSchedule extends Model
     public function panels()
     {
         return $this->hasMany(DefensePanel::class, 'defense_id', 'defense_id');
+    }
+
+    /** The expert who recorded the panel's decision - the Panel Chair. */
+    public function outcomeRecordedBy()
+    {
+        return $this->belongsTo(CapstoneExpert::class, 'outcome_recorded_by', 'expert_id');
+    }
+
+    public function chair()
+    {
+        return $this->hasOne(DefensePanel::class, 'defense_id', 'defense_id')
+            ->where('panel_role', 'Panel Chair');
+    }
+
+    public function isChairedBy(int $expertId): bool
+    {
+        $panels = $this->relationLoaded('panels') ? $this->panels : $this->panels()->get();
+
+        return $panels->contains(fn ($p) => $p->panel_role === 'Panel Chair' && (int) $p->expert_id === $expertId);
+    }
+
+    public function outcomeLabel(): string
+    {
+        return DefenseOutcome::label($this->outcome, $this->defense_type);
+    }
+
+    public function hasOutcome(): bool
+    {
+        return $this->outcome !== null;
     }
 }

@@ -160,6 +160,7 @@ Route::middleware(['expert.auth', 'expert.approved', 'no.cache', 'track.expert']
     Route::get('/grading/{defense}', [GradingController::class, 'show'])->name('grading.show');
     Route::post('/grading/{defense}/save', [GradingController::class, 'save'])->name('grading.save');
     Route::post('/grading/{defense}/submit', [GradingController::class, 'submit'])->name('grading.submit');
+    Route::post('/grading/{defense}/outcome', [GradingController::class, 'recordOutcome'])->name('grading.outcome');
     Route::get('/docreview', [DocReviewController::class, 'index'])->name('docreview');
     Route::get('/docreview/{review}/annotate', [DocReviewController::class, 'annotate'])->name('docreview.annotate');
     Route::get('/assignments', [InstructorAssignmentController::class, 'index'])->name('assignments');
