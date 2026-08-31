@@ -338,7 +338,12 @@
         <div class="card" style="flex-shrink:0">
           <div class="card-header"><span class="card-title" style="display:inline-flex;align-items:center;gap:7px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Check Document</span></div>
 
-          @if ($canSubmitMore)
+          {{-- The checker itself is always open. Running a title past the
+               archive tells a team whether it has been done before, and that
+               is worth knowing whether or not their set is turned in - it
+               used to disappear the moment they submitted, taking the tool
+               away exactly when they had a rejection to answer. Saving a
+               result into the submitted set is the part that stays shut. --}}
             <form class="duplication-form" onsubmit="return false;">
               <div class="upload-zone" id="upload-zone" style="margin-bottom:10px;cursor:pointer;padding:22px 14px;border:1.5px dashed var(--border2,var(--border));background:var(--bg3)" onclick="document.getElementById('file-input').click()">
                 <div class="upload-icon" style="margin-bottom:8px">
@@ -353,14 +358,16 @@
               </button>
             </form>
 
-            <button type="button" class="btn btn-primary" id="open-pp-form-btn" style="display:none;width:100%;justify-content:center;margin-top:10px" onclick="openPpFormModal()">
-              Complete Pre-Proposal Details →
-            </button>
-          @else
-            <div style="font-size:12px;color:var(--text2);text-align:center;padding:20px 10px">
-              All 3 required proposals are submitted. A rejected one can be replaced with a revised upload.
-            </div>
-          @endif
+            @if ($canSubmitMore)
+              <button type="button" class="btn btn-primary" id="open-pp-form-btn" style="display:none;width:100%;justify-content:center;margin-top:10px" onclick="openPpFormModal()">
+                Complete Pre-Proposal Details &rarr;
+              </button>
+            @else
+              <div id="pp-locked-note" style="display:none;margin-top:10px;font-size:11.5px;color:var(--text2);background:var(--bg3);border:1px dashed var(--border);border-radius:8px;padding:10px 12px;line-height:1.5">
+                Your titles are turned in, so this check is for your own reading &mdash;
+                it has not been added to them. Unsubmit first if you want to keep it.
+              </div>
+            @endif
 
           <div style="margin-top:10px;padding:8px;background:var(--bg3);border-radius:8px;font-size:10px;color:var(--text3);line-height:1.5">
             Powered by Qwen 2.5 + nomic-embed-text · Local AI · Results may vary
@@ -991,7 +998,12 @@ function renderResult(data, fileName) {
     renderAgendaTags();
   }
 
-  document.getElementById('open-pp-form-btn').style.display = '';
+  // One of these two is on the page, never both: the button while the team
+  // can still add a title, the note once their set is turned in.
+  const ppNext = document.getElementById('open-pp-form-btn');
+  const ppLocked = document.getElementById('pp-locked-note');
+  if (ppNext) ppNext.style.display = '';
+  if (ppLocked) ppLocked.style.display = '';
   document.getElementById('full-report-btn').style.display = '';
 }
 

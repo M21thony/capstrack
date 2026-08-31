@@ -18,7 +18,7 @@ use Illuminate\View\View;
 class PreProposalController extends Controller
 {
     /** A team has to keep at least this many titles before turning them in. */
-    public const MINIMUM_PROPOSALS = 3;
+    public const MINIMUM_PROPOSALS = 4;
 
     public function __construct(private SimilarityService $service) {}
 

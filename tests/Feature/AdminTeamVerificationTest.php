@@ -250,8 +250,13 @@ class AdminTeamVerificationTest extends TestCase
         // Submitting needs the minimum number of titles kept, so top the set
         // back up before turning it in again.
         $this->submittedProposalFor($team, $leader, ['submitted_at' => null]);
-        $this->createPendingProposal($team, $leader, 2, 'A Second Candidate Title For This Team To Consider Fully');
-        $this->createPendingProposal($team, $leader, 3, 'A Third Candidate Title For This Team To Consider Fully');
+
+        // Up to whatever submitting currently asks for, rather than a fixed
+        // three - the minimum is a rule that moves.
+        foreach (range(2, \App\Http\Controllers\PreProposalController::MINIMUM_PROPOSALS) as $slot) {
+            $this->createPendingProposal($team, $leader, $slot, "Candidate Title Number {$slot} For This Team To Consider Fully");
+        }
+
         $team->preProposals()->update(['submitted_at' => null]);
 
         $this->post(route('student.pre-proposal.submit'))->assertSessionHas('status');
