@@ -80,11 +80,32 @@
   .ep-suggest button:hover{background:var(--bg3)}
   .ep-suggest .ep-suggest-empty{padding:9px 11px;font-size:11.5px;color:var(--text3)}
 
-  .ep-quick-groups{margin-top:10px;display:flex;flex-direction:column;gap:7px}
+  .ep-quick-groups{margin-top:10px;display:flex;flex-direction:column;gap:4px}
+  /* Forty-eight skills in five groups, all open at once, is a long scroll to
+     reach the one you want. Each group is a row you open, so the whole
+     catalogue fits in a glance and only what you are looking at is unfolded. */
+  .ep-quick-group{border:1px solid var(--border);border-radius:9px;background:#fff;overflow:hidden}
   .ep-quick-group-title{
+    width:100%;display:flex;align-items:center;gap:8px;text-align:left;
+    padding:8px 10px;border:none;background:transparent;cursor:pointer;
+    font-family:'DM Sans',sans-serif;
     font-size:9.5px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.8px;
   }
-  .ep-quick-chips{display:flex;flex-wrap:wrap;gap:5px}
+  .ep-quick-group-title:hover{background:var(--bg3)}
+  .ep-quick-group-title .ep-caret{
+    width:11px;height:11px;flex-shrink:0;stroke:currentColor;fill:none;stroke-width:3;
+    transition:transform .15s ease;
+  }
+  .ep-quick-group.open .ep-quick-group-title .ep-caret{transform:rotate(90deg)}
+  .ep-quick-group-title .ep-grp-name{flex:1;min-width:0}
+  /* How many of this group you have taken - the reason to open it, or not. */
+  .ep-grp-count{
+    font-size:9.5px;font-weight:700;letter-spacing:0.4px;padding:1px 6px;border-radius:999px;
+    background:var(--bg4);color:var(--text3);
+  }
+  .ep-grp-count.has{background:var(--blue-bg);color:var(--blue)}
+  .ep-quick-chips{display:none;flex-wrap:wrap;gap:5px;padding:0 10px 10px}
+  .ep-quick-group.open .ep-quick-chips{display:flex}
   .ep-quick-chip{
     font-family:'DM Sans',sans-serif;font-size:11px;font-weight:600;padding:4px 9px;border-radius:999px;
     border:1.5px dashed var(--border);background:#fff;color:var(--text2);cursor:pointer;
@@ -231,7 +252,7 @@
           <div class="ep-suggest" id="ep-suggest"></div>
         </div>
         <div style="font-size:11px;color:var(--text3);margin-top:7px">
-          Pick from the list, or type anything that isn't there and press Enter.
+          Search above, or open a group below. Type anything that isn't there and press Enter.
         </div>
 
         <div class="ep-quick-groups" id="ep-quick-groups"></div>
@@ -310,17 +331,54 @@ function epPickSkill(name){
 
 // The same list, browsable without typing - for people who would rather
 // recognise a skill than recall one.
+//
+// Groups start folded. Every add and remove re-renders this whole block, so
+// which ones are open has to be remembered here rather than read back off the
+// DOM - otherwise picking a skill would slam its own group shut underneath
+// the cursor.
+const EP_OPEN_GROUPS = new Set();
+let epGroupsFirstRender = true;
+
+function epToggleSkillGroup(name){
+  EP_OPEN_GROUPS.has(name) ? EP_OPEN_GROUPS.delete(name) : EP_OPEN_GROUPS.add(name);
+  epRenderQuickGroups();
+}
+
 function epRenderQuickGroups(){
   const wrap = document.getElementById('ep-quick-groups');
   if (!wrap) return;
+
+  // On the way in, open whatever already has something taken in it, so the
+  // expert can see their own picks without hunting for them.
+  if (epGroupsFirstRender) {
+    epGroupsFirstRender = false;
+    EP_SKILL_GROUPS.forEach(function (g) {
+      if (g.items.some(epHasTag)) EP_OPEN_GROUPS.add(g.name);
+    });
+  }
+
+  const caret = '<svg class="ep-caret" viewBox="0 0 24 24"><polyline points="9 6 15 12 9 18"/></svg>';
+
   wrap.innerHTML = EP_SKILL_GROUPS.map(function (g) {
+    const taken = g.items.filter(epHasTag).length;
+    const open = EP_OPEN_GROUPS.has(g.name);
+
     const chips = g.items.map(function (i) {
       const picked = epHasTag(i);
       return '<button type="button" class="ep-quick-chip' + (picked ? ' picked' : '') + '"'
            + (picked ? ' disabled' : ' onclick="epPickSkill(' + JSON.stringify(i).replace(/"/g, '&quot;') + ')"')
            + '>' + (picked ? '✓ ' : '+ ') + i + '</button>';
     }).join('');
-    return '<div><div class="ep-quick-group-title">' + g.name + '</div><div class="ep-quick-chips">' + chips + '</div></div>';
+
+    return '<div class="ep-quick-group' + (open ? ' open' : '') + '">'
+         + '<button type="button" class="ep-quick-group-title" aria-expanded="' + open + '"'
+         + ' onclick="epToggleSkillGroup(' + JSON.stringify(g.name).replace(/"/g, '&quot;') + ')">'
+         + caret
+         + '<span class="ep-grp-name">' + g.name + '</span>'
+         + '<span class="ep-grp-count' + (taken ? ' has' : '') + '">' + (taken ? taken + ' of ' + g.items.length : g.items.length) + '</span>'
+         + '</button>'
+         + '<div class="ep-quick-chips">' + chips + '</div>'
+         + '</div>';
   }).join('');
 }
 
