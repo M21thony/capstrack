@@ -231,6 +231,7 @@
   .ct-toast-close:hover { color: #475569; }
   @keyframes toastIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
 </style>
+@include('partials.skeleton-head', ['skReveal' => 'flex'])
 </head>
 <body>
 

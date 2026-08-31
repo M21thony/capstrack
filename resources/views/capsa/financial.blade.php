@@ -18,6 +18,7 @@
   padding-right: 22px !important;
 }
 </style>
+@include('partials.skeleton-head', ['skReveal' => 'flex'])
 </head>
 <body>
 

@@ -402,6 +402,7 @@
     }
   }
 </style>
+@include('partials.skeleton-head', ['skReveal' => 'flex'])
 </head>
 <body>
 

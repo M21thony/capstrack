@@ -30,6 +30,7 @@
 .sp-meta{font-size:11.5px;color:var(--text3);margin-top:2px;text-transform:capitalize}
 .sp-flag{font-family:'Space Mono',monospace;font-size:8.5px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:1px 6px;border-radius:3px;background:var(--red-bg);color:var(--red);margin-left:7px}
 </style>
+@include('partials.skeleton-head', ['skReveal' => 'opacity'])
 </head>
 <body>
 @include('student.partials.sidebar')
@@ -180,6 +181,15 @@ document.addEventListener('DOMContentLoaded', function () {
   var sk = document.getElementById('skeleton-content');
   var rc = document.getElementById('real-content');
   if (sk && rc) {
+    // partials/skeleton-head already decided this in <head>, before the first
+    // paint: the content is on screen and no skeleton was ever shown. Without
+    // this, every save replayed the 600ms fade over content already there.
+    if (document.documentElement.classList.contains('sk-seen')) {
+      sk.remove();
+
+      return;
+    }
+
     requestAnimationFrame(function () {
       setTimeout(function () {
         sk.style.transition = 'opacity 0.3s ease';
@@ -190,6 +200,9 @@ document.addEventListener('DOMContentLoaded', function () {
           sk.remove();
           rc.style.transition = '';
         }, 350);
+        try {
+          sessionStorage.setItem('sk-seen:{{ substr(sha1(session()->getId()), 0, 12) }}:' + window.location.pathname, '1');
+        } catch (e) {}
       }, 600);
     });
   }

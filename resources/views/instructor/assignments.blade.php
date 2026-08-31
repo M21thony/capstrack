@@ -183,6 +183,7 @@
 
 /* Skeleton styles now live in expert.css, shared across every instructor page */
 </style>
+@include('partials.skeleton-head', ['skReveal' => 'block'])
 </head>
 <body>
 @include('instructor.partials.sidebar', ['currentPage' => 'assignments'])
