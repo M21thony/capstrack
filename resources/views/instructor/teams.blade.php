@@ -189,6 +189,7 @@
   .sk-overlay { padding:10px; }
 }
 </style>
+@include('partials.skeleton-head', ['skReveal' => 'block'])
 </head>
 <body>
 @include('instructor.partials.sidebar', ['currentPage' => 'teams', 'totalTeams' => $totalTeams])

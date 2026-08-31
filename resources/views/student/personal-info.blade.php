@@ -12,6 +12,7 @@
         .sk-overlay { position: absolute; inset: 0; background: var(--bg2, #fff); padding: 40px; z-index: 10; }
         .sk { background: linear-gradient(90deg, var(--bg4) 25%, var(--bg2) 50%, var(--bg4) 75%); background-size: 200% 100%; animation: sk-shimmer 1.5s ease-in-out infinite; border-radius: 8px; }
     </style>
+@include('partials.skeleton-head', ['skReveal' => 'opacity'])
 </head>
 <body class="pi-page-body">
     <div class="pi-page">
@@ -66,6 +67,15 @@
       var sk = document.getElementById('skeleton-content');
       var rc = document.getElementById('real-content');
       if (sk && rc) {
+    // partials/skeleton-head already decided this in <head>, before the first
+    // paint: the content is on screen and no skeleton was ever shown. Without
+    // this, every save replayed the 600ms fade over content already there.
+    if (document.documentElement.classList.contains('sk-seen')) {
+      sk.remove();
+
+      return;
+    }
+
         requestAnimationFrame(function () {
           setTimeout(function () {
             sk.style.transition = 'opacity 0.3s ease';
@@ -76,6 +86,9 @@
               sk.remove();
               rc.style.transition = '';
             }, 350);
+            try {
+              sessionStorage.setItem('sk-seen:{{ substr(sha1(session()->getId()), 0, 12) }}:' + window.location.pathname, '1');
+            } catch (e) {}
           }, 600);
         });
       }

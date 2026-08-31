@@ -50,6 +50,7 @@
   .ann-modal-sender{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--text)}
   .ann-modal-date{font-size:12px;color:var(--text3)}
 </style>
+@include('partials.skeleton-head', ['skReveal' => 'block'])
 </head>
 <body>
 @include('instructor.partials.sidebar', ['currentPage' => 'dashboard'])

@@ -6,6 +6,7 @@
 <title>CapsTRACK — Expert Portal</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="{{ asset('css/expert.css') }}" />
+@include('partials.skeleton-head', ['skReveal' => 'block'])
 </head>
 <body>
 @include('instructor.partials.sidebar', ['currentPage' => 'progress'])

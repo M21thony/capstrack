@@ -143,6 +143,7 @@
 
   .tm-empty{text-align:center;padding:44px 20px;color:var(--text3);font-size:13px;line-height:1.6}
 </style>
+@include('partials.skeleton-head', ['skReveal' => 'flex'])
 </head>
 <body>
 

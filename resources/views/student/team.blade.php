@@ -7,6 +7,7 @@
 <meta name="csrf-token" content="{{ csrf_token() }}">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
 @vite('resources/student-ui/Styles/team.css')
+@include('partials.skeleton-head', ['skReveal' => 'opacity'])
 </head>
 <style>
 @keyframes spin { to { transform: rotate(360deg); } }
@@ -2549,6 +2550,15 @@ document.addEventListener('DOMContentLoaded', function() {
     var sk = document.getElementById('skeleton-content');
     var rc = document.getElementById('real-content');
     if (sk && rc) {
+    // partials/skeleton-head already decided this in <head>, before the first
+    // paint: the content is on screen and no skeleton was ever shown. Without
+    // this, every save replayed the 600ms fade over content already there.
+    if (document.documentElement.classList.contains('sk-seen')) {
+      sk.remove();
+
+      return;
+    }
+
         requestAnimationFrame(function () {
             setTimeout(function () {
                 sk.style.transition = 'opacity 0.3s ease';
@@ -2559,6 +2569,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     sk.remove();
                     rc.style.transition = '';
                 }, 350);
+                try {
+                  sessionStorage.setItem('sk-seen:{{ substr(sha1(session()->getId()), 0, 12) }}:' + window.location.pathname, '1');
+                } catch (e) {}
             }, 600);
         });
     }

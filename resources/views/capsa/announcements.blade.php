@@ -53,6 +53,7 @@
 .card.inactive{opacity:0.55;border-color:var(--border2)}.card.inactive:hover{opacity:0.75}
 .badge-gray{background:var(--bg4);color:var(--text3)}
 </style>
+@include('partials.skeleton-head', ['skReveal' => 'flex'])
 </head>
 <body>
 

@@ -53,6 +53,7 @@
 .pa-tab .pa-tab-count { font-size:10px; font-weight:700; padding:1px 7px; border-radius:20px; background:var(--bg3); color:var(--text3) }
 .pa-tab.active .pa-tab-count { background:rgba(201,168,44,0.15); color:var(--accent3) }
 </style>
+@include('partials.skeleton-head', ['skReveal' => 'flex'])
 </head>
 <body>
 

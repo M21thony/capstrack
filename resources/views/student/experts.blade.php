@@ -198,6 +198,7 @@
 .empty-state p { font-size: 14px; }
 
 </style>
+@include('partials.skeleton-head', ['skReveal' => 'opacity'])
 </head>
 <body>
 @include('student.partials.sidebar')
@@ -1454,6 +1455,15 @@ document.addEventListener('DOMContentLoaded', function () {
   var rc = document.getElementById('real-content');
   var scroller = document.querySelector('.content');
   if (sk && rc) {
+    // partials/skeleton-head already decided this in <head>, before the first
+    // paint: the content is on screen and no skeleton was ever shown. Without
+    // this, every save replayed the 600ms fade over content already there.
+    if (document.documentElement.classList.contains('sk-seen')) {
+      sk.remove();
+
+      return;
+    }
+
     // #real-content stays in normal flow at opacity:0 (not display:none, to
     // avoid a layout jump on reveal) — but that means its full real height
     // already counts toward .content's scrollable area while only the
@@ -1475,6 +1485,9 @@ document.addEventListener('DOMContentLoaded', function () {
           sk.remove();
           rc.style.transition = '';
         }, 350);
+        try {
+          sessionStorage.setItem('sk-seen:{{ substr(sha1(session()->getId()), 0, 12) }}:' + window.location.pathname, '1');
+        } catch (e) {}
       }, 600);
     });
   }
