@@ -453,12 +453,14 @@ function fitOnScoreCommitted(index) {
   updateTotalPts();
 }
 
-// Setting the top level fills in the ones below it: three quarters, a half
-// and a quarter of it, snapped to a quarter point.
+// Setting what a criterion is worth spreads that down its lower levels.
 //
-// Only ever fills levels that are still blank or zero. A level you have
-// actually written a number into is yours, and is left exactly as it is -
-// the point is to save typing the obvious ones, not to overwrite judgement.
+// Applies to levels that already have numbers, not only blank ones - the
+// whole point is that changing the top figure carries the rest with it, so
+// they do not sit at values that belonged to the old one.
+//
+// It only ever runs on the criterion whose top score was just committed, so
+// criteria you have not touched keep whatever shape you gave them.
 function splitLowerLevels(index) {
   var cr = draftCriteria[index];
   if (!cr || !cr.levels || cr.levels.length < 2) return false;
@@ -466,21 +468,28 @@ function splitLowerLevels(index) {
   var top = +cr.levels[0].score || 0;
   if (!top) return false;
 
-  var shares = [1, 0.75, 0.5, 0.25];
-  var filled = false;
+  var shares = shareLadderFor(cr.levels.length);
 
   for (var li = 1; li < cr.levels.length; li++) {
-    var lvl = cr.levels[li];
-    var current = (lvl.score === '' || lvl.score === null) ? 0 : +lvl.score;
-
-    if (current !== 0) continue;
-
-    var share = shares[li] !== undefined ? shares[li] : (shares[shares.length - 1] / (li - shares.length + 2));
-    lvl.score = snapToQuarter(top * share);
-    filled = true;
+    cr.levels[li].score = snapToQuarter(top * shares[li]);
   }
 
-  return filled;
+  return true;
+}
+
+// How the levels step down, by how many there are. Four levels fall in even
+// quarters; three skip the middle, which is the shape this rubric mostly
+// uses already (Excellent 5 / Fair 2.5 / Poor 1).
+function shareLadderFor(count) {
+  if (count <= 2) return [1, 0.5];
+  if (count === 3) return [1, 0.5, 0.25];
+
+  var ladder = [];
+  for (var i = 0; i < count; i++) {
+    ladder.push(1 - (i * (0.75 / (count - 1))));
+  }
+
+  return ladder;
 }
 
 // Push the draft's score values back into the inputs already on the page,
