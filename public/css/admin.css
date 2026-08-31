@@ -1031,6 +1031,12 @@ textarea.input{resize:vertical;min-height:80px}
 .rb-rubric-preview{display:none}
 .rb-rubric-card.open .rb-rubric-preview{display:block}
 
+/* Marks a criterion whose points you set yourself - the rubric leaves those
+   alone and takes what it needs from the rest. */
+.rb-pin{display:none;width:20px;height:20px;flex-shrink:0;align-items:center;justify-content:center;border:none;background:none;padding:0;color:var(--accent3);cursor:pointer;border-radius:4px}
+.rb-pin:hover{background:var(--accent-light)}
+.rb-criterion-card.pinned .rb-pin{display:flex}
+
 /* A criterion whose lower level outscores its top one - the number in the
    Excellent box is then not the number that counts. */
 .rb-crit-warn{display:flex;align-items:flex-start;gap:6px;margin-top:7px;padding:6px 9px;border-radius:6px;background:var(--amber-bg);color:var(--amber);font-size:11px;line-height:1.45}
