@@ -80,8 +80,15 @@ class TeamManagementController extends Controller
             // Only the Milestones tab needs the items themselves; every other
             // tab is served by the counts already in $rows.
             // The Milestones tab is a grid: deliverables across, teams down.
-            'grid' => $tab === 'milestones' ? $this->milestoneGrid($teams, $rows) : null,
+            'grid' => $tab === 'milestones' ? $this->milestoneGrid($teams, $rows, $capsaSections) : null,
             'templates' => \App\Support\MilestoneTemplate::all(),
+            // How many teams a new checklist would actually reach. The grid
+            // lists every team a CaPSA oversees, including ones still forming,
+            // but only a confirmed team can be given one - so the two numbers
+            // differ and the modal has to say which it means.
+            'sectionTeamCount' => $tab === 'milestones' && $selectedSection
+                ? $this->confirmedTeamsIn($selectedSection)
+                : null,
             'selectedSection' => $selectedSection,
             'allSections' => $capsaSections,
             'sectionOptions' => collect(AdminProfileController::getAllAvailableSections())
@@ -126,6 +133,15 @@ class TeamManagementController extends Controller
         return $this->sections->filterTeams($candidates, $syRecords, $capsaSections, $selectedSection);
     }
 
+    /** Confirmed teams in a section - the ones a checklist can be given to. */
+    private function confirmedTeamsIn(string $section): int
+    {
+        return Team::where('is_confirmed', true)
+            ->get()
+            ->filter(fn (Team $team) => $this->sections->sectionFor($team) === $section)
+            ->count();
+    }
+
     /**
      * The Milestones tab: every team in the CaPSA's sections against every
      * deliverable on their checklist.
@@ -133,9 +149,21 @@ class TeamManagementController extends Controller
      * It is both where a checklist gets built and where the papers get ticked
      * off, because a CaPSA working down a section is doing the two together.
      */
-    private function milestoneGrid(Collection $teams, Collection $rows): object
+    private function milestoneGrid(Collection $teams, Collection $rows, array $capsaSections): object
     {
-        $milestones = Milestone::whereIn('team_id', $teams->pluck('team_id'))
+        // Only teams that actually sit in one of the CaPSA's sections.
+        //
+        // The other tabs deliberately surface a team whose section could not
+        // be worked out - a half-formed team is exactly what an oversight page
+        // should show. A checklist is different: it is given to a section, and
+        // a team that belongs to none can never be given one, so listing them
+        // here is a page full of rows nothing can be done to.
+        $scoped = $rows->filter(
+            fn ($row) => $row->section !== SectionScope::UNASSIGNED
+                && $this->sections->covers($capsaSections, $row->section)
+        )->values();
+
+        $milestones = Milestone::whereIn('team_id', $scoped->pluck('team.team_id'))
             ->with('items')
             ->orderBy('due_date')
             ->orderBy('id')
@@ -145,7 +173,7 @@ class TeamManagementController extends Controller
         // somehow has several, the earliest is the one shown.
         $primary = $milestones->groupBy('team_id')->map->first()->values();
 
-        return MilestoneGrid::build($primary, $rows);
+        return MilestoneGrid::build($primary, $scoped);
     }
 
     /** @return array<int, object{total: int, completed: int, overdue: int, percent: int}> */

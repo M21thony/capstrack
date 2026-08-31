@@ -41,12 +41,12 @@
   }
 @endphp
 
-@if ($grid && $grid->rows->isNotEmpty() && $grid->columns->isNotEmpty())
+@if ($grid && $grid->rows->isNotEmpty())
   <div class="card" style="padding:0;overflow:hidden">
 
     {{-- Below the width where nineteen columns can breathe, one phase at a
          time. Same table; the other phases are simply not drawn. --}}
-    <div class="ms-phases" id="ms-phases">
+    <div class="ms-phases" id="ms-phases" @if ($grid->phases->count() < 2) style="display:none" @endif>
       @foreach ($grid->phases as $i => $phase)
         <button type="button" class="ms-ptab {{ $i === 0 ? 'on' : '' }}" data-ph="{{ $i }}">
           {{ $phase->name }}<span class="ms-pc">{{ $phase->span }}</span>
@@ -71,14 +71,18 @@
               <div class="ms-th">Team</div>
               <div class="ms-count">{{ $grid->rows->count() }} in your sections</div>
             </th>
-            @foreach ($grid->columns as $col)
+            @forelse ($grid->columns as $col)
               @php $ph = $phaseOf[$col->key] ?? 0; @endphp
               <th class="{{ $ph % 2 ? 'ms-band' : '' }} {{ isset($firstOfPhase[$col->key]) ? 'ms-grp' : '' }}"
                   data-ph="{{ $ph }}" title="{{ $col->full }}">
                 <div class="ms-lab">{{ $col->label }}</div>
                 <span class="ms-kdot ms-k-{{ $col->kind }}"></span>
               </th>
-            @endforeach
+            @empty
+              <th class="ms-lab" style="text-align:left;padding-left:14px;font-weight:400">
+                No checklist in {{ $selectedSection ?: 'these sections' }} yet &mdash; make one and every team gets it.
+              </th>
+            @endforelse
           </tr>
         </thead>
 
@@ -97,10 +101,12 @@
                   {{ $row->section }}
                   <span class="ms-secmeta">{{ $inSection->count() }} {{ Str::plural('team', $inSection->count()) }}@if ($secTotal) &middot; {{ (int) round($secDone / $secTotal * 100) }}%@endif</span>
                 </td>
-                @foreach ($grid->columns as $col)
+                @forelse ($grid->columns as $col)
                   @php $ph = $phaseOf[$col->key] ?? 0; @endphp
                   <td data-ph="{{ $ph }}" class="{{ $ph % 2 ? 'ms-band' : '' }} {{ isset($firstOfPhase[$col->key]) ? 'ms-grp' : '' }}"></td>
-                @endforeach
+                @empty
+                  <td></td>
+                @endforelse
               </tr>
             @endif
 
@@ -118,7 +124,7 @@
               @if (! $row->milestone)
                 {{-- Nineteen empty cells said nothing except "this row is
                      blank". One line says why, and offers the fix. --}}
-                <td class="ms-none" colspan="{{ $grid->columns->count() }}">No checklist yet</td>
+                <td class="ms-none" colspan="{{ max(1, $grid->columns->count()) }}">No checklist yet</td>
               @else
               @foreach ($grid->columns as $col)
                 @php
@@ -172,11 +178,7 @@
   </div>
 @else
   <div class="card"><div class="tm-empty">
-    @if (! $grid || $grid->rows->isEmpty())
-      No teams in {{ $selectedSection ? 'section '.$selectedSection : 'your sections' }} yet.
-    @else
-      No checklist yet. Make one and every team in the section gets it.
-    @endif
+    No teams in {{ $selectedSection ? 'section '.$selectedSection : 'your sections' }} yet.
   </div></div>
 @endif
 
@@ -205,9 +207,13 @@
            same checklist, so handing them out one team at a time was work
            with no purpose. --}}
       <div class="ms-hint">
-        @if ($selectedSection)
-          Goes to every team in <strong>{{ $selectedSection }}</strong>. Teams that already have
-          this checklist keep whatever is ticked.
+        @if ($selectedSection && $sectionTeamCount)
+          Goes to the <strong>{{ $sectionTeamCount }} confirmed {{ Str::plural('team', $sectionTeamCount) }}</strong>
+          in <strong>{{ $selectedSection }}</strong>. A team still forming does not get one until it is
+          confirmed. Teams that already have this checklist keep whatever is ticked.
+        @elseif ($selectedSection)
+          No confirmed team in <strong>{{ $selectedSection }}</strong> yet, so there is nobody to give
+          this to. A team gets its checklist once it is confirmed.
         @else
           Choose a section above first &mdash; a checklist goes to the whole section.
         @endif
@@ -215,7 +221,7 @@
 
       <div class="modal-actions">
         <button type="button" class="btn btn-ghost" onclick="closeMilestoneModal()">Cancel</button>
-        <button type="submit" class="btn btn-primary" @disabled(! $selectedSection)>Create</button>
+        <button type="submit" class="btn btn-primary" @disabled(! $selectedSection || ! $sectionTeamCount)>Create</button>
       </div>
     </form>
   </div>
@@ -247,9 +253,9 @@ function msPost(url, body, method = 'POST') {
 function msReload() { window.location.reload(); }
 
 function openMilestoneModal() {
-  document.getElementById('ms-modal').classList.add('open');
+  document.getElementById('ms-modal').classList.add('show');
 }
-function closeMilestoneModal() { document.getElementById('ms-modal').classList.remove('open'); }
+function closeMilestoneModal() { document.getElementById('ms-modal').classList.remove('show'); }
 
 function onTemplateChange() {
   const empty = document.getElementById('ms-template').value === '';

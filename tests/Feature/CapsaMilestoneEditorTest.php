@@ -286,6 +286,72 @@ class CapsaMilestoneEditorTest extends TestCase
         $this->assertSame(11, substr_count($body, 'ms-mk auto'), 'the other eleven are not');
     }
 
+    /**
+     * The grid lists the CaPSA's own sections and nothing else.
+     *
+     * Other tabs deliberately surface a team whose section could not be worked
+     * out, because a half-formed team is what an oversight page is for. A
+     * checklist is given to a section, so a team belonging to none is a row
+     * nothing can be done to.
+     */
+    public function test_the_grid_shows_only_teams_in_the_capsas_sections(): void
+    {
+        $this->makeCapsaWithSections();
+        [$mine] = $this->makeTeamInSection('Mine');
+        $theirs = $this->makeTeamOutsideSection('Not Mine');
+
+        $response = $this->get(route('admin.team_management', ['tab' => 'milestones']));
+
+        $response->assertOk();
+        $response->assertSee('Mine');
+        $response->assertDontSee($theirs->team_name);
+    }
+
+    /**
+     * Before any checklist exists there are no columns - and requiring them
+     * hid every team behind an empty state that read as "you have no teams".
+     */
+    public function test_teams_show_before_any_checklist_exists(): void
+    {
+        $this->makeCapsaWithSections();
+        [$team] = $this->makeTeamInSection('Team One');
+
+        $response = $this->get(route('admin.team_management', ['tab' => 'milestones']));
+
+        $response->assertOk();
+        $response->assertSee('Team One');
+        $response->assertSee('No checklist');
+        $response->assertDontSee('No teams in');
+    }
+
+    /**
+     * The New checklist button opened the modal by adding a class the
+     * stylesheet never defined, so the modal stayed hidden and nothing
+     * happened when you clicked - the form was never reachable at all.
+     */
+    public function test_the_new_checklist_button_opens_the_modal(): void
+    {
+        $this->makeCapsaWithSections();
+        $this->makeTeamInSection('Team One');
+
+        $html = $this->get(route('admin.team_management', ['tab' => 'milestones']))
+            ->assertOk()->getContent();
+
+        preg_match_all("/ms-modal'\)\.classList\.(?:add|remove)\('([a-z-]+)'\)/", $html, $m);
+
+        $this->assertNotEmpty($m[1], 'Nothing toggles the milestone modal.');
+
+        $css = file_get_contents(public_path('css/admin.css'));
+
+        foreach (array_unique($m[1]) as $class) {
+            $this->assertStringContainsString(
+                ".modal-overlay.{$class}",
+                $css,
+                "The modal is opened with .{$class}, which admin.css does not style - it would stay hidden."
+            );
+        }
+    }
+
     /** A CaPSA has no business touching a team outside her own sections. */
     public function test_a_capsa_cannot_touch_another_sections_milestone(): void
     {
