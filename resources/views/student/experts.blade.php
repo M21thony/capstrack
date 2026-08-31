@@ -8,12 +8,6 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
 @vite('resources/student-ui/Styles/experts.css')
 <style>
-.stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 24px; }
-.stat-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 14px; padding: 18px 20px; display: flex; align-items: center; gap: 14px; }
-.stat-card-icon { width: 42px; height: 42px; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.stat-card-icon svg { width: 20px; height: 20px; stroke: white; fill: none; stroke-width: 2; }
-.stat-card-n { font-size: 24px; font-weight: 700; color: var(--text); line-height: 1; }
-.stat-card-l { font-size: 12px; color: var(--text3); margin-top: 4px; }
 .role-chips { display: flex; flex-wrap: wrap; gap: 5px; margin: 10px 0 8px; justify-content: center; }
 .role-chip { font-size: 10px; font-weight: 600; padding: 3px 10px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.4px; }
 .expertise-tags { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; margin-bottom: 8px; }
@@ -21,6 +15,30 @@
 
 /* My Team / Request Experts cards */
 .req-section { margin-top: 8px; }
+
+/* The team's three role slots - see the markup above for why these
+   replaced the stat cards and the panel that used to list them. */
+.team-slots { background: var(--bg2); border: 1px solid var(--border); border-radius: 14px; padding: 16px 18px; margin-bottom: 20px; }
+.team-slots-head { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 12px; flex-wrap: wrap; }
+.team-slots-head svg { width: 18px; height: 18px; stroke: var(--accent); fill: none; stroke-width: 2; flex-shrink: 0; }
+.team-slots-hint { font-size: 11.5px; font-weight: 400; color: var(--text3); }
+.slot-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.slot { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg3); min-width: 0; }
+.slot.filled { background: var(--bg2); }
+.slot.open { border-style: dashed; }
+.slot-extra { margin-top: 10px; }
+.slot-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.slot-body { min-width: 0; flex: 1; }
+.slot-role { font-family: 'Space Mono', monospace; font-size: 9.5px; font-weight: 700; letter-spacing: 0.7px; text-transform: uppercase; }
+.slot-state { font-size: 12px; color: var(--text3); margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.slot.filled .slot-state { color: var(--text); font-weight: 500; }
+.slot-remove { background: none; border: none; cursor: pointer; color: var(--text3); padding: 3px; border-radius: 5px; flex-shrink: 0; display: flex; }
+.slot-remove:hover { color: var(--red); background: var(--red-bg); }
+.slot-pending { margin-top: 11px; padding-top: 11px; border-top: 1px solid var(--border); font-size: 12px; color: var(--text2); display: flex; align-items: center; gap: 7px; }
+.slot-pending-n { font-family: 'Space Mono', monospace; font-size: 10px; font-weight: 700; padding: 1px 7px; border-radius: 999px; background: var(--amber-bg); color: var(--amber); }
+.req-notice { font-size: 12.5px; color: var(--text2); background: var(--bg3); border: 1px dashed var(--border); border-radius: 10px; padding: 12px 14px; margin-bottom: 20px; }
+.rg-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+
 .req-card { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: var(--bg3); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 8px; transition: 0.2s; }
 .req-card:hover { border-color: var(--accent); }
 .req-card .status-badge { font-size: 10px; font-weight: 600; padding: 3px 10px; border-radius: 20px; margin-left: auto; flex-shrink: 0; }
@@ -178,18 +196,6 @@
 .empty-state svg { width: 48px; height: 48px; stroke: var(--border2); margin-bottom: 12px; }
 .empty-state p { font-size: 14px; }
 
-.role-overview { background: var(--bg2); border: 1px solid var(--border); border-radius: 14px; padding: 18px 20px; margin-bottom: 20px; }
-.role-overview-title { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
-.role-overview-title svg { width: 18px; height: 18px; stroke: var(--accent); fill: none; stroke-width: 2; }
-.role-overview-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); }
-.role-overview-row:last-child { border-bottom: none; }
-.role-overview-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-.role-overview-role { font-size: 12px; font-weight: 600; color: var(--text2); width: 100px; flex-shrink: 0; text-transform: uppercase; letter-spacing: 0.3px; }
-.role-overview-status { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; }
-.role-overview-status .check { width: 16px; height: 16px; stroke: var(--green); fill: none; stroke-width: 2.5; flex-shrink: 0; }
-.role-overview-status .xmark { width: 16px; height: 16px; stroke: var(--red); fill: none; stroke-width: 2.5; flex-shrink: 0; }
-.role-overview-status .assigned-name { font-size: 13px; font-weight: 500; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
-.role-overview-status .not-assigned { font-size: 12px; color: var(--text3); font-style: italic; }
 </style>
 </head>
 <body>
@@ -220,42 +226,21 @@
     <div id="contentWrapper" class="content-grid-wrap">
 <div id="skeleton-content" class="sk-overlay content-grid">
       <div class="experts-main">
-        <div class="stat-grid">
-          @for($i = 0; $i < 3; $i++)
-          <div class="stat-card">
-            <div class="sk" style="width:42px;height:42px;border-radius:12px;flex-shrink:0;"></div>
-            <div style="flex:1">
-              <div class="sk" style="height:24px;width:36px;margin-bottom:6px;"></div>
-              <div class="sk" style="height:12px;width:110px;"></div>
+        {{-- Shaped like the strip that actually loads, so the page does not
+             jump when the real content replaces it. --}}
+        <div class="team-slots">
+          <div class="sk" style="height:16px;width:180px;margin-bottom:14px;"></div>
+          <div class="slot-row">
+            @for($i = 0; $i < 3; $i++)
+            <div class="slot">
+              <div class="sk" style="width:8px;height:8px;border-radius:50%;flex-shrink:0;"></div>
+              <div style="flex:1">
+                <div class="sk" style="height:9px;width:56px;margin-bottom:5px;"></div>
+                <div class="sk" style="height:12px;width:80%;"></div>
+              </div>
             </div>
+            @endfor
           </div>
-          @endfor
-        </div>
-
-        @if($team)
-        <div class="role-overview">
-          <div class="sk" style="height:18px;width:180px;margin-bottom:14px;"></div>
-          @foreach(['','',''] as $r)
-          <div class="role-overview-row">
-            <div class="sk" style="width:10px;height:10px;border-radius:50%;"></div>
-            <div class="sk" style="height:13px;width:90px;"></div>
-            <div class="sk" style="width:16px;height:16px;border-radius:50%;margin-left:auto;"></div>
-          </div>
-          @endforeach
-        </div>
-        @endif
-
-        <div class="req-section">
-          <div class="sk" style="height:15px;width:160px;margin-bottom:14px;"></div>
-          @for($i = 0; $i < 2; $i++)
-          <div class="req-card">
-            <div class="sk" style="width:36px;height:36px;border-radius:50%;flex-shrink:0;"></div>
-            <div style="flex:1">
-              <div class="sk" style="width:50%;height:12px;"></div>
-            </div>
-            <div class="sk" style="width:60px;height:18px;border-radius:20px;margin-left:auto;"></div>
-          </div>
-          @endfor
         </div>
 
         <div class="sticky-controls">
@@ -312,85 +297,99 @@
       @include('student.partials.page-tutorial', ['page' => 'experts'])
 
     <div class="experts-main">
-      <div class="stat-grid">
-        <div class="stat-card">
-          <div class="stat-card-icon" style="background: var(--accent);">
-            <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 1 0-16 0"/></svg>
-          </div>
-          <div>
-            <div class="stat-card-n">{{ $stats['total_experts'] }}</div>
-            <div class="stat-card-l">Available Experts</div>
-          </div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-card-icon" style="background: var(--green);">
-            <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
-          </div>
-          <div>
-            <div class="stat-card-n">{{ $stats['team_approved'] }}</div>
-            <div class="stat-card-l">My Team Experts</div>
-          </div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-card-icon" style="background: var(--amber);">
-            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-          </div>
-          <div>
-            <div class="stat-card-n">{{ $stats['team_pending'] }}</div>
-            <div class="stat-card-l">Pending Requests</div>
-          </div>
-        </div>
-      </div>
+      {{-- A team takes one adviser, one consultant and one grammarian, so the
+           three slots and who fills them are the whole picture. This replaces
+           three stat cards ("Available Experts" counted the list directly
+           below it; "My Team Experts: 0" and "Pending Requests: 0" each
+           repeated a card underneath saying the same thing in words) - and a
+           count of 0 never told you WHICH role you were still missing. --}}
+      @php
+        // Same colours the role chips on the expert cards use, so a
+        // consultant reads as a consultant everywhere on this page.
+        $roleColors = [
+          'adviser'     => ['dot' => 'var(--accent)', 'bg' => 'var(--accent-light)', 'text' => 'var(--accent3)'],
+          'consultant'  => ['dot' => '#3b82f6',       'bg' => 'var(--blue-bg)',      'text' => 'var(--blue)'],
+          'grammarian'  => ['dot' => '#9333ea',       'bg' => 'var(--purple-bg)',    'text' => 'var(--purple)'],
+        ];
+        $approvedAssignments = $assignments->where('status', 'approved');
+
+        // Keyed by the role the team actually engaged them as. Anyone approved
+        // before roles were recorded has no slot, so they are listed under the
+        // three rather than being dropped from the page.
+        $filledSlots = [];
+        $unslotted = [];
+        foreach ($approvedAssignments as $a) {
+          $r = $a->engaged_role_name;
+          if ($r && isset($roleColors[$r]) && ! isset($filledSlots[$r])) { $filledSlots[$r] = $a; }
+          else { $unslotted[] = $a; }
+        }
+        $pendingCount = $assignments->where('status', 'pending')->count();
+      @endphp
 
       @if($team)
-      <div class="role-overview">
-        <div class="role-overview-title">
+      <div class="team-slots">
+        <div class="team-slots-head">
           <svg viewBox="0 0 24 24"><path d="M9 12l2 2 4-4"/><path d="M12 2a10 10 0 1 0 10 10"/></svg>
           Your Team's Experts
+          <span class="team-slots-hint">One adviser, one consultant, one grammarian.</span>
         </div>
-        @php
-          $approvedAssignments = $assignments->where('status', 'approved');
-          // Same colours the role chips use on the expert cards, so a
-          // consultant reads as a consultant in both places.
-          $roleColors = [
-            'adviser' => ['dot' => 'var(--accent)', 'bg' => 'var(--accent-light)', 'text' => 'var(--accent3)'],
-            'consultant' => ['dot' => '#3b82f6', 'bg' => 'var(--blue-bg)', 'text' => 'var(--blue)'],
-            'grammarian' => ['dot' => '#9333ea', 'bg' => 'var(--purple-bg)', 'text' => 'var(--purple)'],
-          ];
-        @endphp
-        @forelse($approvedAssignments as $a)
-          @php
-            $engagedRole = $a->engaged_role_name;
-            $rc = $roleColors[$engagedRole] ?? ['dot' => 'var(--text3)', 'bg' => 'var(--bg3)', 'text' => 'var(--text3)'];
-          @endphp
-          <div class="role-overview-row">
-            <div class="role-overview-dot" style="background: {{ $rc['dot'] }};"></div>
-            <div class="role-overview-role">
-              {{ $a->expert?->name ?? 'Unknown' }}
-              @if($engagedRole)
-                <span class="role-chip" style="background: {{ $rc['bg'] }}; color: {{ $rc['text'] }}; margin-left: 6px;">{{ ucfirst($engagedRole) }}</span>
-              @endif
-            </div>
-            <div class="role-overview-status">
-              <svg class="check" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
-              <span class="assigned-name">Assigned</span>
-              @if($isLeader)
-                <button class="btn btn-sm btn-soft-red" onclick="openRemoveModal({{ $a->assignment_id }}, '{{ $a->expert?->name ?? '' }}')" title="Remove" style="margin-left:auto;padding:4px 8px;">
+
+        <div class="slot-row">
+          @foreach(['adviser', 'consultant', 'grammarian'] as $slotRole)
+            @php $a = $filledSlots[$slotRole] ?? null; $rc = $roleColors[$slotRole]; @endphp
+            <div class="slot {{ $a ? 'filled' : 'open' }}">
+              <span class="slot-dot" style="background: {{ $rc['dot'] }};"></span>
+              <div class="slot-body">
+                <div class="slot-role" style="color: {{ $rc['text'] }};">{{ ucfirst($slotRole) }}</div>
+                <div class="slot-state" @if($a) title="{{ $a->expert?->name }}" @endif>
+                  {{ $a ? ($a->expert?->name ?? 'Unknown') : 'Not filled' }}
+                </div>
+              </div>
+              @if($a && $isLeader)
+                <button class="slot-remove" title="Remove {{ $a->expert?->name ?? 'this expert' }}"
+                        onclick="openRemoveModal({{ $a->assignment_id }}, '{{ $a->expert?->name ?? '' }}')">
                   <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                 </button>
               @endif
             </div>
+          @endforeach
+        </div>
+
+        @foreach($unslotted as $a)
+          <div class="slot slot-extra">
+            <span class="slot-dot" style="background: var(--text3);"></span>
+            <div class="slot-body">
+              <div class="slot-role" style="color: var(--text3);">Assigned</div>
+              <div class="slot-state">{{ $a->expert?->name ?? 'Unknown' }}</div>
+            </div>
+            @if($isLeader)
+              <button class="slot-remove" title="Remove {{ $a->expert?->name ?? 'this expert' }}"
+                      onclick="openRemoveModal({{ $a->assignment_id }}, '{{ $a->expert?->name ?? '' }}')">
+                <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+              </button>
+            @endif
           </div>
-        @empty
-          <div class="not-assigned" style="padding: 6px 0;">No experts assigned yet.</div>
-        @endforelse
+        @endforeach
+
+        @if($pendingCount > 0)
+          <div class="slot-pending">
+            <span class="slot-pending-n">{{ $pendingCount }}</span>
+            {{ $pendingCount === 1 ? 'request waiting on a reply' : 'requests waiting on a reply' }}
+          </div>
+        @endif
       </div>
       @endif
 
       {{-- Your own outstanding requests sit above the browse list, not below
            it. They used to be the last thing on the page, so finding them
            meant scrolling past every expert card - and the further the list
-           grew, the further down they went. --}}
+           grew, the further down they went.
+
+           Only drawn when there is something in it. An empty "Request Experts"
+           card repeated what the slots above already show, and its message was
+           a dead end - so the two cases worth a sentence say the useful thing
+           instead: you have no team, or you are not the one who can apply. --}}
+      @if($assignments->isNotEmpty())
       <div class="req-section">
         <div class="section-title" style="font-size: 15px; font-weight: 600; margin-bottom: 14px; display: flex; align-items: center; gap: 8px;">
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
@@ -400,7 +399,7 @@
           @endif
         </div>
 
-        @forelse($assignments as $assignment)
+        @foreach($assignments as $assignment)
           @php
             $propUrl = $assignment->proposal_file ? Storage::url($assignment->proposal_file) : null;
             $reqRole = $assignment->engaged_role_name;
@@ -434,16 +433,13 @@
               </button>
             @endif
           </div>
-        @empty
-          <div style="text-align: center; padding: 24px; color: var(--text3); font-size: 13px; background: var(--bg3); border-radius: 10px; border: 1px dashed var(--border);">
-            @if($team)
-              No experts requested yet. Browse and apply for experts below.
-            @else
-              You need to join or create a team first before applying for experts.
-            @endif
-          </div>
-        @endforelse
+        @endforeach
       </div>
+      @elseif(! $team)
+        <div class="req-notice">You need to join or create a team before you can apply for an expert.</div>
+      @elseif(! $isLeader)
+        <div class="req-notice">Only your team leader can apply for experts. You can still browse who is available below.</div>
+      @endif
 
       <div class="sticky-controls">
         <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;">
@@ -711,11 +707,6 @@
       </div>
       @endif
 
-      <div class="tutorial-note" style="justify-content: flex-start; border-top:none; margin-top:15px;">
-        <div class="tutorial-item"><div class="dot-guide" style="background:var(--accent)"></div><span>Adviser</span></div>
-        <div class="tutorial-item"><div class="dot-guide" style="background:#3b82f6"></div><span>Consultant</span></div>
-        <div class="tutorial-item"><div class="dot-guide" style="background:#9333ea"></div><span>Grammarian</span></div>
-      </div>
     </div>
 
     <div class="overview-panel">
@@ -723,15 +714,15 @@
         <div class="card" style="padding: 14px; border-radius: 12px; background: var(--bg2);">
           <div class="section-title" style="font-size: 13px; margin-bottom: 12px;">Role Guide</div>
           <div style="margin-bottom: 12px;">
-            <div style="font-size: 11px; font-weight: 600; color: var(--accent3); margin-bottom: 4px;">Adviser</div>
+            <div style="font-size: 11px; font-weight: 600; color: var(--accent3); margin-bottom: 4px; display: flex; align-items: center; gap: 6px;"><span class="rg-dot" style="background: var(--accent);"></span>Adviser</div>
             <div style="font-size: 10px; color: var(--text3); line-height: 1.4;">Guides capstone teams throughout their project journey</div>
           </div>
           <div style="margin-bottom: 12px;">
-            <div style="font-size: 11px; font-weight: 600; color: #3b82f6; margin-bottom: 4px;">Consultant</div>
+            <div style="font-size: 11px; font-weight: 600; color: #3b82f6; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;"><span class="rg-dot" style="background: #3b82f6;"></span>Consultant</div>
             <div style="font-size: 10px; color: var(--text3); line-height: 1.4;">Provides subject-matter expertise and technical advice</div>
           </div>
           <div style="margin-bottom: 12px;">
-            <div style="font-size: 11px; font-weight: 600; color: #9333ea; margin-bottom: 4px;">Grammarian</div>
+            <div style="font-size: 11px; font-weight: 600; color: #9333ea; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;"><span class="rg-dot" style="background: #9333ea;"></span>Grammarian</div>
             <div style="font-size: 10px; color: var(--text3); line-height: 1.4;">Reviews and ensures quality of written documentation</div>
           </div>
           <div class="divider" style="margin: 16px 0;"></div>
