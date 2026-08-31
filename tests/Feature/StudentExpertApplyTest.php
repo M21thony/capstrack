@@ -27,7 +27,7 @@ class StudentExpertApplyTest extends TestCase
 
         $team = Team::create([
             'team_name' => 'Applying Team',
-            'team_status' => 'on-going',
+            'team_status' => 'Active',
             'leader_id' => $student->student_id,
             'is_confirmed' => false,
             'member_count' => 5,
@@ -173,7 +173,7 @@ class StudentExpertApplyTest extends TestCase
         ]);
         $teamB = Team::create([
             'team_name' => 'Second Team',
-            'team_status' => 'on-going',
+            'team_status' => 'Active',
             'leader_id' => $studentB->student_id,
             'is_confirmed' => false,
             'member_count' => 5,

@@ -38,7 +38,11 @@ class RecruitmentController extends Controller
             ->where('student_id', '!=', $student->student_id)
             ->whereNotIn('student_id', $fullTeamStudentIds)
             ->whereDoesntHave('student.team', function ($q) {
-                $q->whereIn('team_status', ['complete', 'closed']);
+                // Off the feed once the team stops taking members OR has
+                // turned its pre-proposals in - two separate reasons, which
+                // is exactly what one status column used to blur.
+                $q->where('team_status', 'Full')
+                    ->orWhereHas('preProposals', fn ($p) => $p->whereNotNull('submitted_at'));
             })
             ->whereIn('student_id', function ($query) use ($student) {
                 $query->select('student_s_y.student_id')
@@ -90,7 +94,7 @@ class RecruitmentController extends Controller
             if ($validated['recruitment_goal'] === 'build_a_team' && ! empty($validated['team_name'])) {
                 $team = Team::create([
                     'team_name' => $validated['team_name'],
-                    'team_status' => 'on-going',
+                    'team_status' => 'Active',
                     'leader_id' => $studentId,
                 ]);
 

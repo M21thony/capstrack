@@ -54,7 +54,7 @@
     $seenPendingVerifyTeamIds = session('admin_seen_pending_verify_team_ids', []);
     $unseenPendingVerifyTeamCount = count(array_diff($pendingVerifyTeamIds, $seenPendingVerifyTeamIds));
 
-    if ($currentRoute === 'admin.verify_teams') {
+    if ($currentRoute === 'admin.team_management') {
         session()->put('admin_seen_pending_verify_team_ids', array_unique(array_merge($seenPendingVerifyTeamIds, $pendingVerifyTeamIds)));
     }
 
@@ -159,7 +159,7 @@
       // always-expanded section for them.
       $adminDutiesRoutes = [
         'admin.dashboard', 'admin.approval', 'admin.experts', 'admin.panel_assignment',
-        'admin.verify_teams', 'admin.sections', 'admin.archive', 'admin.resources',
+        'admin.team_management', 'admin.sections', 'admin.archive', 'admin.resources',
         'admin.rubric_management', 'admin.announcements', 'admin.analytics', 'admin.activitylog',
         'admin.profile', 'admin.financial',
       ];
@@ -237,9 +237,9 @@
         <span class="nav-badge">{{ $unseenVerifiedTeamCount > 99 ? '99+' : $unseenVerifiedTeamCount }}</span>
       @endif
     </a>
-    <a href="{{ route('admin.verify_teams') }}" class="nav-item {{ $currentRoute === 'admin.verify_teams' ? 'active' : '' }}">
+    <a href="{{ route('admin.team_management') }}" class="nav-item {{ $currentRoute === 'admin.team_management' ? 'active' : '' }}">
       <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
-      Team Verification
+      Team Management
       @if ($unseenPendingVerifyTeamCount > 0)
         <span class="nav-badge red">{{ $unseenPendingVerifyTeamCount > 99 ? '99+' : $unseenPendingVerifyTeamCount }}</span>
       @endif

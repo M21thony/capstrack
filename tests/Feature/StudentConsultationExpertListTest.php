@@ -36,7 +36,7 @@ class StudentConsultationExpertListTest extends TestCase
     {
         $team = DB::table('team')->insertGetId([
             'team_name' => 'Team Alpha',
-            'team_status' => 'on-going',
+            'team_status' => 'Active',
         ]);
 
         $student = Student::factory()->withCompleteProfile()->create(['email' => 'consult@my.cspc.edu.ph']);
@@ -122,7 +122,7 @@ class StudentConsultationExpertListTest extends TestCase
     {
         $team = DB::table('team')->insertGetId([
             'team_name' => 'Team Beta',
-            'team_status' => 'on-going',
+            'team_status' => 'Active',
         ]);
 
         $student = Student::factory()->withCompleteProfile()->create(['email' => 'consult2@my.cspc.edu.ph']);

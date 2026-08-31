@@ -35,7 +35,7 @@ class InstructorAssignmentApproveButtonTest extends TestCase
             'team_name' => "JOLINA's TEAM",
             'project_title' => 'A Capstone Project',
             'tags' => [],
-            'team_status' => 'on-going',
+            'team_status' => 'Active',
             'is_confirmed' => true,
         ]);
 

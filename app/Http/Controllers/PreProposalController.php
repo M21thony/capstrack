@@ -17,6 +17,9 @@ use Illuminate\View\View;
 
 class PreProposalController extends Controller
 {
+    /** A team has to keep at least this many titles before turning them in. */
+    public const MINIMUM_PROPOSALS = 3;
+
     public function __construct(private SimilarityService $service) {}
 
     public function edit(Request $request): View|RedirectResponse
@@ -34,8 +37,16 @@ class PreProposalController extends Controller
             'team' => $team->load('members', 'leader', 'selectedPreProposal'),
             'proposals' => $proposals,
             'approvedProposals' => $proposals->filter(fn ($p) => $p->approved_status),
-            'canSubmitMore' => $this->findAvailableSlot($proposals) !== null,
+            // Saving a pre-proposal keeps it as a draft now; there is always
+            // room for another until the set is turned in.
+            'canSubmitMore' => ! $this->isTurnedIn($team),
             'isLeader' => (int) $team->leader_id === (int) $request->user()->student_id,
+            'turnedIn' => $this->isTurnedIn($team),
+            'turnedInAt' => $proposals->whereNotNull('submitted_at')->min('submitted_at'),
+            'draftCount' => $proposals->whereNull('submitted_at')->count(),
+            'canTurnIn' => $proposals->count() >= self::MINIMUM_PROPOSALS && ! $this->isTurnedIn($team),
+            'minimumProposals' => self::MINIMUM_PROPOSALS,
+            'reviewStarted' => $this->reviewStarted($team),
         ]);
     }
 
@@ -153,12 +164,12 @@ class PreProposalController extends Controller
                 ->with('error', 'Join or create a team before submitting a Pre-Proposal.');
         }
 
-        $slot = $this->nextAvailableSlot($team);
-
-        if (! $slot) {
+        if ($this->isTurnedIn($team)) {
             return redirect()->route('student.duplication')
-                ->with('error', 'You already have 3 submitted proposals awaiting review.');
+                ->with('error', 'Your pre-proposals are already turned in. Unsubmit first if you need to add another.');
         }
+
+        $slot = $this->nextAvailableSlot($team);
 
         $validated = $request->validate([
             'title' => [
@@ -209,18 +220,22 @@ class PreProposalController extends Controller
                 'duplication_status' => $duplicationStatus,
                 'approved_status' => false,
                 'rejection_reason' => null,
-                'submitted_at' => now(),
+                // Deliberately NOT stamped here. submitted_at is what "turned
+                // in" means, and turning in is an explicit act now - saving is
+                // just keeping a draft. Saving used to stamp it and silently
+                // flip the team to complete on the third one, which meant a
+                // team was in front of the CAPSA before they had said they
+                // were ready.
+                'submitted_at' => null,
             ]
         );
 
-        // Only once all 3 slots are in does this team become ready for CAPSA
-        // review - matches "required to submit 3 proposals per team."
-        if (! $team->is_confirmed && $team->preProposals()->count() >= 3) {
-            $team->update(['team_status' => 'complete']);
-        }
+        $saved = $team->preProposals()->count();
+        $message = $saved < self::MINIMUM_PROPOSALS
+            ? 'Pre-proposal saved as a draft. '.($saved).' of '.self::MINIMUM_PROPOSALS.' saved - you need at least '.self::MINIMUM_PROPOSALS.' before you can submit for checking.'
+            : 'Pre-proposal saved as a draft. Submit for checking when your team is ready.';
 
-        return redirect()->route('student.duplication')
-            ->with('status', 'Pre-proposal saved.');
+        return redirect()->route('student.duplication')->with('status', $message);
     }
 
     public function choose(Request $request, CapstonePreProposal $preProposal): RedirectResponse
@@ -258,6 +273,85 @@ class PreProposalController extends Controller
     // Lets a team drop a pending or rejected proposal, freeing its slot back
     // up for a fresh check + resubmission - an approved one is locked and
     // can't be removed.
+    /**
+     * Turn the team's pre-proposals in for the CAPSA to check.
+     *
+     * This is the one act that puts a team in front of the CAPSA, which is
+     * why it also marks them complete: saving a title used to do both
+     * silently, so a team was under review before they had said they were
+     * ready. At least MINIMUM_PROPOSALS titles have to be kept first.
+     */
+    public function submit(Request $request): RedirectResponse
+    {
+        $team = $this->currentTeam($request);
+
+        if (! $team) {
+            return redirect()->route('student.team')->with('error', 'Join or create a team first.');
+        }
+
+        if ((int) $team->leader_id !== (int) $request->user()->student_id) {
+            return redirect()->route('student.duplication')
+                ->with('error', 'Only the team leader can submit your pre-proposals for checking.');
+        }
+
+        if ($this->isTurnedIn($team)) {
+            return redirect()->route('student.duplication')
+                ->with('error', 'Your pre-proposals are already turned in.');
+        }
+
+        $count = $team->preProposals()->count();
+
+        if ($count < self::MINIMUM_PROPOSALS) {
+            return redirect()->route('student.duplication')
+                ->with('error', 'Save at least '.self::MINIMUM_PROPOSALS.' pre-proposal titles before submitting - you have '.$count.'.');
+        }
+
+        // Only the pre-proposals are touched. Turning in used to also set
+        // team_status to 'complete', which is what let one column mean both
+        // "not recruiting" and "under review"; team_status is recruitment
+        // only now, and Team::hasSubmittedPreProposals() answers the rest.
+        $team->preProposals()->whereNull('submitted_at')->update(['submitted_at' => now()]);
+
+        return redirect()->route('student.duplication')
+            ->with('status', 'Submitted for checking. Your CaPSA can now review your '.$count.' titles.');
+    }
+
+    /**
+     * Take the submission back, the way Google Classroom lets you unsubmit.
+     *
+     * Only until the CAPSA has acted on any of the titles - after that,
+     * pulling the set back would change what she is part-way through
+     * reviewing, so her decision has to stand.
+     */
+    public function unsubmit(Request $request): RedirectResponse
+    {
+        $team = $this->currentTeam($request);
+
+        if (! $team) {
+            return redirect()->route('student.team')->with('error', 'Join or create a team first.');
+        }
+
+        if ((int) $team->leader_id !== (int) $request->user()->student_id) {
+            return redirect()->route('student.duplication')
+                ->with('error', 'Only the team leader can unsubmit.');
+        }
+
+        if (! $this->isTurnedIn($team)) {
+            return redirect()->route('student.duplication')
+                ->with('error', 'Your pre-proposals have not been submitted yet.');
+        }
+
+        if ($this->reviewStarted($team)) {
+            return redirect()->route('student.duplication')
+                ->with('error', 'Your CaPSA has already started reviewing these titles, so they can no longer be unsubmitted.');
+        }
+
+        $team->preProposals()->update(['submitted_at' => null]);
+
+        return redirect()->route('student.duplication')
+            ->with('status', 'Unsubmitted. Your titles are drafts again - submit for checking when you are ready.');
+    }
+
     public function destroy(Request $request, CapstonePreProposal $preProposal): RedirectResponse
     {
         $team = $this->currentTeam($request);
@@ -271,43 +365,45 @@ class PreProposalController extends Controller
                 ->with('error', 'An approved proposal cannot be removed.');
         }
 
-        $preProposal->delete();
-
-        if (! $team->is_confirmed && $team->team_status === 'complete' && $team->preProposals()->count() < 3) {
-            $team->update(['team_status' => 'on-going']);
+        if ($this->isTurnedIn($team)) {
+            return redirect()->route('student.duplication')
+                ->with('error', 'Your pre-proposals are turned in. Unsubmit first if you need to remove one.');
         }
+
+        $preProposal->delete();
 
         return redirect()->route('student.duplication')
             ->with('status', 'Proposal removed.');
     }
 
-    // Slots are an internal bookkeeping detail, not something the student
-    // picks - a new save fills the first empty slot, or replaces the first
-    // rejected one if all 3 are already taken. Returns null once all 3 are
-    // pending/approved (the team already has its 3 required proposals in).
-    private function nextAvailableSlot(Team $team): ?int
+    /**
+     * Slots simply count up. There used to be exactly three, with a rejected
+     * one's slot recycled; a team may now keep as many titles as they like so
+     * long as at least MINIMUM_PROPOSALS are turned in, and a rejected title
+     * stays put as a record rather than being written over.
+     */
+    private function nextAvailableSlot(Team $team): int
     {
-        return $this->findAvailableSlot($team->preProposals()->get()->keyBy('slot'));
+        return (int) $team->preProposals()->max('slot') + 1;
+    }
+
+    /** Whether this team has turned their pre-proposals in for checking. */
+    private function isTurnedIn(Team $team): bool
+    {
+        return $team->preProposals()->whereNotNull('submitted_at')->exists();
     }
 
     /**
-     * @param  \Illuminate\Support\Collection<int, CapstonePreProposal>  $existing
+     * Whether the CAPSA has started acting on the submission.
+     *
+     * Once she has approved or rejected any of the titles, the set is locked:
+     * pulling it back then would change what she is part-way through reading.
      */
-    private function findAvailableSlot($existing): ?int
+    private function reviewStarted(Team $team): bool
     {
-        for ($s = 1; $s <= 3; $s++) {
-            if (! isset($existing[$s])) {
-                return $s;
-            }
-        }
-
-        foreach ($existing as $s => $proposal) {
-            if (! $proposal->approved_status && $proposal->rejection_reason) {
-                return (int) $s;
-            }
-        }
-
-        return null;
+        return $team->preProposals()
+            ->where(fn ($q) => $q->where('approved_status', true)->orWhereNotNull('rejection_reason'))
+            ->exists();
     }
 
     private function currentTeam(Request $request): ?Team

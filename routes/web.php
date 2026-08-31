@@ -16,6 +16,7 @@ use App\Http\Controllers\AdminFinancialController;
 use App\Http\Controllers\AdminPanelAssignmentController;
 use App\Http\Controllers\AdminProfileController;
 use App\Http\Controllers\AdminTeamVerificationController;
+use App\Http\Controllers\Capsa\TeamManagementController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Capsa\ExpertRosterController;
 use App\Http\Controllers\Capsa\StudentRosterController;
@@ -78,7 +79,12 @@ Route::middleware(['expert.auth', 'no.cache', 'track.expert'])->prefix('admin')-
         Route::post('/approval/{expert_id}/approve', [AdminApprovalController::class, 'approve'])->name('approval.approve');
         Route::post('/approval/{expert_id}/reject', [AdminApprovalController::class, 'reject'])->name('approval.reject');
         Route::get('/panel_assignment', [AdminPanelAssignmentController::class, 'index'])->name('panel_assignment');
-        Route::get('/verify-teams', [AdminTeamVerificationController::class, 'index'])->name('verify_teams');
+        // Team Management is the single page for everything about the teams
+        // in a CaPSA's sections. Team Verification's actions keep their old
+        // route names so nothing that links to them breaks, but its page
+        // redirects here - it was only ever half of this.
+        Route::get('/team-management', [TeamManagementController::class, 'index'])->name('team_management');
+        Route::get('/verify-teams', fn () => redirect()->route('admin.team_management', ['tab' => 'verification']))->name('verify_teams');
         Route::post('/verify-teams/{team}/verify', [AdminTeamVerificationController::class, 'verify'])->name('verify_teams.verify');
         Route::post('/verify-teams/pre-proposals/{preProposal}/approve', [AdminTeamVerificationController::class, 'approvePreProposal'])->name('verify_teams.pre_proposals.approve');
         Route::post('/verify-teams/pre-proposals/{preProposal}/reject', [AdminTeamVerificationController::class, 'rejectPreProposal'])->name('verify_teams.pre_proposals.reject');
@@ -236,6 +242,8 @@ Route::middleware(['auth', 'no.cache', 'track.expert'])->group(function () {
 
     Route::post('/pre-proposal/check', [PreProposalController::class, 'runCheck'])->name('student.pre-proposal.check');
     Route::post('/pre-proposal', [PreProposalController::class, 'store'])->name('student.pre-proposal.store');
+    Route::post('/pre-proposal/submit', [PreProposalController::class, 'submit'])->name('student.pre-proposal.submit');
+    Route::post('/pre-proposal/unsubmit', [PreProposalController::class, 'unsubmit'])->name('student.pre-proposal.unsubmit');
     Route::post('/pre-proposal/{preProposal}/choose', [PreProposalController::class, 'choose'])->name('student.pre-proposal.choose');
     Route::delete('/pre-proposal/{preProposal}', [PreProposalController::class, 'destroy'])->name('student.pre-proposal.destroy');
 

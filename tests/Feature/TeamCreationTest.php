@@ -33,7 +33,7 @@ class TeamCreationTest extends TestCase
 
         $response = $this->post('/team', [
             'team_name' => 'Bulbasaur',
-            'team_status' => 'on-going',
+            'team_status' => 'Active',
         ]);
 
         $response->assertSessionHas('status');
@@ -59,7 +59,7 @@ class TeamCreationTest extends TestCase
 
         $team = Team::create([
             'team_name' => 'Team Charmander',
-            'team_status' => 'on-going',
+            'team_status' => 'Active',
             'leader_id' => $student->student_id,
         ]);
 
@@ -110,7 +110,7 @@ class TeamCreationTest extends TestCase
 
         $team = Team::create([
             'team_name' => 'Team Squirtle',
-            'team_status' => 'on-going',
+            'team_status' => 'Active',
             'leader_id' => $leader->student_id,
         ]);
 
@@ -162,7 +162,7 @@ class TeamCreationTest extends TestCase
 
         $team = Team::create([
             'team_name' => 'Team Leave Flow',
-            'team_status' => 'on-going',
+            'team_status' => 'Active',
             'leader_id' => $leader->student_id,
         ]);
 
@@ -250,7 +250,7 @@ class TeamCreationTest extends TestCase
 
         $team = Team::create([
             'team_name' => 'Team Transfer',
-            'team_status' => 'on-going',
+            'team_status' => 'Active',
             'leader_id' => $leader->student_id,
         ]);
 
@@ -370,7 +370,7 @@ class TeamCreationTest extends TestCase
 
         $team = Team::create([
             'team_name' => 'Team Pending',
-            'team_status' => 'on-going',
+            'team_status' => 'Active',
             'leader_id' => $leader->student_id,
         ]);
 
@@ -408,7 +408,7 @@ class TeamCreationTest extends TestCase
 
         $team = Team::create([
             'team_name' => 'Team API',
-            'team_status' => 'on-going',
+            'team_status' => 'Active',
             'leader_id' => $leader->student_id,
         ]);
 
@@ -455,7 +455,7 @@ class TeamCreationTest extends TestCase
 
         $team = Team::create([
             'team_name' => 'Team API Decline',
-            'team_status' => 'on-going',
+            'team_status' => 'Active',
             'leader_id' => $leader->student_id,
         ]);
 
@@ -503,7 +503,7 @@ class TeamCreationTest extends TestCase
 
         $team = Team::create([
             'team_name' => 'Team Stuck',
-            'team_status' => 'on-going',
+            'team_status' => 'Active',
             'leader_id' => $leader->student_id,
         ]);
 
@@ -551,7 +551,7 @@ class TeamCreationTest extends TestCase
 
         $team = Team::create([
             'team_name' => 'Team Decline',
-            'team_status' => 'on-going',
+            'team_status' => 'Active',
             'leader_id' => $leader->student_id,
         ]);
 
@@ -588,7 +588,7 @@ class TeamCreationTest extends TestCase
         ]);
         Team::create([
             'team_name' => 'HyperTest',
-            'team_status' => 'on-going',
+            'team_status' => 'Active',
             'leader_id' => $first->student_id,
         ]);
 
@@ -606,7 +606,7 @@ class TeamCreationTest extends TestCase
         foreach (['HYPERTEST', 'hypertest'] as $attempt) {
             $response = $this->post('/team', [
                 'team_name' => $attempt,
-                'team_status' => 'on-going',
+                'team_status' => 'Active',
             ]);
             $response->assertSessionHasErrors('team_name');
         }
@@ -624,7 +624,7 @@ class TeamCreationTest extends TestCase
         ]);
         Team::create([
             'team_name' => 'Innovators',
-            'team_status' => 'on-going',
+            'team_status' => 'Active',
             'leader_id' => $first->student_id,
         ]);
 
@@ -668,7 +668,7 @@ class TeamCreationTest extends TestCase
 
         $team = Team::create([
             'team_name' => 'Team Remind',
-            'team_status' => 'on-going',
+            'team_status' => 'Active',
             'leader_id' => $leader->student_id,
         ]);
 

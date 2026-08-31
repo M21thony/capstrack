@@ -215,6 +215,19 @@
 }
 .pp-field textarea { min-height: 70px; resize: vertical; }
 .pp-hint { font-size: 11px; color: var(--text3); margin-top: 4px; }
+
+/* Turn-in bar at the foot of the Your Pre-Proposals card. */
+.pp-submit-bar { flex-shrink: 0; border-top: 1px solid var(--border); padding: 12px 0 4px; margin-top: 10px; }
+.pp-btn-submit { width: 100%; justify-content: center; gap: 7px; font-size: 12.5px; padding: 9px 12px; }
+.pp-btn-submit:disabled { background: var(--bg3); color: var(--text3); border: 1px solid var(--border); cursor: not-allowed; }
+.pp-btn-unsubmit { width: 100%; justify-content: center; font-size: 12px; padding: 7px 12px; background: transparent; color: var(--text2); border: 1px solid var(--border); }
+.pp-btn-unsubmit:hover { border-color: var(--red); color: var(--red); }
+.pp-submit-note { font-size: 10.5px; color: var(--text3); margin-top: 7px; line-height: 1.5; text-align: center; }
+.pp-submit-state { display: flex; align-items: center; gap: 9px; padding: 9px 11px; border-radius: 8px; background: var(--green-bg); color: var(--green); margin-bottom: 9px; }
+.pp-submit-state svg { flex-shrink: 0; }
+.pp-submit-state-title { font-size: 12px; font-weight: 700; }
+.pp-submit-state-sub { font-size: 10.5px; opacity: 0.85; margin-top: 1px; }
+.pp-badge-draft { background: var(--bg4); color: var(--text3); }
 .pp-tag-list { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
 .pp-tag { display: inline-flex; align-items: center; gap: 6px; background: var(--bg3); border: 1px solid var(--border); border-radius: 6px; padding: 4px 10px; font-size: 12px; color: var(--text2); }
 .pp-tag button { border: none; background: none; color: var(--text3); cursor: pointer; font-size: 12px; padding: 0; }
@@ -348,7 +361,13 @@
       <div class="card dup-portrait">
         <div class="card-header" style="flex-shrink:0;flex-direction:column;align-items:flex-start;gap:2px">
           <span class="card-title" style="display:inline-flex;align-items:center;gap:7px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Your Pre-Proposals</span>
-          <span style="font-size:11px;color:var(--text3);font-weight:400">{{ $proposals->count() }} of 3 submitted</span>
+          <span style="font-size:11px;color:var(--text3);font-weight:400">
+            @if ($turnedIn)
+              {{ $proposals->count() }} turned in
+            @else
+              {{ $proposals->count() }} saved &middot; {{ $minimumProposals }} needed to submit
+            @endif
+          </span>
         </div>
         <div style="overflow-y:auto;flex:1">
           @if ($proposals->isEmpty())
@@ -360,14 +379,20 @@
               @php $check = $proposal->duplicationCheck; @endphp
               <div style="padding:10px 0;border-top:1px solid var(--border)">
                 <div style="font-size:12px;font-weight:500;margin-bottom:4px;{{ $proposal->status === 'rejected' ? 'color:var(--text3);text-decoration:line-through' : 'color:var(--text)' }}">{{ $proposal->title }}</div>
-                <span class="badge {{ $proposal->status === 'approved' ? 'badge-green' : ($proposal->status === 'rejected' ? 'badge-red' : 'badge-amber') }}">{{ ucfirst($proposal->status) }}</span>
+                @if ($proposal->submitted_at || $proposal->status !== 'pending')
+                  <span class="badge {{ $proposal->status === 'approved' ? 'badge-green' : ($proposal->status === 'rejected' ? 'badge-red' : 'badge-amber') }}">{{ ucfirst($proposal->status) }}</span>
+                @else
+                  <span class="badge pp-badge-draft">Draft</span>
+                @endif
 
                 @if ($proposal->status === 'rejected')
                   <div class="pp-hint" style="color:var(--red)">{{ $proposal->rejection_reason }}</div>
                 @elseif ($proposal->status === 'approved')
                   <div class="pp-hint">Locked in as a candidate.</div>
-                @else
+                @elseif ($proposal->submitted_at)
                   <div class="pp-hint">Awaiting adviser review.</div>
+                @else
+                  <div class="pp-hint">Draft &mdash; not submitted yet.</div>
                 @endif
 
                 @if ($check)
@@ -376,7 +401,7 @@
                   </button>
                 @endif
 
-                @if ($proposal->status !== 'approved')
+                @if ($proposal->status !== 'approved' && ! $turnedIn)
                   <form method="POST" action="{{ route('student.pre-proposal.destroy', $proposal->id) }}" id="remove-form-{{ $proposal->id }}" style="display:inline">
                     @csrf
                     @method('DELETE')
@@ -508,6 +533,59 @@
                 @endif
               </div>
             @endforeach
+          @endif
+        </div>
+
+        {{-- Turning in, the way Google Classroom does it: saving a title keeps
+             a draft, and this is the separate act that hands the set to your
+             CaPSA. Before this existed, saving the third title silently put
+             the team under review. --}}
+        <div class="pp-submit-bar">
+          @if ($turnedIn)
+            <div class="pp-submit-state">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              <div>
+                <div class="pp-submit-state-title">Submitted for checking</div>
+                @if ($turnedInAt)
+                  <div class="pp-submit-state-sub">{{ \Illuminate\Support\Carbon::parse($turnedInAt)->format('M j, Y \a\t g:i A') }}</div>
+                @endif
+              </div>
+            </div>
+
+            @if ($isLeader && ! $reviewStarted)
+              <form method="POST" action="{{ route('student.pre-proposal.unsubmit') }}">
+                @csrf
+                <button type="submit" class="btn pp-btn-unsubmit">Unsubmit</button>
+              </form>
+              <div class="pp-submit-note">You can still take this back until your CaPSA starts reviewing.</div>
+            @elseif ($isLeader)
+              <div class="pp-submit-note">Your CaPSA has started reviewing, so this can no longer be unsubmitted.</div>
+            @else
+              <div class="pp-submit-note">Your team leader submitted these for checking.</div>
+            @endif
+          @else
+            @if (! $isLeader)
+              <div class="pp-submit-note">Only your team leader can submit these for checking.</div>
+            @elseif ($canTurnIn)
+              <form method="POST" action="{{ route('student.pre-proposal.submit') }}">
+                @csrf
+                <button type="submit" class="btn btn-primary pp-btn-submit">
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4 20-7z"/></svg>
+                  Submit for Checking
+                </button>
+              </form>
+              <div class="pp-submit-note">Hands all {{ $proposals->count() }} titles to your CaPSA to review.</div>
+            @else
+              <button type="button" class="btn pp-btn-submit" disabled>
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                Submit for Checking
+              </button>
+              <div class="pp-submit-note">
+                {{ $proposals->count() }} of {{ $minimumProposals }} saved &mdash; save
+                {{ $minimumProposals - $proposals->count() }} more
+                {{ \Illuminate\Support\Str::plural('title', $minimumProposals - $proposals->count()) }} to submit.
+              </div>
+            @endif
           @endif
         </div>
       </div>

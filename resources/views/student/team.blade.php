@@ -16,17 +16,11 @@
   .custom-tag-chip { display: inline-flex; align-items: center; gap: 6px; background: var(--blue-bg); color: var(--blue); font-size: 12px; font-weight: 500; padding: 4px 10px; border-radius: 6px; border: 1px solid rgba(29,78,216,0.25); animation: tagFadeIn 0.15s ease-in-out; }
   .custom-tag-chip-remove { display: inline-flex; align-items: center; justify-content: center; background: rgba(29,78,216,0.15); border: none; color: var(--blue); border-radius: 50%; width: 14px; height: 14px; cursor: pointer; font-size: 10px; padding: 0; transition: background 0.1s; }
   .custom-tag-chip-remove:hover { background: rgba(29,78,216,0.25); }
-  #editTeamModal #wordCountHint { color: var(--text2); }
-  #editTeamModal #wordCountBadge { background: var(--bg2); border-color: var(--border); color: #000000; }
   #editTeamModal .edit-team-save-btn { background: var(--bg3) !important; color: var(--text) !important; border: 1px solid var(--border) !important; box-shadow: none !important; }
   #editTeamModal .edit-team-save-btn:hover { background: var(--bg4) !important; transform: none !important; box-shadow: none !important; }
   #editTeamModal .edit-team-cancel-btn { background: var(--navy-dark) !important; color: #fff !important; border: 1px solid var(--navy-dark) !important; }
   #editTeamModal .edit-team-cancel-btn:hover { background: var(--navy-mid) !important; color: #fff !important; }
-  [data-theme="dark"] #editTeamModal #wordCountHint { background: #20232b; border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 10px 12px; }
-  [data-theme="dark"] #editTeamModal #wordCountRequirement { color: #c9ced9 !important; }
-  [data-theme="dark"] #editTeamModal #wordCountBadge { background: #e5e7eb; border-color: rgba(255,255,255,0.18); color: #000000; }
 
-  [data-theme="dark"] #editTeamModal #wordCountHint > span:last-child { color: #c9ced9 !important; }
   [data-theme="dark"] #editTeamModal .edit-team-save-btn { background: #2a2f3a !important; color: #f3f4f6 !important; border-color: rgba(255,255,255,0.12) !important; }
   [data-theme="dark"] #editTeamModal .edit-team-save-btn:hover { background: #343a47 !important; }
   [data-theme="dark"] #editTeamModal .edit-team-cancel-btn { background: #1e222b !important; color: #fff !important; border-color: rgba(255,255,255,0.08) !important; }
@@ -464,7 +458,7 @@
       @endif
 
       <div class="team-actions" style="margin-top: 18px; display: flex; justify-content: flex-end; gap: 8px; padding-top: 10px; border-top: 1px solid var(--border);">
-        @if($isLeader && $myTeam->team_status === 'complete' && !$myTeam->is_confirmed)
+        @if($isLeader && $myTeam->hasSubmittedPreProposals() && !$myTeam->is_confirmed)
           <span class="pending-badge-standalone" style="display:inline-flex;align-items:center;gap:6px;background:linear-gradient(135deg,#d97706,#b45309);color:#fff;padding:6px 14px 6px 10px;border-radius:20px;font-size:11px;font-weight:600;box-shadow:0 2px 8px rgba(217,119,6,0.35);border:none;letter-spacing:0.2px;">
             <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
             Pending Verification
@@ -1033,18 +1027,26 @@
       <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 8px;">Team Name</label>
       <input type="text" name="team_name" id="edit-team-name" value="{{ $myTeam->team_name }}" placeholder="Enter team name..." autocomplete="off" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;margin-bottom:0;box-sizing:border-box;">
       <div id="edit-team-name-msg" style="font-size: 11px; color: var(--red); margin: 6px 0 16px; display: none;"></div>
+      {{-- Project Title is not typed here any more. It is whichever
+           pre-proposal the CAPSA approves - and when two are approved, the
+           one the team then picks - so it is shown, not edited. --}}
       <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 8px;">Project Title</label>
-      <textarea name="project_title" id="projectTitleInput" placeholder="Enter project title..." oninput="autoExpand(this); updateCompleteOption()" rows="2" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;margin-bottom:16px;box-sizing:border-box;resize:none;overflow:hidden;min-height:42px;font-family:inherit;">{{ $myTeam->project_title }}</textarea>
-      <div id="wordCountHint" style="display:flex;align-items:center;gap:8px;margin:-10px 0 16px;font-size:12px;">
-        <span id="wordCountBadge" style="padding:3px 10px;border-radius:10px;font-size:11px;font-weight:600;background:var(--bg2);border:1px solid var(--border);transition:0.2s; color: inherit;">
-          Words: <span id="wordCountDisplay">0</span>/11–12
-        </span>
-        <span id="wordCountRequirement" style="color:var(--text3);">required for <strong>Complete</strong> (filler words excluded)</span>
+      @php
+        $approvedProposalCount = $myTeam->preProposals()->where('approved_status', true)->count();
+      @endphp
+      <div style="padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);font-size:13px;margin-bottom:16px;box-sizing:border-box;line-height:1.5;">
+        @if ($myTeam->project_title)
+          <span style="color:var(--text);font-weight:600;">{{ $myTeam->project_title }}</span>
+        @elseif ($approvedProposalCount >= 2)
+          <span style="color:var(--text2);">{{ $approvedProposalCount }} of your titles were approved &mdash; choose the one you want on the <a href="{{ route('student.duplication') }}" style="color:var(--accent3);font-weight:600;">Duplication Checker</a> page.</span>
+        @else
+          <span style="color:var(--text3);">Set once your CaPSA approves one of your pre-proposal titles.</span>
+        @endif
       </div>
 
-      <div id="tagsSection" style="display:none;margin-bottom:16px;">
+      <div id="tagsSection" style="margin-bottom:16px;">
         <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text3);margin-bottom:8px;">
-          Project Tags <span style="color:var(--red)">*</span>
+          Project Tags <span style="font-weight:400;text-transform:none;color:var(--text3);">(optional)</span>
         </label>
         <div style="position:relative;display:flex;gap:6px;margin-bottom:8px;">
           <div style="position:relative;flex:1;">
@@ -1061,7 +1063,7 @@
             <span class="selected-tag" data-tag="{{ $tag }}">{{ $tag }} <span onclick="removeProjectTag(this)" style="cursor:pointer;opacity:0.6;margin-left:4px;">&times;</span></span>
           @endforeach
         </div>
-        <div id="tagsError" style="font-size:11px;color:var(--red);margin-top:4px;display:none;">Please add at least 2 tags related to your project.</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:6px;">Tags help other students find your project in the recruitment feed.</div>
       </div>
       <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 8px;">Team Members</label>
       <div style="padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text3);font-size:12px;margin-bottom:16px;box-sizing:border-box;">
@@ -1076,9 +1078,17 @@
       @endif
       <select name="team_status" id="teamStatusSelect" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;margin-bottom:8px;box-sizing:border-box;@if($myTeam->is_confirmed) cursor:not-allowed;opacity:0.6;@endif" @if($myTeam->is_confirmed) disabled @endif>
         <option value="on-going" id="ongoingStatusOption" @if($myTeam->team_status === 'on-going') selected @endif @if($isTeamFull) disabled @endif>On-going</option>
-        <option value="complete" id="completeStatusOption" @if($myTeam->team_status === 'complete') selected @endif>Complete</option>
+        {{-- Complete is not set by hand any more: submitting your
+             pre-proposals for checking is what marks the team complete, so
+             there is one way to turn in rather than two. It stays listed,
+             disabled, while it IS the current status, so the dropdown does
+             not silently show the wrong thing. --}}
+        @if($myTeam->team_status === 'complete')
+          <option value="complete" id="completeStatusOption" selected disabled>Complete</option>
+        @endif
         <option value="closed" id="closedStatusOption" @if($myTeam->team_status === 'closed') selected @endif>Closed</option>
       </select>
+      <div id="completeGateHint" style="display:none;font-size:11px;color:var(--text3);margin-bottom:8px;line-height:1.5;"></div>
       @if($myTeam->is_confirmed)
       <div style="display:flex;align-items:center;gap:6px;margin-bottom:20px;font-size:12px;color:#6b7280;">
         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
@@ -1344,6 +1354,13 @@
 </div>
 
 <script>
+@if($myTeam)
+// How many pre-proposal titles this team has submitted - the real gate on
+// marking the team Complete, mirrored from TeamController::update().
+window.PRE_PROPOSAL_COUNT = {{ $myTeam->preProposals()->count() }};
+window.PRE_PROPOSAL_MINIMUM = {{ \App\Http\Controllers\PreProposalController::MINIMUM_PROPOSALS }};
+@endif
+
 const currentStudentTeamId = {{ auth()->user()->studentSchoolYear()->first()?->team_id ?? 'null' }};
 const currentStudentId = {{ auth()->user()->student_id }};
 const myRecruitmentGoal = '{{ $myRecruitmentGoal ?? '' }}';
@@ -1620,38 +1637,20 @@ function countMeaningfulWords(text) {
     }).length;
 }
 
+// Complete is reached by submitting your pre-proposals for checking, not by
+// picking it here, so this only explains where it comes from.
 function updateCompleteOption() {
-    var titleInput = document.getElementById('projectTitleInput');
-    if (!titleInput) return;
-    var wordCount = countMeaningfulWords(titleInput.value);
-    var completeOpt = document.getElementById('completeStatusOption');
-    var wordDisplay = document.getElementById('wordCountDisplay');
+    var hint = document.getElementById('completeGateHint');
+    if (!hint) return;
 
-    if (wordDisplay) wordDisplay.textContent = wordCount;
+    var saved = window.PRE_PROPOSAL_COUNT || 0;
+    var minimum = window.PRE_PROPOSAL_MINIMUM || 3;
 
-    if (completeOpt) {
-        var canComplete = wordCount >= 11 && wordCount <= 12;
-        completeOpt.disabled = !canComplete;
-        if (!canComplete && completeOpt.selected) {
-            var ongoingOpt = document.getElementById('ongoingStatusOption');
-            if (ongoingOpt) ongoingOpt.selected = true;
-        }
-        completeOpt.style.opacity = canComplete ? '1' : '0.4';
-        completeOpt.title = canComplete ? '' : 'Requires 11\u201312 meaningful words in project title';
-
-        var badge = document.getElementById('wordCountBadge');
-        if (badge) {
-            badge.style.background = canComplete ? '#d1fae5' : 'var(--bg2)';
-            badge.style.borderColor = canComplete ? '#6ee7b7' : 'var(--border)';
-            // Ensure readability on both themes
-            badge.style.color = canComplete ? '#0f172a' : (document.documentElement.getAttribute('data-theme') === 'dark' ? '#ffffff' : '#000000');
-        }
-    }
-
-    var tagsSection = document.getElementById('tagsSection');
-    if (tagsSection) {
-        tagsSection.style.display = wordCount >= 11 ? 'block' : 'none';
-    }
+    hint.style.display = '';
+    hint.textContent = saved >= minimum
+        ? 'Your team is marked Complete by submitting your pre-proposals for checking, on the Duplication Checker page.'
+        : saved + ' of ' + minimum + ' pre-proposal titles saved. Save at least ' + minimum +
+          ', then submit them for checking on the Duplication Checker page to mark your team Complete.';
 }
 
 function addCustomTag() {
@@ -1750,18 +1749,6 @@ function updateTagsHiddenInput() {
         tags.push(el.getAttribute('data-tag') || el.textContent.trim().replace('\u00d7','').trim());
     });
     document.getElementById('tagsHiddenInput').value = JSON.stringify(tags);
-    document.getElementById('tagsError').style.display = tags.length >= 2 ? 'none' : 'block';
-}
-
-function validateTags() {
-    var tagsInput = document.getElementById('tagsHiddenInput');
-    var tags = [];
-    try { tags = JSON.parse(tagsInput.value || '[]'); } catch(e) {}
-    if (tags.length < 2) {
-        document.getElementById('tagsError').style.display = 'block';
-        return false;
-    }
-    return true;
 }
 
 function validateForm(event) {
@@ -1772,24 +1759,15 @@ function validateForm(event) {
         editName.focus();
         return false;
     }
-    var tagsSection = document.getElementById('tagsSection');
-    if (tagsSection && tagsSection.style.display !== 'none') {
-        if (!validateTags()) {
-            event.preventDefault();
-            return false;
-        }
-    }
     return true;
 }
 
-// Override openEditTeamModal to run word count, auto-expand, and sync tags
+// Override openEditTeamModal to refresh the status gate and sync tags
 var origOpenTeamModal = openEditTeamModal;
 openEditTeamModal = function() {
     origOpenTeamModal();
     setTimeout(function() {
         updateCompleteOption();
-        var el = document.getElementById('projectTitleInput');
-        if (el) autoExpand(el);
         syncTagUI();
     }, 50);
 };
@@ -1821,7 +1799,6 @@ function syncTagUI() {
             display.appendChild(span);
         }
     });
-    document.getElementById('tagsError').style.display = tags.length >= 2 ? 'none' : 'block';
 }
 @endif
 
