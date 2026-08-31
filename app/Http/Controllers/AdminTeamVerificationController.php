@@ -135,12 +135,30 @@ class AdminTeamVerificationController extends Controller
 
         $preProposal->update(['rejection_reason' => $validated['reason']]);
 
+        // A rejection is half of the decision. Rejecting the last undecided
+        // proposal is what settles the title, so this has to run here too.
+        $this->resolveTitleIfSettled($preProposal->team);
+
         return response()->json(['success' => true, 'message' => 'Proposal rejected.']);
     }
 
     // After every approve/reject, check whether the title question is now
     // settled: exactly one approved auto-resolves it; two or more means the
     // student has to pick, so they're notified instead.
+    /**
+     * Settle the team's title, but only once the review is actually over.
+     *
+     * Approving one proposal used to set the title there and then. A CaPSA
+     * working down a team's three titles approves one and is still reading
+     * the others, so the team was told its title was decided while two were
+     * still being looked at - and if a second was then approved, the choice
+     * reopened but the title already on the team stayed, which is how an
+     * approved-but-not-chosen title ended up showing on student/team.
+     *
+     * Nothing is settled while a proposal is still undecided. A proposal is
+     * undecided when it has been submitted and carries neither an approval
+     * nor a rejection reason.
+     */
     private function resolveTitleIfSettled(Team $team): void
     {
         $team->refresh();
@@ -151,7 +169,23 @@ class AdminTeamVerificationController extends Controller
             return;
         }
 
-        $approved = $team->preProposals()->where('approved_status', true)->get();
+        $submitted = $team->preProposals()->whereNotNull('submitted_at')->get();
+
+        if ($submitted->isEmpty()) {
+            return;
+        }
+
+        $undecided = $submitted->filter(
+            fn ($proposal) => ! $proposal->approved_status && $proposal->rejection_reason === null
+        );
+
+        // Still being reviewed. Say nothing and change nothing - the team
+        // finds out when their CaPSA has finished, not partway through.
+        if ($undecided->isNotEmpty()) {
+            return;
+        }
+
+        $approved = $submitted->where('approved_status', true)->values();
 
         if ($approved->count() === 1) {
             $winner = $approved->first();
@@ -164,15 +198,33 @@ class AdminTeamVerificationController extends Controller
 
                 $this->notifyTeam($team, 'title_approved', 'Title Approved', 'Your title <strong>'.e($winner->title).'</strong> has been approved by your adviser.');
             }
-        } elseif ($approved->count() >= 2) {
-            // A second approval arriving after the first had already
-            // auto-selected a winner reopens the decision - the student
-            // picks between the now-multiple approved options instead.
-            if ($team->selected_pre_proposal_id) {
-                $team->update(['selected_pre_proposal_id' => null]);
+
+            return;
+        }
+
+        if ($approved->count() >= 2) {
+            // Two or more got through, so the team picks. Until they do, the
+            // team has no title - clearing it matters as much as clearing the
+            // selection, because the title is what the rest of the app shows.
+            if ($team->selected_pre_proposal_id || $team->project_title) {
+                $team->update([
+                    'selected_pre_proposal_id' => null,
+                    'project_title' => null,
+                ]);
             }
 
             $this->notifyTeam($team, 'title_pick_required', 'Choose Your Final Title', 'More than one of your submitted titles was approved - please choose which one to proceed with.');
+
+            return;
+        }
+
+        // Everything was rejected: the team has no title, and anything left
+        // over from an earlier round would be a title nobody approved.
+        if ($team->selected_pre_proposal_id || $team->project_title) {
+            $team->update([
+                'selected_pre_proposal_id' => null,
+                'project_title' => null,
+            ]);
         }
     }
 
