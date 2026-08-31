@@ -939,7 +939,13 @@ function cancelCheck() {
 
 function renderResult(data, fileName) {
   lastCheckData = data;
-  document.getElementById('check-id').value = data.duplication_check_id;
+
+  // Everything from here that writes into the Pre-Proposal Details form has
+  // to check the form is there first. The checker itself is always on the
+  // page now; the form is not, once a team has turned their titles in.
+  const ppForm = document.getElementById('pp-form');
+  const checkIdEl = document.getElementById('check-id');
+  if (checkIdEl) checkIdEl.value = data.duplication_check_id;
 
   const badge = document.getElementById('result-badge');
   badge.textContent = data.verdict;
@@ -982,20 +988,23 @@ function renderResult(data, fileName) {
     instrList.innerHTML = `<div style="font-size:11px;color:var(--text3);text-align:center;padding:16px 0">No instructor suggestions available</div>`;
   }
 
-  document.getElementById('title').value = data.concepts.title || '';
-  document.getElementById('problem').value = data.concepts.problem_statement || '';
-  document.getElementById('solution').value = data.concepts.proposed_solution || '';
-  document.getElementById('scope').value = data.concepts.scope || '';
-  document.getElementById('limitations').value = data.concepts.limitations || '';
-  if (data.concepts.sdm) document.getElementById('sdm').value = data.concepts.sdm;
-  updateWordCount();
-  selectSdgOption(data.concepts.sdg_goals);
-  if (Array.isArray(data.concepts.research_agenda) && data.concepts.research_agenda.length) {
-    agendaTags = data.concepts.research_agenda
-      .map(item => typeof item === 'string' ? item : (item && (item.name || item.title || item.agenda || item.label || item.text || item.value)) || '')
-      .map(s => String(s).trim())
-      .filter(s => s.length > 0);
-    renderAgendaTags();
+  if (ppForm) {
+    document.getElementById('title').value = data.concepts.title || '';
+    document.getElementById('problem').value = data.concepts.problem_statement || '';
+    document.getElementById('solution').value = data.concepts.proposed_solution || '';
+    document.getElementById('scope').value = data.concepts.scope || '';
+    document.getElementById('limitations').value = data.concepts.limitations || '';
+    if (data.concepts.sdm) document.getElementById('sdm').value = data.concepts.sdm;
+    updateWordCount();
+    selectSdgOption(data.concepts.sdg_goals);
+
+    if (Array.isArray(data.concepts.research_agenda) && data.concepts.research_agenda.length) {
+      agendaTags = data.concepts.research_agenda
+        .map(item => typeof item === 'string' ? item : (item && (item.name || item.title || item.agenda || item.label || item.text || item.value)) || '')
+        .map(s => String(s).trim())
+        .filter(s => s.length > 0);
+      renderAgendaTags();
+    }
   }
 
   // One of these two is on the page, never both: the button while the team
@@ -1004,7 +1013,8 @@ function renderResult(data, fileName) {
   const ppLocked = document.getElementById('pp-locked-note');
   if (ppNext) ppNext.style.display = '';
   if (ppLocked) ppLocked.style.display = '';
-  document.getElementById('full-report-btn').style.display = '';
+  const fullReport = document.getElementById('full-report-btn');
+  if (fullReport) fullReport.style.display = '';
 }
 
 function openPpFormModal() {
