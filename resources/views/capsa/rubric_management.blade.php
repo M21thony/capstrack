@@ -691,6 +691,15 @@ function renderCriterionCard(cr, i) {
 // this replaced.
 let openCriterion = null;
 
+// Which rubric's criteria preview is expanded on the list. One at a time,
+// so the list stays a list.
+let openRubric = null;
+
+function toggleRubricPreview(id) {
+  openRubric = (openRubric === id) ? null : id;
+  renderList();
+}
+
 function toggleCriterion(i) {
   openCriterion = (openCriterion === i) ? null : i;
   renderCriteriaBuilder();
@@ -1177,24 +1186,50 @@ function renderList() {
     }, 0);
     var col = TYPE_COLOR[rb.type] || 'var(--text3)';
     var bg = TYPE_BG[rb.type] || 'var(--bg4)';
-    return '<div class="card rb-rubric-card" style="padding:0;overflow:hidden">' +
+    // Edit and Delete live in the header, beside the rubric's name.
+    //
+    // They used to sit in a footer BELOW every criterion, so acting on a
+    // 27-criterion rubric meant scrolling past all 27 to reach the button,
+    // then scrolling back up. The criteria are a preview, not the point of
+    // this page, so they fold away too - the list is for finding a rubric
+    // and doing something with it.
+    var open = openRubric === rb.id;
+
+    return '<div class="card rb-rubric-card' + (open ? ' open' : '') + '" style="padding:0;overflow:hidden">' +
       '<div class="rb-rubric-header">' +
       '<div style="flex:1;min-width:0">' +
       '<div style="margin-bottom:6px"><span class="badge" style="background:' + bg + ';color:' + col + ';font-size:10px;font-weight:600">' + (TYPE_LABEL[rb.type] || rb.type) + '</span></div>' +
       '<div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:3px">' + rb.name + '</div>' +
       (rb.description ? '<div style="font-size:12px;color:var(--text3)">' + rb.description + '</div>' : '') +
       '</div>' +
-      '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0">' +
-      '<div style="font-family:\'Space Mono\',monospace;font-size:22px;font-weight:700;color:' + col + '">' + total + '<span style="font-size:11px;color:var(--text3);font-family:\'DM Sans\',sans-serif"> pts</span></div>' +
+
+      '<div class="rb-card-side">' +
+      '<div style="text-align:right">' +
+      '<div style="font-family:\'Space Mono\',monospace;font-size:22px;font-weight:700;color:' + col + '">' + formatPts(round2(total)) + '<span style="font-size:11px;color:var(--text3);font-family:\'DM Sans\',sans-serif"> pts</span></div>' +
       '<div style="font-size:11px;color:var(--text3)">' + rb.criteria.length + ' criteria</div>' +
       '</div>' +
+      '<div class="rb-card-actions">' +
+      '<button class="btn btn-ghost" style="font-size:11px;padding:5px 14px" onclick="editRubric(' + rb.id + ')">' +
+      '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="m18.5 2.5 3 3L12 15l-4 1 1-4z"/></svg> Edit</button>' +
+      '<button class="btn rb-btn-danger" style="font-size:11px;padding:5px 14px" onclick="confirmDelete(' + rb.id + ')">' +
+      '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg> Delete</button>' +
       '</div>' +
-      '<div style="padding:0 18px 14px">' +
+      '</div>' +
+      '</div>' +
+
+      (rb.criteria.length
+        ? '<button type="button" class="rb-preview-toggle" onclick="toggleRubricPreview(' + rb.id + ')" aria-expanded="' + (open ? 'true' : 'false') + '">' +
+            '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>' +
+            (open ? 'Hide the ' + rb.criteria.length + ' criteria' : 'Show the ' + rb.criteria.length + ' criteria') +
+          '</button>'
+        : '') +
+
+      '<div class="rb-rubric-preview" style="padding:0 18px 14px">' +
       rb.criteria.map(function(cr, i) {
         return '<div class="rb-crit-row">' +
           '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">' +
           '<div style="font-size:12px;font-weight:600;color:var(--text)">' + (i + 1) + '. ' + cr.name + '</div>' +
-          '<span style="font-family:\'Space Mono\',monospace;font-size:11px;color:' + col + ';font-weight:700">' + criterionScore(cr) + ' pts</span>' +
+          '<span style="font-family:\'Space Mono\',monospace;font-size:11px;color:' + col + ';font-weight:700">' + formatPts(criterionScore(cr)) + ' pts</span>' +
           '</div>' +
           '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:5px">' +
           cr.levels.map(function(lv, li) {
@@ -1207,12 +1242,6 @@ function renderList() {
           '</div>' +
           '</div>';
       }).join('') +
-      '</div>' +
-      '<div class="rb-rubric-footer">' +
-      '<button class="btn btn-ghost" style="font-size:11px;padding:5px 14px" onclick="editRubric(' + rb.id + ')">' +
-      '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="m18.5 2.5 3 3L12 15l-4 1 1-4z"/></svg> Edit</button>' +
-      '<button class="btn rb-btn-danger" style="font-size:11px;padding:5px 14px" onclick="confirmDelete(' + rb.id + ')">' +
-      '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg> Delete</button>' +
       '</div>' +
       '</div>';
   }).join('');
