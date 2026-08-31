@@ -170,13 +170,22 @@ class PdfAnnotationController extends Controller
 
         $status = $request->input('review_status');
 
-        if (! in_array($status, ['To Review', 'Reviewing', 'Reviewed'], true)) {
+        if (! in_array($status, CapstoneDocumentReview::STATUSES, true)) {
             return response()->json([
                 'message' => 'The selected review status is invalid.',
             ], 422);
         }
 
-        $review->update(['review_status' => $status]);
+        // Stamp when the review was finished. Nothing has ever written
+        // reviewed_at - it was only read - so every row held null, including
+        // the ones marked Reviewed. That left the instructor dashboard's
+        // "Oldest: ..." label blank and made two orderings meaningless.
+        // Moving a review back off Reviewed clears it again, so the column
+        // never claims a finish that was undone.
+        $review->update([
+            'review_status' => $status,
+            'reviewed_at' => $status === CapstoneDocumentReview::REVIEWED ? now() : null,
+        ]);
 
         return response()->json([
             'success' => true,

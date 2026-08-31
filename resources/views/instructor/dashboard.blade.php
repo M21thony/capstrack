@@ -105,7 +105,9 @@
       <x-dashboard.stat-chip
         value="{{ $docsForReview }}"
         label="Docs for Review"
-        sub="{{ $oldestDocReview ? 'Oldest: '.$oldestDocReview->reviewed_at?->diffForHumans() : 'No pending reviews' }}"
+        {{-- Waiting since it arrived. It used to read reviewed_at, which is null
+             on anything still waiting, so this rendered "Oldest: " and nothing. --}}
+        sub="{{ $oldestDocReview ? 'Oldest: waiting '.$oldestDocReview->created_at?->diffForHumans(null, true) : 'No pending reviews' }}"
         color="var(--red)"
       />
       <x-dashboard.stat-chip value="{{ $upcomingConsults }}" label="Upcoming Consults" sub="Available slots" color="var(--blue)" />

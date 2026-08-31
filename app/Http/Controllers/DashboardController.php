@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\ActivityLog;
 use App\Models\Announcement;
+use App\Models\CapstoneDocumentReview;
 use App\Models\DefenseSchedule;
 use App\Models\FinancialRecord;
 use App\Models\Milestone;
@@ -187,7 +188,14 @@ class DashboardController extends Controller
                         });
                     }
                 })
-                ->where('review_status', 'pending')
+                // 'pending' is never written, so this was always zero. This is a
+                // DB::table() builder, not Eloquent, so it cannot use the model's
+                // scope - and the catch below would have swallowed the resulting
+                // error and gone on returning zero.
+                ->whereIn('review_status', [
+                    CapstoneDocumentReview::AWAITING,
+                    CapstoneDocumentReview::IN_PROGRESS,
+                ])
                 ->count();
         } catch (\Exception $e) {
             return 0;
