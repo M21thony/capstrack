@@ -332,10 +332,27 @@ class TeamManagementController extends Controller
                 'scope' => $p->scope,
                 'limitations' => $p->limitations,
                 'sdm' => $p->sdm,
+                // The whole duplication report, not the top three with their
+                // titles. The CAPSA is deciding whether a title is too close
+                // to something already done - she needs the matched
+                // abstracts and what the check said about them, which is
+                // exactly what the team saw before submitting.
                 'duplication' => $p->duplicationCheck ? [
                     'verdict' => $p->duplicationCheck->verdict,
                     'top_score' => $p->duplicationCheck->top_score,
-                    'matches' => array_slice($p->duplicationCheck->matches ?? [], 0, 3),
+                    'matches' => collect($p->duplicationCheck->matches ?? [])->map(fn ($m) => [
+                        'title' => $m['title'] ?? '',
+                        'score' => $m['score'] ?? null,
+                        'reason' => $m['reason'] ?? null,
+                        'program' => $m['program'] ?? null,
+                        'academic_year' => $m['academic_year'] ?? null,
+                        'abstract' => $m['abstract'] ?? null,
+                        'similarities' => $m['similarities'] ?? null,
+                        'differences' => $m['differences'] ?? null,
+                        'suggestion' => $m['suggestion'] ?? null,
+                    ])->values(),
+                    'highlight_words' => app(\App\Services\SimilarityService::class)
+                        ->extractHighlightWords($p->duplicationCheck->concepts ?? []),
                 ] : null,
                 'document_url' => $p->duplicationCheck ? route('admin.verify_teams.pre_proposals.document', $p->id) : null,
                 'approve_url' => route('admin.verify_teams.pre_proposals.approve', $p->id),

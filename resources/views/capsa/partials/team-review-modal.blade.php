@@ -81,6 +81,14 @@
 </div>
 
 <style>
+  /* Collapsed detail on each match in the duplication report. */
+  .ppdup-toggle{display:block;margin-top:6px;padding:0;border:none;background:none;font-family:inherit;font-size:11px;font-weight:600;color:var(--primary,#5b5bd6);cursor:pointer;text-align:left}
+  .ppdup-toggle:hover{text-decoration:underline}
+  .ppdup-panel{display:none;margin-top:5px;padding:7px 9px;border-radius:6px;background:var(--bg3);border:1px solid var(--border)}
+  .ppdup-panel.open{display:block}
+  .ppdup-abstract{font-size:11px;color:var(--text2);line-height:1.55;max-height:200px;overflow-y:auto;white-space:pre-wrap}
+  .ppdup-abstract mark{background:rgba(201,168,44,.35);color:inherit;padding:0 1px;border-radius:2px}
+
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1000;opacity:0;pointer-events:none;transition:opacity 0.2s}
 .modal-overlay.open{opacity:1;pointer-events:auto}
 .modal-box{background:#fff;border:1px solid var(--border);border-radius:16px;padding:28px;max-width:560px;width:90%}
@@ -92,6 +100,36 @@
 
 <script>
 var vmData = null;
+
+// Show/hide one of a match's panels. Kept collapsed so a report with ten
+// matches is still scannable.
+function togglePpDup(id, btn, kind) {
+  var el = document.getElementById(id);
+  if (!el) return;
+
+  var open = el.classList.toggle('open');
+  var label = kind === 'abstract' ? 'abstract' : 'similarities &amp; differences';
+  btn.innerHTML = (open ? 'Hide ' : 'Show ') + label;
+}
+
+// Mark the team's own significant words wherever they turn up in a matched
+// abstract - the same literal, checkable signal the team was shown, rather
+// than asking the CAPSA to spot the overlap by eye.
+function highlightWords(text, words) {
+  var safe = escapeHtml(text || '');
+
+  if (!words || !words.length) return safe;
+
+  var pattern = words
+    .filter(Boolean)
+    .map(function (w) { return String(w).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); })
+    .join('|');
+
+  if (!pattern) return safe;
+
+  return safe.replace(new RegExp('\\b(' + pattern + ')\\b', 'gi'), '<mark>$1</mark>');
+}
+
 function openVerifyModal(data) {
   vmData = data;
   document.getElementById('vm-avatar').style.background = 'linear-gradient(135deg,' + data.gradient + ')';
@@ -183,24 +221,50 @@ function renderPreProposals(proposals, selectedId) {
     // whole point of the adviser's requirement (a report that "travels
     // with the submission"), so the CAPSA can see what was flagged and why
     // instead of trusting a percentage blind.
+    // The full report, the same one the team saw before submitting: every
+    // match with its abstract, and what the check made of it. A title and a
+    // percentage is not enough to judge whether a topic is too close to
+    // something already done - the abstract is where that shows.
+    var highlight = (dup && dup.highlight_words) || [];
+
     var matchesHtml = (dup && dup.matches && dup.matches.length)
-      ? dup.matches.map(function (m, i) {
+      ? '<div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text3);letter-spacing:0.4px;margin-top:10px">'
+          + dup.matches.length + ' matched capstone' + (dup.matches.length === 1 ? '' : 's') + '</div>'
+        + dup.matches.map(function (m, i) {
           var mTone = m.score >= 65 ? 'red' : (m.score >= 55 ? 'amber' : 'green');
+          var meta = [m.academic_year, m.program].filter(Boolean).join(' \u00b7 ');
+          var notesId = 'ppdup-notes-' + p.id + '-' + i;
+          var absId = 'ppdup-abs-' + p.id + '-' + i;
+
+          var notes = ''
+            + (m.similarities ? '<div><strong>Similarities:</strong> ' + escapeHtml(m.similarities) + '</div>' : '')
+            + (m.differences ? '<div style="margin-top:3px"><strong>Differences:</strong> ' + escapeHtml(m.differences) + '</div>' : '')
+            + (m.suggestion ? '<div style="margin-top:3px;color:var(--accent3)"><strong>Suggestion:</strong> ' + escapeHtml(m.suggestion) + '</div>' : '');
+
           return '<div style="border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-top:6px;background:#fff">'
             + '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">'
             + '<span style="font-size:11.5px;font-weight:600;color:var(--text)">' + escapeHtml(m.title || '') + '</span>'
             + '<span class="badge badge-' + mTone + '" style="font-family:\'Space Mono\',monospace;font-weight:700;flex-shrink:0">' + m.score + '%</span>'
             + '</div>'
+            + (meta ? '<div style="font-size:10.5px;color:var(--text3);margin-top:2px">' + escapeHtml(meta) + '</div>' : '')
             + (m.reason ? '<div style="font-size:11px;color:var(--text3);margin-top:3px">' + escapeHtml(m.reason) + '</div>' : '')
-            + '</div>';
+            + (notes
+                ? '<button type="button" class="ppdup-toggle" onclick="togglePpDup(\'' + notesId + '\', this, \'notes\')">Show similarities &amp; differences</button>'
+                  + '<div id="' + notesId + '" class="ppdup-panel" style="font-size:11px;color:var(--text2);line-height:1.5">' + notes + '</div>'
+                : '')
+            + (m.abstract
+                ? '<button type="button" class="ppdup-toggle" onclick="togglePpDup(\'' + absId + '\', this, \'abstract\')">Show abstract</button>'
+                  + '<div id="' + absId + '" class="ppdup-panel ppdup-abstract">' + highlightWords(m.abstract, highlight) + '</div>'
+                : '');
         }).join('')
-      : '';
+      : (dup ? '<div style="font-size:11.5px;color:var(--green);margin-top:8px">No similar capstones were found.</div>' : '');
+
     var dupHtml = dup
       ? '<div style="margin-top:8px">'
         + '<div style="font-size:12px"><span class="badge ' + dupBadgeClass + '">' + dup.verdict + '</span> <span style="font-family:\'Space Mono\',monospace;font-weight:700;margin-left:6px">' + dup.top_score + '%</span></div>'
         + matchesHtml
         + '</div>'
-      : '';
+      : '<div style="font-size:11.5px;color:var(--text3);margin-top:8px">No duplication check was run for this title.</div>';
 
     var contentHtml = '<div style="font-size:12px;color:var(--text2);line-height:1.5;margin-top:8px">'
       + '<div><strong style="color:var(--text)">SDG:</strong> ' + escapeHtml(p.sdg_goals || '—') + '</div>'

@@ -347,82 +347,114 @@ function criterionScore(c) {
 }
 
 // A criterion is worth its top level, so making room for a new one means
-// scaling the OTHER criteria's levels - not just a number. Adding one used to
-// simply push the rubric over 100 and refuse to save until the other criteria
-// were reduced by hand.
+// scaling the OTHER criteria's levels - not just a number.
 //
-// Mirrors rebalanceCriteria() in Api\AdminGradingRubricController, which does
-// the same for the per-criterion API.
+// Two things this is careful about, both learned the hard way:
+//
+//  - Values snap to 0.25, the same step the point inputs use. Plain
+//    proportional scaling turned a tidy 3 / 5 / 10 rubric into 3.07 / 5.12 /
+//    10.23, which is nobody's idea of a rubric.
+//  - The rounding leftover is spread a quarter-point at a time across the
+//    largest criteria rather than dumped on one, so a single criterion does
+//    not jump from 10 to 11.75 absorbing everyone else's rounding.
+//
+// Mirrors rebalanceCriteria() in Api\AdminGradingRubricController.
 function fitCriteriaTo100(exceptIndex) {
   var target = 100;
   var fixed = 0;
 
   if (typeof exceptIndex === 'number' && draftCriteria[exceptIndex]) {
     fixed = criterionScore(draftCriteria[exceptIndex]);
-    target = 100 - fixed;
+    target = round2(100 - fixed);
   }
 
   var others = draftCriteria.filter(function (c, i) { return i !== exceptIndex; });
   var current = others.reduce(function (sum, c) { return sum + criterionScore(c); }, 0);
 
-  // Nothing to scale, or no proportions to preserve.
   if (!others.length || current <= 0 || target <= 0) return false;
-  if (Math.abs(current - target) < 0.01) return false;
+  if (Math.abs(current - target) < 0.005) return false;
 
   var factor = target / current;
 
   others.forEach(function (c) {
     (c.levels || []).forEach(function (lvl) {
       if (lvl.score === '' || lvl.score === null || isNaN(+lvl.score)) return;
-      lvl.score = round2(+lvl.score * factor);
+      lvl.score = snapToQuarter(+lvl.score * factor);
     });
   });
 
-  // Rounding leaves the total a hair off; put the difference on the biggest
-  // criterion, where it distorts least.
-  var sum = others.reduce(function (s, c) { return s + criterionScore(c); }, 0);
-  var drift = round2(target - sum);
-
-  if (Math.abs(drift) >= 0.01) {
-    var biggest = others[0];
-    others.forEach(function (c) {
-      if (criterionScore(c) > criterionScore(biggest)) biggest = c;
-    });
-    if (biggest && biggest.levels && biggest.levels[0]) {
-      biggest.levels[0].score = Math.max(0, round2(criterionScore(biggest) + drift));
-    }
-  }
+  spreadRemainder(others, round2(target - others.reduce(function (s, c) { return s + criterionScore(c); }, 0)));
 
   return true;
+}
+
+// Nearest quarter point - what the score inputs step by, so the numbers stay
+// the kind a person would have written themselves.
+function snapToQuarter(n) {
+  return Math.round(n * 4) / 4;
+}
+
+// Hand out (or take back) whatever the rounding left over, a quarter at a
+// time, largest criteria first. Never takes a criterion below a quarter
+// point, and is bounded so a pathological rubric cannot spin here.
+function spreadRemainder(criteria, drift) {
+  if (Math.abs(drift) < 0.01) return;
+
+  var step = drift > 0 ? 0.25 : -0.25;
+  var ranked = criteria.slice().sort(function (a, b) { return criterionScore(b) - criterionScore(a); });
+  var i = 0;
+  var guard = 0;
+
+  while (Math.abs(drift) >= 0.01 && guard++ < 2000) {
+    var c = ranked[i % ranked.length];
+    i++;
+
+    if (step < 0 && criterionScore(c) <= 0.25) continue;
+    if (!c.levels || !c.levels[0]) continue;
+
+    c.levels[0].score = round2(criterionScore(c) + step);
+    drift = round2(drift - step);
+  }
 }
 
 function round2(n) {
   return Math.round(n * 100) / 100;
 }
 
-// Committing what a criterion is worth makes room for it: the others scale so
-// the rubric lands back on 100. This is the whole point - it used to be a
-// manual subtraction across every other criterion before you could save.
-function fitOnScoreChange(index) {
-  if (draftCriteria.length < 2) { updateTotalPts(); return; }
+// Giving a NEWLY ADDED criterion its points takes those points off the
+// existing ones, so the rubric stays at 100 without anyone subtracting by
+// hand - which was the whole complaint.
+//
+// Only for a criterion that is being added. Doing this whenever ANY score
+// changed meant editing one criterion moved all the others, so the next edit
+// undid the last and a 27-criterion rubric could never be typed in.
+function fitOnNewCriterionScored(index) {
+  var isNew = newCriterionIndex === index;
+  newCriterionIndex = null;
+
+  if (!isNew || draftCriteria.length < 2) { updateTotalPts(); return; }
   if (!criterionScore(draftCriteria[index])) { updateTotalPts(); return; }
 
   if (fitCriteriaTo100(index)) {
     renderCriteriaBuilder();
-    toast('Other criteria scaled to keep the rubric at 100 points.');
+    toast('Took those points off the other criteria to keep the rubric at 100.');
   } else {
     updateTotalPts();
   }
 }
 
-// The same thing on demand, for a rubric that has drifted - deleting a
-// criterion deliberately leaves the total short rather than silently
-// inflating what everyone else is worth.
+// Rescaling every criterion to total 100, on demand only.
+//
+// This deliberately does NOT happen while you type. Rescaling on each entry
+// meant that setting one criterion's points moved all the others, so the
+// next entry undid the last - a 27-criterion rubric could never converge.
+// You enter the points you actually want, and press this if you want the
+// tool to do the arithmetic.
 function fitAllTo100() {
-  var total = draftCriteria.reduce(function (sum, c) { return sum + criterionScore(c); }, 0);
+  var total = draftTotal();
 
   if (!draftCriteria.length || total <= 0) { toast('Add a criterion with points first.'); return; }
-  if (Math.abs(total - 100) < 0.01) { toast('Already at 100 points.'); return; }
+  if (isAtHundred(total)) { toast('Already adds up to 100.'); return; }
 
   fitCriteriaTo100(null);
   renderCriteriaBuilder();
@@ -433,6 +465,9 @@ let rubrics = [];
 let activeFilter = "all";
 let editingId = null;
 let draftCriteria = [];
+// Which criterion was just added, so scoring it makes room while editing an
+// existing one's points does not cascade.
+let newCriterionIndex = null;
 let nameErrors = [];
 let descErrors = [];
 let _tt;
@@ -485,12 +520,15 @@ function normalizeCriterion(c) {
 // ── CRITERION BUILDER ─────────────────────────────────────────────────────────
 function addCriterion(preload) {
   var crit = preload || { name: '', category: '', categoryMaxPoints: null, maxScore: 100, levels: LEVEL_LABELS.map(function(label) { return { label: label, score: '', desc: '' }; }) };
-  if (!preload) draftCriteria.push(crit);
+  if (!preload) {
+    draftCriteria.push(crit);
+    newCriterionIndex = draftCriteria.length - 1;
+  }
   nameErrors = [];
   descErrors = [];
   renderCriteriaBuilder();
-  // A brand-new criterion has no points yet, so there is nothing to make room
-  // for until one is typed - fitOnScoreChange() handles it from there.
+  // Nothing to make room for until it is given points - that happens in
+  // fitOnNewCriterionScored() when the Excellent score is committed.
   if (!preload) {
     var list = document.getElementById('criteria-list');
     var cards = list.querySelectorAll('.rb-criterion-card');
@@ -530,12 +568,12 @@ function renderCriteriaBuilder() {
     var cat = (cr.category || '').trim();
     if (cat !== lastCategory) {
       lastCategory = cat;
-      var catTotal = draftCriteria.reduce(function(s, c) {
+      var catTotal = round2(draftCriteria.reduce(function(s, c) {
         return ((c.category || '').trim() === cat) ? s + criterionScore(c) : s;
-      }, 0);
+      }, 0));
       html += '<div class="rb-category-header">' +
         '<span>' + (cat ? escHtml(cat) : 'Ungrouped') + '</span>' +
-        '<span class="rb-category-header-pts">' + catTotal + ' pts</span>' +
+        '<span class="rb-category-header-pts">' + formatPts(catTotal) + ' pts</span>' +
         '</div>';
     }
     html += renderCriterionCard(cr, i);
@@ -565,7 +603,7 @@ function renderCriterionCard(cr, i) {
         '<input type="text" class="input rb-level-label-input" style="color:' + LEVEL_COLORS[li] + '" value="' + escHtml(lv.label) + '" placeholder="' + LEVEL_LABELS[li] + '" maxlength="255" oninput="draftCriteria[' + i + '].levels[' + li + '].label=this.value"/>' +
         '<div class="rb-level-input-wrap">' +
         '<input type="number" class="input rb-score-tiny" value="' + lv.score + '" placeholder="0" oninput="draftCriteria[' + i + '].levels[' + li + '].score=+this.value;updateTotalPts()"' +
-          (li === 0 ? ' onchange="fitOnScoreChange(' + i + ')"' : '') +
+          (li === 0 ? ' onchange="fitOnNewCriterionScored(' + i + ')"' : '') +
           ' min="0" step="0.25"/>' +
         '<span class="rb-pts-unit">pts</span>' +
         '</div>' +
@@ -614,41 +652,66 @@ function validateLevelDescriptions() {
   return descErrors.some(function(errs) { return errs.some(Boolean); }) === false;
 }
 
+// Adding up the criteria. Rounded, because adding a lot of decimals in
+// binary floating point does not land where you expect: scaling 27 criteria
+// to fit 100 produced 100.00000000000001, which is not equal to 100, so the
+// page insisted the rubric was over and asked to "Reduce 1.42e-14 points".
+function draftTotal() {
+  return round2(draftCriteria.reduce(function (sum, c) {
+    return sum + criterionScore(c);
+  }, 0));
+}
+
+// Anything inside half a hundredth IS 100 - below the precision the points
+// are even stored at, so it is not a difference anyone can act on.
+function isAtHundred(total) {
+  return Math.abs(total - 100) < 0.005;
+}
+
 function updateTotalPts() {
-  var total = draftCriteria.reduce(function(s, c) {
-    return s + criterionScore(c);
-  }, 0);
+  var total = draftTotal();
+  var atHundred = isAtHundred(total);
+  var diff = round2(100 - total);
+
   var lbl = document.getElementById('total-pts-label');
   var hint = document.getElementById('total-pts-hint');
   var note = document.getElementById('total-pts-note');
   var saveBtn = document.getElementById('form-save-btn');
-  var diff = 100 - total;
+
   if (lbl) {
-    lbl.textContent = total + ' / 100 pts';
-    lbl.className = 'rb-pts-badge' + (total === 100 ? ' rb-pts-ok' : diff > 0 ? ' rb-pts-under' : ' rb-pts-over');
+    lbl.textContent = formatPts(total) + ' / 100 pts';
+    lbl.className = 'rb-pts-badge' + (atHundred ? ' rb-pts-ok' : diff > 0 ? ' rb-pts-under' : ' rb-pts-over');
   }
   if (note) {
-    note.classList.toggle('show', total !== 100);
+    note.classList.toggle('show', !atHundred);
   }
   if (hint) {
-    if (total === 100) {
-      hint.textContent = 'Total points are valid.';
+    if (atHundred) {
+      hint.textContent = 'Adds up to 100.';
       hint.className = 'rb-pts-hint rb-pts-hint-ok';
     } else if (diff > 0) {
-      hint.textContent = 'Add ' + diff + ' more points.';
+      hint.textContent = formatPts(diff) + ' points still unassigned.';
       hint.className = 'rb-pts-hint rb-pts-hint-warn';
     } else {
-      hint.textContent = 'Reduce ' + (-diff) + ' points.';
+      hint.textContent = formatPts(-diff) + ' points over.';
       hint.className = 'rb-pts-hint rb-pts-hint-warn';
     }
   }
+  // Never disabled on the total. A rubric is under 100 for the whole time it
+  // is being built, and blocking the save meant you could not stop halfway -
+  // the page warns instead.
   if (saveBtn) {
-    saveBtn.disabled = total !== 100;
+    saveBtn.disabled = false;
   }
   var fitBtn = document.getElementById('fit-to-100-btn');
   if (fitBtn) {
-    fitBtn.style.display = (total !== 100 && draftCriteria.length && total > 0) ? '' : 'none';
+    fitBtn.style.display = (!atHundred && draftCriteria.length && total > 0) ? '' : 'none';
   }
+}
+
+// Drop trailing zeros so a whole number reads as "25", not "25.00".
+function formatPts(n) {
+  return String(round2(n));
 }
 
 // ── MODAL ─────────────────────────────────────────────────────────────────────
@@ -792,10 +855,12 @@ async function saveRubric() {
   if (!draftCriteria.length) { toast('Add at least one criterion.'); return; }
   if (!validateCriterionNames()) { toast('Criterion Name is required for every criterion.'); return; }
   if (!validateLevelDescriptions()) { toast('Performance level description is required for every performance level.'); return; }
-  var total = draftCriteria.reduce(function(s, c) {
-    return s + criterionScore(c);
-  }, 0);
-  if (total !== 100) { toast('Total criterion points must equal exactly 100 points (currently ' + total + ').'); return; }
+  var total = draftTotal();
+  // Off 100 is allowed - the rubric is saved as it stands and the total is
+  // shown wherever it is used. Warned once, not blocked.
+  if (!isAtHundred(total)) {
+    toast('Saved with ' + formatPts(total) + ' points, not 100. Use "Fit to 100" if you want them scaled.');
+  }
 
   var url, method;
   if (editingId) {
