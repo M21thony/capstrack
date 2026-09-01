@@ -525,6 +525,18 @@
                   Manage Roles
                 </button>
 
+                {{-- Only for someone who already holds the role: changing
+                     which sections they cover is not a change of role, and
+                     doing it through the toggle meant removing them as CaPSA
+                     and making them one again. --}}
+                @if ($expert->is_capsa)
+                  <button type="button" class="roles-btn"
+                          onclick="editCapsaSections({{ $expert->expert_id }}, {{ Illuminate\Support\Js::from($expert->name) }}, {{ Illuminate\Support\Js::from($expert->sections ?? []) }})">
+                    <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="6" rx="1"/><rect x="3" y="14" width="18" height="6" rx="1"/></svg>
+                    Manage Sections
+                  </button>
+                @endif
+
                 <button type="button" class="icon-btn capsa" title="{{ $expert->is_capsa ? 'Remove CaPSA' : 'Make CaPSA' }}"
                         onclick="toggleCapsa({{ $expert->expert_id }}, {{ $expert->is_capsa ? 'true' : 'false' }}, {{ Illuminate\Support\Js::from($expert->name) }})">
                   @if ($expert->is_capsa)
@@ -688,8 +700,12 @@
         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="23" y1="11" x2="17" y2="11"/><line x1="20" y1="8" x2="20" y2="14"/>
       </svg>
     </div>
-    <h3 class="ct-modal-title">Make <span id="capsaExpertName" style="color:#2563eb;"></span> a CaPSA</h3>
-    <p class="ct-modal-desc">
+    <h3 class="ct-modal-title">
+      <span id="capsaModalLead">Make</span>
+      <span id="capsaExpertName" style="color:#2563eb;"></span>
+      <span id="capsaModalTail">a CaPSA</span>
+    </h3>
+    <p class="ct-modal-desc" id="capsaModalDesc">
       CaPSA duties (account approval, panel assignment, team verification, financial checks) are scoped to the section(s) assigned below.
     </p>
 
@@ -737,6 +753,8 @@
 
     <div class="ct-modal-actions">
       <button type="button" id="capsaCancelBtn" class="ct-btn ct-btn-secondary">Cancel</button>
+      {{-- Same picker for granting the role and for changing sections later;
+           the label says which job it is doing. --}}
       <button type="button" id="capsaConfirmBtn" class="ct-btn ct-btn-primary">Make CaPSA</button>
     </div>
   </div>
@@ -1087,8 +1105,55 @@ const capsaExpertName = document.getElementById('capsaExpertName');
 const capsaSectionsError = document.getElementById('capsaSectionsError');
 const capsaConfirmBtn = document.getElementById('capsaConfirmBtn');
 let capsaTargetExpertId = null;
+let capsaEditingSections = false;
+
+/**
+ * Change the sections a CaPSA covers.
+ *
+ * Sections used to be settable only while granting the role, so changing
+ * them meant removing the person as CaPSA and making them one again - which
+ * cuts off their approval, panel, verification and financial access in
+ * between, for a change that was never about their role.
+ */
+function editCapsaSections(expertId, expertName, current) {
+  capsaTargetExpertId = expertId;
+  capsaEditingSections = true;
+  capsaExpertName.textContent = expertName;
+  capsaSectionsError.style.display = 'none';
+  resetSectionPicker();
+  checkSections(current || []);
+  capsaConfirmBtn.textContent = 'Save Sections';
+  document.getElementById('capsaModalLead').textContent = 'Manage sections for';
+  document.getElementById('capsaModalTail').textContent = '';
+  document.getElementById('capsaModalDesc').textContent =
+    'Tick every section they handle. Their CaPSA role is not affected - only what it covers.';
+  capsaModal.style.display = 'flex';
+}
+
+/** Tick the ones they already have, and open the groups holding them. */
+function checkSections(names) {
+  const wanted = new Set(names.map(n => String(n).trim().toLowerCase()));
+
+  document.querySelectorAll('#sectionList .section-opt').forEach(opt => {
+    const label = opt.querySelector('span').textContent.trim().toLowerCase();
+    if (wanted.has(label)) {
+      opt.querySelector('input').checked = true;
+      const group = opt.closest('.section-group');
+      if (group) group.classList.add('open');
+    }
+  });
+
+  updateAllSectionCounts();
+}
 
 function toggleCapsa(expertId, isCurrentlyCapsa, expertName) {
+  capsaEditingSections = false;
+  capsaConfirmBtn.textContent = 'Make CaPSA';
+  document.getElementById('capsaModalLead').textContent = 'Make';
+  document.getElementById('capsaModalTail').textContent = 'a CaPSA';
+  document.getElementById('capsaModalDesc').textContent =
+    'CaPSA duties (account approval, panel assignment, team verification, financial checks) are scoped to the section(s) assigned below.';
+
   if (isCurrentlyCapsa) {
     removeCapsaTargetExpertId = expertId;
     document.getElementById('removeCapsaExpertName').textContent = expertName;
@@ -1141,13 +1206,48 @@ capsaConfirmBtn.addEventListener('click', function () {
   }
   capsaSectionsError.style.display = 'none';
 
+  const wasEditing = capsaEditingSections;
+  const restore = () => {
+    this.disabled = false;
+    this.textContent = wasEditing ? 'Save Sections' : 'Make CaPSA';
+  };
+
   this.disabled = true;
   this.textContent = 'Saving...';
-  sendToggleCapsa(capsaTargetExpertId, sections, 'CaPSA assigned successfully.', () => {
-    this.disabled = false;
-    this.textContent = 'Make CaPSA';
-  });
+
+  if (wasEditing) {
+    saveCapsaSections(capsaTargetExpertId, sections, restore);
+
+    return;
+  }
+
+  sendToggleCapsa(capsaTargetExpertId, sections, 'CaPSA assigned successfully.', restore);
 });
+
+/** Sections only - the role is left exactly as it is. */
+function saveCapsaSections(expertId, sections, onDone) {
+  fetch(`{{ route('admin.experts.sections', ['expert' => 'EXPERT_ID']) }}`.replace('EXPERT_ID', expertId), {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRF-TOKEN': '{{ csrf_token() }}',
+      'Accept': 'application/json',
+    },
+    body: JSON.stringify({ sections }),
+  })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        capsaModal.style.display = 'none';
+        showToast('Sections updated.', 'success');
+        setTimeout(() => window.location.reload(), 700);
+      } else {
+        showToast(data.message || 'Could not update the sections.', 'error');
+      }
+    })
+    .catch(() => showToast('Network error updating the sections.', 'error'))
+    .finally(() => { if (onDone) onDone(); });
+}
 
 // ── SECTION PICKER (Make CaPSA modal) ────────────────────────
 // Grouped by program, collapsed by default, with a per-group "select

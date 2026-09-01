@@ -9,6 +9,7 @@ use App\Models\TeamExpertAssignment;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 
 class AdminExpertsController extends Controller
 {
@@ -215,6 +216,56 @@ class AdminExpertsController extends Controller
         return response()->json([
             'success' => true,
             'message' => "Roles updated for {$expert->name}.",
+        ]);
+    }
+
+    /**
+     * Change which sections a CaPSA covers, without touching the role.
+     *
+     * Sections could only be set while granting CaPSA, so changing them meant
+     * removing the person as CaPSA and making them one again - which cuts off
+     * their account approval, panel, verification and financial access in
+     * between, for a change of section that was never about their role.
+     */
+    public function updateSections(Request $request, CapstoneExpert $expert): JsonResponse
+    {
+        // Checked by hand rather than through $request->validate(): the only
+        // caller is a fetch(), and a failed validate() on a route outside
+        // api/* answers with a redirect - which reaches the browser as a page
+        // of HTML where JSON was expected, and fails in silence.
+        $validator = Validator::make($request->all(), [
+            'sections' => ['required', 'array', 'min:1'],
+            'sections.*' => ['string'],
+        ], [
+            'sections.required' => 'Choose at least one section.',
+            'sections.min' => 'Choose at least one section.',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => $validator->errors()->first(),
+            ], 422);
+        }
+
+        $validated = $validator->validated();
+
+        // Sections are what a CaPSA covers, so they only mean anything on
+        // someone who holds the role. Setting them on anyone else would leave
+        // a value nothing reads, waiting to surprise whoever grants it later.
+        if (! $expert->is_capsa) {
+            return response()->json([
+                'success' => false,
+                'message' => 'That expert is not a CaPSA, so they have no sections to change.',
+            ], 422);
+        }
+
+        $expert->sections = array_values(array_unique($validated['sections']));
+        $expert->save();
+
+        return response()->json([
+            'success' => true,
+            'sections' => $expert->fresh()->sections,
         ]);
     }
 
