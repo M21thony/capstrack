@@ -63,6 +63,9 @@ Route::middleware(['expert.auth', 'no.cache', 'track.expert'])->prefix('admin')-
     // ---- Admin only: creating a CAPSA, student accounts, system config ----
     Route::middleware('expert.admin')->group(function () {
         Route::post('/experts/{expert}/toggle-capsa', [AdminExpertsController::class, 'toggleCapsa'])->name('experts.toggle-capsa');
+        // Changing sections is not a change of role, so it does not go
+        // through the toggle - see AdminExpertsController::updateSections.
+        Route::put('/experts/{expert}/sections', [AdminExpertsController::class, 'updateSections'])->name('experts.sections');
         Route::get('/students', [StudentAccountsController::class, 'index'])->name('students');
         Route::post('/students', [StudentAccountsController::class, 'store'])->name('students.store');
         Route::put('/students/{student}', [StudentAccountsController::class, 'update'])->name('students.update');
