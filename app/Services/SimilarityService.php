@@ -386,8 +386,10 @@ PROMPT;
     // its own verdict during matching.
     private function enrichWithReasons(array $concepts, array $topCandidates): array
     {
-        foreach ($topCandidates as &$item) {
-            $verdict = $this->judgeOneCandidate($concepts, $item['document'], $item['score']);
+        $verdicts = $this->judgeCandidates($concepts, $topCandidates);
+
+        foreach ($topCandidates as $position => &$item) {
+            $verdict = $verdicts[$position] ?? null;
             $hasVerdict = $verdict !== null;
 
             $item['reason'] = $verdict['reason']
@@ -459,6 +461,91 @@ PROMPT;
     // and scope (previously just topic/domain/keywords) - comparing actual
     // proposal content against title-and-abstract, not summaries of both.
     private function judgeOneCandidate(array $concepts, ArchivedDocument $doc, int $embeddingScore): ?array
+    {
+        $prompt = $this->buildJudgePrompt($concepts, $doc, $embeddingScore);
+
+        try {
+            return $this->readVerdict($this->ollama->generate($prompt, 700));
+        } catch (\Exception $e) {
+            Log::warning('judgeOneCandidate failed', ['archived_id' => $doc->archived_id, 'error' => $e->getMessage()]);
+
+            return null;
+        }
+    }
+
+    /**
+     * Judge the candidates worth judging, in one trip.
+     *
+     * Two things were making a check slow. Every candidate was judged, and
+     * each judgement was its own round trip to the AI machine - ten of them,
+     * one after another. On a good link that is about two seconds each; on a
+     * weak one it is minutes, because the cost is the network, not the model.
+     *
+     * So: only the candidates near enough to be worth explaining are judged -
+     * the rest already fall back to the embedding line, which is what they
+     * were showing anyway - and those are asked for together, in a single
+     * round trip that runs them in parallel on the far side. Each candidate
+     * is still judged on its own, which is what keeps the scoring honest;
+     * only the waiting is shared.
+     *
+     * @return array<int, array|null> keyed by position in $topCandidates
+     */
+    private function judgeCandidates(array $concepts, array $topCandidates): array
+    {
+        $limit = (int) config('services.ollama.judge_limit', 4);
+        $floor = (int) config('services.ollama.judge_min_score', 40);
+
+        $worthJudging = [];
+
+        foreach ($topCandidates as $position => $item) {
+            if (count($worthJudging) >= $limit) {
+                break;
+            }
+
+            // The top one is always explained, however it scored: a check
+            // that says nothing about its own best match is not much of a
+            // check.
+            if ($position === 0 || $item['score'] >= $floor) {
+                $worthJudging[$position] = $this->buildJudgePrompt($concepts, $item['document'], $item['score']);
+            }
+        }
+
+        if ($worthJudging === []) {
+            return [];
+        }
+
+        $positions = array_keys($worthJudging);
+        $verdicts = [];
+
+        try {
+            $answers = $this->ollama->generateMany(array_values($worthJudging), 700);
+
+            foreach ($answers as $i => $raw) {
+                $verdicts[$positions[$i]] = $this->readVerdict($raw);
+            }
+        } catch (\Throwable $e) {
+            // One trip failing should not cost every verdict - fall back to
+            // asking one at a time, which is what this did before.
+            Log::warning('Batched judging failed, falling back one at a time', ['error' => $e->getMessage()]);
+        }
+
+        // Anything the batch did not answer for is asked individually, so a
+        // partial batch degrades to slower rather than to nothing.
+        foreach ($positions as $position) {
+            if (! array_key_exists($position, $verdicts)) {
+                $verdicts[$position] = $this->judgeOneCandidate(
+                    $concepts,
+                    $topCandidates[$position]['document'],
+                    $topCandidates[$position]['score']
+                );
+            }
+        }
+
+        return $verdicts;
+    }
+
+    /** The prompt that asks for one candidate's verdict. */
+    private function buildJudgePrompt(array $concepts, ArchivedDocument $doc, int $embeddingScore): string
     {
         $conceptText = implode(', ', $concepts['keywords'] ?? []);
 
@@ -536,38 +623,38 @@ PROMPT;
                 ."\nTitle: ".$this->redactLocations(mb_substr($doc->title, 0, 150))
                 ."\nAbstract: ".$this->redactLocations(mb_substr($doc->abstract ?? '', 0, 1200));
 
-        try {
-            // A single verdict needs far less room than the old 10-candidate
-            // array did - 700 covers score+reason+similarities+differences+
-            // suggestion for one candidate with headroom, and keeps each of
-            // these now-many calls as quick as possible.
-            $raw = $this->ollama->generate($prompt, 700);
-            $cleaned = trim(preg_replace('/```json|```/i', '', $raw));
+        return $prompt;
+    }
 
-            preg_match('/\{.*\}/s', $cleaned, $matches);
-            $r = json_decode($matches[0] ?? $cleaned, true);
+    /**
+     * Read one verdict out of whatever the model wrote.
+     *
+     * Split out so a batched answer and a single one are read the same way -
+     * there is no second parser to drift from this one.
+     */
+    private function readVerdict(string $raw): ?array
+    {
+        $cleaned = trim(preg_replace('/```json|```/i', '', $raw));
 
-            if (json_last_error() !== JSON_ERROR_NONE || ! is_array($r)) {
-                return null;
-            }
+        preg_match('/\{.*\}/s', $cleaned, $matches);
+        $r = json_decode($matches[0] ?? $cleaned, true);
 
-            $aiScore = isset($r['score']) && is_numeric($r['score'])
-                ? max(0, min(100, (int) round($r['score'])))
-                : null;
-
-            return [
-                'reason' => $r['reason'] ?? '',
-                'similarities' => $r['similarities'] ?? '',
-                'differences' => $r['differences'] ?? '',
-                'suggestion' => $r['suggestion'] ?? '',
-                'matches' => array_key_exists('matches', $r) ? (bool) $r['matches'] : true,
-                'score' => $aiScore,
-            ];
-        } catch (\Exception $e) {
-            Log::warning('judgeOneCandidate failed', ['archived_id' => $doc->archived_id, 'error' => $e->getMessage()]);
-
+        if (json_last_error() !== JSON_ERROR_NONE || ! is_array($r)) {
             return null;
         }
+
+        $aiScore = isset($r['score']) && is_numeric($r['score'])
+            ? max(0, min(100, (int) round($r['score'])))
+            : null;
+
+        return [
+            'reason' => $r['reason'] ?? '',
+            'similarities' => $r['similarities'] ?? '',
+            'differences' => $r['differences'] ?? '',
+            'suggestion' => $r['suggestion'] ?? '',
+            'matches' => array_key_exists('matches', $r) ? (bool) $r['matches'] : true,
+            'score' => $aiScore,
+        ];
     }
 
     // ── 5. Cosine similarity between two float vectors ─────────────────
