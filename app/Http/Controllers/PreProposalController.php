@@ -151,8 +151,56 @@ class PreProposalController extends Controller
                 'trace' => $e->getTraceAsString(),
             ]);
 
+            // A student was being shown the raw failure - "Cannot connect to
+            // 127.0.0.1:22. Error 10061..." - which tells them nothing and
+            // reads like they broke something. The checker being unreachable
+            // is not their problem and not their mistake, so say that, and
+            // answer 503 rather than 500: nothing here is wrong, the machine
+            // that does the checking is simply not answering.
+            if ($this->checkerIsUnreachable($e)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'The similarity checker is not responding right now. '
+                        .'Nothing you uploaded was lost - try again in a few minutes, '
+                        .'and tell your CaPSA if it keeps happening.',
+                ], 503);
+            }
+
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
+    }
+
+    /**
+     * Whether a failed check means the machine that does the checking is not
+     * answering, rather than something about the document.
+     *
+     * The messages worth keeping are the ones thrown deliberately above - a
+     * PDF with no text layer, a document that is not a pre-proposal. Those
+     * tell a student what to do. Everything below is the SSH tunnel or Ollama
+     * being unavailable, and none of it means anything to them.
+     */
+    private function checkerIsUnreachable(\Throwable $e): bool
+    {
+        $signatures = [
+            'Cannot connect to',
+            'Connection refused',
+            'Empty response from Ollama',
+            'Failed to decode Ollama JSON',
+            'Failed to get embedding',
+            'Unable to connect',
+            'SSH',
+            'cURL',
+            'timed out',
+            'Operation timed out',
+        ];
+
+        foreach ($signatures as $signature) {
+            if (stripos($e->getMessage(), $signature) !== false) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public function store(Request $request): RedirectResponse
