@@ -204,6 +204,130 @@ class OllamaSSHClient
         return $decoded['response'] ?? '';
     }
 
+    /**
+     * Answer several prompts in one trip, run in parallel on the far side.
+     *
+     * generate() costs a full round trip each time: an SFTP upload, a remote
+     * curl, and the output read back. A duplication check judges its
+     * candidates one at a time, so ten of them meant ten round trips - about
+     * two seconds each on a good link, and minutes on a weak one, because the
+     * cost is the network rather than the model.
+     *
+     * This sends every prompt as one file, starts a background job per prompt
+     * on the remote host so they overlap, and reads all the answers back
+     * together. The model still judges each candidate on its own - that
+     * separation is what keeps the scoring honest - only the waiting is
+     * shared.
+     *
+     * Answers come back keyed by the index they were given in. A prompt whose
+     * job produced nothing is simply absent, so a caller can fall back to
+     * generate() for that one rather than losing the whole batch.
+     *
+     * @param  string[]  $prompts
+     * @return array<int, string>
+     */
+    public function generateMany(array $prompts, int $maxTokens = 512): array
+    {
+        if ($prompts === []) {
+            return [];
+        }
+
+        $payloads = [];
+
+        foreach (array_values($prompts) as $prompt) {
+            $payloads[] = [
+                'model' => config('services.ollama.model', 'qwen2.5:7b'),
+                'prompt' => $prompt,
+                'stream' => false,
+                'keep_alive' => config('services.ollama.keep_alive', '30m'),
+                'options' => [
+                    'num_predict' => $maxTokens,
+                    'temperature' => 0,
+                    'min_p' => 0,
+                    'top_p' => 1,
+                    'top_k' => 1,
+                ],
+            ];
+        }
+
+        $ssh = $this->getConnection();
+        $tempDir = $this->getRemoteTempDir($ssh);
+        $batchId = uniqid();
+        $remotePath = $tempDir.'\\ollama_batch_'.$batchId.'.json';
+
+        if ($ssh->put($this->toSftpPath($remotePath), json_encode($payloads)) === false) {
+            throw new \Exception('Failed to upload batch payload via SFTP.');
+        }
+
+        // Each answer is announced by a marker carrying its index, because
+        // jobs finish in whatever order they finish in.
+        $marker = '@@OLLAMA_'.$batchId.'_';
+
+        $script = '$items = Get-Content -Raw -Encoding UTF8 \"'.$remotePath.'\" | ConvertFrom-Json; '
+                .'$jobs = @(); '
+                .'for ($i = 0; $i -lt $items.Count; $i++) { '
+                .'  $f = \"'.$tempDir.'\\ollama_'.$batchId.'_$i.json\"; '
+                // Written without a BOM: curl hands the file to Ollama as-is,
+                // and a BOM makes it invalid JSON.
+                .'  [System.IO.File]::WriteAllText($f, ($items[$i] | ConvertTo-Json -Depth 20 -Compress), (New-Object System.Text.UTF8Encoding $false)); '
+                .'  $jobs += Start-Job -ArgumentList $f, $i -ScriptBlock { param($file, $idx) '
+                .'    $r = curl.exe -s --max-time 300 -X POST http://localhost:11434/api/generate -H \"Content-Type: application/json\" --data-binary \"@$file\"; '
+                .'    Write-Output (\"'.$marker.'$idx@@\"); '
+                .'    Write-Output $r; '
+                .'    Remove-Item $file -ErrorAction SilentlyContinue '
+                .'  } '
+                .'} '
+                .'$null = $jobs | Wait-Job; '
+                .'foreach ($j in $jobs) { Receive-Job $j } '
+                .'$jobs | Remove-Job -Force -ErrorAction SilentlyContinue; '
+                .'Remove-Item \"'.$remotePath.'\" -ErrorAction SilentlyContinue';
+
+        $output = $ssh->exec('powershell -Command "'.$script.'"');
+
+        if (empty(trim((string) $output))) {
+            throw new \Exception('Empty response from Ollama batch.');
+        }
+
+        return $this->splitBatchOutput((string) $output, $marker, count($payloads));
+    }
+
+    /**
+     * Pull the individual answers out of one batch's combined output.
+     *
+     * @return array<int, string>
+     */
+    private function splitBatchOutput(string $output, string $marker, int $expected): array
+    {
+        $parts = preg_split(
+            '/'.preg_quote($marker, '/').'(\d+)@@/',
+            $output,
+            -1,
+            PREG_SPLIT_DELIM_CAPTURE
+        );
+
+        $answers = [];
+
+        // parts: [before, index, body, index, body, ...]
+        for ($i = 1; $i < count($parts) - 1; $i += 2) {
+            $index = (int) $parts[$i];
+            $body = trim($parts[$i + 1]);
+
+            if ($index >= 0 && $index < $expected && $body !== '') {
+                $decoded = json_decode($body, true);
+
+                if (json_last_error() === JSON_ERROR_NONE && isset($decoded['response'])) {
+                    $answers[$index] = $decoded['response'];
+                }
+            }
+        }
+
+        if ($answers === []) {
+            Log::warning('Ollama batch returned nothing usable', ['expected' => $expected]);
+        }
+
+        return $answers;
+    }
+
     public function embed(string $text): array
     {
         $payload = [

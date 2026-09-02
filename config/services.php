@@ -57,6 +57,16 @@ return [
         // where the minutes went. '-1' keeps it resident until something
         // else needs the memory.
         'keep_alive' => env('OLLAMA_KEEP_ALIVE', '30m'),
+
+        // How many of a check's candidates get an AI-written verdict. The
+        // rest keep the embedding line they were already showing. Each
+        // verdict is a model call, so this is the main lever on how long a
+        // check takes on a weak connection.
+        'judge_limit' => env('OLLAMA_JUDGE_LIMIT', 4),
+
+        // ...and how close a candidate has to be to be worth explaining.
+        // The top match is always explained whatever it scored.
+        'judge_min_score' => env('OLLAMA_JUDGE_MIN_SCORE', 40),
     ],
 
     'ssh_tunnel' => [
