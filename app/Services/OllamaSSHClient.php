@@ -117,6 +117,23 @@ class OllamaSSHClient
 
         $output = $ssh->exec($command);
 
+        // An empty channel is usually a blip on a slow link rather than a
+        // real failure - the command ran, the bytes did not come back. One
+        // retry on a fresh connection costs a second and turns the commonest
+        // failure during a presentation into a pause nobody notices.
+        if (empty(trim($output))) {
+            Log::warning('Empty response from Ollama, retrying once', ['endpoint' => $endpoint]);
+
+            $this->connection = null;
+            $ssh = $this->getConnection();
+
+            if ($ssh->put($this->toSftpPath($remotePath), $jsonPayload) === false) {
+                throw new \Exception('Failed to upload request payload via SFTP.');
+            }
+
+            $output = $ssh->exec($command);
+        }
+
         if (empty(trim($output))) {
             throw new \Exception("Empty response from Ollama at {$endpoint}.");
         }

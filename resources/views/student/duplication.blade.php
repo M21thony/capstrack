@@ -855,6 +855,8 @@ function selectSdgOption(extractedValue) {
 }
 
 let checkAbortController = null;
+let checkTimeoutHandle = null;
+let checkTimedOut = false;
 let checkStepInterval = null;
 let checkStillWorkingTimeout = null;
 
@@ -900,6 +902,16 @@ async function runCheck() {
 
   checkAbortController = new AbortController();
 
+  // The server gives Ollama 300 seconds, so anything past that is not going
+  // to arrive. Without this the overlay spun until the request died on its
+  // own and came back as an HTML error page - which is what a slow
+  // connection during a presentation looks like.
+  checkTimedOut = false;
+  checkTimeoutHandle = setTimeout(() => {
+    checkTimedOut = true;
+    if (checkAbortController) checkAbortController.abort();
+  }, 330000);
+
   try {
     const res = await fetch('/pre-proposal/check', {
       method: 'POST',
@@ -908,9 +920,26 @@ async function runCheck() {
       signal: checkAbortController.signal,
     });
 
-    const data = await res.json();
+    // Read the body as text first. When the server dies mid-check, or a
+    // proxy gives up on a slow connection, what comes back is an HTML error
+    // page - and res.json() on that threw "Unexpected token '<', \"<!DOCTYPE\"",
+    // which is the error a student was left looking at.
+    const raw = await res.text();
+    let data;
+
+    try {
+      data = JSON.parse(raw);
+    } catch (parseError) {
+      throw new Error(
+        res.status === 419
+          ? 'Your session expired while the check was running. Sign in again and retry - nothing was lost.'
+          : 'The check did not finish. The connection may be too slow to hold it open - try again, and nothing you uploaded was lost.'
+      );
+    }
+
     clearInterval(checkStepInterval);
     clearTimeout(checkStillWorkingTimeout);
+    clearTimeout(checkTimeoutHandle);
     overlay.classList.remove('show');
 
     if (!data.success) { showToast(data.message, 'error'); return; }
@@ -919,20 +948,34 @@ async function runCheck() {
   } catch (err) {
     clearInterval(checkStepInterval);
     clearTimeout(checkStillWorkingTimeout);
+    clearTimeout(checkTimeoutHandle);
     overlay.classList.remove('show');
-    if (err.name === 'AbortError') { return; }
+
+    if (err.name === 'AbortError') {
+      // Two ways to get here: the reader pressed Cancel, or the hard stop
+      // above fired. Only the second one needs explaining.
+      if (checkTimedOut) {
+        showToast('The check ran out of time - the connection is too slow to hold it open. Try again; nothing you uploaded was lost.', 'error');
+      }
+
+      return;
+    }
+
     showToast(err.message, 'error');
   } finally {
     checkAbortController = null;
+    checkTimeoutHandle = null;
   }
 }
 
 function cancelCheck() {
+  checkTimedOut = false;
   if (checkAbortController) {
     checkAbortController.abort();
   }
   clearInterval(checkStepInterval);
   clearTimeout(checkStillWorkingTimeout);
+  clearTimeout(checkTimeoutHandle);
   document.getElementById('check-loading').classList.remove('show');
   showToast('Similarity check cancelled.', 'error');
 }
