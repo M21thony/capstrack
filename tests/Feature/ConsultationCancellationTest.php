@@ -161,7 +161,10 @@ class ConsultationCancellationTest extends TestCase
         $response = $this->actingAs($teammate, 'web')->get(route('student.consultation'));
 
         $response->assertOk();
-        $response->assertSee('Team Shared');
+        // The booking row no longer repeats the team's own name - a student
+        // is only ever shown their own team's bookings, so it said nothing.
+        // The row being there for a teammate who did not book it is the
+        // point, and that is what data-booking-id proves.
         $response->assertSee('data-booking-id="'.$bookingId.'"', false);
     }
 
