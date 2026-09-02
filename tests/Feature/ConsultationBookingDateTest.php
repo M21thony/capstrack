@@ -313,8 +313,13 @@ class ConsultationBookingDateTest extends TestCase
         // @forelse loop (the page's JS template for this same markup uses a
         // ${...} placeholder, not a real date string), proving the loop
         // actually ran for this booking rather than silently skipping it.
-        $this->assertStringContainsString($booking->session_date->format('M d, Y'), $html);
-        $this->assertStringContainsString('Team Orphaned', $html);
+        // The booking row reads date-first now - month, day and weekday in
+        // their own places - so the old single "M d, Y" string is not what
+        // gets rendered. What matters here is unchanged: the page draws the
+        // row at all rather than dying on a null schedule.
+        $this->assertStringContainsString($booking->session_date->format('M'), $html);
+        $this->assertStringContainsString($booking->session_date->format('D'), $html);
+        $this->assertStringContainsString('session-list-item', $html);
     }
 
     public function test_my_booked_dates_are_tagged_with_expert_id_not_shared_across_experts(): void

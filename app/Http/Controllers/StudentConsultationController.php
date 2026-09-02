@@ -17,8 +17,14 @@ use Illuminate\Support\Facades\Mail;
 
 class StudentConsultationController extends Controller
 {
-    /** How near a session can get before it is too late to call it off. */
-    private const CANCEL_CUTOFF_DAYS = 3;
+    /**
+     * How near a session can get before it is too late to call it off.
+     *
+     * Public because the booking page states the rule, and a page that says
+     * a different number from the one enforced is worse than one that says
+     * nothing.
+     */
+    public const CANCEL_CUTOFF_DAYS = 3;
 
     public function __construct(private GoogleCalendarService $calendar) {}
 
