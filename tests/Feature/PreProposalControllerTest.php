@@ -630,4 +630,59 @@ class PreProposalControllerTest extends TestCase
         $response->assertStatus(200);
         $response->assertSee('Have at least '.PreProposalController::MINIMUM_PROPOSALS.' pre-proposal titles saved before you can submit. You have 1.');
     }
+
+    /**
+     * When the machine that does the checking is not answering, a student was
+     * shown the raw failure - "Cannot connect to 127.0.0.1:22. Error 10061" -
+     * which tells them nothing and reads like they broke something.
+     */
+    public function test_an_unreachable_checker_says_so_in_plain_words(): void
+    {
+        [$student] = $this->makeLeaderWithTeam();
+        $this->actingAs($student, 'web');
+
+        $this->mock(\App\Services\OllamaSSHClient::class, function ($mock) {
+            $mock->shouldReceive('warmup')->andThrow(
+                new \Exception('Cannot connect to 127.0.0.1:22. Error 10061. No connection could be made because the target machine actively refused it')
+            );
+        });
+
+        $response = $this->post(route('student.pre-proposal.check'), [
+            'document' => UploadedFile::fake()->create('p.pdf', 10, 'application/pdf'),
+        ]);
+
+        // 503, not 500: nothing here is wrong, the checker is simply not up.
+        $response->assertStatus(503);
+        $response->assertJsonPath('success', false);
+
+        $message = $response->json('message');
+        $this->assertStringContainsString('not responding', $message);
+        $this->assertStringNotContainsString('127.0.0.1', $message, 'The raw failure reached the student.');
+        $this->assertStringNotContainsString('10061', $message);
+    }
+
+    /**
+     * A problem with the document itself still says what it is - those are
+     * the messages that tell a student what to do about it.
+     */
+    public function test_a_problem_with_the_document_still_says_what_it_is(): void
+    {
+        [$student] = $this->makeLeaderWithTeam();
+        $this->actingAs($student, 'web');
+
+        $this->mock(\App\Services\OllamaSSHClient::class, function ($mock) {
+            $mock->shouldReceive('warmup')->andReturnNull();
+        });
+
+        $this->mock(\App\Services\SimilarityService::class, function ($mock) {
+            $mock->shouldReceive('extractPdfText')->andReturn('');
+        });
+
+        $response = $this->post(route('student.pre-proposal.check'), [
+            'document' => UploadedFile::fake()->create('p.pdf', 10, 'application/pdf'),
+        ]);
+
+        $response->assertStatus(500);
+        $this->assertStringContainsString('Could not extract text', $response->json('message'));
+    }
 }
