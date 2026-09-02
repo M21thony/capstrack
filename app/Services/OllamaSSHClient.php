@@ -2,12 +2,16 @@
 
 namespace App\Services;
 
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use phpseclib3\Crypt\PublicKeyLoader;
 use phpseclib3\Net\SFTP;
 
 class OllamaSSHClient
 {
+    /** Remembers that the model is loaded, so a scan need not warm it again. */
+    private const WARM_KEY = 'ollama:model-warm';
+
     // Always SSH — this client only ever talks to Ollama through the tunnel.
     // Requires: SSH server running + .env SSH_TUNNEL_* values.
 
@@ -138,6 +142,10 @@ class OllamaSSHClient
             throw new \Exception("Empty response from Ollama at {$endpoint}.");
         }
 
+        // An answer is proof the model is loaded, so the next scan can skip
+        // warming it.
+        $this->markWarm();
+
         return $output;
     }
 
@@ -145,8 +153,27 @@ class OllamaSSHClient
     // PUBLIC METHODS
     // ─────────────────────────────────────────────────────────────────
 
+    /**
+     * Load the model, unless it is already loaded.
+     *
+     * This ran at the top of every scan and cost a full round trip plus a
+     * generate - about four and a half seconds at a desk, and far worse on a
+     * weak link - to load a model that keep_alive had kept in memory the
+     * whole time. It saved nothing either way: a cold model gets loaded by
+     * the first real call regardless, so warming first only paid for it
+     * twice.
+     *
+     * Every successful call now leaves a marker saying the model is up, and
+     * this returns immediately while that marker stands. The marker expires
+     * before keep_alive does, so the one scan that follows a long idle still
+     * warms properly rather than assuming.
+     */
     public function warmup(): void
     {
+        if (Cache::get(self::WARM_KEY)) {
+            return;
+        }
+
         try {
             $payload = [
                 'model' => config('services.ollama.model', 'qwen2.5:7b'),
@@ -162,6 +189,27 @@ class OllamaSSHClient
         } catch (\Exception $e) {
             Log::warning('Ollama warmup failed', ['error' => $e->getMessage()]);
         }
+    }
+
+    /**
+     * How long to trust that the model is still loaded.
+     *
+     * Deliberately short of keep_alive: being wrong the safe way costs one
+     * unnecessary warmup, being wrong the other way means a scan meeting a
+     * cold model with no warning.
+     */
+    private function markWarm(): void
+    {
+        $keepAlive = (string) config('services.ollama.keep_alive', '30m');
+
+        $minutes = match (true) {
+            $keepAlive === '-1' => 60,
+            str_ends_with($keepAlive, 'h') => ((int) $keepAlive) * 60,
+            str_ends_with($keepAlive, 'm') => (int) $keepAlive,
+            default => 30,
+        };
+
+        Cache::put(self::WARM_KEY, true, now()->addMinutes(max(1, (int) ($minutes * 0.7))));
     }
 
     public function generate(string $prompt, int $maxTokens = 512): string
@@ -287,6 +335,8 @@ class OllamaSSHClient
         if (empty(trim((string) $output))) {
             throw new \Exception('Empty response from Ollama batch.');
         }
+
+        $this->markWarm();
 
         return $this->splitBatchOutput((string) $output, $marker, count($payloads));
     }
