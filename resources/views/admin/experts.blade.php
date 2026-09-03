@@ -7,7 +7,13 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="{{ asset('css/admin.css') }}"/>
 <style>
-  .ct-upload-card{max-width:660px;text-align:left;padding:24px}
+  /* Both classes in the selector, so this beats .ct-modal-card wherever that
+     is defined - on this page it is defined further down, and a single-class
+     rule of equal weight coming later would otherwise win and squeeze the
+     card back to the narrow dialog width. width as well as max-width,
+     because the card is a flex item and a max-width alone leaves it free to
+     shrink to fit its contents. */
+  .ct-modal-card.ct-upload-card{width:100%;max-width:660px;text-align:left;padding:24px}
   .ct-up-head{display:flex;align-items:flex-start;gap:14px;margin-bottom:18px}
   .ct-up-head-icon{display:flex;align-items:center;justify-content:center;width:46px;height:46px;border-radius:50%;
                    background:#eff6ff;color:#2563eb;flex-shrink:0}
