@@ -292,4 +292,142 @@ class ExpertListUploadTest extends TestCase
         $response->assertDontSee('CSV', false);
         $response->assertDontSee('.csv', false);
     }
+
+    // -- The preview -------------------------------------------------------
+
+    /**
+     * The preview reads the file and writes nothing.
+     *
+     * An upload approves people and grants them work in one go, and nothing
+     * undoes it, so looking has to be free.
+     */
+    public function test_previewing_a_list_changes_nothing(): void
+    {
+        $this->actingAs($this->capsa(), 'expert');
+
+        $this->post(route('admin.rosters.experts.preview'), [
+            'file' => $this->listFile(['Experts' => [self::HEADER, [
+                ['Nobody Yet', 'nobodyyet@gmail.com', 'Adviser', 'Data Analytics'],
+            ]]]),
+        ])->assertOk();
+
+        $this->assertNull(CapstoneExpert::where('email', 'nobodyyet@gmail.com')->first());
+        $this->assertSame([], $this->rolesOf('nobodyyet@gmail.com'));
+    }
+
+    /** Each person is reported as what they would become. */
+    public function test_the_preview_says_what_each_person_would_become(): void
+    {
+        $this->actingAs($this->capsa(), 'expert');
+
+        // Already an approved adviser - the row would change nothing.
+        $same = CapstoneExpert::create([
+            'email' => 'same@gmail.com',
+            'first_name' => 'Same',
+            'last_name' => 'Same',
+            'approved_status' => true,
+        ]);
+        CapstoneExpert::syncRoles($same->expert_id, [DB::table('roles')->where('role_name', 'adviser')->value('role_id')]);
+
+        // An adviser the list now names as a grammarian.
+        $moved = CapstoneExpert::create([
+            'email' => 'moved@gmail.com',
+            'first_name' => 'Moved',
+            'last_name' => 'Role',
+            'approved_status' => true,
+        ]);
+        CapstoneExpert::syncRoles($moved->expert_id, [DB::table('roles')->where('role_name', 'adviser')->value('role_id')]);
+
+        $response = $this->post(route('admin.rosters.experts.preview'), [
+            'file' => $this->listFile(['Experts' => [self::HEADER, [
+                ['Fresh Face', 'fresh@gmail.com', 'Consultant', ''],
+                ['Same Same', 'same@gmail.com', 'Adviser', ''],
+                ['Moved Role', 'moved@gmail.com', 'Grammarian', ''],
+            ]]]),
+        ]);
+
+        $response->assertOk();
+        $response->assertJson(['create' => 1, 'update' => 1, 'unchanged' => 1, 'skipped' => 0]);
+
+        $rows = collect($response->json('rows'))->keyBy('email');
+
+        $this->assertSame('create', $rows['fresh@gmail.com']['action']);
+        $this->assertSame('unchanged', $rows['same@gmail.com']['action']);
+        $this->assertSame('update', $rows['moved@gmail.com']['action']);
+
+        // Named, so a CaPSA can see it is the roles about to move.
+        $this->assertSame(['roles'], $rows['moved@gmail.com']['changes']);
+        $this->assertSame(['grammarian'], $rows['moved@gmail.com']['roles']);
+    }
+
+    /** Expertise the row would record is shown before it is recorded. */
+    public function test_the_preview_shows_the_expertise_a_row_carries(): void
+    {
+        $this->actingAs($this->capsa(), 'expert');
+
+        $row = $this->post(route('admin.rosters.experts.preview'), [
+            'file' => $this->listFile(['Experts' => [self::HEADER, [
+                ['Ana Reyes', 'anapreview@gmail.com', 'Adviser', 'Research Methodology, Data Analytics'],
+            ]]]),
+        ])->assertOk()->json('rows.0');
+
+        $this->assertSame(['Research Methodology', 'Data Analytics'], $row['expertise']);
+    }
+
+    /** A row the upload would skip is reported as skipped, not as a change. */
+    public function test_the_preview_reports_the_rows_that_would_be_skipped(): void
+    {
+        $capsa = $this->capsa();
+        $this->actingAs($capsa, 'expert');
+
+        $response = $this->post(route('admin.rosters.experts.preview'), [
+            'file' => $this->listFile(['Experts' => [self::HEADER, [
+                ['Someone Else', $capsa->email, 'Adviser', ''],
+            ]]]),
+        ]);
+
+        $response->assertOk();
+        $response->assertJson(['skipped' => 1, 'create' => 0, 'update' => 0]);
+        $this->assertSame([], $response->json('rows'));
+    }
+
+    /** The preview and the upload agree, because they read the same way. */
+    public function test_what_the_preview_says_is_what_the_upload_does(): void
+    {
+        $this->actingAs($this->capsa(), 'expert');
+
+        $rows = [['Agree Ment', 'agree@gmail.com', 'Consultant, Grammarian', 'UI/UX Design']];
+
+        $preview = $this->post(route('admin.rosters.experts.preview'), [
+            'file' => $this->listFile(['Experts' => [self::HEADER, $rows]]),
+        ])->assertOk();
+
+        $this->assertSame('create', $preview->json('rows.0.action'));
+        $this->assertSame(['consultant', 'grammarian'], $preview->json('rows.0.roles'));
+
+        $this->post(route('admin.rosters.experts.store'), [
+            'file' => $this->listFile(['Experts' => [self::HEADER, $rows]]),
+        ])->assertOk()->assertJson(['inserted' => 1]);
+
+        $this->assertSame(['consultant', 'grammarian'], $this->rolesOf('agree@gmail.com'));
+
+        // And a second look now reports it as settled, not as a change.
+        $this->post(route('admin.rosters.experts.preview'), [
+            'file' => $this->listFile(['Experts' => [self::HEADER, $rows]]),
+        ])->assertOk()->assertJson(['unchanged' => 1, 'create' => 0, 'update' => 0]);
+    }
+
+    /** Saving is offered without previewing first. */
+    public function test_the_modal_offers_both_preview_and_save(): void
+    {
+        $this->actingAs($this->capsa(), 'expert');
+
+        $response = $this->get(route('admin.experts'));
+
+        $response->assertOk();
+        $response->assertSee('id="expertRosterPreviewBtn"', false);
+        $response->assertSee('id="expertRosterStep2"', false);
+        $response->assertSee('id="expertRosterPreviewTable"', false);
+        $response->assertSee('uploadExpertRoster(this)', false);
+    }
 }

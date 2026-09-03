@@ -695,6 +695,10 @@ class StudentListUploadTest extends TestCase
         // file that gets refused at the door.
         $response->assertDontSee('CSV', false);
         $response->assertDontSee('.csv', false);
+
+        // Saving is offered without previewing first - the preview is there
+        // to be used, not to be got past.
+        $response->assertSee('uploadStudentRoster(this)', false);
     }
 
     /** Program, Year and Section read down three columns, not one. */

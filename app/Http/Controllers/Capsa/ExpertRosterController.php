@@ -42,13 +42,18 @@ class ExpertRosterController extends Controller
     /** The headings the template writes, in the order it writes them. */
     private const TEMPLATE_HEADINGS = ['Name', 'Email Address', 'Role', 'Expertise'];
 
-    public function store(Request $request): JsonResponse
+    /**
+     * The file, read into the people it names. Nothing is written.
+     *
+     * Both the preview and the upload go through here, so what the preview
+     * shows and what the upload does cannot drift apart - they are the same
+     * reading of the same file.
+     *
+     * @return array{people: array<string, array>, errors: string[], skipped: int}
+     */
+    private function read(string $path): array
     {
-        $request->validate([
-            'file' => ['required', 'file', 'mimes:xlsx'],
-        ]);
-
-        $spreadsheet = IOFactory::load($request->file('file')->getRealPath());
+        $spreadsheet = IOFactory::load($path);
 
         $errors = [];
         $skipped = 0;
@@ -165,6 +170,19 @@ class ExpertRosterController extends Controller
             }
         }
 
+        return ['people' => $people, 'errors' => $errors, 'skipped' => $skipped];
+    }
+
+    public function store(Request $request): JsonResponse
+    {
+        $request->validate([
+            'file' => ['required', 'file', 'mimes:xlsx'],
+        ]);
+
+        $read = $this->read($request->file('file')->getRealPath());
+
+        $errors = $read['errors'];
+
         $roleIds = DB::table('roles')
             ->whereIn('role_name', CapstoneExpert::STUDENT_FACING_ROLES)
             ->pluck('role_id', 'role_name');
@@ -172,7 +190,7 @@ class ExpertRosterController extends Controller
         $inserted = 0;
         $updated = 0;
 
-        foreach ($people as $email => $person) {
+        foreach ($read['people'] as $email => $person) {
             $nameParts = preg_split('/\s+/', $person['name'], 2);
 
             $existing = DB::table('capstone_experts')->where('email', $email)->first(['expert_id']);
@@ -231,9 +249,124 @@ class ExpertRosterController extends Controller
             'success' => true,
             'inserted' => $inserted,
             'updated' => $updated,
-            'skipped' => $skipped,
+            'skipped' => $read['skipped'],
             'errors' => $errors,
         ]);
+    }
+
+    /**
+     * What the file would do, without doing any of it.
+     *
+     * The list is how faculty get accounts and what decides their roles, so
+     * an upload approves people and grants them work in one go, and nothing
+     * undoes it. This runs the same reading and the same comparison store()
+     * runs and reports the outcome per person instead of writing it.
+     */
+    public function preview(Request $request): JsonResponse
+    {
+        $request->validate([
+            'file' => ['required', 'file', 'mimes:xlsx'],
+        ]);
+
+        $read = $this->read($request->file('file')->getRealPath());
+
+        $rows = [];
+        $create = 0;
+        $update = 0;
+        $unchanged = 0;
+
+        foreach ($read['people'] as $email => $person) {
+            $account = DB::table('capstone_experts')->where('email', $email)->first(['expert_id', 'first_name', 'last_name', 'approved_status']);
+
+            if (! $account) {
+                $action = 'create';
+                $changes = [];
+                $create++;
+            } elseif (($changes = $this->changesFor($person, $account)) !== []) {
+                $action = 'update';
+                $update++;
+            } else {
+                $action = 'unchanged';
+                $unchanged++;
+            }
+
+            $rows[] = [
+                'name' => $person['name'],
+                'email' => $email,
+                'roles' => $person['roles'],
+                'expertise' => $person['expertise'] ?? [],
+                'action' => $action,
+                // Named, not counted: "roles" says what an upload is about to
+                // change about somebody who already has an account.
+                'changes' => $changes,
+            ];
+        }
+
+        return response()->json([
+            'success' => true,
+            'rows' => $rows,
+            'create' => $create,
+            'update' => $update,
+            'unchanged' => $unchanged,
+            'skipped' => $read['skipped'],
+            'errors' => $read['errors'],
+        ]);
+    }
+
+    /**
+     * What this row would change about an account that already exists.
+     *
+     * Reported by the preview and written by the upload, from this one place,
+     * so the preview cannot promise something the upload does not do.
+     *
+     * @return string[]
+     */
+    private function changesFor(array $person, object $account): array
+    {
+        $changes = [];
+
+        $nameParts = preg_split('/\s+/', $person['name'], 2);
+
+        if ($account->first_name !== $nameParts[0] || $account->last_name !== ($nameParts[1] ?? $nameParts[0])) {
+            $changes[] = 'name';
+        }
+
+        if (! $account->approved_status) {
+            $changes[] = 'approval';
+        }
+
+        // Scoped to the student-facing roles, because CaPSA is the only role
+        // an upload never touches and comparing it in would report a change
+        // that could not happen.
+        $held = DB::table('expert_roles')
+            ->join('roles', 'roles.role_id', '=', 'expert_roles.role_id')
+            ->where('expert_roles.expert_id', $account->expert_id)
+            ->whereIn('roles.role_name', CapstoneExpert::STUDENT_FACING_ROLES)
+            ->pluck('roles.role_name')
+            ->sort()
+            ->values()
+            ->all();
+
+        $wanted = collect($person['roles'])->sort()->values()->all();
+
+        if ($person['roles'] !== [] && $held !== $wanted) {
+            $changes[] = 'roles';
+        }
+
+        // Blank expertise means "not saying", so it is not a change.
+        if ($person['expertise'] !== null) {
+            $recorded = ExpertExpertise::where('expert_id', $account->expert_id)
+                ->pluck('expertise_field')
+                ->sort()
+                ->values()
+                ->all();
+
+            if ($recorded !== collect($person['expertise'])->sort()->values()->all()) {
+                $changes[] = 'expertise';
+            }
+        }
+
+        return $changes;
     }
 
     /**

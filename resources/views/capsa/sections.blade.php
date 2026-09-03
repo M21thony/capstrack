@@ -97,6 +97,9 @@
   .ct-tag-update{background:rgba(217,119,6,0.12);color:#b45309}
   .ct-tag-same{background:rgba(107,114,128,0.1);color:#64748b}
   .ct-preview-changes{color:#64748b;font-size:11px}
+  /* Preview sits between Cancel and Save: offered, not insisted on. */
+  .ct-btn-outline{background:#fff;color:#2563eb;border:1.5px solid #cbd5e1}
+  .ct-btn-outline:hover:not(:disabled){border-color:#2563eb;background:#eff6ff}
   /* .ct-btn is flex:1, which shares a narrow dialog neatly and turns each
      button into half a wide one. On this step they sit at their own size. */
   .ct-modal-card-wide .ct-modal-actions{justify-content:flex-end}
@@ -350,7 +353,8 @@ function closeSidebar() {
       <div id="studentRosterResult" style="display:none;font-size:12px;text-align:left;margin:4px 0 0;"></div>
       <div class="ct-modal-actions">
         <button type="button" class="ct-btn ct-btn-secondary" onclick="closeStudentRosterModal()">Cancel</button>
-        <button type="button" id="studentRosterPreviewBtn" class="ct-btn ct-btn-primary" onclick="previewStudentRoster()">Preview</button>
+        <button type="button" id="studentRosterPreviewBtn" class="ct-btn ct-btn-outline" onclick="previewStudentRoster()">Preview</button>
+        <button type="button" class="ct-btn ct-btn-primary" onclick="uploadStudentRoster(this)">Save to system</button>
       </div>
     </div>
 
@@ -582,11 +586,12 @@ function renderRosterPreview(data) {
   }
 }
 
-function uploadStudentRoster() {
+function uploadStudentRoster(btn) {
   const fileInput = document.getElementById('studentRosterFile');
-  // Step 1 is hidden by the time this runs, and so is its result box - a
-  // failure reported there would be reported to nobody.
-  const resultBox = document.getElementById('studentRosterSaveResult');
+  // Saving is offered from both steps, so a failure has to be reported on
+  // whichever one is on screen - the other one's box is hidden.
+  const previewing = document.getElementById('studentRosterStep2').style.display !== 'none';
+  const resultBox = document.getElementById(previewing ? 'studentRosterSaveResult' : 'studentRosterResult');
 
   if (!fileInput.files.length) {
     resultBox.style.display = 'block';
@@ -594,7 +599,7 @@ function uploadStudentRoster() {
     return;
   }
 
-  const btn = document.getElementById('studentRosterUploadBtn');
+  btn = btn || document.getElementById('studentRosterUploadBtn');
   btn.disabled = true;
   btn.textContent = 'Saving...';
 
