@@ -624,7 +624,7 @@ class StudentListUploadTest extends TestCase
             ->toArray();
 
         $this->assertSame(
-            ['Email', 'Last Name', 'First Name', 'Middle Initial', 'Student No.', 'Course/Program', 'Year', 'Section', 'School Year'],
+            ['Email', 'Last Name', 'First Name', 'Middle Name', 'Student No.', 'Course/Program', 'Year', 'Section', 'School Year'],
             $sheet[0]
         );
     }

@@ -15,16 +15,12 @@
   .ct-modal-input{width:100%;padding:9px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:inherit;outline:none;margin-bottom:14px}
   .ct-modal-actions{display:flex;gap:10px;margin-top:4px}
   .ct-modal-card-wide{max-width:900px;text-align:left}
-  /* Deliberately the loudest thing in the modal: a CaPSA who misses it types
-     nine headings by hand, and one of them subtly wrong reads as no column. */
-  .ct-template-card{display:flex;align-items:center;gap:13px;margin:0 0 16px;padding:15px 16px;border-radius:11px;
-                    text-decoration:none;background:#0f172a;color:#fff;transition:background .15s}
-  .ct-template-card:hover{background:#1e293b}
-  .ct-template-icon{display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:10px;
-                    background:rgba(255,255,255,0.12);flex-shrink:0}
-  .ct-template-text{display:flex;flex-direction:column;gap:2px;text-align:left}
-  .ct-template-title{font-size:14px;font-weight:700}
-  .ct-template-sub{font-size:11.5px;color:rgba(255,255,255,0.7)}
+  /* A link, but the one the eye lands on first: it sits above the file
+     picker, and a CaPSA who misses it types the headings by hand - one of
+     them subtly wrong reads as no column at all. */
+  .ct-template-link{display:inline-flex;align-items:center;gap:7px;margin:0 0 16px;font-size:13.5px;font-weight:600;
+                    color:#1d4ed8;text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1.5px}
+  .ct-template-link:hover{color:#1e3a8a}
   .ct-preview-summary{display:flex;gap:16px;flex-wrap:wrap;font-size:12.5px;color:#475569;margin-bottom:12px}
   .ct-preview-summary strong{color:#0f172a}
   .ct-preview-scroll{max-height:340px;overflow:auto;border:1px solid #e2e8f0;border-radius:10px;margin-bottom:14px}
@@ -234,18 +230,11 @@ function closeSidebar() {
     <h3 class="ct-modal-title">Upload Student List</h3>
 
     <div id="studentRosterStep1">
-      {{-- The template is the first thing in the modal and the largest thing
-           in it. The columns it carries used to be described here in prose,
-           which is the same information in the form nobody reads before
-           reaching for the file picker below it. --}}
-      <a class="ct-template-card" href="{{ route('admin.rosters.students.template') }}">
-        <span class="ct-template-icon">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        </span>
-        <span class="ct-template-text">
-          <span class="ct-template-title">Download the template</span>
-          <span class="ct-template-sub">Fill it in, then upload it below</span>
-        </span>
+      {{-- The template carries the exact columns this reads, so nobody has to
+           type the headings by hand and get one subtly wrong. --}}
+      <a class="ct-template-link" href="{{ route('admin.rosters.students.template') }}">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Download the template
       </a>
 
       <input type="file" id="studentRosterFile" class="ct-modal-input" accept=".xlsx">
