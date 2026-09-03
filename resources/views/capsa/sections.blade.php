@@ -14,7 +14,11 @@
   .ct-modal-desc{font-size:13px;color:#64748b;line-height:1.5;margin-bottom:16px}
   .ct-modal-input{width:100%;padding:9px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:inherit;outline:none;margin-bottom:14px}
   .ct-modal-actions{display:flex;gap:10px;margin-top:4px}
-  .ct-modal-card-wide{max-width:900px;text-align:left}
+  /* Named alongside .ct-upload-card, because that rule carries two classes
+     and would otherwise outrank this one and hold the preview at the width
+     of the step before it. As wide as the window allows, so the whole list
+     is read rather than scrolled sideways. */
+  .ct-modal-card.ct-upload-card.ct-modal-card-wide{max-width:min(1180px,96vw);text-align:left}
   /* Both classes in the selector, so this beats .ct-modal-card wherever that
      is defined - on this page it is defined further down, and a single-class
      rule of equal weight coming later would otherwise win and squeeze the
@@ -66,11 +70,25 @@
   .ct-file-remove:hover{color:#0f172a;background:#f1f5f9}
   .ct-preview-summary{display:flex;gap:16px;flex-wrap:wrap;font-size:12.5px;color:#475569;margin-bottom:12px}
   .ct-preview-summary strong{color:#0f172a}
-  .ct-preview-scroll{max-height:340px;overflow:auto;border:1px solid #e2e8f0;border-radius:10px;margin-bottom:14px}
+  .ct-preview-scroll{max-height:52vh;overflow:auto;border:1px solid #e2e8f0;border-radius:10px;margin-bottom:14px}
   .ct-preview-table{width:100%;border-collapse:collapse;font-size:12px}
+  /* Fixed layout so the columns are shared out rather than each one taking
+     whatever its longest value asks for - an email is what used to push the
+     table past the modal and force a sideways scroll. */
+  .ct-preview-table{table-layout:fixed}
   .ct-preview-table th{position:sticky;top:0;background:#f8fafc;text-align:left;padding:8px 10px;font-weight:600;
-                       color:#475569;border-bottom:1px solid #e2e8f0;white-space:nowrap}
-  .ct-preview-table td{padding:7px 10px;border-bottom:1px solid #f1f5f9;color:#0f172a;white-space:nowrap}
+                       color:#475569;border-bottom:1px solid #e2e8f0}
+  .ct-preview-table td{padding:7px 10px;border-bottom:1px solid #f1f5f9;color:#0f172a;
+                       overflow-wrap:anywhere}
+  /* Row / Program / Year / Section / School Year hold short values; the room
+     saved goes to the name, the email and what is about to happen. */
+  .ct-preview-table th:nth-child(1),.ct-preview-table td:nth-child(1){width:46px}
+  .ct-preview-table th:nth-child(4),.ct-preview-table td:nth-child(4){width:98px}
+  .ct-preview-table th:nth-child(5),.ct-preview-table td:nth-child(5){width:72px}
+  .ct-preview-table th:nth-child(6),.ct-preview-table td:nth-child(6){width:56px}
+  .ct-preview-table th:nth-child(7),.ct-preview-table td:nth-child(7){width:68px}
+  .ct-preview-table th:nth-child(8),.ct-preview-table td:nth-child(8){width:96px}
+  .ct-preview-table th:nth-child(9),.ct-preview-table td:nth-child(9){width:150px}
   .ct-preview-table tr:last-child td{border-bottom:none}
   /* The badge is what a CaPSA scans the list by, so the three outcomes have
      to be tellable apart at a glance and not only by their wording. */
@@ -79,6 +97,10 @@
   .ct-tag-update{background:rgba(217,119,6,0.12);color:#b45309}
   .ct-tag-same{background:rgba(107,114,128,0.1);color:#64748b}
   .ct-preview-changes{color:#64748b;font-size:11px}
+  /* .ct-btn is flex:1, which shares a narrow dialog neatly and turns each
+     button into half a wide one. On this step they sit at their own size. */
+  .ct-modal-card-wide .ct-modal-actions{justify-content:flex-end}
+  .ct-modal-card-wide .ct-modal-actions .ct-btn{flex:0 0 auto;min-width:160px}
   .ct-btn{flex:1;padding:10px 16px;font-size:13px;font-weight:600;border-radius:8px;border:none;cursor:pointer;transition:all 0.12s ease}
   .ct-btn-secondary{background:#f1f5f9;color:#475569}
   .ct-btn-secondary:hover{background:#e2e8f0;color:#1e293b}
