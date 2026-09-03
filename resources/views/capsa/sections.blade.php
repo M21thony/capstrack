@@ -14,6 +14,25 @@
   .ct-modal-desc{font-size:13px;color:#64748b;line-height:1.5;margin-bottom:16px}
   .ct-modal-input{width:100%;padding:9px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:inherit;outline:none;margin-bottom:14px}
   .ct-modal-actions{display:flex;gap:10px;margin-top:4px}
+  .ct-modal-card-wide{max-width:900px;text-align:left}
+  .ct-template-link{display:inline-flex;align-items:center;gap:7px;margin:0 0 14px;padding:8px 12px;border:1px solid #e2e8f0;
+                    border-radius:8px;font-size:12.5px;font-weight:600;color:#0f172a;text-decoration:none;background:#f8fafc}
+  .ct-template-link:hover{border-color:#cbd5e1;background:#f1f5f9}
+  .ct-preview-summary{display:flex;gap:16px;flex-wrap:wrap;font-size:12.5px;color:#475569;margin-bottom:12px}
+  .ct-preview-summary strong{color:#0f172a}
+  .ct-preview-scroll{max-height:340px;overflow:auto;border:1px solid #e2e8f0;border-radius:10px;margin-bottom:14px}
+  .ct-preview-table{width:100%;border-collapse:collapse;font-size:12px}
+  .ct-preview-table th{position:sticky;top:0;background:#f8fafc;text-align:left;padding:8px 10px;font-weight:600;
+                       color:#475569;border-bottom:1px solid #e2e8f0;white-space:nowrap}
+  .ct-preview-table td{padding:7px 10px;border-bottom:1px solid #f1f5f9;color:#0f172a;white-space:nowrap}
+  .ct-preview-table tr:last-child td{border-bottom:none}
+  /* The badge is what a CaPSA scans the list by, so the three outcomes have
+     to be tellable apart at a glance and not only by their wording. */
+  .ct-tag{display:inline-block;padding:2px 8px;border-radius:6px;font-size:10.5px;font-weight:600;white-space:nowrap}
+  .ct-tag-create{background:rgba(22,163,74,0.1);color:#15803d}
+  .ct-tag-update{background:rgba(217,119,6,0.12);color:#b45309}
+  .ct-tag-same{background:rgba(107,114,128,0.1);color:#64748b}
+  .ct-preview-changes{color:#64748b;font-size:11px}
   .ct-btn{flex:1;padding:10px 16px;font-size:13px;font-weight:600;border-radius:8px;border:none;cursor:pointer;transition:all 0.12s ease}
   .ct-btn-secondary{background:#f1f5f9;color:#475569}
   .ct-btn-secondary:hover{background:#e2e8f0;color:#1e293b}
@@ -121,7 +140,8 @@
               <th style="width:40px">#</th>
               <th>Student Name</th>
               <th>Program</th>
-              <th>Year & Section</th>
+              <th>Year</th>
+              <th>Section</th>
               <th>Team</th>
               <th>School Year</th>
               <th>Status</th>
@@ -134,7 +154,17 @@
                 <td>{{ $index + 1 }}</td>
                 <td style="font-weight:500">{{ $student->l_name }}, {{ $student->f_name }} {{ $student->m_name ? $student->m_name[0] . '.' : '' }}</td>
                 <td>{{ $student->programAbbr ?? '—' }}</td>
-                <td>{{ $student->year_section ?? '—' }}</td>
+                {{-- year_section is stored joined - "4th · B" - because that is
+                     the shape every section lookup matches on. It is shown apart
+                     here: Program, Year and Section are three things a CaPSA
+                     reads down a column, not one string to pick through. --}}
+                @php
+                  $ys = array_map('trim', explode('·', (string) $student->year_section));
+                  $year = count($ys) === 2 ? $ys[0] : '';
+                  $section = count($ys) === 2 ? $ys[1] : ($ys[0] ?? '');
+                @endphp
+                <td>{{ $year !== '' ? $year : '—' }}</td>
+                <td>{{ $section !== '' ? $section : '—' }}</td>
                 <td>
                   @if ($sy && $sy->team)
                     {{ $sy->team->team_name ?? 'Team #' . $sy->team->team_id }}
@@ -153,7 +183,7 @@
               </tr>
             @empty
               <tr>
-                <td colspan="7" style="text-align:center;padding:40px 0;color:var(--text3);font-size:13px">
+                <td colspan="8" style="text-align:center;padding:40px 0;color:var(--text3);font-size:13px">
                   @if (empty($adminSections))
                     No sections assigned yet. <a href="{{ route('admin.profile') }}" style="color:var(--accent)">Set your sections</a> to view students.
                   @else
@@ -193,24 +223,49 @@ function closeSidebar() {
 ══════════════════════════════════════════ --}}
 <div id="ct-toast-container"></div>
 <div id="studentRosterModal" class="ct-modal-overlay">
-  <div class="ct-modal-card">
+  <div class="ct-modal-card" id="studentRosterCard">
     <h3 class="ct-modal-title">Upload Student List</h3>
-    <p class="ct-modal-desc" style="text-align:left;">
-      One .xlsx file, one sheet. Columns are read by their headings, in any order:
-      <strong>Email</strong> (required), Student No., Course/Program, Year, Section, School Year, and
-      either <strong>Name</strong> ("Cruz, Juan B.") or <strong>Last Name / First Name / Middle Initial</strong>.
-      Leave School Year out and the term that is running is used; write it as <strong>2026-2027</strong>.
-      <strong>Course, year &amp; section and school year are taken from this list</strong> and replace
-      what is on the account &mdash; the list is the record of them. Name and student number are only
-      filled in when missing. An account is prepared for anyone who has not signed in yet, so their
-      profile is ready when they do.
-      Emails must be <strong>@my.cspc.edu.ph</strong> &mdash; nothing else can sign in.
-    </p>
-    <input type="file" id="studentRosterFile" class="ct-modal-input" accept=".xlsx">
-    <div id="studentRosterResult" style="display:none;font-size:12px;text-align:left;margin:-6px 0 16px;"></div>
-    <div class="ct-modal-actions">
-      <button type="button" class="ct-btn ct-btn-secondary" onclick="closeStudentRosterModal()">Cancel</button>
-      <button type="button" id="studentRosterUploadBtn" class="ct-btn ct-btn-primary" onclick="uploadStudentRoster()">Upload</button>
+
+    <div id="studentRosterStep1">
+      <p class="ct-modal-desc" style="text-align:left;">
+        One .xlsx file, one sheet. Columns are read by their headings, in any order:
+        <strong>Email</strong> (required), Student No., Course/Program, Year, Section, School Year, and
+        either <strong>Name</strong> ("Cruz, Juan B.") or <strong>Last Name / First Name / Middle Initial</strong>.
+        Leave School Year out and the term that is running is used; write it as <strong>2026-2027</strong>.
+        <strong>Course, year &amp; section and school year are taken from this list</strong> and replace
+        what is on the account &mdash; the list is the record of them. Name and student number are only
+        filled in when missing. An account is prepared for anyone who has not signed in yet, so their
+        profile is ready when they do.
+        Emails must be <strong>@my.cspc.edu.ph</strong> &mdash; nothing else can sign in.
+      </p>
+
+      {{-- The template carries the exact headings the upload reads, so nobody
+           has to type nine of them by hand and get one subtly wrong. --}}
+      <a class="ct-template-link" href="{{ route('admin.rosters.students.template') }}">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Download the template
+      </a>
+
+      <input type="file" id="studentRosterFile" class="ct-modal-input" accept=".xlsx">
+      <div id="studentRosterResult" style="display:none;font-size:12px;text-align:left;margin:-6px 0 16px;"></div>
+      <div class="ct-modal-actions">
+        <button type="button" class="ct-btn ct-btn-secondary" onclick="closeStudentRosterModal()">Cancel</button>
+        <button type="button" id="studentRosterPreviewBtn" class="ct-btn ct-btn-primary" onclick="previewStudentRoster()">Preview</button>
+      </div>
+    </div>
+
+    {{-- Nothing has been written at this point. The upload rewrites course,
+         section and school year on every account it matches, and there is no
+         undo, so the list is shown as it will be applied before it is. --}}
+    <div id="studentRosterStep2" style="display:none">
+      <div class="ct-preview-summary" id="studentRosterSummary"></div>
+      <div class="ct-preview-scroll"><table class="ct-preview-table" id="studentRosterPreviewTable"></table></div>
+      <div id="studentRosterErrors" style="display:none"></div>
+      <div id="studentRosterSaveResult" style="display:none;font-size:12px;margin-bottom:12px"></div>
+      <div class="ct-modal-actions">
+        <button type="button" class="ct-btn ct-btn-secondary" onclick="backToStudentRosterFile()">Choose another file</button>
+        <button type="button" id="studentRosterUploadBtn" class="ct-btn ct-btn-primary" onclick="uploadStudentRoster()">Save to system</button>
+      </div>
     </div>
   </div>
 </div>
@@ -240,6 +295,7 @@ const studentRosterModal = document.getElementById('studentRosterModal');
 function openStudentRosterModal() {
   document.getElementById('studentRosterFile').value = '';
   document.getElementById('studentRosterResult').style.display = 'none';
+  backToStudentRosterFile();
   studentRosterModal.style.display = 'flex';
 }
 
@@ -247,7 +303,28 @@ function closeStudentRosterModal() {
   studentRosterModal.style.display = 'none';
 }
 
-function uploadStudentRoster() {
+/** Back to choosing a file, and back to the narrow card that step needs. */
+function backToStudentRosterFile() {
+  document.getElementById('studentRosterStep1').style.display = '';
+  document.getElementById('studentRosterStep2').style.display = 'none';
+  document.getElementById('studentRosterCard').classList.remove('ct-modal-card-wide');
+}
+
+/** Text from the file, put on the page as text and never as markup. */
+function escRoster(value) {
+  const box = document.createElement('div');
+  box.textContent = value == null ? '' : String(value);
+  return box.innerHTML;
+}
+
+const ROSTER_ACTIONS = {
+  create: ['ct-tag-create', 'New account'],
+  update: ['ct-tag-update', 'Update'],
+  unchanged: ['ct-tag-same', 'No change'],
+};
+
+/** What the file would do, read back and shown before anything is written. */
+function previewStudentRoster() {
   const fileInput = document.getElementById('studentRosterFile');
   const resultBox = document.getElementById('studentRosterResult');
 
@@ -257,9 +334,105 @@ function uploadStudentRoster() {
     return;
   }
 
+  const btn = document.getElementById('studentRosterPreviewBtn');
+  btn.disabled = true;
+  btn.textContent = 'Reading...';
+
+  const formData = new FormData();
+  formData.append('file', fileInput.files[0]);
+
+  fetch('{{ route('admin.rosters.students.preview') }}', {
+    method: 'POST',
+    headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' },
+    body: formData,
+  })
+    .then(r => r.json())
+    .then(data => {
+      if (!data.success) {
+        resultBox.style.display = 'block';
+        resultBox.innerHTML = `<span style="color:#dc2626">${escRoster(data.message || 'That file could not be read.')}</span>`;
+        return;
+      }
+
+      renderRosterPreview(data);
+
+      document.getElementById('studentRosterStep1').style.display = 'none';
+      document.getElementById('studentRosterStep2').style.display = '';
+      document.getElementById('studentRosterCard').classList.add('ct-modal-card-wide');
+    })
+    .catch(() => {
+      resultBox.style.display = 'block';
+      resultBox.innerHTML = '<span style="color:#dc2626">Could not read that file. Check the connection and try again.</span>';
+    })
+    .finally(() => {
+      btn.disabled = false;
+      btn.textContent = 'Preview';
+    });
+}
+
+function renderRosterPreview(data) {
+  const summary = [
+    `<span><strong>${data.rows.length}</strong> row${data.rows.length === 1 ? '' : 's'} read</span>`,
+    `<span><strong>${data.create}</strong> new account${data.create === 1 ? '' : 's'}</span>`,
+    `<span><strong>${data.update}</strong> to update</span>`,
+    `<span><strong>${data.unchanged}</strong> unchanged</span>`,
+  ];
+  if (data.skipped) summary.push(`<span style="color:#b91c1c"><strong>${data.skipped}</strong> skipped</span>`);
+  document.getElementById('studentRosterSummary').innerHTML = summary.join('');
+
+  const head = `<thead><tr><th>Row</th><th>Name</th><th>Email</th><th>Student No.</th>
+    <th>Program</th><th>Year</th><th>Section</th><th>School Year</th><th>What happens</th></tr></thead>`;
+
+  const body = data.rows.map(row => {
+    const [cls, label] = ROSTER_ACTIONS[row.action] || ROSTER_ACTIONS.unchanged;
+    // Naming the fields is the point of the preview - "Update" alone does not
+    // say that a re-upload is about to rewrite somebody's course.
+    const changes = row.changes && row.changes.length
+      ? `<div class="ct-preview-changes">${escRoster(row.changes.join(', '))}</div>`
+      : '';
+
+    return `<tr>
+      <td>${escRoster(row.row)}</td>
+      <td>${escRoster(row.name) || '&mdash;'}</td>
+      <td>${escRoster(row.email)}</td>
+      <td>${escRoster(row.student_number) || '&mdash;'}</td>
+      <td>${escRoster(row.program) || '&mdash;'}</td>
+      <td>${escRoster(row.year) || '&mdash;'}</td>
+      <td>${escRoster(row.section) || '&mdash;'}</td>
+      <td>${escRoster(row.school_year)}</td>
+      <td><span class="ct-tag ${cls}">${label}</span>${changes}</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('studentRosterPreviewTable').innerHTML = head + '<tbody>' + body + '</tbody>';
+
+  const errorBox = document.getElementById('studentRosterErrors');
+
+  if (data.errors && data.errors.length) {
+    errorBox.style.display = 'block';
+    errorBox.innerHTML = '<div style="font-size:12px;color:#b91c1c;max-height:120px;overflow-y:auto;margin-bottom:12px">'
+      + data.errors.map(e => `<div>${escRoster(e)}</div>`).join('') + '</div>';
+  } else {
+    errorBox.style.display = 'none';
+    errorBox.innerHTML = '';
+  }
+}
+
+function uploadStudentRoster() {
+  const fileInput = document.getElementById('studentRosterFile');
+  // Step 1 is hidden by the time this runs, and so is its result box - a
+  // failure reported there would be reported to nobody.
+  const resultBox = document.getElementById('studentRosterSaveResult');
+
+  if (!fileInput.files.length) {
+    resultBox.style.display = 'block';
+    resultBox.innerHTML = '<span style="color:#dc2626">Choose a file first.</span>';
+    return;
+  }
+
   const btn = document.getElementById('studentRosterUploadBtn');
   btn.disabled = true;
-  btn.textContent = 'Uploading...';
+  btn.textContent = 'Saving...';
 
   const formData = new FormData();
   formData.append('file', fileInput.files[0]);
