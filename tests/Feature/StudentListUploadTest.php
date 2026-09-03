@@ -676,7 +676,7 @@ class StudentListUploadTest extends TestCase
         $response->assertOk();
         $response->assertSee('id="studentRosterModal"', false);
         $response->assertSee(route('admin.rosters.students.template'), false);
-        $response->assertSee('Download the template', false);
+        $response->assertSee('Download template', false);
 
         // Preview first, save second - both steps present on the page, since
         // a button whose target is missing does nothing when clicked.
@@ -685,6 +685,16 @@ class StudentListUploadTest extends TestCase
         $response->assertSee('id="studentRosterPreviewBtn"', false);
         $response->assertSee('id="studentRosterUploadBtn"', false);
         $response->assertSee('id="studentRosterPreviewTable"', false);
+
+        // A file can be dropped as well as browsed for, and either way it
+        // lands in the one input Preview and Save both read.
+        $response->assertSee('id="studentRosterDrop"', false);
+        $response->assertSee('id="studentRosterChip"', false);
+
+        // Only .xlsx is read, so offering CSV would be an invitation to a
+        // file that gets refused at the door.
+        $response->assertDontSee('CSV', false);
+        $response->assertDontSee('.csv', false);
     }
 
     /** Program, Year and Section read down three columns, not one. */
