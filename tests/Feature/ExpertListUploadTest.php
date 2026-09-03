@@ -280,6 +280,16 @@ class ExpertListUploadTest extends TestCase
 
         $response->assertOk();
         $response->assertSee(route('admin.rosters.experts.template'), false);
-        $response->assertSee('Download the template', false);
+        $response->assertSee('Download template', false);
+
+        // A file can be dropped as well as browsed for, and either way it
+        // lands in the one input the upload reads.
+        $response->assertSee('id="expertRosterDrop"', false);
+        $response->assertSee('id="expertRosterChip"', false);
+
+        // Only .xlsx is read, so offering CSV would be an invitation to a
+        // file that gets refused at the door.
+        $response->assertDontSee('CSV', false);
+        $response->assertDontSee('.csv', false);
     }
 }
