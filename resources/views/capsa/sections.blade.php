@@ -15,7 +15,13 @@
   .ct-modal-input{width:100%;padding:9px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:inherit;outline:none;margin-bottom:14px}
   .ct-modal-actions{display:flex;gap:10px;margin-top:4px}
   .ct-modal-card-wide{max-width:900px;text-align:left}
-  .ct-upload-card{max-width:660px;text-align:left;padding:24px}
+  /* Both classes in the selector, so this beats .ct-modal-card wherever that
+     is defined - on this page it is defined further down, and a single-class
+     rule of equal weight coming later would otherwise win and squeeze the
+     card back to the narrow dialog width. width as well as max-width,
+     because the card is a flex item and a max-width alone leaves it free to
+     shrink to fit its contents. */
+  .ct-modal-card.ct-upload-card{width:100%;max-width:660px;text-align:left;padding:24px}
   .ct-up-head{display:flex;align-items:flex-start;gap:14px;margin-bottom:18px}
   .ct-up-head-icon{display:flex;align-items:center;justify-content:center;width:46px;height:46px;border-radius:50%;
                    background:#eff6ff;color:#2563eb;flex-shrink:0}
