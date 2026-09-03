@@ -545,7 +545,7 @@ function renderRosterPreview(data) {
   document.getElementById('studentRosterSummary').innerHTML = summary.join('');
 
   const head = `<thead><tr><th>Row</th><th>Name</th><th>Email</th><th>Student No.</th>
-    <th>Program</th><th>Year</th><th>Section</th><th>School Year</th><th>What happens</th></tr></thead>`;
+    <th>Program</th><th>Year</th><th>Section</th><th>School Year</th><th>Action</th></tr></thead>`;
 
   const body = data.rows.map(row => {
     const [cls, label] = ROSTER_ACTIONS[row.action] || ROSTER_ACTIONS.unchanged;
