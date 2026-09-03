@@ -7,6 +7,13 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="{{ asset('css/admin.css') }}"/>
 <style>
+  /* A link, but the one the eye lands on first: it sits above the file
+     picker, and a CaPSA who misses it types the headings by hand - one of
+     them subtly wrong reads as no column at all. */
+  .ct-template-link{display:inline-flex;align-items:center;gap:7px;margin:0 0 16px;font-size:13.5px;font-weight:600;
+                    color:#1d4ed8;text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1.5px}
+  .ct-template-link:hover{color:#1e3a8a}
+
   /* Expert Management (Admin's copy - full CRUD + Manage Roles). CaPSA has
      its own separate, leaner copy at resources/views/capsa/experts.blade.php
      (view + Manage Roles only) - these two used to be one file switching on
@@ -1484,11 +1491,12 @@ function closeSidebar() {
 <div id="expertRosterModal" class="ct-modal-overlay" style="display:none;">
   <div class="ct-modal-card" style="max-width:480px;">
     <h3 class="ct-modal-title">Upload Expert List</h3>
-    <p class="ct-modal-desc" style="text-align:left;">
-      One .xlsx file with 3 sheets named <strong>Adviser</strong>, <strong>Consultant</strong>, and <strong>Grammarian</strong>. Each sheet needs a <strong>Name</strong> and <strong>Email Address</strong> column (any order).
-      Everyone on the list is approved right away and can sign in with that exact CSPC email - they will fill in their own accepted program(s), areas of expertise, and team capacity from their profile afterward.
-      This only creates the account - it does not assign a role. Use <strong>Manage Roles</strong> on each new person afterward to set what they will do.
-    </p>
+    {{-- The template carries the exact columns this reads, so nobody has to
+         type the headings by hand and get one subtly wrong. --}}
+    <a class="ct-template-link" href="{{ route('admin.rosters.experts.template') }}">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Download the template
+    </a>
     <input type="file" id="expertRosterFile" class="ct-modal-input" accept=".xlsx">
     <div id="expertRosterResult" style="display:none;font-size:12px;text-align:left;margin:-6px 0 16px;"></div>
     <div class="ct-modal-actions">

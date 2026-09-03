@@ -230,7 +230,7 @@ class StudentRosterController extends Controller
 
     /** The headings the template is written with, in the order it writes them. */
     private const TEMPLATE_HEADINGS = [
-        'Email', 'Last Name', 'First Name', 'Middle Initial',
+        'Email', 'Last Name', 'First Name', 'Middle Name',
         'Student No.', 'Course/Program', 'Year', 'Section', 'School Year',
     ];
 
@@ -253,7 +253,7 @@ class StudentRosterController extends Controller
         $sheet->fromArray([self::TEMPLATE_HEADINGS], null, 'A1');
         $sheet->fromArray([[
             'juan.delacruz'.Student::EMAIL_DOMAIN,
-            'Dela Cruz', 'Juan', 'B.', '221001135', 'BSIT', 4, 'B', Term::currentSchoolYear(),
+            'Dela Cruz', 'Juan', 'Bautista', '221001135', 'BSIT', 4, 'B', Term::currentSchoolYear(),
         ]], null, 'A2');
 
         $sheet->getStyle('A1:I1')->getFont()->setBold(true);
