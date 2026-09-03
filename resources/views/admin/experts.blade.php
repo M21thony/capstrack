@@ -7,12 +7,49 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="{{ asset('css/admin.css') }}"/>
 <style>
-  /* A link, but the one the eye lands on first: it sits above the file
-     picker, and a CaPSA who misses it types the headings by hand - one of
-     them subtly wrong reads as no column at all. */
-  .ct-template-link{display:inline-flex;align-items:center;gap:7px;margin:0 0 16px;font-size:13.5px;font-weight:600;
-                    color:#1d4ed8;text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1.5px}
-  .ct-template-link:hover{color:#1e3a8a}
+  .ct-upload-card{max-width:660px;text-align:left;padding:24px}
+  .ct-up-head{display:flex;align-items:flex-start;gap:14px;margin-bottom:18px}
+  .ct-up-head-icon{display:flex;align-items:center;justify-content:center;width:46px;height:46px;border-radius:50%;
+                   background:#eff6ff;color:#2563eb;flex-shrink:0}
+  .ct-up-head-text{display:flex;flex-direction:column;gap:4px;flex:1;min-width:0}
+  .ct-up-head .ct-modal-title{margin-bottom:0;font-size:22px;letter-spacing:-0.4px}
+  .ct-up-sub{font-size:13px;color:#64748b}
+  .ct-up-close{background:none;border:none;padding:2px;cursor:pointer;color:#64748b;line-height:0;border-radius:6px}
+  .ct-up-close:hover{color:#0f172a;background:#f1f5f9}
+
+  .ct-up-hint{display:flex;align-items:center;gap:9px;padding:11px 14px;border-radius:10px;background:#f8fafc;
+              font-size:13px;color:#475569;margin-bottom:18px;flex-wrap:wrap}
+  .ct-up-hint > svg{color:#94a3b8;flex-shrink:0}
+  .ct-template-link{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:#2563eb;
+                    text-decoration:none}
+  .ct-template-link:hover{color:#1d4ed8;text-decoration:underline;text-underline-offset:3px}
+
+  /* The drop zone is the body of the modal, so it is the thing the eye lands
+     on and the thing a file can be thrown at without hunting for a button. */
+  .ct-dropzone{display:flex;flex-direction:column;align-items:center;gap:10px;padding:32px 20px;
+               border:1.5px dashed #cbd5e1;border-radius:12px;text-align:center;transition:border-color .15s,background .15s}
+  .ct-dropzone.dragging{border-color:#2563eb;background:#eff6ff}
+  .ct-drop-icon{display:flex;align-items:center;justify-content:center;width:56px;height:56px;border-radius:50%;
+                background:#eff6ff;color:#2563eb}
+  .ct-drop-title{font-size:15px;font-weight:600;color:#0f172a}
+  .ct-drop-or{font-size:13px;color:#94a3b8}
+  .ct-drop-browse{padding:9px 22px;border:1.5px solid #2563eb;border-radius:9px;background:#fff;color:#2563eb;
+                  font-family:inherit;font-size:13.5px;font-weight:600;cursor:pointer;transition:background .12s}
+  .ct-drop-browse:hover{background:#eff6ff}
+  .ct-drop-formats{font-size:12px;color:#94a3b8}
+  .ct-drop-formats strong{color:#2563eb;font-weight:600}
+  .ct-file-input{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);border:0}
+
+  .ct-file-chip{display:flex;align-items:center;gap:12px;margin-top:16px;padding:12px 14px;border:1px solid #e2e8f0;
+                border-radius:11px}
+  .ct-file-icon{display:flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:8px;
+                background:#dcfce7;color:#15803d;flex-shrink:0}
+  .ct-file-text{display:flex;flex-direction:column;gap:2px;flex:1;min-width:0}
+  .ct-file-name{font-size:13.5px;font-weight:600;color:#0f172a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .ct-file-meta{font-size:11.5px;color:#94a3b8}
+  .ct-file-ok{color:#16a34a;line-height:0;flex-shrink:0}
+  .ct-file-remove{background:none;border:none;padding:2px;cursor:pointer;color:#64748b;line-height:0;border-radius:6px;flex-shrink:0}
+  .ct-file-remove:hover{color:#0f172a;background:#f1f5f9}
 
   /* Expert Management (Admin's copy - full CRUD + Manage Roles). CaPSA has
      its own separate, leaner copy at resources/views/capsa/experts.blade.php
@@ -1489,16 +1526,62 @@ function closeSidebar() {
      NO roles, so it grants Admin no role-assignment power.
 ══════════════════════════════════════════ --}}
 <div id="expertRosterModal" class="ct-modal-overlay" style="display:none;">
-  <div class="ct-modal-card" style="max-width:480px;">
-    <h3 class="ct-modal-title">Upload Expert List</h3>
-    {{-- The template carries the exact columns this reads, so nobody has to
-         type the headings by hand and get one subtly wrong. --}}
-    <a class="ct-template-link" href="{{ route('admin.rosters.experts.template') }}">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-      Download the template
-    </a>
-    <input type="file" id="expertRosterFile" class="ct-modal-input" accept=".xlsx">
-    <div id="expertRosterResult" style="display:none;font-size:12px;text-align:left;margin:-6px 0 16px;"></div>
+  <div class="ct-modal-card ct-upload-card">
+    <div class="ct-up-head">
+      <span class="ct-up-head-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      </span>
+      <span class="ct-up-head-text">
+        <span class="ct-modal-title">Upload Expert List</span>
+        <span class="ct-up-sub">Upload a spreadsheet file containing your faculty.</span>
+      </span>
+      <button type="button" class="ct-up-close" onclick="closeExpertRosterModal()" aria-label="Close">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+
+    {{-- The template carries the exact columns this reads, the role included,
+         so nobody has to type the headings by hand and get one subtly wrong. --}}
+    <div class="ct-up-hint">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+      <span>Need the correct format?</span>
+      <a class="ct-template-link" href="{{ route('admin.rosters.experts.template') }}">
+        Download template
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      </a>
+    </div>
+
+    <div class="ct-dropzone" id="expertRosterDrop">
+      <span class="ct-drop-icon">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      </span>
+      <span class="ct-drop-title">Drag &amp; drop your file here</span>
+      <span class="ct-drop-or">or</span>
+      <button type="button" class="ct-drop-browse" onclick="document.getElementById('expertRosterFile').click()">Browse files</button>
+      <span class="ct-drop-formats">Supported format: Microsoft <strong>Excel</strong> (.xlsx)</span>
+    </div>
+
+    {{-- Driven by the drop zone and the Browse button above, but still the one
+         place the file lives - the upload reads it from here. --}}
+    <input type="file" id="expertRosterFile" accept=".xlsx" class="ct-file-input" onchange="showExpertRosterFile()">
+
+    <div class="ct-file-chip" id="expertRosterChip" style="display:none">
+      <span class="ct-file-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="19"/><line x1="15" y1="13" x2="9" y2="19"/></svg>
+      </span>
+      <span class="ct-file-text">
+        <span class="ct-file-name" id="expertRosterFileName"></span>
+        <span class="ct-file-meta" id="expertRosterFileMeta"></span>
+      </span>
+      <span class="ct-file-ok">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="8.5 12.5 11 15 15.5 9.5"/></svg>
+      </span>
+      <button type="button" class="ct-file-remove" onclick="clearExpertRosterFile()" aria-label="Remove file">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+
+    <div id="expertRosterResult" style="display:none;font-size:12px;text-align:left;margin:4px 0 0;"></div>
     <div class="ct-modal-actions">
       <button type="button" class="ct-btn ct-btn-secondary" onclick="closeExpertRosterModal()">Cancel</button>
       <button type="button" id="expertRosterUploadBtn" class="ct-btn ct-btn-primary" onclick="uploadExpertRoster()">Upload</button>
@@ -1510,10 +1593,73 @@ function closeSidebar() {
 const expertRosterModal = document.getElementById('expertRosterModal');
 
 function openExpertRosterModal() {
-  document.getElementById('expertRosterFile').value = '';
-  document.getElementById('expertRosterResult').style.display = 'none';
+  clearExpertRosterFile();
   expertRosterModal.style.display = 'flex';
 }
+
+/** Nothing chosen: no file, no chip, nothing left over from last time. */
+function clearExpertRosterFile() {
+  document.getElementById('expertRosterFile').value = '';
+  document.getElementById('expertRosterChip').style.display = 'none';
+  document.getElementById('expertRosterResult').style.display = 'none';
+}
+
+/** Name the chosen file, so what is about to be read is never a guess. */
+function showExpertRosterFile() {
+  const file = document.getElementById('expertRosterFile').files[0];
+  const chip = document.getElementById('expertRosterChip');
+
+  if (!file) {
+    chip.style.display = 'none';
+    return;
+  }
+
+  const kb = file.size / 1024;
+  const size = kb >= 1024 ? (kb / 1024).toFixed(1) + ' MB' : Math.max(1, Math.round(kb)) + ' KB';
+  const type = (file.name.split('.').pop() || '').toUpperCase();
+
+  document.getElementById('expertRosterFileName').textContent = file.name;
+  document.getElementById('expertRosterFileMeta').textContent = size + ' \u2022 ' + type;
+  document.getElementById('expertRosterResult').style.display = 'none';
+  chip.style.display = 'flex';
+}
+
+// A dropped file has to end up in the file input itself, because the upload
+// reads it from there - a file held anywhere else would be invisible to it.
+(function () {
+  const zone = document.getElementById('expertRosterDrop');
+  const input = document.getElementById('expertRosterFile');
+
+  if (!zone || !input) return;
+
+  ['dragenter', 'dragover'].forEach(name => zone.addEventListener(name, e => {
+    e.preventDefault();
+    zone.classList.add('dragging');
+  }));
+
+  ['dragleave', 'drop'].forEach(name => zone.addEventListener(name, e => {
+    e.preventDefault();
+    zone.classList.remove('dragging');
+  }));
+
+  zone.addEventListener('drop', e => {
+    const file = e.dataTransfer.files[0];
+
+    if (!file) return;
+
+    const box = new DataTransfer();
+    box.items.add(file);
+    input.files = box.files;
+
+    showExpertRosterFile();
+  });
+
+  // Outside the zone a dropped file would otherwise replace the whole page
+  // with itself, losing whatever was on screen.
+  ['dragover', 'drop'].forEach(name => window.addEventListener(name, e => {
+    if (!zone.contains(e.target)) e.preventDefault();
+  }));
+})();
 
 function closeExpertRosterModal() {
   expertRosterModal.style.display = 'none';
