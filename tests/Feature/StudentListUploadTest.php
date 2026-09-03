@@ -482,4 +482,232 @@ class StudentListUploadTest extends TestCase
             StudentSchoolYear::where('student_id', $student->student_id)->value('school_year')
         );
     }
+
+    // -- The preview, and the template it is filled in from ----------------
+
+    /**
+     * The preview reads the file and writes nothing.
+     *
+     * That is the whole point of it: an upload rewrites the course, section
+     * and school year on every account it matches and nothing undoes it, so
+     * looking has to be free.
+     */
+    public function test_previewing_a_list_changes_nothing(): void
+    {
+        $this->actingAs($this->capsa(), 'expert');
+
+        $student = Student::create([
+            'email' => 'look@my.cspc.edu.ph',
+            'f_name' => 'Look',
+            'l_name' => 'Only',
+        ]);
+
+        $this->post(route('admin.rosters.students.preview'), [
+            'file' => $this->listFile(self::HEADER, [
+                ['look@my.cspc.edu.ph', 'Only, Look B.', '221000020', 'BSIT', 4, 'B'],
+                ['newperson@my.cspc.edu.ph', 'New, Person B.', '221000021', 'BSIT', 4, 'B'],
+            ]),
+        ])->assertOk();
+
+        $student->refresh();
+        $this->assertNull($student->student_number);
+        $this->assertNull($student->course);
+        $this->assertNull($student->year_section);
+
+        $this->assertNull(Student::where('email', 'newperson@my.cspc.edu.ph')->first());
+        $this->assertSame(0, StudentRoster::count());
+    }
+
+    /** Each row is reported as what it would do, and which fields it moves. */
+    public function test_the_preview_says_what_each_row_would_do(): void
+    {
+        $this->actingAs($this->capsa(), 'expert');
+
+        // Nothing on file yet - the row would make the account.
+        // Already right - the row would change nothing.
+        Student::create([
+            'email' => 'same@my.cspc.edu.ph',
+            'f_name' => 'Same',
+            'l_name' => 'Same',
+            'student_number' => '221000030',
+            'course' => 'Bachelor of Science in Information Technology',
+            'year_section' => '4th '.json_decode('"\u00b7"').' B',
+        ]);
+
+        // Wrong course on file - the row would correct it.
+        Student::create([
+            'email' => 'wrong@my.cspc.edu.ph',
+            'f_name' => 'Wrong',
+            'l_name' => 'Course',
+            'student_number' => '221000031',
+            'course' => 'Bachelor of Science in Computer Science',
+            'year_section' => '4th '.json_decode('"\u00b7"').' B',
+        ]);
+
+        $response = $this->post(route('admin.rosters.students.preview'), [
+            'file' => $this->listFile(self::HEADER, [
+                ['fresh@my.cspc.edu.ph', 'Fresh, Face B.', '221000032', 'BSIT', 4, 'B'],
+                ['same@my.cspc.edu.ph', 'Same, Same', '221000030', 'BSIT', 4, 'B'],
+                ['wrong@my.cspc.edu.ph', 'Course, Wrong', '221000031', 'BSIT', 4, 'B'],
+            ]),
+        ]);
+
+        $response->assertOk();
+        $response->assertJson(['create' => 1, 'update' => 1, 'unchanged' => 1, 'skipped' => 0]);
+
+        $rows = collect($response->json('rows'))->keyBy('email');
+
+        $this->assertSame('create', $rows['fresh@my.cspc.edu.ph']['action']);
+        $this->assertSame('unchanged', $rows['same@my.cspc.edu.ph']['action']);
+        $this->assertSame('update', $rows['wrong@my.cspc.edu.ph']['action']);
+
+        // Named, so a CaPSA can see it is the course about to be rewritten.
+        $this->assertSame(['course'], $rows['wrong@my.cspc.edu.ph']['changes']);
+    }
+
+    /** Year and section are reported apart, the way the list shows them. */
+    public function test_the_preview_reports_year_and_section_separately(): void
+    {
+        $this->actingAs($this->capsa(), 'expert');
+
+        $response = $this->post(route('admin.rosters.students.preview'), [
+            'file' => $this->listFile(self::HEADER, [
+                ['apart@my.cspc.edu.ph', 'Apart, Kept B.', '221000033', 'BSIT', 4, 'B'],
+            ]),
+        ]);
+
+        $row = $response->assertOk()->json('rows.0');
+
+        $this->assertSame('BSIT', $row['program']);
+        $this->assertSame('4th', $row['year']);
+        $this->assertSame('B', $row['section']);
+    }
+
+    /** A row the upload would skip is reported as skipped, not as a change. */
+    public function test_the_preview_reports_the_rows_that_would_be_skipped(): void
+    {
+        $this->actingAs($this->capsa(), 'expert');
+
+        $response = $this->post(route('admin.rosters.students.preview'), [
+            'file' => $this->listFile(self::HEADER, [
+                ['typo@my.cpsc.edu.ph', 'Typo, Do Not B.', '221000034', 'BSIT', 4, 'B'],
+            ]),
+        ]);
+
+        $response->assertOk();
+        $response->assertJson(['skipped' => 1, 'create' => 0, 'update' => 0]);
+        $this->assertSame([], $response->json('rows'));
+    }
+
+    /** A file with no Email column is refused by the preview, as by the upload. */
+    public function test_the_preview_refuses_a_file_with_no_email_column(): void
+    {
+        $this->actingAs($this->capsa(), 'expert');
+
+        $this->post(route('admin.rosters.students.preview'), [
+            'file' => $this->listFile(['Name', 'Student No.'], [['Cruz, Juan', '221000035']]),
+        ])->assertStatus(422)->assertJson(['success' => false]);
+    }
+
+    /** The template carries the headings the upload reads. */
+    public function test_the_template_is_offered_with_the_headings_that_are_read(): void
+    {
+        $this->actingAs($this->capsa(), 'expert');
+
+        $response = $this->get(route('admin.rosters.students.template'));
+
+        $response->assertOk();
+        $response->assertDownload('Student List Template.xlsx');
+
+        $sheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($response->baseResponse->getFile()->getPathname())
+            ->getActiveSheet()
+            ->toArray();
+
+        $this->assertSame(
+            ['Email', 'Last Name', 'First Name', 'Middle Initial', 'Student No.', 'Course/Program', 'Year', 'Section', 'School Year'],
+            $sheet[0]
+        );
+    }
+
+    /**
+     * The template, filled in, is a list this accepts.
+     *
+     * The headings matching is not the same as the upload reading them - this
+     * walks the template through the real import so the two cannot drift.
+     */
+    public function test_a_list_written_from_the_template_imports(): void
+    {
+        $this->actingAs($this->capsa(), 'expert');
+
+        $headings = \PhpOffice\PhpSpreadsheet\IOFactory::load(
+            $this->get(route('admin.rosters.students.template'))->baseResponse->getFile()->getPathname()
+        )->getActiveSheet()->toArray()[0];
+
+        $this->post(route('admin.rosters.students.store'), [
+            'file' => $this->listFile($headings, [
+                ['fromtemplate@my.cspc.edu.ph', 'Dela Cruz', 'Juan', 'B.', '221000036', 'BSIT', 4, 'B', '2026-2027'],
+            ]),
+        ])->assertOk()->assertJson(['created' => 1, 'skipped' => 0]);
+
+        $student = Student::where('email', 'fromtemplate@my.cspc.edu.ph')->first();
+
+        $this->assertSame('Juan', $student->f_name);
+        $this->assertSame('B.', $student->m_name);
+        $this->assertSame('Dela Cruz', $student->l_name);
+        $this->assertSame('221000036', $student->student_number);
+        $this->assertSame('Bachelor of Science in Information Technology', $student->course);
+        $this->assertSame('4th '.json_decode('"\u00b7"').' B', $student->year_section);
+    }
+
+    // -- The page the upload is done from ----------------------------------
+
+    /**
+     * The modal is on the page, with the template inside it.
+     *
+     * CaPSA asked for the template to be in the modal where the list is
+     * uploaded, rather than somewhere she has to go and find it.
+     */
+    public function test_the_upload_modal_offers_the_template(): void
+    {
+        $this->actingAs($this->capsa(), 'expert');
+
+        $response = $this->get(route('admin.sections'));
+
+        $response->assertOk();
+        $response->assertSee('id="studentRosterModal"', false);
+        $response->assertSee(route('admin.rosters.students.template'), false);
+        $response->assertSee('Download the template', false);
+
+        // Preview first, save second - both steps present on the page, since
+        // a button whose target is missing does nothing when clicked.
+        $response->assertSee('id="studentRosterStep1"', false);
+        $response->assertSee('id="studentRosterStep2"', false);
+        $response->assertSee('id="studentRosterPreviewBtn"', false);
+        $response->assertSee('id="studentRosterUploadBtn"', false);
+        $response->assertSee('id="studentRosterPreviewTable"', false);
+    }
+
+    /** Program, Year and Section read down three columns, not one. */
+    public function test_the_student_list_keeps_program_year_and_section_apart(): void
+    {
+        $capsa = $this->capsa();
+        $capsa->update(['sections' => ['BSIT-4B']]);
+        $this->actingAs($capsa, 'expert');
+
+        Student::create([
+            'email' => 'listed@my.cspc.edu.ph',
+            'f_name' => 'Listed',
+            'l_name' => 'Student',
+            'course' => 'Bachelor of Science in Information Technology',
+            'year_section' => '4th '.json_decode('"\u00b7"').' B',
+        ]);
+
+        $response = $this->get(route('admin.sections'));
+
+        $response->assertOk();
+        $response->assertSee('<th>Program</th>', false);
+        $response->assertSee('<th>Year</th>', false);
+        $response->assertSee('<th>Section</th>', false);
+        $response->assertDontSee('<th>Year & Section</th>', false);
+    }
 }

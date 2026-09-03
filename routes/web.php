@@ -115,6 +115,10 @@ Route::middleware(['expert.auth', 'no.cache', 'track.expert'])->prefix('admin')-
         Route::post('/financial/receipt/{financialRecord}/approve', [AdminFinancialController::class, 'approveReceipt'])->name('financial.receipt.approve');
         Route::post('/financial/receipt/{financialRecord}/reject', [AdminFinancialController::class, 'rejectReceipt'])->name('financial.receipt.reject');
         // Upload is a modal on Student Section List itself, not its own page.
+        // The template is offered inside that same modal - a CaPSA who has to
+        // go looking for it elsewhere ends up typing the headings by hand.
+        Route::get('/rosters/students/template', [StudentRosterController::class, 'template'])->name('rosters.students.template');
+        Route::post('/rosters/students/preview', [StudentRosterController::class, 'preview'])->name('rosters.students.preview');
         Route::post('/rosters/students', [StudentRosterController::class, 'store'])->name('rosters.students.store');
 
         // Archive/Announcements/Resources are academic-process content
