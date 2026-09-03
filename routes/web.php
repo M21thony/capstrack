@@ -138,6 +138,7 @@ Route::middleware(['expert.auth', 'no.cache', 'track.expert'])->prefix('admin')-
         // the list from the .xlsx without hand-typing anyone's email, then
         // make one of them CaPSA, who assigns everyone's roles from there.
         Route::get('/rosters/experts/template', [ExpertRosterController::class, 'template'])->name('rosters.experts.template');
+        Route::post('/rosters/experts/preview', [ExpertRosterController::class, 'preview'])->name('rosters.experts.preview');
         Route::post('/rosters/experts', [ExpertRosterController::class, 'store'])->name('rosters.experts.store');
 
         Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');

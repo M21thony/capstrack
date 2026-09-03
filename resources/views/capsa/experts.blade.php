@@ -56,6 +56,37 @@
   .ct-file-ok{color:#16a34a;line-height:0;flex-shrink:0}
   .ct-file-remove{background:none;border:none;padding:2px;cursor:pointer;color:#64748b;line-height:0;border-radius:6px;flex-shrink:0}
   .ct-file-remove:hover{color:#0f172a;background:#f1f5f9}
+  .ct-preview-summary{display:flex;gap:16px;flex-wrap:wrap;font-size:12.5px;color:#475569;margin-bottom:12px}
+  .ct-preview-summary strong{color:#0f172a}
+  .ct-preview-scroll{max-height:52vh;overflow:auto;border:1px solid #e2e8f0;border-radius:10px;margin-bottom:14px}
+  /* Fixed layout so the columns are shared out rather than each one taking
+     whatever its longest value asks for - an email is what would otherwise
+     push the table past the modal and force a sideways scroll. */
+  .ct-preview-table{width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed}
+  .ct-preview-table th{position:sticky;top:0;background:#f8fafc;text-align:left;padding:8px 10px;font-weight:600;
+                       color:#475569;border-bottom:1px solid #e2e8f0}
+  .ct-preview-table td{padding:7px 10px;border-bottom:1px solid #f1f5f9;color:#0f172a;overflow-wrap:anywhere}
+  .ct-preview-table tr:last-child td{border-bottom:none}
+  .ct-preview-table th:nth-child(3),.ct-preview-table td:nth-child(3){width:180px}
+  .ct-preview-table th:nth-child(5),.ct-preview-table td:nth-child(5){width:160px}
+  /* The badge is what a CaPSA scans the list by, so the three outcomes have
+     to be tellable apart at a glance and not only by their wording. */
+  .ct-tag{display:inline-block;padding:2px 8px;border-radius:6px;font-size:10.5px;font-weight:600;white-space:nowrap}
+  .ct-tag-create{background:rgba(22,163,74,0.1);color:#15803d}
+  .ct-tag-update{background:rgba(217,119,6,0.12);color:#b45309}
+  .ct-tag-same{background:rgba(107,114,128,0.1);color:#64748b}
+  .ct-preview-changes{color:#64748b;font-size:11px}
+  /* Preview sits between Cancel and Save: offered, not insisted on. */
+  .ct-btn-outline{background:#fff;color:#2563eb;border:1.5px solid #cbd5e1}
+  .ct-btn-outline:hover:not(:disabled){border-color:#2563eb;background:#eff6ff}
+  /* Named alongside .ct-upload-card, because that rule carries two classes
+     and would otherwise outrank this one and hold the preview at the width
+     of the step before it. */
+  .ct-modal-card.ct-upload-card.ct-modal-card-wide{max-width:min(1000px,96vw)}
+  /* .ct-btn is flex:1, which shares a narrow dialog neatly and turns each
+     button into half a wide one. On this step they sit at their own size. */
+  .ct-modal-card-wide .ct-modal-actions{justify-content:flex-end}
+  .ct-modal-card-wide .ct-modal-actions .ct-btn{flex:0 0 auto;min-width:160px}
 
   /* Expert Management (CaPSA's copy - view + Manage Roles only). Admin has
      its own separate, fuller copy at resources/views/admin/experts.blade.php
@@ -696,9 +727,10 @@ const ROLE_NAME_TO_ID = {{ Illuminate\Support\Js::from($roleNameToId) }};
       </button>
     </div>
 
-    {{-- The template carries the exact columns this reads, the role included,
-         so nobody has to type the headings by hand and get one subtly wrong. --}}
-    <div class="ct-up-hint">
+    <div id="expertRosterStep1">
+      {{-- The template carries the exact columns this reads, the role included,
+           so nobody has to type the headings by hand and get one subtly wrong. --}}
+      <div class="ct-up-hint">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
       <span>Need the correct format?</span>
       <a class="ct-template-link" href="{{ route('admin.rosters.experts.template') }}">
@@ -738,9 +770,25 @@ const ROLE_NAME_TO_ID = {{ Illuminate\Support\Js::from($roleNameToId) }};
     </div>
 
     <div id="expertRosterResult" style="display:none;font-size:12px;text-align:left;margin:4px 0 0;"></div>
-    <div class="ct-modal-actions">
-      <button type="button" class="ct-btn ct-btn-secondary" onclick="closeExpertRosterModal()">Cancel</button>
-      <button type="button" id="expertRosterUploadBtn" class="ct-btn ct-btn-primary" onclick="uploadExpertRoster()">Upload</button>
+      <div class="ct-modal-actions">
+        <button type="button" class="ct-btn ct-btn-secondary" onclick="closeExpertRosterModal()">Cancel</button>
+        <button type="button" id="expertRosterPreviewBtn" class="ct-btn ct-btn-outline" onclick="previewExpertRoster()">Preview</button>
+        <button type="button" class="ct-btn ct-btn-primary" onclick="uploadExpertRoster(this)">Save to system</button>
+      </div>
+    </div>
+
+    {{-- Nothing has been written at this point. An upload approves people and
+         grants them work in one go, and nothing undoes it, so the list is
+         shown as it will be applied before it is. --}}
+    <div id="expertRosterStep2" style="display:none">
+      <div class="ct-preview-summary" id="expertRosterSummary"></div>
+      <div class="ct-preview-scroll"><table class="ct-preview-table" id="expertRosterPreviewTable"></table></div>
+      <div id="expertRosterErrors" style="display:none"></div>
+      <div id="expertRosterSaveResult" style="display:none;font-size:12px;margin-bottom:12px"></div>
+      <div class="ct-modal-actions">
+        <button type="button" class="ct-btn ct-btn-secondary" onclick="backToExpertRosterFile()">Choose another file</button>
+        <button type="button" id="expertRosterUploadBtn" class="ct-btn ct-btn-primary" onclick="uploadExpertRoster()">Save to system</button>
+      </div>
     </div>
   </div>
 </div>
@@ -750,7 +798,121 @@ const expertRosterModal = document.getElementById('expertRosterModal');
 
 function openExpertRosterModal() {
   clearExpertRosterFile();
+  backToExpertRosterFile();
   expertRosterModal.style.display = 'flex';
+}
+
+/** Back to choosing a file, and back to the narrow card that step needs. */
+function backToExpertRosterFile() {
+  document.getElementById('expertRosterStep1').style.display = '';
+  document.getElementById('expertRosterStep2').style.display = 'none';
+  document.querySelector('#expertRosterModal .ct-modal-card').classList.remove('ct-modal-card-wide');
+}
+
+/** Text from the file, put on the page as text and never as markup. */
+function escExpertRoster(value) {
+  const box = document.createElement('div');
+  box.textContent = value == null ? '' : String(value);
+  return box.innerHTML;
+}
+
+const EXPERT_ROSTER_ACTIONS = {
+  create: ['ct-tag-create', 'New account'],
+  update: ['ct-tag-update', 'Update'],
+  unchanged: ['ct-tag-same', 'No change'],
+};
+
+/** What the file would do, read back and shown before anything is written. */
+function previewExpertRoster() {
+  const fileInput = document.getElementById('expertRosterFile');
+  const resultBox = document.getElementById('expertRosterResult');
+
+  if (!fileInput.files.length) {
+    resultBox.style.display = 'block';
+    resultBox.innerHTML = '<span style="color:#dc2626">Choose a file first.</span>';
+    return;
+  }
+
+  const btn = document.getElementById('expertRosterPreviewBtn');
+  btn.disabled = true;
+  btn.textContent = 'Reading...';
+
+  const formData = new FormData();
+  formData.append('file', fileInput.files[0]);
+
+  fetch('{{ route('admin.rosters.experts.preview') }}', {
+    method: 'POST',
+    headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' },
+    body: formData,
+  })
+    .then(r => r.json())
+    .then(data => {
+      if (!data.success) {
+        resultBox.style.display = 'block';
+        resultBox.innerHTML = `<span style="color:#dc2626">${escExpertRoster(data.message || 'That file could not be read.')}</span>`;
+        return;
+      }
+
+      renderExpertRosterPreview(data);
+
+      document.getElementById('expertRosterStep1').style.display = 'none';
+      document.getElementById('expertRosterStep2').style.display = '';
+      document.querySelector('#expertRosterModal .ct-modal-card').classList.add('ct-modal-card-wide');
+    })
+    .catch(() => {
+      resultBox.style.display = 'block';
+      resultBox.innerHTML = '<span style="color:#dc2626">Could not read that file. Check the connection and try again.</span>';
+    })
+    .finally(() => {
+      btn.disabled = false;
+      btn.textContent = 'Preview';
+    });
+}
+
+function renderExpertRosterPreview(data) {
+  const summary = [
+    `<span><strong>${data.rows.length}</strong> ${data.rows.length === 1 ? 'person' : 'people'} read</span>`,
+    `<span><strong>${data.create}</strong> new account${data.create === 1 ? '' : 's'}</span>`,
+    `<span><strong>${data.update}</strong> to update</span>`,
+    `<span><strong>${data.unchanged}</strong> unchanged</span>`,
+  ];
+  if (data.skipped) summary.push(`<span style="color:#b91c1c"><strong>${data.skipped}</strong> skipped</span>`);
+  document.getElementById('expertRosterSummary').innerHTML = summary.join('');
+
+  const head = '<thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Expertise</th><th>Action</th></tr></thead>';
+
+  const body = data.rows.map(row => {
+    const [cls, label] = EXPERT_ROSTER_ACTIONS[row.action] || EXPERT_ROSTER_ACTIONS.unchanged;
+    // Naming what moves is the point of the preview - "Update" alone does not
+    // say that an upload is about to change somebody's roles.
+    const changes = row.changes && row.changes.length
+      ? `<div class="ct-preview-changes">${escExpertRoster(row.changes.join(', '))}</div>`
+      : '';
+    const roles = row.roles && row.roles.length
+      ? escExpertRoster(row.roles.map(r => r.charAt(0).toUpperCase() + r.slice(1)).join(', '))
+      : '<span style="color:#b45309">None named</span>';
+
+    return `<tr>
+      <td>${escExpertRoster(row.name)}</td>
+      <td>${escExpertRoster(row.email)}</td>
+      <td>${roles}</td>
+      <td>${escExpertRoster((row.expertise || []).join(', ')) || '&mdash;'}</td>
+      <td><span class="ct-tag ${cls}">${label}</span>${changes}</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('expertRosterPreviewTable').innerHTML = head + '<tbody>' + body + '</tbody>';
+
+  const errorBox = document.getElementById('expertRosterErrors');
+
+  if (data.errors && data.errors.length) {
+    errorBox.style.display = 'block';
+    errorBox.innerHTML = '<div style="font-size:12px;color:#b91c1c;max-height:120px;overflow-y:auto;margin-bottom:12px">'
+      + data.errors.map(e => `<div>${escExpertRoster(e)}</div>`).join('') + '</div>';
+  } else {
+    errorBox.style.display = 'none';
+    errorBox.innerHTML = '';
+  }
 }
 
 /** Nothing chosen: no file, no chip, nothing left over from last time. */
@@ -821,9 +983,12 @@ function closeExpertRosterModal() {
   expertRosterModal.style.display = 'none';
 }
 
-function uploadExpertRoster() {
+function uploadExpertRoster(btn) {
   const fileInput = document.getElementById('expertRosterFile');
-  const resultBox = document.getElementById('expertRosterResult');
+  // Saving is offered from both steps, so a failure has to be reported on
+  // whichever one is on screen - the other one's box is hidden.
+  const previewing = document.getElementById('expertRosterStep2').style.display !== 'none';
+  const resultBox = document.getElementById(previewing ? 'expertRosterSaveResult' : 'expertRosterResult');
 
   if (!fileInput.files.length) {
     resultBox.style.display = 'block';
@@ -831,7 +996,7 @@ function uploadExpertRoster() {
     return;
   }
 
-  const btn = document.getElementById('expertRosterUploadBtn');
+  btn = btn || document.getElementById('expertRosterUploadBtn');
   btn.disabled = true;
   btn.textContent = 'Uploading...';
 
