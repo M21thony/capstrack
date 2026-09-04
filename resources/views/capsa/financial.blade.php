@@ -4,7 +4,7 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Financial Records - CapsTRACK Admin</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="{{ asset('css/admin.css') }}"/>
 <style>
 .filter-select {
@@ -171,7 +171,7 @@
             <span style="font-size:10px;color:var(--text3);display:flex;align-items:center;gap:4px">
               <span style="width:8px;height:8px;border-radius:50%;background:var(--red);display:inline-block"></span>No Submission
             </span>
-            <span style="margin-left:auto;font-size:10px;color:var(--text3);font-family:'Space Mono',monospace">{{ $totalStudents }} students total</span>
+            <span style="margin-left:auto;font-size:10px;color:var(--text3);font-variant-numeric:tabular-nums;">{{ $totalStudents }} students total</span>
           </div>
         </div>
 
@@ -284,11 +284,11 @@
               </td>
               <td style="font-size:11px;max-width:160px;line-height:1.6">{!! $teamTitleHtml !!}</td>
               <td><span class="badge badge-gold" style="font-size:10px">{{ $teamCourse }}</span></td>
-              <td style="font-family:'Space Mono',monospace;font-size:12px">{{ $memberCount }}</td>
+              <td style="font-variant-numeric:tabular-nums;font-size:12px">{{ $memberCount }}</td>
               <td>
-                <div style="font-family:'Space Mono',monospace;font-size:12px;font-weight:600;color:var(--green)">{{ $verifiedCount }} / {{ $memberCount }}</div>
+                <div style="font-variant-numeric:tabular-nums;font-size:12px;font-weight:600;color:var(--green)">{{ $verifiedCount }} / {{ $memberCount }}</div>
               </td>
-              <td style="font-family:'Space Mono',monospace;font-size:12px;color:var(--green)">PHP {{ number_format($totalVerifiedAmount, 2) }}</td>
+              <td style="font-variant-numeric:tabular-nums;font-size:12px;color:var(--green)">PHP {{ number_format($totalVerifiedAmount, 2) }}</td>
               <td><span class="badge {{ $badge }}">{{ $statusLabel }}</span></td>
             </tr>
           @empty
@@ -421,7 +421,7 @@
               </div>
               <div style="font-size:11px;color:var(--text3)">{{ $post->course }} · {{ $post->year_level }}</div>
             </div>
-            <div style="flex:1;font-family:'Space Mono',monospace;font-size:13px;color:var(--text2)">PHP {{ number_format($post->amount, 2) }}</div>
+            <div style="flex:1;font-variant-numeric:tabular-nums;font-size:13px;color:var(--text2)">PHP {{ number_format($post->amount, 2) }}</div>
             <div style="flex:2;font-size:11px;color:var(--text3);min-width:0">@if($post->description){{ Str::limit($post->description, 60) }}@else<span style="font-style:italic">No description</span>@endif</div>
             <div style="display:flex;gap:6px;flex-shrink:0">
               <button class="btn btn-sm btn-primary"
@@ -1381,7 +1381,7 @@ function renderExpensePosts(posts) {
       '<div style="font-size:13px;font-weight:500;color:var(--text);display:flex;align-items:center;gap:6px">' + post.title + defenseTypeBadge + '</div>' +
       '<div style="font-size:11px;color:var(--text3)">' + post.course + ' · ' + post.year_level + '</div>' +
       '</div>' +
-      '<div style="flex:1;font-family:\'Space Mono\',monospace;font-size:13px;color:var(--text2)">PHP ' + parseFloat(post.amount).toLocaleString('en-US', {minimumFractionDigits: 2}) + '</div>' +
+      '<div style="flex:1;font-variant-numeric:tabular-nums;font-size:13px;color:var(--text2)">PHP ' + parseFloat(post.amount).toLocaleString('en-US', {minimumFractionDigits: 2}) + '</div>' +
       '<div style="flex:2;font-size:11px;color:var(--text3);min-width:0">' + desc + '</div>' +
       '<div style="display:flex;gap:6px;flex-shrink:0">' +
       '<button class="btn btn-sm btn-primary" onclick="openEditModal(' + post.id + ', \'' + safeTitle + '\', \'' + post.course + '\', \'' + post.year_level + '\', \'' + (post.defense_type || '') + '\', \'' + post.amount + '\', \'' + safeDesc + '\')">' +

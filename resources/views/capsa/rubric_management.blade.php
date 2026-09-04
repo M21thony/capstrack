@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Rubric Management - CapsTRACK Admin</title>
 <meta name="csrf-token" content="{{ csrf_token() }}">
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="{{ asset('css/admin.css') }}"/>
 @include('partials.skeleton-head', ['skReveal' => 'flex'])
 </head>
@@ -1298,7 +1298,7 @@ function renderList() {
 
       '<div class="rb-card-side">' +
       '<div style="text-align:right">' +
-      '<div style="font-family:\'Space Mono\',monospace;font-size:22px;font-weight:700;color:' + col + '">' + formatPts(round2(total)) + '<span style="font-size:11px;color:var(--text3);font-family:\'DM Sans\',sans-serif"> pts</span></div>' +
+      '<div style="font-variant-numeric:tabular-nums;font-size:22px;font-weight:700;color:' + col + '">' + formatPts(round2(total)) + '<span style="font-size:11px;color:var(--text3);font-family:\'DM Sans\',sans-serif"> pts</span></div>' +
       '<div style="font-size:11px;color:var(--text3)">' + rb.criteria.length + ' criteria</div>' +
       '</div>' +
       '<div class="rb-card-actions">' +
@@ -1322,7 +1322,7 @@ function renderList() {
         return '<div class="rb-crit-row">' +
           '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">' +
           '<div style="font-size:12px;font-weight:600;color:var(--text)">' + (i + 1) + '. ' + cr.name + '</div>' +
-          '<span style="font-family:\'Space Mono\',monospace;font-size:11px;color:' + col + ';font-weight:700">' + formatPts(criterionScore(cr)) + ' pts</span>' +
+          '<span style="font-variant-numeric:tabular-nums;font-size:11px;color:' + col + ';font-weight:700">' + formatPts(criterionScore(cr)) + ' pts</span>' +
           '</div>' +
           '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:5px">' +
           cr.levels.map(function(lv, li) {

@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Capstone Expert - CapsTrack</title>
 <meta name="csrf-token" content="{{ csrf_token() }}">
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
 @vite('resources/student-ui/Styles/experts.css')
 <style>
 .role-chips { display: flex; flex-wrap: wrap; gap: 5px; margin: 10px 0 8px; justify-content: center; }
@@ -36,14 +36,14 @@
 .slot-extra { margin-top: 10px; }
 .slot-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 .slot-body { min-width: 0; flex: 1; }
-.slot-role { font-family: 'Space Mono', monospace; font-size: 9.5px; font-weight: 700; letter-spacing: 0.7px; text-transform: uppercase; }
+.slot-role { font-variant-numeric:tabular-nums; font-size: 9.5px; font-weight: 700; letter-spacing: 0.7px; text-transform: uppercase; }
 .slot-state { font-size: 12px; color: var(--text3); margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .slot.filled .slot-state { color: var(--text); font-weight: 500; }
 .slot-remove { background: none; border: none; cursor: pointer; color: var(--text3); padding: 3px; border-radius: 5px; flex-shrink: 0; display: flex; }
 .slot-remove:hover { color: var(--red); background: var(--red-bg); }
 .slot-pending { margin-top: 11px; padding-top: 11px; border-top: 1px solid var(--border); font-size: 12px; color: var(--text2); display: flex; align-items: center; gap: 7px; }
 .slot-pending-none { background: var(--bg4); color: var(--text3); }
-.slot-pending-n { font-family: 'Space Mono', monospace; font-size: 10px; font-weight: 700; padding: 1px 7px; border-radius: 999px; background: var(--amber-bg); color: var(--amber); }
+.slot-pending-n { font-variant-numeric:tabular-nums; font-size: 10px; font-weight: 700; padding: 1px 7px; border-radius: 999px; background: var(--amber-bg); color: var(--amber); }
 .req-notice { font-size: 12.5px; color: var(--text2); background: var(--bg3); border: 1px dashed var(--border); border-radius: 10px; padding: 12px 14px; margin-bottom: 20px; }
 .rg-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
 
@@ -180,7 +180,7 @@
 .remove-box { width: 420px; text-align: left; }
 .remove-field { margin-top: 16px; }
 .remove-field label { font-size: 12px; font-weight: 600; color: var(--text2); display: block; margin-bottom: 6px; }
-.remove-field label strong { color: var(--red); font-family: 'Space Mono', monospace; }
+.remove-field label strong { color: var(--red); font-variant-numeric:tabular-nums; }
 .modal-input { width: 100%; padding: 12px 14px; border-radius: 10px; border: 1.5px solid var(--border); background: var(--bg3); color: var(--text); font-size: 14px; font-family: 'DM Sans', sans-serif; outline: none; box-sizing: border-box; transition: border 0.2s, box-shadow 0.2s, background 0.2s; }
 .modal-input:focus { border-color: var(--accent); background: var(--bg2); box-shadow: 0 0 0 3px var(--accent-glow); }
 .modal-input.error { border-color: var(--red); background: var(--red-bg); box-shadow: 0 0 0 3px rgba(220,38,38,0.1); }

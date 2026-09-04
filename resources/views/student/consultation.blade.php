@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Consultation - CapsTrack</title>
 <meta name="csrf-token" content="{{ csrf_token() }}">
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
 @vite('resources/student-ui/Styles/consultation.css')
 <x-dashboard.styles />
 <style>
@@ -27,7 +27,7 @@
 
 .book-step{margin-bottom:22px}
 .step-head{display:flex;gap:8px;align-items:flex-start;margin-bottom:12px}
-.step-n{font-family:'Space Mono',monospace;font-size:13px;font-weight:700;color:var(--accent3);line-height:1.35}
+.step-n{font-variant-numeric:tabular-nums;font-size:13px;font-weight:700;color:var(--accent3);line-height:1.35}
 .step-title{font-size:13.5px;font-weight:600;color:var(--text)}
 .step-sub{font-size:11.5px;color:var(--text3);margin-top:1px}
 

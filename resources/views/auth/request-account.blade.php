@@ -178,7 +178,7 @@
   }
 
   .card-hero h1 {
-    font-family: 'Space Mono', monospace;
+    font-variant-numeric:tabular-nums;
     font-size: 18px;
     font-weight: 700;
     color: var(--text);
@@ -549,7 +549,7 @@
   }
 
   .success-title {
-    font-family: 'Space Mono', monospace;
+    font-variant-numeric:tabular-nums;
     font-size: 18px;
     font-weight: 700;
     color: var(--text);
@@ -733,7 +733,7 @@
   .modal-icon.warning svg { stroke: #f59e0b; }
 
   .modal-title {
-    font-family: 'Space Mono', monospace;
+    font-variant-numeric:tabular-nums;
     font-size: 16px;
     font-weight: 700;
     color: var(--text);
@@ -993,7 +993,7 @@
       <div style="width:56px;height:56px;border-radius:50%;background:rgba(239,68,68,0.1);border:2px solid rgba(239,68,68,0.3);display:flex;align-items:center;justify-content:center;margin:0 auto 16px">
         <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="#ef4444" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
       </div>
-      <div style="font-family:'Space Mono',monospace;font-size:16px;font-weight:700;color:var(--text);margin-bottom:8px">Submission Blocked</div>
+      <div style="font-variant-numeric:tabular-nums;font-size:16px;font-weight:700;color:var(--text);margin-bottom:8px">Submission Blocked</div>
       <div style="font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:22px;max-width:360px;margin-left:auto;margin-right:auto">
         You have reached the maximum number of attempts ({{ $rejectAttempts }}/{{ $maxRejects }}). 
         Please wait <b id="cooldown-timer-block">{{ $waitSeconds }}</b> seconds before you can resubmit your account request.

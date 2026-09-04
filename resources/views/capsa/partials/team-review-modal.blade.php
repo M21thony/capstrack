@@ -263,7 +263,7 @@ function renderPreProposals(proposals, selectedId) {
           return '<div style="border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-top:6px;background:#fff">'
             + '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">'
             + '<span style="font-size:11.5px;font-weight:600;color:var(--text)">' + escapeHtml(m.title || '') + '</span>'
-            + '<span class="badge badge-' + mTone + '" style="font-family:\'Space Mono\',monospace;font-weight:700;flex-shrink:0">' + m.score + '%</span>'
+            + '<span class="badge badge-' + mTone + '" style="font-variant-numeric:tabular-nums;font-weight:700;flex-shrink:0">' + m.score + '%</span>'
             + '</div>'
             + (meta ? '<div style="font-size:10.5px;color:var(--text3);margin-top:2px">' + escapeHtml(meta) + '</div>' : '')
             + (m.reason ? '<div style="font-size:11px;color:var(--text3);margin-top:3px">' + escapeHtml(m.reason) + '</div>' : '')
@@ -284,7 +284,7 @@ function renderPreProposals(proposals, selectedId) {
 
     var dupHtml = dup
       ? '<div style="margin-top:8px">'
-        + '<div style="font-size:12px"><span class="badge ' + dupBadgeClass + '">' + dup.verdict + '</span> <span style="font-family:\'Space Mono\',monospace;font-weight:700;margin-left:6px">' + dup.top_score + '%</span></div>'
+        + '<div style="font-size:12px"><span class="badge ' + dupBadgeClass + '">' + dup.verdict + '</span> <span style="font-variant-numeric:tabular-nums;font-weight:700;margin-left:6px">' + dup.top_score + '%</span></div>'
         + matchesHtml
         + '</div>'
       : '<div style="font-size:11.5px;color:var(--text3);margin-top:8px">No duplication check was run for this title.</div>';

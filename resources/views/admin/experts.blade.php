@@ -4,7 +4,7 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>CaPSA Management - CapsTRACK Admin</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="{{ asset('css/admin.css') }}"/>
 <style>
   /* ── Compact table ───────────────────────────────────────────────────
@@ -185,7 +185,7 @@
   .capacity-stack{display:flex;flex-direction:column;gap:5px}
   .capacity-row{display:grid;grid-template-columns:38px 1fr 34px;align-items:center;gap:8px}
   .capacity-prog{font-size:10px;font-weight:700;color:var(--text3);letter-spacing:0.3px}
-  .capacity-count{font-family:'Space Mono',monospace;font-size:11px;color:var(--text3);text-align:right}
+  .capacity-count{font-variant-numeric:tabular-nums;font-size:11px;color:var(--text3);text-align:right}
 
   /* Manage Roles - shared with CaPSA's copy of this page. */
   .roles-btn{
@@ -350,7 +350,7 @@
   .section-group.open .group-chevron{transform:rotate(90deg)}
   .group-all{width:15px;height:15px;accent-color:var(--accent);flex-shrink:0}
   .group-name{font-size:12.5px;font-weight:700;color:#0f172a;letter-spacing:0.2px}
-  .group-count{margin-left:auto;font-size:10px;font-weight:700;color:#94a3b8;font-family:'Space Mono',monospace;background:#eceef2;padding:2px 8px;border-radius:999px}
+  .group-count{margin-left:auto;font-size:10px;font-weight:700;color:#94a3b8;font-variant-numeric:tabular-nums;background:#eceef2;padding:2px 8px;border-radius:999px}
   .section-group.all-selected .group-count{background:var(--accent-light);color:var(--accent3)}
   .section-group-body{display:none;grid-template-columns:repeat(3, 1fr);gap:5px 8px;padding:6px 8px 8px 33px}
   .section-group.open .section-group-body{display:grid}
@@ -547,16 +547,9 @@
               $computedStatus = $isFull ? 'full' : ($isOnline ? 'active' : 'offline');
               $capacityRows = $expert->parsedCapacity();
 
-              // "Adviser" and "capstone_adviser" read as near-duplicates
-              // once both show up together (the latter is really "CaPSA"'s
-              // own role - Capstone [Project] Subject Adviser) - spelling
-              // both out fully keeps them visibly distinct instead of both
-              // collapsing to "Adviser".
-              $roleLabel = fn (string $roleName) => match ($roleName) {
-                  'adviser' => 'Capstone Adviser',
-                  'capstone_adviser' => 'Capstone Subject Adviser',
-                  default => (string) \Illuminate\Support\Str::of($roleName)->replace('_', ' ')->title(),
-              };
+              // One mapping, on the model, so the pills here and the ones on
+              // the expert's own profile panel cannot drift apart.
+              $roleLabel = fn (string $roleName) => \App\Models\Role::labelFor($roleName);
 
               $detailPayload = [
                 'avatar' => $expert->avatarUrl(),
@@ -953,7 +946,7 @@
 
 <script>
 const ROLE_OPTIONS = [
-  { id: 'adviser', label: 'Capstone Adviser', desc: "Primary subject adviser for a team's capstone project." },
+  { id: 'adviser', label: 'Adviser', desc: "Primary subject adviser for a team's capstone project." },
   { id: 'consultant', label: 'Consultant', desc: 'Secondary technical/content guidance alongside the adviser.' },
   { id: 'grammarian', label: 'Grammarian', desc: 'Reviews document language and formatting before submission.' },
 ];

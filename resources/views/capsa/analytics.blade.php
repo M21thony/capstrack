@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Analytics - CapsTRACK Admin</title>
 <meta name="csrf-token" content="{{ csrf_token() }}"/>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="{{ asset('css/admin.css') }}"/>
 @include('partials.skeleton-head', ['skReveal' => 'flex'])
 </head>
@@ -76,7 +76,7 @@
         <div style="display:flex;align-items:flex-end;width:100%;gap:10px;height:180px;padding:0 16px 8px 16px">
           @forelse($yearlyArchive as $year => $count)
           <div style="display:flex;flex-direction:column;align-items:center;flex:1">
-            <span style="font-size:10px;color:var(--text3);font-family:'Space Mono',monospace;margin-bottom:2px">{{ $count }}</span>
+            <span style="font-size:10px;color:var(--text3);font-variant-numeric:tabular-nums;margin-bottom:2px">{{ $count }}</span>
             <div style="width:100%;background:{{ (string) $selectedYear === (string) $year ? 'var(--accent)' : 'var(--bg4)' }};border-radius:4px 4px 0 0;height:{{ max(round(($count / $maxYearlyCount) * 130), 8) }}px"></div>
             <div style="font-size:10px;color:{{ (string) $selectedYear === (string) $year ? 'var(--accent3)' : 'var(--text3)' }};font-weight:{{ (string) $selectedYear === (string) $year ? 700 : 400 }};margin-top:4px">{{ substr($year, 2) }}</div>
           </div>
@@ -92,46 +92,46 @@
       <div class="card">
         <div class="card-header"><span class="card-title">Pre-Proposal Defense</span><span class="badge badge-green">Active</span></div>
         <div style="display:flex;align-items:center;gap:12px">
-          <div style="flex:1"><div style="font-size:24px;font-family:'Space Mono',monospace;font-weight:700;color:var(--green)">36</div><div style="font-size:10px;color:var(--text3);margin-top:2px">Passed</div></div>
+          <div style="flex:1"><div style="font-size:24px;font-variant-numeric:tabular-nums;font-weight:700;color:var(--green)">36</div><div style="font-size:10px;color:var(--text3);margin-top:2px">Passed</div></div>
           <div style="width:1px;height:24px;background:var(--border)"></div>
-          <div style="flex:1"><div style="font-size:24px;font-family:'Space Mono',monospace;font-weight:700;color:var(--red)">12</div><div style="font-size:10px;color:var(--text3);margin-top:2px">Failed</div></div>
+          <div style="flex:1"><div style="font-size:24px;font-variant-numeric:tabular-nums;font-weight:700;color:var(--red)">12</div><div style="font-size:10px;color:var(--text3);margin-top:2px">Failed</div></div>
           <div style="width:1px;height:24px;background:var(--border)"></div>
-          <div style="flex:1;text-align:center"><div style="font-size:18px;font-family:'Space Mono',monospace;font-weight:700;color:var(--accent3)">75%</div><div style="font-size:10px;color:var(--text3);margin-top:2px">Rate</div></div>
+          <div style="flex:1;text-align:center"><div style="font-size:18px;font-variant-numeric:tabular-nums;font-weight:700;color:var(--accent3)">75%</div><div style="font-size:10px;color:var(--text3);margin-top:2px">Rate</div></div>
         </div>
         <div style="margin-top:12px;font-size:11px;color:var(--text3)">48 teams · AY 2025–2026</div>
       </div>
       <div class="card">
         <div class="card-header"><span class="card-title">Title Defense</span><span class="badge badge-green">Active</span></div>
         <div style="display:flex;align-items:center;gap:12px">
-          <div style="flex:1"><div style="font-size:24px;font-family:'Space Mono',monospace;font-weight:700;color:var(--green)">32</div><div style="font-size:10px;color:var(--text3);margin-top:2px">Passed</div></div>
+          <div style="flex:1"><div style="font-size:24px;font-variant-numeric:tabular-nums;font-weight:700;color:var(--green)">32</div><div style="font-size:10px;color:var(--text3);margin-top:2px">Passed</div></div>
           <div style="width:1px;height:24px;background:var(--border)"></div>
-          <div style="flex:1"><div style="font-size:24px;font-family:'Space Mono',monospace;font-weight:700;color:var(--red)">4</div><div style="font-size:10px;color:var(--text3);margin-top:2px">Failed</div></div>
+          <div style="flex:1"><div style="font-size:24px;font-variant-numeric:tabular-nums;font-weight:700;color:var(--red)">4</div><div style="font-size:10px;color:var(--text3);margin-top:2px">Failed</div></div>
           <div style="width:1px;height:24px;background:var(--border)"></div>
-          <div style="flex:1;text-align:center"><div style="font-size:18px;font-family:'Space Mono',monospace;font-weight:700;color:var(--accent3)">89%</div><div style="font-size:10px;color:var(--text3);margin-top:2px">Rate</div></div>
+          <div style="flex:1;text-align:center"><div style="font-size:18px;font-variant-numeric:tabular-nums;font-weight:700;color:var(--accent3)">89%</div><div style="font-size:10px;color:var(--text3);margin-top:2px">Rate</div></div>
         </div>
         <div style="margin-top:12px;font-size:11px;color:var(--text3)">36 teams · AY 2025–2026</div>
       </div>
       <div class="card">
         <div class="card-header"><span class="card-title">Pre-Oral Defense</span><span class="badge badge-green">Active</span></div>
         <div style="display:flex;align-items:center;gap:12px">
-          <div style="flex:1"><div style="font-size:24px;font-family:'Space Mono',monospace;font-weight:700;color:var(--green)">24</div><div style="font-size:10px;color:var(--text3);margin-top:2px">Passed</div></div>
+          <div style="flex:1"><div style="font-size:24px;font-variant-numeric:tabular-nums;font-weight:700;color:var(--green)">24</div><div style="font-size:10px;color:var(--text3);margin-top:2px">Passed</div></div>
           <div style="width:1px;height:24px;background:var(--border)"></div>
-          <div style="flex:1"><div style="font-size:24px;font-family:'Space Mono',monospace;font-weight:700;color:var(--red)">8</div><div style="font-size:10px;color:var(--text3);margin-top:2px">Failed</div></div>
+          <div style="flex:1"><div style="font-size:24px;font-variant-numeric:tabular-nums;font-weight:700;color:var(--red)">8</div><div style="font-size:10px;color:var(--text3);margin-top:2px">Failed</div></div>
           <div style="width:1px;height:24px;background:var(--border)"></div>
-          <div style="flex:1;text-align:center"><div style="font-size:18px;font-family:'Space Mono',monospace;font-weight:700;color:var(--accent3)">75%</div><div style="font-size:10px;color:var(--text3);margin-top:2px">Rate</div></div>
+          <div style="flex:1;text-align:center"><div style="font-size:18px;font-variant-numeric:tabular-nums;font-weight:700;color:var(--accent3)">75%</div><div style="font-size:10px;color:var(--text3);margin-top:2px">Rate</div></div>
         </div>
         <div style="margin-top:12px;font-size:11px;color:var(--text3)">32 teams · AY 2025–2026</div>
       </div>
       <div class="card">
         <div class="card-header"><span class="card-title">Final Oral Defense</span><span class="badge badge-amber">In Progress</span></div>
         <div style="display:flex;align-items:center;gap:12px">
-          <div style="flex:1"><div style="font-size:24px;font-family:'Space Mono',monospace;font-weight:700;color:var(--green)">18</div><div style="font-size:10px;color:var(--text3);margin-top:2px">Passed</div></div>
+          <div style="flex:1"><div style="font-size:24px;font-variant-numeric:tabular-nums;font-weight:700;color:var(--green)">18</div><div style="font-size:10px;color:var(--text3);margin-top:2px">Passed</div></div>
           <div style="width:1px;height:24px;background:var(--border)"></div>
-          <div style="flex:1"><div style="font-size:24px;font-family:'Space Mono',monospace;font-weight:700;color:var(--red)">6</div><div style="font-size:10px;color:var(--text3);margin-top:2px">Failed</div></div>
+          <div style="flex:1"><div style="font-size:24px;font-variant-numeric:tabular-nums;font-weight:700;color:var(--red)">6</div><div style="font-size:10px;color:var(--text3);margin-top:2px">Failed</div></div>
           <div style="width:1px;height:24px;background:var(--border)"></div>
-          <div style="flex:1;text-align:center"><div style="font-size:18px;font-family:'Space Mono',monospace;font-weight:700;color:var(--accent3)">75%</div><div style="font-size:10px;color:var(--text3);margin-top:2px">Rate</div></div>
+          <div style="flex:1;text-align:center"><div style="font-size:18px;font-variant-numeric:tabular-nums;font-weight:700;color:var(--accent3)">75%</div><div style="font-size:10px;color:var(--text3);margin-top:2px">Rate</div></div>
           <div style="width:1px;height:24px;background:var(--border)"></div>
-          <div style="flex:1"><div style="font-size:24px;font-family:'Space Mono',monospace;font-weight:700;color:var(--text3)">8</div><div style="font-size:10px;color:var(--text3);margin-top:2px">Pending</div></div>
+          <div style="flex:1"><div style="font-size:24px;font-variant-numeric:tabular-nums;font-weight:700;color:var(--text3)">8</div><div style="font-size:10px;color:var(--text3);margin-top:2px">Pending</div></div>
         </div>
         <div style="margin-top:12px;font-size:11px;color:var(--text3)">32 teams · AY 2025–2026</div>
       </div>
@@ -218,9 +218,9 @@
             <tr><td>SY 2022–2023</td><td class="total">26</td><td class="pass">22</td><td class="fail">4</td><td style="color:var(--text3)">·</td><td class="rate">85%</td></tr>
             <tr><td>SY 2023–2024</td><td class="total">30</td><td class="pass">26</td><td class="fail">4</td><td style="color:var(--text3)">·</td><td class="rate">87%</td></tr>
             <tr><td>SY 2024–2025</td><td class="total">37</td><td class="pass">32</td><td class="fail">5</td><td style="color:var(--text3)">·</td><td class="rate">86%</td></tr>
-            <tr class="yt-current"><td>SY 2025–2026 ?</td><td class="total">32</td><td class="pass">18</td><td class="fail">6</td><td style="font-family:'Space Mono',monospace;color:var(--text3)">8</td><td class="rate">75%*</td></tr>
+            <tr class="yt-current"><td>SY 2025–2026 ?</td><td class="total">32</td><td class="pass">18</td><td class="fail">6</td><td style="font-variant-numeric:tabular-nums;color:var(--text3)">8</td><td class="rate">75%*</td></tr>
           </tbody>
-          <tfoot><tr><td>All-Time Total</td><td class="total">186</td><td class="pass">149</td><td class="fail">29</td><td style="font-family:'Space Mono',monospace;color:var(--text3)">8</td><td class="rate">84%</td></tr></tfoot>
+          <tfoot><tr><td>All-Time Total</td><td class="total">186</td><td class="pass">149</td><td class="fail">29</td><td style="font-variant-numeric:tabular-nums;color:var(--text3)">8</td><td class="rate">84%</td></tr></tfoot>
         </table></div>
         <div style="font-size:10px;color:var(--text3);margin-top:8px">* SY 2025–2026 rate excludes 8 pending teams</div>
       </div>
@@ -300,19 +300,19 @@
         <div class="gap-12" style="margin-top:4px">
           <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--green-bg);border-radius:8px">
             <div style="display:flex;align-items:center;gap:8px"><svg viewBox="0 0 24 24" width="16" height="16" stroke="var(--green)" fill="none" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg><span style="font-size:13px;font-weight:500;color:var(--text)">Pre-Proposal Defense</span></div>
-            <span style="font-size:14px;font-family:'Space Mono',monospace;font-weight:700;color:var(--green)">36 passed</span>
+            <span style="font-size:14px;font-variant-numeric:tabular-nums;font-weight:700;color:var(--green)">36 passed</span>
           </div>
           <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--green-bg);border-radius:8px">
             <div style="display:flex;align-items:center;gap:8px"><svg viewBox="0 0 24 24" width="16" height="16" stroke="var(--green)" fill="none" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg><span style="font-size:13px;font-weight:500;color:var(--text)">Title Defense</span></div>
-            <span style="font-size:14px;font-family:'Space Mono',monospace;font-weight:700;color:var(--green)">32 passed</span>
+            <span style="font-size:14px;font-variant-numeric:tabular-nums;font-weight:700;color:var(--green)">32 passed</span>
           </div>
           <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--green-bg);border-radius:8px">
             <div style="display:flex;align-items:center;gap:8px"><svg viewBox="0 0 24 24" width="16" height="16" stroke="var(--green)" fill="none" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg><span style="font-size:13px;font-weight:500;color:var(--text)">Pre-Oral Defense</span></div>
-            <span style="font-size:14px;font-family:'Space Mono',monospace;font-weight:700;color:var(--green)">24 passed</span>
+            <span style="font-size:14px;font-variant-numeric:tabular-nums;font-weight:700;color:var(--green)">24 passed</span>
           </div>
           <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--amber-bg);border-radius:8px">
             <div style="display:flex;align-items:center;gap:8px"><svg viewBox="0 0 24 24" width="16" height="16" stroke="var(--amber)" fill="none" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span style="font-size:13px;font-weight:500;color:var(--text)">Final Oral Defense</span></div>
-            <span style="font-size:14px;font-family:'Space Mono',monospace;font-weight:500;color:var(--amber)">18 passed · 8 pending</span>
+            <span style="font-size:14px;font-variant-numeric:tabular-nums;font-weight:500;color:var(--amber)">18 passed · 8 pending</span>
           </div>
         </div>
       </div>
@@ -321,15 +321,15 @@
         <div class="card-header"><span class="card-title">Defense Stage Results</span></div>
         <div class="gap-12" style="margin-top:4px">
           <div>
-            <div style="display:flex;justify-content:space-between;margin-bottom:5px"><span style="font-size:12px;color:var(--text2)">Title Defense</span><span style="font-size:11px;font-family:'Space Mono',monospace;color:var(--green)">92%</span></div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:5px"><span style="font-size:12px;color:var(--text2)">Title Defense</span><span style="font-size:11px;font-variant-numeric:tabular-nums;color:var(--green)">92%</span></div>
             <div class="pbar"><div class="pbar-fill pf-green" style="width:92%"></div></div>
           </div>
           <div>
-            <div style="display:flex;justify-content:space-between;margin-bottom:5px"><span style="font-size:12px;color:var(--text2)">Pre-oral Defense</span><span style="font-size:11px;font-family:'Space Mono',monospace;color:var(--accent3)">68%</span></div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:5px"><span style="font-size:12px;color:var(--text2)">Pre-oral Defense</span><span style="font-size:11px;font-variant-numeric:tabular-nums;color:var(--accent3)">68%</span></div>
             <div class="pbar"><div class="pbar-fill pf-gold" style="width:68%"></div></div>
           </div>
           <div>
-            <div style="display:flex;justify-content:space-between;margin-bottom:5px"><span style="font-size:12px;color:var(--text2)">Final Oral Defense</span><span style="font-size:11px;font-family:'Space Mono',monospace;color:var(--blue)">54%</span></div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:5px"><span style="font-size:12px;color:var(--text2)">Final Oral Defense</span><span style="font-size:11px;font-variant-numeric:tabular-nums;color:var(--blue)">54%</span></div>
             <div class="pbar"><div class="pbar-fill pf-blue" style="width:54%"></div></div>
           </div>
           <div style="font-size:11px;color:var(--text3);margin-top:4px">Based on AY 2025–2026 data</div>
@@ -341,19 +341,19 @@
         <div class="gap-12" style="margin-top:4px">
           <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)">
             <span style="font-size:12px;color:var(--text2)">Pre-Proposal Defense</span>
-            <div style="text-align:right"><div style="font-size:13px;font-family:'Space Mono',monospace;font-weight:700;color:var(--green)">265</div><div style="font-size:10px;color:var(--text3)">passed · 81% rate</div></div>
+            <div style="text-align:right"><div style="font-size:13px;font-variant-numeric:tabular-nums;font-weight:700;color:var(--green)">265</div><div style="font-size:10px;color:var(--text3)">passed · 81% rate</div></div>
           </div>
           <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)">
             <span style="font-size:12px;color:var(--text2)">Title Defense</span>
-            <div style="text-align:right"><div style="font-size:13px;font-family:'Space Mono',monospace;font-weight:700;color:var(--green)">239</div><div style="font-size:10px;color:var(--text3)">passed · 90% rate</div></div>
+            <div style="text-align:right"><div style="font-size:13px;font-variant-numeric:tabular-nums;font-weight:700;color:var(--green)">239</div><div style="font-size:10px;color:var(--text3)">passed · 90% rate</div></div>
           </div>
           <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)">
             <span style="font-size:12px;color:var(--text2)">Pre-Oral Defense</span>
-            <div style="text-align:right"><div style="font-size:13px;font-family:'Space Mono',monospace;font-weight:700;color:var(--green)">178</div><div style="font-size:10px;color:var(--text3)">passed · 74% rate</div></div>
+            <div style="text-align:right"><div style="font-size:13px;font-variant-numeric:tabular-nums;font-weight:700;color:var(--green)">178</div><div style="font-size:10px;color:var(--text3)">passed · 74% rate</div></div>
           </div>
           <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0">
             <span style="font-size:12px;color:var(--text2)">Final Oral Defense</span>
-            <div style="text-align:right"><div style="font-size:13px;font-family:'Space Mono',monospace;font-weight:700;color:var(--green)">149</div><div style="font-size:10px;color:var(--text3)">passed · 84% rate</div></div>
+            <div style="text-align:right"><div style="font-size:13px;font-variant-numeric:tabular-nums;font-weight:700;color:var(--green)">149</div><div style="font-size:10px;color:var(--text3)">passed · 84% rate</div></div>
           </div>
         </div>
       </div>

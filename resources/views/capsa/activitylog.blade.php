@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Activity Log - CapsTRACK Admin</title>
 <meta name="csrf-token" content="{{ csrf_token() }}"/>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="{{ asset('css/admin.css') }}"/>
 @include('partials.skeleton-head', ['skReveal' => 'flex'])
 </head>
@@ -66,8 +66,8 @@
         <tbody>
         @forelse($logs as $log)
           <tr>
-            <td style="padding-left:20px"><a href="javascript:void(0)" onclick="openLogModal({{ $log->id }})" style="color:var(--accent);text-decoration:underline;font-size:12px;font-family:'Space Mono',monospace">#{{ $log->id }}</a></td>
-            <td style="font-family:'Space Mono',monospace;font-size:11px;color:var(--text3)">{{ $log->created_at->format('M j · H:i') }}</td>
+            <td style="padding-left:20px"><a href="javascript:void(0)" onclick="openLogModal({{ $log->id }})" style="color:var(--accent);text-decoration:underline;font-size:12px;font-variant-numeric:tabular-nums;">#{{ $log->id }}</a></td>
+            <td style="font-variant-numeric:tabular-nums;font-size:11px;color:var(--text3)">{{ $log->created_at->format('M j · H:i') }}</td>
             <td class="td-main">{{ $log->student?->f_name }} {{ $log->student?->l_name }}</td>
             <td><span class="badge badge-gold" style="font-size:10px">{{ $log->student?->currentTeam?->team_name ?? $log->metadata['team_name'] ?? 'N/A' }}</span></td>
             <td><span class="badge badge-blue" style="font-size:10px">{{ $log->type }}</span></td>

@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Financial Records - CapsTrack</title>
 <meta name="csrf-token" content="{{ csrf_token() }}">
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
 @vite('resources/student-ui/styles.css')
 <style>
 /* ── DISABLED UPLOAD OVERLAY ── */
@@ -92,7 +92,7 @@
   margin-bottom: 8px;
 }
 .confirm-receipt-box__value {
-  font-family: 'Space Mono', monospace;
+  font-variant-numeric:tabular-nums;
   font-size: 22px;
   font-weight: 700;
   color: var(--accent3);

@@ -6,7 +6,7 @@
 <title>Sign in — CapsTrack</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://www.google.com/recaptcha/api.js?render={{ config('services.recaptcha.site_key') }}"></script>
 <style>
   @font-face {
@@ -160,7 +160,7 @@
 
   .eyebrow {
     margin: clamp(32px, 6vh, 64px) 0 0;
-    font-family: 'Space Mono', monospace;
+    font-variant-numeric:tabular-nums;
     font-size: 11.5px;
     letter-spacing: 0.16em;
     text-transform: uppercase;
@@ -231,7 +231,7 @@
     margin-top: 2px;
   }
   .feature-label {
-    font-family: 'Space Mono', monospace;
+    font-variant-numeric:tabular-nums;
     font-size: 13px;
     letter-spacing: 0.03em;
     color: #fff;
@@ -255,7 +255,7 @@
     padding-top: 28px;
     margin-top: 28px;
     border-top: 1px solid var(--line-dark);
-    font-family: 'Space Mono', monospace;
+    font-variant-numeric:tabular-nums;
     font-size: 11px;
     letter-spacing: 0.04em;
     color: rgba(255,255,255,0.35);
@@ -282,7 +282,7 @@
   }
 
   .mini-wordmark {
-    font-family: 'Space Mono', monospace;
+    font-variant-numeric:tabular-nums;
     font-weight: 700;
     font-size: 16px;
     letter-spacing: -0.01em;
@@ -360,7 +360,7 @@
     letter-spacing: 0.04em;
     text-transform: uppercase;
     color: var(--gold-dim);
-    font-family: 'Space Mono', monospace;
+    font-variant-numeric:tabular-nums;
   }
   .note-box ul {
     margin: 0;
@@ -395,7 +395,7 @@
     gap: 14px;
     margin: 12px 0 12px;
     color: #a8a293;
-    font-family: 'Space Mono', monospace;
+    font-variant-numeric:tabular-nums;
     font-size: 10.5px;
     letter-spacing: 0.12em;
     text-transform: uppercase;
