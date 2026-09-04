@@ -93,6 +93,44 @@ class AddCapsaByEmailTest extends TestCase
         $this->assertSame('Delacruz', $expert->last_name);
     }
 
+    /**
+     * An address with nothing to split on gives one name, not the same one
+     * twice.
+     *
+     * "hellscreamgrom9@gmail.com" has no surname in it, and writing the whole
+     * thing into both halves reads as "Hellscreamgrom9 Hellscreamgrom9" on
+     * every screen that shows a name.
+     */
+    public function test_an_email_with_no_surname_in_it_does_not_repeat_the_name(): void
+    {
+        $this->actingAs($this->admin(), 'expert');
+
+        $this->postJson(route('admin.experts.capsa.store'), [
+            'email' => 'hellscreamgrom9@gmail.com',
+            'sections' => ['BSIT-4B'],
+        ])->assertOk();
+
+        $expert = CapstoneExpert::where('email', 'hellscreamgrom9@gmail.com')->first();
+
+        $this->assertSame('Hellscreamgrom9', $expert->first_name);
+        $this->assertSame('', $expert->last_name);
+        $this->assertSame('Hellscreamgrom9', $expert->name);
+    }
+
+    /** A one-word name typed in is treated the same way. */
+    public function test_a_single_word_name_is_not_repeated_either(): void
+    {
+        $this->actingAs($this->admin(), 'expert');
+
+        $this->postJson(route('admin.experts.capsa.store'), [
+            'email' => 'oneword@gmail.com',
+            'name' => 'Madonna',
+            'sections' => ['BSIT-4B'],
+        ])->assertOk();
+
+        $this->assertSame('Madonna', CapstoneExpert::where('email', 'oneword@gmail.com')->first()->name);
+    }
+
     /** Somebody who already has an account is granted the role, not remade. */
     public function test_an_existing_account_is_granted_the_role_rather_than_duplicated(): void
     {

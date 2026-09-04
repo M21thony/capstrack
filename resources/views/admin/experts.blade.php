@@ -469,9 +469,11 @@
         </select>
       </div>
       <span class="experts-count">{{ $experts->count() }} registered experts</span>
-      <button type="button" class="btn" onclick="addCapsa()">Add CaPSA</button>
-      <button type="button" class="btn" onclick="openExpertRosterModal()">Upload List</button>
-      <button type="button" class="btn btn-primary" onclick="openExpertModal()">+ Add Expert</button>
+      {{-- Admin's job here is naming CaPSAs. Getting the rest of the faculty
+           into the system is the CaPSA's, from their own copy of this page,
+           so the list upload and the one-off Add Expert form are not offered
+           twice. --}}
+      <button type="button" class="btn btn-primary" onclick="addCapsa()">Add CaPSA</button>
     </div>
 
     <div class="card" style="padding:0;overflow:hidden">
