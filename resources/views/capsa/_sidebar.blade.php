@@ -206,10 +206,12 @@
         <span class="nav-badge red">{{ $unseenExpertCount > 99 ? '99+' : $unseenExpertCount }}</span>
       @endif
     </a>
-    <a href="{{ route($rolePrefix.'sections') }}" class="nav-item {{ $currentRoute === $rolePrefix.'sections' ? 'active' : '' }}">
+    @if ($admin->is_capsa)
+    <a href="{{ route('capsa.sections') }}" class="nav-item {{ $currentRoute === 'capsa.sections' ? 'active' : '' }}">
       <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
       Student Section List
     </a>
+    @endif
 
     {{-- Everything below is either strictly Admin's job or strictly
          CaPSA's - each labeled section only renders for the role it

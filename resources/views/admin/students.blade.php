@@ -89,7 +89,9 @@
             <th style="padding-left:20px">Name</th>
             <th>Email</th>
             <th>Student No.</th>
-            <th>Course / Section</th>
+            <th>Program</th>
+            <th>Year</th>
+            <th>Section</th>
             <th style="padding-right:20px">Action</th>
           </tr>
         </thead>
@@ -119,7 +121,18 @@
               </td>
               <td>{{ $student->email }}</td>
               <td>{{ $student->student_number ?? '—' }}</td>
-              <td>{{ $student->course ?? '—' }} {{ $student->year_section ?? '' }}</td>
+              @php
+                // Program, year and section are three things read down a
+                // column. They were one string - the full course name and
+                // "4th · B" run together - which reads as neither.
+                $program = $student->course ? \App\Models\Student::mapCourseToProgram($student->course) : null;
+                $ys = array_map('trim', explode('·', (string) $student->year_section));
+                $year = count($ys) === 2 ? $ys[0] : '';
+                $section = count($ys) === 2 ? $ys[1] : ($ys[0] ?? '');
+              @endphp
+              <td title="{{ $student->course }}">{{ $program ?? ($student->course ?: '—') }}</td>
+              <td>{{ $year !== '' ? $year : '—' }}</td>
+              <td>{{ $section !== '' ? $section : '—' }}</td>
               <td style="padding-right:20px">
                 <div class="std-actions">
                   <button type="button" class="btn-pill btn-edit" onclick='openStudentModal({{ Illuminate\Support\Js::from($studentPayload) }})'>
@@ -134,7 +147,7 @@
               </td>
             </tr>
           @empty
-            <tr><td colspan="5" style="padding:24px 20px;text-align:center;color:var(--text3);font-size:13px">No student accounts found.</td></tr>
+            <tr><td colspan="7" style="padding:24px 20px;text-align:center;color:var(--text3);font-size:13px">No student accounts found.</td></tr>
           @endforelse
         </tbody>
       </table>
