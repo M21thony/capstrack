@@ -33,8 +33,16 @@ class AdminExpertsController extends Controller
         $viewer = auth('expert')->user();
         $isCapsaOnly = $viewer && $viewer->is_capsa && ! $viewer->is_admin;
 
+        // Admin's copy of this page is about CaPSAs and nothing else - the
+        // faculty themselves are the CaPSA's to onboard and give roles to,
+        // from their own copy, so listing every expert here only offered the
+        // same job from two places with different powers behind it.
         $experts = CapstoneExpert::where('approved_status', true)
             ->where('is_admin', false)
+            ->when(! $isCapsaOnly, fn ($q) => $q->whereHas(
+                'roles',
+                fn ($r) => $r->where('role_name', CapstoneExpert::CAPSA_ROLE)
+            ))
             ->with('expertise', 'roles')
             ->withCount(['teamAssignments' => function ($q) {
                 $q->where('status', 'approved');

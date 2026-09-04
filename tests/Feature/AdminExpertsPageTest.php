@@ -27,7 +27,14 @@ class AdminExpertsPageTest extends TestCase
         ]);
     }
 
-    public function test_admin_experts_page_renders_expected_roles_and_actions(): void
+    /**
+     * Admin's copy of this page lists CaPSAs and nothing else.
+     *
+     * Onboarding the faculty and giving them their roles is the CaPSA's job,
+     * from their own copy of this page. Listing every expert here offered the
+     * same job from two places with different powers behind it.
+     */
+    public function test_the_admin_page_lists_capsas_and_not_other_experts(): void
     {
         $admin = CapstoneExpert::create([
             'email' => 'admin.experts@test.com',
@@ -37,6 +44,15 @@ class AdminExpertsPageTest extends TestCase
             'approved_status' => true,
         ]);
 
+        $capsa = $this->makeCapsa(CapstoneExpert::create([
+            'email' => 'capsa.listed@test.com',
+            'first_name' => 'Rosa',
+            'last_name' => 'Villanueva',
+            'approved_status' => true,
+        ]));
+
+        // An adviser and consultant who is not a CaPSA - the CaPSA's own copy
+        // of this page is where they are managed.
         $expert = CapstoneExpert::create([
             'email' => 'expert.one@test.com',
             'first_name' => 'Mara',
@@ -44,12 +60,9 @@ class AdminExpertsPageTest extends TestCase
             'approved_status' => true,
         ]);
 
-        $adviserRoleId = DB::table('roles')->where('role_name', 'adviser')->value('role_id');
-        $consultantRoleId = DB::table('roles')->where('role_name', 'consultant')->value('role_id');
-
         DB::table('expert_roles')->insert([
-            ['expert_id' => $expert->expert_id, 'role_id' => $adviserRoleId],
-            ['expert_id' => $expert->expert_id, 'role_id' => $consultantRoleId],
+            ['expert_id' => $expert->expert_id, 'role_id' => DB::table('roles')->where('role_name', 'adviser')->value('role_id')],
+            ['expert_id' => $expert->expert_id, 'role_id' => DB::table('roles')->where('role_name', 'consultant')->value('role_id')],
         ]);
 
         $this->actingAs($admin, 'expert');
@@ -57,26 +70,42 @@ class AdminExpertsPageTest extends TestCase
         $response = $this->get(route('admin.experts'));
 
         $response->assertOk();
+        $response->assertSee('CaPSA Management', false);
         $response->assertSee('Role(s)', false);
         $response->assertSee('Action', false);
 
-        // The listed expert and the roles they hold. 'adviser' renders as
-        // "Capstone Adviser" and capstone_adviser as "Capstone Subject
-        // Adviser", so the two read as distinct things.
-        $response->assertSee('Mara', false);
-        $response->assertSee('Capstone Adviser', false);
-        $response->assertSee('Consultant', false);
+        // The CaPSA is listed; the plain expert is not.
+        $response->assertSee('Rosa', false);
+        $response->assertDontSee('Mara', false);
+        $response->assertSee('1 CaPSA', false);
 
-        // Row actions.
+        // Row actions that still belong to Admin.
         $response->assertSee('Manage Roles', false);
         $response->assertSee('Remove', false);
-
-        // Admin accounts are not experts, so this page never lists them.
-        // Asserting the count rather than the admin's email: the sidebar
-        // shows the signed-in user's email in a title attribute, so it is
-        // legitimately on the page even though it is not in the table.
-        $response->assertSee('1 registered experts', false);
-
         $response->assertDontSee('Transfer Rights', false);
+    }
+
+    /** Naming a CaPSA is the only thing this page starts. */
+    public function test_the_admin_page_offers_only_adding_a_capsa(): void
+    {
+        $admin = CapstoneExpert::create([
+            'email' => 'admin.only@test.com',
+            'first_name' => 'Admin',
+            'last_name' => 'Only',
+            'is_admin' => true,
+            'approved_status' => true,
+        ]);
+
+        $this->actingAs($admin, 'expert');
+
+        $response = $this->get(route('admin.experts'));
+
+        $response->assertOk();
+        $response->assertSee('Add CaPSA', false);
+
+        // Uploading the faculty list and adding one expert by hand are the
+        // CaPSA's, so they are not offered from here as well.
+        $response->assertDontSee('openExpertRosterModal()', false);
+        $response->assertDontSee('+ Add Expert', false);
     }
 }
