@@ -63,7 +63,7 @@ class ExpertLoginTest extends TestCase
         $response->assertJson([
             'success' => true,
             'status' => 'authenticated',
-            'redirect_url' => '/capsa/dashboard',
+            'redirect_url' => '/admin/dashboard',
         ]);
 
         $this->assertTrue(Auth::guard('expert')->check());
@@ -166,7 +166,7 @@ class ExpertLoginTest extends TestCase
 
         $this->actingAs($admin, 'expert');
 
-        $response = $this->get('/capsa/dashboard');
+        $response = $this->get('/admin/dashboard');
         $response->assertOk();
         $response->assertSee('https://lh3.googleusercontent.com/a/admin-photo=s96-c', false);
         $response->assertDontSee('images/avatars/https://', false);

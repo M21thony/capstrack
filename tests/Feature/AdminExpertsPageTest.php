@@ -67,7 +67,7 @@ class AdminExpertsPageTest extends TestCase
 
         $this->actingAs($admin, 'expert');
 
-        $response = $this->get(route('capsa.experts'));
+        $response = $this->get(route('admin.experts'));
 
         $response->assertOk();
         $response->assertSee('CaPSA Management', false);
@@ -98,7 +98,7 @@ class AdminExpertsPageTest extends TestCase
 
         $this->actingAs($admin, 'expert');
 
-        $response = $this->get(route('capsa.experts'));
+        $response = $this->get(route('admin.experts'));
 
         $response->assertOk();
         $response->assertSee('Add CaPSA', false);
@@ -135,7 +135,7 @@ class AdminExpertsPageTest extends TestCase
 
         $this->actingAs($admin, 'expert');
 
-        $response = $this->get(route('capsa.experts'));
+        $response = $this->get(route('admin.experts'));
 
         $response->assertOk();
         $response->assertSee('Team Slot', false);
@@ -172,6 +172,6 @@ class AdminExpertsPageTest extends TestCase
 
         $this->actingAs($admin, 'expert');
 
-        $this->get(route('capsa.experts'))->assertOk()->assertSee('0/3', false);
+        $this->get(route('admin.experts'))->assertOk()->assertSee('0/3', false);
     }
 }

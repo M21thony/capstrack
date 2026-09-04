@@ -58,10 +58,54 @@ use Illuminate\Support\Facades\Route;
 // each sub-group changed, so no existing route('admin.xxx') link anywhere
 // needed touching. See app/Models/CapstoneExpert.php's is_admin/is_capsa/
 // is_staff for what each bucket means.
+// Pages both roles open. They are registered under BOTH prefixes rather
+// than shared from one, so an Admin never sees /capsa in the address of a
+// page that is theirs, and a CaPSA never sees /admin. Same controllers
+// either way - only the address and the guard in front of it differ.
+$pagesBothRolesOpen = function () {
+    // Expert List upload is shared. It only creates approved accounts
+    // with NO roles attached (see Capsa\ExpertRosterController), so it
+    // hands Admin no role-assignment power - it just gets people into
+    // the system. That matters on a fresh install: Admin can populate
+    // the list from the .xlsx without hand-typing anyone's email, then
+    // make one of them CaPSA, who assigns everyone's roles from there.
+    Route::get('/rosters/experts/template', [ExpertRosterController::class, 'template'])->name('rosters.experts.template');
+    Route::post('/rosters/experts/preview', [ExpertRosterController::class, 'preview'])->name('rosters.experts.preview');
+    Route::post('/rosters/experts', [ExpertRosterController::class, 'store'])->name('rosters.experts.store');
+
+    Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
+    Route::get('/profile', [AdminProfileController::class, 'index'])->name('profile');
+    Route::post('/profile', [AdminProfileController::class, 'update'])->name('profile.update');
+    Route::get('/sections', [StudentSectionController::class, 'index'])->name('sections');
+    Route::get('/analytics', [AdminAnalyticsController::class, 'index'])->name('analytics');
+    Route::get('/activitylog', [AdminActivityLogController::class, 'index'])->name('activitylog');
+
+    // Managing the expert ROSTER (viewing, editing, removing accounts)
+    // is shared - both Admin and CAPSA need it day to day. Student
+    // ACCOUNT management stays Admin-only (below) since CAPSA already
+    // has Student Section List for their section-scoped student view -
+    // a second, unscoped "manage every student" page on top of that
+    // would just be a confusing duplicate.
+    Route::get('/experts', [AdminExpertsController::class, 'index'])->name('experts');
+    Route::post('/experts', [AdminExpertsController::class, 'store'])->name('experts.store');
+    Route::put('/experts/{expert}', [AdminExpertsController::class, 'update'])->name('experts.update');
+    Route::put('/experts/{expert}/roles', [AdminExpertsController::class, 'updateRoles'])->name('experts.update-roles');
+    Route::delete('/experts/{expert}', [AdminExpertsController::class, 'destroy'])->name('experts.destroy');
+    Route::post('/notifications/seen', function (Request $request) {
+        $ids = $request->input('ids', []);
+        if (! empty($ids)) {
+            $seen = session('admin_notification_seen_ids', []);
+            $seen = array_unique(array_merge($seen, $ids));
+            session(['admin_notification_seen_ids' => $seen]);
+        }
+
+        return response()->json(['success' => true]);
+    })->name('notifications.seen');
+};
 // Admin's own surface, and nothing else: naming a CaPSA, the student
 // accounts, and the system settings. Everything else an Admin can open is
 // shared with CaPSA and lives under /capsa with it.
-Route::middleware(['expert.auth', 'no.cache', 'track.expert'])->prefix('admin')->name('admin.')->group(function () {
+Route::middleware(['expert.auth', 'no.cache', 'track.expert'])->prefix('admin')->name('admin.')->group(function () use ($pagesBothRolesOpen) {
 
 Route::middleware('expert.admin')->group(function () {
     // Making a CaPSA from an email alone, for someone who has no account
@@ -79,6 +123,8 @@ Route::middleware('expert.admin')->group(function () {
     Route::get('/settings', [AdminSettingsController::class, 'index'])->name('settings');
     Route::post('/settings', [AdminSettingsController::class, 'update'])->name('settings.update');
 });
+
+    Route::middleware('expert.admin')->group($pagesBothRolesOpen);
 });
 
 // The CaPSA's pages answered on /admin until now, so a bookmark, an open tab
@@ -100,7 +146,7 @@ Route::get('/admin/{path}', function (string $path) {
 // (dashboard, profile, the expert list, the sections) live here too: the
 // system is overwhelmingly the CaPSA's to run, so their reading of the URL is
 // the one that should be right.
-Route::middleware(['expert.auth', 'no.cache', 'track.expert'])->prefix('capsa')->name('capsa.')->group(function () {
+Route::middleware(['expert.auth', 'no.cache', 'track.expert'])->prefix('capsa')->name('capsa.')->group(function () use ($pagesBothRolesOpen) {
 Route::middleware('expert.capsa')->group(function () {
     // Approving an account also assigns that expert's role(s) - approve()
     // requires role_ids - so this stays CaPSA-only: assigning expert
@@ -155,46 +201,8 @@ Route::middleware('expert.capsa')->group(function () {
     Route::get('/resources', [ResourcesController::class, 'index'])->name('resources');
 });
 
-Route::middleware('expert.staff')->group(function () {
-    // Expert List upload is shared. It only creates approved accounts
-    // with NO roles attached (see Capsa\ExpertRosterController), so it
-    // hands Admin no role-assignment power - it just gets people into
-    // the system. That matters on a fresh install: Admin can populate
-    // the list from the .xlsx without hand-typing anyone's email, then
-    // make one of them CaPSA, who assigns everyone's roles from there.
-    Route::get('/rosters/experts/template', [ExpertRosterController::class, 'template'])->name('rosters.experts.template');
-    Route::post('/rosters/experts/preview', [ExpertRosterController::class, 'preview'])->name('rosters.experts.preview');
-    Route::post('/rosters/experts', [ExpertRosterController::class, 'store'])->name('rosters.experts.store');
 
-    Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
-    Route::get('/profile', [AdminProfileController::class, 'index'])->name('profile');
-    Route::post('/profile', [AdminProfileController::class, 'update'])->name('profile.update');
-    Route::get('/sections', [StudentSectionController::class, 'index'])->name('sections');
-    Route::get('/analytics', [AdminAnalyticsController::class, 'index'])->name('analytics');
-    Route::get('/activitylog', [AdminActivityLogController::class, 'index'])->name('activitylog');
-
-    // Managing the expert ROSTER (viewing, editing, removing accounts)
-    // is shared - both Admin and CAPSA need it day to day. Student
-    // ACCOUNT management stays Admin-only (below) since CAPSA already
-    // has Student Section List for their section-scoped student view -
-    // a second, unscoped "manage every student" page on top of that
-    // would just be a confusing duplicate.
-    Route::get('/experts', [AdminExpertsController::class, 'index'])->name('experts');
-    Route::post('/experts', [AdminExpertsController::class, 'store'])->name('experts.store');
-    Route::put('/experts/{expert}', [AdminExpertsController::class, 'update'])->name('experts.update');
-    Route::put('/experts/{expert}/roles', [AdminExpertsController::class, 'updateRoles'])->name('experts.update-roles');
-    Route::delete('/experts/{expert}', [AdminExpertsController::class, 'destroy'])->name('experts.destroy');
-    Route::post('/notifications/seen', function (Request $request) {
-        $ids = $request->input('ids', []);
-        if (! empty($ids)) {
-            $seen = session('admin_notification_seen_ids', []);
-            $seen = array_unique(array_merge($seen, $ids));
-            session(['admin_notification_seen_ids' => $seen]);
-        }
-
-        return response()->json(['success' => true]);
-    })->name('notifications.seen');
-});
+    Route::middleware('expert.capsa')->group($pagesBothRolesOpen);
 });
 
 Route::middleware(['expert.auth', 'expert.approved', 'no.cache', 'track.expert'])->prefix('instructor')->name('instructor.')->group(function () {

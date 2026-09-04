@@ -211,7 +211,14 @@ class AuthController extends Controller
 
                     $expert->markFirstLogin();
 
-                    $redirectUrl = $expert->is_staff ? '/capsa/dashboard' : '/instructor/dashboard';
+                    $redirectUrl = match (true) {
+                        // Admin and CaPSA each have their own copy of the
+                        // dashboard, guarded by their own role - sending an
+                        // Admin to the CaPSA one is a 403 at the door.
+                        (bool) $expert->is_admin => '/admin/dashboard',
+                        (bool) $expert->is_capsa => '/capsa/dashboard',
+                        default => '/instructor/dashboard',
+                    };
 
                     return redirect($redirectUrl);
                 }
@@ -364,7 +371,14 @@ class AuthController extends Controller
 
                     $expert->markFirstLogin();
 
-                    $redirectUrl = $expert->is_staff ? '/capsa/dashboard' : '/instructor/dashboard';
+                    $redirectUrl = match (true) {
+                        // Admin and CaPSA each have their own copy of the
+                        // dashboard, guarded by their own role - sending an
+                        // Admin to the CaPSA one is a 403 at the door.
+                        (bool) $expert->is_admin => '/admin/dashboard',
+                        (bool) $expert->is_capsa => '/capsa/dashboard',
+                        default => '/instructor/dashboard',
+                    };
 
                     if ($request->expectsJson()) {
                         return response()->json([
