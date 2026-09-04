@@ -100,7 +100,7 @@ class ExpertController extends Controller
                         'rejection_reason' => null,
                         'reject_attempts' => 0,
                         'reject_cooldown_until' => null,
-                        'max_teams' => $validated['max_teams'] ?? 4,
+                        'max_teams' => $validated['max_teams'] ?? null,
                     ]);
 
                     // Role is deliberately left untouched here - a resubmit
@@ -136,7 +136,7 @@ class ExpertController extends Controller
                     'program' => $validated['course'] ?? null,
                     'approved_status' => false,
                     'rejection_reason' => null,
-                    'max_teams' => $validated['max_teams'] ?? 4,
+                    'max_teams' => $validated['max_teams'] ?? null,
                 ]);
 
                 // Role is deliberately left untouched here too - see the
@@ -172,7 +172,7 @@ class ExpertController extends Controller
                     'credentials' => $validated['credentials'] ?? null,
                     'program' => $validated['course'] ?? null,
                     'approved_status' => false,
-                    'max_teams' => $validated['max_teams'] ?? 4,
+                    'max_teams' => $validated['max_teams'] ?? null,
                     'reject_attempts' => 0,
                     'created_at' => now(),
                 ]);

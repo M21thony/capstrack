@@ -165,7 +165,7 @@ class StudentExpertController extends Controller
             ->where('status', 'approved')
             ->count();
 
-        if ($slotsUsed >= ($expert->max_teams ?? 4)) {
+        if ($slotsUsed >= ($expert->max_teams ?? 0)) {
             return response()->json([
                 'success' => false,
                 'message' => 'This expert has reached their maximum number of teams.',

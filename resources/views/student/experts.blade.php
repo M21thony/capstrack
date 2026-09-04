@@ -578,7 +578,7 @@
               'grammarian' => ['bg' => 'var(--purple-bg)', 'text' => 'var(--purple)'],
             ];
             $_slotsUsed = $expert->slots_used;
-            $_maxSlots = $expert->max_teams ?? 4;
+            $_maxSlots = $expert->max_teams ?? 0;
             $_slotPercent = $_maxSlots > 0 ? min(100, ($_slotsUsed / $_maxSlots) * 100) : 0;
             $_isFull = $_slotsUsed >= $_maxSlots;
             $_barColor = $_isFull ? 'var(--red)' : ($_slotPercent > 66 ? 'var(--amber)' : 'var(--accent)');

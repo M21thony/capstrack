@@ -36,7 +36,7 @@ class AssignmentController extends Controller
             ->get();
 
         $currentSlots = $approvedAssignments->count();
-        $maxSlots = $expert->max_teams ?? 4;
+        $maxSlots = $expert->max_teams ?? 0;
 
         $allAssignments = $pendingAssignments
             ->merge($approvedAssignments)
@@ -129,7 +129,7 @@ class AssignmentController extends Controller
             ->where('status', 'approved')
             ->count();
 
-        if ($slotsUsed >= ($expert->max_teams ?? 4)) {
+        if ($slotsUsed >= ($expert->max_teams ?? 0)) {
             return response()->json([
                 'success' => false,
                 'message' => 'You have reached your maximum number of teams.',

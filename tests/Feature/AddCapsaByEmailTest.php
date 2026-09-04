@@ -131,6 +131,29 @@ class AddCapsaByEmailTest extends TestCase
         $this->assertSame('Madonna', CapstoneExpert::where('email', 'oneword@gmail.com')->first()->name);
     }
 
+    /**
+     * A new account is not credited with a team capacity nobody agreed to.
+     *
+     * The column defaulted to 4 and the model handed back 4 for a null, so
+     * every account ever made looked willing to take four teams - and that
+     * number fed the "slots left" reading and the assignment checks, so it
+     * decided who could still be given work.
+     */
+    public function test_a_new_account_has_no_team_capacity_until_it_is_set(): void
+    {
+        $this->actingAs($this->admin(), 'expert');
+
+        $this->postJson(route('admin.experts.capsa.store'), [
+            'email' => 'nocapacity@cspc.edu.ph',
+            'sections' => ['BSIT-4B'],
+        ])->assertOk();
+
+        $expert = CapstoneExpert::where('email', 'nocapacity@cspc.edu.ph')->first();
+
+        $this->assertNull($expert->max_teams);
+        $this->assertSame([['ALL', 0]], $expert->parsedCapacity());
+    }
+
     /** Somebody who already has an account is granted the role, not remade. */
     public function test_an_existing_account_is_granted_the_role_rather_than_duplicated(): void
     {
