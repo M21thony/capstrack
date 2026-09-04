@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Team Management - CapsTRACK Admin</title>
 <meta name="csrf-token" content="{{ csrf_token() }}"/>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="{{ asset('css/admin.css') }}"/>
 <style>
   .tm-note{font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:16px}
@@ -20,7 +20,7 @@
 
   .tm-bar{width:96px;height:6px;border-radius:999px;background:var(--bg4);overflow:hidden}
   .tm-bar-fill{height:100%;border-radius:999px;background:var(--accent)}
-  .tm-bar-label{font-size:11px;color:var(--text3);font-family:'Space Mono',monospace}
+  .tm-bar-label{font-size:11px;color:var(--text3);font-variant-numeric:tabular-nums;}
 
   .tm-roles{display:flex;gap:4px;flex-wrap:nowrap}
   .tm-role{font-size:9.5px;font-weight:700;padding:2px 7px;border-radius:5px;text-transform:uppercase;letter-spacing:0.3px}
@@ -41,7 +41,7 @@
            padding:9px 12px;border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap}
   .ms-ptab:hover{color:var(--text)}
   .ms-ptab.on{color:var(--accent3);border-bottom-color:var(--accent)}
-  .ms-pc{font-family:'Space Mono',monospace;font-size:9.5px;color:var(--text3);margin-left:5px}
+  .ms-pc{font-variant-numeric:tabular-nums;font-size:9.5px;color:var(--text3);margin-left:5px}
   .ms-ptab.on .ms-pc{color:var(--accent3)}
   .ms-hide{display:none}
 
@@ -88,7 +88,7 @@
   .ms-phaserow th.ms-team{top:0;height:26px}
   .ms-namerow th.ms-team{top:26px}
   .ms-th{font-size:11px;font-weight:600;color:var(--text3);letter-spacing:.3px;text-transform:uppercase}
-  .ms-count{font-family:'Space Mono',monospace;font-size:10.5px;color:var(--text3);white-space:nowrap}
+  .ms-count{font-variant-numeric:tabular-nums;font-size:10.5px;color:var(--text3);white-space:nowrap}
 
   .ms-tname{font-size:13.5px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .ms-tprog{display:flex;align-items:center;gap:6px;margin-top:4px}

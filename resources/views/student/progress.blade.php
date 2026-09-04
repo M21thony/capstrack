@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Progress Tracker - CapsTrack</title>
 <meta name="csrf-token" content="{{ csrf_token() }}">
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
 @vite('resources/student-ui/styles.css')
 <x-dashboard.styles />
 <style>
@@ -28,7 +28,7 @@
 .sp-title{font-size:13px;font-weight:500;color:var(--text)}
 .sp-title-done{color:var(--text3);font-weight:400}
 .sp-meta{font-size:11.5px;color:var(--text3);margin-top:2px;text-transform:capitalize}
-.sp-flag{font-family:'Space Mono',monospace;font-size:8.5px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:1px 6px;border-radius:3px;background:var(--red-bg);color:var(--red);margin-left:7px}
+.sp-flag{font-variant-numeric:tabular-nums;font-size:8.5px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:1px 6px;border-radius:3px;background:var(--red-bg);color:var(--red);margin-left:7px}
 </style>
 @include('partials.skeleton-head', ['skReveal' => 'opacity'])
 </head>
@@ -115,7 +115,7 @@
       <div style="flex:1;min-width:0">
         <span class="card-title">{{ $m->title }}</span>
         @if($m->due_date)
-          <span style="font-family:'Space Mono',monospace;font-size:11px;color:var(--text3);margin-left:8px">due {{ $m->due_date->format('j M Y') }}</span>
+          <span style="font-variant-numeric:tabular-nums;font-size:11px;color:var(--text3);margin-left:8px">due {{ $m->due_date->format('j M Y') }}</span>
         @endif
         <div style="font-size:12px;color:var(--text3);margin-top:3px">
           <strong style="color:var(--text2)">{{ $p->completed }} of {{ $p->total }} complete</strong>

@@ -81,7 +81,7 @@
   }
 
   .title {
-    font-family: 'Space Mono', monospace;
+    font-variant-numeric:tabular-nums;
     font-size: 18px;
     font-weight: 700;
     color: var(--text);

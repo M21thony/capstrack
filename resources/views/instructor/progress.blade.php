@@ -4,7 +4,7 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>CapsTRACK — Expert Portal</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="{{ asset('css/expert.css') }}" />
 @include('partials.skeleton-head', ['skReveal' => 'block'])
 </head>
@@ -63,7 +63,7 @@
             <div class="tp-title">{{ $entry->team->project_title ?? 'No title set' }}</div>
           </div>
           <div style="text-align:right">
-            <div style="font-family:'Space Mono',monospace;font-size:16px;font-weight:700;color:{{ $entry->progress >= 70 ? 'var(--green)' : ($entry->progress >= 40 ? 'var(--accent3)' : 'var(--red)') }}">{{ $entry->progress }}%</div>
+            <div style="font-variant-numeric:tabular-nums;font-size:16px;font-weight:700;color:{{ $entry->progress >= 70 ? 'var(--green)' : ($entry->progress >= 40 ? 'var(--accent3)' : 'var(--red)') }}">{{ $entry->progress }}%</div>
             <div style="font-size:10px;color:var(--text3)">overall</div>
           </div>
         </div>

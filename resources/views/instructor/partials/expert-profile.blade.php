@@ -170,7 +170,7 @@
           <div class="ep-label">Assigned Roles</div>
           <div class="ep-tags-wrap">
             @foreach($expert?->roles ?? [] as $role)
-              <span class="role-pill role-{{ $role->role_name }}">{{ ucfirst($role->role_name) }}</span>
+              <span class="role-pill role-{{ $role->role_name }}">{{ $role->label }}</span>
             @endforeach
           </div>
         <div style="font-size:11px;color:var(--text3);margin-top:8px;display:flex;align-items:center;gap:4px">

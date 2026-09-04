@@ -21,7 +21,7 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Admin Profile - CapsTRACK Admin</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="{{ asset('css/admin.css') }}"/>
 <meta name="csrf-token" content="{{ csrf_token() }}"/>
 
@@ -52,7 +52,7 @@
   }
 
   .profile-page .pf-eyebrow {
-    font-family: 'Space Mono', monospace;
+    font-variant-numeric:tabular-nums;
     font-size: 11px;
     font-weight: 700;
     letter-spacing: 0.14em;
@@ -262,7 +262,7 @@
 
   /* Sections list */
   .profile-page .pf-section-count {
-    font-family: 'Space Mono', monospace;
+    font-variant-numeric:tabular-nums;
     font-size: 11.5px;
     font-weight: 700;
     color: var(--pf-accent);

@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Pre-Proposal Submission - CapsTrack</title>
 <meta name="csrf-token" content="{{ csrf_token() }}">
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
 @vite('resources/student-ui/styles.css')
 <style>
 @keyframes spin { to { transform: rotate(360deg); } }
@@ -144,7 +144,7 @@
 .match-item-row { display: flex; justify-content: space-between; align-items: flex-start; }
 .match-score-pill {
   display: inline-flex; align-items: center;
-  font-family: 'Space Mono', monospace; font-size: 12px; font-weight: 700;
+  font-variant-numeric:tabular-nums; font-size: 12px; font-weight: 700;
   padding: 3px 10px; border-radius: 100px; flex-shrink: 0;
 }
 
@@ -323,7 +323,7 @@
          renderResult() already updates - only the layout moved. -->
     <div class="card" style="display:flex;align-items:center;gap:18px;margin-bottom:16px;padding:18px 22px">
       <div class="score-ring-sm" id="score-ring" style="width:84px;height:84px;flex-shrink:0">
-        <div style="font-family:'Space Mono',monospace;font-size:19px;font-weight:700;color:var(--text)" id="sim-pct">--</div>
+        <div style="font-variant-numeric:tabular-nums;font-size:19px;font-weight:700;color:var(--text)" id="sim-pct">--</div>
       </div>
       <div style="flex:1;min-width:0">
         <span class="badge badge-green" id="result-badge" style="display:inline-block">No Check Yet</span>
@@ -463,7 +463,7 @@
                   @endphp
                   <div id="report-data-{{ $proposal->id }}" style="display:none">
                     <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:8px;background:var(--{{ $verdictTone }}-bg);margin-bottom:16px">
-                      <span style="font-family:'Space Mono',monospace;font-size:22px;font-weight:700;color:var(--{{ $verdictTone }})">{{ $check->top_score }}%</span>
+                      <span style="font-variant-numeric:tabular-nums;font-size:22px;font-weight:700;color:var(--{{ $verdictTone }})">{{ $check->top_score }}%</span>
                       <div>
                         <span class="badge badge-{{ $verdictTone }}">{{ $check->verdict }}</span>
                         <div style="font-size:11px;color:var(--text3);margin-top:3px">Highest similarity found across archived capstones</div>
@@ -1175,7 +1175,7 @@ function openFreshReportModal() {
   document.getElementById('report-modal-title').textContent = data.concepts.title || 'Duplication Report';
   document.getElementById('report-modal-body').innerHTML = `
     <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:8px;background:var(--${tone}-bg);margin-bottom:16px">
-      <span style="font-family:'Space Mono',monospace;font-size:22px;font-weight:700;color:var(--${tone})">${data.top_score}%</span>
+      <span style="font-variant-numeric:tabular-nums;font-size:22px;font-weight:700;color:var(--${tone})">${data.top_score}%</span>
       <div>
         <span class="badge badge-${tone}">${escapeHtml(data.verdict)}</span>
         <div style="font-size:11px;color:var(--text3);margin-top:3px">Highest similarity found across archived capstones</div>

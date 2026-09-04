@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <meta name="csrf-token" content="{{ csrf_token() }}">
 <title>CapsTRACK – Expert Portal</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="{{ asset('css/schedule.css') }}" />
 @include('partials.skeleton-head', ['skReveal' => 'block'])
 </head>
@@ -1520,7 +1520,7 @@ function renderSlotStats() {
     div.innerHTML = `
       <div style="display:flex;justify-content:space-between;align-items:center">
         <span style="font-size:12px;color:var(--text2);font-weight:500">${TYPE_LABELS[type]}</span>
-        <span style="font-family:'Space Mono',monospace;font-size:11px;font-weight:700;color:var(--text)">${count}</span>
+        <span style="font-variant-numeric:tabular-nums;font-size:11px;font-weight:700;color:var(--text)">${count}</span>
       </div>
       <div style="height:5px;background:var(--bg4);border-radius:3px;overflow:hidden">
         <div style="height:100%;width:${pct}%;background:${colors[type]};border-radius:3px;transition:width 0.4s"></div>
