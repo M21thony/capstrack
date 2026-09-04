@@ -12,7 +12,11 @@
      etc.), so this scoped block renders identically in both places. */
   .ep-overlay{position:fixed;inset:0;background:transparent;z-index:200;display:none;pointer-events:none}
   .ep-overlay.open{display:block}
-  .ep-modal{position:fixed;top:0;left:250px;width:300px;height:100vh;background:#fff;box-shadow:4px 0 24px rgba(0,0,0,0.18);overflow-y:auto;pointer-events:all;transform:translateX(-10px);opacity:0;transition:transform 0.18s ease,opacity 0.18s ease;z-index:201;border-right:1px solid var(--border)}
+  /* Scrolls without a bar. The panel is 300px wide and the bar took a slice
+     of that off every row of chips, on a surface that is already obviously
+     scrollable from its content running past the bottom. */
+  .ep-modal{position:fixed;top:0;left:250px;width:300px;height:100vh;background:#fff;box-shadow:4px 0 24px rgba(0,0,0,0.18);overflow-y:auto;pointer-events:all;transform:translateX(-10px);opacity:0;transition:transform 0.18s ease,opacity 0.18s ease;z-index:201;border-right:1px solid var(--border);scrollbar-width:none;-ms-overflow-style:none}
+  .ep-modal::-webkit-scrollbar{display:none}
   .ep-overlay.open .ep-modal{transform:translateX(0);opacity:1}
   .ep-header{background:var(--navy-dark);padding:22px 18px 18px;border-bottom:2px solid var(--accent);display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:1}
   .ep-avatar{width:44px;height:44px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:#18191f;flex-shrink:0;border:2px solid rgba(201,168,44,0.4)}
