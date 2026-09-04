@@ -376,6 +376,13 @@ class AdminExpertsController extends Controller
      * Delacruz" than as the raw address, and they can correct it from their
      * own profile once they sign in.
      *
+     * One word stays one word. Copying it into the surname as well - which is
+     * what the rest of this codebase does with a single-word name - turns
+     * "hellscreamgrom9@..." into "Hellscreamgrom9 Hellscreamgrom9" on every
+     * screen that shows a name. A missing surname is missing; it is not the
+     * first name again. The accessor drops the empty half, so the name reads
+     * as the one word it is.
+     *
      * @return array{0: string, 1: string}
      */
     private function capsaName(?string $typed, string $email): array
@@ -389,7 +396,7 @@ class AdminExpertsController extends Controller
 
         $parts = preg_split('/\s+/', $name, 2);
 
-        return [$parts[0], $parts[1] ?? $parts[0]];
+        return [$parts[0], $parts[1] ?? ''];
     }
 
     public function toggleCapsa(Request $request, CapstoneExpert $expert): JsonResponse

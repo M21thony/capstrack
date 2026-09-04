@@ -38,7 +38,10 @@ class ExpertListUploadTest extends TestCase
             'email' => 'capsa.experts@test.com',
             'first_name' => 'Cap',
             'last_name' => 'Sa',
-            'is_admin' => true,
+            // Not an Admin: the expert list is the CaPSA's to upload, and it
+            // is their copy of Expert Management that offers it. An Admin
+            // here would render the other view entirely.
+            'is_admin' => false,
             'approved_status' => true,
         ]));
     }
