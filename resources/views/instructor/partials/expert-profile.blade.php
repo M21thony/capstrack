@@ -23,15 +23,17 @@
      at the bottom of a scroll. */
   /* Sticky, so the way out and the name of the panel stay put through a
      scroll that is most of this panel's height. */
+  /* The dark bar with the gold rule under it, the way the sidebar beside it
+     is dressed - it just no longer carries a name and a face. */
   .ep-header{position:sticky;top:0;z-index:3;display:flex;align-items:center;gap:10px;
-             padding:13px 16px;background:var(--bg2);border-bottom:1px solid var(--border)}
-  .ep-header-title{flex:1;min-width:0;font-size:13px;font-weight:700;color:var(--text);
+             padding:13px 16px;background:var(--navy-dark);border-bottom:2px solid var(--accent)}
+  .ep-header-title{flex:1;min-width:0;font-size:13px;font-weight:700;color:var(--navy-text);
                    letter-spacing:-0.1px}
   .ep-close{width:26px;height:26px;flex-shrink:0;
             background:transparent;border:none;border-radius:7px;cursor:pointer;
-            color:var(--text3);padding:0;display:flex;align-items:center;justify-content:center;
+            color:var(--navy-text2);padding:0;display:flex;align-items:center;justify-content:center;
             transition:color 0.13s,background 0.13s}
-  .ep-close:hover{color:var(--text);background:var(--bg4)}
+  .ep-close:hover{color:var(--navy-text);background:rgba(255,255,255,0.08)}
   .ep-close svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2.5}
   .ep-body{padding:18px}
   .ep-field{margin-bottom:15px}
