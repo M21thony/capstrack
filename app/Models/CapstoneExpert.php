@@ -115,10 +115,17 @@ class CapstoneExpert extends Authenticatable
         return implode(', ', array_map('ucfirst', $roles));
     }
 
-    public function getMaxTeamsAttribute($value): int
-    {
-        return $value ?? 4;
-    }
+    /**
+      * How many teams this expert takes, or null if they have never said.
+      *
+      * This used to hand back 4 for a null, which meant every account ever
+      * made was credited with four teams' worth of slots nobody had agreed
+      * to - and that number decided who could still be assigned.
+      */
+     public function getMaxTeamsAttribute($value): ?int
+     {
+         return $value === null ? null : (int) $value;
+     }
 
     // Removed getExpertiseAttribute accessor to allow direct relationship access
 
@@ -280,7 +287,10 @@ class CapstoneExpert extends Authenticatable
             return array_map(fn ($m) => [strtoupper($m[2]), (int) $m[1]], $matches);
         }
 
-        return [['ALL', $this->max_teams ?? 4]];
+        // No capacity set is no slots, not four of them. An expert says
+        // how many teams they take from their own profile; until they do,
+        // there is no number here to assign against.
+        return [['ALL', $this->max_teams ?? 0]];
     }
 
     /**

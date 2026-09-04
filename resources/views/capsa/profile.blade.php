@@ -574,7 +574,7 @@
                   </div>
                   <div class="pf-field">
                     <label class="label">Max Teams</label>
-                    <div class="pf-field-static" style="background:var(--pf-surface);color:var(--pf-text2);padding:10px 12px;border:1.5px solid var(--pf-border);border-radius:10px;font-size:14px">{{ $admin->max_teams ?? '4' }}</div>
+                    <div class="pf-field-static" style="background:var(--pf-surface);color:var(--pf-text2);padding:10px 12px;border:1.5px solid var(--pf-border);border-radius:10px;font-size:14px">{{ $admin->max_teams ?? 'Not set' }}</div>
                   </div>
                 </div>
               </div>

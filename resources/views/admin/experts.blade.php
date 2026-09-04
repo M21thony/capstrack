@@ -497,7 +497,7 @@
               $expertiseShown = $expertiseList->take(2)->join(', ');
               $expertiseExtra = $expertiseList->count() - 2;
 
-              $maxTeams = $expert->max_teams ?? 4;
+              $maxTeams = $expert->max_teams ?? 0;
               $teamCount = $expert->team_assignments_count ?? 0;
               $slotsLeft = max(0, $maxTeams - $teamCount);
               $isFull = $teamCount >= $maxTeams;
