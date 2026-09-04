@@ -114,7 +114,7 @@ class CapsaSectionsUpdateTest extends TestCase
         $this->actingAs($this->admin(), 'expert');
         $capsa = $this->capsa(['BSIT-3A']);
 
-        $html = $this->get(route('capsa.experts'))->assertOk()->getContent();
+        $html = $this->get(route('admin.experts'))->assertOk()->getContent();
 
         $this->assertStringContainsString('Manage Sections', $html);
         $this->assertStringContainsString('editCapsaSections('.$capsa->expert_id, $html);
