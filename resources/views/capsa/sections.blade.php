@@ -256,7 +256,7 @@
               <tr>
                 <td colspan="8" style="text-align:center;padding:40px 0;color:var(--text3);font-size:13px">
                   @if (empty($adminSections))
-                    No sections assigned yet. <a href="{{ route('admin.profile') }}" style="color:var(--accent)">Set your sections</a> to view students.
+                    No sections assigned yet. <a href="{{ route('capsa.profile') }}" style="color:var(--accent)">Set your sections</a> to view students.
                   @else
                     No students found for the assigned sections.
                   @endif
@@ -314,7 +314,7 @@ function closeSidebar() {
       <div class="ct-up-hint">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
         <span>Need the correct format?</span>
-        <a class="ct-template-link" href="{{ route('admin.rosters.students.template') }}">
+        <a class="ct-template-link" href="{{ route('capsa.rosters.students.template') }}">
           Download template
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         </a>
@@ -509,7 +509,7 @@ function previewStudentRoster() {
   const formData = new FormData();
   formData.append('file', fileInput.files[0]);
 
-  fetch('{{ route('admin.rosters.students.preview') }}', {
+  fetch('{{ route('capsa.rosters.students.preview') }}', {
     method: 'POST',
     headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' },
     body: formData,
@@ -606,7 +606,7 @@ function uploadStudentRoster(btn) {
   const formData = new FormData();
   formData.append('file', fileInput.files[0]);
 
-  fetch('{{ route('admin.rosters.students.store') }}', {
+  fetch('{{ route('capsa.rosters.students.store') }}', {
     method: 'POST',
     headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' },
     body: formData,

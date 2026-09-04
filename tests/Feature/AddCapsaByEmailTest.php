@@ -259,7 +259,7 @@ class AddCapsaByEmailTest extends TestCase
     {
         $this->actingAs($this->admin(), 'expert');
 
-        $response = $this->get(route('admin.experts'));
+        $response = $this->get(route('capsa.experts'));
 
         $response->assertOk();
         $response->assertSee('Add CaPSA', false);

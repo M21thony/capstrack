@@ -116,7 +116,7 @@ class CapsaTeamManagementTest extends TestCase
         ]);
         StudentSchoolYear::create(['student_id' => $other->student_id, 'team_id' => $theirs->team_id]);
 
-        $response = $this->get(route('admin.team_management'));
+        $response = $this->get(route('capsa.team_management'));
 
         $response->assertOk();
         $response->assertSee($mine->team_name);
@@ -131,7 +131,7 @@ class CapsaTeamManagementTest extends TestCase
         $this->makeCapsaWithSections();
         [$stalled] = $this->makeTeamInSection('Team Stalled', ['team_status' => 'Active']);
 
-        $response = $this->get(route('admin.team_management'));
+        $response = $this->get(route('capsa.team_management'));
 
         $response->assertOk();
         $response->assertSee($stalled->team_name);
@@ -165,7 +165,7 @@ class CapsaTeamManagementTest extends TestCase
             ]);
         }
 
-        $response = $this->get(route('admin.team_management'));
+        $response = $this->get(route('capsa.team_management'));
 
         $response->assertOk();
         $response->assertSee('2/4');
@@ -198,7 +198,7 @@ class CapsaTeamManagementTest extends TestCase
             'status' => 'approved',
         ]);
 
-        $response = $this->get(route('admin.team_management'));
+        $response = $this->get(route('capsa.team_management'));
 
         $response->assertOk();
         // The filled role carries the expert's name as its tooltip; the two
@@ -218,7 +218,7 @@ class CapsaTeamManagementTest extends TestCase
         $this->addProposal($team, $sy, 1, approved: true);
         $this->addProposal($team, $sy, 2, approved: true);
 
-        $response = $this->get(route('admin.team_management', ['tab' => 'verification']));
+        $response = $this->get(route('capsa.team_management', ['tab' => 'verification']));
 
         $response->assertOk();
         $response->assertSee('Team choosing');
@@ -234,7 +234,7 @@ class CapsaTeamManagementTest extends TestCase
         $this->addProposal($team, $sy, 2);
         $this->addProposal($team, $sy, 3, approved: true);
 
-        $response = $this->get(route('admin.team_management', ['tab' => 'pre_proposals']));
+        $response = $this->get(route('capsa.team_management', ['tab' => 'pre_proposals']));
 
         $response->assertOk();
         $response->assertSee('2 to review');
@@ -253,7 +253,7 @@ class CapsaTeamManagementTest extends TestCase
         $formatCheck = $this->makeDocumentReview($capsa, $leader, 'Chapter 1 Format.pdf', 'subject_adviser');
         $adviserWork = $this->makeDocumentReview($capsa, $leader, 'Chapter 2 Content.pdf', 'adviser');
 
-        $response = $this->get(route('admin.team_management', ['tab' => 'papers']));
+        $response = $this->get(route('capsa.team_management', ['tab' => 'papers']));
 
         $response->assertOk();
         $response->assertSee('Chapter 1 Format.pdf');
@@ -288,7 +288,7 @@ class CapsaTeamManagementTest extends TestCase
         $this->makeCapsaWithSections([]);
         $this->makeTeamInSection('Team Somewhere');
 
-        $response = $this->get(route('admin.team_management'));
+        $response = $this->get(route('capsa.team_management'));
 
         $response->assertOk();
         $response->assertSee('You have no sections assigned yet');
@@ -298,8 +298,8 @@ class CapsaTeamManagementTest extends TestCase
     {
         $this->makeCapsaWithSections();
 
-        $this->get(route('admin.verify_teams'))
-            ->assertRedirect(route('admin.team_management', ['tab' => 'verification']));
+        $this->get(route('capsa.verify_teams'))
+            ->assertRedirect(route('capsa.team_management', ['tab' => 'verification']));
     }
 
     // The CaPSA decides whether a title is too close to something already
@@ -348,7 +348,7 @@ class CapsaTeamManagementTest extends TestCase
             'submitted_at' => now(),
         ]);
 
-        $response = $this->get(route('admin.team_management', ['tab' => 'pre_proposals']));
+        $response = $this->get(route('capsa.team_management', ['tab' => 'pre_proposals']));
 
         $response->assertOk();
 

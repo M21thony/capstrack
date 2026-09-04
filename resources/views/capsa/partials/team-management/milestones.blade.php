@@ -289,7 +289,7 @@ function closeDueModal() { document.getElementById('ms-due-modal').classList.rem
 
 function saveDue(e, clear = false) {
   e.preventDefault();
-  msPost('{{ route('admin.milestones.deliverable_due') }}', {
+  msPost('{{ route('capsa.milestones.deliverable_due') }}', {
     section: MS_SECTION,
     key: MS_DUE_KEY,
     due_date: clear ? null : (document.getElementById('ms-due-date').value || null),
@@ -341,7 +341,7 @@ function createMilestone(e) {
     return;
   }
 
-  msPost('{{ route('admin.milestones.store') }}', {
+  msPost('{{ route('capsa.milestones.store') }}', {
     section,
     template: form.get('template') || null,
     title: form.get('title') || null,
@@ -350,7 +350,7 @@ function createMilestone(e) {
 }
 
 function toggleItem(itemId, done) {
-  msPost('/admin/milestone-items/' + itemId + '/toggle', { done })
+  msPost('/capsa/milestone-items/' + itemId + '/toggle', { done })
     .then(msReload).catch((err) => alert(err.message));
 }
 

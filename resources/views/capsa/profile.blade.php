@@ -490,7 +490,7 @@
 
       @endphp
 
-      <form method="POST" action="{{ route('admin.profile.update') }}" enctype="multipart/form-data">
+      <form method="POST" action="{{ route('capsa.profile.update') }}" enctype="multipart/form-data">
         @csrf
 
         {{-- Identity strip: avatar + name/email --}}

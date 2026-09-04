@@ -340,7 +340,7 @@ class AdminGradingRubricTest extends TestCase
     public function test_web_route_returns_view(): void
     {
         $response = $this->actingAs($this->admin, 'expert')
-            ->get(route('admin.rubric_management'));
+            ->get(route('capsa.rubric_management'));
 
         $response->assertStatus(200);
         // The route name is still admin.rubric_management; the view moved to

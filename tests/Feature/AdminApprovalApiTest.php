@@ -59,8 +59,8 @@ class AdminApprovalApiTest extends TestCase
         // Role is no longer picked at request time - CAPSA assigns it here,
         // as part of approving the request.
         $response = $this->actingAs($admin, 'expert')
-            ->from(route('admin.approval'))
-            ->postJson(route('admin.approval.approve', ['expert_id' => $expert->expert_id]), [
+            ->from(route('capsa.approval'))
+            ->postJson(route('capsa.approval.approve', ['expert_id' => $expert->expert_id]), [
                 'role_ids' => [$adviserRoleId, $consultantRoleId],
             ]);
 
@@ -107,7 +107,7 @@ class AdminApprovalApiTest extends TestCase
         // simple 422 in tests. What actually matters either way: it must
         // not succeed, and the expert must stay unapproved.
         $response = $this->actingAs($admin, 'expert')
-            ->postJson(route('admin.approval.approve', ['expert_id' => $expert->expert_id]));
+            ->postJson(route('capsa.approval.approve', ['expert_id' => $expert->expert_id]));
 
         $this->assertNotEquals(200, $response->getStatusCode());
 
@@ -139,8 +139,8 @@ class AdminApprovalApiTest extends TestCase
         ]);
 
         $response = $this->actingAs($admin, 'expert')
-            ->from(route('admin.approval'))
-            ->postJson(route('admin.approval.reject', ['expert_id' => $expert->expert_id]), [
+            ->from(route('capsa.approval'))
+            ->postJson(route('capsa.approval.reject', ['expert_id' => $expert->expert_id]), [
                 'reason' => 'Insufficient credentials.',
             ]);
 
@@ -178,7 +178,7 @@ class AdminApprovalApiTest extends TestCase
         ]);
 
         $response = $this->actingAs($admin, 'expert')
-            ->postJson(route('admin.approval.reject', ['expert_id' => $expert->expert_id]));
+            ->postJson(route('capsa.approval.reject', ['expert_id' => $expert->expert_id]));
 
         $this->assertNotEquals(200, $response->getStatusCode());
 
@@ -200,8 +200,8 @@ class AdminApprovalApiTest extends TestCase
         ]));
 
         $response = $this->actingAs($admin, 'expert')
-            ->from(route('admin.approval'))
-            ->postJson(route('admin.approval.approve', ['expert_id' => 99999]));
+            ->from(route('capsa.approval'))
+            ->postJson(route('capsa.approval.approve', ['expert_id' => 99999]));
 
         $response->assertStatus(404)
             ->assertJson([
@@ -222,8 +222,8 @@ class AdminApprovalApiTest extends TestCase
         ]));
 
         $response = $this->actingAs($admin, 'expert')
-            ->from(route('admin.approval'))
-            ->postJson(route('admin.approval.reject', ['expert_id' => 99999]), [
+            ->from(route('capsa.approval'))
+            ->postJson(route('capsa.approval.reject', ['expert_id' => 99999]), [
                 'reason' => 'Some reason.',
             ]);
 

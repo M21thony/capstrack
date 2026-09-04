@@ -57,9 +57,9 @@ class PreProposalPayload
                     'highlight_words' => app(\App\Services\SimilarityService::class)
                         ->extractHighlightWords($p->duplicationCheck->concepts ?? []),
                 ] : null,
-                'document_url' => $p->duplicationCheck ? route('admin.verify_teams.pre_proposals.document', $p->id) : null,
-                'approve_url' => route('admin.verify_teams.pre_proposals.approve', $p->id),
-                'reject_url' => route('admin.verify_teams.pre_proposals.reject', $p->id),
+                'document_url' => $p->duplicationCheck ? route('capsa.verify_teams.pre_proposals.document', $p->id) : null,
+                'approve_url' => route('capsa.verify_teams.pre_proposals.approve', $p->id),
+                'reject_url' => route('capsa.verify_teams.pre_proposals.reject', $p->id),
             ])->values()->all();
     }
 }

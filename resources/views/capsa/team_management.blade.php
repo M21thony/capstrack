@@ -188,7 +188,7 @@
 
     <div class="tab-bar tab-bar-wide" style="margin-bottom:18px">
       @foreach ($tabs as $key => $label)
-        <a href="{{ route('admin.team_management', $qs($key)) }}" class="tab-btn {{ $tab === $key ? 'active' : '' }}">
+        <a href="{{ route('capsa.team_management', $qs($key)) }}" class="tab-btn {{ $tab === $key ? 'active' : '' }}">
           {{ $label }}
           @if (($counts[$key] ?? 0) > 0 && $key !== 'teams')
             <span class="tab-count">{{ $counts[$key] }}</span>
@@ -197,7 +197,7 @@
       @endforeach
     </div>
 
-    <form method="get" action="{{ route('admin.team_management') }}" style="display:flex;align-items:center;gap:8px;padding-bottom:16px">
+    <form method="get" action="{{ route('capsa.team_management') }}" style="display:flex;align-items:center;gap:8px;padding-bottom:16px">
       <input type="hidden" name="tab" value="{{ $tab }}"/>
       <label style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.4px">Section</label>
       <select name="section" onchange="this.form.submit()" style="padding:7px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:12px;font-family:inherit">
@@ -207,7 +207,7 @@
         @endforeach
       </select>
       @if ($selectedSection)
-        <a href="{{ route('admin.team_management', ['tab' => $tab]) }}" style="font-size:12px;color:var(--text3);text-decoration:none">Clear</a>
+        <a href="{{ route('capsa.team_management', ['tab' => $tab]) }}" style="font-size:12px;color:var(--text3);text-decoration:none">Clear</a>
       @endif
     </form>
 

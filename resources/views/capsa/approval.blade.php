@@ -566,7 +566,7 @@ function executeAction(id, type, reasonOverride, roleIds){
   const cardEl = document.querySelector(`.expert-card[data-id="${id}"]`);
   if(cardEl) cardEl.style.pointerEvents = 'none';
 
-  fetch(`/admin/approval/${id}/${type}`, {
+  fetch(`/capsa/approval/${id}/${type}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

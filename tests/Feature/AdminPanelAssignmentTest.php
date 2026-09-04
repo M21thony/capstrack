@@ -121,7 +121,7 @@ class AdminPanelAssignmentTest extends TestCase
         ]);
 
         $response = $this->actingAs($this->admin, 'expert')
-            ->get(route('admin.panel_assignment'));
+            ->get(route('capsa.panel_assignment'));
 
         $response->assertStatus(200)
             ->assertSee('Ada Lovelace')
@@ -134,7 +134,7 @@ class AdminPanelAssignmentTest extends TestCase
         $this->makeTeam();
 
         $response = $this->actingAs($this->admin, 'expert')
-            ->get(route('admin.panel_assignment'));
+            ->get(route('capsa.panel_assignment'));
 
         $response->assertStatus(200)->assertSee('Assign');
     }
@@ -1072,7 +1072,7 @@ class AdminPanelAssignmentTest extends TestCase
         $schedule = $this->scheduleWithPanel($team, 'Title Defense', $chair, '2027-03-10', 'Mac Lab');
 
         $response = $this->actingAs($this->admin, 'expert')
-            ->get(route('admin.panel_assignment'));
+            ->get(route('capsa.panel_assignment'));
 
         $response->assertOk();
         $response->assertSee("openScheduleModal({$team->team_id}, {$schedule->defense_id}, '2027-03-10', '08:00', 'Mac Lab')", false);
@@ -1083,7 +1083,7 @@ class AdminPanelAssignmentTest extends TestCase
         $team = $this->makeTeam();
 
         $response = $this->actingAs($this->admin, 'expert')
-            ->get(route('admin.panel_assignment'));
+            ->get(route('capsa.panel_assignment'));
 
         $response->assertOk();
         // "cell-schedule-edit" and "openScheduleModal(" alone both always
@@ -1154,7 +1154,7 @@ class AdminPanelAssignmentTest extends TestCase
         $this->makeTeam(['team_name' => 'Unpaid Squad'], paid: false);
 
         $response = $this->actingAs($this->admin, 'expert')
-            ->get(route('admin.panel_assignment', ['defense_type' => 'Title Defense']));
+            ->get(route('capsa.panel_assignment', ['defense_type' => 'Title Defense']));
 
         $response->assertOk();
         $content = $response->getContent();
@@ -1178,7 +1178,7 @@ class AdminPanelAssignmentTest extends TestCase
         $this->makeTeam(['team_name' => 'Any Team'], paid: false);
 
         $response = $this->actingAs($this->admin, 'expert')
-            ->get(route('admin.panel_assignment', ['defense_type' => 'Pre-proposal Defense']));
+            ->get(route('capsa.panel_assignment', ['defense_type' => 'Pre-proposal Defense']));
 
         $response->assertOk();
         $response->assertSee('Any Team');
@@ -1193,7 +1193,7 @@ class AdminPanelAssignmentTest extends TestCase
     public function test_an_invalid_defense_type_falls_back_to_the_default(): void
     {
         $response = $this->actingAs($this->admin, 'expert')
-            ->get(route('admin.panel_assignment', ['defense_type' => 'Not A Real Stage']));
+            ->get(route('capsa.panel_assignment', ['defense_type' => 'Not A Real Stage']));
 
         $response->assertOk();
         $response->assertSee('No teams have paid for Title Defense yet.');
@@ -1223,11 +1223,11 @@ class AdminPanelAssignmentTest extends TestCase
         $this->assignPanel($team, 'Title Defense', $titleChair);
 
         $preProposalView = $this->actingAs($this->admin, 'expert')
-            ->get(route('admin.panel_assignment', ['defense_type' => 'Pre-proposal Defense']));
+            ->get(route('capsa.panel_assignment', ['defense_type' => 'Pre-proposal Defense']));
         $preProposalView->assertOk()->assertSee($preProposalChair->name);
 
         $titleView = $this->actingAs($this->admin, 'expert')
-            ->get(route('admin.panel_assignment', ['defense_type' => 'Title Defense']));
+            ->get(route('capsa.panel_assignment', ['defense_type' => 'Title Defense']));
         $titleView->assertOk()->assertSee($titleChair->name)->assertDontSee($preProposalChair->name);
     }
 

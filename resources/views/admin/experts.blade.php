@@ -941,7 +941,7 @@ function saveRoles() {
   saveBtn.disabled = true;
   saveBtn.textContent = 'Saving...';
 
-  fetch(`{{ route('admin.experts.update-roles', ['expert' => 'EXPERT_ID']) }}`.replace('EXPERT_ID', rolesTargetExpertId), {
+  fetch(`{{ route('capsa.experts.update-roles', ['expert' => 'EXPERT_ID']) }}`.replace('EXPERT_ID', rolesTargetExpertId), {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' },
     body: JSON.stringify({ role_ids: checked.map(id => ROLE_NAME_TO_ID[id]).filter(Boolean) }),
@@ -1037,7 +1037,7 @@ removeBtn.addEventListener('click', function () {
   this.disabled = true;
   this.textContent = 'Deleting…';
 
-  fetch(`{{ route('admin.experts.destroy', ['expert' => 'EXPERT_ID']) }}`.replace('EXPERT_ID', expertId), {
+  fetch(`{{ route('capsa.experts.destroy', ['expert' => 'EXPERT_ID']) }}`.replace('EXPERT_ID', expertId), {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

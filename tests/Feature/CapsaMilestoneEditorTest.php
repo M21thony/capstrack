@@ -77,7 +77,7 @@ class CapsaMilestoneEditorTest extends TestCase
         $this->makeCapsaWithSections();
         [$team] = $this->makeTeamInSection('Team One');
 
-        $response = $this->postJson(route('admin.milestones.store'), [
+        $response = $this->postJson(route('capsa.milestones.store'), [
             'section' => $this->section(),
             'template' => MilestoneTemplate::CAPSTONE_1,
             'due_date' => now()->addMonth()->toDateString(),
@@ -100,7 +100,7 @@ class CapsaMilestoneEditorTest extends TestCase
         [$a] = $this->makeTeamInSection('Team A');
         [$b] = $this->makeTeamInSection('Team B');
 
-        $this->postJson(route('admin.milestones.store'), [
+        $this->postJson(route('capsa.milestones.store'), [
             'section' => $this->section(),
             'template' => MilestoneTemplate::CAPSTONE_1,
         ])->assertOk();
@@ -121,8 +121,8 @@ class CapsaMilestoneEditorTest extends TestCase
             'template' => MilestoneTemplate::CAPSTONE_1,
         ];
 
-        $this->postJson(route('admin.milestones.store'), $payload)->assertOk();
-        $this->postJson(route('admin.milestones.store'), $payload)->assertOk();
+        $this->postJson(route('capsa.milestones.store'), $payload)->assertOk();
+        $this->postJson(route('capsa.milestones.store'), $payload)->assertOk();
 
         $this->assertSame(1, Milestone::where('team_id', $team->team_id)->count());
         $this->assertSame(19, Milestone::where('team_id', $team->team_id)->first()->items()->count());
@@ -134,7 +134,7 @@ class CapsaMilestoneEditorTest extends TestCase
         $this->makeCapsaWithSections();
         [$team] = $this->makeTeamInSection('Team One');
 
-        $this->postJson(route('admin.milestones.store'), [
+        $this->postJson(route('capsa.milestones.store'), [
             'section' => $this->section(),
             'title' => 'Capstone 2',
         ])->assertOk();
@@ -142,7 +142,7 @@ class CapsaMilestoneEditorTest extends TestCase
         $milestone = Milestone::where('team_id', $team->team_id)->first();
         $this->assertSame(0, $milestone->items()->count());
 
-        $this->postJson(route('admin.milestones.items.store', $milestone), [
+        $this->postJson(route('capsa.milestones.items.store', $milestone), [
             'title' => 'Signed Something Form',
         ])->assertOk();
 
@@ -156,7 +156,7 @@ class CapsaMilestoneEditorTest extends TestCase
         [$team] = $this->makeTeamInSection('Team One');
         $milestone = Milestone::create(['team_id' => $team->team_id, 'title' => 'Draft', 'status' => 'todo']);
 
-        $this->putJson(route('admin.milestones.update', $milestone), [
+        $this->putJson(route('capsa.milestones.update', $milestone), [
             'title' => 'Capstone 1',
             'due_date' => now()->addWeeks(2)->toDateString(),
         ])->assertOk();
@@ -164,7 +164,7 @@ class CapsaMilestoneEditorTest extends TestCase
         $this->assertSame('Capstone 1', $milestone->fresh()->title);
         $this->assertNotNull($milestone->fresh()->due_date);
 
-        $this->deleteJson(route('admin.milestones.destroy', $milestone))->assertOk();
+        $this->deleteJson(route('capsa.milestones.destroy', $milestone))->assertOk();
         $this->assertNull(Milestone::find($milestone->id));
     }
 
@@ -175,14 +175,14 @@ class CapsaMilestoneEditorTest extends TestCase
         $milestone = Milestone::create(['team_id' => $team->team_id, 'title' => 'Capstone 1', 'status' => 'todo']);
         $item = $milestone->items()->create(['title' => 'Signed Form', 'kind' => MilestoneItem::FORM]);
 
-        $this->postJson(route('admin.milestones.items.toggle', $item), [
+        $this->postJson(route('capsa.milestones.items.toggle', $item), [
             'done' => true,
             'completed_at' => '2026-08-14',
         ])->assertOk()->assertJsonPath('data.completed', 1);
 
         $this->assertSame('2026-08-14', $item->fresh()->completed_at->toDateString());
 
-        $this->postJson(route('admin.milestones.items.toggle', $item), ['done' => false])->assertOk();
+        $this->postJson(route('capsa.milestones.items.toggle', $item), ['done' => false])->assertOk();
         $this->assertNull($item->fresh()->completed_at);
     }
 
@@ -200,7 +200,7 @@ class CapsaMilestoneEditorTest extends TestCase
         foreach ([MilestoneItem::DOCUMENT, MilestoneItem::APPROVAL, MilestoneItem::DEFENSE] as $kind) {
             $item = $milestone->items()->create(['title' => "A {$kind}", 'kind' => $kind]);
 
-            $this->postJson(route('admin.milestones.items.toggle', $item), ['done' => true])
+            $this->postJson(route('capsa.milestones.items.toggle', $item), ['done' => true])
                 ->assertStatus(422);
 
             $this->assertNull($item->fresh()->completed_at);
@@ -217,7 +217,7 @@ class CapsaMilestoneEditorTest extends TestCase
             ->map(fn ($t, $i) => $milestone->items()->create(['title' => $t, 'kind' => MilestoneItem::FORM, 'position' => $i])->id)
             ->all();
 
-        $this->postJson(route('admin.milestones.items.reorder', $milestone), [
+        $this->postJson(route('capsa.milestones.items.reorder', $milestone), [
             'item_ids' => [$ids[2], $ids[0], $ids[1]],
         ])->assertOk();
 
@@ -226,7 +226,7 @@ class CapsaMilestoneEditorTest extends TestCase
             $milestone->fresh()->items()->orderBy('position')->pluck('title')->all(),
         );
 
-        $this->deleteJson(route('admin.milestones.items.destroy', $ids[0]))->assertOk();
+        $this->deleteJson(route('capsa.milestones.items.destroy', $ids[0]))->assertOk();
         $this->assertSame(2, $milestone->fresh()->items()->count());
     }
 
@@ -238,12 +238,12 @@ class CapsaMilestoneEditorTest extends TestCase
         $this->makeCapsaWithSections();
         [$team] = $this->makeTeamInSection('Team One');
 
-        $this->postJson(route('admin.milestones.store'), [
+        $this->postJson(route('capsa.milestones.store'), [
             'section' => $this->section(),
             'template' => MilestoneTemplate::CAPSTONE_1,
         ])->assertOk();
 
-        $response = $this->get(route('admin.team_management', ['tab' => 'milestones']));
+        $response = $this->get(route('capsa.team_management', ['tab' => 'milestones']));
         $response->assertOk();
 
         // The team is a row, with its score.
@@ -271,12 +271,12 @@ class CapsaMilestoneEditorTest extends TestCase
         $this->makeCapsaWithSections();
         [$team] = $this->makeTeamInSection('Team One');
 
-        $this->postJson(route('admin.milestones.store'), [
+        $this->postJson(route('capsa.milestones.store'), [
             'section' => $this->section(),
             'template' => MilestoneTemplate::CAPSTONE_1,
         ])->assertOk();
 
-        $html = $this->get(route('admin.team_management', ['tab' => 'milestones']))->getContent();
+        $html = $this->get(route('capsa.team_management', ['tab' => 'milestones']))->getContent();
 
         // Counted inside the table body only - the key at the foot draws one
         // of each mark to explain them, and those are not cells.
@@ -300,7 +300,7 @@ class CapsaMilestoneEditorTest extends TestCase
         [$mine] = $this->makeTeamInSection('Mine');
         $theirs = $this->makeTeamOutsideSection('Not Mine');
 
-        $response = $this->get(route('admin.team_management', ['tab' => 'milestones']));
+        $response = $this->get(route('capsa.team_management', ['tab' => 'milestones']));
 
         $response->assertOk();
         $response->assertSee('Mine');
@@ -316,7 +316,7 @@ class CapsaMilestoneEditorTest extends TestCase
         $this->makeCapsaWithSections();
         [$team] = $this->makeTeamInSection('Team One');
 
-        $response = $this->get(route('admin.team_management', ['tab' => 'milestones']));
+        $response = $this->get(route('capsa.team_management', ['tab' => 'milestones']));
 
         $response->assertOk();
         $response->assertSee('Team One');
@@ -336,7 +336,7 @@ class CapsaMilestoneEditorTest extends TestCase
         $this->makeCapsaWithSections();
         $this->makeTeamInSection('Team One');
 
-        $html = $this->get(route('admin.team_management', ['tab' => 'milestones']))
+        $html = $this->get(route('capsa.team_management', ['tab' => 'milestones']))
             ->assertOk()->getContent();
 
         preg_match_all("/ms-modal'\)\.classList\.(?:add|remove)\('([a-z-]+)'\)/", $html, $m);
@@ -362,7 +362,7 @@ class CapsaMilestoneEditorTest extends TestCase
         $this->makeCapsaWithSections();
         $this->makeTeamInSection('Team One');
 
-        $html = $this->get(route('admin.team_management', ['tab' => 'milestones']))
+        $html = $this->get(route('capsa.team_management', ['tab' => 'milestones']))
             ->assertOk()->getContent();
 
         $this->assertStringContainsString('id="ms-section"', $html, 'The form has no section to pick.');
@@ -382,18 +382,18 @@ class CapsaMilestoneEditorTest extends TestCase
         $this->makeCapsaWithSections();
         $this->makeTeamInSection('Team One');
 
-        $this->postJson(route('admin.milestones.store'), [
+        $this->postJson(route('capsa.milestones.store'), [
             'section' => self::SECTION,
             'template' => 'capstone_1',
         ])->assertOk();
 
-        $this->postJson(route('admin.milestones.deliverable_due'), [
+        $this->postJson(route('capsa.milestones.deliverable_due'), [
             'section' => self::SECTION,
             'key' => 'chapter_1_draft',
             'due_date' => '2026-09-07',
         ])->assertOk();
 
-        $this->postJson(route('admin.milestones.deliverable_due'), [
+        $this->postJson(route('capsa.milestones.deliverable_due'), [
             'section' => self::SECTION,
             'key' => 'clf_chapter_1',
             'due_date' => '2026-09-21',
@@ -420,12 +420,12 @@ class CapsaMilestoneEditorTest extends TestCase
         $this->makeCapsaWithSections();
         $this->makeTeamInSection('Team One');
 
-        $this->postJson(route('admin.milestones.store'), [
+        $this->postJson(route('capsa.milestones.store'), [
             'section' => self::SECTION,
             'template' => 'capstone_1',
         ])->assertOk();
 
-        $this->postJson(route('admin.milestones.deliverable_due'), [
+        $this->postJson(route('capsa.milestones.deliverable_due'), [
             'section' => 'BSIT-4Z',
             'key' => 'chapter_1_draft',
             'due_date' => '2026-09-07',
@@ -441,8 +441,8 @@ class CapsaMilestoneEditorTest extends TestCase
         $otherTeam = $this->makeTeamOutsideSection('Not Mine');
         $milestone = Milestone::create(['team_id' => $otherTeam->team_id, 'title' => 'Capstone 1', 'status' => 'todo']);
 
-        $this->putJson(route('admin.milestones.update', $milestone), ['title' => 'Hijacked'])->assertStatus(403);
-        $this->deleteJson(route('admin.milestones.destroy', $milestone))->assertStatus(403);
+        $this->putJson(route('capsa.milestones.update', $milestone), ['title' => 'Hijacked'])->assertStatus(403);
+        $this->deleteJson(route('capsa.milestones.destroy', $milestone))->assertStatus(403);
 
         $this->assertSame('Capstone 1', $milestone->fresh()->title);
     }

@@ -58,122 +58,143 @@ use Illuminate\Support\Facades\Route;
 // each sub-group changed, so no existing route('admin.xxx') link anywhere
 // needed touching. See app/Models/CapstoneExpert.php's is_admin/is_capsa/
 // is_staff for what each bucket means.
+// Admin's own surface, and nothing else: naming a CaPSA, the student
+// accounts, and the system settings. Everything else an Admin can open is
+// shared with CaPSA and lives under /capsa with it.
 Route::middleware(['expert.auth', 'no.cache', 'track.expert'])->prefix('admin')->name('admin.')->group(function () {
 
-    // ---- Admin only: creating a CAPSA, student accounts, system config ----
-    Route::middleware('expert.admin')->group(function () {
-        // Making a CaPSA from an email alone, for someone who has no account
-        // yet - there is no permanent CaPSA, so this happens often enough
-        // that it should not need a spreadsheet with one row in it.
-        Route::post('/experts/capsa', [AdminExpertsController::class, 'storeCapsa'])->name('experts.capsa.store');
-        Route::post('/experts/{expert}/toggle-capsa', [AdminExpertsController::class, 'toggleCapsa'])->name('experts.toggle-capsa');
-        // Changing sections is not a change of role, so it does not go
-        // through the toggle - see AdminExpertsController::updateSections.
-        Route::put('/experts/{expert}/sections', [AdminExpertsController::class, 'updateSections'])->name('experts.sections');
-        Route::get('/students', [StudentAccountsController::class, 'index'])->name('students');
-        Route::post('/students', [StudentAccountsController::class, 'store'])->name('students.store');
-        Route::put('/students/{student}', [StudentAccountsController::class, 'update'])->name('students.update');
-        Route::delete('/students/{student}', [StudentAccountsController::class, 'destroy'])->name('students.destroy');
-        Route::get('/settings', [AdminSettingsController::class, 'index'])->name('settings');
-        Route::post('/settings', [AdminSettingsController::class, 'update'])->name('settings.update');
-    });
+Route::middleware('expert.admin')->group(function () {
+    // Making a CaPSA from an email alone, for someone who has no account
+    // yet - there is no permanent CaPSA, so this happens often enough
+    // that it should not need a spreadsheet with one row in it.
+    Route::post('/experts/capsa', [AdminExpertsController::class, 'storeCapsa'])->name('experts.capsa.store');
+    Route::post('/experts/{expert}/toggle-capsa', [AdminExpertsController::class, 'toggleCapsa'])->name('experts.toggle-capsa');
+    // Changing sections is not a change of role, so it does not go
+    // through the toggle - see AdminExpertsController::updateSections.
+    Route::put('/experts/{expert}/sections', [AdminExpertsController::class, 'updateSections'])->name('experts.sections');
+    Route::get('/students', [StudentAccountsController::class, 'index'])->name('students');
+    Route::post('/students', [StudentAccountsController::class, 'store'])->name('students.store');
+    Route::put('/students/{student}', [StudentAccountsController::class, 'update'])->name('students.update');
+    Route::delete('/students/{student}', [StudentAccountsController::class, 'destroy'])->name('students.destroy');
+    Route::get('/settings', [AdminSettingsController::class, 'index'])->name('settings');
+    Route::post('/settings', [AdminSettingsController::class, 'update'])->name('settings.update');
+});
+});
 
-    // ---- CAPSA: review/approve/assign, bulk rosters ----
-    Route::middleware('expert.capsa')->group(function () {
-        // Approving an account also assigns that expert's role(s) - approve()
-        // requires role_ids - so this stays CaPSA-only: assigning expert
-        // categories is CaPSA's call, not Admin's.
-        Route::get('/approval', [AdminApprovalController::class, 'index'])->name('approval');
-        Route::post('/approval/{expert_id}/approve', [AdminApprovalController::class, 'approve'])->name('approval.approve');
-        Route::post('/approval/{expert_id}/reject', [AdminApprovalController::class, 'reject'])->name('approval.reject');
-        Route::get('/panel_assignment', [AdminPanelAssignmentController::class, 'index'])->name('panel_assignment');
-        // Team Management is the single page for everything about the teams
-        // in a CaPSA's sections. Team Verification's actions keep their old
-        // route names so nothing that links to them breaks, but its page
-        // redirects here - it was only ever half of this.
-        Route::get('/team-management', [TeamManagementController::class, 'index'])->name('team_management');
-        Route::get('/verify-teams', fn () => redirect()->route('admin.team_management', ['tab' => 'verification']))->name('verify_teams');
-        Route::post('/verify-teams/{team}/verify', [AdminTeamVerificationController::class, 'verify'])->name('verify_teams.verify');
-        Route::post('/verify-teams/pre-proposals/{preProposal}/approve', [AdminTeamVerificationController::class, 'approvePreProposal'])->name('verify_teams.pre_proposals.approve');
-        Route::post('/verify-teams/pre-proposals/{preProposal}/reject', [AdminTeamVerificationController::class, 'rejectPreProposal'])->name('verify_teams.pre_proposals.reject');
-        Route::get('/verify-teams/pre-proposals/{preProposal}/document', [AdminTeamVerificationController::class, 'viewPreProposalDocument'])->name('verify_teams.pre_proposals.document');
-        // Milestones are created and edited deliberately here, rather than
-        // falling out of posting an announcement - which is how the one
-        // milestone in the database ended up with no team and no way to be
-        // changed or removed.
-        Route::post('/milestones', [MilestoneController::class, 'store'])->name('milestones.store');
-        Route::post('/milestones/deliverable-due', [MilestoneController::class, 'setDeliverableDue'])->name('milestones.deliverable_due');
-        Route::put('/milestones/{milestone}', [MilestoneController::class, 'update'])->name('milestones.update');
-        Route::delete('/milestones/{milestone}', [MilestoneController::class, 'destroy'])->name('milestones.destroy');
-        Route::post('/milestones/{milestone}/template', [MilestoneController::class, 'applyTemplate'])->name('milestones.template');
-        Route::post('/milestones/{milestone}/items', [MilestoneController::class, 'storeItem'])->name('milestones.items.store');
-        Route::post('/milestones/{milestone}/items/reorder', [MilestoneController::class, 'reorderItems'])->name('milestones.items.reorder');
-        Route::put('/milestone-items/{item}', [MilestoneController::class, 'updateItem'])->name('milestones.items.update');
-        Route::delete('/milestone-items/{item}', [MilestoneController::class, 'destroyItem'])->name('milestones.items.destroy');
-        Route::post('/milestone-items/{item}/toggle', [MilestoneController::class, 'toggleItem'])->name('milestones.items.toggle');
-        Route::get('/rubric_management', [GradingRubricController::class, 'index'])->name('rubric_management');
-        Route::get('/financial', [AdminFinancialController::class, 'index'])->name('financial');
-        Route::post('/financial/expense-post', [AdminFinancialController::class, 'storeExpensePost'])->name('financial.expense-post.store');
-        Route::put('/financial/expense-post/{expensePost}', [AdminFinancialController::class, 'updateExpensePost'])->name('financial.expense-post.update');
-        Route::delete('/financial/expense-post/{expensePost}', [AdminFinancialController::class, 'destroyExpensePost'])->name('financial.expense-post.destroy');
-        Route::post('/financial/receipt/{financialRecord}/approve', [AdminFinancialController::class, 'approveReceipt'])->name('financial.receipt.approve');
-        Route::post('/financial/receipt/{financialRecord}/reject', [AdminFinancialController::class, 'rejectReceipt'])->name('financial.receipt.reject');
-        // Upload is a modal on Student Section List itself, not its own page.
-        // The template is offered inside that same modal - a CaPSA who has to
-        // go looking for it elsewhere ends up typing the headings by hand.
-        Route::get('/rosters/students/template', [StudentRosterController::class, 'template'])->name('rosters.students.template');
-        Route::post('/rosters/students/preview', [StudentRosterController::class, 'preview'])->name('rosters.students.preview');
-        Route::post('/rosters/students', [StudentRosterController::class, 'store'])->name('rosters.students.store');
+// The CaPSA's pages answered on /admin until now, so a bookmark, an open tab
+// or a pasted link still points there. These send those to where the page
+// actually lives rather than showing a 404 for an address that worked
+// yesterday. Safe to delete once nobody is on an old link - the paths kept
+// under /admin are listed above, and none of them is matched here.
+Route::redirect('/admin', '/capsa/dashboard');
+Route::get('/admin/{path}', function (string $path) {
+    // Only what actually moved. /admin/students, /admin/settings and
+    // /admin/gdrive are still served from /admin, and a catch-all that
+    // swallowed them would redirect a working page into a loop.
+    return redirect('/capsa/'.$path);
+})->where('path', '(?!students|settings|gdrive|experts)[a-zA-Z0-9/_-]+');
 
-        // Archive/Announcements/Resources are academic-process content
-        // (archived capstones, lesson templates, student-facing
-        // announcements) - CaPSA's territory, not Admin's.
-        Route::get('/archive', [AdminArchiveController::class, 'index'])->name('archive');
-        Route::get('/announcements', [AnnouncementController::class, 'index'])->name('announcements');
-        Route::get('/resources', [ResourcesController::class, 'index'])->name('resources');
-    });
+// The CaPSA's surface. This used to sit under /admin with everything else,
+// which meant a CaPSA saw "admin" in the address of every page they opened -
+// including the ones an Admin cannot reach at all. The pages both roles open
+// (dashboard, profile, the expert list, the sections) live here too: the
+// system is overwhelmingly the CaPSA's to run, so their reading of the URL is
+// the one that should be right.
+Route::middleware(['expert.auth', 'no.cache', 'track.expert'])->prefix('capsa')->name('capsa.')->group(function () {
+Route::middleware('expert.capsa')->group(function () {
+    // Approving an account also assigns that expert's role(s) - approve()
+    // requires role_ids - so this stays CaPSA-only: assigning expert
+    // categories is CaPSA's call, not Admin's.
+    Route::get('/approval', [AdminApprovalController::class, 'index'])->name('approval');
+    Route::post('/approval/{expert_id}/approve', [AdminApprovalController::class, 'approve'])->name('approval.approve');
+    Route::post('/approval/{expert_id}/reject', [AdminApprovalController::class, 'reject'])->name('approval.reject');
+    Route::get('/panel_assignment', [AdminPanelAssignmentController::class, 'index'])->name('panel_assignment');
+    // Team Management is the single page for everything about the teams
+    // in a CaPSA's sections. Team Verification's actions keep their old
+    // route names so nothing that links to them breaks, but its page
+    // redirects here - it was only ever half of this.
+    Route::get('/team-management', [TeamManagementController::class, 'index'])->name('team_management');
+    Route::get('/verify-teams', fn () => redirect()->route('capsa.team_management', ['tab' => 'verification']))->name('verify_teams');
+    Route::post('/verify-teams/{team}/verify', [AdminTeamVerificationController::class, 'verify'])->name('verify_teams.verify');
+    Route::post('/verify-teams/pre-proposals/{preProposal}/approve', [AdminTeamVerificationController::class, 'approvePreProposal'])->name('verify_teams.pre_proposals.approve');
+    Route::post('/verify-teams/pre-proposals/{preProposal}/reject', [AdminTeamVerificationController::class, 'rejectPreProposal'])->name('verify_teams.pre_proposals.reject');
+    Route::get('/verify-teams/pre-proposals/{preProposal}/document', [AdminTeamVerificationController::class, 'viewPreProposalDocument'])->name('verify_teams.pre_proposals.document');
+    // Milestones are created and edited deliberately here, rather than
+    // falling out of posting an announcement - which is how the one
+    // milestone in the database ended up with no team and no way to be
+    // changed or removed.
+    Route::post('/milestones', [MilestoneController::class, 'store'])->name('milestones.store');
+    Route::post('/milestones/deliverable-due', [MilestoneController::class, 'setDeliverableDue'])->name('milestones.deliverable_due');
+    Route::put('/milestones/{milestone}', [MilestoneController::class, 'update'])->name('milestones.update');
+    Route::delete('/milestones/{milestone}', [MilestoneController::class, 'destroy'])->name('milestones.destroy');
+    Route::post('/milestones/{milestone}/template', [MilestoneController::class, 'applyTemplate'])->name('milestones.template');
+    Route::post('/milestones/{milestone}/items', [MilestoneController::class, 'storeItem'])->name('milestones.items.store');
+    Route::post('/milestones/{milestone}/items/reorder', [MilestoneController::class, 'reorderItems'])->name('milestones.items.reorder');
+    Route::put('/milestone-items/{item}', [MilestoneController::class, 'updateItem'])->name('milestones.items.update');
+    Route::delete('/milestone-items/{item}', [MilestoneController::class, 'destroyItem'])->name('milestones.items.destroy');
+    Route::post('/milestone-items/{item}/toggle', [MilestoneController::class, 'toggleItem'])->name('milestones.items.toggle');
+    Route::get('/rubric_management', [GradingRubricController::class, 'index'])->name('rubric_management');
+    Route::get('/financial', [AdminFinancialController::class, 'index'])->name('financial');
+    Route::post('/financial/expense-post', [AdminFinancialController::class, 'storeExpensePost'])->name('financial.expense-post.store');
+    Route::put('/financial/expense-post/{expensePost}', [AdminFinancialController::class, 'updateExpensePost'])->name('financial.expense-post.update');
+    Route::delete('/financial/expense-post/{expensePost}', [AdminFinancialController::class, 'destroyExpensePost'])->name('financial.expense-post.destroy');
+    Route::post('/financial/receipt/{financialRecord}/approve', [AdminFinancialController::class, 'approveReceipt'])->name('financial.receipt.approve');
+    Route::post('/financial/receipt/{financialRecord}/reject', [AdminFinancialController::class, 'rejectReceipt'])->name('financial.receipt.reject');
+    // Upload is a modal on Student Section List itself, not its own page.
+    // The template is offered inside that same modal - a CaPSA who has to
+    // go looking for it elsewhere ends up typing the headings by hand.
+    Route::get('/rosters/students/template', [StudentRosterController::class, 'template'])->name('rosters.students.template');
+    Route::post('/rosters/students/preview', [StudentRosterController::class, 'preview'])->name('rosters.students.preview');
+    Route::post('/rosters/students', [StudentRosterController::class, 'store'])->name('rosters.students.store');
 
-    // ---- Either Admin or CAPSA ----
-    Route::middleware('expert.staff')->group(function () {
-        // Expert List upload is shared. It only creates approved accounts
-        // with NO roles attached (see Capsa\ExpertRosterController), so it
-        // hands Admin no role-assignment power - it just gets people into
-        // the system. That matters on a fresh install: Admin can populate
-        // the list from the .xlsx without hand-typing anyone's email, then
-        // make one of them CaPSA, who assigns everyone's roles from there.
-        Route::get('/rosters/experts/template', [ExpertRosterController::class, 'template'])->name('rosters.experts.template');
-        Route::post('/rosters/experts/preview', [ExpertRosterController::class, 'preview'])->name('rosters.experts.preview');
-        Route::post('/rosters/experts', [ExpertRosterController::class, 'store'])->name('rosters.experts.store');
+    // Archive/Announcements/Resources are academic-process content
+    // (archived capstones, lesson templates, student-facing
+    // announcements) - CaPSA's territory, not Admin's.
+    Route::get('/archive', [AdminArchiveController::class, 'index'])->name('archive');
+    Route::get('/announcements', [AnnouncementController::class, 'index'])->name('announcements');
+    Route::get('/resources', [ResourcesController::class, 'index'])->name('resources');
+});
 
-        Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
-        Route::get('/profile', [AdminProfileController::class, 'index'])->name('profile');
-        Route::post('/profile', [AdminProfileController::class, 'update'])->name('profile.update');
-        Route::get('/sections', [StudentSectionController::class, 'index'])->name('sections');
-        Route::get('/analytics', [AdminAnalyticsController::class, 'index'])->name('analytics');
-        Route::get('/activitylog', [AdminActivityLogController::class, 'index'])->name('activitylog');
+Route::middleware('expert.staff')->group(function () {
+    // Expert List upload is shared. It only creates approved accounts
+    // with NO roles attached (see Capsa\ExpertRosterController), so it
+    // hands Admin no role-assignment power - it just gets people into
+    // the system. That matters on a fresh install: Admin can populate
+    // the list from the .xlsx without hand-typing anyone's email, then
+    // make one of them CaPSA, who assigns everyone's roles from there.
+    Route::get('/rosters/experts/template', [ExpertRosterController::class, 'template'])->name('rosters.experts.template');
+    Route::post('/rosters/experts/preview', [ExpertRosterController::class, 'preview'])->name('rosters.experts.preview');
+    Route::post('/rosters/experts', [ExpertRosterController::class, 'store'])->name('rosters.experts.store');
 
-        // Managing the expert ROSTER (viewing, editing, removing accounts)
-        // is shared - both Admin and CAPSA need it day to day. Student
-        // ACCOUNT management stays Admin-only (below) since CAPSA already
-        // has Student Section List for their section-scoped student view -
-        // a second, unscoped "manage every student" page on top of that
-        // would just be a confusing duplicate.
-        Route::get('/experts', [AdminExpertsController::class, 'index'])->name('experts');
-        Route::post('/experts', [AdminExpertsController::class, 'store'])->name('experts.store');
-        Route::put('/experts/{expert}', [AdminExpertsController::class, 'update'])->name('experts.update');
-        Route::put('/experts/{expert}/roles', [AdminExpertsController::class, 'updateRoles'])->name('experts.update-roles');
-        Route::delete('/experts/{expert}', [AdminExpertsController::class, 'destroy'])->name('experts.destroy');
-        Route::post('/notifications/seen', function (Request $request) {
-            $ids = $request->input('ids', []);
-            if (! empty($ids)) {
-                $seen = session('admin_notification_seen_ids', []);
-                $seen = array_unique(array_merge($seen, $ids));
-                session(['admin_notification_seen_ids' => $seen]);
-            }
+    Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
+    Route::get('/profile', [AdminProfileController::class, 'index'])->name('profile');
+    Route::post('/profile', [AdminProfileController::class, 'update'])->name('profile.update');
+    Route::get('/sections', [StudentSectionController::class, 'index'])->name('sections');
+    Route::get('/analytics', [AdminAnalyticsController::class, 'index'])->name('analytics');
+    Route::get('/activitylog', [AdminActivityLogController::class, 'index'])->name('activitylog');
 
-            return response()->json(['success' => true]);
-        })->name('notifications.seen');
-    });
+    // Managing the expert ROSTER (viewing, editing, removing accounts)
+    // is shared - both Admin and CAPSA need it day to day. Student
+    // ACCOUNT management stays Admin-only (below) since CAPSA already
+    // has Student Section List for their section-scoped student view -
+    // a second, unscoped "manage every student" page on top of that
+    // would just be a confusing duplicate.
+    Route::get('/experts', [AdminExpertsController::class, 'index'])->name('experts');
+    Route::post('/experts', [AdminExpertsController::class, 'store'])->name('experts.store');
+    Route::put('/experts/{expert}', [AdminExpertsController::class, 'update'])->name('experts.update');
+    Route::put('/experts/{expert}/roles', [AdminExpertsController::class, 'updateRoles'])->name('experts.update-roles');
+    Route::delete('/experts/{expert}', [AdminExpertsController::class, 'destroy'])->name('experts.destroy');
+    Route::post('/notifications/seen', function (Request $request) {
+        $ids = $request->input('ids', []);
+        if (! empty($ids)) {
+            $seen = session('admin_notification_seen_ids', []);
+            $seen = array_unique(array_merge($seen, $ids));
+            session(['admin_notification_seen_ids' => $seen]);
+        }
+
+        return response()->json(['success' => true]);
+    })->name('notifications.seen');
+});
 });
 
 Route::middleware(['expert.auth', 'expert.approved', 'no.cache', 'track.expert'])->prefix('instructor')->name('instructor.')->group(function () {

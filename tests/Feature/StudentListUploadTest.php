@@ -68,7 +68,7 @@ class StudentListUploadTest extends TestCase
         $this->assertNull($student->course);
         $this->assertNull($student->year_section);
 
-        $response = $this->post(route('admin.rosters.students.store'), [
+        $response = $this->post(route('capsa.rosters.students.store'), [
             'file' => $this->listFile(self::HEADER, [
                 ['early@my.cspc.edu.ph', 'Bird, Early A.', '221001135', 'BSIT', 4, 'B'],
             ]),
@@ -99,7 +99,7 @@ class StudentListUploadTest extends TestCase
 
         $student = Student::create(['email' => 'shuffled@my.cspc.edu.ph', 'f_name' => 'S', 'l_name' => 'H']);
 
-        $this->post(route('admin.rosters.students.store'), [
+        $this->post(route('capsa.rosters.students.store'), [
             'file' => $this->listFile(
                 ['Section', 'Course/Program', 'Name', 'Year', 'Email', 'Student No.'],
                 [['A', 'BSCS', 'Cruz, Juan D.', 3, 'shuffled@my.cspc.edu.ph', '221000001']]
@@ -123,7 +123,7 @@ class StudentListUploadTest extends TestCase
 
         $this->assertNull(Student::where('email', 'nobody@my.cspc.edu.ph')->first());
 
-        $response = $this->post(route('admin.rosters.students.store'), [
+        $response = $this->post(route('capsa.rosters.students.store'), [
             'file' => $this->listFile(self::HEADER, [
                 ['nobody@my.cspc.edu.ph', 'Nobody, At All B.', '221000002', 'BSIT', 4, 'B'],
             ]),
@@ -154,10 +154,10 @@ class StudentListUploadTest extends TestCase
 
         $row = [['twice@my.cspc.edu.ph', 'Twice, Once B.', '221000008', 'BSIT', 4, 'B']];
 
-        $this->post(route('admin.rosters.students.store'), ['file' => $this->listFile(self::HEADER, $row)])
+        $this->post(route('capsa.rosters.students.store'), ['file' => $this->listFile(self::HEADER, $row)])
             ->assertOk()->assertJson(['created' => 1]);
 
-        $this->post(route('admin.rosters.students.store'), ['file' => $this->listFile(self::HEADER, $row)])
+        $this->post(route('capsa.rosters.students.store'), ['file' => $this->listFile(self::HEADER, $row)])
             ->assertOk()->assertJson(['created' => 0, 'matched' => 1]);
 
         $this->assertSame(1, Student::where('email', 'twice@my.cspc.edu.ph')->count());
@@ -173,7 +173,7 @@ class StudentListUploadTest extends TestCase
     {
         $this->actingAs($this->capsa(), 'expert');
 
-        $response = $this->post(route('admin.rosters.students.store'), [
+        $response = $this->post(route('capsa.rosters.students.store'), [
             'file' => $this->listFile(self::HEADER, [
                 ['typo@my.cpsc.edu.ph', 'Typo, Do Not B.', '221000009', 'BSIT', 4, 'B'],
                 ['nodomain@my.edu.ph', 'Short, Domain B.', '221000010', 'BSIT', 4, 'B'],
@@ -193,7 +193,7 @@ class StudentListUploadTest extends TestCase
     {
         $this->actingAs($this->capsa(), 'expert');
 
-        $this->post(route('admin.rosters.students.store'), [
+        $this->post(route('capsa.rosters.students.store'), [
             'file' => $this->listFile(['Name', 'Student No.'], [['Cruz, Juan D.', '221000003']]),
         ])->assertStatus(422);
 
@@ -207,7 +207,7 @@ class StudentListUploadTest extends TestCase
 
         $good = Student::create(['email' => 'good@my.cspc.edu.ph', 'f_name' => 'G', 'l_name' => 'D']);
 
-        $response = $this->post(route('admin.rosters.students.store'), [
+        $response = $this->post(route('capsa.rosters.students.store'), [
             'file' => $this->listFile(self::HEADER, [
                 ['not-an-email', 'Broken, Row', '1', 'BSIT', 4, 'B'],
                 ['good@my.cspc.edu.ph', 'Good, Row', '221000004', 'BSIT', 4, 'B'],
@@ -234,7 +234,7 @@ class StudentListUploadTest extends TestCase
         $student = Student::create(['email' => 'again@my.cspc.edu.ph', 'f_name' => 'A', 'l_name' => 'G']);
 
         foreach ([['221000005', 'B'], ['221000006', 'A']] as [$number, $section]) {
-            $this->post(route('admin.rosters.students.store'), [
+            $this->post(route('capsa.rosters.students.store'), [
                 'file' => $this->listFile(self::HEADER, [
                     ['again@my.cspc.edu.ph', 'Gain, A.', $number, 'BSIT', 4, $section],
                 ]),
@@ -271,7 +271,7 @@ class StudentListUploadTest extends TestCase
             'year_section' => '3rd '.json_decode('"·"').' A',
         ]);
 
-        $response = $this->post(route('admin.rosters.students.store'), [
+        $response = $this->post(route('capsa.rosters.students.store'), [
             'file' => $this->listFile(self::HEADER, [
                 ['wrong@my.cspc.edu.ph', 'Ready, Al B.', '999999999', 'BSIT', 4, 'B'],
             ]),
@@ -305,7 +305,7 @@ class StudentListUploadTest extends TestCase
             'year_section' => '4th '.json_decode('"·"').' B',
         ]);
 
-        $this->post(route('admin.rosters.students.store'), [
+        $this->post(route('capsa.rosters.students.store'), [
             'file' => $this->listFile(self::HEADER, [
                 ['same@my.cspc.edu.ph', 'Same, Same', '221000011', 'BSIT', 4, 'B'],
             ]),
@@ -321,7 +321,7 @@ class StudentListUploadTest extends TestCase
     {
         $this->actingAs($this->capsa(), 'expert');
 
-        $this->post(route('admin.rosters.students.store'), [
+        $this->post(route('capsa.rosters.students.store'), [
             'file' => $this->listFile(self::HEADER_SPLIT, [
                 ['split@my.cspc.edu.ph', 'Aurillas', 'John Kenneth', 'B.', '221001135', 'BSIT', 4, 'B'],
             ]),
@@ -339,7 +339,7 @@ class StudentListUploadTest extends TestCase
     {
         $this->actingAs($this->capsa(), 'expert');
 
-        $this->post(route('admin.rosters.students.store'), [
+        $this->post(route('capsa.rosters.students.store'), [
             'file' => $this->listFile(self::HEADER_SPLIT, [
                 ['readable@my.cspc.edu.ph', 'Balilla', 'Mark Anthony', 'B.', '221001145', 'BSIT', 4, 'B'],
             ]),
@@ -356,7 +356,7 @@ class StudentListUploadTest extends TestCase
     {
         $this->actingAs($this->capsa(), 'expert');
 
-        $this->post(route('admin.rosters.students.store'), [
+        $this->post(route('capsa.rosters.students.store'), [
             'file' => $this->listFile(self::HEADER_SPLIT, [
                 ['nomi@my.cspc.edu.ph', 'Cruz', 'Juan', '', '221000050', 'BSIT', 4, 'B'],
             ]),
@@ -386,7 +386,7 @@ class StudentListUploadTest extends TestCase
         $student = Student::create(['email' => 'sy@my.cspc.edu.ph', 'f_name' => 'S', 'l_name' => 'Y']);
         StudentSchoolYear::create(['student_id' => $student->student_id, 'school_year' => '2020-2021']);
 
-        $this->post(route('admin.rosters.students.store'), [
+        $this->post(route('capsa.rosters.students.store'), [
             'file' => $this->listFile(self::HEADER_SY, [
                 ['sy@my.cspc.edu.ph', 'Why, Ess B.', '221000020', 'BSIT', 4, 'B', '2026-2027'],
             ]),
@@ -403,7 +403,7 @@ class StudentListUploadTest extends TestCase
     {
         $this->actingAs($this->capsa(), 'expert');
 
-        $this->post(route('admin.rosters.students.store'), [
+        $this->post(route('capsa.rosters.students.store'), [
             'file' => $this->listFile(self::HEADER_SY, [
                 ['fresh@my.cspc.edu.ph', 'Fresh, New B.', '221000021', 'BSIT', 4, 'B', '2026-2027'],
             ]),
@@ -425,7 +425,7 @@ class StudentListUploadTest extends TestCase
         foreach ([['2026-2027', 'a'], ['2026-27', 'b'], ['26-27', 'c'], ['2026', 'd']] as [$written, $tag]) {
             $email = "sy{$tag}@my.cspc.edu.ph";
 
-            $this->post(route('admin.rosters.students.store'), [
+            $this->post(route('capsa.rosters.students.store'), [
                 'file' => $this->listFile(self::HEADER_SY, [
                     [$email, 'Typed, Various B.', '22100002'.$tag, 'BSIT', 4, 'B', $written],
                 ]),
@@ -450,7 +450,7 @@ class StudentListUploadTest extends TestCase
     {
         $this->actingAs($this->capsa(), 'expert');
 
-        $response = $this->post(route('admin.rosters.students.store'), [
+        $response = $this->post(route('capsa.rosters.students.store'), [
             'file' => $this->listFile(self::HEADER_SY, [
                 ['junk@my.cspc.edu.ph', 'Junk, Year B.', '221000030', 'BSIT', 4, 'B', '26-1'],
                 ['gap@my.cspc.edu.ph', 'Gap, Year B.', '221000031', 'BSIT', 4, 'B', '2026-2028'],
@@ -469,7 +469,7 @@ class StudentListUploadTest extends TestCase
     {
         $this->actingAs($this->capsa(), 'expert');
 
-        $this->post(route('admin.rosters.students.store'), [
+        $this->post(route('capsa.rosters.students.store'), [
             'file' => $this->listFile(self::HEADER, [
                 ['noyear@my.cspc.edu.ph', 'No, Year B.', '221000040', 'BSIT', 4, 'B'],
             ]),
@@ -502,7 +502,7 @@ class StudentListUploadTest extends TestCase
             'l_name' => 'Only',
         ]);
 
-        $this->post(route('admin.rosters.students.preview'), [
+        $this->post(route('capsa.rosters.students.preview'), [
             'file' => $this->listFile(self::HEADER, [
                 ['look@my.cspc.edu.ph', 'Only, Look B.', '221000020', 'BSIT', 4, 'B'],
                 ['newperson@my.cspc.edu.ph', 'New, Person B.', '221000021', 'BSIT', 4, 'B'],
@@ -544,7 +544,7 @@ class StudentListUploadTest extends TestCase
             'year_section' => '4th '.json_decode('"\u00b7"').' B',
         ]);
 
-        $response = $this->post(route('admin.rosters.students.preview'), [
+        $response = $this->post(route('capsa.rosters.students.preview'), [
             'file' => $this->listFile(self::HEADER, [
                 ['fresh@my.cspc.edu.ph', 'Fresh, Face B.', '221000032', 'BSIT', 4, 'B'],
                 ['same@my.cspc.edu.ph', 'Same, Same', '221000030', 'BSIT', 4, 'B'],
@@ -570,7 +570,7 @@ class StudentListUploadTest extends TestCase
     {
         $this->actingAs($this->capsa(), 'expert');
 
-        $response = $this->post(route('admin.rosters.students.preview'), [
+        $response = $this->post(route('capsa.rosters.students.preview'), [
             'file' => $this->listFile(self::HEADER, [
                 ['apart@my.cspc.edu.ph', 'Apart, Kept B.', '221000033', 'BSIT', 4, 'B'],
             ]),
@@ -588,7 +588,7 @@ class StudentListUploadTest extends TestCase
     {
         $this->actingAs($this->capsa(), 'expert');
 
-        $response = $this->post(route('admin.rosters.students.preview'), [
+        $response = $this->post(route('capsa.rosters.students.preview'), [
             'file' => $this->listFile(self::HEADER, [
                 ['typo@my.cpsc.edu.ph', 'Typo, Do Not B.', '221000034', 'BSIT', 4, 'B'],
             ]),
@@ -604,7 +604,7 @@ class StudentListUploadTest extends TestCase
     {
         $this->actingAs($this->capsa(), 'expert');
 
-        $this->post(route('admin.rosters.students.preview'), [
+        $this->post(route('capsa.rosters.students.preview'), [
             'file' => $this->listFile(['Name', 'Student No.'], [['Cruz, Juan', '221000035']]),
         ])->assertStatus(422)->assertJson(['success' => false]);
     }
@@ -614,7 +614,7 @@ class StudentListUploadTest extends TestCase
     {
         $this->actingAs($this->capsa(), 'expert');
 
-        $response = $this->get(route('admin.rosters.students.template'));
+        $response = $this->get(route('capsa.rosters.students.template'));
 
         $response->assertOk();
         $response->assertDownload('Student List Template.xlsx');
@@ -640,10 +640,10 @@ class StudentListUploadTest extends TestCase
         $this->actingAs($this->capsa(), 'expert');
 
         $headings = \PhpOffice\PhpSpreadsheet\IOFactory::load(
-            $this->get(route('admin.rosters.students.template'))->baseResponse->getFile()->getPathname()
+            $this->get(route('capsa.rosters.students.template'))->baseResponse->getFile()->getPathname()
         )->getActiveSheet()->toArray()[0];
 
-        $this->post(route('admin.rosters.students.store'), [
+        $this->post(route('capsa.rosters.students.store'), [
             'file' => $this->listFile($headings, [
                 ['fromtemplate@my.cspc.edu.ph', 'Dela Cruz', 'Juan', 'B.', '221000036', 'BSIT', 4, 'B', '2026-2027'],
             ]),
@@ -671,11 +671,11 @@ class StudentListUploadTest extends TestCase
     {
         $this->actingAs($this->capsa(), 'expert');
 
-        $response = $this->get(route('admin.sections'));
+        $response = $this->get(route('capsa.sections'));
 
         $response->assertOk();
         $response->assertSee('id="studentRosterModal"', false);
-        $response->assertSee(route('admin.rosters.students.template'), false);
+        $response->assertSee(route('capsa.rosters.students.template'), false);
         $response->assertSee('Download template', false);
 
         // Preview first, save second - both steps present on the page, since
@@ -716,7 +716,7 @@ class StudentListUploadTest extends TestCase
             'year_section' => '4th '.json_decode('"\u00b7"').' B',
         ]);
 
-        $response = $this->get(route('admin.sections'));
+        $response = $this->get(route('capsa.sections'));
 
         $response->assertOk();
         $response->assertSee('<th>Program</th>', false);
