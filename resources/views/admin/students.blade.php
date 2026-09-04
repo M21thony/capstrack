@@ -116,7 +116,7 @@
             <th>Program</th>
             <th>Year</th>
             <th>Section</th>
-            <th style="padding-right:20px">Action</th>
+            <th style="padding-right:20px;text-align:right">Action</th>
           </tr>
         </thead>
         <tbody>

@@ -253,6 +253,15 @@ class AuthController extends Controller
         // this.
         $roster = StudentRoster::where('email', $email)->first();
 
+        // CaPSA uploads the section's list before its students may have
+        // accounts, so being on it is what makes somebody a student here.
+        // Anyone who already has an account keeps it - they were let in
+        // before this rule existed, and taking that away would lock out the
+        // students who have been using the site all along.
+        if (! $roster && ! Student::whereRaw('LOWER(email) = ?', [$email])->exists()) {
+            return $this->refuseUnlistedStudent($request);
+        }
+
         $student = Student::firstOrCreate(
             ['email' => $email],
             [
@@ -417,6 +426,12 @@ class AuthController extends Controller
             return redirect('/request-account?email='.urlencode($email).'&first_name='.urlencode($firstName).'&last_name='.urlencode($lastName));
         }
 
+        // Same rule as the real callback - see refuseUnlistedStudent().
+        if (! StudentRoster::where('email', $email)->exists()
+            && ! Student::whereRaw('LOWER(email) = ?', [$email])->exists()) {
+            return $this->refuseUnlistedStudent($request);
+        }
+
         $student = Student::firstOrCreate(
             ['email' => $email],
             [
@@ -449,6 +464,30 @@ class AuthController extends Controller
     /**
      * Log the user out and invalidate the session.
      */
+    /**
+     * Turn away a student who is not on any uploaded list.
+     *
+     * CaPSA asked that a section's list be uploaded before its students can
+     * have accounts, so that nobody arrives with a profile the department
+     * never put there. The message names the way out, because the student
+     * cannot fix this themselves and "access denied" would leave them
+     * guessing at which of their details was wrong.
+     */
+    private function refuseUnlistedStudent(Request $request)
+    {
+        $message = "Your account is not on your section's list yet. Ask your CaPSA to upload "
+            .'the student list for your section, then sign in again.';
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => false,
+                'message' => $message,
+            ], 403);
+        }
+
+        return redirect('/login')->withErrors(['message' => $message]);
+    }
+
     public function logout(Request $request)
     {
         Auth::logout();

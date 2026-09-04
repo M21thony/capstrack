@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\CapstoneExpert;
 use App\Models\Student;
+use App\Models\StudentRoster;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
@@ -17,6 +18,17 @@ class GoogleAuthTest extends TestCase
     {
         $state = 'real-state-token';
         $this->withSession(['oauth_state' => $state]);
+
+        // A student's section has to be on an uploaded list before they can
+        // sign in (see StudentSignupGateTest). This test is about what the
+        // callback does with Google's answer, so put them on one.
+        StudentRoster::create([
+            'email' => 'juan.delacruz@my.cspc.edu.ph',
+            'name' => 'Dela Cruz, Juan',
+            'section' => '4th '.json_decode('"\u00b7"').' B',
+            'program' => 'BSIT',
+            'school_year' => '2026-2027',
+        ]);
 
         Http::fake([
             'oauth2.googleapis.com/token' => Http::response([
@@ -231,6 +243,16 @@ class GoogleAuthTest extends TestCase
     {
         $state = 'test-state-token';
         $this->withSession(['oauth_state' => $state]);
+
+        // On the list, so the gate lets them through - what this test is
+        // about is that an institutional address is accepted at all.
+        StudentRoster::create([
+            'email' => 'jose.rizal@my.cspc.edu.ph',
+            'name' => 'Rizal, Jose',
+            'section' => '4th '.json_decode('"\u00b7"').' B',
+            'program' => 'BSIT',
+            'school_year' => '2026-2027',
+        ]);
 
         $response = $this->postJson('/login/google/mock', [
             'state' => $state,
