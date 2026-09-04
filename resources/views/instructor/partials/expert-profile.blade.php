@@ -21,8 +21,14 @@
   /* Sits over the body now that there is no bar to sit in. Kept at the top
      because a panel this tall would otherwise only be closable from a button
      at the bottom of a scroll. */
-  .ep-close{position:absolute;top:12px;right:12px;z-index:2;width:26px;height:26px;
-            background:var(--bg2);border:1px solid var(--border);border-radius:7px;cursor:pointer;
+  /* Sticky, so the way out and the name of the panel stay put through a
+     scroll that is most of this panel's height. */
+  .ep-header{position:sticky;top:0;z-index:3;display:flex;align-items:center;gap:10px;
+             padding:13px 16px;background:var(--bg2);border-bottom:1px solid var(--border)}
+  .ep-header-title{flex:1;min-width:0;font-size:13px;font-weight:700;color:var(--text);
+                   letter-spacing:-0.1px}
+  .ep-close{width:26px;height:26px;flex-shrink:0;
+            background:transparent;border:1px solid var(--border);border-radius:7px;cursor:pointer;
             color:var(--text3);padding:0;display:flex;align-items:center;justify-content:center;
             transition:color 0.13s,background 0.13s,border-color 0.13s}
   .ep-close:hover{color:var(--text);background:var(--bg3);border-color:var(--border2)}
@@ -123,13 +129,15 @@
 <div class="ep-overlay" id="ep-overlay" onclick="handleEpOverlay(event)">
   <div class="ep-modal" id="ep-modal">
 
-    {{-- No name and face at the top: the sidebar three inches to the left is
-         already showing whose panel this is, and the block was repeating it
-         at the cost of the first 80px of a panel that has to scroll. Only the
-         way out stays, floated over the body where it was. --}}
-    <button class="ep-close" onclick="closeExpertProfile()" aria-label="Close">
-      <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-    </button>
+    {{-- Says what the panel is, not whose it is: the sidebar a few inches to
+         the left is already showing the name and the face, and repeating them
+         cost the first 80px of something that has to scroll. --}}
+    <div class="ep-header">
+      <span class="ep-header-title">Expert Profile</span>
+      <button class="ep-close" onclick="closeExpertProfile()" aria-label="Close">
+        <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
 
     <!-- Scrollable Body -->
     <div class="ep-body">
