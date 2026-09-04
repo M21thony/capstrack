@@ -286,4 +286,78 @@ class GoogleAuthTest extends TestCase
             'email' => 'jose.rizal@my.cspc.edu.ph',
         ]);
     }
+
+    /**
+     * A typed name is a placeholder; the person's own account is the source.
+     *
+     * Whoever added an expert typed a name from what they knew. Google is
+     * holding the one they actually go by, and they cannot edit it here - the
+     * profile panel shows it locked - so signing in is the moment the guess
+     * gets corrected.
+     */
+    public function test_signing_in_corrects_the_name_somebody_typed_for_an_expert(): void
+    {
+        $expert = CapstoneExpert::create([
+            'email' => 'typed.name@gmail.com',
+            // what a CaPSA guessed when they added them
+            'first_name' => 'Markanthonybalilla21',
+            'last_name' => '',
+            'approved_status' => true,
+        ]);
+
+        $state = 'name-sync-state';
+        $this->withSession(['oauth_state' => $state]);
+
+        Http::fake([
+            'oauth2.googleapis.com/token' => Http::response([
+                'access_token' => 'fake-access-token',
+                'token_type' => 'Bearer',
+                'expires_in' => 3600,
+            ]),
+            'www.googleapis.com/oauth2/v3/userinfo*' => Http::response([
+                'email' => 'typed.name@gmail.com',
+                'given_name' => 'Mark Anthony',
+                'family_name' => 'Balilla',
+            ]),
+        ]);
+
+        $this->get("/login/google/callback?state={$state}&code=fake-code");
+
+        $expert->refresh();
+
+        $this->assertSame('Mark Anthony', $expert->first_name);
+        $this->assertSame('Balilla', $expert->last_name);
+    }
+
+    /** Google telling us nothing leaves the name that was there. */
+    public function test_a_sign_in_without_a_name_from_google_keeps_the_one_on_file(): void
+    {
+        $expert = CapstoneExpert::create([
+            'email' => 'keeps.name@gmail.com',
+            'first_name' => 'Rosa',
+            'last_name' => 'Villanueva',
+            'approved_status' => true,
+        ]);
+
+        $state = 'name-keep-state';
+        $this->withSession(['oauth_state' => $state]);
+
+        Http::fake([
+            'oauth2.googleapis.com/token' => Http::response([
+                'access_token' => 'fake-access-token',
+                'token_type' => 'Bearer',
+                'expires_in' => 3600,
+            ]),
+            'www.googleapis.com/oauth2/v3/userinfo*' => Http::response([
+                'email' => 'keeps.name@gmail.com',
+            ]),
+        ]);
+
+        $this->get("/login/google/callback?state={$state}&code=fake-code");
+
+        $expert->refresh();
+
+        $this->assertSame('Rosa', $expert->first_name);
+        $this->assertSame('Villanueva', $expert->last_name);
+    }
 }

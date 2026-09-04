@@ -334,6 +334,13 @@
           else { $unslotted[] = $a; }
         }
         $pendingCount = $assignments->where('status', 'pending')->count();
+
+        // An approved expert is not a request any more and not available any
+        // more - they are yours, and the slots above say so. Leaving them in
+        // both lists showed the same person three times over and made a
+        // settled adviser look like something still to be decided.
+        $settledExpertIds = $approvedAssignments->pluck('expert_id')->filter()->all();
+        $openRequests = $assignments->whereNotIn('status', ['approved']);
       @endphp
 
       @if($team)
@@ -409,17 +416,15 @@
            card repeated what the slots above already show, and its message was
            a dead end - so the two cases worth a sentence say the useful thing
            instead: you have no team, or you are not the one who can apply. --}}
-      @if($assignments->isNotEmpty())
+      @if($openRequests->isNotEmpty())
       <div class="req-section">
         <div class="section-title" style="font-size: 15px; font-weight: 600; margin-bottom: 14px; display: flex; align-items: center; gap: 8px;">
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
           Request Experts
-          @if($assignments->isNotEmpty())
-            <span style="font-size: 12px; color: var(--text3); font-weight: 400;">({{ $assignments->count() }})</span>
-          @endif
+          <span style="font-size: 12px; color: var(--text3); font-weight: 400;">({{ $openRequests->count() }})</span>
         </div>
 
-        @foreach($assignments as $assignment)
+        @foreach($openRequests as $assignment)
           @php
             // Through the public disk explicitly: the file was stored with
             // ->store("proposals", "public"), and a bare Storage::url() call
@@ -568,7 +573,7 @@
       </div>
 
       <div id="expert-grid" class="expert-grid">
-        @forelse($experts as $expert)
+        @forelse($experts->whereNotIn('expert_id', $settledExpertIds) as $expert)
           @php
             $visibleRoles = $expert->roles;
             $firstRole = $visibleRoles->first();

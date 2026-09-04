@@ -179,7 +179,24 @@ class AuthController extends Controller
                     $existingToken = json_decode($expert->google_token ?? '', true);
                     $refreshToken = $response->json('refresh_token') ?? ($existingToken['refresh_token'] ?? null);
 
-                    $expert->update([
+                    // Whoever added them typed a name from what they knew,
+                    // which is a guess until the person themselves turns up.
+                    // Google is holding the name they actually go by, and
+                    // they cannot edit it here - the profile panel shows it
+                    // locked - so their own account is the only source of it
+                    // there is. Taken on every sign-in, like the photo beside
+                    // it, so a name corrected on Google arrives here too.
+                    $fromGoogle = [];
+
+                    if (filled($userInfo['given_name'] ?? null)) {
+                        $fromGoogle['first_name'] = $userInfo['given_name'];
+                    }
+
+                    if (filled($userInfo['family_name'] ?? null)) {
+                        $fromGoogle['last_name'] = $userInfo['family_name'];
+                    }
+
+                    $expert->update($fromGoogle + [
                         'google_token' => json_encode([
                             'access_token' => $accessToken,
                             'refresh_token' => $refreshToken,

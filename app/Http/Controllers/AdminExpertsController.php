@@ -108,7 +108,7 @@ class AdminExpertsController extends Controller
         // api/* answers with a redirect - HTML where JSON was expected.
         $validator = Validator::make($request->all(), [
             'email' => ['required', 'email', 'max:190'],
-            'name' => ['nullable', 'string', 'max:120'],
+            'name' => ['required', 'string', 'max:120'],
             'roles' => ['required', 'array', 'min:1'],
             'roles.*' => ['string', 'in:'.implode(',', CapstoneExpert::STUDENT_FACING_ROLES)],
             'expertise' => ['nullable', 'array'],
@@ -116,6 +116,7 @@ class AdminExpertsController extends Controller
         ], [
             'email.required' => 'Type the email address of the person to add.',
             'email.email' => 'That is not an email address.',
+            'name.required' => 'Type their full name.',
             'roles.required' => 'Choose at least one role.',
             'roles.min' => 'Choose at least one role.',
         ]);
@@ -140,7 +141,7 @@ class AdminExpertsController extends Controller
         $created = false;
 
         if (! $expert) {
-            [$firstName, $lastName] = $this->nameFrom($request->input('name'), $email);
+            [$firstName, $lastName] = $this->nameFrom($request->input('name'));
 
             $expert = CapstoneExpert::create([
                 'email' => $email,
@@ -398,12 +399,13 @@ class AdminExpertsController extends Controller
         // of HTML where JSON was expected, and fails in silence.
         $validator = Validator::make($request->all(), [
             'email' => ['required', 'email'],
-            'name' => ['nullable', 'string', 'max:120'],
+            'name' => ['required', 'string', 'max:120'],
             'sections' => ['required', 'array', 'min:1'],
             'sections.*' => ['string'],
         ], [
             'email.required' => 'Type the email address of the person to make a CaPSA.',
             'email.email' => 'That is not an email address.',
+            'name.required' => 'Type their full name.',
             'sections.required' => 'Choose at least one section.',
             'sections.min' => 'Choose at least one section.',
         ]);
@@ -440,7 +442,7 @@ class AdminExpertsController extends Controller
         $created = false;
 
         if (! $expert) {
-            [$firstName, $lastName] = $this->nameFrom($request->input('name'), $email);
+            [$firstName, $lastName] = $this->nameFrom($request->input('name'));
 
             $expert = CapstoneExpert::create([
                 'email' => $email,
@@ -474,36 +476,35 @@ class AdminExpertsController extends Controller
     }
 
     /**
-     * A first and last name for an account being made from an email.
+     * A full name, split into the parts the rest of the app stores.
      *
-     * A name typed in is used as given. Without one, the address is the only
-     * thing there is to go on - "juan.delacruz@..." reads better as "Juan
-     * Delacruz" than as the raw address, and they can correct it from their
-     * own profile once they sign in.
+     * On the LAST space, not the first: "Mark Anthony Balilla" is Mark
+     * Anthony Balilla, not Mark, of the family Anthony Balilla. Two given
+     * names is the ordinary case here, not the exception.
      *
-     * One word stays one word. Copying it into the surname as well - which is
-     * what the rest of this codebase does with a single-word name - turns
-     * "hellscreamgrom9@..." into "Hellscreamgrom9 Hellscreamgrom9" on every
-     * screen that shows a name. A missing surname is missing; it is not the
-     * first name again. The accessor drops the empty half, so the name reads
-     * as the one word it is.
+     * The name is required. It used to be optional and read off the address
+     * when blank, which works for "juan.delacruz@" and produces
+     * "Markanthonybalilla21" for an address with nothing to split on - and
+     * that lands on every screen showing a name, in every panel list, and in
+     * the emails the system sends. Three seconds of typing beats a name
+     * nobody can correct but its owner.
      *
-     * @return array{0: string, 1: string}
+     * @return array{0: string, 1: string} first, last
      */
-    private function nameFrom(?string $typed, string $email): array
+    private function nameFrom(string $name): array
     {
-        $name = trim((string) $typed);
+        $name = trim(preg_replace('/\s+/', ' ', $name));
 
-        if ($name === '') {
-            $local = Str::before($email, '@');
-            $name = Str::title(trim(preg_replace('/[._\-]+/', ' ', $local)));
+        $at = mb_strrpos($name, ' ');
+
+        if ($at === false) {
+            // One word is one word - somebody who goes by a single name keeps
+            // it, rather than having it written into both halves.
+            return [$name, ''];
         }
 
-        $parts = preg_split('/\s+/', $name, 2);
-
-        return [$parts[0], $parts[1] ?? ''];
+        return [mb_substr($name, 0, $at), mb_substr($name, $at + 1)];
     }
-
     public function toggleCapsa(Request $request, CapstoneExpert $expert): JsonResponse
     {
         $validated = $request->validate([

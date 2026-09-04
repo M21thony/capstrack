@@ -61,6 +61,7 @@ class AdminSectionsSettingTest extends TestCase
 
         $this->postJson(route('admin.experts.capsa.store'), [
             'email' => 'first.capsa@cspc.edu.ph',
+            'name' => 'Rosa Villanueva',
             'sections' => ['BSIT-4B'],
         ])->assertOk();
 
