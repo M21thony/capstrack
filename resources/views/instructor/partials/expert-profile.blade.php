@@ -56,64 +56,47 @@
   .ep-tag-remove{background:none;border:none;cursor:pointer;display:flex;align-items:center;padding:0;color:var(--blue);opacity:0.55;line-height:1;transition:opacity 0.13s}
   .ep-tag-remove:hover{opacity:1}
   .ep-tag-remove svg{width:10px;height:10px;stroke:currentColor;fill:none;stroke-width:2.5}
-  .ep-tag-input-row{display:flex;gap:6px}
-  .ep-tag-input{flex:1;background:#fff;border:1.5px solid var(--border);border-radius:8px;padding:7px 11px;font-size:12px;font-family:'DM Sans',sans-serif;color:var(--text);outline:none;transition:border 0.15s}
+  .ep-tag-input-row{display:flex;align-items:center;gap:8px;padding:7px 10px;border:1.5px solid var(--border);border-radius:9px;background:#fff}
+  .ep-tag-input-row:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px rgba(201,168,44,0.1)}
+  .ep-tag-input{flex:1;min-width:0;border:none;outline:none;background:transparent;font-family:'DM Sans',sans-serif;font-size:12.5px;color:var(--text)}
   .ep-tag-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(201,168,44,0.1)}
   .ep-tag-input::placeholder{color:var(--text3)}
-  .ep-tag-add-btn{background:var(--accent);border:none;border-radius:8px;padding:7px 12px;font-size:11.5px;font-weight:700;color:#18191f;cursor:pointer;font-family:'DM Sans',sans-serif;transition:background 0.13s;white-space:nowrap}
-  .ep-tag-add-btn:hover{background:var(--accent2)}
-  .ep-suggest{
-    display:none;position:absolute;top:100%;left:0;right:0;margin-top:4px;background:#fff;
-    border:1.5px solid var(--border);border-radius:8px;box-shadow:0 10px 24px -6px rgba(0,0,0,0.16);
-    max-height:190px;overflow-y:auto;z-index:30;scrollbar-width:none;
-  }
-  .ep-suggest::-webkit-scrollbar{display:none}
-  .ep-suggest.open{display:block}
-  .ep-suggest-group{
-    padding:6px 11px 3px;font-size:9.5px;font-weight:700;color:var(--text3);
-    text-transform:uppercase;letter-spacing:0.8px;
-  }
-  .ep-suggest button{
-    display:block;width:100%;text-align:left;padding:6px 11px;border:none;background:none;
-    font-size:12px;color:var(--text);cursor:pointer;font-family:'DM Sans',sans-serif;
-  }
-  .ep-suggest button:hover{background:var(--bg3)}
-  .ep-suggest .ep-suggest-empty{padding:9px 11px;font-size:11.5px;color:var(--text3)}
-
-  .ep-quick-groups{margin-top:10px;display:flex;flex-direction:column;gap:4px}
-  /* Forty-eight skills in five groups, all open at once, is a long scroll to
-     reach the one you want. Each group is a row you open, so the whole
-     catalogue fits in a glance and only what you are looking at is unfolded. */
-  .ep-quick-group{border:1px solid var(--border);border-radius:9px;background:#fff;overflow:hidden}
-  .ep-quick-group-title{
-    width:100%;display:flex;align-items:center;gap:8px;text-align:left;
-    padding:8px 10px;border:none;background:transparent;cursor:pointer;
-    font-family:'DM Sans',sans-serif;
-    font-size:9.5px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.8px;
-  }
-  .ep-quick-group-title:hover{background:var(--bg3)}
-  .ep-quick-group-title .ep-caret{
-    width:11px;height:11px;flex-shrink:0;stroke:currentColor;fill:none;stroke-width:3;
-    transition:transform .15s ease;
-  }
-  .ep-quick-group.open .ep-quick-group-title .ep-caret{transform:rotate(90deg)}
-  .ep-quick-group-title .ep-grp-name{flex:1;min-width:0}
-  /* How many of this group you have taken - the reason to open it, or not. */
-  .ep-grp-count{
-    font-size:9.5px;font-weight:700;letter-spacing:0.4px;padding:1px 6px;border-radius:999px;
-    background:var(--bg4);color:var(--text3);
-  }
-  .ep-grp-count.has{background:var(--blue-bg);color:var(--blue)}
-  .ep-quick-chips{display:none;flex-wrap:wrap;gap:5px;padding:0 10px 10px}
-  .ep-quick-group.open .ep-quick-chips{display:flex}
+  .ep-quick-groups{margin-top:10px}
+  /* The strip that replaces scrolling: every group reachable in one click,
+     and only the one being looked at taking up room. */
+  .ep-grp-tabs{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:9px;
+               padding-bottom:8px;border-bottom:1px solid var(--border)}
+  .ep-grp-tab{font-family:'DM Sans',sans-serif;font-size:10.5px;font-weight:700;
+              letter-spacing:0.3px;padding:4px 9px;border-radius:7px;border:1px solid transparent;
+              background:transparent;color:var(--text3);cursor:pointer;
+              display:inline-flex;align-items:center;gap:5px;transition:background .12s,color .12s}
+  .ep-grp-tab:hover{background:var(--bg4);color:var(--text2)}
+  .ep-grp-tab.on{background:var(--bg4);color:var(--text);border-color:var(--border2)}
+  /* How many of this group they hold - the reason to look in it, or not. */
+  .ep-grp-tab-n{font-size:9.5px;font-weight:700;padding:0 5px;border-radius:999px;
+                background:var(--blue-bg);color:var(--blue)}
+  .ep-grp-tab.on .ep-grp-tab-n{background:var(--accent);color:#18191f}
+  .ep-quick-chips{display:flex;flex-wrap:wrap;gap:5px}
+  .ep-picker-hint{font-size:11px;color:var(--text3);margin-top:9px;line-height:1.45}
+  .ep-picker-empty{font-size:11.5px;color:var(--text3);padding:14px 12px;text-align:center;
+                   border:1px dashed var(--border);border-radius:9px}
+  .ep-search-ico{width:14px;height:14px;flex-shrink:0;stroke:var(--text3);fill:none;stroke-width:2}
+  .ep-search-clear{width:20px;height:20px;flex-shrink:0;border:none;background:transparent;
+                   cursor:pointer;color:var(--text3);align-items:center;justify-content:center;
+                   border-radius:5px;padding:0}
+  .ep-search-clear svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2.4}
+  .ep-search-clear:hover{background:var(--bg4);color:var(--text)}
   .ep-quick-chip{
-    font-family:'DM Sans',sans-serif;font-size:11px;font-weight:600;padding:4px 9px;border-radius:999px;
-    border:1.5px dashed var(--border);background:#fff;color:var(--text2);cursor:pointer;
+    font-family:'DM Sans',sans-serif;font-size:11px;font-weight:600;padding:4px 10px;
+    border-radius:999px;border:1px solid var(--border);background:#fff;color:var(--text2);
+    cursor:pointer;transition:border-color .12s,background .12s,color .12s;
+    max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
   }
-  .ep-quick-chip:hover{border-style:solid;border-color:var(--accent);color:var(--accent3);background:rgba(201,168,44,0.07)}
-  .ep-quick-chip.picked{
-    border-style:solid;border-color:var(--blue);background:var(--blue-bg);color:var(--blue);cursor:default;
-  }
+  .ep-quick-chip:hover{border-color:var(--accent);background:var(--accent-light);color:var(--text)}
+  /* Taken. The same chip gives it back, so there is no second list of little
+     x buttons to hunt through to change your mind. */
+  .ep-quick-chip.picked{border-color:var(--accent);background:var(--accent);color:#18191f}
+  .ep-quick-chip.picked:hover{background:var(--accent2);border-color:var(--accent2)}
   .ep-footer{padding:12px 18px 16px;border-top:1px solid var(--border);display:flex;gap:8px;position:sticky;bottom:0;background:#fff;z-index:1}
   .ep-footer .btn{flex:1;justify-content:center;font-size:12px;padding:7px 10px}
   .role-pill{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:22px;font-size:11px;font-weight:700;letter-spacing:0.3px;text-transform:uppercase}
@@ -243,19 +226,26 @@
             </span>
           @endforeach
         </div>
-        <div class="ep-tag-input-row" style="position:relative">
+        {{-- One box and one list. Picking used to mean choosing between a
+             dropdown, an "+ Add" button and an accordion you opened a group
+             at a time - three ways to do one thing, and none of them showing
+             you what you had already taken. --}}
+        <div class="ep-tag-input-row">
+          <svg class="ep-search-ico" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
           <input class="ep-tag-input" id="ep-tag-input" type="text" autocomplete="off"
-                 placeholder="Search skills, or type your own..."
-                 onkeydown="handleTagKey(event)" oninput="epFilterSuggestions(this.value)"
-                 onfocus="epFilterSuggestions(this.value)"/>
-          <button class="ep-tag-add-btn" onclick="addTag()">+ Add</button>
-          <div class="ep-suggest" id="ep-suggest"></div>
-        </div>
-        <div style="font-size:11px;color:var(--text3);margin-top:7px">
-          Search above, or open a group below. Type anything that isn't there and press Enter.
+                 placeholder="Type to narrow the list below"
+                 onkeydown="handleTagKey(event)" oninput="epRenderQuickGroups()"/>
+          <button type="button" class="ep-search-clear" id="ep-search-clear" onclick="epClearSearch()" title="Clear" style="display:none">
+            <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
         </div>
 
         <div class="ep-quick-groups" id="ep-quick-groups"></div>
+
+        <div class="ep-picker-hint">
+          Click to take one, click again to drop it. Anything not on the list &mdash;
+          type it and press Enter.
+        </div>
       </div>
 
     </div>
@@ -328,57 +318,53 @@ function epSkillGroups(){
     // any of them needs a literature review and a proofread.
     .map(g => EP_SHARED_GROUPS.includes(g.name)
       ? g
-      : { name: g.name, items: g.items.filter(i => allowed.has(epNorm(i))) })
+      // Something already taken stays on show even when it belongs to
+      // another programme. Hiding it would leave a skill they hold with no
+      // tick beside it anywhere in this list, which reads as not having it.
+      : { name: g.name, items: g.items.filter(i => allowed.has(epNorm(i)) || epHasTag(i)) })
     .filter(g => g.items.length);
 }
 
 function epNorm(v){ return String(v).trim().toLowerCase(); }
 function epHasTag(name){ return epTags.some(t => epNorm(t) === epNorm(name)); }
 
-function epFilterSuggestions(query){
-  const box = document.getElementById('ep-suggest');
-  const q = epNorm(query || '');
-  const all = epSkillGroups().flatMap(g => g.items.map(i => ({ name: i, group: g.name })));
-  const matches = all.filter(s => !epHasTag(s.name) && (!q || epNorm(s.name).includes(q)));
+// Long enough to scroll is long enough to be a chore, and the list was that
+// whether it was folded into rows to open or laid out flat. One group is
+// shown at a time, picked from a strip along the top: a dozen or so chips,
+// all of them on screen, and switching group is a click rather than a scroll.
+const EP_SHORT_LABELS = {
+  'Research & Writing (Adviser)': 'Research',
+  'Language & Editing (Grammarian)': 'Language',
+  'Software & Development': 'Software',
+  'Data, AI & Systems': 'Data & AI',
+  'Information & Library Science': 'Info Science',
+  'Your own': 'Yours',
+};
 
-  if (!matches.length) {
-    box.innerHTML = q
-      ? '<div class="ep-suggest-empty">Nothing matches - press Enter to add "' + query.trim() + '" anyway.</div>'
-      : '';
-    box.classList.toggle('open', !!q);
-    return;
-  }
+let epActiveGroup = null;
 
-  let html = '', lastGroup = null;
-  matches.slice(0, 40).forEach(function (s) {
-    if (s.group !== lastGroup) { html += '<div class="ep-suggest-group">' + s.group + '</div>'; lastGroup = s.group; }
-    html += '<button type="button" onclick="epPickSkill(' + JSON.stringify(s.name).replace(/"/g, '&quot;') + ')">' + s.name + '</button>';
-  });
-  box.innerHTML = html;
-  box.classList.add('open');
+function epShortLabel(name){ return EP_SHORT_LABELS[name] || name; }
+
+/** The groups worth showing: filtered by programme, then by what was typed. */
+function epVisibleGroups(){
+  const q = epNorm(document.getElementById('ep-tag-input')?.value || '');
+
+  const groups = epSkillGroups()
+    .map(g => ({ name: g.name, items: g.items.filter(i => !q || epNorm(i).includes(q)) }))
+    .filter(g => g.items.length);
+
+  // Skills they typed themselves are theirs to see and drop too, so they get
+  // a group rather than disappearing.
+  const known = new Set(EP_ALL_SKILLS.map(s => epNorm(s.name)));
+  const own = epTags.filter(t => !known.has(epNorm(t)) && (!q || epNorm(t).includes(q)));
+
+  if (own.length) groups.push({ name: 'Your own', items: own });
+
+  return groups;
 }
 
-function epPickSkill(name){
-  if (!epHasTag(name)) { epTags.push(name); renderTags(); }
-  const input = document.getElementById('ep-tag-input');
-  input.value = '';
-  document.getElementById('ep-suggest').classList.remove('open');
-  epRenderQuickGroups();
-  input.focus();
-}
-
-// The same list, browsable without typing - for people who would rather
-// recognise a skill than recall one.
-//
-// Groups start folded. Every add and remove re-renders this whole block, so
-// which ones are open has to be remembered here rather than read back off the
-// DOM - otherwise picking a skill would slam its own group shut underneath
-// the cursor.
-const EP_OPEN_GROUPS = new Set();
-let epGroupsFirstRender = true;
-
-function epToggleSkillGroup(name){
-  EP_OPEN_GROUPS.has(name) ? EP_OPEN_GROUPS.delete(name) : EP_OPEN_GROUPS.add(name);
+function epSelectGroup(name){
+  epActiveGroup = name;
   epRenderQuickGroups();
 }
 
@@ -386,46 +372,87 @@ function epRenderQuickGroups(){
   const wrap = document.getElementById('ep-quick-groups');
   if (!wrap) return;
 
-  // On the way in, open whatever already has something taken in it, so the
-  // expert can see their own picks without hunting for them.
-  if (epGroupsFirstRender) {
-    epGroupsFirstRender = false;
-    epSkillGroups().forEach(function (g) {
-      if (g.items.some(epHasTag)) EP_OPEN_GROUPS.add(g.name);
-    });
+  const raw = document.getElementById('ep-tag-input')?.value || '';
+  const clear = document.getElementById('ep-search-clear');
+  if (clear) clear.style.display = raw.trim() ? 'flex' : 'none';
+
+  const groups = epVisibleGroups();
+
+  if (!groups.length) {
+    wrap.innerHTML = '<div class="ep-picker-empty">Nothing matches &ldquo;'
+      + epEscape(raw.trim()) + '&rdquo;. Press Enter to add it anyway.</div>';
+
+    return;
   }
 
-  const caret = '<svg class="ep-caret" viewBox="0 0 24 24"><polyline points="9 6 15 12 9 18"/></svg>';
+  // Searching crosses every group, so the tabs would be answering a question
+  // nobody asked - show the matches together instead.
+  const searching = raw.trim() !== '';
 
-  wrap.innerHTML = epSkillGroups().map(function (g) {
-    const taken = g.items.filter(epHasTag).length;
-    const open = EP_OPEN_GROUPS.has(g.name);
+  const chipsFor = items => items.map(function (i) {
+    const picked = epHasTag(i);
 
-    const chips = g.items.map(function (i) {
-      const picked = epHasTag(i);
-      return '<button type="button" class="ep-quick-chip' + (picked ? ' picked' : '') + '"'
-           + (picked ? ' disabled' : ' onclick="epPickSkill(' + JSON.stringify(i).replace(/"/g, '&quot;') + ')"')
-           + '>' + (picked ? '✓ ' : '+ ') + i + '</button>';
-    }).join('');
-
-    return '<div class="ep-quick-group' + (open ? ' open' : '') + '">'
-         + '<button type="button" class="ep-quick-group-title" aria-expanded="' + open + '"'
-         + ' onclick="epToggleSkillGroup(' + JSON.stringify(g.name).replace(/"/g, '&quot;') + ')">'
-         + caret
-         + '<span class="ep-grp-name">' + g.name + '</span>'
-         + '<span class="ep-grp-count' + (taken ? ' has' : '') + '">' + (taken ? taken + ' of ' + g.items.length : g.items.length) + '</span>'
-         + '</button>'
-         + '<div class="ep-quick-chips">' + chips + '</div>'
-         + '</div>';
+    // One control per skill: the same chip takes it and gives it back.
+    return '<button type="button" class="ep-quick-chip' + (picked ? ' picked' : '') + '"'
+         + ' onclick="epToggleSkill(' + JSON.stringify(i).replace(/"/g, '&quot;') + ')"'
+         + ' title="' + (picked ? 'Remove' : 'Add') + '">'
+         + (picked ? '&#10003; ' : '') + epEscape(i) + '</button>';
   }).join('');
+
+  if (searching) {
+    wrap.innerHTML = '<div class="ep-quick-chips">'
+      + chipsFor(groups.flatMap(g => g.items)) + '</div>';
+
+    return;
+  }
+
+  // Keep whatever they were looking at, unless the programmes changed under
+  // them and it is not there any more.
+  if (!groups.some(g => g.name === epActiveGroup)) {
+    const withPicks = groups.find(g => g.items.some(epHasTag));
+    epActiveGroup = (withPicks || groups[0]).name;
+  }
+
+  const tabs = groups.map(function (g) {
+    const taken = g.items.filter(epHasTag).length;
+    const on = g.name === epActiveGroup;
+
+    return '<button type="button" class="ep-grp-tab' + (on ? ' on' : '') + '"'
+         + ' onclick="epSelectGroup(' + JSON.stringify(g.name).replace(/"/g, '&quot;') + ')">'
+         + epEscape(epShortLabel(g.name))
+         + (taken ? '<span class="ep-grp-tab-n">' + taken + '</span>' : '')
+         + '</button>';
+  }).join('');
+
+  const active = groups.find(g => g.name === epActiveGroup);
+
+  wrap.innerHTML = '<div class="ep-grp-tabs">' + tabs + '</div>'
+    + '<div class="ep-quick-chips">' + chipsFor(active.items) + '</div>';
 }
 
-document.addEventListener('click', function (e) {
-  if (!e.target.closest('.ep-tag-input-row')) {
-    const box = document.getElementById('ep-suggest');
-    if (box) box.classList.remove('open');
-  }
-});
+/** Text from a person, put on the page as text and never as markup. */
+function epEscape(value){
+  const box = document.createElement('div');
+  box.textContent = value == null ? '' : String(value);
+  return box.innerHTML;
+}
+
+/** The one thing a chip does: take this skill, or give it back. */
+function epToggleSkill(name){
+  const at = epTags.findIndex(t => epNorm(t) === epNorm(name));
+
+  at >= 0 ? epTags.splice(at, 1) : epTags.push(name);
+
+  renderTags();
+  document.getElementById('ep-tag-input')?.focus();
+}
+
+function epClearSearch(){
+  const input = document.getElementById('ep-tag-input');
+  input.value = '';
+  epRenderQuickGroups();
+  input.focus();
+}
 
 function renderTags(){
   EP_TAGS_EL.innerHTML = '';
@@ -455,7 +482,6 @@ function addTag(){
   epTags.push(known ? known.name : val);
 
   EP_INPUT.value = '';
-  document.getElementById('ep-suggest').classList.remove('open');
   renderTags();
   EP_INPUT.focus();
 }
