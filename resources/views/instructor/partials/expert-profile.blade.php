@@ -52,10 +52,6 @@
   .ep-divider{height:1px;background:var(--border);margin:14px 0}
   .ep-roles{display:flex;flex-wrap:wrap;gap:5px}
   .ep-tags-wrap{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px;min-height:26px}
-  .ep-tag{display:inline-flex;align-items:center;gap:4px;padding:4px 9px;border-radius:6px;font-size:11.5px;font-weight:500;background:var(--blue-bg);color:var(--blue);border:1px solid rgba(29,78,216,0.18)}
-  .ep-tag-remove{background:none;border:none;cursor:pointer;display:flex;align-items:center;padding:0;color:var(--blue);opacity:0.55;line-height:1;transition:opacity 0.13s}
-  .ep-tag-remove:hover{opacity:1}
-  .ep-tag-remove svg{width:10px;height:10px;stroke:currentColor;fill:none;stroke-width:2.5}
   .ep-tag-input-row{display:flex;align-items:center;gap:8px;padding:7px 10px;border:1.5px solid var(--border);border-radius:9px;background:#fff}
   .ep-tag-input-row:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px rgba(201,168,44,0.1)}
   .ep-tag-input{flex:1;min-width:0;border:none;outline:none;background:transparent;font-family:'DM Sans',sans-serif;font-size:12.5px;color:var(--text)}
@@ -72,11 +68,20 @@
               display:inline-flex;align-items:center;gap:5px;transition:background .12s,color .12s}
   .ep-grp-tab:hover{background:var(--bg4);color:var(--text2)}
   .ep-grp-tab.on{background:var(--bg4);color:var(--text);border-color:var(--border2)}
+  /* Not a group of the catalogue - what they hold out of all of them. */
+  .ep-grp-tab-selected{color:var(--accent3)}
+  .ep-grp-tab-selected.on{background:var(--accent-light);border-color:var(--accent)}
   /* How many of this group they hold - the reason to look in it, or not. */
   .ep-grp-tab-n{font-size:9.5px;font-weight:700;padding:0 5px;border-radius:999px;
                 background:var(--blue-bg);color:var(--blue)}
   .ep-grp-tab.on .ep-grp-tab-n{background:var(--accent);color:#18191f}
-  .ep-quick-chips{display:flex;flex-wrap:wrap;gap:5px}
+  /* A tab of a dozen chips never reaches this. Somebody holding thirty
+     skills would otherwise push Save off the bottom of the panel, so the
+     chips stop growing and scroll instead - without a bar, because the panel
+     already has one and two side by side reads as a fault. */
+  .ep-quick-chips{display:flex;flex-wrap:wrap;gap:5px;max-height:196px;overflow-y:auto;
+                  scrollbar-width:none;-ms-overflow-style:none}
+  .ep-quick-chips::-webkit-scrollbar{display:none}
   .ep-picker-hint{font-size:11px;color:var(--text3);margin-top:9px;line-height:1.45}
   .ep-picker-empty{font-size:11.5px;color:var(--text3);padding:14px 12px;text-align:center;
                    border:1px dashed var(--border);border-radius:9px}
@@ -214,18 +219,13 @@
       <!-- Expertise Tags -->
       <div class="ep-field">
         <div class="ep-label">Areas of Expertise</div>
-        <div class="ep-tags-wrap" id="ep-tags-wrap">
-          @php
-            $expertiseList = \App\Models\ExpertExpertise::where('expert_id', $expert?->expert_id)->pluck('expertise_field')->toArray();
-          @endphp
-          @foreach($expertiseList as $exp)
-            <span class="ep-tag">{{ $exp }}
-              <button class="ep-tag-remove" onclick="removeTag({{ $loop->index }})" title="Remove">
-                <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-              </button>
-            </span>
-          @endforeach
-        </div>
+        @php
+          $expertiseList = \App\Models\ExpertExpertise::where('expert_id', $expert?->expert_id)->pluck('expertise_field')->toArray();
+        @endphp
+        {{-- No separate list of what has been taken. In a panel this narrow a
+             long skill name is a row of its own, so fifteen of them pushed the
+             thing you pick with off the bottom of the screen. They live in the
+             picker instead, as a Selected tab beside the others. --}}
         {{-- One box and one list. Picking used to mean choosing between a
              dropdown, an "+ Add" button and an accordion you opened a group
              at a time - three ways to do one thing, and none of them showing
@@ -268,7 +268,6 @@
 <script>
 const EP_OVERLAY = document.getElementById('ep-overlay');
 const EP_TRIGGER = document.getElementById('ep-trigger');
-const EP_TAGS_EL = document.getElementById('ep-tags-wrap');
 const EP_INPUT   = document.getElementById('ep-tag-input');
 
 let epTags = @json($expertiseList ?? []);
@@ -341,6 +340,8 @@ const EP_SHORT_LABELS = {
   'Your own': 'Yours',
 };
 
+const EP_SELECTED = 'Selected';
+
 let epActiveGroup = null;
 
 function epShortLabel(name){ return EP_SHORT_LABELS[name] || name; }
@@ -359,6 +360,13 @@ function epVisibleGroups(){
   const own = epTags.filter(t => !known.has(epNorm(t)) && (!q || epNorm(t).includes(q)));
 
   if (own.length) groups.push({ name: 'Your own', items: own });
+
+  // Everything taken, wherever it came from, in one tab. It goes first
+  // because "what do I already have" is the question somebody opening this
+  // panel has, and it is the only view that answers it in one place.
+  const taken = epTags.filter(t => !q || epNorm(t).includes(q));
+
+  if (taken.length) groups.unshift({ name: EP_SELECTED, items: taken });
 
   return groups;
 }
@@ -409,15 +417,16 @@ function epRenderQuickGroups(){
   // Keep whatever they were looking at, unless the programmes changed under
   // them and it is not there any more.
   if (!groups.some(g => g.name === epActiveGroup)) {
-    const withPicks = groups.find(g => g.items.some(epHasTag));
-    epActiveGroup = (withPicks || groups[0]).name;
+    epActiveGroup = groups[0].name;
   }
 
   const tabs = groups.map(function (g) {
     const taken = g.items.filter(epHasTag).length;
     const on = g.name === epActiveGroup;
 
-    return '<button type="button" class="ep-grp-tab' + (on ? ' on' : '') + '"'
+    const kind = g.name === EP_SELECTED ? ' ep-grp-tab-selected' : '';
+
+    return '<button type="button" class="ep-grp-tab' + kind + (on ? ' on' : '') + '"'
          + ' onclick="epSelectGroup(' + JSON.stringify(g.name).replace(/"/g, '&quot;') + ')">'
          + epEscape(epShortLabel(g.name))
          + (taken ? '<span class="ep-grp-tab-n">' + taken + '</span>' : '')
@@ -455,19 +464,9 @@ function epClearSearch(){
 }
 
 function renderTags(){
-  EP_TAGS_EL.innerHTML = '';
-  epTags.forEach((tag, i) => {
-    const span = document.createElement('span');
-    span.className = 'ep-tag';
-    span.innerHTML = `${tag}
-      <button class="ep-tag-remove" onclick="removeTag(${i})" title="Remove">
-        <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </button>`;
-    EP_TAGS_EL.appendChild(span);
-  });
-
-  // Single place every add/remove funnels through, so the browsable chips
-  // stay in step no matter which route added the tag.
+  // The picker is the only place skills are shown now, so keeping it in step
+  // is the whole of this. Everything that adds or removes one comes through
+  // here, whichever route it took.
   epRenderQuickGroups();
 }
 
@@ -486,7 +485,6 @@ function addTag(){
   EP_INPUT.focus();
 }
 
-function removeTag(i){ epTags.splice(i,1); renderTags(); }
 function handleTagKey(e){ if(e.key==='Enter'){ e.preventDefault(); addTag(); } }
 
 function epToggleProgram(cb){
