@@ -28,10 +28,10 @@
   .ep-header-title{flex:1;min-width:0;font-size:13px;font-weight:700;color:var(--text);
                    letter-spacing:-0.1px}
   .ep-close{width:26px;height:26px;flex-shrink:0;
-            background:transparent;border:1px solid var(--border);border-radius:7px;cursor:pointer;
+            background:transparent;border:none;border-radius:7px;cursor:pointer;
             color:var(--text3);padding:0;display:flex;align-items:center;justify-content:center;
-            transition:color 0.13s,background 0.13s,border-color 0.13s}
-  .ep-close:hover{color:var(--text);background:var(--bg3);border-color:var(--border2)}
+            transition:color 0.13s,background 0.13s}
+  .ep-close:hover{color:var(--text);background:var(--bg4)}
   .ep-close svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2.5}
   .ep-body{padding:18px}
   .ep-field{margin-bottom:15px}
