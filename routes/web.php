@@ -76,7 +76,6 @@ $pagesBothRolesOpen = function () {
     Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
     Route::get('/profile', [AdminProfileController::class, 'index'])->name('profile');
     Route::post('/profile', [AdminProfileController::class, 'update'])->name('profile.update');
-    Route::get('/sections', [StudentSectionController::class, 'index'])->name('sections');
     Route::get('/analytics', [AdminAnalyticsController::class, 'index'])->name('analytics');
     Route::get('/activitylog', [AdminActivityLogController::class, 'index'])->name('activitylog');
 
@@ -199,6 +198,11 @@ Route::middleware('expert.capsa')->group(function () {
     Route::get('/archive', [AdminArchiveController::class, 'index'])->name('archive');
     Route::get('/announcements', [AnnouncementController::class, 'index'])->name('announcements');
     Route::get('/resources', [ResourcesController::class, 'index'])->name('resources');
+
+    // Scoped to the sections the viewer covers, and an Admin covers none -
+    // the page is empty for them, and Student Accounts below is the
+    // unscoped list they actually want.
+    Route::get('/sections', [StudentSectionController::class, 'index'])->name('sections');
 });
 
 
