@@ -469,6 +469,7 @@
         </select>
       </div>
       <span class="experts-count">{{ $experts->count() }} registered experts</span>
+      <button type="button" class="btn" onclick="addCapsa()">Add CaPSA</button>
       <button type="button" class="btn" onclick="openExpertRosterModal()">Upload List</button>
       <button type="button" class="btn btn-primary" onclick="openExpertModal()">+ Add Expert</button>
     </div>
@@ -789,6 +790,22 @@
     <p class="ct-modal-desc" id="capsaModalDesc">
       CaPSA duties (account approval, panel assignment, team verification, financial checks) are scoped to the section(s) assigned below.
     </p>
+
+    {{-- Only for a person with no account yet. The same modal grants the role
+         to somebody already listed, where the email is already known. --}}
+    <div id="capsaNewFields" style="display:none">
+      <div class="section-field">
+        <label class="ct-modal-label" for="capsaEmail" style="margin-bottom:6px">
+          Email address <span style="color:#ef4444;font-weight:400;">(required)</span>
+        </label>
+        <input type="email" id="capsaEmail" class="ct-modal-input" placeholder="name@cspc.edu.ph" autocomplete="off">
+      </div>
+      <div class="section-field">
+        <label class="ct-modal-label" for="capsaName" style="margin-bottom:6px">Name <span style="color:#94a3b8;font-weight:400;">(optional)</span></label>
+        <input type="text" id="capsaName" class="ct-modal-input" placeholder="Taken from the email if left blank" autocomplete="off">
+      </div>
+      <p id="capsaEmailError" style="display:none;color:#dc2626;font-size:12px;margin:-6px 0 12px;text-align:left;"></p>
+    </div>
 
     <div class="section-field">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
@@ -1187,6 +1204,7 @@ const capsaSectionsError = document.getElementById('capsaSectionsError');
 const capsaConfirmBtn = document.getElementById('capsaConfirmBtn');
 let capsaTargetExpertId = null;
 let capsaEditingSections = false;
+let capsaAdding = false;
 
 /**
  * Change the sections a CaPSA covers.
@@ -1199,6 +1217,8 @@ let capsaEditingSections = false;
 function editCapsaSections(expertId, expertName, current) {
   capsaTargetExpertId = expertId;
   capsaEditingSections = true;
+  capsaAdding = false;
+  document.getElementById('capsaNewFields').style.display = 'none';
   capsaExpertName.textContent = expertName;
   capsaSectionsError.style.display = 'none';
   resetSectionPicker();
@@ -1227,8 +1247,39 @@ function checkSections(names) {
   updateAllSectionCounts();
 }
 
+/**
+ * Make a CaPSA from an email address, with no account needed first.
+ *
+ * The job moves between faculty and there is no permanent CaPSA, so this
+ * happens often enough that it should not need the expert list uploaded for
+ * the sake of one person.
+ */
+function addCapsa() {
+  capsaTargetExpertId = null;
+  capsaEditingSections = false;
+  capsaAdding = true;
+
+  document.getElementById('capsaNewFields').style.display = '';
+  document.getElementById('capsaEmail').value = '';
+  document.getElementById('capsaName').value = '';
+  document.getElementById('capsaEmailError').style.display = 'none';
+
+  capsaExpertName.textContent = '';
+  document.getElementById('capsaModalLead').textContent = 'Add a CaPSA';
+  document.getElementById('capsaModalTail').textContent = '';
+  document.getElementById('capsaModalDesc').textContent =
+    'The account is made if it does not exist yet, and is approved straight away. CaPSA duties are scoped to the section(s) assigned below.';
+  capsaConfirmBtn.textContent = 'Add CaPSA';
+
+  capsaSectionsError.style.display = 'none';
+  resetSectionPicker();
+  capsaModal.style.display = 'flex';
+}
+
 function toggleCapsa(expertId, isCurrentlyCapsa, expertName) {
   capsaEditingSections = false;
+  capsaAdding = false;
+  document.getElementById('capsaNewFields').style.display = 'none';
   capsaConfirmBtn.textContent = 'Make CaPSA';
   document.getElementById('capsaModalLead').textContent = 'Make';
   document.getElementById('capsaModalTail').textContent = 'a CaPSA';
@@ -1288,13 +1339,20 @@ capsaConfirmBtn.addEventListener('click', function () {
   capsaSectionsError.style.display = 'none';
 
   const wasEditing = capsaEditingSections;
+  const wasAdding = capsaAdding;
   const restore = () => {
     this.disabled = false;
-    this.textContent = wasEditing ? 'Save Sections' : 'Make CaPSA';
+    this.textContent = wasAdding ? 'Add CaPSA' : (wasEditing ? 'Save Sections' : 'Make CaPSA');
   };
 
   this.disabled = true;
   this.textContent = 'Saving...';
+
+  if (wasAdding) {
+    addCapsaByEmail(sections, restore);
+
+    return;
+  }
 
   if (wasEditing) {
     saveCapsaSections(capsaTargetExpertId, sections, restore);
@@ -1304,6 +1362,43 @@ capsaConfirmBtn.addEventListener('click', function () {
 
   sendToggleCapsa(capsaTargetExpertId, sections, 'CaPSA assigned successfully.', restore);
 });
+
+/** Make the account if it is needed, grant the role, set the sections. */
+function addCapsaByEmail(sections, onDone) {
+  const errorBox = document.getElementById('capsaEmailError');
+  errorBox.style.display = 'none';
+
+  fetch('{{ route('admin.experts.capsa.store') }}', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRF-TOKEN': '{{ csrf_token() }}',
+      'Accept': 'application/json',
+    },
+    body: JSON.stringify({
+      email: document.getElementById('capsaEmail').value.trim(),
+      name: document.getElementById('capsaName').value.trim(),
+      sections,
+    }),
+  })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        capsaModal.style.display = 'none';
+        showToast(data.message || 'CaPSA added.', 'success');
+        setTimeout(() => window.location.reload(), 900);
+
+        return;
+      }
+
+      // Beside the field it is about, rather than in a toast that has gone
+      // by the time they look back at what they typed.
+      errorBox.textContent = data.message || 'Could not add that CaPSA.';
+      errorBox.style.display = 'block';
+    })
+    .catch(() => showToast('Network error adding the CaPSA.', 'error'))
+    .finally(() => { if (onDone) onDone(); });
+}
 
 /** Sections only - the role is left exactly as it is. */
 function saveCapsaSections(expertId, sections, onDone) {
