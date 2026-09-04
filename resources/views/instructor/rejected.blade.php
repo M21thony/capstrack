@@ -218,7 +218,7 @@ p {
          commented routes in routes/web.php). A CaPSA adds faculty now, so
          there is nothing to resubmit - only somebody to ask. --}}
     <div style="margin-top:24px;font-size:13px;color:var(--text3)">
-      Ask your CaPSA to add you to the faculty list if this was a mistake.
+      Ask a CaPSA to add you to the expert list if this was a mistake.
     </div>
   </div>
 </div>

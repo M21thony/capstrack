@@ -490,8 +490,11 @@ class AuthController extends Controller
      */
     private function refuseUnlistedExpert(Request $request)
     {
-        $message = 'There is no account for this address yet. Ask your CaPSA to add you '
-            .'to the faculty list, then sign in again.';
+        // "A CaPSA", not "your CaPSA": a student belongs to a section somebody
+        // covers, and faculty belong to nobody - any CaPSA can add them. And
+        // "expert list", because that is what the upload is called on screen.
+        $message = 'There is no account for this address yet. Ask a CaPSA to add you '
+            .'to the expert list, then sign in again.';
 
         if ($request->expectsJson()) {
             return response()->json(['success' => false, 'message' => $message], 403);

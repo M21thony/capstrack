@@ -601,7 +601,7 @@
     {{-- Applying for your own account is switched off (see routes/web.php).
          The line says who to ask instead, because a person with no account is
          the one reader who cannot do anything about it themselves. --}}
-    <p class="request-link">Students and faculty are added by their CaPSA. If you cannot sign in, ask them to add you.</p>
+    <p class="request-link">Accounts are added by a CaPSA. If you cannot sign in, ask one to add you.</p>
 
     <p class="signin-footer">CapsTrack — CSPC College of Computer Studies</p>
   </div>
