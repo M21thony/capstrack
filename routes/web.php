@@ -121,6 +121,11 @@ Route::middleware('expert.admin')->group(function () {
     Route::delete('/students/{student}', [StudentAccountsController::class, 'destroy'])->name('students.destroy');
     Route::get('/settings', [AdminSettingsController::class, 'index'])->name('settings');
     Route::post('/settings', [AdminSettingsController::class, 'update'])->name('settings.update');
+    // Sections have to exist before anybody can be made a CaPSA over them,
+    // and they cannot be worked out from students on an install that has
+    // none yet - see App\Support\SectionCatalog.
+    Route::post('/settings/sections', [AdminSettingsController::class, 'storeSections'])->name('settings.sections.store');
+    Route::delete('/settings/sections', [AdminSettingsController::class, 'destroySection'])->name('settings.sections.destroy');
 });
 
     Route::middleware('expert.admin')->group($pagesBothRolesOpen);
