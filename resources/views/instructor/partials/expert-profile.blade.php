@@ -18,12 +18,14 @@
   .ep-modal{position:fixed;top:0;left:250px;width:300px;height:100vh;background:#fff;box-shadow:4px 0 24px rgba(0,0,0,0.18);overflow-y:auto;pointer-events:all;transform:translateX(-10px);opacity:0;transition:transform 0.18s ease,opacity 0.18s ease;z-index:201;border-right:1px solid var(--border);scrollbar-width:none;-ms-overflow-style:none}
   .ep-modal::-webkit-scrollbar{display:none}
   .ep-overlay.open .ep-modal{transform:translateX(0);opacity:1}
-  .ep-header{background:var(--navy-dark);padding:22px 18px 18px;border-bottom:2px solid var(--accent);display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:1}
-  .ep-avatar{width:44px;height:44px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:#18191f;flex-shrink:0;border:2px solid rgba(201,168,44,0.4)}
-  .ep-header-name{font-size:13px;font-weight:600;color:var(--navy-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .ep-header-sub{font-size:11px;color:var(--accent);margin-top:2px;font-weight:500}
-  .ep-close{background:none;border:none;cursor:pointer;color:rgba(255,255,255,0.4);padding:4px;line-height:1;display:flex;margin-left:auto;flex-shrink:0;transition:color 0.13s}
-  .ep-close:hover{color:rgba(255,255,255,0.85)}
+  /* Sits over the body now that there is no bar to sit in. Kept at the top
+     because a panel this tall would otherwise only be closable from a button
+     at the bottom of a scroll. */
+  .ep-close{position:absolute;top:12px;right:12px;z-index:2;width:26px;height:26px;
+            background:var(--bg2);border:1px solid var(--border);border-radius:7px;cursor:pointer;
+            color:var(--text3);padding:0;display:flex;align-items:center;justify-content:center;
+            transition:color 0.13s,background 0.13s,border-color 0.13s}
+  .ep-close:hover{color:var(--text);background:var(--bg3);border-color:var(--border2)}
   .ep-close svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2.5}
   .ep-body{padding:18px}
   .ep-field{margin-bottom:15px}
@@ -108,9 +110,10 @@
   .ep-quick-chip.picked:hover{background:var(--accent2);border-color:var(--accent2)}
   .ep-footer{padding:12px 18px 16px;border-top:1px solid var(--border);display:flex;gap:8px;position:sticky;bottom:0;background:#fff;z-index:1}
   .ep-footer .btn{flex:1;justify-content:center;font-size:12px;padding:7px 10px}
-  .role-pill{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:22px;font-size:11px;font-weight:700;letter-spacing:0.3px;text-transform:uppercase}
+  .role-pill{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:22px;font-size:11px;font-weight:700;letter-spacing:0.3px;text-transform:uppercase;background:var(--bg4);color:var(--text2);border:1px solid var(--border)}
   .role-pill svg{width:11px;height:11px;stroke:currentColor;fill:none;stroke-width:2.5;flex-shrink:0}
   .role-adviser{background:rgba(201,168,44,0.12);color:var(--accent3);border:1px solid rgba(201,168,44,0.3)}
+  .role-capstone_adviser{background:var(--blue-bg);color:var(--blue);border:1px solid rgba(29,78,216,0.2)}
   .role-consultant{background:var(--cyan-bg);color:var(--cyan);border:1px solid rgba(8,145,178,0.2)}
   .role-grammarian{background:var(--green-bg);color:var(--green);border:1px solid rgba(22,163,74,0.2)}
 </style>
@@ -120,19 +123,13 @@
 <div class="ep-overlay" id="ep-overlay" onclick="handleEpOverlay(event)">
   <div class="ep-modal" id="ep-modal">
 
-    <!-- Sticky Header -->
-    <div class="ep-header">
-      <div class="ep-avatar" style="padding:0;overflow:hidden;">
-        <img src="{{ $expert?->avatarUrl() ?? asset('images/default-avatar.jpg') }}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;display:block;" loading="lazy">
-      </div>
-      <div style="flex:1;min-width:0">
-        <div class="ep-header-name">{{ $expert?->first_name }} {{ $expert?->last_name }}</div>
-        <div class="ep-header-sub">Capstone Expert &middot; Active</div>
-      </div>
-      <button class="ep-close" onclick="closeExpertProfile()">
-        <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </button>
-    </div>
+    {{-- No name and face at the top: the sidebar three inches to the left is
+         already showing whose panel this is, and the block was repeating it
+         at the cost of the first 80px of a panel that has to scroll. Only the
+         way out stays, floated over the body where it was. --}}
+    <button class="ep-close" onclick="closeExpertProfile()" aria-label="Close">
+      <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
 
     <!-- Scrollable Body -->
     <div class="ep-body">

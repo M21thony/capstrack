@@ -308,8 +308,8 @@
     gap: 8px;
     max-height: 400px;
     overflow-y: auto;
-    padding-right: 2px;
-  }
+    padding-right: 2px;scrollbar-width:none;-ms-overflow-style:none}
+.pf-sections-list::-webkit-scrollbar{display:none}
 
   .profile-page .pf-section-opt {
     display: flex;

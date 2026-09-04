@@ -97,7 +97,8 @@
   .ppdup-toggle:hover{text-decoration:underline}
   .ppdup-panel{display:none;margin-top:5px;padding:7px 9px;border-radius:6px;background:var(--bg3);border:1px solid var(--border)}
   .ppdup-panel.open{display:block}
-  .ppdup-abstract{font-size:11px;color:var(--text2);line-height:1.55;max-height:200px;overflow-y:auto;white-space:pre-wrap}
+  .ppdup-abstract{font-size:11px;color:var(--text2);line-height:1.55;max-height:200px;overflow-y:auto;white-space:pre-wrap;scrollbar-width:none;-ms-overflow-style:none}
+.ppdup-abstract::-webkit-scrollbar{display:none}
   .ppdup-abstract mark{background:rgba(201,168,44,.35);color:inherit;padding:0 1px;border-radius:2px}
 
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1000;opacity:0;pointer-events:none;transition:opacity 0.2s}

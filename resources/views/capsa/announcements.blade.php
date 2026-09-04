@@ -17,7 +17,8 @@
 
 /* @mention */
 .mention-wrapper { position:relative; }
-.mention-dropdown { position:absolute;bottom:100%;left:0;right:0;background:#fff;border:1px solid var(--border);border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,0.12);max-height:180px;overflow-y:auto;z-index:100;display:none;margin-bottom:4px; }
+.mention-dropdown { position:absolute;bottom:100%;left:0;right:0;background:#fff;border:1px solid var(--border);border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,0.12);max-height:180px;overflow-y:auto;z-index:100;display:none;margin-bottom:4px;scrollbar-width:none;-ms-overflow-style:none}
+.mention-dropdown::-webkit-scrollbar{display:none}
 .mention-dropdown.open { display:block; }
 .mention-item { padding:8px 12px;font-size:13px;font-weight:500;color:var(--text2);cursor:pointer;border-bottom:1px solid #f0f0f0;transition:background .1s; }
 .mention-item:last-child { border-bottom:none;border-radius:0 0 10px 10px; }

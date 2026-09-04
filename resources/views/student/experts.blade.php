@@ -127,7 +127,8 @@
 .skill-picker-search svg { width: 13px; height: 13px; stroke: var(--text3); fill: none; stroke-width: 2; flex-shrink: 0; }
 .skill-picker-search input { flex: 1; border: none; outline: none; background: none; font-family: 'DM Sans', sans-serif; font-size: 13px; color: var(--text); }
 .skill-picker-search input::placeholder { color: var(--text3); }
-.skill-picker-list { max-height: 300px; overflow-y: auto; padding: 7px; display: flex; flex-direction: column; gap: 4px; }
+.skill-picker-list { max-height: 300px; overflow-y: auto; padding: 7px; display: flex; flex-direction: column; gap: 4px;scrollbar-width:none;-ms-overflow-style:none}
+.skill-picker-list::-webkit-scrollbar{display:none}
 .skill-picker-empty { font-size: 12px; color: var(--text3); padding: 10px 8px; margin: 0; }
 
 .skill-group { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; flex-shrink: 0; }
