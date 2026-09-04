@@ -174,4 +174,60 @@ class AdminExpertsPageTest extends TestCase
 
         $this->get(route('admin.experts'))->assertOk()->assertSee('0/3', false);
     }
+
+    /**
+     * The compact table: one line per person, status as a dot, skills as
+     * chips.
+     *
+     * The filter used to find the status by counting to the sixth column,
+     * which is a thing that breaks the moment a column moves - and this
+     * moves one. It reads the row's own attributes now, so the assertions
+     * here are about those as much as about the markup.
+     */
+    public function test_the_table_is_compact_and_filterable_by_row_attributes(): void
+    {
+        $admin = CapstoneExpert::create([
+            'email' => 'admin.compact@test.com',
+            'first_name' => 'Admin',
+            'last_name' => 'Compact',
+            'is_admin' => true,
+            'approved_status' => true,
+        ]);
+
+        $capsa = $this->makeCapsa(CapstoneExpert::create([
+            'email' => 'chips@test.com',
+            'first_name' => 'Many',
+            'last_name' => 'Skills',
+            'approved_status' => true,
+            'sections' => ['BSIT-4B'],
+        ]));
+
+        foreach (['Research Methodology', 'Data Analytics', 'Machine Learning', 'Web Development'] as $skill) {
+            \App\Models\ExpertExpertise::create(['expert_id' => $capsa->expert_id, 'expertise_field' => $skill]);
+        }
+
+        $this->actingAs($admin, 'expert');
+
+        $response = $this->get(route('admin.experts'));
+
+        $response->assertOk();
+
+        // Sections earn their own column; Status gives its up to a dot.
+        $response->assertSee('<th>Sections</th>', false);
+        $response->assertDontSee('<th>Status</th>', false);
+        $response->assertSee('cx-dot cx-dot-', false);
+
+        // The profile picture stays.
+        $response->assertSee('class="cx-av"', false);
+
+        // Two skills as chips, the rest behind a counter that opens the panel.
+        $response->assertSee('cx-chip">Research Methodology', false);
+        $response->assertSee('cx-chip cx-chip-n', false);
+        $response->assertSee('+2', false);
+
+        // What the filter reads, so it no longer counts columns.
+        $response->assertSee('data-status="', false);
+        $response->assertSee('data-roles="', false);
+        $response->assertSee('data-search="', false);
+    }
 }
