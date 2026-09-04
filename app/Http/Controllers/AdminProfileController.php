@@ -25,10 +25,12 @@ class AdminProfileController extends Controller
             }
         }
 
-        $sections = array_values(array_unique(array_filter($sections)));
-        sort($sections);
+        // What an Admin has written down counts as much as what a student is
+        // enrolled in - before a term starts there are no students, and a
+        // section nobody is in yet is still a section somebody covers.
+        $sections = array_merge($sections, \App\Support\SectionCatalog::defined());
 
-        return $sections;
+        return \App\Support\SectionCatalog::tidy($sections);
     }
 
     public function index(): View
