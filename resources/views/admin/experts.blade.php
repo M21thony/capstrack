@@ -483,7 +483,7 @@
             <th style="padding-left:20px">Expert</th>
             <th>Role(s)</th>
             <th>Expertise</th>
-            <th>Capacity</th>
+            <th>Team Slot</th>
             <th>Status</th>
             <th>Action</th>
           </tr>
@@ -500,7 +500,22 @@
               $maxTeams = $expert->max_teams ?? 0;
               $teamCount = $expert->team_assignments_count ?? 0;
               $slotsLeft = max(0, $maxTeams - $teamCount);
-              $isFull = $teamCount >= $maxTeams;
+
+              // Team slots belong to the roles that take teams. A CaPSA is
+              // not one of them - the job is running the subject, not
+              // advising groups - so a plain CaPSA has no slots to show and
+              // reading "0/0 - Full" against their name says they are
+              // overloaded when they were never carrying anything.
+              $takesTeams = $expert->roles
+                  ->pluck('role_name')
+                  ->intersect(\App\Models\CapstoneExpert::STUDENT_FACING_ROLES)
+                  ->isNotEmpty();
+
+              // Nobody has said how many they take yet, which is not the
+              // same as having said none.
+              $slotsSet = $expert->max_teams !== null || filled($expert->program_slots);
+
+              $isFull = $takesTeams && $slotsSet && $teamCount >= $maxTeams;
               $isOnline = $expert->is_online;
               $computedStatus = $isFull ? 'full' : ($isOnline ? 'active' : 'offline');
               $capacityRows = $expert->parsedCapacity();
@@ -526,7 +541,11 @@
                 'sections' => $expert->sections ?? [],
                 'roles' => $expert->roles->pluck('role_name')->map($roleLabel)->values(),
                 'expertise' => $expertiseList->values(),
-                'capacity' => collect($capacityRows)->map(fn ($row) => $row[0].': max '.$row[1])->values(),
+                // Empty rather than "ALL: max 0" - the detail panel reads
+                // that as "Not set", which is what it is.
+                'capacity' => $takesTeams && $slotsSet
+                    ? collect($capacityRows)->map(fn ($row) => $row[0].': max '.$row[1])->values()
+                    : collect(),
               ];
             @endphp
             <td style="padding-left:20px" data-label="Expert">
@@ -571,8 +590,12 @@
                 @endif
               @endif
             </td>
-            <td data-label="Capacity">
-              @if (count($capacityRows) === 1)
+            <td data-label="Team Slot">
+              @if (! $takesTeams)
+                <span style="font-size:11px;color:var(--text3)">&mdash;</span>
+              @elseif (! $slotsSet)
+                <span style="font-size:11px;color:var(--text3)">Not set</span>
+              @elseif (count($capacityRows) === 1)
                 <div style="display:flex;align-items:center;gap:8px">
                   <div class="pbar" style="width:60px">
                     <div class="pbar-fill pf-green" style="width:{{ $maxTeams > 0 ? round(($teamCount / $maxTeams) * 100) : 0 }}%"></div>
@@ -727,7 +750,7 @@
         <div class="expert-detail-field-value" id="detailExpertise">—</div>
       </div>
       <div>
-        <div class="expert-detail-field-label">Capacity</div>
+        <div class="expert-detail-field-label">Team Slot</div>
         <div class="expert-detail-field-value" id="detailCapacity">—</div>
       </div>
     </div>

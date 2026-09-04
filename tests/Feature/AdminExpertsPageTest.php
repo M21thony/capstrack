@@ -108,4 +108,70 @@ class AdminExpertsPageTest extends TestCase
         $response->assertDontSee('openExpertRosterModal()', false);
         $response->assertDontSee('+ Add Expert', false);
     }
+
+    /**
+     * A CaPSA who advises nobody has no team slots, and is not "Full".
+     *
+     * Team slots belong to the roles that take teams. Running the subject is
+     * not one of them, so the row used to read "0/0 - 0 left" with a Full
+     * badge beside it: an overload badge on somebody carrying nothing.
+     */
+    public function test_a_capsa_with_no_team_taking_role_shows_no_slots(): void
+    {
+        $admin = CapstoneExpert::create([
+            'email' => 'admin.slots@test.com',
+            'first_name' => 'Admin',
+            'last_name' => 'Slots',
+            'is_admin' => true,
+            'approved_status' => true,
+        ]);
+
+        $this->makeCapsa(CapstoneExpert::create([
+            'email' => 'plain.capsa@test.com',
+            'first_name' => 'Plain',
+            'last_name' => 'Capsa',
+            'approved_status' => true,
+        ]));
+
+        $this->actingAs($admin, 'expert');
+
+        $response = $this->get(route('capsa.experts'));
+
+        $response->assertOk();
+        $response->assertSee('Team Slot', false);
+        $response->assertDontSee('Capacity</th>', false);
+
+        // No slot reading, and no overload badge for someone with no slots.
+        $response->assertDontSee('0/0', false);
+        $response->assertDontSee('badge-amber">Full', false);
+    }
+
+    /** A CaPSA who also advises does have slots, once they are set. */
+    public function test_a_capsa_who_also_advises_shows_their_slots(): void
+    {
+        $admin = CapstoneExpert::create([
+            'email' => 'admin.slots2@test.com',
+            'first_name' => 'Admin',
+            'last_name' => 'Slots',
+            'is_admin' => true,
+            'approved_status' => true,
+        ]);
+
+        $both = $this->makeCapsa(CapstoneExpert::create([
+            'email' => 'both.roles@test.com',
+            'first_name' => 'Both',
+            'last_name' => 'Roles',
+            'approved_status' => true,
+            'max_teams' => 3,
+        ]));
+
+        DB::table('expert_roles')->insert([
+            'expert_id' => $both->expert_id,
+            'role_id' => DB::table('roles')->where('role_name', 'adviser')->value('role_id'),
+        ]);
+
+        $this->actingAs($admin, 'expert');
+
+        $this->get(route('capsa.experts'))->assertOk()->assertSee('0/3', false);
+    }
 }
