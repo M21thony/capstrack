@@ -846,8 +846,8 @@
         <input type="email" id="capsaEmail" class="ct-modal-input" placeholder="name@cspc.edu.ph" autocomplete="off">
       </div>
       <div class="section-field">
-        <label class="ct-modal-label" for="capsaName" style="margin-bottom:6px">Name <span style="color:#94a3b8;font-weight:400;">(optional)</span></label>
-        <input type="text" id="capsaName" class="ct-modal-input" placeholder="Taken from the email if left blank" autocomplete="off">
+        <label class="ct-modal-label" for="capsaName" style="margin-bottom:6px">Full name <span style="color:#ef4444;font-weight:400;">(required)</span></label>
+        <input type="text" id="capsaName" class="ct-modal-input" placeholder="Rosa Villanueva" autocomplete="off">
       </div>
       <p id="capsaEmailError" style="display:none;color:#dc2626;font-size:12px;margin:-6px 0 12px;text-align:left;"></p>
     </div>
@@ -1253,6 +1253,14 @@ capsaConfirmBtn.addEventListener('click', function () {
     .map(cb => cb.closest('.section-opt').querySelector('span').textContent);
   if (sections.length === 0) {
     capsaSectionsError.style.display = 'block';
+    return;
+  }
+
+  // Said before the request goes, beside the field it is about.
+  if (capsaAdding && !document.getElementById('capsaName').value.trim()) {
+    const box = document.getElementById('capsaEmailError');
+    box.textContent = 'Type their full name.';
+    box.style.display = 'block';
     return;
   }
   capsaSectionsError.style.display = 'none';

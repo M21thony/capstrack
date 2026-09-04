@@ -794,8 +794,8 @@ const ROLE_NAME_TO_ID = {{ Illuminate\Support\Js::from($roleNameToId) }};
     </div>
 
     <div class="ae-field">
-      <label class="ae-label" for="addExpertName">Name <span class="ae-opt">(optional)</span></label>
-      <input type="text" id="addExpertName" class="ct-modal-input" placeholder="Taken from the email if left blank" autocomplete="off" style="margin-bottom:0">
+      <label class="ae-label" for="addExpertName">Full name <span class="ae-req">(required)</span></label>
+      <input type="text" id="addExpertName" class="ct-modal-input" placeholder="Mark Anthony Balilla" autocomplete="off" style="margin-bottom:0">
     </div>
 
     {{-- Required here, unlike the bulk upload: adding one person is a
@@ -931,6 +931,7 @@ function addExpert() {
   // Said beside the fields rather than in a toast that has gone by the time
   // they look back at what they typed.
   if (!document.getElementById('addExpertEmail').value.trim()) return fail('Type an email address.');
+  if (!document.getElementById('addExpertName').value.trim()) return fail('Type their full name.');
   if (!roles.length) return fail('Choose at least one role.');
 
   box.style.display = 'none';

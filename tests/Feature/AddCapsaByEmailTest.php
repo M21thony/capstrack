@@ -77,44 +77,45 @@ class AddCapsaByEmailTest extends TestCase
         $this->assertTrue($this->isCapsa('newcapsa@cspc.edu.ph'));
     }
 
-    /** Without a name, the address is the only thing there is to go on. */
-    public function test_a_name_is_taken_from_the_email_when_none_is_given(): void
+    /**
+     * A name is required, because a guessed one is wrong on every screen.
+     *
+     * It used to be read off the address when blank, which works for
+     * "juan.delacruz@" and gives "Markanthonybalilla21" for an address with
+     * nothing to split on.
+     */
+    public function test_a_capsa_cannot_be_added_without_a_name(): void
     {
         $this->actingAs($this->admin(), 'expert');
 
         $this->postJson(route('admin.experts.capsa.store'), [
-            'email' => 'juan.delacruz@cspc.edu.ph',
+            'email' => 'noname@cspc.edu.ph',
             'sections' => ['BSIT-4B'],
-        ])->assertOk();
+        ])->assertStatus(422)->assertJson(['success' => false]);
 
-        $expert = CapstoneExpert::where('email', 'juan.delacruz@cspc.edu.ph')->first();
-
-        $this->assertSame('Juan', $expert->first_name);
-        $this->assertSame('Delacruz', $expert->last_name);
+        $this->assertNull(CapstoneExpert::where('email', 'noname@cspc.edu.ph')->first());
     }
 
     /**
-     * An address with nothing to split on gives one name, not the same one
-     * twice.
+     * A full name splits on the LAST space.
      *
-     * "hellscreamgrom9@gmail.com" has no surname in it, and writing the whole
-     * thing into both halves reads as "Hellscreamgrom9 Hellscreamgrom9" on
-     * every screen that shows a name.
+     * "Mark Anthony Balilla" is Mark Anthony Balilla, not Mark of the family
+     * Anthony Balilla. Two given names is the ordinary case here.
      */
-    public function test_an_email_with_no_surname_in_it_does_not_repeat_the_name(): void
+    public function test_a_full_name_splits_on_the_last_space(): void
     {
         $this->actingAs($this->admin(), 'expert');
 
         $this->postJson(route('admin.experts.capsa.store'), [
-            'email' => 'hellscreamgrom9@gmail.com',
+            'email' => 'threenames@cspc.edu.ph',
+            'name' => 'Mark Anthony Balilla',
             'sections' => ['BSIT-4B'],
         ])->assertOk();
 
-        $expert = CapstoneExpert::where('email', 'hellscreamgrom9@gmail.com')->first();
+        $expert = CapstoneExpert::where('email', 'threenames@cspc.edu.ph')->first();
 
-        $this->assertSame('Hellscreamgrom9', $expert->first_name);
-        $this->assertSame('', $expert->last_name);
-        $this->assertSame('Hellscreamgrom9', $expert->name);
+        $this->assertSame('Mark Anthony', $expert->first_name);
+        $this->assertSame('Balilla', $expert->last_name);
     }
 
     /** A one-word name typed in is treated the same way. */
@@ -144,6 +145,7 @@ class AddCapsaByEmailTest extends TestCase
         $this->actingAs($this->admin(), 'expert');
 
         $this->postJson(route('admin.experts.capsa.store'), [
+            'name' => 'Test Person',
             'email' => 'nocapacity@cspc.edu.ph',
             'sections' => ['BSIT-4B'],
         ])->assertOk();
@@ -167,6 +169,7 @@ class AddCapsaByEmailTest extends TestCase
         ]);
 
         $response = $this->postJson(route('admin.experts.capsa.store'), [
+            'name' => 'Test Person',
             'email' => 'already@gmail.com',
             'sections' => ['BSIT-4B'],
         ]);
@@ -194,6 +197,7 @@ class AddCapsaByEmailTest extends TestCase
         ]);
 
         $this->postJson(route('admin.experts.capsa.store'), [
+            'name' => 'Test Person',
             'email' => 'Mixed@Gmail.com',
             'sections' => ['BSIT-4B'],
         ])->assertOk()->assertJson(['created' => false]);
@@ -227,6 +231,7 @@ class AddCapsaByEmailTest extends TestCase
         $this->actingAs($this->admin(), 'expert');
 
         $this->postJson(route('admin.experts.capsa.store'), [
+            'name' => 'Test Person',
             'email' => 'nosections@cspc.edu.ph',
             'sections' => [],
         ])->assertStatus(422)->assertJson(['success' => false]);
@@ -247,6 +252,7 @@ class AddCapsaByEmailTest extends TestCase
         $this->actingAs($capsa, 'expert');
 
         $this->postJson(route('admin.experts.capsa.store'), [
+            'name' => 'Test Person',
             'email' => 'sneaky@gmail.com',
             'sections' => ['BSIT-4B'],
         ])->assertForbidden();

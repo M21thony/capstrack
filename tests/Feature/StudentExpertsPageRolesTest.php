@@ -109,10 +109,19 @@ class StudentExpertsPageRolesTest extends TestCase
 
         // The expert is qualified as an adviser too, so a label reading
         // "Adviser" here would mean the old guess is still in play.
-        $response->assertSee('Applied as consultant');
         $this->assertStringContainsString(
             'Consultant',
             $this->teamExpertsSection($response->getContent()),
+        );
+
+        // An approved expert belongs in the slots above and nowhere else.
+        // They used to appear three times over - in the slots, still in
+        // Request Experts as though undecided, and still in the grid below
+        // as though available to ask.
+        $response->assertDontSee('Applied as consultant');
+        $this->assertStringNotContainsString(
+            'data-expert-id="'.$expert->expert_id.'"',
+            $response->getContent(),
         );
     }
 

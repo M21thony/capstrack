@@ -68,20 +68,39 @@ class AddExpertByEmailTest extends TestCase
         $this->assertSame(['adviser'], $this->rolesOf('late.arrival@cspc.edu.ph'));
     }
 
-    /** Without a name, the address is the only thing there is to go on. */
-    public function test_the_name_is_read_from_the_email_when_none_is_given(): void
+    /**
+     * A name is required, because a guessed one is wrong on every screen.
+     *
+     * It used to be read off the address when blank, which gives
+     * "Markanthonybalilla21" for an address with nothing to split on.
+     */
+    public function test_an_expert_cannot_be_added_without_a_name(): void
     {
         $this->actingAs($this->capsa(), 'expert');
 
         $this->postJson(route('capsa.experts.store'), [
-            'email' => 'juan.delacruz@cspc.edu.ph',
+            'email' => 'noname@cspc.edu.ph',
             'roles' => ['consultant'],
+        ])->assertStatus(422)->assertJson(['success' => false]);
+
+        $this->assertNull(CapstoneExpert::where('email', 'noname@cspc.edu.ph')->first());
+    }
+
+    /** A full name splits on the last space, so two given names survive. */
+    public function test_a_full_name_splits_on_the_last_space(): void
+    {
+        $this->actingAs($this->capsa(), 'expert');
+
+        $this->postJson(route('capsa.experts.store'), [
+            'email' => 'threenames@cspc.edu.ph',
+            'name' => 'Maria Cristina Dela Cruz',
+            'roles' => ['adviser'],
         ])->assertOk();
 
-        $expert = CapstoneExpert::where('email', 'juan.delacruz@cspc.edu.ph')->first();
+        $expert = CapstoneExpert::where('email', 'threenames@cspc.edu.ph')->first();
 
-        $this->assertSame('Juan', $expert->first_name);
-        $this->assertSame('Delacruz', $expert->last_name);
+        $this->assertSame('Maria Cristina Dela', $expert->first_name);
+        $this->assertSame('Cruz', $expert->last_name);
     }
 
     /** One person, more than one role. */
@@ -90,6 +109,7 @@ class AddExpertByEmailTest extends TestCase
         $this->actingAs($this->capsa(), 'expert');
 
         $this->postJson(route('capsa.experts.store'), [
+            'name' => 'Test Person',
             'email' => 'two.roles@cspc.edu.ph',
             'roles' => ['consultant', 'grammarian'],
         ])->assertOk();
@@ -108,6 +128,7 @@ class AddExpertByEmailTest extends TestCase
         $this->actingAs($this->capsa(), 'expert');
 
         $this->postJson(route('capsa.experts.store'), [
+            'name' => 'Test Person',
             'email' => 'norole@cspc.edu.ph',
             'roles' => [],
         ])->assertStatus(422)->assertJson(['success' => false]);
@@ -121,6 +142,7 @@ class AddExpertByEmailTest extends TestCase
         $this->actingAs($this->capsa(), 'expert');
 
         $this->postJson(route('capsa.experts.store'), [
+            'name' => 'Test Person',
             'email' => 'someone@yahoo.com',
             'roles' => ['adviser'],
         ])->assertStatus(422)->assertJson(['success' => false]);
@@ -160,6 +182,7 @@ class AddExpertByEmailTest extends TestCase
         $this->actingAs($this->capsa(), 'expert');
 
         $this->postJson(route('capsa.experts.store'), [
+            'name' => 'Test Person',
             'email' => 'sneaky@cspc.edu.ph',
             'roles' => ['adviser', 'capstone_adviser'],
         ])->assertStatus(422);
@@ -173,6 +196,7 @@ class AddExpertByEmailTest extends TestCase
         $this->actingAs($this->capsa(), 'expert');
 
         $this->postJson(route('capsa.experts.store'), [
+            'name' => 'Test Person',
             'email' => 'blank.skills@cspc.edu.ph',
             'roles' => ['adviser'],
         ])->assertOk();
