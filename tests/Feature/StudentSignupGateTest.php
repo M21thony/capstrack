@@ -66,9 +66,13 @@ class StudentSignupGateTest extends TestCase
         $this->assertNotNull($student);
         $this->assertAuthenticatedAs($student);
 
-        // Pre-filling the academic fields from the list is the real Google
-        // callback's job; this local mock only makes the account. What this
-        // asserts is the gate: being on the list is what let them in.
+        // The list already said who they are, so the account arrives filled
+        // in rather than empty - and that is true of this local mock as much
+        // as of the real Google callback, because both go through the one
+        // method that decides it.
+        $this->assertSame('221001135', $student->student_number);
+        $this->assertSame('Bachelor of Science in Information Technology', $student->course);
+        $this->assertSame('4th '.json_decode('"·"').' B', $student->year_section);
     }
 
     /**

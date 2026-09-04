@@ -242,42 +242,13 @@ class AuthController extends Controller
             return redirect('/request-account?email='.urlencode($email).'&first_name='.urlencode($firstName).'&last_name='.urlencode($lastName));
         }
 
-        // Students can register and use the site immediately, whether or
-        // not CAPSA has uploaded the official roster yet - it's never a
-        // gate on account creation or access. If a roster row already
-        // exists for this email (CAPSA uploaded it before this student's
-        // first login), pre-fill their academic fields from it now; if
-        // not, those fields just start null and get filled in later by
-        // StudentRosterController's email-match sync whenever CAPSA's
-        // roster does arrive - see that controller for the other half of
-        // this.
-        $roster = StudentRoster::where('email', $email)->first();
+        // Who may sign in, and what their account starts as, are the same
+        // two questions in both sign-in paths - see studentSigningIn().
+        $student = $this->studentSigningIn($email, $firstName, $lastName, $userInfo['picture'] ?? null);
 
-        // CaPSA uploads the section's list before its students may have
-        // accounts, so being on it is what makes somebody a student here.
-        // Anyone who already has an account keeps it - they were let in
-        // before this rule existed, and taking that away would lock out the
-        // students who have been using the site all along.
-        if (! $roster && ! Student::whereRaw('LOWER(email) = ?', [$email])->exists()) {
+        if (! $student) {
             return $this->refuseUnlistedStudent($request);
         }
-
-        $student = Student::firstOrCreate(
-            ['email' => $email],
-            [
-                'f_name' => $firstName,
-                'l_name' => $lastName,
-                'p_picture' => $userInfo['picture'] ?? null,
-                'student_number' => $roster->student_number ?? null,
-                // The roster stores the program code; everywhere else stores
-                // the course's full name, and a mix of the two means two
-                // students on the same course never match each other.
-                'course' => isset($roster->program)
-                    ? (Student::PROGRAM_COURSES[$roster->program] ?? $roster->program)
-                    : null,
-                'year_section' => $roster->section ?? null,
-            ]
-        );
 
         Auth::login($student);
 
@@ -426,19 +397,11 @@ class AuthController extends Controller
             return redirect('/request-account?email='.urlencode($email).'&first_name='.urlencode($firstName).'&last_name='.urlencode($lastName));
         }
 
-        // Same rule as the real callback - see refuseUnlistedStudent().
-        if (! StudentRoster::where('email', $email)->exists()
-            && ! Student::whereRaw('LOWER(email) = ?', [$email])->exists()) {
+        $student = $this->studentSigningIn($email, $firstName, $lastName);
+
+        if (! $student) {
             return $this->refuseUnlistedStudent($request);
         }
-
-        $student = Student::firstOrCreate(
-            ['email' => $email],
-            [
-                'f_name' => $firstName,
-                'l_name' => $lastName,
-            ]
-        );
 
         Auth::login($student);
 
@@ -464,6 +427,47 @@ class AuthController extends Controller
     /**
      * Log the user out and invalidate the session.
      */
+    /**
+     * The account this student signs in to, or null if nobody has listed them.
+     *
+     * CaPSA uploads the section's list before its students may have accounts,
+     * so being on it is what makes somebody a student here. Anyone who
+     * already has an account keeps it - they were let in before this rule
+     * existed, and taking that away would lock out the students who have been
+     * using the site all along.
+     *
+     * A list uploaded before their first sign-in already says who they are,
+     * so the account arrives filled in rather than empty. This is the only
+     * place that decides either of those things: the real Google callback and
+     * the local mock both come through here, so what happens on a developer's
+     * machine is what happens in front of a student.
+     */
+    private function studentSigningIn(string $email, string $firstName, string $lastName, ?string $picture = null): ?Student
+    {
+        $roster = StudentRoster::where('email', $email)->first();
+
+        if (! $roster && ! Student::whereRaw('LOWER(email) = ?', [$email])->exists()) {
+            return null;
+        }
+
+        return Student::firstOrCreate(
+            ['email' => $email],
+            [
+                'f_name' => $firstName,
+                'l_name' => $lastName,
+                'p_picture' => $picture,
+                'student_number' => $roster->student_number ?? null,
+                // The list stores the program code; everywhere else stores the
+                // course's full name, and a mix of the two means two students
+                // on the same course never match each other.
+                'course' => isset($roster->program)
+                    ? (Student::PROGRAM_COURSES[$roster->program] ?? $roster->program)
+                    : null,
+                'year_section' => $roster->section ?? null,
+            ]
+        );
+    }
+
     /**
      * Turn away a student who is not on any uploaded list.
      *
