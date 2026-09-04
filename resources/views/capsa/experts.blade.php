@@ -7,6 +7,31 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="{{ asset('css/admin.css') }}"/>
 <style>
+  /* ── Compact table ───────────────────────────────────────────────────
+     One line per person. Status is a dot beside the name, which buys the
+     width back for the sections and the expertise - the two columns that
+     were being squeezed. */
+  .table td{padding-top:9px;padding-bottom:9px;vertical-align:middle}
+  .table thead th{position:sticky;top:0;z-index:2;background:var(--bg2)}
+  .cx-who{display:flex;align-items:center;gap:9px;cursor:pointer;min-width:0}
+  .cx-av{width:26px;height:26px;border-radius:7px;object-fit:cover;flex-shrink:0}
+  .cx-who .td-main{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  /* The dot is the only thing saying whether they are around, so it is not
+     decoration - it carries the status the column used to. */
+  .cx-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;background:var(--text3)}
+  .cx-dot-active{background:var(--green)}
+  .cx-dot-full{background:var(--amber)}
+  .cx-dot-offline{background:var(--border2)}
+  .cx-sections{font-size:11.5px;color:var(--text2);white-space:nowrap}
+  .cx-skills{max-width:240px}
+  .cx-chip{display:inline-block;max-width:150px;padding:2px 8px;margin:1px 3px 1px 0;border-radius:6px;
+           background:var(--bg4);color:var(--text2);font-size:11px;font-weight:500;
+           white-space:nowrap;overflow:hidden;text-overflow:ellipsis;vertical-align:middle}
+  .cx-chip-n{background:transparent;border:1px dashed var(--border2);color:var(--text3);cursor:pointer;max-width:none}
+  .cx-chip-n:hover{border-color:var(--accent);color:var(--accent3);background:var(--accent-light)}
+  .table td[data-label="Action"]{text-align:right;padding-right:20px}
+  .expert-actions{justify-content:flex-end}
+
   /* Both classes in the selector, so this beats .ct-modal-card wherever that
      is defined - on this page it is defined further down, and a single-class
      rule of equal weight coming later would otherwise win and squeeze the
@@ -385,18 +410,20 @@
       <table class="table">
         <thead>
           <tr>
+            {{-- Status is a dot beside the name rather than a column of its
+                 own: it carries one bit, and a whole column to say "Offline"
+                 is width the sections and the expertise need more. --}}
             <th style="padding-left:20px">Expert</th>
             <th>Role(s)</th>
+            <th>Sections</th>
             <th>Expertise</th>
             <th>Team Slot</th>
-            <th>Status</th>
-            <th>Action</th>
+            <th style="text-align:right;padding-right:20px">Action</th>
           </tr>
         </thead>
         <tbody>
           @foreach($experts as $expert)
-          <tr>
-            @php
+          @php
               $expertiseList = $expert->expertise->pluck('expertise_field');
               $expertiseFull = $expertiseList->join(', ') ?: 'None specified';
               $expertiseShown = $expertiseList->take(2)->join(', ');
@@ -453,15 +480,18 @@
                     : collect(),
               ];
             @endphp
+          {{-- The filter reads these rather than picking through the cells:
+               it used to find the status by counting columns, which is a
+               thing that breaks the moment a column moves. --}}
+          <tr data-status="{{ $computedStatus }}"
+              data-roles="{{ $expert->roles->pluck('role_name')->map($roleLabel)->implode(' ') }}"
+              data-search="{{ Str::lower($expert->name.' '.$expert->email.' '.$expertiseFull) }}">
             <td style="padding-left:20px" data-label="Expert">
-              <div class="expert-name-trigger" style="display:flex;align-items:center;gap:10px" onclick="openExpertDetail({{ Illuminate\Support\Js::from($detailPayload) }})">
-                <img src="{{ $expert->avatarUrl() }}" alt="" loading="lazy"
-                     style="width:32px;height:32px;border-radius:8px;object-fit:cover;flex-shrink:0"
+              <div class="expert-name-trigger cx-who" onclick="openExpertDetail({{ Illuminate\Support\Js::from($detailPayload) }})" title="{{ $expert->email }}">
+                <span class="cx-dot cx-dot-{{ $computedStatus }}" title="{{ ucfirst($computedStatus) }}"></span>
+                <img src="{{ $expert->avatarUrl() }}" alt="" loading="lazy" class="cx-av"
                      onerror="this.onerror=null;this.src='{{ asset('images/default-avatar.jpg') }}';">
-                <div>
-                  <div class="td-main">{{ $expert->name }}</div>
-                  <div style="font-size:11px;color:var(--text3)">{{ $expert->email }}</div>
-                </div>
+                <span class="td-main">{{ $expert->name }}</span>
               </div>
             </td>
             <td data-label="Role">
@@ -479,19 +509,28 @@
                     @endif
                   @endforelse
                 </div>
-                @if ($expert->is_capsa)
-                  <span class="expert-role-meta">Sections: {{ !empty($expert->sections) ? implode(', ', $expert->sections) : 'none set' }}</span>
-                @endif
               </div>
             </td>
-
-            <td style="font-size:12px;max-width:220px" data-label="Expertise" title="{{ $expertiseFull }}">
-              @if ($expertiseList->isEmpty())
-                None specified
+            <td data-label="Sections" class="cx-sections">
+              @if ($expert->is_capsa)
+                {{ !empty($expert->sections) ? implode(', ', $expert->sections) : 'none set' }}
               @else
-                <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ $expertiseShown }}</div>
+                <span style="color:var(--text3)">&mdash;</span>
+              @endif
+            </td>
+
+            {{-- A chip each, so a long name truncates on its own instead of
+                 being joined to the next one and cut mid-word. The counter
+                 opens the detail panel, where the full list already is. --}}
+            <td data-label="Expertise" class="cx-skills" title="{{ $expertiseFull }}">
+              @if ($expertiseList->isEmpty())
+                <span style="color:var(--text3)">None specified</span>
+              @else
+                @foreach ($expertiseList->take(2) as $skill)
+                  <span class="cx-chip">{{ $skill }}</span>
+                @endforeach
                 @if ($expertiseExtra > 0)
-                  <span style="color:var(--text3)">+{{ $expertiseExtra }} more</span>
+                  <span class="cx-chip cx-chip-n" onclick="openExpertDetail({{ Illuminate\Support\Js::from($detailPayload) }})">+{{ $expertiseExtra }}</span>
                 @endif
               @endif
             </td>
@@ -520,15 +559,7 @@
                 <div style="font-size:10px;color:var(--text3);margin-top:4px">{{ $teamCount }} total assigned</div>
               @endif
             </td>
-            <td data-label="Status">
-              @if($computedStatus === 'full')
-                <span class="badge badge-amber">Full</span>
-              @elseif($computedStatus === 'offline')
-                <span class="badge badge-gray">Offline</span>
-              @else
-                <span class="badge badge-green">Active</span>
-              @endif
-            </td>
+
             <td data-label="Action">
               <div class="expert-actions">
                 <button type="button" class="roles-btn"
@@ -555,18 +586,14 @@
       var status = statusFilter ? statusFilter.value : 'all';
 
       rows.forEach(function(row) {
-        var name = (row.querySelector('.td-main')?.textContent || '').toLowerCase();
-        var email = (row.querySelector('td:first-child div[style*="font-size:11px"]')?.textContent || '').toLowerCase();
-        var expertise = (row.querySelector('td[data-label="Expertise"]')?.textContent || '').toLowerCase();
-        var roleTd = row.querySelector('td[data-label="Role"]');
-        var roleBadges = roleTd ? roleTd.querySelectorAll('.badge-gold') : [];
-        var roleText = '';
-        roleBadges.forEach(function(b) { roleText += b.textContent.trim().toLowerCase() + ' '; });
+        // Read off the row rather than out of the cells. Counting columns to
+        // find the status broke the moment one moved, and the expertise is
+        // truncated on screen - the attribute holds all of it.
+        var searchText = (row.dataset.search || '');
+        var roleText = (row.dataset.roles || '').toLowerCase();
+        var statusText = (row.dataset.status || '');
 
-        var badge = row.querySelector('td[data-label="Status"] span');
-        var statusText = badge ? badge.textContent.trim().toLowerCase() : '';
-
-        var matchSearch = !q || name.includes(q) || email.includes(q) || expertise.includes(q);
+        var matchSearch = !q || searchText.includes(q);
         var matchRole = role === 'All Roles' || roleText.includes(role.toLowerCase());
         var matchStatus = true;
         if (status === 'active') matchStatus = statusText === 'active';
