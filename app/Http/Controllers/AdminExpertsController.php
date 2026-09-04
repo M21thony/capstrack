@@ -10,6 +10,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 
 class AdminExpertsController extends Controller
 {
@@ -274,6 +275,123 @@ class AdminExpertsController extends Controller
     // one expert can hold CAPSA at once, each covering their own section(s)
     // (one CAPSA can have multiple sections), so turning one on never turns
     // another off.
+    /**
+     * Make somebody a CaPSA from their email address alone.
+     *
+     * There is no permanent CaPSA - the job moves between faculty - and until
+     * now making one meant first getting them into the system through the
+     * expert list upload, then finding them in it and granting the role. For
+     * one person that is a spreadsheet to serve a single row. This makes the
+     * account if it does not exist, grants the role, and sets the sections,
+     * in one action.
+     */
+    public function storeCapsa(Request $request): JsonResponse
+    {
+        // Checked by hand rather than through $request->validate(): the only
+        // caller is a fetch(), and a failed validate() on a route outside
+        // api/* answers with a redirect - which reaches the browser as a page
+        // of HTML where JSON was expected, and fails in silence.
+        $validator = Validator::make($request->all(), [
+            'email' => ['required', 'email'],
+            'name' => ['nullable', 'string', 'max:120'],
+            'sections' => ['required', 'array', 'min:1'],
+            'sections.*' => ['string'],
+        ], [
+            'email.required' => 'Type the email address of the person to make a CaPSA.',
+            'email.email' => 'That is not an email address.',
+            'sections.required' => 'Choose at least one section.',
+            'sections.min' => 'Choose at least one section.',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => $validator->errors()->first(),
+            ], 422);
+        }
+
+        $email = mb_strtolower(trim($request->input('email')));
+
+        // An account on any other domain is one nobody could ever sign in
+        // with, so it would look created and then never be reachable.
+        if (! Str::endsWith($email, CapstoneExpert::EMAIL_DOMAINS)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'A CaPSA signs in with '.implode(' or ', CapstoneExpert::EMAIL_DOMAINS)
+                    .', so an address outside those could never be used.',
+            ], 422);
+        }
+
+        $roleId = DB::table('roles')->where('role_name', CapstoneExpert::CAPSA_ROLE)->value('role_id');
+
+        if (! $roleId) {
+            return response()->json([
+                'success' => false,
+                'message' => 'The Capstone Subject Adviser role is missing from the roles table.',
+            ], 500);
+        }
+
+        $expert = CapstoneExpert::where('email', $email)->first();
+        $created = false;
+
+        if (! $expert) {
+            [$firstName, $lastName] = $this->capsaName($request->input('name'), $email);
+
+            $expert = CapstoneExpert::create([
+                'email' => $email,
+                'first_name' => $firstName,
+                'last_name' => $lastName,
+                // Admin naming them is the vetting, so there is nobody left
+                // to approve them afterwards.
+                'approved_status' => true,
+                'reject_attempts' => 0,
+            ]);
+
+            $created = true;
+        }
+
+        DB::table('expert_roles')->insertOrIgnore([
+            'expert_id' => $expert->expert_id,
+            'role_id' => $roleId,
+        ]);
+
+        $expert->sections = $request->input('sections');
+        $expert->save();
+
+        return response()->json([
+            'success' => true,
+            'created' => $created,
+            'name' => $expert->name,
+            'message' => $created
+                ? "{$expert->name} was made a CaPSA. They can sign in with {$email}."
+                : "{$expert->name} is now a CaPSA.",
+        ]);
+    }
+
+    /**
+     * A first and last name for an account being made from an email.
+     *
+     * A name typed in is used as given. Without one, the address is the only
+     * thing there is to go on - "juan.delacruz@..." reads better as "Juan
+     * Delacruz" than as the raw address, and they can correct it from their
+     * own profile once they sign in.
+     *
+     * @return array{0: string, 1: string}
+     */
+    private function capsaName(?string $typed, string $email): array
+    {
+        $name = trim((string) $typed);
+
+        if ($name === '') {
+            $local = Str::before($email, '@');
+            $name = Str::title(trim(preg_replace('/[._\-]+/', ' ', $local)));
+        }
+
+        $parts = preg_split('/\s+/', $name, 2);
+
+        return [$parts[0], $parts[1] ?? $parts[0]];
+    }
+
     public function toggleCapsa(Request $request, CapstoneExpert $expert): JsonResponse
     {
         $validated = $request->validate([

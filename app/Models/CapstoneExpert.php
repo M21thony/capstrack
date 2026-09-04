@@ -45,6 +45,15 @@ class CapstoneExpert extends Authenticatable
     // due to be dropped in a migration.
     public const CAPSA_ROLE = 'capstone_adviser';
 
+    /**
+     * The domains an expert can sign in from.
+     *
+     * AuthController decides who may log in by these, and an account made on
+     * anything else is one nobody can ever reach - so anywhere that creates
+     * an expert account has to refuse an address outside them.
+     */
+    public const EMAIL_DOMAINS = ['@cspc.edu.ph', '@gmail.com'];
+
     public const PROGRAMS = ['BSCS', 'BSIT', 'BSIS', 'BLIS'];
 
     // The roles a team can actually engage an expert AS. capstone_adviser is

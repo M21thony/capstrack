@@ -62,6 +62,10 @@ Route::middleware(['expert.auth', 'no.cache', 'track.expert'])->prefix('admin')-
 
     // ---- Admin only: creating a CAPSA, student accounts, system config ----
     Route::middleware('expert.admin')->group(function () {
+        // Making a CaPSA from an email alone, for someone who has no account
+        // yet - there is no permanent CaPSA, so this happens often enough
+        // that it should not need a spreadsheet with one row in it.
+        Route::post('/experts/capsa', [AdminExpertsController::class, 'storeCapsa'])->name('experts.capsa.store');
         Route::post('/experts/{expert}/toggle-capsa', [AdminExpertsController::class, 'toggleCapsa'])->name('experts.toggle-capsa');
         // Changing sections is not a change of role, so it does not go
         // through the toggle - see AdminExpertsController::updateSections.
