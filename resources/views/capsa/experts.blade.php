@@ -7,6 +7,21 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="{{ asset('css/admin.css') }}"/>
 <style>
+  .ae-field{margin-bottom:14px}
+  .ae-label{display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;
+            color:#64748b;margin-bottom:6px}
+  .ae-req{color:#ef4444;font-weight:400;text-transform:none;letter-spacing:0}
+  .ae-opt{color:#94a3b8;font-weight:400;text-transform:none;letter-spacing:0}
+  .ae-roles{display:flex;flex-wrap:wrap;gap:6px}
+  /* The whole box is the target, not a 14px square beside it. */
+  .ae-role{display:inline-flex;align-items:center;gap:7px;padding:7px 12px;border:1.5px solid #e2e8f0;
+           border-radius:8px;cursor:pointer;font-size:12.5px;font-weight:600;color:#475569;background:#fff;
+           transition:border-color .12s,background .12s,color .12s}
+  .ae-role:hover{border-color:#cbd5e1}
+  .ae-role input{width:14px;height:14px;accent-color:#2563eb;cursor:pointer;margin:0}
+  .ae-role:has(input:checked){border-color:#2563eb;background:rgba(29,78,216,0.06);color:#1d4ed8}
+  .ae-note{font-size:11.5px;color:#94a3b8;line-height:1.5;margin:0 0 14px}
+
   /* ── Compact table ───────────────────────────────────────────────────
      One line per person. Status is a dot beside the name, which buys the
      width back for the sections and the expertise - the two columns that
@@ -403,6 +418,9 @@
         </select>
       </div>
       <span class="experts-count">{{ $experts->count() }} registered experts</span>
+      {{-- The list is for a whole faculty at once. This is for the one it
+           missed, so admitting a late arrival is not a spreadsheet. --}}
+      <button type="button" class="btn" onclick="openAddExpertModal()">Add Expert</button>
       <button type="button" class="btn" onclick="openExpertRosterModal()">Upload List</button>
     </div>
 
@@ -755,6 +773,54 @@ const ROLE_NAME_TO_ID = {{ Illuminate\Support\Js::from($roleNameToId) }};
 {{-- ══════════════════════════════════════════
      UPLOAD EXPERT ROSTER — Modal
 ══════════════════════════════════════════ --}}
+<div id="addExpertModal" class="ct-modal-overlay" style="display:none;">
+  <div class="ct-modal-card ct-upload-card" style="max-width:460px">
+    <div class="ct-up-head">
+      <span class="ct-up-head-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+      </span>
+      <span class="ct-up-head-text">
+        <span class="ct-modal-title">Add Expert</span>
+        <span class="ct-up-sub">For one person. Use Upload List for a whole faculty.</span>
+      </span>
+      <button type="button" class="ct-up-close" onclick="closeAddExpertModal()" aria-label="Close">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+
+    <div class="ae-field">
+      <label class="ae-label" for="addExpertEmail">Email address <span class="ae-req">(required)</span></label>
+      <input type="email" id="addExpertEmail" class="ct-modal-input" placeholder="name@cspc.edu.ph" autocomplete="off" style="margin-bottom:0">
+    </div>
+
+    <div class="ae-field">
+      <label class="ae-label" for="addExpertName">Name <span class="ae-opt">(optional)</span></label>
+      <input type="text" id="addExpertName" class="ct-modal-input" placeholder="Taken from the email if left blank" autocomplete="off" style="margin-bottom:0">
+    </div>
+
+    {{-- Required here, unlike the bulk upload: adding one person is a
+         deliberate act, and one with no role in it leaves an account that can
+         sign in and do nothing. --}}
+    <div class="ae-field">
+      <label class="ae-label">Role <span class="ae-req">(required)</span></label>
+      <div class="ae-roles">
+        <label class="ae-role"><input type="checkbox" value="adviser">Adviser</label>
+        <label class="ae-role"><input type="checkbox" value="consultant">Consultant</label>
+        <label class="ae-role"><input type="checkbox" value="grammarian">Grammarian</label>
+      </div>
+    </div>
+
+    <p class="ae-note">They are approved straight away &mdash; naming them here is the vetting, the same as putting them on the list. Their areas of expertise are theirs to fill in from their own profile.</p>
+
+    <div id="addExpertResult" style="display:none;font-size:12px;margin-bottom:12px"></div>
+
+    <div class="ct-modal-actions">
+      <button type="button" class="ct-btn ct-btn-secondary" onclick="closeAddExpertModal()">Cancel</button>
+      <button type="button" id="addExpertBtn" class="ct-btn ct-btn-primary" onclick="addExpert()">Add Expert</button>
+    </div>
+  </div>
+</div>
+
 <div id="expertRosterModal" class="ct-modal-overlay" style="display:none;">
   <div class="ct-modal-card ct-upload-card">
     <div class="ct-up-head">
@@ -837,6 +903,68 @@ const ROLE_NAME_TO_ID = {{ Illuminate\Support\Js::from($roleNameToId) }};
 </div>
 
 <script>
+const addExpertModal = document.getElementById('addExpertModal');
+
+function openAddExpertModal() {
+  document.getElementById('addExpertEmail').value = '';
+  document.getElementById('addExpertName').value = '';
+  document.querySelectorAll('.ae-role input').forEach(function (c) { c.checked = false; });
+  document.getElementById('addExpertResult').style.display = 'none';
+  addExpertModal.style.display = 'flex';
+  document.getElementById('addExpertEmail').focus();
+}
+
+function closeAddExpertModal() {
+  addExpertModal.style.display = 'none';
+}
+
+function addExpert() {
+  const box = document.getElementById('addExpertResult');
+  const btn = document.getElementById('addExpertBtn');
+  const roles = [...document.querySelectorAll('.ae-role input:checked')].map(function (c) { return c.value; });
+
+  const fail = function (message) {
+    box.style.display = 'block';
+    box.innerHTML = '<span style="color:#dc2626">' + message + '</span>';
+  };
+
+  // Said beside the fields rather than in a toast that has gone by the time
+  // they look back at what they typed.
+  if (!document.getElementById('addExpertEmail').value.trim()) return fail('Type an email address.');
+  if (!roles.length) return fail('Choose at least one role.');
+
+  box.style.display = 'none';
+  btn.disabled = true;
+  btn.textContent = 'Adding...';
+
+  fetch('{{ route('capsa.experts.store') }}', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRF-TOKEN': '{{ csrf_token() }}',
+      'Accept': 'application/json',
+    },
+    body: JSON.stringify({
+      email: document.getElementById('addExpertEmail').value.trim(),
+      name: document.getElementById('addExpertName').value.trim(),
+      roles: roles,
+    }),
+  })
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      if (!data.success) return fail(data.message || 'Could not add that expert.');
+
+      closeAddExpertModal();
+      showToast(data.message, 'success');
+      setTimeout(function () { window.location.reload(); }, 900);
+    })
+    .catch(function () { fail('Network error adding the expert.'); })
+    .finally(function () {
+      btn.disabled = false;
+      btn.textContent = 'Add Expert';
+    });
+}
+
 const expertRosterModal = document.getElementById('expertRosterModal');
 
 function openExpertRosterModal() {

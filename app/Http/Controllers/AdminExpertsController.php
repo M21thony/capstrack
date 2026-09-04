@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\CapstoneExpert;
+use App\Models\ExpertExpertise;
 use App\Models\Notification;
 use App\Models\StudentSchoolYear;
 use App\Models\TeamExpertAssignment;
@@ -86,25 +87,117 @@ class AdminExpertsController extends Controller
      * request+approval flow - e.g. an emergency add CAPSA needs done now).
      * Pre-approved immediately, same as a roster-uploaded row.
      */
+    /**
+     * Add one expert from their email address.
+     *
+     * The list upload is for a whole faculty at once; this is for the person
+     * it missed. Without it a CaPSA had to re-upload a spreadsheet to admit
+     * one late arrival, which is a lot of ceremony for one row - and it is
+     * the reason a stricter sign-in rule for experts would have been unfair,
+     * because there was no quick way to let somebody in.
+     *
+     * A role is required, unlike the bulk upload, which reports a row with no
+     * recognisable role and moves on. Adding one person deliberately is a
+     * decision, and a decision with no role in it leaves an account that can
+     * sign in and do nothing.
+     */
     public function store(Request $request): JsonResponse
     {
-        $validated = $request->validate([
-            'first_name' => ['required', 'string', 'max:100'],
-            'last_name' => ['required', 'string', 'max:100'],
-            'middle_name' => ['nullable', 'string', 'max:100'],
-            'suffix' => ['nullable', 'string', 'max:20'],
-            'email' => ['required', 'email', 'max:190', 'unique:capstone_experts,email'],
-            'credentials' => ['nullable', 'string', 'max:190'],
-            'program' => ['nullable', 'string', 'max:100'],
-            'max_teams' => ['nullable', 'integer', 'min:0'],
+        // Checked by hand rather than through $request->validate(): the only
+        // caller is a fetch(), and a failed validate() on a route outside
+        // api/* answers with a redirect - HTML where JSON was expected.
+        $validator = Validator::make($request->all(), [
+            'email' => ['required', 'email', 'max:190'],
+            'name' => ['nullable', 'string', 'max:120'],
+            'roles' => ['required', 'array', 'min:1'],
+            'roles.*' => ['string', 'in:'.implode(',', CapstoneExpert::STUDENT_FACING_ROLES)],
+            'expertise' => ['nullable', 'array'],
+            'expertise.*' => ['string', 'max:100'],
+        ], [
+            'email.required' => 'Type the email address of the person to add.',
+            'email.email' => 'That is not an email address.',
+            'roles.required' => 'Choose at least one role.',
+            'roles.min' => 'Choose at least one role.',
         ]);
 
-        $expert = CapstoneExpert::create($validated + ['approved_status' => true]);
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'message' => $validator->errors()->first()], 422);
+        }
+
+        $email = mb_strtolower(trim($request->input('email')));
+
+        // An account on any other domain is one nobody could ever sign in
+        // with, so it would look made and then never be reachable.
+        if (! Str::endsWith($email, CapstoneExpert::EMAIL_DOMAINS)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'An expert signs in with '.implode(' or ', CapstoneExpert::EMAIL_DOMAINS)
+                    .', so an address outside those could never be used.',
+            ], 422);
+        }
+
+        $expert = CapstoneExpert::where('email', $email)->first();
+        $created = false;
+
+        if (! $expert) {
+            [$firstName, $lastName] = $this->nameFrom($request->input('name'), $email);
+
+            $expert = CapstoneExpert::create([
+                'email' => $email,
+                'first_name' => $firstName,
+                'last_name' => $lastName,
+                // CaPSA naming them is the vetting, the same as including
+                // them on the list - there is nobody left to approve them.
+                'approved_status' => true,
+                'reject_attempts' => 0,
+            ]);
+
+            $created = true;
+        }
+
+        $roleIds = DB::table('roles')
+            ->whereIn('role_name', CapstoneExpert::STUDENT_FACING_ROLES)
+            ->pluck('role_id', 'role_name');
+
+        $wanted = collect($request->input('roles'))
+            ->filter(fn ($r) => $roleIds->has($r))
+            ->map(fn ($r) => $roleIds[$r])
+            ->all();
+
+        if ($wanted === []) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Those roles are not set up on this system.',
+            ], 500);
+        }
+
+        // Scoped to the student-facing roles, so this can neither grant nor
+        // revoke CaPSA - that stays Admin's own action.
+        CapstoneExpert::syncRoles($expert->expert_id, $wanted, $roleIds->values());
+
+        // Blank means "not saying", the same as an empty column on the list -
+        // an expert fills their own areas in from their profile.
+        $expertise = collect($request->input('expertise', []))
+            ->map(fn ($e) => trim((string) $e))
+            ->filter()
+            ->unique()
+            ->values();
+
+        if ($expertise->isNotEmpty()) {
+            ExpertExpertise::where('expert_id', $expert->expert_id)->delete();
+
+            foreach ($expertise as $field) {
+                ExpertExpertise::create(['expert_id' => $expert->expert_id, 'expertise_field' => $field]);
+            }
+        }
 
         return response()->json([
             'success' => true,
-            'message' => "Expert {$expert->name} has been added.",
+            'created' => $created,
             'expert_id' => $expert->expert_id,
+            'message' => $created
+                ? "{$expert->name} was added. They can sign in with {$email}."
+                : "{$expert->name} already had an account - their roles were updated.",
         ]);
     }
 
@@ -347,7 +440,7 @@ class AdminExpertsController extends Controller
         $created = false;
 
         if (! $expert) {
-            [$firstName, $lastName] = $this->capsaName($request->input('name'), $email);
+            [$firstName, $lastName] = $this->nameFrom($request->input('name'), $email);
 
             $expert = CapstoneExpert::create([
                 'email' => $email,
@@ -397,7 +490,7 @@ class AdminExpertsController extends Controller
      *
      * @return array{0: string, 1: string}
      */
-    private function capsaName(?string $typed, string $email): array
+    private function nameFrom(?string $typed, string $email): array
     {
         $name = trim((string) $typed);
 
