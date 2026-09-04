@@ -206,7 +206,13 @@ class GoogleAuthTest extends TestCase
         ]);
     }
 
-    public function test_mock_login_redirects_unrecognized_gmail_to_request_account(): void
+    /**
+     * A faculty address nobody has put in the system is turned away.
+     *
+     * It used to be sent to a form to apply. A CaPSA adds faculty now - on
+     * the list, or one at a time - so there is nothing to apply to.
+     */
+    public function test_mock_login_turns_away_an_unlisted_faculty_address(): void
     {
         $state = 'test-state-token';
         $this->withSession(['oauth_state' => $state]);
@@ -217,8 +223,12 @@ class GoogleAuthTest extends TestCase
             'email' => 'john.doe@gmail.com',
         ]);
 
-        $response->assertRedirectContains('/request-account');
+        $response->assertStatus(403);
+        $this->assertStringContainsString('CaPSA', $response->json('message'));
         $this->assertFalse(Auth::check());
+
+        // Nothing was created on the way out.
+        $this->assertNull(CapstoneExpert::where('email', 'john.doe@gmail.com')->first());
     }
 
     public function test_mock_login_denies_non_institutional_non_gmail_email(): void

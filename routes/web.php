@@ -263,8 +263,22 @@ Route::get('/login/google/callback', [AuthController::class, 'handleGoogleCallba
 Route::get('/login/google/mock', [AuthController::class, 'showMockLogin'])->name('login.google.mock');
 Route::post('/login/google/mock', [AuthController::class, 'handleMockLogin'])->name('login.google.mock.post');
 Route::get('/login/rejected', [AuthController::class, 'rejected'])->name('login.rejected');
-Route::get('/request-account', [ExpertController::class, 'showRequestForm'])->name('account.request');
-Route::post('/request-account', [ExpertController::class, 'storeRequest'])->name('account.request.store');
+// Faculty applying for their own account, switched off rather than deleted.
+//
+// A CaPSA now puts faculty in herself - on the uploaded list, or one at a
+// time with Add Expert on Expert Management - so an account is only ever made
+// by somebody who already knows who the person is. Leaving the form reachable
+// alongside that gave two ways in with different vetting behind them, and a
+// queue somebody had to remember to watch.
+//
+// The controller (ExpertController::showRequestForm, storeRequest), the view
+// (resources/views/auth/request-account.blade.php) and the approval screen
+// that went with it are all still here. Uncomment these two lines to have it
+// back; AuthController::refuseUnlistedExpert() is what to point at the form
+// again if you do.
+//
+// Route::get('/request-account', [ExpertController::class, 'showRequestForm'])->name('account.request');
+// Route::post('/request-account', [ExpertController::class, 'storeRequest'])->name('account.request.store');
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 Route::prefix('expert')->group(function () {

@@ -598,7 +598,10 @@
 
     <div class="divider">or</div>
 
-    <p class="request-link">Don't have an account yet? <a href="{{ route('account.request') }}">Request Account</a></p>
+    {{-- Applying for your own account is switched off (see routes/web.php).
+         The line says who to ask instead, because a person with no account is
+         the one reader who cannot do anything about it themselves. --}}
+    <p class="request-link">Students and faculty are added by their CaPSA. If you cannot sign in, ask them to add you.</p>
 
     <p class="signin-footer">CapsTrack — CSPC College of Computer Studies</p>
   </div>
