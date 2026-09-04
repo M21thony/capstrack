@@ -57,6 +57,10 @@ class AdminExpertsController extends Controller
         $groupedSections = collect(AdminProfileController::getAllAvailableSections())
             ->groupBy(fn ($section) => explode('-', $section)[0] ?? $section);
 
+        // Not route names: these are the two view FILES. They read the same
+        // as the route names, which is how a bulk rename of route('admin.x')
+        // to route('capsa.x') silently pointed both branches at the CaPSA
+        // page and took Add CaPSA away from Admin.
         return view($isCapsaOnly ? 'capsa.experts' : 'admin.experts', [
             'experts' => $experts,
             'groupedSections' => $groupedSections,

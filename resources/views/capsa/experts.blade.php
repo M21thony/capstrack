@@ -677,7 +677,7 @@ function saveRoles() {
   saveBtn.disabled = true;
   saveBtn.textContent = 'Saving...';
 
-  fetch(`{{ route('admin.experts.update-roles', ['expert' => 'EXPERT_ID']) }}`.replace('EXPERT_ID', rolesTargetExpertId), {
+  fetch(`{{ route('capsa.experts.update-roles', ['expert' => 'EXPERT_ID']) }}`.replace('EXPERT_ID', rolesTargetExpertId), {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' },
     body: JSON.stringify({ role_ids: checked.map(id => ROLE_NAME_TO_ID[id]).filter(Boolean) }),
@@ -733,7 +733,7 @@ const ROLE_NAME_TO_ID = {{ Illuminate\Support\Js::from($roleNameToId) }};
       <div class="ct-up-hint">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
       <span>Need the correct format?</span>
-      <a class="ct-template-link" href="{{ route('admin.rosters.experts.template') }}">
+      <a class="ct-template-link" href="{{ route('capsa.rosters.experts.template') }}">
         Download template
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
       </a>
@@ -840,7 +840,7 @@ function previewExpertRoster() {
   const formData = new FormData();
   formData.append('file', fileInput.files[0]);
 
-  fetch('{{ route('admin.rosters.experts.preview') }}', {
+  fetch('{{ route('capsa.rosters.experts.preview') }}', {
     method: 'POST',
     headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' },
     body: formData,
@@ -1003,7 +1003,7 @@ function uploadExpertRoster(btn) {
   const formData = new FormData();
   formData.append('file', fileInput.files[0]);
 
-  fetch('{{ route('admin.rosters.experts.store') }}', {
+  fetch('{{ route('capsa.rosters.experts.store') }}', {
     method: 'POST',
     headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' },
     body: formData,

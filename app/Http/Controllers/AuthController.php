@@ -211,7 +211,7 @@ class AuthController extends Controller
 
                     $expert->markFirstLogin();
 
-                    $redirectUrl = $expert->is_staff ? '/admin/dashboard' : '/instructor/dashboard';
+                    $redirectUrl = $expert->is_staff ? '/capsa/dashboard' : '/instructor/dashboard';
 
                     return redirect($redirectUrl);
                 }
@@ -364,7 +364,7 @@ class AuthController extends Controller
 
                     $expert->markFirstLogin();
 
-                    $redirectUrl = $expert->is_staff ? '/admin/dashboard' : '/instructor/dashboard';
+                    $redirectUrl = $expert->is_staff ? '/capsa/dashboard' : '/instructor/dashboard';
 
                     if ($request->expectsJson()) {
                         return response()->json([

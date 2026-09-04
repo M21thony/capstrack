@@ -87,6 +87,6 @@ class AdminProfileController extends Controller
             ]);
         }
 
-        return redirect()->route('admin.profile')->with('status', 'Profile updated successfully.');
+        return redirect()->route('capsa.profile')->with('status', 'Profile updated successfully.');
     }
 }

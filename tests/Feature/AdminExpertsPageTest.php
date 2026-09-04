@@ -67,7 +67,7 @@ class AdminExpertsPageTest extends TestCase
 
         $this->actingAs($admin, 'expert');
 
-        $response = $this->get(route('admin.experts'));
+        $response = $this->get(route('capsa.experts'));
 
         $response->assertOk();
         $response->assertSee('CaPSA Management', false);
@@ -98,7 +98,7 @@ class AdminExpertsPageTest extends TestCase
 
         $this->actingAs($admin, 'expert');
 
-        $response = $this->get(route('admin.experts'));
+        $response = $this->get(route('capsa.experts'));
 
         $response->assertOk();
         $response->assertSee('Add CaPSA', false);

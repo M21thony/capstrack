@@ -87,7 +87,7 @@ class ExpertListUploadTest extends TestCase
     {
         $this->actingAs($this->capsa(), 'expert');
 
-        $response = $this->post(route('admin.rosters.experts.store'), [
+        $response = $this->post(route('capsa.rosters.experts.store'), [
             'file' => $this->listFile(['Experts' => [self::HEADER, [
                 ['Juan Dela Cruz', 'juan@gmail.com', 'Adviser', ''],
             ]]]),
@@ -110,7 +110,7 @@ class ExpertListUploadTest extends TestCase
     {
         $this->actingAs($this->capsa(), 'expert');
 
-        $this->post(route('admin.rosters.experts.store'), [
+        $this->post(route('capsa.rosters.experts.store'), [
             'file' => $this->listFile(['Experts' => [self::HEADER, [
                 ['Maria Santos', 'maria@gmail.com', 'Consultant, Grammarian', ''],
             ]]]),
@@ -124,7 +124,7 @@ class ExpertListUploadTest extends TestCase
     {
         $this->actingAs($this->capsa(), 'expert');
 
-        $this->post(route('admin.rosters.experts.store'), [
+        $this->post(route('capsa.rosters.experts.store'), [
             'file' => $this->listFile(['Experts' => [self::HEADER, [
                 ['Ana Reyes', 'ana@gmail.com', 'Adviser', 'Research Methodology, Data Analytics'],
             ]]]),
@@ -157,7 +157,7 @@ class ExpertListUploadTest extends TestCase
 
         ExpertExpertise::create(['expert_id' => $expert->expert_id, 'expertise_field' => 'Machine Learning']);
 
-        $this->post(route('admin.rosters.experts.store'), [
+        $this->post(route('capsa.rosters.experts.store'), [
             'file' => $this->listFile(['Experts' => [self::HEADER, [
                 ['Kept Skills', 'kept@gmail.com', 'Adviser', ''],
             ]]]),
@@ -181,7 +181,7 @@ class ExpertListUploadTest extends TestCase
 
         $header = ['Name', 'Email Address'];
 
-        $this->post(route('admin.rosters.experts.store'), [
+        $this->post(route('capsa.rosters.experts.store'), [
             'file' => $this->listFile([
                 'Adviser' => [$header, [['Old Shape', 'oldshape@gmail.com']]],
                 'Grammarian' => [$header, [['Old Shape', 'oldshape@gmail.com']]],
@@ -197,7 +197,7 @@ class ExpertListUploadTest extends TestCase
     {
         $this->actingAs($this->capsa(), 'expert');
 
-        $response = $this->post(route('admin.rosters.experts.store'), [
+        $response = $this->post(route('capsa.rosters.experts.store'), [
             'file' => $this->listFile(['Experts' => [self::HEADER, [
                 ['Typo Person', 'typo@gmail.com', 'Advisor', ''],
             ]]]),
@@ -216,7 +216,7 @@ class ExpertListUploadTest extends TestCase
         $capsa = $this->capsa();
         $this->actingAs($capsa, 'expert');
 
-        $response = $this->post(route('admin.rosters.experts.store'), [
+        $response = $this->post(route('capsa.rosters.experts.store'), [
             'file' => $this->listFile(['Experts' => [self::HEADER, [
                 ['Someone Else', $capsa->email, 'Adviser', ''],
             ]]]),
@@ -234,7 +234,7 @@ class ExpertListUploadTest extends TestCase
     {
         $this->actingAs($this->capsa(), 'expert');
 
-        $response = $this->get(route('admin.rosters.experts.template'));
+        $response = $this->get(route('capsa.rosters.experts.template'));
 
         $response->assertOk();
         $response->assertDownload('Expert List Template.xlsx');
@@ -255,10 +255,10 @@ class ExpertListUploadTest extends TestCase
         $this->actingAs($this->capsa(), 'expert');
 
         $headings = IOFactory::load(
-            $this->get(route('admin.rosters.experts.template'))->baseResponse->getFile()->getPathname()
+            $this->get(route('capsa.rosters.experts.template'))->baseResponse->getFile()->getPathname()
         )->getActiveSheet()->toArray()[0];
 
-        $this->post(route('admin.rosters.experts.store'), [
+        $this->post(route('capsa.rosters.experts.store'), [
             'file' => $this->listFile(['Experts' => [$headings, [
                 ['From Template', 'fromtemplate@gmail.com', 'Consultant', 'UI/UX Design'],
             ]]]),
@@ -279,10 +279,10 @@ class ExpertListUploadTest extends TestCase
     {
         $this->actingAs($this->capsa(), 'expert');
 
-        $response = $this->get(route('admin.experts'));
+        $response = $this->get(route('capsa.experts'));
 
         $response->assertOk();
-        $response->assertSee(route('admin.rosters.experts.template'), false);
+        $response->assertSee(route('capsa.rosters.experts.template'), false);
         $response->assertSee('Download template', false);
 
         // A file can be dropped as well as browsed for, and either way it
@@ -308,7 +308,7 @@ class ExpertListUploadTest extends TestCase
     {
         $this->actingAs($this->capsa(), 'expert');
 
-        $this->post(route('admin.rosters.experts.preview'), [
+        $this->post(route('capsa.rosters.experts.preview'), [
             'file' => $this->listFile(['Experts' => [self::HEADER, [
                 ['Nobody Yet', 'nobodyyet@gmail.com', 'Adviser', 'Data Analytics'],
             ]]]),
@@ -341,7 +341,7 @@ class ExpertListUploadTest extends TestCase
         ]);
         CapstoneExpert::syncRoles($moved->expert_id, [DB::table('roles')->where('role_name', 'adviser')->value('role_id')]);
 
-        $response = $this->post(route('admin.rosters.experts.preview'), [
+        $response = $this->post(route('capsa.rosters.experts.preview'), [
             'file' => $this->listFile(['Experts' => [self::HEADER, [
                 ['Fresh Face', 'fresh@gmail.com', 'Consultant', ''],
                 ['Same Same', 'same@gmail.com', 'Adviser', ''],
@@ -368,7 +368,7 @@ class ExpertListUploadTest extends TestCase
     {
         $this->actingAs($this->capsa(), 'expert');
 
-        $row = $this->post(route('admin.rosters.experts.preview'), [
+        $row = $this->post(route('capsa.rosters.experts.preview'), [
             'file' => $this->listFile(['Experts' => [self::HEADER, [
                 ['Ana Reyes', 'anapreview@gmail.com', 'Adviser', 'Research Methodology, Data Analytics'],
             ]]]),
@@ -383,7 +383,7 @@ class ExpertListUploadTest extends TestCase
         $capsa = $this->capsa();
         $this->actingAs($capsa, 'expert');
 
-        $response = $this->post(route('admin.rosters.experts.preview'), [
+        $response = $this->post(route('capsa.rosters.experts.preview'), [
             'file' => $this->listFile(['Experts' => [self::HEADER, [
                 ['Someone Else', $capsa->email, 'Adviser', ''],
             ]]]),
@@ -401,21 +401,21 @@ class ExpertListUploadTest extends TestCase
 
         $rows = [['Agree Ment', 'agree@gmail.com', 'Consultant, Grammarian', 'UI/UX Design']];
 
-        $preview = $this->post(route('admin.rosters.experts.preview'), [
+        $preview = $this->post(route('capsa.rosters.experts.preview'), [
             'file' => $this->listFile(['Experts' => [self::HEADER, $rows]]),
         ])->assertOk();
 
         $this->assertSame('create', $preview->json('rows.0.action'));
         $this->assertSame(['consultant', 'grammarian'], $preview->json('rows.0.roles'));
 
-        $this->post(route('admin.rosters.experts.store'), [
+        $this->post(route('capsa.rosters.experts.store'), [
             'file' => $this->listFile(['Experts' => [self::HEADER, $rows]]),
         ])->assertOk()->assertJson(['inserted' => 1]);
 
         $this->assertSame(['consultant', 'grammarian'], $this->rolesOf('agree@gmail.com'));
 
         // And a second look now reports it as settled, not as a change.
-        $this->post(route('admin.rosters.experts.preview'), [
+        $this->post(route('capsa.rosters.experts.preview'), [
             'file' => $this->listFile(['Experts' => [self::HEADER, $rows]]),
         ])->assertOk()->assertJson(['unchanged' => 1, 'create' => 0, 'update' => 0]);
     }
@@ -425,7 +425,7 @@ class ExpertListUploadTest extends TestCase
     {
         $this->actingAs($this->capsa(), 'expert');
 
-        $response = $this->get(route('admin.experts'));
+        $response = $this->get(route('capsa.experts'));
 
         $response->assertOk();
         $response->assertSee('id="expertRosterPreviewBtn"', false);

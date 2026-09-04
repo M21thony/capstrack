@@ -24,7 +24,7 @@ class GoogleDriveController extends Controller
     public function callback(Request $request)
     {
         $expert = Auth::guard('expert')->user();
-        $route = $expert && $expert->is_admin ? 'admin.resources' : 'instructor.docreview';
+        $route = $expert && $expert->is_admin ? 'capsa.resources' : 'instructor.docreview';
 
         if ($request->has('error')) {
             return redirect()->route($route)->with('error', 'Google Drive connection was cancelled.');
@@ -34,7 +34,7 @@ class GoogleDriveController extends Controller
             $expert = Auth::guard('expert')->user();
             $this->drive->handleCallback($request->get('code'), Auth::guard('expert')->id());
 
-            $route = $expert && $expert->is_admin ? 'admin.resources' : 'instructor.docreview';
+            $route = $expert && $expert->is_admin ? 'capsa.resources' : 'instructor.docreview';
 
             return redirect()->route($route)->with('success', 'Google Drive connected successfully.');
         } catch (\Exception $e) {

@@ -127,7 +127,7 @@
       @if (auth('expert')->user()?->is_capsa)
       <x-dashboard.info-card
         title="Pending Expert Approvals"
-        :actionUrl="route('admin.approval')"
+        :actionUrl="route('capsa.approval')"
         actionText="View All"
         :empty="$pendingExperts->isEmpty()"
         emptyMessage="No pending approvals."
@@ -146,7 +146,7 @@
                 </div>
               </div>
               <div style="display:flex;gap:6px">
-                <a href="{{ route('admin.approval') }}" class="btn btn-success" style="font-size:10px;padding:4px 10px">Review</a>
+                <a href="{{ route('capsa.approval') }}" class="btn btn-success" style="font-size:10px;padding:4px 10px">Review</a>
               </div>
             </div>
           @endforeach
@@ -156,7 +156,7 @@
 
       <x-dashboard.info-card
         title="Recent Activity"
-        :actionUrl="route('admin.activitylog')"
+        :actionUrl="route('capsa.activitylog')"
         actionText="View All"
         :empty="empty($recentActivity)"
         emptyMessage="No recent activity."

@@ -410,6 +410,6 @@ class TeamManagementController extends Controller
         // post it; a verified team is read-only.
         return $team->is_confirmed
             ? $payload + ['verified' => true]
-            : $payload + ['verify_url' => route('admin.verify_teams.verify', $team->team_id)];
+            : $payload + ['verify_url' => route('capsa.verify_teams.verify', $team->team_id)];
     }
 }

@@ -31,17 +31,17 @@ class AdminTeamVerificationController extends Controller
         $team->refresh();
 
         if (! $team->hasSubmittedPreProposals()) {
-            return redirect()->route('admin.verify_teams')
+            return redirect()->route('capsa.verify_teams')
                 ->with('error', 'This team has not submitted their pre-proposals for checking yet, so it cannot be verified.');
         }
 
         if ($team->is_confirmed) {
-            return redirect()->route('admin.verify_teams')
+            return redirect()->route('capsa.verify_teams')
                 ->with('error', 'Team <strong>'.e($team->team_name).'</strong> is already verified.');
         }
 
         if (! $team->selected_pre_proposal_id) {
-            return redirect()->route('admin.verify_teams')
+            return redirect()->route('capsa.verify_teams')
                 ->with('error', 'This team\'s final title hasn\'t been resolved yet - approve one of their pre-proposals first.');
         }
 
@@ -49,7 +49,7 @@ class AdminTeamVerificationController extends Controller
         $section = $this->sections->sectionFor($team);
 
         if (! $this->sections->covers($adminSections, $section)) {
-            return redirect()->route('admin.verify_teams')
+            return redirect()->route('capsa.verify_teams')
                 ->with('error', 'You can only verify teams assigned to your sections.');
         }
 
@@ -75,7 +75,7 @@ class AdminTeamVerificationController extends Controller
             ]);
         }
 
-        return redirect()->route('admin.verify_teams')
+        return redirect()->route('capsa.verify_teams')
             ->with('status', 'Team <strong>'.e($team->team_name).'</strong> has been verified.');
     }
 

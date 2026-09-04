@@ -159,7 +159,7 @@ function filterArch(){
 }
 function deleteArchive(id) {
   if (!confirm('Delete this archived capstone?')) return;
-  fetch('/admin/archive/' + id, {
+  fetch('/api/admin/archive/' + id, {
     method: 'DELETE',
     headers: { 'X-CSRF-TOKEN': CSRF_TOKEN, 'Accept': 'application/json' },
   }).then(() => location.reload());
