@@ -73,6 +73,5 @@
     'unseenScheduleCount' => $unseenScheduleCount,
   ])
 </div>
-@include('partials.idle-timeout')
 @include('partials.sidebar-scroll-restore')
 @endif

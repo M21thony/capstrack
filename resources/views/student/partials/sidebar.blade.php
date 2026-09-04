@@ -243,7 +243,6 @@
   </div>
 </div>
 
-@include('partials.idle-timeout')
 
 @include('student.partials.join-request-popup')
 

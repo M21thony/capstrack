@@ -345,7 +345,6 @@
 @if ($adminHasExpertRole)
   @include('instructor.partials.expert-profile')
 @endif
-@include('partials.idle-timeout')
 @include('partials.sidebar-scroll-restore')
 <script>
 (function () {
