@@ -20,10 +20,20 @@
   .opt:hover{border-color:var(--border2)}
   .opt input{width:14px;height:14px;accent-color:var(--accent);cursor:pointer;margin:0}
   .opt:has(input:checked){border-color:var(--accent);background:var(--accent-light);color:var(--accent3)}
-  .range-row{display:flex;align-items:center;gap:9px}
-  .range-row select{padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--bg2);
-                    font-family:inherit;font-size:13px;color:var(--text);cursor:pointer}
-  .range-row span{font-size:12.5px;color:var(--text3)}
+  /* A to Z as one strip. Click either end of the range; the letters between
+     fill in, which is the whole answer to "which sections do you run". */
+  .letters{display:flex;flex-wrap:wrap;gap:3px}
+  .letter{width:27px;height:29px;padding:0;border:1.5px solid var(--border);border-radius:7px;
+          background:var(--bg2);cursor:pointer;font-family:inherit;font-size:12px;font-weight:600;
+          color:var(--text3);transition:border-color .1s,background .1s,color .1s}
+  .letter:hover{border-color:var(--border2);color:var(--text2)}
+  /* Inside the range: the letters this will actually make. */
+  .letter.on{background:var(--accent-light);border-color:rgba(201,168,44,0.4);color:var(--accent3)}
+  /* The two you chose, so it is clear which ends you can move. */
+  .letter.edge{background:var(--accent);border-color:var(--accent);color:#18191f}
+  .letter:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+  .letter-said{font-size:12px;color:var(--text2);margin:9px 0 0}
+  .letter-said b{color:var(--text)}
   /* What the range will actually produce, before it is saved. */
   .preview{margin-top:14px;padding:11px 13px;border:1px dashed var(--border2);border-radius:9px;
            background:var(--bg3);font-size:12px;color:var(--text2);min-height:42px}
@@ -120,15 +130,18 @@
 
         <div>
           <label class="set-label">Section letters</label>
-          <div class="range-row">
-            <select name="from" onchange="previewSections()">
-              @foreach ($letters as $l)<option value="{{ $l }}">{{ $l }}</option>@endforeach
-            </select>
-            <span>through</span>
-            <select name="to" onchange="previewSections()">
-              @foreach ($letters as $l)<option value="{{ $l }}" {{ $l === 'D' ? 'selected' : '' }}>{{ $l }}</option>@endforeach
-            </select>
+          {{-- Two dropdowns between the programs and the years, which are
+               both click-to-pick, read as a different kind of control for no
+               reason - and a range is a thing you point at either end of, not
+               a pair of lists you read twice. --}}
+          <div class="letters" id="letterStrip">
+            @foreach ($letters as $l)
+              <button type="button" class="letter" data-letter="{{ $l }}" onclick="pickLetter('{{ $l }}')">{{ $l }}</button>
+            @endforeach
           </div>
+          <input type="hidden" name="from" id="fromLetter" value="A">
+          <input type="hidden" name="to" id="toLetter" value="D">
+          <p class="letter-said" id="letterSaid"></p>
           @error('from')<div style="font-size:11px;color:var(--red);margin-top:5px">{{ $message }}</div>@enderror
         </div>
 
@@ -199,8 +212,8 @@ function previewSections(){
 
   var programs = [].slice.call(form.querySelectorAll('input[name="programs[]"]:checked')).map(function (i) { return i.value; });
   var years = [].slice.call(form.querySelectorAll('input[name="years[]"]:checked')).map(function (i) { return i.value; });
-  var from = SECTION_LETTERS.indexOf(form.querySelector('select[name="from"]').value);
-  var to = SECTION_LETTERS.indexOf(form.querySelector('select[name="to"]').value);
+  var from = SECTION_LETTERS.indexOf(document.getElementById('fromLetter').value);
+  var to = SECTION_LETTERS.indexOf(document.getElementById('toLetter').value);
 
   if (from > to) { var swap = from; from = to; to = swap; }
 
@@ -225,6 +238,53 @@ function previewSections(){
     + shown + (made.length > 12 ? '<span class="sec-tag">+' + (made.length - 12) + ' more</span>' : '') + '</div>';
 }
 
+/**
+ * Click one letter, then another. The first sets one end and the second the
+ * other; a third click starts again, so there is no mode to be in and
+ * nothing to reset.
+ */
+var letterPending = null;
+
+function pickLetter(letter){
+  var fromEl = document.getElementById('fromLetter');
+  var toEl = document.getElementById('toLetter');
+
+  if (letterPending === null) {
+    letterPending = letter;
+    fromEl.value = letter;
+    toEl.value = letter;
+  } else {
+    var a = SECTION_LETTERS.indexOf(letterPending);
+    var b = SECTION_LETTERS.indexOf(letter);
+
+    fromEl.value = SECTION_LETTERS[Math.min(a, b)];
+    toEl.value = SECTION_LETTERS[Math.max(a, b)];
+    letterPending = null;
+  }
+
+  paintLetters();
+  previewSections();
+}
+
+function paintLetters(){
+  var from = SECTION_LETTERS.indexOf(document.getElementById('fromLetter').value);
+  var to = SECTION_LETTERS.indexOf(document.getElementById('toLetter').value);
+  var said = document.getElementById('letterSaid');
+
+  document.querySelectorAll('.letter').forEach(function (b) {
+    var i = SECTION_LETTERS.indexOf(b.dataset.letter);
+    b.classList.toggle('on', i >= from && i <= to);
+    b.classList.toggle('edge', i === from || i === to);
+  });
+
+  var n = to - from + 1;
+  said.innerHTML = from === to
+    ? 'Section <b>' + SECTION_LETTERS[from] + '</b> only.'
+      + (letterPending ? ' Click another letter for a range.' : '')
+    : '<b>' + SECTION_LETTERS[from] + '</b> through <b>' + SECTION_LETTERS[to] + '</b> \u2014 ' + n + ' sections each.';
+}
+
+paintLetters();
 previewSections();
 </script>
 </body>
