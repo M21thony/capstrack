@@ -290,10 +290,47 @@ let epTags = @json($expertiseList ?? []);
 // see impossible to scan or match on.
 // Sourced from App\Support\SkillCatalog so the suggestions offered here and
 // the groups the student expert list filters by can never drift apart.
-const EP_SKILL_GROUPS = Object.entries(@json(\App\Support\SkillCatalog::groups()))
+const EP_ALL_GROUPS = Object.entries(@json(\App\Support\SkillCatalog::groups()))
   .map(([name, items]) => ({ name, items }));
 
-const EP_ALL_SKILLS = EP_SKILL_GROUPS.flatMap(g => g.items.map(i => ({ name: i, group: g.name })));
+// CaPSA asked that each programme have its own areas of expertise: the four
+// are not the same subject, and offering a BLIS adviser "Embedded Systems"
+// made the picker longer without making it more useful. Ticking a programme
+// above narrows what is suggested here; ticking none shows everything, because
+// narrowing to nothing would leave an expert with no technical skills at all.
+const EP_PROGRAM_SKILLS = @json(\App\Support\SkillCatalog::programSkills());
+const EP_SHARED_GROUPS = @json(\App\Support\SkillCatalog::sharedGroups());
+
+// Every skill the catalogue knows, whichever programme it belongs to. What is
+// SUGGESTED narrows by programme; what is RECOGNISED must not, or a skill
+// typed from another programme would be treated as something nobody has heard
+// of - and an expert is free to type any of them.
+const EP_ALL_SKILLS = EP_ALL_GROUPS.flatMap(g => g.items.map(i => ({ name: i, group: g.name })));
+
+/** The programmes ticked in Programs Accepted, right now. */
+function epCheckedPrograms(){
+  return [...document.querySelectorAll('.ep-program-row')]
+    .filter(row => row.querySelector('.ep-program-check')?.checked)
+    .map(row => row.dataset.program);
+}
+
+/** The catalogue as this expert's programmes see it. */
+function epSkillGroups(){
+  const codes = epCheckedPrograms().filter(c => EP_PROGRAM_SKILLS[c]);
+
+  if (!codes.length) return EP_ALL_GROUPS;
+
+  const allowed = new Set();
+  codes.forEach(c => EP_PROGRAM_SKILLS[c].forEach(s => allowed.add(epNorm(s))));
+
+  return EP_ALL_GROUPS
+    // Research craft and language belong to every programme - a capstone in
+    // any of them needs a literature review and a proofread.
+    .map(g => EP_SHARED_GROUPS.includes(g.name)
+      ? g
+      : { name: g.name, items: g.items.filter(i => allowed.has(epNorm(i))) })
+    .filter(g => g.items.length);
+}
 
 function epNorm(v){ return String(v).trim().toLowerCase(); }
 function epHasTag(name){ return epTags.some(t => epNorm(t) === epNorm(name)); }
@@ -301,7 +338,8 @@ function epHasTag(name){ return epTags.some(t => epNorm(t) === epNorm(name)); }
 function epFilterSuggestions(query){
   const box = document.getElementById('ep-suggest');
   const q = epNorm(query || '');
-  const matches = EP_ALL_SKILLS.filter(s => !epHasTag(s.name) && (!q || epNorm(s.name).includes(q)));
+  const all = epSkillGroups().flatMap(g => g.items.map(i => ({ name: i, group: g.name })));
+  const matches = all.filter(s => !epHasTag(s.name) && (!q || epNorm(s.name).includes(q)));
 
   if (!matches.length) {
     box.innerHTML = q
@@ -352,14 +390,14 @@ function epRenderQuickGroups(){
   // expert can see their own picks without hunting for them.
   if (epGroupsFirstRender) {
     epGroupsFirstRender = false;
-    EP_SKILL_GROUPS.forEach(function (g) {
+    epSkillGroups().forEach(function (g) {
       if (g.items.some(epHasTag)) EP_OPEN_GROUPS.add(g.name);
     });
   }
 
   const caret = '<svg class="ep-caret" viewBox="0 0 24 24"><polyline points="9 6 15 12 9 18"/></svg>';
 
-  wrap.innerHTML = EP_SKILL_GROUPS.map(function (g) {
+  wrap.innerHTML = epSkillGroups().map(function (g) {
     const taken = g.items.filter(epHasTag).length;
     const open = EP_OPEN_GROUPS.has(g.name);
 
@@ -432,6 +470,8 @@ function epToggleProgram(cb){
   num.disabled = !cb.checked;
   if (cb.checked && (!num.value || Number(num.value) < 1)) num.value = 1;
   epUpdateSlotTotal();
+  // What they take teams from decides what they are offered to be expert in.
+  epRenderQuickGroups();
 }
 
 function epUpdateSlotTotal(){
