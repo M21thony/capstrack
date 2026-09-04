@@ -59,7 +59,8 @@
 /* Team Info Modal */
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 300; display: none; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
 .modal-overlay.open { display: flex; }
-.modal-box { background: var(--bg2); border-radius: 16px; padding: 28px; width: 460px; max-width: 92vw; box-shadow: 0 20px 60px rgba(0,0,0,0.3); animation: modalIn 0.2s ease; max-height: 85vh; overflow-y: auto; }
+.modal-box { background: var(--bg2); border-radius: 16px; padding: 28px; width: 460px; max-width: 92vw; box-shadow: 0 20px 60px rgba(0,0,0,0.3); animation: modalIn 0.2s ease; max-height: 85vh; overflow-y: auto;scrollbar-width:none;-ms-overflow-style:none}
+.modal-box::-webkit-scrollbar{display:none}
 @keyframes modalIn { from { opacity: 0; transform: scale(0.95) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
 .modal-box h3 { font-size: 18px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
 .modal-sub { font-size: 13px; color: var(--text3); margin-bottom: 18px; }

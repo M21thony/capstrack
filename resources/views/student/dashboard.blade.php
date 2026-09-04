@@ -43,7 +43,8 @@
 
   .ann-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;z-index:1000;opacity:0;pointer-events:none;transition:opacity .2s}
   .ann-modal-overlay.open{opacity:1;pointer-events:auto}
-  .ann-modal-box{background:var(--bg2);border-radius:16px;padding:28px;max-width:520px;width:90%;max-height:80vh;overflow-y:auto;position:relative}
+  .ann-modal-box{background:var(--bg2);border-radius:16px;padding:28px;max-width:520px;width:90%;max-height:80vh;overflow-y:auto;position:relative;scrollbar-width:none;-ms-overflow-style:none}
+.ann-modal-box::-webkit-scrollbar{display:none}
   .ann-modal-close{position:absolute;top:14px;right:16px;background:none;border:none;font-size:22px;color:var(--text3);cursor:pointer;padding:4px;line-height:1}
   .ann-modal-close:hover{color:var(--text)}
   .ann-modal-priority{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px}

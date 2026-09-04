@@ -273,8 +273,8 @@
     align-items: center;
     justify-content: center;
     padding: clamp(24px, 4.5vw, 56px);
-    overflow-y: auto;
-  }
+    overflow-y: auto;scrollbar-width:none;-ms-overflow-style:none}
+.signin-panel::-webkit-scrollbar{display:none}
 
   .signin-col {
     width: 100%;
