@@ -239,7 +239,11 @@ class AuthController extends Controller
                 return view('auth.pending-approval', ['accountRequest' => $expert]);
             }
 
-            return redirect('/request-account?email='.urlencode($email).'&first_name='.urlencode($firstName).'&last_name='.urlencode($lastName));
+            // Applying for an account is switched off - see the commented
+            // routes in routes/web.php. A CaPSA puts faculty in, either on
+            // the uploaded list or one at a time with Add Expert, so an
+            // address nobody has listed has nowhere to go but back.
+            return $this->refuseUnlistedExpert($request);
         }
 
         // Who may sign in, and what their account starts as, are the same
@@ -394,7 +398,11 @@ class AuthController extends Controller
                 return view('auth.pending-approval', ['accountRequest' => $expert]);
             }
 
-            return redirect('/request-account?email='.urlencode($email).'&first_name='.urlencode($firstName).'&last_name='.urlencode($lastName));
+            // Applying for an account is switched off - see the commented
+            // routes in routes/web.php. A CaPSA puts faculty in, either on
+            // the uploaded list or one at a time with Add Expert, so an
+            // address nobody has listed has nowhere to go but back.
+            return $this->refuseUnlistedExpert($request);
         }
 
         $student = $this->studentSigningIn($email, $firstName, $lastName);
@@ -466,6 +474,30 @@ class AuthController extends Controller
                 'year_section' => $roster->section ?? null,
             ]
         );
+    }
+
+    /**
+     * Turn away a faculty member nobody has put in the system.
+     *
+     * They used to be sent to a form to apply, which a CaPSA then approved.
+     * That path is switched off: a CaPSA adds faculty herself, on the list or
+     * one at a time, so an account is only ever made by somebody who already
+     * knows who this person is.
+     *
+     * The message names the way in, because the person reading it cannot fix
+     * this themselves and "access denied" would leave them checking their own
+     * address for a typo that is not there.
+     */
+    private function refuseUnlistedExpert(Request $request)
+    {
+        $message = 'There is no account for this address yet. Ask your CaPSA to add you '
+            .'to the faculty list, then sign in again.';
+
+        if ($request->expectsJson()) {
+            return response()->json(['success' => false, 'message' => $message], 403);
+        }
+
+        return redirect('/login')->withErrors(['message' => $message]);
     }
 
     /**

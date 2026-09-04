@@ -17,9 +17,20 @@ class ExpertAccountRequestTest extends TestCase
 {
     use RefreshDatabase;
 
+    /**
+     * Applying for your own account is switched off, not removed - see the
+     * commented routes in routes/web.php. These tests are kept beside the
+     * code they cover so uncommenting those two lines brings both back
+     * together; skipped rather than deleted, because a deleted test is a
+     * feature nobody remembers was ever tested.
+     */
     protected function setUp(): void
     {
         parent::setUp();
+
+        if (! \Illuminate\Support\Facades\Route::has('account.request.store')) {
+            $this->markTestSkipped('Faculty self-registration is switched off; a CaPSA adds them instead.');
+        }
 
         foreach (['capstone_adviser', 'adviser', 'consultant', 'grammarian'] as $roleName) {
             DB::table('roles')->insert([
