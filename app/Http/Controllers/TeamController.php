@@ -11,6 +11,7 @@ use App\Models\StudentSchoolYear;
 use App\Models\Team;
 use App\Models\TeamInvitation;
 use App\Models\Term;
+use App\Support\StudentTeam;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -45,8 +46,12 @@ class TeamController extends Controller
             $studentId = $student ? $student->student_id : 8;
         }
 
+        $teamId = StudentTeam::idFor($studentId);
+
+        // The enrolment row itself, for the school year and the role on it -
+        // a different question from which team they are in, and one a student
+        // with no team still has an answer to.
         $studentSy = StudentSchoolYear::where('student_id', $studentId)->first();
-        $teamId = $studentSy?->team_id;
 
         $myTeam = null;
         $teamMembers = collect();
@@ -435,8 +440,7 @@ class TeamController extends Controller
         $student = $request->user();
         $studentId = $student ? $student->student_id : 8;
 
-        $studentSy = StudentSchoolYear::where('student_id', $studentId)->first();
-        $teamId = $studentSy ? $studentSy->team_id : null;
+        $teamId = StudentTeam::idFor($studentId);
 
         if (! $teamId) {
             return redirect()
@@ -497,8 +501,7 @@ class TeamController extends Controller
         $student = $request->user();
         $studentId = $student->student_id;
 
-        $studentSy = StudentSchoolYear::where('student_id', $studentId)->first();
-        $teamId = $studentSy?->team_id;
+        $teamId = StudentTeam::idFor($studentId);
 
         if (! $teamId) {
             return redirect()

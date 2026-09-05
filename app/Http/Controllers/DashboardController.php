@@ -13,6 +13,7 @@ use App\Models\Student;
 use App\Models\StudentMilestone;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
+use App\Support\StudentTeam;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -25,8 +26,7 @@ class DashboardController extends Controller
         /** @var Student $student */
         $student = auth()->user();
 
-        $studentSy = StudentSchoolYear::where('student_id', $student->student_id)->first();
-        $teamId = $studentSy?->team_id;
+        $teamId = StudentTeam::idFor($student->student_id);
 
         [$myTeam, $teamMembers, $leaderStudentId] = $this->loadTeamData($student, $teamId);
 
@@ -38,7 +38,7 @@ class DashboardController extends Controller
 
         $activities = $this->buildActivities($student, $teamId);
         $milestones = $this->getMilestones($teamId);
-        $announcements = $this->getAnnouncements($student, $studentSy);
+        $announcements = $this->getAnnouncements($student);
         $defenseResults = $this->getDefenseResults($teamId);
 
         // Recent expense receipts for dashboard widget (from
@@ -345,7 +345,9 @@ class DashboardController extends Controller
         })->values();
     }
 
-    private function getAnnouncements(Student $student, ?StudentSchoolYear $studentSy): Collection
+    // The enrolment row was passed in and never read - the section comes
+    // from the student's own course and year.
+    private function getAnnouncements(Student $student): Collection
     {
         if (! $student->course || ! $student->year_section) {
             return collect();
