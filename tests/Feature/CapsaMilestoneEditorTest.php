@@ -175,14 +175,14 @@ class CapsaMilestoneEditorTest extends TestCase
         $milestone = Milestone::create(['team_id' => $team->team_id, 'title' => 'Capstone 1', 'status' => 'todo']);
         $item = $milestone->items()->create(['title' => 'Signed Form', 'kind' => MilestoneItem::FORM]);
 
-        $this->postJson(route('capsa.milestones.items.toggle', $item), [
+        $this->putJson(route('capsa.milestones.items.done', $item), [
             'done' => true,
             'completed_at' => '2026-08-14',
         ])->assertOk()->assertJsonPath('data.completed', 1);
 
         $this->assertSame('2026-08-14', $item->fresh()->completed_at->toDateString());
 
-        $this->postJson(route('capsa.milestones.items.toggle', $item), ['done' => false])->assertOk();
+        $this->putJson(route('capsa.milestones.items.done', $item), ['done' => false])->assertOk();
         $this->assertNull($item->fresh()->completed_at);
     }
 
@@ -200,7 +200,7 @@ class CapsaMilestoneEditorTest extends TestCase
         foreach ([MilestoneItem::DOCUMENT, MilestoneItem::APPROVAL, MilestoneItem::DEFENSE] as $kind) {
             $item = $milestone->items()->create(['title' => "A {$kind}", 'kind' => $kind]);
 
-            $this->postJson(route('capsa.milestones.items.toggle', $item), ['done' => true])
+            $this->putJson(route('capsa.milestones.items.done', $item), ['done' => true])
                 ->assertStatus(422);
 
             $this->assertNull($item->fresh()->completed_at);

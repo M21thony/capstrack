@@ -352,7 +352,7 @@ class ScheduleController extends Controller
 
     // Toggle availability without deleting
     // PATCH /instructor/schedule/slots/{id}/toggle
-    public function toggleAvailability(int $id)
+    public function setAvailability(Request $request, int $id)
     {
         $expert = Auth::guard('expert')->user();
 
@@ -365,7 +365,11 @@ class ScheduleController extends Controller
             return response()->json(['error' => 'Slot not found.'], 404);
         }
 
-        $newStatus = ! $slot->is_available;
+        // The caller says what it wants; it already knows what it is
+        // showing. Falling back to a flip keeps any caller that does not.
+        $newStatus = $request->has('is_available')
+            ? $request->boolean('is_available')
+            : ! $slot->is_available;
 
         DB::table('consultation_schedule')
             ->where('schedule_id', $id)

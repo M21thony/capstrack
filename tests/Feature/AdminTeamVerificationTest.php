@@ -259,7 +259,7 @@ class AdminTeamVerificationTest extends TestCase
 
         $team->preProposals()->update(['submitted_at' => null]);
 
-        $this->post(route('student.pre-proposal.submit'))->assertSessionHas('status');
+        $this->patch(route('student.pre-proposal.submit'))->assertSessionHas('status');
 
         $this->actingAs(CapstoneExpert::find(1), 'expert');
         $response = $this->get(route('capsa.team_management', ['tab' => 'verification']));

@@ -350,7 +350,7 @@ function createMilestone(e) {
 }
 
 function toggleItem(itemId, done) {
-  msPost('/capsa/milestone-items/' + itemId + '/toggle', { done })
+  msPost('/capsa/milestone-items/' + itemId + '/done', { done }, 'PUT')
     .then(msReload).catch((err) => alert(err.message));
 }
 

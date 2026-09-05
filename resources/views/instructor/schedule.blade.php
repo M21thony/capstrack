@@ -1213,7 +1213,13 @@ function resetForm() {
 // ── Toggle availability ────────────────────────────────────────
 async function toggleSlot(scheduleId, key, index) {
   try {
-    const data = await apiFetch(`/instructor/schedule/slots/${scheduleId}/toggle`, { method: 'PATCH' });
+    // The page already knows what the slot is showing, so it asks for the
+    // opposite outright rather than for a flip.
+    const wanted = !(slots[key] && slots[key][index] ? slots[key][index].is_available : true);
+    const data = await apiFetch(`/instructor/schedule/slots/${scheduleId}/availability`, {
+      method: 'PUT',
+      body: JSON.stringify({ is_available: wanted }),
+    });
 
     // Update both slots[] and the underlying slotsByDay[] entry
     if (slots[key] && slots[key][index]) {
