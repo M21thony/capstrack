@@ -165,6 +165,12 @@ class NotificationBellScopeTest extends TestCase
         $this->assertStringContainsString('id="notif-btn"', $html);
         $this->assertStringContainsString('id="notif-dropdown"', $html);
         $this->assertStringNotContainsString('<div class="notif-btn">', $html);
+
+        // The panel is absolutely positioned, so it needs a positioned wrapper
+        // of its own - the host pages do not set position on their toolbar, and
+        // without this it measured against <body> and opened most of a page
+        // below the bell.
+        $this->assertStringContainsString('notif-wrap', $html);
     }
 
     /** With nothing waiting, the unread dot is not lit. */

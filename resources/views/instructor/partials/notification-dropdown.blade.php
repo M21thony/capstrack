@@ -15,6 +15,7 @@
     : collect();
 @endphp
 
+<div class="notif-wrap">
 <button class="notif-btn" id="notif-btn" type="button" aria-label="Notifications" aria-expanded="false">
   <svg viewBox="0 0 24 24" style="pointer-events:none"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
   @if ($waiting->isNotEmpty())
@@ -52,8 +53,13 @@
     <a class="notif-footer" href="{{ route('instructor.assignments') }}">Review all applications</a>
   @endif
 </div>
+</div>
 
 <style>
+/* The panel hangs off the bell. Without a positioned wrapper of its own it
+   measured against <body> and appeared most of a page below the button - the
+   host pages do not set position on their toolbar. */
+.notif-wrap{position:relative;display:inline-flex}
 .notif-btn{position:relative}
 .notif-dot{
   position:absolute;top:-3px;right:-3px;min-width:15px;height:15px;padding:0 3px;border-radius:8px;
