@@ -353,6 +353,18 @@ class TeamController extends Controller
         ]);
     }
 
+    /**
+     * Same as the web side: one PATCH, the status says accepted or declined.
+     */
+    public function updateLeadership(Request $request, int $notificationId): JsonResponse
+    {
+        return $request->validate([
+            'status' => ['required', 'in:accepted,declined'],
+        ])['status'] === 'accepted'
+            ? $this->acceptLeadership($request, $notificationId)
+            : $this->declineLeadership($request, $notificationId);
+    }
+
     public function acceptLeadership(Request $request, int $notificationId): JsonResponse
     {
         return $this->respondToLeadershipTransfer($request, $notificationId, true);

@@ -164,9 +164,8 @@ Route::middleware('expert.capsa')->group(function () {
     // redirects here - it was only ever half of this.
     Route::get('/team-management', [TeamManagementController::class, 'index'])->name('team_management');
     Route::get('/verify-teams', fn () => redirect()->route('capsa.team_management', ['tab' => 'verification']))->name('verify_teams');
-    Route::post('/verify-teams/{team}/verify', [AdminTeamVerificationController::class, 'verify'])->name('verify_teams.verify');
-    Route::post('/verify-teams/pre-proposals/{preProposal}/approve', [AdminTeamVerificationController::class, 'approvePreProposal'])->name('verify_teams.pre_proposals.approve');
-    Route::post('/verify-teams/pre-proposals/{preProposal}/reject', [AdminTeamVerificationController::class, 'rejectPreProposal'])->name('verify_teams.pre_proposals.reject');
+    Route::patch('/verify-teams/{team}', [AdminTeamVerificationController::class, 'verify'])->name('verify_teams.verify');
+    Route::patch('/verify-teams/pre-proposals/{preProposal}', [AdminTeamVerificationController::class, 'updatePreProposal'])->name('verify_teams.pre_proposals.update');
     Route::get('/verify-teams/pre-proposals/{preProposal}/document', [AdminTeamVerificationController::class, 'viewPreProposalDocument'])->name('verify_teams.pre_proposals.document');
     // Milestones are created and edited deliberately here, rather than
     // falling out of posting an announcement - which is how the one
@@ -291,20 +290,20 @@ Route::prefix('expert')->group(function () {
 
 Route::middleware(['auth', 'no.cache', 'track.expert'])->group(function () {
     Route::post('/team', [TeamController::class, 'store'])->name('team.store');
+    // Above /team/{team}, or route-model binding tries to resolve a team
+    // called "leader" and 404s before this is ever reached.
+    Route::put('/team/leader', [TeamController::class, 'transferLeadership'])->name('team.transfer-leadership');
     Route::put('/team/{team}', [TeamController::class, 'update'])->name('team.update');
     Route::get('/team/check-name', [TeamController::class, 'checkName'])->name('team.check-name');
     // Before anything matching /team/{something}, so the literal path is not
     // swallowed by a route-model-binding parameter.
     Route::get('/team/available-classmates', [TeamController::class, 'getAvailableClassmates'])->name('team.available-classmates');
-    Route::post('/team/transfer-leadership', [TeamController::class, 'transferLeadership'])->name('team.transfer-leadership');
-    Route::post('/team/leadership/{notification}/accept', [TeamController::class, 'acceptLeadership'])->name('team.leadership.accept');
-    Route::post('/team/leadership/{notification}/decline', [TeamController::class, 'declineLeadership'])->name('team.leadership.decline');
+    Route::patch('/team/leadership/{notification}', [TeamController::class, 'updateLeadership'])->name('team.leadership.update');
     Route::post('/team/leadership/{notification}/remind-later', [TeamController::class, 'remindLeadershipLater'])->name('team.leadership.remind-later');
     Route::delete('/team/members/{student}', [TeamController::class, 'removeMember'])->name('team.members.remove');
     Route::delete('/team', [TeamController::class, 'destroy'])->name('team.destroy');
-    Route::post('/team/leave', [TeamController::class, 'requestLeave'])->name('team.leave-request');
-    Route::post('/team/leave/{approval}/approve', [TeamController::class, 'approveLeave'])->name('team.leave.approve');
-    Route::post('/team/leave/{approval}/decline', [TeamController::class, 'declineLeave'])->name('team.leave.decline');
+    Route::post('/team/leave-requests', [TeamController::class, 'requestLeave'])->name('team.leave-request');
+    Route::patch('/team/leave-requests/{approval}', [TeamController::class, 'updateLeave'])->name('team.leave.update');
     Route::get('/team/leave/popups', [TeamController::class, 'leavePopups'])->name('team.leave.popups');
     Route::post('/recruitment', [RecruitmentController::class, 'store'])->name('recruitment.store');
     Route::put('/recruitment/{recruitment}', [RecruitmentController::class, 'update'])->name('recruitment.update');

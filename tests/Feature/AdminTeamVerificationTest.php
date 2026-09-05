@@ -171,7 +171,7 @@ class AdminTeamVerificationTest extends TestCase
             'team_id' => $team->team_id,
         ]);
 
-        $response = $this->post(route('capsa.verify_teams.verify', $team->team_id));
+        $response = $this->patch(route('capsa.verify_teams.verify', $team->team_id));
 
         $response->assertRedirect(route('capsa.verify_teams'));
         $response->assertSessionHas('status');
@@ -207,7 +207,7 @@ class AdminTeamVerificationTest extends TestCase
             'leader_id' => $leader->student_id,
         ]);
 
-        $response = $this->post(route('capsa.verify_teams.verify', $team->team_id));
+        $response = $this->patch(route('capsa.verify_teams.verify', $team->team_id));
 
         $response->assertRedirect(route('capsa.verify_teams'));
         $response->assertSessionHas('error');
@@ -349,7 +349,7 @@ class AdminTeamVerificationTest extends TestCase
         $teamB = $this->createCompleteTeam($leaderB, 'Team BSIT');
         $this->selectFinalTitleForTeam($teamB, $leaderB);
 
-        $response = $this->post(route('capsa.verify_teams.verify', $teamA->team_id));
+        $response = $this->patch(route('capsa.verify_teams.verify', $teamA->team_id));
 
         $response->assertRedirect(route('capsa.verify_teams'));
         $response->assertSessionHas('error');
@@ -359,7 +359,7 @@ class AdminTeamVerificationTest extends TestCase
             'is_confirmed' => false,
         ]);
 
-        $response = $this->post(route('capsa.verify_teams.verify', $teamB->team_id));
+        $response = $this->patch(route('capsa.verify_teams.verify', $teamB->team_id));
 
         $response->assertRedirect(route('capsa.verify_teams'));
         $response->assertSessionHas('status');
@@ -391,7 +391,7 @@ class AdminTeamVerificationTest extends TestCase
         $leader = $this->createLeader();
         $team = $this->createCompleteTeam($leader);
 
-        $response = $this->post(route('capsa.verify_teams.verify', $team->team_id));
+        $response = $this->patch(route('capsa.verify_teams.verify', $team->team_id));
 
         $response->assertRedirect(route('capsa.verify_teams'));
         $response->assertSessionHas('error');
@@ -419,7 +419,7 @@ class AdminTeamVerificationTest extends TestCase
         $team = $this->createCompleteTeam($leader);
         $this->selectFinalTitleForTeam($team, $leader);
 
-        $response = $this->post(route('capsa.verify_teams.verify', $team->team_id));
+        $response = $this->patch(route('capsa.verify_teams.verify', $team->team_id));
 
         $response->assertRedirect(route('capsa.verify_teams'));
         $response->assertSessionHas('status');
@@ -532,7 +532,7 @@ class AdminTeamVerificationTest extends TestCase
         $team = $this->createCompleteTeam($leader);
         $proposal = $this->createPendingProposal($team, $leader, 1, self::PROJECT_TITLE);
 
-        $response = $this->postJson(route('capsa.verify_teams.pre_proposals.approve', $proposal->id));
+        $response = $this->patchJson(route('capsa.verify_teams.pre_proposals.update', $proposal->id), ['status' => 'approved']);
 
         $response->assertOk();
         $response->assertJson(['success' => true]);
@@ -555,8 +555,8 @@ class AdminTeamVerificationTest extends TestCase
         $proposal1 = $this->createPendingProposal($team, $leader, 1, self::PROJECT_TITLE);
         $proposal2 = $this->createPendingProposal($team, $leader, 2, 'Automated Smart Campus Energy Consumption Tracking and Optimization Dashboard System');
 
-        $this->postJson(route('capsa.verify_teams.pre_proposals.approve', $proposal1->id))->assertOk();
-        $this->postJson(route('capsa.verify_teams.pre_proposals.approve', $proposal2->id))->assertOk();
+        $this->patchJson(route('capsa.verify_teams.pre_proposals.update', $proposal1->id), ['status' => 'approved'])->assertOk();
+        $this->patchJson(route('capsa.verify_teams.pre_proposals.update', $proposal2->id), ['status' => 'approved'])->assertOk();
 
         $team->refresh();
         $this->assertNull($team->selected_pre_proposal_id);
@@ -580,7 +580,8 @@ class AdminTeamVerificationTest extends TestCase
         // either: this app's exception handler only renders JSON for
         // /api/* routes, so a server-side validation failure on this
         // web-group route doesn't produce a clean JSON response to assert on.
-        $response = $this->postJson(route('capsa.verify_teams.pre_proposals.reject', $proposal->id), [
+        $response = $this->patchJson(route('capsa.verify_teams.pre_proposals.update', $proposal->id), [
+            'status' => 'rejected',
             'reason' => 'Too similar to an existing capstone.',
         ]);
 
@@ -596,7 +597,7 @@ class AdminTeamVerificationTest extends TestCase
         $team = $this->createCompleteTeam($leader);
         $this->createPendingProposal($team, $leader, 1, self::PROJECT_TITLE);
 
-        $response = $this->post(route('capsa.verify_teams.verify', $team->team_id));
+        $response = $this->patch(route('capsa.verify_teams.verify', $team->team_id));
 
         $response->assertSessionHas('error');
         $this->assertDatabaseHas('team', ['team_id' => $team->team_id, 'is_confirmed' => false]);
@@ -691,7 +692,7 @@ class AdminTeamVerificationTest extends TestCase
         $team->update(['project_title' => null]);
         [$first] = $this->threeSubmittedTitles($team, $leader);
 
-        $this->postJson(route('capsa.verify_teams.pre_proposals.approve', $first))->assertOk();
+        $this->patchJson(route('capsa.verify_teams.pre_proposals.update', $first), ['status' => 'approved'])->assertOk();
 
         $team->refresh();
         $this->assertNull($team->project_title, 'The team was given a title while two were still unreviewed.');
@@ -707,12 +708,12 @@ class AdminTeamVerificationTest extends TestCase
         $team->update(['project_title' => null]);
         [$first, $second, $third] = $this->threeSubmittedTitles($team, $leader);
 
-        $this->postJson(route('capsa.verify_teams.pre_proposals.approve', $first))->assertOk();
-        $this->postJson(route('capsa.verify_teams.pre_proposals.reject', $second), ['reason' => 'Too broad'])->assertOk();
+        $this->patchJson(route('capsa.verify_teams.pre_proposals.update', $first), ['status' => 'approved'])->assertOk();
+        $this->patchJson(route('capsa.verify_teams.pre_proposals.update', $second), ['status' => 'rejected', 'reason' => 'Too broad'])->assertOk();
 
         $this->assertNull($team->fresh()->project_title, 'Settled with one still undecided.');
 
-        $this->postJson(route('capsa.verify_teams.pre_proposals.reject', $third), ['reason' => 'Duplicate'])->assertOk();
+        $this->patchJson(route('capsa.verify_teams.pre_proposals.update', $third), ['status' => 'rejected', 'reason' => 'Duplicate'])->assertOk();
 
         $team->refresh();
         $this->assertSame('First Title', $team->project_title);
@@ -732,9 +733,9 @@ class AdminTeamVerificationTest extends TestCase
         $team->update(['project_title' => null]);
         [$first, $second, $third] = $this->threeSubmittedTitles($team, $leader);
 
-        $this->postJson(route('capsa.verify_teams.pre_proposals.approve', $first))->assertOk();
-        $this->postJson(route('capsa.verify_teams.pre_proposals.approve', $second))->assertOk();
-        $this->postJson(route('capsa.verify_teams.pre_proposals.reject', $third), ['reason' => 'No'])->assertOk();
+        $this->patchJson(route('capsa.verify_teams.pre_proposals.update', $first), ['status' => 'approved'])->assertOk();
+        $this->patchJson(route('capsa.verify_teams.pre_proposals.update', $second), ['status' => 'approved'])->assertOk();
+        $this->patchJson(route('capsa.verify_teams.pre_proposals.update', $third), ['status' => 'rejected', 'reason' => 'No'])->assertOk();
 
         $team->refresh();
         $this->assertNull($team->project_title, 'The first approval is still showing as the team title.');
@@ -750,7 +751,7 @@ class AdminTeamVerificationTest extends TestCase
         [$first, $second, $third] = $this->threeSubmittedTitles($team, $leader);
 
         foreach ([$first, $second, $third] as $p) {
-            $this->postJson(route('capsa.verify_teams.pre_proposals.reject', $p), ['reason' => 'No'])->assertOk();
+            $this->patchJson(route('capsa.verify_teams.pre_proposals.update', $p), ['status' => 'rejected', 'reason' => 'No'])->assertOk();
         }
 
         $team->refresh();
@@ -771,7 +772,7 @@ class AdminTeamVerificationTest extends TestCase
         $team->update(['project_title' => null]);
         [$first, $second, $third] = $this->threeSubmittedTitles($team, $leader);
 
-        $response = $this->postJson(route('capsa.verify_teams.pre_proposals.approve', $first))->assertOk();
+        $response = $this->patchJson(route('capsa.verify_teams.pre_proposals.update', $first), ['status' => 'approved'])->assertOk();
 
         $response->assertJsonPath('success', true);
         $response->assertJsonCount(3, 'proposals');
@@ -780,12 +781,12 @@ class AdminTeamVerificationTest extends TestCase
         $response->assertJsonPath('project_title', null);
         $response->assertJsonPath('selected_pre_proposal_id', null);
 
-        $this->postJson(route('capsa.verify_teams.pre_proposals.reject', $second), ['reason' => 'Too broad'])
+        $this->patchJson(route('capsa.verify_teams.pre_proposals.update', $second), ['status' => 'rejected', 'reason' => 'Too broad'])
             ->assertOk()
             ->assertJsonPath('proposals.1.status', 'rejected')
             ->assertJsonPath('proposals.1.rejection_reason', 'Too broad');
 
-        $this->postJson(route('capsa.verify_teams.pre_proposals.reject', $third), ['reason' => 'Duplicate'])
+        $this->patchJson(route('capsa.verify_teams.pre_proposals.update', $third), ['status' => 'rejected', 'reason' => 'Duplicate'])
             ->assertOk()
             ->assertJsonPath('project_title', 'First Title')
             ->assertJsonPath('selected_pre_proposal_id', $first->id);
@@ -833,7 +834,7 @@ class AdminTeamVerificationTest extends TestCase
         [$first, , $third] = $this->threeSubmittedTitles($team, $leader);
         $third->update(['submitted_at' => null, 'title' => 'Still A Draft']);
 
-        $response = $this->postJson(route('capsa.verify_teams.pre_proposals.approve', $first))->assertOk();
+        $response = $this->patchJson(route('capsa.verify_teams.pre_proposals.update', $first), ['status' => 'approved'])->assertOk();
 
         $titles = collect($response->json('proposals'))->pluck('title');
 
