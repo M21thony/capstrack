@@ -165,6 +165,14 @@ class TeamController extends Controller
             ->latest('created_at')
             ->get();
 
+        // Outgoing team invitations sent by this student (as leader) that are still pending
+        $outgoingInvitations = TeamInvitation::with(['receiver'])
+            ->where('sender_id', $studentId)
+            ->where('type', 'invite')
+            ->where('status', 'pending')
+            ->latest('created_at')
+            ->get();
+
         $hasPendingRequest = $outgoingRequests->isNotEmpty();
 
         $hasPendingLeaveApproval = $myTeam
@@ -223,6 +231,7 @@ class TeamController extends Controller
             'invites' => $invites,
             'incomingRequests' => $incomingRequests,
             'outgoingRequests' => $outgoingRequests,
+            'outgoingInvitations' => $outgoingInvitations,
             'hasPendingRequest' => $hasPendingRequest,
             'hasPendingLeaveApproval' => $hasPendingLeaveApproval,
             'pendingLeaveApprovals' => $pendingLeaveApprovals,
@@ -1229,6 +1238,13 @@ class TeamController extends Controller
 
         $availableSlots = $maxMembers - $currentCount;
 
+        // Get pending invitation receiver IDs
+        $pendingInviteReceiverIds = TeamInvitation::where('team_id', $myTeam->team_id)
+            ->where('type', 'invite')
+            ->where('status', 'pending')
+            ->pluck('receiver_id')
+            ->toArray();
+
         // Compute the current academic year the same way PersonalInfoController does.
         // This is used as a fallback when the leader's stored school_year is
         // null, corrupted, or doesn't match any classmates (e.g. legacy "26-1" data).
@@ -1258,7 +1274,7 @@ class TeamController extends Controller
                 ->get();
         }
 
-        $classmates = $classmates->map(function ($classmate) {
+        $classmates = $classmates->map(function ($classmate) use ($pendingInviteReceiverIds) {
             $avatar = '';
             if (filled($classmate->p_picture)) {
                 if (filter_var($classmate->p_picture, FILTER_VALIDATE_URL)) {
@@ -1268,6 +1284,9 @@ class TeamController extends Controller
                 }
             }
 
+            $isPendingInvite = in_array($classmate->student_id, $pendingInviteReceiverIds);
+            $hasTeam = $classmate->team_id !== null;
+
             return [
                 'student_id' => $classmate->student_id,
                 'name' => trim(($classmate->f_name ?? '').' '.($classmate->l_name ?? '')),
@@ -1276,7 +1295,8 @@ class TeamController extends Controller
                 'course' => $classmate->course,
                 'year_section' => $classmate->year_section,
                 'student_number' => $classmate->student_number,
-                'has_team' => $classmate->team_id !== null,
+                'has_team' => $hasTeam,
+                'is_pending_invite' => $isPendingInvite,
             ];
         });
 
