@@ -180,7 +180,9 @@ Route::middleware('expert.capsa')->group(function () {
     Route::post('/milestones/{milestone}/items/reorder', [MilestoneController::class, 'reorderItems'])->name('milestones.items.reorder');
     Route::put('/milestone-items/{item}', [MilestoneController::class, 'updateItem'])->name('milestones.items.update');
     Route::delete('/milestone-items/{item}', [MilestoneController::class, 'destroyItem'])->name('milestones.items.destroy');
-    Route::post('/milestone-items/{item}/toggle', [MilestoneController::class, 'toggleItem'])->name('milestones.items.toggle');
+    // Its own path: PUT /milestone-items/{item} already edits the item, and
+    // two routes cannot share a name without route() picking one of them.
+    Route::put('/milestone-items/{item}/done', [MilestoneController::class, 'toggleItem'])->name('milestones.items.done');
     Route::get('/rubric_management', [GradingRubricController::class, 'index'])->name('rubric_management');
     Route::get('/financial', [AdminFinancialController::class, 'index'])->name('financial');
     Route::post('/financial/expense-post', [AdminFinancialController::class, 'storeExpensePost'])->name('financial.expense-post.store');
@@ -323,7 +325,7 @@ Route::middleware(['auth', 'no.cache', 'track.expert'])->group(function () {
 
     Route::post('/pre-proposal/check', [PreProposalController::class, 'runCheck'])->name('student.pre-proposal.check');
     Route::post('/pre-proposal', [PreProposalController::class, 'store'])->name('student.pre-proposal.store');
-    Route::post('/pre-proposal/submit', [PreProposalController::class, 'submit'])->name('student.pre-proposal.submit');
+    Route::patch('/pre-proposal', [PreProposalController::class, 'submit'])->name('student.pre-proposal.submit');
     Route::post('/pre-proposal/unsubmit', [PreProposalController::class, 'unsubmit'])->name('student.pre-proposal.unsubmit');
     Route::post('/pre-proposal/{preProposal}/choose', [PreProposalController::class, 'choose'])->name('student.pre-proposal.choose');
     Route::delete('/pre-proposal/{preProposal}', [PreProposalController::class, 'destroy'])->name('student.pre-proposal.destroy');
@@ -353,8 +355,8 @@ Route::middleware(['auth', 'no.cache', 'track.expert'])->group(function () {
             Route::post('/consultation/book', [StudentConsultationController::class, 'book'])->name('student.consultation.book');
             Route::post('/consultation/cancel/{bookingId}', [StudentConsultationController::class, 'cancel'])->name('student.consultation.cancel');
             Route::get('/progress', [StudentProgressController::class, 'index'])->name('student.progress');
-            Route::post('/progress/milestones/mark-done', [StudentProgressController::class, 'markDone'])->name('student.progress.milestones.mark-done');
-            Route::post('/progress/milestones/update-picture', [StudentProgressController::class, 'updatePicture'])->name('student.progress.milestones.update-picture');
+            Route::patch('/progress/milestones', [StudentProgressController::class, 'markDone'])->name('student.progress.milestones.mark-done');
+            Route::put('/progress/milestones/picture', [StudentProgressController::class, 'updatePicture'])->name('student.progress.milestones.update-picture');
             Route::get('/financial', [StudentFinancialController::class, 'index'])->name('student.financial');
             Route::post('/financial/receipts', [StudentFinancialController::class, 'submitReceipt'])->name('student.financial.submit');
             Route::get('/resources', [StudentResourceController::class, 'index'])->name('student.resources');
@@ -368,7 +370,7 @@ Route::middleware(['auth', 'no.cache', 'track.expert'])->group(function () {
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
     Route::get('/notifications/count', [NotificationController::class, 'count'])->name('notifications.count');
     Route::post('/notifications/{notification}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
-    Route::post('/notifications/mark-all-read', [NotificationController::class, 'markAllRead'])->name('notifications.mark-all-read');
+    Route::patch('/notifications', [NotificationController::class, 'markAllRead'])->name('notifications.mark-all-read');
     Route::post('/notifications/seen', [NotificationController::class, 'markSeen'])->name('notifications.seen');
 });
 Route::prefix('instructor/schedule')
@@ -378,7 +380,7 @@ Route::prefix('instructor/schedule')
         Route::post('slots', [ScheduleController::class, 'addSlot']);
         Route::patch('slots/{id}', [ScheduleController::class, 'updateSlot']);
         Route::delete('slots/{id}', [ScheduleController::class, 'deleteSlot']);
-        Route::patch('slots/{id}/toggle', [ScheduleController::class, 'toggleAvailability']);
+        Route::put('slots/{id}/availability', [ScheduleController::class, 'setAvailability']);
     });
 
 Route::post('/session/keep-alive', function () {

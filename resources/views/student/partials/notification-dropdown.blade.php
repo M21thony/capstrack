@@ -242,8 +242,8 @@ document.addEventListener('click', function(e) {
 
 document.addEventListener('click', function(e) {
   if (!e.target.closest('#notif-mark-all-btn')) return;
-  fetch('/notifications/mark-all-read', {
-    method: 'POST',
+  fetch('/notifications', {
+    method: 'PATCH',
     headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content }
   }).then(function(r) { return r.json(); }).then(function(data) {
     if (data.success) {

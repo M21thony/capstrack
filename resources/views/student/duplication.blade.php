@@ -617,6 +617,7 @@
               <div class="pp-submit-note">Only your team leader can submit these for checking.</div>
             @elseif ($canTurnIn)
               <form method="POST" action="{{ route('student.pre-proposal.submit') }}">
+                @method('PATCH')
                 @csrf
                 <button type="submit" class="btn btn-primary pp-btn-submit">
                   <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4 20-7z"/></svg>
