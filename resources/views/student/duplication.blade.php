@@ -296,7 +296,22 @@
   </div>
 
   <div class="content">
-    @if ($approvedProposals->count() >= 2 && ! $team->selected_pre_proposal_id)
+    {{-- A pre-proposal belongs to a team, so without one there is nothing to
+         save. The page still opens - being redirected away with no
+         explanation read as a broken link - and says what is missing. --}}
+    @if (! $team)
+      <div class="card" style="margin-bottom:16px;border-color:rgba(180,83,9,0.25);background:var(--amber-bg);">
+        <div class="card-header"><span class="card-title">You are not in a team yet</span></div>
+        <div style="font-size:12.5px;color:var(--amber);line-height:1.55">
+          You can run a duplication check on a title now &mdash; the result is kept against your own
+          record. Saving a pre-proposal and turning the set in belong to a team, so those need one.
+          <a href="{{ route('student.team') }}" style="color:inherit;font-weight:700;text-decoration:underline;text-underline-offset:2px;">Join or create a team</a>
+          when you are ready to save.
+        </div>
+      </div>
+    @endif
+
+    @if ($approvedProposals->count() >= 2 && ! $team?->selected_pre_proposal_id)
       <div class="card" style="margin-bottom:16px;border-color:rgba(180,83,9,0.25);background:var(--amber-bg);">
         <div class="card-header"><span class="card-title">Choose Your Final Title</span></div>
         <div style="font-size:12px;color:var(--amber);margin-bottom:12px">
