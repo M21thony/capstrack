@@ -35,13 +35,12 @@ class ResourceScopeTest extends TestCase
         return $expert;
     }
 
-    private function resource(string $title, ?string $for, ?int $by, ?string $section = null): Resource
+    private function resource(string $title, ?string $for, ?int $by, array $sections = []): Resource
     {
-        return Resource::create([
+        $resource = Resource::create([
             'resource_type' => 'template',
             'category' => 'Chapter 1',
             'resource_for' => $for,
-            'section' => $section,
             'title' => $title,
             'file_name' => $title.'.pdf',
             'file_path' => 'resources/'.$title.'.pdf',
@@ -49,6 +48,12 @@ class ResourceScopeTest extends TestCase
             'uploaded_by' => $by,
             'uploaded_at' => now(),
         ]);
+
+        foreach ($sections as $section) {
+            $resource->sections()->create(['section' => $section]);
+        }
+
+        return $resource->load('sections');
     }
 
     private function student(?string $course, ?string $program = null): Student
@@ -187,8 +192,8 @@ class ResourceScopeTest extends TestCase
     {
         $capsa = $this->capsa(['BSIT-4A', 'BSIT-4B']);
 
-        $this->resource('For 4B Only', 'BSIT', $capsa->expert_id, '4B');
-        $this->resource('For 4A Only', 'BSIT', $capsa->expert_id, '4A');
+        $this->resource('For 4B Only', null, $capsa->expert_id, ['BSIT-4B']);
+        $this->resource('For 4A Only', null, $capsa->expert_id, ['BSIT-4A']);
         $this->resource('For All BSIT', 'BSIT', $capsa->expert_id);
 
         // student() makes a 4 · B student, so their section is BSIT-4B.
@@ -199,15 +204,29 @@ class ResourceScopeTest extends TestCase
         $response->assertDontSee('For 4A Only');
     }
 
-    /** The label is built from the pair, never stored. */
-    public function test_the_section_label_is_derived_not_duplicated(): void
+    /** Several at once - the point of the picker. */
+    public function test_a_resource_can_be_aimed_at_several_sections(): void
     {
-        $capsa = $this->capsa(['BSIT-4B']);
-        $resource = $this->resource('Labelled', 'BSIT', $capsa->expert_id, '4B');
+        $capsa = $this->capsa(['BSIT-4A', 'BSIT-4B', 'BSIT-3A']);
 
-        $this->assertSame('BSIT-4B', $resource->section_label);
-        $this->assertSame('4B', $resource->section);
-        $this->assertNull($this->resource('Unlabelled', 'BSIT', $capsa->expert_id)->section_label);
+        $this->resource('For 4A and 4B', null, $capsa->expert_id, ['BSIT-4A', 'BSIT-4B']);
+        $this->resource('For 3A only', null, $capsa->expert_id, ['BSIT-3A']);
+
+        $response = $this->actingAs($this->student('BSIT'), 'web')->get('/student/resources');
+
+        $response->assertSee('For 4A and 4B');
+        $response->assertDontSee('For 3A only');
+    }
+
+    /** Named sections carry the program, so the program column stays empty. */
+    public function test_targeting_sections_records_them_and_leaves_the_program_alone(): void
+    {
+        $capsa = $this->capsa(['BSIT-4A', 'BSIT-4B']);
+        $resource = $this->resource('Targeted', null, $capsa->expert_id, ['BSIT-4A', 'BSIT-4B']);
+
+        $this->assertSame(['BSIT-4A', 'BSIT-4B'], $resource->targetSections());
+        $this->assertNull($resource->resource_for);
+        $this->assertSame([], $this->resource('Untargeted', 'BSIT', $capsa->expert_id)->targetSections());
     }
 
     /** A CaPSA's programs come from the sections they handle. */

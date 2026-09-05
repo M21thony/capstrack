@@ -159,29 +159,22 @@ class GoogleDriveController extends Controller
                     }
                 },
             ],
-            // The year and letter only - "4A". The program is resource_for,
-            // and the two together are the section. Null means every section
-            // of that program.
-            'section' => [
-                'nullable',
+            // The sections this is for, as labels. Leave it empty to reach
+            // every section you handle - a resource with no targeting only
+            // reaches your own students anyway, since that is who can see
+            // your uploads.
+            'sections' => ['nullable', 'array'],
+            'sections.*' => [
                 'string',
-                'max:8',
-                function ($attribute, $value, $fail) use ($request) {
+                'max:24',
+                function ($attribute, $value, $fail) {
                     $viewer = Auth::guard('expert')->user();
 
-                    if (! $value || ! $viewer || $viewer->is_admin) {
+                    if (! $viewer || $viewer->is_admin) {
                         return;
                     }
 
-                    $program = $request->input('resource_for');
-
-                    if (! $program) {
-                        $fail('Choose a program before aiming a resource at one of its sections.');
-
-                        return;
-                    }
-
-                    if (! in_array($program.'-'.$value, $viewer->sections ?? [], true)) {
+                    if (! in_array($value, $viewer->sections ?? [], true)) {
                         $fail('You can only upload resources for a section you handle.');
                     }
                 },
@@ -217,8 +210,9 @@ class GoogleDriveController extends Controller
 
             $resource = Resource::create([
                 'resource_type' => Resource::typeForCategory($category),
-                'resource_for' => $request->input('resource_for'), // null = all programs
-                'section' => $request->input('section'), // null = every section of it
+                // Named sections carry the program in their labels, so the
+                // program column stays empty for those - one fact, one place.
+                'resource_for' => $request->filled('sections') ? null : $request->input('resource_for'),
                 'category' => $category,
                 'title' => $request->input('title'),
                 'description' => $request->input('description'),
@@ -237,7 +231,14 @@ class GoogleDriveController extends Controller
                 'uploaded_by' => Auth::guard('expert')->id(),
             ]);
 
-            return response()->json(['success' => true, 'resource' => $resource]);
+            foreach (array_unique($request->input('sections', [])) as $section) {
+                $resource->sections()->create(['section' => $section]);
+            }
+
+            return response()->json([
+                'success' => true,
+                'resource' => $resource->load('sections'),
+            ]);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
         }

@@ -138,7 +138,25 @@
             </select>
           </div>
 
-          <!-- Program -->
+          {{-- Who it is for. A CaPSA hands material to their own sections, so
+               those are what is offered - the program list used to include
+               programs they do not handle. Tick none to reach all of yours.
+               Checkboxes rather than a dropdown: with a handful of sections
+               you can see the whole choice without opening anything. --}}
+          @if (! $isAdmin && count($mySections))
+          <div class="form-group">
+            <label class="label">Sections</label>
+            <div class="section-picker" id="res-sections">
+              @foreach ($mySections as $sectionLabel)
+                <label class="section-chip">
+                  <input type="checkbox" value="{{ $sectionLabel }}">
+                  <span>{{ $sectionLabel }}</span>
+                </label>
+              @endforeach
+            </div>
+            <p class="section-hint" id="res-sections-hint">All of your sections</p>
+          </div>
+          @else
           <div class="form-group">
             <label class="label">Program</label>
             <select class="input" id="res-program">
@@ -149,6 +167,7 @@
               <option value="BSIS">BSIS</option>
             </select>
           </div>
+          @endif
 
           <!-- Drive Folder -->
           <div class="form-group" style="margin-bottom:0">
@@ -271,6 +290,20 @@ function mapResource(r) {
 }
 
 let resources = rawResources.map(mapResource);
+
+// Says what ticking nothing means, so an empty picker does not read as
+// "nobody".
+document.addEventListener('change', function (e) {
+  if (!e.target.closest('#res-sections')) return;
+
+  const picked = document.querySelectorAll('#res-sections input:checked').length;
+  const hint = document.getElementById('res-sections-hint');
+  if (!hint) return;
+
+  hint.textContent = picked === 0
+    ? 'All of your sections'
+    : picked + (picked === 1 ? ' section' : ' sections') + ' selected';
+});
 let pendingDeleteId = null;
 
 // -- CATEGORY LABELS ----------------------------------------------------------
@@ -513,7 +546,13 @@ function uploadResource(){
 
   const name = document.getElementById('res-name').value.trim();
   const category = document.getElementById('res-category').value;
-  const program = document.getElementById('res-program').value;
+  // Empty means every section this CaPSA handles - the resource reaches
+  // their own students either way, since that is who sees their uploads.
+  const chosenSections = Array.prototype.map.call(
+    document.querySelectorAll('#res-sections input:checked'), function (i) { return i.value; }
+  );
+  const programEl = document.getElementById('res-program');
+  const program = programEl ? programEl.value : '';
   const folderId = document.getElementById('res-folder').value;
 
   if(!selectedFile){ showToast('?? Please select a file first.'); return; }
@@ -524,7 +563,8 @@ function uploadResource(){
   fd.append('file', selectedFile);
   fd.append('title', name);
   fd.append('category', category);
-  if(program) fd.append('resource_for', program);
+  chosenSections.forEach(function (s) { fd.append('sections[]', s); });
+  if(program && !chosenSections.length) fd.append('resource_for', program);
   if(folderId) fd.append('drive_folder_id', folderId);
 
   const btn = document.getElementById('upload-btn');
