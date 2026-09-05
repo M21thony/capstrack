@@ -321,9 +321,12 @@ Route::middleware(['auth', 'no.cache', 'track.expert'])->group(function () {
     // (below) always being tied to a real proposal submission. Left in place
     // rather than deleted in case something elsewhere still references it.
     Route::get('/duplication-legacy', [DuplicationController::class, 'index'])->name('duplication.index');
-    Route::post('/duplication/check', [DuplicationController::class, 'check'])->name('duplication.check');
+    // Running a check produces a result that is kept and referred to later
+    // by id, so it is a thing being created. Nothing reaches this one - the
+    // pre-proposal route below is what the page calls.
+    Route::post('/duplication-checks', [DuplicationController::class, 'check'])->name('duplication-checks.store');
 
-    Route::post('/pre-proposal/check', [PreProposalController::class, 'runCheck'])->name('student.pre-proposal.check');
+    Route::post('/pre-proposal/duplication-checks', [PreProposalController::class, 'runCheck'])->name('student.pre-proposal.check');
     Route::post('/pre-proposal', [PreProposalController::class, 'store'])->name('student.pre-proposal.store');
     Route::patch('/pre-proposal', [PreProposalController::class, 'submit'])->name('student.pre-proposal.submit');
     Route::post('/pre-proposal/unsubmit', [PreProposalController::class, 'unsubmit'])->name('student.pre-proposal.unsubmit');

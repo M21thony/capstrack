@@ -929,7 +929,7 @@ async function runCheck() {
   }, 330000);
 
   try {
-    const res = await fetch('/pre-proposal/check', {
+    const res = await fetch('/pre-proposal/duplication-checks', {
       method: 'POST',
       headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content, 'Accept': 'application/json' },
       body: form,
