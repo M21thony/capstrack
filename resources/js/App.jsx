@@ -391,8 +391,8 @@ function App() {
     const reviewId = getReviewId();
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
 
-    const response = await fetch(`/reviews/${reviewId}/sync-drive`, {
-      method: "POST",
+    const response = await fetch(`/reviews/${reviewId}/drive-file`, {
+      method: "PUT",
       headers: {
         "Content-Type": "application/pdf",
         "X-CSRF-TOKEN": csrfToken,

@@ -104,9 +104,12 @@
     <div class="upload-scrim" id="upload-scrim" hidden onclick="closeUpload(event)">
       <div class="upload-sheet" onclick="event.stopPropagation()">
         <div class="card" style="padding:16px;box-shadow:none;border:0">
-          <div class="card-header">
+          <div class="card-header sheet-head">
             <span class="card-title">Upload Resource</span>
-            <button onclick="resetForm()" style="background:none;border:none;font-size:11px;color:var(--text3);cursor:pointer">Clear</button>
+            <span class="sheet-head-right">
+              <button onclick="resetForm()" class="sheet-clear">Clear</button>
+              <button class="sheet-x" onclick="closeUpload()" aria-label="Close"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+            </span>
           </div>
 
           <!-- Dropzone -->
@@ -136,14 +139,17 @@
             </div>
           </div>
 
+          {{-- Three short answers about one file belong on one line. Stacked,
+               they turned a panel into a column you scroll. --}}
+          <div class="sheet-row">
           <!-- Resource Name -->
-          <div class="form-group" id="res-name-group">
+          <div class="form-group sheet-col-2" id="res-name-group">
             <label class="label">Resource Name</label>
             <input class="input" id="res-name" placeholder="e.g. Chapter 1–3 Manuscript Template"/>
           </div>
 
           <!-- Category -->
-          <div class="form-group">
+          <div class="form-group sheet-col">
             <label class="label">Category</label>
             <select class="input" id="res-category">
               <option value="">Select a category…</option>
@@ -164,7 +170,7 @@
                Checkboxes rather than a dropdown: with a handful of sections
                you can see the whole choice without opening anything. --}}
           @if (! $isAdmin && count($mySections))
-          <div class="form-group">
+          <div class="form-group sheet-full">
             <label class="label">
               Who should be able to open this?
               <span class="req-chip">Pick at least one</span>
@@ -183,7 +189,7 @@
             <p class="section-hint" id="res-sections-hint">Tick every section to hand it to all your students.</p>
           </div>
           @else
-          <div class="form-group">
+          <div class="form-group sheet-full">
             <label class="label">Program</label>
             <select class="input" id="res-program">
               <option value="">All Programs</option>
@@ -196,7 +202,7 @@
           @endif
 
           <!-- Drive Folder -->
-          <div class="form-group" style="margin-bottom:0">
+          <div class="form-group sheet-col">
             <label class="label">Google Drive Folder</label>
             <div style="display:flex;gap:6px">
               <select class="input" id="res-folder" style="flex:1">
@@ -206,7 +212,9 @@
             </div>
           </div>
 
-          <div style="margin-top:16px">
+          </div>
+
+          <div style="margin-top:4px">
             <button class="btn btn-primary" id="upload-btn" style="width:100%;justify-content:center;font-size:13px" onclick="uploadResource()">
               <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
               Upload Resource
@@ -222,9 +230,11 @@
     <div class="upload-scrim" id="import-scrim" hidden onclick="closeImport(event)">
       <div class="upload-sheet" onclick="event.stopPropagation()">
         <div class="card" style="padding:16px;box-shadow:none;border:0">
-          <div class="card-header">
+          <div class="card-header sheet-head">
             <span class="card-title">Take these on</span>
-            <button onclick="closeImport()" style="background:none;border:none;font-size:11px;color:var(--text3);cursor:pointer">Cancel</button>
+            <span class="sheet-head-right">
+              <button class="sheet-x" onclick="closeImport()" aria-label="Close"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+            </span>
           </div>
 
           <p class="import-warn">
