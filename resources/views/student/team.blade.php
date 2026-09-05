@@ -752,15 +752,19 @@
                 </div>
               </div>
               <div class="invitation-actions">
-                <form method="POST" action="{{ route('invitations.accept', $invite->id) }}" id="accept-form-{{ $invite->id }}" style="display:inline;">
+                <form method="POST" action="{{ route('invitations.update', $invite->id) }}" id="accept-form-{{ $invite->id }}" style="display:inline;">
                   @csrf
+                  @method('PATCH')
+                  <input type="hidden" name="status" value="accepted">
                   <button class="btn-accept" type="button" style="cursor:pointer; border:none; outline:none;"
                     onclick="showConfirm({title:'Join Team',message:'Accept invitation from <strong>{{ addslashes($invite->team->team_name ?? 'this team') }}</strong>? Your current post will be removed.',icon:'team',confirmText:'Accept',confirmClass:'success',onConfirm:function(){document.getElementById('accept-form-{{ $invite->id }}').submit();}})">
                     Accept
                   </button>
                 </form>
-                <form method="POST" action="{{ route('invitations.decline', $invite->id) }}" id="decline-form-{{ $invite->id }}" style="display:inline;">
+                <form method="POST" action="{{ route('invitations.update', $invite->id) }}" id="decline-form-{{ $invite->id }}" style="display:inline;">
                   @csrf
+                  @method('PATCH')
+                  <input type="hidden" name="status" value="declined">
                   <button class="btn-decline" title="Decline" type="button" onclick="openDeclineModal({{ $invite->id }}, '{{ addslashes($invite->sender->f_name . ' ' . $invite->sender->l_name) }}', '{{ $invite->type }}', '{{ addslashes($invite->team->team_name ?? '') }}', '{{ addslashes($invite->sender->avatarUrl()) }}', '{{ addslashes($invite->sender->email ?? '') }}', '{{ addslashes(($invite->sender->course ?? '') . ($invite->sender->year_section ? ' · ' . $invite->sender->year_section : '')) }}')">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                   </button>
@@ -792,15 +796,19 @@
                     </div>
                   </div>
                   <div class="invitation-actions">
-                    <form method="POST" action="{{ route('invitations.accept', $request->id) }}" id="accept-form-{{ $request->id }}" style="display:inline;">
+                    <form method="POST" action="{{ route('invitations.update', $request->id) }}" id="accept-form-{{ $request->id }}" style="display:inline;">
                       @csrf
+                      @method('PATCH')
+                      <input type="hidden" name="status" value="accepted">
                       <button class="btn-accept" type="button" style="cursor:pointer; border:none; outline:none;"
                         onclick="showConfirm({title:'Accept Request',message:'Let <strong>{{ addslashes(($request->sender->f_name ?? '') . ' ' . ($request->sender->l_name ?? '')) }}</strong> join your team? Their post will be removed.',icon:'team',confirmText:'Accept',confirmClass:'success',onConfirm:function(){document.getElementById('accept-form-{{ $request->id }}').submit();}})">
                         Accept Request
                       </button>
                     </form>
-                    <form method="POST" action="{{ route('invitations.decline', $request->id) }}" id="decline-form-{{ $request->id }}" style="display:inline;">
+                    <form method="POST" action="{{ route('invitations.update', $request->id) }}" id="decline-form-{{ $request->id }}" style="display:inline;">
                       @csrf
+                      @method('PATCH')
+                      <input type="hidden" name="status" value="declined">
                       <button class="btn-decline" title="Decline" type="button" onclick="openDeclineModal({{ $request->id }}, '{{ addslashes($request->sender->f_name . ' ' . $request->sender->l_name) }}', '{{ $request->type }}', '{{ addslashes($request->team->team_name ?? '') }}', '{{ addslashes($request->sender->avatarUrl()) }}', '{{ addslashes($request->sender->email ?? '') }}', '{{ addslashes(($request->sender->course ?? '') . ($request->sender->year_section ? ' · ' . $request->sender->year_section : '')) }}')">
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                       </button>
@@ -1904,13 +1912,14 @@ function cancelPendingInvite(invitationId, name) {
         onConfirm: function () {
             var csrf = document.querySelector('meta[name="csrf-token"]');
 
-            fetch('{{ route("invitations.decline", ":id") }}'.replace(':id', invitationId), {
-                method: 'POST',
+            fetch('{{ route("invitations.update", ":id") }}'.replace(':id', invitationId), {
+                method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json',
                     'Accept': 'application/json',
                     'X-CSRF-TOKEN': csrf ? csrf.getAttribute('content') : '{{ csrf_token() }}'
-                }
+                },
+                body: JSON.stringify({ status: 'declined' })
             })
             .then(function (r) { return r.json(); })
             .then(function (data) {

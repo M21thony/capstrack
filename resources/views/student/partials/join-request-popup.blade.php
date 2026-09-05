@@ -126,8 +126,7 @@
   var overlay = document.getElementById('jrp-overlay');
   if (!overlay) return;
 
-  var acceptUrl = '{{ route('invitations.accept', '__ID__') }}';
-  var declineUrl = '{{ route('invitations.decline', '__ID__') }}';
+  var updateUrl = '{{ route('invitations.update', '__ID__') }}';
   var remindUrl = '{{ route('invitations.remind-later', '__ID__') }}';
   var itemsById = {};
 
@@ -174,10 +173,22 @@
     });
   }
 
-  function jrpSubmit(url) {
+  function jrpSubmit(url, status) {
     var form = document.createElement('form');
     form.method = 'POST';
     form.action = url;
+    // Only a status change is a PATCH - remind-later still posts. A form
+    // can only send GET or POST, so the real verb rides along in _method
+    // the way a Blade method directive does it.
+    if (status) {
+      [['_method', 'PATCH'], ['status', status]].forEach(function (pair) {
+        var f = document.createElement('input');
+        f.type = 'hidden';
+        f.name = pair[0];
+        f.value = pair[1];
+        form.appendChild(f);
+      });
+    }
     var csrf = document.createElement('input');
     csrf.type = 'hidden';
     csrf.name = '_token';
@@ -221,10 +232,12 @@
   var confirmSub = document.getElementById('jrp-confirm-sub');
   var confirmOk = document.getElementById('jrp-confirm-ok');
   var confirmUrl = null;
+  var confirmStatus = null;
 
   function jrpConfirmClose() {
     confirmOverlay.classList.remove('active');
     confirmUrl = null;
+    confirmStatus = null;
   }
   window.jrpConfirmClose = jrpConfirmClose;
 
@@ -234,7 +247,8 @@
     var team = item.team_name || 'the team';
 
     if (act === 'accept') {
-      confirmUrl = acceptUrl.replace('__ID__', id);
+      confirmUrl = updateUrl.replace('__ID__', id);
+      confirmStatus = 'accepted';
       confirmIcon.className = 'accept';
       confirmTitle.textContent = 'Approve and review?';
       confirmSub.innerHTML = 'You are about to accept <strong>'+name+'</strong>\'s '+
@@ -243,7 +257,8 @@
       confirmOk.textContent = 'Approve & Review';
       confirmOk.className = 'jrp-btn jrp-btn-accept';
     } else {
-      confirmUrl = declineUrl.replace('__ID__', id);
+      confirmUrl = updateUrl.replace('__ID__', id);
+      confirmStatus = 'declined';
       confirmIcon.className = 'decline';
       confirmTitle.textContent = 'Decline and review?';
       confirmSub.innerHTML = 'You are about to decline <strong>'+name+'</strong>\'s '+
@@ -257,7 +272,7 @@
   }
 
   confirmOk.addEventListener('click', function () {
-    if (confirmUrl) jrpSubmit(confirmUrl);
+    if (confirmUrl) jrpSubmit(confirmUrl, confirmStatus);
   });
 
   document.addEventListener('click', function (e) {

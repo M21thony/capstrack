@@ -116,8 +116,7 @@ Route::middleware('auth')->group(function () {
     // Invitations
     Route::get('/invitations', [InvitationController::class, 'index']);
     Route::post('/invitations', [InvitationController::class, 'store']);
-    Route::post('/invitations/{invitation}/accept', [InvitationController::class, 'accept']);
-    Route::post('/invitations/{invitation}/decline', [InvitationController::class, 'decline']);
+    Route::patch('/invitations/{invitation}', [InvitationController::class, 'update']);
 
     // Expert assignments
     Route::get('/experts', [StudentExpertController::class, 'index'])->name('api.student.experts.index');
