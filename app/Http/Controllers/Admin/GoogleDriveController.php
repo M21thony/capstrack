@@ -276,6 +276,136 @@ class GoogleDriveController extends Controller
         return trim(preg_replace('/[-_]+/', ' ', $stem)) ?: $filename;
     }
 
+    /**
+     * Take on files the CaPSA already has in Drive, chosen through the Picker.
+     *
+     * Nothing is uploaded - each file stays where it is, and what is written
+     * here is a row saying where to find it and who it is for. The category
+     * and sections arrive per file because the review list lets them be set
+     * per file, even when a folder was picked and they are all the same.
+     */
+    public function import(Request $request)
+    {
+        $viewer = Auth::guard('expert')->user();
+
+        $validated = $request->validate([
+            // Capped like the upload: two Drive calls a file, no queue, and
+            // the CaPSA is watching.
+            'files' => ['required', 'array', 'max:25'],
+            'files.*.drive_file_id' => ['required', 'string', 'max:255'],
+            'files.*.category' => ['required', 'string', 'max:50'],
+            'files.*.sections' => ['nullable', 'array'],
+            // The same rule the upload uses, for the same reason: a page can
+            // be scoped and a hand-made request still file a resource under
+            // someone else's section.
+            'files.*.sections.*' => [
+                'string',
+                'max:24',
+                function ($attribute, $value, $fail) use ($viewer) {
+                    if (! $viewer || $viewer->is_admin) {
+                        return;
+                    }
+
+                    if (! in_array($value, $viewer->sections ?? [], true)) {
+                        $fail('You can only import resources for a section you handle.');
+                    }
+                },
+            ],
+        ]);
+
+        $created = [];
+        $skipped = [];
+
+        try {
+            foreach ($validated['files'] as $entry) {
+                $driveFileId = $entry['drive_file_id'];
+
+                // Importing the same file twice would give students two rows
+                // pointing at one document.
+                $already = Resource::where('drive_file_id', $driveFileId)
+                    ->where('uploaded_by', $viewer->expert_id)
+                    ->exists();
+
+                if ($already) {
+                    $skipped[] = $driveFileId;
+
+                    continue;
+                }
+
+                $file = $this->drive->importFile($viewer->expert_id, $driveFileId);
+                $category = $entry['category'];
+                $sections = array_unique($entry['sections'] ?? []);
+
+                $resource = Resource::create([
+                    'resource_type' => Resource::typeForCategory($category),
+                    // Named sections carry the program in their labels, so the
+                    // program column stays empty for those - one fact, one place.
+                    'resource_for' => null,
+                    'category' => $category,
+                    'title' => self::titleFrom($file['name']),
+                    'file_name' => $file['name'],
+                    'file_path' => null,
+                    'file_size' => $file['size'],
+                    'file_type' => self::extensionFor($file['name'], $file['mime_type']),
+                    'content_type' => 'file',
+                    'external_url' => null,
+                    // A native Google Doc cannot be handed over as bytes, only
+                    // opened, so it is not offered as a download.
+                    'is_downloadable' => ! str_starts_with($file['mime_type'] ?? '', 'application/vnd.google-apps.'),
+                    'drive_file_id' => $file['id'],
+                    // The folder it sits in is the CaPSA's own, not one this
+                    // app made, so there is no admin_drive_folders row to point at.
+                    'drive_folder_id' => null,
+                    'drive_web_view_link' => $file['web_view_link'],
+                    'uploaded_at' => now(),
+                    'uploaded_by' => $viewer->expert_id,
+                ]);
+
+                foreach ($sections as $section) {
+                    $resource->sections()->create(['section' => $section]);
+                }
+
+                $created[] = $resource->load('sections');
+            }
+
+            return response()->json([
+                'success' => true,
+                'resources' => $created,
+                'skipped' => count($skipped),
+            ]);
+        } catch (\Exception $e) {
+            // Whatever was taken on before the failure stays - it is already
+            // shared and recorded, and rolling it back would unshare a file
+            // the CaPSA owns.
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+                'resources' => $created,
+                'skipped' => count($skipped),
+            ], 422);
+        }
+    }
+
+    /**
+     * The extension to record for a file, which a Drive file need not have:
+     * a native Google Doc has a mime type and nothing else.
+     */
+    private static function extensionFor(string $filename, ?string $mimeType): string
+    {
+        $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+
+        if ($ext !== '') {
+            return $ext;
+        }
+
+        return match ($mimeType) {
+            'application/vnd.google-apps.document' => 'gdoc',
+            'application/vnd.google-apps.spreadsheet' => 'gsheet',
+            'application/vnd.google-apps.presentation' => 'gslides',
+            default => 'file',
+        };
+    }
+
     public function destroy(Resource $resource)
     {
         $viewer = Auth::guard('expert')->user();

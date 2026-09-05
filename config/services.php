@@ -39,6 +39,9 @@ return [
         'client_id' => env('GOOGLE_CLIENT_ID'),
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),
         'redirect_uri' => env('GOOGLE_REDIRECT_URI'),
+        // The Picker is a separate API and wants a browser key, not the OAuth
+        // pair above. Without it the "Choose from Drive" button stays hidden.
+        'picker_api_key' => env('GOOGLE_PICKER_API_KEY'),
     ],
 
     'recaptcha' => [

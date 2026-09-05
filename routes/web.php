@@ -414,6 +414,10 @@ Route::middleware(['expert.auth', 'track.expert'])->prefix('admin/gdrive')->name
     Route::post('/submission-folders', [GoogleDriveController::class, 'storeSubmissionFolder'])->name('submission-folders.store');
     Route::delete('/submission-folders/{id}', [GoogleDriveController::class, 'destroySubmissionFolder'])->name('submission-folders.destroy');
     Route::post('/resources', [GoogleDriveController::class, 'upload'])->name('resources.store');
+    // Taking on files that already exist in the CaPSA's Drive. An import
+    // is the thing being made here - the files are not touched beyond
+    // being opened to their students.
+    Route::post('/imports', [GoogleDriveController::class, 'import'])->name('imports.store');
     Route::delete('/resources/{resource}', [GoogleDriveController::class, 'destroy'])->name('resources.destroy');
 });
 
