@@ -10,6 +10,7 @@ use App\Models\StudentRole;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
 use App\Models\TeamInvitation;
+use App\Models\Term;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -167,6 +168,16 @@ class TeamController extends Controller
             ->latest('created_at')
             ->get();
 
+        // The other direction: invitations this leader has sent that are still
+        // waiting on an answer. Without these the slot they are holding looked
+        // empty, so a leader could invite five people into three places.
+        $outgoingInvitations = TeamInvitation::with(['receiver'])
+            ->where('sender_id', $studentId)
+            ->where('type', 'invite')
+            ->where('status', 'pending')
+            ->latest('created_at')
+            ->get();
+
         $hasPendingRequest = $outgoingRequests->isNotEmpty();
 
         $hasPendingLeaveApproval = $myTeam
@@ -225,6 +236,7 @@ class TeamController extends Controller
             'invites' => $invites,
             'incomingRequests' => $incomingRequests,
             'outgoingRequests' => $outgoingRequests,
+            'outgoingInvitations' => $outgoingInvitations,
             'hasPendingRequest' => $hasPendingRequest,
             'hasPendingLeaveApproval' => $hasPendingLeaveApproval,
             'pendingLeaveApprovals' => $pendingLeaveApprovals,
@@ -270,7 +282,7 @@ class TeamController extends Controller
                 // Keyed on the term too: this table is one row per student PER
                 // TERM, so keying on the student alone would overwrite last
                 // semester's record instead of starting this one.
-                ['student_id' => $student->student_id, 'term_id' => \App\Models\Term::activeId()],
+                ['student_id' => $student->student_id, 'term_id' => Term::activeId()],
                 [
                     'team_id' => $team->team_id,
                     's_role_id' => StudentRole::leaderRoleId(),
@@ -278,7 +290,7 @@ class TeamController extends Controller
                     // model's creating hook never fires - the year has to be
                     // named here or the row lands with none, which is how
                     // every row on the live database ended up null.
-                    'school_year' => \App\Models\Term::currentSchoolYear(),
+                    'school_year' => Term::currentSchoolYear(),
                 ]
             );
 
@@ -1224,11 +1236,19 @@ class TeamController extends Controller
 
         $availableSlots = $maxMembers - $currentCount;
 
+        // Anyone already sitting on an unanswered invitation from this team.
+        // They stay in the list, marked, rather than being invited twice.
+        $pendingInviteReceiverIds = TeamInvitation::where('team_id', $myTeam->team_id)
+            ->where('type', 'invite')
+            ->where('status', 'pending')
+            ->pluck('receiver_id')
+            ->all();
+
         // The fallback for a leader whose stored year is null, corrupted, or
         // simply matches nobody (legacy "26-1" data). Asked of the term
         // rather than guessed from the month, so it agrees with what the
         // rest of the app writes.
-        $computedSchoolYear = \App\Models\Term::currentSchoolYear();
+        $computedSchoolYear = Term::currentSchoolYear();
 
         $classmates = Student::join('student_s_y', 'students.student_id', '=', 'student_s_y.student_id')
             ->where('student_s_y.school_year', $currentSchoolYear)
@@ -1252,7 +1272,7 @@ class TeamController extends Controller
                 ->get();
         }
 
-        $classmates = $classmates->map(function ($classmate) {
+        $classmates = $classmates->map(function ($classmate) use ($pendingInviteReceiverIds) {
             $avatar = '';
             if (filled($classmate->p_picture)) {
                 if (filter_var($classmate->p_picture, FILTER_VALIDATE_URL)) {
@@ -1271,6 +1291,7 @@ class TeamController extends Controller
                 'year_section' => $classmate->year_section,
                 'student_number' => $classmate->student_number,
                 'has_team' => $classmate->team_id !== null,
+                'is_pending_invite' => in_array($classmate->student_id, $pendingInviteReceiverIds, true),
             ];
         });
 

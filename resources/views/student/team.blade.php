@@ -328,6 +328,9 @@
           <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 14px;">TEAM MEMBERS <span style="color: var(--accent3); font-weight: 600;">· Max 5</span></div>
           @php
             $memberSlots = 5;
+            // Invitations already sent and unanswered. They hold a slot, so
+            // the leader can see the team is fuller than the member count.
+            $pendingInvites = collect($outgoingInvitations ?? []);
             $slotCount = $teamMembers->count();
             $slotIndex = 0;
           @endphp
@@ -353,7 +356,30 @@
                   @endif
                 </div>
               @else
-                @if($isLeader && !$myTeam->is_confirmed)
+                @php
+                  $pendingIndex = $i - $teamMembers->count();
+                  $pendingInvite = $pendingInvites->values()->get($pendingIndex);
+                  $invitee = $pendingInvite?->receiver;
+                @endphp
+                @if($invitee)
+                <div style="display: flex; align-items: center; gap: 10px; border: 1px solid rgba(29,78,216,0.3); border-radius: 10px; padding: 6px 12px; background: var(--blue-bg);">
+                  <div style="width: 36px; height: 36px; border-radius: 50%; background: #7c3aed; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #1a1a1a; overflow: hidden; flex-shrink: 0;">
+                    @if ($invitee->avatarUrl())
+                      <img src="{{ $invitee->avatarUrl() }}" alt="" style="width: 100%; height: 100%; object-fit: cover;">
+                    @else
+                      {{ $invitee->avatarInitials() }}
+                    @endif
+                  </div>
+                  <div style="flex: 1; min-width: 0;">
+                    <div style="font-size: 12.5px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ trim(($invitee->f_name ?? '') . ' ' . ($invitee->l_name ?? '')) }}</div>
+                    <div style="font-size: 11px; color: var(--text3);">Invited &mdash; waiting on a reply</div>
+                  </div>
+                  <span style="font-size: 9px; font-weight: 700; color: var(--blue); background: rgba(29,78,216,0.15); padding: 2px 6px; border-radius: 4px;">PENDING</span>
+                  @if($isLeader && !$myTeam->is_confirmed)
+                    <button type="button" onclick="cancelPendingInvite({{ $pendingInvite->id }}, '{{ addslashes(trim(($invitee->f_name ?? '') . ' ' . ($invitee->l_name ?? ''))) }}')" style="background:none;border:none;color:#ef4444;cursor:pointer;padding:4px;font-size:13px;line-height:1;" title="Cancel invitation">&times;</button>
+                  @endif
+                </div>
+                @elseif($isLeader && !$myTeam->is_confirmed)
                 <button type="button" onclick="openOpenSlotInviteModal()" style="display: flex; align-items: center; gap: 10px; border: 1px dashed var(--border2); border-radius: 10px; padding: 6px 12px; opacity: 0.75; background: transparent; cursor: pointer; width: 100%; text-align: left; transition: all 0.2s;" onmouseover="this.style.opacity='1'; this.style.borderColor='var(--blue)'; this.style.background='var(--blue-bg)'" onmouseout="this.style.opacity='0.75'; this.style.borderColor='var(--border2)'; this.style.background='transparent'">
                   <div style="width: 36px; height: 36px; border-radius: 50%; background: var(--bg2); border: 1.5px dashed var(--border2); display: flex; align-items: center; justify-content: center; font-size: 13px; color: var(--text3); flex-shrink: 0;">+</div>
                   <div style="flex: 1;">
@@ -1865,6 +1891,43 @@ function syncTagUI() {
     });
 }
 
+// Cancelling an invitation is declining it - the same endpoint the invited
+// student's own Decline button uses, so there is one way for an invitation to
+// end rather than two that could drift apart.
+function cancelPendingInvite(invitationId, name) {
+    showConfirm({
+        title: 'Cancel invitation',
+        message: 'Cancel the invitation sent to <strong>' + name + '</strong>? They will not be able to accept it.',
+        icon: 'invite',
+        confirmText: 'Cancel invite',
+        confirmClass: 'danger',
+        onConfirm: function () {
+            var csrf = document.querySelector('meta[name="csrf-token"]');
+
+            fetch('{{ route("invitations.decline", ":id") }}'.replace(':id', invitationId), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': csrf ? csrf.getAttribute('content') : '{{ csrf_token() }}'
+                }
+            })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (data.success) {
+                    showToast('Invitation cancelled.', 'success');
+                    location.reload();
+                } else {
+                    showToast(data.message || 'Could not cancel the invitation.', 'error');
+                }
+            })
+            .catch(function () {
+                showToast('Could not cancel the invitation. Please try again.', 'error');
+            });
+        }
+    });
+}
+
 function openOpenSlotInviteModal() {
     var modal = document.getElementById('openSlotInviteModal');
     if (modal) {
@@ -1935,14 +1998,26 @@ function loadOpenSlotClassmates() {
             item.setAttribute('data-student-number', classmate.student_number || '');
             item.setAttribute('data-has-team', classmate.has_team ? '1' : '0');
             var hasTeam = !!classmate.has_team;
-            var cursorStyle = hasTeam ? 'not-allowed' : 'pointer';
-            item.style.cssText = 'display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--border);border-radius:12px;background:var(--bg2);cursor:' + cursorStyle + ';text-align:left;transition:all 0.15s;' + (hasTeam ? 'opacity:0.55;' : '');
-            if (!hasTeam) {
+            // Already invited and waiting: still listed, so you can see you
+            // asked them, but not offered again.
+            var isPendingInvite = !!classmate.is_pending_invite;
+            if (isPendingInvite) item.className += ' pending-invite';
+            item.setAttribute('data-is-pending-invite', isPendingInvite ? '1' : '0');
+
+            var blocked = hasTeam || isPendingInvite;
+            var baseStyle = 'display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--border);border-radius:12px;background:var(--bg2);cursor:' + (blocked ? 'not-allowed' : 'pointer') + ';text-align:left;transition:all 0.15s;';
+            item.style.cssText = baseStyle
+                + (hasTeam ? 'opacity:0.55;' : '')
+                + (!hasTeam && isPendingInvite ? 'opacity:0.85;border-color:rgba(29,78,216,0.3);background:var(--blue-bg);' : '');
+
+            if (!blocked) {
                 item.onmouseover = function() { this.style.borderColor = 'var(--blue)'; this.style.background = 'var(--blue-bg)'; };
                 item.onmouseout = function() { this.style.borderColor = 'var(--border)'; this.style.background = 'var(--bg2)'; };
                 item.onclick = function() { selectOpenSlotClassmate(this); };
-            } else {
+            } else if (hasTeam) {
                 item.onclick = function() { showToast('This classmate already has a team.', 'error'); };
+            } else {
+                item.onclick = function() { showToast('You have already invited this classmate.', 'error'); };
             }
 
             var avatarHtml = classmate.avatar
@@ -1951,6 +2026,8 @@ function loadOpenSlotClassmates() {
 
             var indicatorHtml = hasTeam
                 ? '<span style="font-size:10px;font-weight:700;color:#f59e0b;white-space:nowrap;">Has Team</span>'
+                : isPendingInvite
+                ? '<span style="font-size:10px;font-weight:700;color:var(--blue);white-space:nowrap;">Invited</span>'
                 : '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;transition:all 0.15s;" class="osl-radio"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4" style="opacity:0;transform:scale(0);transition:all 0.15s;" class="osl-radio-inner"/></svg>';
 
             item.innerHTML =

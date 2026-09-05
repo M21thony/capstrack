@@ -14,6 +14,8 @@
   .pm-close-btn:hover{background-color:var(--border);color:var(--text);transform:scale(1.05)}
 
   #jrp-overlay{background:rgba(24,25,31,0.5);backdrop-filter:blur(3px);cursor:default}
+  /* the card sits above the overlay, so the close button needs to sit above the card */
+  #jrp-overlay .pm-close-btn{z-index:100;position:relative}
   #jrp-overlay .card{padding:0!important;border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,0.18),0 8px 24px rgba(0,0,0,0.12);overflow:hidden;display:flex;flex-direction:column;animation:jrpIn 0.2s ease forwards}
   @keyframes jrpIn{from{opacity:0;transform:translateY(10px) scale(0.985)}to{opacity:1;transform:translateY(0) scale(1)}}
 
@@ -81,7 +83,7 @@
 </style>
 <div class="modal-overlay" id="jrp-overlay" onclick="if(event.target===this)jrpClose()">
   <div class="card modal-card" style="width: 480px; max-width: 92vw; position: relative;">
-    <button type="button" onclick="jrpClose()" class="pm-close-btn" aria-label="Close" style="position: absolute; top: 18px; right: 18px; z-index: 2;">
+    <button type="button" onclick="event.stopPropagation(); jrpClose()" class="pm-close-btn" aria-label="Close" style="position: absolute; top: 18px; right: 18px; z-index: 1000; pointer-events: auto;">
       <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
     </button>
     <div id="jrp-header">
@@ -192,7 +194,25 @@
   }
 
   function jrpClose() {
-    overlay.classList.remove('active');
+    // Dismissing is "remind me later" for everything in the popup. Without
+    // this it reopened on the next page load, so closing it did nothing.
+    var meta = document.querySelector('meta[name="csrf-token"]');
+    var token = meta ? meta.getAttribute('content') : '{{ csrf_token() }}';
+
+    var pending = Object.keys(itemsById).map(function (id) {
+      return fetch(remindUrl.replace('__ID__', id), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-CSRF-TOKEN': token
+        }
+      });
+    });
+
+    Promise.all(pending).finally(function () {
+      overlay.classList.remove('active');
+    });
   }
 
   var confirmOverlay = document.getElementById('jrp-confirm-overlay');
