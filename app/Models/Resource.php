@@ -16,6 +16,7 @@ class Resource extends Model
     protected $fillable = [
         'resource_type',
         'resource_for',
+        'section',
         'category',
         'title',
         'description',
@@ -33,6 +34,24 @@ class Resource extends Model
         'uploaded_at',
         'uploaded_by',
     ];
+
+    /**
+     * The section this is aimed at, as a label - "BSIT-4A".
+     *
+     * Built from the two columns rather than stored: resource_for carries the
+     * program and section carries the year and letter, so a stored label
+     * would be the program written down twice.
+     */
+    public function getSectionLabelAttribute(): ?string
+    {
+        if (! $this->section) {
+            return null;
+        }
+
+        return $this->resource_for
+            ? $this->resource_for.'-'.$this->section
+            : $this->section;
+    }
 
     protected $casts = [
         'uploaded_at' => 'datetime',

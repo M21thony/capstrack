@@ -159,6 +159,33 @@ class GoogleDriveController extends Controller
                     }
                 },
             ],
+            // The year and letter only - "4A". The program is resource_for,
+            // and the two together are the section. Null means every section
+            // of that program.
+            'section' => [
+                'nullable',
+                'string',
+                'max:8',
+                function ($attribute, $value, $fail) use ($request) {
+                    $viewer = Auth::guard('expert')->user();
+
+                    if (! $value || ! $viewer || $viewer->is_admin) {
+                        return;
+                    }
+
+                    $program = $request->input('resource_for');
+
+                    if (! $program) {
+                        $fail('Choose a program before aiming a resource at one of its sections.');
+
+                        return;
+                    }
+
+                    if (! in_array($program.'-'.$value, $viewer->sections ?? [], true)) {
+                        $fail('You can only upload resources for a section you handle.');
+                    }
+                },
+            ],
             'drive_folder_id' => 'nullable|string',
         ]);
 
@@ -191,6 +218,7 @@ class GoogleDriveController extends Controller
             $resource = Resource::create([
                 'resource_type' => Resource::typeForCategory($category),
                 'resource_for' => $request->input('resource_for'), // null = all programs
+                'section' => $request->input('section'), // null = every section of it
                 'category' => $category,
                 'title' => $request->input('title'),
                 'description' => $request->input('description'),

@@ -35,12 +35,13 @@ class ResourceScopeTest extends TestCase
         return $expert;
     }
 
-    private function resource(string $title, ?string $for, ?int $by): Resource
+    private function resource(string $title, ?string $for, ?int $by, ?string $section = null): Resource
     {
         return Resource::create([
             'resource_type' => 'template',
             'category' => 'Chapter 1',
             'resource_for' => $for,
+            'section' => $section,
             'title' => $title,
             'file_name' => $title.'.pdf',
             'file_path' => 'resources/'.$title.'.pdf',
@@ -175,6 +176,38 @@ class ResourceScopeTest extends TestCase
 
         $response->assertSee('For BSIS');
         $response->assertDontSee('For BSIT');
+    }
+
+    /**
+     * A resource can be aimed at one section. It stores the year and letter
+     * only - the program is resource_for - so the two together are the label
+     * and neither is written down twice.
+     */
+    public function test_a_resource_aimed_at_one_section_reaches_only_that_section(): void
+    {
+        $capsa = $this->capsa(['BSIT-4A', 'BSIT-4B']);
+
+        $this->resource('For 4B Only', 'BSIT', $capsa->expert_id, '4B');
+        $this->resource('For 4A Only', 'BSIT', $capsa->expert_id, '4A');
+        $this->resource('For All BSIT', 'BSIT', $capsa->expert_id);
+
+        // student() makes a 4 · B student, so their section is BSIT-4B.
+        $response = $this->actingAs($this->student('BSIT'), 'web')->get('/student/resources');
+
+        $response->assertSee('For 4B Only');
+        $response->assertSee('For All BSIT');
+        $response->assertDontSee('For 4A Only');
+    }
+
+    /** The label is built from the pair, never stored. */
+    public function test_the_section_label_is_derived_not_duplicated(): void
+    {
+        $capsa = $this->capsa(['BSIT-4B']);
+        $resource = $this->resource('Labelled', 'BSIT', $capsa->expert_id, '4B');
+
+        $this->assertSame('BSIT-4B', $resource->section_label);
+        $this->assertSame('4B', $resource->section);
+        $this->assertNull($this->resource('Unlabelled', 'BSIT', $capsa->expert_id)->section_label);
     }
 
     /** A CaPSA's programs come from the sections they handle. */
