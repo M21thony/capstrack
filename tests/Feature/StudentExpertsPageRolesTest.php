@@ -111,8 +111,10 @@ class StudentExpertsPageRolesTest extends TestCase
         // adviser row would mean the old guess is still in play.
         $html = $response->getContent();
 
-        $this->assertStringContainsString($expert->name, $this->checklistRow($html, 'consultant'));
-        $this->assertStringNotContainsString($expert->name, $this->checklistRow($html, 'adviser'));
+        // e(): the page escapes the name, so a generated "O'Reilly" arrives as
+        // "O&#039;Reilly" and a raw comparison fails at random.
+        $this->assertStringContainsString(e($expert->name), $this->checklistRow($html, 'consultant'));
+        $this->assertStringNotContainsString(e($expert->name), $this->checklistRow($html, 'adviser'));
 
         // An approved expert belongs in the slots above and nowhere else.
         // They used to appear three times over - in the slots, still in

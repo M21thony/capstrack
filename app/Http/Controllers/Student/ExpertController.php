@@ -220,21 +220,6 @@ class ExpertController extends Controller
                 return $expert;
             });
 
-        $stats = [
-            'total_experts' => $experts->total(),
-            'team_approved' => $assignments->where('status', 'approved')->count(),
-            'team_pending' => $assignments->where('status', 'pending')->count(),
-        ];
-
-        // Experts this team has already engaged, in any role. An expert can
-        // hold only one role per team, so a second application to the same
-        // person is closed off regardless of which role it is for.
-        $engagedExpertIds = $assignments->whereIn('status', ['pending', 'approved'])
-            ->pluck('expert_id')
-            ->unique()
-            ->values()
-            ->toArray();
-
         return view('student.experts', [
             'experts' => $experts,
             'assignments' => $assignments,
@@ -248,15 +233,12 @@ class ExpertController extends Controller
                 : null,
             'isLeader' => $isLeader,
             'teamConfirmed' => $team?->is_confirmed ?? false,
-            'stats' => $stats,
             'skillGroups' => $skillGroups,
             'activeSkill' => $activeSkill,
             'activeGroup' => $activeGroup,
             'activeRole' => $activeRole,
             'search' => $search,
             'roleCounts' => $roleCounts,
-            'roleAssignments' => $roleAssignments,
-            'engagedExpertIds' => $engagedExpertIds,
         ]);
     }
 

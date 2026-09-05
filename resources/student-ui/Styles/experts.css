@@ -533,6 +533,9 @@ select.input{cursor:pointer}
   color:var(--text);outline:none;height:100%;
 }
 .filters .field input::-webkit-search-cancel-button{display:none}
+.field-go{display:grid;place-items:center;border:none;background:none;padding:0;margin:0;color:var(--text3);cursor:pointer;flex-shrink:0;line-height:0}
+.field-go:hover{color:var(--text)}
+.field-go:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
 .field-clear{color:var(--text3);text-decoration:none;font-size:16px;line-height:1;padding:0 2px}
 .field-clear:hover{color:var(--text)}
 .seg{display:flex;background:var(--bg3);border:1px solid var(--border);border-radius:9px;padding:2px;gap:2px}
