@@ -1,5 +1,17 @@
 @php
-  $recentLogs = App\Models\ActivityLog::latest('created_at')->take(20)->get();
+  // Whose activity this viewer may see - see App\Support\ActivityScope. The
+  // bell used to list every student in the school regardless of the sections
+  // the CaPSA actually covers.
+  $visibleIds = App\Support\ActivityScope::studentIdsFor(auth('expert')->user());
+
+  $recentLogs = App\Models\ActivityLog::when(
+      $visibleIds !== null,
+      fn ($q) => $q->whereIn('student_id', $visibleIds)
+    )
+    ->latest('created_at')
+    ->take(20)
+    ->get();
+
   $allLogIds = $recentLogs->pluck('id')->toArray();
   $seenLogIds = session('admin_notification_seen_ids', []);
   $unseenCount = count(array_diff($allLogIds, $seenLogIds));

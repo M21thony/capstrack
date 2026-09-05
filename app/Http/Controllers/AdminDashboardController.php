@@ -8,6 +8,8 @@ use App\Models\CapstoneExpert;
 use App\Models\Student;
 use App\Models\Team;
 use App\Models\TeamExpertAssignment;
+use App\Support\ActivityScope;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 
@@ -160,7 +162,12 @@ class AdminDashboardController extends Controller
                 }
             });
 
-        ActivityLog::latest('created_at')
+        // Same rule as the bell and the Activity Log page: a CaPSA sees the
+        // sections they cover, the admin sees everything.
+        $visibleIds = ActivityScope::studentIdsFor(Auth::guard('expert')->user());
+
+        ActivityLog::when($visibleIds !== null, fn ($q) => $q->whereIn('student_id', $visibleIds))
+            ->latest('created_at')
             ->take(10)
             ->get()
             ->each(function ($log) use ($activities) {
