@@ -995,7 +995,7 @@ async function saveBulkPanelAssignment() {
   btn.disabled = true;
 
   try {
-    const res = await fetch('/api/admin/panel_assignment/bulk', {
+    const res = await fetch('/api/admin/panel_assignment', {
       method: 'POST',
       headers: { 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json', 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
@@ -1155,7 +1155,7 @@ async function assignSuggestedPanel() {
   btn.disabled = true;
 
   try {
-    const res = await fetch('/api/admin/panel_assignment/bulk', {
+    const res = await fetch('/api/admin/panel_assignment', {
       method: 'POST',
       headers: { 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json', 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),

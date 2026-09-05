@@ -260,10 +260,10 @@ let rawResources = @json($resources ?? []);
 const ROUTES = {
   status: "{{ route('gdrive.status') }}",
   connect: "{{ route('gdrive.connect') }}",
-  disconnect: "{{ route('gdrive.disconnect') }}",
+  disconnect: "{{ route('gdrive.connection.destroy') }}",
   folders: "{{ route('gdrive.folders.index') }}",
   createFolder: "{{ route('gdrive.folders.store') }}",
-  upload: "{{ route('gdrive.upload') }}",
+  upload: "{{ route('gdrive.resources.store') }}",
   destroy: (id) => `{{ url('admin/gdrive/resources') }}/${id}`,
 };
 
@@ -459,7 +459,7 @@ function refreshDriveStatus(){
 
 function disconnectDrive(){
   fetch(ROUTES.disconnect, {
-    method: 'POST',
+    method: 'DELETE',
     headers: { 'X-CSRF-TOKEN': CSRF_TOKEN },
   })
   .then(r => r.json())
