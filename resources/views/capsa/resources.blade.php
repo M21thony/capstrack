@@ -72,25 +72,32 @@
   <div id="real-content" style="display:none;flex:1;overflow:hidden;flex-direction:column;">
   <div class="content">
 
-    <!-- GOOGLE DRIVE CONNECTION BANNER -->
-    <div class="card" id="gdrive-banner" style="padding:14px 16px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:12px">
-      <div style="display:flex;align-items:center;gap:10px">
-        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><path d="M12 15V3"/>
-        </svg>
-        <span id="gdrive-status-text" style="font-size:13px;color:var(--text2)">Checking Google Drive connection…</span>
+    {{-- One line saying what this page is for, the Drive state as a dot
+         rather than a banner, and the way in. --}}
+    <div class="lib-head">
+      <div class="lib-head-text">
+        <div class="lib-rule">Students only see files shared with their section</div>
+        <div class="lib-count" id="lib-count">&nbsp;</div>
       </div>
-      <div>
+      <div class="lib-head-actions">
+        <span class="drive-pill" id="gdrive-banner">
+          <span class="drive-dot" id="gdrive-dot"></span>
+          <span id="gdrive-status-text">Checking Google Drive…</span>
+        </span>
         <a href="{{ route('gdrive.connect') }}" class="btn btn-primary" id="gdrive-connect-btn" style="font-size:12px;display:none">Connect Google Drive</a>
         <button class="btn btn-ghost" id="gdrive-disconnect-btn" style="font-size:12px;display:none" onclick="disconnectDrive()">Disconnect</button>
+        <button class="btn btn-primary" id="open-upload-btn" style="font-size:12.5px" onclick="openUpload()">
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+          Upload
+        </button>
       </div>
     </div>
 
-    <div class="res-upload-list-grid" style="gap:16px">
-
-      <!-- LEFT: UPLOAD FORM -->
-      <div style="display:flex;flex-direction:column;gap:14px">
-        <div class="card" style="padding:16px">
+    {{-- The upload panel sits over the page and is opened from the button
+         above, so the library gets the whole width the rest of the time. --}}
+    <div class="upload-scrim" id="upload-scrim" hidden onclick="closeUpload(event)">
+      <div class="upload-sheet" onclick="event.stopPropagation()">
+        <div class="card" style="padding:16px;box-shadow:none;border:0">
           <div class="card-header">
             <span class="card-title">Upload Resource</span>
             <button onclick="resetForm()" style="background:none;border:none;font-size:11px;color:var(--text3);cursor:pointer">Clear</button>
@@ -152,16 +159,22 @@
                you can see the whole choice without opening anything. --}}
           @if (! $isAdmin && count($mySections))
           <div class="form-group">
-            <label class="label">Sections</label>
+            <label class="label">
+              Who should be able to open this?
+              <span class="req-chip">Pick at least one</span>
+            </label>
             <div class="section-picker" id="res-sections">
               @foreach ($mySections as $sectionLabel)
-                <label class="section-chip">
+                <label class="section-box">
                   <input type="checkbox" value="{{ $sectionLabel }}">
-                  <span>{{ $sectionLabel }}</span>
+                  <span class="section-tick">
+                    <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+                  </span>
+                  <span class="section-name">{{ $sectionLabel }}</span>
                 </label>
               @endforeach
             </div>
-            <p class="section-hint" id="res-sections-hint">All of your sections</p>
+            <p class="section-hint" id="res-sections-hint">Tick every section to hand it to all your students.</p>
           </div>
           @else
           <div class="form-group">
@@ -195,63 +208,44 @@
           </div>
         </div>
 
-        <!-- Quick stats -->
-        <div class="card" style="padding:14px 16px">
-          <div class="card-header" style="margin-bottom:12px">
-            <span class="card-title">Library Summary</span>
-          </div>
-          <div class="grid-2" style="gap:8px">
-            <div class="alltime-chip">
-              <div class="n" id="stat-total" style="color:var(--accent3)">0</div>
-              <div class="l">Total Files</div>
-            </div>
-            <div class="alltime-chip">
-              <div class="n" id="stat-bsit" style="color:var(--green)">0</div>
-              <div class="l">BSIT</div>
-            </div>
-            <div class="alltime-chip">
-              <div class="n" id="stat-all-programs" style="color:var(--purple)">0</div>
-              <div class="l">All Programs</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- RIGHT: FILE LIBRARY -->
-      <div>
-        <!-- Filter bar -->
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:10px;flex-wrap:wrap">
-          <div style="display:flex;align-items:center;gap:8px">
-            <select class="input" id="category-filter" style="width:170px;font-size:12px" onchange="renderCards()">
-              <option value="all">All Categories</option>
-              <option value="pre-proposal">Pre-Proposal</option>
-              <option value="ch1-3">Ch. 1–3</option>
-              <option value="ch4-5">Ch. 4–5</option>
-              <option value="final">Final MS</option>
-              <option value="presentation">Presentation</option>
-              <option value="lesson">Lessons</option>
-              <option value="forms">Forms</option>
-            </select>
-            <select class="input" id="folder-filter" style="width:170px;font-size:12px" onchange="renderCards()">
-              <option value="all">All Folders</option>
-            </select>
-          </div>
-          <div style="display:flex;align-items:center;gap:8px">
-            <input class="input" id="search-input" placeholder="Search resources…" style="width:200px;font-size:12px" oninput="renderCards()"/>
-            <select class="input" style="width:130px;font-size:12px" id="program-filter" onchange="renderCards()">
-              <option value="all">All Programs</option>
-              <option value="BSIT">BSIT</option>
-              <option value="BSCS">BSCS</option>
-              <option value="BLIS">BLIS</option>
-              <option value="BSIS">BSIS</option>
-            </select>
-          </div>
-        </div>
-
-        <!-- Cards container -->
-        <div id="resource-list" class="gap-12"></div>
       </div>
     </div>
+
+    {{-- Four filters, one row, left to right in the order someone narrows:
+         what kind of file, who it is for, where it lives, then free text. --}}
+    <div class="lib-bar">
+      <select class="input lib-filter" id="category-filter" onchange="renderCards()">
+        <option value="all">All categories</option>
+        <option value="pre-proposal">Pre-Proposal</option>
+        <option value="ch1-3">Ch. 1–3</option>
+        <option value="ch4-5">Ch. 4–5</option>
+        <option value="final">Final MS</option>
+        <option value="presentation">Presentation</option>
+        <option value="lesson">Lessons</option>
+        <option value="forms">Forms</option>
+      </select>
+      <select class="input lib-filter" id="section-filter" onchange="renderCards()">
+        <option value="all">All sections</option>
+        @foreach ($mySections as $sectionLabel)
+          <option value="{{ $sectionLabel }}">{{ $sectionLabel }}</option>
+        @endforeach
+        <option value="__none__">Not shared with a section</option>
+      </select>
+      <select class="input lib-filter" id="folder-filter" onchange="renderCards()">
+        <option value="all">All folders</option>
+      </select>
+      <input class="input lib-search" id="search-input" placeholder="Search templates and lessons…" oninput="renderCards()"/>
+    </div>
+
+    {{-- The strip that stops anyone having to ask what the labels mean. --}}
+    <div class="lib-head-row" id="lib-head-row" hidden>
+      <span class="h-file">File</span>
+      <span class="h-who">Shared with</span>
+      <span class="h-when">Added</span>
+      <span class="h-acts"></span>
+    </div>
+
+    <div id="resource-list"></div>
   </div>
   </div>
 </div>
@@ -286,9 +280,15 @@ function mapResource(r) {
     size: r.file_size ? formatSize(r.file_size) : '—',
     driveLink: r.drive_web_view_link,
     driveFolderId: r.drive_folder_id || null,
+    // Empty means it was never aimed at particular sections, so it reaches
+    // every student this CaPSA handles.
+    sections: (r.sections || []).map(function (s) { return s.section; }),
     date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+    shortDate: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
   };
 }
+
+const MY_SECTIONS = @json($mySections);
 
 let resources = rawResources.map(mapResource);
 
@@ -301,9 +301,20 @@ document.addEventListener('change', function (e) {
   const hint = document.getElementById('res-sections-hint');
   if (!hint) return;
 
-  hint.textContent = picked === 0
-    ? 'All of your sections'
-    : picked + (picked === 1 ? ' section' : ' sections') + ' selected';
+  // Name who is in and who is out, before anything is uploaded.
+  const chosen = Array.prototype.map.call(
+    document.querySelectorAll('#res-sections input:checked'), function (i) { return i.value; }
+  );
+  const left = MY_SECTIONS.filter(function (s) { return chosen.indexOf(s) === -1; });
+
+  if (picked === 0) {
+    hint.textContent = 'Tick every section to hand it to all your students.';
+  } else if (!left.length) {
+    hint.textContent = 'Every student you handle will see this.';
+  } else {
+    hint.textContent = 'Students in ' + chosen.join(' and ') + ' will see this. '
+      + left.join(' and ') + ' will not.';
+  }
 });
 let pendingDeleteId = null;
 
@@ -339,69 +350,129 @@ function formatSize(bytes){
 }
 
 // -- RENDER --------------------------------------------------------------------
+// Who can open this file, in the words the header asks the question in.
+// A file aimed at no section reaches everyone this CaPSA handles, and is
+// drawn differently on purpose so nobody reads it as a section name.
+function sharedWith(r){
+  if(!r.sections.length){
+    return '<span class="pill pill-all">All your students</span>';
+  }
+  return r.sections.map(function(s){
+    return '<span class="pill pill-section">'+esc(s)+'</span>';
+  }).join('');
+}
+
+function esc(v){
+  return String(v).replace(/[&<>"']/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
+}
+
 function renderCards(){
   const q = document.getElementById('search-input').value.trim().toLowerCase();
-  const pf = document.getElementById('program-filter').value;
   const cf = document.getElementById('category-filter').value;
+  const sf = document.getElementById('section-filter').value;
   const ff = document.getElementById('folder-filter').value;
   const list = document.getElementById('resource-list');
+  const headRow = document.getElementById('lib-head-row');
 
   let filtered = resources.filter(r=>{
     const matchCat = cf==='all' || r.category===cf;
-    const matchQ = !q || r.name.toLowerCase().includes(q) || CAT_LABELS[r.category]?.toLowerCase().includes(q);
-    const matchProgram = pf==='all' || r.program===pf || !r.program;
+    const matchQ = !q || r.name.toLowerCase().includes(q) || (CAT_LABELS[r.category]||'').toLowerCase().includes(q);
+    const matchSection = sf==='all'
+      || (sf==='__none__' ? !r.sections.length : r.sections.indexOf(sf) !== -1);
     const matchFolder = ff==='all' || r.driveFolderId===ff;
-    return matchCat && matchQ && matchProgram && matchFolder;
+    return matchCat && matchQ && matchSection && matchFolder;
   });
 
+  updateStats(filtered.length);
+
   if(!filtered.length){
-    list.innerHTML=`<div class="card empty-state">
-      <svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
-      <p>No resources match the current filter.</p>
-    </div>`;
-    updateStats();
+    headRow.hidden = true;
+    // An empty library and a filter hiding everything are different things,
+    // and saying the wrong one makes a new page look broken.
+    list.innerHTML = resources.length
+      ? `<div class="lib-empty">
+           <b>Nothing matches</b>
+           <span>No file here is in that category, section or folder. Clear the filters to see all ${resources.length}.</span>
+           <button class="btn btn-ghost" style="font-size:12px" onclick="clearFilters()">Clear filters</button>
+         </div>`
+      : `<div class="lib-empty">
+           <b>You haven't uploaded anything yet</b>
+           <span>Files you upload here show up for the students in the sections you pick.</span>
+           <button class="btn btn-primary" style="font-size:12.5px" onclick="openUpload()">
+             <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+             Upload your first resource
+           </button>
+         </div>`;
     return;
   }
 
-  list.innerHTML = filtered.map(r=>`
-    <div class="resource-card" id="rcard-${r.id}">
-      ${extIcon(r.ext)}
-      <div class="resource-meta">
-        <div class="resource-name" title="${r.name}">${r.name}</div>
-        <div style="display:flex;align-items:center;gap:6px;margin-top:5px;flex-wrap:wrap">
-          <span class="cat-chip ${CAT_CLASS[r.category]||'cat-ch4'}">${CAT_LABELS[r.category]||'Other'}</span>
-          ${r.program ? `<span class="badge" style="font-size:10px;padding:3px 9px">${r.program}</span>` : ''}
-        </div>
-        <div class="resource-info">
-          <span>
-            <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-            ${r.date}
-          </span>
-          <span>·</span>
-          <span>${r.size}</span>
-        </div>
-        <div class="resource-actions">
-          <button class="btn btn-ghost" style="font-size:11px;padding:4px 12px;color:var(--text2)" onclick="downloadResource(${r.id},this)">
-            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><path d="M12 15V3"/></svg>
-            Download
-          </button>
-          <button class="btn btn-danger" style="font-size:11px;padding:4px 12px" onclick="confirmDelete(${r.id},'${r.name.replace(/'/g,"\\'")}')">
-            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
-            Remove
-          </button>
-        </div>
-      </div>
+  headRow.hidden = false;
+
+  list.innerHTML = '<div class="lib-list">' + filtered.map(r=>`
+    <div class="lib-row" id="rcard-${r.id}">
+      <span class="lib-file">
+        ${extIcon(r.ext)}
+        <span class="lib-file-text">
+          <b title="${esc(r.name)}">${esc(r.name)}</b>
+          <span class="lib-sub">${esc(CAT_LABELS[r.category]||'Other')} · ${esc(r.size)}</span>
+        </span>
+      </span>
+      <span class="lib-who">${sharedWith(r)}</span>
+      <span class="lib-when" title="${esc(r.date)}">${esc(r.shortDate)}</span>
+      <span class="lib-acts">
+        <button class="lib-icon" title="Open in Drive" onclick="downloadResource(${r.id},this)">
+          <svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14L21 3"/></svg>
+        </button>
+        <button class="lib-icon lib-icon-danger" title="Remove" onclick="confirmDelete(${r.id},'${r.name.replace(/'/g,"\\'")}')">
+          <svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>
+        </button>
+      </span>
     </div>
-  `).join('');
-
-  updateStats();
+  `).join('') + '</div>';
 }
 
-function updateStats(){
-  document.getElementById('stat-total').textContent = resources.length;
-  document.getElementById('stat-bsit').textContent = resources.filter(r=>r.program==='BSIT').length;
-  document.getElementById('stat-all-programs').textContent = resources.filter(r=>!r.program).length;
+function clearFilters(){
+  document.getElementById('category-filter').value = 'all';
+  document.getElementById('section-filter').value = 'all';
+  document.getElementById('folder-filter').value = 'all';
+  document.getElementById('search-input').value = '';
+  renderCards();
 }
+
+// One line of text where three coloured tiles used to be. It says the same
+// thing and stops competing with the library for attention.
+function updateStats(shown){
+  const total = resources.length;
+  const el = document.getElementById('lib-count');
+  if(!el) return;
+
+  if(!total){ el.textContent = 'Nothing here yet'; return; }
+
+  const files = total + (total === 1 ? ' file' : ' files');
+  el.textContent = (shown !== undefined && shown !== total)
+    ? shown + ' of ' + files
+    : files + (MY_SECTIONS.length ? ' · ' + MY_SECTIONS.join(', ') : '');
+}
+
+// ── the upload panel ──
+function openUpload(){
+  document.getElementById('upload-scrim').hidden = false;
+  document.body.style.overflow = 'hidden';
+  const name = document.getElementById('res-name');
+  if(name) name.focus();
+}
+
+function closeUpload(e){
+  if(e && e.target !== document.getElementById('upload-scrim')) return;
+  document.getElementById('upload-scrim').hidden = true;
+  document.body.style.overflow = '';
+}
+
+document.addEventListener('keydown', function(e){
+  if(e.key === 'Escape' && !document.getElementById('upload-scrim').hidden) closeUpload();
+});
 
 // -- FILE SELECT ---------------------------------------------------------------
 let selectedFile = null;
@@ -495,18 +566,24 @@ function refreshDriveStatus(){
       const connectBtn = document.getElementById('gdrive-connect-btn');
       const disconnectBtn = document.getElementById('gdrive-disconnect-btn');
 
+      // The dot carries the state; the "?" here was a broken icon.
+      const dot = document.getElementById('gdrive-dot');
+
       if (GDRIVE_CONNECTED) {
-        text.textContent = '? Google Drive connected — uploads sync automatically.';
+        text.textContent = 'Drive connected';
+        dot.className = 'drive-dot drive-dot-on';
         connectBtn.style.display = 'none';
         disconnectBtn.style.display = 'inline-flex';
       } else {
-        text.textContent = 'Connect Google Drive to upload and store resources.';
+        text.textContent = 'Drive not connected';
+        dot.className = 'drive-dot drive-dot-off';
         connectBtn.style.display = 'inline-flex';
         disconnectBtn.style.display = 'none';
       }
     })
     .catch(() => {
-      document.getElementById('gdrive-status-text').textContent = 'Could not check Google Drive status.';
+      document.getElementById('gdrive-status-text').textContent = 'Could not reach Google Drive';
+      document.getElementById('gdrive-dot').className = 'drive-dot drive-dot-off';
     });
 }
 
@@ -532,7 +609,7 @@ function populateFolderSelect(){
 function populateFolderFilter(){
   const sel = document.getElementById('folder-filter');
   const current = sel.value || 'all';
-  sel.innerHTML = '<option value="all">All Folders</option>' +
+  sel.innerHTML = '<option value="all">All folders</option>' +
     driveFolders.map(f => `<option value="${f.id}">${f.name}</option>`).join('');
   // keep the current selection if it still exists among the folders
   if ([...sel.options].some(o => o.value === current)) {
@@ -602,6 +679,13 @@ function uploadResource(){
   // A folder names its own files, so a title is only asked for one at a time.
   if(!isFolder && !name){ document.getElementById('res-name').focus(); showToast('Please enter a resource name.'); return; }
   if(!category){ document.getElementById('res-category').focus(); showToast('Please choose a category.'); return; }
+  // Ticking nothing used to quietly mean everyone, which is a decision nobody
+  // knew they were making.
+  if(MY_SECTIONS.length && !chosenSections.length){
+    document.getElementById('res-sections').classList.add('needs-pick');
+    showToast('Pick at least one section, so students can find this.');
+    return;
+  }
 
   const fd = new FormData();
   if(isFolder){
@@ -638,9 +722,8 @@ function uploadResource(){
     added.slice().reverse().forEach(function(r){ resources.unshift(mapResource(r)); });
 
     resetForm();
-    document.getElementById('category-filter').value = 'all';
-    document.getElementById('folder-filter').value = 'all';
-    renderCards();
+    closeUpload();
+    clearFilters();
     showToast(added.length > 1
       ? added.length + ' files uploaded to Google Drive.'
       : 'Uploaded to Google Drive.');
@@ -664,8 +747,10 @@ function resetForm(){
   if(programEl) programEl.value='';
 
   document.querySelectorAll('#res-sections input:checked').forEach(function(i){ i.checked = false; });
+  const picker = document.getElementById('res-sections');
+  if(picker) picker.classList.remove('needs-pick');
   const hint = document.getElementById('res-sections-hint');
-  if(hint) hint.textContent = 'All of your sections';
+  if(hint) hint.textContent = 'Tick every section to hand it to all your students.';
 }
 
 // -- DOWNLOAD -------------------------------------------------------------------
