@@ -405,13 +405,13 @@ Route::middleware(['expert.auth', 'track.expert'])->prefix('admin/gdrive')->name
     Route::get('/connect', [GoogleDriveController::class, 'connect'])->name('connect');
     Route::get('/callback', [GoogleDriveController::class, 'callback'])->name('callback');
     Route::get('/status', [GoogleDriveController::class, 'status'])->name('status');
-    Route::post('/disconnect', [GoogleDriveController::class, 'disconnect'])->name('disconnect');
+    Route::delete('/connection', [GoogleDriveController::class, 'disconnect'])->name('connection.destroy');
     Route::get('/folders', [GoogleDriveController::class, 'listFolders'])->name('folders.index');
     Route::post('/folders', [GoogleDriveController::class, 'createFolder'])->name('folders.store');
     Route::get('/submission-folders', [GoogleDriveController::class, 'listSubmissionFolders'])->name('submission-folders.index');
     Route::post('/submission-folders', [GoogleDriveController::class, 'storeSubmissionFolder'])->name('submission-folders.store');
     Route::delete('/submission-folders/{id}', [GoogleDriveController::class, 'destroySubmissionFolder'])->name('submission-folders.destroy');
-    Route::post('/upload', [GoogleDriveController::class, 'upload'])->name('upload');
+    Route::post('/resources', [GoogleDriveController::class, 'upload'])->name('resources.store');
     Route::delete('/resources/{resource}', [GoogleDriveController::class, 'destroy'])->name('resources.destroy');
 });
 

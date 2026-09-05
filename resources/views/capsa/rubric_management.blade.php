@@ -1015,7 +1015,7 @@ async function aiGenerateRubric() {
   label.textContent = 'Generating…';
 
   try {
-    var res = await fetch('/api/admin/grading-rubrics/ai-generate', {
+    var res = await fetch('/api/admin/grading-rubrics/drafts', {
       method: 'POST',
       headers: { 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json', 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -1097,7 +1097,7 @@ async function saveRubric() {
 
     // Sync criteria
     var rubricId = json.data.rubric_id;
-    var syncRes = await fetch('/api/admin/grading-rubrics/' + rubricId + '/criteria/sync', {
+    var syncRes = await fetch('/api/admin/grading-rubrics/' + rubricId + '/criteria', {
       method: 'POST',
       headers: { 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json', 'Content-Type': 'application/json' },
       body: JSON.stringify({ criteria: draftCriteria.map(function(c) {

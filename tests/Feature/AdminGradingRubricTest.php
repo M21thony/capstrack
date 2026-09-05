@@ -201,7 +201,7 @@ class AdminGradingRubricTest extends TestCase
         ]);
 
         $response = $this->actingAs($this->admin, 'expert')
-            ->postJson("/api/admin/grading-rubrics/{$rubric->rubric_id}/criteria/sync", [
+            ->putJson("/api/admin/grading-rubrics/{$rubric->rubric_id}/criteria", [
                 'criteria' => [
                     [
                         'criterion_name' => 'New Criterion 1',
@@ -499,7 +499,7 @@ class AdminGradingRubricTest extends TestCase
         ]);
 
         $response = $this->actingAs($this->admin, 'expert')
-            ->postJson("/api/admin/grading-rubrics/{$rubric->rubric_id}/criteria/sync", [
+            ->putJson("/api/admin/grading-rubrics/{$rubric->rubric_id}/criteria", [
                 'criteria' => [
                     [
                         'criterion_name' => 'Oral Defense',
@@ -570,7 +570,7 @@ class AdminGradingRubricTest extends TestCase
         ]);
 
         $response = $this->actingAs($this->admin, 'expert')
-            ->postJson("/api/admin/grading-rubrics/{$rubric->rubric_id}/criteria/sync", [
+            ->putJson("/api/admin/grading-rubrics/{$rubric->rubric_id}/criteria", [
                 'criteria' => [
                     [
                         'criterion_name' => 'Criterion 1',
@@ -598,7 +598,7 @@ class AdminGradingRubricTest extends TestCase
         ]);
 
         $response = $this->actingAs($this->admin, 'expert')
-            ->postJson("/api/admin/grading-rubrics/{$rubric->rubric_id}/criteria/sync", [
+            ->putJson("/api/admin/grading-rubrics/{$rubric->rubric_id}/criteria", [
                 'criteria' => [
                     [
                         'criterion_name' => 'C1',
@@ -653,7 +653,7 @@ class AdminGradingRubricTest extends TestCase
         ]);
 
         $response = $this->actingAs($this->admin, 'expert')
-            ->postJson("/api/admin/grading-rubrics/{$rubric->rubric_id}/criteria/sync", [
+            ->putJson("/api/admin/grading-rubrics/{$rubric->rubric_id}/criteria", [
                 'criteria' => [
                     [
                         'criterion_name' => 'C1',
@@ -740,7 +740,7 @@ class AdminGradingRubricTest extends TestCase
         ]);
 
         $response = $this->actingAs($this->admin, 'expert')
-            ->postJson("/api/admin/grading-rubrics/{$rubric->rubric_id}/criteria/sync", [
+            ->putJson("/api/admin/grading-rubrics/{$rubric->rubric_id}/criteria", [
                 'criteria' => [
                     ['criterion_name' => 'Knowledge', 'max_points' => 50],
                     ['criterion_name' => '', 'max_points' => 50],
@@ -761,7 +761,7 @@ class AdminGradingRubricTest extends TestCase
         ]);
 
         $response = $this->actingAs($this->admin, 'expert')
-            ->postJson("/api/admin/grading-rubrics/{$rubric->rubric_id}/criteria/sync", [
+            ->putJson("/api/admin/grading-rubrics/{$rubric->rubric_id}/criteria", [
                 'criteria' => [
                     ['criterion_name' => '   ', 'max_points' => 100],
                 ],
@@ -781,7 +781,7 @@ class AdminGradingRubricTest extends TestCase
         ]);
 
         $response = $this->actingAs($this->admin, 'expert')
-            ->postJson("/api/admin/grading-rubrics/{$rubric->rubric_id}/criteria/sync", [
+            ->putJson("/api/admin/grading-rubrics/{$rubric->rubric_id}/criteria", [
                 'criteria' => [
                     ['max_points' => 100],
                 ],
@@ -807,7 +807,7 @@ class AdminGradingRubricTest extends TestCase
         ]);
 
         $response = $this->actingAs($this->admin, 'expert')
-            ->postJson("/api/admin/grading-rubrics/{$rubric->rubric_id}/criteria/sync", [
+            ->putJson("/api/admin/grading-rubrics/{$rubric->rubric_id}/criteria", [
                 'criteria' => [
                     ['criterion_name' => 'New C1', 'max_points' => 50],
                     ['criterion_name' => '', 'max_points' => 50],
@@ -832,7 +832,7 @@ class AdminGradingRubricTest extends TestCase
         ]);
 
         $response = $this->actingAs($this->admin, 'expert')
-            ->postJson("/api/admin/grading-rubrics/{$rubric->rubric_id}/criteria/sync", [
+            ->putJson("/api/admin/grading-rubrics/{$rubric->rubric_id}/criteria", [
                 'criteria' => [
                     [
                         'criterion_name' => '  Knowledge  ',
@@ -944,7 +944,7 @@ class AdminGradingRubricTest extends TestCase
         ]);
 
         $response = $this->actingAs($this->admin, 'expert')
-            ->postJson("/api/admin/grading-rubrics/{$rubric->rubric_id}/criteria/sync", [
+            ->putJson("/api/admin/grading-rubrics/{$rubric->rubric_id}/criteria", [
                 'criteria' => [
                     [
                         'criterion_name' => 'C1',
@@ -972,7 +972,7 @@ class AdminGradingRubricTest extends TestCase
         ]);
 
         $response = $this->actingAs($this->admin, 'expert')
-            ->postJson("/api/admin/grading-rubrics/{$rubric->rubric_id}/criteria/sync", [
+            ->putJson("/api/admin/grading-rubrics/{$rubric->rubric_id}/criteria", [
                 'criteria' => [
                     [
                         'criterion_name' => 'C1',
@@ -998,7 +998,7 @@ class AdminGradingRubricTest extends TestCase
         ]);
 
         $response = $this->actingAs($this->admin, 'expert')
-            ->postJson("/api/admin/grading-rubrics/{$rubric->rubric_id}/criteria/sync", [
+            ->putJson("/api/admin/grading-rubrics/{$rubric->rubric_id}/criteria", [
                 'criteria' => [
                     [
                         'criterion_name' => 'C1',
@@ -1024,7 +1024,7 @@ class AdminGradingRubricTest extends TestCase
         ]);
 
         $response = $this->actingAs($this->admin, 'expert')
-            ->postJson("/api/admin/grading-rubrics/{$rubric->rubric_id}/criteria/sync", [
+            ->putJson("/api/admin/grading-rubrics/{$rubric->rubric_id}/criteria", [
                 'criteria' => [
                     [
                         'criterion_name' => 'C1',
@@ -1050,7 +1050,7 @@ class AdminGradingRubricTest extends TestCase
         ]);
 
         $response = $this->actingAs($this->admin, 'expert')
-            ->postJson("/api/admin/grading-rubrics/{$rubric->rubric_id}/criteria/sync", [
+            ->putJson("/api/admin/grading-rubrics/{$rubric->rubric_id}/criteria", [
                 'criteria' => [
                     [
                         'criterion_name' => 'C1',
@@ -1256,7 +1256,7 @@ class AdminGradingRubricTest extends TestCase
         ]);
 
         $response = $this->actingAs($this->admin, 'expert')
-            ->postJson("/api/admin/grading-rubrics/{$rubric->rubric_id}/criteria/sync", [
+            ->putJson("/api/admin/grading-rubrics/{$rubric->rubric_id}/criteria", [
                 'criteria' => [
                     [
                         'criterion_name' => 'C1',
@@ -1284,7 +1284,7 @@ class AdminGradingRubricTest extends TestCase
         ]);
 
         $response = $this->actingAs($this->admin, 'expert')
-            ->postJson("/api/admin/grading-rubrics/{$rubric->rubric_id}/criteria/sync", [
+            ->putJson("/api/admin/grading-rubrics/{$rubric->rubric_id}/criteria", [
                 'criteria' => [
                     [
                         'criterion_name' => 'C1',
@@ -1312,7 +1312,7 @@ class AdminGradingRubricTest extends TestCase
         ]);
 
         $response = $this->actingAs($this->admin, 'expert')
-            ->postJson("/api/admin/grading-rubrics/{$rubric->rubric_id}/criteria/sync", [
+            ->putJson("/api/admin/grading-rubrics/{$rubric->rubric_id}/criteria", [
                 'criteria' => [
                     [
                         'criterion_name' => 'C1',
@@ -1340,7 +1340,7 @@ class AdminGradingRubricTest extends TestCase
         ]);
 
         $response = $this->actingAs($this->admin, 'expert')
-            ->postJson("/api/admin/grading-rubrics/{$rubric->rubric_id}/criteria/sync", [
+            ->putJson("/api/admin/grading-rubrics/{$rubric->rubric_id}/criteria", [
                 'criteria' => [
                     [
                         'criterion_name' => 'C1',
@@ -1368,7 +1368,7 @@ class AdminGradingRubricTest extends TestCase
         ]);
 
         $response = $this->actingAs($this->admin, 'expert')
-            ->postJson("/api/admin/grading-rubrics/{$rubric->rubric_id}/criteria/sync", [
+            ->putJson("/api/admin/grading-rubrics/{$rubric->rubric_id}/criteria", [
                 'criteria' => [
                     [
                         'criterion_name' => 'C1',
@@ -1396,7 +1396,7 @@ class AdminGradingRubricTest extends TestCase
         ]);
 
         $response = $this->actingAs($this->admin, 'expert')
-            ->postJson("/api/admin/grading-rubrics/{$rubric->rubric_id}/criteria/sync", [
+            ->putJson("/api/admin/grading-rubrics/{$rubric->rubric_id}/criteria", [
                 'criteria' => [
                     [
                         'criterion_name' => 'C1',
@@ -1424,7 +1424,7 @@ class AdminGradingRubricTest extends TestCase
         ]);
 
         $response = $this->actingAs($this->admin, 'expert')
-            ->postJson("/api/admin/grading-rubrics/{$rubric->rubric_id}/criteria/sync", [
+            ->putJson("/api/admin/grading-rubrics/{$rubric->rubric_id}/criteria", [
                 'criteria' => [
                     [
                         'criterion_name' => 'C1',
@@ -1452,7 +1452,7 @@ class AdminGradingRubricTest extends TestCase
         ]);
 
         $response = $this->actingAs($this->admin, 'expert')
-            ->postJson("/api/admin/grading-rubrics/{$rubric->rubric_id}/criteria/sync", [
+            ->putJson("/api/admin/grading-rubrics/{$rubric->rubric_id}/criteria", [
                 'criteria' => [
                     [
                         'criterion_name' => 'C1',
@@ -1547,7 +1547,7 @@ class AdminGradingRubricTest extends TestCase
         ]);
 
         $response = $this->actingAs($this->admin, 'expert')
-            ->postJson("/api/admin/grading-rubrics/{$rubric->rubric_id}/criteria/sync", [
+            ->putJson("/api/admin/grading-rubrics/{$rubric->rubric_id}/criteria", [
                 'criteria' => [
                     [
                         'criterion_name' => 'New C1',
@@ -1579,7 +1579,7 @@ class AdminGradingRubricTest extends TestCase
         ]);
 
         $this->actingAs($this->admin, 'expert')
-            ->postJson("/api/admin/grading-rubrics/{$rubric->rubric_id}/criteria/sync", [
+            ->putJson("/api/admin/grading-rubrics/{$rubric->rubric_id}/criteria", [
                 'criteria' => [
                     [
                         'criterion_name' => 'C1',
@@ -1608,7 +1608,7 @@ class AdminGradingRubricTest extends TestCase
     {
         // expert.auth redirects unauthenticated requests rather than
         // returning a JSON 401, same as every other endpoint in this group.
-        $response = $this->postJson('/api/admin/grading-rubrics/ai-generate', [
+        $response = $this->postJson('/api/admin/grading-rubrics/drafts', [
             'rubric_type' => 'title_defense',
         ]);
 
@@ -1618,7 +1618,7 @@ class AdminGradingRubricTest extends TestCase
     public function test_ai_generate_validates_rubric_type(): void
     {
         $response = $this->actingAs($this->admin, 'expert')
-            ->postJson('/api/admin/grading-rubrics/ai-generate', []);
+            ->postJson('/api/admin/grading-rubrics/drafts', []);
 
         $response->assertStatus(422)
             ->assertJsonValidationErrors(['rubric_type']);
@@ -1627,7 +1627,7 @@ class AdminGradingRubricTest extends TestCase
     public function test_ai_generate_rejects_invalid_rubric_type(): void
     {
         $response = $this->actingAs($this->admin, 'expert')
-            ->postJson('/api/admin/grading-rubrics/ai-generate', [
+            ->postJson('/api/admin/grading-rubrics/drafts', [
                 'rubric_type' => 'not_a_real_type',
             ]);
 
@@ -1686,7 +1686,7 @@ class AdminGradingRubricTest extends TestCase
         $this->app->instance(OllamaSSHClient::class, $mock);
 
         $response = $this->actingAs($this->admin, 'expert')
-            ->postJson('/api/admin/grading-rubrics/ai-generate', [
+            ->postJson('/api/admin/grading-rubrics/drafts', [
                 'rubric_type' => 'pre_oral_defense',
                 'criteria_count' => 3,
             ]);
@@ -1734,7 +1734,7 @@ class AdminGradingRubricTest extends TestCase
         $this->app->instance(OllamaSSHClient::class, $mock);
 
         $response = $this->actingAs($this->admin, 'expert')
-            ->postJson('/api/admin/grading-rubrics/ai-generate', [
+            ->postJson('/api/admin/grading-rubrics/drafts', [
                 'rubric_type' => 'final_oral_defense',
                 'criteria_count' => 6,
             ]);
@@ -1755,7 +1755,7 @@ class AdminGradingRubricTest extends TestCase
         $this->app->instance(OllamaSSHClient::class, $mock);
 
         $response = $this->actingAs($this->admin, 'expert')
-            ->postJson('/api/admin/grading-rubrics/ai-generate', [
+            ->postJson('/api/admin/grading-rubrics/drafts', [
                 'rubric_type' => 'pre_proposal',
             ]);
 
@@ -1771,7 +1771,7 @@ class AdminGradingRubricTest extends TestCase
         $this->app->instance(OllamaSSHClient::class, $mock);
 
         $response = $this->actingAs($this->admin, 'expert')
-            ->postJson('/api/admin/grading-rubrics/ai-generate', [
+            ->postJson('/api/admin/grading-rubrics/drafts', [
                 'rubric_type' => 'pre_oral_defense',
             ]);
 
@@ -1801,7 +1801,7 @@ class AdminGradingRubricTest extends TestCase
         $this->app->instance(OllamaSSHClient::class, $mock);
 
         $response = $this->actingAs($this->admin, 'expert')
-            ->postJson('/api/admin/grading-rubrics/ai-generate', [
+            ->postJson('/api/admin/grading-rubrics/drafts', [
                 'rubric_type' => 'pre_oral_defense',
                 'criteria_count' => 3,
             ]);
@@ -1843,7 +1843,7 @@ class AdminGradingRubricTest extends TestCase
         $this->app->instance(OllamaSSHClient::class, $mock);
 
         $response = $this->actingAs($this->admin, 'expert')
-            ->postJson('/api/admin/grading-rubrics/ai-generate', [
+            ->postJson('/api/admin/grading-rubrics/drafts', [
                 'rubric_type' => 'final_oral_defense',
                 'criteria_count' => 5,
             ]);
@@ -1895,7 +1895,7 @@ class AdminGradingRubricTest extends TestCase
         $this->app->instance(OllamaSSHClient::class, $mock);
 
         $response = $this->actingAs($this->admin, 'expert')
-            ->postJson('/api/admin/grading-rubrics/ai-generate', [
+            ->postJson('/api/admin/grading-rubrics/drafts', [
                 'rubric_type' => 'final_oral_defense',
             ]);
 
@@ -1936,7 +1936,7 @@ class AdminGradingRubricTest extends TestCase
         $this->app->instance(OllamaSSHClient::class, $mock);
 
         $response = $this->actingAs($this->admin, 'expert')
-            ->postJson('/api/admin/grading-rubrics/ai-generate', [
+            ->postJson('/api/admin/grading-rubrics/drafts', [
                 'rubric_type' => 'pre_proposal',
             ]);
 
@@ -1976,7 +1976,7 @@ class AdminGradingRubricTest extends TestCase
         $this->app->instance(OllamaSSHClient::class, $mock);
 
         $response = $this->actingAs($this->admin, 'expert')
-            ->postJson('/api/admin/grading-rubrics/ai-generate', [
+            ->postJson('/api/admin/grading-rubrics/drafts', [
                 'rubric_type' => 'title_defense',
             ]);
 
@@ -2015,7 +2015,7 @@ class AdminGradingRubricTest extends TestCase
         // confirmed directly to skew Chapter 1/2/3 totals to 19/13/22
         // instead of 20/15/20. Matching is now scoped by category+name.
         $response = $this->actingAs($this->admin, 'expert')
-            ->postJson('/api/admin/grading-rubrics/ai-generate', [
+            ->postJson('/api/admin/grading-rubrics/drafts', [
                 'rubric_type' => 'title_defense',
             ]);
 
@@ -2052,7 +2052,7 @@ class AdminGradingRubricTest extends TestCase
         $this->app->instance(OllamaSSHClient::class, $mock);
 
         $response = $this->actingAs($this->admin, 'expert')
-            ->postJson('/api/admin/grading-rubrics/ai-generate', [
+            ->postJson('/api/admin/grading-rubrics/drafts', [
                 'rubric_type' => 'pre_oral_defense',
             ]);
 
@@ -2072,7 +2072,7 @@ class AdminGradingRubricTest extends TestCase
         ]);
 
         $response = $this->actingAs($this->admin, 'expert')
-            ->postJson("/api/admin/grading-rubrics/{$rubric->rubric_id}/criteria/sync", [
+            ->putJson("/api/admin/grading-rubrics/{$rubric->rubric_id}/criteria", [
                 'criteria' => [
                     [
                         'criterion_name' => 'Oral Delivery',
@@ -2118,7 +2118,7 @@ class AdminGradingRubricTest extends TestCase
         ]);
 
         $this->actingAs($this->admin, 'expert')
-            ->postJson("/api/admin/grading-rubrics/{$rubric->rubric_id}/criteria/sync", [
+            ->putJson("/api/admin/grading-rubrics/{$rubric->rubric_id}/criteria", [
                 'criteria' => [
                     [
                         'criterion_name' => 'C1',
@@ -2143,7 +2143,7 @@ class AdminGradingRubricTest extends TestCase
         ]);
 
         $this->actingAs($this->admin, 'expert')
-            ->postJson("/api/admin/grading-rubrics/{$rubric->rubric_id}/criteria/sync", [
+            ->putJson("/api/admin/grading-rubrics/{$rubric->rubric_id}/criteria", [
                 'criteria' => [
                     ['criterion_name' => 'C1', 'score_levels' => json_encode([['score' => 70, 'desc' => 'Excellent']])],
                     ['criterion_name' => 'C2', 'score_levels' => json_encode([['score' => 45, 'desc' => 'Excellent']])],
@@ -2165,7 +2165,7 @@ class AdminGradingRubricTest extends TestCase
         ]);
 
         $this->actingAs($this->admin, 'expert')
-            ->postJson("/api/admin/grading-rubrics/{$rubric->rubric_id}/criteria/sync", [
+            ->putJson("/api/admin/grading-rubrics/{$rubric->rubric_id}/criteria", [
                 'criteria' => [
                     ['criterion_name' => 'C1', 'score_levels' => json_encode([['score' => 40, 'desc' => 'Excellent']])],
                     ['criterion_name' => 'C2', 'score_levels' => json_encode([['score' => 55, 'desc' => 'Excellent']])],

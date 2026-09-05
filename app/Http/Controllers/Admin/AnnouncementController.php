@@ -274,14 +274,13 @@ class AnnouncementController extends Controller
         return response()->json(['success' => true]);
     }
 
-    public function verifySubmission(Request $request, Announcement $announcement)
+    public function verifySubmission(Request $request, Announcement $announcement, int $submission)
     {
         $data = $request->validate([
-            'submission_id' => 'required|integer|exists:student_milestones,id',
             'verified' => 'required|boolean',
         ]);
 
-        $submission = StudentMilestone::findOrFail($data['submission_id']);
+        $submission = StudentMilestone::findOrFail($submission);
 
         $submission->update([
             'is_verified' => $data['verified'],

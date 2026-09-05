@@ -44,7 +44,7 @@ Route::middleware(['web', 'expert.auth'])
                 Route::get('/windows', [AdminPanelAssignmentController::class, 'indexWindows'])->name('windows.index');
                 Route::put('/windows/{defenseType}', [AdminPanelAssignmentController::class, 'updateWindow'])->name('windows.update');
                 Route::put('/schedule/{defense}', [AdminPanelAssignmentController::class, 'updateSchedule'])->name('schedule.update');
-                Route::post('/bulk', [AdminPanelAssignmentController::class, 'storeMultiple'])->name('store.bulk');
+                Route::post('/', [AdminPanelAssignmentController::class, 'storeMultiple'])->name('store.bulk');
                 Route::get('/suggest-multi', [AdminPanelAssignmentController::class, 'suggestExpertsMultiple'])->name('suggest-multi');
                 Route::get('/suggest-teams', [AdminPanelAssignmentController::class, 'suggestTeamsForPanel'])->name('suggest-teams');
                 Route::post('/{team}', [AdminPanelAssignmentController::class, 'store'])->name('store');
@@ -53,7 +53,7 @@ Route::middleware(['web', 'expert.auth'])
 
             // Grading Rubrics
             Route::prefix('grading-rubrics')->name('api.admin.grading-rubrics.')->group(function () {
-                Route::post('/ai-generate', [AdminGradingRubricController::class, 'aiGenerate'])->name('ai-generate');
+                Route::post('/drafts', [AdminGradingRubricController::class, 'aiGenerate'])->name('drafts.store');
                 Route::get('/', [AdminGradingRubricController::class, 'index'])->name('index');
                 Route::get('/{gradingRubric}', [AdminGradingRubricController::class, 'show'])->name('show');
                 Route::post('/', [AdminGradingRubricController::class, 'store'])->name('store');
@@ -62,7 +62,7 @@ Route::middleware(['web', 'expert.auth'])
                 Route::post('/{gradingRubric}/criteria', [AdminGradingRubricController::class, 'storeCriterion'])->name('criteria.store');
                 Route::put('/{gradingRubric}/criteria/{rubricCriterion}', [AdminGradingRubricController::class, 'updateCriterion'])->name('criteria.update');
                 Route::delete('/{gradingRubric}/criteria/{rubricCriterion}', [AdminGradingRubricController::class, 'destroyCriterion'])->name('criteria.destroy');
-                Route::post('/{gradingRubric}/criteria/sync', [AdminGradingRubricController::class, 'syncCriteria'])->name('criteria.sync');
+                Route::put('/{gradingRubric}/criteria', [AdminGradingRubricController::class, 'syncCriteria'])->name('criteria.sync');
             });
 
             // Financial Records - CAPSA checks uploaded payment receipts to
@@ -85,7 +85,7 @@ Route::middleware(['web', 'expert.auth'])
             Route::post('/announcements', [AnnouncementController::class, 'store'])->name('api.admin.announcements.store');
             Route::put('/announcements/{announcement}', [AnnouncementController::class, 'update'])->name('api.admin.announcements.update');
             Route::delete('/announcements/{announcement}', [AnnouncementController::class, 'destroy'])->name('api.admin.announcements.destroy');
-            Route::post('/announcements/{announcement}/verify-submission', [AnnouncementController::class, 'verifySubmission'])->name('api.admin.announcements.verify-submission');
+            Route::patch('/announcements/{announcement}/submissions/{submission}', [AnnouncementController::class, 'verifySubmission'])->name('api.admin.announcements.submissions.update');
 
             Route::post('/archive', [ArchiveController::class, 'store'])->name('api.admin.archive.store');
             Route::put('/archive/{archive}', [ArchiveController::class, 'update'])->name('api.admin.archive.update');

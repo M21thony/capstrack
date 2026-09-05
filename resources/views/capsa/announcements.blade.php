@@ -774,14 +774,14 @@ function openReviewModal(el) {
 }
 
 function verifySubmission(annId, submissionId, verified) {
-  fetch('/api/admin/announcements/' + annId + '/verify-submission', {
-    method: 'POST',
+  fetch('/api/admin/announcements/' + annId + '/submissions/' + submissionId, {
+    method: 'PATCH',
     headers: {
       'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
       'Content-Type': 'application/json',
       'Accept': 'application/json',
     },
-    body: JSON.stringify({ submission_id: submissionId, verified: verified }),
+    body: JSON.stringify({ verified: verified }),
   })
     .then(function(r) { return r.json(); })
     .then(function() { location.reload(); })
