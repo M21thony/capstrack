@@ -125,20 +125,30 @@ class GoogleDriveController extends Controller
     // ── Upload a file: pushes it to Drive, then saves a resources row ────
     public function upload(Request $request)
     {
+        // A folder arrives as files[] - the browser has no way to send a
+        // folder, it sends what is inside one - so the only difference here is
+        // how many came, and where each title comes from.
+        $isBatch = $request->hasFile('files');
+
+        $isAllowedType = function ($attribute, $value, $fail) {
+            $allowedExtensions = ['pdf', 'doc', 'docx', 'ppt', 'pptx'];
+            $ext = strtolower($value->getClientOriginalExtension());
+            if (! in_array($ext, $allowedExtensions)) {
+                $fail('The file must be a PDF, DOC, DOCX, PPT, or PPTX.');
+            }
+        };
+
         $request->validate([
-            'file' => [
-                'required',
-                'file',
-                'max:25600', // 25 MB
-                function ($attribute, $value, $fail) {
-                    $allowedExtensions = ['pdf', 'doc', 'docx', 'ppt', 'pptx'];
-                    $ext = strtolower($value->getClientOriginalExtension());
-                    if (! in_array($ext, $allowedExtensions)) {
-                        $fail('The file must be a PDF, DOC, DOCX, PPT, or PPTX.');
-                    }
-                },
-            ],
-            'title' => 'required|string|max:255',
+            'file' => [$isBatch ? 'nullable' : 'required', 'file', 'max:25600', $isAllowedType],
+
+            // Capped because this runs while the CaPSA waits - two Drive calls
+            // a file, no queue. Raise it when someone actually needs to.
+            'files' => [$isBatch ? 'required' : 'nullable', 'array', 'max:25'],
+            'files.*' => ['file', 'max:25600', $isAllowedType],
+
+            // A folder names its own files, so a title is only asked for when
+            // a single file was picked.
+            'title' => [$isBatch ? 'nullable' : 'required', 'string', 'max:255'],
             'category' => 'required|string|max:50',
             // Only a program this CaPSA actually handles. Without this the
             // page could be scoped and a hand-made request still file a
@@ -183,8 +193,12 @@ class GoogleDriveController extends Controller
         ]);
 
         try {
-            $file = $request->file('file');
+            $files = $isBatch
+                ? array_values($request->file('files'))
+                : [$request->file('file')];
             $category = $request->input('category');
+            $sections = array_unique($request->input('sections', []));
+            $created = [];
 
             // PHP's fileinfo-based MIME detection is unreliable for Office
             // files on some setups (e.g. .docx often detected as application/zip).
@@ -197,50 +211,69 @@ class GoogleDriveController extends Controller
                 'ppt' => 'application/vnd.ms-powerpoint',
                 'pptx' => 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
             ];
-            $ext = strtolower($file->getClientOriginalExtension());
-            $correctMimeType = $extensionMimeMap[$ext] ?? $file->getMimeType();
+            foreach ($files as $file) {
+                $ext = strtolower($file->getClientOriginalExtension());
+                $correctMimeType = $extensionMimeMap[$ext] ?? $file->getMimeType();
 
-            $uploaded = $this->drive->uploadFile(
-                Auth::guard('expert')->id(),
-                $file->getRealPath(),
-                $file->getClientOriginalName(),
-                $correctMimeType,
-                $request->input('drive_folder_id')
-            );
+                $uploaded = $this->drive->uploadFile(
+                    Auth::guard('expert')->id(),
+                    $file->getRealPath(),
+                    $file->getClientOriginalName(),
+                    $correctMimeType,
+                    $request->input('drive_folder_id')
+                );
 
-            $resource = Resource::create([
-                'resource_type' => Resource::typeForCategory($category),
-                // Named sections carry the program in their labels, so the
-                // program column stays empty for those - one fact, one place.
-                'resource_for' => $request->filled('sections') ? null : $request->input('resource_for'),
-                'category' => $category,
-                'title' => $request->input('title'),
-                'description' => $request->input('description'),
-                'file_name' => $file->getClientOriginalName(),
-                'file_path' => null, // real file lives on Drive; see drive_web_view_link
-                'file_size' => $file->getSize(),
-                'file_type' => $ext,
-                'content_type' => 'file',
-                'external_url' => null,
-                'is_downloadable' => true,
-                'drive_file_id' => $uploaded['id'],
-                'drive_folder_id' => $request->input('drive_folder_id'),
-                'drive_web_view_link' => $uploaded['web_view_link'],
-                'uploaded_at' => now(),
-                'uploaded_by' => Auth::guard('expert')->id(),
-            ]);
+                $resource = Resource::create([
+                    'resource_type' => Resource::typeForCategory($category),
+                    // Named sections carry the program in their labels, so the
+                    // program column stays empty for those - one fact, one place.
+                    'resource_for' => $request->filled('sections') ? null : $request->input('resource_for'),
+                    'category' => $category,
+                    'title' => $isBatch
+                        ? self::titleFrom($file->getClientOriginalName())
+                        : $request->input('title'),
+                    'description' => $request->input('description'),
+                    'file_name' => $file->getClientOriginalName(),
+                    'file_path' => null, // real file lives on Drive; see drive_web_view_link
+                    'file_size' => $file->getSize(),
+                    'file_type' => $ext,
+                    'content_type' => 'file',
+                    'external_url' => null,
+                    'is_downloadable' => true,
+                    'drive_file_id' => $uploaded['id'],
+                    'drive_folder_id' => $request->input('drive_folder_id'),
+                    'drive_web_view_link' => $uploaded['web_view_link'],
+                    'uploaded_at' => now(),
+                    'uploaded_by' => Auth::guard('expert')->id(),
+                ]);
 
-            foreach (array_unique($request->input('sections', [])) as $section) {
-                $resource->sections()->create(['section' => $section]);
+                foreach ($sections as $section) {
+                    $resource->sections()->create(['section' => $section]);
+                }
+
+                $created[] = $resource->load('sections');
             }
 
             return response()->json([
                 'success' => true,
-                'resource' => $resource->load('sections'),
+                'resources' => $created,
+                // The single-file caller still reads this.
+                'resource' => $created[0] ?? null,
             ]);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
         }
+    }
+
+    /**
+     * A readable title out of a filename, for files uploaded in bulk where
+     * nobody typed one: "Chapter_1-3 Template.docx" -> "Chapter 1 3 Template".
+     */
+    private static function titleFrom(string $filename): string
+    {
+        $stem = pathinfo($filename, PATHINFO_FILENAME);
+
+        return trim(preg_replace('/[-_]+/', ' ', $stem)) ?: $filename;
     }
 
     public function destroy(Resource $resource)
