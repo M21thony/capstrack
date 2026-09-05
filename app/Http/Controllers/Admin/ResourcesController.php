@@ -32,6 +32,10 @@ class ResourcesController extends Controller
             // rather than every program in the school.
             'mySections' => $viewer?->sections ?? [],
             'isAdmin' => (bool) $viewer?->is_admin,
+            // Without a Picker key there is no "Choose from Drive" to offer,
+            // so the button is not drawn rather than drawn broken.
+            'pickerKey' => config('services.google.picker_api_key'),
+            'googleClientId' => config('services.google.client_id'),
         ]);
     }
 }

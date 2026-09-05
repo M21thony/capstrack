@@ -86,6 +86,12 @@
         </span>
         <a href="{{ route('gdrive.connect') }}" class="btn btn-primary" id="gdrive-connect-btn" style="font-size:12px;display:none">Connect Google Drive</a>
         <button class="btn btn-ghost" id="gdrive-disconnect-btn" style="font-size:12px;display:none" onclick="disconnectDrive()">Disconnect</button>
+        @if ($pickerKey && $googleClientId)
+          <button class="btn btn-ghost" id="pick-drive-btn" style="font-size:12.5px;display:none" onclick="openDrivePicker()">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 4h5l2 2h9v13H4z"/></svg>
+            Choose from Drive
+          </button>
+        @endif
         <button class="btn btn-primary" id="open-upload-btn" style="font-size:12.5px" onclick="openUpload()">
           <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
           Upload
@@ -211,6 +217,65 @@
       </div>
     </div>
 
+    {{-- What the Picker hands back, before any of it is written down. Close
+         this and nothing was imported. --}}
+    <div class="upload-scrim" id="import-scrim" hidden onclick="closeImport(event)">
+      <div class="upload-sheet" onclick="event.stopPropagation()">
+        <div class="card" style="padding:16px;box-shadow:none;border:0">
+          <div class="card-header">
+            <span class="card-title">Take these on</span>
+            <button onclick="closeImport()" style="background:none;border:none;font-size:11px;color:var(--text3);cursor:pointer">Cancel</button>
+          </div>
+
+          <p class="import-warn">
+            <svg viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
+            <span>These files stay in your Drive — nothing is copied. They will be made
+            <b>viewable by anyone with the link</b>, which is how students open them.</span>
+          </p>
+
+          <div class="import-list" id="import-list"></div>
+
+          <div class="form-group" style="margin-top:14px">
+            <label class="label">Category</label>
+            <select class="input" id="import-category">
+              <option value="">Select a category…</option>
+              <option value="pre-proposal">Pre-Proposal Template</option>
+              <option value="ch1-3">Chapter 1–3 Template</option>
+              <option value="ch4-5">Chapter 4–5 Template</option>
+              <option value="final">Final Manuscript Template</option>
+              <option value="presentation">Presentation Template</option>
+              <option value="lesson">Lesson / Reference Material</option>
+              <option value="forms">Forms &amp; Checklists</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+
+          @if (! $isAdmin && count($mySections))
+          <div class="form-group">
+            <label class="label">
+              Who should be able to open these?
+              <span class="req-chip">Pick at least one</span>
+            </label>
+            <div class="section-picker" id="import-sections">
+              @foreach ($mySections as $sectionLabel)
+                <label class="section-box">
+                  <input type="checkbox" value="{{ $sectionLabel }}">
+                  <span class="section-tick">
+                    <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+                  </span>
+                  <span class="section-name">{{ $sectionLabel }}</span>
+                </label>
+              @endforeach
+            </div>
+            <p class="section-hint">The same sections apply to everything in this batch.</p>
+          </div>
+          @endif
+
+          <button class="btn btn-primary" id="import-btn" style="width:100%;justify-content:center;font-size:13px;margin-top:4px" onclick="runImport()">Take on&nbsp;<span id="import-count">0</span>&nbsp;files</button>
+        </div>
+      </div>
+    </div>
+
     {{-- Four filters, one row, left to right in the order someone narrows:
          what kind of file, who it is for, where it lives, then free text. --}}
     <div class="lib-bar">
@@ -265,6 +330,7 @@ const ROUTES = {
   folders: "{{ route('gdrive.folders.index') }}",
   createFolder: "{{ route('gdrive.folders.store') }}",
   upload: "{{ route('gdrive.resources.store') }}",
+  import: "{{ route('gdrive.imports.store') }}",
   destroy: (id) => `{{ url('admin/gdrive/resources') }}/${id}`,
 };
 
@@ -289,6 +355,8 @@ function mapResource(r) {
 }
 
 const MY_SECTIONS = @json($mySections);
+const PICKER_KEY = @json($pickerKey);
+const GOOGLE_CLIENT_ID = @json($googleClientId);
 
 let resources = rawResources.map(mapResource);
 
@@ -556,6 +624,179 @@ function clearFile(){
   if(nameGroup) nameGroup.style.display = '';
 }
 
+// -- CHOOSE FROM DRIVE ------------------------------------------------------
+// The Picker runs in the browser and hands back ids, not files. Nothing is
+// uploaded: the server is told which files to take on, and the only change
+// made to them is the sharing.
+let picked = [];
+let pickerReady = false;
+let driveToken = null;
+
+function loadPicker(){
+  if(!PICKER_KEY || !GOOGLE_CLIENT_ID) return;
+
+  const gapiScript = document.createElement('script');
+  gapiScript.src = 'https://apis.google.com/js/api.js';
+  gapiScript.onload = function(){
+    gapi.load('picker', function(){
+      pickerReady = true;
+      const btn = document.getElementById('pick-drive-btn');
+      if(btn && GDRIVE_CONNECTED) btn.style.display = 'inline-flex';
+    });
+  };
+  document.head.appendChild(gapiScript);
+
+  const gsi = document.createElement('script');
+  gsi.src = 'https://accounts.google.com/gsi/client';
+  document.head.appendChild(gsi);
+}
+
+function openDrivePicker(){
+  if(!pickerReady){ showToast('Google Drive is still loading — try again in a moment.'); return; }
+
+  // A fresh browser-side token rather than the one the server keeps, so the
+  // stored credentials never reach the page.
+  const client = google.accounts.oauth2.initTokenClient({
+    client_id: GOOGLE_CLIENT_ID,
+    scope: 'https://www.googleapis.com/auth/drive.file',
+    callback: function(resp){
+      if(resp.error){ showToast('Google would not grant access.'); return; }
+      driveToken = resp.access_token;
+      showPicker();
+    },
+  });
+
+  client.requestAccessToken();
+}
+
+function showPicker(){
+  const view = new google.picker.DocsView(google.picker.ViewId.DOCS)
+    .setIncludeFolders(true)
+    .setSelectFolderEnabled(true)
+    .setMimeTypes([
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-powerpoint',
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      'application/vnd.google-apps.document',
+      'application/vnd.google-apps.presentation',
+    ].join(','));
+
+  new google.picker.PickerBuilder()
+    .setTitle('Choose templates and lessons')
+    .setDeveloperKey(PICKER_KEY)
+    .setOAuthToken(driveToken)
+    .addView(view)
+    .addView(new google.picker.DocsView(google.picker.ViewId.DOCS).setEnableDrives(true))
+    .enableFeature(google.picker.Feature.MULTISELECT_ENABLED)
+    .setCallback(onPicked)
+    .build()
+    .setVisible(true);
+}
+
+function onPicked(data){
+  if(data.action !== google.picker.Action.PICKED) return;
+
+  picked = (data.docs || []).map(function(d){
+    return { id: d.id, name: d.name, mimeType: d.mimeType, isFolder: d.type === 'folder' };
+  });
+
+  if(!picked.length) return;
+  openImport();
+}
+
+function openImport(){
+  renderImportList();
+  document.getElementById('import-scrim').hidden = false;
+  document.body.style.overflow = 'hidden';
+}
+
+function closeImport(e){
+  if(e && e.target !== document.getElementById('import-scrim')) return;
+  document.getElementById('import-scrim').hidden = true;
+  document.body.style.overflow = '';
+}
+
+function renderImportList(){
+  const list = document.getElementById('import-list');
+
+  list.innerHTML = picked.map(function(f, i){
+    return '<div class="import-row">'
+      + '<span class="import-name" title="' + esc(f.name) + '">' + esc(f.name) + '</span>'
+      + (f.isFolder ? '<span class="pill pill-all">folder</span>' : '')
+      + '<button class="lib-icon" title="Leave this out" onclick="dropPicked(' + i + ')">'
+      + '<svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'
+      + '</button></div>';
+  }).join('');
+
+  document.getElementById('import-count').textContent = picked.length;
+  document.getElementById('import-btn').disabled = !picked.length;
+}
+
+function dropPicked(i){
+  picked.splice(i, 1);
+  if(!picked.length){ closeImport(); return; }
+  renderImportList();
+}
+
+function runImport(){
+  const category = document.getElementById('import-category').value;
+  const sections = Array.prototype.map.call(
+    document.querySelectorAll('#import-sections input:checked'), function(i){ return i.value; }
+  );
+
+  if(!category){ document.getElementById('import-category').focus(); showToast('Please choose a category.'); return; }
+  if(MY_SECTIONS.length && !sections.length){
+    document.getElementById('import-sections').classList.add('needs-pick');
+    showToast('Pick at least one section, so students can find these.');
+    return;
+  }
+
+  const btn = document.getElementById('import-btn');
+  const original = btn.innerHTML;
+  btn.disabled = true;
+  btn.textContent = 'Taking on ' + picked.length + '…';
+
+  fetch(ROUTES.import, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'X-CSRF-TOKEN': CSRF_TOKEN,
+    },
+    body: JSON.stringify({
+      files: picked.map(function(f){
+        return { drive_file_id: f.id, category: category, sections: sections };
+      }),
+    }),
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(data){
+    btn.disabled = false;
+    btn.innerHTML = original;
+
+    const added = data.resources || [];
+    added.slice().reverse().forEach(function(r){ resources.unshift(mapResource(r)); });
+
+    if(!data.success){ showToast(data.message || 'Some files could not be taken on.'); }
+
+    picked = [];
+    closeImport();
+    clearFilters();
+
+    const parts = [];
+    if(added.length) parts.push(added.length + (added.length === 1 ? ' file added' : ' files added'));
+    if(data.skipped) parts.push(data.skipped + ' already here');
+    if(parts.length) showToast(parts.join(' · ') + '.');
+  })
+  .catch(function(){
+    btn.disabled = false;
+    btn.innerHTML = original;
+    showToast('Could not reach Google Drive.');
+  });
+}
+
 // -- GOOGLE DRIVE CONNECTION STATUS -----------------------------------------
 function refreshDriveStatus(){
   fetch(ROUTES.status)
@@ -574,6 +815,8 @@ function refreshDriveStatus(){
         dot.className = 'drive-dot drive-dot-on';
         connectBtn.style.display = 'none';
         disconnectBtn.style.display = 'inline-flex';
+        const pickBtn = document.getElementById('pick-drive-btn');
+        if(pickBtn && pickerReady) pickBtn.style.display = 'inline-flex';
       } else {
         text.textContent = 'Drive not connected';
         dot.className = 'drive-dot drive-dot-off';
@@ -825,6 +1068,7 @@ populateFolderSelect();
 populateFolderFilter();
 renderCards();
 refreshDriveStatus();
+loadPicker();
 
 
 /* Mobile sidebar toggle */

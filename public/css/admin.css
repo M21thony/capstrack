@@ -1557,3 +1557,17 @@ textarea.input{resize:vertical;min-height:80px}
   .lib-who{flex:1 1 100%;order:3}
   .lib-when{flex:0 0 auto;order:2}
 }
+
+/* ══ taking on files that are already in Drive ══ */
+.import-warn{display:flex;gap:9px;align-items:flex-start;font-size:12px;line-height:1.55;
+  color:var(--amber);background:var(--amber-bg);border:1px solid rgba(180,83,9,.25);
+  border-radius:8px;padding:10px 12px;margin-bottom:12px}
+.import-warn svg{width:14px;height:14px;flex:0 0 14px;margin-top:2px;stroke:currentColor;fill:none;stroke-width:2}
+.import-warn b{color:var(--amber)}
+
+.import-list{max-height:230px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;
+  background:var(--bg3)}
+.import-row{display:flex;align-items:center;gap:9px;padding:8px 11px;border-top:1px solid var(--bg4)}
+.import-row:first-child{border-top:0}
+.import-name{flex:1;min-width:0;font-size:12.5px;color:var(--text);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}

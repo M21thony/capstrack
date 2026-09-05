@@ -141,6 +141,43 @@ class GoogleDriveService
         ];
     }
 
+    /**
+     * Take on a file the user already owns, picked through the Google Picker.
+     *
+     * Nothing is copied: the file stays where it is and we record where to
+     * find it. The one change made to it is the sharing - students open these
+     * with no Drive access of their own, which is why uploads are made
+     * link-viewable, and an imported file is not until this runs. That is a
+     * real change to a file someone else owns, so the page says so before
+     * asking for it.
+     *
+     * @return array{id: string, name: string, mime_type: string, size: ?int, web_view_link: ?string}
+     */
+    public function importFile(int $userId, string $fileId): array
+    {
+        $client = $this->clientForUser($userId);
+        $service = new GoogleDrive($client);
+
+        $file = $service->files->get($fileId, [
+            'fields' => 'id, name, mimeType, size, webViewLink',
+        ]);
+
+        $service->permissions->create($fileId, new Permission([
+            'type' => 'anyone',
+            'role' => 'reader',
+        ]));
+
+        return [
+            'id' => $file->getId(),
+            'name' => $file->getName(),
+            'mime_type' => $file->getMimeType(),
+            // A native Google Doc has no byte size and no extension; the link
+            // is the whole of it.
+            'size' => $file->getSize() ? (int) $file->getSize() : null,
+            'web_view_link' => $file->getWebViewLink(),
+        ];
+    }
+
     public function uploadFile(int $userId, string $localPath, string $filename, string $mimeType, ?string $folderId = null): array
     {
         $client = $this->clientForUser($userId);
