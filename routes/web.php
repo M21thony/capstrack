@@ -314,8 +314,7 @@ Route::middleware(['auth', 'no.cache', 'track.expert'])->group(function () {
     Route::delete('/recruitment/{recruitment}', [RecruitmentController::class, 'destroy'])->name('recruitment.destroy');
 
     Route::post('/invitations', [InvitationController::class, 'store'])->name('invitations.store');
-    Route::post('/invitations/{invitation}/accept', [InvitationController::class, 'accept'])->name('invitations.accept');
-    Route::post('/invitations/{invitation}/decline', [InvitationController::class, 'decline'])->name('invitations.decline');
+    Route::patch('/invitations/{invitation}', [InvitationController::class, 'update'])->name('invitations.update');
     Route::post('/invitations/{invitation}/remind-later', [InvitationController::class, 'remindLater'])->name('invitations.remind-later');
     Route::get('/invitations/popup', [InvitationController::class, 'popup'])->name('invitations.popup');
 

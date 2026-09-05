@@ -408,7 +408,7 @@ class RecruitmentTest extends TestCase
 
         $this->actingAs($receiver);
 
-        $response = $this->post("/invitations/{$invitation->id}/accept");
+        $response = $this->patch("/invitations/{$invitation->id}", ['status' => 'accepted']);
 
         $response->assertRedirect(route('student.team'));
         $response->assertSessionHas('status', 'Welcome to the team!');
@@ -455,7 +455,7 @@ class RecruitmentTest extends TestCase
 
         $this->actingAs($receiver);
 
-        $response = $this->post("/invitations/{$invitation->id}/decline");
+        $response = $this->patch("/invitations/{$invitation->id}", ['status' => 'declined']);
 
         $response->assertRedirect(route('student.team'));
         $response->assertSessionHas('status', 'Invitation declined.');
