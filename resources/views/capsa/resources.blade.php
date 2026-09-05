@@ -86,12 +86,6 @@
         </span>
         <a href="{{ route('gdrive.connect') }}" class="btn btn-primary" id="gdrive-connect-btn" style="font-size:12px;display:none">Connect Google Drive</a>
         <button class="btn btn-ghost" id="gdrive-disconnect-btn" style="font-size:12px;display:none" onclick="disconnectDrive()">Disconnect</button>
-        @if ($pickerKey && $googleClientId)
-          <button class="btn btn-ghost" id="pick-drive-btn" style="font-size:12.5px;display:none" onclick="openDrivePicker()">
-            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 4h5l2 2h9v13H4z"/></svg>
-            Choose from Drive
-          </button>
-        @endif
         <button class="btn btn-primary" id="open-upload-btn" style="font-size:12.5px" onclick="openUpload()">
           <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
           Upload
@@ -123,13 +117,22 @@
               <div class="dropzone-label">Drop file here or click to browse</div>
               <div class="dropzone-sub">PDF, DOCX, PPTX — max 25 MB</div>
             </div>
-            {{-- A browser cannot send a folder, only what is inside one, so this
-                 quietly turns into a list of files. --}}
-            <label class="folder-pick">
-              <input type="file" id="folder-input" webkitdirectory multiple onchange="onFolderSelect(event)">
-              <svg viewBox="0 0 24 24"><path d="M4 4h5l2 2h9v13H4z"/></svg>
-              Upload a whole folder instead
-            </label>
+            {{-- The other two places files come from. A browser cannot send a
+                 folder, only what is inside one, so that option quietly turns
+                 into a list of files; the Drive option copies nothing at all. --}}
+            <div class="source-row">
+              <label class="folder-pick">
+                <input type="file" id="folder-input" webkitdirectory multiple onchange="onFolderSelect(event)">
+                <svg viewBox="0 0 24 24"><path d="M4 4h5l2 2h9v13H4z"/></svg>
+                Upload a whole folder
+              </label>
+              @if ($pickerKey && $googleClientId)
+                <button type="button" class="folder-pick" id="pick-drive-btn" style="display:none" onclick="openDrivePicker()">
+                  <svg viewBox="0 0 24 24"><path d="M12 15V3m0 0L8 7m4-4 4 4"/><path d="M3 15v4a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-4"/></svg>
+                  Choose from Drive
+                </button>
+              @endif
+            </div>
             <div class="upload-preview" id="upload-preview">
               <div id="preview-ftype" class="ftype ftype-pdf" style="width:32px;height:32px;font-size:8px">PDF</div>
               <div class="upload-preview-name" id="preview-name">document.pdf</div>
@@ -717,6 +720,11 @@ function onPicked(data){
 }
 
 function openImport(){
+  // The panel it was opened from has nothing more to say - what happens next
+  // is the review list.
+  const uploadScrim = document.getElementById('upload-scrim');
+  if(uploadScrim) uploadScrim.hidden = true;
+
   renderImportList();
   document.getElementById('import-scrim').hidden = false;
   document.body.style.overflow = 'hidden';
