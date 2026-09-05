@@ -199,10 +199,6 @@
               <div class="l">Total Files</div>
             </div>
             <div class="alltime-chip">
-              <div class="n" id="stat-downloads" style="color:var(--blue)">0</div>
-              <div class="l">Downloads</div>
-            </div>
-            <div class="alltime-chip">
               <div class="n" id="stat-bsit" style="color:var(--green)">0</div>
               <div class="l">BSIT</div>
             </div>
@@ -268,7 +264,6 @@ const ROUTES = {
   folders: "{{ route('gdrive.folders.index') }}",
   createFolder: "{{ route('gdrive.folders.store') }}",
   upload: "{{ route('gdrive.upload') }}",
-  download: (id) => `{{ url('admin/gdrive/resources') }}/${id}/download`,
   destroy: (id) => `{{ url('admin/gdrive/resources') }}/${id}`,
 };
 
@@ -284,7 +279,6 @@ function mapResource(r) {
     size: r.file_size ? formatSize(r.file_size) : '—',
     driveLink: r.drive_web_view_link,
     driveFolderId: r.drive_folder_id || null,
-    downloads: r.downloads || 0,
     date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
   };
 }
@@ -373,11 +367,6 @@ function renderCards(){
         </div>
         <div class="resource-info">
           <span>
-            <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><path d="M12 15V3"/></svg>
-            ${r.downloads} downloads
-          </span>
-          <span>·</span>
-          <span>
             <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
             ${r.date}
           </span>
@@ -403,7 +392,6 @@ function renderCards(){
 
 function updateStats(){
   document.getElementById('stat-total').textContent = resources.length;
-  document.getElementById('stat-downloads').textContent = resources.reduce((a,r)=>a+r.downloads,0);
   document.getElementById('stat-bsit').textContent = resources.filter(r=>r.program==='BSIT').length;
   document.getElementById('stat-all-programs').textContent = resources.filter(r=>!r.program).length;
 }
@@ -613,16 +601,7 @@ function downloadResource(id, btn){
   btn.classList.add('btn-downloading');
   btn.textContent='Opening…';
 
-  fetch(ROUTES.download(id), {
-    method: 'POST',
-    headers: { 'X-CSRF-TOKEN': CSRF_TOKEN },
-  })
-  .then(r2 => r2.json())
-  .then(data => {
-    if(data.success){ r.downloads = data.downloads; renderCards(); }
-    window.open(r.driveLink, '_blank');
-  })
-  .catch(() => window.open(r.driveLink, '_blank'));
+  window.open(r.driveLink, '_blank');
 }
 
 // -- DELETE ---------------------------------------------------------------------

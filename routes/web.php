@@ -415,7 +415,6 @@ Route::middleware(['expert.auth', 'track.expert'])->prefix('admin/gdrive')->name
     Route::post('/submission-folders', [GoogleDriveController::class, 'storeSubmissionFolder'])->name('submission-folders.store');
     Route::delete('/submission-folders/{id}', [GoogleDriveController::class, 'destroySubmissionFolder'])->name('submission-folders.destroy');
     Route::post('/upload', [GoogleDriveController::class, 'upload'])->name('upload');
-    Route::post('/resources/{resource}/download', [GoogleDriveController::class, 'trackDownload'])->name('resources.download');
     Route::delete('/resources/{resource}', [GoogleDriveController::class, 'destroy'])->name('resources.destroy');
 });
 
