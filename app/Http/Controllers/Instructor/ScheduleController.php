@@ -351,7 +351,7 @@ class ScheduleController extends Controller
     }
 
     // Toggle availability without deleting
-    // PATCH /instructor/schedule/slots/{id}/toggle
+    // PUT /instructor/schedule/slots/{id}/availability
     public function setAvailability(Request $request, int $id)
     {
         $expert = Auth::guard('expert')->user();

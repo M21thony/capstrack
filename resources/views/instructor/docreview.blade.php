@@ -174,8 +174,8 @@
 function disconnectDrive(){
   if (!confirm('Disconnect Google Drive? Annotated PDFs will stop syncing until you reconnect.')) return;
 
-  fetch("{{ route('gdrive.disconnect') }}", {
-    method: 'POST',
+  fetch("{{ route('gdrive.connection.destroy') }}", {
+    method: 'DELETE',
     headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content },
   })
     .then((r) => r.json())

@@ -495,7 +495,7 @@ class AdminGradingRubricController extends Controller
 
     public function __construct(private OllamaSSHClient $ollama) {}
 
-    // POST /api/admin/grading-rubrics/ai-generate — drafts a rubric (name,
+    // POST /api/admin/grading-rubrics/drafts — drafts a rubric (name,
     // description, criteria with per-level narrative descriptions) via the
     // same Ollama model used by the duplication checker. Scores are NOT
     // taken from the model; they're computed deterministically afterward

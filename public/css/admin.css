@@ -1524,7 +1524,7 @@ textarea.input{resize:vertical;min-height:80px}
 .upload-scrim{position:fixed;inset:0;background:rgba(24,25,31,.45);z-index:60;
   display:flex;align-items:flex-start;justify-content:center;padding:40px 20px;overflow-y:auto}
 .upload-scrim[hidden]{display:none}
-.upload-sheet{width:100%;max-width:560px;background:var(--bg2);border-radius:12px;
+.upload-sheet{width:100%;max-width:760px;background:var(--bg2);border-radius:12px;
   box-shadow:0 24px 60px rgba(24,25,31,.28)}
 
 /* ══ picking sections has to look like picking ══
@@ -1571,3 +1571,27 @@ textarea.input{resize:vertical;min-height:80px}
 .import-row:first-child{border-top:0}
 .import-name{flex:1;min-width:0;font-size:12.5px;color:var(--text);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* ══ the sheets read across, not down ══
+   Three short answers about one file sat stacked, which turned a panel into a
+   column you scroll. On one line the whole form is visible at once. */
+.sheet-row{display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap}
+.sheet-row .form-group{margin-bottom:14px}
+.sheet-col{flex:1 1 190px;min-width:0}
+.sheet-col-2{flex:2 1 260px;min-width:0}
+/* Anything that is a list of choices rather than one answer gets its own line. */
+.sheet-full{flex:1 1 100%;min-width:0}
+
+.sheet-head{align-items:center}
+.sheet-head-right{display:flex;align-items:center;gap:6px;margin-left:auto}
+.sheet-clear{background:none;border:none;font-size:11px;color:var(--text3);cursor:pointer;padding:4px 6px}
+.sheet-clear:hover{color:var(--text2)}
+.sheet-x{width:28px;height:28px;border-radius:6px;border:1px solid transparent;background:none;
+  display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;transition:all .13s}
+.sheet-x svg{width:14px;height:14px;stroke:var(--text3);fill:none;stroke-width:2.2}
+.sheet-x:hover{background:var(--bg4);border-color:var(--border)}
+.sheet-x:hover svg{stroke:var(--text)}
+
+@media (max-width:620px){
+  .sheet-col,.sheet-col-2{flex:1 1 100%}
+}
