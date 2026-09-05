@@ -124,7 +124,7 @@ select.input{cursor:pointer}
 /* ── SIGNATURE CREDENTIALS ── */
 /* Spans the full width under both columns. It is a direct child of the
    two-column grid, so without this it would be placed into one column. */
-.legal-credits{grid-column:1 / -1;grid-row:3;margin-top:60px;padding-top:20px;border-top:1px dashed var(--border);text-align:center;opacity:0.5;padding-bottom:20px}
+.legal-credits{grid-column:1 / -1;grid-row:3;margin-top:0;padding-top:12px;border-top:1px dashed var(--border);text-align:center;opacity:0.5;padding-bottom:0}
 .credits-title{font-variant-numeric:tabular-nums;font-size:8px;font-weight:600;letter-spacing:1px;color:var(--text3);text-transform:uppercase;margin-bottom:4px}
 .credits-names{font-size:9px;font-weight:500;color:var(--text3);letter-spacing:0.3px}
 
@@ -154,8 +154,11 @@ select.input{cursor:pointer}
    same 2-column grid one level deeper so .experts-main/.overview-panel resume
    correct placement. Real classes, not inline styles, so the mobile override
    below (and the existing @media(max-width:1024px) block) can reach them. */
-.content-grid-wrap{position:relative;grid-column:1 / -1;grid-row:1 / -1}
-.content-grid{display:grid;grid-template-columns:1fr 292px;grid-template-rows:auto 1fr;gap:22px}
+.content-grid-wrap{position:relative;grid-column:1 / -1;grid-row:1 / -1;height:100%;min-height:0}
+/* Three rows, not two: the credits are the third one. Left implicit they
+   flowed after whatever the results happened to be, which put them below
+   the fold and moved them every time the view changed. */
+.content-grid{display:grid;grid-template-columns:1fr 292px;grid-template-rows:auto 1fr auto;gap:22px;height:100%;min-height:0}
 
 
 /* top is -24px, not 0, and the 24 is .content's own padding-top above.
@@ -694,3 +697,7 @@ select.input{cursor:pointer}
   .seg{display:none}
   .tags{height:auto}
 }
+
+/* the two columns have to be allowed to be shorter than their content, or
+   the row cannot shrink and the page grows a scrollbar again */
+.experts-main,.overview-panel{min-height:0}
