@@ -808,7 +808,7 @@ window.submitReceipt = async function() {
   const formData = new FormData(form);
 
   try {
-    const response = await fetch('/api/student/financial/submit', {
+    const response = await fetch('/api/student/financial/receipts', {
       method: 'POST',
       headers: {
         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),

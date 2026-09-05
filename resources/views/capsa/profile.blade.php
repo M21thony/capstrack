@@ -492,6 +492,7 @@
 
       <form method="POST" action="{{ route('capsa.profile.update') }}" enctype="multipart/form-data">
         @csrf
+        @method('PUT')
 
         {{-- Identity strip: avatar + name/email --}}
         <div class="pf-card">

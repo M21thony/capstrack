@@ -128,7 +128,7 @@ Route::middleware('auth')->group(function () {
     // Student Financial
     Route::prefix('student/financial')->name('api.student.financial.')->group(function () {
         Route::get('/', [StudentFinancialController::class, 'index'])->name('index');
-        Route::post('/submit', [StudentFinancialController::class, 'store'])->name('submit');
+        Route::post('/receipts', [StudentFinancialController::class, 'store'])->name('submit');
         Route::get('/submissions', [StudentFinancialController::class, 'submissions'])->name('submissions');
         Route::get('/expense-posts', [StudentFinancialController::class, 'expensePosts'])->name('expense-posts');
         Route::get('/submissions/{financialRecord}', [StudentFinancialController::class, 'show'])->name('show');

@@ -87,6 +87,7 @@
       <div class="card-header"><span class="card-title">Current School Year</span></div>
       <form method="POST" action="{{ route('admin.settings.update') }}">
         @csrf
+        @method('PUT')
         <div style="margin-bottom:14px">
           <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text3);margin-bottom:6px">School Year</label>
           <input class="input" type="text" name="current_school_year" value="{{ old('current_school_year', $currentSchoolYear) }}" placeholder="2026-2027">

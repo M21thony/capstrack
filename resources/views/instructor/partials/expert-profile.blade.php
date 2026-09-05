@@ -571,7 +571,7 @@ async function saveExpertProfile(){
 
   try {
     const res = await fetch('{{ route('instructor.profile.update') }}', {
-      method: 'POST',
+      method: 'PUT',
       headers: {
         'X-CSRF-TOKEN': '{{ csrf_token() }}',
         'Accept': 'application/json',

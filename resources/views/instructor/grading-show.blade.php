@@ -323,13 +323,13 @@ function recordOutcome() {
     });
 }
 
-function postGrade(url, statusMsg) {
+function postGrade(url, statusMsg, method) {
   showFormError('');
   const saveStatus = document.getElementById('saveStatus');
   saveStatus.textContent = 'Saving…';
 
   fetch(url, {
-    method: 'POST',
+    method: method || 'POST',
     credentials: 'same-origin',
     headers: {
       'X-CSRF-TOKEN': document.querySelector('input[name="_token"]').value,
@@ -356,7 +356,7 @@ function postGrade(url, statusMsg) {
     });
 }
 
-function saveDraft() { postGrade('{{ route('instructor.grading.save', $defense->defense_id) }}', 'Draft saved.'); }
+function saveDraft() { postGrade('{{ route('instructor.grading.save', $defense->defense_id) }}', 'Draft saved.', 'PUT'); }
 function submitGrade() { postGrade('{{ route('instructor.grading.submit', $defense->defense_id) }}', 'Submitted! Redirecting…'); }
 
 updateScore();
