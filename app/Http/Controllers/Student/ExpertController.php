@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Student;
 
 use App\Http\Controllers\Controller;
 use App\Models\CapstoneExpert;
+use App\Models\CapstonePreProposal;
 use App\Models\Student;
 use App\Models\StudentSchoolYear;
 use App\Models\TeamExpertAssignment;
@@ -53,7 +54,6 @@ class ExpertController extends Controller
                 }
             }
         }
-
 
         // The base list this student is allowed to see. Reused for both the
         // page of results and the skill dropdown, so the dropdown can only
@@ -244,7 +244,7 @@ class ExpertController extends Controller
             // through the CaPSA, and asking for it again only invited a
             // different, unapproved file to be attached instead.
             'approvedProposal' => $team?->selected_pre_proposal_id
-                ? \App\Models\CapstonePreProposal::find($team->selected_pre_proposal_id)
+                ? CapstonePreProposal::find($team->selected_pre_proposal_id)
                 : null,
             'isLeader' => $isLeader,
             'teamConfirmed' => $team?->is_confirmed ?? false,
