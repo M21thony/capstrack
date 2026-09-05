@@ -156,8 +156,7 @@ Route::middleware('expert.capsa')->group(function () {
     // requires role_ids - so this stays CaPSA-only: assigning expert
     // categories is CaPSA's call, not Admin's.
     Route::get('/approval', [AdminApprovalController::class, 'index'])->name('approval');
-    Route::post('/approval/{expert_id}/approve', [AdminApprovalController::class, 'approve'])->name('approval.approve');
-    Route::post('/approval/{expert_id}/reject', [AdminApprovalController::class, 'reject'])->name('approval.reject');
+    Route::patch('/approval/{expert_id}', [AdminApprovalController::class, 'update'])->name('approval.update');
     Route::get('/panel_assignment', [AdminPanelAssignmentController::class, 'index'])->name('panel_assignment');
     // Team Management is the single page for everything about the teams
     // in a CaPSA's sections. Team Verification's actions keep their old
@@ -188,8 +187,7 @@ Route::middleware('expert.capsa')->group(function () {
     Route::post('/financial/expense-post', [AdminFinancialController::class, 'storeExpensePost'])->name('financial.expense-post.store');
     Route::put('/financial/expense-post/{expensePost}', [AdminFinancialController::class, 'updateExpensePost'])->name('financial.expense-post.update');
     Route::delete('/financial/expense-post/{expensePost}', [AdminFinancialController::class, 'destroyExpensePost'])->name('financial.expense-post.destroy');
-    Route::post('/financial/receipt/{financialRecord}/approve', [AdminFinancialController::class, 'approveReceipt'])->name('financial.receipt.approve');
-    Route::post('/financial/receipt/{financialRecord}/reject', [AdminFinancialController::class, 'rejectReceipt'])->name('financial.receipt.reject');
+    Route::patch('/financial/receipts/{financialRecord}', [AdminFinancialController::class, 'updateReceipt'])->name('financial.receipt.update');
     // Upload is a modal on Student Section List itself, not its own page.
     // The template is offered inside that same modal - a CaPSA who has to
     // go looking for it elsewhere ends up typing the headings by hand.
@@ -229,8 +227,7 @@ Route::middleware(['expert.auth', 'expert.approved', 'no.cache', 'track.expert']
     Route::get('/docreview', [DocReviewController::class, 'index'])->name('docreview');
     Route::get('/docreview/{review}/annotate', [DocReviewController::class, 'annotate'])->name('docreview.annotate');
     Route::get('/assignments', [InstructorAssignmentController::class, 'index'])->name('assignments');
-    Route::post('/assignments/{assignment}/approve', [InstructorAssignmentController::class, 'approve'])->name('assignments.approve');
-    Route::post('/assignments/{assignment}/reject', [InstructorAssignmentController::class, 'reject'])->name('assignments.reject');
+    Route::patch('/assignments/{assignment}', [InstructorAssignmentController::class, 'update'])->name('assignments.update');
     Route::delete('/assignments/{assignment}', [InstructorAssignmentController::class, 'remove'])->name('assignments.remove');
     // The pre-proposal PDF a team applied with, when they used the one
     // their CaPSA approved instead of attaching a file.

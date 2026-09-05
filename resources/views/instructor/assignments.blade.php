@@ -621,12 +621,14 @@ function confirmApprove() {
   btn.disabled = true;
   btn.innerHTML = 'Approving...';
 
-  fetch('{{ url("instructor/assignments") }}/' + currentApproveId + '/approve', {
-    method: 'POST',
+  fetch('{{ url("instructor/assignments") }}/' + currentApproveId, {
+    method: 'PATCH',
     headers: {
       'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
       'Accept': 'application/json',
+      'Content-Type': 'application/json',
     },
+    body: JSON.stringify({ status: 'approved' }),
   })
   .then(r => r.json())
   .then(data => {
@@ -655,14 +657,14 @@ function confirmReject() {
   btn.disabled = true;
   btn.innerHTML = 'Rejecting...';
 
-  fetch('{{ url("instructor/assignments") }}/' + currentRejectId + '/reject', {
-    method: 'POST',
+  fetch('{{ url("instructor/assignments") }}/' + currentRejectId, {
+    method: 'PATCH',
     headers: {
       'Content-Type': 'application/json',
       'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
       'Accept': 'application/json',
     },
-    body: JSON.stringify({ reason: reason || null }),
+    body: JSON.stringify({ status: 'rejected', reason: reason || null }),
   })
   .then(r => r.json())
   .then(data => {

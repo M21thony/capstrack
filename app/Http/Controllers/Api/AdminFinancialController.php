@@ -112,6 +112,20 @@ class AdminFinancialController extends Controller
         ]);
     }
 
+    /**
+     * Approving and rejecting both land the record on a new status, so one
+     * PATCH carries which one. The deciding stays in the two methods that
+     * already do it - this only routes to them.
+     */
+    public function update(Request $request, FinancialRecord $financialRecord): JsonResponse
+    {
+        return $request->validate([
+            'status' => ['required', 'in:approved,rejected'],
+        ])['status'] === 'approved'
+            ? $this->approve($request, $financialRecord)
+            : $this->reject($request, $financialRecord);
+    }
+
     public function approve(Request $request, FinancialRecord $financialRecord): JsonResponse
     {
         /** @var CapstoneExpert $admin */

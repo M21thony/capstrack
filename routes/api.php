@@ -73,8 +73,7 @@ Route::middleware(['web', 'expert.auth'])
                 Route::get('/teams', [AdminFinancialController::class, 'teams'])->name('teams');
                 Route::get('/records', [AdminFinancialController::class, 'records'])->name('records');
                 Route::get('/records/{financialRecord}', [AdminFinancialController::class, 'record'])->name('record');
-                Route::post('/records/{financialRecord}/approve', [AdminFinancialController::class, 'approve'])->name('approve');
-                Route::post('/records/{financialRecord}/reject', [AdminFinancialController::class, 'reject'])->name('reject');
+                Route::patch('/records/{financialRecord}', [AdminFinancialController::class, 'update'])->name('update');
                 Route::get('/expense-posts', [AdminFinancialController::class, 'expensePosts'])->name('expense-posts');
                 Route::post('/expense-posts', [AdminFinancialController::class, 'storeExpensePost'])->name('expense-posts.store');
                 Route::put('/expense-posts/{expensePost}', [AdminFinancialController::class, 'updateExpensePost'])->name('expense-posts.update');
