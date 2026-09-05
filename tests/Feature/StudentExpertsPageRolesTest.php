@@ -107,12 +107,12 @@ class StudentExpertsPageRolesTest extends TestCase
 
         $response->assertStatus(200);
 
-        // The expert is qualified as an adviser too, so a label reading
-        // "Adviser" here would mean the old guess is still in play.
-        $this->assertStringContainsString(
-            'Consultant',
-            $this->teamExpertsSection($response->getContent()),
-        );
+        // The expert is qualified as an adviser too, so landing in the
+        // adviser row would mean the old guess is still in play.
+        $html = $response->getContent();
+
+        $this->assertStringContainsString($expert->name, $this->checklistRow($html, 'consultant'));
+        $this->assertStringNotContainsString($expert->name, $this->checklistRow($html, 'adviser'));
 
         // An approved expert belongs in the slots above and nowhere else.
         // They used to appear three times over - in the slots, still in
@@ -147,7 +147,8 @@ class StudentExpertsPageRolesTest extends TestCase
         $response->assertStatus(200);
 
         // The request itself, named and labelled, not merely counted.
-        $response->assertSee('class="req-section"', false);
+        $response->assertSee('Pending Applications');
+        $response->assertSee('class="req-card"', false);
         $response->assertSee($expert->name, false);
         $response->assertSee('Applied as consultant');
         $response->assertSee('Pending');
@@ -168,19 +169,24 @@ class StudentExpertsPageRolesTest extends TestCase
         $response = $this->actingAs($student, 'web')->get('/student/experts');
 
         $response->assertStatus(200);
-        $response->assertDontSee('class="req-section"', false);
+        $response->assertDontSee('class="req-card"', false);
         $response->assertDontSee('waiting on a reply');
 
         // The signpost stays put at zero.
         $response->assertSee('No requests out yet.');
     }
 
-    /** The "Your Team's Experts" panel only. */
-    private function teamExpertsSection(string $html): string
+    /** One row of the Team Checklist - the slot for a given role. */
+    private function checklistRow(string $html, string $role): string
     {
-        $start = strpos($html, 'Your Team\'s Experts');
-        $end = strpos($html, 'sticky-controls', $start ?: 0);
+        $start = strpos($html, 'data-slot-role="'.$role.'"');
 
-        return $start === false || $end === false ? '' : substr($html, $start, $end - $start);
+        if ($start === false) {
+            return '';
+        }
+
+        $end = strpos($html, 'data-slot-role="', $start + 20);
+
+        return substr($html, $start, ($end === false ? strlen($html) : $end) - $start);
     }
 }

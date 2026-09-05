@@ -307,25 +307,24 @@
       @include('student.partials.page-tutorial', ['page' => 'experts'])
 
     <div class="experts-main">
-      {{-- A team takes one adviser, one consultant and one grammarian, so the
-           three slots and who fills them are the whole picture. This replaces
-           three stat cards ("Available Experts" counted the list directly
-           below it; "My Team Experts: 0" and "Pending Requests: 0" each
-           repeated a card underneath saying the same thing in words) - and a
-           count of 0 never told you WHICH role you were still missing. --}}
       @php
-        // Same colours the role chips on the expert cards use, so a
-        // consultant reads as a consultant everywhere on this page.
+        // Same colours the role chips use, so a consultant reads as a
+        // consultant everywhere on this page.
         $roleColors = [
           'adviser'     => ['dot' => 'var(--accent)', 'bg' => 'var(--accent-light)', 'text' => 'var(--accent3)'],
-          'consultant'  => ['dot' => '#3b82f6',       'bg' => 'var(--blue-bg)',      'text' => 'var(--blue)'],
-          'grammarian'  => ['dot' => '#9333ea',       'bg' => 'var(--purple-bg)',    'text' => 'var(--purple)'],
+          'consultant'  => ['dot' => '#2160b8',       'bg' => 'var(--blue-bg)',      'text' => 'var(--blue)'],
+          'grammarian'  => ['dot' => '#7c3aed',       'bg' => 'var(--purple-bg)',    'text' => 'var(--purple)'],
+        ];
+        $roleBlurbs = [
+          'adviser'    => "Guides your team's overall capstone journey",
+          'consultant' => 'Provides subject-matter expertise and technical advice',
+          'grammarian' => 'Reviews and ensures quality of written documentation',
         ];
         $approvedAssignments = $assignments->where('status', 'approved');
 
         // Keyed by the role the team actually engaged them as. Anyone approved
         // before roles were recorded has no slot, so they are listed under the
-        // three rather than being dropped from the page.
+        // three rather than dropped from the page.
         $filledSlots = [];
         $unslotted = [];
         foreach ($approvedAssignments as $a) {
@@ -333,167 +332,86 @@
           if ($r && isset($roleColors[$r]) && ! isset($filledSlots[$r])) { $filledSlots[$r] = $a; }
           else { $unslotted[] = $a; }
         }
-        $pendingCount = $assignments->where('status', 'pending')->count();
 
         // An approved expert is not a request any more and not available any
-        // more - they are yours, and the slots above say so. Leaving them in
-        // both lists showed the same person three times over and made a
-        // settled adviser look like something still to be decided.
+        // more - they are yours, and the checklist says so.
         $settledExpertIds = $approvedAssignments->pluck('expert_id')->filter()->all();
         $openRequests = $assignments->whereNotIn('status', ['approved']);
+        $shownExperts = $experts->whereNotIn('expert_id', $settledExpertIds);
       @endphp
 
-      @if($team)
-      <div class="team-slots">
-        <div class="team-slots-head">
-          <svg viewBox="0 0 24 24"><path d="M9 12l2 2 4-4"/><path d="M12 2a10 10 0 1 0 10 10"/></svg>
-          Your Team's Experts
-          <span class="team-slots-hint">One adviser, one consultant, one grammarian.</span>
-        </div>
+      <div class="pagehead"><h1>Find Your Team Experts</h1></div>
 
-        <div class="slot-row">
-          @foreach(['adviser', 'consultant', 'grammarian'] as $slotRole)
-            @php $a = $filledSlots[$slotRole] ?? null; $rc = $roleColors[$slotRole]; @endphp
-            <div class="slot {{ $a ? 'filled' : 'open' }}">
-              <span class="slot-dot" style="background: {{ $rc['dot'] }};"></span>
-              <div class="slot-body">
-                <div class="slot-role" style="color: {{ $rc['text'] }};">{{ ucfirst($slotRole) }}</div>
-                <div class="slot-state" @if($a) title="{{ $a->expert?->name }}" @endif>
-                  {{ $a ? ($a->expert?->name ?? 'Unknown') : 'Not filled' }}
-                </div>
-              </div>
-              @if($a && $isLeader)
-                <button class="slot-remove" title="Remove {{ $a->expert?->name ?? 'this expert' }}"
-                        onclick="openRemoveModal({{ $a->assignment_id }}, '{{ $a->expert?->name ?? '' }}')">
-                  <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                </button>
-              @endif
-            </div>
-          @endforeach
-        </div>
-
-        @foreach($unslotted as $a)
-          <div class="slot slot-extra">
-            <span class="slot-dot" style="background: var(--text3);"></span>
-            <div class="slot-body">
-              <div class="slot-role" style="color: var(--text3);">Assigned</div>
-              <div class="slot-state">{{ $a->expert?->name ?? 'Unknown' }}</div>
-            </div>
-            @if($isLeader)
-              <button class="slot-remove" title="Remove {{ $a->expert?->name ?? 'this expert' }}"
-                      onclick="openRemoveModal({{ $a->assignment_id }}, '{{ $a->expert?->name ?? '' }}')">
-                <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-              </button>
-            @endif
-          </div>
-        @endforeach
-
-        {{-- Always drawn, even at nothing. Hiding it when the team had made
-             no applications meant the page said nothing at all about
-             requests, so there was no way to learn where they would appear
-             before you had one - the Request Experts section below is
-             conditional too, so both vanished together. --}}
-        <div class="slot-pending">
-          @if($pendingCount > 0)
-            <span class="slot-pending-n">{{ $pendingCount }}</span>
-            {{ $pendingCount === 1 ? 'request waiting on a reply' : 'requests waiting on a reply' }}
-          @elseif($assignments->isNotEmpty())
-            No requests waiting &mdash; see the list below.
-          @else
-            <span class="slot-pending-n slot-pending-none">0</span>
-            No requests out yet.
-          @endif
-        </div>
-      </div>
-      @endif
-
-      {{-- Your own outstanding requests sit above the browse list, not below
-           it. They used to be the last thing on the page, so finding them
-           meant scrolling past every expert card - and the further the list
-           grew, the further down they went.
-
-           Only drawn when there is something in it. An empty "Request Experts"
-           card repeated what the slots above already show, and its message was
-           a dead end - so the two cases worth a sentence say the useful thing
-           instead: you have no team, or you are not the one who can apply. --}}
-      @if($openRequests->isNotEmpty())
-      <div class="req-section">
-        <div class="section-title" style="font-size: 15px; font-weight: 600; margin-bottom: 14px; display: flex; align-items: center; gap: 8px;">
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
-          Request Experts
-          <span style="font-size: 12px; color: var(--text3); font-weight: 400;">({{ $openRequests->count() }})</span>
-        </div>
-
-        @foreach($openRequests as $assignment)
+      {{-- The role decides the list, so it is the first thing on the page and
+           it lives in the URL. A team needs one of each, so you are never
+           choosing among everybody - only among the four or five who can hold
+           the role you are filling. That is what keeps this page to one
+           screen no matter how long the roster gets. --}}
+      <div class="roles">
+        @foreach(['adviser', 'consultant', 'grammarian'] as $r)
           @php
-            // Through the public disk explicitly: the file was stored with
-            // ->store("proposals", "public"), and a bare Storage::url() call
-            // resolves against the DEFAULT disk instead - the same fix the
-            // expert side of this link already carries.
-            $propUrl = $assignment->proposal_file
-                ? Storage::disk("public")->url($assignment->proposal_file)
-                : null;
-            $reqRole = $assignment->engaged_role_name;
+            $isOn = $activeRole === $r;
+            $filled = $filledSlots[$r] ?? null;
+            $qs = array_filter([
+              'role' => $r,
+              'q' => $search !== '' ? $search : null,
+              'skill' => $activeSkill !== '' ? $activeSkill : null,
+              'skill_group' => $activeGroup !== '' ? $activeGroup : null,
+            ]);
           @endphp
-          <div class="req-card">
-            <div class="avatar" style="width: 36px; height: 36px; font-size: 12px; background: var(--accent); color: white;">
-              {{ $assignment->expert?->avatarInitials() ?? 'NA' }}
-              @if ($assignment->expert?->hasAvatarImage())
-                <img class="avatar-photo" src="{{ $assignment->expert->avatarUrl() }}" alt="" loading="lazy"
-                     referrerpolicy="no-referrer" onerror="this.remove()">
+          <a class="role role-{{ $r }} {{ $isOn ? 'is-on' : '' }}"
+             href="{{ route('student.experts', $qs) }}" aria-current="{{ $isOn ? 'true' : 'false' }}">
+            <span class="role-ic">
+              @if($r === 'adviser')
+                <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              @elseif($r === 'consultant')
+                <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/></svg>
+              @else
+                <svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
               @endif
-            </div>
-            <div style="flex: 1; min-width: 0;">
-              <div style="font-size: 13px; font-weight: 600; color: var(--text);">{{ $assignment->expert?->name ?? 'Unknown Expert' }}</div>
-              <div style="font-size: 11px; color: var(--text3); text-transform: uppercase;">{{ $reqRole ? 'Applied as '.$reqRole : ucfirst($assignment->status) }}</div>
-            </div>
-            <span class="status-badge" style="background: {{ $assignment->status === 'approved' ? 'var(--green-bg)' : ($assignment->status === 'pending' ? 'var(--amber-bg)' : 'var(--red-bg)') }}; color: {{ $assignment->status === 'approved' ? 'var(--green)' : ($assignment->status === 'pending' ? 'var(--amber)' : 'var(--red)') }};">
-              {{ ucfirst($assignment->status) }}
             </span>
-            <button class="btn btn-sm btn-soft" onclick="openReqInfoModal({{ json_encode([
-              'name' => $assignment->expert?->name ?? 'Unknown',
-              'role' => $reqRole ? ucfirst($reqRole) : null,
-              'status' => ucfirst($assignment->status),
-              'message' => $assignment->message ?? 'No message provided.',
-              // Why the expert said no. It was written down and sent in a
-              // notification, then never shown again - so a team that missed
-              // the notification had a rejected application and no idea why.
-              'rejection_reason' => $assignment->rejection_reason,
-              // An application made with the CaPSA-approved pre-proposal has
-              // no uploaded file, and the details said "None attached" - as
-              // though nothing had been sent, when what was sent is the one
-              // document the CaPSA had already passed.
-              'pre_proposal_title' => $assignment->preProposal?->title,
-              'proposal' => $propUrl,
-              'date' => $assignment->created_at ? $assignment->created_at->format('M d, Y g:i A') : 'N/A',
-            ]) }})" title="View details">View</button>
-            @if($isLeader && $assignment->status !== 'approved')
-              <button class="btn btn-sm btn-soft-red" onclick="openRemoveModal({{ $assignment->assignment_id }}, '{{ $assignment->expert?->name ?? '' }}')" title="Remove">
-                <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-              </button>
-            @endif
-          </div>
+            <span class="role-body">
+              <span class="role-nm">{{ ucfirst($r) }}</span>
+              <span class="role-ds">{{ $roleBlurbs[$r] }}</span>
+              <span class="role-ct">
+                @if($filled)
+                  Filled &mdash; {{ $filled->expert?->name }}
+                @else
+                  {{ $roleCounts[$r] ?? 0 }} {{ Str::plural('expert', $roleCounts[$r] ?? 0) }}
+                @endif
+              </span>
+            </span>
+            <span class="role-tick">
+              @if($isOn)
+                <svg viewBox="0 0 24 24" class="on"><circle cx="12" cy="12" r="10"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/></svg>
+              @endif
+            </span>
+          </a>
         @endforeach
       </div>
-      @elseif(! $team)
+
+      @if(! $team)
         <div class="req-notice">You need to join or create a team before you can apply for an expert.</div>
       @elseif(! $isLeader)
         <div class="req-notice">Only your team leader can apply for experts. You can still browse who is available below.</div>
       @endif
 
-      <div class="sticky-controls">
-        <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;">
-          <input class="input" id="search-input" placeholder="Search experts..." style="flex: 1; min-width: 180px; max-width: 320px;" oninput="filterExperts()" />
+      {{-- Searching reloads the page rather than hiding cards. The list is
+           paginated, so a filter in the browser would only ever search the
+           experts already on screen and report "none" for the rest. --}}
+      <form class="filters" method="GET" action="{{ route('student.experts') }}">
+        <input type="hidden" name="role" value="{{ $activeRole }}">
+        @if($activeSkill !== '')<input type="hidden" name="skill" value="{{ $activeSkill }}">@endif
+        @if($activeGroup !== '')<input type="hidden" name="skill_group" value="{{ $activeGroup }}">@endif
 
-          {{-- Reloads the page rather than hiding cards: the list is
-               paginated, so filtering in the browser would only ever search
-               the experts already on screen. --}}
-          {{-- Grouped, searchable skill picker - the same shape as the
-               "Make CaPSA" section list. Experts write their own skills, so
-               the roster runs to dozens of entries and several spellings of
-               the same thing; grouping them into a handful of areas keeps
-               that browsable, and picking a whole area covers every wording
-               filed under it. --}}
+        <label class="field search">
+          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+          <input type="search" name="q" value="{{ $search }}" placeholder="Search experts by name or expertise&hellip;" autocomplete="off">
+          @if($search !== '')
+            <a class="field-clear" href="{{ route('student.experts', array_filter(['role' => $activeRole, 'skill' => $activeSkill ?: null, 'skill_group' => $activeGroup ?: null])) }}" aria-label="Clear search">&times;</a>
+          @endif
+        </label>
+
           <div class="skill-filter">
             <button type="button" class="input skill-filter-trigger" id="skill-filter-trigger" onclick="toggleSkillPicker(event)"
                     aria-haspopup="true" aria-expanded="false">
@@ -551,172 +469,33 @@
             </div>
           </div>
 
-          <div class="filter-bar" style="margin-bottom: 0;">
-            <div class="filter-chip active" data-role="all" onclick="setFilter('all', this)">All</div>
-            <div class="filter-chip" data-role="adviser" onclick="setFilter('adviser', this)">Advisers</div>
-            <div class="filter-chip" data-role="consultant" onclick="setFilter('consultant', this)">Consultants</div>
-            <div class="filter-chip" data-role="grammarian" onclick="setFilter('grammarian', this)">Grammarian</div>
-          </div>
+        <div class="seg" id="viewSeg">
+          <button type="button" data-view="cards" aria-pressed="true">
+            <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+            Cards</button>
+          <button type="button" data-view="list" aria-pressed="false">
+            <svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></svg>
+            List</button>
         </div>
+      </form>
 
-        @if($activeSkill !== '' || $activeGroup !== '')
-          <div class="skill-filter-active">
-            @if($activeSkill !== '')
-              Experts whose skills mention <strong>{{ $activeSkill }}</strong>
-            @else
-              Experts with any skill in <strong>{{ $activeGroup }}</strong>
-            @endif
-            — {{ $experts->total() }} {{ Str::plural('expert', $experts->total()) }} found.
-            <a href="{{ route('student.experts') }}" class="skill-filter-clear">Clear</a>
-          </div>
-        @endif
-      </div>
+      @if($activeSkill !== '' || $activeGroup !== '')
+        <div class="skill-filter-active">
+          @if($activeSkill !== '')
+            Experts whose skills mention <strong>{{ $activeSkill }}</strong>
+          @else
+            Experts with any skill in <strong>{{ $activeGroup }}</strong>
+          @endif
+          &mdash; {{ $experts->total() }} {{ Str::plural('expert', $experts->total()) }} found.
+          <a href="{{ route('student.experts', ['role' => $activeRole]) }}" class="skill-filter-clear">Clear</a>
+        </div>
+      @endif
 
-      <div id="expert-grid" class="expert-grid">
-        @forelse($experts->whereNotIn('expert_id', $settledExpertIds) as $expert)
-          @php
-            $visibleRoles = $expert->roles;
-            $firstRole = $visibleRoles->first();
-            $dotColors = ['adviser' => 'var(--accent)', 'consultant' => '#3b82f6', 'grammarian' => '#9333ea'];
-            $chipColors = [
-              'adviser' => ['bg' => 'var(--accent-light)', 'text' => 'var(--accent3)'],
-              'consultant' => ['bg' => 'var(--blue-bg)', 'text' => 'var(--blue)'],
-              'grammarian' => ['bg' => 'var(--purple-bg)', 'text' => 'var(--purple)'],
-            ];
-            $_slotsUsed = $expert->slots_used;
-            $_maxSlots = $expert->max_teams ?? 0;
-            $_slotPercent = $_maxSlots > 0 ? min(100, ($_slotsUsed / $_maxSlots) * 100) : 0;
-            // Only full against a number somebody actually set. With the
-            // default of four gone, an expert who has not said reads max = 0,
-            // and "0 >= 0" marked every one of them full - and refused every
-            // request to them, here and on the server.
-            $_isFull = $_maxSlots > 0 && $_slotsUsed >= $_maxSlots;
-            $_slotsUnset = $_maxSlots < 1;
-            $_barColor = $_isFull ? 'var(--red)' : ($_slotPercent > 66 ? 'var(--amber)' : 'var(--accent)');
-            $_chips = $visibleRoles->map(fn($r) => [
-                'name' => ucfirst($r->role_name),
-                'bg' => ($chipColors[$r->role_name]['bg'] ?? 'var(--bg3)'),
-                'text' => ($chipColors[$r->role_name]['text'] ?? 'var(--text3)'),
-            ])->values()->toArray();
-            $_expertiseTags = $expert->expertise->pluck('expertise_field')->toArray();
-            $_expertiseMore = max(0, $expert->expertise->count() - 3);
-          @endphp
-          <div class="expert-card-compact" data-expert-id="{{ $expert->expert_id }}" style="--accent-clr:{{ $dotColors[$firstRole?->role_name ?? 'adviser'] ?? 'var(--accent)' }}" data-roles="{{ $visibleRoles->pluck('role_name')->join(',') }}" data-name="{{ $expert->name }}" data-initials="{{ $expert->avatarInitials() }}" data-avatar="{{ $expert->hasAvatarImage() ? $expert->avatarUrl() : '' }}" data-chips='{{ json_encode($_chips) }}' data-tags='{{ json_encode($_expertiseTags) }}' data-tags-more="{{ $_expertiseMore }}" data-slots="{{ $_slotsUnset ? 'Capacity not set' : $_slotsUsed.'/'.$_maxSlots }}" data-slots-pct="{{ $_slotPercent }}" data-slots-color="{{ $_barColor }}" onclick="openExpertPostModal(this)">
-            <div class="role-dot" style="background: {{ $dotColors[$firstRole?->role_name ?? 'adviser'] ?? 'var(--accent)' }};"></div>
-            <div class="card-accent" style="background:{{ $dotColors[$firstRole?->role_name ?? 'adviser'] ?? 'var(--accent)' }};"></div>
-            <div class="expert-avatar-wrap">
-              {{-- Experts sign in with Google, so most have a real photo on
-                   file. If it fails to load (an expired Google URL, say) the
-                   initials underneath show through. --}}
-              <div class="avatar" style="width:100%; height:100%; font-size:16px;">
-                {{ $expert->avatarInitials() }}
-                @if ($expert->hasAvatarImage())
-                  <img class="avatar-photo" src="{{ $expert->avatarUrl() }}" alt="" loading="lazy"
-                       referrerpolicy="no-referrer" onerror="this.remove()">
-                @endif
-              </div>
-            </div>
-            <div style="font-size: 15px; font-weight: 700; color: var(--text); line-height: 1.3;">{{ $expert->name }}</div>
-
-            <div class="role-chips">
-              @foreach($visibleRoles as $role)
-                @php
-                  $chipColors = [
-                    'adviser' => ['bg' => 'var(--accent-light)', 'text' => 'var(--accent3)'],
-                    'consultant' => ['bg' => 'var(--blue-bg)', 'text' => 'var(--blue)'],
-                    'grammarian' => ['bg' => 'var(--purple-bg)', 'text' => 'var(--purple)'],
-                  ];
-                  $c = $chipColors[$role->role_name] ?? ['bg' => 'var(--bg3)', 'text' => 'var(--text3)'];
-                @endphp
-                <span class="role-chip" style="background: {{ $c['bg'] }}; color: {{ $c['text'] }};">
-                  {{ ucfirst($role->role_name) }}
-                </span>
-              @endforeach
-            </div>
-
-            <div class="expertise-tags">
-              @foreach($expert->expertise->take(3) as $exp)
-                <span class="expertise-tag">{{ $exp->expertise_field }}</span>
-              @endforeach
-              @if($expert->expertise->count() > 3)
-                <span class="expertise-tag">+{{ $expert->expertise->count() - 3 }} more</span>
-              @endif
-            </div>
-
-            <div class="mini-slot-bar"></div>
-            {{-- Three states, not two. "Not set" is somebody who has never said
-                 how many teams they take, which is neither full nor a number -
-                 and used to read FULL CAPACITY. --}}
-            <div class="slot-caption {{ $_isFull ? 'is-full' : ($_slotsUnset ? 'is-unset' : '') }}">
-              @if ($_slotsUnset)
-                Capacity not set
-              @elseif ($_isFull)
-                Full capacity
-              @else
-                {{ $_slotsUsed }} of {{ $_maxSlots }} slots
-              @endif
-            </div>
-
-            @if($team && $isLeader && !$teamConfirmed)
-              <button class="btn btn-sm btn-full btn-muted" disabled>
-                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2"><path d="M12 15v2m-6 4h12a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2zm10-10V7a4 4 0 0 0-8 0v4h8z"/></svg>
-                Verified First
-              </button>
-            @elseif($team && $isLeader)
-              @php
-                $teamAssignmentsForExpert = $assignments->where('expert_id', $expert->expert_id);
-                $hasApproved = $teamAssignmentsForExpert->where('status', 'approved')->isNotEmpty();
-                $hasPending = $teamAssignmentsForExpert->where('status', 'pending')->isNotEmpty();
-              @endphp
-              @if($hasApproved)
-                <button class="btn btn-sm btn-full btn-muted-green" disabled>
-                  <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-                  Approved
-                </button>
-              @elseif($hasPending)
-                <button class="btn btn-sm btn-full btn-muted-amber" disabled>
-                  <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                  Pending
-                </button>
-              @elseif(!$_isFull)
-                @php
-                  // Each role the leader can apply for, carrying the pivot key
-                  // the application records - so "as our consultant" is stored,
-                  // not guessed at later.
-                  $_roleChoices = $visibleRoles->map(fn($r) => [
-                      'expert_role_id' => $r->pivot->expert_role_id,
-                      'name' => $r->role_name,
-                      'label' => ucfirst($r->role_name),
-                  ])->values();
-                @endphp
-                <button class="btn btn-sm btn-full btn-solid" data-apply-expert="{{ $expert->expert_id }}" onclick="openApplyModal({{ $expert->expert_id }}, {{ Js::from($expert->name) }}, {{ Js::from($_roleChoices) }})">
-                  <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><polyline points="17 11 19 13 23 9"/></svg>
-                  Apply Now
-                </button>
-              @elseif($_isFull)
-                <button class="btn btn-sm btn-full btn-muted" disabled>
-                  <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
-                  Full
-                </button>
-              @else
-                <button class="btn btn-sm btn-full btn-muted" disabled>
-                  <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
-                  Already Applied
-                </button>
-              @endif
-            @elseif(!$team)
-              <button class="btn btn-sm btn-full btn-muted" disabled>
-                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
-                Join a Team First
-              </button>
-            @elseif(!$isLeader)
-              <button class="btn btn-sm btn-full btn-muted" disabled>
-                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2"><path d="M12 15v2m-6 4h12a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2zm10-10V7a4 4 0 0 0-8 0v4h8z"/></svg>
-                Leader Only
-              </button>
-            @endif
-          </div>
-        @empty
+      {{-- Both views are rendered from the same rows; the switch only changes
+           which one is shown, so the list can never fall out of step with the
+           cards. --}}
+      <div id="results" class="view-cards">
+        @if($shownExperts->isEmpty())
           <div class="empty-state" style="grid-column: 1 / -1;">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 1 0-16 0"/></svg>
             @if($activeSkill !== '' || $activeGroup !== '')
@@ -726,7 +505,140 @@
               <p>No approved experts available yet.</p>
             @endif
           </div>
-        @endforelse
+        @else
+        <div class="railwrap">
+          <div class="rail" id="rail">
+            @foreach($shownExperts as $expert)
+          @php
+            $visibleRoles = $expert->roles;
+            $firstRole = $visibleRoles->first();
+            $_maxSlots = $expert->max_teams ?? 0;
+            $_slotsUsed = $expert->slots_used;
+            // Only full against a number somebody actually set - "0 >= 0"
+            // used to mark every expert who had not said as full.
+            $_isFull = $_maxSlots > 0 && $_slotsUsed >= $_maxSlots;
+            $_slotsUnset = $_maxSlots < 1;
+            // The role you are browsing is on every card in the list, so
+            // saying it again tells you nothing. The OTHER roles do.
+            $_alsoRoles = $visibleRoles->pluck('role_name')->reject(fn ($r) => $r === $activeRole);
+            $_expertiseTags = $expert->expertise->pluck('expertise_field')->all();
+            $_chips = $visibleRoles->map(fn ($r) => ['name' => ucfirst($r->role_name), 'color' => $roleColors[$r->role_name]['dot'] ?? 'var(--accent)'])->values();
+          @endphp
+              <div class="card expert-card-compact" data-expert-id="{{ $expert->expert_id }}"
+                   data-name="{{ $expert->name }}" data-initials="{{ $expert->avatarInitials() }}"
+                   data-avatar="{{ $expert->hasAvatarImage() ? $expert->avatarUrl() : '' }}"
+                   data-chips='{{ json_encode($_chips) }}' data-tags='{{ json_encode($_expertiseTags) }}'
+                   data-tags-more="0"
+                   data-slots="{{ $_slotsUnset ? 'Capacity not set' : $_slotsUsed.'/'.$_maxSlots }}"
+                   data-slots-pct="{{ $_maxSlots > 0 ? min(100, ($_slotsUsed / $_maxSlots) * 100) : 0 }}"
+                   data-slots-color="{{ $_isFull ? 'var(--red)' : 'var(--accent)' }}"
+                   onclick="openExpertPostModal(this)">
+                <span class="role-dot" style="background: {{ $roleColors[$firstRole?->role_name ?? 'adviser']['dot'] ?? 'var(--accent)' }};"></span>
+
+                <div class="who">
+                  <div class="expert-avatar-wrap">
+                    <div class="avatar" style="width:100%; height:100%; font-size:13px;">
+                      {{ $expert->avatarInitials() }}
+                      @if ($expert->hasAvatarImage())
+                        <img class="avatar-photo" src="{{ $expert->avatarUrl() }}" alt="" loading="lazy"
+                             referrerpolicy="no-referrer" onerror="this.remove()">
+                      @endif
+                    </div>
+                  </div>
+                  <div class="ex-nm">{{ $expert->name }}</div>
+                </div>
+
+                @if($_alsoRoles->isNotEmpty())
+                  <div class="chips">
+                    @foreach($_alsoRoles as $r)
+                      <span class="chip" style="background: {{ $roleColors[$r]['bg'] ?? 'var(--bg3)' }}; color: {{ $roleColors[$r]['text'] ?? 'var(--text2)' }};">also {{ $r }}</span>
+                    @endforeach
+                  </div>
+                @endif
+
+                <div>
+                  <div class="lbl">Expertise</div>
+                  <div class="tags">
+                    @foreach($_expertiseTags as $tag)
+                      <span class="t" title="{{ $tag }}">{{ $tag }}</span>
+                    @endforeach
+                  </div>
+                </div>
+
+                <div class="avail">
+                  <div class="lbl">Availability</div>
+                  <div class="slot-caption {{ $_isFull ? 'is-full' : ($_slotsUnset ? 'is-unset' : '') }}">
+                    @if($_slotsUnset) Capacity not set
+                    @elseif($_isFull) Full capacity
+                    @else {{ $_maxSlots - $_slotsUsed }} of {{ $_maxSlots }} slots open
+                    @endif
+                  </div>
+                </div>
+
+@include('student.partials.expert-action')
+              </div>
+            @endforeach
+          </div>
+
+          <button class="rail-nav prev" type="button" data-rail="-1" aria-label="Previous experts" hidden>
+            <svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
+          <button class="rail-nav next" type="button" data-rail="1" aria-label="More experts" hidden>
+            <svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg></button>
+        </div>
+        <div class="rail-pager" id="railPager" hidden>
+          <span class="dots" id="railDots"></span><span class="count" id="railCount"></span>
+        </div>
+
+        <div class="listwrap">
+          <div class="listscroll">
+            <table>
+              <thead><tr><th>Expert</th><th>Also</th><th>Expertise</th><th>Availability</th><th></th></tr></thead>
+              <tbody>
+                @foreach($shownExperts as $expert)
+          @php
+            $visibleRoles = $expert->roles;
+            $firstRole = $visibleRoles->first();
+            $_maxSlots = $expert->max_teams ?? 0;
+            $_slotsUsed = $expert->slots_used;
+            // Only full against a number somebody actually set - "0 >= 0"
+            // used to mark every expert who had not said as full.
+            $_isFull = $_maxSlots > 0 && $_slotsUsed >= $_maxSlots;
+            $_slotsUnset = $_maxSlots < 1;
+            // The role you are browsing is on every card in the list, so
+            // saying it again tells you nothing. The OTHER roles do.
+            $_alsoRoles = $visibleRoles->pluck('role_name')->reject(fn ($r) => $r === $activeRole);
+            $_expertiseTags = $expert->expertise->pluck('expertise_field')->all();
+            $_chips = $visibleRoles->map(fn ($r) => ['name' => ucfirst($r->role_name), 'color' => $roleColors[$r->role_name]['dot'] ?? 'var(--accent)'])->values();
+          @endphp
+                  <tr>
+                    <td><span class="lname">
+                      <span class="expert-avatar-wrap sm"><span class="avatar" style="width:100%;height:100%;font-size:10px;">{{ $expert->avatarInitials() }}</span></span>
+                      <span>{{ $expert->name }}</span>
+                    </span></td>
+                    <td>
+                      @forelse($_alsoRoles as $r)
+                        <span class="chip" style="background: {{ $roleColors[$r]['bg'] ?? 'var(--bg3)' }}; color: {{ $roleColors[$r]['text'] ?? 'var(--text2)' }};">{{ $r }}</span>
+                      @empty
+                        <span class="t">&mdash;</span>
+                      @endforelse
+                    </td>
+                    <td><span class="ltags">@foreach($_expertiseTags as $tag)<span class="t" title="{{ $tag }}">{{ $tag }}</span>@endforeach</span></td>
+                    <td>
+                      <span class="slot-caption {{ $_isFull ? 'is-full' : ($_slotsUnset ? 'is-unset' : '') }}">
+                        @if($_slotsUnset) Capacity not set
+                        @elseif($_isFull) Full capacity
+                        @else {{ $_maxSlots - $_slotsUsed }} of {{ $_maxSlots }} slots open
+                        @endif
+                      </span>
+                    </td>
+                    <td class="lact">@include('student.partials.expert-action')</td>
+                  </tr>
+                @endforeach
+              </tbody>
+            </table>
+          </div>
+        </div>
+        @endif
       </div>
 
       @if ($experts->hasPages())
@@ -760,47 +672,122 @@
         @endif
       </div>
       @endif
-
     </div>
 
-    <div class="overview-panel">
-      <div class="rg-qt-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: start;">
-        <div class="card" style="padding: 14px; border-radius: 12px; background: var(--bg2);">
-          <div class="section-title" style="font-size: 13px; margin-bottom: 12px;">Role Guide</div>
-          <div style="margin-bottom: 12px;">
-            <div style="font-size: 11px; font-weight: 600; color: var(--accent3); margin-bottom: 4px; display: flex; align-items: center; gap: 6px;"><span class="rg-dot" style="background: var(--accent);"></span>Adviser</div>
-            <div style="font-size: 10px; color: var(--text3); line-height: 1.4;">Guides capstone teams throughout their project journey</div>
+    <aside class="overview-panel">
+      <div class="panel">
+        <h3>Team Checklist</h3>
+        @foreach(['adviser', 'consultant', 'grammarian'] as $slotRole)
+          @php $a = $filledSlots[$slotRole] ?? null; $rc = $roleColors[$slotRole]; @endphp
+          <div class="check" data-slot-role="{{ $slotRole }}">
+            <span class="check-dot" style="background: {{ $rc['dot'] }};"></span>
+            <span class="check-role">{{ ucfirst($slotRole) }}</span>
+            @if($a)
+              <span class="pill set" title="{{ $a->expert?->name }}">{{ $a->expert?->name }}</span>
+              @if($isLeader)
+                <button class="check-remove" title="Remove {{ $a->expert?->name ?? 'this expert' }}"
+                        onclick="openRemoveModal({{ $a->assignment_id }}, '{{ $a->expert?->name ?? '' }}')">
+                  <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" fill="none" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                </button>
+              @endif
+            @else
+              <span class="pill">Not selected</span>
+            @endif
           </div>
-          <div style="margin-bottom: 12px;">
-            <div style="font-size: 11px; font-weight: 600; color: #3b82f6; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;"><span class="rg-dot" style="background: #3b82f6;"></span>Consultant</div>
-            <div style="font-size: 10px; color: var(--text3); line-height: 1.4;">Provides subject-matter expertise and technical advice</div>
-          </div>
-          <div style="margin-bottom: 12px;">
-            <div style="font-size: 11px; font-weight: 600; color: #9333ea; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;"><span class="rg-dot" style="background: #9333ea;"></span>Grammarian</div>
-            <div style="font-size: 10px; color: var(--text3); line-height: 1.4;">Reviews and ensures quality of written documentation</div>
-          </div>
-          <div class="divider" style="margin: 16px 0;"></div>
-          <p style="font-size: 10px; color: var(--text3); line-height: 1.4; opacity: 0.8;">
-            Request approval depends on the expert's current workload and availability.
-          </p>
-        </div>
+        @endforeach
 
-        <div class="card" style="padding: 14px; border-radius: 12px; background: var(--bg2);">
-          <div class="section-title" style="font-size: 13px; margin-bottom: 12px;">Quick Tips</div>
-          <ul style="font-size: 11px; color: var(--text3); line-height: 1.6; padding-left: 16px; margin: 0;">
-            <li>Only the Team Leader can apply for experts</li>
-            <li>An expert can hold only one role per team - pick which role you need them for</li>
-            <li>Attach your approved pre-proposal PDF when applying</li>
-            <li>Check the slot status before applying</li>
-          </ul>
-        </div>
+        @foreach($unslotted as $a)
+          <div class="check">
+            <span class="check-dot" style="background: var(--text3);"></span>
+            <span class="check-role">Assigned</span>
+            <span class="pill set">{{ $a->expert?->name ?? 'Unknown' }}</span>
+            @if($isLeader)
+              <button class="check-remove" onclick="openRemoveModal({{ $a->assignment_id }}, '{{ $a->expert?->name ?? '' }}')">
+                <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" fill="none" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+              </button>
+            @endif
+          </div>
+        @endforeach
       </div>
-    </div>
 
-      {{-- Sits along the bottom of the page, spanning both columns. It used
-           to be inside .overview-panel - the 420px right-hand column holding
-           the Role Guide and Quick Tips - so it was drawn tucked under those
-           at the right instead of under the page. --}}
+      {{-- Applications that are still out. A sent application is not a filled
+           slot, so it shows here and the checklist above stays "Not selected"
+           until the expert approves. --}}
+      <div class="panel">
+        <h3>Pending Applications</h3>
+        @php $pendingCount = $assignments->where('status', 'pending')->count(); @endphp
+        @if($pendingCount > 0)
+          <p class="panel-count"><b>{{ $pendingCount }}</b> {{ $pendingCount === 1 ? 'request waiting on a reply' : 'requests waiting on a reply' }}</p>
+        @endif
+        @if($openRequests->isNotEmpty())
+        @foreach($openRequests as $assignment)
+          @php
+            // Through the public disk explicitly: the file was stored with
+            // ->store("proposals", "public"), and a bare Storage::url() call
+            // resolves against the DEFAULT disk instead - the same fix the
+            // expert side of this link already carries.
+            $propUrl = $assignment->proposal_file
+                ? Storage::disk("public")->url($assignment->proposal_file)
+                : null;
+            $reqRole = $assignment->engaged_role_name;
+          @endphp
+          <div class="req-card">
+            <div class="avatar" style="width: 36px; height: 36px; font-size: 12px; background: var(--accent); color: white;">
+              {{ $assignment->expert?->avatarInitials() ?? 'NA' }}
+              @if ($assignment->expert?->hasAvatarImage())
+                <img class="avatar-photo" src="{{ $assignment->expert->avatarUrl() }}" alt="" loading="lazy"
+                     referrerpolicy="no-referrer" onerror="this.remove()">
+              @endif
+            </div>
+            <div style="flex: 1; min-width: 0;">
+              <div style="font-size: 13px; font-weight: 600; color: var(--text);">{{ $assignment->expert?->name ?? 'Unknown Expert' }}</div>
+              <div style="font-size: 11px; color: var(--text3); text-transform: uppercase;">{{ $reqRole ? 'Applied as '.$reqRole : ucfirst($assignment->status) }}</div>
+            </div>
+            <span class="status-badge" style="background: {{ $assignment->status === 'approved' ? 'var(--green-bg)' : ($assignment->status === 'pending' ? 'var(--amber-bg)' : 'var(--red-bg)') }}; color: {{ $assignment->status === 'approved' ? 'var(--green)' : ($assignment->status === 'pending' ? 'var(--amber)' : 'var(--red)') }};">
+              {{ ucfirst($assignment->status) }}
+            </span>
+            <button class="btn btn-sm btn-soft" onclick="openReqInfoModal({{ json_encode([
+              'name' => $assignment->expert?->name ?? 'Unknown',
+              'role' => $reqRole ? ucfirst($reqRole) : null,
+              'status' => ucfirst($assignment->status),
+              'message' => $assignment->message ?? 'No message provided.',
+              // Why the expert said no. It was written down and sent in a
+              // notification, then never shown again - so a team that missed
+              // the notification had a rejected application and no idea why.
+              'rejection_reason' => $assignment->rejection_reason,
+              // An application made with the CaPSA-approved pre-proposal has
+              // no uploaded file, and the details said "None attached" - as
+              // though nothing had been sent, when what was sent is the one
+              // document the CaPSA had already passed.
+              'pre_proposal_title' => $assignment->preProposal?->title,
+              'proposal' => $propUrl,
+              'date' => $assignment->created_at ? $assignment->created_at->format('M d, Y g:i A') : 'N/A',
+            ]) }})" title="View details">View</button>
+            @if($isLeader && $assignment->status !== 'approved')
+              <button class="btn btn-sm btn-soft-red" onclick="openRemoveModal({{ $assignment->assignment_id }}, '{{ $assignment->expert?->name ?? '' }}')" title="Remove">
+                <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+              </button>
+            @endif
+          </div>
+        @endforeach
+        @else
+          <p class="panel-empty">No requests out yet. Choose a role above, then apply to an expert.</p>
+        @endif
+      </div>
+
+      <details class="panel howto">
+        <summary>How it works
+          <svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
+        </summary>
+        <div class="steps">
+          <div class="step"><span class="n">1</span><div><b>Choose a role</b><span>Pick the slot your team still needs to fill.</span></div></div>
+          <div class="step"><span class="n">2</span><div><b>Browse experts</b><span>Only the people who can hold that role are listed.</span></div></div>
+          <div class="step"><span class="n">3</span><div><b>Submit request</b><span>Your approved pre-proposal goes with it.</span></div></div>
+          <div class="step"><span class="n">4</span><div><b>Wait for approval</b><span>The expert reviews and decides.</span></div></div>
+        </div>
+      </details>
+    </aside>
+
       <div class="legal-credits">
         <div class="credits-title">System Developers</div>
         <div class="credits-names">Jolina · John Kenneth · Mark Anthony · Ian Cyrus · Alexa Nicole</div>
@@ -839,6 +826,43 @@
   </div>
 </div>
 
+@if($approvedProposal)
+<div class="modal-overlay" id="proposal-preview-modal" onclick="if (event.target === this) closeModal('proposal-preview-modal')">
+  <div class="modal-box pp-box">
+    <div class="pp-head">
+      <div style="min-width:0">
+        <div class="pp-eyebrow">Approved pre-proposal</div>
+        <h3 style="margin:0">{{ $approvedProposal->title }}</h3>
+      </div>
+      <button class="pp-x" onclick="closeModal('proposal-preview-modal')" aria-label="Close">
+        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="pp-body">
+      @foreach([
+        'Problem statement' => $approvedProposal->problem_statement,
+        'Proposed solution' => $approvedProposal->proposed_solution,
+        'Scope' => $approvedProposal->scope,
+        'Limitations' => $approvedProposal->limitations,
+        'Software development method' => $approvedProposal->sdm,
+        'Research agenda' => $approvedProposal->research_agenda,
+        'SDG goals' => $approvedProposal->sdg_goals,
+      ] as $label => $value)
+        @if(filled($value))
+          <div class="pp-field">
+            <div class="pp-label">{{ $label }}</div>
+            <p>{{ is_array($value) ? implode(', ', $value) : $value }}</p>
+          </div>
+        @endif
+      @endforeach
+    </div>
+    <div class="pp-foot">
+      <button class="btn btn-sm btn-soft" onclick="closeModal('proposal-preview-modal')">Close</button>
+    </div>
+  </div>
+</div>
+@endif
+
 <!-- Apply Form Modal -->
 <div class="modal-overlay" id="apply-modal">
   <div class="modal-box" style="width: 560px; max-width: 94vw;">
@@ -861,10 +885,17 @@
       <label>Approved Pre-Proposal</label>
       <div style="display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border:1px solid var(--green);background:var(--green-bg);border-radius:10px">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="var(--green)" stroke-width="2.4" style="flex-shrink:0;margin-top:1px"><polyline points="20 6 9 17 4 12"/></svg>
-        <div style="min-width:0">
+        <div style="min-width:0;flex:1">
           <div style="font-size:12.5px;font-weight:600;color:var(--text);line-height:1.4">{{ $approvedProposal->title }}</div>
           <div style="font-size:11px;color:var(--text3);margin-top:3px">Approved by your CaPSA &mdash; sent with this application, so there is nothing to upload.</div>
         </div>
+        {{-- The document goes out with the application, so being able to read
+             it first is the least the form owes you. --}}
+        <button type="button" class="btn btn-sm btn-soft" style="flex-shrink:0;align-self:center"
+                onclick="openModal('proposal-preview-modal')">
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          Preview
+        </button>
       </div>
     </div>
     @else
@@ -1421,26 +1452,150 @@ function showToast(msg, type) {
   setTimeout(() => toast.classList.remove('show'), 4000);
 }
 
-function setFilter(role, el) {
-  document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
-  el.classList.add('active');
-  filterExperts();
+// ── Cards or list ──────────────────────────────────────────────────────
+// Both are rendered server-side; the switch only changes which is shown, so
+// the two can never disagree about who is on the page. The choice is
+// remembered per browser, because it is a preference and not page state.
+function setView(view) {
+  var results = document.getElementById('results');
+  if (!results) return;
+
+  results.classList.toggle('view-cards', view === 'cards');
+  results.classList.toggle('view-list', view === 'list');
+
+  var seg = document.getElementById('viewSeg');
+  if (seg) {
+    Array.prototype.forEach.call(seg.children, function (b) {
+      b.setAttribute('aria-pressed', String(b.dataset.view === view));
+    });
+  }
+
+  try { localStorage.setItem('capstrack_experts_view', view); } catch (e) {}
+  if (view === 'cards') layoutRail();
 }
 
-function filterExperts() {
-  const query = document.getElementById('search-input').value.toLowerCase();
-  const activeRole = document.querySelector('.filter-chip.active')?.dataset.role || 'all';
-  const cards = document.querySelectorAll('.expert-card-compact');
+// ── The card strip ─────────────────────────────────────────────────────
+// Rows are capped at what the leftover height allows, and anything past that
+// runs sideways. That is what keeps the page one screen high however many
+// experts a role has - it never grows downwards.
+function layoutRail() {
+  var rail = document.getElementById('rail');
+  if (!rail) return;
 
-  cards.forEach(card => {
-    const nameEl = card.querySelector('[style*="font-weight: 700"]');
-    const name = nameEl?.textContent?.toLowerCase() || '';
-    const roles = (card.dataset.roles || '').toLowerCase();
-    const matchesSearch = name.includes(query);
-    const matchesRole = activeRole === 'all' || roles.split(',').includes(activeRole);
-    card.style.display = (matchesSearch && matchesRole) ? '' : 'none';
+  var card = rail.querySelector('.card');
+  if (!card) return;
+
+  var scroller = document.querySelector('.content');
+  var cols = Math.max(2, Math.round((rail.clientWidth + 10) / (228 + 10)));
+  rail.style.setProperty('--cols', cols);
+
+  function room() {
+    var pager = document.getElementById('railPager');
+    return scroller.getBoundingClientRect().bottom
+         - parseFloat(getComputedStyle(scroller).paddingBottom || 0)
+         - rail.getBoundingClientRect().top
+         - (pager && !pager.hidden ? pager.getBoundingClientRect().height + 8 : 24);
+  }
+
+  rail.style.setProperty('--rows', 1);
+  var one = card.getBoundingClientRect().height;
+  rail.style.setProperty('--rows', (room() >= one * 2 + 10) ? 2 : 1);
+
+  fitAllTags();
+  updateRail();
+}
+
+function updateRail() {
+  var rail = document.getElementById('rail');
+  var pager = document.getElementById('railPager');
+  if (!rail || !pager) return;
+
+  var per = (+getComputedStyle(rail).getPropertyValue('--cols') || 1)
+          * (+getComputedStyle(rail).getPropertyValue('--rows') || 1);
+  // Counted from the cards rather than from scrollWidth: a few sub-pixels of
+  // rounding on the last column was enough to invent an empty page.
+  var pages = Math.max(1, Math.ceil(rail.children.length / per));
+  var at = Math.min(pages - 1, Math.round(rail.scrollLeft / rail.clientWidth));
+
+  var prev = document.querySelector('.rail-nav.prev');
+  var next = document.querySelector('.rail-nav.next');
+
+  pager.hidden = prev.hidden = next.hidden = pages < 2;
+  if (pages < 2) return;
+
+  prev.disabled = at <= 0;
+  next.disabled = at >= pages - 1;
+
+  // Past eight pages nobody counts dots, so the number carries it alone.
+  document.getElementById('railDots').innerHTML = pages <= 8
+    ? Array.apply(null, { length: pages }).map(function (_, k) {
+        return '<i class="' + (k === at ? 'on' : '') + '"></i>';
+      }).join('')
+    : '';
+  document.getElementById('railCount').innerHTML = '<b>' + (at + 1) + '</b> of ' + pages;
+}
+
+// Two rows of expertise tags is the budget. What does not fit is counted into
+// a +N chip, measured rather than assumed: "Proofreading" and "Human-Computer
+// Interaction and Usability Engineering" are not the same width.
+function fitTags(box) {
+  var tags = Array.prototype.slice.call(box.querySelectorAll('.t:not(.more)'));
+  if (!tags.length) return;
+
+  var chip = box.querySelector('.more');
+  if (!chip) {
+    chip = document.createElement('span');
+    chip.className = 't more';
+    box.appendChild(chip);
+  }
+
+  tags.forEach(function (t) { t.hidden = false; });
+  chip.hidden = true;
+  if (box.scrollHeight <= box.clientHeight) return;
+
+  chip.hidden = false;
+  var shown = tags.length;
+  while (shown > 0 && box.scrollHeight > box.clientHeight) {
+    shown--;
+    tags[shown].hidden = true;
+    var rest = tags.slice(shown);
+    chip.textContent = '+' + rest.length;
+    chip.title = rest.map(function (t) { return t.title; }).join(', ');
+  }
+}
+
+function fitAllTags() {
+  Array.prototype.forEach.call(document.querySelectorAll('.rail .tags'), fitTags);
+}
+
+document.addEventListener('click', function (ev) {
+  var seg = ev.target.closest('#viewSeg [data-view]');
+  if (seg) { setView(seg.dataset.view); return; }
+
+  var arrow = ev.target.closest('[data-rail]');
+  if (arrow && !arrow.disabled) {
+    var rail = document.getElementById('rail');
+    rail.scrollLeft += (+arrow.dataset.rail) * rail.clientWidth;
+    setTimeout(updateRail, 260);
+  }
+});
+
+document.addEventListener('scroll', function (ev) {
+  if (ev.target && ev.target.id === 'rail') updateRail();
+}, true);
+
+(function () {
+  var saved = 'cards';
+  try { saved = localStorage.getItem('capstrack_experts_view') || 'cards'; } catch (e) {}
+  setView(saved);
+
+  var t;
+  addEventListener('resize', function () {
+    clearTimeout(t);
+    t = setTimeout(layoutRail, 120);
   });
-}
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(layoutRail);
+})();
 
 // ── Skill picker ──
 function toggleSkillPicker(event) {
