@@ -8,9 +8,9 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
 @vite('resources/student-ui/Styles/experts.css')
 <style>
-.role-chips { display: flex; flex-wrap: wrap; gap: 5px; margin: 10px 0 8px; justify-content: center; }
+.role-chips { display: flex; flex-wrap: wrap; gap: 5px; margin: 0; justify-content: center; }
 .role-chip { font-size: 10px; font-weight: 600; padding: 3px 10px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.4px; }
-.expertise-tags { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; margin-bottom: 8px; }
+.expertise-tags { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; margin: 0; }
 .expertise-tag { font-size: 10px; color: var(--text3); background: var(--bg3); padding: 2px 8px; border-radius: 4px; }
 
 /* The list of applications this team has out.
@@ -586,7 +586,12 @@
             $_slotsUsed = $expert->slots_used;
             $_maxSlots = $expert->max_teams ?? 0;
             $_slotPercent = $_maxSlots > 0 ? min(100, ($_slotsUsed / $_maxSlots) * 100) : 0;
-            $_isFull = $_slotsUsed >= $_maxSlots;
+            // Only full against a number somebody actually set. With the
+            // default of four gone, an expert who has not said reads max = 0,
+            // and "0 >= 0" marked every one of them full - and refused every
+            // request to them, here and on the server.
+            $_isFull = $_maxSlots > 0 && $_slotsUsed >= $_maxSlots;
+            $_slotsUnset = $_maxSlots < 1;
             $_barColor = $_isFull ? 'var(--red)' : ($_slotPercent > 66 ? 'var(--amber)' : 'var(--accent)');
             $_chips = $visibleRoles->map(fn($r) => [
                 'name' => ucfirst($r->role_name),
@@ -596,14 +601,14 @@
             $_expertiseTags = $expert->expertise->pluck('expertise_field')->toArray();
             $_expertiseMore = max(0, $expert->expertise->count() - 3);
           @endphp
-          <div class="expert-card-compact" data-expert-id="{{ $expert->expert_id }}" style="--accent-clr:{{ $dotColors[$firstRole?->role_name ?? 'adviser'] ?? 'var(--accent)' }}" data-roles="{{ $visibleRoles->pluck('role_name')->join(',') }}" data-name="{{ $expert->name }}" data-initials="{{ $expert->avatarInitials() }}" data-avatar="{{ $expert->hasAvatarImage() ? $expert->avatarUrl() : '' }}" data-chips='{{ json_encode($_chips) }}' data-tags='{{ json_encode($_expertiseTags) }}' data-tags-more="{{ $_expertiseMore }}" data-slots="{{ $_slotsUsed }}/{{ $_maxSlots }}" data-slots-pct="{{ $_slotPercent }}" data-slots-color="{{ $_barColor }}" onclick="openExpertPostModal(this)">
+          <div class="expert-card-compact" data-expert-id="{{ $expert->expert_id }}" style="--accent-clr:{{ $dotColors[$firstRole?->role_name ?? 'adviser'] ?? 'var(--accent)' }}" data-roles="{{ $visibleRoles->pluck('role_name')->join(',') }}" data-name="{{ $expert->name }}" data-initials="{{ $expert->avatarInitials() }}" data-avatar="{{ $expert->hasAvatarImage() ? $expert->avatarUrl() : '' }}" data-chips='{{ json_encode($_chips) }}' data-tags='{{ json_encode($_expertiseTags) }}' data-tags-more="{{ $_expertiseMore }}" data-slots="{{ $_slotsUnset ? 'Capacity not set' : $_slotsUsed.'/'.$_maxSlots }}" data-slots-pct="{{ $_slotPercent }}" data-slots-color="{{ $_barColor }}" onclick="openExpertPostModal(this)">
             <div class="role-dot" style="background: {{ $dotColors[$firstRole?->role_name ?? 'adviser'] ?? 'var(--accent)' }};"></div>
             <div class="card-accent" style="background:{{ $dotColors[$firstRole?->role_name ?? 'adviser'] ?? 'var(--accent)' }};"></div>
             <div class="expert-avatar-wrap">
               {{-- Experts sign in with Google, so most have a real photo on
                    file. If it fails to load (an expired Google URL, say) the
                    initials underneath show through. --}}
-              <div class="avatar" style="width:100%; height:100%; font-size:18px;">
+              <div class="avatar" style="width:100%; height:100%; font-size:16px;">
                 {{ $expert->avatarInitials() }}
                 @if ($expert->hasAvatarImage())
                   <img class="avatar-photo" src="{{ $expert->avatarUrl() }}" alt="" loading="lazy"
@@ -611,7 +616,7 @@
                 @endif
               </div>
             </div>
-            <div style="font-size: 15px; font-weight: 700; color: var(--text);">{{ $expert->name }}</div>
+            <div style="font-size: 15px; font-weight: 700; color: var(--text); line-height: 1.3;">{{ $expert->name }}</div>
 
             <div class="role-chips">
               @foreach($visibleRoles as $role)
@@ -638,9 +643,18 @@
               @endif
             </div>
 
-            <div class="mini-slot-bar"><div class="mini-slot-fill" style="width: {{ $_slotPercent }}%; background: {{ $_barColor }};"></div></div>
-            <div style="font-size: 10px; font-weight: 700; color: {{ $_isFull ? 'var(--red)' : 'var(--text3)' }}; letter-spacing: 0.5px;">
-              {{ $_isFull ? 'FULL CAPACITY' : 'SLOTS: '.$_slotsUsed.'/'.$_maxSlots }}
+            <div class="mini-slot-bar"></div>
+            {{-- Three states, not two. "Not set" is somebody who has never said
+                 how many teams they take, which is neither full nor a number -
+                 and used to read FULL CAPACITY. --}}
+            <div class="slot-caption {{ $_isFull ? 'is-full' : ($_slotsUnset ? 'is-unset' : '') }}">
+              @if ($_slotsUnset)
+                Capacity not set
+              @elseif ($_isFull)
+                Full capacity
+              @else
+                {{ $_slotsUsed }} of {{ $_maxSlots }} slots
+              @endif
             </div>
 
             @if($team && $isLeader && !$teamConfirmed)

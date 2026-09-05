@@ -165,7 +165,12 @@ class StudentExpertController extends Controller
             ->where('status', 'approved')
             ->count();
 
-        if ($slotsUsed >= ($expert->max_teams ?? 0)) {
+        // A capacity nobody has set is not a capacity of nought: an expert
+        // who has not opened their profile yet would otherwise be full from
+        // the moment their account was made, and refuse every team.
+        $maxTeams = $expert->max_teams ?? 0;
+
+        if ($maxTeams > 0 && $slotsUsed >= $maxTeams) {
             return response()->json([
                 'success' => false,
                 'message' => 'This expert has reached their maximum number of teams.',

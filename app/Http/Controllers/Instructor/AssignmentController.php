@@ -129,7 +129,10 @@ class AssignmentController extends Controller
             ->where('status', 'approved')
             ->count();
 
-        if ($slotsUsed >= ($expert->max_teams ?? 0)) {
+        // Unset is not nought - see the same guard in StudentExpertController.
+        $maxTeams = $expert->max_teams ?? 0;
+
+        if ($maxTeams > 0 && $slotsUsed >= $maxTeams) {
             return response()->json([
                 'success' => false,
                 'message' => 'You have reached your maximum number of teams.',
