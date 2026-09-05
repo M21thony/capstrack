@@ -14,6 +14,9 @@ use Illuminate\Support\Facades\DB;
 
 class ExpertController extends Controller
 {
+    /** The roles a team engages, in the order the page offers them. */
+    private const ROLES = ['adviser', 'consultant', 'grammarian'];
+
     public function index(Request $request)
     {
         $student = Auth::user();
@@ -24,6 +27,33 @@ class ExpertController extends Controller
         // Only experts who take teams from this student's program - an
         // expert who accepts BSIS only shouldn't show up to a BSIT student.
         $studentProgram = Student::mapCourseToProgram($student->course ?? '');
+
+        $assignments = collect();
+        $isLeader = false;
+        $roleAssignments = [
+            'adviser' => null,
+            'consultant' => null,
+            'grammarian' => null,
+        ];
+
+        if ($team) {
+            $isLeader = $team->leader_id === $student->student_id;
+            $assignments = TeamExpertAssignment::where('team_id', $team->team_id)
+                ->with(['expert.roles', 'expert.expertise', 'expertRole.role', 'preProposal'])
+                ->get();
+
+            // Keyed by the role the team actually engaged each expert as,
+            // which is what expert_role_id records. This used to read
+            // $a->expert->roles->first(), i.e. whichever role happened to
+            // come back first out of everything the expert is qualified for.
+            foreach ($assignments->where('status', 'approved') as $a) {
+                $roleName = $a->engaged_role_name;
+                if ($roleName && array_key_exists($roleName, $roleAssignments)) {
+                    $roleAssignments[$roleName] = $a;
+                }
+            }
+        }
+
 
         // The base list this student is allowed to see. Reused for both the
         // page of results and the skill dropdown, so the dropdown can only
@@ -69,6 +99,19 @@ class ExpertController extends Controller
         $activeSkill = trim((string) $request->query('skill', ''));
         $activeGroup = trim((string) $request->query('skill_group', ''));
 
+        // A team needs one adviser, one consultant and one grammarian, so the
+        // page shows one role at a time rather than everybody at once. The
+        // role travels in the query string for the same reason the skill
+        // does: the list is paginated, so choosing in the browser would only
+        // ever filter the page you happen to be looking at.
+        $activeRole = strtolower(trim((string) $request->query('role', '')));
+
+        if (! in_array($activeRole, self::ROLES, true)) {
+            $activeRole = '';
+        }
+
+        $search = trim((string) $request->query('q', ''));
+
         // A group only means something if it is one we actually offer.
         if ($activeGroup !== '' && ! $skillGroups->has($activeGroup)) {
             $activeGroup = '';
@@ -104,19 +147,71 @@ class ExpertController extends Controller
             });
         };
 
-        $experts = $visible()
+        // Typed words, each of which has to match something - a part of the
+        // name, or an expertise entry. Words are ANDed, so "mark web" finds
+        // the one person rather than everyone called Mark plus everyone who
+        // does web.
+        //
+        // Columns are matched one at a time rather than concatenated:
+        // SQLite, which the tests run on, has no CONCAT_WS.
+        $matchesSearch = function ($q) use ($search) {
+            foreach (preg_split('/\\s+/', $search, -1, PREG_SPLIT_NO_EMPTY) as $word) {
+                $like = '%'.$this->escapeLike(mb_strtolower($word)).'%';
+
+                $q->where(function ($w) use ($like) {
+                    $w->whereRaw("LOWER(first_name) LIKE ? ESCAPE '!'", [$like])
+                        ->orWhereRaw("LOWER(last_name) LIKE ? ESCAPE '!'", [$like])
+                        ->orWhereRaw("LOWER(COALESCE(middle_name, '')) LIKE ? ESCAPE '!'", [$like])
+                        ->orWhereHas('expertise', function ($e) use ($like) {
+                            $e->whereRaw("LOWER(expertise_field) LIKE ? ESCAPE '!'", [$like]);
+                        });
+                });
+            }
+        };
+
+        // Everything except the role, so the count on each role card and the
+        // list itself are filtered identically - the number on the card is
+        // then exactly what choosing it shows.
+        $filtered = fn () => $visible()
             ->when($activeSkill !== '', function ($q) use ($activeSkill, $matchesSkill) {
                 $q->whereHas('expertise', fn ($sub) => $matchesSkill($sub, [$activeSkill]));
             })
             ->when($activeSkill === '' && $groupTerms !== [], function ($q) use ($groupTerms, $matchesSkill) {
                 $q->whereHas('expertise', fn ($sub) => $matchesSkill($sub, $groupTerms));
             })
+            ->when($search !== '', $matchesSearch);
+
+        $roleCounts = [];
+        foreach (self::ROLES as $roleName) {
+            $roleCounts[$roleName] = $filtered()
+                ->whereHas('roles', fn ($q) => $q->where('role_name', $roleName))
+                ->count();
+        }
+
+        // With no role asked for, open on the first slot the team has not
+        // filled - that is the one they came here to fill.
+        if ($activeRole === '') {
+            foreach (self::ROLES as $roleName) {
+                if (($roleAssignments[$roleName] ?? null) === null) {
+                    $activeRole = $roleName;
+                    break;
+                }
+            }
+
+            $activeRole = $activeRole ?: self::ROLES[0];
+        }
+
+        // 24 rather than 9: the page shows one role at a time now, and the
+        // card strip pages through what it is handed without the screen
+        // growing, so a whole role normally arrives in a single request.
+        $experts = $filtered()
+            ->whereHas('roles', fn ($q) => $q->where('role_name', $activeRole))
             ->with(['roles' => function ($q) {
                 $q->where('role_name', '!=', 'capstone_adviser');
             }, 'expertise', 'teamAssignments' => function ($q) {
                 $q->where('status', 'approved');
             }])
-            ->paginate(9)
+            ->paginate(24)
             ->withQueryString()
             ->through(function ($expert) {
                 $expert->slots_used = $expert->teamAssignments->count();
@@ -124,32 +219,6 @@ class ExpertController extends Controller
 
                 return $expert;
             });
-
-        $assignments = collect();
-        $isLeader = false;
-        $roleAssignments = [
-            'adviser' => null,
-            'consultant' => null,
-            'grammarian' => null,
-        ];
-
-        if ($team) {
-            $isLeader = $team->leader_id === $student->student_id;
-            $assignments = TeamExpertAssignment::where('team_id', $team->team_id)
-                ->with(['expert.roles', 'expert.expertise', 'expertRole.role', 'preProposal'])
-                ->get();
-
-            // Keyed by the role the team actually engaged each expert as,
-            // which is what expert_role_id records. This used to read
-            // $a->expert->roles->first(), i.e. whichever role happened to
-            // come back first out of everything the expert is qualified for.
-            foreach ($assignments->where('status', 'approved') as $a) {
-                $roleName = $a->engaged_role_name;
-                if ($roleName && array_key_exists($roleName, $roleAssignments)) {
-                    $roleAssignments[$roleName] = $a;
-                }
-            }
-        }
 
         $stats = [
             'total_experts' => $experts->total(),
@@ -183,6 +252,9 @@ class ExpertController extends Controller
             'skillGroups' => $skillGroups,
             'activeSkill' => $activeSkill,
             'activeGroup' => $activeGroup,
+            'activeRole' => $activeRole,
+            'search' => $search,
+            'roleCounts' => $roleCounts,
             'roleAssignments' => $roleAssignments,
             'engagedExpertIds' => $engagedExpertIds,
         ]);
