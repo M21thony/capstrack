@@ -404,9 +404,15 @@
         @if($activeSkill !== '')<input type="hidden" name="skill" value="{{ $activeSkill }}">@endif
         @if($activeGroup !== '')<input type="hidden" name="skill_group" value="{{ $activeGroup }}">@endif
 
+        {{-- The magnifier is the submit button, not decoration. The skill
+             picker below carries its own text box, and a form with two text
+             fields and no submit button does not submit on Enter at all -
+             which is exactly how this search came to do nothing. --}}
         <label class="field search">
-          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
-          <input type="search" name="q" value="{{ $search }}" placeholder="Search experts by name or expertise&hellip;" autocomplete="off">
+          <button type="submit" class="field-go" aria-label="Search experts">
+            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+          </button>
+          <input type="search" name="q" value="{{ $search }}" enterkeyhint="search" placeholder="Search experts by name or expertise&hellip;" autocomplete="off">
           @if($search !== '')
             <a class="field-clear" href="{{ route('student.experts', array_filter(['role' => $activeRole, 'skill' => $activeSkill ?: null, 'skill_group' => $activeGroup ?: null])) }}" aria-label="Clear search">&times;</a>
           @endif
@@ -421,6 +427,12 @@
                 @elseif($activeGroup !== '') {{ $activeGroup }}
                 @else All skills @endif
               </span>
+                    @if($activeSkill !== '' || $activeGroup !== '')
+                      {{-- Clearing belongs on the control that set it. --}}
+                      <a class="skill-filter-x"
+                         href="{{ route('student.experts', array_filter(['role' => $activeRole, 'q' => $search ?: null])) }}"
+                         onclick="event.stopPropagation()" aria-label="Clear skill filter">&times;</a>
+                    @endif
               <svg class="skill-filter-caret" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.4"><polyline points="6 9 12 15 18 9"/></svg>
             </button>
 
@@ -479,18 +491,6 @@
         </div>
       </form>
 
-      @if($activeSkill !== '' || $activeGroup !== '')
-        <div class="skill-filter-active">
-          @if($activeSkill !== '')
-            Experts whose skills mention <strong>{{ $activeSkill }}</strong>
-          @else
-            Experts with any skill in <strong>{{ $activeGroup }}</strong>
-          @endif
-          &mdash; {{ $experts->total() }} {{ Str::plural('expert', $experts->total()) }} found.
-          <a href="{{ route('student.experts', ['role' => $activeRole]) }}" class="skill-filter-clear">Clear</a>
-        </div>
-      @endif
-
       {{-- Both views are rendered from the same rows; the switch only changes
            which one is shown, so the list can never fall out of step with the
            cards. --}}
@@ -528,7 +528,6 @@
                    data-name="{{ $expert->name }}" data-initials="{{ $expert->avatarInitials() }}"
                    data-avatar="{{ $expert->hasAvatarImage() ? $expert->avatarUrl() : '' }}"
                    data-chips='{{ json_encode($_chips) }}' data-tags='{{ json_encode($_expertiseTags) }}'
-                   data-tags-more="0"
                    data-slots="{{ $_slotsUnset ? 'Capacity not set' : $_slotsUsed.'/'.$_maxSlots }}"
                    data-slots-pct="{{ $_maxSlots > 0 ? min(100, ($_slotsUsed / $_maxSlots) * 100) : 0 }}"
                    data-slots-color="{{ $_isFull ? 'var(--red)' : 'var(--accent)' }}"
@@ -1499,7 +1498,13 @@ function layoutRail() {
 
   rail.style.setProperty('--rows', 1);
   var one = card.getBoundingClientRect().height;
-  rail.style.setProperty('--rows', (room() >= one * 2 + 10) ? 2 : 1);
+
+  // Two rows only when there are enough cards to fill two. The strip fills
+  // downwards first, so four cards against a fixed two rows made two narrow
+  // columns with the page empty beside them.
+  var fits = room() >= one * 2 + 10 ? 2 : 1;
+  var needed = Math.ceil(rail.children.length / cols);
+  rail.style.setProperty('--rows', Math.max(1, Math.min(fits, needed)));
 
   fitAllTags();
   updateRail();

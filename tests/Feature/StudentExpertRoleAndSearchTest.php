@@ -149,6 +149,26 @@ class StudentExpertRoleAndSearchTest extends TestCase
         $response->assertDontSee('data-expert-id="'.$nameOnly->expert_id.'"', false);
     }
 
+    /**
+     * The search box has to be submittable. The filter row also holds the
+     * skill picker, which has a text box of its own, and a form with two text
+     * fields and no submit button does not submit on Enter at all - so the
+     * search silently did nothing.
+     */
+    public function test_the_search_form_has_a_submit_button(): void
+    {
+        [$student] = $this->leader();
+        $this->expert('Neil', 'Inocencio', ['adviser']);
+
+        $html = $this->actingAs($student, 'web')->get('/student/experts')->getContent();
+
+        $form = substr($html, strpos($html, '<form class="filters"'));
+        $form = substr($form, 0, strpos($form, '</form>'));
+
+        $this->assertStringContainsString('name="q"', $form);
+        $this->assertStringContainsString('type="submit"', $form);
+    }
+
     /** With no role asked for, open on the slot the team still has to fill. */
     public function test_the_page_opens_on_the_first_unfilled_slot(): void
     {
