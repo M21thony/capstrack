@@ -20,7 +20,10 @@ class ResourcesController extends Controller
         $ownerId = $viewer && ! $viewer->is_admin ? $viewer->expert_id : null;
 
         return view('capsa.resources', [
-            'resources' => Resource::when($ownerId !== null, fn ($q) => $q->where('uploaded_by', $ownerId))
+            // The sections come along because the list says who can open
+            // each file, which is the question the page exists to answer.
+            'resources' => Resource::with('sections')
+                ->when($ownerId !== null, fn ($q) => $q->where('uploaded_by', $ownerId))
                 ->orderByDesc('uploaded_at')
                 ->get(),
             'folders' => AdminDriveFolder::orderBy('name')->get(),

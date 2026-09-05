@@ -1451,3 +1451,109 @@ textarea.input{resize:vertical;min-height:80px}
 .folder-pick:hover{border-color:var(--accent);color:var(--text);background:var(--accent-light)}
 .folder-pick input{display:none}
 .folder-pick svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2}
+
+/* ══ Templates & Lessons: library first ══════════════════════════════════
+   The upload form used to hold a third of the width for something done once
+   a week. It moved into a panel, and everything below is the library taking
+   the space back. */
+
+.lib-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;
+  flex-wrap:wrap;margin-bottom:14px}
+.lib-rule{font-size:13px;color:var(--text2)}
+.lib-count{font-size:12px;color:var(--text3);margin-top:3px;font-variant-numeric:tabular-nums}
+.lib-head-actions{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+
+/* The Drive state as a dot, not a banner across the page. */
+.drive-pill{display:inline-flex;align-items:center;gap:7px;font-size:11.5px;color:var(--text2);
+  background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:5px 11px;white-space:nowrap}
+.drive-dot{width:7px;height:7px;border-radius:50%;background:var(--text3);flex:0 0 7px}
+.drive-dot-on{background:var(--green)}
+.drive-dot-off{background:var(--amber)}
+
+/* Four filters, one row. Search takes what is left. */
+.lib-bar{display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.lib-filter{width:auto;min-width:150px;font-size:12.5px}
+.lib-search{flex:1;min-width:190px;font-size:12.5px}
+
+/* The strip that names the columns - without it a bare "BSIT-4A" beside a
+   file could mean three different things, and people ask. */
+.lib-head-row{display:flex;align-items:flex-end;gap:13px;padding:0 14px 7px;font-size:10px;
+  font-weight:700;letter-spacing:1.1px;text-transform:uppercase;color:var(--text3)}
+.lib-head-row .h-file{flex:1;min-width:0}
+.lib-head-row .h-who{flex:0 0 250px;color:var(--accent3)}
+.lib-head-row .h-when{flex:0 0 58px;text-align:right}
+.lib-head-row .h-acts{flex:0 0 66px}
+
+.lib-list{background:var(--bg2);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.lib-row{display:flex;align-items:center;gap:13px;padding:11px 14px;border-top:1px solid var(--bg4)}
+.lib-row:first-child{border-top:0}
+.lib-row:hover{background:var(--bg3)}
+
+.lib-file{flex:1;min-width:0;display:flex;align-items:center;gap:12px}
+.lib-file-text{min-width:0}
+.lib-file-text b{display:block;font-size:13px;font-weight:500;color:var(--text);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lib-sub{display:block;font-size:11.5px;color:var(--text3);margin-top:2px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+.lib-who{flex:0 0 250px;display:flex;gap:5px;flex-wrap:wrap;align-items:center}
+.pill{display:inline-block;font-size:11px;font-weight:500;padding:3px 9px;border-radius:4px;
+  white-space:nowrap}
+.pill-section{background:var(--accent-light);color:var(--accent3);border:1px solid rgba(201,168,44,.35)}
+/* Dashed and unfilled, so "All your students" never reads as a section name. */
+.pill-all{background:var(--bg2);color:var(--text2);border:1px dashed var(--border2)}
+
+.lib-when{flex:0 0 58px;text-align:right;font-size:11.5px;color:var(--text3);
+  white-space:nowrap;font-variant-numeric:tabular-nums}
+.lib-acts{flex:0 0 66px;display:flex;gap:6px;justify-content:flex-end}
+.lib-icon{width:27px;height:27px;border-radius:6px;border:1px solid var(--border);background:var(--bg2);
+  display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .13s;padding:0}
+.lib-icon svg{width:12px;height:12px;stroke:var(--text2);fill:none;stroke-width:2.2}
+.lib-icon:hover{border-color:var(--accent);background:var(--accent-light)}
+.lib-icon:hover svg{stroke:var(--accent3)}
+.lib-icon-danger:hover{border-color:var(--red);background:var(--red-bg)}
+.lib-icon-danger:hover svg{stroke:var(--red)}
+
+/* Says which of the two nothings this is. */
+.lib-empty{background:var(--bg2);border:1px dashed var(--border2);border-radius:12px;
+  padding:34px 24px;text-align:center}
+.lib-empty b{display:block;font-size:14px;color:var(--text);margin-bottom:5px}
+.lib-empty span{display:block;font-size:12.5px;color:var(--text3);margin:0 auto 15px;max-width:46ch}
+
+/* ══ the upload panel ══ */
+.upload-scrim{position:fixed;inset:0;background:rgba(24,25,31,.45);z-index:60;
+  display:flex;align-items:flex-start;justify-content:center;padding:40px 20px;overflow-y:auto}
+.upload-scrim[hidden]{display:none}
+.upload-sheet{width:100%;max-width:560px;background:var(--bg2);border-radius:12px;
+  box-shadow:0 24px 60px rgba(24,25,31,.28)}
+
+/* ══ picking sections has to look like picking ══
+   These are inputs, not labels. The list elsewhere on the page uses pills for
+   output, so these get boxes and edges instead. */
+.section-picker{display:flex;gap:16px;flex-wrap:wrap;align-items:center;
+  border:1px solid var(--border2);background:var(--bg2);border-radius:6px;padding:10px 12px}
+.section-picker.needs-pick{border-color:var(--red);box-shadow:0 0 0 3px var(--red-bg)}
+.section-box{display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-size:12.5px;
+  color:var(--text)}
+.section-box input{position:absolute;opacity:0;width:0;height:0}
+.section-tick{width:16px;height:16px;flex:0 0 16px;border-radius:4px;border:1.5px solid var(--border2);
+  background:var(--bg2);display:flex;align-items:center;justify-content:center;transition:all .12s}
+.section-tick svg{width:10px;height:10px;stroke:#18191f;stroke-width:3.4;fill:none;
+  opacity:0;transition:opacity .12s}
+.section-box input:checked ~ .section-tick{background:var(--accent);border-color:var(--accent2)}
+.section-box input:checked ~ .section-tick svg{opacity:1}
+.section-box input:focus-visible ~ .section-tick{box-shadow:0 0 0 3px var(--accent-glow)}
+.section-box input:checked ~ .section-name{font-weight:700}
+.section-hint{font-size:11.5px;color:var(--text3);margin-top:7px;line-height:1.5}
+
+.req-chip{display:inline-block;font-size:9.5px;font-weight:700;letter-spacing:.8px;
+  text-transform:uppercase;color:var(--accent3);background:var(--accent-light);
+  border:1px solid rgba(201,168,44,.4);border-radius:4px;padding:2px 6px;margin-left:7px;
+  vertical-align:1px}
+
+@media (max-width:760px){
+  .lib-head-row{display:none}
+  .lib-row{flex-wrap:wrap}
+  .lib-who{flex:1 1 100%;order:3}
+  .lib-when{flex:0 0 auto;order:2}
+}
