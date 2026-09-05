@@ -66,7 +66,7 @@ class PreProposalWithoutTeamTest extends TestCase
 
     public function test_turning_the_set_in_still_needs_a_team(): void
     {
-        $response = $this->actingAs($this->teamless(), 'web')->patch('/pre-proposal');
+        $response = $this->actingAs($this->teamless(), 'web')->patch('/pre-proposal', ['status' => 'submitted']);
 
         $response->assertRedirect();
         $this->assertNotNull(session('error'));

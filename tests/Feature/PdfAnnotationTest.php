@@ -585,8 +585,8 @@ class PdfAnnotationTest extends TestCase
         $this->instance(GoogleDriveService::class, $mock);
 
         $response = $this->call(
-            'POST',
-            "/reviews/{$reviewId}/sync-drive",
+            'PUT',
+            "/reviews/{$reviewId}/drive-file",
             [],
             [],
             [],
@@ -604,8 +604,8 @@ class PdfAnnotationTest extends TestCase
         $reviewId = $this->makeReview(25, $expert->expert_id, 'To Review');
 
         $response = $this->call(
-            'POST',
-            "/reviews/{$reviewId}/sync-drive",
+            'PUT',
+            "/reviews/{$reviewId}/drive-file",
             [],
             [],
             [],

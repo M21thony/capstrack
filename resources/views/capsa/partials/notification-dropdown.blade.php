@@ -113,7 +113,7 @@ document.addEventListener('click', function(e) {
       var ids = [{{ $recentLogs->pluck('id')->join(',') }}];
       if (ids.length) {
         fetch('/capsa/notifications/seen', {
-          method: 'POST',
+          method: 'PUT',
           headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content, 'Content-Type': 'application/json' },
           body: JSON.stringify({ ids: ids })
         }).then(function() {
@@ -133,7 +133,7 @@ document.addEventListener('click', function(e) {
 document.addEventListener('click', function(e) {
   if (!e.target.closest('#notif-mark-all-btn')) return;
   fetch('/capsa/notifications/seen', {
-    method: 'POST',
+    method: 'PUT',
     headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content, 'Content-Type': 'application/json' },
     body: JSON.stringify({ ids: [{{ $recentLogs->pluck('id')->join(',') }}] })
   }).then(function() {

@@ -90,7 +90,7 @@ $pagesBothRolesOpen = function () {
     Route::put('/experts/{expert}', [AdminExpertsController::class, 'update'])->name('experts.update');
     Route::put('/experts/{expert}/roles', [AdminExpertsController::class, 'updateRoles'])->name('experts.update-roles');
     Route::delete('/experts/{expert}', [AdminExpertsController::class, 'destroy'])->name('experts.destroy');
-    Route::post('/notifications/seen', function (Request $request) {
+    Route::put('/notifications/seen', function (Request $request) {
         $ids = $request->input('ids', []);
         if (! empty($ids)) {
             $seen = session('admin_notification_seen_ids', []);
@@ -111,7 +111,7 @@ Route::middleware('expert.admin')->group(function () {
     // yet - there is no permanent CaPSA, so this happens often enough
     // that it should not need a spreadsheet with one row in it.
     Route::post('/experts/capsa', [AdminExpertsController::class, 'storeCapsa'])->name('experts.capsa.store');
-    Route::post('/experts/{expert}/toggle-capsa', [AdminExpertsController::class, 'toggleCapsa'])->name('experts.toggle-capsa');
+    Route::put('/experts/{expert}/capsa', [AdminExpertsController::class, 'toggleCapsa'])->name('experts.capsa.update');
     // Changing sections is not a change of role, so it does not go
     // through the toggle - see AdminExpertsController::updateSections.
     Route::put('/experts/{expert}/sections', [AdminExpertsController::class, 'updateSections'])->name('experts.sections');
@@ -223,7 +223,7 @@ Route::middleware(['expert.auth', 'expert.approved', 'no.cache', 'track.expert']
     Route::get('/grading', [GradingController::class, 'index'])->name('grading');
     Route::get('/grading/{defense}', [GradingController::class, 'show'])->name('grading.show');
     Route::put('/grading/{defense}', [GradingController::class, 'save'])->name('grading.save');
-    Route::post('/grading/{defense}/submit', [GradingController::class, 'submit'])->name('grading.submit');
+    Route::patch('/grading/{defense}', [GradingController::class, 'submit'])->name('grading.submit');
     Route::post('/grading/{defense}/outcome', [GradingController::class, 'recordOutcome'])->name('grading.outcome');
     Route::get('/docreview', [DocReviewController::class, 'index'])->name('docreview');
     Route::get('/docreview/{review}/annotate', [DocReviewController::class, 'annotate'])->name('docreview.annotate');
@@ -248,7 +248,7 @@ Route::middleware(['auth:expert', 'expert.approved', 'no.cache'])->prefix('revie
     Route::delete('/{review}/general-remarks/{remark}', [PdfAnnotationController::class, 'generalDestroy'])->name('general-remarks.destroy');
     Route::get('/{review}/status', [PdfAnnotationController::class, 'showStatus'])->name('status.show');
     Route::post('/{review}/status', [PdfAnnotationController::class, 'updateStatus'])->name('status.update');
-    Route::post('/{review}/sync-drive', [PdfAnnotationController::class, 'syncDrive'])->name('sync-drive');
+    Route::put('/{review}/drive-file', [PdfAnnotationController::class, 'syncDrive'])->name('sync-drive');
 });
 
 Route::get('/', function () {
@@ -301,7 +301,7 @@ Route::middleware(['auth', 'no.cache', 'track.expert'])->group(function () {
     // swallowed by a route-model-binding parameter.
     Route::get('/team/available-classmates', [TeamController::class, 'getAvailableClassmates'])->name('team.available-classmates');
     Route::patch('/team/leadership/{notification}', [TeamController::class, 'updateLeadership'])->name('team.leadership.update');
-    Route::post('/team/leadership/{notification}/remind-later', [TeamController::class, 'remindLeadershipLater'])->name('team.leadership.remind-later');
+    Route::put('/team/leadership/{notification}/reminder', [TeamController::class, 'remindLeadershipLater'])->name('team.leadership.remind-later');
     Route::delete('/team/members/{student}', [TeamController::class, 'removeMember'])->name('team.members.remove');
     Route::delete('/team', [TeamController::class, 'destroy'])->name('team.destroy');
     Route::post('/team/leave-requests', [TeamController::class, 'requestLeave'])->name('team.leave-request');
@@ -313,7 +313,7 @@ Route::middleware(['auth', 'no.cache', 'track.expert'])->group(function () {
 
     Route::post('/invitations', [InvitationController::class, 'store'])->name('invitations.store');
     Route::patch('/invitations/{invitation}', [InvitationController::class, 'update'])->name('invitations.update');
-    Route::post('/invitations/{invitation}/remind-later', [InvitationController::class, 'remindLater'])->name('invitations.remind-later');
+    Route::put('/invitations/{invitation}/reminder', [InvitationController::class, 'remindLater'])->name('invitations.remind-later');
     Route::get('/invitations/popup', [InvitationController::class, 'popup'])->name('invitations.popup');
 
     // NOTE: DuplicationController's index/check are now dead code - the
@@ -328,8 +328,7 @@ Route::middleware(['auth', 'no.cache', 'track.expert'])->group(function () {
 
     Route::post('/pre-proposal/duplication-checks', [PreProposalController::class, 'runCheck'])->name('student.pre-proposal.check');
     Route::post('/pre-proposal', [PreProposalController::class, 'store'])->name('student.pre-proposal.store');
-    Route::patch('/pre-proposal', [PreProposalController::class, 'submit'])->name('student.pre-proposal.submit');
-    Route::post('/pre-proposal/unsubmit', [PreProposalController::class, 'unsubmit'])->name('student.pre-proposal.unsubmit');
+    Route::patch('/pre-proposal', [PreProposalController::class, 'updateStatus'])->name('student.pre-proposal.submit');
     Route::post('/pre-proposal/{preProposal}/choose', [PreProposalController::class, 'choose'])->name('student.pre-proposal.choose');
     Route::delete('/pre-proposal/{preProposal}', [PreProposalController::class, 'destroy'])->name('student.pre-proposal.destroy');
 
@@ -372,9 +371,9 @@ Route::middleware(['auth', 'no.cache', 'track.expert'])->group(function () {
 
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
     Route::get('/notifications/count', [NotificationController::class, 'count'])->name('notifications.count');
-    Route::post('/notifications/{notification}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
+    Route::put('/notifications/{notification}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
     Route::patch('/notifications', [NotificationController::class, 'markAllRead'])->name('notifications.mark-all-read');
-    Route::post('/notifications/seen', [NotificationController::class, 'markSeen'])->name('notifications.seen');
+    Route::put('/notifications/seen', [NotificationController::class, 'markSeen'])->name('notifications.seen');
 });
 Route::prefix('instructor/schedule')
     ->middleware(['expert.auth', 'no.cache', 'track.expert'])

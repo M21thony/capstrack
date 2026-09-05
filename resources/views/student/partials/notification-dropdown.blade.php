@@ -208,7 +208,7 @@ document.addEventListener('click', function(e) {
       var ids = [{{ collect($unreadNotifications ?? [])->pluck('id')->map(fn($id) => $id)->join(',') }}];
       if (ids.length) {
         fetch('/notifications/seen', {
-          method: 'POST',
+          method: 'PUT',
           headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content, 'Content-Type': 'application/json' },
           body: JSON.stringify({ ids: ids })
         }).then(function() {
@@ -234,7 +234,7 @@ document.addEventListener('click', function(e) {
     if (href === '#' || !href) return;
     item.style.opacity = '0.5';
     fetch('/notifications/' + id + '/read', {
-      method: 'POST',
+      method: 'PUT',
       headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content }
     }).then(function() { window.location.href = href; }).catch(function() { window.location.href = href; });
   }
@@ -250,7 +250,7 @@ document.addEventListener('click', function(e) {
       var dot = document.querySelector('.notif-dot');
       if (dot) dot.remove();
       fetch('/notifications/seen', {
-        method: 'POST',
+        method: 'PUT',
         headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content, 'Content-Type': 'application/json' },
         body: JSON.stringify({ ids: data.ids || [] })
       });

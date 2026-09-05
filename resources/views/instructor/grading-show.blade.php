@@ -357,7 +357,7 @@ function postGrade(url, statusMsg, method) {
 }
 
 function saveDraft() { postGrade('{{ route('instructor.grading.save', $defense->defense_id) }}', 'Draft saved.', 'PUT'); }
-function submitGrade() { postGrade('{{ route('instructor.grading.submit', $defense->defense_id) }}', 'Submitted! Redirecting…'); }
+function submitGrade() { postGrade('{{ route('instructor.grading.submit', $defense->defense_id) }}', 'Submitted! Redirecting…', 'PATCH'); }
 
 updateScore();
 

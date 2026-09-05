@@ -2688,7 +2688,7 @@ document.addEventListener('DOMContentLoaded', function() {
             var token = document.querySelector('meta[name=csrf-token]').content;
             var promises = ids.map(function(id) {
                 return fetch('/notifications/' + id + '/read', {
-                    method: 'POST',
+                    method: 'PUT',
                     headers: { 'X-CSRF-TOKEN': token }
                 });
             });
