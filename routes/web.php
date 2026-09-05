@@ -75,7 +75,7 @@ $pagesBothRolesOpen = function () {
 
     Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
     Route::get('/profile', [AdminProfileController::class, 'index'])->name('profile');
-    Route::post('/profile', [AdminProfileController::class, 'update'])->name('profile.update');
+    Route::put('/profile', [AdminProfileController::class, 'update'])->name('profile.update');
     Route::get('/analytics', [AdminAnalyticsController::class, 'index'])->name('analytics');
     Route::get('/activitylog', [AdminActivityLogController::class, 'index'])->name('activitylog');
 
@@ -120,7 +120,7 @@ Route::middleware('expert.admin')->group(function () {
     Route::put('/students/{student}', [StudentAccountsController::class, 'update'])->name('students.update');
     Route::delete('/students/{student}', [StudentAccountsController::class, 'destroy'])->name('students.destroy');
     Route::get('/settings', [AdminSettingsController::class, 'index'])->name('settings');
-    Route::post('/settings', [AdminSettingsController::class, 'update'])->name('settings.update');
+    Route::put('/settings', [AdminSettingsController::class, 'update'])->name('settings.update');
     // Sections have to exist before anybody can be made a CaPSA over them,
     // and they cannot be worked out from students on an install that has
     // none yet - see App\Support\SectionCatalog.
@@ -219,11 +219,11 @@ Route::middleware(['expert.auth', 'expert.approved', 'no.cache', 'track.expert']
     Route::get('/teams', [InstructorTeamController::class, 'index'])->name('teams');
     Route::get('/progress', [InstructorProgressController::class, 'index'])->name('progress');
     Route::get('/profile', [InstructorProfileController::class, 'index'])->name('profile');
-    Route::post('/profile', [InstructorProfileController::class, 'update'])->name('profile.update');
+    Route::put('/profile', [InstructorProfileController::class, 'update'])->name('profile.update');
     Route::view('/schedule', 'instructor.schedule')->name('schedule');
     Route::get('/grading', [GradingController::class, 'index'])->name('grading');
     Route::get('/grading/{defense}', [GradingController::class, 'show'])->name('grading.show');
-    Route::post('/grading/{defense}/save', [GradingController::class, 'save'])->name('grading.save');
+    Route::put('/grading/{defense}', [GradingController::class, 'save'])->name('grading.save');
     Route::post('/grading/{defense}/submit', [GradingController::class, 'submit'])->name('grading.submit');
     Route::post('/grading/{defense}/outcome', [GradingController::class, 'recordOutcome'])->name('grading.outcome');
     Route::get('/docreview', [DocReviewController::class, 'index'])->name('docreview');
@@ -361,14 +361,14 @@ Route::middleware(['auth', 'no.cache', 'track.expert'])->group(function () {
             Route::post('/progress/milestones/mark-done', [StudentProgressController::class, 'markDone'])->name('student.progress.milestones.mark-done');
             Route::post('/progress/milestones/update-picture', [StudentProgressController::class, 'updatePicture'])->name('student.progress.milestones.update-picture');
             Route::get('/financial', [StudentFinancialController::class, 'index'])->name('student.financial');
-            Route::post('/financial/submit', [StudentFinancialController::class, 'submitReceipt'])->name('student.financial.submit');
+            Route::post('/financial/receipts', [StudentFinancialController::class, 'submitReceipt'])->name('student.financial.submit');
             Route::get('/resources', [StudentResourceController::class, 'index'])->name('student.resources');
             Route::get('/archive', [StudentArchiveController::class, 'index'])->name('student.archive');
             Route::redirect('/profile', '/student/personal-info/edit')->name('student.profile');
         });
     });
 
-    Route::post('/profile/update', [ProfileController::class, 'update'])->name('profile.update');
+    Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
 
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
     Route::get('/notifications/count', [NotificationController::class, 'count'])->name('notifications.count');

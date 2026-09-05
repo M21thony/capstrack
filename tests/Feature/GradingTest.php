@@ -164,8 +164,8 @@ class GradingTest extends TestCase
         $rubric = $this->makeRubric();
         $criterion = $rubric->criteria()->first();
 
-        $response = $this->actingAs($expert, 'expert')->postJson(
-            "/instructor/grading/{$defense->defense_id}/save",
+        $response = $this->actingAs($expert, 'expert')->putJson(
+            "/instructor/grading/{$defense->defense_id}",
             ['scores' => [$criterion->criterion_id => 40]]
         );
 
@@ -258,8 +258,8 @@ class GradingTest extends TestCase
         $rubric = $this->makeRubric();
         $criterion = $rubric->criteria()->first();
 
-        $response = $this->actingAs($expert, 'expert')->postJson(
-            "/instructor/grading/{$defense->defense_id}/save",
+        $response = $this->actingAs($expert, 'expert')->putJson(
+            "/instructor/grading/{$defense->defense_id}",
             ['scores' => [$criterion->criterion_id => 999]]
         );
 

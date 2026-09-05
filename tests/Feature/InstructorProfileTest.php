@@ -30,7 +30,7 @@ class InstructorProfileTest extends TestCase
     {
         $expert = $this->makeExpert();
 
-        $response = $this->actingAs($expert, 'expert')->postJson(
+        $response = $this->actingAs($expert, 'expert')->putJson(
             route('instructor.profile.update'),
             ['program_slots' => ['BSIT' => 1, 'BSIS' => 5], 'expertise' => []]
         );
@@ -49,7 +49,7 @@ class InstructorProfileTest extends TestCase
     {
         $expert = $this->makeExpert();
 
-        $this->actingAs($expert, 'expert')->postJson(
+        $this->actingAs($expert, 'expert')->putJson(
             route('instructor.profile.update'),
             ['program_slots' => ['BSIT' => 2, 'BSIS' => 0], 'expertise' => []]
         )->assertOk();
@@ -65,7 +65,7 @@ class InstructorProfileTest extends TestCase
     {
         $expert = $this->makeExpert();
 
-        $this->actingAs($expert, 'expert')->postJson(
+        $this->actingAs($expert, 'expert')->putJson(
             route('instructor.profile.update'),
             ['program_slots' => ['BSIT' => 0, 'BSIS' => 0], 'expertise' => []]
         )->assertStatus(422)->assertJson(['success' => false]);
@@ -77,7 +77,7 @@ class InstructorProfileTest extends TestCase
     {
         $expert = $this->makeExpert();
 
-        $this->actingAs($expert, 'expert')->postJson(
+        $this->actingAs($expert, 'expert')->putJson(
             route('instructor.profile.update'),
             ['program_slots' => ['BSHM' => 3], 'expertise' => []]
         )->assertStatus(422)->assertJson(['success' => false]);
@@ -87,7 +87,7 @@ class InstructorProfileTest extends TestCase
     {
         $expert = $this->makeExpert();
 
-        $this->actingAs($expert, 'expert')->postJson(route('instructor.profile.update'), [])
+        $this->actingAs($expert, 'expert')->putJson(route('instructor.profile.update'), [])
             ->assertStatus(422)->assertJson(['success' => false]);
     }
 
@@ -100,7 +100,7 @@ class InstructorProfileTest extends TestCase
             'expertise_field' => 'An Old Skill',
         ]);
 
-        $this->actingAs($expert, 'expert')->postJson(
+        $this->actingAs($expert, 'expert')->putJson(
             route('instructor.profile.update'),
             ['program_slots' => ['BSIT' => 1], 'expertise' => ['Machine Learning', 'Technical Writing']]
         )->assertOk();
@@ -118,7 +118,7 @@ class InstructorProfileTest extends TestCase
     {
         // EnsureExpertIsAuthenticated always redirects to /login, even for
         // JSON requests - it doesn't check expectsJson().
-        $this->postJson(route('instructor.profile.update'), ['program_slots' => ['BSIT' => 5]])
+        $this->putJson(route('instructor.profile.update'), ['program_slots' => ['BSIT' => 5]])
             ->assertRedirect('/login');
     }
 }
