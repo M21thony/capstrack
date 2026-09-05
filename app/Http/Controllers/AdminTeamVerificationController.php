@@ -81,6 +81,20 @@ class AdminTeamVerificationController extends Controller
 
     // Mirrors AdminApprovalController::approve() exactly - same shape
     // (approved_status + rejection_reason), same guards.
+    /**
+     * A CaPSA either picks this pre-proposal or sends it back, and both are
+     * the same field changing. The status says which; the methods below
+     * still do the work.
+     */
+    public function updatePreProposal(Request $request, CapstonePreProposal $preProposal): JsonResponse
+    {
+        return $request->validate([
+            'status' => ['required', 'in:approved,rejected'],
+        ])['status'] === 'approved'
+            ? $this->approvePreProposal($preProposal)
+            : $this->rejectPreProposal($request, $preProposal);
+    }
+
     public function approvePreProposal(CapstonePreProposal $preProposal): JsonResponse
     {
         if ($preProposal->approved_status) {

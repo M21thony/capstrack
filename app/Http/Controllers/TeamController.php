@@ -594,6 +594,19 @@ class TeamController extends Controller
             ->with('status', 'Your leave request has been sent to the team leader. It will auto-approve after '.LeaveApproval::EXPIRY_HOURS.' hours if unanswered.');
     }
 
+    /**
+     * A leave request is approved or turned down; either way the same
+     * approval row lands on a new status.
+     */
+    public function updateLeave(Request $request, LeaveApproval $approval): RedirectResponse
+    {
+        return $request->validate([
+            'status' => ['required', 'in:approved,declined'],
+        ])['status'] === 'approved'
+            ? $this->approveLeave($request, $approval)
+            : $this->declineLeave($request, $approval);
+    }
+
     public function approveLeave(Request $request, LeaveApproval $approval): RedirectResponse
     {
         $this->sweepExpiredLeaveApprovals();
@@ -1019,6 +1032,19 @@ class TeamController extends Controller
 
         return redirect()->route('student.team')
             ->with('status', 'Leadership transfer request sent to '.($newLeader?->f_name ?? 'the member').'. They must approve it first.');
+    }
+
+    /**
+     * Taking the handover or turning it down both settle the same pending
+     * transfer, so one PATCH carries which. The methods below still do it.
+     */
+    public function updateLeadership(Request $request, $notificationId): RedirectResponse
+    {
+        return $request->validate([
+            'status' => ['required', 'in:accepted,declined'],
+        ])['status'] === 'accepted'
+            ? $this->acceptLeadership($request, $notificationId)
+            : $this->declineLeadership($request, $notificationId);
     }
 
     public function acceptLeadership(Request $request, $notificationId): RedirectResponse

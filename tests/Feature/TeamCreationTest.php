@@ -179,7 +179,7 @@ class TeamCreationTest extends TestCase
 
         $this->actingAs($member, 'web');
 
-        $response = $this->post('/team/leave');
+        $response = $this->post('/team/leave-requests');
         $response->assertRedirect(route('student.team'));
         $response->assertSessionHas('status');
 
@@ -194,15 +194,15 @@ class TeamCreationTest extends TestCase
         $this->actingAs($leader, 'web');
         $teamPage = $this->get(route('student.team'));
         $teamPage->assertOk();
-        $teamPage->assertSee('/team/leave/'.$approval->id.'/approve', false);
-        $teamPage->assertSee('/team/leave/'.$approval->id.'/decline', false);
+        $teamPage->assertSee('/team/leave-requests/'.$approval->id, false);
+        $teamPage->assertSee('value="declined"', false);
 
-        $this->post('/team/leave/'.$approval->id.'/decline');
+        $this->patch('/team/leave-requests/'.$approval->id, ['status' => 'declined']);
         $approval->refresh();
         $this->assertSame('declined', $approval->status);
 
         $this->actingAs($member, 'web');
-        $this->post('/team/leave');
+        $this->post('/team/leave-requests');
         $secondApproval = LeaveApproval::where('student_id', $member->student_id)
             ->where('team_id', $team->team_id)
             ->latest('id')
@@ -211,12 +211,12 @@ class TeamCreationTest extends TestCase
         $this->assertSame(2, $secondApproval->attempt);
 
         $this->actingAs($leader, 'web');
-        $this->post('/team/leave/'.$secondApproval->id.'/decline');
+        $this->patch('/team/leave-requests/'.$secondApproval->id, ['status' => 'declined']);
         $secondApproval->refresh();
         $this->assertSame('declined', $secondApproval->status);
 
         $this->actingAs($member, 'web');
-        $this->post('/team/leave');
+        $this->post('/team/leave-requests');
         $thirdApproval = LeaveApproval::where('student_id', $member->student_id)
             ->where('team_id', $team->team_id)
             ->latest('id')
@@ -225,7 +225,7 @@ class TeamCreationTest extends TestCase
         $this->assertSame(3, $thirdApproval->attempt);
 
         $this->actingAs($leader, 'web');
-        $this->post('/team/leave/'.$thirdApproval->id.'/decline');
+        $this->patch('/team/leave-requests/'.$thirdApproval->id, ['status' => 'declined']);
 
         $memberSy = StudentSchoolYear::where('student_id', $member->student_id)->first();
         $this->assertNull($memberSy->team_id);
@@ -275,7 +275,7 @@ class TeamCreationTest extends TestCase
         $this->actingAs($leader, 'web');
 
         // Send leadership transfer request
-        $response = $this->post('/team/transfer-leadership', [
+        $response = $this->put('/team/leader', [
             'new_leader_id' => $member->student_id,
         ]);
 
@@ -311,7 +311,7 @@ class TeamCreationTest extends TestCase
 
         // Member accepts the request
         $this->actingAs($member, 'web');
-        $response = $this->post('/team/leadership/'.$requestNotif->id.'/accept');
+        $response = $this->patch('/team/leadership/'.$requestNotif->id, ['status' => 'accepted']);
 
         $response->assertRedirect(route('student.team'));
         $response->assertSessionHas('status');
@@ -338,7 +338,7 @@ class TeamCreationTest extends TestCase
 
         // New leader approves the leave request
         $this->actingAs($member, 'web');
-        $this->post('/team/leave/'.$leaveApproval->id.'/approve');
+        $this->patch('/team/leave-requests/'.$leaveApproval->id, ['status' => 'approved']);
 
         // Verify the original leader's team_id is null
         $this->assertNull(StudentSchoolYear::where('student_id', $leader->student_id)->value('team_id'));
@@ -380,7 +380,7 @@ class TeamCreationTest extends TestCase
 
         $this->actingAs($leader, 'web');
 
-        $this->post('/team/transfer-leadership', ['new_leader_id' => $member->student_id]);
+        $this->put('/team/leader', ['new_leader_id' => $member->student_id]);
 
         // Leadership must NOT be transferred until the member approves
         $this->assertDatabaseHas('team', ['team_id' => $team->team_id, 'leader_id' => $leader->student_id]);
@@ -418,7 +418,7 @@ class TeamCreationTest extends TestCase
 
         // Leader requests transfer via API
         $this->actingAs($leader, 'web');
-        $response = $this->post('/api/teams/'.$team->team_id.'/transfer-leadership', [
+        $response = $this->put('/api/teams/'.$team->team_id.'/leader', [
             'new_leader_id' => $member->student_id,
         ]);
         $response->assertOk();
@@ -435,7 +435,7 @@ class TeamCreationTest extends TestCase
 
         // Member approves via API
         $this->actingAs($member, 'web');
-        $this->post('/api/team/leadership/'.$requestNotif->id.'/accept');
+        $this->patch('/api/team/leadership/'.$requestNotif->id, ['status' => 'accepted']);
 
         $this->assertDatabaseHas('team', ['team_id' => $team->team_id, 'leader_id' => $member->student_id]);
     }
@@ -464,7 +464,7 @@ class TeamCreationTest extends TestCase
         StudentSchoolYear::create(['student_id' => $member->student_id, 'team_id' => $team->team_id]);
 
         $this->actingAs($leader, 'web');
-        $this->post('/api/teams/'.$team->team_id.'/transfer-leadership', ['new_leader_id' => $member->student_id]);
+        $this->put('/api/teams/'.$team->team_id.'/leader', ['new_leader_id' => $member->student_id]);
 
         $requestNotif = Notification::where('student_id', $member->student_id)
             ->where('type', 'leadership_transfer_request')
@@ -473,7 +473,7 @@ class TeamCreationTest extends TestCase
         $this->assertNotNull($requestNotif);
 
         $this->actingAs($member, 'web');
-        $this->post('/api/team/leadership/'.$requestNotif->id.'/decline');
+        $this->patch('/api/team/leadership/'.$requestNotif->id, ['status' => 'declined']);
 
         $this->assertDatabaseHas('team', ['team_id' => $team->team_id, 'leader_id' => $leader->student_id]);
         $this->assertDatabaseHas('notifications', [
@@ -515,12 +515,12 @@ class TeamCreationTest extends TestCase
         $this->actingAs($leader, 'web');
 
         // First transfer attempt to member 1 (never approved/declined -> stuck)
-        $this->post('/team/transfer-leadership', ['new_leader_id' => $firstMember->student_id]);
+        $this->put('/team/leader', ['new_leader_id' => $firstMember->student_id]);
 
         $this->assertDatabaseHas('team', ['team_id' => $team->team_id, 'leader_id' => $leader->student_id]);
 
         // Leader picks another member — must NOT be blocked by the stuck request
-        $response = $this->post('/team/transfer-leadership', ['new_leader_id' => $secondMember->student_id]);
+        $response = $this->put('/team/leader', ['new_leader_id' => $secondMember->student_id]);
 
         $response->assertRedirect(route('student.team'));
         $response->assertSessionHas('status');
@@ -560,7 +560,7 @@ class TeamCreationTest extends TestCase
         StudentSchoolYear::create(['student_id' => $member->student_id, 'team_id' => $team->team_id]);
 
         $this->actingAs($leader, 'web');
-        $this->post('/team/transfer-leadership', ['new_leader_id' => $member->student_id]);
+        $this->put('/team/leader', ['new_leader_id' => $member->student_id]);
 
         $requestNotif = Notification::where('student_id', $member->student_id)
             ->where('type', 'leadership_transfer_request')
@@ -568,7 +568,7 @@ class TeamCreationTest extends TestCase
             ->first();
 
         $this->actingAs($member, 'web');
-        $this->post('/team/leadership/'.$requestNotif->id.'/decline');
+        $this->patch('/team/leadership/'.$requestNotif->id, ['status' => 'declined']);
 
         // Leader remains unchanged
         $this->assertDatabaseHas('team', ['team_id' => $team->team_id, 'leader_id' => $leader->student_id]);
@@ -677,7 +677,7 @@ class TeamCreationTest extends TestCase
         StudentSchoolYear::create(['student_id' => $member->student_id, 'team_id' => $team->team_id]);
 
         $this->actingAs($leader, 'web');
-        $this->post('/team/transfer-leadership', ['new_leader_id' => $member->student_id]);
+        $this->put('/team/leader', ['new_leader_id' => $member->student_id]);
 
         $requestNotif = Notification::where('student_id', $member->student_id)
             ->where('type', 'leadership_transfer_request')

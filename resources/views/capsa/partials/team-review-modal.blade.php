@@ -56,6 +56,7 @@
 
     <form id="vm-form" method="POST" style="border-top:1px solid var(--border);padding-top:16px">
       @csrf
+      @method('PATCH')
       <div style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:12px">
         <strong style="color:var(--text)">Verifying</strong> confirms this team for the semester.
         Its members and title are settled from then on, and it becomes eligible for
@@ -302,8 +303,8 @@ function renderPreProposals(proposals, selectedId) {
 
     var actionsHtml = p.status === 'pending'
       ? '<div style="display:flex;gap:8px;margin-top:10px" id="pp-actions-' + p.id + '">'
-        + '<button type="button" class="btn btn-primary" style="font-size:11px;padding:5px 12px" onclick="ppApprove(' + p.id + ', \'' + p.approve_url + '\')">Approve</button>'
-        + '<button type="button" class="btn" style="font-size:11px;padding:5px 12px;background:transparent;border:1px solid var(--border);color:var(--text2)" onclick="openPpRejectModal(' + p.id + ', \'' + p.reject_url + '\')">Reject</button>'
+        + '<button type="button" class="btn btn-primary" style="font-size:11px;padding:5px 12px" onclick="ppApprove(' + p.id + ', \'' + p.update_url + '\')">Approve</button>'
+        + '<button type="button" class="btn" style="font-size:11px;padding:5px 12px;background:transparent;border:1px solid var(--border);color:var(--text2)" onclick="openPpRejectModal(' + p.id + ', \'' + p.update_url + '\')">Reject</button>'
         + '</div>'
       : (p.status === 'rejected' ? '<div style="font-size:11px;color:#991b1b;margin-top:6px">Rejected: ' + escapeHtml(p.rejection_reason || '') + '</div>' : '');
 
@@ -341,8 +342,13 @@ function joinStringList(list) {
 
 function ppApprove(id, url) {
   fetch(url, {
-    method: 'POST',
-    headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' },
+    method: 'PATCH',
+    headers: {
+      'X-CSRF-TOKEN': '{{ csrf_token() }}',
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ status: 'approved' }),
   })
     .then(function (r) { return r.json(); })
     .then(function (res) {
@@ -410,9 +416,9 @@ function confirmPpReject() {
   }
 
   fetch(ppActiveId.url, {
-    method: 'POST',
+    method: 'PATCH',
     headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json', 'Content-Type': 'application/json' },
-    body: JSON.stringify({ reason: reason }),
+    body: JSON.stringify({ status: 'rejected', reason: reason }),
   })
     .then(function (r) { return r.json(); })
     .then(function (res) {

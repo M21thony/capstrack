@@ -481,11 +481,15 @@
                 <div style="font-size: 11px; color: var(--text3);">Requesting to leave the team (attempt {{ $approval->attempt }}/{{ \App\Models\LeaveApproval::MAX_ATTEMPTS }})</div>
               </div>
               <div style="display: flex; gap: 8px; flex-shrink: 0;">
-                <form method="POST" action="{{ route('team.leave.approve', $approval->id) }}" style="display:inline;">
+                <form method="POST" action="{{ route('team.leave.update', $approval->id) }}" style="display:inline;">
+                  @method('PATCH')
+                  <input type="hidden" name="status" value="approved">
                   @csrf
                   <button type="submit" style="padding: 6px 12px; border-radius: 6px; border: 1px solid var(--green); background: var(--green-bg); color: var(--green); font-size: 11px; font-weight: 700; cursor: pointer;">Approve</button>
                 </form>
-                <form method="POST" action="{{ route('team.leave.decline', $approval->id) }}" style="display:inline;">
+                <form method="POST" action="{{ route('team.leave.update', $approval->id) }}" style="display:inline;">
+                  @method('PATCH')
+                  <input type="hidden" name="status" value="declined">
                   @csrf
                   <button type="submit" style="padding: 6px 12px; border-radius: 6px; border: 1px solid var(--red); background: var(--red-bg); color: var(--red); font-size: 11px; font-weight: 700; cursor: pointer;">Decline</button>
                 </form>
@@ -1223,6 +1227,7 @@
     </div>
 
     <form method="POST" action="{{ route('team.transfer-leadership') }}" style="padding: 22px 26px 26px;">
+      @method('PUT')
       @csrf
       <div style="display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg3); margin-bottom: 18px;">
         <div style="width: 40px; height: 40px; border-radius: 50%; background: var(--accent); color: var(--navy-dark); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; overflow: hidden; flex-shrink: 0;">
@@ -1324,10 +1329,14 @@
         <p style="font-size: 12px; color: var(--text2); line-height: 1.55; margin: 0;">If you accept, you become the new team leader. You can also <strong style="color: var(--text);">remind me later</strong> and we'll ask you again in 3 hours.</p>
       </div>
 
-      <form method="POST" action="{{ route('team.leadership.accept', $pendingLeadershipTransfer->id) }}" style="display:none;" id="leadership-pop-accept-form">
+      <form method="POST" action="{{ route('team.leadership.update', $pendingLeadershipTransfer->id) }}" style="display:none;" id="leadership-pop-accept-form">
+        @method('PATCH')
+        <input type="hidden" name="status" value="accepted">
         @csrf
       </form>
-      <form method="POST" action="{{ route('team.leadership.decline', $pendingLeadershipTransfer->id) }}" style="display:none;" id="leadership-pop-decline-form">
+      <form method="POST" action="{{ route('team.leadership.update', $pendingLeadershipTransfer->id) }}" style="display:none;" id="leadership-pop-decline-form">
+        @method('PATCH')
+        <input type="hidden" name="status" value="declined">
         @csrf
       </form>
 

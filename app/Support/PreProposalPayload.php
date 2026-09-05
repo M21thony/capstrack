@@ -58,8 +58,7 @@ class PreProposalPayload
                         ->extractHighlightWords($p->duplicationCheck->concepts ?? []),
                 ] : null,
                 'document_url' => $p->duplicationCheck ? route('capsa.verify_teams.pre_proposals.document', $p->id) : null,
-                'approve_url' => route('capsa.verify_teams.pre_proposals.approve', $p->id),
-                'reject_url' => route('capsa.verify_teams.pre_proposals.reject', $p->id),
+                'update_url' => route('capsa.verify_teams.pre_proposals.update', $p->id),
             ])->values()->all();
     }
 }
