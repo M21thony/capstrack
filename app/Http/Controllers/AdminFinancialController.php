@@ -260,6 +260,20 @@ class AdminFinancialController extends Controller
         return redirect()->back()->with('success', 'Expense post deleted successfully.');
     }
 
+    /**
+     * Approving and rejecting both land the record on a new status, so one
+     * PATCH carries which one. The deciding stays in the two methods that
+     * already do it - this only routes to them.
+     */
+    public function updateReceipt(Request $request, FinancialRecord $financialRecord): RedirectResponse
+    {
+        return $request->validate([
+            'status' => ['required', 'in:approved,rejected'],
+        ])['status'] === 'approved'
+            ? $this->approveReceipt($financialRecord)
+            : $this->rejectReceipt($request, $financialRecord);
+    }
+
     public function approveReceipt(FinancialRecord $financialRecord): RedirectResponse
     {
         /** @var CapstoneExpert $admin */

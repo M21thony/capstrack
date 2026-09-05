@@ -103,6 +103,20 @@ class AssignmentController extends Controller
         ]);
     }
 
+    /**
+     * Approving and rejecting both land the record on a new status, so one
+     * PATCH carries which one. The deciding stays in the two methods that
+     * already do it - this only routes to them.
+     */
+    public function update(Request $request, $id): JsonResponse
+    {
+        return $request->validate([
+            'status' => ['required', 'in:approved,rejected'],
+        ])['status'] === 'approved'
+            ? $this->approve($id)
+            : $this->reject($request, $id);
+    }
+
     public function approve($id): JsonResponse
     {
         $expert = Auth::guard('expert')->user();

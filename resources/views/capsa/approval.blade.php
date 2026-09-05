@@ -552,12 +552,15 @@ function confirmInlineReject(id){
 function executeAction(id, type, reasonOverride, roleIds){
   if(!id || !type) return;
 
+  // The status is what the request is for; the rest is the detail that
+  // goes with it - a reason when rejecting, the roles when approving.
+  const status = type === 'approve' ? 'approved' : 'rejected';
   let body = null;
   if(type === 'reject'){
     const reason = typeof reasonOverride === 'string' ? reasonOverride : '';
-    body = JSON.stringify({ reason });
+    body = JSON.stringify({ status, reason });
   } else if(type === 'approve'){
-    body = JSON.stringify({ role_ids: roleIds || [] });
+    body = JSON.stringify({ status, role_ids: roleIds || [] });
   }
 
   setActionBusy(id, type, true);
@@ -566,8 +569,8 @@ function executeAction(id, type, reasonOverride, roleIds){
   const cardEl = document.querySelector(`.expert-card[data-id="${id}"]`);
   if(cardEl) cardEl.style.pointerEvents = 'none';
 
-  fetch(`/capsa/approval/${id}/${type}`, {
-    method: 'POST',
+  fetch(`/capsa/approval/${id}`, {
+    method: 'PATCH',
     headers: {
       'Content-Type': 'application/json',
       'X-CSRF-TOKEN': '{{ csrf_token() }}',

@@ -1102,13 +1102,14 @@ async function approveReceipt(recordId, btn) {
   btn.textContent = 'Approving...';
 
   try {
-    const response = await fetch('/api/admin/financial/records/' + recordId + '/approve', {
-      method: 'POST',
+    const response = await fetch('/api/admin/financial/records/' + recordId, {
+      method: 'PATCH',
       headers: {
         'X-CSRF-TOKEN': csrf,
         'Accept': 'application/json',
         'Content-Type': 'application/json',
       },
+      body: JSON.stringify({ status: 'approved' }),
     });
 
     const result = await response.json();
@@ -1172,14 +1173,14 @@ document.getElementById('rejectForm')?.addEventListener('submit', async function
   document.getElementById('rejectFormErrors').style.display = 'none';
 
   try {
-    const response = await fetch('/api/admin/financial/records/' + rejectingRecordId + '/reject', {
-      method: 'POST',
+    const response = await fetch('/api/admin/financial/records/' + rejectingRecordId, {
+      method: 'PATCH',
       headers: {
         'X-CSRF-TOKEN': csrf,
         'Accept': 'application/json',
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ rejection_reason: reason }),
+      body: JSON.stringify({ status: 'rejected', rejection_reason: reason }),
     });
 
     const result = await response.json();
