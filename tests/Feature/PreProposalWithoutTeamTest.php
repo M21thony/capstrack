@@ -84,7 +84,7 @@ class PreProposalWithoutTeamTest extends TestCase
         // team - which is the whole point: the gate is gone and the work
         // itself never needed one.
         try {
-            $this->actingAs($this->teamless(), 'web')->postJson('/pre-proposal/check', []);
+            $this->actingAs($this->teamless(), 'web')->postJson('/pre-proposal/duplication-checks', []);
             $this->fail('The check should have rejected the empty request.');
         } catch (ValidationException $e) {
             $this->assertArrayHasKey('document', $e->errors());
