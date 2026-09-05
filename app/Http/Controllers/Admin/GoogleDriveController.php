@@ -226,7 +226,6 @@ class GoogleDriveController extends Controller
                 'drive_file_id' => $uploaded['id'],
                 'drive_folder_id' => $request->input('drive_folder_id'),
                 'drive_web_view_link' => $uploaded['web_view_link'],
-                'downloads' => 0,
                 'uploaded_at' => now(),
                 'uploaded_by' => Auth::guard('expert')->id(),
             ]);
@@ -242,13 +241,6 @@ class GoogleDriveController extends Controller
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
         }
-    }
-
-    public function trackDownload(Resource $resource)
-    {
-        $resource->increment('downloads');
-
-        return response()->json(['success' => true, 'downloads' => $resource->downloads]);
     }
 
     public function destroy(Resource $resource)
