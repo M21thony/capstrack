@@ -324,6 +324,24 @@ class CapstoneExpert extends Authenticatable
      * Same rule as scopeAcceptsProgram(), for one already-loaded expert -
      * used to enforce it on apply, not just hide them from the list.
      */
+    /**
+     * The programs this CaPSA covers, derived from the sections they handle -
+     * "BSIT-4A" and "BSIT-4B" are one program, BSIT.
+     *
+     * Empty for an admin, who has no sections and is not scoped by program.
+     *
+     * @return array<int, string>
+     */
+    public function handledPrograms(): array
+    {
+        return collect($this->sections ?? [])
+            ->map(fn ($section) => strtoupper(trim(explode('-', (string) $section)[0] ?? '')))
+            ->filter(fn ($program) => in_array($program, self::PROGRAMS, true))
+            ->unique()
+            ->values()
+            ->all();
+    }
+
     public function acceptsProgram(?string $program): bool
     {
         if (! $program) {
