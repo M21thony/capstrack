@@ -61,6 +61,28 @@ leaves no half-live records. An imported file with no sections would otherwise b
 to every student that CaPSA handles the moment it lands — exactly wrong. Close the tab
 mid-review and nothing was imported.
 
+## Two ways in, one review list
+
+A CaPSA has their files in one of two places, and each needs its own door.
+
+**"They are on my computer"** - a folder upload, no Google involved. One
+attribute does it: `<input type="file" webkitdirectory multiple>`. The browser
+shows a folder picker, warns the user what is about to be uploaded, and hands
+over every file inside, each carrying a `webkitRelativePath` so the subfolder it
+came from is known. Chrome, Edge, Firefox and Safari all support it.
+
+What it costs: `GoogleDriveController::upload` validates a single `file`. A
+folder is N files, so it needs a loop - validate each, push each to Drive, write
+N rows - and the same cap the import gets.
+
+**"They are already in my Drive"** - the Picker. Nothing is re-uploaded, so no
+25 MB limit and no second copy of a file the CaPSA already owns. It carries the
+two unknowns above instead.
+
+Both land in the same review list, so the category-and-sections screen is built
+once and serves either route. If the Picker verifications go badly, build the
+folder upload first - it needs no Google approval and no new scope.
+
 ## Steps
 
 - [ ] Step 1: Run the two verifications above. Write down what they returned.
