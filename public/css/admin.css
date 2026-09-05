@@ -1442,3 +1442,12 @@ textarea.input{resize:vertical;min-height:80px}
 .section-chip input{accent-color:var(--accent);width:14px;height:14px;margin:0;cursor:pointer}
 .section-chip:has(input:checked){border-color:var(--accent);background:var(--accent-light);color:var(--accent3)}
 .section-hint{margin:7px 0 0;font-size:11.5px;color:var(--text3)}
+
+/* "Upload a whole folder instead" - a second, quieter way into the dropzone
+   above it, so it reads as an alternative rather than another control. */
+.folder-pick{display:inline-flex;align-items:center;gap:7px;margin-top:8px;padding:6px 10px;
+  border:1px solid var(--border);border-radius:6px;background:var(--bg2);cursor:pointer;
+  font-size:12px;color:var(--text2);transition:all .13s}
+.folder-pick:hover{border-color:var(--accent);color:var(--text);background:var(--accent-light)}
+.folder-pick input{display:none}
+.folder-pick svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2}

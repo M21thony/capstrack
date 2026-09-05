@@ -107,6 +107,13 @@
               <div class="dropzone-label">Drop file here or click to browse</div>
               <div class="dropzone-sub">PDF, DOCX, PPTX — max 25 MB</div>
             </div>
+            {{-- A browser cannot send a folder, only what is inside one, so this
+                 quietly turns into a list of files. --}}
+            <label class="folder-pick">
+              <input type="file" id="folder-input" webkitdirectory multiple onchange="onFolderSelect(event)">
+              <svg viewBox="0 0 24 24"><path d="M4 4h5l2 2h9v13H4z"/></svg>
+              Upload a whole folder instead
+            </label>
             <div class="upload-preview" id="upload-preview">
               <div id="preview-ftype" class="ftype ftype-pdf" style="width:32px;height:32px;font-size:8px">PDF</div>
               <div class="upload-preview-name" id="preview-name">document.pdf</div>
@@ -117,7 +124,7 @@
           </div>
 
           <!-- Resource Name -->
-          <div class="form-group">
+          <div class="form-group" id="res-name-group">
             <label class="label">Resource Name</label>
             <input class="input" id="res-name" placeholder="e.g. Chapter 1–3 Manuscript Template"/>
           </div>
@@ -398,7 +405,48 @@ function updateStats(){
 
 // -- FILE SELECT ---------------------------------------------------------------
 let selectedFile = null;
+let selectedFolder = [];   // set instead of selectedFile when a folder is picked
 function onFileSelect(e){ handleFile(e.target.files[0]); }
+
+const MAX_FOLDER_FILES = 25;
+
+// The folder input hands over every file inside, subfolders included. Only the
+// ones we accept are kept, and the rest are counted so the CaPSA is told what
+// was left behind rather than wondering.
+function onFolderSelect(e){
+  const allowed = ['pdf','doc','docx','ppt','pptx'];
+  const all = Array.prototype.slice.call(e.target.files);
+  const usable = all.filter(function(f){
+    return allowed.indexOf(f.name.split('.').pop().toLowerCase()) !== -1
+        && f.size <= 25*1024*1024;
+  });
+
+  if(!usable.length){
+    showToast('Nothing in that folder can be uploaded — PDF, DOCX or PPTX only.');
+    e.target.value = '';
+    return;
+  }
+
+  const skipped = all.length - usable.length;
+  selectedFolder = usable.slice(0, MAX_FOLDER_FILES);
+  selectedFile = null;
+
+  const over = usable.length - selectedFolder.length;
+  const parts = [selectedFolder.length + (selectedFolder.length === 1 ? ' file' : ' files')];
+  if(skipped) parts.push(skipped + ' skipped');
+  if(over) parts.push(over + ' over the ' + MAX_FOLDER_FILES + ' limit');
+
+  const prev = document.getElementById('upload-preview');
+  prev.classList.add('show');
+  document.getElementById('preview-name').textContent = parts.join(' · ');
+  const ftEl = document.getElementById('preview-ftype');
+  ftEl.textContent = 'DIR';
+  ftEl.className = 'ftype ftype-doc';
+
+  // Each file is named after itself, so the one name box does not apply.
+  const nameGroup = document.getElementById('res-name-group');
+  if(nameGroup) nameGroup.style.display = 'none';
+}
 function onDragOver(e){ e.preventDefault(); document.getElementById('dropzone').classList.add('drag-over'); }
 function onDragLeave(){ document.getElementById('dropzone').classList.remove('drag-over'); }
 function onDrop(e){
@@ -428,8 +476,13 @@ function handleFile(file){
 
 function clearFile(){
   selectedFile = null;
+  selectedFolder = [];
   document.getElementById('file-input').value='';
+  const folderInput = document.getElementById('folder-input');
+  if(folderInput) folderInput.value='';
   document.getElementById('upload-preview').classList.remove('show');
+  const nameGroup = document.getElementById('res-name-group');
+  if(nameGroup) nameGroup.style.display = '';
 }
 
 // -- GOOGLE DRIVE CONNECTION STATUS -----------------------------------------
@@ -543,13 +596,20 @@ function uploadResource(){
   const program = programEl ? programEl.value : '';
   const folderId = document.getElementById('res-folder').value;
 
-  if(!selectedFile){ showToast('?? Please select a file first.'); return; }
-  if(!name){ document.getElementById('res-name').focus(); showToast('?? Please enter a resource name.'); return; }
-  if(!category){ document.getElementById('res-category').focus(); showToast('?? Please choose a category.'); return; }
+  const isFolder = selectedFolder.length > 0;
+
+  if(!selectedFile && !isFolder){ showToast('Please choose a file or a folder first.'); return; }
+  // A folder names its own files, so a title is only asked for one at a time.
+  if(!isFolder && !name){ document.getElementById('res-name').focus(); showToast('Please enter a resource name.'); return; }
+  if(!category){ document.getElementById('res-category').focus(); showToast('Please choose a category.'); return; }
 
   const fd = new FormData();
-  fd.append('file', selectedFile);
-  fd.append('title', name);
+  if(isFolder){
+    selectedFolder.forEach(function(f){ fd.append('files[]', f); });
+  } else {
+    fd.append('file', selectedFile);
+    fd.append('title', name);
+  }
   fd.append('category', category);
   chosenSections.forEach(function (s) { fd.append('sections[]', s); });
   if(program && !chosenSections.length) fd.append('resource_for', program);
@@ -558,7 +618,9 @@ function uploadResource(){
   const btn = document.getElementById('upload-btn');
   const originalHTML = btn.innerHTML;
   btn.disabled = true;
-  btn.textContent = 'Uploading…';
+  btn.textContent = isFolder
+    ? 'Uploading ' + selectedFolder.length + ' files…'
+    : 'Uploading…';
 
   fetch(ROUTES.upload, {
     method: 'POST',
@@ -571,12 +633,17 @@ function uploadResource(){
     btn.innerHTML = originalHTML;
     if(!data.success){ showToast('? '+(data.message||'Upload failed.')); return; }
 
-    resources.unshift(mapResource(data.resource));
+    // One file or twenty-five, the answer is a list.
+    const added = data.resources || (data.resource ? [data.resource] : []);
+    added.slice().reverse().forEach(function(r){ resources.unshift(mapResource(r)); });
+
     resetForm();
     document.getElementById('category-filter').value = 'all';
     document.getElementById('folder-filter').value = 'all';
     renderCards();
-    showToast('? Uploaded to Google Drive.');
+    showToast(added.length > 1
+      ? added.length + ' files uploaded to Google Drive.'
+      : 'Uploaded to Google Drive.');
   })
   .catch(() => {
     btn.disabled = false;
@@ -589,8 +656,16 @@ function resetForm(){
   clearFile();
   document.getElementById('res-name').value='';
   document.getElementById('res-category').value='';
-  document.getElementById('res-program').value='';
   document.getElementById('res-folder').value='';
+
+  // A CaPSA sees section checkboxes where an admin sees the program dropdown,
+  // so neither can be assumed to be on the page.
+  const programEl = document.getElementById('res-program');
+  if(programEl) programEl.value='';
+
+  document.querySelectorAll('#res-sections input:checked').forEach(function(i){ i.checked = false; });
+  const hint = document.getElementById('res-sections-hint');
+  if(hint) hint.textContent = 'All of your sections';
 }
 
 // -- DOWNLOAD -------------------------------------------------------------------
