@@ -140,7 +140,25 @@ class GoogleDriveController extends Controller
             ],
             'title' => 'required|string|max:255',
             'category' => 'required|string|max:50',
-            'resource_for' => 'nullable|in:BSIT,BSCS,BLIS,BSIS',
+            // Only a program this CaPSA actually handles. Without this the
+            // page could be scoped and a hand-made request still file a
+            // resource under someone else's program. Null means every
+            // program, which stays open.
+            'resource_for' => [
+                'nullable',
+                'in:BSIT,BSCS,BLIS,BSIS',
+                function ($attribute, $value, $fail) {
+                    $viewer = Auth::guard('expert')->user();
+
+                    if (! $value || ! $viewer || $viewer->is_admin) {
+                        return;
+                    }
+
+                    if (! in_array($value, $viewer->handledPrograms(), true)) {
+                        $fail('You can only upload resources for a program you handle.');
+                    }
+                },
+            ],
             'drive_folder_id' => 'nullable|string',
         ]);
 
@@ -206,6 +224,17 @@ class GoogleDriveController extends Controller
 
     public function destroy(Resource $resource)
     {
+        $viewer = Auth::guard('expert')->user();
+
+        // Deleting is scoped like seeing: your own uploads only. There was no
+        // ownership check at all, so any CaPSA could remove anyone's.
+        if ($viewer && ! $viewer->is_admin && (int) $resource->uploaded_by !== (int) $viewer->expert_id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'That resource was uploaded by someone else.',
+            ], 403);
+        }
+
         try {
             if ($resource->drive_file_id) {
                 $this->drive->deleteFile(Auth::guard('expert')->id(), $resource->drive_file_id);
