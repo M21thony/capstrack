@@ -44,7 +44,13 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        // Anything under api/* answers in JSON whatever the caller asked for.
+        // Everywhere else, honour what the caller actually asked for: a
+        // fetch() sending Accept: application/json was being handed an HTML
+        // error page, and calling .json() on that is where the student-facing
+        // "Unexpected token '<'" came from. Ordinary form posts send no such
+        // header, so they still redirect back with the errors in the session.
         $exceptions->shouldRenderJsonWhen(
-            fn (Request $request) => $request->is('api/*'),
+            fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
         );
     })->create();

@@ -92,6 +92,24 @@ class PreProposalWithoutTeamTest extends TestCase
         }
     }
 
+    /**
+     * A failed check has to come back as JSON, because that is what the page
+     * asked for.
+     *
+     * The handler used to render JSON only for api/* paths, so a validation
+     * failure here returned an HTML error page while the page was calling
+     * .json() on it - the "Unexpected token '<'" a student was left looking
+     * at. The workaround in the view reads the body as text first; this is
+     * the cause.
+     */
+    public function test_a_failed_check_answers_in_json_when_json_was_asked_for(): void
+    {
+        $this->actingAs($this->teamless(), 'web')
+            ->postJson('/pre-proposal/duplication-checks', [])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('document');
+    }
+
     /** A student who does have a team still sees the real page. */
     public function test_a_student_with_a_team_sees_no_notice(): void
     {
