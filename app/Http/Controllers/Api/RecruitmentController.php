@@ -8,6 +8,8 @@ use App\Models\Recruitment;
 use App\Models\StudentRole;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
+use App\Models\Term;
+use App\Support\StudentTeam;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -77,8 +79,7 @@ class RecruitmentController extends Controller
         $student = $request->user();
         $studentId = $student->student_id;
 
-        $studentSy = StudentSchoolYear::where('student_id', $studentId)->first();
-        if ($studentSy?->team_id) {
+        if (StudentTeam::has($studentId)) {
             return response()->json([
                 'message' => 'You already have a team, so you cannot publish a recruitment post.',
             ], 422);
@@ -101,9 +102,9 @@ class RecruitmentController extends Controller
                 DB::table('student_s_y')
                     ->updateOrInsert(
                         // Keyed on the term too: this table is one row per student PER
-                // TERM, so keying on the student alone would overwrite last
-                // semester's record instead of starting this one.
-                ['student_id' => $studentId, 'term_id' => \App\Models\Term::activeId()],
+                        // TERM, so keying on the student alone would overwrite last
+                        // semester's record instead of starting this one.
+                        ['student_id' => $studentId, 'term_id' => Term::activeId()],
                         ['team_id' => $team->team_id, 's_role_id' => StudentRole::leaderRoleId()]
                     );
             }

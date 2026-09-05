@@ -4,8 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\Recruitment;
 use App\Models\StudentRole;
-use App\Models\StudentSchoolYear;
 use App\Models\Team;
+use App\Models\Term;
+use App\Support\StudentTeam;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -35,8 +36,7 @@ class RecruitmentController extends Controller
         $studentId = $student ? $student->student_id : 8;
 
         // Prevent posting if the student already belongs to a team
-        $studentSy = StudentSchoolYear::where('student_id', $studentId)->first();
-        if ($studentSy?->team_id) {
+        if (StudentTeam::has($studentId)) {
             if ($request->expectsJson()) {
                 return response()->json([
                     'success' => false,
@@ -66,9 +66,9 @@ class RecruitmentController extends Controller
                 DB::table('student_s_y')
                     ->updateOrInsert(
                         // Keyed on the term too: this table is one row per student PER
-                // TERM, so keying on the student alone would overwrite last
-                // semester's record instead of starting this one.
-                ['student_id' => $studentId, 'term_id' => \App\Models\Term::activeId()],
+                        // TERM, so keying on the student alone would overwrite last
+                        // semester's record instead of starting this one.
+                        ['student_id' => $studentId, 'term_id' => Term::activeId()],
                         ['team_id' => $team->team_id, 's_role_id' => StudentRole::leaderRoleId()]
                     );
             }

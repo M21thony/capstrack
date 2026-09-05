@@ -8,6 +8,7 @@ use App\Models\StudentSchoolYear;
 use App\Models\Team;
 use App\Services\OllamaSSHClient;
 use App\Services\SimilarityService;
+use App\Support\StudentTeam;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -466,8 +467,6 @@ class PreProposalController extends Controller
 
     private function currentTeam(Request $request): ?Team
     {
-        $studentSy = StudentSchoolYear::where('student_id', $request->user()->student_id)->first();
-
-        return $studentSy?->team_id ? Team::find($studentSy->team_id) : null;
+        return StudentTeam::for($request->user()->student_id);
     }
 }

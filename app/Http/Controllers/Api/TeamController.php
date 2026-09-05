@@ -11,6 +11,8 @@ use App\Models\StudentRole;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
 use App\Models\TeamInvitation;
+use App\Models\Term;
+use App\Support\StudentTeam;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -65,7 +67,7 @@ class TeamController extends Controller
                 // Keyed on the term too: this table is one row per student PER
                 // TERM, so keying on the student alone would overwrite last
                 // semester's record instead of starting this one.
-                ['student_id' => $student->student_id, 'term_id' => \App\Models\Term::activeId()],
+                ['student_id' => $student->student_id, 'term_id' => Term::activeId()],
                 ['team_id' => $team->team_id, 's_role_id' => StudentRole::leaderRoleId()]
             );
 
@@ -228,8 +230,9 @@ class TeamController extends Controller
             ]);
         }
 
-        $studentSy = StudentSchoolYear::where('student_id', $studentId)->first();
-        $studentSy->update(['team_id' => null, 's_role_id' => null]);
+        // The row holding the team, not whichever row came back first -
+        // clearing the wrong year left the student in the team.
+        StudentTeam::rowFor($studentId)?->update(['team_id' => null, 's_role_id' => null]);
 
         $this->logActivity(
             $studentId,

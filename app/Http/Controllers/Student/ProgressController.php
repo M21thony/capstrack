@@ -6,9 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\Milestone;
 use App\Models\Student;
 use App\Models\StudentMilestone;
-use App\Models\StudentSchoolYear;
 use App\Models\Team;
 use App\Support\MilestoneProgress;
+use App\Support\StudentTeam;
 use Illuminate\Http\Request;
 
 class ProgressController extends Controller
@@ -33,8 +33,7 @@ class ProgressController extends Controller
         /** @var Student $student */
         $student = auth()->user();
 
-        $studentSy = StudentSchoolYear::where('student_id', $student->student_id)->first();
-        $teamId = $studentSy?->team_id;
+        $teamId = StudentTeam::idFor($student->student_id);
 
         $isLeader = false;
         if ($teamId) {
@@ -97,8 +96,7 @@ class ProgressController extends Controller
 
         /** @var Student $student */
         $student = auth()->user();
-        $studentSy = StudentSchoolYear::where('student_id', $student->student_id)->first();
-        $teamId = $studentSy?->team_id;
+        $teamId = StudentTeam::idFor($student->student_id);
 
         if (! $teamId) {
             return back()->with('error', 'No team found.');
@@ -138,8 +136,7 @@ class ProgressController extends Controller
         ]);
 
         $student = auth()->user();
-        $studentSy = StudentSchoolYear::where('student_id', $student->student_id)->first();
-        $teamId = $studentSy?->team_id;
+        $teamId = StudentTeam::idFor($student->student_id);
 
         if (! $teamId) {
             return back()->with('error', 'No team found.');

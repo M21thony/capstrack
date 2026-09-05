@@ -9,6 +9,7 @@ use App\Models\StudentRole;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
 use App\Models\TeamInvitation;
+use App\Support\StudentTeam;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -28,8 +29,7 @@ class InvitationController extends Controller
 
         // If the sender already belongs to a team, they cannot send join requests
         if ($validated['type'] === 'request') {
-            $senderSy = StudentSchoolYear::where('student_id', $studentId)->first();
-            if ($senderSy?->team_id) {
+            if (StudentTeam::has($studentId)) {
                 if ($request->expectsJson()) {
                     return response()->json([
                         'success' => false,
