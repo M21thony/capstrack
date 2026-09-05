@@ -1457,8 +1457,8 @@ function filterSections(q) {
 }
 
 function sendToggleCapsa(expertId, sections, successMessage, onDone) {
-  fetch(`{{ route('admin.experts.toggle-capsa', ['expert' => 'EXPERT_ID']) }}`.replace('EXPERT_ID', expertId), {
-    method: 'POST',
+  fetch(`{{ route('admin.experts.capsa.update', ['expert' => 'EXPERT_ID']) }}`.replace('EXPERT_ID', expertId), {
+    method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
       'X-CSRF-TOKEN': '{{ csrf_token() }}',

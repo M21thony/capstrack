@@ -224,7 +224,7 @@ class PreProposalControllerTest extends TestCase
         $this->checkAndStore('p1.pdf');
         $this->checkAndStore('p2.pdf');
 
-        $this->patch(route('student.pre-proposal.submit'))->assertSessionHas('error');
+        $this->patch(route('student.pre-proposal.submit'), ['status' => 'submitted'])->assertSessionHas('error');
 
         $this->assertSame(0, $team->preProposals()->whereNotNull('submitted_at')->count());
         $this->assertSame('Active', $team->fresh()->team_status);
@@ -241,7 +241,7 @@ class PreProposalControllerTest extends TestCase
 
         $this->saveTheMinimum();
 
-        $this->patch(route('student.pre-proposal.submit'))->assertSessionHas('status');
+        $this->patch(route('student.pre-proposal.submit'), ['status' => 'submitted'])->assertSessionHas('status');
 
         $this->assertSame(PreProposalController::MINIMUM_PROPOSALS, $team->preProposals()->whereNotNull('submitted_at')->count());
         $this->assertTrue($team->fresh()->hasSubmittedPreProposals());
@@ -259,7 +259,7 @@ class PreProposalControllerTest extends TestCase
         $this->actingAs($member, 'web');
         $this->saveTheMinimum();
 
-        $this->patch(route('student.pre-proposal.submit'))->assertSessionHas('error');
+        $this->patch(route('student.pre-proposal.submit'), ['status' => 'submitted'])->assertSessionHas('error');
         $this->assertSame(0, $team->preProposals()->whereNotNull('submitted_at')->count());
     }
 
@@ -270,9 +270,9 @@ class PreProposalControllerTest extends TestCase
         $this->actingAs($student, 'web');
 
         $this->saveTheMinimum();
-        $this->patch(route('student.pre-proposal.submit'));
+        $this->patch(route('student.pre-proposal.submit'), ['status' => 'submitted']);
 
-        $this->post(route('student.pre-proposal.unsubmit'))->assertSessionHas('status');
+        $this->patch(route('student.pre-proposal.submit'), ['status' => 'draft'])->assertSessionHas('status');
 
         $this->assertSame(0, $team->preProposals()->whereNotNull('submitted_at')->count());
         $this->assertSame('Active', $team->fresh()->team_status);
@@ -287,11 +287,11 @@ class PreProposalControllerTest extends TestCase
         $this->actingAs($student, 'web');
 
         $this->saveTheMinimum();
-        $this->patch(route('student.pre-proposal.submit'));
+        $this->patch(route('student.pre-proposal.submit'), ['status' => 'submitted']);
 
         $team->preProposals()->where('slot', 1)->first()->update(['approved_status' => true]);
 
-        $this->post(route('student.pre-proposal.unsubmit'))->assertSessionHas('error');
+        $this->patch(route('student.pre-proposal.submit'), ['status' => 'draft'])->assertSessionHas('error');
         $this->assertSame(PreProposalController::MINIMUM_PROPOSALS, $team->preProposals()->whereNotNull('submitted_at')->count());
     }
 
@@ -302,7 +302,7 @@ class PreProposalControllerTest extends TestCase
         $this->actingAs($student, 'web');
 
         $this->saveTheMinimum();
-        $this->patch(route('student.pre-proposal.submit'));
+        $this->patch(route('student.pre-proposal.submit'), ['status' => 'submitted']);
 
         $checkId = $this->post(route('student.pre-proposal.check'), [
             'document' => UploadedFile::fake()->create('p4.pdf', 10, 'application/pdf'),
@@ -467,7 +467,7 @@ class PreProposalControllerTest extends TestCase
         $this->actingAs($student, 'web');
 
         $this->saveTheMinimum();
-        $this->patch(route('student.pre-proposal.submit'));
+        $this->patch(route('student.pre-proposal.submit'), ['status' => 'submitted']);
 
         $proposal = $team->preProposals()->where('slot', 1)->first();
 

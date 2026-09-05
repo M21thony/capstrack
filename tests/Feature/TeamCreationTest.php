@@ -695,7 +695,7 @@ class TeamCreationTest extends TestCase
         $page->assertSee('Remind Me Later');
 
         // Member chooses "Remind Me Later" — sets a 3-hour reminder, request stays pending
-        $response = $this->post('/team/leadership/'.$requestNotif->id.'/remind-later', [], ['Accept' => 'application/json']);
+        $response = $this->put('/team/leadership/'.$requestNotif->id.'/reminder', [], ['Accept' => 'application/json']);
         $response->assertOk();
 
         $requestNotif->refresh();

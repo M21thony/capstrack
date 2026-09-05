@@ -227,7 +227,7 @@ class AdminTeamVerificationTest extends TestCase
         $team = $this->createCompleteTeam($leader);
 
         $this->actingAs($leader, 'web');
-        $this->post(route('student.pre-proposal.unsubmit'))->assertSessionHas('status');
+        $this->patch(route('student.pre-proposal.submit'), ['status' => 'draft'])->assertSessionHas('status');
 
         $this->assertSame(0, $team->preProposals()->whereNotNull('submitted_at')->count());
 
@@ -245,7 +245,7 @@ class AdminTeamVerificationTest extends TestCase
         $team = $this->createCompleteTeam($leader);
 
         $this->actingAs($leader, 'web');
-        $this->post(route('student.pre-proposal.unsubmit'));
+        $this->patch(route('student.pre-proposal.submit'), ['status' => 'draft']);
 
         // Submitting needs the minimum number of titles kept, so top the set
         // back up before turning it in again.
@@ -259,7 +259,7 @@ class AdminTeamVerificationTest extends TestCase
 
         $team->preProposals()->update(['submitted_at' => null]);
 
-        $this->patch(route('student.pre-proposal.submit'))->assertSessionHas('status');
+        $this->patch(route('student.pre-proposal.submit'), ['status' => 'submitted'])->assertSessionHas('status');
 
         $this->actingAs(CapstoneExpert::find(1), 'expert');
         $response = $this->get(route('capsa.team_management', ['tab' => 'verification']));

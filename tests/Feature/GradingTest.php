@@ -185,8 +185,8 @@ class GradingTest extends TestCase
         $rubric = $this->makeRubric();
         $criterion = $rubric->criteria()->first();
 
-        $response = $this->actingAs($expert, 'expert')->postJson(
-            "/instructor/grading/{$defense->defense_id}/submit",
+        $response = $this->actingAs($expert, 'expert')->patchJson(
+            "/instructor/grading/{$defense->defense_id}",
             ['scores' => [$criterion->criterion_id => 40], 'verdict' => 'approved']
         );
 
@@ -209,8 +209,8 @@ class GradingTest extends TestCase
             $scores[$c->criterion_id] = (float) $c->max_points;
         }
 
-        $response = $this->actingAs($expert, 'expert')->postJson(
-            "/instructor/grading/{$defense->defense_id}/submit",
+        $response = $this->actingAs($expert, 'expert')->patchJson(
+            "/instructor/grading/{$defense->defense_id}",
             ['scores' => $scores]
         );
 
@@ -235,8 +235,8 @@ class GradingTest extends TestCase
             $expectedTotal += (float) $c->max_points;
         }
 
-        $response = $this->actingAs($expert, 'expert')->postJson(
-            "/instructor/grading/{$defense->defense_id}/submit",
+        $response = $this->actingAs($expert, 'expert')->patchJson(
+            "/instructor/grading/{$defense->defense_id}",
             ['scores' => $scores, 'verdict' => 'approved', 'remarks' => 'Great job']
         );
 
@@ -277,8 +277,8 @@ class GradingTest extends TestCase
             $scores[$c->criterion_id] = (float) $c->max_points;
         }
 
-        $this->actingAs($expert, 'expert')->postJson(
-            "/instructor/grading/{$defense->defense_id}/submit",
+        $this->actingAs($expert, 'expert')->patchJson(
+            "/instructor/grading/{$defense->defense_id}",
             ['scores' => $scores, 'verdict' => 'approved']
         );
 

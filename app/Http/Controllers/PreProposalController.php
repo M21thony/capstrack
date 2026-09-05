@@ -340,6 +340,19 @@ class PreProposalController extends Controller
      * silently, so a team was under review before they had said they were
      * ready. At least MINIMUM_PROPOSALS titles have to be kept first.
      */
+    /**
+     * Handing the pre-proposal in and taking it back are the same field
+     * moving, so one PATCH carries where it should end up.
+     */
+    public function updateStatus(Request $request): RedirectResponse
+    {
+        return $request->validate([
+            'status' => ['required', 'in:submitted,draft'],
+        ])['status'] === 'submitted'
+            ? $this->submit($request)
+            : $this->unsubmit($request);
+    }
+
     public function submit(Request $request): RedirectResponse
     {
         $team = $this->currentTeam($request);
