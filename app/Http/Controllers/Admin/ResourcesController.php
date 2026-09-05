@@ -25,6 +25,10 @@ class ResourcesController extends Controller
                 ->get(),
             'folders' => AdminDriveFolder::orderBy('name')->get(),
             'driveConnected' => $drive->isConnected(Auth::guard('expert')->id()),
+            // The sections this CaPSA handles, so the form can offer those
+            // rather than every program in the school.
+            'mySections' => $viewer?->sections ?? [],
+            'isAdmin' => (bool) $viewer?->is_admin,
         ]);
     }
 }

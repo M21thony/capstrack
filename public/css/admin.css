@@ -1432,3 +1432,13 @@ textarea.input{resize:vertical;min-height:80px}
 }
 
 @keyframes sheetUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+/* ── Section picker on the resources upload form ──
+   A CaPSA hands material to their own sections, so the form offers those.
+   Checkboxes rather than a dropdown: with a handful of sections the whole
+   choice is visible without opening anything. */
+.section-picker{display:flex;flex-wrap:wrap;gap:7px}
+.section-chip{display:inline-flex;align-items:center;gap:7px;padding:7px 11px;border:1px solid var(--border);border-radius:8px;background:var(--bg2);font-size:12.5px;font-weight:600;color:var(--text2);cursor:pointer;user-select:none}
+.section-chip:hover{border-color:var(--border2)}
+.section-chip input{accent-color:var(--accent);width:14px;height:14px;margin:0;cursor:pointer}
+.section-chip:has(input:checked){border-color:var(--accent);background:var(--accent-light);color:var(--accent3)}
+.section-hint{margin:7px 0 0;font-size:11.5px;color:var(--text3)}

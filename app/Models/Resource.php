@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Resource extends Model
 {
@@ -16,7 +17,6 @@ class Resource extends Model
     protected $fillable = [
         'resource_type',
         'resource_for',
-        'section',
         'category',
         'title',
         'description',
@@ -36,21 +36,23 @@ class Resource extends Model
     ];
 
     /**
-     * The section this is aimed at, as a label - "BSIT-4A".
+     * The sections this resource is aimed at, as labels - "BSIT-4A".
      *
-     * Built from the two columns rather than stored: resource_for carries the
-     * program and section carries the year and letter, so a stored label
-     * would be the program written down twice.
+     * Empty means it is not aimed at particular sections: it is scoped by
+     * program, or by nothing, in which case it reaches the uploader's own
+     * students because that is who can see their uploads at all.
+     *
+     * @return HasMany<ResourceSection>
      */
-    public function getSectionLabelAttribute(): ?string
+    public function sections(): HasMany
     {
-        if (! $this->section) {
-            return null;
-        }
+        return $this->hasMany(ResourceSection::class, 'resource_id', 'resource_id');
+    }
 
-        return $this->resource_for
-            ? $this->resource_for.'-'.$this->section
-            : $this->section;
+    /** @return array<int, string> */
+    public function targetSections(): array
+    {
+        return $this->sections->pluck('section')->all();
     }
 
     protected $casts = [

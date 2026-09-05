@@ -45,19 +45,20 @@ class ResourceController extends Controller
         // No CaPSA covering this student means no resources - deliberately,
         // not everything. An empty list read as "no filter" is how this page
         // came to show every program's material to everybody.
-        // "4B" out of "BSIT-4B" - the half the resource stores, since the
-        // other half is the program.
-        $sectionSuffix = $section ? substr($section, strpos($section, '-') + 1) : null;
-
         $resources = Resource::orderByDesc('uploaded_at')
+            ->with('sections')
             ->whereIn('uploaded_by', $capsaIds)
-            ->where(fn ($q) => $q
-                ->when($program, fn ($w) => $w->where('resource_for', $program))
-                ->orWhereNull('resource_for'))
-            // Aimed at every section of the program, or at theirs.
-            ->where(fn ($q) => $q
-                ->whereNull('section')
-                ->when($sectionSuffix, fn ($w) => $w->orWhere('section', $sectionSuffix)))
+            ->where(function ($q) use ($program, $section) {
+                // Aimed at named sections: theirs has to be one of them.
+                $q->whereHas('sections', fn ($w) => $w->where('section', $section ?: '__none__'));
+
+                // Or aimed at no section, in which case the program decides.
+                $q->orWhere(fn ($w) => $w
+                    ->whereDoesntHave('sections')
+                    ->where(fn ($p) => $p
+                        ->when($program, fn ($x) => $x->where('resource_for', $program))
+                        ->orWhereNull('resource_for')));
+            })
             ->get();
 
         $folders = AdminDriveFolder::orderBy('name')->get();
