@@ -142,7 +142,12 @@ select.input{cursor:pointer}
 .content{display:grid;grid-template-columns:1fr 420px;grid-template-rows:auto 1fr;gap:30px;padding:24px 40px;width:100%;height:calc(100vh - 70px);overflow-y:auto;box-sizing:border-box} /* Grid with explicit rows */
 .page-tutorial{grid-column:1 / -1;grid-row:1;margin-bottom:16px} /* Tutorial spans full width in row 1 */
 .experts-main{grid-column:1;grid-row:2;display:flex;flex-direction:column;min-width:0} /* Main content in row 2, column 1 */
-.overview-panel{grid-column:2;grid-row:2;width:420px;flex-shrink:0;position:sticky;top:20px} /* Sidebar in row 2, column 2 */
+/* align-self:start is what makes the sticky below actually work. A grid item
+   stretches to its row by default, and this row is as tall as the whole expert
+   list - so the panel was a ~3800px box that never needed to move, and Role
+   Guide and Quick Tips simply scrolled off the top inside it. Sized to its own
+   content, it can stick. */
+.overview-panel{grid-column:2;grid-row:2;align-self:start;width:420px;flex-shrink:0;position:sticky;top:20px} /* Sidebar in row 2, column 2 */
 
 /* #contentWrapper spans .content's whole grid as one cell (skeleton/real-content
    toggling needs a single positioned ancestor); .content-grid re-declares the
@@ -153,7 +158,14 @@ select.input{cursor:pointer}
 .content-grid{display:grid;grid-template-columns:1fr 420px;grid-template-rows:auto 1fr;gap:30px}
 
 
-.sticky-controls{position:sticky;top:0;z-index:100;background:var(--bg);padding:20px 0;margin-top:-20px} /* Sticky filter and search bar */
+/* top is -24px, not 0, and the 24 is .content's own padding-top above.
+   A sticky offset is measured from the scroll container's CONTENT box, so
+   top:0 parked the bar 24px below the top edge of what you can see - and
+   cards scrolled up through that 24px strip and showed above the bar. Pulling
+   it up by the same 24 puts the bar flush against the top edge; nothing is
+   cut off, because that strip is on screen too. Change .content's padding and
+   change this with it. */
+.sticky-controls{position:sticky;top:-24px;z-index:100;background:var(--bg);padding:20px 0;margin-top:-20px} /* Sticky filter and search bar */
 
 /* ── FILTER BAR & CHIPS ── */
 /* Role filter, drawn as the app's underlined tab strip: the chosen role is
@@ -165,18 +177,29 @@ select.input{cursor:pointer}
 .filter-chip.active{color:var(--accent3);border-bottom-color:var(--accent)}
 
 /* ── 3X3 GRID SYSTEM ── */
-.expert-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:25px;width:100%;margin-top:20px;margin-bottom:32px} /* Strict 3-column layout */
+/* As many as the width allows, so cards do not stretch to fill a row of
+   exactly three on a wide screen. */
+.expert-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(248px,1fr));gap:16px;width:100%;margin-top:20px;margin-bottom:28px}
 
 /* ── EXPERT CARD DESIGN ── */
-.expert-card-compact{background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:35px 20px;display:flex;flex-direction:column;align-items:center;text-align:center;position:relative;transition:all 0.3s ease;box-shadow:0 4px 12px rgba(0,0,0,0.03)} /* Professional card base */
-.expert-card-compact:hover{border-color:var(--accent);transform:translateY(-8px);box-shadow:0 12px 24px rgba(181,148,31,0.1)} /* Hover elevation and glow */
-.role-dot{position:absolute;top:15px;right:15px;width:8px;height:8px;border-radius:50%} /* Small status indicator on card */
-.expert-avatar-wrap{width:72px;height:72px;border-radius:50%;padding:3px;border:2px solid var(--border);margin-bottom:16px;transition:0.3s} /* Avatar frame */
-.expert-card-compact:hover .expert-avatar-wrap{border-color:var(--accent);transform:scale(1.05)} /* Avatar zoom effect on hover */
+/* Medium: the same card, at about 210px instead of 285, so half again as
+   many experts are on screen without anything being taken off it. */
+.expert-card-compact{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:22px 18px 16px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:9px;position:relative;transition:border-color .13s ease,box-shadow .13s ease}
+.expert-card-compact:hover{border-color:var(--border2);box-shadow:0 3px 10px rgba(0,0,0,0.04)}
+.role-dot{position:absolute;top:12px;right:12px;width:7px;height:7px;border-radius:50%}
+/* The gold disc is the avatar itself now, not a ring around it - the ring was
+   a second border inside a bordered card. */
+.expert-avatar-wrap{width:56px;height:56px;border-radius:50%;padding:2px;border:2px solid var(--border);margin:0;flex-shrink:0;transition:border-color .13s ease}
+.expert-card-compact:hover .expert-avatar-wrap{border-color:var(--accent)}
 
 /* ── PROGRESS INDICATORS ── */
-.mini-slot-bar{width:100%;height:5px;background:var(--bg3);border-radius:10px;margin:18px 0 8px;overflow:hidden} /* Container for availability bar */
-.mini-slot-fill{height:100%;background:var(--accent);transition:0.5s ease-out} /* Dynamic fill for slots */
+/* A rule, where a progress bar used to say what the line below it says. */
+.mini-slot-bar{width:100%;height:1px;background:var(--border);border-radius:0;margin:3px 0 0}
+.mini-slot-fill{display:none}
+.slot-caption{font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--text3)}
+.slot-caption.is-full{color:var(--red)}
+/* Not "full" and not a number - nobody has said yet, which is its own state. */
+.slot-caption.is-unset{color:var(--amber);text-transform:none;letter-spacing:0;font-size:11px;font-weight:600}
 
 /* ── SLIM OVERVIEW PANEL (RIGHT) ── */
 .overview-panel{width:420px;flex-shrink:0;position:sticky;top:20px} /* Side info panel */
@@ -272,6 +295,7 @@ select.input{cursor:pointer}
   .expert-card-compact .role-chips,
   .expert-card-compact .expertise-tags,
   .expert-card-compact .mini-slot-bar,
+  .expert-card-compact .slot-caption,
   .expert-card-compact div[style*="font-size: 10px"]:not(.btn),
   .expert-card-compact .role-dot{display:none!important}
   .expert-card-compact .btn{pointer-events:auto;flex-shrink:0!important;padding:5px 10px!important;font-size:10px!important;width:auto!important}
