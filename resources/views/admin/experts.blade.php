@@ -496,7 +496,7 @@
       'table' => '.table',
       'noun' => 'expert',
       'actions' => [
-        ['id' => 'bulkRemove', 'label' => 'Remove', 'danger' => true],
+        ['id' => 'bulkRemove', 'label' => 'Delete accounts', 'danger' => true],
       ],
     ])
 
@@ -658,29 +658,38 @@
 
             <td data-label="Action">
               <div class="expert-actions">
-                {{-- Only for someone who already holds the role: changing
-                     which sections they cover is not a change of role, and
-                     doing it through the toggle meant removing them as CaPSA
-                     and making them one again. --}}
-                @if ($expert->is_capsa)
-                  <button type="button" class="icon-btn" title="Manage sections"
-                          onclick="editCapsaSections({{ $expert->expert_id }}, {{ Illuminate\Support\Js::from($expert->name) }}, {{ Illuminate\Support\Js::from($expert->sections ?? []) }})">
-                    <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="6" rx="1"/><rect x="3" y="14" width="18" height="6" rx="1"/></svg>
+                {{-- Three actions, and two of them used to be a person with a
+                     plus and a person with a minus - the shape of an add-friend
+                     button, saying nothing about capstone. They carry their
+                     names in here, and the colours keep them apart: amber takes
+                     a role away, red deletes the account behind it. --}}
+                <div class="rowmenu">
+                  <button type="button" class="icon-btn rowmenu-btn" aria-expanded="false"
+                          aria-label="Actions for {{ $expert->name }}">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.7" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.7" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.7" fill="currentColor" stroke="none"/></svg>
                   </button>
-                @endif
-
-                <button type="button" class="icon-btn capsa" title="{{ $expert->is_capsa ? 'Remove CaPSA' : 'Make CaPSA' }}"
-                        onclick="toggleCapsa({{ $expert->expert_id }}, {{ $expert->is_capsa ? 'true' : 'false' }}, {{ Illuminate\Support\Js::from($expert->name) }})">
-                  @if ($expert->is_capsa)
-                    <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="17" y1="11" x2="23" y2="11"/></svg>
-                  @else
-                    <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="23" y1="11" x2="17" y2="11"/><line x1="20" y1="8" x2="20" y2="14"/></svg>
-                  @endif
-                </button>
-
-                <button type="button" class="icon-btn danger remove-trigger" title="Remove" data-id="{{ $expert->expert_id }}" data-name="{{ $expert->name }}">
-                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M7 6l1 14h8l1-14"/><path d="M10 10v6"/><path d="M14 10v6"/></svg>
-                </button>
+                  <div class="rowmenu-pop" hidden>
+                    @if ($expert->is_capsa)
+                      {{-- Only for someone who already holds the role: changing
+                           which sections they cover is not a change of role, and
+                           doing it through the toggle meant removing them as
+                           CaPSA and making them one again. --}}
+                      <button type="button" class="rowmenu-item"
+                              onclick="editCapsaSections({{ $expert->expert_id }}, {{ Illuminate\Support\Js::from($expert->name) }}, {{ Illuminate\Support\Js::from($expert->sections ?? []) }})">
+                        <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="6" rx="1"/><rect x="3" y="14" width="18" height="6" rx="1"/></svg> Which sections they cover
+                      </button>
+                    @endif
+                    <button type="button" class="rowmenu-item warn"
+                            onclick="toggleCapsa({{ $expert->expert_id }}, {{ $expert->is_capsa ? 'true' : 'false' }}, {{ Illuminate\Support\Js::from($expert->name) }})">
+                      <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="17" y1="11" x2="23" y2="11"/></svg> {{ $expert->is_capsa ? 'Take away the CaPSA role' : 'Make them a CaPSA' }}
+                    </button>
+                    <div class="rowmenu-sep"></div>
+                    <button type="button" class="rowmenu-item danger remove-trigger"
+                            data-id="{{ $expert->expert_id }}" data-name="{{ $expert->name }}">
+                      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M7 6l1 14h8l1-14"/></svg> Delete this account
+                    </button>
+                  </div>
+                </div>
               </div>
             </td>
           </tr>
@@ -1497,25 +1506,34 @@ function bulkNames(rows) {
 }
 
 onBulk('bulkRemove', function (ids, rows) {
-  const names = bulkNames(rows);
-  if (!confirm('Remove ' + ids.length + (ids.length === 1 ? ' expert' : ' experts') + '?\n\n'
-      + names.join('\n') + '\n\nThis cannot be undone.')) return;
+  confirmSheet({
+    title: 'Delete ' + ids.length + (ids.length === 1 ? ' account' : ' accounts') + '?',
+    names: bulkNames(rows),
+    body: 'The account goes, not just the CaPSA role. To leave them in the system '
+        + 'without their sections, use Remove CaPSA on the row instead.',
+    confirmLabel: ids.length === 1 ? 'Delete account' : 'Delete ' + ids.length + ' accounts',
+    danger: true,
+  }).then(function (yes) {
+    if (!yes) return;
 
-  Promise.all(ids.map(function (id) {
-    return fetch('{{ url('admin/experts') }}/' + id, {
-      method: 'DELETE',
-      headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' },
-    }).then(r => r.ok).catch(() => false);
-  })).then(function (results) {
-    const ok = results.filter(Boolean).length;
-    const failed = results.length - ok;
-    showToast(failed ? ok + ' removed, ' + failed + ' could not be' : ok + ' removed',
-      failed ? 'error' : 'success');
-    setTimeout(() => window.location.reload(), 900);
+    Promise.all(ids.map(function (id) {
+      return fetch('{{ url('admin/experts') }}/' + id, {
+        method: 'DELETE',
+        headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' },
+      }).then(r => r.ok).catch(() => false);
+    })).then(function (results) {
+      const ok = results.filter(Boolean).length;
+      const failed = results.length - ok;
+      showToast(failed ? ok + ' removed, ' + failed + ' could not be' : ok + ' removed',
+        failed ? 'error' : 'success');
+      setTimeout(() => window.location.reload(), 900);
+    });
   });
 });
 </script>
 
+@include('partials.confirm-sheet')
+@include('partials.row-menu')
 @include('partials.email-lookup', ['input' => 'capsaEmail', 'kind' => 'expert', 'nameInput' => 'capsaName'])
 
 </body>

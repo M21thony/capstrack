@@ -2,9 +2,10 @@
   Turns a table into one you can act on several rows at once.
 
   Nothing appears until something is ticked: with no selection the page is for
-  looking at, and the moment there is one the same strip becomes what you can
-  do to those rows. That way there is never a greyed-out "Edit" waiting on a
-  selection that is not there.
+  looking at, and the moment there is one the table's own heading row becomes
+  what you can do to those rows. That way there is never a greyed-out "Edit"
+  waiting on a selection that is not there - and nothing on the page moves,
+  which a bar opening above the table could not manage.
 
   The bulk actions are supplied by the page, because who may change what is not
   the same on both sides - a CaPSA sets roles, an admin sets roles and sections,
@@ -72,9 +73,28 @@ function start() {
   // offering one and refusing the action afterwards is worse than not offering.
   const rows = Array.from(table.querySelectorAll('tbody tr'));
 
+  const head = table.querySelector('thead');
+  const headRow = head.querySelector('tr');
+
   table.querySelectorAll('thead tr').forEach(function (tr) {
     tr.insertBefore(cell(false, true), tr.firstElementChild);
   });
+
+  // The bar becomes a second heading row and the two swap places, so the
+  // table keeps its height and the row under the cursor stays there. It is
+  // built here rather than written in the markup because only this file knows
+  // how many columns the page's table has.
+  const barRow = document.createElement('tr');
+  barRow.className = 'rs-bar';
+  barRow.hidden = true;
+  barRow.appendChild(cell(false, true));
+
+  const barCell = document.createElement('th');
+  barCell.colSpan = Math.max(1, headRow.children.length - 1);
+  barCell.appendChild(bar);
+  bar.hidden = false;
+  barRow.appendChild(barCell);
+  head.appendChild(barRow);
 
   rows.forEach(function (tr) {
     if (tr.dataset.noSelect === '1') {
@@ -101,18 +121,22 @@ function start() {
   function refresh() {
     const chosen = selectedRows();
     const all = boxes();
+    const any = chosen.length > 0;
 
-    bar.hidden = chosen.length === 0;
+    // One row or the other, never both and never neither.
+    barRow.hidden = !any;
+    headRow.hidden = any;
+
     count.textContent = chosen.length + ' ' + noun + (chosen.length === 1 ? '' : 's') + ' selected';
 
     all.forEach(b => b.closest('tr').classList.toggle('rs-on', b.checked));
 
-    const master = table.querySelector('thead input[data-all]');
-    if (master) {
+    // Both heading rows carry one, so whichever is on screen answers.
+    table.querySelectorAll('thead input[data-all]').forEach(function (master) {
       master.checked = all.length > 0 && chosen.length === all.length;
       // Neither all nor none, so the box says "some" rather than lying.
-      master.indeterminate = chosen.length > 0 && chosen.length < all.length;
-    }
+      master.indeterminate = any && chosen.length < all.length;
+    });
   }
 
   table.addEventListener('change', function (e) {
