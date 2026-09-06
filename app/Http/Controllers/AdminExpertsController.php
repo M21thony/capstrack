@@ -38,7 +38,12 @@ class AdminExpertsController extends Controller
         // faculty themselves are the CaPSA's to onboard and give roles to,
         // from their own copy, so listing every expert here only offered the
         // same job from two places with different powers behind it.
-        $experts = CapstoneExpert::where('approved_status', true)
+        // The only list that shows a deactivated account, because it is the
+        // only one that can switch it back on. Everywhere else - the browse
+        // page a student applies from, panel assignment, the API - the model's
+        // own scope has already taken them out.
+        $experts = CapstoneExpert::withTrashed()
+            ->where('approved_status', true)
             ->where('is_admin', false)
             ->when(! $isCapsaOnly, fn ($q) => $q->whereHas(
                 'roles',
@@ -280,9 +285,12 @@ class AdminExpertsController extends Controller
             'reason' => $reason,
         ], now()->addMinutes(10));
 
+        // Switched off, not thrown away: the row, their expertise, their team
+        // history and everything hanging off expert_id all stay, so somebody
+        // back from study leave is one click away rather than a re-application.
         $expert->delete();
 
-        $msg = "Expert {$expertName} has been removed.";
+        $msg = "{$expertName}'s account has been deactivated.";
         if ($notifiedTeams > 0) {
             $msg .= " {$notifiedTeams} team(s) have been notified.";
         }
@@ -290,6 +298,26 @@ class AdminExpertsController extends Controller
         return response()->json([
             'success' => true,
             'message' => $msg,
+        ]);
+    }
+
+    /** PUT /experts/{expert}/reactivate — switch the account back on. */
+    public function reactivate(int $expertId): JsonResponse
+    {
+        $expert = CapstoneExpert::withTrashed()->findOrFail($expertId);
+
+        if (! $expert->deactivated_at) {
+            return response()->json([
+                'success' => false,
+                'message' => 'That account is already active.',
+            ], 422);
+        }
+
+        $expert->restore();
+
+        return response()->json([
+            'success' => true,
+            'message' => "{$expert->name}'s account is active again.",
         ]);
     }
 

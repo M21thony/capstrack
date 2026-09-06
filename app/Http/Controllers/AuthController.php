@@ -168,7 +168,11 @@ class AuthController extends Controller
         }
 
         if ($isExpertDomain) {
-            $expert = CapstoneExpert::where('email', $email)->first();
+            $expert = CapstoneExpert::withTrashed()->where('email', $email)->first();
+
+            if ($expert && $expert->deactivated_at) {
+                return $this->refuseDeactivatedExpert($request);
+            }
 
             if ($expert) {
                 if ($expert->approved_status) {
@@ -364,7 +368,11 @@ class AuthController extends Controller
         $lastName = $nameParts[1] ?? $nameParts[0];
 
         if ($isExpert) {
-            $expert = CapstoneExpert::where('email', $email)->first();
+            $expert = CapstoneExpert::withTrashed()->where('email', $email)->first();
+
+            if ($expert && $expert->deactivated_at) {
+                return $this->refuseDeactivatedExpert($request);
+            }
 
             if ($expert) {
                 if ($expert->approved_status) {
@@ -524,6 +532,25 @@ class AuthController extends Controller
         // and so the form can tell them where a previous request got to.
         return redirect()->route('account.request', ['email' => $request->input('email')])
             ->withErrors(['message' => $message]);
+    }
+
+    /**
+     * Turn away someone whose account has been switched off.
+     *
+     * Distinct from refuseUnlistedExpert() on purpose: that one sends people
+     * to the request form, and telling somebody to apply for the account they
+     * already have - and were deliberately removed from - is worse than
+     * telling them nothing.
+     */
+    private function refuseDeactivatedExpert(Request $request)
+    {
+        $message = 'This account has been deactivated. Ask a CaPSA to switch it back on.';
+
+        if ($request->expectsJson()) {
+            return response()->json(['success' => false, 'message' => $message], 403);
+        }
+
+        return redirect('/login')->withErrors(['message' => $message]);
     }
 
     /**

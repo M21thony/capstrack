@@ -447,6 +447,7 @@
         <option value="active">Active</option>
         <option value="full">Full</option>
         <option value="offline">Offline</option>
+        <option value="off">Deactivated</option>
       </select>
       <span class="page-filters-actions">
         {{-- The list is for a whole faculty at once. The other is for the one
@@ -509,7 +510,10 @@
 
               $isFull = $takesTeams && $slotsSet && $teamCount >= $maxTeams;
               $isOnline = $expert->is_online;
-              $computedStatus = $isFull ? 'full' : ($isOnline ? 'active' : 'offline');
+              // A deactivated account has no capacity and no presence - saying
+              // "offline" about it would be true and useless.
+              $isOff = (bool) $expert->deactivated_at;
+              $computedStatus = $isOff ? 'off' : ($isFull ? 'full' : ($isOnline ? 'active' : 'offline'));
               $capacityRows = $expert->parsedCapacity();
 
               // One mapping, on the model, so the pills here and the ones on
@@ -537,6 +541,7 @@
                it used to find the status by counting columns, which is a
                thing that breaks the moment a column moves. --}}
           <tr data-status="{{ $computedStatus }}"
+              @class(['cx-off' => $isOff])
               data-id="{{ $expert->expert_id }}"
               {{-- Removing your own account, or stripping your own roles, is
                    not a thing to be one careless drag away from. --}}
@@ -545,12 +550,13 @@
               data-search="{{ Str::lower($expert->name.' '.$expert->email.' '.$expertiseFull) }}">
             <td style="padding-left:20px" data-label="Expert">
               <div class="expert-name-trigger cx-who" onclick="openExpertDetail({{ Illuminate\Support\Js::from($detailPayload) }})">
-                <span class="cx-dot cx-dot-{{ $computedStatus }}" title="{{ ucfirst($computedStatus) }}"></span>
+                <span class="cx-dot cx-dot-{{ $computedStatus }}" title="{{ $isOff ? 'Deactivated' : ucfirst($computedStatus) }}"></span>
                 <img src="{{ $expert->avatarUrl() }}" alt="" loading="lazy" class="cx-av"
                      onerror="this.onerror=null;this.src='{{ asset('images/default-avatar.jpg') }}';">
                 {{-- The address under the name rather than hidden in a tooltip:
                      two people share a surname often enough, and the email is
                      what tells them apart. --}}
+                @if ($isOff)<span class="cx-off-tag">Deactivated</span>@endif
                 <span class="cx-text">
                   <span class="td-main">{{ $expert->name }}</span>
                   <span class="cx-mail">{{ $expert->email }}</span>
@@ -636,10 +642,17 @@
                       <svg viewBox="0 0 24 24"><path d="M20.59 13.41 13.42 20.6a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82Z"/><circle cx="7" cy="7" r="1"/></svg> Set roles
                     </button>
                     <div class="rowmenu-sep"></div>
+                    @if ($isOff)
+                      <button type="button" class="rowmenu-item"
+                              onclick="reactivateExpert({{ $expert->expert_id }}, {{ Illuminate\Support\Js::from($expert->name) }})">
+                        <svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> Switch this account back on
+                      </button>
+                    @else
                     <button type="button" class="rowmenu-item danger"
                             onclick="removeOneExpert({{ $expert->expert_id }}, {{ Illuminate\Support\Js::from($expert->name) }})">
-                      <svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M7 6l1 14h8l1-14"/></svg> Remove expert
+                      <svg viewBox="0 0 24 24"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg> Deactivate this account
                     </button>
+                    @endif
                   </div>
                 </div>
               </div>
@@ -674,6 +687,7 @@
         if (status === 'active') matchStatus = statusText === 'active';
         else if (status === 'full') matchStatus = statusText === 'full';
         else if (status === 'offline') matchStatus = statusText === 'offline';
+        else if (status === 'off') matchStatus = statusText === 'off';
 
         row.style.display = (matchSearch && matchRole && matchStatus) ? '' : 'none';
       });
@@ -1436,10 +1450,12 @@ onBulk('bulkRoles', function (ids, rows) {
 // One expert, through the sheet the bar uses.
 function removeOneExpert(id, name) {
   confirmSheet({
-    title: 'Remove ' + name + '?',
+    title: 'Deactivate ' + name + "'s account?",
     names: [name],
-    body: 'Every team they advise is told. This cannot be undone.',
-    confirmLabel: 'Remove expert',
+    body: 'They can no longer sign in and cannot be assigned to a team. Nothing is '
+        + 'deleted - their expertise, their teams and their history stay, and you can '
+        + 'switch the account back on from this same menu. Every team they advise is told.',
+    confirmLabel: 'Deactivate account',
     danger: true,
   }).then(function (yes) {
     if (!yes) return;
@@ -1447,9 +1463,22 @@ function removeOneExpert(id, name) {
       method: 'DELETE',
       headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' },
     }).then(function (r) {
-      showToast(r.ok ? name + ' removed' : 'Could not remove them', r.ok ? 'success' : 'error');
+      showToast(r.ok ? name + ' deactivated' : 'Could not deactivate them', r.ok ? 'success' : 'error');
       if (r.ok) setTimeout(() => window.location.reload(), 900);
     });
+  });
+}
+
+// Switching one back on asks nothing: it undoes something, and it is the
+// deactivate above that was worth a confirmation.
+function reactivateExpert(id, name) {
+  fetch(`{{ route('capsa.experts.reactivate', ['expert' => 'EXPERT_ID']) }}`.replace('EXPERT_ID', id), {
+    method: 'PUT',
+    headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' },
+  }).then(function (r) {
+    showToast(r.ok ? name + ' is active again' : 'Could not switch it back on',
+      r.ok ? 'success' : 'error');
+    if (r.ok) setTimeout(() => window.location.reload(), 900);
   });
 }
 
