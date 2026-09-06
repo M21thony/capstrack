@@ -424,6 +424,15 @@
       <button type="button" class="btn" onclick="openExpertRosterModal()">Upload List</button>
     </div>
 
+    @include('partials.row-select', [
+      'table' => '.table',
+      'noun' => 'expert',
+      'actions' => [
+        ['id' => 'bulkRoles', 'label' => 'Set roles'],
+        ['id' => 'bulkRemove', 'label' => 'Remove', 'danger' => true],
+      ],
+    ])
+
     <div class="card" style="padding:0;overflow:hidden">
       <table class="table">
         <thead>
@@ -495,6 +504,10 @@
                it used to find the status by counting columns, which is a
                thing that breaks the moment a column moves. --}}
           <tr data-status="{{ $computedStatus }}"
+              data-id="{{ $expert->expert_id }}"
+              {{-- Removing your own account, or stripping your own roles, is
+                   not a thing to be one careless drag away from. --}}
+              @if ($expert->expert_id === Auth::guard('expert')->id()) data-no-select="1" @endif
               data-roles="{{ $expert->roles->pluck('role_name')->map($roleLabel)->implode(' ') }}"
               data-search="{{ Str::lower($expert->name.' '.$expert->email.' '.$expertiseFull) }}">
             <td style="padding-left:20px" data-label="Expert">
@@ -708,6 +721,12 @@ const ROLE_OPTIONS = [
 const rolesModal = document.getElementById('rolesModal');
 let rolesTargetExpertId = null;
 
+// One id or a list of them. Bulk goes through the same picker and the same
+// save, so what the endpoint expects is written once.
+function rolesTargets() {
+  return Array.isArray(rolesTargetExpertId) ? rolesTargetExpertId : [rolesTargetExpertId];
+}
+
 function openRoles(expertId, expertName, currentRoles) {
   rolesTargetExpertId = expertId;
   document.getElementById('rolesExpertName').textContent = expertName;
@@ -738,25 +757,34 @@ function saveRoles() {
   saveBtn.disabled = true;
   saveBtn.textContent = 'Saving...';
 
-  fetch(`{{ route('capsa.experts.update-roles', ['expert' => 'EXPERT_ID']) }}`.replace('EXPERT_ID', rolesTargetExpertId), {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' },
-    body: JSON.stringify({ role_ids: checked.map(id => ROLE_NAME_TO_ID[id]).filter(Boolean) }),
-  })
-    .then(res => res.json().then(data => ({ status: res.status, data })))
-    .then(({ status, data }) => {
-      if (status === 200 && data.success) {
-        closeRolesModal();
-        showToast(data.message, 'success');
-        setTimeout(() => window.location.reload(), 700);
-      } else {
-        errorEl.textContent = data.message || 'Could not save roles.';
-        errorEl.style.display = 'block';
-      }
+  const body = JSON.stringify({ role_ids: checked.map(id => ROLE_NAME_TO_ID[id]).filter(Boolean) });
+
+  Promise.all(rolesTargets().map(function (id) {
+    return fetch(`{{ route('capsa.experts.update-roles', ['expert' => 'EXPERT_ID']) }}`.replace('EXPERT_ID', id), {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' },
+      body: body,
     })
-    .catch(() => {
-      errorEl.textContent = 'Network error while saving.';
-      errorEl.style.display = 'block';
+      .then(res => res.json().then(data => ({ ok: res.status === 200 && data.success, data })))
+      .catch(() => ({ ok: false, data: {} }));
+  }))
+    .then(function (results) {
+      const ok = results.filter(r => r.ok).length;
+      const failed = results.length - ok;
+
+      if (!ok) {
+        // Nothing changed, so the modal stays open with the reason showing
+        // rather than closing on a silent failure.
+        errorEl.textContent = (results[0] && results[0].data.message) || 'Could not save roles.';
+        errorEl.style.display = 'block';
+        return;
+      }
+
+      closeRolesModal();
+      showToast(failed
+        ? ok + ' updated, ' + failed + ' could not be'
+        : (results.length > 1 ? ok + ' experts updated' : 'Roles saved.'), failed ? 'error' : 'success');
+      setTimeout(() => window.location.reload(), 800);
     })
     .finally(() => {
       saveBtn.disabled = false;
@@ -1333,6 +1361,45 @@ function closeSidebar() {
   sidebarOverlay.classList.remove('open');
   document.body.style.overflow = '';
 }
+</script>
+
+<script>
+// ── acting on several experts at once ──
+// Both loop the endpoint that already changes one expert, so the rules about
+// what a CaPSA may set stay in one place.
+
+function bulkNames(rows) {
+  return rows.map(function (tr) {
+    const el = tr.querySelector('.td-main');
+    return el ? el.textContent.trim() : '';
+  }).filter(Boolean);
+}
+
+onBulk('bulkRoles', function (ids, rows) {
+  const names = bulkNames(rows);
+  // Nothing pre-ticked for a group: they hold different roles, and starting
+  // from one person's would quietly hand those roles to everyone else.
+  openRoles(ids, names.length > 2 ? names.length + ' experts' : names.join(', '), []);
+});
+
+onBulk('bulkRemove', function (ids, rows) {
+  const names = bulkNames(rows);
+  if (!confirm('Remove ' + ids.length + (ids.length === 1 ? ' expert' : ' experts') + '?\n\n'
+      + names.join('\n') + '\n\nTeams they advise are told. This cannot be undone.')) return;
+
+  Promise.all(ids.map(function (id) {
+    return fetch('{{ url('capsa/experts') }}/' + id, {
+      method: 'DELETE',
+      headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' },
+    }).then(r => r.ok).catch(() => false);
+  })).then(function (results) {
+    const ok = results.filter(Boolean).length;
+    const failed = results.length - ok;
+    showToast(failed ? ok + ' removed, ' + failed + ' could not be' : ok + ' removed',
+      failed ? 'error' : 'success');
+    setTimeout(() => window.location.reload(), 900);
+  });
+});
 </script>
 
 @include('partials.email-lookup', ['input' => 'addExpertEmail', 'kind' => 'expert', 'nameInput' => 'addExpertName'])
