@@ -1601,3 +1601,13 @@ textarea.input{resize:vertical;min-height:80px}
    is the main way in - the dropzone is. */
 .source-row{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
 .source-row .folder-pick{min-width:150px}
+
+/* Each file says what it is, because a folder holds several kinds at once and
+   one category for all of them is not a fact about any of them. */
+.import-head{display:flex;gap:9px;padding:0 11px 6px;font-size:10px;font-weight:700;
+  letter-spacing:1.1px;text-transform:uppercase;color:var(--text3)}
+.import-head .import-h-name{flex:1;min-width:0}
+.import-head .import-h-cat{flex:0 0 176px;color:var(--accent3)}
+.import-head .import-h-x{flex:0 0 27px}
+.import-row .import-cat{flex:0 0 176px;width:176px;font-size:12px;height:29px;padding:0 8px}
+.import-warn[hidden]{display:none}

@@ -11,6 +11,9 @@ use Google\Service\Drive\Permission;
 
 class GoogleDriveService
 {
+    /** A folder in Drive is a file that happens to hold others. */
+    public const FOLDER_MIME = 'application/vnd.google-apps.folder';
+
     private GoogleClient $client;
 
     public function __construct()
@@ -139,6 +142,51 @@ class GoogleDriveService
             'id' => $folder->getId(),
             'name' => $folder->getName(),
         ];
+    }
+
+    /**
+     * The files directly inside a folder the user picked.
+     *
+     * Whether this is allowed at all is the open question with the drive.file
+     * scope: Google grants access to what the user hands over through the
+     * Picker, and their documentation does not say whether handing over a
+     * folder hands over its contents. So this returns whatever comes back and
+     * the caller says something useful when that is nothing - rather than us
+     * guessing in advance and being wrong in either direction.
+     *
+     * Sub-folders are not followed. One level is what a CaPSA means by "this
+     * folder", and recursing invites importing someone's whole Drive.
+     *
+     * @return array<int, array{id: string, name: string, mime_type: string, size: ?int, web_view_link: ?string}>
+     */
+    public function listFolderChildren(int $userId, string $folderId): array
+    {
+        $client = $this->clientForUser($userId);
+        $service = new GoogleDrive($client);
+
+        $response = $service->files->listFiles([
+            'q' => sprintf("'%s' in parents and trashed = false", $folderId),
+            'fields' => 'files(id, name, mimeType, size, webViewLink)',
+            'pageSize' => 100,
+        ]);
+
+        $out = [];
+
+        foreach ($response->getFiles() as $file) {
+            if ($file->getMimeType() === self::FOLDER_MIME) {
+                continue;
+            }
+
+            $out[] = [
+                'id' => $file->getId(),
+                'name' => $file->getName(),
+                'mime_type' => $file->getMimeType(),
+                'size' => $file->getSize() ? (int) $file->getSize() : null,
+                'web_view_link' => $file->getWebViewLink(),
+            ];
+        }
+
+        return $out;
     }
 
     /**

@@ -145,6 +145,46 @@ class DriveImportTest extends TestCase
         $this->assertSame('forms', Resource::where('drive_file_id', 'b')->first()->category);
     }
 
+    public function test_a_folder_is_not_stored_as_a_resource(): void
+    {
+        // A folder in Drive is a file that holds others. Before this guard the
+        // Picker handed back a folder id and the import wrote a row for it -
+        // students got a resource that opened a folder listing.
+        $this->fakeDrive([
+            'folder-1' => ['name' => 'CLF Template', 'mime' => 'application/vnd.google-apps.folder', 'size' => null],
+        ]);
+        $capsa = $this->capsa();
+
+        $response = $this->actingAs($capsa, 'expert')->postJson(route('gdrive.imports.store'), [
+            'files' => [['drive_file_id' => 'folder-1', 'category' => 'forms', 'sections' => ['BSIT-4A']]],
+        ]);
+
+        $response->assertOk()->assertJson(['skipped' => 1]);
+        $this->assertSame(0, Resource::count());
+    }
+
+    public function test_each_picked_file_keeps_the_category_it_was_given(): void
+    {
+        $this->fakeDrive([
+            'a' => ['name' => 'Pre-Proposal Form.docx', 'mime' => 'application/pdf', 'size' => 10],
+            'b' => ['name' => 'Chapter 1-3 Template.docx', 'mime' => 'application/pdf', 'size' => 10],
+            'c' => ['name' => 'Defense Rubric.pdf', 'mime' => 'application/pdf', 'size' => 10],
+        ]);
+        $capsa = $this->capsa();
+
+        $this->actingAs($capsa, 'expert')->postJson(route('gdrive.imports.store'), [
+            'files' => [
+                ['drive_file_id' => 'a', 'category' => 'pre-proposal', 'sections' => ['BSIT-4A']],
+                ['drive_file_id' => 'b', 'category' => 'ch1-3', 'sections' => ['BSIT-4A']],
+                ['drive_file_id' => 'c', 'category' => 'forms', 'sections' => ['BSIT-4A']],
+            ],
+        ])->assertOk();
+
+        $this->assertSame('pre-proposal', Resource::where('drive_file_id', 'a')->value('category'));
+        $this->assertSame('ch1-3', Resource::where('drive_file_id', 'b')->value('category'));
+        $this->assertSame('forms', Resource::where('drive_file_id', 'c')->value('category'));
+    }
+
     public function test_more_than_twenty_five_is_refused(): void
     {
         $this->fakeDrive([]);
