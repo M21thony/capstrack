@@ -65,13 +65,18 @@ class FolderUploadTest extends TestCase
                 UploadedFile::fake()->create('Chapter_1-3 Template.docx', 12),
                 UploadedFile::fake()->create('Title Defense Rubric.pdf', 8),
             ],
-            'category' => 'ch1-3',
+            'categories' => ['ch1-3', 'forms'],
             'sections' => ['BSIT-4A', 'BSIT-4B'],
         ]);
 
         $response->assertOk()->assertJson(['success' => true]);
         $this->assertCount(2, $response->json('resources'));
         $this->assertSame(2, Resource::where('uploaded_by', $capsa->expert_id)->count());
+
+        // A folder holds several kinds of file at once, so each keeps the
+        // category it was given rather than the folder having one.
+        $this->assertSame('ch1-3', Resource::where('file_name', 'Chapter_1-3 Template.docx')->value('category'));
+        $this->assertSame('forms', Resource::where('file_name', 'Title Defense Rubric.pdf')->value('category'));
     }
 
     public function test_each_file_is_titled_from_its_own_name(): void

@@ -409,6 +409,9 @@ Route::middleware(['expert.auth', 'track.expert'])->prefix('admin/gdrive')->name
     Route::get('/status', [GoogleDriveController::class, 'status'])->name('status');
     Route::delete('/connection', [GoogleDriveController::class, 'disconnect'])->name('connection.destroy');
     Route::get('/folders', [GoogleDriveController::class, 'listFolders'])->name('folders.index');
+    // What is inside a folder the CaPSA picked, so each file can be given
+    // its own category before anything is taken on.
+    Route::get('/folders/{folder}/files', [GoogleDriveController::class, 'folderFiles'])->name('folders.files.index');
     Route::post('/folders', [GoogleDriveController::class, 'createFolder'])->name('folders.store');
     Route::get('/submission-folders', [GoogleDriveController::class, 'listSubmissionFolders'])->name('submission-folders.index');
     Route::post('/submission-folders', [GoogleDriveController::class, 'storeSubmissionFolder'])->name('submission-folders.store');

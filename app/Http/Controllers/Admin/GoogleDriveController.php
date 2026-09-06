@@ -149,7 +149,14 @@ class GoogleDriveController extends Controller
             // A folder names its own files, so a title is only asked for when
             // a single file was picked.
             'title' => [$isBatch ? 'nullable' : 'required', 'string', 'max:255'],
-            'category' => 'required|string|max:50',
+
+            // One category for a whole folder is not a fact about the files -
+            // a folder holds a pre-proposal template, some forms and a chapter
+            // template together. Each file carries its own, in the same order
+            // the files arrived.
+            'categories' => ['nullable', 'array'],
+            'categories.*' => ['nullable', 'string', 'max:50'],
+            'category' => [$isBatch ? 'nullable' : 'required', 'string', 'max:50'],
             // Only a program this CaPSA actually handles. Without this the
             // page could be scoped and a hand-made request still file a
             // resource under someone else's program. Null means every
@@ -196,7 +203,8 @@ class GoogleDriveController extends Controller
             $files = $isBatch
                 ? array_values($request->file('files'))
                 : [$request->file('file')];
-            $category = $request->input('category');
+            $fallbackCategory = $request->input('category');
+            $categories = $request->input('categories', []);
             $sections = array_unique($request->input('sections', []));
             $created = [];
 
@@ -211,7 +219,8 @@ class GoogleDriveController extends Controller
                 'ppt' => 'application/vnd.ms-powerpoint',
                 'pptx' => 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
             ];
-            foreach ($files as $file) {
+            foreach ($files as $i => $file) {
+                $category = $categories[$i] ?? $fallbackCategory;
                 $ext = strtolower($file->getClientOriginalExtension());
                 $correctMimeType = $extensionMimeMap[$ext] ?? $file->getMimeType();
 
@@ -277,6 +286,28 @@ class GoogleDriveController extends Controller
     }
 
     /**
+     * The files inside a folder the CaPSA picked, so each can be given its own
+     * category before any of them is taken on.
+     *
+     * An empty list is a real answer, not an error: the drive.file scope may
+     * simply not extend inside a folder, and the page says so plainly rather
+     * than leaving someone staring at nothing.
+     */
+    public function folderFiles(string $folder)
+    {
+        $viewer = Auth::guard('expert')->user();
+
+        try {
+            return response()->json([
+                'success' => true,
+                'files' => $this->drive->listFolderChildren($viewer->expert_id, $folder),
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
+        }
+    }
+
+    /**
      * Take on files the CaPSA already has in Drive, chosen through the Picker.
      *
      * Nothing is uploaded - each file stays where it is, and what is written
@@ -333,6 +364,17 @@ class GoogleDriveController extends Controller
                 }
 
                 $file = $this->drive->importFile($viewer->expert_id, $driveFileId);
+
+                // A folder in Drive is a file that holds others. Storing one as
+                // a resource gives students a row that opens a folder listing
+                // instead of a document - which is what happened before the
+                // page started expanding folders into their contents.
+                if (($file['mime_type'] ?? null) === GoogleDriveService::FOLDER_MIME) {
+                    $skipped[] = $driveFileId;
+
+                    continue;
+                }
+
                 $category = $entry['category'];
                 $sections = array_unique($entry['sections'] ?? []);
 

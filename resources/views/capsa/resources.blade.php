@@ -234,34 +234,26 @@
       <div class="upload-sheet" onclick="event.stopPropagation()">
         <div class="card" style="padding:16px;box-shadow:none;border:0">
           <div class="card-header sheet-head">
-            <span class="card-title">Take these on</span>
+            <span class="card-title" id="import-title">Take these on</span>
             <span class="sheet-head-right">
               <button class="sheet-x" onclick="closeImport()" aria-label="Close"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
             </span>
           </div>
 
-          <p class="import-warn">
+          <p class="import-warn" id="import-warn">
             <svg viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
             <span>These files stay in your Drive — nothing is copied. They will be made
             <b>viewable by anyone with the link</b>, which is how students open them.</span>
           </p>
 
+          <div class="import-head">
+            <span class="import-h-name">File</span>
+            <span class="import-h-cat">What kind of file is it?</span>
+            <span class="import-h-x"></span>
+          </div>
           <div class="import-list" id="import-list"></div>
 
-          <div class="form-group" style="margin-top:14px">
-            <label class="label">Category</label>
-            <select class="input" id="import-category">
-              <option value="">Select a category…</option>
-              <option value="pre-proposal">Pre-Proposal Template</option>
-              <option value="ch1-3">Chapter 1–3 Template</option>
-              <option value="ch4-5">Chapter 4–5 Template</option>
-              <option value="final">Final Manuscript Template</option>
-              <option value="presentation">Presentation Template</option>
-              <option value="lesson">Lesson / Reference Material</option>
-              <option value="forms">Forms &amp; Checklists</option>
-              <option value="other">Other</option>
-            </select>
-          </div>
+          <p class="section-hint" id="import-guess-note" style="margin:10px 0 0"></p>
 
           @if (! $isAdmin && count($mySections))
           <div class="form-group">
@@ -284,7 +276,7 @@
           </div>
           @endif
 
-          <button class="btn btn-primary" id="import-btn" style="width:100%;justify-content:center;font-size:13px;margin-top:4px" onclick="runImport()">Take on&nbsp;<span id="import-count">0</span>&nbsp;files</button>
+          <button class="btn btn-primary" id="import-btn" style="width:100%;justify-content:center;font-size:13px;margin-top:4px" onclick="runImport()"><span id="import-verb">Take on</span>&nbsp;<span id="import-count">0</span>&nbsp;files</button>
         </div>
       </div>
     </div>
@@ -344,6 +336,7 @@ const ROUTES = {
   createFolder: "{{ route('gdrive.folders.store') }}",
   upload: "{{ route('gdrive.resources.store') }}",
   import: "{{ route('gdrive.imports.store') }}",
+  folderFiles: (id) => `{{ url('admin/gdrive/folders') }}/${id}/files`,
   destroy: (id) => `{{ url('admin/gdrive/resources') }}/${id}`,
 };
 
@@ -580,24 +573,27 @@ function onFolderSelect(e){
   }
 
   const skipped = all.length - usable.length;
-  selectedFolder = usable.slice(0, MAX_FOLDER_FILES);
+  const taking = usable.slice(0, MAX_FOLDER_FILES);
+  const over = usable.length - taking.length;
+
   selectedFile = null;
+  selectedFolder = [];
+  e.target.value = '';
 
-  const over = usable.length - selectedFolder.length;
-  const parts = [selectedFolder.length + (selectedFolder.length === 1 ? ' file' : ' files')];
-  if(skipped) parts.push(skipped + ' skipped');
-  if(over) parts.push(over + ' over the ' + MAX_FOLDER_FILES + ' limit');
+  if(skipped || over){
+    const parts = [];
+    if(skipped) parts.push(skipped + ' skipped');
+    if(over) parts.push(over + ' over the ' + MAX_FOLDER_FILES + ' limit');
+    showToast(parts.join(' · ') + '.');
+  }
 
-  const prev = document.getElementById('upload-preview');
-  prev.classList.add('show');
-  document.getElementById('preview-name').textContent = parts.join(' · ');
-  const ftEl = document.getElementById('preview-ftype');
-  ftEl.textContent = 'DIR';
-  ftEl.className = 'ftype ftype-doc';
-
-  // Each file is named after itself, so the one name box does not apply.
-  const nameGroup = document.getElementById('res-name-group');
-  if(nameGroup) nameGroup.style.display = 'none';
+  // Straight to the review list, because a folder holds several kinds of file
+  // and each needs saying what it is.
+  pickedSource = 'local';
+  picked = taking.map(function(f){
+    return { id: null, name: f.name, file: f, category: guessCategory(f.name) };
+  });
+  openImport();
 }
 function onDragOver(e){ e.preventDefault(); document.getElementById('dropzone').classList.add('drag-over'); }
 function onDragLeave(){ document.getElementById('dropzone').classList.remove('drag-over'); }
@@ -642,6 +638,7 @@ function clearFile(){
 // uploaded: the server is told which files to take on, and the only change
 // made to them is the sharing.
 let picked = [];
+let pickedSource = 'drive';   // or 'local', when a folder came off the machine
 let pickerReady = false;
 let driveToken = null;
 
@@ -708,15 +705,48 @@ function showPicker(){
     .setVisible(true);
 }
 
+const FOLDER_MIME = 'application/vnd.google-apps.folder';
+
 function onPicked(data){
   if(data.action !== google.picker.Action.PICKED) return;
 
-  picked = (data.docs || []).map(function(d){
-    return { id: d.id, name: d.name, mimeType: d.mimeType, isFolder: d.type === 'folder' };
-  });
+  const docs = data.docs || [];
+  const folders = docs.filter(function(d){ return d.mimeType === FOLDER_MIME || d.type === 'folder'; });
+  const files = docs.filter(function(d){ return !(d.mimeType === FOLDER_MIME || d.type === 'folder'); });
 
-  if(!picked.length) return;
-  openImport();
+  picked = files.map(asPicked);
+
+  if(!folders.length){
+    if(picked.length) openImport();
+    return;
+  }
+
+  // A folder is not a resource - what is wanted is what is inside it. Whether
+  // Drive lets us look is the one thing Google's documentation would not say,
+  // so ask, and say plainly if the answer is no.
+  showToast('Looking inside ' + folders.length + (folders.length === 1 ? ' folder…' : ' folders…'));
+
+  Promise.all(folders.map(function(f){
+    return fetch(ROUTES.folderFiles(f.id), { headers: { 'Accept': 'application/json' } })
+      .then(function(r){ return r.json(); })
+      .then(function(res){ return res.success ? res.files : []; })
+      .catch(function(){ return []; });
+  })).then(function(lists){
+    lists.forEach(function(files){
+      files.forEach(function(f){ picked.push(asPicked({ id: f.id, name: f.name, mimeType: f.mime_type })); });
+    });
+
+    if(!picked.length){
+      showToast('Google would not let us see inside that folder — pick the files themselves instead.');
+      return;
+    }
+
+    openImport();
+  });
+}
+
+function asPicked(d){
+  return { id: d.id, name: d.name, mimeType: d.mimeType, category: guessCategory(d.name) };
 }
 
 function openImport(){
@@ -724,6 +754,12 @@ function openImport(){
   // is the review list.
   const uploadScrim = document.getElementById('upload-scrim');
   if(uploadScrim) uploadScrim.hidden = true;
+
+  const local = pickedSource === 'local';
+  document.getElementById('import-title').textContent = local ? 'Upload these' : 'Take these on';
+  document.getElementById('import-verb').textContent = local ? 'Upload' : 'Take on';
+  // Only a Drive import changes the sharing on a file someone already owns.
+  document.getElementById('import-warn').hidden = local;
 
   renderImportList();
   document.getElementById('import-scrim').hidden = false;
@@ -736,20 +772,55 @@ function closeImport(e){
   document.body.style.overflow = '';
 }
 
+// A first guess at what each file is, from what it is called. Wrong
+// sometimes, which is why every row can be changed - but it beats setting
+// twenty dropdowns by hand, and it beats one category for a whole folder,
+// which is not a fact about the files at all.
+function guessCategory(name){
+  const n = name.toLowerCase();
+  if(/pre[-_ ]?proposal|title\s*proposal/.test(n)) return 'pre-proposal';
+  if(/chapter\s*[1-3]|ch[-_ ]?1|\b1\s*-\s*3\b/.test(n)) return 'ch1-3';
+  if(/chapter\s*[45]|ch[-_ ]?4|\b4\s*-\s*5\b/.test(n)) return 'ch4-5';
+  if(/final|manuscript/.test(n)) return 'final';
+  if(/slide|present|defense\s*deck|\.pptx?$/.test(n)) return 'presentation';
+  if(/rubric|form|checklist|endorse|consent/.test(n)) return 'forms';
+  if(/lesson|lecture|module|week\s*\d|reading/.test(n)) return 'lesson';
+  return '';
+}
+
+const CAT_OPTIONS = `<option value="">Category…</option><option value="pre-proposal">Pre-Proposal Template</option><option value="ch1-3">Chapter 1–3 Template</option><option value="ch4-5">Chapter 4–5 Template</option><option value="final">Final Manuscript Template</option><option value="presentation">Presentation Template</option><option value="lesson">Lesson / Reference Material</option><option value="forms">Forms &amp; Checklists</option><option value="other">Other</option>`;
+
 function renderImportList(){
   const list = document.getElementById('import-list');
 
   list.innerHTML = picked.map(function(f, i){
     return '<div class="import-row">'
       + '<span class="import-name" title="' + esc(f.name) + '">' + esc(f.name) + '</span>'
-      + (f.isFolder ? '<span class="pill pill-all">folder</span>' : '')
+      + '<select class="input import-cat" onchange="setPickedCategory(' + i + ', this.value)">'
+      + CAT_OPTIONS.replace('value="' + f.category + '"', 'value="' + f.category + '" selected')
+      + '</select>'
       + '<button class="lib-icon" title="Leave this out" onclick="dropPicked(' + i + ')">'
       + '<svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'
       + '</button></div>';
   }).join('');
 
+  const guessed = picked.filter(function(f){ return f.category; }).length;
+  const note = document.getElementById('import-guess-note');
+  if(note){
+    note.textContent = guessed
+      ? 'Guessed ' + guessed + ' of ' + picked.length + ' from the file names — change any that are wrong.'
+      : 'Set what each file is before taking them on.';
+  }
+
   document.getElementById('import-count').textContent = picked.length;
   document.getElementById('import-btn').disabled = !picked.length;
+}
+
+function setPickedCategory(i, value){
+  if(picked[i]) picked[i].category = value;
+  const note = document.getElementById('import-guess-note');
+  const missing = picked.filter(function(f){ return !f.category; }).length;
+  if(note && !missing) note.textContent = 'Every file has a category.';
 }
 
 function dropPicked(i){
@@ -759,12 +830,15 @@ function dropPicked(i){
 }
 
 function runImport(){
-  const category = document.getElementById('import-category').value;
   const sections = Array.prototype.map.call(
     document.querySelectorAll('#import-sections input:checked'), function(i){ return i.value; }
   );
 
-  if(!category){ document.getElementById('import-category').focus(); showToast('Please choose a category.'); return; }
+  const missing = picked.filter(function(f){ return !f.category; }).length;
+  if(missing){
+    showToast(missing + (missing === 1 ? ' file still needs' : ' files still need') + ' a category.');
+    return;
+  }
   if(MY_SECTIONS.length && !sections.length){
     document.getElementById('import-sections').classList.add('needs-pick');
     showToast('Pick at least one section, so students can find these.');
@@ -773,22 +847,46 @@ function runImport(){
 
   const btn = document.getElementById('import-btn');
   const original = btn.innerHTML;
+  const local = pickedSource === 'local';
   btn.disabled = true;
-  btn.textContent = 'Taking on ' + picked.length + '…';
+  btn.textContent = (local ? 'Uploading ' : 'Taking on ') + picked.length + '…';
 
-  fetch(ROUTES.import, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-      'X-CSRF-TOKEN': CSRF_TOKEN,
-    },
-    body: JSON.stringify({
-      files: picked.map(function(f){
-        return { drive_file_id: f.id, category: category, sections: sections };
+  let request;
+
+  if(local){
+    // Real files, so they go up as a form the way any upload does - with a
+    // category alongside each, in the same order.
+    const fd = new FormData();
+    picked.forEach(function(f){
+      fd.append('files[]', f.file);
+      fd.append('categories[]', f.category);
+    });
+    sections.forEach(function(s){ fd.append('sections[]', s); });
+    const folderId = document.getElementById('res-folder');
+    if(folderId && folderId.value) fd.append('drive_folder_id', folderId.value);
+
+    request = fetch(ROUTES.upload, {
+      method: 'POST',
+      headers: { 'X-CSRF-TOKEN': CSRF_TOKEN, 'Accept': 'application/json' },
+      body: fd,
+    });
+  } else {
+    request = fetch(ROUTES.import, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'X-CSRF-TOKEN': CSRF_TOKEN,
+      },
+      body: JSON.stringify({
+        files: picked.map(function(f){
+          return { drive_file_id: f.id, category: f.category, sections: sections };
+        }),
       }),
-    }),
-  })
+    });
+  }
+
+  request
   .then(function(r){ return r.json(); })
   .then(function(data){
     btn.disabled = false;
@@ -807,6 +905,7 @@ function runImport(){
     if(added.length) parts.push(added.length + (added.length === 1 ? ' file added' : ' files added'));
     if(data.skipped) parts.push(data.skipped + ' already here');
     if(parts.length) showToast(parts.join(' · ') + '.');
+    pickedSource = 'drive';
   })
   .catch(function(){
     btn.disabled = false;
@@ -934,9 +1033,9 @@ function uploadResource(){
   const program = programEl ? programEl.value : '';
   const folderId = document.getElementById('res-folder').value;
 
-  const isFolder = selectedFolder.length > 0;
+  const isFolder = false;
 
-  if(!selectedFile && !isFolder){ showToast('Please choose a file or a folder first.'); return; }
+  if(!selectedFile){ showToast('Please choose a file first.'); return; }
   // A folder names its own files, so a title is only asked for one at a time.
   if(!isFolder && !name){ document.getElementById('res-name').focus(); showToast('Please enter a resource name.'); return; }
   if(!category){ document.getElementById('res-category').focus(); showToast('Please choose a category.'); return; }
