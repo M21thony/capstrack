@@ -124,7 +124,7 @@ select.input{cursor:pointer}
 /* ── SIGNATURE CREDENTIALS ── */
 /* Spans the full width under both columns. It is a direct child of the
    two-column grid, so without this it would be placed into one column. */
-.legal-credits{grid-column:1 / -1;grid-row:3;margin-top:0;padding-top:12px;border-top:1px dashed var(--border);text-align:center;opacity:0.5;padding-bottom:0}
+.legal-credits{grid-column:1 / -1;grid-row:4;margin-top:0;padding-top:12px;border-top:1px dashed var(--border);text-align:center;opacity:0.5;padding-bottom:0}
 .credits-title{font-variant-numeric:tabular-nums;font-size:8px;font-weight:600;letter-spacing:1px;color:var(--text3);text-transform:uppercase;margin-bottom:4px}
 .credits-names{font-size:9px;font-weight:500;color:var(--text3);letter-spacing:0.3px}
 
@@ -141,13 +141,14 @@ select.input{cursor:pointer}
 /* ── EXPERT LAYOUT & CONTAINER ── */
 .content{display:grid;grid-template-columns:1fr 292px;grid-template-rows:auto 1fr;gap:22px;padding:24px 32px;width:100%;height:calc(100vh - 70px);overflow-y:auto;box-sizing:border-box} /* Grid with explicit rows */
 .page-tutorial{grid-column:1 / -1;grid-row:1;margin-bottom:16px} /* Tutorial spans full width in row 1 */
-.experts-main{grid-column:1;grid-row:2;display:flex;flex-direction:column;min-width:0} /* Main content in row 2, column 1 */
+.pagehead{grid-column:1 / -1;grid-row:2;margin:0}
+.experts-main{grid-column:1;grid-row:3;display:flex;flex-direction:column;min-width:0} /* Main content in row 3, column 1 */
 /* align-self:start is what makes the sticky below actually work. A grid item
    stretches to its row by default, and this row is as tall as the whole expert
    list - so the panel was a ~3800px box that never needed to move, and Role
    Guide and Quick Tips simply scrolled off the top inside it. Sized to its own
    content, it can stick. */
-.overview-panel{grid-column:2;grid-row:2;align-self:start;width:292px;flex-shrink:0;position:sticky;top:20px} /* Sidebar in row 2, column 2 */
+.overview-panel{grid-column:2;grid-row:3;align-self:start;width:292px;flex-shrink:0;position:sticky;top:20px} /* Sidebar in row 2, column 2 */
 
 /* #contentWrapper spans .content's whole grid as one cell (skeleton/real-content
    toggling needs a single positioned ancestor); .content-grid re-declares the
@@ -158,7 +159,13 @@ select.input{cursor:pointer}
 /* Three rows, not two: the credits are the third one. Left implicit they
    flowed after whatever the results happened to be, which put them below
    the fold and moved them every time the view changed. */
-.content-grid{display:grid;grid-template-columns:1fr 292px;grid-template-rows:auto 1fr auto;gap:22px;height:100%;min-height:0}
+/* Four rows: the tutorial, the page title, the two columns, the credits.
+   The title used to live inside .experts-main, which meant the left column
+   began with 42px of heading the right column did not have - so Applications
+   started level with the words "Find Your Team Experts" while the role cards
+   it belongs beside started lower. Given a row of its own across both
+   columns, the two line up without anybody guessing at a margin. */
+.content-grid{display:grid;grid-template-columns:1fr 292px;grid-template-rows:auto auto 1fr auto;gap:22px;height:100%;min-height:0}
 
 
 /* top is -24px, not 0, and the 24 is .content's own padding-top above.

@@ -316,6 +316,12 @@
     <div id="real-content" class="content-grid" style="opacity:0">
       @include('student.partials.page-tutorial', ['page' => 'experts'])
 
+    {{-- A grid child in its own right, spanning both columns. Inside
+         .experts-main it gave the left column 42px of heading the right column
+         did not have, so the sidebar started level with this line instead of
+         with the role cards underneath it. --}}
+    <div class="pagehead"><h1>Find Your Team Experts</h1></div>
+
     <div class="experts-main">
       @php
         // Same colours the role chips use, so a consultant reads as a
@@ -355,8 +361,6 @@
         $openRequests = $waitingRequests->concat($closedRequests);
         $shownExperts = $experts->whereNotIn('expert_id', $settledExpertIds);
       @endphp
-
-      <div class="pagehead"><h1>Find Your Team Experts</h1></div>
 
       {{-- The role decides the list, so it is the first thing on the page and
            it lives in the URL. A team needs one of each, so you are never
