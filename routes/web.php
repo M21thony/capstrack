@@ -116,10 +116,11 @@ Route::middleware('expert.admin')->group(function () {
     // Changing sections is not a change of role, so it does not go
     // through the toggle - see AdminExpertsController::updateSections.
     Route::put('/experts/{expert}/sections', [AdminExpertsController::class, 'updateSections'])->name('experts.sections');
+    // A register, not an editor. Students belong to their CaPSA - enrolled
+    // from the section list and the roster import, both on that side - so the
+    // write routes are gone rather than hidden: a button an admin cannot use
+    // is a smaller problem than an endpoint they still can.
     Route::get('/students', [StudentAccountsController::class, 'index'])->name('students');
-    Route::post('/students', [StudentAccountsController::class, 'store'])->name('students.store');
-    Route::put('/students/{student}', [StudentAccountsController::class, 'update'])->name('students.update');
-    Route::delete('/students/{student}', [StudentAccountsController::class, 'destroy'])->name('students.destroy');
     Route::get('/settings', [AdminSettingsController::class, 'index'])->name('settings');
     Route::put('/settings', [AdminSettingsController::class, 'update'])->name('settings.update');
     // Sections have to exist before anybody can be made a CaPSA over them,
