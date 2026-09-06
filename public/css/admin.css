@@ -1611,3 +1611,28 @@ textarea.input{resize:vertical;min-height:80px}
 .import-head .import-h-x{flex:0 0 27px}
 .import-row .import-cat{flex:0 0 176px;width:176px;font-size:12px;height:29px;padding:0 8px}
 .import-warn[hidden]{display:none}
+
+/* Acting on several rows at once. A guess is usually wrong the same way for a
+   run of files, and removing them one at a time is the tedious part. */
+.import-bulk{display:flex;align-items:center;gap:9px;margin-bottom:8px;padding:8px 11px;
+  background:var(--accent-light);border:1px solid rgba(201,168,44,.35);border-radius:8px;flex-wrap:wrap}
+.import-bulk[hidden]{display:none}
+.import-bulk-count{font-size:12px;font-weight:700;color:var(--accent3);white-space:nowrap}
+.import-bulk .input{width:auto;flex:1;min-width:160px;font-size:12px;height:29px;padding:0 8px}
+.import-bulk-drop{font-size:12px;padding:5px 12px;color:var(--red);border-color:var(--border)}
+.import-bulk-drop:hover{background:var(--red-bg);border-color:var(--red)}
+
+.pick-box{display:inline-flex;align-items:center;cursor:pointer;flex:0 0 16px}
+.pick-box input{position:absolute;opacity:0;width:0;height:0}
+.pick-tick{width:16px;height:16px;border-radius:4px;border:1.5px solid var(--border2);
+  background:var(--bg2);display:flex;align-items:center;justify-content:center;transition:all .12s}
+.pick-tick svg{width:10px;height:10px;stroke:#18191f;stroke-width:3.4;fill:none;opacity:0;transition:opacity .12s}
+.pick-box input:checked ~ .pick-tick{background:var(--accent);border-color:var(--accent2)}
+.pick-box input:checked ~ .pick-tick svg{opacity:1}
+.pick-box input:indeterminate ~ .pick-tick{background:var(--accent);border-color:var(--accent2)}
+.pick-box input:indeterminate ~ .pick-tick svg{opacity:0}
+.pick-box input:indeterminate ~ .pick-tick::after{content:'';width:8px;height:2px;background:#18191f;border-radius:1px}
+.pick-box input:focus-visible ~ .pick-tick{box-shadow:0 0 0 3px var(--accent-glow)}
+
+.import-head .import-h-pick{margin-right:-3px}
+.import-row.is-picked{background:var(--accent-light)}
