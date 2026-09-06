@@ -646,36 +646,68 @@ select.input{cursor:pointer}
 .panel-empty{margin:0;font-size:12px;color:var(--text3);line-height:1.5}
 .panel-count{margin:0 0 9px;font-size:12px;color:var(--text3)}
 .panel-count b{color:var(--amber);font-weight:700}
-/* Whether a slot is filled is the one thing this card exists to say, so it
-   is carried by shape before colour: a ticked circle against a hollow dashed
-   one, readable without reading. It used to be the colour of a 10px pill,
-   which made three rows look like three identical rows. */
-.check{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border)}
-.check:last-child{border-bottom:0}
-.check-mark{
-  width:18px;height:18px;border-radius:50%;flex-shrink:0;
-  display:grid;place-items:center;
-  border:1.5px dashed var(--border2);background:transparent;color:transparent;
+/* ══ Your Experts ══
+   Across the page under the role picker, rather than down the side of it.
+   In the panel it said whether a slot was filled with the colour of a 10px
+   pill, so three rows read as three identical rows and a team could not tell
+   at a glance whether they had an adviser. Here the state is a shape before
+   it is a colour - a ticked chip against a dashed one - which survives a
+   glance, a bad screen and colour blindness. */
+.yx{
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:11px 0 0;
+  padding:9px 13px;background:var(--bg2);border:1px solid var(--border);border-radius:11px;
 }
-.check.is-set .check-mark{border:1.5px solid var(--green);background:var(--green);color:#fff}
-.check-role{min-width:0;font-size:12.5px;font-weight:600;color:var(--text3)}
-.check.is-set .check-role{color:var(--text)}
-.check-name{
-  flex:1;min-width:0;text-align:right;font-size:12px;font-weight:600;color:var(--green);
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+.yx-lab{font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;
+  color:var(--text3);white-space:nowrap}
+.yx-sep{width:1px;height:18px;background:var(--border)}
+
+.yx-chip{
+  display:inline-flex;align-items:center;gap:7px;min-width:0;
+  padding:4px 10px 4px 5px;border-radius:999px;font-size:11.5px;white-space:nowrap;
+  border:1px solid var(--border);background:var(--bg3);
 }
-.check-open{flex:1;text-align:right;font-size:11.5px;color:var(--text3)}
+.yx-chip.is-open{border-style:dashed;background:transparent}
+.yx-chip.is-set{border-color:rgba(22,163,74,.3);background:var(--green-bg)}
+
+.yx-mark{
+  width:17px;height:17px;border-radius:50%;flex-shrink:0;display:grid;place-items:center;
+  background:var(--bg4);color:var(--text3);font-size:10px;font-weight:700;
+}
+.yx-chip.is-set .yx-mark{background:var(--green);color:#fff}
+
+/* On a filled chip the name is the answer and the role is the label, so they
+   are not the same size. They were both 11.5px and 600, which left "Adviser"
+   and "Neil Inocencio" reading as equal halves of one phrase. */
+.yx-role{font-weight:600;color:var(--text3)}
+.yx-chip.is-set .yx-role{
+  font-size:9.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--green);
+}
+.yx-name{
+  font-size:13px;font-weight:700;letter-spacing:-.01em;color:var(--text);
+  min-width:0;overflow:hidden;text-overflow:ellipsis;
+}
+
+.yx-x{
+  width:19px;height:19px;flex-shrink:0;margin-left:1px;border:0;background:transparent;
+  border-radius:5px;color:var(--text3);cursor:pointer;display:grid;place-items:center;
+}
+.yx-x:hover{background:var(--red-bg);color:var(--red)}
+
+.yx-count{margin-left:auto;font-size:11.5px;color:var(--text3);white-space:nowrap}
+.yx-count b{color:var(--text);font-weight:700;font-variant-numeric:tabular-nums}
+
+@media (max-width:640px){
+  /* The count has nothing to sit opposite once the chips wrap, so it stops
+     pretending to and takes its own line. */
+  .yx-count{margin-left:0;width:100%}
+}
 
 /* Said once, above the applications that are finished. */
 .req-divider{
   font-size:11px;color:var(--text3);margin:14px 0 8px;padding-top:11px;
   border-top:1px solid var(--border);
 }
-.check-remove{
-  width:20px;height:20px;flex-shrink:0;border:none;background:transparent;border-radius:5px;
-  color:var(--text3);cursor:pointer;display:grid;place-items:center;
-}
-.check-remove:hover{background:var(--red-bg);color:var(--red)}
 /* Guidance a student reads once should not hold a third of the screen for
    the whole term - folded shut it costs a row instead of 300px. */
 .howto{padding:0}

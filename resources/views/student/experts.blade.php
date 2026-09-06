@@ -412,6 +412,53 @@
         <div class="req-notice">Only your team leader can apply for experts. You can still browse who is available below.</div>
       @endif
 
+
+      {{-- Who your team actually has, across the page rather than down the
+           side of it. It sat in the right-hand panel where filled and empty
+           differed by the colour of a ten-pixel pill, so three rows read as
+           three identical rows and a team could not tell at a glance whether
+           they had an adviser. --}}
+      @if($team)
+        @php $filledCount = count($filledSlots) + count($unslotted); @endphp
+        <div class="yx">
+          <span class="yx-lab">Your Experts</span>
+          <span class="yx-sep"></span>
+
+          @foreach(['adviser', 'consultant', 'grammarian'] as $slotRole)
+            @php $a = $filledSlots[$slotRole] ?? null; @endphp
+            <span class="yx-chip {{ $a ? 'is-set' : 'is-open' }}" data-slot-role="{{ $slotRole }}">
+              <span class="yx-mark">@if($a)<svg viewBox="0 0 24 24" width="9" height="9" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>@else?@endif</span>
+              <span class="yx-role">{{ ucfirst($slotRole) }}</span>
+              @if($a)
+                <span class="yx-name" title="{{ $a->expert?->name }}">{{ $a->expert?->name }}</span>
+                @if($isLeader)
+                  <button type="button" class="yx-x" title="Remove {{ $a->expert?->name ?? 'this expert' }}"
+                          onclick="openRemoveModal({{ $a->assignment_id }}, '{{ addslashes($a->expert?->name ?? '') }}')"><svg viewBox="0 0 24 24" width="11" height="11" stroke="currentColor" fill="none" stroke-width="2" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+                @endif
+              @endif
+            </span>
+          @endforeach
+
+          {{-- Approved before roles were recorded, so they belong to no slot.
+               Listed rather than dropped: they are still your expert. --}}
+          @foreach($unslotted as $a)
+            <span class="yx-chip is-set">
+              <span class="yx-mark"><svg viewBox="0 0 24 24" width="9" height="9" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg></span>
+              <span class="yx-role">Assigned</span>
+              <span class="yx-name">{{ $a->expert?->name ?? 'Unknown' }}</span>
+              @if($isLeader)
+                <button type="button" class="yx-x" title="Remove {{ $a->expert?->name ?? 'this expert' }}"
+                        onclick="openRemoveModal({{ $a->assignment_id }}, '{{ addslashes($a->expert?->name ?? '') }}')"><svg viewBox="0 0 24 24" width="11" height="11" stroke="currentColor" fill="none" stroke-width="2" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+              @endif
+            </span>
+          @endforeach
+
+          <span class="yx-count">
+            <b>{{ $filledCount }} of 3</b> {{ $filledCount >= 3 ? 'filled - your team is set' : 'filled' }}
+          </span>
+        </div>
+      @endif
+
       {{-- Searching reloads the page rather than hiding cards. The list is
            paginated, so a filter in the browser would only ever search the
            experts already on screen and report "none" for the rest. --}}
@@ -690,47 +737,6 @@
     </div>
 
     <aside class="overview-panel">
-      <div class="panel">
-        {{-- Filled and empty used to differ by the colour of a 10px pill, so
-             three rows read as three identical rows and a team could not tell
-             at a glance whether they had an adviser. A tick against a hollow
-             ring says it without being read. --}}
-        @php $filledCount = count($filledSlots); @endphp
-        <h3>Team Checklist</h3>
-        <p class="panel-count"><b>{{ $filledCount }} of 3</b> {{ $filledCount === 3 ? 'filled - your team is set' : 'filled' }}</p>
-        @foreach(['adviser', 'consultant', 'grammarian'] as $slotRole)
-          @php $a = $filledSlots[$slotRole] ?? null; $rc = $roleColors[$slotRole]; @endphp
-          <div class="check {{ $a ? 'is-set' : 'is-open' }}" data-slot-role="{{ $slotRole }}">
-            <span class="check-mark">@if($a)<svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>@endif</span>
-            <span class="check-role">{{ ucfirst($slotRole) }}</span>
-            @if($a)
-              <span class="check-name" title="{{ $a->expert?->name }}">{{ $a->expert?->name }}</span>
-              @if($isLeader)
-                <button class="check-remove" title="Remove {{ $a->expert?->name ?? 'this expert' }}"
-                        onclick="openRemoveModal({{ $a->assignment_id }}, '{{ $a->expert?->name ?? '' }}')">
-                  <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" fill="none" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                </button>
-              @endif
-            @else
-              <span class="check-open">Not yet</span>
-            @endif
-          </div>
-        @endforeach
-
-        @foreach($unslotted as $a)
-          <div class="check is-set">
-            <span class="check-mark"><svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg></span>
-            <span class="check-role">Assigned</span>
-            <span class="check-name">{{ $a->expert?->name ?? 'Unknown' }}</span>
-            @if($isLeader)
-              <button class="check-remove" onclick="openRemoveModal({{ $a->assignment_id }}, '{{ $a->expert?->name ?? '' }}')">
-                <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" fill="none" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-              </button>
-            @endif
-          </div>
-        @endforeach
-      </div>
-
       {{-- Applications that are still out. A sent application is not a filled
            slot, so it shows here and the checklist above stays "Not selected"
            until the expert approves. --}}
