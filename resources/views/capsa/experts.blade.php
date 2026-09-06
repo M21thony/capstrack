@@ -398,31 +398,50 @@
 
   <div id="real-content" style="display:none;flex:1;overflow:hidden;flex-direction:column;">
   <div class="content">
-    <div class="experts-toolbar">
+    @php
+      // The mix, not just the total: how many of each role you have is the
+      // thing a CaPSA is actually deciding about when they open this page.
+      $byRole = $experts->flatMap(fn ($e) => $e->roles->pluck('role_name'))
+        ->countBy()
+        ->map(fn ($n, $role) => $n.' '.Str::plural(Str::lower(\App\Models\Role::labelFor($role)), $n))
+        ->values();
+    @endphp
+
+    <div class="page-head">
+      <div class="page-head-text">
+        {{ $experts->count() }} {{ Str::plural('expert', $experts->count()) }}
+        @if ($byRole->isNotEmpty()) · {{ $byRole->join(', ') }} @endif
+      </div>
+      <div class="page-head-actions">
+        {{-- The list is for a whole faculty at once. This is for the one it
+             missed, so admitting a late arrival is not a spreadsheet. --}}
+        <button type="button" class="btn" onclick="openExpertRosterModal()">Upload List</button>
+        <button type="button" class="btn btn-primary" onclick="openAddExpertModal()">Add Expert</button>
+      </div>
+    </div>
+
+    {{-- Filters on their own line. They were sharing a strip with the count
+         and the two buttons, which made "look for something" and "do
+         something" compete for the same row. --}}
+    <div class="page-filters">
       <div class="experts-search">
         <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         <input class="input" id="experts-search-input" placeholder="Search experts by name or expertise..."/>
       </div>
-      <div class="filter-row">
-        <select class="input" id="experts-role-filter" style="width:160px">
-          <option>All Roles</option>
-          <option>Adviser</option>
-          <option>Consultant</option>
-          <option>Grammarian</option>
-        </select>
-        <select class="input" style="width:160px" id="statusFilter">
-          <option value="all">All Status</option>
-          <option value="active">Active</option>
-          <option value="full">Full</option>
-          <option value="offline">Offline</option>
-        </select>
-      </div>
-      <span class="experts-count">{{ $experts->count() }} registered experts</span>
-      {{-- The list is for a whole faculty at once. This is for the one it
-           missed, so admitting a late arrival is not a spreadsheet. --}}
-      <button type="button" class="btn" onclick="openAddExpertModal()">Add Expert</button>
-      <button type="button" class="btn" onclick="openExpertRosterModal()">Upload List</button>
+      <select class="input page-filter" id="experts-role-filter">
+        <option>All Roles</option>
+        <option>Adviser</option>
+        <option>Consultant</option>
+        <option>Grammarian</option>
+      </select>
+      <select class="input page-filter" id="statusFilter">
+        <option value="all">All Status</option>
+        <option value="active">Active</option>
+        <option value="full">Full</option>
+        <option value="offline">Offline</option>
+      </select>
     </div>
+
 
     @include('partials.row-select', [
       'table' => '.table',

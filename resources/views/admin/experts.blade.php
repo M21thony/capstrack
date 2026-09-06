@@ -474,35 +474,54 @@
 
   <div id="real-content" style="display:none;flex:1;overflow:hidden;flex-direction:column;">
   <div class="content">
-    <div class="experts-toolbar">
+    @php
+      // What the page is of, in a sentence. A bare count in a pill said less
+      // and took the same room.
+      $sectionsCovered = $experts->flatMap(fn ($e) => $e->sections ?? [])->unique()->count();
+    @endphp
+
+    {{-- The title is already in the bar above; this line says what the page
+         holds, and the two things you can do to it sit opposite. --}}
+    <div class="page-head">
+      <div class="page-head-text">
+        {{ $experts->count() }} {{ Str::plural('CaPSA', $experts->count()) }}
+        @if ($sectionsCovered)
+          · covering {{ $sectionsCovered }} {{ Str::plural('section', $sectionsCovered) }}
+        @endif
+      </div>
+      <div class="page-head-actions">
+        {{-- Admin's job here is naming CaPSAs. Getting the rest of the faculty
+             into the system is the CaPSA's, from their own copy of this page,
+             so the list upload and the one-off Add Expert form are not offered
+             twice. --}}
+        {{-- Off until a row is ticked, so the button itself teaches that
+             selection is how bulk editing starts. --}}
+        <button type="button" class="btn" id="editSelectedBtn" disabled
+                onclick="document.getElementById('bulkRoles').click()">Edit</button>
+        <button type="button" class="btn btn-primary" onclick="addCapsa()">Add CaPSA</button>
+      </div>
+    </div>
+
+    {{-- Filters on their own line. They were sharing a strip with the count
+         and the two buttons, which made "look for something" and "do
+         something" compete for the same row. --}}
+    <div class="page-filters">
       <div class="experts-search">
         <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         <input class="input" id="experts-search-input" placeholder="Search experts by name or expertise..."/>
       </div>
-      <div class="filter-row">
-        <select class="input" id="experts-role-filter" style="width:160px">
-          <option>All Roles</option>
-          <option>Adviser</option>
-          <option>Consultant</option>
-          <option>Grammarian</option>
-        </select>
-        <select class="input" style="width:160px" id="statusFilter">
-          <option value="all">All Status</option>
-          <option value="active">Active</option>
-          <option value="full">Full</option>
-          <option value="offline">Offline</option>
-        </select>
-      </div>
-      <span class="experts-count">{{ $experts->count() }} {{ Str::plural('CaPSA', $experts->count()) }}</span>
-      {{-- Admin's job here is naming CaPSAs. Getting the rest of the faculty
-           into the system is the CaPSA's, from their own copy of this page,
-           so the list upload and the one-off Add Expert form are not offered
-           twice. --}}
-      {{-- Off until a row is ticked, so the button itself teaches that
-           selection is how bulk editing starts. --}}
-      <button type="button" class="btn" id="editSelectedBtn" disabled
-              onclick="document.getElementById('bulkRoles').click()">Edit</button>
-      <button type="button" class="btn btn-primary" onclick="addCapsa()">Add CaPSA</button>
+      <select class="input page-filter" id="experts-role-filter">
+        <option>All Roles</option>
+        <option>Adviser</option>
+        <option>Consultant</option>
+        <option>Grammarian</option>
+      </select>
+      <select class="input page-filter" id="statusFilter">
+        <option value="all">All Status</option>
+        <option value="active">Active</option>
+        <option value="full">Full</option>
+        <option value="offline">Offline</option>
+      </select>
     </div>
 
     @include('partials.row-select', [

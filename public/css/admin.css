@@ -1680,3 +1680,23 @@ textarea.input{resize:vertical;min-height:80px}
 .rs-box input:indeterminate ~ .rs-tick::after{content:"";width:7px;height:2px;background:#18191f;border-radius:1px}
 .rs-box input:focus-visible ~ .rs-tick{box-shadow:0 0 0 3px var(--accent-glow)}
 tr.rs-on > td{background:var(--accent-light)}
+
+/* ══ list page header ══
+   The count, the filters and the buttons used to share one strip, so "look
+   for something" and "do something" competed for the same row. The count is
+   a sentence about the page now, the actions sit opposite it, and the filters
+   get a line of their own underneath. */
+.page-head{display:flex;align-items:center;justify-content:space-between;gap:16px;
+  flex-wrap:wrap;margin-bottom:12px}
+.page-head-text{font-size:13px;color:var(--text2);font-variant-numeric:tabular-nums}
+.page-head-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+
+.page-filters{display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.page-filters .experts-search{flex:1;min-width:200px;margin:0}
+.page-filter{width:auto;min-width:150px;font-size:12.5px}
+
+@media (max-width:700px){
+  .page-head{align-items:flex-start}
+  .page-head-actions{width:100%}
+  .page-filter{flex:1 1 45%;min-width:0}
+}
