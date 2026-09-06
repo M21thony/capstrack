@@ -91,6 +91,9 @@ $pagesBothRolesOpen = function () {
     Route::post('/experts', [AdminExpertsController::class, 'store'])->name('experts.store');
     Route::put('/experts/{expert}', [AdminExpertsController::class, 'update'])->name('experts.update');
     Route::delete('/experts/{expert}', [AdminExpertsController::class, 'destroy'])->name('experts.destroy');
+    // Not bound to the model: route-model binding cannot find a deactivated
+    // account, which is the only kind this is ever called on.
+    Route::put('/experts/{expert}/reactivate', [AdminExpertsController::class, 'reactivate'])->name('experts.reactivate');
     Route::put('/notifications/seen', function (Request $request) {
         $ids = $request->input('ids', []);
         if (! empty($ids)) {

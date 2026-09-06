@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\DB;
@@ -60,6 +61,25 @@ class CapstoneExpert extends Authenticatable
     // deliberately absent: it is a portal permission, not something a team
     // applies for.
     public const STUDENT_FACING_ROLES = ['adviser', 'consultant', 'grammarian'];
+
+    /**
+     * Deactivating rather than deleting.
+     *
+     * Removing someone used to be a real DELETE, so a lecturer on study leave
+     * had to be re-added from nothing when they came back. SoftDeletes is
+     * exactly this feature, and pointing it at deactivated_at rather than
+     * deleted_at keeps the column honest about what it means.
+     *
+     * The point of doing it here rather than in a dozen queries: every place
+     * that lists or picks an expert - the browse page a student applies from,
+     * panel assignment, the API - filters on approved_status and none of them
+     * had to change. A deactivated expert stops existing for all of them at
+     * once. The two management pages that must still show them say so with
+     * withTrashed().
+     */
+    use SoftDeletes;
+
+    public const DELETED_AT = 'deactivated_at';
 
     protected $primaryKey = 'expert_id';
 

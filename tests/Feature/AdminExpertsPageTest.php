@@ -86,7 +86,7 @@ class AdminExpertsPageTest extends TestCase
         // them - see AdminHasNoRoleManagementTest for why.
         $response->assertSee('Which sections they cover', false);
         $response->assertSee('Take away the CaPSA role', false);
-        $response->assertSee('Delete this account', false);
+        $response->assertSee('Deactivate this account', false);
         $response->assertDontSee('Transfer Rights', false);
     }
 

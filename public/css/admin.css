@@ -1964,3 +1964,14 @@ tr.rs-on > td{background:var(--accent-light)}
 .bulk-result{margin:12px 0 0;font-size:12px;color:var(--text2);line-height:1.5}
 .bulk-result b{color:var(--text)}
 .bulk-error{margin:10px 0 0;font-size:12px;color:var(--red);display:none}
+
+/* ══ an account that has been switched off ══
+   Dimmed so it reads as inactive at a glance, and labelled, because a dot
+   nobody hovers is not a label. The row stays in the list on purpose: it is
+   the only place the account can be switched back on from. */
+tr.cx-off > td{opacity:.55}
+tr.cx-off:hover > td{opacity:.8}
+.cx-dot-off{background:transparent;box-shadow:inset 0 0 0 2px var(--text3)}
+.cx-off-tag{font-size:10px;font-weight:600;letter-spacing:.03em;text-transform:uppercase;
+  color:var(--text2);background:var(--bg4);border:1px solid var(--border2);
+  border-radius:4px;padding:1px 6px;white-space:nowrap;flex-shrink:0}

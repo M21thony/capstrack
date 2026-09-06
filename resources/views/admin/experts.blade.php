@@ -488,6 +488,7 @@
         <option value="active">Active</option>
         <option value="full">Full</option>
         <option value="offline">Offline</option>
+        <option value="off">Deactivated</option>
       </select>
       <span class="page-filters-actions">
         {{-- Admin's job here is naming CaPSAs. Getting the rest of the faculty
@@ -502,7 +503,7 @@
       'table' => '.table',
       'noun' => 'expert',
       'actions' => [
-        ['id' => 'bulkRemove', 'label' => 'Delete accounts', 'danger' => true],
+        ['id' => 'bulkRemove', 'label' => 'Deactivate accounts', 'danger' => true],
       ],
     ])
 
@@ -549,7 +550,10 @@
 
               $isFull = $takesTeams && $slotsSet && $teamCount >= $maxTeams;
               $isOnline = $expert->is_online;
-              $computedStatus = $isFull ? 'full' : ($isOnline ? 'active' : 'offline');
+              // A deactivated account has no capacity and no presence - saying
+              // "offline" about it would be true and useless.
+              $isOff = (bool) $expert->deactivated_at;
+              $computedStatus = $isOff ? 'off' : ($isFull ? 'full' : ($isOnline ? 'active' : 'offline'));
               $capacityRows = $expert->parsedCapacity();
 
               // One mapping, on the model, so the pills here and the ones on
@@ -577,6 +581,7 @@
                it used to find the status by counting columns, which is a
                thing that breaks the moment a column moves. --}}
           <tr data-status="{{ $computedStatus }}"
+              @class(['cx-off' => $isOff])
               data-id="{{ $expert->expert_id }}"
               {{-- You cannot put yourself in a batch: bulk-removing your own
                    account is not a thing to be one careless drag away from. --}}
@@ -584,9 +589,10 @@
               data-search="{{ Str::lower($expert->name.' '.$expert->email.' '.$expertiseFull) }}">
             <td style="padding-left:20px" data-label="Expert">
               <div class="expert-name-trigger cx-who" onclick="openExpertDetail({{ Illuminate\Support\Js::from($detailPayload) }})">
-                <span class="cx-dot cx-dot-{{ $computedStatus }}" title="{{ ucfirst($computedStatus) }}"></span>
+                <span class="cx-dot cx-dot-{{ $computedStatus }}" title="{{ $isOff ? 'Deactivated' : ucfirst($computedStatus) }}"></span>
                 <img src="{{ $expert->avatarUrl() }}" alt="" loading="lazy" class="cx-av"
                      onerror="this.onerror=null;this.src='{{ asset('images/default-avatar.jpg') }}';">
+                @if ($isOff)<span class="cx-off-tag">Deactivated</span>@endif
                 {{-- The address under the name rather than hidden in a tooltip:
                      two people share a surname often enough, and the email is
                      what tells them apart. --}}
@@ -690,10 +696,20 @@
                       <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="17" y1="11" x2="23" y2="11"/></svg> {{ $expert->is_capsa ? 'Take away the CaPSA role' : 'Make them a CaPSA' }}
                     </button>
                     <div class="rowmenu-sep"></div>
-                    <button type="button" class="rowmenu-item danger remove-trigger"
-                            data-id="{{ $expert->expert_id }}" data-name="{{ $expert->name }}">
-                      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M7 6l1 14h8l1-14"/></svg> Delete this account
-                    </button>
+                    @if ($isOff)
+                      <button type="button" class="rowmenu-item"
+                              onclick="reactivateExpert({{ $expert->expert_id }}, {{ Illuminate\Support\Js::from($expert->name) }})">
+                        <svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> Switch this account back on
+                      </button>
+                    @else
+                      {{-- Deactivate rather than delete: a CaPSA who steps down for a
+                           term should not have to be created from nothing when they
+                           come back, and their sections and history hang off the row. --}}
+                      <button type="button" class="rowmenu-item danger remove-trigger"
+                              data-id="{{ $expert->expert_id }}" data-name="{{ $expert->name }}">
+                        <svg viewBox="0 0 24 24"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg> Deactivate this account
+                      </button>
+                    @endif
                   </div>
                 </div>
               </div>
@@ -724,6 +740,7 @@
         if (status === 'active') matchStatus = statusText === 'active';
         else if (status === 'full') matchStatus = statusText === 'full';
         else if (status === 'offline') matchStatus = statusText === 'offline';
+        else if (status === 'off') matchStatus = statusText === 'off';
 
         row.style.display = (matchSearch && matchStatus) ? '' : 'none';
       });
@@ -1511,13 +1528,27 @@ function bulkNames(rows) {
   }).filter(Boolean);
 }
 
+// Switching one back on undoes something, so it asks nothing.
+function reactivateExpert(id, name) {
+  fetch(`{{ route('admin.experts.reactivate', ['expert' => 'EXPERT_ID']) }}`.replace('EXPERT_ID', id), {
+    method: 'PUT',
+    headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' },
+  }).then(function (r) {
+    showToast(r.ok ? name + ' is active again' : 'Could not switch it back on',
+      r.ok ? 'success' : 'error');
+    if (r.ok) setTimeout(() => window.location.reload(), 900);
+  });
+}
+
 onBulk('bulkRemove', function (ids, rows) {
   confirmSheet({
-    title: 'Delete ' + ids.length + (ids.length === 1 ? ' account' : ' accounts') + '?',
+    title: 'Deactivate ' + ids.length + (ids.length === 1 ? ' account' : ' accounts') + '?',
     names: bulkNames(rows),
-    body: 'The account goes, not just the CaPSA role. To leave them in the system '
-        + 'without their sections, use Remove CaPSA on the row instead.',
-    confirmLabel: ids.length === 1 ? 'Delete account' : 'Delete ' + ids.length + ' accounts',
+    body: 'They can no longer sign in and cannot be assigned. Nothing is deleted - the '
+        + 'sections they cover and their history stay, and the account can be switched '
+        + 'back on from its row. To leave them signed in but without their sections, '
+        + 'use Take away the CaPSA role instead.',
+    confirmLabel: ids.length === 1 ? 'Deactivate account' : 'Deactivate ' + ids.length + ' accounts',
     danger: true,
   }).then(function (yes) {
     if (!yes) return;
