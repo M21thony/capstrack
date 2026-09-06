@@ -168,10 +168,10 @@
       </div>
       @if ($viewerIsCapsa)
         <div class="page-head-actions">
-          <button type="button" class="btn" onclick="openStudentRosterModal()">Upload list</button>
+          <button type="button" class="btn" onclick="openStudentRosterModal()">Upload List</button>
           <button type="button" class="btn btn-primary" onclick="openAddStudent()">
             <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 4h16v16H4z"/><path d="M4 7l8 6 8-6"/></svg>
-            Add by email
+            Add Student
           </button>
         </div>
       @endif
@@ -203,7 +203,10 @@
         @endforeach
       </select>
       <select class="input page-filter" id="team-filter" onchange="filterStudents()">
-        <option value="">With or without a team</option>
+        {{-- Short enough to leave the select the same width as its two
+             neighbours, which is what keeps the header's buttons sitting on
+             the same grid as the filters. --}}
+        <option value="">All students</option>
         <option value="0">Without a team</option>
         <option value="1">In a team</option>
       </select>

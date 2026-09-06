@@ -1760,17 +1760,30 @@ tr.rs-on > td{background:var(--accent-light)}
    page is barely there. .btn-ghost is no help either: it is built for the
    navy sidebar and paints near-white text. These bars sit on white, so they
    get a button that is actually drawn. */
-.page-head-actions .btn:not(.btn-primary),
 .selbar .btn:not(.btn-primary){
   background:var(--bg2);
   border:1px solid var(--border2);
   color:var(--text);
 }
-.page-head-actions .btn:not(.btn-primary):hover,
 .selbar .btn:not(.btn-primary):hover{
   border-color:var(--accent);
   background:var(--accent-light);
   color:var(--accent3);
+}
+/* The header's second action was white on a near-white page with a pale grey
+   edge - barely a button at all beside the gold one. It borrows the sidebar's
+   navy rather than a second accent: unmistakably a control, and it does not
+   compete with the one action that is meant to stand out. */
+.page-head-actions .btn:not(.btn-primary){
+  background:var(--bg2);
+  border:1.5px solid var(--navy-light);
+  color:var(--navy-mid);
+  font-weight:600;
+}
+.page-head-actions .btn:not(.btn-primary):hover{
+  background:var(--navy-mid);
+  border-color:var(--navy-mid);
+  color:#fff;
 }
 /* Off, but still readable - the browser default at 55% opacity was a grey
    smudge that did not look like a control at all. */
@@ -1815,3 +1828,30 @@ tr.rs-on > td{background:var(--accent-light)}
   flex-wrap:wrap;padding-top:12px;font-size:12px;color:var(--text3)}
 .list-foot-nav{display:flex;align-items:center;gap:10px}
 .list-foot-off{opacity:.4;font-weight:600}
+
+/* ══ a row's own actions ══
+   One button per action, tooltipped by its title - at this row height a
+   labelled button is most of the width of the table.
+
+   These rules lived inside admin/experts.blade.php's <style> block, and both
+   CaPSA pages used the class without them: their row buttons were rendering
+   4px wide with a browser-default border and a 0x0 icon, which is to say the
+   CaPSA's own Manage roles and Edit student were on the page and invisible. */
+.icon-btn{width:32px;height:32px;border-radius:8px;border:1.5px solid var(--border);
+  background:var(--bg2);color:var(--text2);cursor:pointer;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center}
+.icon-btn svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2.3}
+.icon-btn:hover{border-color:var(--border2);background:var(--bg3)}
+.icon-btn:disabled{opacity:.55;cursor:not-allowed}
+.icon-btn.capsa{border-color:var(--blue-bg);background:var(--blue-bg);color:var(--blue)}
+.icon-btn.capsa:hover{border-color:var(--blue);background:var(--blue);color:#fff}
+.icon-btn.danger{border-color:var(--red-bg);background:var(--red-bg);color:var(--red)}
+.icon-btn.danger:hover{border-color:var(--red);background:var(--red);color:#fff}
+
+/* The dash sits in a flex row beside the tick, which is invisible but still
+   takes its 9px - so "some selected" was drawing off to the right of centre. */
+.rs-box input:indeterminate ~ .rs-tick svg{display:none}
+
+/* A button above a dropdown that is 60px narrower reads as two ragged
+   columns. Same minimum, so the header's actions land on the filters' grid. */
+.page-head-actions .btn{min-width:150px;justify-content:center}
