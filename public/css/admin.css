@@ -1855,3 +1855,67 @@ tr.rs-on > td{background:var(--accent-light)}
 /* A button above a dropdown that is 60px narrower reads as two ragged
    columns. Same minimum, so the header's actions land on the filters' grid. */
 .page-head-actions .btn{min-width:150px;justify-content:center}
+
+/* ══ a row's own actions, behind one button ══
+   The icons were a luggage tag and a person with a minus beside them, which
+   reads as "add friend" more than as anything this app does - and an icon
+   says nothing at all on a touch screen, where there is no hover to read the
+   tooltip with. Every action carries its name in here, and the row gives up
+   the width of one button to hold all of them. */
+.rowmenu{position:relative;display:inline-flex}
+.rowmenu-pop{
+  position:fixed;z-index:70;min-width:200px;padding:5px;
+  background:var(--bg2);border:1px solid var(--border);border-radius:10px;
+  box-shadow:0 8px 24px rgba(24,25,31,.14);
+  display:flex;flex-direction:column;gap:1px;
+}
+.rowmenu-pop[hidden]{display:none}
+.rowmenu-item{
+  display:flex;align-items:center;gap:9px;width:100%;text-align:left;
+  padding:8px 10px;border:0;border-radius:6px;background:none;cursor:pointer;
+  font-family:'DM Sans',sans-serif;font-size:12.5px;font-weight:500;color:var(--text);
+  white-space:nowrap;
+}
+.rowmenu-item svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2.1;flex-shrink:0}
+.rowmenu-item:hover{background:var(--bg3)}
+.rowmenu-item:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.rowmenu-item.warn{color:var(--amber)}
+.rowmenu-item.warn:hover{background:var(--amber-bg)}
+.rowmenu-item.danger{color:var(--red)}
+.rowmenu-item.danger:hover{background:var(--red-bg)}
+.rowmenu-sep{height:1px;background:var(--border);margin:4px 6px}
+.rowmenu-btn[aria-expanded="true"]{border-color:var(--border2);background:var(--bg3)}
+
+/* ══ the selection bar is the heading row ══
+   It used to open above the table and push every row down 44px, so the second
+   row you were reaching for moved out from under the cursor - and on a long
+   list you scrolled away from it. The heading row and the bar are the same
+   height and swap places, so nothing moves, and the bar inherits the sticky
+   header for free. */
+.table thead tr[hidden]{display:none}
+.table thead tr.rs-bar th{
+  background:var(--accent-light);
+  border-bottom:2px solid #ecdfae;
+  padding:7px 12px;text-transform:none;letter-spacing:0;
+}
+.rs-bar .selbar{margin:0;padding:0;border:0;background:none;border-radius:0}
+
+/* ══ the confirm sheet ══ (resources/views/partials/confirm-sheet.blade.php) */
+.cf-sheet{max-width:440px}
+.cf-names{border:1px solid var(--border);border-radius:8px;background:var(--bg3);
+  padding:9px 11px;margin:0 0 12px;font-size:12px;color:var(--text2);line-height:1.7;
+  max-height:150px;overflow:auto}
+.cf-names b{color:var(--text);font-weight:600}
+.cf-actions{display:flex;justify-content:flex-end;gap:8px}
+.cf-actions .btn{height:34px;min-height:34px;padding:0 16px;font-size:12.5px;border-radius:7px}
+.cf-actions .btn:not(.btn-primary):not(.btn-danger-solid){
+  background:var(--bg2);border:1px solid var(--border2);color:var(--text)}
+.btn-danger-solid{background:var(--red);border:1px solid var(--red);color:#fff;font-weight:600}
+.btn-danger-solid:hover{background:#b91c1c;border-color:#b91c1c}
+
+/* The bulk editors on the section list: one field, one sentence saying what
+   the change works out to before it is made. */
+.bulk-sheet{max-width:430px}
+.bulk-result{margin:12px 0 0;font-size:12px;color:var(--text2);line-height:1.5}
+.bulk-result b{color:var(--text)}
+.bulk-error{margin:10px 0 0;font-size:12px;color:var(--red);display:none}

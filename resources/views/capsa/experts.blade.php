@@ -621,10 +621,23 @@
 
             <td data-label="Action">
               <div class="expert-actions">
-                <button type="button" class="icon-btn" title="Manage roles"
-                        onclick="openRoles({{ $expert->expert_id }}, {{ Illuminate\Support\Js::from($expert->name) }}, {{ Illuminate\Support\Js::from($expert->roles->pluck('role_name')) }})">
-                  <svg viewBox="0 0 24 24"><path d="M20.59 13.41 13.42 20.6a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82Z"/><circle cx="7" cy="7" r="1"/></svg>
-                </button>
+                <div class="rowmenu">
+                  <button type="button" class="icon-btn rowmenu-btn" aria-expanded="false"
+                          aria-label="Actions for {{ $expert->name }}">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.7" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.7" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.7" fill="currentColor" stroke="none"/></svg>
+                  </button>
+                  <div class="rowmenu-pop" hidden>
+                    <button type="button" class="rowmenu-item"
+                            onclick="openRoles({{ $expert->expert_id }}, {{ Illuminate\Support\Js::from($expert->name) }}, {{ Illuminate\Support\Js::from($expert->roles->pluck('role_name')) }})">
+                      <svg viewBox="0 0 24 24"><path d="M20.59 13.41 13.42 20.6a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82Z"/><circle cx="7" cy="7" r="1"/></svg> Set roles
+                    </button>
+                    <div class="rowmenu-sep"></div>
+                    <button type="button" class="rowmenu-item danger"
+                            onclick="removeOneExpert({{ $expert->expert_id }}, {{ Illuminate\Support\Js::from($expert->name) }})">
+                      <svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M7 6l1 14h8l1-14"/></svg> Remove expert
+                    </button>
+                  </div>
+                </div>
               </div>
             </td>
           </tr>
@@ -1416,26 +1429,54 @@ onBulk('bulkRoles', function (ids, rows) {
   openRoles(ids, names.length > 2 ? names.length + ' experts' : names.join(', '), []);
 });
 
-onBulk('bulkRemove', function (ids, rows) {
-  const names = bulkNames(rows);
-  if (!confirm('Remove ' + ids.length + (ids.length === 1 ? ' expert' : ' experts') + '?\n\n'
-      + names.join('\n') + '\n\nTeams they advise are told. This cannot be undone.')) return;
-
-  Promise.all(ids.map(function (id) {
-    return fetch('{{ url('capsa/experts') }}/' + id, {
+// One expert, through the sheet the bar uses.
+function removeOneExpert(id, name) {
+  confirmSheet({
+    title: 'Remove ' + name + '?',
+    names: [name],
+    body: 'Every team they advise is told. This cannot be undone.',
+    confirmLabel: 'Remove expert',
+    danger: true,
+  }).then(function (yes) {
+    if (!yes) return;
+    fetch('{{ url('capsa/experts') }}/' + id, {
       method: 'DELETE',
       headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' },
-    }).then(r => r.ok).catch(() => false);
-  })).then(function (results) {
-    const ok = results.filter(Boolean).length;
-    const failed = results.length - ok;
-    showToast(failed ? ok + ' removed, ' + failed + ' could not be' : ok + ' removed',
-      failed ? 'error' : 'success');
-    setTimeout(() => window.location.reload(), 900);
+    }).then(function (r) {
+      showToast(r.ok ? name + ' removed' : 'Could not remove them', r.ok ? 'success' : 'error');
+      if (r.ok) setTimeout(() => window.location.reload(), 900);
+    });
+  });
+}
+
+onBulk('bulkRemove', function (ids, rows) {
+  confirmSheet({
+    title: 'Remove ' + ids.length + (ids.length === 1 ? ' expert' : ' experts') + '?',
+    names: bulkNames(rows),
+    body: 'Every team they advise is told. This cannot be undone.',
+    confirmLabel: ids.length === 1 ? 'Remove expert' : 'Remove ' + ids.length + ' experts',
+    danger: true,
+  }).then(function (yes) {
+    if (!yes) return;
+
+    Promise.all(ids.map(function (id) {
+      return fetch('{{ url('capsa/experts') }}/' + id, {
+        method: 'DELETE',
+        headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' },
+      }).then(r => r.ok).catch(() => false);
+    })).then(function (results) {
+      const ok = results.filter(Boolean).length;
+      const failed = results.length - ok;
+      showToast(failed ? ok + ' removed, ' + failed + ' could not be' : ok + ' removed',
+        failed ? 'error' : 'success');
+      setTimeout(() => window.location.reload(), 900);
+    });
   });
 });
 </script>
 
+@include('partials.confirm-sheet')
+@include('partials.row-menu')
 @include('partials.email-lookup', ['input' => 'addExpertEmail', 'kind' => 'expert', 'nameInput' => 'addExpertName'])
 
 </body>

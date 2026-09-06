@@ -264,9 +264,20 @@
           </thead>
           <tbody>
             @forelse ($students as $index => $student)
-              @php $sy = $student->currentSy; @endphp
+              @php
+                $sy = $student->currentSy;
+                // year_section is stored joined - "4th | B" - because that is
+                // the shape every section lookup matches on. Taken apart up
+                // here, because the row's own attributes need it before the
+                // Year and Section cells do.
+                $ys = array_map('trim', explode('·', (string) $student->year_section));
+                $year = count($ys) === 2 ? $ys[0] : '';
+                $section = count($ys) === 2 ? $ys[1] : ($ys[0] ?? '');
+              @endphp
               <tr data-id="{{ $student->student_id }}"
                   data-program="{{ $student->programAbbr }}"
+                  data-year="{{ preg_replace('/[^0-9]/', '', $year) }}"
+                  data-letter="{{ strtoupper($section) }}"
                   data-team="{{ $sy && $sy->team ? '1' : '0' }}"
                   data-search="{{ Str::lower($student->f_name.' '.$student->l_name.' '.$student->email.' '.$student->student_number) }}">
                 <td>
@@ -280,15 +291,8 @@
                 </td>
                 <td class="std-mono">{{ $student->student_number ?: '—' }}</td>
                 <td class="std-mono">{{ $student->programAbbr ?? '—' }}</td>
-                {{-- year_section is stored joined - "4th · B" - because that is
-                     the shape every section lookup matches on. It is shown apart
-                     here: Program, Year and Section are three things a CaPSA
-                     reads down a column, not one string to pick through. --}}
-                @php
-                  $ys = array_map('trim', explode('·', (string) $student->year_section));
-                  $year = count($ys) === 2 ? $ys[0] : '';
-                  $section = count($ys) === 2 ? $ys[1] : ($ys[0] ?? '');
-                @endphp
+                {{-- Program, Year and Section are three things a CaPSA reads
+                     down a column, not one string to pick through. --}}
                 <td class="std-mono">{{ $year !== '' ? $year : '—' }}</td>
                 <td class="std-mono">{{ $section !== '' ? $section : '—' }}</td>
                 <td>
@@ -325,10 +329,26 @@
                         'email' => $student->email,
                       ];
                     @endphp
-                    <button type="button" class="icon-btn" title="Edit this student"
-                            onclick="openEditStudent({{ Illuminate\Support\Js::from($editPayload) }})">
-                      <svg viewBox="0 0 24 24"><path d="M11 4H4v16h16v-7"/><path d="M18.5 2.5a2.1 2.1 0 0 1 3 3L12 15l-4 1 1-4z"/></svg>
-                    </button>
+                    <div class="rowmenu">
+                      <button type="button" class="icon-btn rowmenu-btn" aria-expanded="false"
+                              aria-label="Actions for {{ $student->f_name }} {{ $student->l_name }}">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.7" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.7" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.7" fill="currentColor" stroke="none"/></svg>
+                      </button>
+                      {{-- Always about this one student, ticked or not. Setting a
+                           program or a year for several at once is the bar's job;
+                           a name and a student number are one person's. --}}
+                      <div class="rowmenu-pop" hidden>
+                        <button type="button" class="rowmenu-item"
+                                onclick="openEditStudent({{ Illuminate\Support\Js::from($editPayload) }})">
+                          <svg viewBox="0 0 24 24"><path d="M11 4H4v16h16v-7"/><path d="M18.5 2.5a2.1 2.1 0 0 1 3 3L12 15l-4 1 1-4z"/></svg> Edit student details
+                        </button>
+                        <div class="rowmenu-sep"></div>
+                        <button type="button" class="rowmenu-item danger"
+                                onclick="removeOneStudent({{ Illuminate\Support\Js::from($editPayload) }})">
+                          <svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M7 6l1 14h8l1-14"/></svg> Remove from section
+                        </button>
+                      </div>
+                    </div>
                   </td>
                 @endif
               </tr>
@@ -838,6 +858,115 @@ function uploadStudentRoster(btn) {
   </div>
 </div>
 
+{{-- ══ set a program for several students ══ --}}
+<div class="upload-scrim" id="bulk-program-scrim" hidden onclick="closeBulkProgram(event)">
+  <div class="upload-sheet bulk-sheet" onclick="event.stopPropagation()">
+    <div class="card" style="padding:16px;box-shadow:none;border:0">
+      <div class="card-header sheet-head">
+        <span class="card-title" id="bulk-program-title">Set program</span>
+        <span class="sheet-head-right">
+          <button class="sheet-x" type="button" onclick="closeBulkProgram()" aria-label="Close">
+            <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </span>
+      </div>
+
+      <div class="cf-names" id="bulk-program-names"></div>
+
+      <div class="form-group">
+        <label class="label" for="bulk-program-value">Program</label>
+        <select class="input" id="bulk-program-value" onchange="previewBulkProgram()">
+          <option value="BSIT">BSIT</option>
+          <option value="BSCS">BSCS</option>
+          <option value="BSIS">BSIS</option>
+          <option value="BLIS">BLIS</option>
+        </select>
+      </div>
+
+      {{-- The program is half of the section label, so changing it moves them
+           between sections. Better said here than discovered after. --}}
+      <p class="bulk-result" id="bulk-program-result"></p>
+      <p class="bulk-error" id="bulk-program-error"></p>
+
+      <div class="cf-actions" style="margin-top:16px">
+        <button type="button" class="btn" onclick="closeBulkProgram()">Cancel</button>
+        <button type="button" class="btn btn-primary" id="bulk-program-btn" onclick="saveBulkProgram()">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{{-- ══ set a year and section for several students ══ --}}
+<div class="upload-scrim" id="bulk-section-scrim" hidden onclick="closeBulkSection(event)">
+  <div class="upload-sheet bulk-sheet" onclick="event.stopPropagation()">
+    <div class="card" style="padding:16px;box-shadow:none;border:0">
+      <div class="card-header sheet-head">
+        <span class="card-title" id="bulk-section-title">Set year &amp; section</span>
+        <span class="sheet-head-right">
+          <button class="sheet-x" type="button" onclick="closeBulkSection()" aria-label="Close">
+            <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </span>
+      </div>
+
+      <div class="cf-names" id="bulk-section-names"></div>
+
+      @php
+        // Taken apart from the sections this CaPSA actually handles - the
+        // endpoint refuses a move into anyone else's, so offering one here
+        // would be offering a choice that comes back as an error.
+        $myYears = [];
+        $myLetters = [];
+        foreach ($adminSections as $label) {
+          if (preg_match('/-(\d+)([A-Za-z]+)$/', $label, $m)) {
+            $myYears[(int) $m[1]] = true;
+            $myLetters[strtoupper($m[2])] = true;
+          }
+        }
+        $myYears = array_keys($myYears);
+        $myLetters = array_keys($myLetters);
+        sort($myYears);
+        sort($myLetters);
+        $ordinal = fn (int $n) => $n.match ($n) { 1 => 'st', 2 => 'nd', 3 => 'rd', default => 'th' };
+      @endphp
+      <div class="sheet-row">
+        <div class="form-group sheet-col">
+          <label class="label" for="bulk-section-year">Year</label>
+          <select class="input" id="bulk-section-year" onchange="previewBulkSection()">
+            @forelse ($myYears as $y)
+              <option value="{{ $y }}">{{ $ordinal($y) }}</option>
+            @empty
+              <option value="3">3rd</option><option value="4">4th</option>
+            @endforelse
+          </select>
+        </div>
+        <div class="form-group sheet-col">
+          <label class="label" for="bulk-section-letter">Section</label>
+          <select class="input" id="bulk-section-letter" onchange="previewBulkSection()">
+            @forelse ($myLetters as $letter)
+              <option value="{{ $letter }}">{{ $letter }}</option>
+            @empty
+              <option value="A">A</option><option value="B">B</option>
+            @endforelse
+          </select>
+        </div>
+      </div>
+
+      {{-- Two prompts in a row could not do this: say what the change works
+           out to, and whether it leaves them in a section you handle. --}}
+      <p class="bulk-result" id="bulk-section-result"></p>
+      <p class="bulk-error" id="bulk-section-error"></p>
+
+      <div class="cf-actions" style="margin-top:16px">
+        <button type="button" class="btn" onclick="closeBulkSection()">Cancel</button>
+        <button type="button" class="btn btn-primary" id="bulk-section-btn" onclick="saveBulkSection()">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+@include('partials.confirm-sheet')
+@include('partials.row-menu')
 @include('partials.email-lookup', ['input' => 'add-student-email', 'kind' => 'student'])
 
 <script>
@@ -1011,45 +1140,207 @@ function patchEach(ids, body, done) {
   });
 }
 
-function askOne(label, options) {
-  const list = options.map(function (o, i) { return (i + 1) + ') ' + o; }).join('\n');
-  const answer = window.prompt(label + '\n\n' + list + '\n\nType the number:');
-  if (!answer) return null;
-  const i = Number(answer.trim()) - 1;
-  return options[i] || null;
+// == bulk editing ==
+// The sections this CaPSA handles, so a sheet can say whether the change it is
+// about to make leaves the students within reach. The endpoint refuses a move
+// out of them, and a red toast afterwards is a worse way to learn that.
+const MY_SECTIONS = @json($adminSections);
+
+let bulkIds = [];
+
+function pickedNames(rows) {
+  return rows.map(function (tr) {
+    const el = tr.querySelector('.std-name');
+    return el ? el.textContent.trim() : '';
+  }).filter(Boolean);
+}
+
+function fillNames(el, names) {
+  el.textContent = '';
+  names.forEach(function (name, i) {
+    if (i) el.appendChild(document.createTextNode(' · '));
+    const b = document.createElement('b');
+    b.textContent = name;
+    el.appendChild(b);
+  });
+}
+
+function pickedRows() {
+  return Array.from(document.querySelectorAll('.table tbody tr[data-id]'))
+    .filter(tr => bulkIds.indexOf(tr.dataset.id) !== -1);
+}
+
+// "4th" and "B" and BSIT together make BSIT-4B, the string every section
+// lookup matches on. Worked out here the same way the server works it out.
+function sectionLabel(program, year, letter) {
+  return program + '-' + Number(year) + String(letter).toUpperCase();
+}
+
+function ordinal(year) {
+  return Number(year) + (({ 1: 'st', 2: 'nd', 3: 'rd' })[Number(year)] || 'th');
+}
+
+// One line saying what the change comes to, and whether it stays yours.
+function saying(el, label, count) {
+  const mine = MY_SECTIONS.length === 0 || MY_SECTIONS.indexOf(label) !== -1;
+  el.textContent = '';
+  el.appendChild(document.createTextNode(count + (count === 1 ? ' student' : ' students') + ' → '));
+  const b = document.createElement('b');
+  b.textContent = label;
+  el.appendChild(b);
+  el.appendChild(document.createTextNode(mine
+    ? ', which is one of yours.'
+    : ', which you do not handle — the save will be refused.'));
+}
+
+// -- set program --
+function openBulkProgram(ids, rows) {
+  bulkIds = ids;
+  fillNames(document.getElementById('bulk-program-names'), pickedNames(rows));
+  document.getElementById('bulk-program-title').textContent =
+    'Set program for ' + ids.length + (ids.length === 1 ? ' student' : ' students');
+  document.getElementById('bulk-program-error').style.display = 'none';
+  previewBulkProgram();
+  document.getElementById('bulk-program-scrim').hidden = false;
+  document.body.style.overflow = 'hidden';
+}
+
+function closeBulkProgram(e) {
+  if (e && e.target !== document.getElementById('bulk-program-scrim')) return;
+  document.getElementById('bulk-program-scrim').hidden = true;
+  document.body.style.overflow = '';
+}
+
+// The program is half of the section label, so changing it moves people
+// between sections whether or not that was the intention.
+function previewBulkProgram() {
+  const program = document.getElementById('bulk-program-value').value;
+  const el = document.getElementById('bulk-program-result');
+  const rows = pickedRows();
+
+  const targets = rows
+    .map(tr => sectionLabel(program, tr.dataset.year || '4', tr.dataset.letter || 'A'))
+    .filter((v, i, a) => a.indexOf(v) === i);
+
+  if (targets.length === 1) {
+    saying(el, targets[0], rows.length);
+    return;
+  }
+
+  // A mixed selection lands in several sections at once; naming one of them
+  // would be naming the wrong one for everybody else.
+  el.textContent = 'They keep their own year and section, so they land in '
+    + targets.join(', ') + '.';
+}
+
+function saveBulkProgram() {
+  const program = document.getElementById('bulk-program-value').value;
+  closeBulkProgram();
+  patchEach(bulkIds, { course: program }, n => n + ' moved to ' + program);
+}
+
+// -- set year and section --
+function openBulkSection(ids, rows) {
+  bulkIds = ids;
+  fillNames(document.getElementById('bulk-section-names'), pickedNames(rows));
+  document.getElementById('bulk-section-title').textContent =
+    'Set year & section for ' + ids.length + (ids.length === 1 ? ' student' : ' students');
+  document.getElementById('bulk-section-error').style.display = 'none';
+  previewBulkSection();
+  document.getElementById('bulk-section-scrim').hidden = false;
+  document.body.style.overflow = 'hidden';
+}
+
+function closeBulkSection(e) {
+  if (e && e.target !== document.getElementById('bulk-section-scrim')) return;
+  document.getElementById('bulk-section-scrim').hidden = true;
+  document.body.style.overflow = '';
+}
+
+function previewBulkSection() {
+  const year = document.getElementById('bulk-section-year').value;
+  const letter = document.getElementById('bulk-section-letter').value;
+  const el = document.getElementById('bulk-section-result');
+  const rows = pickedRows();
+
+  // Everybody keeps their own program, so a mixed selection lands in more
+  // than one section.
+  const programs = rows.map(tr => tr.dataset.program)
+    .filter((v, i, a) => v && a.indexOf(v) === i);
+
+  if (programs.length === 1) {
+    saying(el, sectionLabel(programs[0], year, letter), rows.length);
+    return;
+  }
+
+  el.textContent = '';
+  el.appendChild(document.createTextNode('They will read '));
+  const b = document.createElement('b');
+  b.textContent = ordinal(year) + ' · ' + letter;
+  el.appendChild(b);
+  el.appendChild(document.createTextNode(
+    ', in ' + programs.join(' and ') + ' — each stays in their own program.'));
+}
+
+function saveBulkSection() {
+  const year = document.getElementById('bulk-section-year').value;
+  const letter = document.getElementById('bulk-section-letter').value;
+  closeBulkSection();
+  patchEach(bulkIds, { year: Number(year), section: letter },
+    n => n + ' moved to ' + ordinal(year) + ' · ' + letter);
+}
+
+// The row menu's own remove. Same sheet and same request as the bar's, so
+// one student and eight are told the same thing before it happens.
+function removeOneStudent(student) {
+  confirmSheet({
+    title: 'Remove ' + student.f_name + ' ' + student.l_name + ' from your section?',
+    names: [student.l_name + ', ' + student.f_name],
+    body: 'Their account, team and submissions are kept. Only the section is cleared, '
+        + 'so whoever handles the section they join next becomes their CaPSA.',
+    confirmLabel: 'Remove from section',
+    danger: true,
+  }).then(function (yes) {
+    if (!yes) return;
+
+    fetch(STUDENT_ROUTES.one(student.id), {
+      method: 'DELETE',
+      headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' },
+    }).then(function (r) {
+      showToast(r.ok ? 'Removed from your section' : 'Could not remove them',
+        r.ok ? 'success' : 'error');
+      if (r.ok) setTimeout(() => window.location.reload(), 900);
+    });
+  });
 }
 
 if (typeof onBulk === 'function') {
-  onBulk('bulkProgram', function (ids) {
-    const program = askOne('Set the program for ' + ids.length + ' students', PROGRAMS);
-    if (!program) return;
-    patchEach(ids, { course: program }, n => n + ' moved to ' + program);
-  });
+  onBulk('bulkProgram', openBulkProgram);
+  onBulk('bulkSection', openBulkSection);
 
-  onBulk('bulkSection', function (ids) {
-    const year = window.prompt('Year for ' + ids.length + ' students (1-5):');
-    if (!year) return;
-    const section = window.prompt('Section letter:');
-    if (!section) return;
-    patchEach(ids, { year: Number(year), section: section.trim() },
-      n => n + ' moved to ' + year + ' · ' + section.trim().toUpperCase());
-  });
+  onBulk('bulkRemove', function (ids, rows) {
+    confirmSheet({
+      title: 'Remove ' + ids.length + (ids.length === 1 ? ' student' : ' students') + ' from your section?',
+      names: pickedNames(rows),
+      body: 'Their accounts, teams and submissions are kept. Only the section is cleared, '
+          + 'so whoever handles the section they join next becomes their CaPSA.',
+      confirmLabel: 'Remove from section',
+      danger: true,
+    }).then(function (yes) {
+      if (!yes) return;
 
-  onBulk('bulkRemove', function (ids) {
-    if (!window.confirm('Take ' + ids.length + (ids.length === 1 ? ' student' : ' students')
-        + ' off your section?\n\nTheir accounts and history are kept — only the section is cleared.')) return;
-
-    Promise.all(ids.map(function (id) {
-      return fetch(STUDENT_ROUTES.one(id), {
-        method: 'DELETE',
-        headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' },
-      }).then(r => r.ok).catch(() => false);
-    })).then(function (results) {
-      const ok = results.filter(Boolean).length;
-      const failed = results.length - ok;
-      showToast(failed ? ok + ' removed, ' + failed + ' could not be' : ok + ' removed from your section',
-        failed ? 'error' : 'success');
-      setTimeout(() => window.location.reload(), 900);
+      Promise.all(ids.map(function (id) {
+        return fetch(STUDENT_ROUTES.one(id), {
+          method: 'DELETE',
+          headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' },
+        }).then(r => r.ok).catch(() => false);
+      })).then(function (results) {
+        const ok = results.filter(Boolean).length;
+        const failed = results.length - ok;
+        showToast(failed ? ok + ' removed, ' + failed + ' could not be' : ok + ' removed from your section',
+          failed ? 'error' : 'success');
+        setTimeout(() => window.location.reload(), 900);
+      });
     });
   });
 }
@@ -1058,6 +1349,8 @@ document.addEventListener('keydown', function (e) {
   if (e.key !== 'Escape') return;
   if (!document.getElementById('add-student-scrim').hidden) closeAddStudent();
   if (!document.getElementById('edit-student-scrim').hidden) closeEditStudent();
+  if (!document.getElementById('bulk-program-scrim').hidden) closeBulkProgram();
+  if (!document.getElementById('bulk-section-scrim').hidden) closeBulkSection();
 });
 </script>
 
