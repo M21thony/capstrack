@@ -647,61 +647,68 @@ select.input{cursor:pointer}
 .panel-count{margin:0 0 9px;font-size:12px;color:var(--text3)}
 .panel-count b{color:var(--amber);font-weight:700}
 /* ══ Your Experts ══
-   Across the page under the role picker, rather than down the side of it.
-   In the panel it said whether a slot was filled with the colour of a 10px
-   pill, so three rows read as three identical rows and a team could not tell
-   at a glance whether they had an adviser. Here the state is a shape before
-   it is a colour - a ticked chip against a dashed one - which survives a
-   glance, a bad screen and colour blindness. */
+   Across the page under the role picker rather than down the side of it, and
+   loud enough to be seen without being looked for. The first pass was a white
+   band with a 1px grey border on a near-white page, holding small pale chips:
+   from any distance it read as one more empty panel.
+
+   Three things carry it now. The band is inset - darker than the page rather
+   than lighter - so it separates from the cards above without pretending to
+   be one. A filled slot is a solid green pill, which is the only saturated
+   thing on this part of the page. And the chips and the count sit together as
+   one group instead of at opposite ends of the row, so it reads as a sentence
+   rather than a bar with something stranded on the end of it. */
 .yx{
-  display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:11px 0 0;
-  padding:9px 13px;background:var(--bg2);border:1px solid var(--border);border-radius:11px;
+  display:flex;align-items:center;gap:9px;flex-wrap:wrap;
+  margin:12px 0 0;padding:11px 14px;
+  background:var(--bg4);border-radius:12px;
 }
-.yx-lab{font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;
-  color:var(--text3);white-space:nowrap}
-.yx-sep{width:1px;height:18px;background:var(--border)}
+.yx-lab{
+  font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--text2);white-space:nowrap;
+}
+.yx-sep{width:1px;height:20px;background:var(--border2)}
 
 .yx-chip{
-  display:inline-flex;align-items:center;gap:7px;min-width:0;
-  padding:4px 10px 4px 5px;border-radius:999px;font-size:11.5px;white-space:nowrap;
-  border:1px solid var(--border);background:var(--bg3);
+  display:inline-flex;align-items:center;gap:8px;min-width:0;
+  padding:5px 12px 5px 6px;border-radius:999px;white-space:nowrap;
 }
-.yx-chip.is-open{border-style:dashed;background:transparent}
-.yx-chip.is-set{border-color:rgba(22,163,74,.3);background:var(--green-bg)}
+/* Solid, not tinted: a filled slot should be the thing your eye lands on. */
+.yx-chip.is-set{background:var(--green);box-shadow:0 1px 3px rgba(22,163,74,.28)}
+.yx-chip.is-open{border:1.5px dashed var(--border2);background:transparent;padding:4px 12px 4px 5px}
 
 .yx-mark{
-  width:17px;height:17px;border-radius:50%;flex-shrink:0;display:grid;place-items:center;
-  background:var(--bg4);color:var(--text3);font-size:10px;font-weight:700;
+  width:19px;height:19px;border-radius:50%;flex-shrink:0;display:grid;place-items:center;
+  font-size:11px;font-weight:700;
 }
-.yx-chip.is-set .yx-mark{background:var(--green);color:#fff}
+.yx-chip.is-set .yx-mark{background:rgba(255,255,255,.22);color:#fff}
+.yx-chip.is-open .yx-mark{background:var(--bg2);color:var(--text3);border:1px solid var(--border2)}
 
 /* On a filled chip the name is the answer and the role is the label, so they
-   are not the same size. They were both 11.5px and 600, which left "Adviser"
-   and "Neil Inocencio" reading as equal halves of one phrase. */
-.yx-role{font-weight:600;color:var(--text3)}
+   are not the same size. They were both 11.5px at weight 600, which left
+   "Adviser" and "Neil Inocencio" reading as equal halves of one phrase. */
+.yx-role{font-size:12px;font-weight:600;color:var(--text2)}
 .yx-chip.is-set .yx-role{
-  font-size:9.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
-  color:var(--green);
+  font-size:9.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;
+  color:rgba(255,255,255,.72);
 }
 .yx-name{
-  font-size:13px;font-weight:700;letter-spacing:-.01em;color:var(--text);
+  font-size:13.5px;font-weight:700;letter-spacing:-.01em;color:#fff;
   min-width:0;overflow:hidden;text-overflow:ellipsis;
 }
 
 .yx-x{
-  width:19px;height:19px;flex-shrink:0;margin-left:1px;border:0;background:transparent;
-  border-radius:5px;color:var(--text3);cursor:pointer;display:grid;place-items:center;
+  width:20px;height:20px;flex-shrink:0;margin-left:1px;border:0;border-radius:6px;
+  background:rgba(255,255,255,.16);color:#fff;cursor:pointer;display:grid;place-items:center;
 }
-.yx-x:hover{background:var(--red-bg);color:var(--red)}
+.yx-x:hover{background:rgba(255,255,255,.32)}
 
-.yx-count{margin-left:auto;font-size:11.5px;color:var(--text3);white-space:nowrap}
+/* Label over count, one block at the left. Pushed to the far edge with
+   margin-left:auto the count was the first thing to wrap, and a strip two
+   rows tall with a number stranded on the second is worse than no count. */
+.yx-head{display:flex;flex-direction:column;gap:2px;white-space:nowrap;margin-right:2px}
+.yx-count{font-size:11.5px;color:var(--text2);line-height:1.2}
 .yx-count b{color:var(--text);font-weight:700;font-variant-numeric:tabular-nums}
-
-@media (max-width:640px){
-  /* The count has nothing to sit opposite once the chips wrap, so it stops
-     pretending to and takes its own line. */
-  .yx-count{margin-left:0;width:100%}
-}
 
 /* Said once, above the applications that are finished. */
 .req-divider{

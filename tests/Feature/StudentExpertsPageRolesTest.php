@@ -182,6 +182,45 @@ class StudentExpertsPageRolesTest extends TestCase
     }
 
     /** One row of the Team Checklist - the slot for a given role. */
+    /**
+     * An approved expert's name belongs in Your Experts and nowhere else on
+     * this screen.
+     *
+     * The role card above it used to end with "Filled - Neil Inocencio", which
+     * is the same fact twice on one page - a CaPSA reading over a team's
+     * shoulder pointed at it. The card is the filter for browsing that role,
+     * so it says whether there is anything left to browse for and stops there.
+     */
+    public function test_the_name_is_said_once(): void
+    {
+        [$student, $team] = $this->makeLeaderWithTeam();
+        $expert = $this->makeExpertWithRoles(['adviser']);
+
+        TeamExpertAssignment::create([
+            'team_id' => $team->team_id,
+            'expert_id' => $expert->expert_id,
+            'expert_role_id' => $this->expertRoleId($expert, 'adviser'),
+            'status' => 'approved',
+        ]);
+
+        $html = $this->actingAs($student, 'web')->get('/student/experts')->getContent();
+
+        // Named in Your Experts...
+        $this->assertStringContainsString(e($expert->name), $this->checklistRow($html, 'adviser'));
+
+        // ...and not again in the role picker directly above it. Sliced rather
+        // than counted, because the name also rides along in a title and in
+        // the remove button's arguments, neither of which anybody reads.
+        $rolesStart = strpos($html, '<div class="roles">');
+        $rolesEnd = strpos($html, '</div>', strpos($html, 'role-grammarian', $rolesStart));
+        $rolesGrid = substr($html, $rolesStart, $rolesEnd - $rolesStart);
+
+        $this->assertStringNotContainsString(e($expert->name), $rolesGrid);
+        $this->assertStringNotContainsString('Filled &mdash;', $rolesGrid);
+        // It still says the slot is taken, which is what the filter is for.
+        $this->assertStringContainsString('Filled', $rolesGrid);
+    }
+
     private function checklistRow(string $html, string $role): string
     {
         $start = strpos($html, 'data-slot-role="'.$role.'"');
