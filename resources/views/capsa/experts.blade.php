@@ -1335,5 +1335,7 @@ function closeSidebar() {
 }
 </script>
 
+@include('partials.email-lookup', ['input' => 'addExpertEmail', 'kind' => 'expert', 'nameInput' => 'addExpertName'])
+
 </body>
 </html>

@@ -1636,3 +1636,20 @@ textarea.input{resize:vertical;min-height:80px}
 
 .import-head .import-h-pick{margin-right:-3px}
 .import-row.is-picked{background:var(--accent-light)}
+
+/* ══ email lookup ══
+   Suggests people already in CapsTrack as an address is typed, so the wrong
+   person is not added by a typo nobody notices. */
+.lookup-wrap{position:relative}
+.lookup-list{position:absolute;top:100%;left:0;right:0;z-index:200;margin-top:4px;
+  background:var(--bg2);border:1px solid var(--border);border-radius:8px;
+  box-shadow:0 12px 30px rgba(24,25,31,.16);max-height:250px;overflow-y:auto}
+.lookup-list[hidden]{display:none}
+.lookup-row{display:block;width:100%;text-align:left;padding:8px 12px;border:0;background:none;
+  cursor:pointer;border-top:1px solid var(--bg4);font-family:inherit}
+.lookup-row:first-child{border-top:0}
+.lookup-row:hover,.lookup-row.on{background:var(--accent-light)}
+.lookup-name{display:block;font-size:12.5px;font-weight:500;color:var(--text)}
+.lookup-mail{display:block;font-size:11.5px;color:var(--text2);margin-top:1px}
+.lookup-detail{display:block;font-size:11px;color:var(--text3);margin-top:2px}
+.lookup-empty{padding:10px 12px;font-size:11.5px;color:var(--text3);line-height:1.5}

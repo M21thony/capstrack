@@ -1578,5 +1578,7 @@ function closeSidebar() {
 </script>
 
 
+@include('partials.email-lookup', ['input' => 'capsaEmail', 'kind' => 'expert', 'nameInput' => 'capsaName'])
+
 </body>
 </html>
