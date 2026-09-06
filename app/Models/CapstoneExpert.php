@@ -294,6 +294,47 @@ class CapstoneExpert extends Authenticatable
     }
 
     /**
+     * Turn a program => teams map into what the columns actually hold.
+     *
+     * Two places ask an expert which programs they take teams from and how
+     * many of each - the request form on the way in, and their own profile
+     * afterwards - and both have to write the same two columns the same way
+     * or the Accepts column reads one of them wrong. The format is not
+     * obvious enough to be retyped: program_slots is free text shaped
+     * "2 - BSIT, 1 - BSIS", which is what the roster upload's own cells used
+     * and what parsedCapacity() reads back.
+     *
+     * @param  array<string,int|string>  $slots
+     * @return array{accepted: array<string,int>, raw: string, total: int}
+     */
+    public static function packProgramSlots(array $slots): array
+    {
+        // Walked in PROGRAMS order rather than the caller's, so the saved
+        // text is the same however the form happened to send it.
+        $accepted = [];
+        foreach (self::PROGRAMS as $program) {
+            $count = (int) ($slots[$program] ?? 0);
+            if ($count > 0) {
+                $accepted[$program] = $count;
+            }
+        }
+
+        $raw = implode(', ', array_map(
+            fn ($program, $count) => $count.' - '.$program,
+            array_keys($accepted),
+            $accepted
+        ));
+
+        return [
+            'accepted' => $accepted,
+            'raw' => $raw,
+            // max_teams stays the overall total, so the existing full and
+            // slots-left checks keep working untouched.
+            'total' => array_sum($accepted),
+        ];
+    }
+
+    /**
      * Limit to experts who take teams from $program (BSIT, BSIS, ...).
      *
      * Accepted programs live in program_slots as "1 - BSIT, 5 - BSIS" (see

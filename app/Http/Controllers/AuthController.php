@@ -507,17 +507,23 @@ class AuthController extends Controller
      */
     private function refuseUnlistedExpert(Request $request)
     {
-        // "A CaPSA", not "your CaPSA": a student belongs to a section somebody
-        // covers, and faculty belong to nobody - any CaPSA can add them. And
-        // "expert list", because that is what the upload is called on screen.
-        $message = 'There is no account for this address yet. Ask a CaPSA to add you '
-            .'to the expert list, then sign in again.';
+        // Two ways in, and the one they can act on themselves comes first.
+        // Being told to go and ask somebody is a dead end at nine at night.
+        $message = 'There is no account for this address yet. Request one below, or ask '
+            .'a CaPSA to add you to the expert list.';
 
         if ($request->expectsJson()) {
-            return response()->json(['success' => false, 'message' => $message], 403);
+            return response()->json([
+                'success' => false,
+                'message' => $message,
+                'request_url' => route('account.request'),
+            ], 403);
         }
 
-        return redirect('/login')->withErrors(['message' => $message]);
+        // The address is carried over so they are not made to type it twice,
+        // and so the form can tell them where a previous request got to.
+        return redirect()->route('account.request', ['email' => $request->input('email')])
+            ->withErrors(['message' => $message]);
     }
 
     /**
