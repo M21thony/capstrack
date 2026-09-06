@@ -334,10 +334,14 @@ Route::middleware(['auth', 'no.cache', 'track.expert'])->group(function () {
     Route::put('/recruitment/{recruitment}', [RecruitmentController::class, 'update'])->name('recruitment.update');
     Route::delete('/recruitment/{recruitment}', [RecruitmentController::class, 'destroy'])->name('recruitment.destroy');
 
+    // The collection first, so the literal path is matched before any
+    // {invitation} route below could swallow it.
+    Route::get('/invitations', [InvitationController::class, 'index'])->name('invitations.index');
     Route::post('/invitations', [InvitationController::class, 'store'])->name('invitations.store');
     Route::patch('/invitations/{invitation}', [InvitationController::class, 'update'])->name('invitations.update');
+    // Putting off an answer is a thing you set on the invitation, so it is a
+    // PUT on a sub-resource rather than a verb in the path.
     Route::put('/invitations/{invitation}/reminder', [InvitationController::class, 'remindLater'])->name('invitations.remind-later');
-    Route::get('/invitations/popup', [InvitationController::class, 'popup'])->name('invitations.popup');
 
     // NOTE: DuplicationController's index/check are now dead code - the
     // standalone casual checker was retired in favor of student.duplication

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Notification;
 use App\Models\Student;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
@@ -38,6 +39,19 @@ class TeamInvitePopupTest extends TestCase
         StudentSchoolYear::create(['student_id' => $leader->student_id, 'team_id' => $team->team_id]);
 
         return [$leader, $team];
+    }
+
+    /** A leadership transfer waiting on this student, so its dialogs render. */
+    private function pendingTransfer(Student $leader, Team $team): void
+    {
+        Notification::create([
+            'student_id' => $leader->student_id,
+            'type' => 'leadership_transfer_request',
+            'title' => 'Leadership transfer',
+            'message' => 'You have been offered leadership of '.$team->team_name.'.',
+            'is_read' => false,
+            'data' => ['team_id' => $team->team_id, 'team_name' => $team->team_name],
+        ]);
     }
 
     /**
@@ -96,13 +110,77 @@ class TeamInvitePopupTest extends TestCase
         $this->assertStringContainsString("'Accept Request'", $html);
         $this->assertStringContainsString("confirmTitle.textContent = 'Decline';", $html);
 
-        // Both answer with Yes, against a No. Scoped to this popup's own
-        // variables: the leadership-transfer dialogs elsewhere on the page
-        // still read "Approve & Review", which is a separate question.
+        // Both answer with Yes, against a No.
         $this->assertStringContainsString("confirmOk.textContent = 'Yes';", $html);
-        $this->assertStringNotContainsString("confirmOk.textContent = 'Approve & Review';", $html);
-        $this->assertStringNotContainsString("confirmOk.textContent = 'Decline & Review';", $html);
         $this->assertStringContainsString('jrpConfirmClose()">No</button>', $html);
+    }
+
+    /**
+     * The same question in the same words wherever it is asked. Accepting
+     * leadership is not the same act as accepting an invitation, so it keeps
+     * its own title - but it stopped saying "Approve and review?" too.
+     */
+    public function test_the_leadership_transfer_dialogs_match(): void
+    {
+        [$leader, $team] = $this->leaderWithTeam();
+        $this->pendingTransfer($leader, $team);
+
+        $html = $this->actingAs($leader, 'web')->get(route('student.team'))->getContent();
+
+        $this->assertStringContainsString("title:'Accept Transfer'", $html);
+        $this->assertStringNotContainsString('Approve and review?', $html);
+        $this->assertStringNotContainsString('Approve &amp; Review', $html);
+        $this->assertStringNotContainsString('Decline and review?', $html);
+        $this->assertStringNotContainsString('Decline &amp; Review', $html);
+
+        // Cancel is a parameter rather than a rename: the same dialog asks a
+        // dozen other things where Cancel is the right word.
+        $this->assertStringContainsString("cancelText = 'Cancel'", $html);
+        $this->assertStringContainsString("cancelText:'No'", $html);
+    }
+
+    /**
+     * Later on a leadership transfer had the identical bug the invitation
+     * popup did: a POST to a route that only answers PUT.
+     */
+    public function test_leadership_later_is_sent_as_a_put(): void
+    {
+        [$leader, $team] = $this->leaderWithTeam();
+        $this->pendingTransfer($leader, $team);
+
+        $html = $this->actingAs($leader, 'web')->get(route('student.team'))->getContent();
+
+        $this->assertStringContainsString('leadershipPopRemindLater', $html);
+        // The verb sent to the reminder route, read off the call itself.
+        $this->assertSame(1, preg_match('/leadership.{0,200}?reminder.{0,200}?method: .(\w+)./s', $html, $m));
+        $this->assertSame('PUT', $m[1]);
+    }
+
+    /**
+     * "popup" named the thing on screen, not the thing being fetched. It is
+     * the collection now, filtered to what is waiting for you.
+     */
+    public function test_what_is_waiting_is_read_from_the_collection(): void
+    {
+        [$leader, $team] = $this->leaderWithTeam();
+
+        $sender = Student::create([
+            'email' => 'p.escano@my.cspc.edu.ph',
+            'f_name' => 'Paolo', 'l_name' => 'Escano',
+        ]);
+
+        TeamInvitation::create([
+            'sender_id' => $sender->student_id,
+            'receiver_id' => $leader->student_id,
+            'team_id' => $team->team_id,
+            'type' => 'invite',
+            'status' => 'pending',
+        ]);
+
+        $this->actingAs($leader, 'web')
+            ->getJson(route('invitations.index'))
+            ->assertOk()
+            ->assertJsonPath('items.0.name', 'Paolo Escano');
     }
 
     /**

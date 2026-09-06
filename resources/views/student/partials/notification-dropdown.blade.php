@@ -82,11 +82,11 @@
     <div class="nld-confirm-icon" id="nld-confirm-icon" style="background:rgba(22,163,74,0.1);color:#16a34a;">
       <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
     </div>
-    <div class="nld-confirm-title" id="nld-confirm-title">Approve and review?</div>
+    <div class="nld-confirm-title" id="nld-confirm-title">Accept Transfer</div>
     <div class="nld-confirm-msg" id="nld-confirm-msg"></div>
     <div class="nld-confirm-actions">
-      <button type="button" class="nld-confirm-btn nld-confirm-cancel" onclick="nldConfirmClose()">Cancel</button>
-      <button type="button" class="nld-confirm-btn" id="nld-confirm-ok" style="background:#16a34a;">Approve &amp; Review</button>
+      <button type="button" class="nld-confirm-btn nld-confirm-cancel" onclick="nldConfirmClose()">No</button>
+      <button type="button" class="nld-confirm-btn" id="nld-confirm-ok" style="background:#16a34a;">Yes</button>
     </div>
   </div>
 </div>
@@ -171,17 +171,17 @@ document.addEventListener('click', function(e) {
     nldConfirmIcon.style.background = 'rgba(22,163,74,0.1)';
     nldConfirmIcon.style.color = '#16a34a';
     nldConfirmIcon.innerHTML = '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
-    nldConfirmTitle.textContent = 'Approve and review?';
+    nldConfirmTitle.textContent = 'Accept Transfer';
     nldConfirmMsg.innerHTML = 'You are about to accept leadership of <strong>' + team + '</strong>. You will become the new team leader, and the current leader will be notified.';
-    nldConfirmOk.textContent = 'Approve & Review';
+    nldConfirmOk.textContent = 'Yes';
     nldConfirmOk.style.background = '#16a34a';
   } else {
     nldConfirmIcon.style.background = 'rgba(239,68,68,0.1)';
     nldConfirmIcon.style.color = '#ef4444';
     nldConfirmIcon.innerHTML = '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
-    nldConfirmTitle.textContent = 'Decline and review?';
+    nldConfirmTitle.textContent = 'Decline';
     nldConfirmMsg.innerHTML = 'You are about to decline leadership of <strong>' + team + '</strong>. You will stay a member, and the current leader will be notified.';
-    nldConfirmOk.textContent = 'Decline & Review';
+    nldConfirmOk.textContent = 'Yes';
     nldConfirmOk.style.background = '#ef4444';
   }
 

@@ -1348,8 +1348,8 @@
       </form>
 
       <div style="display: flex; gap: 10px;">
-        <button type="button" onclick="showConfirm({title:'Approve and review?',message:'You are about to accept leadership of <strong>{{ addslashes($ltData['team_name'] ?? 'the team') }}</strong>. You will become the new team leader, and the current leader will be notified.',icon:'team',confirmText:'Approve & Review',confirmClass:'success',onConfirm:function(){document.getElementById('leadership-pop-accept-form').submit();}})" style="flex:1;padding:11px 12px;border-radius:9px;border:1px solid var(--green);background:var(--green);color:#fff;font-size:12.5px;font-weight:700;cursor:pointer;transition:all 0.15s;">Approve</button>
-        <button type="button" onclick="showConfirm({title:'Decline and review?',message:'You are about to decline leadership of <strong>{{ addslashes($ltData['team_name'] ?? 'the team') }}</strong>. You will stay a member, and the current leader will be notified.',icon:'request',confirmText:'Decline & Review',confirmClass:'danger',onConfirm:function(){document.getElementById('leadership-pop-decline-form').submit();}})" style="flex:1;padding:11px 12px;border-radius:9px;border:1px solid var(--red);background:var(--red-bg);color:var(--red);font-size:12.5px;font-weight:700;cursor:pointer;transition:all 0.15s;">Decline</button>
+        <button type="button" onclick="showConfirm({title:'Accept Transfer',message:'You are about to accept leadership of <strong>{{ addslashes($ltData['team_name'] ?? 'the team') }}</strong>. You will become the new team leader, and the current leader will be notified.',icon:'team',confirmText:'Yes',cancelText:'No',confirmClass:'success',onConfirm:function(){document.getElementById('leadership-pop-accept-form').submit();}})" style="flex:1;padding:11px 12px;border-radius:9px;border:1px solid var(--green);background:var(--green);color:#fff;font-size:12.5px;font-weight:700;cursor:pointer;transition:all 0.15s;">Approve</button>
+        <button type="button" onclick="showConfirm({title:'Decline',message:'You are about to decline leadership of <strong>{{ addslashes($ltData['team_name'] ?? 'the team') }}</strong>. You will stay a member, and the current leader will be notified.',icon:'request',confirmText:'Yes',cancelText:'No',confirmClass:'danger',onConfirm:function(){document.getElementById('leadership-pop-decline-form').submit();}})" style="flex:1;padding:11px 12px;border-radius:9px;border:1px solid var(--red);background:var(--red-bg);color:var(--red);font-size:12.5px;font-weight:700;cursor:pointer;transition:all 0.15s;">Decline</button>
         <button type="button" onclick="leadershipPopRemindLater()" style="flex:1;padding:11px 12px;border-radius:9px;border:1px solid var(--border);background:var(--bg3);color:var(--text2);font-size:12.5px;font-weight:700;cursor:pointer;transition:all 0.15s;">Remind Me Later</button>
       </div>
     </div>
@@ -1659,8 +1659,11 @@ function leadershipPopDismiss() {
 function leadershipPopRemindLater() {
     var csrf = document.querySelector('meta[name="csrf-token"]');
     @if($pendingLeadershipTransfer)
+    // PUT, because that is what the route answers. This was a POST and
+     // pressing Later on a leadership transfer crashed the page the same way
+     // the invitation popup's did.
     fetch('{{ route('team.leadership.remind-later', $pendingLeadershipTransfer->id) }}', {
-        method: 'POST',
+        method: 'PUT',
         headers: {
             'X-CSRF-TOKEN': csrf ? csrf.getAttribute('content') : '{{ csrf_token() }}',
             'Accept': 'application/json'
@@ -2244,7 +2247,7 @@ const ccmStyles = {
 };
 let ccmCallback = null;
 
-function showConfirm({ title, message, icon = 'request', confirmText = 'Confirm', confirmClass = 'primary', onConfirm }) {
+function showConfirm({ title, message, icon = 'request', confirmText = 'Confirm', cancelText = 'Cancel', confirmClass = 'primary', onConfirm }) {
     ccmCallback = onConfirm;
     const modal = document.getElementById('customConfirmModal');
     const card  = document.getElementById('ccm-card');
@@ -2256,6 +2259,8 @@ function showConfirm({ title, message, icon = 'request', confirmText = 'Confirm'
     document.getElementById('ccm-icon-wrap').innerHTML = iconData.svg;
     document.getElementById('ccm-title').textContent = title;
     document.getElementById('ccm-message').innerHTML = message;
+
+    document.getElementById('ccm-cancel').textContent = cancelText;
 
     const btn = document.getElementById('ccm-confirm');
     btn.textContent = confirmText;
