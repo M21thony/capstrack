@@ -168,18 +168,7 @@
     gap:5px;
   }
 
-  /* Direct icon buttons - one per action, no dropdown. Each is tooltipped
-     via its title attribute since there's no room for a label. */
-  .icon-btn{
-    width:32px;height:32px;border-radius:8px;border:1.5px solid var(--border);background:#fff;
-    color:var(--text2);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;
-  }
-  .icon-btn svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2.3}
-  .icon-btn:hover{border-color:var(--border2);background:var(--bg3)}
-  .icon-btn.capsa{border-color:var(--blue-bg);background:var(--blue-bg);color:var(--blue)}
-  .icon-btn.capsa:hover{border-color:var(--blue);background:var(--blue);color:#fff}
-  .icon-btn.danger{border-color:var(--red-bg);background:var(--red-bg);color:var(--red)}
-  .icon-btn.danger:hover{border-color:var(--red);background:var(--red);color:#fff}
+  {{-- .icon-btn lives in admin.css: both CaPSA pages use it too. --}}
 
   /* Capacity column - merges what used to be separate Teams / Slots Left
      columns. One row per program when an expert's slots are actually split
@@ -224,12 +213,6 @@
   .expert-detail-chip{
     font-size:11px;font-weight:600;padding:4px 10px;border-radius:999px;background:#f1f5f9;color:#475569;
   }
-
-  .icon-btn:disabled {
-    opacity: 0.55;
-    cursor: not-allowed;
-  }
-
 
   /* ── Modal overlay ── */
   .ct-modal-overlay {
