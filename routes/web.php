@@ -22,6 +22,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Capsa\ExpertRosterController;
 use App\Http\Controllers\Capsa\StudentRosterController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DirectoryController;
 use App\Http\Controllers\DuplicationController;
 use App\Http\Controllers\PreProposalController;
 use App\Http\Controllers\ExpertController;
@@ -136,6 +137,12 @@ Route::middleware('expert.admin')->group(function () {
 // actually lives rather than showing a 404 for an address that worked
 // yesterday. Safe to delete once nobody is on an old link - the paths kept
 // under /admin are listed above, and none of them is matched here.
+// Who is already in the system, for the add-one-at-a-time boxes. Staff only:
+// a plain adviser has no reason to be able to page through the college.
+Route::middleware(['expert.auth', 'expert.staff'])
+    ->get('/directory/people', [DirectoryController::class, 'people'])
+    ->name('directory.people');
+
 Route::redirect('/admin', '/capsa/dashboard');
 Route::get('/admin/{path}', function (string $path) {
     // Only what actually moved. /admin/students, /admin/settings and
