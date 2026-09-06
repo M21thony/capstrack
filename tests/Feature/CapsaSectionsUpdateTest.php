@@ -116,7 +116,10 @@ class CapsaSectionsUpdateTest extends TestCase
 
         $html = $this->get(route('admin.experts'))->assertOk()->getContent();
 
-        $this->assertStringContainsString('Manage Sections', $html);
+        // The label moved into a title attribute when the row's four buttons
+        // became icons - the words were most of the width of the table. What
+        // this guards is that the control is offered at all.
+        $this->assertStringContainsString('title="Manage sections"', $html);
         $this->assertStringContainsString('editCapsaSections('.$capsa->expert_id, $html);
     }
 }
