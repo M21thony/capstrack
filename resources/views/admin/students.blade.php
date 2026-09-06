@@ -31,8 +31,6 @@
   .std-ico-danger:hover{background:var(--red);border-color:var(--red);color:#fff}
   .std-actions{justify-content:flex-end}
 
-  .std-toolbar{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center;justify-content:space-between}
-  .std-search{max-width:360px;flex:1;min-width:220px}
   .std-av{width:26px;height:26px;border-radius:7px;flex-shrink:0;object-fit:cover}
   .std-actions{display:flex;gap:5px}
   .std-name{font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -98,7 +96,7 @@
     </div>
   </div>
 
-  <div class="content">
+  <div class="content list-page">
     {{-- Students belong to their CaPSA: they are enrolled from the section
          list and the roster import, both of which live on that side. An admin
          who could add or edit one here would be doing a job from a page with
@@ -112,13 +110,36 @@
       </div>
     </div>
 
-    <div class="std-toolbar">
-      <form method="GET" class="std-search">
-        <input class="input" type="text" name="search" value="{{ $search }}" placeholder="Search by name, email, or student number...">
+    {{-- One form, so narrowing by program and then by section keeps whatever
+         was typed in the box instead of throwing it away. --}}
+    <div class="page-filters">
+      <form method="GET" id="studentFilters">
+        <div class="experts-search">
+          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input class="input" type="text" name="search" value="{{ $search }}" placeholder="Search by name, email, or student number...">
+        </div>
+        <select class="input page-filter" name="program" onchange="this.form.submit()">
+          <option value="">All programs</option>
+          @foreach (\App\Models\Student::PROGRAM_COURSES as $code => $fullName)
+            <option value="{{ $code }}" @selected($program === $code)>{{ $code }}</option>
+          @endforeach
+        </select>
+        <select class="input page-filter" name="year" onchange="this.form.submit()">
+          <option value="">All years</option>
+          @foreach ($years as $y)
+            <option value="{{ $y }}" @selected($year === $y)>{{ $y }} year</option>
+          @endforeach
+        </select>
+        <select class="input page-filter" name="section" onchange="this.form.submit()">
+          <option value="">All sections</option>
+          @foreach ($sections as $letter)
+            <option value="{{ $letter }}" @selected($section === $letter)>Section {{ $letter }}</option>
+          @endforeach
+        </select>
       </form>
     </div>
 
-    <div class="card" style="padding:0;overflow:hidden">
+    <div class="card list-card">
       <table class="table">
         <thead>
           <tr>
@@ -182,7 +203,27 @@
       </table>
     </div>
 
-    <div style="margin-top:16px">{{ $students->links() }}</div>
+    @if ($students->hasPages())
+      {{-- Laravel's own pager is written for Tailwind, which this page does
+           not load, so its arrows render at full page height and push the
+           table off the screen. Same three controls, this page's buttons. --}}
+      <div class="list-foot">
+        <span>Showing {{ $students->firstItem() }}–{{ $students->lastItem() }} of {{ $students->total() }}</span>
+        <span class="list-foot-nav">
+          @if ($students->onFirstPage())
+            <span class="list-foot-off">Previous</span>
+          @else
+            <a class="btn btn-sm btn-ghost" href="{{ $students->previousPageUrl() }}">Previous</a>
+          @endif
+          <span>Page {{ $students->currentPage() }} of {{ $students->lastPage() }}</span>
+          @if ($students->hasMorePages())
+            <a class="btn btn-sm btn-ghost" href="{{ $students->nextPageUrl() }}">Next</a>
+          @else
+            <span class="list-foot-off">Next</span>
+          @endif
+        </span>
+      </div>
+    @endif
   </div>
 </div>
 

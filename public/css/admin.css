@@ -1740,10 +1740,10 @@ tr.rs-on > td{background:var(--accent-light)}
    The name and the address were written as two spans with no rules behind
    them, so they ran together on one line - which is exactly as unreadable as
    it sounds. */
-.std-who{display:flex;flex-direction:column;line-height:1.35;min-width:0}
-.std-name{font-size:12.5px;font-weight:500;color:var(--text);
+.std-stack{display:flex;flex-direction:column;line-height:1.35;min-width:0}
+.std-stack .std-name{font-size:12.5px;font-weight:500;color:var(--text);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.std-mail{font-size:11px;color:var(--text3);
+.std-stack .std-mail{font-size:11px;color:var(--text3);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .std-mono{font-family:ui-monospace,"Cascadia Mono",Consolas,monospace;font-size:11.5px;
   color:var(--text2);font-variant-numeric:tabular-nums;white-space:nowrap}
@@ -1753,3 +1753,65 @@ tr.rs-on > td{background:var(--accent-light)}
 /* Added by email and not yet signed in - a real state, and without a word for
    it the row reads as broken rather than waiting. */
 .std-tag-wait{background:var(--amber-bg);color:var(--amber)}
+
+/* ══ secondary buttons on a light page ══
+   .btn sets no background and no border at all, so a plain one falls through
+   to the browser default - a grey slab with no edge, which on a near-white
+   page is barely there. .btn-ghost is no help either: it is built for the
+   navy sidebar and paints near-white text. These bars sit on white, so they
+   get a button that is actually drawn. */
+.page-head-actions .btn:not(.btn-primary),
+.selbar .btn:not(.btn-primary){
+  background:var(--bg2);
+  border:1px solid var(--border2);
+  color:var(--text);
+}
+.page-head-actions .btn:not(.btn-primary):hover,
+.selbar .btn:not(.btn-primary):hover{
+  border-color:var(--accent);
+  background:var(--accent-light);
+  color:var(--accent3);
+}
+/* Off, but still readable - the browser default at 55% opacity was a grey
+   smudge that did not look like a control at all. */
+.page-head-actions .btn:disabled,
+.selbar .btn:disabled{
+  opacity:1;
+  background:var(--bg3);
+  border-color:var(--border);
+  color:var(--text3);
+  cursor:not-allowed;
+}
+.page-head-actions .btn:disabled:hover{background:var(--bg3);border-color:var(--border);color:var(--text3)}
+
+/* Danger keeps its own edge rather than inheriting the neutral one. */
+.selbar .selbar-danger{border-color:#e6c9c7;color:var(--red)}
+.selbar .selbar-danger:hover{background:var(--red-bg);border-color:var(--red);color:var(--red)}
+
+/* A form wrapping one select was making a layout box of its own, so the
+   select sat off the line the other filters share. */
+.page-filters form{margin:0;display:contents}
+
+/* ══ a long list scrolls inside itself ══
+   The page holds still - the count, the filters and the selection bar stay
+   where they are - and only the rows move. Scrolling the whole page instead
+   walks those controls off the top, which is worst with the most rows, which
+   is exactly when you need them. */
+.content.list-page{display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.content.list-page > .list-card{flex:1;min-height:0;padding:0;overflow:auto}
+
+.list-card .table thead th{
+  position:sticky;top:0;z-index:2;
+  /* Opaque on purpose: a sticky header over a transparent background has the
+     rows sliding through it, which reads as a rendering fault. */
+  background:var(--bg3);
+  /* border-bottom does not travel with a sticky cell in every browser, so the
+     line under the header is drawn as an inset shadow, which does. */
+  box-shadow:inset 0 -2px 0 var(--border);border-bottom:0;
+}
+
+/* Page controls under a scrolling list: where you are, and the way on. */
+.list-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;
+  flex-wrap:wrap;padding-top:12px;font-size:12px;color:var(--text3)}
+.list-foot-nav{display:flex;align-items:center;gap:10px}
+.list-foot-off{opacity:.4;font-weight:600}

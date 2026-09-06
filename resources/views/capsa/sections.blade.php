@@ -156,7 +156,7 @@
   </div>
 
   <div id="real-content" style="display:none;flex:1;overflow:hidden;flex-direction:column;">
-  <div class="content">
+  <div class="content list-page">
     {{-- What the page holds on the left, the ways in on the right. The count
          used to be a card title with the sections underneath in grey, which
          said the same thing in two lines and left the buttons sharing a row
@@ -192,6 +192,21 @@
           @endforeach
         </select>
       </form>
+      {{-- The section filter reloads because the server decides which students
+           are yours. These two only hide rows already on the page, so they do
+           not - a CaPSA flipping between programs would otherwise wait for a
+           round trip each time. --}}
+      <select class="input page-filter" id="program-filter" onchange="filterStudents()">
+        <option value="">All programs</option>
+        @foreach ($students->pluck('programAbbr')->filter()->unique()->sort() as $abbr)
+          <option value="{{ $abbr }}">{{ $abbr }}</option>
+        @endforeach
+      </select>
+      <select class="input page-filter" id="team-filter" onchange="filterStudents()">
+        <option value="">With or without a team</option>
+        <option value="0">Without a team</option>
+        <option value="1">In a team</option>
+      </select>
     </div>
 
     @if ($viewerIsCapsa)
@@ -206,9 +221,9 @@
       ])
     @endif
 
-    <div class="card" style="padding:0;overflow:hidden">
+    <div class="card list-card">
 
-      <div style="overflow-x:auto">
+      <div>
         @if (! empty($debug))
           <div style="padding:12px;background:#fff6; border:1px dashed var(--muted);margin-bottom:12px;border-radius:8px;font-size:13px">
             <strong>Debug:</strong>
@@ -248,12 +263,14 @@
             @forelse ($students as $index => $student)
               @php $sy = $student->currentSy; @endphp
               <tr data-id="{{ $student->student_id }}"
+                  data-program="{{ $student->programAbbr }}"
+                  data-team="{{ $sy && $sy->team ? '1' : '0' }}"
                   data-search="{{ Str::lower($student->f_name.' '.$student->l_name.' '.$student->email.' '.$student->student_number) }}">
                 <td>
                   {{-- The address under the name rather than nowhere: two
                        students share a surname often enough that it is what
                        tells them apart. --}}
-                  <span class="std-who">
+                  <span class="std-stack">
                     <span class="std-name">{{ $student->l_name }}, {{ $student->f_name }} {{ $student->m_name ? $student->m_name[0] . '.' : '' }}</span>
                     <span class="std-mail">{{ $student->email }}</span>
                   </span>
@@ -845,8 +862,14 @@ function headers() {
 // ── search ──
 function filterStudents() {
   const q = document.getElementById('student-search').value.trim().toLowerCase();
+  const program = document.getElementById('program-filter').value;
+  const team = document.getElementById('team-filter').value;
+
   document.querySelectorAll('.table tbody tr[data-id]').forEach(function (tr) {
-    tr.style.display = !q || (tr.dataset.search || '').includes(q) ? '' : 'none';
+    const hit = (!q || (tr.dataset.search || '').includes(q))
+      && (!program || tr.dataset.program === program)
+      && (!team || tr.dataset.team === team);
+    tr.style.display = hit ? '' : 'none';
   });
 }
 

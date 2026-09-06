@@ -407,7 +407,7 @@
   </div>
 
   <div id="real-content" style="display:none;flex:1;overflow:hidden;flex-direction:column;">
-  <div class="content">
+  <div class="content list-page">
     @php
       // The mix, not just the total: how many of each role you have is the
       // thing a CaPSA is actually deciding about when they open this page.
@@ -462,7 +462,7 @@
       ],
     ])
 
-    <div class="card" style="padding:0;overflow:hidden">
+    <div class="card list-card">
       <table class="table">
         <thead>
           <tr>
