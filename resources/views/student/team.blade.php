@@ -117,23 +117,27 @@
   .goal-member{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#3b82f6}
 
   /* ── Compact Feed & Unified Dashboard ── */
-  .compact-feed .feed-post-card { padding: 14px; gap: 10px; border-radius: 12px; }
+  .compact-feed .feed-post-card { padding: 10px; gap: 8px; border-radius: 10px; border: 1px solid var(--border); box-shadow: 0 1px 2px rgba(0,0,0,0.03); transition: all 0.15s; }
+  .compact-feed .feed-post-card:hover { border-color: var(--border2); box-shadow: 0 1px 4px rgba(0,0,0,0.05); }
   .compact-feed .feed-post-card .avatar-ring { width: 36px; height: 36px; margin: 0; }
-  .compact-feed .feed-post-card .avatar-ring .avatar-text { font-size: 11px; }
-  .compact-feed .feed-post-card .feed-post-head .name-label { font-size: 12px; }
-  .compact-feed .feed-post-card .goal-label { font-size: 8px; }
+  .compact-feed .feed-post-card .avatar-ring .avatar-text { font-size: 10px; }
+  .compact-feed .feed-post-card .feed-post-head .name-label { font-size: 11px; }
+  .compact-feed .feed-post-card .goal-label { font-size: 7.5px; padding: 1px 6px; }
   .compact-feed .feed-post-card .feed-post-text { font-size: 10.5px; }
   .compact-feed .feed-post-card .expert-tag { font-size: 7px; padding: 1px 4px; }
 
   /* ── Team Dashboard Grid ── */
-  .team-dashboard-grid { gap: 16px; }
+  .team-dashboard-grid { gap: 12px; }
   .team-dashboard-grid .team-members-panel,
   .team-dashboard-grid .team-overview-panel { border-radius: 14px; padding: 14px; }
   .team-actions-bar { margin-top: 14px; }
   .team-leave-panel { padding: 14px; }
+  .team-dashboard-toggle { opacity: 0.5; }
+  .team-dashboard-toggle:hover { opacity: 1; color: var(--text); }
+  .team-dashboard-body { transition: opacity 0.2s; }
 
   /* ── Main Content Grid ── */
-  .main-content .team-container { gap: 16px; }
+  .main-content .team-container { gap: 12px; }
   .feed-toolbar.compact { padding: 8px 0; }
   .feed-toolbar.compact .feed-title { font-size: 12px; }
   .feed-toolbar.compact .feed-count { font-size: 10px; padding: 2px 8px; }
@@ -276,7 +280,7 @@
     @if($myTeam)
     <!-- TEAM DASHBOARD -->
     <div class="team-dashboard-compact" style="margin-bottom: 16px;">
-      <div class="team-dash-header" style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 14px 18px; background: var(--bg); border: 1px solid var(--border); border-radius: 14px;">
+      <div class="team-dash-header" id="teamDashHeader" onclick="toggleTeamDashboard()" style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 14px 18px; background: var(--bg); border: 1px solid var(--border); border-radius: 14px; cursor: pointer;">
         <div class="team-dash-logo" style="width: 44px; height: 44px; border-radius: 10px; background: #fbbf24; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 15px; color: #1a1a1a; flex-shrink: 0;">
           {{ substr($myTeam->team_name, 0, 2) }}
         </div>
@@ -318,24 +322,14 @@
             @endif
           </div>
           <div style="font-size: 12px; color: var(--text3); margin-top: 4px;">{{ auth()->user()->studentSchoolYear()->first()?->program ?? 'BSIT-4A' }} · Capstone SY 2025–2026</div>
-        </div>
-        <div class="team-status-badge team-status-badge--desktop" style="background: {{ $statusData['bg'] }}; color: #fff; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; display: flex; align-items: center; gap: 6px;">
-          <span style="width: 6px; height: 6px; border-radius: 50%; background: #fff; display: inline-block;"></span>{{ $statusData['label'] }}
-          @if($isVerified)
-            <span class="verified-chip-desktop" style="display:inline-flex;align-items:center;gap:3px;background:rgba(255,255,255,0.2);color:#fff;padding:1px 8px 1px 5px;border-radius:20px;font-size:8px;font-weight:600;backdrop-filter:blur(4px);border:1px solid rgba(255,255,255,0.15);">
-              <svg viewBox="0 0 24 24" width="8" height="8" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
-              Verified
-            </span>
-          @elseif($isPendingVerification)
-            <span class="pending-chip-desktop" style="display:inline-flex;align-items:center;gap:3px;background:rgba(255,255,255,0.2);color:#fff;padding:1px 8px 1px 5px;border-radius:20px;font-size:8px;font-weight:600;backdrop-filter:blur(4px);border:1px solid rgba(255,255,255,0.15);">
-              <svg viewBox="0 0 24 24" width="8" height="8" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-              Pending
-            </span>
-          @endif
-        </div>
-      </div>
+         </div>
+         <button type="button" id="teamDashboardToggle" class="team-dashboard-toggle" style="background: none; border: none; cursor: pointer; padding: 4px; display: flex; align-items: center; justify-content: center; color: var(--text3); transition: color 0.2s;" title="Minimize team card">
+           <svg id="teamDashboardChevron" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+         </button>
+     </div>
 
-      <div class="team-dashboard-grid" style="margin-top: 14px; display: grid; grid-template-columns: 1.1fr 1fr; gap: 16px;">
+      <div class="team-dashboard-body" id="teamDashboardBody" style="margin-top: 14px;">
+      <div class="team-dashboard-grid" style="display: grid; grid-template-columns: 1.1fr 1fr; gap: 12px;">
         <!-- Team Members -->
         <div class="team-members-panel" style="background: var(--bg); border: 1px solid var(--border); border-radius: 14px; padding: 14px;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
@@ -433,42 +427,50 @@
         <div style="display: flex; flex-direction: column; gap: 0;">
           <div style="background: var(--bg); border: 1px solid var(--border); border-radius: 14px; padding: 14px;">
             <div style="font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 12px;">TEAM OVERVIEW</div>
-            <div style="display: flex; flex-direction: column; gap: 8px;">
-              <div style="display: flex; justify-content: space-between; font-size: 11px;">
-                <span style="color: var(--text3);">Section</span>
-                @php
-                  $authStudent = auth()->user();
-                  $program = $authStudent->studentSchoolYear()->first()?->program ?? '';
-                  $yearSection = $authStudent->year_section ?? '';
-                  $parts = array_map('trim', explode('·', $yearSection));
-                  $year = $parts[0] ?? '';
-                  $section = $parts[1] ?? '';
-                  $yearNum = preg_replace('/[^0-9]/', '', $year);
-                  $sectionLabel = $program
-                    ? $program . ' - ' . $yearNum . $section
-                    : $yearSection;
-                @endphp
-                <span style="font-weight: 700; color: var(--text);">{{ $sectionLabel }}</span>
+            <div class="stat-row" style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; padding: 3px 0;">
+              @php
+                $authStudent = auth()->user();
+                $program = $authStudent->studentSchoolYear()->first()?->program ?? '';
+                $yearSection = $authStudent->year_section ?? '';
+                $parts = array_map('trim', explode('·', $yearSection));
+                $year = $parts[0] ?? '';
+                $section = $parts[1] ?? '';
+                $yearNum = preg_replace('/[^0-9]/', '', $year);
+                $sectionLabel = $program
+                  ? $program . ' - ' . $yearNum . $section
+                  : $yearSection;
+              @endphp
+              <span style="color: var(--text3);">Section</span>
+              <span style="font-weight: 700; color: var(--text);">{{ $sectionLabel }}</span>
+            </div>
+            <div class="stat-row" style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; padding: 6px 0; border-top: 1px solid var(--border);">
+              <span style="color: var(--text3);">Team Name</span>
+              <span style="font-weight: 700; color: var(--text);">{{ $myTeam->team_name }}</span>
+            </div>
+            <div class="stat-row" style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; padding: 6px 0; border-top: 1px solid var(--border);">
+              <span style="color: var(--text3);">Status</span>
+              <span style="font-weight: 700; color: {{ $statusData['bg'] }};">{{ $statusData['label'] }}</span>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 6px;">
+              <div class="stat-chip" style="display: flex; justify-content: space-between; align-items: center; gap: 4px; padding: 5px 8px; background: var(--bg2); border-radius: 8px;">
+                <span style="font-size: 9px; color: var(--text3);">Members</span>
+                <span style="font-size: 9px; font-weight: 700; color: var(--text);">{{ \App\Models\StudentSchoolYear::where('team_id', $myTeam->team_id)->count() }} / 5</span>
               </div>
-              <div style="display: flex; justify-content: space-between; font-size: 11px; border-top: 1px solid var(--border); padding-top: 8px;">
-                <span style="color: var(--text3);">Team Name</span>
-                <span style="font-weight: 700; color: var(--text);">{{ $myTeam->team_name }}</span>
+              <div class="stat-chip" style="display: flex; justify-content: space-between; align-items: center; gap: 4px; padding: 5px 8px; background: var(--bg2); border-radius: 8px;">
+                <span style="font-size: 9px; color: var(--text3);">Your Role</span>
+                <span style="font-size: 9px; font-weight: 700; color: {{ (int) $myTeam->leader_id === (int) auth()->user()->student_id ? '#fbbf24' : 'var(--text3)' }};">{{ (int) $myTeam->leader_id === (int) auth()->user()->student_id ? 'Leader' : ($userRole ?? 'Member') }}</span>
               </div>
-              <div style="display: flex; justify-content: space-between; font-size: 11px; border-top: 1px solid var(--border); padding-top: 8px;">
-                <span style="color: var(--text3);">Status</span>
-                <span style="font-weight: 700; color: {{ $statusData['bg'] }};">{{ $statusData['label'] }}</span>
+              <div class="stat-chip" style="display: flex; justify-content: space-between; align-items: center; gap: 4px; padding: 5px 8px; background: var(--bg2); border-radius: 8px;">
+                <span style="font-size: 9px; color: var(--text3);">Date Formed</span>
+                <span style="font-size: 9px; font-weight: 700; color: var(--text);">
+                  {{ $myTeam->created_at ? \Carbon\Carbon::parse($myTeam->created_at)->format('M j, Y') : \Carbon\Carbon::now()->format('M j, Y') }}
+                </span>
               </div>
-              <div style="display: flex; justify-content: space-between; font-size: 11px; border-top: 1px solid var(--border); padding-top: 8px;">
-                <span style="color: var(--text3);">Members</span>
-                <span style="font-weight: 700; color: var(--text);">{{ \App\Models\StudentSchoolYear::where('team_id', $myTeam->team_id)->count() }} / 5</span>
-              </div>
-              <div style="display: flex; justify-content: space-between; font-size: 11px; border-top: 1px solid var(--border); padding-top: 8px;">
-                <span style="color: var(--text3);">Your Role</span>
-                <span style="font-weight: 700; color: {{ (int) $myTeam->leader_id === (int) auth()->user()->student_id ? '#fbbf24' : 'var(--text3)' }};">{{ (int) $myTeam->leader_id === (int) auth()->user()->student_id ? 'Leader' : ($userRole ?? 'Member') }}</span>
-              </div>
-              <div style="display: flex; justify-content: space-between; font-size: 11px; border-top: 1px solid var(--border); padding-top: 8px;">
-                <span style="color: var(--text3);">Date Formed</span>
-                <span style="font-weight: 700; color: var(--text);">{{ $myTeam->created_at ? \Carbon\Carbon::parse($myTeam->created_at)->format('M j, Y') : \Carbon\Carbon::now()->format('M j, Y') }}</span>
+              <div class="stat-chip" style="display: flex; justify-content: space-between; align-items: center; gap: 4px; padding: 5px 8px; background: var(--bg2); border-radius: 8px;">
+                <span style="font-size: 9px; color: var(--text3);">Verified</span>
+                <span style="font-size: 9px; font-weight: 700; color: {{ $isVerified ? 'var(--green)' : ($isPendingVerification ? '#d97706' : 'var(--text3)') }};">
+                  {{ $isVerified ? 'Yes' : ($isPendingVerification ? 'Pending' : 'No') }}
+                </span>
               </div>
             </div>
           </div>
@@ -551,6 +553,8 @@
             <button type="button" onclick="{{ $leaveOnclick }}" title="Leave Team" style="padding: 5px 12px; border-radius: 6px; border: 1px solid var(--red); background: var(--red-bg); color: var(--red); font-size: 10px; font-weight: 700; cursor: pointer; {{ $leaveStateStyle }}">{{ $leaveLabel }}</button>
           @endif
         </div>
+      </div>
+      </div>
       </div>
     </div>
     @endif
@@ -733,19 +737,19 @@
     <!-- RIGHT COLUMN -->
     <div style="display: flex; flex-direction: column; gap: 14px;">
       <div class="card" style="padding: 14px;">
-        <div class="section-title" style="font-size: 11px;">Section Overview</div>
-        <div style="margin-top: 10px;">
-          <div style="display: flex; justify-content: space-between; margin-bottom: 6px; border-bottom: 1px solid var(--border); padding-bottom: 5px;">
-            <span style="font-size: 10px; color: var(--text3);">Total Students</span>
-            <span style="font-size: 10px; font-weight: 700;">{{ $totalStudents }}</span>
+        <div class="section-title" style="font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 10px;">Section Overview</div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+          <div class="stat-chip" style="display: flex; flex-direction: column; gap: 2px; align-items: center; padding: 8px; background: var(--bg2); border-radius: 10px;">
+            <span style="font-size: 12px; font-weight: 700; color: var(--text);">{{ $totalStudents }}</span>
+            <span style="font-size: 9px; color: var(--text3);">Total Students</span>
           </div>
-          <div style="display: flex; justify-content: space-between; margin-bottom: 6px; border-bottom: 1px solid var(--border); padding-bottom: 5px;">
-            <span style="font-size: 10px; color: var(--text3);">Teamed Up</span>
-            <span style="font-size: 10px; font-weight: 700; color: var(--green);">{{ $teamedUp }}</span>
+          <div class="stat-chip" style="display: flex; flex-direction: column; gap: 2px; align-items: center; padding: 8px; background: var(--green-bg); border-radius: 10px;">
+            <span style="font-size: 12px; font-weight: 700; color: var(--green);">{{ $teamedUp }}</span>
+            <span style="font-size: 9px; color: var(--text3);">Teamed Up</span>
           </div>
-          <div style="display: flex; justify-content: space-between;">
-            <span style="font-size: 10px; color: var(--text3);">Still Individual</span>
-            <span style="font-size: 10px; font-weight: 700; color: var(--amber);">{{ $stillIndividual }}</span>
+          <div class="stat-chip" style="display: flex; flex-direction: column; gap: 2px; align-items: center; padding: 8px; background: var(--amber-bg); border-radius: 10px;">
+            <span style="font-size: 12px; font-weight: 700; color: var(--amber);">{{ $stillIndividual }}</span>
+            <span style="font-size: 9px; color: var(--text3);">Individual</span>
           </div>
         </div>
       </div>
@@ -890,11 +894,11 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
           </div>
       @endif
-  </div>
-  @endif
+   </div>
+   @endif
 
-  <div class="tutorial-note">
-      <div class="tutorial-item">
+   <div class="tutorial-note" style="margin-top: 4px;">
+       <div class="tutorial-item">
           <div class="dot-guide" style="background: #16a34a;"></div>
           <span>Find Members</span>
       </div>
@@ -904,8 +908,8 @@
       </div>
   </div>
 
-  <div class="legal-credits">
-      <div class="credits-title">System Developers</div>
+   <div class="legal-credits" style="margin-top: 4px;">
+       <div class="credits-title">System Developers</div>
       <div class="credits-names">Jolina · John Kenneth · Mark Anthony · Ian Cyrus · Alexa Nicole</div>
   </div>
 
@@ -2161,6 +2165,21 @@ function viewPostDetails(cardEl, name, skills, lookingFor, teamName, projectTitl
 
 function closeDetailModal() {
     document.getElementById('detailModal').classList.remove('active');
+}
+
+function toggleTeamDashboard() {
+    var body = document.getElementById('teamDashboardBody');
+    var chevron = document.getElementById('teamDashboardChevron');
+    var toggleBtn = document.getElementById('teamDashboardToggle');
+    if (body.style.display === 'none') {
+        body.style.display = 'block';
+        chevron.setAttribute('transform', '');
+        toggleBtn.title = 'Minimize team card';
+    } else {
+        body.style.display = 'none';
+        chevron.setAttribute('transform', 'rotate(-180)');
+        toggleBtn.title = 'Expand team card';
+    }
 }
 
 function updateModalUI() {
