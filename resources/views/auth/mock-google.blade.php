@@ -44,7 +44,7 @@
         border: 1px dashed #b5941f;
         color: #b5941f;
         font-size: 11px;
-        font-family: 'Space Mono', monospace;
+        font-variant-numeric:tabular-nums;
         padding: 4px 12px;
         border-radius: 20px;
         margin-bottom: 20px;

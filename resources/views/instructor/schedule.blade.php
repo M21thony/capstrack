@@ -5,8 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <meta name="csrf-token" content="{{ csrf_token() }}">
 <title>CapsTRACK – Expert Portal</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="{{ asset('css/schedule.css') }}" />
+@include('partials.skeleton-head', ['skReveal' => 'block'])
 </head>
 <body>
 @include('instructor.partials.sidebar', ['currentPage' => 'schedule'])
@@ -19,10 +20,7 @@
     </button>
     <div class="page-title">Schedule Management</div>
     <div class="topbar-actions">
-      <div class="notif-btn">
-        <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-        <div class="notif-dot"></div>
-      </div>
+      @include('instructor.partials.notification-dropdown')
     </div>
   </div>
 
@@ -202,7 +200,7 @@
                 <option value="weekly">Every week (same day)</option>
                 <option value="biweekly">Every 2 weeks</option>
               </select>
-              <div id="f-recur-locked-note" style="display:none;font-size:11px;color:var(--text3);margin-top:4px">Recurrence can't be changed here — delete and re-add the slot instead.</div>
+              <div id="f-recur-locked-note" style="display:none;font-size:11px;color:var(--text3);margin-top:4px">Switching to a single date? Pick the date above.</div>
             </div>
 
             <div id="edit-mode-banner" style="display:none;padding:8px 12px;margin-bottom:11px;background:var(--accent-glow,rgba(0,229,255,0.08));border:1px solid var(--accent,#00e5ff);border-radius:8px;color:var(--accent,#00e5ff);font-size:12px;font-weight:600">
@@ -251,6 +249,11 @@
 </div>
 @include('instructor.partials.skeleton-toggle')
 
+{{-- The expert profile panel is included once for every instructor page by
+     the sidebar (capsa._sidebar -> instructor.partials.expert-profile). This
+     page used to carry its own older copy of it, which redeclared EP_TAGS_EL
+     and EP_INPUT. A repeated const is a SyntaxError, and it took the whole
+     script block down with it - which is why nothing on this page ran. --}}
 <!-- ─── TOAST ─────────────────────────────────────────────────────────────── -->
 <div id="sched-toast" style="
   position:fixed;bottom:24px;right:24px;z-index:9999;
@@ -300,91 +303,6 @@
 </div>
 
 <!-- ─── EXPERT PROFILE SIDE PANEL ─────────────────────────────────────────── -->
-<div class="ep-overlay" id="ep-overlay" onclick="handleEpOverlay(event)">
-  <div class="ep-modal" id="ep-modal">
-
-    <div class="ep-header">
-      <div class="ep-avatar">CS</div>
-      <div style="flex:1;min-width:0">
-        <div class="ep-header-name">Dr. Neil A. Inocencio</div>
-        <div class="ep-header-sub">Capstone Expert · Active</div>
-      </div>
-      <button class="ep-close" onclick="closeExpertProfile()">
-        <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </button>
-    </div>
-
-    <div class="ep-body">
-
-      <div class="ep-field">
-        <div class="ep-label">Full Name</div>
-        <div class="ep-value readonly">
-          <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-          Dr. Neil A. Inocencio
-        </div>
-      </div>
-
-      <div class="ep-field">
-        <div class="ep-label">Institutional Email</div>
-        <div class="ep-value readonly">
-          <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-          nainocencio@cspc.edu.ph
-        </div>
-      </div>
-
-      <div class="ep-divider"></div>
-
-      <div class="ep-field">
-        <div class="ep-label">Assigned Roles</div>
-        <div class="ep-tags-wrap">
-          <span class="role-pill role-adviser">Adviser</span>
-          <span class="role-pill role-panel">Panel</span>
-          <span class="role-pill role-consultant">Consultant</span>
-          <span class="role-pill role-grammarian">Grammarian</span>
-        </div>
-        <div style="font-size:11px;color:var(--text3);margin-top:8px;display:flex;align-items:center;gap:4px">
-          <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-          Managed by the system administrator
-        </div>
-      </div>
-
-      <div class="ep-divider"></div>
-
-      <div class="ep-field">
-        <div class="ep-label">Team Capacity</div>
-        <div class="ep-value readonly">
-          <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-          Max 4 teams · Currently advising 3
-        </div>
-      </div>
-
-      <div class="ep-divider"></div>
-
-      <div class="ep-field">
-        <div class="ep-label">Areas of Expertise</div>
-        <div class="ep-tags-wrap" id="ep-tags-wrap"></div>
-        <div class="ep-tag-input-row">
-          <input class="ep-tag-input" id="ep-tag-input" type="text" placeholder="Add expertise…" onkeydown="handleTagKey(event)"/>
-          <button class="ep-tag-add-btn" onclick="addTag()">+ Add</button>
-        </div>
-        <div style="font-size:11px;color:var(--text3);margin-top:7px">
-          Press Enter or click Add. Click × to remove.
-        </div>
-      </div>
-
-    </div>
-
-    <div class="ep-footer">
-      <button class="btn content btn-ghost" style="color:#FFFF00" onclick="closeExpertProfile()">Close</button>
-      <button class="btn btn-primary" onclick="saveExpertProfile()">
-        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-        Save
-      </button>
-    </div>
-
-  </div>
-</div>
-
 <script>
 // ══════════════════════════════════════════════════════════════
 //  CONSTANTS
@@ -415,11 +333,6 @@ let slots      = {};
 // slotsByDay[dayName] = [ ...rawApiSlots ]  — source of truth for recurring slots
 let slotsByDay = {};
 let blockedDates = new Set();
-
-// Expert profile tags
-const EP_TAGS_EL = document.getElementById('ep-tags-wrap');
-const EP_INPUT   = document.getElementById('ep-tag-input');
-let expertTags   = ['Machine Learning', 'Data Science', 'Web Systems'];
 
 // ══════════════════════════════════════════════════════════════
 //  HELPERS
@@ -700,7 +613,6 @@ async function initCalendar() {
   renderCalendar();
   renderUpcoming();
   renderSlotStats();
-  renderExpertTags();
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -1121,6 +1033,8 @@ async function saveSlot() {
           end_time:           end,
           consultation_limit: maxB,
           slot_type:          type,
+          recur:              recur,
+          specific_date:      recur === 'once' ? selectedDate : null,
         }),
       });
 
@@ -1132,6 +1046,8 @@ async function saveSlot() {
         raw.end_time           = end;
         raw.consultation_limit = maxB;
         raw.slot_type          = type;
+        raw.recur              = recur;
+        raw.specific_date      = recur === 'once' ? selectedDate : null;
       }
 
       fanOutSlots();
@@ -1248,9 +1164,12 @@ function editSlot(scheduleId, key, index) {
   document.getElementById('f-max').value   = s.consultation_limit || 1;
   document.getElementById('f-recur').value = s.recur || 'weekly';
 
+  // Recurrence is editable now: updateSlot took neither recur nor
+  // specific_date, so changing it here did nothing and the field was
+  // disabled to hide that. Both are accepted, so it is a real control.
   const recurSelect = document.getElementById('f-recur');
   const recurNote   = document.getElementById('f-recur-locked-note');
-  if (recurSelect) recurSelect.disabled = true;
+  if (recurSelect) recurSelect.disabled = false;
   if (recurNote) recurNote.style.display = 'block';
 
   const banner = document.getElementById('edit-mode-banner');
@@ -1598,71 +1517,13 @@ function renderSlotStats() {
     div.innerHTML = `
       <div style="display:flex;justify-content:space-between;align-items:center">
         <span style="font-size:12px;color:var(--text2);font-weight:500">${TYPE_LABELS[type]}</span>
-        <span style="font-family:'Space Mono',monospace;font-size:11px;font-weight:700;color:var(--text)">${count}</span>
+        <span style="font-variant-numeric:tabular-nums;font-size:11px;font-weight:700;color:var(--text)">${count}</span>
       </div>
       <div style="height:5px;background:var(--bg4);border-radius:3px;overflow:hidden">
         <div style="height:100%;width:${pct}%;background:${colors[type]};border-radius:3px;transition:width 0.4s"></div>
       </div>`;
     container.appendChild(div);
   });
-}
-
-// ══════════════════════════════════════════════════════════════
-//  EXPERT PROFILE PANEL
-// ══════════════════════════════════════════════════════════════
-function openExpertProfile() {
-  document.getElementById('ep-overlay').classList.add('open');
-}
-
-function closeExpertProfile() {
-  document.getElementById('ep-overlay').classList.remove('open');
-}
-
-function handleEpOverlay(e) {
-  if (e.target === document.getElementById('ep-overlay')) closeExpertProfile();
-}
-
-function renderExpertTags() {
-  EP_TAGS_EL.innerHTML = '';
-  expertTags.forEach((tag, i) => {
-    const span = document.createElement('span');
-    span.className = 'ep-tag';
-    span.innerHTML = `${tag} <button onclick="removeTag(${i})" style="background:none;border:none;cursor:pointer;color:inherit;padding:0 0 0 4px;font-size:12px">×</button>`;
-    EP_TAGS_EL.appendChild(span);
-  });
-}
-
-function addTag() {
-  const val = EP_INPUT.value.trim();
-  if (!val) return;
-  if (!expertTags.includes(val)) {
-    expertTags.push(val);
-    renderExpertTags();
-  }
-  EP_INPUT.value = '';
-}
-
-function removeTag(i) {
-  expertTags.splice(i, 1);
-  renderExpertTags();
-}
-
-function handleTagKey(e) {
-  if (e.key === 'Enter') { e.preventDefault(); addTag(); }
-}
-
-async function saveExpertProfile() {
-  try {
-    await apiFetch('/instructor/profile/expertise', {
-      method: 'POST',
-      body: JSON.stringify({ tags: expertTags }),
-    });
-    showToast('Profile saved ✓');
-    closeExpertProfile();
-  } catch (e) {
-    showToast('Saved locally (server error: ' + e.message + ')', 'error');
-    closeExpertProfile();
-  }
 }
 
 // ══════════════════════════════════════════════════════════════

@@ -8,6 +8,8 @@ use App\Models\DefensePanel;
 use App\Models\DefenseSchedule;
 use App\Models\GradingRubric;
 use App\Models\PanelGrade;
+use App\Services\DefenseOutcomeRecorder;
+use App\Support\DefenseOutcome;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -84,11 +86,20 @@ class GradingController extends Controller
 
         $defense->load('team');
 
+        $defense->load('panels', 'outcomeRecordedBy');
+
         return view('instructor.grading-show', [
             'defense' => $defense,
             'rubric' => $rubric,
             'grade' => $grade,
             'panelRole' => $panel->panel_role,
+            // The panel confers and then gives the team one result, so the
+            // verdict is recorded once, by the chair - not collected from
+            // each panelist and tallied. Everyone else just scores.
+            'isChair' => $panel->panel_role === 'Panel Chair',
+            'outcomeOptions' => DefenseOutcome::forStage($defense->defense_type),
+            'gradesIn' => $defense->submittedGrades()->count(),
+            'panelSize' => $defense->panelSize(),
         ]);
     }
 
@@ -125,7 +136,10 @@ class GradingController extends Controller
         $validator = Validator::make($request->all(), [
             'scores' => ['nullable', 'array'],
             'scores.*' => ['nullable', 'numeric'],
-            'verdict' => [$status === 'submitted' ? 'required' : 'nullable', 'string', 'in:'.implode(',', self::VERDICTS)],
+            // Optional now, and kept only as a panelist's own note to
+            // themselves before the briefing. The decision that counts is the
+            // panel's, recorded once by the chair - see recordOutcome().
+            'verdict' => ['nullable', 'string', 'in:'.implode(',', self::VERDICTS)],
             'remarks' => ['nullable', 'string', 'max:5000'],
         ]);
 
@@ -194,6 +208,84 @@ class GradingController extends Controller
             'data' => [
                 'status' => $grade->status,
                 'total_score' => $grade->total_score !== null ? (float) $grade->total_score : null,
+            ],
+        ]);
+    }
+
+    /**
+     * Record what the panel decided.
+     *
+     * Chair only, and only once every panelist has scored: the outcome is
+     * the conclusion of the briefing, and a briefing cannot have happened
+     * while someone still has not marked the rubric.
+     */
+    public function recordOutcome(Request $request, DefenseSchedule $defense, DefenseOutcomeRecorder $recorder): JsonResponse
+    {
+        $panel = $this->panelFor($defense);
+
+        if ($panel->panel_role !== 'Panel Chair') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Only the Panel Chair records the panel\'s decision.',
+            ], 403);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'outcome' => ['required', 'string'],
+            'remarks' => ['nullable', 'string', 'max:5000'],
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'message' => $validator->errors()->first()], 422);
+        }
+
+        $validated = $validator->validated();
+
+        // The options depend on the stage - only a pre-proposal can be sent
+        // back for a whole new title.
+        if (! DefenseOutcome::allowedForStage($defense->defense_type, $validated['outcome'])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'That is not a possible outcome for a '.$defense->defense_type.'.',
+            ], 422);
+        }
+
+        if ($defense->hasOutcome()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'This defense already has a recorded outcome.',
+            ], 422);
+        }
+
+        if (! $defense->allGradesIn()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Every panelist has to submit their scores before the outcome can be recorded.',
+            ], 422);
+        }
+
+        /** @var CapstoneExpert $chair */
+        $chair = auth()->guard('expert')->user();
+
+        $result = $recorder->record($defense, $validated['outcome'], $chair, $validated['remarks'] ?? null);
+
+        $message = 'Outcome recorded: '.DefenseOutcome::label($validated['outcome'], $defense->defense_type).'.';
+
+        if ($result['redefense']) {
+            $message .= ' A redefense has been opened for this team - the CAPSA schedules it from Panel Assignment.';
+        }
+
+        if ($result['reopened_proposals']) {
+            $message .= ' Their pre-proposals have been reopened so they can submit a new title.';
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => $message,
+            'data' => [
+                'outcome' => $result['schedule']->outcome,
+                'outcome_label' => $result['schedule']->outcomeLabel(),
+                'redefense_attempt' => $result['redefense']?->attempt,
             ],
         ]);
     }

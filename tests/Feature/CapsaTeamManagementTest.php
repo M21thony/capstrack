@@ -7,6 +7,7 @@ use App\Models\CapstonePreProposal;
 use App\Models\DuplicationCheck;
 use App\Models\ExpertRole;
 use App\Models\Milestone;
+use App\Models\MilestoneItem;
 use App\Models\Role;
 use App\Models\Student;
 use App\Models\StudentSchoolYear;
@@ -115,7 +116,7 @@ class CapsaTeamManagementTest extends TestCase
         ]);
         StudentSchoolYear::create(['student_id' => $other->student_id, 'team_id' => $theirs->team_id]);
 
-        $response = $this->get(route('admin.team_management'));
+        $response = $this->get(route('capsa.team_management'));
 
         $response->assertOk();
         $response->assertSee($mine->team_name);
@@ -130,7 +131,7 @@ class CapsaTeamManagementTest extends TestCase
         $this->makeCapsaWithSections();
         [$stalled] = $this->makeTeamInSection('Team Stalled', ['team_status' => 'Active']);
 
-        $response = $this->get(route('admin.team_management'));
+        $response = $this->get(route('capsa.team_management'));
 
         $response->assertOk();
         $response->assertSee($stalled->team_name);
@@ -141,16 +142,30 @@ class CapsaTeamManagementTest extends TestCase
         $this->makeCapsaWithSections();
         [$team] = $this->makeTeamInSection('Team Progress');
 
-        foreach (['completed', 'completed', 'pending', 'overdue'] as $i => $status) {
-            Milestone::create([
-                'team_id' => $team->team_id,
-                'title' => "Milestone {$i}",
-                'status' => $status,
-                'order' => $i,
+        // Progress is counted from a milestone's items now, not from
+        // milestones.status - that column was written once as 'todo' and never
+        // moved, so it reported no progress for every team however far along
+        // they were.
+        $milestone = Milestone::create([
+            'team_id' => $team->team_id,
+            'title' => 'Capstone 1',
+            'due_date' => now()->subWeek()->toDateString(),
+            'status' => 'todo',
+        ]);
+
+        foreach (['done', 'done', 'open', 'open'] as $i => $state) {
+            $milestone->items()->create([
+                'title' => "Deliverable {$i}",
+                'kind' => MilestoneItem::FORM,
+                'position' => $i,
+                // The two open ones are past the milestone's due date, so they
+                // are overdue - worked out, not stored.
+                'due_date' => $i === 3 ? now()->addWeek()->toDateString() : null,
+                'completed_at' => $state === 'done' ? now()->subDays(10) : null,
             ]);
         }
 
-        $response = $this->get(route('admin.team_management'));
+        $response = $this->get(route('capsa.team_management'));
 
         $response->assertOk();
         $response->assertSee('2/4');
@@ -183,7 +198,7 @@ class CapsaTeamManagementTest extends TestCase
             'status' => 'approved',
         ]);
 
-        $response = $this->get(route('admin.team_management'));
+        $response = $this->get(route('capsa.team_management'));
 
         $response->assertOk();
         // The filled role carries the expert's name as its tooltip; the two
@@ -203,7 +218,7 @@ class CapsaTeamManagementTest extends TestCase
         $this->addProposal($team, $sy, 1, approved: true);
         $this->addProposal($team, $sy, 2, approved: true);
 
-        $response = $this->get(route('admin.team_management', ['tab' => 'verification']));
+        $response = $this->get(route('capsa.team_management', ['tab' => 'verification']));
 
         $response->assertOk();
         $response->assertSee('Team choosing');
@@ -219,7 +234,7 @@ class CapsaTeamManagementTest extends TestCase
         $this->addProposal($team, $sy, 2);
         $this->addProposal($team, $sy, 3, approved: true);
 
-        $response = $this->get(route('admin.team_management', ['tab' => 'pre_proposals']));
+        $response = $this->get(route('capsa.team_management', ['tab' => 'pre_proposals']));
 
         $response->assertOk();
         $response->assertSee('2 to review');
@@ -238,7 +253,7 @@ class CapsaTeamManagementTest extends TestCase
         $formatCheck = $this->makeDocumentReview($capsa, $leader, 'Chapter 1 Format.pdf', 'subject_adviser');
         $adviserWork = $this->makeDocumentReview($capsa, $leader, 'Chapter 2 Content.pdf', 'adviser');
 
-        $response = $this->get(route('admin.team_management', ['tab' => 'papers']));
+        $response = $this->get(route('capsa.team_management', ['tab' => 'papers']));
 
         $response->assertOk();
         $response->assertSee('Chapter 1 Format.pdf');
@@ -273,7 +288,7 @@ class CapsaTeamManagementTest extends TestCase
         $this->makeCapsaWithSections([]);
         $this->makeTeamInSection('Team Somewhere');
 
-        $response = $this->get(route('admin.team_management'));
+        $response = $this->get(route('capsa.team_management'));
 
         $response->assertOk();
         $response->assertSee('You have no sections assigned yet');
@@ -283,8 +298,8 @@ class CapsaTeamManagementTest extends TestCase
     {
         $this->makeCapsaWithSections();
 
-        $this->get(route('admin.verify_teams'))
-            ->assertRedirect(route('admin.team_management', ['tab' => 'verification']));
+        $this->get(route('capsa.verify_teams'))
+            ->assertRedirect(route('capsa.team_management', ['tab' => 'verification']));
     }
 
     // The CaPSA decides whether a title is too close to something already
@@ -333,7 +348,7 @@ class CapsaTeamManagementTest extends TestCase
             'submitted_at' => now(),
         ]);
 
-        $response = $this->get(route('admin.team_management', ['tab' => 'pre_proposals']));
+        $response = $this->get(route('capsa.team_management', ['tab' => 'pre_proposals']));
 
         $response->assertOk();
 

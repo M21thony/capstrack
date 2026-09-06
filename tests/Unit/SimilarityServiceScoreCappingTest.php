@@ -142,7 +142,7 @@ class SimilarityServiceScoreCappingTest extends TestCase
             $filler->save();
         }
 
-        $this->mock(OllamaSSHClient::class, function ($mock) {
+        $this->mock(OllamaSSHClient::class, function ($mock) use ($closeButRejected, $farAndRejected) {
             $mock->shouldReceive('embed')->andReturn([1.0, 0.0]);
             // Both are rejected with the same reason text - the point of this
             // test is that their DIFFERENT raw embedding scores still survive

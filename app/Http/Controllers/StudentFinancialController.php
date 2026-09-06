@@ -47,12 +47,22 @@ class StudentFinancialController extends Controller
         $team = $student->team;
         $teamStatus = $team?->team_status;
 
-        $teamNotComplete = $team && $teamStatus !== 'complete';
+        // The page asked whether team_status was 'complete'. That value no
+        // longer exists - a team is Active or Full now - so the lock could
+        // never come off, while the submit endpoint had already moved on to
+        // asking whether the team has turned its pre-proposals in. One rule,
+        // and it is the endpoint's, so the form is open exactly when a
+        // receipt would be accepted.
+        $canSubmitReceipts = (bool) $team
+            && ($team->hasSubmittedPreProposals() || $team->is_confirmed);
+
+        $teamNotComplete = $team && ! $canSubmitReceipts;
 
         return view('student.financial', compact(
             'expensePosts',
             'submissions',
             'teamStatus',
+            'canSubmitReceipts',
             'teamNotComplete',
         ));
     }
@@ -70,9 +80,14 @@ class StudentFinancialController extends Controller
 
         $team = $student->team;
 
-        if (! $team || $team->team_status !== 'complete') {
+        // is_confirmed carries the teams that were verified before the
+        // pre-proposal flow existed - they have no proposals to have
+        // submitted, and were able to file receipts under the old
+        // team_status gate. Verification is the later milestone anyway, so a
+        // verified team is past this bar by definition.
+        if (! $team || ! ($team->hasSubmittedPreProposals() || $team->is_confirmed)) {
             return redirect()->back()->withErrors([
-                'team_status' => 'Your Team Leader must first mark your team as Complete in Team Management before any team member can submit a receipt.',
+                'team_status' => 'Your team has to be marked Complete before anyone can submit a receipt. Your team leader does that by submitting your pre-proposals for checking on the Duplication Checker page.',
             ])->withInput();
         }
 

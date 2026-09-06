@@ -75,11 +75,6 @@
   [data-theme="light"] .signin-link:hover { color: #111827; }
   [data-theme="light"] .tag-opt.selected { background: #e5e7eb; border-color: #9ca3af; color: #111827; }
   [data-theme="light"] .tag-opt:hover { border-color: #9ca3af; color: #111827; }
-  [data-theme="light"] .role-card.selected { border-color: #3b82f6; background: #eff6ff; }
-  [data-theme="light"] .role-card.selected .role-icon { background: #dbeafe; }
-  [data-theme="light"] .role-card.selected .role-icon svg { stroke: #3b82f6; }
-  [data-theme="light"] .role-card.selected .role-name { color: #1d4ed8; }
-  [data-theme="light"] .role-card:hover { border-color: #93c5fd; background: #f0f7ff; }
   [data-theme="light"] input:focus,
   [data-theme="light"] select:focus,
   [data-theme="light"] textarea:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.15); }
@@ -183,7 +178,7 @@
   }
 
   .card-hero h1 {
-    font-family: 'Space Mono', monospace;
+    font-variant-numeric:tabular-nums;
     font-size: 18px;
     font-weight: 700;
     color: var(--text);
@@ -361,83 +356,6 @@
     background: rgba(181,148,31,0.12);
     border-color: var(--primary);
     color: var(--primary);
-  }
-
-  .role-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 10px;
-    margin-bottom: 10px;
-  }
-
-  .role-card {
-    border: 1.5px solid var(--border2);
-    background: var(--navy-mid);
-    border-radius: 12px;
-    padding: 14px 10px;
-    cursor: pointer;
-    transition: all 0.2s;
-    text-align: center;
-    user-select: none;
-  }
-
-  .role-card:hover {
-    border-color: rgba(181,148,31,0.4);
-    background: rgba(181,148,31,0.04);
-  }
-
-  .role-card.selected {
-    border-color: var(--primary);
-    background: rgba(181,148,31,0.1);
-  }
-
-  .role-icon {
-    width: 36px;
-    height: 36px;
-    border-radius: 10px;
-    background: rgba(255,255,255,0.04);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 0 auto 8px;
-    transition: background 0.2s;
-  }
-
-  .role-card.selected .role-icon {
-    background: rgba(181,148,31,0.2);
-  }
-
-  .role-icon svg {
-    width: 18px;
-    height: 18px;
-    stroke: var(--text2);
-    fill: none;
-    stroke-width: 1.8;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-    transition: stroke 0.2s;
-  }
-
-  .role-card.selected .role-icon svg {
-    stroke: var(--primary);
-  }
-
-  .role-name {
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--text2);
-    transition: color 0.2s;
-  }
-
-  .role-card.selected .role-name {
-    color: var(--primary);
-  }
-
-  .role-desc {
-    font-size: 10.5px;
-    color: var(--text3);
-    margin-top: 3px;
-    line-height: 1.3;
   }
 
   .divider {
@@ -631,7 +549,7 @@
   }
 
   .success-title {
-    font-family: 'Space Mono', monospace;
+    font-variant-numeric:tabular-nums;
     font-size: 18px;
     font-weight: 700;
     color: var(--text);
@@ -707,7 +625,6 @@
     #step-counter { font-size: 11px; }
     .field-row { grid-template-columns: 1fr; }
     .field-row-3 { grid-template-columns: 1fr; }
-    .role-grid { grid-template-columns: 1fr; }
     .review-key { min-width: 90px; font-size: 11px; }
     .review-val { font-size: 12px; }
     .tag-opt { font-size: 11px; padding: 5px 10px; }
@@ -715,9 +632,6 @@
     .side-toast { max-width: calc(100vw - 20px); }
     .modal-box { padding: 24px 18px 20px; }
     .attempts-bar { flex-direction: column; gap: 8px; align-items: flex-start; }
-    .role-card { padding: 12px 10px; }
-    .role-card .role-icon { width: 32px; height: 32px; }
-    .role-name { font-size: 13px; }
     .field-hint { font-size: 10.5px; }
     input[type="text"], input[type="email"], input[type="number"], select, textarea {
       font-size: 15px; padding: 12px 14px;
@@ -819,7 +733,7 @@
   .modal-icon.warning svg { stroke: #f59e0b; }
 
   .modal-title {
-    font-family: 'Space Mono', monospace;
+    font-variant-numeric:tabular-nums;
     font-size: 16px;
     font-weight: 700;
     color: var(--text);
@@ -1079,7 +993,7 @@
       <div style="width:56px;height:56px;border-radius:50%;background:rgba(239,68,68,0.1);border:2px solid rgba(239,68,68,0.3);display:flex;align-items:center;justify-content:center;margin:0 auto 16px">
         <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="#ef4444" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
       </div>
-      <div style="font-family:'Space Mono',monospace;font-size:16px;font-weight:700;color:var(--text);margin-bottom:8px">Submission Blocked</div>
+      <div style="font-variant-numeric:tabular-nums;font-size:16px;font-weight:700;color:var(--text);margin-bottom:8px">Submission Blocked</div>
       <div style="font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:22px;max-width:360px;margin-left:auto;margin-right:auto">
         You have reached the maximum number of attempts ({{ $rejectAttempts }}/{{ $maxRejects }}). 
         Please wait <b id="cooldown-timer-block">{{ $waitSeconds }}</b> seconds before you can resubmit your account request.
@@ -1143,48 +1057,10 @@
 
       <div class="form-section" id="step-2">
         <div class="section-label">
-          <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-          Select Your Role <span class="req" style="font-size:12px">*</span>
-        </div>
-
-        <div class="role-grid" id="role-grid">
-          <div class="role-card" onclick="toggleRole('capstone_adviser')" id="role-capstone_adviser">
-            <div class="role-icon">
-              <svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
-            </div>
-            <div class="role-name">CaPSA / Thesis Adviser</div>
-            <div class="role-desc">Serves as Capstone Project Subject Adviser or Thesis Subject Adviser</div>
-          </div>
-          <div class="role-card" onclick="toggleRole('adviser')" id="role-adviser">
-            <div class="role-icon">
-              <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/></svg>
-            </div>
-            <div class="role-name">Adviser</div>
-            <div class="role-desc">Guides capstone teams throughout their project journey</div>
-          </div>
-          <div class="role-card" onclick="toggleRole('consultant')" id="role-consultant">
-            <div class="role-icon">
-              <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-            </div>
-            <div class="role-name">Consultant</div>
-            <div class="role-desc">Provides subject-matter expertise and technical advice</div>
-          </div>
-          <div class="role-card" onclick="toggleRole('grammarian')" id="role-grammarian">
-            <div class="role-icon">
-              <svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-            </div>
-            <div class="role-name">Grammarian</div>
-            <div class="role-desc">Reviews and ensures quality of written documentation</div>
-          </div>
-        </div>
-        <div class="field-error" id="err-role" style="margin-bottom:12px">Please select a role.</div>
-
-        <div class="divider"></div>
-
-        <div class="section-label">
           <svg viewBox="0 0 24 24"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
           Areas of Expertise <span class="req" style="font-size:12px">*</span>
         </div>
+        <div class="field-hint" style="margin-bottom:14px">Your role (Adviser, Consultant, Grammarian, etc.) is assigned by CAPSA when your request is approved - no need to pick one here.</div>
 
         <div class="tags-picker" id="tags-picker">
           <div class="tag-opt" onclick="toggleTag(this)">Machine Learning</div>
@@ -1309,17 +1185,6 @@
 <script>
 let currentStep = 1;
 const totalSteps = 3;
-let selectedRoles = [];
-
-function roleDisplayName(slug) {
-  const names = {
-    'capstone_adviser': 'CaPSA / Thesis Adviser',
-    'adviser': 'Adviser',
-    'consultant': 'Consultant',
-    'grammarian': 'Grammarian',
-  };
-  return names[slug] || slug;
-}
 
 function goNext() {
   if (!validateStep(currentStep)) return;
@@ -1359,10 +1224,10 @@ function updateStep() {
     nextBtn.className = 'btn btn-primary';
   }
 
-  const titles = ['Personal Information', 'Role & Expertise', 'Review & Submit'];
+  const titles = ['Personal Information', 'Areas of Expertise', 'Review & Submit'];
   const subs = [
     'Fill in your basic details to start your account request. All fields marked with <span style="color:var(--primary)">*</span> are required.',
-    'Select your role in capstone reviews and highlight your areas of expertise.',
+    'Highlight your areas of expertise - your role is assigned by CAPSA when your request is approved.',
     'Everything look correct? Submit your request for admin approval.'
   ];
   document.getElementById('hero-title').textContent = titles[currentStep - 1];
@@ -1380,13 +1245,6 @@ function validateStep(step) {
   }
 
   if (step === 2) {
-    if (selectedRoles.length === 0) {
-      document.getElementById('err-role').classList.add('show');
-      ok = false;
-    } else {
-      document.getElementById('err-role').classList.remove('show');
-    }
-
     const tags = getSelectedTags();
     if (tags.length === 0) {
       document.getElementById('err-tags').classList.add('show');
@@ -1406,33 +1264,6 @@ function req(id, errId, test) {
   el.classList.toggle('error', !valid);
   errEl.classList.toggle('show', !valid);
   return valid;
-}
-
-const TEAM_ROLES = ['adviser', 'consultant', 'grammarian'];
-
-function toggleRole(role) {
-  const idx = selectedRoles.indexOf(role);
-  if (idx >= 0) {
-    selectedRoles.splice(idx, 1);
-  } else {
-    // An expert only ever serves a team as one of Adviser/Consultant/
-    // Grammarian - picking a new one swaps out whichever of those was
-    // selected before, instead of stacking both.
-    if (TEAM_ROLES.includes(role)) {
-      TEAM_ROLES.filter(r => r !== role).forEach(r => {
-        const i = selectedRoles.indexOf(r);
-        if (i >= 0) {
-          selectedRoles.splice(i, 1);
-          document.getElementById(`role-${r}`).classList.remove('selected');
-        }
-      });
-    }
-    selectedRoles.push(role);
-  }
-  document.getElementById(`role-${role}`).classList.toggle('selected', selectedRoles.includes(role));
-  if (selectedRoles.length > 0) {
-    document.getElementById('err-role').classList.remove('show');
-  }
 }
 
 function toggleTag(el) {
@@ -1509,10 +1340,6 @@ function buildReview() {
       <div class="review-val">${fullName}</div>
     </div>
     <div class="review-item">
-      <div class="review-key">Roles</div>
-      <div class="review-val"><div class="review-tags">${selectedRoles.map(r => `<span class="review-tag">${roleDisplayName(r)}</span>`).join('')}</div></div>
-    </div>
-    <div class="review-item">
       <div class="review-key">Email Address</div>
       <div class="review-val">${email}</div>
     </div>
@@ -1562,7 +1389,6 @@ function submitRequest() {
       suffix: suffix,
       credentials: credentials,
       email: email,
-      specialization: selectedRoles,
       expertise: tags,
       max_teams: parseInt(maxTeams),
       course: course || null,

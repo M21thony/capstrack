@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Dashboard - CapsTrack</title>
 <meta name="csrf-token" content="{{ csrf_token() }}">
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
 @vite('resources/student-ui/Styles/dashboard.css')
 <x-dashboard.styles />
 <style>
@@ -43,7 +43,8 @@
 
   .ann-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;z-index:1000;opacity:0;pointer-events:none;transition:opacity .2s}
   .ann-modal-overlay.open{opacity:1;pointer-events:auto}
-  .ann-modal-box{background:var(--bg2);border-radius:16px;padding:28px;max-width:520px;width:90%;max-height:80vh;overflow-y:auto;position:relative}
+  .ann-modal-box{background:var(--bg2);border-radius:16px;padding:28px;max-width:520px;width:90%;max-height:80vh;overflow-y:auto;position:relative;scrollbar-width:none;-ms-overflow-style:none}
+.ann-modal-box::-webkit-scrollbar{display:none}
   .ann-modal-close{position:absolute;top:14px;right:16px;background:none;border:none;font-size:22px;color:var(--text3);cursor:pointer;padding:4px;line-height:1}
   .ann-modal-close:hover{color:var(--text)}
   .ann-modal-priority{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px}
@@ -55,6 +56,7 @@
   .ann-modal-sender{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--text)}
   .ann-modal-date{font-size:12px;color:var(--text3)}
 </style>
+@include('partials.skeleton-head', ['skReveal' => 'opacity'])
 </head>
 <body>
 @include('student.partials.sidebar')
@@ -339,7 +341,7 @@
           @foreach ($myTeam->expertAssignments as $assignment)
             @php
               // role() is belongsToMany — always a collection, never a single model
-              $roleKey = strtolower($assignment->role->first()?->role_name ?? '');
+              $roleKey = strtolower($assignment->engaged_role_name ?? '');
               $dotColor = match ($roleKey) { 'adviser' => 'var(--accent)', 'consultant' => '#3b82f6', 'grammarian' => '#9333ea', 'panel' => '#f59e0b', default => '#6b7280' };
               $fgColor = match ($roleKey) { 'adviser' => 'var(--accent3)', 'consultant' => 'var(--blue)', 'grammarian' => 'var(--purple)', 'panel' => '#d97706', default => '#6b7280' };
               $isApproved = $assignment->status === 'approved';
@@ -348,7 +350,7 @@
               <div style="width:8px;height:8px;border-radius:50%;background:{{ $dotColor }};flex-shrink:0;"></div>
               <div style="flex:1;min-width:0;">
                 <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-                  <span style="font-size:11px;font-weight:700;color:{{ $fgColor }};text-transform:uppercase;letter-spacing:0.3px;">{{ $assignment->role->first()?->role_name ?? 'Unknown' }}</span>
+                  <span style="font-size:11px;font-weight:700;color:{{ $fgColor }};text-transform:uppercase;letter-spacing:0.3px;">{{ $assignment->engaged_role_name ?? 'Unknown' }}</span>
                   <span style="font-size:9px;padding:1px 6px;border-radius:4px;background:{{ $isApproved ? 'rgba(16,185,129,0.1)' : 'rgba(245,158,11,0.1)' }};color:{{ $isApproved ? '#059669' : '#d97706' }};font-weight:700;">{{ $isApproved ? 'Approved' : ucfirst($assignment->status) }}</span>
                 </div>
                 <div style="font-size:12px;font-weight:600;margin-top:1px;">{{ $assignment->expert?->name ?? 'Unassigned' }}</div>
@@ -400,10 +402,15 @@
             </div>
             <div class="m-body">
               <div class="m-top">
-                <span class="m-title">{{ $result->defense_type }}</span>
+                <span class="m-title">{{ $result->defense_type }}@if(($result->attempt ?? 1) > 1) <span style="font-weight:500;color:var(--text3)">&middot; Redefense {{ $result->attempt }}</span>@endif</span>
                 <span class="m-badge @if($allSubmitted) m-badge-done @elseif($partialSubmitted) m-badge-active @else m-badge-todo @endif">
+                  {{-- The score only appears once every panelist has graded:
+                       it is their totals divided by the size of the panel, so
+                       a partial one would read as final and then move. --}}
                   @if($result->average_score !== null)
                     {{ rtrim(rtrim(number_format($result->average_score, 2), '0'), '.') }} pts
+                  @elseif($partialSubmitted)
+                    Awaiting the rest of the panel
                   @else
                     Not graded yet
                   @endif
@@ -487,6 +494,15 @@ document.addEventListener('DOMContentLoaded', function () {
   var sk = document.getElementById('skeleton-content');
   var rc = document.getElementById('real-content');
   if (sk && rc) {
+    // partials/skeleton-head already decided this in <head>, before the first
+    // paint: the content is on screen and no skeleton was ever shown. Without
+    // this, every save replayed the 600ms fade over content already there.
+    if (document.documentElement.classList.contains('sk-seen')) {
+      sk.remove();
+
+      return;
+    }
+
     requestAnimationFrame(function () {
       setTimeout(function () {
         sk.style.transition = 'opacity 0.3s ease';
@@ -497,6 +513,9 @@ document.addEventListener('DOMContentLoaded', function () {
           sk.remove();
           rc.style.transition = '';
         }, 350);
+        try {
+          sessionStorage.setItem('sk-seen:{{ substr(sha1(session()->getId()), 0, 12) }}:' + window.location.pathname, '1');
+        } catch (e) {}
       }, 600);
     });
   }

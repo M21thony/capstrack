@@ -26,6 +26,9 @@ function App() {
   const [openCommentId, setOpenCommentId] = useState(null);
   // Review workflow status: "To Review" -> "Reviewing" -> "Reviewed"
   const [reviewStatus, setReviewStatus] = useState("To Review");
+  // What the reviewer decided: "approved", "needs_revision", or null when
+  // they have not turned it in yet.
+  const [reviewVerdict, setReviewVerdict] = useState(null);
   // Transient "Saved" flash state for the save button.
   const [saveState, setSaveState] = useState("idle");
   // Background Google Drive upload state: "idle" | "syncing" | "synced" | "error".
@@ -63,12 +66,13 @@ function App() {
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (data?.review_status) setReviewStatus(data.review_status);
+        if (data?.verdict) setReviewVerdict(data.verdict);
       })
       .catch(() => {});
   }, []);
 
   // Updates the review workflow status on the server.
-  const updateReviewStatus = async (status) => {
+  const updateReviewStatus = async (status, verdict = null) => {
     const reviewId = getReviewId();
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
 
@@ -79,7 +83,7 @@ function App() {
         "X-CSRF-TOKEN": csrfToken,
         Accept: "application/json",
       },
-      body: JSON.stringify({ review_status: status }),
+      body: JSON.stringify({ review_status: status, verdict }),
     });
 
     if (!response.ok) {
@@ -120,11 +124,20 @@ function App() {
     return response.json();
   };
 
-  // Handle turn in action — saves remarks and marks the review as Reviewed.
-  const handleTurnIn = async () => {
+  // Turning in is the moment the reviewer decides, so it carries the verdict.
+  // Finishing without one used to leave the decision in a typed remark, where
+  // nothing could find it — the checklist's "Signed CLF Approving Chapter 1"
+  // lines are exactly this decision and could not be tracked.
+  const handleTurnIn = async (verdict) => {
     try {
-      await persistAndFlash("Reviewed");
-      showToast("success", "Turned in successfully!");
+      await persistAndFlash("Reviewed", verdict);
+      setReviewVerdict(verdict);
+      showToast(
+        "success",
+        verdict === "approved"
+          ? "Turned in — approved."
+          : "Turned in — marked as needing revision.",
+      );
     } catch (error) {
       console.error("Turn in error:", error);
       showToast("error", "Error turning in. Please try again.");
@@ -450,8 +463,8 @@ function App() {
   // upload are the slow part of this flow — a real network call to Google's
   // API plus redrawing every annotation onto the PDF — so they're kicked off
   // in the background afterward instead of blocking the button on them.
-  const persistAndFlash = async (status) => {
-    await Promise.all([saveRemarks(), updateReviewStatus(status)]);
+  const persistAndFlash = async (status, verdict = null) => {
+    await Promise.all([saveRemarks(), updateReviewStatus(status, verdict)]);
     setReviewStatus(status);
 
     setSaveState("saved");
@@ -492,6 +505,7 @@ function App() {
         selectedHighlightColor={selectedHighlightColor}
         setSelectedHighlightColor={setSelectedHighlightColor}
         status={reviewStatus}
+        verdict={reviewVerdict}
         saveState={saveState}
         driveSyncState={driveSyncState}
         driveSyncError={driveSyncError}

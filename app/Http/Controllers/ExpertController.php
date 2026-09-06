@@ -7,18 +7,10 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class ExpertController extends Controller
 {
-    public function login()
-    {
-        // Experts and students share the same sign-in page.
-        return redirect()->route('login');
-    }
-
     public function showRequestForm(Request $request)
     {
         $email = $request->query('email');
@@ -53,16 +45,8 @@ class ExpertController extends Controller
                 'suffix' => ['nullable', 'string', 'max:50'],
                 'credentials' => ['nullable', 'string', 'max:50'],
                 'email' => ['required', 'email', 'regex:/@gmail\\.com$/i'],
-                'specialization' => ['required', 'array', 'min:1', function ($attribute, $value, $fail) {
-                    // An expert can only ever serve a team in one of these
-                    // three capacities - picking more than one is what let a
-                    // single expert show up as e.g. both a team's "adviser"
-                    // and "consultant" everywhere their role gets displayed.
-                    if (count(array_intersect($value, ['adviser', 'consultant', 'grammarian'])) > 1) {
-                        $fail('Please select only one of Adviser, Consultant, or Grammarian.');
-                    }
-                }],
-                'specialization.*' => ['string', 'in:adviser,consultant,grammarian,capstone_adviser'],
+                // Role is no longer picked here - CAPSA assigns it when
+                // approving the request (see AdminApprovalController::approve()).
                 'expertise' => ['required', 'array', 'min:1'],
                 'expertise.*' => ['string', 'max:100'],
                 'max_teams' => ['nullable', 'integer', 'min:1', 'max:10'],
@@ -111,28 +95,17 @@ class ExpertController extends Controller
                         'middle_name' => $validated['middle_name'] ?? null,
                         'suffix' => $validated['suffix'] ?? null,
                         'credentials' => $validated['credentials'] ?? null,
-                        'department' => $validated['course'] ?? null,
+                        'program' => $validated['course'] ?? null,
                         'approved_status' => false,
                         'rejection_reason' => null,
                         'reject_attempts' => 0,
                         'reject_cooldown_until' => null,
-                        'max_teams' => $validated['max_teams'] ?? 4,
-                        'is_admin' => in_array('capstone_adviser', $validated['specialization']),
+                        'max_teams' => $validated['max_teams'] ?? null,
                     ]);
 
-                    DB::table('expert_roles')->where('expert_id', $existing->expert_id)->delete();
-                    foreach ($validated['specialization'] as $roleName) {
-                        if ($roleName === 'capstone_adviser') {
-                            continue;
-                        }
-                        $roleId = DB::table('roles')->where('role_name', $roleName)->value('role_id');
-                        if ($roleId) {
-                            DB::table('expert_roles')->insert([
-                                'expert_id' => $existing->expert_id,
-                                'role_id' => $roleId,
-                            ]);
-                        }
-                    }
+                    // Role is deliberately left untouched here - a resubmit
+                    // after rejection doesn't get to re-pick it either;
+                    // CAPSA still assigns it at approval time.
 
                     DB::table('expert_expertise')->where('expert_id', $existing->expert_id)->delete();
                     foreach ($validated['expertise'] as $field) {
@@ -160,26 +133,14 @@ class ExpertController extends Controller
                     'middle_name' => $validated['middle_name'] ?? null,
                     'suffix' => $validated['suffix'] ?? null,
                     'credentials' => $validated['credentials'] ?? null,
-                    'department' => $validated['course'] ?? null,
+                    'program' => $validated['course'] ?? null,
                     'approved_status' => false,
                     'rejection_reason' => null,
-                    'max_teams' => $validated['max_teams'] ?? 4,
-                    'is_admin' => in_array('capstone_adviser', $validated['specialization']),
+                    'max_teams' => $validated['max_teams'] ?? null,
                 ]);
 
-                DB::table('expert_roles')->where('expert_id', $existing->expert_id)->delete();
-                foreach ($validated['specialization'] as $roleName) {
-                    if ($roleName === 'capstone_adviser') {
-                        continue;
-                    }
-                    $roleId = DB::table('roles')->where('role_name', $roleName)->value('role_id');
-                    if ($roleId) {
-                        DB::table('expert_roles')->insert([
-                            'expert_id' => $existing->expert_id,
-                            'role_id' => $roleId,
-                        ]);
-                    }
-                }
+                // Role is deliberately left untouched here too - see the
+                // comment in the branch above.
 
                 DB::table('expert_expertise')->where('expert_id', $existing->expert_id)->delete();
                 foreach ($validated['expertise'] as $field) {
@@ -209,26 +170,15 @@ class ExpertController extends Controller
                     'middle_name' => $validated['middle_name'] ?? null,
                     'suffix' => $validated['suffix'] ?? null,
                     'credentials' => $validated['credentials'] ?? null,
-                    'department' => $validated['course'] ?? null,
+                    'program' => $validated['course'] ?? null,
                     'approved_status' => false,
-                    'max_teams' => $validated['max_teams'] ?? 4,
+                    'max_teams' => $validated['max_teams'] ?? null,
                     'reject_attempts' => 0,
-                    'is_admin' => in_array('capstone_adviser', $validated['specialization']),
                     'created_at' => now(),
                 ]);
 
-                foreach ($validated['specialization'] as $roleName) {
-                    if ($roleName === 'capstone_adviser') {
-                        continue;
-                    }
-                    $roleId = DB::table('roles')->where('role_name', $roleName)->value('role_id');
-                    if ($roleId) {
-                        DB::table('expert_roles')->insert([
-                            'expert_id' => $expertId,
-                            'role_id' => $roleId,
-                        ]);
-                    }
-                }
+                // No role, no is_admin/is_capsa - a fresh request never sets
+                // any of these; CAPSA assigns the role when approving it.
 
                 foreach ($validated['expertise'] as $field) {
                     if (is_string($field) && trim($field) !== '') {
@@ -260,281 +210,12 @@ class ExpertController extends Controller
         }
     }
 
-    public function initiateGoogleLogin(Request $request): JsonResponse
-    {
-        $recaptchaToken = $request->input('g-recaptcha-response');
-        if (! $recaptchaToken) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Please complete the reCAPTCHA verification.',
-            ], 422);
-        }
-
-        $http = Http::asForm();
-        if (app()->environment('local')) {
-            $http = $http->withOptions(['verify' => false]);
-        }
-        $response = $http->post('https://www.google.com/recaptcha/api/siteverify', [
-            'secret' => config('services.recaptcha.secret_key'),
-            'response' => $recaptchaToken,
-            'remoteip' => $request->ip(),
-        ]);
-        logger()->info('reCAPTCHA response', $response->json());
-        $errorCodes = $response->json('error-codes', []);
-        if (! empty($errorCodes)) {
-            logger()->warning('reCAPTCHA error codes', $errorCodes);
-        }
-
-        if (! $response->json('success')) {
-            return response()->json([
-                'success' => false,
-                'message' => 'reCAPTCHA verification failed. Please try again.',
-            ], 422);
-        }
-        $clientId = config('services.google.client_id');
-
-        $state = Str::random(40);
-        session(['oauth_state' => $state]);
-
-        if (empty($clientId)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Google OAuth is not configured. Please set GOOGLE_CLIENT_ID in .env.',
-            ], 500);
-        }
-
-        $query = http_build_query([
-            'client_id' => $clientId,
-            'redirect_uri' => config('services.google.redirect_uri'),
-            'response_type' => 'code',
-            // Added Drive scope (drive.file = only files this app creates/opens,
-            // narrower and safer than the full 'drive' scope) so instructor login
-            // also grants Drive access.
-            'scope' => 'openid email profile https://www.googleapis.com/auth/drive.file',
-            'state' => $state,
-            'hd' => 'gmail.com',
-            // 'consent' (not 'select_account') is required so Google actually returns
-            // a refresh_token on this login — otherwise handleGoogleCallback() below
-            // always saves null for refresh_token and the Drive connection expires
-            // after the first access token times out (usually ~1 hour).
-            'prompt' => 'consent',
-            'access_type' => 'offline',
-        ]);
-
-        return response()->json([
-            'success' => true,
-            'auth_url' => 'https://accounts.google.com/o/oauth2/v2/auth?'.$query,
-            'state' => $state,
-        ]);
-    }
-
-    public function handleGoogleCallback(Request $request)
-    {
-        $state = $request->input('state');
-        if (empty($state) || $state !== session('oauth_state')) {
-            return redirect()->route('login')->withErrors(['message' => 'Invalid session state. Please try again.']);
-        }
-        session()->forget('oauth_state');
-
-        $code = $request->input('code');
-        if (! $code) {
-            return redirect()->route('login')->withErrors(['message' => 'Authentication failed. No authorization code returned from Google.']);
-        }
-
-        $http = Http::asForm();
-        if (app()->environment('local')) {
-            $http = $http->withOptions(['verify' => false]);
-        }
-        $response = $http->post('https://oauth2.googleapis.com/token', [
-            'code' => $code,
-            'client_id' => config('services.google.client_id'),
-            'client_secret' => config('services.google.client_secret'),
-            'redirect_uri' => config('services.google.redirect_uri'),
-            'grant_type' => 'authorization_code',
-        ]);
-
-        if (! $response->successful()) {
-            return redirect()->route('login')->withErrors(['message' => 'Failed to obtain access token from Google.']);
-        }
-
-        $accessToken = $response->json('access_token');
-
-        $httpUserInfo = Http::asForm();
-        if (app()->environment('local')) {
-            $httpUserInfo = $httpUserInfo->withOptions(['verify' => false]);
-        }
-        $userInfoResponse = $httpUserInfo->get('https://www.googleapis.com/oauth2/v3/userinfo', [
-            'access_token' => $accessToken,
-        ]);
-
-        if (! $userInfoResponse->successful()) {
-            return redirect()->route('login')->withErrors(['message' => 'Failed to retrieve user information from Google.']);
-        }
-
-        $userInfo = $userInfoResponse->json();
-        $email = $userInfo['email'] ?? null;
-        $firstName = $userInfo['given_name'] ?? null;
-        $lastName = $userInfo['family_name'] ?? null;
-
-        if (! $firstName && ! $lastName) {
-            $nameParts = explode(' ', $userInfo['name'] ?? 'Instructor User', 2);
-            $firstName = $nameParts[0];
-            $lastName = $nameParts[1] ?? $nameParts[0];
-        }
-
-        if (! $email || ! Str::endsWith($email, '@gmail.com')) {
-            return redirect()->route('login')->withErrors(['message' => 'Access denied. Only Gmail accounts (@gmail.com) are allowed.']);
-        }
-
-        $expert = CapstoneExpert::where('email', $email)->first();
-
-        if ($expert) {
-            if ($expert->approved_status) {
-                $expert->update([
-                    'google_token' => json_encode([
-                        'access_token' => $accessToken,
-                        'refresh_token' => $response->json('refresh_token'),
-                        'token_type' => $response->json('token_type'),
-                    ]),
-                    'google_token_expires_at' => now()->addSeconds($response->json('expires_in', 3600)),
-                    'profile_picture' => $userInfo['picture'] ?? $expert->profile_picture,
-                ]);
-
-                Auth::guard('expert')->login($expert);
-
-                $expert->markFirstLogin();
-
-                $redirectUrl = $expert->is_admin ? '/admin/dashboard' : '/instructor/dashboard';
-
-                if ($request->expectsJson()) {
-                    return response()->json([
-                        'success' => true,
-                        'status' => 'authenticated',
-                        'redirect_url' => $redirectUrl,
-                        'user' => [
-                            'id' => $expert->expert_id,
-                            'email' => $expert->email,
-                            'name' => $expert->first_name.' '.$expert->last_name,
-                        ],
-                    ]);
-                }
-
-                return redirect($redirectUrl);
-            }
-
-            $status = $expert->status;
-
-            if ($status === 'rejected') {
-                $attempts = (int) $expert->reject_attempts;
-                $cooldownUntil = $expert->reject_cooldown_until;
-
-                if ($attempts >= 3 && $cooldownUntil && now()->lt($cooldownUntil)) {
-                    return redirect('/request-account?email='.urlencode($email).'&blocked=cooldown');
-                }
-
-                return redirect('/login/rejected?email='.urlencode($email));
-            }
-
-            return view('auth.pending-approval', ['accountRequest' => $expert]);
-        }
-
-        return redirect('/request-account?email='.urlencode($email).'&first_name='.urlencode($firstName).'&last_name='.urlencode($lastName));
-    }
-
-    public function showMockLogin(Request $request): JsonResponse
-    {
-        if (! app()->environment('local', 'testing')) {
-            abort(403, 'Mock login is only available in local development environment.');
-        }
-
-        $state = $request->input('state');
-        if (empty($state) || $state !== session('oauth_state')) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Invalid session state. Please try again.',
-            ], 422);
-        }
-
-        return response()->json([
-            'success' => true,
-            'state' => $state,
-            'message' => 'Mock login endpoint available. Use handleMockLogin to authenticate.',
-        ]);
-    }
-
-    public function handleMockLogin(Request $request)
-    {
-        if (! app()->environment('local', 'testing')) {
-            abort(403);
-        }
-
-        $state = $request->input('state');
-        if (empty($state) || $state !== session('oauth_state')) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Invalid session state. Please try again.',
-            ], 422);
-        }
-        session()->forget('oauth_state');
-
-        $email = $request->input('email', 'instructor.test@gmail.com');
-        $fullName = 'Instructor Test';
-
-        if (! $email || ! Str::endsWith($email, '@gmail.com')) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Access denied. Only Gmail accounts (@gmail.com) are allowed.',
-            ], 403);
-        }
-
-        $nameParts = explode(' ', $fullName, 2);
-        $firstName = $nameParts[0];
-        $lastName = $nameParts[1] ?? $nameParts[0];
-
-        $expert = CapstoneExpert::where('email', $email)->first();
-
-        if ($expert) {
-            if ($expert->approved_status) {
-                Auth::guard('expert')->login($expert);
-
-                $expert->markFirstLogin();
-
-                $redirectUrl = $expert->is_admin ? '/admin/dashboard' : '/instructor/dashboard';
-
-                if ($request->expectsJson()) {
-                    return response()->json([
-                        'success' => true,
-                        'status' => 'authenticated',
-                        'redirect_url' => $redirectUrl,
-                        'user' => [
-                            'id' => $expert->expert_id,
-                            'email' => $expert->email,
-                            'name' => $expert->first_name.' '.$expert->last_name,
-                        ],
-                    ]);
-                }
-
-                return redirect($redirectUrl);
-            }
-
-            $status = $expert->status;
-
-            if ($status === 'rejected') {
-                $attempts = (int) $expert->reject_attempts;
-                $cooldownUntil = $expert->reject_cooldown_until;
-
-                if ($attempts >= 3 && $cooldownUntil && now()->lt($cooldownUntil)) {
-                    return redirect('/request-account?email='.urlencode($email).'&blocked=cooldown');
-                }
-
-                return redirect('/login/rejected?email='.urlencode($email));
-            }
-
-            return view('auth.pending-approval', ['accountRequest' => $expert]);
-        }
-
-        return redirect('/request-account?email='.urlencode($email).'&first_name='.urlencode($firstName).'&last_name='.urlencode($lastName));
-    }
+    // initiateGoogleLogin()/handleGoogleCallback()/showMockLogin()/
+    // handleMockLogin() used to live here too - a second, near-duplicate
+    // OAuth implementation nothing in the app ever linked to (the real
+    // expert login path is AuthController's). Removed rather than kept in
+    // sync, since it had drifted to only accept @gmail.com and would need
+    // updating alongside AuthController's domain check forever otherwise.
 
     public function logout(Request $request)
     {

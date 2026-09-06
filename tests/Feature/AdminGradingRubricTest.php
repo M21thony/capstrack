@@ -6,83 +6,32 @@ use App\Http\Controllers\Api\AdminGradingRubricController;
 use App\Models\CapstoneExpert;
 use App\Models\GradingRubric;
 use App\Services\OllamaSSHClient;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Mockery;
 use Tests\TestCase;
 
 class AdminGradingRubricTest extends TestCase
 {
+    // Real migrations rather than a hand-built subset of tables: the web
+    // route renders the full admin sidebar, which queries team,
+    // archived_documents, financial_records and more.
+    use RefreshDatabase;
+
     private CapstoneExpert $admin;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->ensureSchema();
-
-        $this->admin = CapstoneExpert::create([
+        $this->admin = $this->makeCapsa(CapstoneExpert::create([
             'email' => 'admin.rubric@test.com',
             'first_name' => 'Admin',
             'last_name' => 'Rubric',
             'is_admin' => true,
             'approved_status' => true,
-        ]);
+        ]));
     }
 
-    protected function ensureSchema(): void
-    {
-        if (! Schema::hasTable('capstone_experts')) {
-            Schema::create('capstone_experts', function (Blueprint $table): void {
-                $table->id('expert_id');
-                $table->string('email')->unique();
-                $table->string('first_name')->nullable();
-                $table->string('last_name')->nullable();
-                $table->string('middle_name')->nullable();
-                $table->string('suffix')->nullable();
-                $table->string('credentials')->nullable();
-                $table->string('profile_picture')->nullable();
-                $table->boolean('is_admin')->default(false);
-                $table->boolean('approved_status')->default(false);
-                $table->unsignedInteger('max_teams')->nullable();
-                $table->string('department')->nullable();
-                $table->text('rejection_reason')->nullable();
-                $table->unsignedInteger('reject_attempts')->default(0);
-                $table->timestamp('reject_cooldown_until')->nullable();
-                $table->string('google_token')->nullable();
-                $table->timestamp('google_token_expires_at')->nullable();
-                $table->timestamp('last_seen_at')->nullable();
-                $table->timestamp('created_at')->nullable();
-            });
-        }
-
-        if (! Schema::hasTable('grading_rubrics')) {
-            Schema::create('grading_rubrics', function (Blueprint $table): void {
-                $table->id('rubric_id');
-                $table->string('rubric_name');
-                $table->string('rubric_type');
-                $table->text('description')->nullable();
-                $table->decimal('total_points', 6, 2)->default(100.00);
-                $table->boolean('is_active')->default(true);
-                $table->timestamps();
-            });
-        }
-
-        if (! Schema::hasTable('rubric_criteria')) {
-            Schema::create('rubric_criteria', function (Blueprint $table): void {
-                $table->id('criterion_id');
-                $table->unsignedBigInteger('rubric_id');
-                $table->string('criterion_name');
-                $table->text('description')->nullable();
-                $table->string('category')->nullable();
-                $table->decimal('category_max_points', 6, 2)->nullable();
-                $table->decimal('max_points', 6, 2);
-                $table->text('score_levels');
-                $table->integer('sort_order')->default(0);
-                $table->timestamp('created_at')->nullable();
-            });
-        }
-    }
 
     public function test_index_returns_all_rubrics(): void
     {
@@ -391,10 +340,12 @@ class AdminGradingRubricTest extends TestCase
     public function test_web_route_returns_view(): void
     {
         $response = $this->actingAs($this->admin, 'expert')
-            ->get(route('admin.rubric_management'));
+            ->get(route('capsa.rubric_management'));
 
         $response->assertStatus(200);
-        $response->assertViewIs('admin.rubric_management');
+        // The route name is still admin.rubric_management; the view moved to
+        // the capsa/ folder when the Admin/CaPSA views were split.
+        $response->assertViewIs('capsa.rubric_management');
     }
 
     public function test_index_empty_when_no_rubrics(): void
@@ -740,119 +691,6 @@ class AdminGradingRubricTest extends TestCase
         $this->assertCount(3, $rubric->criteria()->get());
     }
 
-    public function test_sync_rejects_criteria_total_below_100(): void
-    {
-        $rubric = GradingRubric::create([
-            'rubric_name' => 'Below Total',
-            'rubric_type' => 'Title Defense',
-        ]);
-
-        $response = $this->actingAs($this->admin, 'expert')
-            ->postJson("/api/admin/grading-rubrics/{$rubric->rubric_id}/criteria/sync", [
-                'criteria' => [
-                    [
-                        'criterion_name' => 'C1',
-                        'max_points' => 60,
-                        'score_levels' => json_encode([
-                            ['score' => 30, 'desc' => 'Excellent'],
-                            ['score' => 30, 'desc' => 'Good'],
-                            ['score' => 30, 'desc' => 'Fair'],
-                            ['score' => 9, 'desc' => 'Poor'],
-                        ]),
-                    ],
-                ],
-            ]);
-
-        $response->assertStatus(422)
-            ->assertJson([
-                'success' => false,
-                'message' => 'Total criterion points must equal exactly 100 points.',
-            ]);
-
-        $this->assertCount(0, $rubric->criteria()->get());
-    }
-
-    public function test_sync_rejects_criteria_total_above_100(): void
-    {
-        $rubric = GradingRubric::create([
-            'rubric_name' => 'Above Total',
-            'rubric_type' => 'Pre-Proposal Defense',
-        ]);
-
-        $response = $this->actingAs($this->admin, 'expert')
-            ->postJson("/api/admin/grading-rubrics/{$rubric->rubric_id}/criteria/sync", [
-                'criteria' => [
-                    [
-                        'criterion_name' => 'C1',
-                        'max_points' => 40,
-                        'score_levels' => json_encode([
-                            ['score' => 40, 'desc' => 'Excellent'],
-                            ['score' => 30, 'desc' => 'Good'],
-                            ['score' => 20, 'desc' => 'Fair'],
-                            ['score' => 11, 'desc' => 'Poor'],
-                        ]),
-                    ],
-                ],
-            ]);
-
-        $response->assertStatus(422)
-            ->assertJson([
-                'success' => false,
-                'message' => 'Total criterion points must equal exactly 100 points.',
-            ]);
-
-        $this->assertCount(0, $rubric->criteria()->get());
-    }
-
-    public function test_sync_rejected_total_does_not_delete_existing_criteria(): void
-    {
-        $rubric = GradingRubric::create([
-            'rubric_name' => 'Rollback Test',
-            'rubric_type' => 'Title Defense',
-        ]);
-
-        $rubric->criteria()->create([
-            'criterion_name' => 'Existing Criterion',
-            'max_points' => 100,
-            'score_levels' => '[]',
-        ]);
-
-        $response = $this->actingAs($this->admin, 'expert')
-            ->postJson("/api/admin/grading-rubrics/{$rubric->rubric_id}/criteria/sync", [
-                'criteria' => [
-                    [
-                        'criterion_name' => 'New C1',
-                        'max_points' => 50,
-                        'score_levels' => json_encode([
-                            ['score' => 30, 'desc' => 'Excellent'],
-                            ['score' => 20, 'desc' => 'Good'],
-                            ['score' => 10, 'desc' => 'Fair'],
-                            ['score' => 5, 'desc' => 'Poor'],
-                        ]),
-                    ],
-                    [
-                        'criterion_name' => 'New C2',
-                        'max_points' => 40,
-                        'score_levels' => json_encode([
-                            ['score' => 20, 'desc' => 'Excellent'],
-                            ['score' => 15, 'desc' => 'Good'],
-                            ['score' => 10, 'desc' => 'Fair'],
-                            ['score' => 5, 'desc' => 'Poor'],
-                        ]),
-                    ],
-                ],
-            ]);
-
-        $response->assertStatus(422);
-
-        $this->assertCount(1, $rubric->criteria()->get());
-        $this->assertDatabaseHas('rubric_criteria', [
-            'rubric_id' => $rubric->rubric_id,
-            'criterion_name' => 'Existing Criterion',
-            'max_points' => 100.00,
-        ]);
-    }
-
     public function test_store_rejects_rubric_total_not_100(): void
     {
         $response = $this->actingAs($this->admin, 'expert')
@@ -1152,99 +990,6 @@ class AdminGradingRubricTest extends TestCase
             ->assertJson(['success' => true]);
     }
 
-    public function test_sync_rejects_score_levels_totaling_99(): void
-    {
-        $rubric = GradingRubric::create([
-            'rubric_name' => 'Ninety Nine',
-            'rubric_type' => 'Pre Oral Defense',
-        ]);
-
-        $response = $this->actingAs($this->admin, 'expert')
-            ->postJson("/api/admin/grading-rubrics/{$rubric->rubric_id}/criteria/sync", [
-                'criteria' => [
-                    [
-                        'criterion_name' => 'C1',
-                        'score_levels' => json_encode([
-                            ['label' => 'Excellent', 'score' => 40, 'desc' => 'Valid performance description.'],
-                            ['label' => 'Good', 'score' => 25, 'desc' => 'Valid performance description.'],
-                            ['label' => 'Fair', 'score' => 25, 'desc' => 'Valid performance description.'],
-                            ['label' => 'Poor', 'score' => 9, 'desc' => 'Valid performance description.'],
-                        ]),
-                    ],
-                ],
-            ]);
-
-        $response->assertStatus(422)
-            ->assertJson([
-                'success' => false,
-                'message' => 'Total criterion points must equal exactly 100 points.',
-            ]);
-
-        $this->assertCount(0, $rubric->criteria()->get());
-    }
-
-    public function test_sync_rejects_score_levels_totaling_101(): void
-    {
-        $rubric = GradingRubric::create([
-            'rubric_name' => 'One Oh One',
-            'rubric_type' => 'Final Oral Defense',
-        ]);
-
-        $response = $this->actingAs($this->admin, 'expert')
-            ->postJson("/api/admin/grading-rubrics/{$rubric->rubric_id}/criteria/sync", [
-                'criteria' => [
-                    [
-                        'criterion_name' => 'C1',
-                        'score_levels' => json_encode([
-                            ['label' => 'Excellent', 'score' => 40, 'desc' => 'Valid performance description.'],
-                            ['label' => 'Good', 'score' => 30, 'desc' => 'Valid performance description.'],
-                            ['label' => 'Fair', 'score' => 20, 'desc' => 'Valid performance description.'],
-                            ['label' => 'Poor', 'score' => 11, 'desc' => 'Valid performance description.'],
-                        ]),
-                    ],
-                ],
-            ]);
-
-        $response->assertStatus(422)
-            ->assertJson([
-                'success' => false,
-                'message' => 'Total criterion points must equal exactly 100 points.',
-            ]);
-
-        $this->assertCount(0, $rubric->criteria()->get());
-    }
-
-    public function test_sync_rejects_score_levels_totaling_95(): void
-    {
-        $rubric = GradingRubric::create([
-            'rubric_name' => 'Ninety Five',
-            'rubric_type' => 'Pre-Proposal Defense',
-        ]);
-
-        $response = $this->actingAs($this->admin, 'expert')
-            ->postJson("/api/admin/grading-rubrics/{$rubric->rubric_id}/criteria/sync", [
-                'criteria' => [
-                    [
-                        'criterion_name' => 'C1',
-                        'score_levels' => json_encode([
-                            ['label' => 'Excellent', 'score' => 50, 'desc' => 'Valid performance description.'],
-                            ['label' => 'Good', 'score' => 20, 'desc' => 'Valid performance description.'],
-                            ['label' => 'Fair', 'score' => 20, 'desc' => 'Valid performance description.'],
-                            ['label' => 'Poor', 'score' => 5, 'desc' => 'Valid performance description.'],
-                        ]),
-                    ],
-                ],
-            ]);
-
-        $response->assertStatus(422)
-            ->assertJson([
-                'success' => false,
-                'message' => 'Total criterion points must equal exactly 100 points.',
-            ]);
-
-        $this->assertCount(0, $rubric->criteria()->get());
-    }
-
     public function test_sync_accepts_equal_levels_across_all_four(): void
     {
         $rubric = GradingRubric::create([
@@ -1297,29 +1042,6 @@ class AdminGradingRubricTest extends TestCase
             ->assertJson(['success' => true]);
     }
 
-    public function test_sync_rejects_criterion_without_score_levels_when_total_not_100(): void
-    {
-        $rubric = GradingRubric::create([
-            'rubric_name' => 'No Levels',
-            'rubric_type' => 'Final Oral Defense',
-        ]);
-
-        $response = $this->actingAs($this->admin, 'expert')
-            ->postJson("/api/admin/grading-rubrics/{$rubric->rubric_id}/criteria/sync", [
-                'criteria' => [
-                    ['criterion_name' => 'C1', 'max_points' => 100],
-                ],
-            ]);
-
-        $response->assertStatus(422)
-            ->assertJson([
-                'success' => false,
-                'message' => 'Total criterion points must equal exactly 100 points.',
-            ]);
-
-        $this->assertCount(0, $rubric->criteria()->get());
-    }
-
     public function test_sync_total_spans_all_criteria(): void
     {
         $rubric = GradingRubric::create([
@@ -1357,107 +1079,140 @@ class AdminGradingRubricTest extends TestCase
         $this->assertCount(2, $rubric->criteria()->get());
     }
 
-    public function test_sync_rejects_when_combined_criteria_total_under_100(): void
-    {
-        $rubric = GradingRubric::create([
-            'rubric_name' => 'Combined Under',
-            'rubric_type' => 'Title Defense',
-        ]);
-
-        $response = $this->actingAs($this->admin, 'expert')
-            ->postJson("/api/admin/grading-rubrics/{$rubric->rubric_id}/criteria/sync", [
-                'criteria' => [
-                    [
-                        'criterion_name' => 'C1',
-                        'score_levels' => json_encode([
-                            ['label' => 'Excellent', 'score' => 30, 'desc' => 'Valid performance description.'],
-                            ['label' => 'Good', 'score' => 20, 'desc' => 'Valid performance description.'],
-                            ['label' => 'Fair', 'score' => 10, 'desc' => 'Valid performance description.'],
-                            ['label' => 'Poor', 'score' => 5, 'desc' => 'Valid performance description.'],
-                        ]),
-                    ],
-                    [
-                        'criterion_name' => 'C2',
-                        'score_levels' => json_encode([
-                            ['label' => 'Excellent', 'score' => 20, 'desc' => 'Valid performance description.'],
-                            ['label' => 'Good', 'score' => 9, 'desc' => 'Valid performance description.'],
-                            ['label' => 'Fair', 'score' => 5, 'desc' => 'Valid performance description.'],
-                            ['label' => 'Poor', 'score' => 0, 'desc' => 'Valid performance description.'],
-                        ]),
-                    ],
-                ],
-            ]);
-
-        $response->assertStatus(422)
-            ->assertJson([
-                'success' => false,
-                'message' => 'Total criterion points must equal exactly 100 points.',
-            ]);
-
-        $this->assertCount(0, $rubric->criteria()->get());
-    }
-
-    public function test_store_criterion_rejects_when_whole_rubric_total_not_100(): void
+    // Adding a criterion used to be refused unless the rubric already added
+    // up to 100 with it, which meant hand-reducing the other criteria first
+    // just to be allowed to save. The rest are scaled to make room instead.
+    public function test_store_criterion_scales_the_others_to_keep_the_rubric_at_100(): void
     {
         $rubric = GradingRubric::create([
             'rubric_name' => 'Store Criterion Total',
             'rubric_type' => 'Pre Oral Defense',
         ]);
 
+        // Two criteria worth 50 each - a full rubric with no room left.
+        foreach (['C1', 'C2'] as $name) {
+            $rubric->criteria()->create([
+                'criterion_name' => $name,
+                'max_points' => 50,
+                'score_levels' => json_encode([
+                    ['label' => 'Excellent', 'score' => 50, 'desc' => 'Valid performance description.'],
+                    ['label' => 'Poor', 'score' => 10, 'desc' => 'Valid performance description.'],
+                ]),
+            ]);
+        }
+
         $response = $this->actingAs($this->admin, 'expert')
             ->postJson("/api/admin/grading-rubrics/{$rubric->rubric_id}/criteria", [
-                'criterion_name' => 'C1',
+                'criterion_name' => 'C3',
                 'score_levels' => json_encode([
-                    ['label' => 'Excellent', 'score' => 40, 'desc' => 'Valid performance description.'],
-                    ['label' => 'Good', 'score' => 30, 'desc' => 'Valid performance description.'],
-                    ['label' => 'Fair', 'score' => 20, 'desc' => 'Valid performance description.'],
-                    ['label' => 'Poor', 'score' => 9, 'desc' => 'Valid performance description.'],
+                    ['label' => 'Excellent', 'score' => 20, 'desc' => 'Valid performance description.'],
+                    ['label' => 'Poor', 'score' => 5, 'desc' => 'Valid performance description.'],
                 ]),
             ]);
 
-        $response->assertStatus(422)
-            ->assertJson([
-                'success' => false,
-                'message' => 'Total criterion points must equal exactly 100 points.',
-            ]);
+        $response->assertStatus(201);
+
+        $criteria = $rubric->criteria()->get();
+        $this->assertCount(3, $criteria);
+        $this->assertEqualsWithDelta(100.0, $criteria->sum(fn ($c) => (float) $c->max_points), 0.01);
+
+        // The new one keeps exactly what was asked for; the other two split
+        // the remaining 80 in the proportion they had.
+        $this->assertEqualsWithDelta(20.0, (float) $criteria->firstWhere('criterion_name', 'C3')->max_points, 0.01);
+        $this->assertEqualsWithDelta(40.0, (float) $criteria->firstWhere('criterion_name', 'C1')->max_points, 0.01);
+        $this->assertEqualsWithDelta(40.0, (float) $criteria->firstWhere('criterion_name', 'C2')->max_points, 0.01);
+    }
+
+    // A criterion is worth its highest score level, so rebalancing has to
+    // move the levels themselves - leaving them behind would let a criterion
+    // claim a ceiling none of its levels can reach, and grading validates
+    // every submitted score against those exact values.
+    public function test_rebalancing_rescales_the_score_levels_not_just_the_ceiling(): void
+    {
+        $rubric = GradingRubric::create([
+            'rubric_name' => 'Level Rescale',
+            'rubric_type' => 'Pre Oral Defense',
+        ]);
+
+        $rubric->criteria()->create([
+            'criterion_name' => 'Only One',
+            'max_points' => 100,
+            'score_levels' => json_encode([
+                ['label' => 'Excellent', 'score' => 100, 'desc' => 'Valid performance description.'],
+                ['label' => 'Fair', 'score' => 50, 'desc' => 'Valid performance description.'],
+            ]),
+        ]);
+
+        $this->actingAs($this->admin, 'expert')
+            ->postJson("/api/admin/grading-rubrics/{$rubric->rubric_id}/criteria", [
+                'criterion_name' => 'Newcomer',
+                'score_levels' => json_encode([
+                    ['label' => 'Excellent', 'score' => 40, 'desc' => 'Valid performance description.'],
+                ]),
+            ])->assertStatus(201);
+
+        $scaled = $rubric->criteria()->where('criterion_name', 'Only One')->first();
+        $levels = collect($scaled->decodedScoreLevels())->keyBy('label');
+
+        // Scaled to 60 of the 100, so its levels halve-ish in the same ratio.
+        $this->assertEqualsWithDelta(60.0, (float) $levels['Excellent']['score'], 0.01);
+        $this->assertEqualsWithDelta(30.0, (float) $levels['Fair']['score'], 0.01);
+        $this->assertEqualsWithDelta(60.0, (float) $scaled->max_points, 0.01);
+    }
+
+    public function test_a_criterion_worth_more_than_the_whole_rubric_is_refused(): void
+    {
+        $rubric = GradingRubric::create([
+            'rubric_name' => 'Too Big',
+            'rubric_type' => 'Pre Oral Defense',
+        ]);
+
+        $this->actingAs($this->admin, 'expert')
+            ->postJson("/api/admin/grading-rubrics/{$rubric->rubric_id}/criteria", [
+                'criterion_name' => 'Greedy',
+                'score_levels' => json_encode([
+                    ['label' => 'Excellent', 'score' => 120, 'desc' => 'Valid performance description.'],
+                ]),
+            ])->assertStatus(422);
 
         $this->assertCount(0, $rubric->criteria()->get());
     }
 
-    public function test_update_criterion_rejects_when_whole_rubric_total_not_100(): void
+    public function test_update_criterion_scales_the_others_to_keep_the_rubric_at_100(): void
     {
         $rubric = GradingRubric::create([
             'rubric_name' => 'Update Criterion Total',
             'rubric_type' => 'Final Oral Defense',
         ]);
 
-        $criterion = $rubric->criteria()->create([
-            'criterion_name' => 'C1',
-            'max_points' => 100,
+        $target = $rubric->criteria()->create([
+            'criterion_name' => 'Changing',
+            'max_points' => 50,
             'score_levels' => json_encode([
-                ['label' => 'Excellent', 'score' => 30, 'desc' => 'Valid performance description.'],
-                ['label' => 'Good', 'score' => 30, 'desc' => 'Valid performance description.'],
-                ['label' => 'Fair', 'score' => 30, 'desc' => 'Valid performance description.'],
-                ['label' => 'Poor', 'score' => 10, 'desc' => 'Valid performance description.'],
+                ['label' => 'Excellent', 'score' => 50, 'desc' => 'Valid performance description.'],
             ]),
         ]);
 
-        $response = $this->actingAs($this->admin, 'expert')
-            ->putJson("/api/admin/grading-rubrics/{$rubric->rubric_id}/criteria/{$criterion->criterion_id}", [
-                'criterion_name' => 'C1',
-                'score_levels' => json_encode([
-                    ['label' => 'Excellent', 'score' => 40, 'desc' => 'Valid performance description.'],
-                    ['label' => 'Good', 'score' => 30, 'desc' => 'Valid performance description.'],
-                    ['label' => 'Fair', 'score' => 20, 'desc' => 'Valid performance description.'],
-                    ['label' => 'Poor', 'score' => 11, 'desc' => 'Valid performance description.'],
-                ]),
-            ]);
+        $rubric->criteria()->create([
+            'criterion_name' => 'Other',
+            'max_points' => 50,
+            'score_levels' => json_encode([
+                ['label' => 'Excellent', 'score' => 50, 'desc' => 'Valid performance description.'],
+            ]),
+        ]);
 
-        $response->assertStatus(422)
-            ->assertJson([
-                'success' => false,
-                'message' => 'Total criterion points must equal exactly 100 points.',
-            ]);
+        $this->actingAs($this->admin, 'expert')
+            ->putJson("/api/admin/grading-rubrics/{$rubric->rubric_id}/criteria/{$target->criterion_id}", [
+                'criterion_name' => 'Changing',
+                'score_levels' => json_encode([
+                    ['label' => 'Excellent', 'score' => 70, 'desc' => 'Valid performance description.'],
+                ]),
+            ])->assertStatus(200);
+
+        $criteria = $rubric->criteria()->get();
+        $this->assertEqualsWithDelta(100.0, $criteria->sum(fn ($c) => (float) $c->max_points), 0.01);
+        $this->assertEqualsWithDelta(70.0, (float) $criteria->firstWhere('criterion_name', 'Changing')->max_points, 0.01);
+        $this->assertEqualsWithDelta(30.0, (float) $criteria->firstWhere('criterion_name', 'Other')->max_points, 0.01);
     }
 
     public function test_update_criterion_accepts_when_whole_rubric_total_is_100(): void
@@ -1882,8 +1637,12 @@ class AdminGradingRubricTest extends TestCase
 
     public function test_ai_generate_returns_draft_with_scores_totaling_exactly_100(): void
     {
+        // pre_oral_defense (not title_defense) - title_defense now has a
+        // real reference rubric and goes through exact-reproduction
+        // (scoreTitleDefenseCriteria), so it wouldn't exercise the generic
+        // free-generation budget-split engine this test is actually about.
         $fakeResponse = json_encode([
-            'rubric_name' => 'Title Defense Rubric',
+            'rubric_name' => 'Pre Oral Defense Rubric',
             'description' => 'Evaluates project title clarity and feasibility.',
             'criteria' => [
                 [
@@ -1928,13 +1687,13 @@ class AdminGradingRubricTest extends TestCase
 
         $response = $this->actingAs($this->admin, 'expert')
             ->postJson('/api/admin/grading-rubrics/ai-generate', [
-                'rubric_type' => 'title_defense',
+                'rubric_type' => 'pre_oral_defense',
                 'criteria_count' => 3,
             ]);
 
         $response->assertStatus(200)
             ->assertJson(['success' => true])
-            ->assertJsonPath('data.rubric_name', 'Title Defense Rubric')
+            ->assertJsonPath('data.rubric_name', 'Pre Oral Defense Rubric')
             ->assertJsonCount(3, 'data.criteria');
 
         $criteria = $response->json('data.criteria');
@@ -2022,9 +1781,10 @@ class AdminGradingRubricTest extends TestCase
 
     public function test_ai_generate_defaults_rubric_name_when_ai_omits_it(): void
     {
-        // Uses title_defense (not pre_proposal) - pre_proposal always goes
-        // through the exact-reproduction path regardless of what's mocked,
-        // so it wouldn't exercise this "AI omitted rubric_name" fallback.
+        // Uses pre_oral_defense (not pre_proposal or title_defense) - those
+        // two always go through their own exact-reproduction path
+        // regardless of what's mocked, so neither would exercise this "AI
+        // omitted rubric_name" fallback.
         $fakeResponse = json_encode([
             'criteria' => [
                 [
@@ -2042,12 +1802,12 @@ class AdminGradingRubricTest extends TestCase
 
         $response = $this->actingAs($this->admin, 'expert')
             ->postJson('/api/admin/grading-rubrics/ai-generate', [
-                'rubric_type' => 'title_defense',
+                'rubric_type' => 'pre_oral_defense',
                 'criteria_count' => 3,
             ]);
 
         $response->assertStatus(200)
-            ->assertJsonPath('data.rubric_name', 'Title Defense Rubric');
+            ->assertJsonPath('data.rubric_name', 'Pre Oral Defense Rubric');
 
         // Only one criterion came back even though 3 were requested - the
         // budget split still has to land on exactly 100 for what it got.
@@ -2201,12 +1961,85 @@ class AdminGradingRubricTest extends TestCase
         $this->assertSame(100, $grandTotal);
     }
 
+    public function test_ai_generate_title_defense_returns_all_27_criteria_without_calling_ai(): void
+    {
+        // Title Defense skips the AI call entirely (unlike Pre-Proposal,
+        // which still echoes wording through the model) - a real
+        // reproduction call was tested against the live model and silently
+        // dropped 16 of 27 criteria, so the draft is now built directly
+        // from TITLE_DEFENSE_CRITERIA. ->never() on both methods proves
+        // that bypass actually happens, not just that the numbers end up
+        // right.
+        $mock = Mockery::mock(OllamaSSHClient::class);
+        $mock->shouldReceive('warmup')->never();
+        $mock->shouldReceive('generate')->never();
+        $this->app->instance(OllamaSSHClient::class, $mock);
+
+        $response = $this->actingAs($this->admin, 'expert')
+            ->postJson('/api/admin/grading-rubrics/ai-generate', [
+                'rubric_type' => 'title_defense',
+            ]);
+
+        $response->assertStatus(200)->assertJson(['success' => true]);
+
+        $criteria = $response->json('data.criteria');
+        $this->assertCount(27, $criteria);
+
+        $categories = $response->json('data.categories');
+        $this->assertSame([
+            ['name' => 'Chapter 1', 'max_points' => 20],
+            ['name' => 'Chapter 2', 'max_points' => 15],
+            ['name' => 'Chapter 3', 'max_points' => 20],
+            ['name' => 'Grammar and Spelling', 'max_points' => 10],
+            ['name' => 'Oral Examination/Presentation', 'max_points' => 20],
+            ['name' => 'Research Instrument', 'max_points' => 10],
+            ['name' => 'Timeliness', 'max_points' => 5],
+        ], $categories);
+
+        $grandTotal = array_sum(array_column($criteria, 'max_points'));
+        $this->assertSame(100.0, $grandTotal);
+
+        foreach ($criteria as $c) {
+            $this->assertCount(3, $c['levels']);
+            $this->assertSame(['Excellent', 'Fair', 'Poor'], array_column($c['levels'], 'label'));
+        }
+    }
+
+    public function test_ai_generate_title_defense_keeps_duplicate_named_criteria_in_their_own_category(): void
+    {
+        // Regression test: TITLE_DEFENSE_CRITERIA legitimately reuses
+        // "Notes Page" as a criterion name in Chapter 1, 2, AND 3 (each
+        // chapter ends with its own notes-page row). An earlier version of
+        // scoreTitleDefenseCriteria() matched by criterion name alone,
+        // which collapsed all three into whichever was listed last -
+        // confirmed directly to skew Chapter 1/2/3 totals to 19/13/22
+        // instead of 20/15/20. Matching is now scoped by category+name.
+        $response = $this->actingAs($this->admin, 'expert')
+            ->postJson('/api/admin/grading-rubrics/ai-generate', [
+                'rubric_type' => 'title_defense',
+            ]);
+
+        $response->assertStatus(200);
+
+        $notesPages = collect($response->json('data.criteria'))
+            ->filter(fn ($c) => $c['criterion_name'] === 'Notes Page')
+            ->values();
+
+        $this->assertCount(3, $notesPages);
+        $this->assertSame(['Chapter 1', 'Chapter 2', 'Chapter 3'], $notesPages->pluck('category')->all());
+        $this->assertSame([1, 2, 1], $notesPages->pluck('max_points')->all());
+    }
+
     public function test_ai_generate_falls_back_to_flat_when_categories_missing_for_non_preproposal_type(): void
     {
-        // No "categories" key at all in the response - should behave
-        // exactly like before categories existed (single implicit group).
+        // pre_oral_defense (not title_defense) - title_defense now has its
+        // own fixed real categories (Chapter 1, Chapter 2, ...), so it
+        // would no longer fall back to a flat/uncategorized draft the way
+        // this test expects. No "categories" key at all in the response -
+        // should behave exactly like before categories existed (single
+        // implicit group).
         $fakeResponse = json_encode([
-            'rubric_name' => 'Title Defense Rubric',
+            'rubric_name' => 'Pre Oral Defense Rubric',
             'criteria' => [
                 ['criterion_name' => 'C1', 'description' => 'd', 'levels' => ['excellent' => 'a', 'good' => 'b', 'fair' => 'c', 'poor' => 'd']],
                 ['criterion_name' => 'C2', 'description' => 'd', 'levels' => ['excellent' => 'a', 'good' => 'b', 'fair' => 'c', 'poor' => 'd']],
@@ -2220,7 +2053,7 @@ class AdminGradingRubricTest extends TestCase
 
         $response = $this->actingAs($this->admin, 'expert')
             ->postJson('/api/admin/grading-rubrics/ai-generate', [
-                'rubric_type' => 'title_defense',
+                'rubric_type' => 'pre_oral_defense',
             ]);
 
         $response->assertStatus(200)
@@ -2271,5 +2104,151 @@ class AdminGradingRubricTest extends TestCase
             'category' => 'Manuscript',
             'category_max_points' => 20.00,
         ]);
+    }
+
+    // Saving used to be refused unless the criteria hit exactly 100, which
+    // is what made a real rubric painful to enter: a 27-criterion rubric is
+    // under 100 for the whole time it is being typed, so there was no way to
+    // stop halfway. It saves as it stands now, and records what it totals.
+    public function test_sync_saves_a_rubric_that_does_not_total_100(): void
+    {
+        $rubric = GradingRubric::create([
+            'rubric_name' => 'Half Built',
+            'rubric_type' => 'Title Defense',
+        ]);
+
+        $this->actingAs($this->admin, 'expert')
+            ->postJson("/api/admin/grading-rubrics/{$rubric->rubric_id}/criteria/sync", [
+                'criteria' => [
+                    [
+                        'criterion_name' => 'C1',
+                        'score_levels' => json_encode([
+                            ['score' => 30, 'desc' => 'Excellent'],
+                            ['score' => 10, 'desc' => 'Poor'],
+                        ]),
+                    ],
+                ],
+            ])
+            ->assertStatus(200);
+
+        $this->assertCount(1, $rubric->criteria()->get());
+        $this->assertEqualsWithDelta(30.0, (float) $rubric->fresh()->total_points, 0.01);
+    }
+
+    public function test_sync_saves_a_rubric_that_totals_more_than_100(): void
+    {
+        $rubric = GradingRubric::create([
+            'rubric_name' => 'Over Built',
+            'rubric_type' => 'Title Defense',
+        ]);
+
+        $this->actingAs($this->admin, 'expert')
+            ->postJson("/api/admin/grading-rubrics/{$rubric->rubric_id}/criteria/sync", [
+                'criteria' => [
+                    ['criterion_name' => 'C1', 'score_levels' => json_encode([['score' => 70, 'desc' => 'Excellent']])],
+                    ['criterion_name' => 'C2', 'score_levels' => json_encode([['score' => 45, 'desc' => 'Excellent']])],
+                ],
+            ])
+            ->assertStatus(200);
+
+        $this->assertEqualsWithDelta(115.0, (float) $rubric->fresh()->total_points, 0.01);
+    }
+
+    // The denominator a score is out of has to be what the criteria really
+    // add up to, or a mark out of 95 reads as a mark out of 100.
+    public function test_sync_keeps_the_rubrics_declared_total_in_step(): void
+    {
+        $rubric = GradingRubric::create([
+            'rubric_name' => 'Stays In Step',
+            'rubric_type' => 'Title Defense',
+            'total_points' => 100,
+        ]);
+
+        $this->actingAs($this->admin, 'expert')
+            ->postJson("/api/admin/grading-rubrics/{$rubric->rubric_id}/criteria/sync", [
+                'criteria' => [
+                    ['criterion_name' => 'C1', 'score_levels' => json_encode([['score' => 40, 'desc' => 'Excellent']])],
+                    ['criterion_name' => 'C2', 'score_levels' => json_encode([['score' => 55, 'desc' => 'Excellent']])],
+                ],
+            ])
+            ->assertStatus(200);
+
+        $this->assertEqualsWithDelta(95.0, (float) $rubric->fresh()->total_points, 0.01);
+    }
+
+    // The complaint this exists for: adding a criterion should take the
+    // points off the existing ones, not make you subtract by hand.
+    public function test_adding_a_criterion_takes_the_points_off_the_existing_ones(): void
+    {
+        $rubric = GradingRubric::create([
+            'rubric_name' => 'Real Shape',
+            'rubric_type' => 'Title Defense',
+        ]);
+
+        // A tidy rubric that already fills its 100.
+        foreach ([40, 40, 20] as $i => $points) {
+            $rubric->criteria()->create([
+                'criterion_name' => 'C'.$i,
+                'max_points' => $points,
+                'score_levels' => json_encode([
+                    ['label' => 'Excellent', 'score' => $points, 'desc' => 'Valid performance description.'],
+                ]),
+            ]);
+        }
+
+        $this->actingAs($this->admin, 'expert')
+            ->postJson("/api/admin/grading-rubrics/{$rubric->rubric_id}/criteria", [
+                'criterion_name' => 'Newcomer',
+                'score_levels' => json_encode([
+                    ['label' => 'Excellent', 'score' => 10, 'desc' => 'Valid performance description.'],
+                ]),
+            ])
+            ->assertStatus(201);
+
+        $criteria = $rubric->criteria()->get();
+
+        $this->assertEqualsWithDelta(100.0, $criteria->sum(fn ($c) => (float) $c->max_points), 0.01);
+        $this->assertEqualsWithDelta(10.0, (float) $criteria->firstWhere('criterion_name', 'Newcomer')->max_points, 0.01);
+    }
+
+    // Scaling used to turn a tidy 3 / 5 / 10 rubric into 3.07 / 5.12 / 10.23.
+    // Points land on quarters now - the step the inputs already use.
+    public function test_rebalanced_points_stay_on_sensible_quarter_values(): void
+    {
+        $rubric = GradingRubric::create([
+            'rubric_name' => 'Tidy Numbers',
+            'rubric_type' => 'Title Defense',
+        ]);
+
+        foreach ([30, 30, 20, 20] as $i => $points) {
+            $rubric->criteria()->create([
+                'criterion_name' => 'C'.$i,
+                'max_points' => $points,
+                'score_levels' => json_encode([
+                    ['label' => 'Excellent', 'score' => $points, 'desc' => 'Valid performance description.'],
+                ]),
+            ]);
+        }
+
+        $this->actingAs($this->admin, 'expert')
+            ->postJson("/api/admin/grading-rubrics/{$rubric->rubric_id}/criteria", [
+                'criterion_name' => 'Newcomer',
+                'score_levels' => json_encode([
+                    ['label' => 'Excellent', 'score' => 12, 'desc' => 'Valid performance description.'],
+                ]),
+            ])
+            ->assertStatus(201);
+
+        foreach ($rubric->criteria()->get() as $criterion) {
+            $points = (float) $criterion->max_points;
+            $this->assertEqualsWithDelta(
+                $points,
+                round($points * 4) / 4,
+                0.001,
+                "{$criterion->criterion_name} landed on {$points}, which is not a quarter point",
+            );
+        }
+
+        $this->assertEqualsWithDelta(100.0, $rubric->criteria()->get()->sum(fn ($c) => (float) $c->max_points), 0.01);
     }
 }

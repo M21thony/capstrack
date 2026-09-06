@@ -28,7 +28,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
 .brand-badge{display:inline-flex;align-items:center;gap:10px;flex:1}
 .brand-icon{width:38px;height:38px;background:var(--accent);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .brand-icon svg{width:19px;height:19px;stroke:#1e2028;fill:none;stroke-width:2.2}
-.brand-name{font-family:'Space Mono',monospace;font-size:14px;font-weight:700;color:var(--navy-text);letter-spacing:-0.3px;line-height:1.2}
+.brand-name{font-variant-numeric:tabular-nums;font-size:14px;font-weight:700;color:var(--navy-text);letter-spacing:-0.3px;line-height:1.2}
 .brand-sub{font-size:10.5px;color:var(--navy-text2);letter-spacing:0.8px;text-transform:uppercase;margin-top:2px}
 .sidebar-user{padding:14px 16px;border-bottom:1px solid var(--navy-border);display:flex;align-items:center;gap:12px;background:rgba(245,193,0,0.04)}
 .avatar{width:36px;height:36px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--navy-dark);flex-shrink:0;border:2px solid rgba(245,193,0,0.3)}
@@ -122,8 +122,10 @@ select.input{cursor:pointer}
 .edit-mode .pm-edit-only{display:block}
 
 /* ── SIGNATURE CREDENTIALS ── */
-.legal-credits{margin-top:60px;padding-top:20px;border-top:1px dashed var(--border);text-align:center;opacity:0.5;padding-bottom:20px}
-.credits-title{font-family:'Space Mono',monospace;font-size:8px;font-weight:600;letter-spacing:1px;color:var(--text3);text-transform:uppercase;margin-bottom:4px}
+/* Spans the full width under both columns. It is a direct child of the
+   two-column grid, so without this it would be placed into one column. */
+.legal-credits{grid-column:1 / -1;grid-row:3;margin-top:0;padding-top:12px;border-top:1px dashed var(--border);text-align:center;opacity:0.5;padding-bottom:0}
+.credits-title{font-variant-numeric:tabular-nums;font-size:8px;font-weight:600;letter-spacing:1px;color:var(--text3);text-transform:uppercase;margin-bottom:4px}
 .credits-names{font-size:9px;font-weight:500;color:var(--text3);letter-spacing:0.3px}
 
 /* RECRUITMENT BADGES */
@@ -132,49 +134,78 @@ select.input{cursor:pointer}
 .btn-primary:hover{background:var(--accent2);transform:translateY(-2px);box-shadow:0 8px 20px rgba(201,168,44,0.3)}
 
 /* NOTES */
-.tutorial-note{margin-top:24px;padding:12px 0;display:flex;gap:24px;border-top:1px solid var(--border);justify-content:center}
 .tutorial-item{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px}
 .dot-guide{width:8px;height:8px;border-radius:50%}
 
 
 /* ── EXPERT LAYOUT & CONTAINER ── */
-.content{display:grid;grid-template-columns:1fr 420px;grid-template-rows:auto 1fr;gap:30px;padding:24px 40px;width:100%;height:calc(100vh - 70px);overflow-y:auto;box-sizing:border-box} /* Grid with explicit rows */
+.content{display:grid;grid-template-columns:1fr 292px;grid-template-rows:auto 1fr;gap:22px;padding:24px 32px;width:100%;height:calc(100vh - 70px);overflow-y:auto;box-sizing:border-box} /* Grid with explicit rows */
 .page-tutorial{grid-column:1 / -1;grid-row:1;margin-bottom:16px} /* Tutorial spans full width in row 1 */
 .experts-main{grid-column:1;grid-row:2;display:flex;flex-direction:column;min-width:0} /* Main content in row 2, column 1 */
-.overview-panel{grid-column:2;grid-row:2;width:420px;flex-shrink:0;position:sticky;top:20px} /* Sidebar in row 2, column 2 */
+/* align-self:start is what makes the sticky below actually work. A grid item
+   stretches to its row by default, and this row is as tall as the whole expert
+   list - so the panel was a ~3800px box that never needed to move, and Role
+   Guide and Quick Tips simply scrolled off the top inside it. Sized to its own
+   content, it can stick. */
+.overview-panel{grid-column:2;grid-row:2;align-self:start;width:292px;flex-shrink:0;position:sticky;top:20px} /* Sidebar in row 2, column 2 */
 
 /* #contentWrapper spans .content's whole grid as one cell (skeleton/real-content
    toggling needs a single positioned ancestor); .content-grid re-declares the
    same 2-column grid one level deeper so .experts-main/.overview-panel resume
    correct placement. Real classes, not inline styles, so the mobile override
    below (and the existing @media(max-width:1024px) block) can reach them. */
-.content-grid-wrap{position:relative;grid-column:1 / -1;grid-row:1 / -1}
-.content-grid{display:grid;grid-template-columns:1fr 420px;grid-template-rows:auto 1fr;gap:30px}
+.content-grid-wrap{position:relative;grid-column:1 / -1;grid-row:1 / -1;height:100%;min-height:0}
+/* Three rows, not two: the credits are the third one. Left implicit they
+   flowed after whatever the results happened to be, which put them below
+   the fold and moved them every time the view changed. */
+.content-grid{display:grid;grid-template-columns:1fr 292px;grid-template-rows:auto 1fr auto;gap:22px;height:100%;min-height:0}
 
 
-.sticky-controls{position:sticky;top:0;z-index:100;background:var(--bg);padding:20px 0;margin-top:-20px} /* Sticky filter and search bar */
+/* top is -24px, not 0, and the 24 is .content's own padding-top above.
+   A sticky offset is measured from the scroll container's CONTENT box, so
+   top:0 parked the bar 24px below the top edge of what you can see - and
+   cards scrolled up through that 24px strip and showed above the bar. Pulling
+   it up by the same 24 puts the bar flush against the top edge; nothing is
+   cut off, because that strip is on screen too. Change .content's padding and
+   change this with it. */
+.sticky-controls{position:sticky;top:-24px;z-index:100;background:var(--bg);padding:20px 0;margin-top:-20px} /* Sticky filter and search bar */
 
 /* ── FILTER BAR & CHIPS ── */
-.filter-bar{display:flex;gap:10px;margin-bottom:24px} /* Flex container for filter buttons */
-.filter-chip{padding:8px 16px;border-radius:10px;background:var(--bg2);border:1px solid var(--border);font-size:12px;font-weight:600;color:var(--text3);cursor:pointer;transition:0.2s} /* Clickable filter item */
-.filter-chip.active{background:var(--accent);color:white;border-color:var(--accent)} /* Active filter state */
+/* Role filter, drawn as the app's underlined tab strip: the chosen role is
+   marked by an accent rule on the strip's own baseline. */
+.filter-bar{display:flex;flex-wrap:wrap;width:fit-content;max-width:100%;border-bottom:1px solid var(--border);margin-bottom:24px}
+.filter-chip{padding:10px 16px;border:none;border-bottom:2px solid transparent;margin-bottom:-1px;background:transparent;font-size:12.5px;font-weight:600;color:var(--text2);cursor:pointer;transition:.13s;white-space:nowrap}
+.filter-chip:hover{background:var(--bg4);color:var(--text)}
+.filter-chip:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.filter-chip.active{color:var(--accent3);border-bottom-color:var(--accent)}
 
 /* ── 3X3 GRID SYSTEM ── */
-.expert-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:25px;width:100%;margin-top:20px;margin-bottom:32px} /* Strict 3-column layout */
+/* As many as the width allows, so cards do not stretch to fill a row of
+   exactly three on a wide screen. */
+.expert-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(248px,1fr));gap:16px;width:100%;margin-top:20px;margin-bottom:28px}
 
 /* ── EXPERT CARD DESIGN ── */
-.expert-card-compact{background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:35px 20px;display:flex;flex-direction:column;align-items:center;text-align:center;position:relative;transition:all 0.3s ease;box-shadow:0 4px 12px rgba(0,0,0,0.03)} /* Professional card base */
-.expert-card-compact:hover{border-color:var(--accent);transform:translateY(-8px);box-shadow:0 12px 24px rgba(181,148,31,0.1)} /* Hover elevation and glow */
-.role-dot{position:absolute;top:15px;right:15px;width:8px;height:8px;border-radius:50%} /* Small status indicator on card */
-.expert-avatar-wrap{width:72px;height:72px;border-radius:50%;padding:3px;border:2px solid var(--border);margin-bottom:16px;transition:0.3s} /* Avatar frame */
-.expert-card-compact:hover .expert-avatar-wrap{border-color:var(--accent);transform:scale(1.05)} /* Avatar zoom effect on hover */
+/* Medium: the same card, at about 210px instead of 285, so half again as
+   many experts are on screen without anything being taken off it. */
+.expert-card-compact{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:22px 18px 16px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:9px;position:relative;transition:border-color .13s ease,box-shadow .13s ease}
+.expert-card-compact:hover{border-color:var(--border2);box-shadow:0 3px 10px rgba(0,0,0,0.04)}
+.role-dot{position:absolute;top:12px;right:12px;width:7px;height:7px;border-radius:50%}
+/* The gold disc is the avatar itself now, not a ring around it - the ring was
+   a second border inside a bordered card. */
+.expert-avatar-wrap{width:56px;height:56px;border-radius:50%;padding:2px;border:2px solid var(--border);margin:0;flex-shrink:0;transition:border-color .13s ease}
+.expert-card-compact:hover .expert-avatar-wrap{border-color:var(--accent)}
 
 /* ── PROGRESS INDICATORS ── */
-.mini-slot-bar{width:100%;height:5px;background:var(--bg3);border-radius:10px;margin:18px 0 8px;overflow:hidden} /* Container for availability bar */
-.mini-slot-fill{height:100%;background:var(--accent);transition:0.5s ease-out} /* Dynamic fill for slots */
+/* A rule, where a progress bar used to say what the line below it says. */
+.mini-slot-bar{width:100%;height:1px;background:var(--border);border-radius:0;margin:3px 0 0}
+.mini-slot-fill{display:none}
+.slot-caption{font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--text3)}
+.slot-caption.is-full{color:var(--red)}
+/* Not "full" and not a number - nobody has said yet, which is its own state. */
+.slot-caption.is-unset{color:var(--amber);text-transform:none;letter-spacing:0;font-size:11px;font-weight:600}
 
 /* ── SLIM OVERVIEW PANEL (RIGHT) ── */
-.overview-panel{width:420px;flex-shrink:0;position:sticky;top:20px} /* Side info panel */
+.overview-panel{width:292px;flex-shrink:0;position:sticky;top:20px} /* Side info panel */
 .overview-label{display:block;font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:8px} /* Section header in panel */
 .expert-stat-card{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;margin-bottom:6px;transition:0.2s} /* Individual stat row */
 .stat-name{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:500;color:var(--text2)} /* Label inside stat card */
@@ -251,17 +282,11 @@ select.input{cursor:pointer}
   .content{padding:14px!important}
 
   /* ── Stats (3 compact cards side by side) ── */
-  .stat-grid{grid-template-columns:repeat(3,1fr)!important;gap:8px!important}
-  .stat-card{flex-direction:column!important;text-align:center!important;justify-content:center!important;align-items:center!important;padding:14px 6px!important;gap:6px!important;border-radius:12px!important;min-height:100px!important}
-  .stat-card-icon{width:32px!important;height:32px!important;border-radius:8px!important;margin:0!important;flex-shrink:0!important}
-  .stat-card-icon svg{width:16px!important;height:16px!important}
-  .stat-card-n{font-size:20px!important;line-height:1!important}
-  .stat-card-l{font-size:9px!important;margin-top:0!important;line-height:1.2!important}
 
   /* ── Search + Filters stack ── */
   .sticky-controls>div{flex-direction:column!important;align-items:stretch!important;gap:10px!important}
   .sticky-controls .input{max-width:100%!important}
-  .filter-bar{margin-bottom:0!important;flex-wrap:wrap!important;justify-content:center!important}
+  .filter-bar{margin-bottom:0!important;flex-wrap:wrap!important;justify-content:center!important;width:100%!important}
 
   /* ── Expert cards (list style on mobile) ── */
   .expert-grid{grid-template-columns:1fr!important;gap:10px!important}
@@ -273,6 +298,7 @@ select.input{cursor:pointer}
   .expert-card-compact .role-chips,
   .expert-card-compact .expertise-tags,
   .expert-card-compact .mini-slot-bar,
+  .expert-card-compact .slot-caption,
   .expert-card-compact div[style*="font-size: 10px"]:not(.btn),
   .expert-card-compact .role-dot{display:none!important}
   .expert-card-compact .btn{pointer-events:auto;flex-shrink:0!important;padding:5px 10px!important;font-size:10px!important;width:auto!important}
@@ -280,18 +306,6 @@ select.input{cursor:pointer}
   .expert-card-compact:hover{transform:none!important;box-shadow:none!important}
 
   /* ── Role Overview ── */
-  .role-overview{padding:10px 12px!important;margin-bottom:12px!important}
-  .role-overview-title{font-size:11px!important;margin-bottom:8px!important}
-  .role-overview-title svg{width:14px!important;height:14px!important}
-  .role-overview-row{padding:6px 0!important;gap:8px!important}
-  .role-overview-dot{width:8px!important;height:8px!important}
-  .role-overview-role{font-size:10px!important;width:70px!important}
-  .role-overview-status .check,
-  .role-overview-status .xmark{width:14px!important;height:14px!important}
-  .role-overview-status .assigned-name{font-size:11px!important}
-  .role-overview-status .not-assigned{font-size:10px!important}
-  .role-overview .btn{padding:2px 6px!important}
-  .role-overview .btn svg{width:11px!important;height:11px!important}
 
   /* ── Request Section ── */
   .req-section .section-title{font-size:13px!important;margin-bottom:10px!important}
@@ -304,7 +318,6 @@ select.input{cursor:pointer}
   .req-card .btn svg{width:11px!important;height:11px!important}
 
   /* ── Tutorial Note ── */
-  .tutorial-note{flex-wrap:wrap!important;gap:10px!important}
   .tutorial-item{font-size:10px!important}
 
   /* ── Overview Panel ── */
@@ -330,9 +343,9 @@ select.input{cursor:pointer}
   .overview-panel .card div[style*="margin: 16px 0"]{margin:8px 0!important}
   .overview-panel .card p[style*="line-height: 1.4"]{font-size:9px!important;line-height:1.3!important}
   .overview-panel .card ul[style*="font-size"]{font-size:10px!important;line-height:1.4!important;padding-left:14px!important}
-  .overview-panel .legal-credits{grid-column:1/-1!important;margin-top:0!important;padding:6px 0!important}
-  .overview-panel .legal-credits .credits-title{font-size:7px!important}
-  .overview-panel .legal-credits .credits-names{font-size:8px!important}
+  .legal-credits{margin-top:0!important;padding:6px 0!important}
+  .legal-credits .credits-title{font-size:7px!important}
+  .legal-credits .credits-names{font-size:8px!important}
 
   /* ── Pagination ── */
   .pagination-container{gap:6px!important;margin-top:16px!important}
@@ -352,7 +365,6 @@ select.input{cursor:pointer}
 @media (max-width:480px){
   .content{padding:10px!important;gap:16px!important;height:calc(100vh - 60px)!important}
   .topbar .page-title{font-size:14px!important}
-  .stat-grid{grid-template-columns:repeat(3,1fr)!important;gap:6px!important}
   .expert-grid{grid-template-columns:1fr!important;gap:6px!important}
 
   .expert-card-compact{padding:8px 10px!important;border-radius:8px!important;gap:8px!important}
@@ -362,29 +374,11 @@ select.input{cursor:pointer}
   .expert-card-compact .btn{padding:4px 8px!important;font-size:9px!important}
   .expert-card-compact .btn svg{width:10px!important;height:10px!important}
 
-  .stat-card{padding:10px 4px!important;gap:4px!important;border-radius:10px!important;min-height:80px!important}
-  .stat-card-icon{width:26px!important;height:26px!important;border-radius:6px!important}
-  .stat-card-icon svg{width:13px!important;height:13px!important}
-  .stat-card-n{font-size:16px!important}
-  .stat-card-l{font-size:8px!important}
 
   .sticky-controls{ margin-top:0!important;padding-top:12px!important;padding-bottom:12px!important}
   .sticky-controls .input{font-size:13px!important;padding:9px 12px!important}
-  .filter-chip{padding:6px 12px!important;font-size:11px!important}
-  .filter-bar{gap:6px!important}
+  .filter-chip{padding:8px 12px!important;font-size:11.5px!important}
 
-  .role-overview{padding:12px 14px!important;margin-bottom:14px!important}
-  .role-overview-title{font-size:12px!important;margin-bottom:8px!important}
-  .role-overview-title svg{width:15px!important;height:15px!important}
-  .role-overview-row{padding:6px 0!important;gap:10px!important}
-  .role-overview-dot{width:8px!important;height:8px!important}
-  .role-overview-role{font-size:10px!important;width:75px!important}
-  .role-overview-status .check,
-  .role-overview-status .xmark{width:14px!important;height:14px!important}
-  .role-overview-status .assigned-name{font-size:12px!important}
-  .role-overview-status .not-assigned{font-size:11px!important}
-  .role-overview .btn{padding:3px 7px!important}
-  .role-overview .btn svg{width:11px!important;height:11px!important}
 
   .req-section .section-title{font-size:12px!important;margin-bottom:8px!important;gap:5px!important}
   .req-section .section-title svg{width:14px!important;height:14px!important}
@@ -399,7 +393,6 @@ select.input{cursor:pointer}
 
   .empty-state{padding:24px 16px!important}
 
-  .tutorial-note{gap:8px!important;justify-content:center!important}
   .tutorial-item{font-size:9px!important;gap:5px!important}
 
   .overview-panel{display:grid!important;grid-template-columns:1fr 1fr!important;gap:6px!important;margin-top:10px!important}
@@ -411,9 +404,9 @@ select.input{cursor:pointer}
   .overview-panel .card div[style*="margin: 16px 0"]{margin:5px 0!important}
   .overview-panel .card p[style*="line-height: 1.4"]{font-size:8px!important;line-height:1.2!important}
   .overview-panel .card ul[style*="font-size"]{font-size:9px!important;line-height:1.3!important;padding-left:12px!important}
-  .overview-panel .legal-credits{grid-column:1/-1!important;margin-top:0!important;padding:4px 0!important}
-  .overview-panel .legal-credits .credits-title{font-size:6px!important}
-  .overview-panel .legal-credits .credits-names{font-size:7px!important}
+  .legal-credits{margin-top:0!important;padding:4px 0!important}
+  .legal-credits .credits-title{font-size:6px!important}
+  .legal-credits .credits-names{font-size:7px!important}
   .overview-panel .card>div>div:first-child{font-size:10px!important}
   .overview-panel .card>div>div:nth-child(2){font-size:9px!important}
 
@@ -470,20 +463,244 @@ select.input{cursor:pointer}
   .req-card .status-badge{font-size:6px!important;padding:1px 4px!important;border-radius:4px!important}
   .req-card .btn{padding:2px 5px!important;font-size:8px!important}
   .req-card .btn svg{width:8px!important;height:8px!important}
-  .role-overview{padding:10px 12px!important;margin-bottom:10px!important}
-  .role-overview-title{font-size:11px!important;margin-bottom:6px!important}
-  .role-overview-title svg{width:13px!important;height:13px!important}
-  .role-overview-row{padding:5px 0!important;gap:8px!important}
-  .role-overview-dot{width:7px!important;height:7px!important}
-  .role-overview-role{font-size:9px!important;width:65px!important}
-  .role-overview-status .check,
-  .role-overview-status .xmark{width:13px!important;height:13px!important}
-  .role-overview-status .assigned-name{font-size:11px!important}
-  .role-overview-status .not-assigned{font-size:10px!important}
-  .role-overview .btn{padding:2px 6px!important}
-  .role-overview .btn svg{width:10px!important;height:10px!important}
   .ep-slot-bar{height:6px!important}
   .ep-slot-text{font-size:11px!important}
   .remove-box .modal-input{font-size:16px!important;padding:12px!important}
   .remove-field textarea.modal-input{min-height:90px!important}
 }
+
+/* The three role slots stack once they get too narrow to read. */
+@media (max-width:640px){
+  .slot-row{grid-template-columns:1fr}
+  .team-slots{padding:13px 14px}
+  .team-slots-head{font-size:13px}
+  .team-slots-hint{width:100%}
+}
+
+
+/* ══════════════════════════════════════════════════════════════════════
+   Role-first layout. The page asks which slot you are filling before it
+   asks which person, because a team needs one adviser, one consultant and
+   one grammarian - never a choice among all of them. That is what keeps
+   the list to one screen: the longest role is a handful of people, and
+   anything past what fits runs sideways rather than downwards.
+   ══════════════════════════════════════════════════════════════════════ */
+
+.experts-main{display:flex;flex-direction:column;gap:14px;min-width:0;min-height:0}
+.pagehead h1{margin:0;font-size:21px;font-weight:700;letter-spacing:-.018em;color:var(--text)}
+
+/* ── the three roles ── */
+.roles{display:grid;grid-template-columns:repeat(3,1fr);gap:11px}
+.role{
+  display:flex;gap:10px;align-items:flex-start;padding:10px 12px;text-decoration:none;
+  background:var(--bg2);border:1px solid var(--border);border-radius:11px;color:inherit;transition:.13s;
+}
+.role:hover{border-color:var(--border2)}
+.role:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.role-ic{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;flex-shrink:0}
+.role-ic svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.9}
+.role-body{min-width:0;display:block}
+.role-nm{display:block;font-size:14px;font-weight:700;margin-bottom:1px}
+.role-ds{display:block;font-size:11.5px;line-height:1.4;color:var(--text3)}
+.role-ct{display:block;font-size:10.5px;font-weight:600;color:var(--text3);margin-top:5px;font-variant-numeric:tabular-nums}
+.role-tick{width:17px;height:17px;flex-shrink:0;margin-left:auto;border-radius:50%;border:1.5px solid var(--border2)}
+.role.is-on .role-tick{border-color:transparent}
+.role-tick svg.on{width:17px;height:17px;fill:currentColor}
+.role-tick svg.on path{fill:none;stroke:var(--bg2);stroke-width:2.2;stroke-linecap:round}
+.role-adviser .role-ic{background:var(--accent-light);color:var(--accent3)}
+.role-consultant .role-ic{background:var(--blue-bg);color:var(--blue)}
+.role-grammarian .role-ic{background:var(--purple-bg);color:var(--purple)}
+.role-adviser .role-nm{color:var(--accent3)}
+.role-consultant .role-nm{color:var(--blue)}
+.role-grammarian .role-nm{color:var(--purple)}
+.role-adviser.is-on{background:var(--accent-light);border-color:var(--accent)}
+.role-consultant.is-on{background:var(--blue-bg);border-color:var(--blue)}
+.role-grammarian.is-on{background:var(--purple-bg);border-color:var(--purple)}
+.role-adviser .role-tick{color:var(--accent)}
+.role-consultant .role-tick{color:var(--blue)}
+.role-grammarian .role-tick{color:var(--purple)}
+
+/* ── search, skills, view switch ── */
+.filters{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:0}
+.filters .field{
+  display:flex;align-items:center;gap:7px;background:var(--bg2);border:1px solid var(--border);
+  border-radius:9px;padding:0 11px;height:36px;font-size:12.5px;color:var(--text3);
+}
+.filters .field.search{flex:1;min-width:200px}
+.filters .field svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;flex-shrink:0}
+.filters .field input{
+  flex:1;min-width:0;border:none;background:transparent;font-family:inherit;font-size:12.5px;
+  color:var(--text);outline:none;height:100%;
+}
+.filters .field input::-webkit-search-cancel-button{display:none}
+.field-go{display:grid;place-items:center;border:none;background:none;padding:0;margin:0;color:var(--text3);cursor:pointer;flex-shrink:0;line-height:0}
+.field-go:hover{color:var(--text)}
+.field-go:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+.field-clear{color:var(--text3);text-decoration:none;font-size:16px;line-height:1;padding:0 2px}
+.field-clear:hover{color:var(--text)}
+.seg{display:flex;background:var(--bg3);border:1px solid var(--border);border-radius:9px;padding:2px;gap:2px}
+.seg button{
+  display:flex;align-items:center;gap:6px;font-family:inherit;font-size:12px;font-weight:600;
+  color:var(--text3);background:transparent;border:none;border-radius:7px;padding:5px 11px;cursor:pointer;
+}
+.seg button svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2}
+.seg button[aria-pressed="true"]{background:var(--bg2);color:var(--text);box-shadow:0 1px 2px rgba(0,0,0,.05)}
+.seg button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+
+/* ── which view is showing ── */
+#results{flex:1;min-height:0;display:flex;flex-direction:column}
+#results.view-cards .listwrap{display:none}
+#results.view-list .railwrap,
+#results.view-list .rail-pager{display:none}
+
+/* ── the card strip ── */
+.railwrap{position:relative;min-height:0}
+.rail{
+  display:grid;grid-auto-flow:column;grid-template-rows:repeat(var(--rows,2),auto);
+  grid-auto-columns:calc((100% - (var(--cols,4) - 1) * 10px) / var(--cols,4));gap:10px;
+  overflow-x:auto;scroll-snap-type:x mandatory;scroll-behavior:smooth;
+  scrollbar-width:none;-ms-overflow-style:none;padding-bottom:2px;
+}
+.rail::-webkit-scrollbar{display:none}
+.rail>.card{scroll-snap-align:start}
+/* Half over the edge of the strip. It takes no layout width, so the cards
+   keep the same left and right edge as the role cards above them. */
+.rail-nav{
+  position:absolute;top:50%;transform:translateY(-50%);z-index:3;width:30px;height:30px;padding:0;
+  border-radius:50%;border:1px solid var(--border2);background:var(--bg2);color:var(--text2);
+  display:grid;place-items:center;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.12);transition:.12s;
+}
+.rail-nav svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
+.rail-nav:hover:not(:disabled){color:var(--text);border-color:var(--text3)}
+.rail-nav:disabled{opacity:0;pointer-events:none}
+.rail-nav.prev{left:-11px}
+.rail-nav.next{right:-11px}
+.rail-nav[hidden]{display:none}
+.rail-pager{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:8px;min-height:16px}
+.rail-pager[hidden]{display:none}
+.rail-pager .dots{display:flex;align-items:center;gap:5px}
+.rail-pager i{width:5px;height:5px;border-radius:50%;background:var(--border2)}
+.rail-pager i.on{background:var(--accent);width:14px;border-radius:3px}
+.rail-pager .count{font-size:11px;font-weight:600;color:var(--text3);font-variant-numeric:tabular-nums}
+.rail-pager .count b{color:var(--text2)}
+
+/* ── the card ── */
+.rail .card{
+  background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:12px 13px;
+  display:flex;flex-direction:column;gap:7px;position:relative;cursor:pointer;
+  transition:border-color .13s ease,box-shadow .13s ease;
+}
+.rail .card:hover{border-color:var(--border2);box-shadow:0 3px 10px rgba(0,0,0,.04)}
+.rail .who{display:flex;align-items:center;gap:10px;min-width:0}
+.rail .expert-avatar-wrap{width:34px;height:34px;border-radius:50%;padding:0;border:none;margin:0;flex-shrink:0}
+.ex-nm{
+  font-size:13px;font-weight:700;line-height:1.25;color:var(--text);min-width:0;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere;
+}
+.chips{display:flex;gap:4px;flex-wrap:wrap}
+.chip{font-size:9px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;padding:2px 7px;border-radius:20px;white-space:nowrap}
+.lbl{font-size:9px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--text3);margin-bottom:5px}
+/* Exactly two rows of tags, always: an expert with nine areas and an expert
+   with one produce the same card, and the leftovers become a +N chip rather
+   than being silently cut off. */
+.tags{display:flex;gap:4px;flex-wrap:wrap;height:44px;overflow:hidden;align-content:flex-start}
+.t{
+  font-size:10px;color:var(--text2);background:var(--bg3);padding:2px 6px;border-radius:4px;
+  max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.t.more{background:transparent;color:var(--text3);font-weight:600;padding-left:2px}
+.avail{border-top:1px solid var(--border);padding-top:8px}
+.rail .card .btn{margin-top:auto}
+
+/* ── the list ── */
+.listwrap{background:var(--bg2);border:1px solid var(--border);border-radius:12px;display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden}
+.listscroll{overflow-y:auto;min-height:0}
+/* Styled down rather than hidden - in this view it is the only thing telling
+   you there are more rows. */
+.listscroll{scrollbar-width:thin;scrollbar-color:var(--border2) transparent}
+.listscroll::-webkit-scrollbar{width:10px}
+.listscroll::-webkit-scrollbar-track{background:transparent}
+.listscroll::-webkit-scrollbar-thumb{background:var(--border2);border-radius:10px;border:3px solid transparent;background-clip:content-box}
+.listscroll::-webkit-scrollbar-thumb:hover{background:var(--text3);background-clip:content-box}
+.listwrap table{width:100%;border-collapse:collapse}
+.listwrap th{
+  position:sticky;top:0;z-index:1;text-align:left;background:var(--bg3);font-size:9.5px;font-weight:700;
+  letter-spacing:.08em;text-transform:uppercase;color:var(--text3);padding:10px 14px;
+  border-bottom:1px solid var(--border);white-space:nowrap;
+}
+.listwrap td{padding:8px 14px;border-top:1px solid var(--border);font-size:12.5px;vertical-align:middle}
+.listwrap tbody tr:first-child td{border-top:none}
+.listwrap tbody tr:hover{background:var(--bg3)}
+.lname{display:flex;align-items:center;gap:9px;font-weight:600;min-width:0}
+.lname .expert-avatar-wrap.sm{width:26px;height:26px;border-radius:50%;padding:0;border:none;margin:0;flex-shrink:0}
+.lname>span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ltags{display:flex;gap:4px;flex-wrap:nowrap;overflow:hidden}
+.lact{text-align:right;white-space:nowrap}
+.lact .btn{width:auto;margin-top:0}
+
+/* ── the side column ── */
+.overview-panel{display:flex;flex-direction:column;gap:10px;max-height:100%;overflow-y:auto;scrollbar-width:none}
+.overview-panel::-webkit-scrollbar{display:none}
+.panel{background:var(--bg2);border:1px solid var(--border);border-radius:11px;padding:12px 14px}
+.panel h3{margin:0 0 9px;font-size:13.5px;font-weight:700;color:var(--text)}
+.panel-empty{margin:0;font-size:12px;color:var(--text3);line-height:1.5}
+.panel-count{margin:0 0 9px;font-size:12px;color:var(--text3)}
+.panel-count b{color:var(--amber);font-weight:700}
+.check{display:flex;align-items:center;gap:9px;padding:4px 0}
+.check-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.check-role{flex:1;min-width:0;font-size:12.5px;font-weight:600;color:var(--text2)}
+.pill{
+  font-size:10px;color:var(--text3);background:var(--bg3);padding:2px 7px;border-radius:5px;
+  white-space:nowrap;max-width:104px;overflow:hidden;text-overflow:ellipsis;
+}
+.pill.set{background:var(--green-bg);color:var(--green);font-weight:600}
+.check-remove{
+  width:20px;height:20px;flex-shrink:0;border:none;background:transparent;border-radius:5px;
+  color:var(--text3);cursor:pointer;display:grid;place-items:center;
+}
+.check-remove:hover{background:var(--red-bg);color:var(--red)}
+/* Guidance a student reads once should not hold a third of the screen for
+   the whole term - folded shut it costs a row instead of 300px. */
+.howto{padding:0}
+.howto summary{display:flex;align-items:center;gap:8px;padding:11px 14px;cursor:pointer;font-size:13.5px;font-weight:700;list-style:none;color:var(--text)}
+.howto summary::-webkit-details-marker{display:none}
+.howto summary svg{margin-left:auto;width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2;color:var(--text3);transition:transform .15s ease}
+.howto[open] summary svg{transform:rotate(180deg)}
+.howto summary:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;border-radius:11px}
+.howto .steps{padding:14px 14px 15px;border-top:1px solid var(--border);display:flex;flex-direction:column}
+.step{display:flex;gap:10px;padding-bottom:12px;position:relative}
+.step:last-child{padding-bottom:0}
+.step .n{width:20px;height:20px;border-radius:50%;flex-shrink:0;display:grid;place-items:center;font-size:10px;font-weight:700;color:#fff;background:var(--accent);z-index:1}
+.step:not(:last-child)::before{content:"";position:absolute;left:9.5px;top:20px;bottom:2px;width:1px;background:var(--border)}
+.step b{display:block;font-size:12.5px;font-weight:600;color:var(--text2);margin-bottom:1px}
+.step span{font-size:11.5px;line-height:1.45;color:var(--text3)}
+
+/* the request cards were built for a full-width section; in the side column
+   they stack instead of sitting on one line */
+.overview-panel .req-card{flex-wrap:wrap;padding:9px 10px;gap:8px}
+.overview-panel .req-card .btn{padding:4px 9px;font-size:10.5px}
+
+/* ── reading the pre-proposal before it is sent with an application ── */
+.pp-box{width:640px;max-width:94vw;max-height:84vh;display:flex;flex-direction:column;padding:0}
+.pp-head{display:flex;align-items:flex-start;gap:12px;padding:16px 20px;border-bottom:1px solid var(--border)}
+.pp-eyebrow{font-size:9.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--text3);margin-bottom:4px}
+.pp-x{width:28px;height:28px;flex-shrink:0;border:none;background:transparent;border-radius:7px;color:var(--text3);cursor:pointer;display:grid;place-items:center}
+.pp-x:hover{background:var(--bg3);color:var(--text)}
+.pp-body{padding:16px 20px;overflow-y:auto;display:flex;flex-direction:column;gap:14px}
+.pp-label{font-size:9.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--text3);margin-bottom:5px}
+.pp-field p{margin:0;font-size:13px;line-height:1.6;color:var(--text2);white-space:pre-wrap}
+.pp-foot{padding:12px 20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;background:var(--bg3)}
+
+/* ── phones: the strip becomes a plain list, as it always did ── */
+@media (max-width:1024px){
+  .roles{grid-template-columns:1fr}
+  .rail{display:flex!important;flex-direction:column;overflow-x:visible;height:auto}
+  .rail-nav,.rail-pager{display:none!important}
+  .listwrap{display:none!important}
+  .seg{display:none}
+  .tags{height:auto}
+}
+
+/* the two columns have to be allowed to be shorter than their content, or
+   the row cannot shrink and the page grows a scrollbar again */
+.experts-main,.overview-panel{min-height:0}
