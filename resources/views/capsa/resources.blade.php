@@ -255,6 +255,18 @@
 
           <p class="section-hint" id="import-guess-note" style="margin:10px 0 0"></p>
 
+          {{-- Only an upload has somewhere to go. Files picked from Drive stay
+               where they already are. --}}
+          <div class="form-group" id="import-dest-group" style="margin-top:14px" hidden>
+            <label class="label">Upload them into</label>
+            <div style="display:flex;gap:6px">
+              <select class="input" id="import-folder" style="flex:1">
+                <option value="">No folder (Drive root)</option>
+              </select>
+              <button class="btn btn-ghost" style="padding:0 12px;white-space:nowrap" onclick="openFolderModal()">+ New</button>
+            </div>
+          </div>
+
           @if (! $isAdmin && count($mySections))
           <div class="form-group">
             <label class="label">
@@ -760,6 +772,7 @@ function openImport(){
   document.getElementById('import-verb').textContent = local ? 'Upload' : 'Take on';
   // Only a Drive import changes the sharing on a file someone already owns.
   document.getElementById('import-warn').hidden = local;
+  document.getElementById('import-dest-group').hidden = ! local;
 
   renderImportList();
   document.getElementById('import-scrim').hidden = false;
@@ -862,8 +875,8 @@ function runImport(){
       fd.append('categories[]', f.category);
     });
     sections.forEach(function(s){ fd.append('sections[]', s); });
-    const folderId = document.getElementById('res-folder');
-    if(folderId && folderId.value) fd.append('drive_folder_id', folderId.value);
+    const dest = document.getElementById('import-folder');
+    if(dest && dest.value) fd.append('drive_folder_id', dest.value);
 
     request = fetch(ROUTES.upload, {
       method: 'POST',
@@ -961,9 +974,18 @@ function disconnectDrive(){
 
 // -- FOLDERS ----------------------------------------------------------------
 function populateFolderSelect(){
-  const sel = document.getElementById('res-folder');
-  sel.innerHTML = '<option value="">No folder (Drive root)</option>' +
+  const options = '<option value="">No folder (Drive root)</option>' +
     driveFolders.map(f => `<option value="${f.id}">${f.name}</option>`).join('');
+
+  // Two places offer the destination - the single-file panel and the review
+  // sheet a folder goes through - and both read from the same list.
+  ['res-folder', 'import-folder'].forEach(function (id) {
+    const sel = document.getElementById(id);
+    if (!sel) return;
+    const chosen = sel.value;
+    sel.innerHTML = options;
+    sel.value = chosen;
+  });
 }
 
 function populateFolderFilter(){
@@ -1008,6 +1030,8 @@ function submitNewFolder(){
     populateFolderSelect();
     populateFolderFilter();
     document.getElementById('res-folder').value = data.folder.drive_folder_id;
+    const importSel = document.getElementById('import-folder');
+    if (importSel) importSel.value = data.folder.drive_folder_id;
     closeFolderModal();
     showToast('? Folder created.');
   })
