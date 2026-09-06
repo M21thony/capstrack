@@ -389,9 +389,14 @@
             <span class="role-body">
               <span class="role-nm">{{ ucfirst($r) }}</span>
               <span class="role-ds">{{ $roleBlurbs[$r] }}</span>
+              {{-- The name is not repeated here. Your Experts, directly below
+                   this row, already says who fills the slot; saying it twice on
+                   one screen is what a CaPSA pulled us up on. This card is the
+                   filter for browsing that role, so it says whether there is
+                   anything left to browse for. --}}
               <span class="role-ct">
                 @if($filled)
-                  Filled &mdash; {{ $filled->expert?->name }}
+                  Filled
                 @else
                   {{ $roleCounts[$r] ?? 0 }} {{ Str::plural('expert', $roleCounts[$r] ?? 0) }}
                 @endif
@@ -421,7 +426,16 @@
       @if($team)
         @php $filledCount = count($filledSlots) + count($unslotted); @endphp
         <div class="yx">
-          <span class="yx-lab">Your Experts</span>
+          {{-- The count travels with the label rather than sitting opposite
+               the chips: pushed to the far edge it was the first thing to wrap
+               onto a second line, which left the strip two rows tall with one
+               number stranded under it. --}}
+          <span class="yx-head">
+            <span class="yx-lab">Your Experts</span>
+            <span class="yx-count">
+              <b>{{ $filledCount }} of 3</b> {{ $filledCount >= 3 ? 'filled - your team is set' : 'filled' }}
+            </span>
+          </span>
           <span class="yx-sep"></span>
 
           @foreach(['adviser', 'consultant', 'grammarian'] as $slotRole)
@@ -452,10 +466,6 @@
               @endif
             </span>
           @endforeach
-
-          <span class="yx-count">
-            <b>{{ $filledCount }} of 3</b> {{ $filledCount >= 3 ? 'filled - your team is set' : 'filled' }}
-          </span>
         </div>
       @endif
 
