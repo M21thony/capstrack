@@ -172,8 +172,8 @@ class ExportDuplicationTrainingData extends Command
     private function paraphraseAbstract(OllamaSSHClient $ollama, ArchivedDocument $doc): string
     {
         $prompt = 'Rewrite the following capstone title and abstract in different wording, as if a '
-                .'different student proposed the same underlying system independently. Keep the exact '
-                .'same domain, problem, target users, and proposed solution — only change surface '
+                ."different student proposed the same underlying system independently. Keep the exact "
+                ."same domain, problem, target users, and proposed solution — only change surface "
                 ."phrasing, sentence structure, and word choice. Do not add new features or change scope.\n"
                 ."Return ONLY the rewritten title and abstract as plain text. No labels, no markdown.\n\n"
                 ."Title: {$doc->title}\nAbstract: {$doc->abstract}";

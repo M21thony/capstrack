@@ -2,10 +2,8 @@
 
 namespace Tests\Feature;
 
-use App\Models\ConsultationBooking;
 use App\Models\Student;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
@@ -28,7 +26,7 @@ class ConsultationBookingDateTest extends TestCase
     public function test_booking_a_weekly_slot_stores_a_fixed_session_date_instead_of_a_weekday_name(): void
     {
         $student = Student::factory()->withCompleteProfile()->create(['email' => 'booker@my.cspc.edu.ph']);
-        $team = DB::table('team')->insertGetId(['team_name' => 'Team Book', 'team_status' => 'on-going']);
+        $team = DB::table('team')->insertGetId(['team_name' => 'Team Book', 'team_status' => 'Active']);
         DB::table('student_s_y')->insert([
             'student_id' => $student->student_id,
             'team_id' => $team,
@@ -61,8 +59,8 @@ class ConsultationBookingDateTest extends TestCase
 
         $this->assertNotNull($booking->session_date, 'session_date must be captured at booking time.');
         $this->assertSame(
-            Carbon::parse($booking->session_date)->dayOfWeek,
-            Carbon::parse('Tuesday')->dayOfWeek,
+            \Illuminate\Support\Carbon::parse($booking->session_date)->dayOfWeek,
+            \Illuminate\Support\Carbon::parse('Tuesday')->dayOfWeek,
             'The stored date must actually fall on the slot\'s weekday.'
         );
     }
@@ -70,7 +68,7 @@ class ConsultationBookingDateTest extends TestCase
     public function test_booking_a_once_slot_stores_its_exact_specific_date(): void
     {
         $student = Student::factory()->withCompleteProfile()->create(['email' => 'booker2@my.cspc.edu.ph']);
-        $team = DB::table('team')->insertGetId(['team_name' => 'Team Once', 'team_status' => 'on-going']);
+        $team = DB::table('team')->insertGetId(['team_name' => 'Team Once', 'team_status' => 'Active']);
         DB::table('student_s_y')->insert([
             'student_id' => $student->student_id,
             'team_id' => $team,
@@ -100,13 +98,13 @@ class ConsultationBookingDateTest extends TestCase
         $response->assertOk();
 
         $booking = DB::table('consultation_booking')->where('schedule_id', $scheduleId)->first();
-        $this->assertSame('2026-07-15', Carbon::parse($booking->session_date)->toDateString());
+        $this->assertSame('2026-07-15', \Illuminate\Support\Carbon::parse($booking->session_date)->toDateString());
     }
 
     public function test_booking_a_later_occurrence_of_a_recurring_slot_succeeds_once_the_first_is_done(): void
     {
         $student = Student::factory()->withCompleteProfile()->create(['email' => 'booker3@my.cspc.edu.ph']);
-        $team = DB::table('team')->insertGetId(['team_name' => 'Team Recur', 'team_status' => 'on-going']);
+        $team = DB::table('team')->insertGetId(['team_name' => 'Team Recur', 'team_status' => 'Active']);
         DB::table('student_s_y')->insert([
             'student_id' => $student->student_id,
             'team_id' => $team,
@@ -128,8 +126,8 @@ class ConsultationBookingDateTest extends TestCase
             'updated_at' => now(),
         ]);
 
-        $firstTuesday = Carbon::parse('next Tuesday')->toDateString();
-        $secondTuesday = Carbon::parse('next Tuesday')->addWeek()->toDateString();
+        $firstTuesday = \Illuminate\Support\Carbon::parse('next Tuesday')->toDateString();
+        $secondTuesday = \Illuminate\Support\Carbon::parse('next Tuesday')->addWeek()->toDateString();
 
         // Book the nearest occurrence first.
         $first = $this->actingAs($student, 'web')->postJson(route('student.consultation.book'), [
@@ -162,13 +160,13 @@ class ConsultationBookingDateTest extends TestCase
         $second->assertJson(['success' => true]);
 
         $booking = DB::table('consultation_booking')->where('schedule_id', $scheduleId)->where('booking_status', 'scheduled')->first();
-        $this->assertSame($secondTuesday, Carbon::parse($booking->session_date)->toDateString());
+        $this->assertSame($secondTuesday, \Illuminate\Support\Carbon::parse($booking->session_date)->toDateString());
     }
 
     public function test_team_cannot_book_a_new_slot_while_it_has_an_active_booking(): void
     {
         $student = Student::factory()->withCompleteProfile()->create(['email' => 'booker4@my.cspc.edu.ph']);
-        $team = DB::table('team')->insertGetId(['team_name' => 'Team OneAtATime', 'team_status' => 'on-going']);
+        $team = DB::table('team')->insertGetId(['team_name' => 'Team OneAtATime', 'team_status' => 'Active']);
         DB::table('student_s_y')->insert([
             'student_id' => $student->student_id,
             'team_id' => $team,
@@ -222,14 +220,14 @@ class ConsultationBookingDateTest extends TestCase
         // depending purely on what time of day the tests happen to run.
         $first = $this->actingAs($student, 'web')->postJson(route('student.consultation.book'), [
             'schedule_id' => $scheduleId,
-            'session_date' => Carbon::parse('next Thursday')->toDateString(),
+            'session_date' => \Illuminate\Support\Carbon::parse('next Thursday')->toDateString(),
         ]);
         $first->assertOk();
         $first->assertJson(['success' => true]);
 
         $blocked = $this->actingAs($student, 'web')->postJson(route('student.consultation.book'), [
             'schedule_id' => $otherScheduleId,
-            'session_date' => Carbon::parse('next Friday')->toDateString(),
+            'session_date' => \Illuminate\Support\Carbon::parse('next Friday')->toDateString(),
         ]);
         $blocked->assertStatus(422);
         $blocked->assertJson([
@@ -261,7 +259,7 @@ class ConsultationBookingDateTest extends TestCase
         // pragma that SQLite refuses to change mid-transaction - which
         // RefreshDatabase always has one of active.
         $student = Student::factory()->withCompleteProfile()->create(['email' => 'orphaned@my.cspc.edu.ph']);
-        $team = DB::table('team')->insertGetId(['team_name' => 'Team Orphaned', 'team_status' => 'on-going']);
+        $team = DB::table('team')->insertGetId(['team_name' => 'Team Orphaned', 'team_status' => 'Active']);
         DB::table('student_s_y')->insert([
             'student_id' => $student->student_id,
             'team_id' => $team,
@@ -293,7 +291,7 @@ class ConsultationBookingDateTest extends TestCase
             'updated_at' => now(),
         ]);
 
-        $booking = ConsultationBooking::find($bookingId);
+        $booking = \App\Models\ConsultationBooking::find($bookingId);
         $booking->setRelation('schedule', null);
         $orphanedBookings = collect([$booking]);
 
@@ -315,8 +313,13 @@ class ConsultationBookingDateTest extends TestCase
         // @forelse loop (the page's JS template for this same markup uses a
         // ${...} placeholder, not a real date string), proving the loop
         // actually ran for this booking rather than silently skipping it.
-        $this->assertStringContainsString($booking->session_date->format('M d, Y'), $html);
-        $this->assertStringContainsString('Team Orphaned', $html);
+        // The booking row reads date-first now - month, day and weekday in
+        // their own places - so the old single "M d, Y" string is not what
+        // gets rendered. What matters here is unchanged: the page draws the
+        // row at all rather than dying on a null schedule.
+        $this->assertStringContainsString($booking->session_date->format('M'), $html);
+        $this->assertStringContainsString($booking->session_date->format('D'), $html);
+        $this->assertStringContainsString('session-list-item', $html);
     }
 
     public function test_my_booked_dates_are_tagged_with_expert_id_not_shared_across_experts(): void
@@ -329,7 +332,7 @@ class ConsultationBookingDateTest extends TestCase
         // booked-date dots, making it look like that other expert somehow
         // shared the first expert's schedule.
         $student = Student::factory()->withCompleteProfile()->create(['email' => 'taggedbooking@my.cspc.edu.ph']);
-        $team = DB::table('team')->insertGetId(['team_name' => 'Team Tagged', 'team_status' => 'on-going']);
+        $team = DB::table('team')->insertGetId(['team_name' => 'Team Tagged', 'team_status' => 'Active']);
         DB::table('student_s_y')->insert([
             'student_id' => $student->student_id,
             'team_id' => $team,

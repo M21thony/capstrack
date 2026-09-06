@@ -39,6 +39,9 @@ return [
         'client_id' => env('GOOGLE_CLIENT_ID'),
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),
         'redirect_uri' => env('GOOGLE_REDIRECT_URI'),
+        // The Picker is a separate API and wants a browser key, not the OAuth
+        // pair above. Without it the "Choose from Drive" button stays hidden.
+        'picker_api_key' => env('GOOGLE_PICKER_API_KEY'),
     ],
 
     'recaptcha' => [
@@ -49,6 +52,24 @@ return [
     'ollama' => [
         'model' => env('OLLAMA_MODEL', 'qwen2.5:7B'),
         'embed_model' => env('OLLAMA_EMBED_MODEL', 'nomic-embed-text'),
+
+        // How long Ollama holds a model in memory after answering. Its own
+        // default is five minutes, and a duplication check takes longer than
+        // that to work through a team's titles - so the model was being
+        // unloaded partway and read back off disk again, repeatedly, which is
+        // where the minutes went. '-1' keeps it resident until something
+        // else needs the memory.
+        'keep_alive' => env('OLLAMA_KEEP_ALIVE', '30m'),
+
+        // How many of a check's candidates get an AI-written verdict. The
+        // rest keep the embedding line they were already showing. Each
+        // verdict is a model call, so this is the main lever on how long a
+        // check takes on a weak connection.
+        'judge_limit' => env('OLLAMA_JUDGE_LIMIT', 4),
+
+        // ...and how close a candidate has to be to be worth explaining.
+        // The top match is always explained whatever it scored.
+        'judge_min_score' => env('OLLAMA_JUDGE_MIN_SCORE', 40),
     ],
 
     'ssh_tunnel' => [

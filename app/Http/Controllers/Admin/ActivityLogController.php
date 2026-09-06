@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\ActivityLog;
+use App\Support\ActivityScope;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class ActivityLogController extends Controller
 {
@@ -19,7 +21,11 @@ class ActivityLogController extends Controller
 
     public function index(Request $request)
     {
+        // A CaPSA reads their own sections here; the admin reads everything.
+        $visibleIds = ActivityScope::studentIdsFor(Auth::guard('expert')->user());
+
         $query = ActivityLog::with('student.currentTeam')
+            ->when($visibleIds !== null, fn ($q) => $q->whereIn('student_id', $visibleIds))
             ->whereIn('type', $this->allowedTypes)
             ->latest('created_at');
 
@@ -50,7 +56,7 @@ class ActivityLogController extends Controller
             ];
         })->toJson();
 
-        return view('admin.activitylog', [
+        return view('capsa.activitylog', [
             'logs' => $logs,
             'types' => collect($this->allowedTypes),
             'logDataJson' => $logDataJson,

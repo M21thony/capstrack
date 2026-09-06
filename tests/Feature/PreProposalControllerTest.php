@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Http\Controllers\PreProposalController;
 use App\Models\ArchivedDocument;
 use App\Models\CapstonePreProposal;
 use App\Models\DuplicationCheck;
@@ -129,6 +130,20 @@ class PreProposalControllerTest extends TestCase
         $this->post(route('student.pre-proposal.store'), $this->payload($checkId));
     }
 
+    /**
+     * Keep exactly as many drafts as submitting currently requires.
+     *
+     * Written against the constant rather than a literal count: these tests
+     * all seeded three, so raising the minimum to four failed seven of them
+     * for no reason other than the number being spelled out in each one.
+     */
+    private function saveTheMinimum(): void
+    {
+        foreach (range(1, PreProposalController::RECOMMENDED_PROPOSALS) as $n) {
+            $this->checkAndStore("p{$n}.pdf");
+        }
+    }
+
     // Saving keeps a draft. It used to stamp submitted_at and, on the third
     // one, silently flip the team to complete - so a team was in front of
     // their CAPSA before they had said they were ready.
@@ -138,12 +153,10 @@ class PreProposalControllerTest extends TestCase
         $this->mockSimilarityPipeline();
         $this->actingAs($student, 'web');
 
-        $this->checkAndStore('p1.pdf');
-        $this->checkAndStore('p2.pdf');
-        $this->checkAndStore('p3.pdf');
+        $this->saveTheMinimum();
 
         $this->assertSame('Active', $team->fresh()->team_status);
-        $this->assertSame(3, $team->preProposals()->count());
+        $this->assertSame(PreProposalController::RECOMMENDED_PROPOSALS, $team->preProposals()->count());
         $this->assertSame(0, $team->preProposals()->whereNotNull('submitted_at')->count());
     }
 
@@ -168,12 +181,13 @@ class PreProposalControllerTest extends TestCase
         $this->mockSimilarityPipeline();
         $this->actingAs($student, 'web');
 
-        foreach (['p1.pdf', 'p2.pdf', 'p3.pdf', 'p4.pdf'] as $file) {
-            $this->checkAndStore($file);
-        }
+        $this->saveTheMinimum();
+        $this->checkAndStore('one-more.pdf');
 
-        $this->assertSame(4, $team->preProposals()->count());
-        $this->assertDatabaseHas('capstone_pre_proposals', ['team_id' => $team->team_id, 'slot' => 4]);
+        $beyond = PreProposalController::RECOMMENDED_PROPOSALS + 1;
+
+        $this->assertSame($beyond, $team->preProposals()->count());
+        $this->assertDatabaseHas('capstone_pre_proposals', ['team_id' => $team->team_id, 'slot' => $beyond]);
     }
 
     // A rejected title used to be written over by the next save. It now stays
@@ -184,22 +198,32 @@ class PreProposalControllerTest extends TestCase
         $this->mockSimilarityPipeline();
         $this->actingAs($student, 'web');
 
-        $this->checkAndStore('p1.pdf');
-        $this->checkAndStore('p2.pdf');
-        $this->checkAndStore('p3.pdf');
+        $this->saveTheMinimum();
 
         $team->preProposals()->where('slot', 2)->first()->update(['rejection_reason' => 'Too similar to an archived project.']);
 
         $this->checkAndStore('p2-revised.pdf');
 
-        $this->assertSame(4, $team->preProposals()->count());
+        $this->assertSame(
+            PreProposalController::RECOMMENDED_PROPOSALS + 1,
+            $team->preProposals()->count(),
+            'The rejected title should be kept and the replacement saved beside it.',
+        );
         $this->assertSame(
             'Too similar to an archived project.',
             $team->preProposals()->where('slot', 2)->first()->rejection_reason,
         );
     }
 
-    public function test_submitting_requires_the_minimum_number_of_titles(): void
+    /**
+     * Fewer than the suggested four goes through.
+     *
+     * It used to be refused, which pushed a team with two titles they believed
+     * in into writing two they did not, just to unlock the button - and the
+     * CaPSA then had four to read instead of two. The page asks once before
+     * sending fewer; the endpoint does not stand in the way.
+     */
+    public function test_submitting_fewer_than_the_suggested_number_is_allowed(): void
     {
         [$student, $team] = $this->makeLeaderWithTeam();
         $this->mockSimilarityPipeline();
@@ -208,10 +232,36 @@ class PreProposalControllerTest extends TestCase
         $this->checkAndStore('p1.pdf');
         $this->checkAndStore('p2.pdf');
 
-        $this->post(route('student.pre-proposal.submit'))->assertSessionHas('error');
+        $this->patch(route('student.pre-proposal.submit'), ['status' => 'submitted'])
+            ->assertSessionMissing('error');
 
-        $this->assertSame(0, $team->preProposals()->whereNotNull('submitted_at')->count());
-        $this->assertSame('Active', $team->fresh()->team_status);
+        $this->assertSame(2, $team->preProposals()->whereNotNull('submitted_at')->count());
+    }
+
+    /** One is enough. Nothing at all is not. */
+    public function test_a_single_title_can_be_submitted(): void
+    {
+        [$student, $team] = $this->makeLeaderWithTeam();
+        $this->mockSimilarityPipeline();
+        $this->actingAs($student, 'web');
+
+        $this->checkAndStore('p1.pdf');
+
+        $this->patch(route('student.pre-proposal.submit'), ['status' => 'submitted'])
+            ->assertSessionMissing('error');
+
+        $this->assertSame(1, $team->preProposals()->whereNotNull('submitted_at')->count());
+    }
+
+    public function test_submitting_nothing_is_refused(): void
+    {
+        [$student, $team] = $this->makeLeaderWithTeam();
+        $this->actingAs($student, 'web');
+
+        $this->patch(route('student.pre-proposal.submit'), ['status' => 'submitted'])
+            ->assertSessionHas('error');
+
+        $this->assertSame(0, $team->preProposals()->count());
     }
 
     // Submitting is the one act that hands the team to their CAPSA. It is
@@ -223,13 +273,11 @@ class PreProposalControllerTest extends TestCase
         $this->mockSimilarityPipeline();
         $this->actingAs($student, 'web');
 
-        $this->checkAndStore('p1.pdf');
-        $this->checkAndStore('p2.pdf');
-        $this->checkAndStore('p3.pdf');
+        $this->saveTheMinimum();
 
-        $this->post(route('student.pre-proposal.submit'))->assertSessionHas('status');
+        $this->patch(route('student.pre-proposal.submit'), ['status' => 'submitted'])->assertSessionHas('status');
 
-        $this->assertSame(3, $team->preProposals()->whereNotNull('submitted_at')->count());
+        $this->assertSame(PreProposalController::RECOMMENDED_PROPOSALS, $team->preProposals()->whereNotNull('submitted_at')->count());
         $this->assertTrue($team->fresh()->hasSubmittedPreProposals());
         $this->assertSame('Active', $team->fresh()->team_status, 'turning in is not a recruitment change');
     }
@@ -243,11 +291,9 @@ class PreProposalControllerTest extends TestCase
         StudentSchoolYear::create(['student_id' => $member->student_id, 'team_id' => $team->team_id]);
 
         $this->actingAs($member, 'web');
-        $this->checkAndStore('p1.pdf');
-        $this->checkAndStore('p2.pdf');
-        $this->checkAndStore('p3.pdf');
+        $this->saveTheMinimum();
 
-        $this->post(route('student.pre-proposal.submit'))->assertSessionHas('error');
+        $this->patch(route('student.pre-proposal.submit'), ['status' => 'submitted'])->assertSessionHas('error');
         $this->assertSame(0, $team->preProposals()->whereNotNull('submitted_at')->count());
     }
 
@@ -257,12 +303,10 @@ class PreProposalControllerTest extends TestCase
         $this->mockSimilarityPipeline();
         $this->actingAs($student, 'web');
 
-        $this->checkAndStore('p1.pdf');
-        $this->checkAndStore('p2.pdf');
-        $this->checkAndStore('p3.pdf');
-        $this->post(route('student.pre-proposal.submit'));
+        $this->saveTheMinimum();
+        $this->patch(route('student.pre-proposal.submit'), ['status' => 'submitted']);
 
-        $this->post(route('student.pre-proposal.unsubmit'))->assertSessionHas('status');
+        $this->patch(route('student.pre-proposal.submit'), ['status' => 'draft'])->assertSessionHas('status');
 
         $this->assertSame(0, $team->preProposals()->whereNotNull('submitted_at')->count());
         $this->assertSame('Active', $team->fresh()->team_status);
@@ -276,15 +320,13 @@ class PreProposalControllerTest extends TestCase
         $this->mockSimilarityPipeline();
         $this->actingAs($student, 'web');
 
-        $this->checkAndStore('p1.pdf');
-        $this->checkAndStore('p2.pdf');
-        $this->checkAndStore('p3.pdf');
-        $this->post(route('student.pre-proposal.submit'));
+        $this->saveTheMinimum();
+        $this->patch(route('student.pre-proposal.submit'), ['status' => 'submitted']);
 
         $team->preProposals()->where('slot', 1)->first()->update(['approved_status' => true]);
 
-        $this->post(route('student.pre-proposal.unsubmit'))->assertSessionHas('error');
-        $this->assertSame(3, $team->preProposals()->whereNotNull('submitted_at')->count());
+        $this->patch(route('student.pre-proposal.submit'), ['status' => 'draft'])->assertSessionHas('error');
+        $this->assertSame(PreProposalController::RECOMMENDED_PROPOSALS, $team->preProposals()->whereNotNull('submitted_at')->count());
     }
 
     public function test_a_turned_in_set_cannot_be_added_to(): void
@@ -293,10 +335,8 @@ class PreProposalControllerTest extends TestCase
         $this->mockSimilarityPipeline();
         $this->actingAs($student, 'web');
 
-        $this->checkAndStore('p1.pdf');
-        $this->checkAndStore('p2.pdf');
-        $this->checkAndStore('p3.pdf');
-        $this->post(route('student.pre-proposal.submit'));
+        $this->saveTheMinimum();
+        $this->patch(route('student.pre-proposal.submit'), ['status' => 'submitted']);
 
         $checkId = $this->post(route('student.pre-proposal.check'), [
             'document' => UploadedFile::fake()->create('p4.pdf', 10, 'application/pdf'),
@@ -305,7 +345,7 @@ class PreProposalControllerTest extends TestCase
         $this->post(route('student.pre-proposal.store'), $this->payload($checkId))
             ->assertSessionHas('error');
 
-        $this->assertSame(3, $team->preProposals()->count());
+        $this->assertSame(PreProposalController::RECOMMENDED_PROPOSALS, $team->preProposals()->count());
     }
 
     // team_status only carries recruitment now, so "complete" is not a value
@@ -460,10 +500,8 @@ class PreProposalControllerTest extends TestCase
         $this->mockSimilarityPipeline();
         $this->actingAs($student, 'web');
 
-        $this->checkAndStore('p1.pdf');
-        $this->checkAndStore('p2.pdf');
-        $this->checkAndStore('p3.pdf');
-        $this->post(route('student.pre-proposal.submit'));
+        $this->saveTheMinimum();
+        $this->patch(route('student.pre-proposal.submit'), ['status' => 'submitted']);
 
         $proposal = $team->preProposals()->where('slot', 1)->first();
 
@@ -613,9 +651,13 @@ class PreProposalControllerTest extends TestCase
 
     // The locked Submit button has to say what unlocks it, not just sit there
     // greyed out.
-    public function test_the_locked_submit_button_says_how_many_titles_are_needed(): void
+    /**
+     * With one title the button works, and the page carries the number it
+     * suggests plus the prompt that asks before sending fewer.
+     */
+    public function test_one_title_leaves_the_submit_button_usable(): void
     {
-        [$student, $team] = $this->makeLeaderWithTeam();
+        [$student] = $this->makeLeaderWithTeam();
         $this->mockSimilarityPipeline();
         $this->actingAs($student, 'web');
 
@@ -624,6 +666,63 @@ class PreProposalControllerTest extends TestCase
         $response = $this->get(route('student.duplication'));
 
         $response->assertStatus(200);
-        $response->assertSee('Have at least 3 pre-proposal titles saved before you can submit. You have 1.');
+        $response->assertDontSee('Have at least');
+        $response->assertSee('data-recommended="'.PreProposalController::RECOMMENDED_PROPOSALS.'"', false);
+        $response->assertSee('confirmSubmitCount', false);
+    }
+
+    /**
+     * When the machine that does the checking is not answering, a student was
+     * shown the raw failure - "Cannot connect to 127.0.0.1:22. Error 10061" -
+     * which tells them nothing and reads like they broke something.
+     */
+    public function test_an_unreachable_checker_says_so_in_plain_words(): void
+    {
+        [$student] = $this->makeLeaderWithTeam();
+        $this->actingAs($student, 'web');
+
+        $this->mock(\App\Services\OllamaSSHClient::class, function ($mock) {
+            $mock->shouldReceive('warmup')->andThrow(
+                new \Exception('Cannot connect to 127.0.0.1:22. Error 10061. No connection could be made because the target machine actively refused it')
+            );
+        });
+
+        $response = $this->post(route('student.pre-proposal.check'), [
+            'document' => UploadedFile::fake()->create('p.pdf', 10, 'application/pdf'),
+        ]);
+
+        // 503, not 500: nothing here is wrong, the checker is simply not up.
+        $response->assertStatus(503);
+        $response->assertJsonPath('success', false);
+
+        $message = $response->json('message');
+        $this->assertStringContainsString('not responding', $message);
+        $this->assertStringNotContainsString('127.0.0.1', $message, 'The raw failure reached the student.');
+        $this->assertStringNotContainsString('10061', $message);
+    }
+
+    /**
+     * A problem with the document itself still says what it is - those are
+     * the messages that tell a student what to do about it.
+     */
+    public function test_a_problem_with_the_document_still_says_what_it_is(): void
+    {
+        [$student] = $this->makeLeaderWithTeam();
+        $this->actingAs($student, 'web');
+
+        $this->mock(\App\Services\OllamaSSHClient::class, function ($mock) {
+            $mock->shouldReceive('warmup')->andReturnNull();
+        });
+
+        $this->mock(\App\Services\SimilarityService::class, function ($mock) {
+            $mock->shouldReceive('extractPdfText')->andReturn('');
+        });
+
+        $response = $this->post(route('student.pre-proposal.check'), [
+            'document' => UploadedFile::fake()->create('p.pdf', 10, 'application/pdf'),
+        ]);
+
+        $response->assertStatus(500);
+        $this->assertStringContainsString('Could not extract text', $response->json('message'));
     }
 }

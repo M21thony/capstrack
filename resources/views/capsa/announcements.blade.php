@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Announcements - CapsTRACK Admin</title>
 <meta name="csrf-token" content="{{ csrf_token() }}"/>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="{{ asset('css/admin.css') }}"/>
 <style>
 .target-group { display:flex;flex-wrap:wrap;gap:8px;margin-top:6px; }
@@ -17,7 +17,8 @@
 
 /* @mention */
 .mention-wrapper { position:relative; }
-.mention-dropdown { position:absolute;bottom:100%;left:0;right:0;background:#fff;border:1px solid var(--border);border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,0.12);max-height:180px;overflow-y:auto;z-index:100;display:none;margin-bottom:4px; }
+.mention-dropdown { position:absolute;bottom:100%;left:0;right:0;background:#fff;border:1px solid var(--border);border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,0.12);max-height:180px;overflow-y:auto;z-index:100;display:none;margin-bottom:4px;scrollbar-width:none;-ms-overflow-style:none}
+.mention-dropdown::-webkit-scrollbar{display:none}
 .mention-dropdown.open { display:block; }
 .mention-item { padding:8px 12px;font-size:13px;font-weight:500;color:var(--text2);cursor:pointer;border-bottom:1px solid #f0f0f0;transition:background .1s; }
 .mention-item:last-child { border-bottom:none;border-radius:0 0 10px 10px; }
@@ -44,16 +45,16 @@
 .modal-btn-cancel:hover{background:#f9fafb}
 .modal-btn-danger{background:#d92d20;color:#fff}
 .modal-btn-danger:hover{background:#b42318}
-/* Tabs */
-.tab-bar{display:flex;gap:4px;margin-left:12px}
-.tab-btn{padding:4px 14px;font-size:11px;font-weight:600;border:none;border-radius:6px;cursor:pointer;background:transparent;color:var(--text3);transition:all .15s}
-.tab-btn:hover{background:rgba(79,70,229,0.06);color:var(--accent)}
-.tab-btn.active{background:rgba(79,70,229,0.1);color:var(--accent)}
+/* Tabs: the look is the shared .tab-bar/.tab-btn component; only the spot
+   this page puts the strip in is set here. */
+.tab-bar{margin-left:12px}
+.tab-btn{font-size:11.5px;padding:8px 13px}
 .tab-content{display:none}
 .tab-content.active{display:block}
 .card.inactive{opacity:0.55;border-color:var(--border2)}.card.inactive:hover{opacity:0.75}
 .badge-gray{background:var(--bg4);color:var(--text3)}
 </style>
+@include('partials.skeleton-head', ['skReveal' => 'flex'])
 </head>
 <body>
 
@@ -773,14 +774,14 @@ function openReviewModal(el) {
 }
 
 function verifySubmission(annId, submissionId, verified) {
-  fetch('/api/admin/announcements/' + annId + '/verify-submission', {
-    method: 'POST',
+  fetch('/api/admin/announcements/' + annId + '/submissions/' + submissionId, {
+    method: 'PATCH',
     headers: {
       'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
       'Content-Type': 'application/json',
       'Accept': 'application/json',
     },
-    body: JSON.stringify({ submission_id: submissionId, verified: verified }),
+    body: JSON.stringify({ verified: verified }),
   })
     .then(function(r) { return r.json(); })
     .then(function() { location.reload(); })

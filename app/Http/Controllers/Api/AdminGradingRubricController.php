@@ -187,9 +187,315 @@ class AdminGradingRubricController extends Controller
         ],
     ];
 
+    // Transcribed verbatim from the school's actual Title Defense Grading
+    // Rubric (BSIT). Unlike PRE_PROPOSAL_CRITERIA, the source only rates
+    // each row on THREE tiers (not four) - there's no "good" level in the
+    // real document, just a top/middle/bottom point value per row with no
+    // level names printed at all. 'excellent'/'fair'/'poor' are used as the
+    // three keys here (reusing 3 of the same names PRE_PROPOSAL_CRITERIA
+    // uses) purely as display labels; the source document itself doesn't
+    // name these tiers.
+    //
+    // Every category's "excellent" column sums exactly to that category's
+    // printed ceiling (e.g. Chapter 1: 3+3+5+2+3+3+1 = 20), and all 7
+    // category ceilings sum to exactly 100 - both confirm this was
+    // transcribed correctly, not just each row in isolation.
+    //
+    // NOTE: Chapter 3's own printed band headers (20 / 12 / 5) don't
+    // exactly match the sum of its 7 rows' middle/bottom columns (11.5 and
+    // 4.5, not 12 and 5) - almost certainly a rounding slip in the source
+    // document, same as the pre-existing SDM note above. The per-row
+    // numbers below are transcribed exactly as printed rather than
+    // adjusted to force the chapter header to match.
+    private const TITLE_DEFENSE_CRITERIA = [
+        // ── Chapter 1 (ceiling 20) ──────────────────────────────────────
+        [
+            'criterion_name' => 'Project Context',
+            'category' => 'Chapter 1',
+            'description' => 'Assesses whether the discussion provides a clear overview of the background of the problem being addressed.',
+            'levels' => [
+                'excellent' => ['desc' => 'The discussion is completely intact and provides a clear overview of the background of the problem that needs to be addressed.', 'score' => 3],
+                'fair' => ['desc' => 'The discussion is slightly intact and provides a slightly clear overview of the background of the problem that needs to be addressed.', 'score' => 2],
+                'poor' => ['desc' => 'The discussion is not intact and does not provide a clear overview of the background of the problem that needs to be addressed.', 'score' => 1],
+            ],
+        ],
+        [
+            'criterion_name' => 'Purpose and Description of the Project',
+            'category' => 'Chapter 1',
+            'description' => "Assesses the discussion of the project's main function, advantage, and uniqueness.",
+            'levels' => [
+                'excellent' => ['desc' => 'Clearly discusses the main function of the project (on the first paragraph), the advantage/good of the project (on the second paragraph), and uniqueness of the project (on the third paragraph).', 'score' => 3],
+                'fair' => ['desc' => 'Slightly clear discussion of the main function of the project (on the first paragraph), the advantage/good of the project (on the second paragraph), and uniqueness of the project (on the third paragraph).', 'score' => 2],
+                'poor' => ['desc' => 'There is no clear discussion of the main function of the project (on the first paragraph), the advantage/good of the project (on the second paragraph), and uniqueness of the project (on the third paragraph).', 'score' => 1],
+            ],
+        ],
+        [
+            'criterion_name' => 'Objectives of the Project',
+            'category' => 'Chapter 1',
+            'description' => 'Assesses whether the objectives are SMART (Specific, Measurable, Achievable, Relevant, Time-bound).',
+            'levels' => [
+                'excellent' => ['desc' => 'The objectives are 100% SMART.', 'score' => 5],
+                'fair' => ['desc' => 'The objectives are at least 50% SMART.', 'score' => 2.5],
+                'poor' => ['desc' => 'The objectives are 0% SMART.', 'score' => 1],
+            ],
+        ],
+        [
+            'criterion_name' => 'Significance of the Study',
+            'category' => 'Chapter 1',
+            'description' => 'Assesses whether the significance is presented across personal, community, and computing-field perspectives.',
+            'levels' => [
+                'excellent' => ['desc' => 'Clearly presents the significance of the study/project based on three perspectives: personal, community and computing field.', 'score' => 2],
+                'fair' => ['desc' => 'Slightly clear presentation of the significance of the study/project based on three perspectives: personal, community and computing field.', 'score' => 1],
+                'poor' => ['desc' => 'No clear presentation of the significance of the study/project based on three perspectives: personal, community and computing field.', 'score' => 0.5],
+            ],
+        ],
+        [
+            'criterion_name' => 'Scope and Limitation of the Project',
+            'category' => 'Chapter 1',
+            'description' => 'Assesses whether coverage and constraints are clearly discussed, answering the What, Who, Where, When, Why, How.',
+            'levels' => [
+                'excellent' => ['desc' => 'Clearly discusses the coverage and constraints based on the nature of the project and the allotted timeframe; answers the What, Who, Where, When, Why, How.', 'score' => 3],
+                'fair' => ['desc' => 'Slightly clear discussion of the coverage and constraints based on the nature of the project and the allotted timeframe; answers the What, Who, Where, When, Why, How.', 'score' => 1.5],
+                'poor' => ['desc' => 'There is no clear discussion of the coverage and constraints based on the nature of the project and the allotted timeframe; answers the What, Who, Where, When, Why, How.', 'score' => 0.5],
+            ],
+        ],
+        [
+            'criterion_name' => 'Project Dictionary',
+            'category' => 'Chapter 1',
+            'description' => 'Assesses whether technical keywords are relevant and defined both operationally and conceptually, with proper citations.',
+            'levels' => [
+                'excellent' => ['desc' => 'All the technical keywords are relevant to the project and are defined both operationally and conceptually; operational definitions are cited properly.', 'score' => 3],
+                'fair' => ['desc' => 'Not all the technical keywords are relevant to the project and are defined both operationally and conceptually; operational definitions are cited properly.', 'score' => 1.5],
+                'poor' => ['desc' => 'All the technical keywords are irrelevant to the project and are not defined both operationally and conceptually; operational definitions are not cited properly.', 'score' => 0.5],
+            ],
+        ],
+        [
+            'criterion_name' => 'Notes Page',
+            'category' => 'Chapter 1',
+            'description' => 'Assesses whether the notes page follows the ACM reference format.',
+            'levels' => [
+                'excellent' => ['desc' => '100% follows the ACM reference format.', 'score' => 1],
+                'fair' => ['desc' => 'At least 50% follows the ACM reference format.', 'score' => 0.5],
+                'poor' => ['desc' => 'The entire notes page does not follow the ACM reference format.', 'score' => 0],
+            ],
+        ],
+
+        // ── Chapter 2 (ceiling 15) ──────────────────────────────────────
+        [
+            'criterion_name' => 'Review of Related Literatures and Systems',
+            'category' => 'Chapter 2',
+            'description' => 'Assesses the recency, relevance, and proper ACM-format citation of related literature, organized topically.',
+            'levels' => [
+                'excellent' => ['desc' => '100% of the RLs are recent and relevant; 100% of the RLs are appropriately cited and noted, in ACM format; Discussion of the RLs is in topical format; Each topic has at least 5 RLs cited.', 'score' => 5],
+                'fair' => ['desc' => 'At least 50% of the RLs are recent and relevant; At least 50% of the RLs are appropriately cited and noted, in ACM format; Discussion of the RLs is in topical format; Each topic has at least 3 RLs cited.', 'score' => 3],
+                'poor' => ['desc' => 'Less than 50% of the RLs are recent and relevant; Less than 50% of the RLs are appropriately cited and noted, in ACM format; Discussion of the RLs is not in topical format; Each topic has less than 3 RLs cited.', 'score' => 1.5],
+            ],
+        ],
+        [
+            'criterion_name' => 'Synthesis of the State of the Art',
+            'category' => 'Chapter 2',
+            'description' => 'Assesses the discussion of similarities and differences between the present study and related literature/systems.',
+            'levels' => [
+                'excellent' => ['desc' => 'There is a comprehensive discussion of the similarities and differences between the present study against the related literature and systems mentioned.', 'score' => 5],
+                'fair' => ['desc' => 'There is a less comprehensive discussion of the similarities and differences between the present study against the related literature and systems mentioned.', 'score' => 3],
+                'poor' => ['desc' => 'There is no comprehensive discussion of the similarities and differences between the present study against the related literature and systems mentioned.', 'score' => 1.5],
+            ],
+        ],
+        [
+            'criterion_name' => 'Gap Bridged by the Study',
+            'category' => 'Chapter 2',
+            'description' => 'Assesses the discussion on bridging the gap between related capstone projects and the present project.',
+            'levels' => [
+                'excellent' => ['desc' => 'There is a comprehensive discussion on bridging the gap between the related capstone projects and the present project.', 'score' => 3],
+                'fair' => ['desc' => 'There is a less comprehensive discussion on bridging the gap between the related capstone projects and the present project.', 'score' => 1.5],
+                'poor' => ['desc' => 'There is no comprehensive discussion on bridging the gap between the related capstone projects and the present project.', 'score' => 0.5],
+            ],
+        ],
+        [
+            'criterion_name' => 'Notes Page',
+            'category' => 'Chapter 2',
+            'description' => 'Assesses whether at least twenty sources are listed in ACM format.',
+            'levels' => [
+                'excellent' => ['desc' => 'There are more than twenty (20) sources listed in ACM format.', 'score' => 2],
+                'fair' => ['desc' => 'There are at least twenty (20) sources listed in ACM format.', 'score' => 1],
+                'poor' => ['desc' => 'There are fewer than twenty (20) sources listed in ACM format.', 'score' => 0.5],
+            ],
+        ],
+
+        // ── Chapter 3 (ceiling 20) ──────────────────────────────────────
+        [
+            'criterion_name' => 'Research Design and Methods',
+            'category' => 'Chapter 3',
+            'description' => 'Assesses whether the research design and methods are clearly presented and appropriate for the system.',
+            'levels' => [
+                'excellent' => ['desc' => 'The research design and methods are clearly presented and appropriate for the development and evaluation of the proposed system.', 'score' => 4],
+                'fair' => ['desc' => 'The research design and methods are slightly presented and somewhat appropriate for the development and evaluation of the proposed system.', 'score' => 2.5],
+                'poor' => ['desc' => 'The research design and methods are not clearly presented and are not appropriate for the development and evaluation of the proposed system.', 'score' => 1],
+            ],
+        ],
+        [
+            'criterion_name' => 'Data Sources and Respondents',
+            'category' => 'Chapter 3',
+            'description' => 'Assesses whether data sources, sampling technique, and respondents are clearly identified and appropriate.',
+            'levels' => [
+                'excellent' => ['desc' => 'The data sources, sampling technique, and respondents are clearly identified and appropriate for the development and evaluation of the proposed system.', 'score' => 4],
+                'fair' => ['desc' => 'The data sources, sampling technique, and respondents are slightly identified and somewhat appropriate for the development and evaluation of the proposed system.', 'score' => 2.5],
+                'poor' => ['desc' => 'The data sources, sampling technique, and respondents are not clearly identified and are not appropriate for the development and evaluation of the proposed system.', 'score' => 1],
+            ],
+        ],
+        [
+            'criterion_name' => 'Research Instruments, Data Gathering and Analysis Procedure',
+            'category' => 'Chapter 3',
+            'description' => 'Assesses whether the instruments and procedures for gathering/analyzing data are clearly presented and aligned with the study objectives.',
+            'levels' => [
+                'excellent' => ['desc' => 'The instruments used for data collection and the procedures for gathering and analyzing data are clearly presented and aligned with the objectives of the study.', 'score' => 4],
+                'fair' => ['desc' => 'The instruments used for data collection and the procedures for gathering and analyzing data are slightly presented and somewhat aligned with the objectives of the study.', 'score' => 2.5],
+                'poor' => ['desc' => 'The instruments used for data collection and the procedures for gathering and analyzing data are not clearly presented and are not aligned with the objectives of the study.', 'score' => 1],
+            ],
+        ],
+        [
+            'criterion_name' => 'System Development Approach',
+            'category' => 'Chapter 3',
+            'description' => 'Assesses whether the approach followed in developing the proposed system is clearly discussed and appropriate.',
+            'levels' => [
+                'excellent' => ['desc' => 'The approach followed in developing the proposed system is clearly discussed and appropriate to the nature of the project.', 'score' => 2],
+                'fair' => ['desc' => 'The approach followed in developing the proposed system is slightly discussed and somewhat appropriate to the nature of the project.', 'score' => 1],
+                'poor' => ['desc' => 'The approach followed in developing the proposed system is not clearly discussed and is not appropriate to the nature of the project.', 'score' => 0.5],
+            ],
+        ],
+        [
+            'criterion_name' => 'System Architecture and Technical Requirements',
+            'category' => 'Chapter 3',
+            'description' => 'Assesses whether the system structure and technical requirements are clearly described and appropriate to the project.',
+            'levels' => [
+                'excellent' => ['desc' => 'The overall structure of the system and the technical requirements needed for development and deployment are clearly described and appropriate to the project.', 'score' => 2],
+                'fair' => ['desc' => 'The overall structure of the system and the technical requirements needed for development and deployment are slightly described and somewhat appropriate to the project.', 'score' => 1],
+                'poor' => ['desc' => 'The overall structure of the system and the technical requirements needed for development and deployment are not clearly described and are not appropriate to the project.', 'score' => 0.5],
+            ],
+        ],
+        [
+            'criterion_name' => 'Testing and Evaluation Plan',
+            'category' => 'Chapter 3',
+            'description' => 'Assesses whether the testing and evaluation plan is clearly presented and appropriate to the study objectives.',
+            'levels' => [
+                'excellent' => ['desc' => 'The testing and evaluation plan for the proposed system is clearly presented and appropriate to the objectives of the study.', 'score' => 3],
+                'fair' => ['desc' => 'The testing and evaluation plan for the proposed system is slightly presented and somewhat appropriate to the objectives of the study.', 'score' => 1.5],
+                'poor' => ['desc' => 'The testing and evaluation plan for the proposed system is not clearly presented and is not appropriate to the objectives of the study.', 'score' => 0.5],
+            ],
+        ],
+        [
+            'criterion_name' => 'Notes Page',
+            'category' => 'Chapter 3',
+            'description' => 'Assesses whether the notes page follows the ACM reference format.',
+            'levels' => [
+                'excellent' => ['desc' => '100% follows the ACM reference format.', 'score' => 1],
+                'fair' => ['desc' => 'At least 50% follows the ACM reference format.', 'score' => 0.5],
+                'poor' => ['desc' => 'The entire notes page does not follow the ACM reference format.', 'score' => 0],
+            ],
+        ],
+
+        // ── Grammar and Spelling (ceiling 10) ───────────────────────────
+        [
+            'criterion_name' => 'Grammar and Spelling',
+            'category' => 'Grammar and Spelling',
+            'description' => 'Assesses the presence of grammatical/typographical errors and variety of sentence structure.',
+            'levels' => [
+                'excellent' => ['desc' => 'Grammatical and typographical errors are absent; writer uses a variety of sentence structures to improve the flow of discussion.', 'score' => 10],
+                'fair' => ['desc' => 'Moderate grammatical and typographical errors are present, the writer uses a variety of sentence structures to improve the flow of discussion.', 'score' => 6],
+                'poor' => ['desc' => 'Too many grammatical and typographical errors are present, and the writer does not use a variety of sentence structures to improve the flow of discussion.', 'score' => 3],
+            ],
+        ],
+
+        // ── Oral Examination/Presentation (ceiling 20) ──────────────────
+        [
+            'criterion_name' => 'Team Readiness and Presentability',
+            'category' => 'Oral Examination/Presentation',
+            'description' => 'Assesses whether the team appeared ready and presentable for the defense.',
+            'levels' => [
+                'excellent' => ['desc' => 'All the team members appeared to be ready and presentable.', 'score' => 5],
+                'fair' => ['desc' => 'Only 50% of the team members appeared to be ready and presentable.', 'score' => 2.5],
+                'poor' => ['desc' => 'All of the team members appeared to be not ready and not presentable.', 'score' => 1.25],
+            ],
+        ],
+        [
+            'criterion_name' => 'Slide Usage',
+            'category' => 'Oral Examination/Presentation',
+            'description' => 'Assesses how intelligently and strategically the presentation slides were used.',
+            'levels' => [
+                'excellent' => ['desc' => 'All the presentation slides were intelligently and strategically used.', 'score' => 5],
+                'fair' => ['desc' => 'Only 50% of the presentation slides were intelligently and strategically used.', 'score' => 2.5],
+                'poor' => ['desc' => 'All of the presentation slides were not intelligently and strategically used.', 'score' => 1.25],
+            ],
+        ],
+        [
+            'criterion_name' => 'Delivery/Command of the English Language',
+            'category' => 'Oral Examination/Presentation',
+            'description' => "Assesses the team's delivery and command of the English language.",
+            'levels' => [
+                'excellent' => ['desc' => 'Delivery / Command of the English Language was excellent.', 'score' => 5],
+                'fair' => ['desc' => 'Delivery / Command of the English Language were satisfactory.', 'score' => 2.5],
+                'poor' => ['desc' => 'Delivery / Command of the English Language were poor.', 'score' => 1.25],
+            ],
+        ],
+        [
+            'criterion_name' => 'Panel Q&A Handling',
+            'category' => 'Oral Examination/Presentation',
+            'description' => 'Assesses how confidently and satisfactorily the team answered panel questions and queries.',
+            'levels' => [
+                'excellent' => ['desc' => 'All panel questions and queries were confidently and satisfactorily answered.', 'score' => 5],
+                'fair' => ['desc' => 'Only 50% of the panel questions and queries were confidently and satisfactorily answered.', 'score' => 2.5],
+                'poor' => ['desc' => 'All of the panel questions and queries were not confidently and satisfactorily answered.', 'score' => 1.25],
+            ],
+        ],
+
+        // ── Research Instrument (ceiling 10) ────────────────────────────
+        [
+            'criterion_name' => 'Validity, Reliability, and Succinctness',
+            'category' => 'Research Instrument',
+            'description' => 'Assesses whether the presented research instrument is valid, reliable, and succinct.',
+            'levels' => [
+                'excellent' => ['desc' => 'The presented research instrument is valid, reliable, and succinct.', 'score' => 5],
+                'fair' => ['desc' => 'The presented research instrument is partially valid, reliable, and succinct.', 'score' => 3],
+                'poor' => ['desc' => 'The presented research instrument is totally not valid, nor reliable nor succinct.', 'score' => 1.5],
+            ],
+        ],
+        [
+            'criterion_name' => 'Consistency with Objectives',
+            'category' => 'Research Instrument',
+            'description' => "Assesses whether the research instrument is consistent with the project's objectives.",
+            'levels' => [
+                'excellent' => ['desc' => 'Consistent with the objectives of the project.', 'score' => 5],
+                'fair' => ['desc' => 'Partially consistent with the objectives of the project.', 'score' => 3],
+                'poor' => ['desc' => 'Totally not consistent with the objectives of the project.', 'score' => 1.5],
+            ],
+        ],
+
+        // ── Timeliness (ceiling 5) ───────────────────────────────────────
+        [
+            'criterion_name' => 'On-Time Defense',
+            'category' => 'Timeliness',
+            'description' => 'Assesses whether the title defense was held on the scheduled date and the team was on time.',
+            'levels' => [
+                'excellent' => ['desc' => 'The team was able to have the title defense on scheduled date; capstone team are on time.', 'score' => 2.5],
+                'fair' => ['desc' => 'The team was able to have the title defense on the scheduled date, but the capstone team arrived late.', 'score' => 1.5],
+                'poor' => ['desc' => 'The team was not able to have the title defense on the scheduled date.', 'score' => 0.5],
+            ],
+        ],
+        [
+            'criterion_name' => 'Manuscript Submission Timing',
+            'category' => 'Timeliness',
+            'description' => 'Assesses how far in advance of the title defense the manuscript copy was provided.',
+            'levels' => [
+                'excellent' => ['desc' => 'The team was able to provide a copy of the manuscript 2 days before the title defense schedule.', 'score' => 2.5],
+                'fair' => ['desc' => 'The team was able to provide a copy of the manuscript a day before the title defense schedule.', 'score' => 1.5],
+                'poor' => ['desc' => 'The team was able to provide a copy of the manuscript during title defense schedule.', 'score' => 0.5],
+            ],
+        ],
+    ];
+
     public function __construct(private OllamaSSHClient $ollama) {}
 
-    // POST /api/admin/grading-rubrics/ai-generate — drafts a rubric (name,
+    // POST /api/admin/grading-rubrics/drafts — drafts a rubric (name,
     // description, criteria with per-level narrative descriptions) via the
     // same Ollama model used by the duplication checker. Scores are NOT
     // taken from the model; they're computed deterministically afterward
@@ -206,12 +512,45 @@ class AdminGradingRubricController extends Controller
 
         $typeLabel = self::TYPE_MAP[$validated['rubric_type']];
         $isPreProposal = $validated['rubric_type'] === 'pre_proposal';
-        // Pre-Proposal Defense has a real reference rubric, so there's
-        // nothing to type and no count to pick - the AI is asked to
-        // reproduce all 12 of its actual criteria, not invent a subset.
-        $criteriaCount = $isPreProposal ? count(self::PRE_PROPOSAL_CRITERIA) : ($validated['criteria_count'] ?? 5);
+        $isTitleDefense = $validated['rubric_type'] === 'title_defense';
+        // Pre-Proposal Defense and Title Defense both have a real reference
+        // rubric, so there's nothing to type and no count to pick - the AI
+        // is asked to reproduce all of its actual criteria, not invent a
+        // subset.
+        $criteriaCount = $isPreProposal
+            ? count(self::PRE_PROPOSAL_CRITERIA)
+            : ($isTitleDefense ? count(self::TITLE_DEFENSE_CRITERIA) : ($validated['criteria_count'] ?? 5));
         $topic = trim($validated['topic'] ?? '');
         $fixedCategories = $this->defaultCategoriesFor($validated['rubric_type']);
+
+        // Title Defense's reference rubric is used completely as-is -
+        // unlike the other types, there's no wording left for an AI to
+        // usefully contribute, since TITLE_DEFENSE_CRITERIA already holds
+        // the real, complete, verbatim text for every one of its 27
+        // criteria. Routing this through an actual AI reproduction call was
+        // tried and directly tested against the real capstrack-duplication
+        // model: asked to echo back all 27, it returned a clean, validly-
+        // parsing, but SILENTLY INCOMPLETE response - only 11 of 27
+        // criteria, dropping all of Chapter 2 and Chapter 3 entirely (a
+        // "lost in the middle" failure common to small models on long
+        // structured-reproduction tasks), for a grand total of 51 instead
+        // of 100. Since the real data is already fully known, the AI call
+        // is skipped entirely for this type - instant and immune to that
+        // failure mode, rather than trying to prompt-engineer around it.
+        if ($isTitleDefense) {
+            $criteria = $this->scoreTitleDefenseCriteria($this->titleDefenseCriteriaWordingOnly());
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Draft rubric loaded from the real Title Defense rubric. Review and edit before saving.',
+                'data' => [
+                    'rubric_name' => 'Title Defense Rubric',
+                    'description' => "Evaluates a capstone team's title defense across Chapters 1-3, grammar and spelling, oral examination/presentation, research instrument, and timeliness.",
+                    'categories' => $this->summarizeCategories($criteria),
+                    'criteria' => $criteria,
+                ],
+            ]);
+        }
 
         $prompt = $isPreProposal
             ? $this->buildPreProposalReproductionPrompt()
@@ -270,6 +609,8 @@ class AdminGradingRubricController extends Controller
         if ($isPreProposal) {
             $criteria = $this->scorePreProposalCriteria(array_slice($parsed['criteria'], 0, $criteriaCount));
         } else {
+            // $isTitleDefense never reaches here - it returns early above,
+            // before any AI call is made.
             $categories = $fixedCategories ?? $this->extractCategories($parsed['categories'] ?? null);
             $criteria = $this->scoreCriteriaWithCategories(array_slice($parsed['criteria'], 0, $criteriaCount), $categories);
         }
@@ -294,15 +635,27 @@ class AdminGradingRubricController extends Controller
     // categories since no reference structure exists for them.
     private function defaultCategoriesFor(string $rubricTypeSlug): ?array
     {
-        if ($rubricTypeSlug !== 'pre_proposal') {
-            return null;
+        if ($rubricTypeSlug === 'pre_proposal') {
+            return [
+                ['name' => 'Oral Examination/Presentation', 'weight' => 20],
+                ['name' => 'Topic Quality and Proposal Merit', 'weight' => 30],
+                ['name' => 'Proposal Content and Clarity', 'weight' => 50],
+            ];
         }
 
-        return [
-            ['name' => 'Oral Examination/Presentation', 'weight' => 20],
-            ['name' => 'Topic Quality and Proposal Merit', 'weight' => 30],
-            ['name' => 'Proposal Content and Clarity', 'weight' => 50],
-        ];
+        if ($rubricTypeSlug === 'title_defense') {
+            return [
+                ['name' => 'Chapter 1', 'weight' => 20],
+                ['name' => 'Chapter 2', 'weight' => 15],
+                ['name' => 'Chapter 3', 'weight' => 20],
+                ['name' => 'Grammar and Spelling', 'weight' => 10],
+                ['name' => 'Oral Examination/Presentation', 'weight' => 20],
+                ['name' => 'Research Instrument', 'weight' => 10],
+                ['name' => 'Timeliness', 'weight' => 5],
+            ];
+        }
+
+        return null;
     }
 
     // Pulls real criteria straight from PRE_PROPOSAL_CRITERIA to use as
@@ -361,6 +714,22 @@ class AdminGradingRubricController extends Controller
         PROMPT;
     }
 
+    // Feeds scoreTitleDefenseCriteria() one "raw criterion" entry per real
+    // criterion, built directly from TITLE_DEFENSE_CRITERIA instead of an
+    // actual AI echo (see the comment in aiGenerate() for why: a real
+    // reproduction call was tested and silently dropped 16 of 27 criteria).
+    // Only criterion_name and category are included - scoreTitleDefenseCriteria()
+    // uses those two purely to look up the matching real row, then takes
+    // every actual value (description, levels, scores) from that row, never
+    // from this array - the same division of labor as scorePreProposalCriteria().
+    private function titleDefenseCriteriaWordingOnly(): array
+    {
+        return array_map(fn ($c) => [
+            'criterion_name' => $c['criterion_name'],
+            'category' => $c['category'],
+        ], self::TITLE_DEFENSE_CRITERIA);
+    }
+
     // The AI's echo is only trusted for wording. Point values always come
     // straight from PRE_PROPOSAL_CRITERIA (matched by criterion name, or by
     // position if a name doesn't match - the model was asked for all 12 in
@@ -405,9 +774,66 @@ class AdminGradingRubricController extends Controller
         return $result;
     }
 
-    private function categoryMaxPointsFor(string $categoryName): float
+    // Same idea as scorePreProposalCriteria() - wording comes from the AI's
+    // echo, point values always come straight from TITLE_DEFENSE_CRITERIA.
+    // Level keys/labels are derived from the reference row itself
+    // (array_keys/ucfirst) rather than the hardcoded LEVEL_KEYS/LEVEL_LABELS
+    // constants, since this rubric has 3 tiers (excellent/fair/poor) and
+    // LEVEL_KEYS assumes 4.
+    private function scoreTitleDefenseCriteria(array $rawCriteria): array
     {
-        foreach ($this->defaultCategoriesFor('pre_proposal') as $cat) {
+        $reference = self::TITLE_DEFENSE_CRITERIA;
+        $byKey = [];
+
+        // Keyed by category+name, not name alone - the real rubric
+        // legitimately reuses "Notes Page" as a criterion name in Chapter 1,
+        // 2, AND 3 (each chapter ends with its own notes-page row). A
+        // name-only key collapses all three into whichever is listed last,
+        // which was confirmed by direct testing to skew Chapter 1/2/3's
+        // totals to 19/13/22 instead of the correct 20/15/20 before this
+        // category-scoped key was added.
+        foreach ($reference as $ref) {
+            $key = $this->normalizeCategoryName($ref['category']).'|'.$this->normalizeCategoryName($ref['criterion_name']);
+            $byKey[$key] = $ref;
+        }
+
+        $result = [];
+
+        foreach (array_values($rawCriteria) as $i => $c) {
+            $name = $this->normalizeCategoryName($c['criterion_name'] ?? null);
+            $category = $this->normalizeCategoryName($c['category'] ?? null);
+            $key = ($name !== null && $category !== null) ? $category.'|'.$name : null;
+            $ref = ($key !== null ? $byKey[$key] ?? null : null) ?? $reference[$i] ?? null;
+
+            if ($ref === null) {
+                continue;
+            }
+
+            $levelKeys = array_keys($ref['levels']);
+
+            $levels = array_map(fn ($key) => [
+                'label' => ucfirst($key),
+                'score' => $ref['levels'][$key]['score'],
+                'desc' => $ref['levels'][$key]['desc'],
+            ], $levelKeys);
+
+            $result[] = [
+                'criterion_name' => $ref['criterion_name'],
+                'description' => $ref['description'],
+                'category' => $ref['category'],
+                'category_max_points' => $this->categoryMaxPointsFor($ref['category'], 'title_defense'),
+                'max_points' => $ref['levels'][$levelKeys[0]]['score'],
+                'levels' => $levels,
+                'sort_order' => $i,
+            ];
+        }
+
+        return $result;
+    }
+
+    private function categoryMaxPointsFor(string $categoryName, string $rubricTypeSlug = 'pre_proposal'): float
+    {
+        foreach ($this->defaultCategoriesFor($rubricTypeSlug) as $cat) {
             if ($cat['name'] === $categoryName) {
                 return (float) $cat['weight'];
             }
@@ -819,14 +1245,21 @@ class AdminGradingRubricController extends Controller
         // as an independent client-supplied value) - it's the ceiling of
         // whichever level scores highest, normally "Excellent".
         $newMaxPoints = $this->scoreLevelsMax($validated['score_levels'] ?? null);
-        $total = $this->criteriaMaxPointsTotal($gradingRubric->criteria()->get()) + $newMaxPoints;
 
-        if (abs($total - 100.0) > 0.0001) {
+        // Exactly 100 is fine - a rubric may be one all-or-nothing criterion.
+        // Over 100 is not, since the rest could only be scaled to negatives.
+        if ($newMaxPoints > 100.0) {
             return response()->json([
                 'success' => false,
-                'message' => 'Total criterion points must equal exactly 100 points.',
+                'message' => 'A criterion cannot be worth more than the 100 points a rubric totals.',
             ], 422);
         }
+
+        // Adding a criterion used to be refused unless the rubric already
+        // added up to 100 with it, which meant hand-reducing other criteria
+        // first just to be allowed to save. The existing criteria are now
+        // scaled down to make room instead.
+        $rebalanced = $this->rebalanceCriteria($gradingRubric->criteria()->get(), 100.0 - $newMaxPoints);
 
         $criterion = $gradingRubric->criteria()->create([
             'criterion_name' => trim($validated['criterion_name']),
@@ -840,8 +1273,12 @@ class AdminGradingRubricController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Criterion created successfully.',
+            'message' => $rebalanced > 0
+                ? "Criterion created. {$rebalanced} existing criteria were scaled down to keep the rubric at 100 points."
+                : 'Criterion created successfully.',
             'data' => $this->formatCriterion($criterion),
+            'rebalanced_count' => $rebalanced,
+            'criteria' => $this->formatCriteria($gradingRubric->criteria()->orderBy('sort_order')->get()),
         ], 201);
     }
 
@@ -865,16 +1302,20 @@ class AdminGradingRubricController extends Controller
         ]);
 
         $newMaxPoints = $this->scoreLevelsMax($validated['score_levels'] ?? null);
-        $total = $this->criteriaMaxPointsTotal(
-            $gradingRubric->criteria()->where('criterion_id', '!=', $rubricCriterion->criterion_id)->get()
-        ) + $newMaxPoints;
 
-        if (abs($total - 100.0) > 0.0001) {
+        // Exactly 100 is fine - a rubric may be one all-or-nothing criterion.
+        // Over 100 is not, since the rest could only be scaled to negatives.
+        if ($newMaxPoints > 100.0) {
             return response()->json([
                 'success' => false,
-                'message' => 'Total criterion points must equal exactly 100 points.',
+                'message' => 'A criterion cannot be worth more than the 100 points a rubric totals.',
             ], 422);
         }
+
+        // Changing what a criterion is worth makes room the same way adding
+        // one does: everything else scales to fill the remaining points.
+        $others = $gradingRubric->criteria()->where('criterion_id', '!=', $rubricCriterion->criterion_id)->get();
+        $rebalanced = $this->rebalanceCriteria($others, 100.0 - $newMaxPoints);
 
         $rubricCriterion->update([
             'criterion_name' => trim($validated['criterion_name']),
@@ -888,8 +1329,12 @@ class AdminGradingRubricController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Criterion updated successfully.',
-            'data' => $this->formatCriterion($rubricCriterion),
+            'message' => $rebalanced > 0
+                ? "Criterion updated. {$rebalanced} other criteria were scaled to keep the rubric at 100 points."
+                : 'Criterion updated successfully.',
+            'data' => $this->formatCriterion($rubricCriterion->fresh()),
+            'rebalanced_count' => $rebalanced,
+            'criteria' => $this->formatCriteria($gradingRubric->criteria()->orderBy('sort_order')->get()),
         ]);
     }
 
@@ -923,15 +1368,11 @@ class AdminGradingRubricController extends Controller
             'criteria.*.sort_order' => ['nullable', 'integer', 'min:0'],
         ]);
 
-        $total = collect($validated['criteria'])
-            ->sum(fn ($c) => $this->scoreLevelsMax($c['score_levels'] ?? null));
-
-        if (abs($total - 100.0) > 0.0001) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Total criterion points must equal exactly 100 points.',
-            ], 422);
-        }
+        // Not a hard 100 any more. Refusing the save was what made a real
+        // rubric painful to enter: a 27-criterion rubric is typed one
+        // criterion at a time, so it is under 100 for the entire time it is
+        // being built, and there was no way to stop halfway. The total is
+        // recorded as-is and the page says when it is off.
 
         return DB::transaction(function () use ($gradingRubric, $validated): JsonResponse {
             $gradingRubric->criteria()->delete();
@@ -950,7 +1391,13 @@ class AdminGradingRubricController extends Controller
 
             $gradingRubric->load('criteria');
 
-            return response()->json([
+            // Keep the rubric's declared total honest - it is the denominator a
+        // score is out of, so it has to be what the criteria really sum to.
+        $gradingRubric->update([
+            'total_points' => round($this->criteriaMaxPointsTotal($gradingRubric->criteria()->get()), 2),
+        ]);
+
+        return response()->json([
                 'success' => true,
                 'message' => 'Criteria synced successfully.',
                 'data' => $this->formatRubric($gradingRubric),
@@ -1020,6 +1467,117 @@ class AdminGradingRubricController extends Controller
     // levels - its max_points ceiling is the highest of those levels
     // (normally "Excellent"), not their sum. Used to auto-derive max_points
     // when a request doesn't supply it explicitly.
+    /**
+     * Scale a set of criteria so their ceilings add up to $targetTotal.
+     *
+     * Each criterion's max_points is the highest of its own score levels, so
+     * the levels are what actually move - scaling the number alone would
+     * leave a criterion claiming a ceiling none of its levels can reach, and
+     * grading validates every submitted score against those level values.
+     *
+     * Rounding is to 2dp (the column's precision) and the remainder is
+     * absorbed by the largest criterion, so the rubric lands on exactly
+     * $targetTotal rather than 99.98.
+     *
+     * @param  \Illuminate\Support\Collection<int, RubricCriterion>  $criteria
+     * @return int  how many criteria were changed
+     */
+    private function rebalanceCriteria($criteria, float $targetTotal): int
+    {
+        $current = $this->criteriaMaxPointsTotal($criteria);
+
+        // Nothing to scale, or already right. A rubric whose criteria total
+        // zero has no proportions to preserve, so leave it be rather than
+        // divide by zero.
+        if ($criteria->isEmpty() || $current <= 0.0 || abs($current - $targetTotal) < 0.0001) {
+            return 0;
+        }
+
+        if ($targetTotal <= 0.0) {
+            return 0;
+        }
+
+        $factor = $targetTotal / $current;
+        $changed = 0;
+        $scaled = [];
+
+        foreach ($criteria as $criterion) {
+            $levels = $criterion->decodedScoreLevels();
+
+            foreach ($levels as $i => $level) {
+                if (is_array($level) && isset($level['score']) && is_numeric($level['score'])) {
+                    // Snapped to a quarter point, the same step the score
+                    // inputs use. Plain scaling turned a tidy 3 / 5 / 10
+                    // rubric into 3.07 / 5.12 / 10.23.
+                    $levels[$i]['score'] = round((float) $level['score'] * $factor * 4) / 4;
+                }
+            }
+
+            $scaled[] = [
+                'criterion' => $criterion,
+                'levels' => $levels,
+                'max' => $this->scoreLevelsMax($levels),
+            ];
+        }
+
+        // Hand out whatever the rounding left over a quarter at a time,
+        // largest first, rather than dumping it all on one criterion - which
+        // sent a single criterion from 10 to 11.75 absorbing everyone else's.
+        $drift = round($targetTotal - array_sum(array_column($scaled, 'max')), 2);
+        $step = $drift > 0 ? 0.25 : -0.25;
+        $guard = 0;
+
+        // Largest first, and the order is stable across passes.
+        $order = array_keys($scaled);
+        usort($order, fn ($a, $b) => $scaled[$b]['max'] <=> $scaled[$a]['max']);
+
+        $cursor = 0;
+        while (abs($drift) >= 0.01 && $guard++ < 2000) {
+            $i = $order[$cursor % count($order)];
+            $cursor++;
+
+            if ($step < 0 && $scaled[$i]['max'] <= 0.25) {
+                continue;
+            }
+
+            $scaled[$i]['levels'] = $this->shiftTopLevel($scaled[$i]['levels'], $step);
+            $scaled[$i]['max'] = $this->scoreLevelsMax($scaled[$i]['levels']);
+            $drift = round($drift - $step, 2);
+        }
+
+        foreach ($scaled as $row) {
+            $row['criterion']->update([
+                'score_levels' => $row['levels'],
+                'max_points' => $row['max'],
+            ]);
+            $changed++;
+        }
+
+        return $changed;
+    }
+
+    /** Nudge the highest-scoring level by $delta, keeping the rest as they are. */
+    private function shiftTopLevel(array $levels, float $delta): array
+    {
+        $topIndex = null;
+
+        foreach ($levels as $i => $level) {
+            if (! is_array($level) || ! isset($level['score']) || ! is_numeric($level['score'])) {
+                continue;
+            }
+
+            if ($topIndex === null || (float) $level['score'] > (float) $levels[$topIndex]['score']) {
+                $topIndex = $i;
+            }
+        }
+
+        if ($topIndex !== null) {
+            $levels[$topIndex]['score'] = max(0, round((float) $levels[$topIndex]['score'] + $delta, 2));
+        }
+
+        return $levels;
+    }
+
     private function scoreLevelsMax(mixed $scoreLevels): float
     {
         $levels = is_array($scoreLevels) ? $scoreLevels : (json_decode((string) $scoreLevels, true) ?? []);
@@ -1061,9 +1619,31 @@ class AdminGradingRubricController extends Controller
                 ? $rubric->criteria->map(fn ($c) => $this->formatCriterion($c))->values()->toArray()
                 : [],
             'criteria_count' => $rubric->relationLoaded('criteria') ? $rubric->criteria->count() : 0,
+            // What the criteria actually add up to. Adding or editing a
+            // criterion rebalances the rest back to 100, but deleting one
+            // deliberately does not - silently inflating what everyone else
+            // is worth would change grades behind the CAPSA's back - so a
+            // rubric can sit below 100 and the page needs to be able to say so.
+            'criteria_total' => $rubric->relationLoaded('criteria')
+                ? round($this->criteriaMaxPointsTotal($rubric->criteria), 2)
+                : null,
             'created_at' => $rubric->created_at?->format('Y-m-d H:i:s'),
             'updated_at' => $rubric->updated_at?->format('Y-m-d H:i:s'),
         ];
+    }
+
+    /**
+     * Every criterion of a rubric, formatted.
+     *
+     * Returned alongside a create or update because rebalancing rewrites the
+     * OTHER criteria too - the page would otherwise still be showing their
+     * old point values.
+     *
+     * @param  \Illuminate\Support\Collection<int, RubricCriterion>  $criteria
+     */
+    private function formatCriteria($criteria): array
+    {
+        return $criteria->map(fn (RubricCriterion $c) => $this->formatCriterion($c))->values()->all();
     }
 
     private function formatCriterion(RubricCriterion $criterion): array

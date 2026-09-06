@@ -21,7 +21,7 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Admin Profile - CapsTRACK Admin</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="{{ asset('css/admin.css') }}"/>
 <meta name="csrf-token" content="{{ csrf_token() }}"/>
 
@@ -52,7 +52,7 @@
   }
 
   .profile-page .pf-eyebrow {
-    font-family: 'Space Mono', monospace;
+    font-variant-numeric:tabular-nums;
     font-size: 11px;
     font-weight: 700;
     letter-spacing: 0.14em;
@@ -262,7 +262,7 @@
 
   /* Sections list */
   .profile-page .pf-section-count {
-    font-family: 'Space Mono', monospace;
+    font-variant-numeric:tabular-nums;
     font-size: 11.5px;
     font-weight: 700;
     color: var(--pf-accent);
@@ -308,8 +308,8 @@
     gap: 8px;
     max-height: 400px;
     overflow-y: auto;
-    padding-right: 2px;
-  }
+    padding-right: 2px;scrollbar-width:none;-ms-overflow-style:none}
+.pf-sections-list::-webkit-scrollbar{display:none}
 
   .profile-page .pf-section-opt {
     display: flex;
@@ -402,6 +402,7 @@
     }
   }
 </style>
+@include('partials.skeleton-head', ['skReveal' => 'flex'])
 </head>
 <body>
 
@@ -489,8 +490,9 @@
 
       @endphp
 
-      <form method="POST" action="{{ route('admin.profile.update') }}" enctype="multipart/form-data">
+      <form method="POST" action="{{ route('capsa.profile.update') }}" enctype="multipart/form-data">
         @csrf
+        @method('PUT')
 
         {{-- Identity strip: avatar + name/email --}}
         <div class="pf-card">
@@ -573,7 +575,7 @@
                   </div>
                   <div class="pf-field">
                     <label class="label">Max Teams</label>
-                    <div class="pf-field-static" style="background:var(--pf-surface);color:var(--pf-text2);padding:10px 12px;border:1.5px solid var(--pf-border);border-radius:10px;font-size:14px">{{ $admin->max_teams ?? '4' }}</div>
+                    <div class="pf-field-static" style="background:var(--pf-surface);color:var(--pf-text2);padding:10px 12px;border:1.5px solid var(--pf-border);border-radius:10px;font-size:14px">{{ $admin->max_teams ?? 'Not set' }}</div>
                   </div>
                 </div>
               </div>
@@ -703,7 +705,6 @@ function closeSidebar() {
 // Avatar preview & reset
 var avatarInput = document.getElementById('avatar');
 var avatarPreviewRoot = document.getElementById('avatar-preview');
-var avatarInitialEl = document.getElementById('avatar-initial');
 function readAvatar(file) {
   var reader = new FileReader();
   reader.onload = function(e) {

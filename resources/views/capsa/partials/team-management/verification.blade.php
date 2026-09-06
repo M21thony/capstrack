@@ -12,7 +12,7 @@
     <div style="font-size:13px;font-weight:700;color:var(--text)">Awaiting verification</div>
     <div style="font-size:11.5px;color:var(--text3);margin-top:2px">Marked <strong>Complete</strong> by their leader. Verifying unlocks panel assignment.</div>
   </div>
-  <table class="tbl">
+  <div class="tbl-scroll"><table class="table">
     <thead>
       <tr>
         <th style="padding-left:20px">Team</th>
@@ -34,7 +34,7 @@
               </div>
             </div>
           </td>
-          <td><span class="badge badge-gold" style="font-size:10px">{{ $row->section }}</span></td>
+          <td><span class="badge {{ $row->section === \App\Support\SectionScope::UNASSIGNED ? 'badge-gray' : 'badge-gold' }}" style="font-size:10px">{{ $row->section }}</span></td>
           <td style="max-width:250px;font-size:12px;color:var(--text2);white-space:normal;word-break:break-word;line-height:1.45">
             {{ $row->team->project_title ?: '—' }}
           </td>
@@ -70,14 +70,14 @@
         </tr>
       @endforelse
     </tbody>
-  </table>
+  </table></div>
 </div>
 
 <div class="card" style="padding:0;overflow:hidden">
   <div style="padding:14px 20px;border-bottom:1px solid var(--border)">
     <div style="font-size:13px;font-weight:700;color:var(--text)">Verified</div>
   </div>
-  <table class="tbl">
+  <div class="tbl-scroll"><table class="table">
     <thead>
       <tr>
         <th style="padding-left:20px">Team</th>
@@ -95,7 +95,7 @@
               <span class="td-main">{{ $row->team->team_name }}</span>
             </div>
           </td>
-          <td><span class="badge badge-gold" style="font-size:10px">{{ $row->section }}</span></td>
+          <td><span class="badge {{ $row->section === \App\Support\SectionScope::UNASSIGNED ? 'badge-gray' : 'badge-gold' }}" style="font-size:10px">{{ $row->section }}</span></td>
           <td style="max-width:280px;font-size:12px;color:var(--text2);white-space:normal;word-break:break-word;line-height:1.45">{{ $row->team->project_title ?: '—' }}</td>
           <td>
             <button type="button" class="btn" style="font-size:10px;padding:4px 10px;background:transparent;color:var(--text2);border:1px solid var(--border)"
@@ -106,5 +106,5 @@
         <tr><td colspan="4" class="tm-empty">No verified teams yet.</td></tr>
       @endforelse
     </tbody>
-  </table>
+  </table></div>
 </div>

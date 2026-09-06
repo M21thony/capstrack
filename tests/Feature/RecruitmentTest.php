@@ -112,7 +112,7 @@ class RecruitmentTest extends TestCase
 
         $team = Team::create([
             'team_name' => 'Already A Team',
-            'team_status' => 'on-going',
+            'team_status' => 'Active',
         ]);
 
         StudentSchoolYear::create([
@@ -302,7 +302,7 @@ class RecruitmentTest extends TestCase
 
         $team = Team::create([
             'team_name' => 'Invitation Team',
-            'team_status' => 'on-going',
+            'team_status' => 'Active',
         ]);
 
         $this->actingAs($sender);
@@ -345,7 +345,7 @@ class RecruitmentTest extends TestCase
 
         $team = Team::create([
             'team_name' => 'Request Team',
-            'team_status' => 'on-going',
+            'team_status' => 'Active',
         ]);
 
         $this->actingAs($sender);
@@ -388,7 +388,7 @@ class RecruitmentTest extends TestCase
 
         $team = Team::create([
             'team_name' => 'Accept Invite Team',
-            'team_status' => 'on-going',
+            'team_status' => 'Active',
         ]);
 
         StudentSchoolYear::create([
@@ -408,7 +408,7 @@ class RecruitmentTest extends TestCase
 
         $this->actingAs($receiver);
 
-        $response = $this->post("/invitations/{$invitation->id}/accept");
+        $response = $this->patch("/invitations/{$invitation->id}", ['status' => 'accepted']);
 
         $response->assertRedirect(route('student.team'));
         $response->assertSessionHas('status', 'Welcome to the team!');
@@ -442,7 +442,7 @@ class RecruitmentTest extends TestCase
 
         $team = Team::create([
             'team_name' => 'Decline Invite Team',
-            'team_status' => 'on-going',
+            'team_status' => 'Active',
         ]);
 
         $invitation = TeamInvitation::create([
@@ -455,7 +455,7 @@ class RecruitmentTest extends TestCase
 
         $this->actingAs($receiver);
 
-        $response = $this->post("/invitations/{$invitation->id}/decline");
+        $response = $this->patch("/invitations/{$invitation->id}", ['status' => 'declined']);
 
         $response->assertRedirect(route('student.team'));
         $response->assertSessionHas('status', 'Invitation declined.');

@@ -5,8 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Rubric Management - CapsTRACK Admin</title>
 <meta name="csrf-token" content="{{ csrf_token() }}">
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="{{ asset('css/admin.css') }}"/>
+@include('partials.skeleton-head', ['skReveal' => 'flex'])
 </head>
 <body>
 
@@ -201,10 +202,7 @@
     </button>
     <div class="page-title">Grading Rubrics</div>
     <div class="topbar-actions">
-      <div class="notif-btn">
-        <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-        <div class="notif-dot"></div>
-      </div>
+      @include('capsa.partials.notification-dropdown')
     </div>
   </div>
 
@@ -1017,7 +1015,7 @@ async function aiGenerateRubric() {
   label.textContent = 'Generating…';
 
   try {
-    var res = await fetch('/api/admin/grading-rubrics/ai-generate', {
+    var res = await fetch('/api/admin/grading-rubrics/drafts', {
       method: 'POST',
       headers: { 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json', 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -1099,7 +1097,7 @@ async function saveRubric() {
 
     // Sync criteria
     var rubricId = json.data.rubric_id;
-    var syncRes = await fetch('/api/admin/grading-rubrics/' + rubricId + '/criteria/sync', {
+    var syncRes = await fetch('/api/admin/grading-rubrics/' + rubricId + '/criteria', {
       method: 'POST',
       headers: { 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json', 'Content-Type': 'application/json' },
       body: JSON.stringify({ criteria: draftCriteria.map(function(c) {
@@ -1297,7 +1295,7 @@ function renderList() {
 
       '<div class="rb-card-side">' +
       '<div style="text-align:right">' +
-      '<div style="font-family:\'Space Mono\',monospace;font-size:22px;font-weight:700;color:' + col + '">' + formatPts(round2(total)) + '<span style="font-size:11px;color:var(--text3);font-family:\'DM Sans\',sans-serif"> pts</span></div>' +
+      '<div style="font-variant-numeric:tabular-nums;font-size:22px;font-weight:700;color:' + col + '">' + formatPts(round2(total)) + '<span style="font-size:11px;color:var(--text3);font-family:\'DM Sans\',sans-serif"> pts</span></div>' +
       '<div style="font-size:11px;color:var(--text3)">' + rb.criteria.length + ' criteria</div>' +
       '</div>' +
       '<div class="rb-card-actions">' +
@@ -1321,7 +1319,7 @@ function renderList() {
         return '<div class="rb-crit-row">' +
           '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">' +
           '<div style="font-size:12px;font-weight:600;color:var(--text)">' + (i + 1) + '. ' + cr.name + '</div>' +
-          '<span style="font-family:\'Space Mono\',monospace;font-size:11px;color:' + col + ';font-weight:700">' + formatPts(criterionScore(cr)) + ' pts</span>' +
+          '<span style="font-variant-numeric:tabular-nums;font-size:11px;color:' + col + ';font-weight:700">' + formatPts(criterionScore(cr)) + ' pts</span>' +
           '</div>' +
           '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:5px">' +
           cr.levels.map(function(lv, li) {
@@ -1446,7 +1444,6 @@ loadRubrics();
 
 /* ── TABS ── */
 .rb-tab-btn { padding: 8px 16px; font-size: 13px; }
-.rb-tab-btn.active { background: var(--navy-dark); color: #fff; font-weight: 600; }
 .rb-search-input:focus { width: 260px; }
 
 /* ── RUBRIC CARDS ── */

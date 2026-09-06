@@ -1,1758 +1,634 @@
-@extends('layouts.guest')
-
-@section('title', 'Account Request - CapsTRACK')
-
-@section('content')
 @php
-  $rejectAttempts = (int) ($accountRequest?->reject_attempts ?? 0);
-  $maxRejects = 3;
-  $cooldownUntil = $accountRequest?->reject_cooldown_until;
-  $cooldownActive = $cooldownUntil && now()->lt($cooldownUntil);
-  $waitSeconds = $cooldownActive ? now()->diffInSeconds($cooldownUntil) : null;
-  $attemptsRemaining = max(0, $maxRejects - $rejectAttempts);
+  $rejectAttempts = (int) ($accountRequest->reject_attempts ?? 0);
+  $prefillEmail = request('email', old('email', $accountRequest->email ?? ''));
 @endphp
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Request an expert account — CapsTrack</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<meta name="csrf-token" content="{{ csrf_token() }}">
 <style>
-  :root {
-    --primary: #b5941f;
-    --primary-dark: #9e811a;
-    --navy: #0f1115;
-    --navy-light: #17191e;
-    --navy-mid: #1e2028;
-    --border: rgba(255,255,255,0.06);
-    --border2: rgba(255,255,255,0.12);
-    --text: #f0f2f7;
-    --text2: #9ba3b5;
-    --text3: #5c6478;
-    --green: #22c55e;
-    --red: #ef4444;
-    --blue: #3b82f6;
-  }
-
-  [data-theme="light"] {
-    --navy: #eef1f6;
-    --navy-light: #f8f9fc;
-    --navy-mid: #ffffff;
-    --border: rgba(0,0,0,0.08);
-    --border2: rgba(0,0,0,0.18);
-    --text: #000000;
-    --text2: #1f2937;
-    --text3: #6b7280;
-  }
-  [data-theme="light"] input[type="text"],
-  [data-theme="light"] input[type="email"],
-  [data-theme="light"] input[type="number"],
-  [data-theme="light"] select,
-  [data-theme="light"] textarea {
-    background: #ffffff;
-    border-color: rgba(0,0,0,0.18);
-    color: #000000;
-  }
-  [data-theme="light"] input::placeholder,
-  [data-theme="light"] textarea::placeholder { color: #6b7280; }
-  [data-theme="light"] .section-label { color: #000000; }
-  [data-theme="light"] .field-hint { color: #000000; }
-  [data-theme="light"] .card-footer { background: #f9fafb; }
-  [data-theme="light"] select {
-    appearance: auto;
-    background-image: none;
-    padding-right: 14px;
-  }
-  [data-theme="light"] .tag-input-wrapper {
-    background: #ffffff;
-    border-color: rgba(0,0,0,0.18);
-  }
-  [data-theme="light"] .tag-input-wrapper .tag { background: #eef0f5; color: #000000; }
-  [data-theme="light"] .card { box-shadow: 0 4px 24px rgba(0,0,0,0.06); }
-  [data-theme="light"] .info-note { background: #ffffff; border-color: rgba(0,0,0,0.08); color: #000000; }
-  [data-theme="light"] .info-note svg { stroke: #000000; }
-  [data-theme="light"] .success-info { background: transparent; border-color: var(--border); color: var(--text2); }
-  [data-theme="light"] .review-key { color: #374151; }
-  [data-theme="light"] .review-value { color: #1f2937; }
-  [data-theme="light"] .review-tag { background: #dbeafe; border-color: #93c5fd; color: #1d4ed8; }
-  [data-theme="light"] .btn-primary { background: #3b82f6; color: #ffffff; }
-  [data-theme="light"] .btn-primary:hover { background: #2563eb; box-shadow: 0 4px 20px rgba(59,130,246,0.3); }
-  [data-theme="light"] .signin-link { color: #374151; }
-  [data-theme="light"] .signin-link:hover { color: #111827; }
-  [data-theme="light"] .tag-opt.selected { background: #e5e7eb; border-color: #9ca3af; color: #111827; }
-  [data-theme="light"] .tag-opt:hover { border-color: #9ca3af; color: #111827; }
-  [data-theme="light"] .role-card.selected { border-color: #3b82f6; background: #eff6ff; }
-  [data-theme="light"] .role-card.selected .role-icon { background: #dbeafe; }
-  [data-theme="light"] .role-card.selected .role-icon svg { stroke: #3b82f6; }
-  [data-theme="light"] .role-card.selected .role-name { color: #1d4ed8; }
-  [data-theme="light"] .role-card:hover { border-color: #93c5fd; background: #f0f7ff; }
-  [data-theme="light"] input:focus,
-  [data-theme="light"] select:focus,
-  [data-theme="light"] textarea:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.15); }
-  [data-theme="light"] select option { background: #ffffff; color: #000000; }
-
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-
-  body {
-    font-family: 'DM Sans', sans-serif;
-    background: var(--navy);
-    color: var(--text);
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 40px 16px;
-  }
-
-  body::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background-image:
-      linear-gradient(rgba(181,148,31,0.03) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(181,148,31,0.03) 1px, transparent 1px);
-    background-size: 40px 40px;
-    pointer-events: none;
-  }
-
-  .page-wrap {
-    width: 100%;
-    max-width: 660px;
-  }
-
-  .card {
-    background: var(--navy-light);
-    border: 1px solid var(--border);
-    border-radius: 20px;
-    overflow: hidden;
-    box-shadow: 0 8px 40px rgba(0,0,0,0.5);
-  }
-
-  .card-hero {
-    padding: 24px 28px 20px;
-    border-bottom: 1px solid var(--border);
-    background: linear-gradient(135deg, rgba(181,148,31,0.04) 0%, rgba(59,130,246,0.03) 100%);
-  }
-
-  .card-hero-top {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 14px;
-  }
-
-  .step-dots {
-    display: flex;
-    gap: 8px;
-  }
-
-  .step-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: var(--border2);
-    transition: all 0.3s ease;
-  }
-
-  .step-dot.active {
-    background: var(--primary);
-    width: 22px;
-    border-radius: 4px;
-  }
-
-  .step-dot.done {
-    background: var(--green);
-  }
-
-  .signin-link {
-    font-size: 12px;
-    color: var(--primary);
-    text-decoration: none;
-    white-space: nowrap;
-    font-weight: 500;
-  }
-
-  .theme-toggle {
-    position: fixed; top: 20px; right: 20px; z-index: 999;
-    display: flex; align-items: center; justify-content: center;
-    width: 40px; height: 40px; border-radius: 50%;
-    background: var(--navy-light); border: 1px solid var(--border);
-    color: var(--text2); cursor: pointer;
-    transition: 0.2s; box-shadow: 0 2px 12px rgba(0,0,0,0.15);
-  }
-  .theme-toggle:hover { border-color: var(--primary); color: var(--primary); box-shadow: 0 4px 16px rgba(0,0,0,0.2); }
-  .theme-toggle svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; }
-
-  .signin-link:hover {
-    color: #d4b23a;
-    text-decoration: underline;
-  }
-
-  .card-hero h1 {
-    font-family: 'Space Mono', monospace;
-    font-size: 18px;
-    font-weight: 700;
-    color: var(--text);
-    margin-bottom: 4px;
-    letter-spacing: -0.3px;
-  }
-
-  .card-hero p {
-    font-size: 13px;
-    color: var(--text2);
-    line-height: 1.5;
-  }
-
-  .card-body {
-    padding: 24px 28px;
-  }
-
-  .form-section {
-    display: none;
-    animation: fadeUp 0.3s ease both;
-  }
-
-  .form-section.active {
-    display: block;
-  }
-
-  .section-label {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    color: var(--text3);
-    margin-bottom: 16px;
-  }
-
-  .section-label svg {
-    width: 14px;
-    height: 14px;
-    stroke: var(--primary);
-    fill: none;
-    stroke-width: 2;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-  }
-
-  .field-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 14px;
-    margin-bottom: 14px;
-  }
-
-  .field-row.full {
-    grid-template-columns: 1fr;
-  }
-
-  .field {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  }
-
-  label {
-    font-size: 12.5px;
-    font-weight: 500;
-    color: var(--text2);
-  }
-
-  .req {
-    color: var(--primary);
-  }
-
-  input[type="text"],
-  input[type="email"],
-  input[type="number"],
-  select,
-  textarea {
-    background: var(--navy-mid);
-    border: 1px solid var(--border2);
-    border-radius: 10px;
-    padding: 10px 14px;
-    font-size: 13.5px;
-    font-family: 'DM Sans', sans-serif;
-    color: var(--text);
-    outline: none;
-    transition: border-color 0.2s, box-shadow 0.2s;
-    width: 100%;
-  }
-
-  input::placeholder,
-  textarea::placeholder {
-    color: var(--text3);
-  }
-
-  input:focus,
-  select:focus,
-  textarea:focus {
-    border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(181,148,31,0.12);
-  }
-
-  input.error,
-  select.error,
-  textarea.error {
-    border-color: var(--red);
-    box-shadow: 0 0 0 3px rgba(239,68,68,0.1);
-  }
-
-  select {
-    cursor: pointer;
-    appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239ba3b5' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 12px center;
-    padding-right: 36px;
-  }
-
-  select option {
-    background: var(--navy-mid);
-    color: var(--text);
-  }
-
-  textarea {
-    resize: vertical;
-    min-height: 80px;
-  }
-
-  .field-hint {
-    font-size: 11px;
-    color: var(--text3);
-    margin-top: 2px;
-  }
-
-  .field-error {
-    font-size: 11px;
-    color: var(--red);
-    margin-top: 3px;
-    display: none;
-    font-weight: 500;
-  }
-
-  .field-error.show {
-    display: block;
-  }
-
-  .tags-picker {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-bottom: 10px;
-  }
-
-  .tag-opt {
-    padding: 6px 12px;
-    border-radius: 8px;
-    font-size: 12px;
-    font-weight: 500;
-    border: 1px solid var(--border2);
-    background: var(--navy-mid);
-    color: var(--text2);
-    cursor: pointer;
-    transition: all 0.2s;
-    user-select: none;
-  }
-
-  .tag-opt:hover {
-    border-color: var(--primary);
-    color: #d4b23a;
-  }
-
-  .tag-opt.selected {
-    background: rgba(181,148,31,0.12);
-    border-color: var(--primary);
-    color: var(--primary);
-  }
-
-  .role-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 10px;
-    margin-bottom: 10px;
-  }
-
-  .role-card {
-    border: 1.5px solid var(--border2);
-    background: var(--navy-mid);
-    border-radius: 12px;
-    padding: 14px 10px;
-    cursor: pointer;
-    transition: all 0.2s;
-    text-align: center;
-    user-select: none;
-  }
-
-  .role-card:hover {
-    border-color: rgba(181,148,31,0.4);
-    background: rgba(181,148,31,0.04);
-  }
-
-  .role-card.selected {
-    border-color: var(--primary);
-    background: rgba(181,148,31,0.1);
-  }
-
-  .role-icon {
-    width: 36px;
-    height: 36px;
-    border-radius: 10px;
-    background: rgba(255,255,255,0.04);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 0 auto 8px;
-    transition: background 0.2s;
-  }
-
-  .role-card.selected .role-icon {
-    background: rgba(181,148,31,0.2);
-  }
-
-  .role-icon svg {
-    width: 18px;
-    height: 18px;
-    stroke: var(--text2);
-    fill: none;
-    stroke-width: 1.8;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-    transition: stroke 0.2s;
-  }
-
-  .role-card.selected .role-icon svg {
-    stroke: var(--primary);
-  }
-
-  .role-name {
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--text2);
-    transition: color 0.2s;
-  }
-
-  .role-card.selected .role-name {
-    color: var(--primary);
-  }
-
-  .role-desc {
-    font-size: 10.5px;
-    color: var(--text3);
-    margin-top: 3px;
-    line-height: 1.3;
-  }
-
-  .divider {
-    height: 1px;
-    background: var(--border);
-    margin: 20px 0;
-  }
-
-  .review-grid {
-    display: flex;
-    flex-direction: column;
-    gap: 0;
-  }
-
-  .review-item {
-    display: flex;
-    align-items: baseline;
-    padding: 10px 0;
-    border-bottom: 1px solid var(--border);
-  }
-
-  .review-item:last-child {
-    border-bottom: none;
-  }
-
-  .review-key {
-    font-size: 12px;
-    color: var(--text3);
-    font-weight: 600;
-    min-width: 120px;
-    flex-shrink: 0;
-  }
-
-  .review-val {
-    font-size: 13.5px;
-    color: var(--text);
-    font-weight: 500;
-  }
-
-  .review-tags {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-  }
-
-  .review-tag {
-    padding: 2px 10px;
-    border-radius: 6px;
-    font-size: 11px;
-    font-weight: 600;
-    background: rgba(181,148,31,0.12);
-    color: var(--primary);
-    border: 1px solid rgba(181,148,31,0.25);
-  }
-
-  .card-footer {
-    padding: 18px 28px;
-    border-top: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    background: rgba(255,255,255,0.01);
-  }
-
-  .footer-left {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-
-  .btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 7px;
-    padding: 9px 18px;
-    border-radius: 10px;
-    font-size: 13px;
-    font-weight: 600;
-    font-family: 'DM Sans', sans-serif;
-    cursor: pointer;
-    border: none;
-    transition: all 0.2s;
-  }
-
-  .btn svg {
-    width: 14px;
-    height: 14px;
-    stroke: currentColor;
-    fill: none;
-    stroke-width: 2.5;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-  }
-
-  .btn-ghost {
-    background: transparent;
-    color: var(--text2);
-    border: 1px solid var(--border2);
-  }
-
-  .btn-ghost:hover {
-    background: var(--navy-mid);
-    color: var(--text);
-  }
-
-  .btn-primary {
-    background: var(--primary);
-    color: #0f1115;
-    font-weight: 700;
-  }
-
-  .btn-primary:hover {
-    background: var(--primary-dark);
-    box-shadow: 0 4px 20px rgba(181,148,31,0.3);
-  }
-
-  .btn-success {
-    background: var(--green);
-    color: #fff;
-    font-weight: 700;
-  }
-
-  .btn-success:hover {
-    background: #16a34a;
-  }
-
-  .btn:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-  }
-
-  #step-counter {
-    font-size: 12px;
-    color: var(--text3);
-    font-weight: 500;
-  }
-
-  .info-note {
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-    padding: 12px 14px;
-    border-radius: 10px;
-    background: rgba(59,130,246,0.08);
-    border: 1px solid rgba(59,130,246,0.2);
-    font-size: 12px;
-    color: #93c5fd;
-    line-height: 1.5;
-    margin-bottom: 18px;
-  }
-
-  .info-note svg {
-    width: 15px;
-    height: 15px;
-    stroke: var(--blue);
-    fill: none;
-    stroke-width: 2;
-    flex-shrink: 0;
-    margin-top: 1px;
-  }
-
-  .success-wrap {
-    padding: 48px 28px;
-    text-align: center;
-    display: none;
-  }
-
-  .success-wrap.show {
-    display: block;
-  }
-
-  .success-icon {
-    width: 64px;
-    height: 64px;
-    border-radius: 50%;
-    background: rgba(34,197,94,0.08);
-    border: 2px solid rgba(34,197,94,0.3);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 0 auto 20px;
-  }
-
-  .success-icon svg {
-    width: 28px;
-    height: 28px;
-    stroke: var(--green);
-    fill: none;
-    stroke-width: 2.5;
-  }
-
-  .success-title {
-    font-family: 'Space Mono', monospace;
-    font-size: 18px;
-    font-weight: 700;
-    color: var(--text);
-    margin-bottom: 10px;
-  }
-
-  .success-sub {
-    font-size: 13px;
-    color: var(--text2);
-    line-height: 1.6;
-    max-width: 360px;
-    margin: 0 auto 24px;
-  }
-
-  .success-info {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 10px 18px;
-    border-radius: 10px;
-    background: var(--navy-mid);
-    border: 1px solid var(--border);
-    font-size: 12px;
-    color: var(--text2);
-    font-weight: 500;
-    margin-bottom: 24px;
-  }
-
-  .success-info svg {
-    width: 14px;
-    height: 14px;
-    stroke: currentColor;
-    fill: none;
-    stroke-width: 2;
-  }
-
-  @keyframes fadeUp {
-    from { opacity: 0; transform: translateY(8px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-
-  .field-row-3 {
-    grid-template-columns: 1fr 1fr 1fr;
-  }
-
-  @media (max-width: 520px) {
-    body { padding: 0; }
-    .page-wrap { max-width: 100%; }
-    .card { border-radius: 0; min-height: 100dvh; display: flex; flex-direction: column; box-shadow: none; border: none; }
-    .card-body { padding: 20px 16px; flex: 1; }
-    .card-hero { padding: 16px; }
-    .card-footer {
-      padding: 12px 16px;
-      padding-bottom: max(12px, env(safe-area-inset-bottom));
-      flex-direction: row;
-      gap: 10px;
-      position: sticky;
-      bottom: 0;
-      background: var(--navy-light);
-      border-top: 1px solid var(--border);
-    }
-    .footer-left { width: auto; }
-    .btn {
-      flex: 0 0 auto;
-      justify-content: center;
-      padding: 10px 20px;
-      border-radius: 8px;
-      font-size: 12.5px;
-    }
-    .btn svg { width: 14px; height: 14px; }
-    .btn-ghost { flex: 0 0 auto; padding: 10px 16px; }
-
-    #step-counter { font-size: 11px; }
-    .field-row { grid-template-columns: 1fr; }
-    .field-row-3 { grid-template-columns: 1fr; }
-    .role-grid { grid-template-columns: 1fr; }
-    .review-key { min-width: 90px; font-size: 11px; }
-    .review-val { font-size: 12px; }
-    .tag-opt { font-size: 11px; padding: 5px 10px; }
-    .theme-toggle { top: 12px; right: 12px; width: 40px; height: 40px; }
-    .side-toast { max-width: calc(100vw - 20px); }
-    .modal-box { padding: 24px 18px 20px; }
-    .attempts-bar { flex-direction: column; gap: 8px; align-items: flex-start; }
-    .role-card { padding: 12px 10px; }
-    .role-card .role-icon { width: 32px; height: 32px; }
-    .role-name { font-size: 13px; }
-    .field-hint { font-size: 10.5px; }
-    input[type="text"], input[type="email"], input[type="number"], select, textarea {
-      font-size: 15px; padding: 12px 14px;
-    }
-    .card-hero h1 { font-size: 16px; }
-    .card-hero p { font-size: 12px; }
-    .section-label { font-size: 10px; }
-    .modal-title { font-size: 15px; }
-    .modal-msg { font-size: 12px; }
-    .success-wrap { padding: 40px 16px 24px; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 60dvh; }
-    .success-wrap.show { display: flex; }
-    .success-icon { width: 56px; height: 56px; margin-bottom: 16px; }
-    .success-icon svg { width: 24px; height: 24px; }
-    .success-title { font-size: 16px; margin-bottom: 8px; }
-    .success-sub { font-size: 12px; max-width: 100%; margin-bottom: 20px; }
-    .success-info { font-size: 11px; padding: 8px 14px; margin-bottom: 20px; width: 100%; justify-content: center; }
-    .success-wrap .btn { width: 100%; }
-  }
-
-  @media (min-width: 521px) and (max-width: 768px) {
-    body { padding: 24px 12px; }
-    .card-body { padding: 20px 22px; }
-    .card-hero { padding: 20px 22px; }
-    .card-footer { padding: 16px 22px; }
-  }
-
-  .modal-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.65);
-    backdrop-filter: blur(4px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 9999;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.25s ease;
-    padding: 24px;
-  }
-
-  .modal-overlay.show {
-    opacity: 1;
-    pointer-events: all;
-  }
-
-  .modal-box {
-    background: var(--navy-light);
-    border: 1px solid var(--border);
-    border-radius: 20px;
-    padding: 36px 32px 28px;
-    max-width: 420px;
-    width: 100%;
-    text-align: center;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.6);
-    transform: scale(0.92) translateY(12px);
-    transition: transform 0.25s ease;
-  }
-
-  .modal-overlay.show .modal-box {
-    transform: scale(1) translateY(0);
-  }
-
-  .modal-icon {
-    width: 56px;
-    height: 56px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 0 auto 16px;
-  }
-
-  .modal-icon svg {
-    width: 26px;
-    height: 26px;
-    fill: none;
-    stroke-width: 2.5;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-  }
-
-  .modal-icon.success {
-    background: rgba(34,197,94,0.1);
-    border: 2px solid rgba(34,197,94,0.3);
-  }
-  .modal-icon.success svg { stroke: var(--green); }
-
-  .modal-icon.error {
-    background: rgba(239,68,68,0.1);
-    border: 2px solid rgba(239,68,68,0.3);
-  }
-  .modal-icon.error svg { stroke: var(--red); }
-
-  .modal-icon.warning {
-    background: rgba(245,158,11,0.1);
-    border: 2px solid rgba(245,158,11,0.3);
-  }
-  .modal-icon.warning svg { stroke: #f59e0b; }
-
-  .modal-title {
-    font-family: 'Space Mono', monospace;
-    font-size: 16px;
-    font-weight: 700;
-    color: var(--text);
-    margin-bottom: 8px;
-  }
-
-  .modal-msg {
-    font-size: 13px;
-    color: var(--text2);
-    line-height: 1.6;
-    margin-bottom: 22px;
-  }
-
-  .modal-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 9px 26px;
-    border-radius: 10px;
-    font-size: 13px;
-    font-weight: 600;
-    font-family: 'DM Sans', sans-serif;
-    cursor: pointer;
-    border: none;
-    transition: all 0.2s;
-  }
-
-  .modal-btn.primary {
-    background: var(--primary);
-    color: #0f1115;
-  }
-  .modal-btn.primary:hover { background: var(--primary-dark); }
-
-  .modal-btn.green {
-    background: var(--green);
-    color: #fff;
-  }
-  .modal-btn.green:hover { background: #16a34a; }
-
-  .modal-btn.amber {
-    background: #f59e0b;
-    color: #0f1115;
-  }
-  .modal-btn.amber:hover { background: #d97706; }
-
-  .attempts-bar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 10px 14px;
-    border-radius: 10px;
-    background: rgba(245,158,11,0.06);
-    border: 1px solid rgba(245,158,11,0.15);
-    margin-bottom: 14px;
-  }
-
-  .attempts-label {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 12px;
-    font-weight: 600;
-    color: #f59e0b;
-  }
-
-  .attempts-dots {
-    display: flex;
-    gap: 6px;
-  }
-
-  .attempt-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: var(--border2);
-    transition: background 0.2s;
-  }
-
-  .attempt-dot.used {
-    background: #f59e0b;
-  }
-
-  .info-note.warn {
-    background: rgba(239,68,68,0.08);
-    border-color: rgba(239,68,68,0.2);
-    color: #fca5a5;
-  }
-
-  .info-note.warn svg { stroke: var(--red); }
-
-  /* Side toast notification */
-  .side-toast-wrap {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    z-index: 99999;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    pointer-events: none;
-  }
-
-  .side-toast {
-    pointer-events: all;
-    background: var(--navy-light);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 14px 16px;
-    max-width: 360px;
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
-    transform: translateX(120%);
-    opacity: 0;
-    transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
-  }
-
-  .side-toast.show {
-    transform: translateX(0);
-    opacity: 1;
-  }
-
-  .side-toast-icon {
-    flex-shrink: 0;
-    width: 36px;
-    height: 36px;
-    border-radius: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .side-toast-icon svg {
-    width: 18px;
-    height: 18px;
-    fill: none;
-    stroke-width: 2.5;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-  }
-
-  .side-toast-icon.warn {
-    background: rgba(245,158,11,0.12);
-  }
-  .side-toast-icon.warn svg { stroke: #f59e0b; }
-
-  .side-toast-icon.error {
-    background: rgba(239,68,68,0.12);
-  }
-  .side-toast-icon.error svg { stroke: var(--red); }
-
-  .side-toast-icon.success {
-    background: rgba(34,197,94,0.12);
-  }
-  .side-toast-icon.success svg { stroke: var(--green); }
-
-  .side-toast-body {
-    flex: 1;
-  }
-
-  .side-toast-title {
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--text);
-    margin-bottom: 3px;
-  }
-
-  .side-toast-msg {
-    font-size: 12px;
-    color: var(--text2);
-    line-height: 1.4;
-  }
-
-  .side-toast-close {
-    flex-shrink: 0;
-    width: 20px;
-    height: 20px;
-    border: none;
-    background: transparent;
-    color: var(--text3);
-    cursor: pointer;
-    padding: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 5px;
-    transition: background 0.15s;
-  }
-
-  .side-toast-close:hover {
-    background: var(--navy-mid);
-    color: var(--text1);
-  }
-
-  .side-toast-close svg {
-    width: 14px;
-    height: 14px;
-    stroke: currentColor;
-    fill: none;
-    stroke-width: 2;
-  }
+  /* ══════════════════════════════════════════════════════════════
+     Request an expert account.
+
+     A rail names the three things being asked and how far along you
+     are; the questions themselves sit beside it. Two of the three
+     are skippable, and the Skip is a button of its own in the footer
+     rather than a word inside a sentence - a skip nobody sees is not
+     a skip.
+
+     Self-contained, like login.blade.php: this is a public page, and
+     admin.css is written for the signed-in shell.
+     ══════════════════════════════════════════════════════════════ */
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --bg:#f2f3f5;--bg2:#ffffff;--bg3:#f7f8fa;--bg4:#eceef2;
+    --border:#e0e2e8;--border2:#c8cad4;
+    --text:#1e2128;--text2:#4a5060;--text3:#8a909e;
+    --navy:#18191f;--navy-mid:#1e2028;
+    --accent:#c9a82c;--accent2:#b5941f;--accent3:#8a6e10;--accent-light:#faf7ed;
+    --green:#16a34a;--green-bg:rgba(22,163,74,.07);
+    --amber:#b45309;--amber-bg:rgba(180,83,9,.07);
+    --red:#dc2626;--red-bg:rgba(220,38,38,.07);
+  }
+  body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(--text);
+    font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased;
+    min-height:100vh;display:flex;align-items:center;justify-content:center;padding:32px 20px}
+
+  .ra-shell{width:100%;max-width:760px}
+  .ra-card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;
+    box-shadow:0 1px 4px rgba(0,0,0,.05);overflow:hidden}
+
+  /* The wordmark the sign-in panel uses. No badge, no monogram. */
+  .ra-head{display:flex;align-items:center;gap:12px;padding:15px 22px;background:var(--navy)}
+  .ra-wordmark{font-size:15px;font-weight:700;letter-spacing:.02em;color:#fff}
+  .ra-wordmark span{color:var(--accent)}
+  .ra-head-right{margin-left:auto;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;
+    color:rgba(255,255,255,.5)}
+
+  .ra-grid{display:grid;grid-template-columns:206px 1fr}
+
+  .ra-rail{border-right:1px solid var(--border);background:var(--bg3);padding:22px 0 20px}
+  .ra-railitem{display:flex;gap:11px;padding:10px 20px;font-size:13px;color:var(--text3);
+    border-left:2px solid transparent;width:100%;text-align:left;background:none;border-top:0;
+    border-right:0;border-bottom:0;font-family:inherit;cursor:pointer}
+  .ra-railitem .rn{font-size:11px;font-weight:600;padding-top:2px;width:14px;flex-shrink:0}
+  .ra-railitem .rl{display:block}
+  .ra-railitem .ro{display:block;font-size:11px;font-weight:400;color:var(--text3)}
+  .ra-railitem.on{color:var(--text);font-weight:600;border-left-color:var(--accent);background:var(--bg2)}
+  .ra-railitem.done{color:var(--text2)}
+  .ra-railitem.done .rn{color:var(--green)}
+  .ra-railitem:disabled{cursor:default}
+  .ra-railfoot{margin:18px 20px 0;padding-top:15px;border-top:1px solid var(--border);
+    font-size:11.5px;color:var(--text3);line-height:1.55}
+
+  .ra-body{padding:22px}
+  .ra-title{font-size:17px;font-weight:700;letter-spacing:-.01em;margin-bottom:4px}
+  .ra-sub{font-size:12.5px;color:var(--text2);margin-bottom:18px;max-width:54ch}
+
+  .ra-grid2{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+  .ra-grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:11px}
+  .ra-field{margin-bottom:11px}
+  .ra-field:last-child{margin-bottom:0}
+  .ra-field label{display:block;font-size:11px;font-weight:600;color:var(--text2);margin-bottom:5px}
+  .ra-field label i{font-style:normal;color:var(--text3);font-weight:500}
+  .ra-input{width:100%;height:38px;border:1.5px solid var(--border);border-radius:8px;
+    background:var(--bg2);padding:0 11px;font-size:13px;font-family:inherit;color:var(--text);outline:none}
+  .ra-input::placeholder{color:var(--text3)}
+  .ra-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(201,168,44,.12)}
+  .ra-input.bad{border-color:var(--red)}
+  .ra-hint{font-size:11px;color:var(--text3);margin-top:5px}
+  .ra-err{font-size:11.5px;color:var(--red);margin-top:5px;display:none}
+  .ra-err.show{display:block}
+
+  /* programs and how many teams of each */
+  .ra-progs{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .ra-prog{border:1.5px solid var(--border);border-radius:10px;padding:12px;cursor:pointer;
+    background:var(--bg2);text-align:left;font-family:inherit;
+    transition:border-color .12s,background .12s}
+  .ra-prog:hover{border-color:var(--border2)}
+  .ra-prog:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+  .ra-prog-top{display:flex;align-items:center;justify-content:space-between;gap:6px}
+  .ra-prog-code{font-size:13.5px;font-weight:700}
+  .ra-prog-full{font-size:10.5px;color:var(--text3);line-height:1.35;margin-top:3px}
+  .ra-check{width:16px;height:16px;border-radius:4px;border:1.5px solid var(--border2);flex-shrink:0;
+    display:flex;align-items:center;justify-content:center}
+  .ra-prog.on{border-color:var(--accent);background:var(--accent-light)}
+  .ra-prog.on .ra-check{background:var(--accent);border-color:var(--accent2)}
+  .ra-prog.on .ra-check::after{content:"";width:7px;height:4px;border-left:2px solid #18191f;
+    border-bottom:2px solid #18191f;transform:rotate(-45deg) translate(1px,-1px)}
+  .ra-step{display:none;align-items:center;margin-top:10px;border:1px solid var(--border);
+    border-radius:7px;overflow:hidden;background:var(--bg2)}
+  .ra-prog.on .ra-step{display:flex}
+  .ra-step span[data-d]{flex:0 0 28px;height:28px;display:flex;align-items:center;justify-content:center;
+    background:var(--bg3);color:var(--text2);font-size:15px;font-weight:600;line-height:1;user-select:none}
+  .ra-step span[data-d]:hover{background:var(--bg4);color:var(--text)}
+  .ra-step .n{flex:1;text-align:center;font-size:12.5px;font-weight:700;font-variant-numeric:tabular-nums}
+  .ra-step .u{font-size:10px;font-weight:500;color:var(--text3);padding-right:8px}
+
+  .ra-total{margin-top:12px;font-size:12px;color:var(--text2)}
+  .ra-total b{color:var(--text);font-weight:700;font-variant-numeric:tabular-nums}
+  .ra-total .none{color:var(--text3)}
+
+  /* expertise */
+  .ra-tags{display:flex;flex-wrap:wrap;gap:6px}
+  .ra-tag{border:1.5px solid var(--border);border-radius:999px;padding:6px 13px;font-size:12px;
+    color:var(--text2);background:var(--bg2);cursor:pointer;font-family:inherit}
+  .ra-tag:hover{border-color:var(--border2)}
+  .ra-tag:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+  .ra-tag.on{border-color:var(--accent);background:var(--accent-light);color:var(--accent3);font-weight:600}
+  .ra-addown{display:flex;gap:8px;margin-top:12px}
+  .ra-addown .ra-input{height:34px;font-size:12.5px}
+  .ra-addown button{flex-shrink:0}
+
+  /* footer */
+  .ra-foot{display:flex;align-items:center;gap:9px;padding:14px 22px;border-top:1px solid var(--border);
+    background:var(--bg3);flex-wrap:wrap}
+  .ra-footnote{font-size:11.5px;color:var(--text3);margin-right:auto}
+  .ra-btn{height:38px;padding:0 18px;border-radius:8px;border:1.5px solid var(--border2);
+    background:var(--bg2);color:var(--text);font-family:inherit;font-size:13px;font-weight:600;
+    display:inline-flex;align-items:center;justify-content:center;gap:7px;cursor:pointer;white-space:nowrap}
+  .ra-btn:hover{border-color:var(--text3)}
+  .ra-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .ra-btn.primary{background:var(--accent);border-color:var(--accent);color:#18191f;font-weight:700}
+  .ra-btn.primary:hover{background:var(--accent2);border-color:var(--accent2)}
+  .ra-btn.primary:disabled{opacity:1;background:var(--bg4);border-color:var(--border);
+    color:var(--text3);cursor:not-allowed}
+  .ra-btn.ghost{border-color:transparent;background:none;color:var(--text2)}
+  .ra-btn.ghost:hover{background:var(--bg4);border-color:transparent}
+  .ra-btn[hidden]{display:none}
+
+  /* notices */
+  .ra-note{display:flex;align-items:flex-start;gap:9px;padding:11px 13px;border-radius:9px;
+    font-size:12px;line-height:1.5;margin-bottom:16px}
+  .ra-note.warn{background:var(--amber-bg);border:1px solid #e8d3b4;color:var(--amber)}
+  .ra-note.bad{background:var(--red-bg);border:1px solid #e6c9c7;color:var(--red)}
+  .ra-note.info{background:var(--accent-light);border:1px solid #ecdfae;color:var(--accent3)}
+  .ra-dots{display:flex;gap:4px;margin-left:auto;padding-top:4px;flex-shrink:0}
+  .ra-dot{width:6px;height:6px;border-radius:50%;background:rgba(180,83,9,.25)}
+  .ra-dot.used{background:var(--amber)}
+
+  .ra-alt{text-align:center;font-size:12.5px;color:var(--text3);margin-top:16px}
+  .ra-alt a{color:var(--accent3);font-weight:600}
+
+  /* done */
+  .ra-done{padding:44px 24px;text-align:center}
+  .ra-done-mark{width:46px;height:46px;border-radius:50%;background:var(--green-bg);
+    border:1.5px solid rgba(22,163,74,.3);display:flex;align-items:center;justify-content:center;
+    margin:0 auto 16px}
+  .ra-done-mark svg{width:22px;height:22px;stroke:var(--green);fill:none;stroke-width:2.6}
+  .ra-done h2{font-size:18px;font-weight:700;margin-bottom:7px}
+  .ra-done p{font-size:13px;color:var(--text2);max-width:44ch;margin:0 auto 18px}
+
+  @media (max-width:720px){
+    body{padding:0;align-items:stretch}
+    .ra-shell{max-width:none}
+    .ra-card{border-radius:0;border-left:0;border-right:0;min-height:100vh;
+      display:flex;flex-direction:column}
+    .ra-grid{grid-template-columns:1fr;flex:1}
+    .ra-rail{border-right:0;border-bottom:1px solid var(--border);display:flex;
+      overflow-x:auto;padding:0}
+    .ra-railitem{border-left:0;border-bottom:2px solid transparent;white-space:nowrap;padding:12px 16px}
+    .ra-railitem.on{border-left-color:transparent;border-bottom-color:var(--accent)}
+    .ra-railitem .ro{display:none}
+    .ra-railfoot{display:none}
+    .ra-grid2,.ra-grid3,.ra-progs{grid-template-columns:1fr}
+    .ra-foot{position:sticky;bottom:0}
+    .ra-footnote{width:100%;margin-bottom:4px}
+  }
+  @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
+</head>
+<body>
 
-<button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()" title="Toggle theme" aria-label="Toggle theme">
-  <svg id="theme-icon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-</button>
+<div class="ra-shell">
+  <div class="ra-card" id="ra-card">
+    <div class="ra-head">
+      <span class="ra-wordmark">Caps<span>TRACK</span></span>
+      <span class="ra-head-right">CCS · CSPC</span>
+    </div>
 
-<div class="page-wrap">
+    <div class="ra-grid" id="ra-main">
+      <nav class="ra-rail" aria-label="Steps">
+        <button type="button" class="ra-railitem on" data-go="1">
+          <span class="rn">01</span>
+          <span><span class="rl">Who you are</span></span>
+        </button>
+        <button type="button" class="ra-railitem" data-go="2">
+          <span class="rn">02</span>
+          <span><span class="rl">What you will take on</span><span class="ro">optional</span></span>
+        </button>
+        <button type="button" class="ra-railitem" data-go="3">
+          <span class="rn">03</span>
+          <span><span class="rl">What you know</span><span class="ro">optional</span></span>
+        </button>
+        {{-- The one rule people ask about, kept off the fields. --}}
+        <p class="ra-railfoot">Your role is a CaPSA's to give when they approve this.
+          Adviser, Consultant and Grammarian are not picked here.</p>
+      </nav>
 
-  <div class="card" id="main-card">
-
-    <div class="card-hero">
-      @if($rejectAttempts > 0)
-        <div class="attempts-bar">
-          <div class="attempts-label">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-            @if($cooldownActive)
-              Attempt {{ $rejectAttempts }}/{{ $maxRejects }} — Cooldown active
-            @elseif($rejectAttempts >= $maxRejects)
-              Attempt {{ $rejectAttempts }}/{{ $maxRejects }} — Cooldown expired, you may retry
-            @else
-              Attempt {{ $rejectAttempts }}/{{ $maxRejects }}
-            @endif
-          </div>
-          <div class="attempts-dots">
-            @for($i = 1; $i <= $maxRejects; $i++)
-              <div class="attempt-dot {{ $i <= $rejectAttempts ? 'used' : '' }}"></div>
-            @endfor
-          </div>
-        </div>
-        @if($cooldownActive)
-          <div class="info-note warn" id="cooldown-note">
-            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-            Maximum attempts reached. Please wait <b id="cooldown-timer">{{ $waitSeconds }}</b> seconds before resubmitting.
-          </div>
-        @elseif($rejectAttempts < $maxRejects)
-          <div class="info-note">
-            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-            Your account was rejected. You have <b>{{ $attemptsRemaining }}</b> attempt{{ $attemptsRemaining !== 1 ? 's' : '' }} remaining before a cooldown. Double-check your details before resubmitting.
+      <div class="ra-body">
+        @if ($errors->any())
+          <div class="ra-note bad">
+            <span>{{ $errors->first() }}</span>
           </div>
         @endif
-      @endif
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-        <div class="step-dots" id="step-dots">
-          <div class="step-dot active" id="dot-1"></div>
-          <div class="step-dot" id="dot-2"></div>
-          <div class="step-dot" id="dot-3"></div>
-        </div>
-      </div>
-      <h1 id="hero-title">Personal Information</h1>
-      <p id="hero-sub">Fill in your basic details to start your account request. All fields marked with <span style="color:var(--primary)">*</span> are required.</p>
-    </div>
 
-    @if($cooldownActive)
-    <div class="card-body" style="padding: 48px 28px; text-align: center;">
-      <div style="width:56px;height:56px;border-radius:50%;background:rgba(239,68,68,0.1);border:2px solid rgba(239,68,68,0.3);display:flex;align-items:center;justify-content:center;margin:0 auto 16px">
-        <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="#ef4444" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-      </div>
-      <div style="font-family:'Space Mono',monospace;font-size:16px;font-weight:700;color:var(--text);margin-bottom:8px">Submission Blocked</div>
-      <div style="font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:22px;max-width:360px;margin-left:auto;margin-right:auto">
-        You have reached the maximum number of attempts ({{ $rejectAttempts }}/{{ $maxRejects }}). 
-        Please wait <b id="cooldown-timer-block">{{ $waitSeconds }}</b> seconds before you can resubmit your account request.
-      </div>
-      <a href="/" style="display:inline-flex;align-items:center;gap:6px;padding:9px 26px;border-radius:10px;font-size:13px;font-weight:600;background:var(--primary);color:#0f1115;text-decoration:none">Back to Home</a>
-    </div>
-    @else
-    <div class="card-body">
-      <div class="form-section active" id="step-1">
-        <div class="section-label">
-          <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-          Personal Details
-        </div>
-        <div class="field-row">
-          <div class="field">
-            <label>First Name <span class="req">*</span></label>
-            <input type="text" id="fname" placeholder="e.g. Jose" value="{{ request('first_name', old('first_name', '')) }}"/>
-            <div class="field-error" id="err-fname">Please enter your first name.</div>
+        @if ($cooldownSeconds)
+          <div class="ra-note bad" id="ra-cooldown"
+               data-seconds="{{ $cooldownSeconds }}">
+            <span>Three requests from this address have been turned down.
+              You can try again in <b id="ra-cooldown-left">a moment</b>.</span>
           </div>
-          <div class="field">
-            <label>Last Name <span class="req">*</span></label>
-            <input type="text" id="lname" placeholder="e.g. Dela Cruz" value="{{ request('last_name', old('last_name', '')) }}"/>
-            <div class="field-error" id="err-lname">Please enter your last name.</div>
+        @elseif ($rejectAttempts > 0)
+          <div class="ra-note warn">
+            <span>{{ $rejectAttempts }} of 3 attempts used.
+              @if ($accountRequest?->rejection_reason)
+                Last reason given: &ldquo;{{ $accountRequest->rejection_reason }}&rdquo;
+              @endif
+              A third rejection pauses new requests for 3 days.</span>
+            <span class="ra-dots" aria-hidden="true">
+              @for ($i = 1; $i <= 3; $i++)
+                <span class="ra-dot {{ $i <= $rejectAttempts ? 'used' : '' }}"></span>
+              @endfor
+            </span>
           </div>
-        </div>
+        @endif
 
-        <div class="field-row field-row-3">
-          <div class="field">
-            <label>Middle Name</label>
-            <input type="text" id="mi" placeholder="e.g. Sigabo" length="50" value="{{ old('middle_name', '') }}"/>
-            <div class="field-hint">Optional.</div>
-          </div>
-          <div class="field">
-            <label>Suffix</label>
-            <input type="text" id="suffix" placeholder="e.g. Jr., III" value="{{ old('suffix', '') }}"/>
-            <div class="field-hint">Optional.</div>
-          </div>
-          <div class="field">
-            <label>Credentials</label>
-            <input type="text" id="credentials" placeholder="e.g. MIT, PhD" value="{{ old('credentials', '') }}"/>
-            <div class="field-hint">Optional.</div>
-          </div>
-        </div>
+        {{-- ── 01 ── the only step that is required ── --}}
+        <section data-step="1">
+          <h1 class="ra-title">Who you are</h1>
+          <p class="ra-sub">A CaPSA reads this and decides whether to approve the account.</p>
 
-        <div class="divider"></div>
-
-        <div class="section-label">
-          <svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-          Account Credentials
-        </div>
-
-        <div class="field-row full">
-          <div class="field">
-            <label>Gmail Address <span class="req">*</span></label>
-            <input type="email" id="email" placeholder="yourname@gmail.com" value="{{ request('email', old('email', '')) }}"/>
-            <div class="field-hint">Use your Gmail address.</div>
-            <div class="field-error" id="err-email">Enter a valid @gmail.com email.</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="form-section" id="step-2">
-        <div class="section-label">
-          <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-          Select Your Role <span class="req" style="font-size:12px">*</span>
-        </div>
-
-        <div class="role-grid" id="role-grid">
-          <div class="role-card" onclick="toggleRole('capstone_adviser')" id="role-capstone_adviser">
-            <div class="role-icon">
-              <svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+          <div class="ra-grid2">
+            <div class="ra-field">
+              <label for="ra-first">First name</label>
+              <input class="ra-input" id="ra-first" autocomplete="given-name"
+                     value="{{ request('first_name', old('first_name', $accountRequest->first_name ?? '')) }}"
+                     placeholder="Neil">
             </div>
-            <div class="role-name">CaPSA / Thesis Adviser</div>
-            <div class="role-desc">Serves as Capstone Project Subject Adviser or Thesis Subject Adviser</div>
-          </div>
-          <div class="role-card" onclick="toggleRole('adviser')" id="role-adviser">
-            <div class="role-icon">
-              <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/></svg>
+            <div class="ra-field">
+              <label for="ra-last">Last name</label>
+              <input class="ra-input" id="ra-last" autocomplete="family-name"
+                     value="{{ request('last_name', old('last_name', $accountRequest->last_name ?? '')) }}"
+                     placeholder="Inocencio">
             </div>
-            <div class="role-name">Adviser</div>
-            <div class="role-desc">Guides capstone teams throughout their project journey</div>
           </div>
-          <div class="role-card" onclick="toggleRole('consultant')" id="role-consultant">
-            <div class="role-icon">
-              <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+
+          <div class="ra-grid3">
+            <div class="ra-field">
+              <label for="ra-middle">Middle name <i>optional</i></label>
+              <input class="ra-input" id="ra-middle" value="{{ old('middle_name', $accountRequest->middle_name ?? '') }}" placeholder="Sigabo">
             </div>
-            <div class="role-name">Consultant</div>
-            <div class="role-desc">Provides subject-matter expertise and technical advice</div>
-          </div>
-          <div class="role-card" onclick="toggleRole('grammarian')" id="role-grammarian">
-            <div class="role-icon">
-              <svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+            <div class="ra-field">
+              <label for="ra-suffix">Suffix <i>optional</i></label>
+              <input class="ra-input" id="ra-suffix" value="{{ old('suffix', $accountRequest->suffix ?? '') }}" placeholder="Jr.">
             </div>
-            <div class="role-name">Grammarian</div>
-            <div class="role-desc">Reviews and ensures quality of written documentation</div>
+            <div class="ra-field">
+              <label for="ra-credentials">Credentials <i>optional</i></label>
+              <input class="ra-input" id="ra-credentials" value="{{ old('credentials', $accountRequest->credentials ?? '') }}" placeholder="MIT">
+            </div>
           </div>
-        </div>
-        <div class="field-error" id="err-role" style="margin-bottom:12px">Please select a role.</div>
 
-        <div class="divider"></div>
-
-        <div class="section-label">
-          <svg viewBox="0 0 24 24"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
-          Areas of Expertise <span class="req" style="font-size:12px">*</span>
-        </div>
-
-        <div class="tags-picker" id="tags-picker">
-          <div class="tag-opt" onclick="toggleTag(this)">Machine Learning</div>
-          <div class="tag-opt" onclick="toggleTag(this)">Web Development</div>
-          <div class="tag-opt" onclick="toggleTag(this)">Mobile Apps</div>
-          <div class="tag-opt" onclick="toggleTag(this)">Data Analytics</div>
-          <div class="tag-opt" onclick="toggleTag(this)">Cybersecurity</div>
-          <div class="tag-opt" onclick="toggleTag(this)">Network Systems</div>
-          <div class="tag-opt" onclick="toggleTag(this)">Database Systems</div>
-          <div class="tag-opt" onclick="toggleTag(this)">UI/UX Design</div>
-          <div class="tag-opt" onclick="toggleTag(this)">Technical Writing</div>
-          <div class="tag-opt" onclick="toggleTag(this)">Grammar &amp; Style</div>
-          <div class="tag-opt" onclick="toggleTag(this)">Software Engineering</div>
-          <div class="tag-opt" onclick="toggleTag(this)">Research Methods</div>
-        </div>
-
-        <div class="field-row full" style="grid-template-columns: 1fr auto; gap: 10px; margin-bottom: 6px;">
-          <div class="field" style="gap:6px;">
-            <label style="margin:0;">Add your own expertise</label>
-            <input type="text" id="expertiseInput" placeholder="e.g. Machine Learning" onkeydown="handleExpertiseInputKeydown(event)" />
-
+          <div class="ra-field">
+            <label for="ra-email">Email address</label>
+            <input class="ra-input" id="ra-email" type="email" autocomplete="email"
+                   value="{{ $prefillEmail }}" placeholder="you@cspc.edu.ph">
+            <p class="ra-hint">Sign-in goes through Google, so this has to be the address
+              you will sign in with — your CSPC Mail or a Gmail address.</p>
           </div>
-          <div class="field" style="justify-content:flex-end;">
-            <button type="button" class="btn btn-ghost" style="height: 42px; padding: 9px 14px;" onclick="addExpertiseTag()">
-              Add
-              <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            </button>
+
+          <p class="ra-err" id="ra-err-1"></p>
+        </section>
+
+        {{-- ── 02 ── --}}
+        <section data-step="2" hidden>
+          <h1 class="ra-title">What you will take on</h1>
+          <p class="ra-sub">Tick every program you are willing to take teams from, and say
+            how many of each. Most advisers take two.</p>
+
+          <div class="ra-progs" id="ra-progs">
+            @foreach (['BSCS' => 'Computer Science', 'BSIT' => 'Information Technology', 'BSIS' => 'Information Systems', 'BLIS' => 'Library & Information Science'] as $code => $name)
+              <button type="button" class="ra-prog" data-prog="{{ $code }}" data-n="1" aria-pressed="false">
+                <span class="ra-prog-top">
+                  <span class="ra-prog-code">{{ $code }}</span>
+                  <span class="ra-check"></span>
+                </span>
+                <span class="ra-prog-full">{{ $name }}</span>
+                <span class="ra-step">
+                  <span data-d="-1" role="button" aria-label="One fewer team">&minus;</span>
+                  <span class="n">1</span><span class="u">teams</span>
+                  <span data-d="1" role="button" aria-label="One more team">+</span>
+                </span>
+              </button>
+            @endforeach
           </div>
-        </div>
 
-        <div class="field-hint" style="margin-bottom:6px">Select at least one area of expertise.</div>
+          <p class="ra-total" id="ra-total"></p>
+        </section>
 
-        <div class="field-error" id="err-tags">Please select at least one area of expertise.</div>
+        {{-- ── 03 ── --}}
+        <section data-step="3" hidden>
+          <h1 class="ra-title">What you know</h1>
+          <p class="ra-sub">Helps a CaPSA match you to a team whose topic you can actually
+            supervise. Nothing here is required.</p>
 
-        <div class="divider"></div>
-
-        <div class="section-label">
-          <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-          Team Capacity &amp; Course
-        </div>
-        <div class="field-row">
-          <div class="field">
-            <label>Maximum Teams <span class="req">*</span></label>
-            <input type="number" id="max-teams" placeholder="e.g. 4" min="1" max="10" value="4"/>
-            <div class="field-hint">How many teams you can advise simultaneously.</div>
+          <div class="ra-tags" id="ra-tags">
+            @foreach (['Systems Analysis', 'Machine Learning', 'Web Development', 'Mobile Apps', 'Data Analytics', 'Cybersecurity', 'Network Systems', 'Database Systems', 'UI/UX Design', 'Technical Writing', 'Project Management', 'Research Methodology'] as $field)
+              <button type="button" class="ra-tag" aria-pressed="false">{{ $field }}</button>
+            @endforeach
           </div>
-          <div class="field">
-            <label>Course</label>
-            <select id="course">
-              <option value="BSIT - Information Technology">BSIT - Information Technology</option>
-              <option value="BSCS - Computer Science">BSCS - Computer Science</option>
-              <option value="BSIS - Information System">BSIS - Information System</option>
-              <option value="BLIS - Information Science">BLIS - Information Science</option>
-            </select>
-            <div class="field-hint">Choose your course/program (optional).</div>
+
+          <div class="ra-addown">
+            <input class="ra-input" id="ra-own" maxlength="100" placeholder="Something else you supervise">
+            <button type="button" class="ra-btn" id="ra-add">Add</button>
           </div>
-        </div>
-
-      </div>
-
-      <div class="form-section" id="step-3">
-        <div class="info-note">
-          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-          Review your information carefully. Your request will be sent to the admin for approval.
-        </div>
-
-        <div class="section-label">
-          <svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-          Review Your Application
-        </div>
-
-        <div class="review-grid" id="review-panel"></div>
+        </section>
       </div>
     </div>
-    <div class="card-footer">
-      <div class="footer-left">
 
-        <button class="btn btn-ghost" id="btn-back" style="display:none" onclick="goBack()">
-          <svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
-          Back
-        </button>
-        <span id="step-counter">Step 1 of 3</span>
-      </div>
-      <button class="btn btn-primary" id="btn-next" onclick="goNext()">
-        Continue
-        <svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-      </button>
+    <div class="ra-foot" id="ra-footer">
+      <span class="ra-footnote" id="ra-footnote">You will get an email when a CaPSA decides.</span>
+      <button type="button" class="ra-btn ghost" id="ra-back" hidden>Back</button>
+      {{-- Its own button, in the row where the decisions are. A skip written
+           into a sentence above the fields is a skip nobody finds. --}}
+      <button type="button" class="ra-btn" id="ra-skip" hidden>Skip for now</button>
+      <button type="button" class="ra-btn primary" id="ra-next">Continue</button>
     </div>
-
-    <div class="success-wrap" id="success-wrap">
-      <div class="success-icon">
-        <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
-      </div>
-      <div class="success-title">Request Submitted!</div>
-      <div class="success-sub">Your account request has been sent to the administrator for review. You will be notified via email once it is processed.</div>
-      <div class="success-info">
-        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-        Typical review time: 1–3 business days
-      </div>
-      <a href="/">
-        <button class="btn btn-primary" style="margin:0 auto">Back to Login</button>
-      </a>
-    </div>
-      <div style="display: flex; justify-content: center; margin-bottom: 10px;">
-        <a href="/" class="signin-link">Already have an account? Sign in</a>
-      </div>
-  @endif
   </div>
-</div>
 
-<div class="modal-overlay" id="modal-overlay" onclick="if(event.target===this)hideModal()">
-  <div class="modal-box">
-    <div class="modal-icon" id="modal-icon"></div>
-    <div class="modal-title" id="modal-title"></div>
-    <div class="modal-msg" id="modal-msg"></div>
-    <button class="modal-btn primary" id="modal-btn" onclick="hideModal()">Got It</button>
-  </div>
+  <p class="ra-alt">Already approved? <a href="{{ url('/login') }}">Sign in instead</a></p>
 </div>
-
-<div class="side-toast-wrap" id="side-toast-wrap"></div>
 
 <script>
-let currentStep = 1;
-const totalSteps = 3;
-let selectedRoles = [];
+(function () {
+  var PROGRAMS = ['BSCS', 'BSIT', 'BSIS', 'BLIS'];
+  var STORE = @json(route('account.request.store'));
+  var TOKEN = document.querySelector('meta[name="csrf-token"]').content;
 
-function roleDisplayName(slug) {
-  const names = {
-    'capstone_adviser': 'CaPSA / Thesis Adviser',
-    'adviser': 'Adviser',
-    'consultant': 'Consultant',
-    'grammarian': 'Grammarian',
-  };
-  return names[slug] || slug;
-}
+  var step = 1;
+  var main = document.getElementById('ra-main');
+  var footer = document.getElementById('ra-footer');
+  var card = document.getElementById('ra-card');
+  var backBtn = document.getElementById('ra-back');
+  var skipBtn = document.getElementById('ra-skip');
+  var nextBtn = document.getElementById('ra-next');
+  var note = document.getElementById('ra-footnote');
 
-function goNext() {
-  if (!validateStep(currentStep)) return;
-  if (currentStep === 3) { submitRequest(); return; }
-  currentStep++;
-  updateStep();
-}
+  function val(id) { return document.getElementById(id).value.trim(); }
 
-function goBack() {
-  if (currentStep === 1) return;
-  currentStep--;
-  updateStep();
-}
+  // ── which step is showing ──
+  function show(n) {
+    step = n;
 
-function updateStep() {
-  document.querySelectorAll('.form-section').forEach((s, i) => {
-    s.classList.toggle('active', i + 1 === currentStep);
+    document.querySelectorAll('[data-step]').forEach(function (s) {
+      s.hidden = Number(s.dataset.step) !== n;
+    });
+
+    document.querySelectorAll('.ra-railitem').forEach(function (item) {
+      var i = Number(item.dataset.go);
+      item.classList.toggle('on', i === n);
+      item.classList.toggle('done', i < n);
+      item.querySelector('.rn').textContent = i < n ? '✓' : '0' + i;
+    });
+
+    backBtn.hidden = n === 1;
+    // Step one is the only thing actually needed to review a request, so it
+    // is the only one without a way past it.
+    skipBtn.hidden = n === 1;
+    nextBtn.textContent = n === 3 ? 'Send request' : 'Continue';
+    note.textContent = n === 3
+      ? 'You will get an email when a CaPSA decides.'
+      : (n === 2 ? 'You can set this later from your profile.' : 'Takes about a minute.');
+  }
+
+  // ── step one has to be filled in ──
+  function checkOne() {
+    var err = document.getElementById('ra-err-1');
+    var email = val('ra-email');
+    var problems = [];
+
+    [['ra-first', 'first name'], ['ra-last', 'last name']].forEach(function (pair) {
+      var el = document.getElementById(pair[0]);
+      var empty = el.value.trim() === '';
+      el.classList.toggle('bad', empty);
+      if (empty) problems.push('your ' + pair[1]);
+    });
+
+    var emailEl = document.getElementById('ra-email');
+    var okEmail = /^[^@\s]+@(gmail\.com|cspc\.edu\.ph)$/i.test(email);
+    emailEl.classList.toggle('bad', !okEmail);
+    if (!okEmail) problems.push('a CSPC Mail or Gmail address');
+
+    if (problems.length) {
+      err.textContent = 'Still needed: ' + problems.join(', ') + '.';
+      err.classList.add('show');
+      return false;
+    }
+
+    err.classList.remove('show');
+    return true;
+  }
+
+  // ── programs and slots ──
+  var progs = document.getElementById('ra-progs');
+  var total = document.getElementById('ra-total');
+
+  function chosen() {
+    return Array.prototype.slice.call(progs.querySelectorAll('.ra-prog.on'));
+  }
+
+  function renderTotal() {
+    var on = chosen();
+    total.textContent = '';
+
+    if (!on.length) {
+      var none = document.createElement('span');
+      none.className = 'none';
+      none.textContent = 'No programs picked. You can be approved without this, but nobody '
+        + 'can be assigned to you until you set it on your profile.';
+      total.appendChild(none);
+      return;
+    }
+
+    var teams = on.reduce(function (sum, el) { return sum + Number(el.dataset.n); }, 0);
+    var b = document.createElement('b');
+    b.textContent = teams + (teams === 1 ? ' team' : ' teams');
+    total.appendChild(b);
+    total.appendChild(document.createTextNode(' across ' + on.length
+      + (on.length === 1 ? ' program' : ' programs') + ': '));
+    var which = document.createElement('b');
+    which.textContent = on.map(function (el) { return el.dataset.n + ' - ' + el.dataset.prog; }).join(', ');
+    total.appendChild(which);
+  }
+
+  progs.addEventListener('click', function (e) {
+    var card = e.target.closest('.ra-prog');
+    if (!card) return;
+
+    var stepper = e.target.closest('[data-d]');
+    if (stepper) {
+      var n = Math.min(10, Math.max(1, Number(card.dataset.n) + Number(stepper.dataset.d)));
+      card.dataset.n = n;
+      card.querySelector('.ra-step .n').textContent = n;
+    } else {
+      var on = !card.classList.contains('on');
+      card.classList.toggle('on', on);
+      card.setAttribute('aria-pressed', String(on));
+    }
+
+    renderTotal();
   });
 
-  for (let i = 1; i <= 3; i++) {
-    const dot = document.getElementById(`dot-${i}`);
-    dot.className = 'step-dot';
-    if (i < currentStep) dot.classList.add('done');
-    else if (i === currentStep) dot.classList.add('active');
+  function slots() {
+    var out = {};
+    PROGRAMS.forEach(function (p) { out[p] = 0; });
+    chosen().forEach(function (el) { out[el.dataset.prog] = Number(el.dataset.n); });
+    return out;
   }
 
-  document.getElementById('step-counter').textContent = `Step ${currentStep} of ${totalSteps}`;
-  document.getElementById('btn-back').style.display = currentStep > 1 ? '' : 'none';
+  // ── expertise ──
+  var tags = document.getElementById('ra-tags');
 
-  const nextBtn = document.getElementById('btn-next');
-  if (currentStep === 3) {
-    nextBtn.innerHTML = `Submit Request <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
-    nextBtn.className = 'btn btn-success';
-    buildReview();
-  } else {
-    nextBtn.innerHTML = `Continue <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>`;
-    nextBtn.className = 'btn btn-primary';
-  }
+  tags.addEventListener('click', function (e) {
+    var tag = e.target.closest('.ra-tag');
+    if (!tag) return;
+    var on = !tag.classList.contains('on');
+    tag.classList.toggle('on', on);
+    tag.setAttribute('aria-pressed', String(on));
+  });
 
-  const titles = ['Personal Information', 'Role & Expertise', 'Review & Submit'];
-  const subs = [
-    'Fill in your basic details to start your account request. All fields marked with <span style="color:var(--primary)">*</span> are required.',
-    'Select your role in capstone reviews and highlight your areas of expertise.',
-    'Everything look correct? Submit your request for admin approval.'
-  ];
-  document.getElementById('hero-title').textContent = titles[currentStep - 1];
-  document.getElementById('hero-sub').innerHTML = subs[currentStep - 1];
-}
+  function addOwn() {
+    var input = document.getElementById('ra-own');
+    var text = input.value.trim();
+    if (!text) return;
 
-function validateStep(step) {
-  let ok = true;
-
-  if (step === 1) {
-    const isFnameValid = req('fname', 'err-fname', v => v.trim().length > 0);
-    const isLnameValid = req('lname', 'err-lname', v => v.trim().length > 0);
-    const isEmailValid = req('email', 'err-email', v => /^[^@]+@gmail\.com$/i.test(v.trim()));
-    ok = isFnameValid && isLnameValid && isEmailValid;
-  }
-
-  if (step === 2) {
-    if (selectedRoles.length === 0) {
-      document.getElementById('err-role').classList.add('show');
-      ok = false;
-    } else {
-      document.getElementById('err-role').classList.remove('show');
-    }
-
-    const tags = getSelectedTags();
-    if (tags.length === 0) {
-      document.getElementById('err-tags').classList.add('show');
-      ok = false;
-    } else {
-      document.getElementById('err-tags').classList.remove('show');
-    }
-  }
-
-  return ok;
-}
-
-function req(id, errId, test) {
-  const el = document.getElementById(id);
-  const errEl = document.getElementById(errId);
-  const valid = test(el.value);
-  el.classList.toggle('error', !valid);
-  errEl.classList.toggle('show', !valid);
-  return valid;
-}
-
-const TEAM_ROLES = ['adviser', 'consultant', 'grammarian'];
-
-function toggleRole(role) {
-  const idx = selectedRoles.indexOf(role);
-  if (idx >= 0) {
-    selectedRoles.splice(idx, 1);
-  } else {
-    // An expert only ever serves a team as one of Adviser/Consultant/
-    // Grammarian - picking a new one swaps out whichever of those was
-    // selected before, instead of stacking both.
-    if (TEAM_ROLES.includes(role)) {
-      TEAM_ROLES.filter(r => r !== role).forEach(r => {
-        const i = selectedRoles.indexOf(r);
-        if (i >= 0) {
-          selectedRoles.splice(i, 1);
-          document.getElementById(`role-${r}`).classList.remove('selected');
-        }
-      });
-    }
-    selectedRoles.push(role);
-  }
-  document.getElementById(`role-${role}`).classList.toggle('selected', selectedRoles.includes(role));
-  if (selectedRoles.length > 0) {
-    document.getElementById('err-role').classList.remove('show');
-  }
-}
-
-function toggleTag(el) {
-  el.classList.toggle('selected');
-  document.getElementById('err-tags').classList.remove('show');
-}
-
-function handleExpertiseInputKeydown(event) {
-  // Enter to add tag (prevents form submit/line breaks)
-  if (event.key === 'Enter') {
-    event.preventDefault();
-    addExpertiseTag();
-  }
-}
-
-function addExpertiseTag() {
-  const input = document.getElementById('expertiseInput');
-  const raw = input.value;
-
-  if (!raw) return;
-
-  const normalized = raw.trim().replace(/\s+/g, ' ');
-  if (!normalized) return;
-
-  const existing = Array.from(document.querySelectorAll('#tags-picker .tag-opt')).map(t => t.textContent.trim().toLowerCase());
-  if (existing.includes(normalized.toLowerCase())) {
-    // if it already exists, just select it
-    const el = Array.from(document.querySelectorAll('#tags-picker .tag-opt')).find(t => t.textContent.trim().toLowerCase() === normalized.toLowerCase());
-    if (el && !el.classList.contains('selected')) {
-      el.classList.add('selected');
-      document.getElementById('err-tags').classList.remove('show');
-    }
+    var tag = document.createElement('button');
+    tag.type = 'button';
+    tag.className = 'ra-tag on';
+    tag.setAttribute('aria-pressed', 'true');
+    tag.textContent = text;
+    tags.appendChild(tag);
     input.value = '';
-    return;
   }
 
-  const el = document.createElement('div');
-  el.className = 'tag-opt selected';
-  el.textContent = normalized;
-  el.onclick = function() { toggleTag(this); };
-  document.getElementById('tags-picker').appendChild(el);
+  document.getElementById('ra-add').addEventListener('click', addOwn);
+  document.getElementById('ra-own').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { e.preventDefault(); addOwn(); }
+  });
 
-  input.value = '';
-  document.getElementById('err-tags').classList.remove('show');
-}
+  function expertise() {
+    return Array.prototype.slice.call(tags.querySelectorAll('.ra-tag.on'))
+      .map(function (t) { return t.textContent.trim(); });
+  }
 
+  // ── moving about ──
+  document.querySelectorAll('.ra-railitem').forEach(function (item) {
+    item.addEventListener('click', function () {
+      var to = Number(item.dataset.go);
+      // Forward only over step one, so nobody lands on step three having
+      // never given a name.
+      if (to > 1 && !checkOne()) { show(1); return; }
+      show(to);
+    });
+  });
 
-function getSelectedTags() {
-  return Array.from(document.querySelectorAll('.tag-opt.selected')).map(t => t.textContent.trim());
-}
+  backBtn.addEventListener('click', function () { show(step - 1); });
 
-function buildReview() {
-  const panel = document.getElementById('review-panel');
-  const fname = document.getElementById('fname').value.trim();
-  const mi = document.getElementById('mi').value.trim();
-  const lname = document.getElementById('lname').value.trim();
-  const suffix = document.getElementById('suffix').value.trim();
-  const credentials = document.getElementById('credentials').value.trim();
-  const email = document.getElementById('email').value.trim();
-  const tags = getSelectedTags();
-  const maxTeams = document.getElementById('max-teams').value.trim() || '4';
-  const course = document.getElementById('course').value.trim();
-
-
-  let fullName = fname;
-  if (mi) fullName += ` ${mi}`;
-  fullName += ` ${lname}`;
-  if (suffix) fullName += ` ${suffix}`;
-  if (credentials) fullName += `, ${credentials}`;
-
-  panel.innerHTML = `
-    <div class="review-item">
-      <div class="review-key">Full Name</div>
-      <div class="review-val">${fullName}</div>
-    </div>
-    <div class="review-item">
-      <div class="review-key">Roles</div>
-      <div class="review-val"><div class="review-tags">${selectedRoles.map(r => `<span class="review-tag">${roleDisplayName(r)}</span>`).join('')}</div></div>
-    </div>
-    <div class="review-item">
-      <div class="review-key">Email Address</div>
-      <div class="review-val">${email}</div>
-    </div>
-    <div class="review-item">
-      <div class="review-key">Expertise</div>
-      <div class="review-val"><div class="review-tags">${tags.map(t => `<span class="review-tag">${t}</span>`).join('')}</div></div>
-    </div>
-    <div class="review-item">
-      <div class="review-key">Max Teams</div>
-      <div class="review-val">${maxTeams}</div>
-    </div>
-    ${course ? `<div class="review-item"><div class="review-key">Course</div><div class="review-val">${course}</div></div>` : ''}
-
-  `;
-}
-
-function submitRequest() {
-  const btn = document.getElementById('btn-next');
-  btn.disabled = true;
-  btn.innerHTML = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="animation:spin 1s linear infinite"><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="4.93"/></svg> Submitting...`;
-
-  const fname = document.getElementById('fname').value.trim();
-  const lname = document.getElementById('lname').value.trim();
-  const mi = document.getElementById('mi').value.trim();
-  const suffix = document.getElementById('suffix').value.trim();
-  const credentials = document.getElementById('credentials').value.trim();
-  const email = document.getElementById('email').value.trim();
-  const tags = getSelectedTags();
-  const maxTeams = document.getElementById('max-teams').value.trim() || 4;
-  const course = document.getElementById('course')?.value.trim();
-
-  const url = '{{ route("account.request.store") }}';
-
-
-  fetch(url, {
-    method: 'POST',
-    credentials: 'same-origin',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-CSRF-TOKEN': '{{ csrf_token() }}',
-      'Accept': 'application/json',
-    },
-    body: JSON.stringify({
-      first_name: fname,
-      last_name: lname,
-      middle_name: mi,
-      suffix: suffix,
-      credentials: credentials,
-      email: email,
-      specialization: selectedRoles,
-      expertise: tags,
-      max_teams: parseInt(maxTeams),
-      course: course || null,
-
-    }),
-  })
-  .then(async response => {
-    const text = await response.text();
-    let data;
-    try {
-      data = JSON.parse(text);
-    } catch (e) {
-      console.error('Non-JSON response:', text);
-      throw new Error('Server error. Raw response: ' + text.substring(0, 200));
+  // Skipping a step is the same move as finishing it, minus the answers -
+  // which on the last step means sending the request with none.
+  skipBtn.addEventListener('click', function () {
+    if (step === 2) {
+      chosen().forEach(function (el) {
+        el.classList.remove('on');
+        el.setAttribute('aria-pressed', 'false');
+      });
+      renderTotal();
+      show(3);
+      return;
     }
 
-    if (!response.ok) {
-      if (data.errors) {
-        Object.entries(data.errors).forEach(([field, messages]) => {
-          const errEl = document.getElementById('err-' + field);
-          if (errEl) {
-            errEl.textContent = messages[0];
-            errEl.classList.add('show');
-          }
-        });
+    tags.querySelectorAll('.ra-tag.on').forEach(function (t) {
+      t.classList.remove('on');
+      t.setAttribute('aria-pressed', 'false');
+    });
+    submit();
+  });
+
+  nextBtn.addEventListener('click', function () {
+    if (step === 1) { if (checkOne()) show(2); return; }
+    if (step === 2) { show(3); return; }
+    submit();
+  });
+
+  // ── sending it ──
+  function submit() {
+    nextBtn.disabled = true;
+    skipBtn.disabled = true;
+    nextBtn.textContent = 'Sending…';
+
+    fetch(STORE, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'X-CSRF-TOKEN': TOKEN,
+      },
+      body: JSON.stringify({
+        first_name: val('ra-first'),
+        last_name: val('ra-last'),
+        middle_name: val('ra-middle') || null,
+        suffix: val('ra-suffix') || null,
+        credentials: val('ra-credentials') || null,
+        email: val('ra-email'),
+        program_slots: slots(),
+        expertise: expertise(),
+      }),
+    })
+      .then(function (res) { return res.json().then(function (data) { return { ok: res.ok, data: data }; }); })
+      .catch(function () { return { ok: false, data: {} }; })
+      .then(function (r) {
+        nextBtn.disabled = false;
+        skipBtn.disabled = false;
+        nextBtn.textContent = 'Send request';
+
+        if (r.ok && r.data.success) { done(r.data.message); return; }
+
+        // The reason comes back on the step it belongs to, rather than as a
+        // banner over a form the applicant then has to search.
+        var msg = r.data.message || 'Could not send the request. Try again in a moment.';
+        show(1);
+        var err = document.getElementById('ra-err-1');
+        err.textContent = msg;
+        err.classList.add('show');
+      });
+  }
+
+  function done(message) {
+    main.remove();
+    footer.remove();
+
+    var panel = document.createElement('div');
+    panel.className = 'ra-done';
+    panel.innerHTML = '<div class="ra-done-mark"><svg viewBox="0 0 24 24">'
+      + '<polyline points="20 6 9 17 4 12"/></svg></div>'
+      + '<h2>Request sent</h2>'
+      + '<p></p>'
+      + '<a class="ra-btn" href="' + @json(url('/login')) + '">Back to sign in</a>';
+    panel.querySelector('p').textContent = message
+      || 'A CaPSA will review it. You will get an email either way, usually within 3 days.';
+    card.appendChild(panel);
+  }
+
+  // ── the three-day wait, counted down rather than stated once ──
+  var cooldown = document.getElementById('ra-cooldown');
+  if (cooldown) {
+    var left = Number(cooldown.dataset.seconds);
+    var out = document.getElementById('ra-cooldown-left');
+    nextBtn.disabled = true;
+
+    var tick = setInterval(function () {
+      left -= 1;
+
+      if (left <= 0) {
+        clearInterval(tick);
+        cooldown.remove();
+        nextBtn.disabled = false;
+        return;
       }
-      throw new Error(data.message || 'Submission failed');
-    }
 
-    return data;
-  })
-  .then(data => {
-    if (data.success) {
-      document.querySelector('.card-body').style.display = 'none';
-      document.querySelector('.card-footer').style.display = 'none';
-      document.querySelector('.card-hero').style.display = 'none';
-      document.getElementById('success-wrap').classList.add('show');
-    } else {
-      showModal('error', 'Submission Failed', data.message || 'An error occurred. Please try again.');
-      btn.disabled = false;
-      btn.innerHTML = 'Submit Request';
-    }
-  })
-  .catch(error => {
-    console.error('Submit error:', error);
-    showModal('error', 'Submission Failed', error.message || 'An error occurred. Please verify your fields and try again.');
-    btn.disabled = false;
-    btn.innerHTML = 'Submit Request';
-  });
-}
-
-function showModal(type, title, msg) {
-  const iconEl = document.getElementById('modal-icon');
-  const titleEl = document.getElementById('modal-title');
-  const msgEl = document.getElementById('modal-msg');
-  const btnEl = document.getElementById('modal-btn');
-
-  const icons = {
-    success: '<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>',
-    error: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>',
-    warning: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>',
-  };
-
-  const btnClasses = { success: 'green', error: 'primary', warning: 'amber' };
-
-  iconEl.className = 'modal-icon ' + type;
-  iconEl.innerHTML = icons[type] || icons.error;
-  titleEl.textContent = title;
-  msgEl.textContent = msg;
-  btnEl.className = 'modal-btn ' + (btnClasses[type] || 'primary');
-  btnEl.textContent = 'Got It';
-
-  document.getElementById('modal-overlay').classList.add('show');
-  document.body.style.overflow = 'hidden';
-}
-
-function hideModal() {
-  document.getElementById('modal-overlay').classList.remove('show');
-  document.body.style.overflow = '';
-}
-
-function showSideToast(type, title, msg, duration) {
-  const wrap = document.getElementById('side-toast-wrap');
-  const icons = {
-    warn: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>',
-    error: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>',
-    success: '<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>',
-  };
-
-  const el = document.createElement('div');
-  el.className = 'side-toast';
-  el.innerHTML = `
-    <div class="side-toast-icon ${type}">${icons[type] || icons.warn}</div>
-    <div class="side-toast-body">
-      <div class="side-toast-title">${title}</div>
-      <div class="side-toast-msg">${msg}</div>
-    </div>
-    <button class="side-toast-close" onclick="this.parentElement.remove()">
-      <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-    </button>
-  `;
-  wrap.appendChild(el);
-  requestAnimationFrame(() => el.classList.add('show'));
-
-  const dur = duration || 6000;
-  const timer = setTimeout(() => {
-    el.classList.remove('show');
-    setTimeout(() => el.remove(), 350);
-  }, dur);
-
-  el.querySelector('.side-toast-close').addEventListener('click', () => {
-    clearTimeout(timer);
-    el.classList.remove('show');
-    setTimeout(() => el.remove(), 350);
-  });
-}
-
-// Cooldown countdown timer
-@if($cooldownActive && $waitSeconds)
-(function() {
-  let seconds = {{ $waitSeconds }};
-  const timerEl = document.getElementById('cooldown-timer');
-  if (!timerEl) return;
-  const interval = setInterval(() => {
-    seconds--;
-    if (seconds <= 0) {
-      clearInterval(interval);
-      timerEl.textContent = '0';
-      location.reload();
-    } else {
-      timerEl.textContent = seconds;
-    }
-  }, 1000);
-})();
-@endif
-
-// Show warning side toast on page load if user has been rejected
-@if($rejectAttempts > 0 && !$cooldownActive && $rejectAttempts < $maxRejects)
-document.addEventListener('DOMContentLoaded', function() {
-  showSideToast(
-    'warn',
-    'Attempt {{ $rejectAttempts }}/{{ $maxRejects }}',
-    'Your account was rejected. You have {{ $attemptsRemaining }} attempt{{ $attemptsRemaining !== 1 ? "s" : "" }} remaining before a 1-minute cooldown.'
-  );
-});
-@elseif($rejectAttempts >= $maxRejects && !$cooldownActive)
-document.addEventListener('DOMContentLoaded', function() {
-  showSideToast(
-    'warn',
-    'Cooldown Expired',
-    'Your cooldown period has ended. You may resubmit your account request.'
-  );
-});
-@endif
-
-const style = document.createElement('style');
-style.textContent = '@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }';
-document.head.appendChild(style);
-
-document.querySelectorAll('input, select, textarea').forEach(el => {
-  el.addEventListener('input', () => {
-    el.classList.remove('error');
-  });
-});
-
-// ── THEME TOGGLE ──
-const moonSvg = '<svg viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
-const sunSvg = '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>';
-const icon = document.getElementById('theme-icon');
-
-function toggleTheme() {
-  const html = document.documentElement;
-  const isLight = html.getAttribute('data-theme') === 'light';
-  if (isLight) {
-    html.removeAttribute('data-theme');
-    localStorage.setItem('theme', 'dark');
-    icon.innerHTML = moonSvg;
-  } else {
-    html.setAttribute('data-theme', 'light');
-    localStorage.setItem('theme', 'light');
-    icon.innerHTML = sunSvg;
+      var h = Math.floor(left / 3600);
+      var m = Math.floor((left % 3600) / 60);
+      out.textContent = h > 0 ? h + 'h ' + m + 'm' : m + 'm ' + (left % 60) + 's';
+    }, 1000);
   }
-}
 
-(function initTheme() {
-  const saved = localStorage.getItem('theme');
-  if (saved === 'light') {
-    document.documentElement.setAttribute('data-theme', 'light');
-    icon.innerHTML = sunSvg;
-  }
+  renderTotal();
+  show(1);
 })();
 </script>
-@endsection
+</body>
+</html>

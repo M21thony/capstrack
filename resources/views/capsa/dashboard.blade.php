@@ -5,9 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Dashboard - CapsTRACK Admin</title>
 <meta name="csrf-token" content="{{ csrf_token() }}"/>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="{{ asset('css/admin.css') }}"/>
 <x-dashboard.styles />
+@include('partials.skeleton-head', ['skReveal' => 'flex'])
 </head>
 <body>
 
@@ -84,7 +85,7 @@
         <div style="display:flex;align-items:flex-end;gap:6px;height:140px;padding-bottom:4px;position:relative">
           @forelse($yearlyArchive as $year => $count)
           <div style="display:flex;flex-direction:column;align-items:center;flex:1">
-            <span style="font-size:9px;color:var(--text3);font-family:'Space Mono',monospace;margin-bottom:4px">{{ $count }}</span>
+            <span style="font-size:9px;color:var(--text3);font-variant-numeric:tabular-nums;margin-bottom:4px">{{ $count }}</span>
             <div style="width:100%;max-width:30px;background:{{ (string) $selectedYear === (string) $year ? 'var(--accent)' : 'var(--bg4)' }};border-radius:4px 4px 0 0;height:{{ max(round(($count / $maxYearlyCount) * 90), 8) }}px"></div>
             <div style="font-size:9px;color:{{ (string) $selectedYear === (string) $year ? 'var(--accent3)' : 'var(--text3)' }};font-weight:{{ (string) $selectedYear === (string) $year ? 700 : 400 }};margin-top:4px">{{ substr($year, 2) }}</div>
           </div>
@@ -105,11 +106,11 @@
             @foreach($categories as $cat)
             <circle cx="18" cy="18" r="15.9" fill="none" stroke="{{ $cat['color'] }}" stroke-width="3.8" stroke-dasharray="{{ $cat['dasharray'] }}" stroke-dashoffset="{{ $cat['dashoffset'] }}" transform="rotate(-90 18 18)"/>
             @endforeach
-            <text x="18" y="20" text-anchor="middle" font-size="5" fill="#1e2128" font-family="Space Mono" font-weight="700">{{ $totalTags }}</text>
+            <text x="18" y="20" text-anchor="middle" font-size="5" fill="#1e2128" font-weight="700">{{ $totalTags }}</text>
           </svg>
           <div class="donut-legend">
             @forelse($categories as $cat)
-            <div class="donut-item"><div class="donut-dot" style="background:{{ $cat['color'] }}"></div><span style="flex:1">{{ $cat['name'] }}</span><span style="font-family:'Space Mono',monospace;font-size:11px;color:var(--text2)">{{ $cat['count'] }} ({{ $cat['percentage'] }}%)</span></div>
+            <div class="donut-item"><div class="donut-dot" style="background:{{ $cat['color'] }}"></div><span style="flex:1">{{ $cat['name'] }}</span><span style="font-variant-numeric:tabular-nums;font-size:11px;color:var(--text2)">{{ $cat['count'] }} ({{ $cat['percentage'] }}%)</span></div>
             @empty
             <div class="donut-item"><span style="color:var(--text3)">No verified team tags yet.</span></div>
             @endforelse
@@ -126,7 +127,7 @@
       @if (auth('expert')->user()?->is_capsa)
       <x-dashboard.info-card
         title="Pending Expert Approvals"
-        :actionUrl="route('admin.approval')"
+        :actionUrl="route('capsa.approval')"
         actionText="View All"
         :empty="$pendingExperts->isEmpty()"
         emptyMessage="No pending approvals."
@@ -145,7 +146,7 @@
                 </div>
               </div>
               <div style="display:flex;gap:6px">
-                <a href="{{ route('admin.approval') }}" class="btn btn-success" style="font-size:10px;padding:4px 10px">Review</a>
+                <a href="{{ route('capsa.approval') }}" class="btn btn-success" style="font-size:10px;padding:4px 10px">Review</a>
               </div>
             </div>
           @endforeach
@@ -155,7 +156,7 @@
 
       <x-dashboard.info-card
         title="Recent Activity"
-        :actionUrl="route('admin.activitylog')"
+        :actionUrl="route('capsa.activitylog')"
         actionText="View All"
         :empty="empty($recentActivity)"
         emptyMessage="No recent activity."

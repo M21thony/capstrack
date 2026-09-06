@@ -8,6 +8,8 @@ use App\Models\Recruitment;
 use App\Models\StudentRole;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
+use App\Models\Term;
+use App\Support\StudentTeam;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -38,7 +40,11 @@ class RecruitmentController extends Controller
             ->where('student_id', '!=', $student->student_id)
             ->whereNotIn('student_id', $fullTeamStudentIds)
             ->whereDoesntHave('student.team', function ($q) {
-                $q->whereIn('team_status', ['complete', 'closed']);
+                // Off the feed once the team stops taking members OR has
+                // turned its pre-proposals in - two separate reasons, which
+                // is exactly what one status column used to blur.
+                $q->where('team_status', 'Full')
+                    ->orWhereHas('preProposals', fn ($p) => $p->whereNotNull('submitted_at'));
             })
             ->whereIn('student_id', function ($query) use ($student) {
                 $query->select('student_s_y.student_id')
@@ -73,8 +79,7 @@ class RecruitmentController extends Controller
         $student = $request->user();
         $studentId = $student->student_id;
 
-        $studentSy = StudentSchoolYear::where('student_id', $studentId)->first();
-        if ($studentSy?->team_id) {
+        if (StudentTeam::has($studentId)) {
             return response()->json([
                 'message' => 'You already have a team, so you cannot publish a recruitment post.',
             ], 422);
@@ -90,13 +95,16 @@ class RecruitmentController extends Controller
             if ($validated['recruitment_goal'] === 'build_a_team' && ! empty($validated['team_name'])) {
                 $team = Team::create([
                     'team_name' => $validated['team_name'],
-                    'team_status' => 'on-going',
+                    'team_status' => 'Active',
                     'leader_id' => $studentId,
                 ]);
 
                 DB::table('student_s_y')
                     ->updateOrInsert(
-                        ['student_id' => $studentId],
+                        // Keyed on the term too: this table is one row per student PER
+                        // TERM, so keying on the student alone would overwrite last
+                        // semester's record instead of starting this one.
+                        ['student_id' => $studentId, 'term_id' => Term::activeId()],
                         ['team_id' => $team->team_id, 's_role_id' => StudentRole::leaderRoleId()]
                     );
             }

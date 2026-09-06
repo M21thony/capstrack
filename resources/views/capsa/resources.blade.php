@@ -5,8 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <meta name="csrf-token" content="{{ csrf_token() }}"/>
 <title>Resources - CapsTRACK Admin</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="{{ asset('css/admin.css') }}"/>
+@include('partials.skeleton-head', ['skReveal' => 'flex'])
 </head>
 <body>
 
@@ -71,28 +72,38 @@
   <div id="real-content" style="display:none;flex:1;overflow:hidden;flex-direction:column;">
   <div class="content">
 
-    <!-- GOOGLE DRIVE CONNECTION BANNER -->
-    <div class="card" id="gdrive-banner" style="padding:14px 16px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:12px">
-      <div style="display:flex;align-items:center;gap:10px">
-        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><path d="M12 15V3"/>
-        </svg>
-        <span id="gdrive-status-text" style="font-size:13px;color:var(--text2)">Checking Google Drive connection…</span>
+    {{-- One line saying what this page is for, the Drive state as a dot
+         rather than a banner, and the way in. --}}
+    <div class="lib-head">
+      <div class="lib-head-text">
+        <div class="lib-rule">Students only see files shared with their section</div>
+        <div class="lib-count" id="lib-count">&nbsp;</div>
       </div>
-      <div>
+      <div class="lib-head-actions">
+        <span class="drive-pill" id="gdrive-banner">
+          <span class="drive-dot" id="gdrive-dot"></span>
+          <span id="gdrive-status-text">Checking Google Drive…</span>
+        </span>
         <a href="{{ route('gdrive.connect') }}" class="btn btn-primary" id="gdrive-connect-btn" style="font-size:12px;display:none">Connect Google Drive</a>
         <button class="btn btn-ghost" id="gdrive-disconnect-btn" style="font-size:12px;display:none" onclick="disconnectDrive()">Disconnect</button>
+        <button class="btn btn-primary" id="open-upload-btn" style="font-size:12.5px" onclick="openUpload()">
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+          Upload
+        </button>
       </div>
     </div>
 
-    <div class="res-upload-list-grid" style="gap:16px">
-
-      <!-- LEFT: UPLOAD FORM -->
-      <div style="display:flex;flex-direction:column;gap:14px">
-        <div class="card" style="padding:16px">
-          <div class="card-header">
+    {{-- The upload panel sits over the page and is opened from the button
+         above, so the library gets the whole width the rest of the time. --}}
+    <div class="upload-scrim" id="upload-scrim" hidden onclick="closeUpload(event)">
+      <div class="upload-sheet" onclick="event.stopPropagation()">
+        <div class="card" style="padding:16px;box-shadow:none;border:0">
+          <div class="card-header sheet-head">
             <span class="card-title">Upload Resource</span>
-            <button onclick="resetForm()" style="background:none;border:none;font-size:11px;color:var(--text3);cursor:pointer">Clear</button>
+            <span class="sheet-head-right">
+              <button onclick="resetForm()" class="sheet-clear">Clear</button>
+              <button class="sheet-x" onclick="closeUpload()" aria-label="Close"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+            </span>
           </div>
 
           <!-- Dropzone -->
@@ -106,6 +117,22 @@
               <div class="dropzone-label">Drop file here or click to browse</div>
               <div class="dropzone-sub">PDF, DOCX, PPTX — max 25 MB</div>
             </div>
+            {{-- The other two places files come from. A browser cannot send a
+                 folder, only what is inside one, so that option quietly turns
+                 into a list of files; the Drive option copies nothing at all. --}}
+            <div class="source-row">
+              <label class="folder-pick">
+                <input type="file" id="folder-input" webkitdirectory multiple onchange="onFolderSelect(event)">
+                <svg viewBox="0 0 24 24"><path d="M4 4h5l2 2h9v13H4z"/></svg>
+                Upload a whole folder
+              </label>
+              @if ($pickerKey && $googleClientId)
+                <button type="button" class="folder-pick" id="pick-drive-btn" style="display:none" onclick="openDrivePicker()">
+                  <svg viewBox="0 0 24 24"><path d="M12 15V3m0 0L8 7m4-4 4 4"/><path d="M3 15v4a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-4"/></svg>
+                  Choose from Drive
+                </button>
+              @endif
+            </div>
             <div class="upload-preview" id="upload-preview">
               <div id="preview-ftype" class="ftype ftype-pdf" style="width:32px;height:32px;font-size:8px">PDF</div>
               <div class="upload-preview-name" id="preview-name">document.pdf</div>
@@ -115,14 +142,17 @@
             </div>
           </div>
 
+          {{-- Three short answers about one file belong on one line. Stacked,
+               they turned a panel into a column you scroll. --}}
+          <div class="sheet-row">
           <!-- Resource Name -->
-          <div class="form-group">
+          <div class="form-group sheet-col-2" id="res-name-group">
             <label class="label">Resource Name</label>
             <input class="input" id="res-name" placeholder="e.g. Chapter 1–3 Manuscript Template"/>
           </div>
 
           <!-- Category -->
-          <div class="form-group">
+          <div class="form-group sheet-col">
             <label class="label">Category</label>
             <select class="input" id="res-category">
               <option value="">Select a category…</option>
@@ -137,8 +167,32 @@
             </select>
           </div>
 
-          <!-- Program -->
-          <div class="form-group">
+          {{-- Who it is for. A CaPSA hands material to their own sections, so
+               those are what is offered - the program list used to include
+               programs they do not handle. Tick none to reach all of yours.
+               Checkboxes rather than a dropdown: with a handful of sections
+               you can see the whole choice without opening anything. --}}
+          @if (! $isAdmin && count($mySections))
+          <div class="form-group sheet-full">
+            <label class="label">
+              Who should be able to open this?
+              <span class="req-chip">Pick at least one</span>
+            </label>
+            <div class="section-picker" id="res-sections">
+              @foreach ($mySections as $sectionLabel)
+                <label class="section-box">
+                  <input type="checkbox" value="{{ $sectionLabel }}">
+                  <span class="section-tick">
+                    <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+                  </span>
+                  <span class="section-name">{{ $sectionLabel }}</span>
+                </label>
+              @endforeach
+            </div>
+            <p class="section-hint" id="res-sections-hint">Tick every section to hand it to all your students.</p>
+          </div>
+          @else
+          <div class="form-group sheet-full">
             <label class="label">Program</label>
             <select class="input" id="res-program">
               <option value="">All Programs</option>
@@ -148,9 +202,10 @@
               <option value="BSIS">BSIS</option>
             </select>
           </div>
+          @endif
 
           <!-- Drive Folder -->
-          <div class="form-group" style="margin-bottom:0">
+          <div class="form-group sheet-col">
             <label class="label">Google Drive Folder</label>
             <div style="display:flex;gap:6px">
               <select class="input" id="res-folder" style="flex:1">
@@ -160,7 +215,9 @@
             </div>
           </div>
 
-          <div style="margin-top:16px">
+          </div>
+
+          <div style="margin-top:4px">
             <button class="btn btn-primary" id="upload-btn" style="width:100%;justify-content:center;font-size:13px" onclick="uploadResource()">
               <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
               Upload Resource
@@ -168,67 +225,129 @@
           </div>
         </div>
 
-        <!-- Quick stats -->
-        <div class="card" style="padding:14px 16px">
-          <div class="card-header" style="margin-bottom:12px">
-            <span class="card-title">Library Summary</span>
-          </div>
-          <div class="grid-2" style="gap:8px">
-            <div class="alltime-chip">
-              <div class="n" id="stat-total" style="color:var(--accent3)">0</div>
-              <div class="l">Total Files</div>
-            </div>
-            <div class="alltime-chip">
-              <div class="n" id="stat-downloads" style="color:var(--blue)">0</div>
-              <div class="l">Downloads</div>
-            </div>
-            <div class="alltime-chip">
-              <div class="n" id="stat-bsit" style="color:var(--green)">0</div>
-              <div class="l">BSIT</div>
-            </div>
-            <div class="alltime-chip">
-              <div class="n" id="stat-all-programs" style="color:var(--purple)">0</div>
-              <div class="l">All Programs</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- RIGHT: FILE LIBRARY -->
-      <div>
-        <!-- Filter bar -->
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:10px;flex-wrap:wrap">
-          <div style="display:flex;align-items:center;gap:8px">
-            <select class="input" id="category-filter" style="width:170px;font-size:12px" onchange="renderCards()">
-              <option value="all">All Categories</option>
-              <option value="pre-proposal">Pre-Proposal</option>
-              <option value="ch1-3">Ch. 1–3</option>
-              <option value="ch4-5">Ch. 4–5</option>
-              <option value="final">Final MS</option>
-              <option value="presentation">Presentation</option>
-              <option value="lesson">Lessons</option>
-              <option value="forms">Forms</option>
-            </select>
-            <select class="input" id="folder-filter" style="width:170px;font-size:12px" onchange="renderCards()">
-              <option value="all">All Folders</option>
-            </select>
-          </div>
-          <div style="display:flex;align-items:center;gap:8px">
-            <input class="input" id="search-input" placeholder="Search resources…" style="width:200px;font-size:12px" oninput="renderCards()"/>
-            <select class="input" style="width:130px;font-size:12px" id="program-filter" onchange="renderCards()">
-              <option value="all">All Programs</option>
-              <option value="BSIT">BSIT</option>
-              <option value="BSCS">BSCS</option>
-              <option value="BLIS">BLIS</option>
-              <option value="BSIS">BSIS</option>
-            </select>
-          </div>
-        </div>
-
-        <!-- Cards container -->
-        <div id="resource-list" class="gap-12"></div>
       </div>
     </div>
+
+    {{-- What the Picker hands back, before any of it is written down. Close
+         this and nothing was imported. --}}
+    <div class="upload-scrim" id="import-scrim" hidden onclick="closeImport(event)">
+      <div class="upload-sheet" onclick="event.stopPropagation()">
+        <div class="card" style="padding:16px;box-shadow:none;border:0">
+          <div class="card-header sheet-head">
+            <span class="card-title" id="import-title">Take these on</span>
+            <span class="sheet-head-right">
+              <button class="sheet-x" onclick="closeImport()" aria-label="Close"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+            </span>
+          </div>
+
+          <p class="import-warn" id="import-warn">
+            <svg viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
+            <span>These files stay in your Drive — nothing is copied. They will be made
+            <b>viewable by anyone with the link</b>, which is how students open them.</span>
+          </p>
+
+          <div class="import-bulk" id="import-bulk" hidden>
+            <span class="import-bulk-count" id="import-bulk-count">0 selected</span>
+            <select class="input" id="import-bulk-cat" onchange="bulkCategory(this)">
+              <option value="">Set category to…</option>
+              <option value="pre-proposal">Pre-Proposal Template</option>
+              <option value="ch1-3">Chapter 1–3 Template</option>
+              <option value="ch4-5">Chapter 4–5 Template</option>
+              <option value="final">Final Manuscript Template</option>
+              <option value="presentation">Presentation Template</option>
+              <option value="lesson">Lesson / Reference Material</option>
+              <option value="forms">Forms &amp; Checklists</option>
+              <option value="other">Other</option>
+            </select>
+            <button class="btn btn-ghost import-bulk-drop" onclick="bulkRemove()">Remove</button>
+          </div>
+
+          <div class="import-head">
+            <label class="pick-box import-h-pick" title="Select all">
+              <input type="checkbox" id="import-all" onchange="toggleAllPicked(this.checked)">
+              <span class="pick-tick"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span>
+            </label>
+            <span class="import-h-name">File</span>
+            <span class="import-h-cat">What kind of file is it?</span>
+            <span class="import-h-x"></span>
+          </div>
+          <div class="import-list" id="import-list"></div>
+
+          <p class="section-hint" id="import-guess-note" style="margin:10px 0 0"></p>
+
+          {{-- Only an upload has somewhere to go. Files picked from Drive stay
+               where they already are. --}}
+          <div class="form-group" id="import-dest-group" style="margin-top:14px" hidden>
+            <label class="label">Upload them into</label>
+            <div style="display:flex;gap:6px">
+              <select class="input" id="import-folder" style="flex:1">
+                <option value="">No folder (Drive root)</option>
+              </select>
+              <button class="btn btn-ghost" style="padding:0 12px;white-space:nowrap" onclick="openFolderModal()">+ New</button>
+            </div>
+          </div>
+
+          @if (! $isAdmin && count($mySections))
+          <div class="form-group">
+            <label class="label">
+              Who should be able to open these?
+              <span class="req-chip">Pick at least one</span>
+            </label>
+            <div class="section-picker" id="import-sections">
+              @foreach ($mySections as $sectionLabel)
+                <label class="section-box">
+                  <input type="checkbox" value="{{ $sectionLabel }}">
+                  <span class="section-tick">
+                    <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+                  </span>
+                  <span class="section-name">{{ $sectionLabel }}</span>
+                </label>
+              @endforeach
+            </div>
+            <p class="section-hint">The same sections apply to everything in this batch.</p>
+          </div>
+          @endif
+
+          <button class="btn btn-primary" id="import-btn" style="width:100%;justify-content:center;font-size:13px;margin-top:4px" onclick="runImport()"><span id="import-verb">Take on</span>&nbsp;<span id="import-count">0</span>&nbsp;files</button>
+        </div>
+      </div>
+    </div>
+
+    {{-- Four filters, one row, left to right in the order someone narrows:
+         what kind of file, who it is for, where it lives, then free text. --}}
+    <div class="lib-bar">
+      <select class="input lib-filter" id="category-filter" onchange="renderCards()">
+        <option value="all">All categories</option>
+        <option value="pre-proposal">Pre-Proposal</option>
+        <option value="ch1-3">Ch. 1–3</option>
+        <option value="ch4-5">Ch. 4–5</option>
+        <option value="final">Final MS</option>
+        <option value="presentation">Presentation</option>
+        <option value="lesson">Lessons</option>
+        <option value="forms">Forms</option>
+      </select>
+      <select class="input lib-filter" id="section-filter" onchange="renderCards()">
+        <option value="all">All sections</option>
+        @foreach ($mySections as $sectionLabel)
+          <option value="{{ $sectionLabel }}">{{ $sectionLabel }}</option>
+        @endforeach
+        <option value="__none__">Not shared with a section</option>
+      </select>
+      <select class="input lib-filter" id="folder-filter" onchange="renderCards()">
+        <option value="all">All folders</option>
+      </select>
+      <input class="input lib-search" id="search-input" placeholder="Search templates and lessons…" oninput="renderCards()"/>
+    </div>
+
+    {{-- The strip that stops anyone having to ask what the labels mean. --}}
+    <div class="lib-head-row" id="lib-head-row" hidden>
+      <span class="h-file">File</span>
+      <span class="h-who">Shared with</span>
+      <span class="h-when">Added</span>
+      <span class="h-acts"></span>
+    </div>
+
+    <div id="resource-list"></div>
   </div>
   </div>
 </div>
@@ -244,11 +363,12 @@ let rawResources = @json($resources ?? []);
 const ROUTES = {
   status: "{{ route('gdrive.status') }}",
   connect: "{{ route('gdrive.connect') }}",
-  disconnect: "{{ route('gdrive.disconnect') }}",
+  disconnect: "{{ route('gdrive.connection.destroy') }}",
   folders: "{{ route('gdrive.folders.index') }}",
   createFolder: "{{ route('gdrive.folders.store') }}",
-  upload: "{{ route('gdrive.upload') }}",
-  download: (id) => `{{ url('admin/gdrive/resources') }}/${id}/download`,
+  upload: "{{ route('gdrive.resources.store') }}",
+  import: "{{ route('gdrive.imports.store') }}",
+  folderFiles: (id) => `{{ url('admin/gdrive/folders') }}/${id}/files`,
   destroy: (id) => `{{ url('admin/gdrive/resources') }}/${id}`,
 };
 
@@ -264,12 +384,44 @@ function mapResource(r) {
     size: r.file_size ? formatSize(r.file_size) : '—',
     driveLink: r.drive_web_view_link,
     driveFolderId: r.drive_folder_id || null,
-    downloads: r.downloads || 0,
+    // Empty means it was never aimed at particular sections, so it reaches
+    // every student this CaPSA handles.
+    sections: (r.sections || []).map(function (s) { return s.section; }),
     date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+    shortDate: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
   };
 }
 
+const MY_SECTIONS = @json($mySections);
+const PICKER_KEY = @json($pickerKey);
+const GOOGLE_CLIENT_ID = @json($googleClientId);
+
 let resources = rawResources.map(mapResource);
+
+// Says what ticking nothing means, so an empty picker does not read as
+// "nobody".
+document.addEventListener('change', function (e) {
+  if (!e.target.closest('#res-sections')) return;
+
+  const picked = document.querySelectorAll('#res-sections input:checked').length;
+  const hint = document.getElementById('res-sections-hint');
+  if (!hint) return;
+
+  // Name who is in and who is out, before anything is uploaded.
+  const chosen = Array.prototype.map.call(
+    document.querySelectorAll('#res-sections input:checked'), function (i) { return i.value; }
+  );
+  const left = MY_SECTIONS.filter(function (s) { return chosen.indexOf(s) === -1; });
+
+  if (picked === 0) {
+    hint.textContent = 'Tick every section to hand it to all your students.';
+  } else if (!left.length) {
+    hint.textContent = 'Every student you handle will see this.';
+  } else {
+    hint.textContent = 'Students in ' + chosen.join(' and ') + ' will see this. '
+      + left.join(' and ') + ' will not.';
+  }
+});
 let pendingDeleteId = null;
 
 // -- CATEGORY LABELS ----------------------------------------------------------
@@ -304,79 +456,177 @@ function formatSize(bytes){
 }
 
 // -- RENDER --------------------------------------------------------------------
+// Who can open this file, in the words the header asks the question in.
+// A file aimed at no section reaches everyone this CaPSA handles, and is
+// drawn differently on purpose so nobody reads it as a section name.
+function sharedWith(r){
+  if(!r.sections.length){
+    return '<span class="pill pill-all">All your students</span>';
+  }
+  return r.sections.map(function(s){
+    return '<span class="pill pill-section">'+esc(s)+'</span>';
+  }).join('');
+}
+
+function esc(v){
+  return String(v).replace(/[&<>"']/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
+}
+
 function renderCards(){
   const q = document.getElementById('search-input').value.trim().toLowerCase();
-  const pf = document.getElementById('program-filter').value;
   const cf = document.getElementById('category-filter').value;
+  const sf = document.getElementById('section-filter').value;
   const ff = document.getElementById('folder-filter').value;
   const list = document.getElementById('resource-list');
+  const headRow = document.getElementById('lib-head-row');
 
   let filtered = resources.filter(r=>{
     const matchCat = cf==='all' || r.category===cf;
-    const matchQ = !q || r.name.toLowerCase().includes(q) || CAT_LABELS[r.category]?.toLowerCase().includes(q);
-    const matchProgram = pf==='all' || r.program===pf || !r.program;
+    const matchQ = !q || r.name.toLowerCase().includes(q) || (CAT_LABELS[r.category]||'').toLowerCase().includes(q);
+    const matchSection = sf==='all'
+      || (sf==='__none__' ? !r.sections.length : r.sections.indexOf(sf) !== -1);
     const matchFolder = ff==='all' || r.driveFolderId===ff;
-    return matchCat && matchQ && matchProgram && matchFolder;
+    return matchCat && matchQ && matchSection && matchFolder;
   });
 
+  updateStats(filtered.length);
+
   if(!filtered.length){
-    list.innerHTML=`<div class="card empty-state">
-      <svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
-      <p>No resources match the current filter.</p>
-    </div>`;
-    updateStats();
+    headRow.hidden = true;
+    // An empty library and a filter hiding everything are different things,
+    // and saying the wrong one makes a new page look broken.
+    list.innerHTML = resources.length
+      ? `<div class="lib-empty">
+           <b>Nothing matches</b>
+           <span>No file here is in that category, section or folder. Clear the filters to see all ${resources.length}.</span>
+           <button class="btn btn-ghost" style="font-size:12px" onclick="clearFilters()">Clear filters</button>
+         </div>`
+      : `<div class="lib-empty">
+           <b>You haven't uploaded anything yet</b>
+           <span>Files you upload here show up for the students in the sections you pick.</span>
+           <button class="btn btn-primary" style="font-size:12.5px" onclick="openUpload()">
+             <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+             Upload your first resource
+           </button>
+         </div>`;
     return;
   }
 
-  list.innerHTML = filtered.map(r=>`
-    <div class="resource-card" id="rcard-${r.id}">
-      ${extIcon(r.ext)}
-      <div class="resource-meta">
-        <div class="resource-name" title="${r.name}">${r.name}</div>
-        <div style="display:flex;align-items:center;gap:6px;margin-top:5px;flex-wrap:wrap">
-          <span class="cat-chip ${CAT_CLASS[r.category]||'cat-ch4'}">${CAT_LABELS[r.category]||'Other'}</span>
-          ${r.program ? `<span class="badge" style="font-size:10px;padding:3px 9px">${r.program}</span>` : ''}
-        </div>
-        <div class="resource-info">
-          <span>
-            <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><path d="M12 15V3"/></svg>
-            ${r.downloads} downloads
-          </span>
-          <span>·</span>
-          <span>
-            <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-            ${r.date}
-          </span>
-          <span>·</span>
-          <span>${r.size}</span>
-        </div>
-        <div class="resource-actions">
-          <button class="btn btn-ghost" style="font-size:11px;padding:4px 12px;color:var(--text2)" onclick="downloadResource(${r.id},this)">
-            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><path d="M12 15V3"/></svg>
-            Download
-          </button>
-          <button class="btn btn-danger" style="font-size:11px;padding:4px 12px" onclick="confirmDelete(${r.id},'${r.name.replace(/'/g,"\\'")}')">
-            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
-            Remove
-          </button>
-        </div>
-      </div>
+  headRow.hidden = false;
+
+  list.innerHTML = '<div class="lib-list">' + filtered.map(r=>`
+    <div class="lib-row" id="rcard-${r.id}">
+      <span class="lib-file">
+        ${extIcon(r.ext)}
+        <span class="lib-file-text">
+          <b title="${esc(r.name)}">${esc(r.name)}</b>
+          <span class="lib-sub">${esc(CAT_LABELS[r.category]||'Other')} · ${esc(r.size)}</span>
+        </span>
+      </span>
+      <span class="lib-who">${sharedWith(r)}</span>
+      <span class="lib-when" title="${esc(r.date)}">${esc(r.shortDate)}</span>
+      <span class="lib-acts">
+        <button class="lib-icon" title="Open in Drive" onclick="downloadResource(${r.id},this)">
+          <svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14L21 3"/></svg>
+        </button>
+        <button class="lib-icon lib-icon-danger" title="Remove" onclick="confirmDelete(${r.id},'${r.name.replace(/'/g,"\\'")}')">
+          <svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>
+        </button>
+      </span>
     </div>
-  `).join('');
-
-  updateStats();
+  `).join('') + '</div>';
 }
 
-function updateStats(){
-  document.getElementById('stat-total').textContent = resources.length;
-  document.getElementById('stat-downloads').textContent = resources.reduce((a,r)=>a+r.downloads,0);
-  document.getElementById('stat-bsit').textContent = resources.filter(r=>r.program==='BSIT').length;
-  document.getElementById('stat-all-programs').textContent = resources.filter(r=>!r.program).length;
+function clearFilters(){
+  document.getElementById('category-filter').value = 'all';
+  document.getElementById('section-filter').value = 'all';
+  document.getElementById('folder-filter').value = 'all';
+  document.getElementById('search-input').value = '';
+  renderCards();
 }
+
+// One line of text where three coloured tiles used to be. It says the same
+// thing and stops competing with the library for attention.
+function updateStats(shown){
+  const total = resources.length;
+  const el = document.getElementById('lib-count');
+  if(!el) return;
+
+  if(!total){ el.textContent = 'Nothing here yet'; return; }
+
+  const files = total + (total === 1 ? ' file' : ' files');
+  el.textContent = (shown !== undefined && shown !== total)
+    ? shown + ' of ' + files
+    : files + (MY_SECTIONS.length ? ' · ' + MY_SECTIONS.join(', ') : '');
+}
+
+// ── the upload panel ──
+function openUpload(){
+  document.getElementById('upload-scrim').hidden = false;
+  document.body.style.overflow = 'hidden';
+  const name = document.getElementById('res-name');
+  if(name) name.focus();
+}
+
+function closeUpload(e){
+  if(e && e.target !== document.getElementById('upload-scrim')) return;
+  document.getElementById('upload-scrim').hidden = true;
+  document.body.style.overflow = '';
+}
+
+document.addEventListener('keydown', function(e){
+  if(e.key === 'Escape' && !document.getElementById('upload-scrim').hidden) closeUpload();
+});
 
 // -- FILE SELECT ---------------------------------------------------------------
 let selectedFile = null;
+let selectedFolder = [];   // set instead of selectedFile when a folder is picked
 function onFileSelect(e){ handleFile(e.target.files[0]); }
+
+const MAX_FOLDER_FILES = 25;
+
+// The folder input hands over every file inside, subfolders included. Only the
+// ones we accept are kept, and the rest are counted so the CaPSA is told what
+// was left behind rather than wondering.
+function onFolderSelect(e){
+  const allowed = ['pdf','doc','docx','ppt','pptx'];
+  const all = Array.prototype.slice.call(e.target.files);
+  const usable = all.filter(function(f){
+    return allowed.indexOf(f.name.split('.').pop().toLowerCase()) !== -1
+        && f.size <= 25*1024*1024;
+  });
+
+  if(!usable.length){
+    showToast('Nothing in that folder can be uploaded — PDF, DOCX or PPTX only.');
+    e.target.value = '';
+    return;
+  }
+
+  const skipped = all.length - usable.length;
+  const taking = usable.slice(0, MAX_FOLDER_FILES);
+  const over = usable.length - taking.length;
+
+  selectedFile = null;
+  selectedFolder = [];
+  e.target.value = '';
+
+  if(skipped || over){
+    const parts = [];
+    if(skipped) parts.push(skipped + ' skipped');
+    if(over) parts.push(over + ' over the ' + MAX_FOLDER_FILES + ' limit');
+    showToast(parts.join(' · ') + '.');
+  }
+
+  // Straight to the review list, because a folder holds several kinds of file
+  // and each needs saying what it is.
+  pickedSource = 'local';
+  picked = taking.map(function(f){
+    return { id: null, name: f.name, file: f, category: guessCategory(f.name), sel: false };
+  });
+  openImport();
+}
 function onDragOver(e){ e.preventDefault(); document.getElementById('dropzone').classList.add('drag-over'); }
 function onDragLeave(){ document.getElementById('dropzone').classList.remove('drag-over'); }
 function onDrop(e){
@@ -406,8 +656,359 @@ function handleFile(file){
 
 function clearFile(){
   selectedFile = null;
+  selectedFolder = [];
   document.getElementById('file-input').value='';
+  const folderInput = document.getElementById('folder-input');
+  if(folderInput) folderInput.value='';
   document.getElementById('upload-preview').classList.remove('show');
+  const nameGroup = document.getElementById('res-name-group');
+  if(nameGroup) nameGroup.style.display = '';
+}
+
+// -- CHOOSE FROM DRIVE ------------------------------------------------------
+// The Picker runs in the browser and hands back ids, not files. Nothing is
+// uploaded: the server is told which files to take on, and the only change
+// made to them is the sharing.
+let picked = [];
+let pickedSource = 'drive';   // or 'local', when a folder came off the machine
+let pickerReady = false;
+let driveToken = null;
+
+function loadPicker(){
+  if(!PICKER_KEY || !GOOGLE_CLIENT_ID) return;
+
+  const gapiScript = document.createElement('script');
+  gapiScript.src = 'https://apis.google.com/js/api.js';
+  gapiScript.onload = function(){
+    gapi.load('picker', function(){
+      pickerReady = true;
+      const btn = document.getElementById('pick-drive-btn');
+      if(btn && GDRIVE_CONNECTED) btn.style.display = 'inline-flex';
+    });
+  };
+  document.head.appendChild(gapiScript);
+
+  const gsi = document.createElement('script');
+  gsi.src = 'https://accounts.google.com/gsi/client';
+  document.head.appendChild(gsi);
+}
+
+function openDrivePicker(){
+  if(!pickerReady){ showToast('Google Drive is still loading — try again in a moment.'); return; }
+
+  // A fresh browser-side token rather than the one the server keeps, so the
+  // stored credentials never reach the page.
+  const client = google.accounts.oauth2.initTokenClient({
+    client_id: GOOGLE_CLIENT_ID,
+    scope: 'https://www.googleapis.com/auth/drive.file',
+    callback: function(resp){
+      if(resp.error){ showToast('Google would not grant access.'); return; }
+      driveToken = resp.access_token;
+      showPicker();
+    },
+  });
+
+  client.requestAccessToken();
+}
+
+function showPicker(){
+  const view = new google.picker.DocsView(google.picker.ViewId.DOCS)
+    .setIncludeFolders(true)
+    .setSelectFolderEnabled(true)
+    .setMimeTypes([
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-powerpoint',
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      'application/vnd.google-apps.document',
+      'application/vnd.google-apps.presentation',
+    ].join(','));
+
+  new google.picker.PickerBuilder()
+    .setTitle('Choose templates and lessons')
+    .setDeveloperKey(PICKER_KEY)
+    .setOAuthToken(driveToken)
+    .addView(view)
+    .addView(new google.picker.DocsView(google.picker.ViewId.DOCS).setEnableDrives(true))
+    .enableFeature(google.picker.Feature.MULTISELECT_ENABLED)
+    .setCallback(onPicked)
+    .build()
+    .setVisible(true);
+}
+
+const FOLDER_MIME = 'application/vnd.google-apps.folder';
+
+function onPicked(data){
+  if(data.action !== google.picker.Action.PICKED) return;
+
+  const docs = data.docs || [];
+  const folders = docs.filter(function(d){ return d.mimeType === FOLDER_MIME || d.type === 'folder'; });
+  const files = docs.filter(function(d){ return !(d.mimeType === FOLDER_MIME || d.type === 'folder'); });
+
+  picked = files.map(asPicked);
+
+  if(!folders.length){
+    if(picked.length) openImport();
+    return;
+  }
+
+  // A folder is not a resource - what is wanted is what is inside it. Whether
+  // Drive lets us look is the one thing Google's documentation would not say,
+  // so ask, and say plainly if the answer is no.
+  showToast('Looking inside ' + folders.length + (folders.length === 1 ? ' folder…' : ' folders…'));
+
+  Promise.all(folders.map(function(f){
+    return fetch(ROUTES.folderFiles(f.id), { headers: { 'Accept': 'application/json' } })
+      .then(function(r){ return r.json(); })
+      .then(function(res){ return res.success ? res.files : []; })
+      .catch(function(){ return []; });
+  })).then(function(lists){
+    lists.forEach(function(files){
+      files.forEach(function(f){ picked.push(asPicked({ id: f.id, name: f.name, mimeType: f.mime_type })); });
+    });
+
+    if(!picked.length){
+      showToast('Google would not let us see inside that folder — pick the files themselves instead.');
+      return;
+    }
+
+    openImport();
+  });
+}
+
+function asPicked(d){
+  return { id: d.id, name: d.name, mimeType: d.mimeType, category: guessCategory(d.name), sel: false };
+}
+
+function openImport(){
+  // The panel it was opened from has nothing more to say - what happens next
+  // is the review list.
+  const uploadScrim = document.getElementById('upload-scrim');
+  if(uploadScrim) uploadScrim.hidden = true;
+
+  const local = pickedSource === 'local';
+  document.getElementById('import-title').textContent = local ? 'Upload these' : 'Take these on';
+  document.getElementById('import-verb').textContent = local ? 'Upload' : 'Take on';
+  // Only a Drive import changes the sharing on a file someone already owns.
+  document.getElementById('import-warn').hidden = local;
+  document.getElementById('import-dest-group').hidden = ! local;
+
+  renderImportList();
+  document.getElementById('import-scrim').hidden = false;
+  document.body.style.overflow = 'hidden';
+}
+
+function closeImport(e){
+  if(e && e.target !== document.getElementById('import-scrim')) return;
+  document.getElementById('import-scrim').hidden = true;
+  document.body.style.overflow = '';
+}
+
+// A first guess at what each file is, from what it is called. Wrong
+// sometimes, which is why every row can be changed - but it beats setting
+// twenty dropdowns by hand, and it beats one category for a whole folder,
+// which is not a fact about the files at all.
+function guessCategory(name){
+  const n = name.toLowerCase();
+  if(/pre[-_ ]?proposal|title\s*proposal/.test(n)) return 'pre-proposal';
+  if(/chapter\s*[1-3]|ch[-_ ]?1|\b1\s*-\s*3\b/.test(n)) return 'ch1-3';
+  if(/chapter\s*[45]|ch[-_ ]?4|\b4\s*-\s*5\b/.test(n)) return 'ch4-5';
+  if(/final|manuscript/.test(n)) return 'final';
+  if(/slide|present|defense\s*deck|\.pptx?$/.test(n)) return 'presentation';
+  if(/rubric|form|checklist|endorse|consent/.test(n)) return 'forms';
+  if(/lesson|lecture|module|week\s*\d|reading/.test(n)) return 'lesson';
+  return '';
+}
+
+const CAT_OPTIONS = `<option value="">Category…</option><option value="pre-proposal">Pre-Proposal Template</option><option value="ch1-3">Chapter 1–3 Template</option><option value="ch4-5">Chapter 4–5 Template</option><option value="final">Final Manuscript Template</option><option value="presentation">Presentation Template</option><option value="lesson">Lesson / Reference Material</option><option value="forms">Forms &amp; Checklists</option><option value="other">Other</option>`;
+
+function renderImportList(){
+  const list = document.getElementById('import-list');
+
+  list.innerHTML = picked.map(function(f, i){
+    return '<div class="import-row' + (f.sel ? ' is-picked' : '') + '">'
+      + '<label class="pick-box"><input type="checkbox" ' + (f.sel ? 'checked ' : '')
+      + 'onchange="togglePicked(' + i + ', this.checked)"><span class="pick-tick"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span></label>'
+      + '<span class="import-name" title="' + esc(f.name) + '">' + esc(f.name) + '</span>'
+      + '<select class="input import-cat" onchange="setPickedCategory(' + i + ', this.value)">'
+      + CAT_OPTIONS.replace('value="' + f.category + '"', 'value="' + f.category + '" selected')
+      + '</select>'
+      + '<button class="lib-icon" title="Leave this out" onclick="dropPicked(' + i + ')">'
+      + '<svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'
+      + '</button></div>';
+  }).join('');
+
+  // What is left to answer, not what was guessed - the guess count stops
+  // being true the moment anything is set by hand.
+  const missing = picked.filter(function(f){ return !f.category; }).length;
+  const note = document.getElementById('import-guess-note');
+  if(note){
+    note.textContent = missing
+      ? missing + (missing === 1 ? ' file still needs' : ' files still need')
+        + ' a category — the rest were guessed from their names, so check those too.'
+      : 'Every file has a category. Guesses came from the file names, so check them.';
+  }
+
+  document.getElementById('import-count').textContent = picked.length;
+  document.getElementById('import-btn').disabled = !picked.length;
+  refreshBulkBar();
+}
+
+function setPickedCategory(i, value){
+  if(picked[i]) picked[i].category = value;
+  renderImportList();
+}
+
+// ── acting on several rows at once ──
+// A wrong guess is usually wrong the same way for a run of files, and dropping
+// them one at a time is the tedious part of a folder with twenty things in it.
+
+function togglePicked(i, on){
+  if(picked[i]) picked[i].sel = on;
+  refreshBulkBar();
+}
+
+function toggleAllPicked(on){
+  picked.forEach(function(f){ f.sel = on; });
+  renderImportList();
+}
+
+function selectedPicked(){
+  return picked.filter(function(f){ return f.sel; });
+}
+
+function refreshBulkBar(){
+  const n = selectedPicked().length;
+  const bar = document.getElementById('import-bulk');
+  const all = document.getElementById('import-all');
+
+  bar.hidden = n === 0;
+  document.getElementById('import-bulk-count').textContent =
+    n + (n === 1 ? ' file selected' : ' files selected');
+
+  if(all){
+    all.checked = n > 0 && n === picked.length;
+    // Neither all nor none, so the box says "some" rather than lying.
+    all.indeterminate = n > 0 && n < picked.length;
+  }
+
+  document.querySelectorAll('.import-row').forEach(function(row, i){
+    row.classList.toggle('is-picked', !!(picked[i] && picked[i].sel));
+  });
+}
+
+function bulkCategory(sel){
+  const value = sel.value;
+  if(!value) return;
+
+  const chosen = selectedPicked();
+  chosen.forEach(function(f){ f.category = value; });
+  sel.value = '';
+
+  renderImportList();
+  showToast(chosen.length + (chosen.length === 1 ? ' file set.' : ' files set.'));
+}
+
+function bulkRemove(){
+  const gone = selectedPicked().length;
+  picked = picked.filter(function(f){ return !f.sel; });
+
+  if(!picked.length){ closeImport(); showToast('Nothing left to add.'); return; }
+
+  renderImportList();
+  showToast(gone + (gone === 1 ? ' file removed.' : ' files removed.'));
+}
+
+function dropPicked(i){
+  picked.splice(i, 1);
+  if(!picked.length){ closeImport(); return; }
+  renderImportList();
+}
+
+function runImport(){
+  const sections = Array.prototype.map.call(
+    document.querySelectorAll('#import-sections input:checked'), function(i){ return i.value; }
+  );
+
+  const missing = picked.filter(function(f){ return !f.category; }).length;
+  if(missing){
+    showToast(missing + (missing === 1 ? ' file still needs' : ' files still need') + ' a category.');
+    return;
+  }
+  if(MY_SECTIONS.length && !sections.length){
+    document.getElementById('import-sections').classList.add('needs-pick');
+    showToast('Pick at least one section, so students can find these.');
+    return;
+  }
+
+  const btn = document.getElementById('import-btn');
+  const original = btn.innerHTML;
+  const local = pickedSource === 'local';
+  btn.disabled = true;
+  btn.textContent = (local ? 'Uploading ' : 'Taking on ') + picked.length + '…';
+
+  let request;
+
+  if(local){
+    // Real files, so they go up as a form the way any upload does - with a
+    // category alongside each, in the same order.
+    const fd = new FormData();
+    picked.forEach(function(f){
+      fd.append('files[]', f.file);
+      fd.append('categories[]', f.category);
+    });
+    sections.forEach(function(s){ fd.append('sections[]', s); });
+    const dest = document.getElementById('import-folder');
+    if(dest && dest.value) fd.append('drive_folder_id', dest.value);
+
+    request = fetch(ROUTES.upload, {
+      method: 'POST',
+      headers: { 'X-CSRF-TOKEN': CSRF_TOKEN, 'Accept': 'application/json' },
+      body: fd,
+    });
+  } else {
+    request = fetch(ROUTES.import, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'X-CSRF-TOKEN': CSRF_TOKEN,
+      },
+      body: JSON.stringify({
+        files: picked.map(function(f){
+          return { drive_file_id: f.id, category: f.category, sections: sections };
+        }),
+      }),
+    });
+  }
+
+  request
+  .then(function(r){ return r.json(); })
+  .then(function(data){
+    btn.disabled = false;
+    btn.innerHTML = original;
+
+    const added = data.resources || [];
+    added.slice().reverse().forEach(function(r){ resources.unshift(mapResource(r)); });
+
+    if(!data.success){ showToast(data.message || 'Some files could not be taken on.'); }
+
+    picked = [];
+    closeImport();
+    clearFilters();
+
+    const parts = [];
+    if(added.length) parts.push(added.length + (added.length === 1 ? ' file added' : ' files added'));
+    if(data.skipped) parts.push(data.skipped + ' already here');
+    if(parts.length) showToast(parts.join(' · ') + '.');
+    pickedSource = 'drive';
+  })
+  .catch(function(){
+    btn.disabled = false;
+    btn.innerHTML = original;
+    showToast('Could not reach Google Drive.');
+  });
 }
 
 // -- GOOGLE DRIVE CONNECTION STATUS -----------------------------------------
@@ -420,24 +1021,32 @@ function refreshDriveStatus(){
       const connectBtn = document.getElementById('gdrive-connect-btn');
       const disconnectBtn = document.getElementById('gdrive-disconnect-btn');
 
+      // The dot carries the state; the "?" here was a broken icon.
+      const dot = document.getElementById('gdrive-dot');
+
       if (GDRIVE_CONNECTED) {
-        text.textContent = '? Google Drive connected — uploads sync automatically.';
+        text.textContent = 'Drive connected';
+        dot.className = 'drive-dot drive-dot-on';
         connectBtn.style.display = 'none';
         disconnectBtn.style.display = 'inline-flex';
+        const pickBtn = document.getElementById('pick-drive-btn');
+        if(pickBtn && pickerReady) pickBtn.style.display = 'inline-flex';
       } else {
-        text.textContent = 'Connect Google Drive to upload and store resources.';
+        text.textContent = 'Drive not connected';
+        dot.className = 'drive-dot drive-dot-off';
         connectBtn.style.display = 'inline-flex';
         disconnectBtn.style.display = 'none';
       }
     })
     .catch(() => {
-      document.getElementById('gdrive-status-text').textContent = 'Could not check Google Drive status.';
+      document.getElementById('gdrive-status-text').textContent = 'Could not reach Google Drive';
+      document.getElementById('gdrive-dot').className = 'drive-dot drive-dot-off';
     });
 }
 
 function disconnectDrive(){
   fetch(ROUTES.disconnect, {
-    method: 'POST',
+    method: 'DELETE',
     headers: { 'X-CSRF-TOKEN': CSRF_TOKEN },
   })
   .then(r => r.json())
@@ -449,15 +1058,24 @@ function disconnectDrive(){
 
 // -- FOLDERS ----------------------------------------------------------------
 function populateFolderSelect(){
-  const sel = document.getElementById('res-folder');
-  sel.innerHTML = '<option value="">No folder (Drive root)</option>' +
+  const options = '<option value="">No folder (Drive root)</option>' +
     driveFolders.map(f => `<option value="${f.id}">${f.name}</option>`).join('');
+
+  // Two places offer the destination - the single-file panel and the review
+  // sheet a folder goes through - and both read from the same list.
+  ['res-folder', 'import-folder'].forEach(function (id) {
+    const sel = document.getElementById(id);
+    if (!sel) return;
+    const chosen = sel.value;
+    sel.innerHTML = options;
+    sel.value = chosen;
+  });
 }
 
 function populateFolderFilter(){
   const sel = document.getElementById('folder-filter');
   const current = sel.value || 'all';
-  sel.innerHTML = '<option value="all">All Folders</option>' +
+  sel.innerHTML = '<option value="all">All folders</option>' +
     driveFolders.map(f => `<option value="${f.id}">${f.name}</option>`).join('');
   // keep the current selection if it still exists among the folders
   if ([...sel.options].some(o => o.value === current)) {
@@ -496,6 +1114,8 @@ function submitNewFolder(){
     populateFolderSelect();
     populateFolderFilter();
     document.getElementById('res-folder').value = data.folder.drive_folder_id;
+    const importSel = document.getElementById('import-folder');
+    if (importSel) importSel.value = data.folder.drive_folder_id;
     closeFolderModal();
     showToast('? Folder created.');
   })
@@ -512,24 +1132,47 @@ function uploadResource(){
 
   const name = document.getElementById('res-name').value.trim();
   const category = document.getElementById('res-category').value;
-  const program = document.getElementById('res-program').value;
+  // Empty means every section this CaPSA handles - the resource reaches
+  // their own students either way, since that is who sees their uploads.
+  const chosenSections = Array.prototype.map.call(
+    document.querySelectorAll('#res-sections input:checked'), function (i) { return i.value; }
+  );
+  const programEl = document.getElementById('res-program');
+  const program = programEl ? programEl.value : '';
   const folderId = document.getElementById('res-folder').value;
 
-  if(!selectedFile){ showToast('?? Please select a file first.'); return; }
-  if(!name){ document.getElementById('res-name').focus(); showToast('?? Please enter a resource name.'); return; }
-  if(!category){ document.getElementById('res-category').focus(); showToast('?? Please choose a category.'); return; }
+  const isFolder = false;
+
+  if(!selectedFile){ showToast('Please choose a file first.'); return; }
+  // A folder names its own files, so a title is only asked for one at a time.
+  if(!isFolder && !name){ document.getElementById('res-name').focus(); showToast('Please enter a resource name.'); return; }
+  if(!category){ document.getElementById('res-category').focus(); showToast('Please choose a category.'); return; }
+  // Ticking nothing used to quietly mean everyone, which is a decision nobody
+  // knew they were making.
+  if(MY_SECTIONS.length && !chosenSections.length){
+    document.getElementById('res-sections').classList.add('needs-pick');
+    showToast('Pick at least one section, so students can find this.');
+    return;
+  }
 
   const fd = new FormData();
-  fd.append('file', selectedFile);
-  fd.append('title', name);
+  if(isFolder){
+    selectedFolder.forEach(function(f){ fd.append('files[]', f); });
+  } else {
+    fd.append('file', selectedFile);
+    fd.append('title', name);
+  }
   fd.append('category', category);
-  if(program) fd.append('resource_for', program);
+  chosenSections.forEach(function (s) { fd.append('sections[]', s); });
+  if(program && !chosenSections.length) fd.append('resource_for', program);
   if(folderId) fd.append('drive_folder_id', folderId);
 
   const btn = document.getElementById('upload-btn');
   const originalHTML = btn.innerHTML;
   btn.disabled = true;
-  btn.textContent = 'Uploading…';
+  btn.textContent = isFolder
+    ? 'Uploading ' + selectedFolder.length + ' files…'
+    : 'Uploading…';
 
   fetch(ROUTES.upload, {
     method: 'POST',
@@ -542,12 +1185,16 @@ function uploadResource(){
     btn.innerHTML = originalHTML;
     if(!data.success){ showToast('? '+(data.message||'Upload failed.')); return; }
 
-    resources.unshift(mapResource(data.resource));
+    // One file or twenty-five, the answer is a list.
+    const added = data.resources || (data.resource ? [data.resource] : []);
+    added.slice().reverse().forEach(function(r){ resources.unshift(mapResource(r)); });
+
     resetForm();
-    document.getElementById('category-filter').value = 'all';
-    document.getElementById('folder-filter').value = 'all';
-    renderCards();
-    showToast('? Uploaded to Google Drive.');
+    closeUpload();
+    clearFilters();
+    showToast(added.length > 1
+      ? added.length + ' files uploaded to Google Drive.'
+      : 'Uploaded to Google Drive.');
   })
   .catch(() => {
     btn.disabled = false;
@@ -560,8 +1207,18 @@ function resetForm(){
   clearFile();
   document.getElementById('res-name').value='';
   document.getElementById('res-category').value='';
-  document.getElementById('res-program').value='';
   document.getElementById('res-folder').value='';
+
+  // A CaPSA sees section checkboxes where an admin sees the program dropdown,
+  // so neither can be assumed to be on the page.
+  const programEl = document.getElementById('res-program');
+  if(programEl) programEl.value='';
+
+  document.querySelectorAll('#res-sections input:checked').forEach(function(i){ i.checked = false; });
+  const picker = document.getElementById('res-sections');
+  if(picker) picker.classList.remove('needs-pick');
+  const hint = document.getElementById('res-sections-hint');
+  if(hint) hint.textContent = 'Tick every section to hand it to all your students.';
 }
 
 // -- DOWNLOAD -------------------------------------------------------------------
@@ -572,16 +1229,7 @@ function downloadResource(id, btn){
   btn.classList.add('btn-downloading');
   btn.textContent='Opening…';
 
-  fetch(ROUTES.download(id), {
-    method: 'POST',
-    headers: { 'X-CSRF-TOKEN': CSRF_TOKEN },
-  })
-  .then(r2 => r2.json())
-  .then(data => {
-    if(data.success){ r.downloads = data.downloads; renderCards(); }
-    window.open(r.driveLink, '_blank');
-  })
-  .catch(() => window.open(r.driveLink, '_blank'));
+  window.open(r.driveLink, '_blank');
 }
 
 // -- DELETE ---------------------------------------------------------------------
@@ -645,6 +1293,7 @@ populateFolderSelect();
 populateFolderFilter();
 renderCards();
 refreshDriveStatus();
+loadPicker();
 
 
 /* Mobile sidebar toggle */
