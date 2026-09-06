@@ -22,6 +22,8 @@ class AdminStudentFiltersTest extends TestCase
 {
     use RefreshDatabase;
 
+    private int $issued = 0;
+
     private function admin(): CapstoneExpert
     {
         $admin = CapstoneExpert::factory()->create([
@@ -39,7 +41,9 @@ class AdminStudentFiltersTest extends TestCase
     {
         return Student::create([
             'email' => strtolower($last).'@my.cspc.edu.ph',
-            'student_number' => '21-'.random_int(10000, 99999),
+            // Counted, not drawn at random: the column is unique, and a
+            // clash makes the run fail somewhere unrelated to what it tests.
+            'student_number' => sprintf('21-%05d', ++$this->issued),
             'f_name' => 'Test',
             'l_name' => $last,
             'course' => $course,

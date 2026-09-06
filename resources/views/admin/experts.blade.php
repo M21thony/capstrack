@@ -190,20 +190,6 @@
   .capacity-prog{font-size:10px;font-weight:700;color:var(--text3);letter-spacing:0.3px}
   .capacity-count{font-variant-numeric:tabular-nums;font-size:11px;color:var(--text3);text-align:right}
 
-  /* Manage Roles - shared with CaPSA's copy of this page. */
-  .roles-btn{
-    display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;
-    border:1.5px solid var(--blue-bg);background:var(--blue-bg);color:var(--blue);
-    font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;
-  }
-  .roles-btn:hover{background:var(--blue);color:#fff;border-color:var(--blue)}
-  .roles-btn svg{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2.2}
-  .role-options{display:flex;flex-direction:column;gap:8px;text-align:left}
-  .role-opt{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border:1.5px solid #e2e8f0;border-radius:10px;cursor:pointer;background:#f8fafc}
-  .role-opt:hover{border-color:#bfdbfe;background:#eff6ff}
-  .role-opt input{width:15px;height:15px;accent-color:#2563eb;margin-top:2px;flex-shrink:0}
-  .role-opt-name{font-size:13px;font-weight:700;color:#0f172a}
-  .role-opt-desc{font-size:11.5px;color:#64748b;margin-top:2px;line-height:1.4}
 
   /* Personal info modal - opens on clicking an expert's name/avatar, and
      shows what the table row can't fit (full expertise list, credentials,
@@ -452,7 +438,6 @@
       <div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;align-items:center;">
         <div class="sk" style="height:38px;width:260px;border-radius:8px;"></div>
         <div class="sk" style="height:38px;width:140px;border-radius:8px;"></div>
-        <div class="sk" style="height:38px;width:140px;border-radius:8px;"></div>
         <div class="sk" style="height:38px;width:160px;border-radius:20px;"></div>
       </div>
       <div class="card" style="padding:0;overflow:hidden;">
@@ -475,7 +460,7 @@
       {{-- Who owns which column. Without it a reader assumes every column on
            an editing page is editable, and two of these are not. --}}
       <p class="table-legend">
-        <b>Roles</b> and <b>Sections</b> are yours to set.
+        <b>Sections</b> are yours to set.
         <b>Accepts</b> and <b>Expertise</b> belong to the expert &mdash; they choose which programs
         to take teams from and how many, on their own profile.
       </p>
@@ -504,10 +489,6 @@
              into the system is the CaPSA's, from their own copy of this page,
              so the list upload and the one-off Add Expert form are not offered
              twice. --}}
-        {{-- Off until a row is ticked, so the button itself teaches that
-             selection is how bulk editing starts. --}}
-        <button type="button" class="btn" id="editSelectedBtn" disabled
-                onclick="document.getElementById('bulkRoles').click()">Edit</button>
         <button type="button" class="btn btn-primary" onclick="addCapsa()">Add CaPSA</button>
       </div>
     </div>
@@ -520,12 +501,6 @@
         <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         <input class="input" id="experts-search-input" placeholder="Search experts by name or expertise..."/>
       </div>
-      <select class="input page-filter" id="experts-role-filter">
-        <option>All Roles</option>
-        <option>Adviser</option>
-        <option>Consultant</option>
-        <option>Grammarian</option>
-      </select>
       <select class="input page-filter" id="statusFilter">
         <option value="all">All Status</option>
         <option value="active">Active</option>
@@ -538,7 +513,6 @@
       'table' => '.table',
       'noun' => 'expert',
       'actions' => [
-        ['id' => 'bulkRoles', 'label' => 'Set roles'],
         ['id' => 'bulkRemove', 'label' => 'Remove', 'danger' => true],
       ],
     ])
@@ -616,10 +590,8 @@
           <tr data-status="{{ $computedStatus }}"
               data-id="{{ $expert->expert_id }}"
               {{-- You cannot put yourself in a batch: bulk-removing your own
-                   account, or stripping your own roles, is not a thing to be
-                   one careless drag away from. --}}
+                   account is not a thing to be one careless drag away from. --}}
               @if ($expert->expert_id === Auth::guard('expert')->id()) data-no-select="1" @endif
-              data-roles="{{ $expert->roles->pluck('role_name')->map($roleLabel)->implode(' ') }}"
               data-search="{{ Str::lower($expert->name.' '.$expert->email.' '.$expertiseFull) }}">
             <td style="padding-left:20px" data-label="Expert">
               <div class="expert-name-trigger cx-who" onclick="openExpertDetail({{ Illuminate\Support\Js::from($detailPayload) }})">
@@ -703,11 +675,6 @@
 
             <td data-label="Action">
               <div class="expert-actions">
-                <button type="button" class="icon-btn" title="Manage roles"
-                        onclick="openRoles({{ $expert->expert_id }}, {{ Illuminate\Support\Js::from($expert->name) }}, {{ Illuminate\Support\Js::from($expert->roles->pluck('role_name')) }})">
-                  <svg viewBox="0 0 24 24"><path d="M20.59 13.41 13.42 20.6a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82Z"/><circle cx="7" cy="7" r="1"/></svg>
-                </button>
-
                 {{-- Only for someone who already holds the role: changing
                      which sections they cover is not a change of role, and
                      doing it through the toggle meant removing them as CaPSA
@@ -740,13 +707,11 @@
   // Client-side filtering: search, role, and status.
   (function() {
     var searchInput = document.getElementById('experts-search-input');
-    var roleFilter = document.getElementById('experts-role-filter');
     var statusFilter = document.getElementById('statusFilter');
     var rows = document.querySelectorAll('table.table tbody tr');
 
     function filterRows() {
       var q = searchInput ? searchInput.value.toLowerCase().trim() : '';
-      var role = roleFilter ? roleFilter.value : 'All Roles';
       var status = statusFilter ? statusFilter.value : 'all';
 
       rows.forEach(function(row) {
@@ -754,22 +719,19 @@
         // find the status broke the moment one moved, and the expertise is
         // truncated on screen - the attribute holds all of it.
         var searchText = (row.dataset.search || '');
-        var roleText = (row.dataset.roles || '').toLowerCase();
         var statusText = (row.dataset.status || '');
 
         var matchSearch = !q || searchText.includes(q);
-        var matchRole = role === 'All Roles' || roleText.includes(role.toLowerCase());
         var matchStatus = true;
         if (status === 'active') matchStatus = statusText === 'active';
         else if (status === 'full') matchStatus = statusText === 'full';
         else if (status === 'offline') matchStatus = statusText === 'offline';
 
-        row.style.display = (matchSearch && matchRole && matchStatus) ? '' : 'none';
+        row.style.display = (matchSearch && matchStatus) ? '' : 'none';
       });
     }
 
     if (searchInput) searchInput.addEventListener('input', filterRows);
-    if (roleFilter) roleFilter.addEventListener('change', filterRows);
     if (statusFilter) statusFilter.addEventListener('change', filterRows);
   })();
 </script>
@@ -974,116 +936,6 @@
     </div>
   </div>
 </div>
-
-{{-- ══════════════════════════════════════════
-     MANAGE ROLES — Modal
-     Role assignment used to only happen once, at account approval - this is
-     the same set of roles, just reachable any time afterward. Panel Member
-     isn't offered here since it's assigned per-defense, not to the account
-     itself.
-══════════════════════════════════════════ --}}
-<div id="rolesModal" class="ct-modal-overlay" style="display:none;">
-  <div class="ct-modal-card" style="max-width:420px;">
-    <h3 class="ct-modal-title">Manage Roles for <span id="rolesExpertName" style="color:#2563eb;"></span></h3>
-    <p class="ct-modal-desc">What this expert does for a team - they can hold more than one at once.</p>
-    <div class="role-options" id="roleOptionsList"></div>
-    <p id="rolesModalError" style="display:none;color:#dc2626;font-size:12px;margin:14px 0 0;text-align:left;"></p>
-    <div class="ct-modal-actions" style="margin-top:20px;">
-      <button type="button" class="ct-btn ct-btn-secondary" onclick="closeRolesModal()">Cancel</button>
-      <button type="button" id="rolesSaveBtn" class="ct-btn ct-btn-primary" onclick="saveRoles()">Save Roles</button>
-    </div>
-  </div>
-</div>
-
-<script>
-const ROLE_OPTIONS = [
-  { id: 'adviser', label: 'Adviser', desc: "Primary subject adviser for a team's capstone project." },
-  { id: 'consultant', label: 'Consultant', desc: 'Secondary technical/content guidance alongside the adviser.' },
-  { id: 'grammarian', label: 'Grammarian', desc: 'Reviews document language and formatting before submission.' },
-];
-
-const rolesModal = document.getElementById('rolesModal');
-let rolesTargetExpertId = null;
-
-// One id or a list of them. Bulk goes through the same picker and the same
-// save as a single expert does, so the rules about which roles exist and what
-// the endpoint expects are written once.
-function rolesTargets() {
-  return Array.isArray(rolesTargetExpertId) ? rolesTargetExpertId : [rolesTargetExpertId];
-}
-
-function openRoles(expertId, expertName, currentRoles) {
-  rolesTargetExpertId = expertId;
-  document.getElementById('rolesExpertName').textContent = expertName;
-  document.getElementById('rolesModalError').style.display = 'none';
-
-  document.getElementById('roleOptionsList').innerHTML = ROLE_OPTIONS.map(r => `
-    <label class="role-opt">
-      <input type="checkbox" value="${r.id}" ${currentRoles.includes(r.id) ? 'checked' : ''}>
-      <div>
-        <div class="role-opt-name">${r.label}</div>
-        <div class="role-opt-desc">${r.desc}</div>
-      </div>
-    </label>
-  `).join('');
-
-  rolesModal.style.display = 'flex';
-}
-
-function closeRolesModal() {
-  rolesModal.style.display = 'none';
-}
-
-function saveRoles() {
-  const checked = Array.from(document.querySelectorAll('#roleOptionsList input:checked')).map(c => c.value);
-  const errorEl = document.getElementById('rolesModalError');
-  const saveBtn = document.getElementById('rolesSaveBtn');
-  const targets = rolesTargets();
-
-  saveBtn.disabled = true;
-  saveBtn.textContent = 'Saving...';
-
-  const body = JSON.stringify({ role_ids: checked.map(id => ROLE_NAME_TO_ID[id]).filter(Boolean) });
-
-  Promise.all(targets.map(function (id) {
-    return fetch(`{{ route('capsa.experts.update-roles', ['expert' => 'EXPERT_ID']) }}`.replace('EXPERT_ID', id), {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' },
-      body: body,
-    })
-      .then(res => res.json().then(data => ({ ok: res.status === 200 && data.success, data })))
-      .catch(() => ({ ok: false, data: {} }));
-  }))
-    .then(function (results) {
-      const ok = results.filter(r => r.ok).length;
-      const failed = results.length - ok;
-
-      if (!ok) {
-        // Nothing changed, so the modal stays open with the reason in it
-        // rather than closing on a silent failure.
-        errorEl.textContent = (results[0] && results[0].data.message) || 'Could not save roles.';
-        errorEl.style.display = 'block';
-        return;
-      }
-
-      closeRolesModal();
-      // A loop can half-succeed, so say which it was.
-      showToast(failed
-        ? ok + ' updated, ' + failed + ' could not be'
-        : (targets.length > 1 ? ok + ' experts updated' : 'Roles saved.'), failed ? 'error' : 'success');
-      setTimeout(() => window.location.reload(), 800);
-    })
-    .finally(() => {
-      saveBtn.disabled = false;
-      saveBtn.textContent = 'Save Roles';
-    });
-}
-
-@php
-  $roleNameToId = DB::table('roles')->whereIn('role_name', ['adviser', 'consultant', 'grammarian'])->pluck('role_id', 'role_name');
-@endphp
-const ROLE_NAME_TO_ID = {{ Illuminate\Support\Js::from($roleNameToId) }};
-</script>
 
 <script>
 // ── TOAST NOTIFICATION ───────────────────────────────────────
@@ -1661,13 +1513,6 @@ function bulkNames(rows) {
   }).filter(Boolean);
 }
 
-onBulk('bulkRoles', function (ids, rows) {
-  const names = bulkNames(rows);
-  // The picker starts empty for a group: they hold different roles, and
-  // pre-ticking one person's would quietly apply it to everyone else.
-  openRoles(ids, names.length > 2 ? names.length + ' experts' : names.join(', '), []);
-});
-
 onBulk('bulkRemove', function (ids, rows) {
   const names = bulkNames(rows);
   if (!confirm('Remove ' + ids.length + (ids.length === 1 ? ' expert' : ' experts') + '?\n\n'
@@ -1685,14 +1530,6 @@ onBulk('bulkRemove', function (ids, rows) {
       failed ? 'error' : 'success');
     setTimeout(() => window.location.reload(), 900);
   });
-});
-</script>
-
-<script>
-// Keep the Edit button in step with the selection.
-document.addEventListener('change', function () {
-  const btn = document.getElementById('editSelectedBtn');
-  if (btn && typeof selectedCount === 'function') btn.disabled = selectedCount() === 0;
 });
 </script>
 
