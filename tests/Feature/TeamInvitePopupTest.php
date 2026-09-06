@@ -204,6 +204,25 @@ class TeamInvitePopupTest extends TestCase
     }
 
     /**
+     * A CaPSA verifying a team does not close its roster.
+     *
+     * The invite button was hidden once is_confirmed was set, so a leader
+     * whose member dropped out after verification had no way to replace them.
+     * InvitationController::store() never enforced it, so what was there was a
+     * hidden button over an open door.
+     */
+    public function test_a_verified_team_can_still_invite(): void
+    {
+        [$leader, $team] = $this->leaderWithTeam();
+        $team->update(['is_confirmed' => true]);
+
+        $html = $this->actingAs($leader, 'web')->get(route('student.team'))->getContent();
+
+        $this->assertStringContainsString('openOpenSlotInviteModal()', $html);
+        $this->assertStringContainsString('Click to invite a classmate', $html);
+    }
+
+    /**
      * The pending list is rendered server-side, so a new invitation only
      * appears once the page is asked again - which is why one used to show
      * up only after a manual refresh.
