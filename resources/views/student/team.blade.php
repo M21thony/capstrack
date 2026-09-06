@@ -1202,8 +1202,15 @@
       </div>
     </div>
 
-    <div style="padding: 16px 26px 22px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 10px;">
-      <button type="button" class="google-btn" style="border: none;" onclick="closeOpenSlotInviteModal()">Cancel</button>
+    {{-- Sending is one button at the bottom rather than a confirmation that
+         fired the moment you touched a name. Picking who to invite and
+         deciding to invite them are two different acts, and inviting four
+         people should not be four dialogs. --}}
+    <div style="padding: 16px 26px 22px; border-top: 1px solid var(--border); display: flex; align-items: center; gap: 10px;">
+      <span id="osl-count" style="font-size: 12px; color: var(--text3); margin-right: auto;">Pick who to invite.</span>
+      <button type="button" class="google-btn" style="border: none;" onclick="closeOpenSlotInviteModal()">Close</button>
+      <button type="button" class="btn-primary" id="osl-send" disabled
+              style="opacity:.5;cursor:not-allowed;" onclick="sendOpenSlotInvites()">Send Invite</button>
     </div>
   </div>
 </div>
@@ -1975,6 +1982,7 @@ function loadOpenSlotClassmates() {
 
     if (loadingEl) loadingEl.style.display = 'flex';
     if (emptyEl) emptyEl.style.display = 'none';
+    refreshOpenSlotSendButton();
     // Clear existing classmate items (keep loading and empty)
     Array.from(listEl.children).forEach(function(child) {
         if (child.id !== 'open-slot-loading' && child.id !== 'open-slot-empty') {
@@ -2052,7 +2060,9 @@ function loadOpenSlotClassmates() {
                 ? '<span style="font-size:10px;font-weight:700;color:#f59e0b;white-space:nowrap;">Has Team</span>'
                 : isPendingInvite
                 ? '<span style="font-size:10px;font-weight:700;color:var(--blue);white-space:nowrap;">Invited</span>'
-                : '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;transition:all 0.15s;" class="osl-radio"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4" style="opacity:0;transform:scale(0);transition:all 0.15s;" class="osl-radio-inner"/></svg>';
+                : '<span class="osl-tick" style="width:19px;height:19px;border-radius:5px;border:1.5px solid var(--border2);flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all 0.15s;">'
+                  + '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" style="opacity:0;transition:opacity 0.15s;" class="osl-tick-mark"><polyline points="20 6 9 17 4 12"/></svg>'
+                  + '</span>';
 
             item.innerHTML =
                 '<div style="width:40px;height:40px;border-radius:50%;background:#7c3aed;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#1a1a1a;overflow:hidden;flex-shrink:0;">' + avatarHtml + '</div>' +
@@ -2089,59 +2099,110 @@ function selectOpenSlotClassmate(el) {
         return;
     }
 
-    // Update UI
-    document.querySelectorAll('.open-slot-classmate-option').forEach(function(opt) {
-        opt.classList.remove('selected');
-        var radio = opt.querySelector('.osl-radio-inner');
-        if (radio) { radio.style.opacity = '0'; radio.style.transform = 'scale(0)'; }
-    });
-    el.classList.add('selected');
-    var radio = el.querySelector('.osl-radio-inner');
-    if (radio) { radio.style.opacity = '1'; radio.style.transform = 'scale(1)'; radio.style.stroke = 'var(--blue)'; }
+    // Picking somebody is a toggle, not a decision: Send Invite at the
+    // bottom is the decision, and it can carry several people at once.
+    var on = !el.classList.contains('selected');
+    el.classList.toggle('selected', on);
 
-    // Show confirmation and send invite
-    showConfirm({
-        title: 'Invite ' + name + '?',
-        message: 'Send a team invitation to <strong>' + name + '</strong>? They will receive a notification and can accept or decline.',
-        icon: 'invite',
-        confirmText: 'Send Invite',
-        confirmClass: 'primary',
-        onConfirm: function() { sendOpenSlotInvite(studentId, name, email, avatar); }
-    });
+    var tick = el.querySelector('.osl-tick');
+    var mark = el.querySelector('.osl-tick-mark');
+    if (tick) {
+        tick.style.background = on ? 'var(--blue)' : 'transparent';
+        tick.style.borderColor = on ? 'var(--blue)' : 'var(--border2)';
+    }
+    if (mark) mark.style.opacity = on ? '1' : '0';
+
+    el.style.borderColor = on ? 'var(--blue)' : 'var(--border)';
+    el.style.background = on ? 'var(--blue-bg)' : 'var(--bg2)';
+
+    // The hover handlers would undo the selected look on the way out.
+    el.onmouseout = on
+        ? function () {}
+        : function () { this.style.borderColor = 'var(--border)'; this.style.background = 'var(--bg2)'; };
+
+    refreshOpenSlotSendButton();
 }
 
-function sendOpenSlotInvite(studentId, name, email, avatar) {
+/** How many are picked, and whether Send Invite is worth pressing. */
+function refreshOpenSlotSendButton() {
+    var picked = document.querySelectorAll('.open-slot-classmate-option.selected');
+    var btn = document.getElementById('osl-send');
+    var label = document.getElementById('osl-count');
+    if (!btn) return;
+
+    btn.disabled = picked.length === 0;
+    btn.style.opacity = picked.length ? '1' : '.5';
+    btn.style.cursor = picked.length ? 'pointer' : 'not-allowed';
+    btn.textContent = picked.length > 1 ? 'Send ' + picked.length + ' Invites' : 'Send Invite';
+
+    if (label) {
+        label.textContent = picked.length
+            ? picked.length + (picked.length === 1 ? ' classmate picked' : ' classmates picked')
+            : 'Pick who to invite.';
+    }
+}
+
+function sendOpenSlotInvites() {
     var teamId = {{ $myTeam?->team_id ?? 'null' }};
     if (!teamId) {
         showToast('No team found.', 'error');
         return;
     }
 
+    var picked = Array.prototype.slice.call(
+        document.querySelectorAll('.open-slot-classmate-option.selected')
+    );
+    if (!picked.length) return;
+
+    var btn = document.getElementById('osl-send');
+    btn.disabled = true;
+    btn.textContent = 'Sending…';
+
     var csrf = document.querySelector('meta[name="csrf-token"]');
-    fetch('{{ route('invitations.store') }}', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'X-CSRF-TOKEN': csrf ? csrf.getAttribute('content') : '{{ csrf_token() }}'
-        },
-        body: JSON.stringify({
-            receiver_id: studentId,
-            team_id: teamId,
-            type: 'invite'
+    var token = csrf ? csrf.getAttribute('content') : '{{ csrf_token() }}';
+
+    Promise.all(picked.map(function (el) {
+        return fetch('{{ route('invitations.store') }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': token
+            },
+            body: JSON.stringify({
+                receiver_id: el.getAttribute('data-id'),
+                team_id: teamId,
+                type: 'invite'
+            })
         })
-    })
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-        if (data.success) {
-            showToast('Invitation sent to ' + name + '!', 'success');
-            closeOpenSlotInviteModal();
-        } else {
-            showToast(data.message || 'Failed to send invitation.', 'error');
+            .then(function (r) { return r.json(); })
+            .then(function (d) { return { ok: !!(d && d.success), name: el.getAttribute('data-name'), message: d && d.message }; })
+            .catch(function () { return { ok: false, name: el.getAttribute('data-name') }; });
+    })).then(function (results) {
+        var sent = results.filter(function (r) { return r.ok; });
+        var failed = results.filter(function (r) { return !r.ok; });
+
+        if (sent.length) {
+            showToast(
+                sent.length === 1
+                    ? 'Invitation sent to ' + sent[0].name + '.'
+                    : sent.length + ' invitations sent.',
+                failed.length ? 'error' : 'success'
+            );
         }
-    })
-    .catch(function() {
-        showToast('Failed to send invitation. Please try again.', 'error');
+
+        if (failed.length && !sent.length) {
+            showToast((failed[0].message) || 'Could not send the invitation.', 'error');
+            btn.disabled = false;
+            refreshOpenSlotSendButton();
+            return;
+        }
+
+        // The pending members list is rendered by the server, so it only knows
+        // about these once the page has been asked again - which is why an
+        // invitation used to appear only after a manual refresh.
+        closeOpenSlotInviteModal();
+        setTimeout(function () { window.location.reload(); }, 900);
     });
 }
 
