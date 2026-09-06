@@ -77,11 +77,16 @@ class AdminExpertsPageTest extends TestCase
         // The CaPSA is listed; the plain expert is not.
         $response->assertSee('Rosa', false);
         $response->assertDontSee('Mara', false);
-        $response->assertSee('1 CaPSA', false);
+        // The count is a figure and a noun in their own elements now, rather
+        // than one grey sentence, so they are read apart.
+        $response->assertSee('class="page-count">1<', false);
+        $response->assertSee('class="page-count-noun">CaPSA<', false);
 
-        // Row actions that still belong to Admin.
-        $response->assertSee('Manage Roles', false);
-        $response->assertSee('Remove', false);
+        // Row actions that still belong to Admin. Setting roles is not among
+        // them - see AdminHasNoRoleManagementTest for why.
+        $response->assertSee('Which sections they cover', false);
+        $response->assertSee('Take away the CaPSA role', false);
+        $response->assertSee('Delete this account', false);
         $response->assertDontSee('Transfer Rights', false);
     }
 

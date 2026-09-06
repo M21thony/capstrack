@@ -104,9 +104,11 @@
          copy of it. Nothing on it destroys anything. --}}
     <div class="page-head">
       <div class="page-head-text">
-        {{ $students->total() ?? $students->count() }}
-        {{ Str::plural('student', $students->total() ?? $students->count()) }}
-        · added and edited by their CaPSA
+        <span class="page-count">{{ $students->total() ?? $students->count() }}</span>
+        <span class="page-count-noun">{{ Str::plural('student', $students->total() ?? $students->count()) }}</span>
+        <span class="page-facts">
+          <span class="fact">added and edited by their CaPSA</span>
+        </span>
       </div>
     </div>
 

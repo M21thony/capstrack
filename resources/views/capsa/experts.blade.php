@@ -419,20 +419,18 @@
 
     <div class="page-head">
       <div class="page-head-text">
-        {{ $experts->count() }} {{ Str::plural('expert', $experts->count()) }}
-        @if ($byRole->isNotEmpty()) · {{ $byRole->join(', ') }} @endif
-      </div>
-      <div class="page-head-actions">
-        {{-- The list is for a whole faculty at once. This is for the one it
-             missed, so admitting a late arrival is not a spreadsheet. --}}
-        <button type="button" class="btn" onclick="openExpertRosterModal()">Upload List</button>
-        <button type="button" class="btn btn-primary" onclick="openAddExpertModal()">Add Expert</button>
+        <span class="page-count">{{ $experts->count() }}</span>
+        <span class="page-count-noun">{{ Str::plural('expert', $experts->count()) }}</span>
+        <span class="page-facts">
+          @foreach ($byRole as $line)
+            <span class="fact">{{ $line }}</span>
+          @endforeach
+        </span>
       </div>
     </div>
 
-    {{-- Filters on their own line. They were sharing a strip with the count
-         and the two buttons, which made "look for something" and "do
-         something" compete for the same row. --}}
+    {{-- Everything you do to the list on one line: look for someone, narrow
+         it down, or add to it. --}}
     <div class="page-filters">
       <div class="experts-search">
         <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -450,6 +448,12 @@
         <option value="full">Full</option>
         <option value="offline">Offline</option>
       </select>
+      <span class="page-filters-actions">
+        {{-- The list is for a whole faculty at once. The other is for the one
+             it missed, so admitting a late arrival is not a spreadsheet. --}}
+        <button type="button" class="btn" onclick="openExpertRosterModal()">Upload List</button>
+        <button type="button" class="btn btn-primary" onclick="openAddExpertModal()">Add Expert</button>
+      </span>
     </div>
 
 
