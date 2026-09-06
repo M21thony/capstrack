@@ -18,8 +18,16 @@ use Illuminate\View\View;
 
 class PreProposalController extends Controller
 {
-    /** A team has to keep at least this many titles before turning them in. */
-    public const MINIMUM_PROPOSALS = 4;
+    /**
+     * How many titles a team is advised to turn in, not how many they must.
+     *
+     * It used to be a floor: fewer than this and the submit button was dead.
+     * A team who genuinely had two titles they believed in was stuck writing
+     * two they did not, which is worse for the CaPSA reading them than two
+     * good ones. It is a recommendation now, made once at the point of
+     * submitting, and they can go ahead with one.
+     */
+    public const RECOMMENDED_PROPOSALS = 4;
 
     public function __construct(private SimilarityService $service) {}
 
@@ -47,9 +55,9 @@ class PreProposalController extends Controller
             'turnedInAt' => $proposals->whereNotNull('submitted_at')->min('submitted_at'),
             'draftCount' => $proposals->whereNull('submitted_at')->count(),
             'canTurnIn' => (bool) $team
-                && $proposals->count() >= self::MINIMUM_PROPOSALS
+                && $proposals->count() >= 1
                 && ! $this->isTurnedIn($team),
-            'minimumProposals' => self::MINIMUM_PROPOSALS,
+            'recommendedProposals' => self::RECOMMENDED_PROPOSALS,
             'reviewStarted' => (bool) $team && $this->reviewStarted($team),
         ]);
     }
@@ -290,8 +298,8 @@ class PreProposalController extends Controller
         );
 
         $saved = $team->preProposals()->count();
-        $message = $saved < self::MINIMUM_PROPOSALS
-            ? 'Pre-proposal saved as a draft. '.($saved).' of '.self::MINIMUM_PROPOSALS.' saved - you need at least '.self::MINIMUM_PROPOSALS.' before you can submit for checking.'
+        $message = $saved < self::RECOMMENDED_PROPOSALS
+            ? 'Pre-proposal saved as a draft. '.$saved.' saved - four is the number we suggest, so one being turned down does not send you back to the start.'
             : 'Pre-proposal saved as a draft. Submit for checking when your team is ready.';
 
         return redirect()->route('student.duplication')->with('status', $message);
@@ -338,7 +346,7 @@ class PreProposalController extends Controller
      * This is the one act that puts a team in front of the CAPSA, which is
      * why it also marks them complete: saving a title used to do both
      * silently, so a team was under review before they had said they were
-     * ready. At least MINIMUM_PROPOSALS titles have to be kept first.
+     * ready. One title is enough; RECOMMENDED_PROPOSALS is advice, not a gate.
      */
     /**
      * Handing the pre-proposal in and taking it back are the same field
@@ -373,9 +381,11 @@ class PreProposalController extends Controller
 
         $count = $team->preProposals()->count();
 
-        if ($count < self::MINIMUM_PROPOSALS) {
+        // One is enough to be worth reading. The page says four is wiser and
+        // asks before letting fewer through; it does not refuse them.
+        if ($count < 1) {
             return redirect()->route('student.duplication')
-                ->with('error', 'Save at least '.self::MINIMUM_PROPOSALS.' pre-proposal titles before submitting - you have '.$count.'.');
+                ->with('error', 'Save a pre-proposal title before submitting.');
         }
 
         // Only the pre-proposals are touched. Turning in used to also set
@@ -450,9 +460,9 @@ class PreProposalController extends Controller
 
     /**
      * Slots simply count up. There used to be exactly three, with a rejected
-     * one's slot recycled; a team may now keep as many titles as they like so
-     * long as at least MINIMUM_PROPOSALS are turned in, and a rejected title
-     * stays put as a record rather than being written over.
+     * one's slot recycled; a team may now keep as many titles as they like,
+     * and a rejected title stays put as a record rather than being written
+     * over.
      */
     private function nextAvailableSlot(Team $team): int
     {

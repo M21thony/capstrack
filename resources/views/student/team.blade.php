@@ -1465,7 +1465,7 @@
 // How many pre-proposal titles this team has submitted - the real gate on
 // marking the team Complete, mirrored from TeamController::update().
 window.PRE_PROPOSAL_COUNT = {{ $myTeam->preProposals()->count() }};
-window.PRE_PROPOSAL_MINIMUM = {{ \App\Http\Controllers\PreProposalController::MINIMUM_PROPOSALS }};
+window.PRE_PROPOSAL_RECOMMENDED = {{ \App\Http\Controllers\PreProposalController::RECOMMENDED_PROPOSALS }};
 @endif
 
 const currentStudentTeamId = {{ auth()->user()->studentSchoolYear()->first()?->team_id ?? 'null' }};
@@ -1751,13 +1751,19 @@ function updateCompleteOption() {
     if (!hint) return;
 
     var saved = window.PRE_PROPOSAL_COUNT || 0;
-    var minimum = window.PRE_PROPOSAL_MINIMUM || 3;
+    var recommended = window.PRE_PROPOSAL_RECOMMENDED || 4;
 
     hint.style.display = '';
-    hint.textContent = saved >= minimum
-        ? 'Your team is marked Complete by submitting your pre-proposals for checking, on the Duplication Checker page.'
-        : saved + ' of ' + minimum + ' pre-proposal titles saved. Save at least ' + minimum +
-          ', then submit them for checking on the Duplication Checker page to mark your team Complete.';
+
+    // Any number of saved titles can be submitted; the number is advice.
+    hint.textContent = saved === 0
+        ? 'Save a pre-proposal title on the Duplication Checker page, then submit it for '
+          + 'checking to mark your team Complete.'
+        : saved >= recommended
+            ? 'Your team is marked Complete by submitting your pre-proposals for checking, on the Duplication Checker page.'
+            : saved + ' pre-proposal ' + (saved === 1 ? 'title' : 'titles') + ' saved - we suggest '
+              + recommended + '. Submit them for checking on the Duplication Checker page to mark '
+              + 'your team Complete.';
 }
 
 function addCustomTag() {

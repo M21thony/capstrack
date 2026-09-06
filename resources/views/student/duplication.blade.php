@@ -78,7 +78,9 @@
 }
 .score-ring-sm > div { position: relative; z-index: 1; }
 
-.instructor-item {
+.sx-role{font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;
+    color:var(--accent3,#8a6e10);margin-bottom:2px}
+  .instructor-item {
   display: flex; gap: 10px; align-items: flex-start;
   padding: 8px 0;
   border-bottom: 1px solid var(--border);
@@ -390,7 +392,7 @@
         </div>
 
         <div class="card" id="instructor-card" style="flex:1;overflow:hidden;display:flex;flex-direction:column">
-          <div class="card-header" style="flex-shrink:0"><span class="card-title" style="display:inline-flex;align-items:center;gap:7px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Suggested Instructors</span></div>
+          <div class="card-header" style="flex-shrink:0"><span class="card-title" style="display:inline-flex;align-items:center;gap:7px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Suggested Experts</span></div>
           <div id="instructor-list" style="overflow-y:auto;flex:1">
             <div style="font-size:12px;color:var(--text3);text-align:center;padding:20px 0">Run a check to see suggestions</div>
           </div>
@@ -414,7 +416,7 @@
             @if ($turnedIn)
               {{ $proposals->count() }} turned in
             @else
-              {{ $proposals->count() }} saved &middot; {{ $minimumProposals }} needed to submit
+              {{ $proposals->count() }} saved &middot; {{ $recommendedProposals }} suggested
             @endif
           </span>
         </div>
@@ -545,11 +547,14 @@
                         };
                       @endphp
                       <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
-                        <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text3);margin-bottom:6px;letter-spacing:0.4px">Suggested Instructors</div>
+                        <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text3);margin-bottom:6px;letter-spacing:0.4px">Suggested Experts</div>
                         @foreach ($check->instructors_suggested as $i)
                           <div class="instructor-item">
                             <div class="avatar">{{ strtoupper(substr($i['name'] ?? '?', 0, 1)) }}</div>
                             <div style="min-width:0">
+                              @if (! empty($i['role_label']))
+                                <div class="sx-role">{{ $i['role_label'] }}</div>
+                              @endif
                               <div style="font-size:12px;font-weight:500;color:var(--text)">{{ $i['name'] ?? '' }}</div>
                               <div style="font-size:10px;color:var(--primary,#5b5bd6);margin-top:1px">{{ $i['expertise'] ?? '' }}</div>
                               <div style="font-size:10px;color:var(--text3);margin-top:2px">{{ $i['reason'] ?? '' }}</div>
@@ -618,7 +623,12 @@
             @if (! $isLeader)
               <div class="pp-submit-note">Only your team leader can submit these for checking.</div>
             @elseif ($canTurnIn)
-              <form method="POST" action="{{ route('student.pre-proposal.submit') }}">
+              {{-- Turning in fewer than the suggested number is a decision, not
+                   an error, so it is asked about once rather than forbidden. --}}
+              <form method="POST" action="{{ route('student.pre-proposal.submit') }}"
+                    onsubmit="return confirmSubmitCount(event)"
+                    data-count="{{ $proposals->count() }}"
+                    data-recommended="{{ $recommendedProposals }}">
                 @method('PATCH')
                 <input type="hidden" name="status" value="submitted">
                 @csrf
@@ -627,24 +637,13 @@
                   Submit for Checking
                 </button>
               </form>
-              <div class="pp-submit-note">Hands all {{ $proposals->count() }} titles to your CaPSA to review.</div>
-            @else
-              {{-- The wrapper carries the tooltip: a disabled button fires
-                   no hover events of its own. --}}
-              <span class="pp-submit-wrap"
-                    data-tip="Have at least {{ $minimumProposals }} pre-proposal titles saved before you can submit. You have {{ $proposals->count() }}."
-                    tabindex="0" role="note"
-                    aria-label="Have at least {{ $minimumProposals }} pre-proposal titles saved before you can submit. You have {{ $proposals->count() }}.">
-                <button type="button" class="btn pp-btn-submit" disabled>
-                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                  Submit for Checking
-                </button>
-              </span>
               <div class="pp-submit-note">
-                {{ $proposals->count() }} of {{ $minimumProposals }} saved &mdash; save
-                {{ $minimumProposals - $proposals->count() }} more
-                {{ \Illuminate\Support\Str::plural('title', $minimumProposals - $proposals->count()) }} to submit.
+                Hands
+                {{ $proposals->count() === 1 ? 'your title' : 'all '.$proposals->count().' titles' }}
+                to your CaPSA to review.
               </div>
+            @else
+              <div class="pp-submit-note">Save a pre-proposal title first.</div>
             @endif
           @endif
         </div>
@@ -748,6 +747,33 @@
 </div>
 
 <script>
+// Turning in fewer titles than we suggest is allowed - it used to be refused,
+// which pushed teams into writing two titles they did not believe in to
+// unlock a button. Asked once, and only when it applies.
+function confirmSubmitCount(e) {
+  const form = e.target;
+  const count = Number(form.dataset.count || 0);
+  const recommended = Number(form.dataset.recommended || 4);
+
+  if (count >= recommended) return true;
+
+  const titles = count === 1 ? 'one title' : count + ' titles';
+  const ok = window.confirm(
+    'Submit ' + titles + '?
+
+'
+    + 'We suggest ' + recommended + '. Your CaPSA decides on each title separately, '
+    + 'so the more you turn in, the better the chance one comes back approved - '
+    + 'and if one is turned down you are not starting over.
+
+'
+    + 'You can still add more titles before submitting.'
+  );
+
+  if (!ok) e.preventDefault();
+  return ok;
+}
+
 // Kept so "Full Report" can rebuild the report modal for a check that was
 // just run - it isn't tied to a saved proposal id yet (that only exists
 // after the student saves it), so it can't reuse openReportModal()'s
@@ -1171,11 +1197,12 @@ function openFreshReportModal() {
   // approval status is actually known.
   const instructorsHtml = (data.instructors && data.instructors.length)
     ? `<div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
-        <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text3);margin-bottom:6px;letter-spacing:0.4px">Suggested Instructors</div>
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text3);margin-bottom:6px;letter-spacing:0.4px">Suggested Experts</div>
         ${data.instructors.map(i => `
           <div class="instructor-item">
             <div class="avatar">${escapeHtml((i.name || '?').charAt(0))}</div>
             <div style="min-width:0">
+              ${i.role_label ? `<div class="sx-role">${escapeHtml(i.role_label)}</div>` : ''}
               <div style="font-size:12px;font-weight:500;color:var(--text)">${escapeHtml(i.name)}</div>
               <div style="font-size:10px;color:var(--primary,#5b5bd6);margin-top:1px">${escapeHtml(i.expertise || '')}</div>
               <div style="font-size:10px;color:var(--text3);margin-top:2px">${escapeHtml(i.reason || '')}</div>
