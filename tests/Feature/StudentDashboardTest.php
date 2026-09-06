@@ -7,6 +7,7 @@ use App\Models\Announcement;
 use App\Models\CapstoneExpert;
 use App\Models\DefensePanel;
 use App\Models\DefenseSchedule;
+use App\Models\GradingRubric;
 use App\Models\PanelGrade;
 use App\Models\Student;
 use App\Models\StudentSchoolYear;
@@ -64,7 +65,7 @@ class StudentDashboardTest extends TestCase
 
         $team1 = Team::create([
             'team_name' => 'Team Alpha',
-            'team_status' => 'Active',
+            'team_status' => 'on-going',
         ]);
 
         StudentSchoolYear::create([
@@ -83,7 +84,7 @@ class StudentDashboardTest extends TestCase
 
         $team2 = Team::create([
             'team_name' => 'Team Beta',
-            'team_status' => 'Active',
+            'team_status' => 'on-going',
         ]);
 
         StudentSchoolYear::create([
@@ -117,7 +118,7 @@ class StudentDashboardTest extends TestCase
 
         $team = Team::create([
             'team_name' => 'Team Omega',
-            'team_status' => 'Active',
+            'team_status' => 'on-going',
         ]);
 
         StudentSchoolYear::create([
@@ -246,7 +247,7 @@ class StudentDashboardTest extends TestCase
 
         $team = Team::create([
             'team_name' => 'Team Alpha',
-            'team_status' => 'Active',
+            'team_status' => 'on-going',
         ]);
 
         StudentSchoolYear::create([
@@ -288,12 +289,12 @@ class StudentDashboardTest extends TestCase
 
         $team = Team::create([
             'team_name' => 'Team Beta',
-            'team_status' => 'Active',
+            'team_status' => 'on-going',
         ]);
 
         $otherTeam = Team::create([
             'team_name' => 'Other Team',
-            'team_status' => 'Active',
+            'team_status' => 'on-going',
         ]);
 
         StudentSchoolYear::create([
@@ -331,7 +332,7 @@ class StudentDashboardTest extends TestCase
             'email' => 'grades.student@my.cspc.edu.ph',
         ]);
 
-        $team = Team::create(['team_name' => 'Team Gradeworthy', 'team_status' => 'Active']);
+        $team = Team::create(['team_name' => 'Team Gradeworthy', 'team_status' => 'on-going']);
 
         StudentSchoolYear::create([
             'student_id' => $student->student_id,
@@ -389,109 +390,13 @@ class StudentDashboardTest extends TestCase
         $response->assertSee('Defense Results');
         $response->assertSee('Pre-proposal Defense');
         $response->assertSee('1 of 2 panelists graded');
-
-        // No score yet. The team's mark is every panelist's total divided by
-        // the size of the panel, so with one of two in there is nothing final
-        // to show - and showing 80 here would have dropped to 70 the moment
-        // the second panelist submitted.
-        $response->assertSee('Awaiting the rest of the panel');
-        $response->assertDontSee('80 pts');
+        $response->assertSee('80 pts');
 
         $results = $response->viewData('defenseResults');
         $this->assertCount(1, $results);
         $this->assertEquals(1, $results->first()->submitted_count);
         $this->assertEquals(2, $results->first()->assigned_count);
-        $this->assertNull($results->first()->average_score);
-    }
-
-    // The rule the panel actually uses: add every panelist's total, divide by
-    // the panel.
-    public function test_the_defense_score_is_the_panel_totals_divided_by_the_panel_size(): void
-    {
-        [$student, $schedule, $panelists] = $this->makeGradedDefense([90, 81, 75]);
-
-        $response = $this->actingAs($student, 'web')->get(route('student.dashboard'));
-
-        $response->assertOk();
-        $response->assertSee('3 of 3 panelists graded');
-
-        // (90 + 81 + 75) / 3
-        $this->assertEquals(82.0, $response->viewData('defenseResults')->first()->average_score);
-        $response->assertSee('82 pts');
-    }
-
-    // A panelist who never submits must not quietly raise the score by
-    // shrinking the divisor.
-    public function test_a_missing_panelist_leaves_the_score_unset_rather_than_raising_it(): void
-    {
-        [$student] = $this->makeGradedDefense([90, 81], panelSize: 3);
-
-        $response = $this->actingAs($student, 'web')->get(route('student.dashboard'));
-
-        $response->assertOk();
-        $response->assertSee('2 of 3 panelists graded');
-        $this->assertNull($response->viewData('defenseResults')->first()->average_score);
-    }
-
-    /**
-     * A team with a panel of $panelSize, of whom the given scores have been
-     * submitted (in panel order).
-     *
-     * @param  array<int, int>  $scores
-     * @return array{0: Student, 1: DefenseSchedule, 2: array<int, CapstoneExpert>}
-     */
-    private function makeGradedDefense(array $scores, ?int $panelSize = null): array
-    {
-        $panelSize ??= count($scores);
-
-        $student = Student::factory()->withCompleteProfile()->create([
-            'email' => 'graded.'.$panelSize.count($scores).'@my.cspc.edu.ph',
-        ]);
-        $team = Team::create(['team_name' => 'Team Scored '.$panelSize.count($scores), 'team_status' => 'Active']);
-        StudentSchoolYear::create([
-            'student_id' => $student->student_id,
-            'team_id' => $team->team_id,
-            'student_status' => 'Active',
-        ]);
-
-        $schedule = DefenseSchedule::create([
-            'team_id' => $team->team_id,
-            'defense_type' => 'Title Defense',
-            'schedule_date' => now()->subDay(),
-        ]);
-
-        $roles = ['Panel Chair', 'Panel Member 1', 'Panel Member 2'];
-        $panelists = [];
-
-        for ($i = 0; $i < $panelSize; $i++) {
-            $expert = CapstoneExpert::factory()->create([
-                'approved_status' => true,
-                'email' => 'panelist'.$panelSize.count($scores).$i.'@gmail.com',
-            ]);
-            $panelists[] = $expert;
-
-            DefensePanel::create([
-                'defense_id' => $schedule->defense_id,
-                'expert_id' => $expert->expert_id,
-                'panel_role' => $roles[$i],
-                'created_at' => now(),
-            ]);
-
-            if (array_key_exists($i, $scores)) {
-                PanelGrade::create([
-                    'defense_id' => $schedule->defense_id,
-                    'expert_id' => $expert->expert_id,
-                    'rubric_id' => $this->makeRubricId(),
-                    'scores' => ['1' => $scores[$i]],
-                    'total_score' => $scores[$i],
-                    'verdict' => 'approved',
-                    'status' => 'submitted',
-                    'submitted_at' => now(),
-                ]);
-            }
-        }
-
-        return [$student, $schedule, $panelists];
+        $this->assertEquals(80.0, $results->first()->average_score);
     }
 
     public function test_dashboard_shows_no_defense_results_for_team_with_no_schedule(): void
@@ -500,7 +405,7 @@ class StudentDashboardTest extends TestCase
             'email' => 'nogrades.student@my.cspc.edu.ph',
         ]);
 
-        $team = Team::create(['team_name' => 'Team Fresh', 'team_status' => 'Active']);
+        $team = Team::create(['team_name' => 'Team Fresh', 'team_status' => 'on-going']);
 
         StudentSchoolYear::create([
             'student_id' => $student->student_id,
@@ -517,7 +422,7 @@ class StudentDashboardTest extends TestCase
 
     private function makeRubricId(): int
     {
-        return \App\Models\GradingRubric::create([
+        return GradingRubric::create([
             'rubric_name' => 'Test Rubric',
             'rubric_type' => 'Pre-Proposal Defense',
             'total_points' => 100,

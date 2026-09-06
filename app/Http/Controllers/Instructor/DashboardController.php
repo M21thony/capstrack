@@ -44,9 +44,7 @@ class DashboardController extends Controller
                     });
             });
         })
-            // 'pending' is not a value this column ever holds, so this counted
-            // nothing. What the chip means is "still on my plate".
-            ->awaitingReview()
+            ->where('review_status', 'pending')
             ->where('expert_id', $expertId)
             ->count();
 
@@ -62,12 +60,9 @@ class DashboardController extends Controller
                     });
             });
         })
-            ->awaitingReview()
+            ->where('review_status', 'pending')
             ->where('expert_id', $expertId)
-            // Oldest by when it arrived, not by reviewed_at: a document still
-            // waiting has not been reviewed, so that column is null for every
-            // row this can return and sorted on nothing.
-            ->orderBy('created_at')
+            ->orderBy('reviewed_at')
             ->first();
 
         $upcomingConsults = ConsultationSchedule::where('expert_id', $expertId)
@@ -154,9 +149,7 @@ class DashboardController extends Controller
             ->join('student_s_y', 'capstone_documents.student_id', '=', 'student_s_y.student_id')
             ->join('team', 'student_s_y.team_id', '=', 'team.team_id')
             ->where('capstone_document_review.expert_id', $expertId)
-            // Was 'approved', which nothing writes - the activity feed had a
-            // permanently empty section. 'Reviewed' is what finishing sets.
-            ->where('capstone_document_review.review_status', CapstoneDocumentReview::REVIEWED)
+            ->where('capstone_document_review.review_status', 'approved')
             ->select('team.team_name', 'capstone_document_review.reviewed_at')
             ->latest('capstone_document_review.reviewed_at')
             ->take(5)

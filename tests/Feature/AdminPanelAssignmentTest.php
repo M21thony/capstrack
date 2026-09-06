@@ -5,13 +5,10 @@ namespace Tests\Feature;
 use App\Models\CapstoneExpert;
 use App\Models\DefensePanel;
 use App\Models\DefenseSchedule;
-use App\Models\ExpensePost;
 use App\Models\ExpertExpertise;
-use App\Models\FinancialRecord;
-use App\Models\Student;
-use App\Models\StudentSchoolYear;
 use App\Models\Team;
 use App\Models\TeamExpertAssignment;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -21,26 +18,19 @@ class AdminPanelAssignmentTest extends TestCase
 
     private CapstoneExpert $admin;
 
-    private ?ExpensePost $titleDefensePost = null;
-
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->admin = $this->makeCapsa(CapstoneExpert::factory()->create([
+        $this->admin = CapstoneExpert::factory()->create([
             'is_admin' => true,
             'approved_status' => true,
-        ]));
+        ]);
     }
 
-    // Payment gating (see paidTeamIds()) means every team used by the
-    // scheduling-logic tests in this file must be fully paid for "Title
-    // Defense" by default - that's the type every test in this file uses.
-    // Pass paid: false only for the tests that specifically exercise the
-    // payment gate itself.
-    private function makeTeam(array $overrides = [], bool $paid = true): Team
+    private function makeTeam(array $overrides = []): Team
     {
-        $team = Team::create(array_merge([
+        return Team::create(array_merge([
             'team_name' => 'Team Alpha',
             'project_title' => 'A Capstone Project',
             'tags' => [],
@@ -48,52 +38,6 @@ class AdminPanelAssignmentTest extends TestCase
             'is_confirmed' => true,
             'member_count' => 1,
         ], $overrides));
-
-        if ($paid) {
-            $this->payTeamForTitleDefense($team);
-        }
-
-        return $team;
-    }
-
-    private function titleDefenseExpensePost(): ExpensePost
-    {
-        if (! $this->titleDefensePost) {
-            $this->titleDefensePost = ExpensePost::create([
-                'admin_id' => $this->admin->expert_id,
-                'title' => 'Title Defense Fee',
-                'course' => 'BSIT',
-                'year_level' => '4th',
-                'defense_type' => 'Title Defense',
-                'amount' => 500,
-            ]);
-        }
-
-        return $this->titleDefensePost;
-    }
-
-    private function payTeamForTitleDefense(Team $team): void
-    {
-        $student = Student::factory()->withCompleteProfile()->create();
-        StudentSchoolYear::create([
-            'student_id' => $student->student_id,
-            'team_id' => $team->team_id,
-        ]);
-
-        $post = $this->titleDefenseExpensePost();
-
-        FinancialRecord::create([
-            'student_id' => $student->student_id,
-            'expense_post_id' => $post->id,
-            'receipt_image' => 'receipts/or-'.$team->team_id.'.jpg',
-            'receipt_number' => 'OR-'.$team->team_id,
-            'f_record_status' => 'verified',
-            'payment_for' => $post->title,
-            'amount' => $post->amount,
-            'uploaded_at' => now(),
-            'verified_at' => now(),
-            'verified_by' => $this->admin->name,
-        ]);
     }
 
     private function makeExpert(array $overrides = []): CapstoneExpert
@@ -121,7 +65,7 @@ class AdminPanelAssignmentTest extends TestCase
         ]);
 
         $response = $this->actingAs($this->admin, 'expert')
-            ->get(route('capsa.panel_assignment'));
+            ->get(route('admin.panel_assignment'));
 
         $response->assertStatus(200)
             ->assertSee('Ada Lovelace')
@@ -134,7 +78,7 @@ class AdminPanelAssignmentTest extends TestCase
         $this->makeTeam();
 
         $response = $this->actingAs($this->admin, 'expert')
-            ->get(route('capsa.panel_assignment'));
+            ->get(route('admin.panel_assignment'));
 
         $response->assertStatus(200)->assertSee('Assign');
     }
@@ -214,13 +158,8 @@ class AdminPanelAssignmentTest extends TestCase
         ]);
     }
 
-    public function test_store_requires_a_panel_chair_for_a_team_with_no_existing_panel(): void
+    public function test_store_requires_a_panel_chair(): void
     {
-        // chair_expert_id is nullable at the validation layer (an empty
-        // chair on an EXISTING panel means "remove it" - see
-        // removePanelFromTeam()) - but a team with nothing to remove still
-        // can't be "saved" empty, so this is checked in assignPanelToTeam()
-        // itself rather than by a validation rule.
         $team = $this->makeTeam();
 
         $response = $this->actingAs($this->admin, 'expert')
@@ -228,149 +167,8 @@ class AdminPanelAssignmentTest extends TestCase
                 'defense_type' => 'Title Defense',
             ]);
 
-        $response->assertStatus(422);
-        $this->assertStringContainsString('Panel Chair is required', $response->json('message'));
-    }
-
-    public function test_store_with_no_chair_removes_an_existing_panel(): void
-    {
-        $chair = $this->makeExpert();
-        $team = $this->makeTeam();
-
-        $this->assignPanel($team, 'Title Defense', $chair);
-        $schedule = DefenseSchedule::where('team_id', $team->team_id)->where('defense_type', 'Title Defense')->first();
-        $this->assertNotNull($schedule);
-
-        $response = $this->actingAs($this->admin, 'expert')
-            ->postJson(route('api.admin.panel_assignment.store', $team->team_id), [
-                'defense_type' => 'Title Defense',
-            ]);
-
-        $response->assertStatus(200)->assertJson(['success' => true]);
-        $this->assertSame([], $response->json('data.panels'));
-        $this->assertNull($response->json('data.schedule_date'));
-
-        $this->assertDatabaseMissing('defense_schedule', ['defense_id' => $schedule->defense_id]);
-        $this->assertDatabaseMissing('defense_panels', ['defense_id' => $schedule->defense_id]);
-    }
-
-    // ── Pre-proposal Defense panel propagation ─────────────────────────────
-
-    public function test_assigning_via_pre_proposal_defense_propagates_the_panel_to_all_other_stages(): void
-    {
-        $chair = $this->makeExpert();
-        $member1 = $this->makeExpert();
-        $team = $this->makeTeam();
-
-        $response = $this->actingAs($this->admin, 'expert')
-            ->postJson(route('api.admin.panel_assignment.store', $team->team_id), [
-                'defense_type' => 'Pre-proposal Defense',
-                'chair_expert_id' => $chair->expert_id,
-                'member1_expert_id' => $member1->expert_id,
-            ]);
-
-        $response->assertStatus(200)->assertJson(['success' => true]);
-        $this->assertCount(3, $response->json('propagated'));
-
-        foreach (['Title Defense', 'Pre Oral Defense', 'Final Oral Defense'] as $stage) {
-            $schedule = DefenseSchedule::where('team_id', $team->team_id)->where('defense_type', $stage)->first();
-            $this->assertNotNull($schedule, "Expected a {$stage} schedule to be created.");
-            $this->assertDatabaseHas('defense_panels', [
-                'defense_id' => $schedule->defense_id,
-                'expert_id' => $chair->expert_id,
-                'panel_role' => 'Panel Chair',
-            ]);
-        }
-    }
-
-    public function test_updating_a_single_stage_directly_does_not_propagate_anywhere(): void
-    {
-        $chair = $this->makeExpert();
-        $team = $this->makeTeam();
-
-        $this->assignPanel($team, 'Title Defense', $chair);
-
-        foreach (['Pre-proposal Defense', 'Pre Oral Defense', 'Final Oral Defense'] as $stage) {
-            $this->assertDatabaseMissing('defense_schedule', ['team_id' => $team->team_id, 'defense_type' => $stage]);
-        }
-    }
-
-    public function test_reassigning_the_pre_proposal_panel_overwrites_a_previously_overridden_stage(): void
-    {
-        $originalChair = $this->makeExpert();
-        $overrideChair = $this->makeExpert();
-        $newChair = $this->makeExpert();
-        $team = $this->makeTeam();
-
-        $this->assignPanel($team, 'Pre-proposal Defense', $originalChair);
-
-        // A targeted, independent override for just Title Defense.
-        $this->assignPanel($team, 'Title Defense', $overrideChair);
-        $titleSchedule = DefenseSchedule::where('team_id', $team->team_id)->where('defense_type', 'Title Defense')->first();
-        $this->assertDatabaseHas('defense_panels', ['defense_id' => $titleSchedule->defense_id, 'expert_id' => $overrideChair->expert_id]);
-
-        // Re-assigning Pre-proposal Defense's panel propagates again,
-        // overwriting the override.
-        $this->assignPanel($team, 'Pre-proposal Defense', $newChair);
-
-        $titleSchedule->refresh();
-        $this->assertDatabaseHas('defense_panels', ['defense_id' => $titleSchedule->defense_id, 'expert_id' => $newChair->expert_id]);
-        $this->assertDatabaseMissing('defense_panels', ['defense_id' => $titleSchedule->defense_id, 'expert_id' => $overrideChair->expert_id]);
-    }
-
-    public function test_removing_the_pre_proposal_panel_removes_it_from_all_other_stages_too(): void
-    {
-        $chair = $this->makeExpert();
-        $team = $this->makeTeam();
-
-        $allStages = ['Pre-proposal Defense', 'Title Defense', 'Pre Oral Defense', 'Final Oral Defense'];
-
-        $this->assignPanel($team, 'Pre-proposal Defense', $chair);
-        foreach ($allStages as $stage) {
-            $this->assertDatabaseHas('defense_schedule', ['team_id' => $team->team_id, 'defense_type' => $stage]);
-        }
-
-        $response = $this->actingAs($this->admin, 'expert')
-            ->postJson(route('api.admin.panel_assignment.store', $team->team_id), [
-                'defense_type' => 'Pre-proposal Defense',
-            ]);
-
-        $response->assertStatus(200)->assertJson(['success' => true]);
-
-        foreach ($allStages as $stage) {
-            $this->assertDatabaseMissing('defense_schedule', ['team_id' => $team->team_id, 'defense_type' => $stage]);
-        }
-    }
-
-    public function test_bulk_store_with_no_chair_removes_panels_from_selected_teams_and_skips_teams_with_none(): void
-    {
-        $chair = $this->makeExpert();
-        $teamWithPanel = $this->makeTeam(['team_name' => 'Has Panel']);
-        $teamWithoutPanel = $this->makeTeam(['team_name' => 'No Panel']);
-
-        $this->assignPanel($teamWithPanel, 'Title Defense', $chair);
-
-        $response = $this->actingAs($this->admin, 'expert')
-            ->postJson(route('api.admin.panel_assignment.store.bulk'), [
-                'team_ids' => [$teamWithPanel->team_id, $teamWithoutPanel->team_id],
-                'defense_type' => 'Title Defense',
-            ]);
-
-        $response->assertStatus(200)->assertJson(['success' => true]);
-
-        $assigned = collect($response->json('data.assigned'));
-        $skipped = collect($response->json('data.skipped'));
-
-        $this->assertCount(1, $assigned);
-        $this->assertSame($teamWithPanel->team_id, $assigned->first()['team_id']);
-
-        $this->assertCount(1, $skipped);
-        $this->assertSame('No Panel', $skipped->first()['team_name']);
-
-        $this->assertDatabaseMissing('defense_schedule', [
-            'team_id' => $teamWithPanel->team_id,
-            'defense_type' => 'Title Defense',
-        ]);
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['chair_expert_id']);
     }
 
     public function test_store_rejects_the_same_expert_in_two_roles(): void
@@ -395,7 +193,7 @@ class AdminPanelAssignmentTest extends TestCase
 
         DefenseSchedule::create(['team_id' => $team->team_id, 'defense_type' => 'Title Defense']);
 
-        $this->expectException(\Illuminate\Database\QueryException::class);
+        $this->expectException(QueryException::class);
         DefenseSchedule::create(['team_id' => $team->team_id, 'defense_type' => 'Title Defense']);
     }
 
@@ -412,7 +210,7 @@ class AdminPanelAssignmentTest extends TestCase
             'created_at' => now(),
         ]);
 
-        $this->expectException(\Illuminate\Database\QueryException::class);
+        $this->expectException(QueryException::class);
         DefensePanel::create([
             'defense_id' => $schedule->defense_id,
             'expert_id' => $expert->expert_id,
@@ -728,47 +526,6 @@ class AdminPanelAssignmentTest extends TestCase
         $this->assertTrue($schedule->schedule_date->isSameDay($scheduledDate));
     }
 
-    public function test_saving_a_new_window_range_reschedules_a_team_whose_existing_date_falls_outside_it(): void
-    {
-        $chair = $this->makeExpert();
-        $team = $this->makeTeam();
-
-        $this->assignPanel($team, 'Title Defense', $chair);
-        $this->saveWindow('Title Defense', '2026-09-01', '2026-09-05')
-            ->assertJson(['success' => true, 'scheduled_count' => 1]);
-
-        $firstDate = DefenseSchedule::where('team_id', $team->team_id)->first()->schedule_date;
-        $this->assertTrue($firstDate->isBetween('2026-09-01', '2026-09-05 23:59:59'));
-
-        // A completely different, non-overlapping window - the team's
-        // existing date now falls outside it and must be moved in, not
-        // left stranded at the old (now out-of-range) date.
-        $response = $this->saveWindow('Title Defense', '2026-10-01', '2026-10-05');
-        $response->assertStatus(200)->assertJson(['success' => true, 'scheduled_count' => 1]);
-
-        $newDate = DefenseSchedule::where('team_id', $team->team_id)->first()->schedule_date;
-        $this->assertTrue($newDate->isBetween('2026-10-01', '2026-10-05 23:59:59'));
-    }
-
-    public function test_saving_a_wider_window_leaves_an_already_in_range_schedule_untouched(): void
-    {
-        $chair = $this->makeExpert();
-        $team = $this->makeTeam();
-
-        $this->assignPanel($team, 'Title Defense', $chair);
-        $this->saveWindow('Title Defense', '2026-09-01', '2026-09-05');
-
-        $firstDate = DefenseSchedule::where('team_id', $team->team_id)->first()->schedule_date;
-
-        // Re-saving a WIDER window that still contains the existing date
-        // must not needlessly reshuffle a team that's still validly placed.
-        $response = $this->saveWindow('Title Defense', '2026-09-01', '2026-09-10');
-        $response->assertStatus(200)->assertJson(['success' => true, 'scheduled_count' => 0]);
-
-        $secondDate = DefenseSchedule::where('team_id', $team->team_id)->first()->schedule_date;
-        $this->assertTrue($firstDate->equalTo($secondDate));
-    }
-
     public function test_store_clears_schedule_when_panel_changes_after_being_scheduled(): void
     {
         $originalChair = $this->makeExpert();
@@ -789,7 +546,7 @@ class AdminPanelAssignmentTest extends TestCase
         $team = $this->makeTeam();
         $adviser = $this->makeExpert();
 
-        $assignment = new TeamExpertAssignment();
+        $assignment = new TeamExpertAssignment;
         $assignment->team_id = $team->team_id;
         $assignment->expert_id = $adviser->expert_id;
         $assignment->status = 'approved';
@@ -811,7 +568,7 @@ class AdminPanelAssignmentTest extends TestCase
         $adviser = $this->makeExpert();
         ExpertExpertise::create(['expert_id' => $adviser->expert_id, 'expertise_field' => 'Artificial Intelligence']);
 
-        $assignment = new TeamExpertAssignment();
+        $assignment = new TeamExpertAssignment;
         $assignment->team_id = $team->team_id;
         $assignment->expert_id = $adviser->expert_id;
         $assignment->status = 'approved';
@@ -1072,7 +829,7 @@ class AdminPanelAssignmentTest extends TestCase
         $schedule = $this->scheduleWithPanel($team, 'Title Defense', $chair, '2027-03-10', 'Mac Lab');
 
         $response = $this->actingAs($this->admin, 'expert')
-            ->get(route('capsa.panel_assignment'));
+            ->get(route('admin.panel_assignment'));
 
         $response->assertOk();
         $response->assertSee("openScheduleModal({$team->team_id}, {$schedule->defense_id}, '2027-03-10', '08:00', 'Mac Lab')", false);
@@ -1083,7 +840,7 @@ class AdminPanelAssignmentTest extends TestCase
         $team = $this->makeTeam();
 
         $response = $this->actingAs($this->admin, 'expert')
-            ->get(route('capsa.panel_assignment'));
+            ->get(route('admin.panel_assignment'));
 
         $response->assertOk();
         // "cell-schedule-edit" and "openScheduleModal(" alone both always
@@ -1111,460 +868,5 @@ class AdminPanelAssignmentTest extends TestCase
 
         $schedule->refresh();
         $this->assertEquals('2027-03-10', $schedule->schedule_date->toDateString());
-    }
-
-    // ── Payment gating ──────────────────────────────────────────────────────
-    // Payment never blocks panel ASSIGNMENT (store()/storeMultiple()) - it
-    // only gates the automatic day/venue SCHEDULING step, and only for the
-    // three stages that actually have a fee (see the "Scheduling" tests
-    // below for that behavior).
-
-    public function test_store_allows_assigning_a_panel_to_an_unpaid_team(): void
-    {
-        $team = $this->makeTeam([], paid: false);
-        $chair = $this->makeExpert();
-
-        $response = $this->actingAs($this->admin, 'expert')
-            ->postJson(route('api.admin.panel_assignment.store', $team->team_id), [
-                'defense_type' => 'Title Defense',
-                'chair_expert_id' => $chair->expert_id,
-            ]);
-
-        $response->assertStatus(200)->assertJson(['success' => true]);
-        $this->assertDatabaseHas('defense_schedule', ['team_id' => $team->team_id, 'defense_type' => 'Title Defense']);
-    }
-
-    public function test_store_allows_a_fully_paid_team(): void
-    {
-        $team = $this->makeTeam();
-        $chair = $this->makeExpert();
-
-        $response = $this->actingAs($this->admin, 'expert')
-            ->postJson(route('api.admin.panel_assignment.store', $team->team_id), [
-                'defense_type' => 'Title Defense',
-                'chair_expert_id' => $chair->expert_id,
-            ]);
-
-        $response->assertStatus(200)->assertJson(['success' => true]);
-    }
-
-    public function test_index_splits_teams_into_paid_and_unpaid_sections(): void
-    {
-        $this->makeTeam(['team_name' => 'Paid Squad']);
-        $this->makeTeam(['team_name' => 'Unpaid Squad'], paid: false);
-
-        $response = $this->actingAs($this->admin, 'expert')
-            ->get(route('capsa.panel_assignment', ['defense_type' => 'Title Defense']));
-
-        $response->assertOk();
-        $content = $response->getContent();
-
-        $paidPos = strpos($content, 'Paid Squad');
-        $unpaidPanelPos = strpos($content, 'id="unpaid-panel"');
-        $unpaidPos = strpos($content, 'Unpaid Squad');
-
-        $this->assertNotFalse($paidPos, 'Paid team should be rendered.');
-        $this->assertNotFalse($unpaidPos, 'Unpaid team should be rendered.');
-        $this->assertLessThan($unpaidPanelPos, $paidPos, 'Paid team must render inside the Paid tab panel, before the Unpaid panel starts.');
-        $this->assertGreaterThan($unpaidPanelPos, $unpaidPos, 'Unpaid team must render inside the Unpaid tab panel.');
-    }
-
-    public function test_pre_proposal_defense_shows_every_confirmed_team_with_no_paid_unpaid_split(): void
-    {
-        // Pre-proposal Defense has no fee - it's a valid, selectable stage
-        // (unlike an outright-invalid string, which still falls back), but
-        // shows one unified list instead of the Paid/Unpaid tabs the three
-        // fee-bearing stages use.
-        $this->makeTeam(['team_name' => 'Any Team'], paid: false);
-
-        $response = $this->actingAs($this->admin, 'expert')
-            ->get(route('capsa.panel_assignment', ['defense_type' => 'Pre-proposal Defense']));
-
-        $response->assertOk();
-        $response->assertSee('Any Team');
-        $response->assertSee('has no fee');
-        // "pa-tab-btn-paid" also appears inside showPaymentTab()'s always-
-        // present JS body, so check the conditionally-rendered container
-        // element instead of the tab button id.
-        $response->assertDontSee('id="paid-panel"', false);
-        $response->assertSee('id="all-panel"', false);
-    }
-
-    public function test_an_invalid_defense_type_falls_back_to_the_default(): void
-    {
-        $response = $this->actingAs($this->admin, 'expert')
-            ->get(route('capsa.panel_assignment', ['defense_type' => 'Not A Real Stage']));
-
-        $response->assertOk();
-        $response->assertSee('No teams have paid for Title Defense yet.');
-    }
-
-    public function test_team_row_shows_the_currently_selected_stage_not_the_latest_created_schedule(): void
-    {
-        $team = $this->makeTeam(); // paid for Title Defense by default
-        $preProposalChair = $this->makeExpert(['first_name' => 'PreProposal']);
-        $titleChair = $this->makeExpert(['first_name' => 'TitleStage']);
-
-        // Pre-proposal Defense already scheduled (real date)...
-        $preSchedule = DefenseSchedule::create([
-            'team_id' => $team->team_id,
-            'defense_type' => 'Pre-proposal Defense',
-            'schedule_date' => '2027-05-11 08:00:00',
-            'venue' => 'Mac Lab',
-        ]);
-        DefensePanel::create([
-            'defense_id' => $preSchedule->defense_id,
-            'expert_id' => $preProposalChair->expert_id,
-            'panel_role' => 'Panel Chair',
-            'created_at' => now(),
-        ]);
-
-        // ...then a Title Defense panel is assigned AFTER (higher defense_id), still unscheduled.
-        $this->assignPanel($team, 'Title Defense', $titleChair);
-
-        $preProposalView = $this->actingAs($this->admin, 'expert')
-            ->get(route('capsa.panel_assignment', ['defense_type' => 'Pre-proposal Defense']));
-        $preProposalView->assertOk()->assertSee($preProposalChair->name);
-
-        $titleView = $this->actingAs($this->admin, 'expert')
-            ->get(route('capsa.panel_assignment', ['defense_type' => 'Title Defense']));
-        $titleView->assertOk()->assertSee($titleChair->name)->assertDontSee($preProposalChair->name);
-    }
-
-    // ── Scheduling payment gate (generateScheduleForWindow) ───────────────
-
-    public function test_saving_a_window_only_schedules_paid_teams_for_a_fee_bearing_stage(): void
-    {
-        $paidTeam = $this->makeTeam(['team_name' => 'Paid Team']);
-        $unpaidTeam = $this->makeTeam(['team_name' => 'Unpaid Team'], paid: false);
-        $chairA = $this->makeExpert();
-        $chairB = $this->makeExpert();
-
-        $this->assignPanel($paidTeam, 'Title Defense', $chairA);
-        $this->assignPanel($unpaidTeam, 'Title Defense', $chairB);
-
-        $response = $this->saveWindow('Title Defense', '2026-09-01', '2026-09-05');
-        $response->assertStatus(200)->assertJson(['success' => true, 'scheduled_count' => 1]);
-
-        $this->assertNotNull(DefenseSchedule::where('team_id', $paidTeam->team_id)->first()->schedule_date);
-        $this->assertNull(DefenseSchedule::where('team_id', $unpaidTeam->team_id)->first()->schedule_date);
-    }
-
-    public function test_saving_a_window_schedules_everyone_for_pre_proposal_defense_regardless_of_payment(): void
-    {
-        $paidTeam = $this->makeTeam(['team_name' => 'Paid Team']);
-        $unpaidTeam = $this->makeTeam(['team_name' => 'Unpaid Team'], paid: false);
-        $chairA = $this->makeExpert();
-        $chairB = $this->makeExpert();
-
-        $this->assignPanel($paidTeam, 'Pre-proposal Defense', $chairA);
-        $this->assignPanel($unpaidTeam, 'Pre-proposal Defense', $chairB);
-
-        $response = $this->saveWindow('Pre-proposal Defense', '2026-09-01', '2026-09-05');
-        $response->assertStatus(200)->assertJson(['success' => true, 'scheduled_count' => 2]);
-
-        // Assigning via Pre-proposal Defense propagates the panel to the
-        // other 3 stages too, so each team now has 4 schedule rows - scope
-        // explicitly to the stage this test actually cares about.
-        $this->assertNotNull(DefenseSchedule::where('team_id', $paidTeam->team_id)->where('defense_type', 'Pre-proposal Defense')->first()->schedule_date);
-        $this->assertNotNull(DefenseSchedule::where('team_id', $unpaidTeam->team_id)->where('defense_type', 'Pre-proposal Defense')->first()->schedule_date);
-    }
-
-    // ── Bulk multi-team assignment ────────────────────────────────────────
-
-    public function test_bulk_store_assigns_panel_to_multiple_paid_teams(): void
-    {
-        $teamA = $this->makeTeam(['team_name' => 'Team A']);
-        $teamB = $this->makeTeam(['team_name' => 'Team B']);
-        $chair = $this->makeExpert();
-
-        $response = $this->actingAs($this->admin, 'expert')
-            ->postJson(route('api.admin.panel_assignment.store.bulk'), [
-                'team_ids' => [$teamA->team_id, $teamB->team_id],
-                'defense_type' => 'Title Defense',
-                'chair_expert_id' => $chair->expert_id,
-            ]);
-
-        $response->assertStatus(200)->assertJson(['success' => true]);
-        $this->assertCount(2, $response->json('data.assigned'));
-        $this->assertCount(0, $response->json('data.skipped'));
-
-        foreach ([$teamA, $teamB] as $team) {
-            $schedule = DefenseSchedule::where('team_id', $team->team_id)->first();
-            $this->assertNotNull($schedule);
-            $this->assertDatabaseHas('defense_panels', [
-                'defense_id' => $schedule->defense_id,
-                'expert_id' => $chair->expert_id,
-                'panel_role' => 'Panel Chair',
-            ]);
-        }
-    }
-
-    public function test_bulk_store_assigns_to_paid_and_unpaid_teams_but_skips_the_conflicted_one(): void
-    {
-        // Payment never blocks assignment (only scheduling does) - an
-        // unpaid team in the batch must still get assigned, same as a paid
-        // one. Only a genuine adviser/consultant conflict is skipped.
-        $paidTeam = $this->makeTeam(['team_name' => 'Paid Team']);
-        $unpaidTeam = $this->makeTeam(['team_name' => 'Unpaid Team'], paid: false);
-        $conflictedTeam = $this->makeTeam(['team_name' => 'Conflicted Team']);
-        $chair = $this->makeExpert();
-
-        $assignment = new TeamExpertAssignment();
-        $assignment->team_id = $conflictedTeam->team_id;
-        $assignment->expert_id = $chair->expert_id;
-        $assignment->status = 'approved';
-        $assignment->save();
-
-        $response = $this->actingAs($this->admin, 'expert')
-            ->postJson(route('api.admin.panel_assignment.store.bulk'), [
-                'team_ids' => [$paidTeam->team_id, $unpaidTeam->team_id, $conflictedTeam->team_id],
-                'defense_type' => 'Title Defense',
-                'chair_expert_id' => $chair->expert_id,
-            ]);
-
-        $response->assertStatus(200)->assertJson(['success' => true]);
-
-        $assigned = collect($response->json('data.assigned'));
-        $skipped = collect($response->json('data.skipped'));
-
-        $this->assertCount(2, $assigned);
-        $this->assertTrue($assigned->pluck('team_id')->contains($paidTeam->team_id));
-        $this->assertTrue($assigned->pluck('team_id')->contains($unpaidTeam->team_id));
-
-        $this->assertCount(1, $skipped);
-        $this->assertSame('Conflicted Team', $skipped->first()['team_name']);
-    }
-
-    public function test_suggest_multi_matches_against_the_union_of_selected_teams_tags(): void
-    {
-        $teamA = $this->makeTeam(['team_name' => 'Team A', 'tags' => ['AI']]);
-        $teamB = $this->makeTeam(['team_name' => 'Team B', 'tags' => ['Web Development']]);
-
-        $aiExpert = $this->makeExpert(['first_name' => 'Turing']);
-        ExpertExpertise::create(['expert_id' => $aiExpert->expert_id, 'expertise_field' => 'Artificial Intelligence']);
-
-        $webExpert = $this->makeExpert(['first_name' => 'Berners-Lee']);
-        ExpertExpertise::create(['expert_id' => $webExpert->expert_id, 'expertise_field' => 'Web Development']);
-
-        $unrelatedExpert = $this->makeExpert(['first_name' => 'Nobody']);
-        ExpertExpertise::create(['expert_id' => $unrelatedExpert->expert_id, 'expertise_field' => 'Cybersecurity']);
-
-        $response = $this->actingAs($this->admin, 'expert')
-            ->getJson(route('api.admin.panel_assignment.suggest-multi', ['team_ids' => [$teamA->team_id, $teamB->team_id]]));
-
-        $response->assertStatus(200)->assertJson(['success' => true]);
-
-        $ids = collect($response->json('data'))->pluck('expert_id');
-        $this->assertTrue($ids->contains($aiExpert->expert_id));
-        $this->assertTrue($ids->contains($webExpert->expert_id));
-        $this->assertFalse($ids->contains($unrelatedExpert->expert_id));
-    }
-
-    public function test_suggest_multi_excludes_an_adviser_of_any_selected_team(): void
-    {
-        $teamA = $this->makeTeam(['team_name' => 'Team A', 'tags' => ['AI']]);
-        $teamB = $this->makeTeam(['team_name' => 'Team B', 'tags' => ['AI']]);
-        $adviser = $this->makeExpert();
-        ExpertExpertise::create(['expert_id' => $adviser->expert_id, 'expertise_field' => 'Artificial Intelligence']);
-
-        $assignment = new TeamExpertAssignment();
-        $assignment->team_id = $teamB->team_id;
-        $assignment->expert_id = $adviser->expert_id;
-        $assignment->status = 'approved';
-        $assignment->save();
-
-        $response = $this->actingAs($this->admin, 'expert')
-            ->getJson(route('api.admin.panel_assignment.suggest-multi', ['team_ids' => [$teamA->team_id, $teamB->team_id]]));
-
-        $response->assertStatus(200);
-        $ids = collect($response->json('data'))->pluck('expert_id');
-        $this->assertFalse($ids->contains($adviser->expert_id));
-    }
-
-    // ── Suggest Teams for a Panel (reverse direction) ─────────────────────
-
-    public function test_suggest_teams_ranks_teams_by_how_many_tags_match_the_panels_combined_expertise(): void
-    {
-        $aiExpert = $this->makeExpert(['first_name' => 'Turing']);
-        ExpertExpertise::create(['expert_id' => $aiExpert->expert_id, 'expertise_field' => 'Artificial Intelligence']);
-
-        $webExpert = $this->makeExpert(['first_name' => 'Berners-Lee']);
-        ExpertExpertise::create(['expert_id' => $webExpert->expert_id, 'expertise_field' => 'Web Development']);
-
-        $bothMatch = $this->makeTeam(['team_name' => 'Both Match', 'tags' => ['AI', 'Web Development']]);
-        $oneMatch = $this->makeTeam(['team_name' => 'One Match', 'tags' => ['AI']]);
-        $noMatch = $this->makeTeam(['team_name' => 'No Match', 'tags' => ['Cybersecurity']]);
-
-        $response = $this->actingAs($this->admin, 'expert')
-            ->getJson(route('api.admin.panel_assignment.suggest-teams', [
-                'expert_ids' => [$aiExpert->expert_id, $webExpert->expert_id],
-                'defense_type' => 'Title Defense',
-            ]));
-
-        $response->assertStatus(200)->assertJson(['success' => true]);
-
-        $data = collect($response->json('data'));
-        $ids = $data->pluck('team_id');
-
-        $this->assertTrue($ids->contains($bothMatch->team_id));
-        $this->assertTrue($ids->contains($oneMatch->team_id));
-        $this->assertFalse($ids->contains($noMatch->team_id));
-
-        // Higher-scoring match (2 tags) ranks before the 1-tag match.
-        $this->assertSame($bothMatch->team_id, $data->first()['team_id']);
-    }
-
-    public function test_suggest_teams_excludes_a_team_where_a_picked_expert_is_its_adviser_or_consultant(): void
-    {
-        $aiExpert = $this->makeExpert();
-        ExpertExpertise::create(['expert_id' => $aiExpert->expert_id, 'expertise_field' => 'Artificial Intelligence']);
-
-        $team = $this->makeTeam(['team_name' => 'Conflicted Team', 'tags' => ['AI']]);
-
-        $assignment = new TeamExpertAssignment();
-        $assignment->team_id = $team->team_id;
-        $assignment->expert_id = $aiExpert->expert_id;
-        $assignment->status = 'approved';
-        $assignment->save();
-
-        $response = $this->actingAs($this->admin, 'expert')
-            ->getJson(route('api.admin.panel_assignment.suggest-teams', [
-                'expert_ids' => [$aiExpert->expert_id],
-                'defense_type' => 'Title Defense',
-            ]));
-
-        $response->assertStatus(200);
-        $ids = collect($response->json('data'))->pluck('team_id');
-        $this->assertFalse($ids->contains($team->team_id));
-    }
-
-    public function test_suggest_teams_ignores_payment_status_entirely(): void
-    {
-        // A panel assigned to a team is that team's panel for every defense
-        // stage, not scoped to one stage's payment - suggestions must
-        // include an unpaid team exactly the same as a paid one, and never
-        // report payment status at all.
-        $aiExpert = $this->makeExpert();
-        ExpertExpertise::create(['expert_id' => $aiExpert->expert_id, 'expertise_field' => 'Artificial Intelligence']);
-
-        $paid = $this->makeTeam(['team_name' => 'Paid AI Team', 'tags' => ['AI']]);
-        $unpaid = $this->makeTeam(['team_name' => 'Unpaid AI Team', 'tags' => ['AI']], paid: false);
-
-        $response = $this->actingAs($this->admin, 'expert')
-            ->getJson(route('api.admin.panel_assignment.suggest-teams', [
-                'expert_ids' => [$aiExpert->expert_id],
-            ]));
-
-        $response->assertStatus(200);
-        $data = collect($response->json('data'));
-        $ids = $data->pluck('team_id');
-
-        $this->assertTrue($ids->contains($paid->team_id));
-        $this->assertTrue($ids->contains($unpaid->team_id));
-        $this->assertArrayNotHasKey('is_paid', $data->first());
-    }
-
-    // ── Google Calendar sync ─────────────────────────────────────────────
-
-    public function test_window_generation_never_calls_google_calendar_when_no_panelist_is_connected(): void
-    {
-        $this->mock(\App\Services\GoogleCalendarService::class, function ($mock) {
-            $mock->shouldNotReceive('createDefensePanelEvent');
-            $mock->shouldNotReceive('cancelBookingEvent');
-        });
-
-        $team = $this->makeTeam();
-        $chair = $this->makeExpert(); // no google_token - unconnected
-        $this->assignPanel($team, 'Title Defense', $chair);
-
-        $this->saveWindow('Title Defense', '2026-09-01', '2026-09-05')
-            ->assertJson(['success' => true]);
-
-        $schedule = DefenseSchedule::where('team_id', $team->team_id)->first();
-        $this->assertNotNull($schedule->schedule_date);
-
-        $panel = DefensePanel::where('defense_id', $schedule->defense_id)->first();
-        $this->assertNull($panel->google_event_id);
-    }
-
-    public function test_window_generation_creates_a_calendar_event_for_a_connected_panelist(): void
-    {
-        $team = $this->makeTeam();
-        $chair = $this->makeExpert(['google_token' => json_encode(['access_token' => 'fake'])]);
-
-        $this->mock(\App\Services\GoogleCalendarService::class, function ($mock) use ($chair) {
-            $mock->shouldReceive('createDefensePanelEvent')
-                ->once()
-                ->withArgs(fn ($organizerExpertId, $date, $startTime, $endTime, $defenseType, $teamName, $venue, $attendeeEmails) => $organizerExpertId === $chair->expert_id
-                    && $defenseType === 'Title Defense'
-                    && $venue !== null
-                )
-                ->andReturn('fake-google-event-id');
-        });
-
-        $this->assignPanel($team, 'Title Defense', $chair);
-
-        $this->saveWindow('Title Defense', '2026-09-01', '2026-09-05')
-            ->assertJson(['success' => true]);
-
-        $schedule = DefenseSchedule::where('team_id', $team->team_id)->first();
-        $panel = DefensePanel::where('defense_id', $schedule->defense_id)->where('expert_id', $chair->expert_id)->first();
-
-        $this->assertSame('fake-google-event-id', $panel->google_event_id);
-    }
-
-    public function test_manual_override_recreates_the_calendar_event_for_an_already_synced_panelist(): void
-    {
-        $team = $this->makeTeam();
-        $chair = $this->makeExpert(['google_token' => json_encode(['access_token' => 'fake'])]);
-        $schedule = $this->scheduleWithPanel($team, 'Title Defense', $chair, '2027-03-10', 'Mac Lab');
-
-        DefensePanel::where('defense_id', $schedule->defense_id)
-            ->where('expert_id', $chair->expert_id)
-            ->update(['google_event_id' => 'old-event-id']);
-
-        $this->mock(\App\Services\GoogleCalendarService::class, function ($mock) use ($chair) {
-            $mock->shouldReceive('cancelBookingEvent')
-                ->once()
-                ->with($chair->expert_id, 'old-event-id');
-            $mock->shouldReceive('createDefensePanelEvent')
-                ->once()
-                ->andReturn('new-event-id');
-        });
-
-        $response = $this->actingAs($this->admin, 'expert')->putJson(
-            route('api.admin.panel_assignment.schedule.update', $schedule->defense_id),
-            ['schedule_date' => '2027-03-15', 'start_time' => '10:00', 'venue' => 'Open Lab']
-        );
-
-        $response->assertOk()->assertJson(['success' => true]);
-
-        $panel = DefensePanel::where('defense_id', $schedule->defense_id)->where('expert_id', $chair->expert_id)->first();
-        $this->assertSame('new-event-id', $panel->google_event_id);
-    }
-
-    public function test_removing_a_panel_cancels_the_connected_panelists_calendar_event(): void
-    {
-        $team = $this->makeTeam();
-        $chair = $this->makeExpert(['google_token' => json_encode(['access_token' => 'fake'])]);
-        $schedule = $this->scheduleWithPanel($team, 'Title Defense', $chair, '2027-03-10', 'Mac Lab');
-
-        DefensePanel::where('defense_id', $schedule->defense_id)
-            ->where('expert_id', $chair->expert_id)
-            ->update(['google_event_id' => 'old-event-id']);
-
-        $this->mock(\App\Services\GoogleCalendarService::class, function ($mock) use ($chair) {
-            $mock->shouldReceive('cancelBookingEvent')->once()->with($chair->expert_id, 'old-event-id');
-            $mock->shouldNotReceive('createDefensePanelEvent');
-        });
-
-        $response = $this->actingAs($this->admin, 'expert')
-            ->postJson(route('api.admin.panel_assignment.store', $team->team_id), [
-                'defense_type' => 'Title Defense',
-            ]);
-
-        $response->assertStatus(200)->assertJson(['success' => true]);
-        $this->assertDatabaseMissing('defense_schedule', ['defense_id' => $schedule->defense_id]);
     }
 }

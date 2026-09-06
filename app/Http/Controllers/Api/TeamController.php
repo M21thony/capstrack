@@ -11,8 +11,6 @@ use App\Models\StudentRole;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
 use App\Models\TeamInvitation;
-use App\Models\Term;
-use App\Support\StudentTeam;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -45,7 +43,8 @@ class TeamController extends Controller
     {
         $validated = $request->validate([
             'team_name' => ['required', 'string', 'max:100'],
-            'team_status' => ['nullable', Rule::in(['Active', 'Full'])],
+            'project_title' => ['nullable', 'string', 'max:150'],
+            'team_status' => ['nullable', Rule::in(['on-going', 'complete', 'closed'])],
         ]);
 
         $student = $request->user();
@@ -54,21 +53,25 @@ class TeamController extends Controller
             return response()->json(['message' => 'You are already in a team.'], 422);
         }
 
-        // No project_title: the title is whichever pre-proposal is approved,
-        // not something typed at team creation. Same as the web controller.
         $team = Team::create([
             'team_name' => $validated['team_name'],
-            'team_status' => $validated['team_status'] ?? 'Active',
+            'project_title' => $validated['project_title'] ?? null,
+            'team_status' => $validated['team_status'] ?? 'on-going',
             'leader_id' => $student->student_id,
         ]);
 
+        $computedSchoolYear = now()->month >= 8
+            ? now()->year.'-'.(now()->year + 1)
+            : (now()->year - 1).'-'.now()->year;
+
         DB::table('student_s_y')
             ->updateOrInsert(
-                // Keyed on the term too: this table is one row per student PER
-                // TERM, so keying on the student alone would overwrite last
-                // semester's record instead of starting this one.
-                ['student_id' => $student->student_id, 'term_id' => Term::activeId()],
-                ['team_id' => $team->team_id, 's_role_id' => StudentRole::leaderRoleId()]
+                ['student_id' => $student->student_id],
+                [
+                    'team_id' => $team->team_id,
+                    's_role_id' => StudentRole::leaderRoleId(),
+                    'school_year' => $computedSchoolYear,
+                ]
             );
 
         $recruitment = Recruitment::where('student_id', $student->student_id)
@@ -146,13 +149,30 @@ class TeamController extends Controller
 
         $validated = $request->validate([
             'team_name' => ['required', 'string', 'max:100'],
-            'team_status' => ['nullable', Rule::in(['Active', 'Full'])],
+            'project_title' => ['nullable', 'string', 'max:150'],
+            'team_status' => ['nullable', Rule::in(['on-going', 'complete', 'closed'])],
         ]);
+
+        if (($validated['team_status'] ?? null) === 'complete') {
+            $request->validate([
+                'project_title' => [
+                    'required', 'string', 'max:150',
+                    function ($attr, $value, $fail) {
+                        $count = $this->countMeaningfulWords($value ?? '');
+
+                        if ($count < 11 || $count > 12) {
+                            $fail("Project title must contain 11–12 meaningful words (filler words like 'a', 'of', 'in' don't count). Current count: {$count}.");
+                        }
+                    },
+                ],
+            ]);
+        }
 
         $originalStatus = $team->team_status;
 
         $team->update([
             'team_name' => $validated['team_name'],
+            'project_title' => $validated['project_title'] ?? null,
             'team_status' => $validated['team_status'] ?? $team->team_status,
             'member_count' => 5,
         ]);
@@ -162,10 +182,10 @@ class TeamController extends Controller
             ->update(['member_count' => 5]);
 
         $autoClosed = false;
-        if ($team->team_status === 'Active') {
+        if ($team->team_status === 'on-going') {
             $currentCount = StudentSchoolYear::where('team_id', $team->team_id)->count();
             if ($currentCount >= 5) {
-                $team->update(['team_status' => 'Full']);
+                $team->update(['team_status' => 'closed']);
                 $autoClosed = true;
                 $this->logActivity(
                     $studentId,
@@ -230,9 +250,8 @@ class TeamController extends Controller
             ]);
         }
 
-        // The row holding the team, not whichever row came back first -
-        // clearing the wrong year left the student in the team.
-        StudentTeam::rowFor($studentId)?->update(['team_id' => null, 's_role_id' => null]);
+        $studentSy = StudentSchoolYear::where('student_id', $studentId)->first();
+        $studentSy->update(['team_id' => null, 's_role_id' => null]);
 
         $this->logActivity(
             $studentId,

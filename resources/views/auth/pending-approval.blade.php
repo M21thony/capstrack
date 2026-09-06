@@ -81,7 +81,7 @@
   }
 
   .title {
-    font-variant-numeric:tabular-nums;
+    font-family: 'Space Mono', monospace;
     font-size: 18px;
     font-weight: 700;
     color: var(--text);
@@ -177,10 +177,17 @@
       Typical review time: 1–3 business days
     </div>
 
-    {{-- The "request again" button is gone with the form it pointed at.
-         This page is only reached by an account made before applying was
-         switched off; there is nothing for the person to do here but talk to
-         their CaPSA, which the text above already says. --}}
+    @if($rejectAttempts > 0)
+      <div style="margin: 0 auto 16px; max-width: 360px;">
+        <a href="{{ route('account.request') }}" class="btn btn-primary" style="text-decoration:none; width:100%; justify-content:center;">
+          <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:8px;">
+            <path d="M12 5v14"/>
+            <path d="M5 12h14"/>
+          </svg>
+          Request account again
+        </a>
+      </div>
+    @endif
 
     <form method="POST" action="{{ route('expert.logout') }}">
       @csrf

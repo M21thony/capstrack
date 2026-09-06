@@ -214,11 +214,11 @@ p {
     </div>
     @endif
 
-    {{-- "Request Account Again" is gone with the form it pointed at (see the
-         commented routes in routes/web.php). A CaPSA adds faculty now, so
-         there is nothing to resubmit - only somebody to ask. --}}
-    <div style="margin-top:24px;font-size:13px;color:var(--text3)">
-      Ask a CaPSA to add you to the expert list if this was a mistake.
+    <div style="margin-top:24px">
+      <a href="{{ route('account.request') }}" class="btn-logout" style="display:inline-flex;align-items:center;gap:8px;text-decoration:none;">
+        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+        Request Account Again
+      </a>
     </div>
   </div>
 </div>

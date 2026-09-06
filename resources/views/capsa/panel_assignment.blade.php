@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Panel Assignment - CapsTRACK Admin</title>
 <meta name="csrf-token" content="{{ csrf_token() }}"/>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="{{ asset('css/admin.css') }}"/>
 <style>
 .picker-slot { width:100%; text-align:left; background:#fff; border:1px solid var(--border); border-radius:8px; padding:9px 12px; font-size:13px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; gap:8px; color:var(--text3); font-family:inherit }
@@ -25,12 +25,12 @@
 .cal-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; flex-wrap:wrap; gap:10px }
 .cal-title-group { display:flex; flex-direction:column; gap:2px }
 .cal-title { font-size:13px; font-weight:700; color:var(--text) }
-.cal-month-label { font-variant-numeric:tabular-nums; font-size:11px; color:var(--text3); letter-spacing:0.5px }
+.cal-month-label { font-family:'Space Mono',monospace; font-size:11px; color:var(--text3); letter-spacing:0.5px }
 .cal-controls { display:flex; align-items:center; gap:8px }
 .cal-nav-btn { width:30px; height:30px; border-radius:8px; border:1.5px solid var(--border); background:var(--bg3); cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.15s; color:var(--text2) }
 .cal-nav-btn:hover { background:var(--accent-light); border-color:var(--accent); color:var(--accent3) }
 .cal-nav-btn svg { width:14px; height:14px; stroke:currentColor; fill:none; stroke-width:2.5 }
-.cal-month-display { font-variant-numeric:tabular-nums; font-size:13px; font-weight:700; color:var(--text); min-width:96px; text-align:center }
+.cal-month-display { font-family:'Space Mono',monospace; font-size:13px; font-weight:700; color:var(--text); min-width:96px; text-align:center }
 .cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:1px; background:var(--border); border:1px solid var(--border); border-radius:10px; overflow:hidden }
 .cal-day-label { background:var(--navy-dark); padding:9px 4px; text-align:center; font-size:10px; font-weight:700; color:var(--navy-text2); letter-spacing:0.8px; text-transform:uppercase }
 .cal-cell { background:#fff; min-height:100px; padding:9px; display:flex; flex-direction:column; gap:4px; position:relative; cursor:pointer; transition:all 0.15s; user-select:none }
@@ -40,7 +40,7 @@
 .cal-cell.today .cal-date-num { background:var(--accent); color:#18191f; border-radius:50%; width:22px; height:22px; display:flex; align-items:center; justify-content:center; font-weight:700 }
 .cal-cell.in-range { background:rgba(201,168,44,0.08) }
 .cal-cell.selected { background:rgba(29,78,216,0.06)!important; box-shadow:inset 0 0 0 2px rgba(29,78,216,0.35)!important }
-.cal-date-num { font-variant-numeric:tabular-nums; font-size:11px; font-weight:700; color:var(--text3); line-height:1; margin-bottom:2px; width:22px; height:22px; display:flex; align-items:center; justify-content:center }
+.cal-date-num { font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:var(--text3); line-height:1; margin-bottom:2px; width:22px; height:22px; display:flex; align-items:center; justify-content:center }
 .cal-slot-pill { font-size:9px; font-weight:700; padding:2px 5px; border-radius:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; line-height:1.4 }
 .cal-slot-pill.type-defense { background:rgba(180,83,9,0.1); color:var(--amber); border-left:2px solid var(--amber) }
 .cal-more { font-size:9px; color:var(--text3); font-weight:600; margin-top:2px }
@@ -53,7 +53,6 @@
 .pa-tab .pa-tab-count { font-size:10px; font-weight:700; padding:1px 7px; border-radius:20px; background:var(--bg3); color:var(--text3) }
 .pa-tab.active .pa-tab-count { background:rgba(201,168,44,0.15); color:var(--accent3) }
 </style>
-@include('partials.skeleton-head', ['skReveal' => 'flex'])
 </head>
 <body>
 

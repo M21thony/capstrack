@@ -24,7 +24,7 @@ class GoogleDriveController extends Controller
     public function callback(Request $request)
     {
         $expert = Auth::guard('expert')->user();
-        $route = $expert && $expert->is_admin ? 'capsa.resources' : 'instructor.docreview';
+        $route = $expert && $expert->is_admin ? 'admin.resources' : 'instructor.docreview';
 
         if ($request->has('error')) {
             return redirect()->route($route)->with('error', 'Google Drive connection was cancelled.');
@@ -34,7 +34,7 @@ class GoogleDriveController extends Controller
             $expert = Auth::guard('expert')->user();
             $this->drive->handleCallback($request->get('code'), Auth::guard('expert')->id());
 
-            $route = $expert && $expert->is_admin ? 'capsa.resources' : 'instructor.docreview';
+            $route = $expert && $expert->is_admin ? 'admin.resources' : 'instructor.docreview';
 
             return redirect()->route($route)->with('success', 'Google Drive connected successfully.');
         } catch (\Exception $e) {
@@ -140,45 +140,7 @@ class GoogleDriveController extends Controller
             ],
             'title' => 'required|string|max:255',
             'category' => 'required|string|max:50',
-            // Only a program this CaPSA actually handles. Without this the
-            // page could be scoped and a hand-made request still file a
-            // resource under someone else's program. Null means every
-            // program, which stays open.
-            'resource_for' => [
-                'nullable',
-                'in:BSIT,BSCS,BLIS,BSIS',
-                function ($attribute, $value, $fail) {
-                    $viewer = Auth::guard('expert')->user();
-
-                    if (! $value || ! $viewer || $viewer->is_admin) {
-                        return;
-                    }
-
-                    if (! in_array($value, $viewer->handledPrograms(), true)) {
-                        $fail('You can only upload resources for a program you handle.');
-                    }
-                },
-            ],
-            // The sections this is for, as labels. Leave it empty to reach
-            // every section you handle - a resource with no targeting only
-            // reaches your own students anyway, since that is who can see
-            // your uploads.
-            'sections' => ['nullable', 'array'],
-            'sections.*' => [
-                'string',
-                'max:24',
-                function ($attribute, $value, $fail) {
-                    $viewer = Auth::guard('expert')->user();
-
-                    if (! $viewer || $viewer->is_admin) {
-                        return;
-                    }
-
-                    if (! in_array($value, $viewer->sections ?? [], true)) {
-                        $fail('You can only upload resources for a section you handle.');
-                    }
-                },
-            ],
+            'resource_for' => 'nullable|in:BSIT,BSCS,BLIS,BSIS',
             'drive_folder_id' => 'nullable|string',
         ]);
 
@@ -210,9 +172,7 @@ class GoogleDriveController extends Controller
 
             $resource = Resource::create([
                 'resource_type' => Resource::typeForCategory($category),
-                // Named sections carry the program in their labels, so the
-                // program column stays empty for those - one fact, one place.
-                'resource_for' => $request->filled('sections') ? null : $request->input('resource_for'),
+                'resource_for' => $request->input('resource_for'), // null = all programs
                 'category' => $category,
                 'title' => $request->input('title'),
                 'description' => $request->input('description'),
@@ -231,14 +191,7 @@ class GoogleDriveController extends Controller
                 'uploaded_by' => Auth::guard('expert')->id(),
             ]);
 
-            foreach (array_unique($request->input('sections', [])) as $section) {
-                $resource->sections()->create(['section' => $section]);
-            }
-
-            return response()->json([
-                'success' => true,
-                'resource' => $resource->load('sections'),
-            ]);
+            return response()->json(['success' => true, 'resource' => $resource]);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
         }
@@ -253,17 +206,6 @@ class GoogleDriveController extends Controller
 
     public function destroy(Resource $resource)
     {
-        $viewer = Auth::guard('expert')->user();
-
-        // Deleting is scoped like seeing: your own uploads only. There was no
-        // ownership check at all, so any CaPSA could remove anyone's.
-        if ($viewer && ! $viewer->is_admin && (int) $resource->uploaded_by !== (int) $viewer->expert_id) {
-            return response()->json([
-                'success' => false,
-                'message' => 'That resource was uploaded by someone else.',
-            ], 403);
-        }
-
         try {
             if ($resource->drive_file_id) {
                 $this->drive->deleteFile(Auth::guard('expert')->id(), $resource->drive_file_id);

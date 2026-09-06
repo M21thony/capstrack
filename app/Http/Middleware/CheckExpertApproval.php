@@ -17,7 +17,7 @@ class CheckExpertApproval
             return redirect('/login');
         }
 
-        if ($expert->is_staff) {
+        if ($expert->is_admin) {
             return $next($request);
         }
 

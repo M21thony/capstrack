@@ -19,10 +19,10 @@ class AdminFinancialTest extends TestCase
     {
         parent::setUp();
 
-        $this->admin = $this->makeCapsa(CapstoneExpert::factory()->create([
+        $this->admin = CapstoneExpert::factory()->create([
             'is_admin' => true,
             'approved_status' => true,
-        ]));
+        ]);
     }
 
     /**

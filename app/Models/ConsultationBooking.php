@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class ConsultationBooking extends Model
@@ -87,10 +88,10 @@ class ConsultationBooking extends Model
                 // stuck as 'scheduled' forever, permanently blocking the team
                 // from booking anything else.
                 if (! $row->end_time) {
-                    return \Illuminate\Support\Carbon::parse($row->session_date)->lt($now->copy()->startOfDay());
+                    return Carbon::parse($row->session_date)->lt($now->copy()->startOfDay());
                 }
 
-                return \Illuminate\Support\Carbon::parse($row->session_date)
+                return Carbon::parse($row->session_date)
                     ->setTimeFromTimeString($row->end_time)
                     ->lt($now);
             })

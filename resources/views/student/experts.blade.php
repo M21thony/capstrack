@@ -5,48 +5,22 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Capstone Expert - CapsTrack</title>
 <meta name="csrf-token" content="{{ csrf_token() }}">
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
 @vite('resources/student-ui/Styles/experts.css')
 <style>
-.role-chips { display: flex; flex-wrap: wrap; gap: 5px; margin: 0; justify-content: center; }
+.stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 24px; }
+.stat-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 14px; padding: 18px 20px; display: flex; align-items: center; gap: 14px; }
+.stat-card-icon { width: 42px; height: 42px; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.stat-card-icon svg { width: 20px; height: 20px; stroke: white; fill: none; stroke-width: 2; }
+.stat-card-n { font-size: 24px; font-weight: 700; color: var(--text); line-height: 1; }
+.stat-card-l { font-size: 12px; color: var(--text3); margin-top: 4px; }
+.role-chips { display: flex; flex-wrap: wrap; gap: 5px; margin: 10px 0 8px; justify-content: center; }
 .role-chip { font-size: 10px; font-weight: 600; padding: 3px 10px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.4px; }
-.expertise-tags { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; margin: 0; }
+.expertise-tags { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; margin-bottom: 8px; }
 .expertise-tag { font-size: 10px; color: var(--text3); background: var(--bg3); padding: 2px 8px; border-radius: 4px; }
 
-/* The list of applications this team has out.
-
-   The bottom margin is not decoration: .sticky-controls below is pulled up
-   20px (margin-top:-20px) and paints an opaque background at z-index 100, so
-   whatever sits directly above it loses its last 20px underneath. Every other
-   block up there - .team-slots, .req-notice - already carries margin-bottom
-   20px for exactly that reason. This one did not, so the last application
-   card was clipped along its bottom edge. */
-.req-section { margin-top: 8px; margin-bottom: 20px; }
-
-/* The team's three role slots - see the markup above for why these
-   replaced the stat cards and the panel that used to list them. */
-.team-slots { background: var(--bg2); border: 1px solid var(--border); border-radius: 14px; padding: 16px 18px; margin-bottom: 20px; }
-.team-slots-head { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 12px; flex-wrap: wrap; }
-.team-slots-head svg { width: 18px; height: 18px; stroke: var(--accent); fill: none; stroke-width: 2; flex-shrink: 0; }
-.team-slots-hint { font-size: 11.5px; font-weight: 400; color: var(--text3); }
-.slot-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-.slot { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg3); min-width: 0; }
-.slot.filled { background: var(--bg2); }
-.slot.open { border-style: dashed; }
-.slot-extra { margin-top: 10px; }
-.slot-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-.slot-body { min-width: 0; flex: 1; }
-.slot-role { font-variant-numeric:tabular-nums; font-size: 9.5px; font-weight: 700; letter-spacing: 0.7px; text-transform: uppercase; }
-.slot-state { font-size: 12px; color: var(--text3); margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.slot.filled .slot-state { color: var(--text); font-weight: 500; }
-.slot-remove { background: none; border: none; cursor: pointer; color: var(--text3); padding: 3px; border-radius: 5px; flex-shrink: 0; display: flex; }
-.slot-remove:hover { color: var(--red); background: var(--red-bg); }
-.slot-pending { margin-top: 11px; padding-top: 11px; border-top: 1px solid var(--border); font-size: 12px; color: var(--text2); display: flex; align-items: center; gap: 7px; }
-.slot-pending-none { background: var(--bg4); color: var(--text3); }
-.slot-pending-n { font-variant-numeric:tabular-nums; font-size: 10px; font-weight: 700; padding: 1px 7px; border-radius: 999px; background: var(--amber-bg); color: var(--amber); }
-.req-notice { font-size: 12.5px; color: var(--text2); background: var(--bg3); border: 1px dashed var(--border); border-radius: 10px; padding: 12px 14px; margin-bottom: 20px; }
-.rg-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-
+/* My Team / Request Experts cards */
+.req-section { margin-top: 8px; }
 .req-card { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: var(--bg3); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 8px; transition: 0.2s; }
 .req-card:hover { border-color: var(--accent); }
 .req-card .status-badge { font-size: 10px; font-weight: 600; padding: 3px 10px; border-radius: 20px; margin-left: auto; flex-shrink: 0; }
@@ -107,61 +81,6 @@
 .modal-box .form-group .file-input-wrap .file-icon { width: 20px; height: 20px; stroke: var(--accent); fill: none; stroke-width: 2; flex-shrink: 0; }
 .modal-box .form-group .file-input-wrap .file-label { font-size: 13px; color: var(--text3); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .modal-box .form-group .file-input-wrap .file-label.has-file { color: var(--text); }
-/* An expert's own photo, laid over their initials so a failed load (an
-   expired Google URL) simply reveals the initials again. */
-.avatar { position: relative; overflow: hidden; }
-.avatar .avatar-photo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: inherit; display: block; }
-
-/* Skill filter - a grouped, searchable picker in the controls bar. */
-.skill-filter { position: relative; display: flex; align-items: center; gap: 8px; }
-.skill-filter-trigger { display: inline-flex; align-items: center; gap: 8px; min-width: 190px; max-width: 260px; padding: 8px 11px; font-size: 13px; font-weight: 600; color: var(--text2); cursor: pointer; text-align: left; }
-.skill-filter-trigger span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.skill-filter-trigger svg { flex-shrink: 0; }
-.skill-filter-caret { transition: transform .15s; }
-.skill-filter.open .skill-filter-caret { transform: rotate(180deg); }
-.skill-filter.open .skill-filter-trigger { border-color: var(--accent); }
-
-.skill-picker { display: none; position: absolute; top: calc(100% + 6px); left: 0; z-index: 60; width: 320px; max-width: 92vw; background: var(--bg2); border: 1.5px solid var(--border); border-radius: 10px; box-shadow: 0 14px 32px -8px rgba(0,0,0,0.22); overflow: hidden; }
-.skill-filter.open .skill-picker { display: block; }
-.skill-picker-search { display: flex; align-items: center; gap: 7px; padding: 9px 11px; border-bottom: 1px solid var(--border); }
-.skill-picker-search svg { width: 13px; height: 13px; stroke: var(--text3); fill: none; stroke-width: 2; flex-shrink: 0; }
-.skill-picker-search input { flex: 1; border: none; outline: none; background: none; font-family: 'DM Sans', sans-serif; font-size: 13px; color: var(--text); }
-.skill-picker-search input::placeholder { color: var(--text3); }
-.skill-picker-list { max-height: 300px; overflow-y: auto; padding: 7px; display: flex; flex-direction: column; gap: 4px;scrollbar-width:none;-ms-overflow-style:none}
-.skill-picker-list::-webkit-scrollbar{display:none}
-.skill-picker-empty { font-size: 12px; color: var(--text3); padding: 10px 8px; margin: 0; }
-
-.skill-group { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; flex-shrink: 0; }
-.skill-group-header { display: flex; align-items: center; gap: 8px; padding: 8px 10px; cursor: pointer; background: var(--bg3); user-select: none; }
-.skill-group-header:hover { background: var(--bg4); }
-.skill-chevron { width: 11px; height: 11px; stroke: var(--text3); fill: none; stroke-width: 2.4; flex-shrink: 0; transition: transform .15s; }
-.skill-group.open .skill-chevron { transform: rotate(90deg); }
-.skill-group-name { font-size: 12px; font-weight: 700; color: var(--text); }
-.skill-group-count { margin-left: auto; font-size: 10px; font-weight: 700; color: var(--text3); background: var(--bg4); padding: 2px 7px; border-radius: 999px; }
-.skill-group-body { display: none; flex-direction: column; gap: 2px; padding: 5px; }
-.skill-group.open .skill-group-body { display: flex; }
-
-.skill-opt { display: flex; align-items: center; gap: 8px; padding: 6px 9px; border-radius: 6px; font-size: 12.5px; color: var(--text2); text-decoration: none; border: 1px solid transparent; }
-.skill-opt:hover { background: var(--bg3); color: var(--text); }
-.skill-opt.selected { border-color: var(--accent); background: var(--accent-light); color: var(--accent3); font-weight: 600; }
-.skill-opt-name { flex: 1; }
-.skill-opt-count { font-size: 10px; font-weight: 700; color: var(--text3); }
-.skill-opt-all { font-weight: 600; }
-.skill-opt-group { font-style: italic; color: var(--text3); }
-
-.skill-filter-active { font-size: 12px; color: var(--text2); margin-top: 10px; }
-.skill-filter-active strong { color: var(--text); }
-.skill-filter-clear { font-size: 12px; font-weight: 600; color: var(--text3); text-decoration: none; margin-left: 6px; }
-.skill-filter-clear:hover { color: var(--accent3); text-decoration: underline; }
-
-/* Role picker in the apply modal - one card per role the expert holds. */
-.role-choice-list { display: flex; flex-wrap: wrap; gap: 8px; }
-.role-choice { display: inline-flex; align-items: center; gap: 8px; padding: 9px 14px; border-radius: 8px; border: 2px solid var(--border); background: var(--bg); color: var(--text2); font-size: 13px; font-weight: 600; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: 0.15s; }
-.role-choice:hover { border-color: var(--accent); }
-.role-choice .role-choice-mark { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--border2, var(--border)); flex-shrink: 0; transition: 0.15s; }
-.role-choice.selected { border-color: var(--accent); background: var(--accent-light); color: var(--accent3); }
-.role-choice.selected .role-choice-mark { border-color: var(--accent); background: var(--accent); box-shadow: inset 0 0 0 2px var(--bg); }
-.role-choice-note { font-size: 11px; color: var(--text3); margin-top: 8px; line-height: 1.5; }
 .modal-box .form-group .field-error { font-size: 11px; color: var(--red); margin-top: 4px; display: none; }
 .modal-box .form-group .field-error.show { display: block; }
 .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
@@ -181,7 +100,7 @@
 .remove-box { width: 420px; text-align: left; }
 .remove-field { margin-top: 16px; }
 .remove-field label { font-size: 12px; font-weight: 600; color: var(--text2); display: block; margin-bottom: 6px; }
-.remove-field label strong { color: var(--red); font-variant-numeric:tabular-nums; }
+.remove-field label strong { color: var(--red); font-family: 'Space Mono', monospace; }
 .modal-input { width: 100%; padding: 12px 14px; border-radius: 10px; border: 1.5px solid var(--border); background: var(--bg3); color: var(--text); font-size: 14px; font-family: 'DM Sans', sans-serif; outline: none; box-sizing: border-box; transition: border 0.2s, box-shadow 0.2s, background 0.2s; }
 .modal-input:focus { border-color: var(--accent); background: var(--bg2); box-shadow: 0 0 0 3px var(--accent-glow); }
 .modal-input.error { border-color: var(--red); background: var(--red-bg); box-shadow: 0 0 0 3px rgba(220,38,38,0.1); }
@@ -205,8 +124,19 @@
 .empty-state svg { width: 48px; height: 48px; stroke: var(--border2); margin-bottom: 12px; }
 .empty-state p { font-size: 14px; }
 
+.role-overview { background: var(--bg2); border: 1px solid var(--border); border-radius: 14px; padding: 18px 20px; margin-bottom: 20px; }
+.role-overview-title { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+.role-overview-title svg { width: 18px; height: 18px; stroke: var(--accent); fill: none; stroke-width: 2; }
+.role-overview-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.role-overview-row:last-child { border-bottom: none; }
+.role-overview-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.role-overview-role { font-size: 12px; font-weight: 600; color: var(--text2); width: 100px; flex-shrink: 0; text-transform: uppercase; letter-spacing: 0.3px; }
+.role-overview-status { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; }
+.role-overview-status .check { width: 16px; height: 16px; stroke: var(--green); fill: none; stroke-width: 2.5; flex-shrink: 0; }
+.role-overview-status .xmark { width: 16px; height: 16px; stroke: var(--red); fill: none; stroke-width: 2.5; flex-shrink: 0; }
+.role-overview-status .assigned-name { font-size: 13px; font-weight: 500; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.role-overview-status .not-assigned { font-size: 12px; color: var(--text3); font-style: italic; }
 </style>
-@include('partials.skeleton-head', ['skReveal' => 'opacity'])
 </head>
 <body>
 @include('student.partials.sidebar')
@@ -236,22 +166,30 @@
     <div id="contentWrapper" class="content-grid-wrap">
 <div id="skeleton-content" class="sk-overlay content-grid">
       <div class="experts-main">
-        {{-- Shaped like the strip that actually loads, so the page does not
-             jump when the real content replaces it. --}}
-        <div class="team-slots">
-          <div class="sk" style="height:16px;width:180px;margin-bottom:14px;"></div>
-          <div class="slot-row">
-            @for($i = 0; $i < 3; $i++)
-            <div class="slot">
-              <div class="sk" style="width:8px;height:8px;border-radius:50%;flex-shrink:0;"></div>
-              <div style="flex:1">
-                <div class="sk" style="height:9px;width:56px;margin-bottom:5px;"></div>
-                <div class="sk" style="height:12px;width:80%;"></div>
-              </div>
+        <div class="stat-grid">
+          @for($i = 0; $i < 3; $i++)
+          <div class="stat-card">
+            <div class="sk" style="width:42px;height:42px;border-radius:12px;flex-shrink:0;"></div>
+            <div style="flex:1">
+              <div class="sk" style="height:24px;width:36px;margin-bottom:6px;"></div>
+              <div class="sk" style="height:12px;width:110px;"></div>
             </div>
-            @endfor
           </div>
+          @endfor
         </div>
+
+        @if($team)
+        <div class="role-overview">
+          <div class="sk" style="height:18px;width:180px;margin-bottom:14px;"></div>
+          @foreach(['','',''] as $r)
+          <div class="role-overview-row">
+            <div class="sk" style="width:10px;height:10px;border-radius:50%;"></div>
+            <div class="sk" style="height:13px;width:90px;"></div>
+            <div class="sk" style="width:16px;height:16px;border-radius:50%;margin-left:auto;"></div>
+          </div>
+          @endforeach
+        </div>
+        @endif
 
         <div class="sticky-controls">
           <div style="display:flex;justify-content:space-between;align-items:center;">
@@ -282,6 +220,18 @@
           @endfor
         </div>
 
+        <div class="req-section">
+          <div class="sk" style="height:15px;width:160px;margin-bottom:14px;"></div>
+          @for($i = 0; $i < 2; $i++)
+          <div class="req-card">
+            <div class="sk" style="width:36px;height:36px;border-radius:50%;flex-shrink:0;"></div>
+            <div style="flex:1">
+              <div class="sk" style="width:50%;height:12px;"></div>
+            </div>
+            <div class="sk" style="width:60px;height:18px;border-radius:20px;margin-left:auto;"></div>
+          </div>
+          @endfor
+        </div>
       </div>
 
       <div class="overview-panel">
@@ -307,337 +257,192 @@
       @include('student.partials.page-tutorial', ['page' => 'experts'])
 
     <div class="experts-main">
-      @php
-        // Same colours the role chips use, so a consultant reads as a
-        // consultant everywhere on this page.
-        $roleColors = [
-          'adviser'     => ['dot' => 'var(--accent)', 'bg' => 'var(--accent-light)', 'text' => 'var(--accent3)'],
-          'consultant'  => ['dot' => '#2160b8',       'bg' => 'var(--blue-bg)',      'text' => 'var(--blue)'],
-          'grammarian'  => ['dot' => '#7c3aed',       'bg' => 'var(--purple-bg)',    'text' => 'var(--purple)'],
-        ];
-        $roleBlurbs = [
-          'adviser'    => "Guides your team's overall capstone journey",
-          'consultant' => 'Provides subject-matter expertise and technical advice',
-          'grammarian' => 'Reviews and ensures quality of written documentation',
-        ];
-        $approvedAssignments = $assignments->where('status', 'approved');
-
-        // Keyed by the role the team actually engaged them as. Anyone approved
-        // before roles were recorded has no slot, so they are listed under the
-        // three rather than dropped from the page.
-        $filledSlots = [];
-        $unslotted = [];
-        foreach ($approvedAssignments as $a) {
-          $r = $a->engaged_role_name;
-          if ($r && isset($roleColors[$r]) && ! isset($filledSlots[$r])) { $filledSlots[$r] = $a; }
-          else { $unslotted[] = $a; }
-        }
-
-        // An approved expert is not a request any more and not available any
-        // more - they are yours, and the checklist says so.
-        $settledExpertIds = $approvedAssignments->pluck('expert_id')->filter()->all();
-        $openRequests = $assignments->whereNotIn('status', ['approved']);
-        $shownExperts = $experts->whereNotIn('expert_id', $settledExpertIds);
-      @endphp
-
-      <div class="pagehead"><h1>Find Your Team Experts</h1></div>
-
-      {{-- The role decides the list, so it is the first thing on the page and
-           it lives in the URL. A team needs one of each, so you are never
-           choosing among everybody - only among the four or five who can hold
-           the role you are filling. That is what keeps this page to one
-           screen no matter how long the roster gets. --}}
-      <div class="roles">
-        @foreach(['adviser', 'consultant', 'grammarian'] as $r)
-          @php
-            $isOn = $activeRole === $r;
-            $filled = $filledSlots[$r] ?? null;
-            $qs = array_filter([
-              'role' => $r,
-              'q' => $search !== '' ? $search : null,
-              'skill' => $activeSkill !== '' ? $activeSkill : null,
-              'skill_group' => $activeGroup !== '' ? $activeGroup : null,
-            ]);
-          @endphp
-          <a class="role role-{{ $r }} {{ $isOn ? 'is-on' : '' }}"
-             href="{{ route('student.experts', $qs) }}" aria-current="{{ $isOn ? 'true' : 'false' }}">
-            <span class="role-ic">
-              @if($r === 'adviser')
-                <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-              @elseif($r === 'consultant')
-                <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/></svg>
-              @else
-                <svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
-              @endif
-            </span>
-            <span class="role-body">
-              <span class="role-nm">{{ ucfirst($r) }}</span>
-              <span class="role-ds">{{ $roleBlurbs[$r] }}</span>
-              <span class="role-ct">
-                @if($filled)
-                  Filled &mdash; {{ $filled->expert?->name }}
-                @else
-                  {{ $roleCounts[$r] ?? 0 }} {{ Str::plural('expert', $roleCounts[$r] ?? 0) }}
-                @endif
-              </span>
-            </span>
-            <span class="role-tick">
-              @if($isOn)
-                <svg viewBox="0 0 24 24" class="on"><circle cx="12" cy="12" r="10"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/></svg>
-              @endif
-            </span>
-          </a>
-        @endforeach
+      <div class="stat-grid">
+        <div class="stat-card">
+          <div class="stat-card-icon" style="background: var(--accent);">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 1 0-16 0"/></svg>
+          </div>
+          <div>
+            <div class="stat-card-n">{{ $stats['total_experts'] }}</div>
+            <div class="stat-card-l">Available Experts</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-icon" style="background: var(--green);">
+            <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <div>
+            <div class="stat-card-n">{{ $stats['team_approved'] }}</div>
+            <div class="stat-card-l">My Team Experts</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-icon" style="background: var(--amber);">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+          </div>
+          <div>
+            <div class="stat-card-n">{{ $stats['team_pending'] }}</div>
+            <div class="stat-card-l">Pending Requests</div>
+          </div>
+        </div>
       </div>
 
-      @if(! $team)
-        <div class="req-notice">You need to join or create a team before you can apply for an expert.</div>
-      @elseif(! $isLeader)
-        <div class="req-notice">Only your team leader can apply for experts. You can still browse who is available below.</div>
-      @endif
-
-      {{-- Searching reloads the page rather than hiding cards. The list is
-           paginated, so a filter in the browser would only ever search the
-           experts already on screen and report "none" for the rest. --}}
-      <form class="filters" method="GET" action="{{ route('student.experts') }}">
-        <input type="hidden" name="role" value="{{ $activeRole }}">
-        @if($activeSkill !== '')<input type="hidden" name="skill" value="{{ $activeSkill }}">@endif
-        @if($activeGroup !== '')<input type="hidden" name="skill_group" value="{{ $activeGroup }}">@endif
-
-        {{-- The magnifier is the submit button, not decoration. The skill
-             picker below carries its own text box, and a form with two text
-             fields and no submit button does not submit on Enter at all -
-             which is exactly how this search came to do nothing. --}}
-        <label class="field search">
-          <button type="submit" class="field-go" aria-label="Search experts">
-            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
-          </button>
-          <input type="search" name="q" value="{{ $search }}" enterkeyhint="search" placeholder="Search experts by name or expertise&hellip;" autocomplete="off">
-          @if($search !== '')
-            <a class="field-clear" href="{{ route('student.experts', array_filter(['role' => $activeRole, 'skill' => $activeSkill ?: null, 'skill_group' => $activeGroup ?: null])) }}" aria-label="Clear search">&times;</a>
-          @endif
-        </label>
-
-          <div class="skill-filter">
-            <button type="button" class="input skill-filter-trigger" id="skill-filter-trigger" onclick="toggleSkillPicker(event)"
-                    aria-haspopup="true" aria-expanded="false">
-              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/></svg>
-              <span id="skill-filter-label">
-                @if($activeSkill !== '') {{ $activeSkill }}
-                @elseif($activeGroup !== '') {{ $activeGroup }}
-                @else All skills @endif
-              </span>
-                    @if($activeSkill !== '' || $activeGroup !== '')
-                      {{-- Clearing belongs on the control that set it. --}}
-                      <a class="skill-filter-x"
-                         href="{{ route('student.experts', array_filter(['role' => $activeRole, 'q' => $search ?: null])) }}"
-                         onclick="event.stopPropagation()" aria-label="Clear skill filter">&times;</a>
-                    @endif
-              <svg class="skill-filter-caret" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.4"><polyline points="6 9 12 15 18 9"/></svg>
-            </button>
-
-            <div class="skill-picker" id="skill-picker">
-              <div class="skill-picker-search">
-                <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
-                <input id="skillSearch" placeholder="Search skills…" autocomplete="off" oninput="filterSkillPicker(this.value)">
-              </div>
-
-              <div class="skill-picker-list" id="skillPickerList">
-                <a class="skill-opt skill-opt-all {{ $activeSkill === '' && $activeGroup === '' ? 'selected' : '' }}"
-                   href="{{ route('student.experts') }}">All skills</a>
-
-                @forelse($skillGroups as $groupName => $groupSkills)
-                  @php $groupCount = $groupSkills->sum('expert_count'); @endphp
-                  <div class="skill-group {{ $activeGroup === $groupName ? 'open' : '' }}" data-name="{{ mb_strtolower($groupName) }}">
-                    <div class="skill-group-header" onclick="toggleSkillGroup(this)">
-                      <svg class="skill-chevron" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
-                      <span class="skill-group-name">{{ $groupName }}</span>
-                      <span class="skill-group-count">{{ $groupSkills->count() }}</span>
-                    </div>
-                    <div class="skill-group-body">
-                      {{-- Pick the whole area without needing to know which
-                           wording each expert happened to use. --}}
-                      <a class="skill-opt skill-opt-group {{ $activeGroup === $groupName && $activeSkill === '' ? 'selected' : '' }}"
-                         data-name="{{ mb_strtolower($groupName) }}"
-                         href="{{ route('student.experts', ['skill_group' => $groupName]) }}">
-                        Anything in this area
-                      </a>
-                      @foreach($groupSkills as $skill)
-                        <a class="skill-opt {{ mb_strtolower($activeSkill) === mb_strtolower($skill->skill_name) ? 'selected' : '' }}"
-                           data-name="{{ mb_strtolower($skill->skill_name) }}"
-                           href="{{ route('student.experts', ['skill' => $skill->skill_name]) }}">
-                          <span class="skill-opt-name">{{ $skill->skill_name }}</span>
-                          <span class="skill-opt-count">{{ $skill->expert_count }}</span>
-                        </a>
-                      @endforeach
-                    </div>
-                  </div>
-                @empty
-                  <p class="skill-picker-empty">No skills recorded yet — they appear here once experts fill in their expertise.</p>
-                @endforelse
-
-                <p class="skill-picker-empty" id="skillPickerNoMatch" style="display:none;">No skill matches that.</p>
-              </div>
+      @if($team)
+      <div class="role-overview">
+        <div class="role-overview-title">
+          <svg viewBox="0 0 24 24"><path d="M9 12l2 2 4-4"/><path d="M12 2a10 10 0 1 0 10 10"/></svg>
+          Your Team's Experts
+        </div>
+        @php $approvedAssignments = $assignments->where('status', 'approved'); @endphp
+        @forelse($approvedAssignments as $a)
+          <div class="role-overview-row">
+            <div class="role-overview-dot" style="background: var(--accent);"></div>
+            <div class="role-overview-role">{{ $a->expert?->name ?? 'Unknown' }}</div>
+            <div class="role-overview-status">
+              <svg class="check" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+              <span class="assigned-name">Assigned</span>
+              @if($isLeader)
+                <button class="btn btn-sm btn-soft-red" onclick="openRemoveModal({{ $a->assignment_id }}, '{{ $a->expert?->name ?? '' }}')" title="Remove" style="margin-left:auto;padding:4px 8px;">
+                  <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                </button>
+              @endif
             </div>
           </div>
+        @empty
+          <div class="not-assigned" style="padding: 6px 0;">No experts assigned yet.</div>
+        @endforelse
+      </div>
+      @endif
 
-        <div class="seg" id="viewSeg">
-          <button type="button" data-view="cards" aria-pressed="true">
-            <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
-            Cards</button>
-          <button type="button" data-view="list" aria-pressed="false">
-            <svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></svg>
-            List</button>
+      <div class="sticky-controls">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <input class="input" id="search-input" placeholder="Search experts..." style="flex: 1; max-width: 320px;" oninput="filterExperts()" />
+          <div class="filter-bar" style="margin-bottom: 0;">
+            <div class="filter-chip active" data-role="all" onclick="setFilter('all', this)">All</div>
+            <div class="filter-chip" data-role="adviser" onclick="setFilter('adviser', this)">Advisers</div>
+            <div class="filter-chip" data-role="consultant" onclick="setFilter('consultant', this)">Consultants</div>
+            <div class="filter-chip" data-role="grammarian" onclick="setFilter('grammarian', this)">Grammarian</div>
+          </div>
         </div>
-      </form>
+      </div>
 
-      {{-- Both views are rendered from the same rows; the switch only changes
-           which one is shown, so the list can never fall out of step with the
-           cards. --}}
-      <div id="results" class="view-cards">
-        @if($shownExperts->isEmpty())
-          <div class="empty-state" style="grid-column: 1 / -1;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 1 0-16 0"/></svg>
-            @if($activeSkill !== '' || $activeGroup !== '')
-              <p>No expert lists a skill matching <strong>{{ $activeSkill !== '' ? $activeSkill : $activeGroup }}</strong>.</p>
-              <a href="{{ route('student.experts') }}" class="btn btn-sm btn-soft" style="margin-top:10px;">Show all experts</a>
-            @else
-              <p>No approved experts available yet.</p>
+      <div id="expert-grid" class="expert-grid">
+        @forelse($experts as $expert)
+          @php
+            $visibleRoles = $expert->roles;
+            $firstRole = $visibleRoles->first();
+            $dotColors = ['adviser' => 'var(--accent)', 'consultant' => '#3b82f6', 'grammarian' => '#9333ea'];
+            $chipColors = [
+              'adviser' => ['bg' => 'var(--accent-light)', 'text' => 'var(--accent3)'],
+              'consultant' => ['bg' => 'var(--blue-bg)', 'text' => 'var(--blue)'],
+              'grammarian' => ['bg' => 'var(--purple-bg)', 'text' => 'var(--purple)'],
+            ];
+            $_slotsUsed = $expert->slots_used;
+            $_maxSlots = $expert->max_teams ?? 4;
+            $_slotPercent = $_maxSlots > 0 ? min(100, ($_slotsUsed / $_maxSlots) * 100) : 0;
+            $_isFull = $_slotsUsed >= $_maxSlots;
+            $_barColor = $_isFull ? 'var(--red)' : ($_slotPercent > 66 ? 'var(--amber)' : 'var(--accent)');
+            $_chips = $visibleRoles->map(fn($r) => [
+                'name' => ucfirst($r->role_name),
+                'bg' => ($chipColors[$r->role_name]['bg'] ?? 'var(--bg3)'),
+                'text' => ($chipColors[$r->role_name]['text'] ?? 'var(--text3)'),
+            ])->values()->toArray();
+            $_expertiseTags = $expert->expertise->pluck('expertise_field')->toArray();
+            $_expertiseMore = max(0, $expert->expertise->count() - 3);
+          @endphp
+          <div class="expert-card-compact" style="--accent-clr:{{ $dotColors[$firstRole?->role_name ?? 'adviser'] ?? 'var(--accent)' }}" data-roles="{{ $visibleRoles->pluck('role_name')->join(',') }}" data-name="{{ $expert->name }}" data-initials="{{ $expert->avatarInitials() }}" data-chips='{{ json_encode($_chips) }}' data-tags='{{ json_encode($_expertiseTags) }}' data-tags-more="{{ $_expertiseMore }}" data-slots="{{ $_slotsUsed }}/{{ $_maxSlots }}" data-slots-pct="{{ $_slotPercent }}" data-slots-color="{{ $_barColor }}" onclick="openExpertPostModal(this)">
+            <div class="role-dot" style="background: {{ $dotColors[$firstRole?->role_name ?? 'adviser'] ?? 'var(--accent)' }};"></div>
+            <div class="card-accent" style="background:{{ $dotColors[$firstRole?->role_name ?? 'adviser'] ?? 'var(--accent)' }};"></div>
+            <div class="expert-avatar-wrap">
+              <div class="avatar" style="width:100%; height:100%; font-size:18px;">{{ $expert->avatarInitials() }}</div>
+            </div>
+            <div style="font-size: 15px; font-weight: 700; color: var(--text);">{{ $expert->name }}</div>
+
+            <div class="role-chips">
+              @foreach($visibleRoles as $role)
+                @php
+                  $chipColors = [
+                    'adviser' => ['bg' => 'var(--accent-light)', 'text' => 'var(--accent3)'],
+                    'consultant' => ['bg' => 'var(--blue-bg)', 'text' => 'var(--blue)'],
+                    'grammarian' => ['bg' => 'var(--purple-bg)', 'text' => 'var(--purple)'],
+                  ];
+                  $c = $chipColors[$role->role_name] ?? ['bg' => 'var(--bg3)', 'text' => 'var(--text3)'];
+                @endphp
+                <span class="role-chip" style="background: {{ $c['bg'] }}; color: {{ $c['text'] }};">
+                  {{ ucfirst($role->role_name) }}
+                </span>
+              @endforeach
+            </div>
+
+            <div class="expertise-tags">
+              @foreach($expert->expertise->take(3) as $exp)
+                <span class="expertise-tag">{{ $exp->expertise_field }}</span>
+              @endforeach
+              @if($expert->expertise->count() > 3)
+                <span class="expertise-tag">+{{ $expert->expertise->count() - 3 }} more</span>
+              @endif
+            </div>
+
+            <div class="mini-slot-bar"><div class="mini-slot-fill" style="width: {{ $_slotPercent }}%; background: {{ $_barColor }};"></div></div>
+            <div style="font-size: 10px; font-weight: 700; color: {{ $_isFull ? 'var(--red)' : 'var(--text3)' }}; letter-spacing: 0.5px;">
+              {{ $_isFull ? 'FULL CAPACITY' : 'SLOTS: '.$_slotsUsed.'/'.$_maxSlots }}
+            </div>
+
+            @if($team && $isLeader && !$teamConfirmed)
+              <button class="btn btn-sm btn-full btn-muted" disabled>
+                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2"><path d="M12 15v2m-6 4h12a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2zm10-10V7a4 4 0 0 0-8 0v4h8z"/></svg>
+                Verified First
+              </button>
+            @elseif($team && $isLeader)
+              @php
+                $teamAssignmentsForExpert = $assignments->where('expert_id', $expert->expert_id);
+                $hasApproved = $teamAssignmentsForExpert->where('status', 'approved')->isNotEmpty();
+                $hasPending = $teamAssignmentsForExpert->where('status', 'pending')->isNotEmpty();
+              @endphp
+              @if($hasApproved)
+                <button class="btn btn-sm btn-full btn-muted-green" disabled>
+                  <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                  Approved
+                </button>
+              @elseif($hasPending)
+                <button class="btn btn-sm btn-full btn-muted-amber" disabled>
+                  <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                  Pending
+                </button>
+              @elseif(!$_isFull)
+                <button class="btn btn-sm btn-full btn-solid" onclick="openApplyModal({{ $expert->expert_id }}, '{{ $expert->name }}')">
+                  <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><polyline points="17 11 19 13 23 9"/></svg>
+                  Apply Now
+                </button>
+              @elseif($_isFull)
+                <button class="btn btn-sm btn-full btn-muted" disabled>
+                  <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                  Full
+                </button>
+              @else
+                <button class="btn btn-sm btn-full btn-muted" disabled>
+                  <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                  Already Applied
+                </button>
+              @endif
+            @elseif(!$team)
+              <button class="btn btn-sm btn-full btn-muted" disabled>
+                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                Join a Team First
+              </button>
+            @elseif(!$isLeader)
+              <button class="btn btn-sm btn-full btn-muted" disabled>
+                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2"><path d="M12 15v2m-6 4h12a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2zm10-10V7a4 4 0 0 0-8 0v4h8z"/></svg>
+                Leader Only
+              </button>
             @endif
           </div>
-        @else
-        <div class="railwrap">
-          <div class="rail" id="rail">
-            @foreach($shownExperts as $expert)
-          @php
-            $visibleRoles = $expert->roles;
-            $firstRole = $visibleRoles->first();
-            $_maxSlots = $expert->max_teams ?? 0;
-            $_slotsUsed = $expert->slots_used;
-            // Only full against a number somebody actually set - "0 >= 0"
-            // used to mark every expert who had not said as full.
-            $_isFull = $_maxSlots > 0 && $_slotsUsed >= $_maxSlots;
-            $_slotsUnset = $_maxSlots < 1;
-            // The role you are browsing is on every card in the list, so
-            // saying it again tells you nothing. The OTHER roles do.
-            $_alsoRoles = $visibleRoles->pluck('role_name')->reject(fn ($r) => $r === $activeRole);
-            $_expertiseTags = $expert->expertise->pluck('expertise_field')->all();
-            $_chips = $visibleRoles->map(fn ($r) => ['name' => ucfirst($r->role_name), 'color' => $roleColors[$r->role_name]['dot'] ?? 'var(--accent)'])->values();
-          @endphp
-              <div class="card expert-card-compact" data-expert-id="{{ $expert->expert_id }}"
-                   data-name="{{ $expert->name }}" data-initials="{{ $expert->avatarInitials() }}"
-                   data-avatar="{{ $expert->hasAvatarImage() ? $expert->avatarUrl() : '' }}"
-                   data-chips='{{ json_encode($_chips) }}' data-tags='{{ json_encode($_expertiseTags) }}'
-                   data-slots="{{ $_slotsUnset ? 'Capacity not set' : $_slotsUsed.'/'.$_maxSlots }}"
-                   data-slots-pct="{{ $_maxSlots > 0 ? min(100, ($_slotsUsed / $_maxSlots) * 100) : 0 }}"
-                   data-slots-color="{{ $_isFull ? 'var(--red)' : 'var(--accent)' }}"
-                   onclick="openExpertPostModal(this)">
-                <span class="role-dot" style="background: {{ $roleColors[$firstRole?->role_name ?? 'adviser']['dot'] ?? 'var(--accent)' }};"></span>
-
-                <div class="who">
-                  <div class="expert-avatar-wrap">
-                    <div class="avatar" style="width:100%; height:100%; font-size:13px;">
-                      {{ $expert->avatarInitials() }}
-                      @if ($expert->hasAvatarImage())
-                        <img class="avatar-photo" src="{{ $expert->avatarUrl() }}" alt="" loading="lazy"
-                             referrerpolicy="no-referrer" onerror="this.remove()">
-                      @endif
-                    </div>
-                  </div>
-                  <div class="ex-nm">{{ $expert->name }}</div>
-                </div>
-
-                @if($_alsoRoles->isNotEmpty())
-                  <div class="chips">
-                    @foreach($_alsoRoles as $r)
-                      <span class="chip" style="background: {{ $roleColors[$r]['bg'] ?? 'var(--bg3)' }}; color: {{ $roleColors[$r]['text'] ?? 'var(--text2)' }};">also {{ $r }}</span>
-                    @endforeach
-                  </div>
-                @endif
-
-                <div>
-                  <div class="lbl">Expertise</div>
-                  <div class="tags">
-                    @foreach($_expertiseTags as $tag)
-                      <span class="t" title="{{ $tag }}">{{ $tag }}</span>
-                    @endforeach
-                  </div>
-                </div>
-
-                <div class="avail">
-                  <div class="lbl">Availability</div>
-                  <div class="slot-caption {{ $_isFull ? 'is-full' : ($_slotsUnset ? 'is-unset' : '') }}">
-                    @if($_slotsUnset) Capacity not set
-                    @elseif($_isFull) Full capacity
-                    @else {{ $_maxSlots - $_slotsUsed }} of {{ $_maxSlots }} slots open
-                    @endif
-                  </div>
-                </div>
-
-@include('student.partials.expert-action')
-              </div>
-            @endforeach
+        @empty
+          <div class="empty-state" style="grid-column: 1 / -1;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 1 0-16 0"/></svg>
+            <p>No approved experts available yet.</p>
           </div>
-
-          <button class="rail-nav prev" type="button" data-rail="-1" aria-label="Previous experts" hidden>
-            <svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
-          <button class="rail-nav next" type="button" data-rail="1" aria-label="More experts" hidden>
-            <svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg></button>
-        </div>
-        <div class="rail-pager" id="railPager" hidden>
-          <span class="dots" id="railDots"></span><span class="count" id="railCount"></span>
-        </div>
-
-        <div class="listwrap">
-          <div class="listscroll">
-            <table>
-              <thead><tr><th>Expert</th><th>Also</th><th>Expertise</th><th>Availability</th><th></th></tr></thead>
-              <tbody>
-                @foreach($shownExperts as $expert)
-          @php
-            $visibleRoles = $expert->roles;
-            $firstRole = $visibleRoles->first();
-            $_maxSlots = $expert->max_teams ?? 0;
-            $_slotsUsed = $expert->slots_used;
-            // Only full against a number somebody actually set - "0 >= 0"
-            // used to mark every expert who had not said as full.
-            $_isFull = $_maxSlots > 0 && $_slotsUsed >= $_maxSlots;
-            $_slotsUnset = $_maxSlots < 1;
-            // The role you are browsing is on every card in the list, so
-            // saying it again tells you nothing. The OTHER roles do.
-            $_alsoRoles = $visibleRoles->pluck('role_name')->reject(fn ($r) => $r === $activeRole);
-            $_expertiseTags = $expert->expertise->pluck('expertise_field')->all();
-            $_chips = $visibleRoles->map(fn ($r) => ['name' => ucfirst($r->role_name), 'color' => $roleColors[$r->role_name]['dot'] ?? 'var(--accent)'])->values();
-          @endphp
-                  <tr>
-                    <td><span class="lname">
-                      <span class="expert-avatar-wrap sm"><span class="avatar" style="width:100%;height:100%;font-size:10px;">{{ $expert->avatarInitials() }}</span></span>
-                      <span>{{ $expert->name }}</span>
-                    </span></td>
-                    <td>
-                      @forelse($_alsoRoles as $r)
-                        <span class="chip" style="background: {{ $roleColors[$r]['bg'] ?? 'var(--bg3)' }}; color: {{ $roleColors[$r]['text'] ?? 'var(--text2)' }};">{{ $r }}</span>
-                      @empty
-                        <span class="t">&mdash;</span>
-                      @endforelse
-                    </td>
-                    <td><span class="ltags">@foreach($_expertiseTags as $tag)<span class="t" title="{{ $tag }}">{{ $tag }}</span>@endforeach</span></td>
-                    <td>
-                      <span class="slot-caption {{ $_isFull ? 'is-full' : ($_slotsUnset ? 'is-unset' : '') }}">
-                        @if($_slotsUnset) Capacity not set
-                        @elseif($_isFull) Full capacity
-                        @else {{ $_maxSlots - $_slotsUsed }} of {{ $_maxSlots }} slots open
-                        @endif
-                      </span>
-                    </td>
-                    <td class="lact">@include('student.partials.expert-action')</td>
-                  </tr>
-                @endforeach
-              </tbody>
-            </table>
-          </div>
-        </div>
-        @endif
+        @endforelse
       </div>
 
       @if ($experts->hasPages())
@@ -671,94 +476,35 @@
         @endif
       </div>
       @endif
-    </div>
 
-    <aside class="overview-panel">
-      <div class="panel">
-        <h3>Team Checklist</h3>
-        @foreach(['adviser', 'consultant', 'grammarian'] as $slotRole)
-          @php $a = $filledSlots[$slotRole] ?? null; $rc = $roleColors[$slotRole]; @endphp
-          <div class="check" data-slot-role="{{ $slotRole }}">
-            <span class="check-dot" style="background: {{ $rc['dot'] }};"></span>
-            <span class="check-role">{{ ucfirst($slotRole) }}</span>
-            @if($a)
-              <span class="pill set" title="{{ $a->expert?->name }}">{{ $a->expert?->name }}</span>
-              @if($isLeader)
-                <button class="check-remove" title="Remove {{ $a->expert?->name ?? 'this expert' }}"
-                        onclick="openRemoveModal({{ $a->assignment_id }}, '{{ $a->expert?->name ?? '' }}')">
-                  <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" fill="none" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                </button>
-              @endif
-            @else
-              <span class="pill">Not selected</span>
-            @endif
-          </div>
-        @endforeach
+      <div class="req-section">
+        <div class="section-title" style="font-size: 15px; font-weight: 600; margin-bottom: 14px; display: flex; align-items: center; gap: 8px;">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+          Request Experts
+          @if($assignments->isNotEmpty())
+            <span style="font-size: 12px; color: var(--text3); font-weight: 400;">({{ $assignments->count() }})</span>
+          @endif
+        </div>
 
-        @foreach($unslotted as $a)
-          <div class="check">
-            <span class="check-dot" style="background: var(--text3);"></span>
-            <span class="check-role">Assigned</span>
-            <span class="pill set">{{ $a->expert?->name ?? 'Unknown' }}</span>
-            @if($isLeader)
-              <button class="check-remove" onclick="openRemoveModal({{ $a->assignment_id }}, '{{ $a->expert?->name ?? '' }}')">
-                <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" fill="none" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-              </button>
-            @endif
-          </div>
-        @endforeach
-      </div>
-
-      {{-- Applications that are still out. A sent application is not a filled
-           slot, so it shows here and the checklist above stays "Not selected"
-           until the expert approves. --}}
-      <div class="panel">
-        <h3>Pending Applications</h3>
-        @php $pendingCount = $assignments->where('status', 'pending')->count(); @endphp
-        @if($pendingCount > 0)
-          <p class="panel-count"><b>{{ $pendingCount }}</b> {{ $pendingCount === 1 ? 'request waiting on a reply' : 'requests waiting on a reply' }}</p>
-        @endif
-        @if($openRequests->isNotEmpty())
-        @foreach($openRequests as $assignment)
+        @forelse($assignments as $assignment)
           @php
-            // Through the public disk explicitly: the file was stored with
-            // ->store("proposals", "public"), and a bare Storage::url() call
-            // resolves against the DEFAULT disk instead - the same fix the
-            // expert side of this link already carries.
-            $propUrl = $assignment->proposal_file
-                ? Storage::disk("public")->url($assignment->proposal_file)
-                : null;
-            $reqRole = $assignment->engaged_role_name;
+            $propUrl = $assignment->proposal_file ? Storage::url($assignment->proposal_file) : null;
           @endphp
           <div class="req-card">
             <div class="avatar" style="width: 36px; height: 36px; font-size: 12px; background: var(--accent); color: white;">
               {{ $assignment->expert?->avatarInitials() ?? 'NA' }}
-              @if ($assignment->expert?->hasAvatarImage())
-                <img class="avatar-photo" src="{{ $assignment->expert->avatarUrl() }}" alt="" loading="lazy"
-                     referrerpolicy="no-referrer" onerror="this.remove()">
-              @endif
             </div>
             <div style="flex: 1; min-width: 0;">
               <div style="font-size: 13px; font-weight: 600; color: var(--text);">{{ $assignment->expert?->name ?? 'Unknown Expert' }}</div>
-              <div style="font-size: 11px; color: var(--text3); text-transform: uppercase;">{{ $reqRole ? 'Applied as '.$reqRole : ucfirst($assignment->status) }}</div>
+              <div style="font-size: 11px; color: var(--text3); text-transform: uppercase;">{{ ucfirst($assignment->status) }}</div>
             </div>
             <span class="status-badge" style="background: {{ $assignment->status === 'approved' ? 'var(--green-bg)' : ($assignment->status === 'pending' ? 'var(--amber-bg)' : 'var(--red-bg)') }}; color: {{ $assignment->status === 'approved' ? 'var(--green)' : ($assignment->status === 'pending' ? 'var(--amber)' : 'var(--red)') }};">
               {{ ucfirst($assignment->status) }}
             </span>
             <button class="btn btn-sm btn-soft" onclick="openReqInfoModal({{ json_encode([
               'name' => $assignment->expert?->name ?? 'Unknown',
-              'role' => $reqRole ? ucfirst($reqRole) : null,
               'status' => ucfirst($assignment->status),
               'message' => $assignment->message ?? 'No message provided.',
-              // Why the expert said no. It was written down and sent in a
-              // notification, then never shown again - so a team that missed
-              // the notification had a rejected application and no idea why.
-              'rejection_reason' => $assignment->rejection_reason,
-              // An application made with the CaPSA-approved pre-proposal has
-              // no uploaded file, and the details said "None attached" - as
-              // though nothing had been sent, when what was sent is the one
-              // document the CaPSA had already passed.
-              'pre_proposal_title' => $assignment->preProposal?->title,
               'proposal' => $propUrl,
               'date' => $assignment->created_at ? $assignment->created_at->format('M d, Y g:i A') : 'N/A',
             ]) }})" title="View details">View</button>
@@ -768,29 +514,62 @@
               </button>
             @endif
           </div>
-        @endforeach
-        @else
-          <p class="panel-empty">No requests out yet. Choose a role above, then apply to an expert.</p>
-        @endif
+        @empty
+          <div style="text-align: center; padding: 24px; color: var(--text3); font-size: 13px; background: var(--bg3); border-radius: 10px; border: 1px dashed var(--border);">
+            @if($team)
+              No experts requested yet. Browse and apply for experts above.
+            @else
+              You need to join or create a team first before applying for experts.
+            @endif
+          </div>
+        @endforelse
       </div>
 
-      <details class="panel howto">
-        <summary>How it works
-          <svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
-        </summary>
-        <div class="steps">
-          <div class="step"><span class="n">1</span><div><b>Choose a role</b><span>Pick the slot your team still needs to fill.</span></div></div>
-          <div class="step"><span class="n">2</span><div><b>Browse experts</b><span>Only the people who can hold that role are listed.</span></div></div>
-          <div class="step"><span class="n">3</span><div><b>Submit request</b><span>Your approved pre-proposal goes with it.</span></div></div>
-          <div class="step"><span class="n">4</span><div><b>Wait for approval</b><span>The expert reviews and decides.</span></div></div>
+      <div class="tutorial-note" style="justify-content: flex-start; border-top:none; margin-top:15px;">
+        <div class="tutorial-item"><div class="dot-guide" style="background:var(--accent)"></div><span>Adviser</span></div>
+        <div class="tutorial-item"><div class="dot-guide" style="background:#3b82f6"></div><span>Consultant</span></div>
+        <div class="tutorial-item"><div class="dot-guide" style="background:#9333ea"></div><span>Grammarian</span></div>
+      </div>
+    </div>
+
+    <div class="overview-panel">
+      <div class="rg-qt-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: start;">
+        <div class="card" style="padding: 14px; border-radius: 12px; background: var(--bg2);">
+          <div class="section-title" style="font-size: 13px; margin-bottom: 12px;">Role Guide</div>
+          <div style="margin-bottom: 12px;">
+            <div style="font-size: 11px; font-weight: 600; color: var(--accent3); margin-bottom: 4px;">Adviser</div>
+            <div style="font-size: 10px; color: var(--text3); line-height: 1.4;">Guides capstone teams throughout their project journey</div>
+          </div>
+          <div style="margin-bottom: 12px;">
+            <div style="font-size: 11px; font-weight: 600; color: #3b82f6; margin-bottom: 4px;">Consultant</div>
+            <div style="font-size: 10px; color: var(--text3); line-height: 1.4;">Provides subject-matter expertise and technical advice</div>
+          </div>
+          <div style="margin-bottom: 12px;">
+            <div style="font-size: 11px; font-weight: 600; color: #9333ea; margin-bottom: 4px;">Grammarian</div>
+            <div style="font-size: 10px; color: var(--text3); line-height: 1.4;">Reviews and ensures quality of written documentation</div>
+          </div>
+          <div class="divider" style="margin: 16px 0;"></div>
+          <p style="font-size: 10px; color: var(--text3); line-height: 1.4; opacity: 0.8;">
+            Request approval depends on the expert's current workload and availability.
+          </p>
         </div>
-      </details>
-    </aside>
+
+        <div class="card" style="padding: 14px; border-radius: 12px; background: var(--bg2);">
+          <div class="section-title" style="font-size: 13px; margin-bottom: 12px;">Quick Tips</div>
+          <ul style="font-size: 11px; color: var(--text3); line-height: 1.6; padding-left: 16px; margin: 0;">
+            <li>Only the Team Leader can apply for experts</li>
+            <li>You can apply for multiple roles from the same expert</li>
+            <li>Attach your approved pre-proposal PDF when applying</li>
+            <li>Check the slot status before applying</li>
+          </ul>
+        </div>
+      </div>
 
       <div class="legal-credits">
         <div class="credits-title">System Developers</div>
         <div class="credits-names">Jolina · John Kenneth · Mark Anthony · Ian Cyrus · Alexa Nicole</div>
       </div>
+    </div>
     </div>
   </div>
 </div>
@@ -825,79 +604,12 @@
   </div>
 </div>
 
-@if($approvedProposal)
-<div class="modal-overlay" id="proposal-preview-modal" onclick="if (event.target === this) closeModal('proposal-preview-modal')">
-  <div class="modal-box pp-box">
-    <div class="pp-head">
-      <div style="min-width:0">
-        <div class="pp-eyebrow">Approved pre-proposal</div>
-        <h3 style="margin:0">{{ $approvedProposal->title }}</h3>
-      </div>
-      <button class="pp-x" onclick="closeModal('proposal-preview-modal')" aria-label="Close">
-        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </button>
-    </div>
-    <div class="pp-body">
-      @foreach([
-        'Problem statement' => $approvedProposal->problem_statement,
-        'Proposed solution' => $approvedProposal->proposed_solution,
-        'Scope' => $approvedProposal->scope,
-        'Limitations' => $approvedProposal->limitations,
-        'Software development method' => $approvedProposal->sdm,
-        'Research agenda' => $approvedProposal->research_agenda,
-        'SDG goals' => $approvedProposal->sdg_goals,
-      ] as $label => $value)
-        @if(filled($value))
-          <div class="pp-field">
-            <div class="pp-label">{{ $label }}</div>
-            <p>{{ is_array($value) ? implode(', ', $value) : $value }}</p>
-          </div>
-        @endif
-      @endforeach
-    </div>
-    <div class="pp-foot">
-      <button class="btn btn-sm btn-soft" onclick="closeModal('proposal-preview-modal')">Close</button>
-    </div>
-  </div>
-</div>
-@endif
-
 <!-- Apply Form Modal -->
 <div class="modal-overlay" id="apply-modal">
   <div class="modal-box" style="width: 560px; max-width: 94vw;">
     <h3>Apply for Expert</h3>
     <div class="modal-sub" id="apply-expert-name"></div>
 
-    <div class="form-group" id="apply-role-group">
-      <label>Apply as <span class="req">*</span></label>
-      <div class="role-choice-list" id="apply-role-choices"></div>
-      <div class="role-choice-note">An expert can take only one role per team. Once they are your adviser, you cannot also engage them as your consultant or grammarian.</div>
-      <div class="field-error" id="err-role">Please choose the role you are applying for.</div>
-    </div>
-
-    {{-- A team whose pre-proposal the CaPSA has approved sends that one. It
-         is the document that got through, so re-uploading it was busywork -
-         and nothing stopped a different, unapproved file being attached in
-         its place. Teams still waiting on a decision attach a PDF as before. --}}
-    @if($approvedProposal)
-    <div class="form-group">
-      <label>Approved Pre-Proposal</label>
-      <div style="display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border:1px solid var(--green);background:var(--green-bg);border-radius:10px">
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="var(--green)" stroke-width="2.4" style="flex-shrink:0;margin-top:1px"><polyline points="20 6 9 17 4 12"/></svg>
-        <div style="min-width:0;flex:1">
-          <div style="font-size:12.5px;font-weight:600;color:var(--text);line-height:1.4">{{ $approvedProposal->title }}</div>
-          <div style="font-size:11px;color:var(--text3);margin-top:3px">Approved by your CaPSA &mdash; sent with this application, so there is nothing to upload.</div>
-        </div>
-        {{-- The document goes out with the application, so being able to read
-             it first is the least the form owes you. --}}
-        <button type="button" class="btn btn-sm btn-soft" style="flex-shrink:0;align-self:center"
-                onclick="openModal('proposal-preview-modal')">
-          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-          Preview
-        </button>
-      </div>
-    </div>
-    @else
     <div class="form-group">
       <label>Approved Pre-Proposal <span class="req">*</span></label>
       <div class="file-input-wrap">
@@ -907,7 +619,6 @@
       </div>
       <div class="field-error" id="err-file">Please upload your approved pre-proposal (PDF).</div>
     </div>
-    @endif
 
     <div class="form-group">
       <label>Message to Expert <span class="req">*</span></label>
@@ -934,10 +645,6 @@
     <div class="review-row">
       <div class="review-label">Expert</div>
       <div class="review-value" id="review-expert"></div>
-    </div>
-    <div class="review-row">
-      <div class="review-label">Applying as</div>
-      <div class="review-value" id="review-role"></div>
     </div>
     <div class="review-row">
       <div class="review-label">Proposal</div>
@@ -996,17 +703,13 @@
       <div class="review-label">Expert</div>
       <div class="review-value" id="req-info-expert"></div>
     </div>
-    <div class="review-row" id="req-info-role-row">
-      <div class="review-label">Applied as</div>
+    <div class="review-row">
+      <div class="review-label">Status</div>
       <div class="review-value" id="req-info-role"></div>
     </div>
     <div class="review-row">
       <div class="review-label">Status</div>
       <div class="review-value" id="req-info-status"></div>
-    </div>
-    <div class="review-row" id="req-info-reason-row" style="display:none">
-      <div class="review-label">Reason</div>
-      <div class="review-value" id="req-info-reason" style="font-size:12px;color:var(--red);"></div>
     </div>
     <div class="review-row">
       <div class="review-label">Message</div>
@@ -1029,9 +732,7 @@
 <div class="msg-toast" id="msg-toast"></div>
 
 <script>
-const APPLY_HAS_APPROVED_PROPOSAL = @json((bool) $approvedProposal);
 let currentExpertId = null;
-let currentRoleId = null;
 let currentRoleName = '';
 let currentFileName = '';
 let currentMessage = '';
@@ -1081,17 +782,7 @@ function openExpertPostModal(el) {
   var slotsPct = parseFloat(el.dataset.slotsPct) || 0;
   var slotsColor = el.dataset.slotsColor || 'var(--accent)';
 
-  var epAvatar = document.getElementById('ep-avatar');
-  epAvatar.textContent = initials;
-  if (el.dataset.avatar) {
-    var img = document.createElement('img');
-    img.className = 'avatar-photo';
-    img.src = el.dataset.avatar;
-    img.alt = '';
-    img.referrerPolicy = 'no-referrer';
-    img.onerror = function () { img.remove(); };
-    epAvatar.appendChild(img);
-  }
+  document.getElementById('ep-avatar').textContent = initials;
   document.getElementById('ep-name').textContent = name;
 
   var chipsContainer = document.getElementById('ep-chips');
@@ -1150,60 +841,12 @@ function openExpertPostModal(el) {
   openModal('expert-post-modal');
 }
 
-function renderRoleChoices(roles) {
-  const list = document.getElementById('apply-role-choices');
-  const group = document.getElementById('apply-role-group');
-  list.innerHTML = '';
-  currentRoleId = null;
-  currentRoleName = '';
-
-  // With only one role on offer there is nothing to decide, so it is
-  // selected up front and shown as a statement rather than a question.
-  const single = roles.length === 1;
-  group.querySelector('label').innerHTML = single
-    ? 'Applying as'
-    : 'Apply as <span class="req">*</span>';
-
-  roles.forEach(function (role) {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'role-choice';
-    btn.dataset.roleId = role.expert_role_id;
-    btn.dataset.roleName = role.label;
-    btn.innerHTML = '<span class="role-choice-mark"></span>' + role.label;
-    btn.onclick = function () { selectRoleChoice(btn); };
-    list.appendChild(btn);
-  });
-
-  if (single && list.firstChild) selectRoleChoice(list.firstChild);
-}
-
-function selectRoleChoice(btn) {
-  document.querySelectorAll('#apply-role-choices .role-choice').forEach(function (b) {
-    b.classList.remove('selected');
-  });
-  btn.classList.add('selected');
-  currentRoleId = btn.dataset.roleId;
-  currentRoleName = btn.dataset.roleName;
-  document.getElementById('err-role').classList.remove('show');
-}
-
-function openApplyModal(expertId, expertName, roles) {
+function openApplyModal(expertId, expertName) {
   currentExpertId = expertId;
-  renderRoleChoices(roles || []);
   document.getElementById('apply-expert-name').textContent = 'Apply to ' + expertName;
-
-  // Only there when the team still has to attach a PDF. A team whose
-  // pre-proposal the CaPSA approved sends that one instead, so the whole
-  // upload field is off the page and every line below it used to throw.
-  const fileLabel = document.getElementById('file-label');
-  const fileField = document.getElementById('proposal-file');
-  if (fileLabel) {
-    fileLabel.textContent = 'Choose PDF file...';
-    fileLabel.classList.remove('has-file');
-  }
-  if (fileField) fileField.value = '';
-
+  document.getElementById('file-label').textContent = 'Choose PDF file...';
+  document.getElementById('file-label').classList.remove('has-file');
+  document.getElementById('proposal-file').value = '';
   document.getElementById('apply-message').value = '';
   document.getElementById('msg-count').textContent = '0';
   document.querySelectorAll('#apply-modal .field-error').forEach(e => e.classList.remove('show'));
@@ -1213,7 +856,6 @@ function openApplyModal(expertId, expertName, roles) {
 
 function handleFileSelect(input) {
   const label = document.getElementById('file-label');
-  if (!label) return;
   if (input.files && input.files[0]) {
     label.textContent = input.files[0].name;
     label.classList.add('has-file');
@@ -1252,13 +894,8 @@ function reviewApply() {
 
   document.querySelectorAll('#apply-modal .field-error').forEach(e => e.classList.remove('show'));
 
-  if (!currentRoleId) {
-    document.getElementById('err-role').classList.add('show');
-    valid = false;
-  }
-  if (!APPLY_HAS_APPROVED_PROPOSAL && (!fileInput || !fileInput.files || !fileInput.files[0])) {
-    const fileError = document.getElementById('err-file');
-    if (fileError) fileError.classList.add('show');
+  if (!fileInput.files || !fileInput.files[0]) {
+    document.getElementById('err-file').classList.add('show');
     valid = false;
   }
   if (!message) {
@@ -1275,15 +912,10 @@ function reviewApply() {
 
   if (!valid) return;
 
-  // '+' here, not PHP's '.': this is JavaScript by the time the browser
-  // sees it, and the directive below has already rendered a quoted string.
-  currentFileName = APPLY_HAS_APPROVED_PROPOSAL
-    ? @json($approvedProposal?->title ?? '') + ' (approved pre-proposal)'
-    : fileInput.files[0].name;
+  currentFileName = fileInput.files[0].name;
   currentMessage = message;
 
   document.getElementById('review-expert').textContent = document.getElementById('apply-expert-name').textContent.replace('Apply to ', '');
-  document.getElementById('review-role').textContent = currentRoleName;
   document.getElementById('review-file').textContent = currentFileName;
   document.getElementById('review-message').textContent = message;
 
@@ -1298,11 +930,7 @@ function confirmApply() {
 
   const formData = new FormData();
   formData.append('expert_id', currentExpertId);
-  formData.append('expert_role_id', currentRoleId);
-  var pf = document.getElementById('proposal-file');
-  if (pf && pf.files && pf.files[0]) {
-    formData.append('proposal_file', pf.files[0]);
-  }
+  formData.append('proposal_file', document.getElementById('proposal-file').files[0]);
   formData.append('message', currentMessage);
 
   fetch('{{ route("api.student.assignments.store") }}', {
@@ -1333,41 +961,16 @@ function confirmApply() {
   });
 }
 
-/** Titles are written by students, so they are escaped before going in. */
-function escapeHtmlText(value) {
-  const div = document.createElement('div');
-  div.textContent = value == null ? '' : String(value);
-
-  return div.innerHTML;
-}
-
 function openReqInfoModal(data) {
   document.getElementById('req-info-sub').textContent = 'Information about this expert request.';
   document.getElementById('req-info-expert').textContent = data.name;
-  document.getElementById('req-info-role').textContent = data.role || '';
-  document.getElementById('req-info-role-row').style.display = data.role ? '' : 'none';
+  document.getElementById('req-info-role').textContent = data.status;
   const statusColors = { Approved: 'var(--green)', Pending: 'var(--amber)', Rejected: 'var(--red)' };
   document.getElementById('req-info-status').innerHTML = '<span style="color:' + (statusColors[data.status] || 'var(--text3)') + ';font-weight:600;">' + data.status + '</span>';
-  var reasonRow = document.getElementById('req-info-reason-row');
-  if (data.rejection_reason) {
-    document.getElementById('req-info-reason').textContent = data.rejection_reason;
-    reasonRow.style.display = '';
-  } else {
-    reasonRow.style.display = 'none';
-  }
   document.getElementById('req-info-message').textContent = data.message;
-  const proposalEl = document.getElementById('req-info-proposal');
-  if (data.pre_proposal_title) {
-    // Named, not linked: the team already has this on their Duplication
-    // Checker page, and there is no student-facing route to the file.
-    proposalEl.innerHTML =
-      '<div style="color:var(--green);font-weight:600;font-size:12px">&#10003; CaPSA-approved pre-proposal</div>'
-      + '<div style="font-size:12px;color:var(--text2);margin-top:2px">' + escapeHtmlText(data.pre_proposal_title) + '</div>';
-  } else if (data.proposal) {
-    proposalEl.innerHTML = '<a href="' + data.proposal + '" target="_blank" style="color:var(--accent);">View Proposal <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" fill="none" stroke-width="2" style="display:inline;vertical-align:middle;"><path d="M7 17l9.2-9.2M17 17V7H7"/></svg></a>';
-  } else {
-    proposalEl.textContent = 'None attached';
-  }
+  document.getElementById('req-info-proposal').innerHTML = data.proposal
+    ? '<a href="' + data.proposal + '" target="_blank" style="color:var(--accent);">View Proposal <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" fill="none" stroke-width="2" style="display:inline;vertical-align:middle;"><path d="M7 17l9.2-9.2M17 17V7H7"/></svg></a>'
+    : 'None attached';
   document.getElementById('req-info-date').textContent = data.date;
   openModal('req-info-modal');
 }
@@ -1451,253 +1054,26 @@ function showToast(msg, type) {
   setTimeout(() => toast.classList.remove('show'), 4000);
 }
 
-// ── Cards or list ──────────────────────────────────────────────────────
-// Both are rendered server-side; the switch only changes which is shown, so
-// the two can never disagree about who is on the page. The choice is
-// remembered per browser, because it is a preference and not page state.
-function setView(view) {
-  var results = document.getElementById('results');
-  if (!results) return;
-
-  results.classList.toggle('view-cards', view === 'cards');
-  results.classList.toggle('view-list', view === 'list');
-
-  var seg = document.getElementById('viewSeg');
-  if (seg) {
-    Array.prototype.forEach.call(seg.children, function (b) {
-      b.setAttribute('aria-pressed', String(b.dataset.view === view));
-    });
-  }
-
-  try { localStorage.setItem('capstrack_experts_view', view); } catch (e) {}
-  if (view === 'cards') layoutRail();
+function setFilter(role, el) {
+  document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  filterExperts();
 }
 
-// ── The card strip ─────────────────────────────────────────────────────
-// Rows are capped at what the leftover height allows, and anything past that
-// runs sideways. That is what keeps the page one screen high however many
-// experts a role has - it never grows downwards.
-function layoutRail() {
-  var rail = document.getElementById('rail');
-  if (!rail) return;
+function filterExperts() {
+  const query = document.getElementById('search-input').value.toLowerCase();
+  const activeRole = document.querySelector('.filter-chip.active')?.dataset.role || 'all';
+  const cards = document.querySelectorAll('.expert-card-compact');
 
-  var card = rail.querySelector('.card');
-  if (!card) return;
-
-  var scroller = document.querySelector('.content');
-  var cols = Math.max(2, Math.round((rail.clientWidth + 10) / (228 + 10)));
-  rail.style.setProperty('--cols', cols);
-
-  function room() {
-    var pager = document.getElementById('railPager');
-    return scroller.getBoundingClientRect().bottom
-         - parseFloat(getComputedStyle(scroller).paddingBottom || 0)
-         - rail.getBoundingClientRect().top
-         - (pager && !pager.hidden ? pager.getBoundingClientRect().height + 8 : 24);
-  }
-
-  rail.style.setProperty('--rows', 1);
-  var one = card.getBoundingClientRect().height;
-
-  // Two rows only when there are enough cards to fill two. The strip fills
-  // downwards first, so four cards against a fixed two rows made two narrow
-  // columns with the page empty beside them.
-  var fits = room() >= one * 2 + 10 ? 2 : 1;
-  var needed = Math.ceil(rail.children.length / cols);
-  rail.style.setProperty('--rows', Math.max(1, Math.min(fits, needed)));
-
-  fitAllTags();
-  updateRail();
-}
-
-function updateRail() {
-  var rail = document.getElementById('rail');
-  var pager = document.getElementById('railPager');
-  if (!rail || !pager) return;
-
-  var per = (+getComputedStyle(rail).getPropertyValue('--cols') || 1)
-          * (+getComputedStyle(rail).getPropertyValue('--rows') || 1);
-  // Counted from the cards rather than from scrollWidth: a few sub-pixels of
-  // rounding on the last column was enough to invent an empty page.
-  var pages = Math.max(1, Math.ceil(rail.children.length / per));
-  var at = Math.min(pages - 1, Math.round(rail.scrollLeft / rail.clientWidth));
-
-  var prev = document.querySelector('.rail-nav.prev');
-  var next = document.querySelector('.rail-nav.next');
-
-  pager.hidden = prev.hidden = next.hidden = pages < 2;
-  if (pages < 2) return;
-
-  prev.disabled = at <= 0;
-  next.disabled = at >= pages - 1;
-
-  // Past eight pages nobody counts dots, so the number carries it alone.
-  document.getElementById('railDots').innerHTML = pages <= 8
-    ? Array.apply(null, { length: pages }).map(function (_, k) {
-        return '<i class="' + (k === at ? 'on' : '') + '"></i>';
-      }).join('')
-    : '';
-  document.getElementById('railCount').innerHTML = '<b>' + (at + 1) + '</b> of ' + pages;
-}
-
-// Two rows of expertise tags is the budget. What does not fit is counted into
-// a +N chip, measured rather than assumed: "Proofreading" and "Human-Computer
-// Interaction and Usability Engineering" are not the same width.
-function fitTags(box) {
-  var tags = Array.prototype.slice.call(box.querySelectorAll('.t:not(.more)'));
-  if (!tags.length) return;
-
-  var chip = box.querySelector('.more');
-  if (!chip) {
-    chip = document.createElement('span');
-    chip.className = 't more';
-    box.appendChild(chip);
-  }
-
-  tags.forEach(function (t) { t.hidden = false; });
-  chip.hidden = true;
-  if (box.scrollHeight <= box.clientHeight) return;
-
-  chip.hidden = false;
-  var shown = tags.length;
-  while (shown > 0 && box.scrollHeight > box.clientHeight) {
-    shown--;
-    tags[shown].hidden = true;
-    var rest = tags.slice(shown);
-    chip.textContent = '+' + rest.length;
-    chip.title = rest.map(function (t) { return t.title; }).join(', ');
-  }
-}
-
-function fitAllTags() {
-  Array.prototype.forEach.call(document.querySelectorAll('.rail .tags'), fitTags);
-}
-
-document.addEventListener('click', function (ev) {
-  var seg = ev.target.closest('#viewSeg [data-view]');
-  if (seg) { setView(seg.dataset.view); return; }
-
-  var arrow = ev.target.closest('[data-rail]');
-  if (arrow && !arrow.disabled) {
-    var rail = document.getElementById('rail');
-    rail.scrollLeft += (+arrow.dataset.rail) * rail.clientWidth;
-    setTimeout(updateRail, 260);
-  }
-});
-
-document.addEventListener('scroll', function (ev) {
-  if (ev.target && ev.target.id === 'rail') updateRail();
-}, true);
-
-(function () {
-  var saved = 'cards';
-  try { saved = localStorage.getItem('capstrack_experts_view') || 'cards'; } catch (e) {}
-  setView(saved);
-
-  var t;
-  addEventListener('resize', function () {
-    clearTimeout(t);
-    t = setTimeout(layoutRail, 120);
+  cards.forEach(card => {
+    const nameEl = card.querySelector('[style*="font-weight: 700"]');
+    const name = nameEl?.textContent?.toLowerCase() || '';
+    const roles = (card.dataset.roles || '').toLowerCase();
+    const matchesSearch = name.includes(query);
+    const matchesRole = activeRole === 'all' || roles.split(',').includes(activeRole);
+    card.style.display = (matchesSearch && matchesRole) ? '' : 'none';
   });
-  if (document.fonts && document.fonts.ready) document.fonts.ready.then(layoutRail);
-})();
-
-// ── Skill picker ──
-function toggleSkillPicker(event) {
-  if (event) event.stopPropagation();
-  var wrap = document.querySelector('.skill-filter');
-  if (!wrap) return;
-  var opening = !wrap.classList.contains('open');
-  wrap.classList.toggle('open', opening);
-  document.getElementById('skill-filter-trigger').setAttribute('aria-expanded', opening ? 'true' : 'false');
-  if (opening) document.getElementById('skillSearch').focus();
 }
-
-function toggleSkillGroup(header) {
-  header.closest('.skill-group').classList.toggle('open');
-}
-
-// Typing here narrows the picker itself. It does not filter the expert grid -
-// that only changes when a skill is chosen, so the page never half-applies a
-// search the student is still typing.
-function filterSkillPicker(query) {
-  var q = (query || '').trim().toLowerCase();
-  var anyVisible = false;
-
-  document.querySelectorAll('#skillPickerList .skill-group').forEach(function (group) {
-    var groupMatches = q !== '' && (group.dataset.name || '').includes(q);
-    var shown = 0;
-
-    group.querySelectorAll('.skill-opt').forEach(function (opt) {
-      // "Anything in this area" belongs to the group, not to a skill name.
-      var isGroupOpt = opt.classList.contains('skill-opt-group');
-      var match = q === '' || groupMatches || (opt.dataset.name || '').includes(q);
-      if (isGroupOpt) match = q === '' || groupMatches;
-      opt.style.display = match ? '' : 'none';
-      if (match && !isGroupOpt) shown++;
-    });
-
-    var visible = shown > 0 || groupMatches;
-    group.style.display = visible ? '' : 'none';
-    group.classList.toggle('open', q !== '' ? visible : group.classList.contains('open'));
-    if (visible) anyVisible = true;
-  });
-
-  var all = document.querySelector('#skillPickerList .skill-opt-all');
-  if (all) all.style.display = q === '' ? '' : 'none';
-
-  var none = document.getElementById('skillPickerNoMatch');
-  if (none) none.style.display = anyVisible || q === '' ? 'none' : '';
-}
-
-document.addEventListener('click', function (e) {
-  var wrap = document.querySelector('.skill-filter');
-  if (wrap && wrap.classList.contains('open') && !wrap.contains(e.target)) {
-    wrap.classList.remove('open');
-    document.getElementById('skill-filter-trigger').setAttribute('aria-expanded', 'false');
-  }
-});
-
-document.addEventListener('keydown', function (e) {
-  if (e.key !== 'Escape') return;
-  var wrap = document.querySelector('.skill-filter');
-  if (wrap) {
-    wrap.classList.remove('open');
-    var t = document.getElementById('skill-filter-trigger');
-    if (t) t.setAttribute('aria-expanded', 'false');
-  }
-});
-
-// Arriving from the duplication report's "Apply" link: find that expert's
-// card and open the apply modal on it. The card may not have an apply button
-// (already engaged, full, or the team isn't verified yet), in which case the
-// card itself explains why - so scroll to it and say so rather than failing
-// silently.
-document.addEventListener('DOMContentLoaded', function () {
-  var wanted = new URLSearchParams(window.location.search).get('apply');
-  if (!wanted) return;
-
-  var card = document.querySelector('.expert-card-compact[data-expert-id="' + CSS.escape(wanted) + '"]');
-  var btn = card ? card.querySelector('[data-apply-expert]') : null;
-
-  if (!card) {
-    // Not on this page of results - a skill filter or pagination can hide it.
-    showToast('That expert is not in the current list. Clear any filters to find them.', 'error');
-    return;
-  }
-
-  card.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  card.style.outline = '2px solid var(--accent)';
-  card.style.outlineOffset = '3px';
-  setTimeout(function () { card.style.outline = ''; }, 2600);
-
-  if (btn && !btn.disabled) {
-    setTimeout(function () { btn.click(); }, 450);
-  } else {
-    var why = card.querySelector('button[disabled]');
-    showToast(why ? 'You cannot apply to this expert right now: ' + why.textContent.trim() : 'You cannot apply to this expert right now.', 'error');
-  }
-});
 
 // ── Mobile Sidebar ──
 function toggleSidebar() {
@@ -1721,15 +1097,6 @@ document.addEventListener('DOMContentLoaded', function () {
   var rc = document.getElementById('real-content');
   var scroller = document.querySelector('.content');
   if (sk && rc) {
-    // partials/skeleton-head already decided this in <head>, before the first
-    // paint: the content is on screen and no skeleton was ever shown. Without
-    // this, every save replayed the 600ms fade over content already there.
-    if (document.documentElement.classList.contains('sk-seen')) {
-      sk.remove();
-
-      return;
-    }
-
     // #real-content stays in normal flow at opacity:0 (not display:none, to
     // avoid a layout jump on reveal) — but that means its full real height
     // already counts toward .content's scrollable area while only the
@@ -1751,9 +1118,6 @@ document.addEventListener('DOMContentLoaded', function () {
           sk.remove();
           rc.style.transition = '';
         }, 350);
-        try {
-          sessionStorage.setItem('sk-seen:{{ substr(sha1(session()->getId()), 0, 12) }}:' + window.location.pathname, '1');
-        } catch (e) {}
       }, 600);
     });
   }

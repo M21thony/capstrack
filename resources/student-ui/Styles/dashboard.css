@@ -28,7 +28,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
 .brand-badge{display:inline-flex;align-items:center;gap:10px;flex:1}
 .brand-icon{width:38px;height:38px;background:var(--accent);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .brand-icon svg{width:19px;height:19px;stroke:#1e2028;fill:none;stroke-width:2.2}
-.brand-name{font-variant-numeric:tabular-nums;font-size:14px;font-weight:700;color:var(--navy-text);letter-spacing:-0.3px;line-height:1.2}
+.brand-name{font-family:'Space Mono',monospace;font-size:14px;font-weight:700;color:var(--navy-text);letter-spacing:-0.3px;line-height:1.2}
 .brand-sub{font-size:10.5px;color:var(--navy-text2);letter-spacing:0.8px;text-transform:uppercase;margin-top:2px}
 .sidebar-user{padding:14px 16px;border-bottom:1px solid var(--navy-border);display:flex;align-items:center;gap:12px;background:rgba(245,193,0,0.04)}
 .avatar{width:36px;height:36px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--navy-dark);flex-shrink:0;border:2px solid rgba(245,193,0,0.3)}
@@ -103,7 +103,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
 .m-fill-done{background:var(--green)}
 .m-fill-active{background:var(--accent)}
 .m-fill-todo{background:var(--text3)}
-.m-pct{font-size:10px;font-weight:600;color:var(--text3);font-variant-numeric:tabular-nums;min-width:30px;text-align:right}
+.m-pct{font-size:10px;font-weight:600;color:var(--text3);font-family:'Space Mono',monospace;min-width:30px;text-align:right}
 
 /* BADGES */
 .badge{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:22px;font-size:12px;font-weight:500}
@@ -148,7 +148,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
 
 /* STAT CHIPS */
 .stat-chip{background:#ffffff;border:1.5px solid var(--border);border-radius:12px;padding:16px 18px;display:flex;flex-direction:column;gap:5px;box-shadow:0 1px 3px rgba(0,0,0,0.04)}
-.stat-n{font-variant-numeric:tabular-nums;font-size:24px;font-weight:700;color:var(--text)}
+.stat-n{font-family:'Space Mono',monospace;font-size:24px;font-weight:700;color:var(--text)}
 .stat-l{font-size:11px;color:var(--text3);letter-spacing:0.5px;text-transform:uppercase;font-weight:600}
 
 
@@ -203,7 +203,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
 
 /* ── SIGNATURE CREDENTIALS ── */
 .legal-credits{margin-top:60px;padding-top:20px;border-top:1px dashed var(--border);text-align:center;opacity:0.5;padding-bottom:20px; align-items:center;}
-.credits-title{font-variant-numeric:tabular-nums;font-size:8px;font-weight:600;letter-spacing:1px;color:var(--text3);text-transform:uppercase;margin-bottom:4px}
+.credits-title{font-family:'Space Mono',monospace;font-size:8px;font-weight:600;letter-spacing:1px;color:var(--text3);text-transform:uppercase;margin-bottom:4px}
 .credits-names{font-size:9px;font-weight:500;color:var(--text3);letter-spacing:0.3px}
 
 /* WIDGETS */
@@ -214,7 +214,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
 .member-dot{width:8px;height:8px;border-radius:50%;background:var(--accent);position:relative}
 .member-dot::before{content:'';position:absolute;top:8px;left:3.5px;width:1px;height:20px;background:var(--border)}
 .history-item:last-child .member-dot::before{display:none}
-.scan-badge{font-variant-numeric:tabular-nums;font-size:10px;padding:2px 6px;border-radius:4px;font-weight:700}
+.scan-badge{font-family:'Space Mono',monospace;font-size:10px;padding:2px 6px;border-radius:4px;font-weight:700}
 .scan-low{background:var(--green-bg);color:var(--green)}
 .scan-high{background:var(--red-bg);color:var(--red)}
 

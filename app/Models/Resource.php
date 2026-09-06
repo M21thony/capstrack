@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Resource extends Model
 {
@@ -34,26 +33,6 @@ class Resource extends Model
         'uploaded_at',
         'uploaded_by',
     ];
-
-    /**
-     * The sections this resource is aimed at, as labels - "BSIT-4A".
-     *
-     * Empty means it is not aimed at particular sections: it is scoped by
-     * program, or by nothing, in which case it reaches the uploader's own
-     * students because that is who can see their uploads at all.
-     *
-     * @return HasMany<ResourceSection>
-     */
-    public function sections(): HasMany
-    {
-        return $this->hasMany(ResourceSection::class, 'resource_id', 'resource_id');
-    }
-
-    /** @return array<int, string> */
-    public function targetSections(): array
-    {
-        return $this->sections->pluck('section')->all();
-    }
 
     protected $casts = [
         'uploaded_at' => 'datetime',

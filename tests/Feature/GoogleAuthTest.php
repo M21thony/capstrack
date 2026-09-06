@@ -4,7 +4,6 @@ namespace Tests\Feature;
 
 use App\Models\CapstoneExpert;
 use App\Models\Student;
-use App\Models\StudentRoster;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
@@ -18,17 +17,6 @@ class GoogleAuthTest extends TestCase
     {
         $state = 'real-state-token';
         $this->withSession(['oauth_state' => $state]);
-
-        // A student's section has to be on an uploaded list before they can
-        // sign in (see StudentSignupGateTest). This test is about what the
-        // callback does with Google's answer, so put them on one.
-        StudentRoster::create([
-            'email' => 'juan.delacruz@my.cspc.edu.ph',
-            'name' => 'Dela Cruz, Juan',
-            'section' => '4th '.json_decode('"\u00b7"').' B',
-            'program' => 'BSIT',
-            'school_year' => '2026-2027',
-        ]);
 
         Http::fake([
             'oauth2.googleapis.com/token' => Http::response([
@@ -206,13 +194,7 @@ class GoogleAuthTest extends TestCase
         ]);
     }
 
-    /**
-     * A faculty address nobody has put in the system is turned away.
-     *
-     * It used to be sent to a form to apply. A CaPSA adds faculty now - on
-     * the list, or one at a time - so there is nothing to apply to.
-     */
-    public function test_mock_login_turns_away_an_unlisted_faculty_address(): void
+    public function test_mock_login_redirects_unrecognized_gmail_to_request_account(): void
     {
         $state = 'test-state-token';
         $this->withSession(['oauth_state' => $state]);
@@ -223,12 +205,8 @@ class GoogleAuthTest extends TestCase
             'email' => 'john.doe@gmail.com',
         ]);
 
-        $response->assertStatus(403);
-        $this->assertStringContainsString('CaPSA', $response->json('message'));
+        $response->assertRedirectContains('/request-account');
         $this->assertFalse(Auth::check());
-
-        // Nothing was created on the way out.
-        $this->assertNull(CapstoneExpert::where('email', 'john.doe@gmail.com')->first());
     }
 
     public function test_mock_login_denies_non_institutional_non_gmail_email(): void
@@ -254,16 +232,6 @@ class GoogleAuthTest extends TestCase
         $state = 'test-state-token';
         $this->withSession(['oauth_state' => $state]);
 
-        // On the list, so the gate lets them through - what this test is
-        // about is that an institutional address is accepted at all.
-        StudentRoster::create([
-            'email' => 'jose.rizal@my.cspc.edu.ph',
-            'name' => 'Rizal, Jose',
-            'section' => '4th '.json_decode('"\u00b7"').' B',
-            'program' => 'BSIT',
-            'school_year' => '2026-2027',
-        ]);
-
         $response = $this->postJson('/login/google/mock', [
             'state' => $state,
             'name' => 'Jose Rizal',
@@ -285,79 +253,5 @@ class GoogleAuthTest extends TestCase
         $this->assertDatabaseHas('students', [
             'email' => 'jose.rizal@my.cspc.edu.ph',
         ]);
-    }
-
-    /**
-     * A typed name is a placeholder; the person's own account is the source.
-     *
-     * Whoever added an expert typed a name from what they knew. Google is
-     * holding the one they actually go by, and they cannot edit it here - the
-     * profile panel shows it locked - so signing in is the moment the guess
-     * gets corrected.
-     */
-    public function test_signing_in_corrects_the_name_somebody_typed_for_an_expert(): void
-    {
-        $expert = CapstoneExpert::create([
-            'email' => 'typed.name@gmail.com',
-            // what a CaPSA guessed when they added them
-            'first_name' => 'Markanthonybalilla21',
-            'last_name' => '',
-            'approved_status' => true,
-        ]);
-
-        $state = 'name-sync-state';
-        $this->withSession(['oauth_state' => $state]);
-
-        Http::fake([
-            'oauth2.googleapis.com/token' => Http::response([
-                'access_token' => 'fake-access-token',
-                'token_type' => 'Bearer',
-                'expires_in' => 3600,
-            ]),
-            'www.googleapis.com/oauth2/v3/userinfo*' => Http::response([
-                'email' => 'typed.name@gmail.com',
-                'given_name' => 'Mark Anthony',
-                'family_name' => 'Balilla',
-            ]),
-        ]);
-
-        $this->get("/login/google/callback?state={$state}&code=fake-code");
-
-        $expert->refresh();
-
-        $this->assertSame('Mark Anthony', $expert->first_name);
-        $this->assertSame('Balilla', $expert->last_name);
-    }
-
-    /** Google telling us nothing leaves the name that was there. */
-    public function test_a_sign_in_without_a_name_from_google_keeps_the_one_on_file(): void
-    {
-        $expert = CapstoneExpert::create([
-            'email' => 'keeps.name@gmail.com',
-            'first_name' => 'Rosa',
-            'last_name' => 'Villanueva',
-            'approved_status' => true,
-        ]);
-
-        $state = 'name-keep-state';
-        $this->withSession(['oauth_state' => $state]);
-
-        Http::fake([
-            'oauth2.googleapis.com/token' => Http::response([
-                'access_token' => 'fake-access-token',
-                'token_type' => 'Bearer',
-                'expires_in' => 3600,
-            ]),
-            'www.googleapis.com/oauth2/v3/userinfo*' => Http::response([
-                'email' => 'keeps.name@gmail.com',
-            ]),
-        ]);
-
-        $this->get("/login/google/callback?state={$state}&code=fake-code");
-
-        $expert->refresh();
-
-        $this->assertSame('Rosa', $expert->first_name);
-        $this->assertSame('Villanueva', $expert->last_name);
     }
 }

@@ -14,7 +14,6 @@
   .pm-close-btn:hover{background-color:var(--border);color:var(--text);transform:scale(1.05)}
 
   #jrp-overlay{background:rgba(24,25,31,0.5);backdrop-filter:blur(3px);cursor:default}
-  /* the card sits above the overlay, so the close button needs to sit above the card */
   #jrp-overlay .pm-close-btn{z-index:100;position:relative}
   #jrp-overlay .card{padding:0!important;border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,0.18),0 8px 24px rgba(0,0,0,0.12);overflow:hidden;display:flex;flex-direction:column;animation:jrpIn 0.2s ease forwards}
   @keyframes jrpIn{from{opacity:0;transform:translateY(10px) scale(0.985)}to{opacity:1;transform:translateY(0) scale(1)}}
@@ -194,12 +193,11 @@
   }
 
   function jrpClose() {
-    // Dismissing is "remind me later" for everything in the popup. Without
-    // this it reopened on the next page load, so closing it did nothing.
+    // Call remind-later for all items so they don't reappear
+    var ids = Object.keys(itemsById);
     var meta = document.querySelector('meta[name="csrf-token"]');
     var token = meta ? meta.getAttribute('content') : '{{ csrf_token() }}';
-
-    var pending = Object.keys(itemsById).map(function (id) {
+    var promises = ids.map(function(id) {
       return fetch(remindUrl.replace('__ID__', id), {
         method: 'POST',
         headers: {
@@ -209,8 +207,7 @@
         }
       });
     });
-
-    Promise.all(pending).finally(function () {
+    Promise.all(promises).finally(function() {
       overlay.classList.remove('active');
     });
   }

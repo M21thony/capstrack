@@ -36,17 +36,15 @@ class RecipientResolver
 
     /**
      * Resolve the admin acting as Subject Adviser for a given program
-     * (e.g. BSIT, BSCS, BLIS, BSIS), matched via capstone_experts.progrtment.
+     * (e.g. BSIT, BSCS, BLIS, BSIS), matched via capstone_experts.department.
      */
     public function resolveSubjectAdviserAdmin(string $program): ?int
     {
-        // Subject Adviser is no longer synonymous with admin rights - it's
-        // its own role (capstone_adviser), assignable to any expert, so
-        // this no longer requires e.is_admin.
         $row = DB::table('capstone_experts as e')
             ->join('expert_roles as er', 'er.expert_id', '=', 'e.expert_id')
             ->join('roles as r', 'r.role_id', '=', 'er.role_id')
-            ->where('e.program', $program)
+            ->where('e.is_admin', 1)
+            ->where('e.department', $program)
             ->where('r.role_name', 'capstone_adviser')
             ->select('e.expert_id')
             ->first();
@@ -105,12 +103,12 @@ class RecipientResolver
             ];
         }
 
-        // Subject adviser — resolved by program/department, not team. No
-        // longer requires e.is_admin (see resolveSubjectAdviserAdmin()).
+        // Subject adviser (admin) — resolved by program/department, not team
         $adminRow = DB::table('capstone_experts as e')
             ->join('expert_roles as er', 'er.expert_id', '=', 'e.expert_id')
             ->join('roles as r', 'r.role_id', '=', 'er.role_id')
-            ->where('e.program', $program)
+            ->where('e.is_admin', 1)
+            ->where('e.department', $program)
             ->where('r.role_name', 'capstone_adviser')
             ->select('e.expert_id', 'e.first_name', 'e.last_name')
             ->first();

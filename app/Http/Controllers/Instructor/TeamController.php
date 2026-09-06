@@ -14,7 +14,7 @@ class TeamController extends Controller
 
         $approvedAssignments = TeamExpertAssignment::where('expert_id', $expert->expert_id)
             ->where('status', 'approved')
-            ->with(['team', 'role', 'expertRole.role', 'team.leader', 'team.members'])
+            ->with(['team', 'role', 'team.leader', 'team.members'])
             ->get();
 
         $grouped = $approvedAssignments->groupBy(fn ($a) => $a->role->first()?->role_name ?? 'unknown');

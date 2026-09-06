@@ -9,7 +9,6 @@ function CheckerNavbar({
   selectedHighlightColor,
   setSelectedHighlightColor,
   status = "To Review",
-  verdict = null,
   saveState = "idle",
   driveSyncState = "idle",
   driveSyncError = null,
@@ -206,23 +205,8 @@ function CheckerNavbar({
           📤 Export
         </button>
 
-        {/* Turning in IS the decision — there is no way to finish without
-            making one. It used to be a single button, and whether the adviser
-            was happy went into a typed remark that nothing could read. */}
-        <button
-          onClick={() => onTurnIn("approved")}
-          style={verdict === "approved" ? { ...styles.turnInButton, ...styles.verdictActive } : styles.turnInButton}
-          title="Finish this review and approve the document"
-        >
-          ✓ Approve
-        </button>
-
-        <button
-          onClick={() => onTurnIn("needs_revision")}
-          style={verdict === "needs_revision" ? { ...styles.reviseButton, ...styles.verdictActive } : styles.reviseButton}
-          title="Finish this review and send it back for changes"
-        >
-          ↻ Needs revision
+        <button onClick={onTurnIn} style={styles.turnInButton}>
+          ✓ Turn In
         </button>
       </div>
 
@@ -484,30 +468,6 @@ const styles = {
     fontSize: "14px",
     fontWeight: "600",
     boxShadow: "0 2px 4px rgba(37, 99, 235, 0.3)",
-  },
-
-  // Sending it back is a different act from accepting it, so it does not
-  // borrow the primary colour. Amber, not red: needing another draft is
-  // ordinary, not a failure.
-  reviseButton: {
-    display: "flex",
-    alignItems: "center",
-    gap: "6px",
-    padding: "10px 18px",
-    borderRadius: "8px",
-    border: "1px solid #d97706",
-    backgroundColor: "transparent",
-    color: "#b45309",
-    cursor: "pointer",
-    fontSize: "14px",
-    fontWeight: "600",
-  },
-
-  // Marks the decision already recorded, so reopening the annotator shows
-  // what was decided rather than offering two fresh-looking choices.
-  verdictActive: {
-    outline: "2px solid currentColor",
-    outlineOffset: "2px",
   },
 };
 

@@ -24,21 +24,10 @@ class ProgressController extends Controller
             ->with('leader', 'members')
             ->get()
             ->map(function ($team) {
-                // Counted from the items. milestones.status never moved off
-                // 'todo', so completed and overdue were always zero here and
-                // every team showed no progress whatever they had done.
-                $milestones = Milestone::where('team_id', $team->team_id)->with('items')->get();
-                $total = 0;
-                $completed = 0;
-                $overdue = 0;
-
-                foreach ($milestones as $milestone) {
-                    $milestoneProgress = $milestone->progress();
-                    $total += $milestoneProgress->total;
-                    $completed += $milestoneProgress->completed;
-                    $overdue += $milestoneProgress->overdue;
-                }
-
+                $milestones = Milestone::where('team_id', $team->team_id)->get();
+                $total = $milestones->count();
+                $completed = $milestones->where('status', 'completed')->count();
+                $overdue = $milestones->where('status', 'overdue')->count();
                 $progress = $total > 0 ? round(($completed / $total) * 100) : 0;
 
                 $studentSy = StudentSchoolYear::where('team_id', $team->team_id)->first();

@@ -81,13 +81,12 @@ class PersonalInfoController extends Controller
         $program = Student::mapCourseToProgram($validated['course']);
 
         if ($program) {
-            $schoolYear = \App\Models\Term::currentSchoolYear();
+            $schoolYear = now()->month >= 8
+                ? now()->year.'-'.(now()->year + 1)
+                : (now()->year - 1).'-'.now()->year;
 
             StudentSchoolYear::updateOrCreate(
-                // Keyed on the term too: this table is one row per student
-                // per term, so keying on the student alone reaches back and
-                // rewrites an earlier semester's row.
-                ['student_id' => $student->student_id, 'term_id' => \App\Models\Term::activeId()],
+                ['student_id' => $student->student_id],
                 [
                     'program' => $program,
                     'school_year' => $schoolYear,

@@ -12,7 +12,7 @@
 </p>
 
 <div class="card" style="padding:0;overflow:hidden">
-  <div class="tbl-scroll"><table class="table">
+  <table class="tbl">
     <thead>
       <tr>
         <th style="padding-left:20px">Team</th>
@@ -32,7 +32,7 @@
               <span class="td-main">{{ $row->team->team_name }}</span>
             </div>
           </td>
-          <td><span class="badge {{ $row->section === \App\Support\SectionScope::UNASSIGNED ? 'badge-gray' : 'badge-gold' }}" style="font-size:10px">{{ $row->section }}</span></td>
+          <td><span class="badge badge-gold" style="font-size:10px">{{ $row->section }}</span></td>
           <td style="font-size:12px;color:var(--text2)">{{ $row->proposals->count() }} of 3</td>
           <td>
             @if ($row->pendingProposalCount > 0)
@@ -67,5 +67,5 @@
         </tr>
       @endforelse
     </tbody>
-  </table></div>
+  </table>
 </div>

@@ -188,7 +188,7 @@ class AdminFinancialController extends Controller
 
         $teamDetailsJson = json_encode($teamDetails);
 
-        return view('capsa.financial', compact(
+        return view('admin.financial', compact(
             'teams',
             'teamStats',
             'expensePostTitles',
@@ -216,7 +216,6 @@ class AdminFinancialController extends Controller
             'title' => ['required', 'string', 'max:255'],
             'course' => ['required', 'string', 'in:BSIT,BSCS,BLIS,BSIS'],
             'year_level' => ['required', 'string', 'in:3rd,4th'],
-            'defense_type' => ['nullable', 'string', 'in:Pre-proposal Defense,Title Defense,Pre Oral Defense,Final Oral Defense'],
             'amount' => ['required', 'numeric', 'min:0'],
             'description' => ['nullable', 'string', 'max:1000'],
         ]);
@@ -229,7 +228,6 @@ class AdminFinancialController extends Controller
             'title' => $validated['title'],
             'course' => $validated['course'],
             'year_level' => $validated['year_level'],
-            'defense_type' => $validated['defense_type'] ?? null,
             'amount' => $validated['amount'],
             'description' => $validated['description'],
         ]);
@@ -243,7 +241,6 @@ class AdminFinancialController extends Controller
             'title' => ['required', 'string', 'max:255'],
             'course' => ['required', 'string', 'in:BSIT,BSCS,BLIS,BSIS'],
             'year_level' => ['required', 'string', 'in:3rd,4th'],
-            'defense_type' => ['nullable', 'string', 'in:Pre-proposal Defense,Title Defense,Pre Oral Defense,Final Oral Defense'],
             'amount' => ['required', 'numeric', 'min:0'],
             'description' => ['nullable', 'string', 'max:1000'],
         ]);
