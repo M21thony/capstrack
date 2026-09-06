@@ -99,11 +99,23 @@
   </div>
 
   <div class="content">
+    {{-- Students belong to their CaPSA: they are enrolled from the section
+         list and the roster import, both of which live on that side. An admin
+         who could add or edit one here would be doing a job from a page with
+         different powers behind it, so this is a register - search it, take a
+         copy of it. Nothing on it destroys anything. --}}
+    <div class="page-head">
+      <div class="page-head-text">
+        {{ $students->total() ?? $students->count() }}
+        {{ Str::plural('student', $students->total() ?? $students->count()) }}
+        · added and edited by their CaPSA
+      </div>
+    </div>
+
     <div class="std-toolbar">
       <form method="GET" class="std-search">
         <input class="input" type="text" name="search" value="{{ $search }}" placeholder="Search by name, email, or student number...">
       </form>
-      <button type="button" class="btn btn-primary" onclick="openStudentModal()">+ Add Student</button>
     </div>
 
     <div class="card" style="padding:0;overflow:hidden">
@@ -116,7 +128,7 @@
             <th>Program</th>
             <th>Year</th>
             <th>Section</th>
-            <th style="padding-right:20px;text-align:right">Action</th>
+
           </tr>
         </thead>
         <tbody>
@@ -162,22 +174,9 @@
               </td>
               <td class="std-num">{{ $year !== '' ? $year : '—' }}</td>
               <td class="std-num">{{ $section !== '' ? $section : '—' }}</td>
-              <td style="padding-right:20px">
-                {{-- A pencil and a bin, with the words on the button rather
-                     than beside it: at this row height the labels were most
-                     of the width of the table. --}}
-                <div class="std-actions">
-                  <button type="button" class="std-ico" title="Edit" aria-label="Edit" onclick='openStudentModal({{ Illuminate\Support\Js::from($studentPayload) }})'>
-                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
-                  </button>
-                  <button type="button" class="std-ico std-ico-danger" title="Remove" aria-label="Remove" onclick="openRemoveModal({{ $student->student_id }}, {{ Illuminate\Support\Js::from(trim($student->f_name.' '.$student->l_name)) }})">
-                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M7 6l1 14h8l1-14"/><path d="M10 10v6"/><path d="M14 10v6"/></svg>
-                  </button>
-                </div>
-              </td>
             </tr>
           @empty
-            <tr><td colspan="7" style="padding:24px 20px;text-align:center;color:var(--text3);font-size:13px">No student accounts found.</td></tr>
+            <tr><td colspan="6" style="padding:24px 20px;text-align:center;color:var(--text3);font-size:13px">No student accounts found.</td></tr>
           @endforelse
         </tbody>
       </table>
@@ -189,76 +188,6 @@
 
 {{-- Toast container --}}
 <div id="ct-toast-container"></div>
-
-{{-- ══════════════════════════════════════════
-     ADD / EDIT STUDENT — Form Modal
-══════════════════════════════════════════ --}}
-<div id="studentModal" class="ct-modal-overlay">
-  <div class="ct-modal-card" style="max-width:480px">
-    <h3 class="ct-modal-title" id="studentModalTitle">Add Student</h3>
-    <div class="ct-modal-grid">
-      <div class="full">
-        <label class="ct-modal-label">Email <span style="color:#ef4444">*</span></label>
-        <input type="email" id="studentEmailInput" class="ct-modal-input" placeholder="juan.delacruz@my.cspc.edu.ph">
-      </div>
-      <div>
-        <label class="ct-modal-label">First Name <span style="color:#ef4444">*</span></label>
-        <input type="text" id="studentFNameInput" class="ct-modal-input" placeholder="Juan">
-      </div>
-      <div>
-        <label class="ct-modal-label">Last Name <span style="color:#ef4444">*</span></label>
-        <input type="text" id="studentLNameInput" class="ct-modal-input" placeholder="Dela Cruz">
-      </div>
-      <div>
-        <label class="ct-modal-label">Middle Name</label>
-        <input type="text" id="studentMNameInput" class="ct-modal-input" placeholder="Optional">
-      </div>
-      <div>
-        <label class="ct-modal-label">Suffix</label>
-        <input type="text" id="studentSuffixInput" class="ct-modal-input" placeholder="Jr., III...">
-      </div>
-      <div>
-        <label class="ct-modal-label">Student Number</label>
-        <input type="text" id="studentNumberInput" class="ct-modal-input" placeholder="2021-00123">
-      </div>
-      <div>
-        <label class="ct-modal-label">Course</label>
-        <input type="text" id="studentCourseInput" class="ct-modal-input" placeholder="BSIT">
-      </div>
-      <div class="full">
-        <label class="ct-modal-label">Year &amp; Section</label>
-        <input type="text" id="studentSectionInput" class="ct-modal-input" placeholder="4th · A">
-      </div>
-    </div>
-    <p id="studentModalError" style="display:none;color:#dc2626;font-size:12px;margin:-6px 0 14px;text-align:left"></p>
-    <div class="ct-modal-actions">
-      <button type="button" class="ct-btn ct-btn-secondary" onclick="closeStudentModal()">Cancel</button>
-      <button type="button" id="studentSaveBtn" class="ct-btn ct-btn-primary" onclick="saveStudent()">Save</button>
-    </div>
-  </div>
-</div>
-
-{{-- ══════════════════════════════════════════
-     REMOVE STUDENT — Confirmation Modal
-══════════════════════════════════════════ --}}
-<div id="removeModal" class="ct-modal-overlay">
-  <div class="ct-modal-card">
-    <div class="ct-modal-icon danger">
-      <svg width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
-        <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/>
-      </svg>
-    </div>
-    <h3 class="ct-modal-title">Remove Student</h3>
-    <p class="ct-modal-desc">
-      You are about to permanently remove <strong id="removeStudentName" style="color:#0f172a"></strong>'s account.
-      This action <span style="color:#ef4444;font-weight:600">cannot be undone</span>.
-    </p>
-    <div class="ct-modal-actions">
-      <button type="button" class="ct-btn ct-btn-secondary" onclick="closeRemoveModal()">Cancel</button>
-      <button type="button" id="removeConfirmBtn" class="ct-btn ct-btn-danger" onclick="confirmRemoveStudent()">Remove</button>
-    </div>
-  </div>
-</div>
 
 <script>
 const CSRF_TOKEN = '{{ csrf_token() }}';
@@ -286,124 +215,6 @@ function showToast(message, type = 'success') {
   }, 4000);
 }
 
-// ── ADD / EDIT STUDENT MODAL ───────────────────────────
-let editingStudentId = null;
-const studentModal = document.getElementById('studentModal');
-
-function openStudentModal(student = null) {
-  editingStudentId = student ? student.id : null;
-  document.getElementById('studentModalTitle').textContent = student ? 'Edit Student' : 'Add Student';
-  document.getElementById('studentEmailInput').value = student?.email || '';
-  document.getElementById('studentFNameInput').value = student?.f_name || '';
-  document.getElementById('studentLNameInput').value = student?.l_name || '';
-  document.getElementById('studentMNameInput').value = student?.m_name || '';
-  document.getElementById('studentSuffixInput').value = student?.suffix || '';
-  document.getElementById('studentNumberInput').value = student?.student_number || '';
-  document.getElementById('studentCourseInput').value = student?.course || '';
-  document.getElementById('studentSectionInput').value = student?.year_section || '';
-  document.getElementById('studentModalError').style.display = 'none';
-  studentModal.style.display = 'flex';
-}
-
-function closeStudentModal() {
-  studentModal.style.display = 'none';
-}
-
-function saveStudent() {
-  const errorEl = document.getElementById('studentModalError');
-  const payload = {
-    email: document.getElementById('studentEmailInput').value.trim(),
-    f_name: document.getElementById('studentFNameInput').value.trim(),
-    l_name: document.getElementById('studentLNameInput').value.trim(),
-    m_name: document.getElementById('studentMNameInput').value.trim() || null,
-    suffix: document.getElementById('studentSuffixInput').value.trim() || null,
-    student_number: document.getElementById('studentNumberInput').value.trim() || null,
-    course: document.getElementById('studentCourseInput').value.trim() || null,
-    year_section: document.getElementById('studentSectionInput').value.trim() || null,
-  };
-
-  if (!payload.email || !payload.f_name || !payload.l_name) {
-    errorEl.textContent = 'Email, first name, and last name are required.';
-    errorEl.style.display = 'block';
-    return;
-  }
-
-  const saveBtn = document.getElementById('studentSaveBtn');
-  saveBtn.disabled = true;
-  saveBtn.textContent = 'Saving...';
-
-  const url = editingStudentId ? `/admin/students/${editingStudentId}` : '/admin/students';
-  const method = editingStudentId ? 'PUT' : 'POST';
-
-  fetch(url, {
-    method,
-    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF_TOKEN, 'Accept': 'application/json' },
-    body: JSON.stringify(payload),
-  })
-    .then(res => res.json().then(data => ({ status: res.status, data })))
-    .then(({ status, data }) => {
-      if (status === 200 && data.success) {
-        closeStudentModal();
-        showToast(data.message, 'success');
-        setTimeout(() => window.location.reload(), 700);
-      } else {
-        errorEl.textContent = data.message || (data.errors ? Object.values(data.errors).flat().join(' ') : 'Could not save this student.');
-        errorEl.style.display = 'block';
-      }
-    })
-    .catch(() => {
-      errorEl.textContent = 'Network error while saving.';
-      errorEl.style.display = 'block';
-    })
-    .finally(() => {
-      saveBtn.disabled = false;
-      saveBtn.textContent = 'Save';
-    });
-}
-
-// ── REMOVE STUDENT MODAL ───────────────────────────────
-let removingStudentId = null;
-const removeModal = document.getElementById('removeModal');
-
-function openRemoveModal(id, name) {
-  removingStudentId = id;
-  document.getElementById('removeStudentName').textContent = name;
-  removeModal.style.display = 'flex';
-}
-
-function closeRemoveModal() {
-  removeModal.style.display = 'none';
-  removingStudentId = null;
-}
-
-function confirmRemoveStudent() {
-  const btn = document.getElementById('removeConfirmBtn');
-  btn.disabled = true;
-  btn.textContent = 'Removing...';
-
-  fetch(`/admin/students/${removingStudentId}`, {
-    method: 'DELETE',
-    headers: { 'X-CSRF-TOKEN': CSRF_TOKEN, 'Accept': 'application/json' },
-  })
-    .then(r => r.json())
-    .then(data => {
-      closeRemoveModal();
-      if (data.success) {
-        document.getElementById(`student-row-${removingStudentId}`)?.remove();
-        showToast(data.message, 'success');
-      } else {
-        showToast(data.message || 'Could not remove this student.', 'error');
-      }
-    })
-    .catch(() => {
-      closeRemoveModal();
-      showToast('Network error while removing.', 'error');
-    })
-    .finally(() => {
-      btn.disabled = false;
-      btn.textContent = 'Remove';
-    });
-}
 </script>
 </body>
 </html>
