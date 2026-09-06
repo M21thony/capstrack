@@ -46,7 +46,19 @@ class StudentController extends Controller
      */
     private static function yearSection(string $year, string $section): string
     {
-        return trim($year).' · '.strtoupper(trim($section));
+        // The roster import writes "4th", not "4". Both compute to the same
+        // section label, so nothing breaks either way - but a student added
+        // here would read "4" in the Year column while everyone imported
+        // beside them read "4th", which looks like a data fault and is not.
+        $n = (int) preg_replace('/[^0-9]/', '', $year);
+        $ordinal = match ($n) {
+            1 => '1st',
+            2 => '2nd',
+            3 => '3rd',
+            default => $n.'th',
+        };
+
+        return $ordinal.' · '.strtoupper(trim($section));
     }
 
     /** True when this student sits in a section the viewer handles. */
