@@ -48,6 +48,7 @@ use App\Http\Controllers\Student\ResourceController as StudentResourceController
 use App\Http\Controllers\StudentConsultationController;
 use App\Http\Controllers\StudentFinancialController;
 use App\Http\Controllers\StudentReviewController;
+use App\Http\Controllers\Capsa\StudentController as CapsaStudentController;
 use App\Http\Controllers\StudentSectionController;
 use App\Http\Controllers\SubmissionController;
 use App\Http\Controllers\TeamController;
@@ -215,6 +216,16 @@ Route::middleware('expert.capsa')->group(function () {
     // the page is empty for them, and Student Accounts below is the
     // unscoped list they actually want.
     Route::get('/sections', [StudentSectionController::class, 'index'])->name('sections');
+
+    // A CaPSA's own students. These moved off the admin page, where the person
+    // who runs the subject had to ask someone else to fix a section.
+    // PATCH rather than PUT: the row editor sends everything and setting a
+    // section for a group sends only that, and both are partial changes to the
+    // same record. DELETE takes them off the roster - the account stays,
+    // because their team history and submissions hang off it.
+    Route::post('/students', [CapsaStudentController::class, 'store'])->name('students.store');
+    Route::patch('/students/{student}', [CapsaStudentController::class, 'update'])->name('students.update');
+    Route::delete('/students/{student}', [CapsaStudentController::class, 'destroy'])->name('students.destroy');
 });
 
 
