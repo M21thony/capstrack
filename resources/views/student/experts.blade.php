@@ -445,13 +445,13 @@
           @foreach(['adviser', 'consultant', 'grammarian'] as $slotRole)
             @php $a = $filledSlots[$slotRole] ?? null; @endphp
             <span class="yx-chip {{ $a ? 'is-set' : 'is-open' }}" data-slot-role="{{ $slotRole }}">
-              <span class="yx-mark">@if($a)<svg viewBox="0 0 24 24" width="9" height="9" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>@else?@endif</span>
+              <span class="yx-mark">@if($a)<svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>@else?@endif</span>
               <span class="yx-role">{{ ucfirst($slotRole) }}</span>
               @if($a)
                 <span class="yx-name" title="{{ $a->expert?->name }}">{{ $a->expert?->name }}</span>
                 @if($isLeader)
                   <button type="button" class="yx-x" title="Remove {{ $a->expert?->name ?? 'this expert' }}"
-                          onclick="openRemoveModal({{ $a->assignment_id }}, '{{ addslashes($a->expert?->name ?? '') }}')"><svg viewBox="0 0 24 24" width="11" height="11" stroke="currentColor" fill="none" stroke-width="2" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+                          onclick="openRemoveModal({{ $a->assignment_id }}, '{{ addslashes($a->expert?->name ?? '') }}')"><svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
                 @endif
               @endif
             </span>
@@ -461,12 +461,12 @@
                Listed rather than dropped: they are still your expert. --}}
           @foreach($unslotted as $a)
             <span class="yx-chip is-set">
-              <span class="yx-mark"><svg viewBox="0 0 24 24" width="9" height="9" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg></span>
+              <span class="yx-mark"><svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg></span>
               <span class="yx-role">Assigned</span>
               <span class="yx-name">{{ $a->expert?->name ?? 'Unknown' }}</span>
               @if($isLeader)
                 <button type="button" class="yx-x" title="Remove {{ $a->expert?->name ?? 'this expert' }}"
-                        onclick="openRemoveModal({{ $a->assignment_id }}, '{{ addslashes($a->expert?->name ?? '') }}')"><svg viewBox="0 0 24 24" width="11" height="11" stroke="currentColor" fill="none" stroke-width="2" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+                        onclick="openRemoveModal({{ $a->assignment_id }}, '{{ addslashes($a->expert?->name ?? '') }}')"><svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
               @endif
             </span>
           @endforeach

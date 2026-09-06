@@ -666,46 +666,54 @@ select.input{cursor:pointer}
    one group instead of at opposite ends of the row, so it reads as a sentence
    rather than a bar with something stranded on the end of it. */
 .yx{
-  display:flex;align-items:center;gap:9px;flex-wrap:wrap;
-  margin:12px 0 0;padding:11px 14px;
-  background:var(--bg4);border-radius:12px;
+  display:flex;align-items:center;column-gap:11px;row-gap:9px;flex-wrap:wrap;
+  margin:12px 0 0;padding:15px 17px;
+  /* The same card as everything else on the page - white, one hairline, 11px
+     - rather than the inset grey it started as. It does not need a ground of
+     its own to be seen: the solid green pill is the loud part, and it is
+     louder on white than it was on grey. */
+  background:var(--bg2);border:1px solid var(--border);border-radius:11px;
 }
+/* A long name - "Mark Anthony Balilla" is a real one - pushes the last chip
+   onto a second line on a narrower window. That is fine and better than
+   truncating somebody's name; the row gap is here so it lands as a second
+   line rather than a cramped one. */
 .yx-lab{
-  font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
   color:var(--text2);white-space:nowrap;
 }
-.yx-sep{width:1px;height:20px;background:var(--border2)}
+.yx-sep{width:1px;height:28px;background:var(--border2)}
 
 .yx-chip{
-  display:inline-flex;align-items:center;gap:8px;min-width:0;
-  padding:5px 12px 5px 6px;border-radius:999px;white-space:nowrap;
+  display:inline-flex;align-items:center;gap:9px;min-width:0;
+  padding:7px 15px 7px 7px;border-radius:999px;white-space:nowrap;
 }
 /* Solid, not tinted: a filled slot should be the thing your eye lands on. */
 .yx-chip.is-set{background:var(--green);box-shadow:0 1px 3px rgba(22,163,74,.28)}
-.yx-chip.is-open{border:1.5px dashed var(--border2);background:transparent;padding:4px 12px 4px 5px}
+.yx-chip.is-open{border:1.5px dashed var(--border2);background:var(--bg3);padding:6px 15px 6px 6px}
 
 .yx-mark{
-  width:19px;height:19px;border-radius:50%;flex-shrink:0;display:grid;place-items:center;
-  font-size:11px;font-weight:700;
+  width:23px;height:23px;border-radius:50%;flex-shrink:0;display:grid;place-items:center;
+  font-size:12px;font-weight:700;
 }
 .yx-chip.is-set .yx-mark{background:rgba(255,255,255,.22);color:#fff}
-.yx-chip.is-open .yx-mark{background:var(--bg2);color:var(--text3);border:1px solid var(--border2)}
+.yx-chip.is-open .yx-mark{background:var(--bg4);color:var(--text3);border:1px solid var(--border2)}
 
 /* On a filled chip the name is the answer and the role is the label, so they
    are not the same size. They were both 11.5px at weight 600, which left
    "Adviser" and "Neil Inocencio" reading as equal halves of one phrase. */
-.yx-role{font-size:12px;font-weight:600;color:var(--text2)}
+.yx-role{font-size:12.5px;font-weight:600;color:var(--text2)}
 .yx-chip.is-set .yx-role{
-  font-size:9.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;
+  font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;
   color:rgba(255,255,255,.72);
 }
 .yx-name{
-  font-size:13.5px;font-weight:700;letter-spacing:-.01em;color:#fff;
+  font-size:14.5px;font-weight:700;letter-spacing:-.01em;color:#fff;
   min-width:0;overflow:hidden;text-overflow:ellipsis;
 }
 
 .yx-x{
-  width:20px;height:20px;flex-shrink:0;margin-left:1px;border:0;border-radius:6px;
+  width:23px;height:23px;flex-shrink:0;margin-left:2px;border:0;border-radius:7px;
   background:rgba(255,255,255,.16);color:#fff;cursor:pointer;display:grid;place-items:center;
 }
 .yx-x:hover{background:rgba(255,255,255,.32)}
@@ -713,8 +721,8 @@ select.input{cursor:pointer}
 /* Label over count, one block at the left. Pushed to the far edge with
    margin-left:auto the count was the first thing to wrap, and a strip two
    rows tall with a number stranded on the second is worse than no count. */
-.yx-head{display:flex;flex-direction:column;gap:2px;white-space:nowrap;margin-right:2px}
-.yx-count{font-size:11.5px;color:var(--text2);line-height:1.2}
+.yx-head{display:flex;flex-direction:column;gap:3px;white-space:nowrap;margin-right:2px}
+.yx-count{font-size:12.5px;color:var(--text2);line-height:1.2}
 .yx-count b{color:var(--text);font-weight:700;font-variant-numeric:tabular-nums}
 
 /* Said once, above the applications that are finished. */
