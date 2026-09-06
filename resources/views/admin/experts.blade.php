@@ -483,7 +483,7 @@
   </div>
 
   <div id="real-content" style="display:none;flex:1;overflow:hidden;flex-direction:column;">
-  <div class="content">
+  <div class="content list-page">
     @php
       // What the page is of, in a sentence. A bare count in a pill said less
       // and took the same room.
@@ -543,7 +543,7 @@
       ],
     ])
 
-    <div class="card" style="padding:0;overflow:hidden">
+    <div class="card list-card">
       <table class="table">
         <thead>
           <tr>
