@@ -115,7 +115,7 @@
     <div id="jrp-confirm-title"></div>
     <div id="jrp-confirm-sub"></div>
     <div id="jrp-confirm-actions">
-      <button type="button" class="jrp-btn jrp-btn-cancel" onclick="jrpConfirmClose()">Cancel</button>
+      <button type="button" class="jrp-btn jrp-btn-cancel" onclick="jrpConfirmClose()">No</button>
       <button type="button" class="jrp-btn" id="jrp-confirm-ok"></button>
     </div>
   </div>
@@ -177,18 +177,23 @@
     var form = document.createElement('form');
     form.method = 'POST';
     form.action = url;
-    // Only a status change is a PATCH - remind-later still posts. A form
-    // can only send GET or POST, so the real verb rides along in _method
-    // the way a Blade method directive does it.
-    if (status) {
-      [['_method', 'PATCH'], ['status', status]].forEach(function (pair) {
-        var f = document.createElement('input');
-        f.type = 'hidden';
-        f.name = pair[0];
-        f.value = pair[1];
-        form.appendChild(f);
-      });
-    }
+
+    // A form can only send GET or POST, so the real verb rides along in
+    // _method the way a Blade method directive does it. Both of these need
+    // one: accepting and declining are a PATCH, and Later is a PUT. Later
+    // used to send a bare POST, which the router answered with
+    // MethodNotAllowed - so clicking it crashed the page.
+    var fields = status
+      ? [['_method', 'PATCH'], ['status', status]]
+      : [['_method', 'PUT']];
+
+    fields.forEach(function (pair) {
+      var f = document.createElement('input');
+      f.type = 'hidden';
+      f.name = pair[0];
+      f.value = pair[1];
+      form.appendChild(f);
+    });
     var csrf = document.createElement('input');
     csrf.type = 'hidden';
     csrf.name = '_token';
@@ -212,7 +217,7 @@
 
     var pending = Object.keys(itemsById).map(function (id) {
       return fetch(remindUrl.replace('__ID__', id), {
-        method: 'POST',
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
@@ -250,21 +255,23 @@
       confirmUrl = updateUrl.replace('__ID__', id);
       confirmStatus = 'accepted';
       confirmIcon.className = 'accept';
-      confirmTitle.textContent = 'Approve and review?';
+      // A request to join and an invitation to you are different things, so
+      // the title says which one is being answered.
+      confirmTitle.textContent = isRequest ? 'Accept Request' : 'Accept Invitation';
       confirmSub.innerHTML = 'You are about to accept <strong>'+name+'</strong>\'s '+
         (isRequest ? 'request to join <strong>'+team+'</strong>' : 'invitation to <strong>'+team+'</strong>')+
         '. They will be added as a member of your team.';
-      confirmOk.textContent = 'Approve & Review';
+      confirmOk.textContent = 'Yes';
       confirmOk.className = 'jrp-btn jrp-btn-accept';
     } else {
       confirmUrl = updateUrl.replace('__ID__', id);
       confirmStatus = 'declined';
       confirmIcon.className = 'decline';
-      confirmTitle.textContent = 'Decline and review?';
+      confirmTitle.textContent = 'Decline';
       confirmSub.innerHTML = 'You are about to decline <strong>'+name+'</strong>\'s '+
         (isRequest ? 'request to join <strong>'+team+'</strong>' : 'invitation to <strong>'+team+'</strong>')+
         '. They will be notified that you declined.';
-      confirmOk.textContent = 'Decline & Review';
+      confirmOk.textContent = 'Yes';
       confirmOk.className = 'jrp-btn jrp-btn-decline';
     }
 
