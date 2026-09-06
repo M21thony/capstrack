@@ -1,15 +1,24 @@
 <style>
-  /* This partial is included on every student page via the sidebar, but
-     several pages (submission, personal-info, archive, duplication,
-     resources, review, profile) never define .modal-overlay/.pm-close-btn
-     themselves - without a base rule here, these two overlays render as
-     plain unstyled, unpositioned, always-visible boxes stacked in normal
-     page flow instead of a centered fixed backdrop. Additive only: on
-     pages that already define .modal-overlay for their own modals, this
-     just adds the opacity/pointer-events toggle their JS doesn't already
-     provide - it never overrides their base display/background rules. */
-  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1000;opacity:0;pointer-events:none;transition:opacity .2s}
-  .modal-overlay.active{opacity:1;pointer-events:auto}
+  /* This partial is included on every student page via the sidebar, and
+     consultation, dashboard and team all use .modal-overlay without styling
+     it themselves - without a base rule here their overlays render as plain
+     unpositioned always-visible boxes in normal page flow.
+
+     Wrapped in :where() so it is genuinely what the old comment here claimed
+     it was: a fallback. :where() contributes nothing to specificity, so any
+     page with its own .modal-overlay rule wins outright. Unwrapped, this
+     block came after the page's own <style> and quietly took over - which is
+     how every modal on Find Your Team Experts ended up at z-index 1000
+     instead of the 300 that page sets, and why opening Preview from inside
+     the Apply form painted it behind the form. */
+  :where(.modal-overlay){position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1000;opacity:0;pointer-events:none;transition:opacity .2s}
+  :where(.modal-overlay.active){opacity:1;pointer-events:auto}
+
+  /* The two this partial owns keep the behaviour outright, since a page's
+     own rule has no business deciding whether these are visible. */
+  #jrp-overlay,#jrp-confirm-overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s}
+  #jrp-overlay{z-index:1000}
+  #jrp-overlay.active,#jrp-confirm-overlay.active{opacity:1;pointer-events:auto}
   .pm-close-btn{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;padding:0;background-color:var(--bg2);color:var(--text3);border:none;border-radius:50%;cursor:pointer;transition:all .15s ease-in-out;outline:none}
   .pm-close-btn:hover{background-color:var(--border);color:var(--text);transform:scale(1.05)}
 

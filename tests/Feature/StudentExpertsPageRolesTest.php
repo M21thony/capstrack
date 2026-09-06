@@ -148,8 +148,11 @@ class StudentExpertsPageRolesTest extends TestCase
 
         $response->assertStatus(200);
 
-        // The request itself, named and labelled, not merely counted.
-        $response->assertSee('Pending Applications');
+        // The request itself, named and labelled, not merely counted. The
+        // panel is "Applications" rather than "Pending Applications" now,
+        // because it also carries the ones that were answered.
+        $response->assertSee('Applications');
+        $response->assertSee('request waiting on a reply');
         $response->assertSee('class="req-card"', false);
         $response->assertSee($expert->name, false);
         $response->assertSee('Applied as consultant');
