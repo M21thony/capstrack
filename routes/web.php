@@ -292,15 +292,11 @@ Route::get('/login/rejected', [AuthController::class, 'rejected'])->name('login.
 // by somebody who already knows who the person is. Leaving the form reachable
 // alongside that gave two ways in with different vetting behind them, and a
 // queue somebody had to remember to watch.
-//
-// The controller (ExpertController::showRequestForm, storeRequest), the view
-// (resources/views/auth/request-account.blade.php) and the approval screen
-// that went with it are all still here. Uncomment these two lines to have it
-// back; AuthController::refuseUnlistedExpert() is what to point at the form
-// again if you do.
-//
-// Route::get('/request-account', [ExpertController::class, 'showRequestForm'])->name('account.request');
-// Route::post('/request-account', [ExpertController::class, 'storeRequest'])->name('account.request.store');
+// How a faculty member who is not on any uploaded list gets an account. The
+// login page has always told them to "request account access"; for a while
+// these two lines were commented out and there was nowhere to do it.
+Route::get('/request-account', [ExpertController::class, 'showRequestForm'])->name('account.request');
+Route::post('/request-account', [ExpertController::class, 'storeRequest'])->name('account.request.store');
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 Route::prefix('expert')->group(function () {
