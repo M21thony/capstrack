@@ -107,21 +107,88 @@ class StudentExpertsPageRolesTest extends TestCase
 
         $response->assertStatus(200);
 
-        // The expert is qualified as an adviser too, so a label reading
-        // "Adviser" here would mean the old guess is still in play.
-        $response->assertSee('Applied as consultant');
-        $this->assertStringContainsString(
-            'Consultant',
-            $this->teamExpertsSection($response->getContent()),
+        // The expert is qualified as an adviser too, so landing in the
+        // adviser row would mean the old guess is still in play.
+        $html = $response->getContent();
+
+        // e(): the page escapes the name, so a generated "O'Reilly" arrives as
+        // "O&#039;Reilly" and a raw comparison fails at random.
+        $this->assertStringContainsString(e($expert->name), $this->checklistRow($html, 'consultant'));
+        $this->assertStringNotContainsString(e($expert->name), $this->checklistRow($html, 'adviser'));
+
+        // An approved expert belongs in the slots above and nowhere else.
+        // They used to appear three times over - in the slots, still in
+        // Request Experts as though undecided, and still in the grid below
+        // as though available to ask.
+        $response->assertDontSee('Applied as consultant');
+        $this->assertStringNotContainsString(
+            'data-expert-id="'.$expert->expert_id.'"',
+            $response->getContent(),
         );
     }
 
-    /** The "Your Team's Experts" panel only. */
-    private function teamExpertsSection(string $html): string
+    /**
+     * The Request Experts section is only rendered when there is something in
+     * it, so a pending request has to be what puts it there - otherwise a
+     * student who has applied to someone has nowhere on this page to see it.
+     */
+    public function test_a_pending_request_is_visible_on_the_page(): void
     {
-        $start = strpos($html, 'Your Team\'s Experts');
-        $end = strpos($html, 'sticky-controls', $start ?: 0);
+        [$student, $team] = $this->makeLeaderWithTeam();
+        $expert = $this->makeExpertWithRoles(['consultant']);
 
-        return $start === false || $end === false ? '' : substr($html, $start, $end - $start);
+        TeamExpertAssignment::create([
+            'team_id' => $team->team_id,
+            'expert_id' => $expert->expert_id,
+            'expert_role_id' => $this->expertRoleId($expert, 'consultant'),
+            'status' => 'pending',
+        ]);
+
+        $response = $this->actingAs($student, 'web')->get('/student/experts');
+
+        $response->assertStatus(200);
+
+        // The request itself, named and labelled, not merely counted.
+        $response->assertSee('Pending Applications');
+        $response->assertSee('class="req-card"', false);
+        $response->assertSee($expert->name, false);
+        $response->assertSee('Applied as consultant');
+        $response->assertSee('Pending');
+
+        // And the summary line above it agrees.
+        $response->assertSee('request waiting on a reply');
+    }
+
+    /**
+     * With nothing requested the section stays away - but the page still has
+     * to say so somewhere, or there is no way to find out where requests
+     * appear before you have made one.
+     */
+    public function test_the_request_section_is_absent_but_still_accounted_for(): void
+    {
+        [$student] = $this->makeLeaderWithTeam();
+
+        $response = $this->actingAs($student, 'web')->get('/student/experts');
+
+        $response->assertStatus(200);
+        $response->assertDontSee('class="req-card"', false);
+        $response->assertDontSee('waiting on a reply');
+
+        // The signpost stays put at zero.
+        $response->assertSee('No requests out yet.');
+    }
+
+    /** One row of the Team Checklist - the slot for a given role. */
+    private function checklistRow(string $html, string $role): string
+    {
+        $start = strpos($html, 'data-slot-role="'.$role.'"');
+
+        if ($start === false) {
+            return '';
+        }
+
+        $end = strpos($html, 'data-slot-role="', $start + 20);
+
+        return substr($html, $start, ($end === false ? strlen($html) : $end) - $start);
     }
 }

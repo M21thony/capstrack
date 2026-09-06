@@ -4,14 +4,12 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Team Assignments - CapsTRACK</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="{{ asset('css/expert.css') }}" />
 <meta name="csrf-token" content="{{ csrf_token() }}">
 <style>
-.tab-bar { display: flex; gap: 4px; margin-bottom: 20px; background: var(--bg2); border-radius: 12px; padding: 4px; border: 1px solid var(--border); width: fit-content; }
-.tab-btn { padding: 8px 20px; border-radius: 8px; border: none; background: transparent; color: var(--text3); font-size: 13px; font-weight: 500; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: 0.15s; }
-.tab-btn.active { background: var(--accent); color: white; }
-.tab-btn:hover:not(.active) { color: var(--text); }
+/* Tabs: the look is the shared .tab-bar/.tab-btn component. */
+.tab-bar { margin-bottom: 20px; }
 .tab-content { display: none; }
 .tab-content.active { display: block; }
 .stat-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 24px; }
@@ -138,7 +136,8 @@
 }
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 300; display: none; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
 .modal-overlay.open { display: flex; }
-.modal-box { background: var(--bg2); border-radius: 16px; padding: 28px; width: 440px; max-width: 90vw; box-shadow: 0 20px 60px rgba(0,0,0,0.3); animation: modalIn 0.2s ease; max-height: 85vh; overflow-y: auto; }
+.modal-box { background: var(--bg2); border-radius: 16px; padding: 28px; width: 440px; max-width: 90vw; box-shadow: 0 20px 60px rgba(0,0,0,0.3); animation: modalIn 0.2s ease; max-height: 85vh; overflow-y: auto;scrollbar-width:none;-ms-overflow-style:none}
+.modal-box::-webkit-scrollbar{display:none}
 @keyframes modalIn { from { opacity: 0; transform: scale(0.95) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
 .modal-box h3 { font-size: 17px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
 .modal-box .modal-sub { font-size: 13px; color: var(--text3); margin-bottom: 16px; }
@@ -171,6 +170,12 @@
 .info-box .info-value .proposal-link:hover { background: var(--accent); color: white; }
 .info-box .info-value .msg-text { font-size: 12px; color: var(--text2); line-height: 1.5; background: var(--bg3); border-radius: 6px; padding: 8px 10px; margin-top: 2px; }
 
+/* PDF preview modal - opens over whichever modal triggered it */
+.pdf-box { width: 900px; max-width: 95vw; height: 88vh; max-height: 88vh; display: flex; flex-direction: column; overflow: hidden; }
+.pdf-box .pdf-box-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; flex-shrink: 0; }
+.pdf-box .pdf-box-header h3 { margin: 0; }
+.pdf-box iframe { flex: 1; width: 100%; border: 1px solid var(--border); border-radius: 8px; min-height: 0; }
+
 .msg-toast { position: fixed; bottom: 30px; right: 30px; background: #1e2128; color: white; padding: 14px 22px; border-radius: 12px; font-size: 13px; font-weight: 500; z-index: 500; display: none; align-items: center; gap: 10px; box-shadow: 0 8px 30px rgba(0,0,0,0.3); animation: slideUp 0.3s ease; }
 .msg-toast.success { border-left: 4px solid var(--green); }
 .msg-toast.error { border-left: 4px solid var(--red); }
@@ -179,6 +184,7 @@
 
 /* Skeleton styles now live in expert.css, shared across every instructor page */
 </style>
+@include('partials.skeleton-head', ['skReveal' => 'block'])
 </head>
 <body>
 @include('instructor.partials.sidebar', ['currentPage' => 'assignments'])
@@ -191,10 +197,7 @@
       </button>
       <div class="page-title">Team Assignments</div>
       <div class="topbar-actions">
-        <div class="notif-btn">
-          <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-          <div class="notif-dot"></div>
-        </div>
+        @include('instructor.partials.notification-dropdown')
       </div>
     </div>
 
@@ -256,17 +259,17 @@
               </div>
             </div>
             <div class="req-card-right">
-              <span class="req-role-badge">{{ ucfirst($assignment->role->first()?->role_name ?? '') }}</span>
+              <span class="req-role-badge">{{ ucfirst($assignment->engaged_role_name ?? '') }}</span>
               <div class="req-actions">
                 <button class="btn btn-ghost" onclick="openTeamModal({{ $assignment->assignment_id }})" title="View Details">
                   <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
                   View Details
                 </button>
-                <button class="btn btn-success" onclick="openApproveModal({{ $assignment->assignment_id }}, '{{ $assignment->team?->team_name ?? 'Unknown' }}', '{{ ucfirst($assignment->role->first()?->role_name ?? '') }}', '{{ $assignment->team?->leader?->f_name ?? '' }}')" title="Approve">
+                <button class="btn btn-success" onclick="openApproveModal({{ $assignment->assignment_id }})" title="Approve">
                   <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
                   Approve
                 </button>
-                <button class="btn btn-danger" onclick="openRejectModal({{ $assignment->assignment_id }}, '{{ $assignment->team?->team_name ?? 'Unknown' }}', '{{ ucfirst($assignment->role->first()?->role_name ?? '') }}')" title="Reject">
+                <button class="btn btn-danger" onclick="openRejectModal({{ $assignment->assignment_id }})" title="Reject">
                   <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                   Reject
                 </button>
@@ -293,14 +296,14 @@
               </div>
             </div>
             <div class="req-card-right">
-              <span class="req-role-badge">{{ ucfirst($assignment->role->first()?->role_name ?? '') }}</span>
+              <span class="req-role-badge">{{ ucfirst($assignment->engaged_role_name ?? '') }}</span>
               <span class="status-dot-sm" style="background:var(--green);" title="Approved"></span>
               <div class="req-actions">
                 <button class="btn btn-ghost" onclick="openTeamModal({{ $assignment->assignment_id }})" title="View Details">
                   <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
                   View Details
                 </button>
-                <button class="btn btn-danger" onclick="openInstructorRemoveModal({{ $assignment->assignment_id }}, '{{ $assignment->team?->team_name ?? 'Unknown' }}', '{{ ucfirst($assignment->role->first()?->role_name ?? '') }}')" title="Remove">
+                <button class="btn btn-danger" onclick="openInstructorRemoveModal({{ $assignment->assignment_id }})" title="Remove">
                   <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                   Remove
                 </button>
@@ -327,14 +330,14 @@
               </div>
             </div>
             <div class="req-card-right">
-              <span class="req-role-badge">{{ ucfirst($assignment->role->first()?->role_name ?? '') }}</span>
+              <span class="req-role-badge">{{ ucfirst($assignment->engaged_role_name ?? '') }}</span>
               <span class="status-dot-sm" style="background:var(--red);" title="Rejected"></span>
               <div class="req-actions">
                 <button class="btn btn-ghost" onclick="openTeamModal({{ $assignment->assignment_id }})" title="View Details">
                   <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
                   View Details
                 </button>
-                <button class="btn btn-danger" onclick="openInstructorRemoveModal({{ $assignment->assignment_id }}, '{{ $assignment->team?->team_name ?? 'Unknown' }}', '{{ ucfirst($assignment->role->first()?->role_name ?? '') }}')" title="Remove">
+                <button class="btn btn-danger" onclick="openInstructorRemoveModal({{ $assignment->assignment_id }})" title="Remove">
                   <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                   Remove
                 </button>
@@ -386,6 +389,13 @@
       <div class="info-label">Message</div>
       <div class="info-value" id="tm-message"></div>
     </div>
+    {{-- When the team applied with the pre-proposal their CaPSA approved,
+         name it. An expert should be able to see the title got through
+         rather than take the team's word for a PDF they attached. --}}
+    <div class="info-row" id="tm-approved-row" style="display:none;">
+      <div class="info-label">Approved title</div>
+      <div class="info-value" id="tm-approved"></div>
+    </div>
     <div class="info-row">
       <div class="info-label">Proposal</div>
       <div class="info-value" id="tm-proposal"></div>
@@ -402,6 +412,18 @@
     <div class="modal-actions">
       <button class="btn btn-soft" onclick="closeModal('team-modal')">Close</button>
     </div>
+  </div>
+</div>
+
+<!-- PDF Preview Modal - opened from the Proposal row above instead of
+     navigating to the file in a new tab -->
+<div class="modal-overlay" id="pdf-preview-modal">
+  <div class="modal-box pdf-box">
+    <div class="pdf-box-header">
+      <h3>Proposal Preview</h3>
+      <button onclick="closePdfPreview()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--text3);padding:0;line-height:1" title="Close" aria-label="Close">&times;</button>
+    </div>
+    <iframe id="pdf-preview-frame" src="about:blank" title="Proposal PDF preview"></iframe>
   </div>
 </div>
 
@@ -456,6 +478,24 @@
     <h3>Remove Assignment?</h3>
     <div class="confirm-desc">This will permanently remove this assignment and free up a slot.</div>
     <div class="confirm-detail" id="instructor-remove-detail"></div>
+
+    {{-- Dropping a team used to be one click, with nothing written down and
+         the team never told. Same two steps their own side asks for: say why,
+         and type the word. --}}
+    <div style="text-align:left;margin-top:16px">
+      <label style="display:block;font-size:12px;font-weight:600;color:var(--text);margin-bottom:6px">Reason <span style="color:var(--red)">*</span></label>
+      <textarea id="instructor-remove-reason" rows="3" maxlength="500" oninput="validateInstructorRemove()"
+                placeholder="Why are you no longer working with this team? They will be told."
+                style="width:100%;box-sizing:border-box;padding:9px 11px;border:1px solid var(--border);border-radius:8px;background:var(--bg2);color:var(--text);font:inherit;font-size:13px;resize:vertical"></textarea>
+
+      <label style="display:block;font-size:12px;font-weight:600;color:var(--text);margin:12px 0 6px">Type <strong>remove</strong> to confirm <span style="color:var(--red)">*</span></label>
+      <input type="text" id="instructor-remove-confirm" autocomplete="off" oninput="validateInstructorRemove()"
+             placeholder='type "remove" here'
+             style="width:100%;box-sizing:border-box;padding:9px 11px;border:1px solid var(--border);border-radius:8px;background:var(--bg2);color:var(--text);font:inherit;font-size:13px" />
+
+      <div id="instructor-remove-error" style="display:none;font-size:11.5px;color:var(--red);margin-top:6px"></div>
+    </div>
+
     <div class="modal-actions" style="margin-top: 18px;">
       <button class="btn btn-soft" onclick="closeModal('instructor-remove-modal')">Cancel</button>
       <button class="btn btn-danger" id="btn-confirm-instructor-remove" onclick="confirmInstructorRemove()">
@@ -497,9 +537,32 @@ function openTeamModal(id) {
     ? d.members.map(m => '<span class="member-tag">' + m.name + (m.email ? '<br><span style="font-size:10px;color:var(--text3);">' + m.email + '</span>' : '') + '</span>').join('')
     : '<span style="color:var(--text3);">No members loaded</span>';
   document.getElementById('tm-message').innerHTML = '<div class="msg-text">' + d.message + '</div>';
-  document.getElementById('tm-proposal').innerHTML = d.proposal
-    ? '<a href="' + d.proposal + '" target="_blank" class="proposal-link"><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="12" y2="12"/><line x1="15" y1="15" x2="12" y2="12"/></svg> View Proposal</a>'
-    : '<span style="color:var(--text3);">No file attached</span>';
+
+  const approvedRow = document.getElementById('tm-approved-row');
+  if (d.approved_title) {
+    document.getElementById('tm-approved').innerHTML =
+      '<span style="color:var(--green);font-weight:600">✓ CaPSA-approved</span> &middot; ' + d.approved_title;
+    approvedRow.style.display = 'flex';
+  } else {
+    approvedRow.style.display = 'none';
+  }
+
+  const proposalEl = document.getElementById('tm-proposal');
+  proposalEl.innerHTML = '';
+  if (d.proposal) {
+    // Built via DOM APIs rather than string concatenation so the file URL
+    // never has to be embedded inside an inline onclick/href string - see
+    // the Approve/Reject button fix earlier for why that's fragile.
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'proposal-link';
+    btn.style.cssText = 'border:none;cursor:pointer;font:inherit';
+    btn.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="12" y2="12"/><line x1="15" y1="15" x2="12" y2="12"/></svg> View Proposal';
+    btn.addEventListener('click', () => openPdfPreview(d.proposal));
+    proposalEl.appendChild(btn);
+  } else {
+    proposalEl.innerHTML = '<span style="color:var(--text3);">No file attached</span>';
+  }
   const reasonRow = document.getElementById('tm-reason-row');
   const reasonEl = document.getElementById('tm-reason');
   if (d.rejection_reason) {
@@ -512,11 +575,26 @@ function openTeamModal(id) {
   openModal('team-modal');
 }
 
+function openPdfPreview(url) {
+  // #toolbar=0&navpanes=0 hides Chrome/Edge's built-in PDF viewer chrome
+  // (download/print/zoom bar, thumbnail panel) - just the document itself.
+  document.getElementById('pdf-preview-frame').src = url + '#toolbar=0&navpanes=0';
+  openModal('pdf-preview-modal');
+}
+
+function closePdfPreview() {
+  closeModal('pdf-preview-modal');
+  // Stop the PDF from continuing to load/render in the background once closed.
+  document.getElementById('pdf-preview-frame').src = 'about:blank';
+}
+
 let currentApproveId = null;
-function openApproveModal(id, teamName, roleName, leaderName) {
+function openApproveModal(id) {
+  const d = assignmentData[id];
+  if (!d) return;
   currentApproveId = id;
   document.getElementById('approve-detail').innerHTML =
-    '<strong>' + teamName + '</strong> — ' + roleName + '<br>Leader: ' + (leaderName || 'N/A')
+    '<strong>' + d.team + '</strong> — ' + d.role + '<br>Leader: ' + (d.leader || 'N/A')
     + '<span class="slot-warn">This will use 1 of your ' + {{ $currentSlots }} + '/' + {{ $maxSlots }} + ' available slots.</span>';
   document.getElementById('btn-confirm-approve').disabled = false;
   document.getElementById('btn-confirm-approve').innerHTML =
@@ -525,9 +603,11 @@ function openApproveModal(id, teamName, roleName, leaderName) {
 }
 
 let currentRejectId = null;
-function openRejectModal(id, teamName, roleName) {
+function openRejectModal(id) {
+  const d = assignmentData[id];
+  if (!d) return;
   currentRejectId = id;
-  document.getElementById('reject-modal-sub').textContent = teamName + ' — ' + roleName;
+  document.getElementById('reject-modal-sub').textContent = d.team + ' — ' + d.role;
   document.getElementById('reject-reason').value = '';
   document.getElementById('btn-confirm-reject').disabled = false;
   document.getElementById('btn-confirm-reject').innerHTML =
@@ -606,17 +686,44 @@ function confirmReject() {
 
 let currentInstructorRemoveId = null;
 
-function openInstructorRemoveModal(id, teamName, roleName) {
+function openInstructorRemoveModal(id) {
+  const d = assignmentData[id];
+  if (!d) return;
   currentInstructorRemoveId = id;
   document.getElementById('instructor-remove-detail').innerHTML =
-    '<strong>' + teamName + '</strong> — ' + roleName + '<br><span style="font-size:11px;color:var(--red);">This action cannot be undone.</span>';
+    '<strong>' + d.team + '</strong> — ' + d.role + '<br><span style="font-size:11px;color:var(--red);">This action cannot be undone.</span>';
+  document.getElementById('instructor-remove-reason').value = '';
+  document.getElementById('instructor-remove-confirm').value = '';
+  document.getElementById('instructor-remove-error').style.display = 'none';
+  validateInstructorRemove();
   closeModal('reject-modal');
   closeModal('approve-modal');
   openModal('instructor-remove-modal');
 }
 
+/** Both fields have to be filled in before Remove does anything. */
+function validateInstructorRemove() {
+  const reason = document.getElementById('instructor-remove-reason').value.trim();
+  const typed = document.getElementById('instructor-remove-confirm').value.trim();
+  const ok = reason.length >= 3 && typed.toLowerCase() === 'remove';
+  const btn = document.getElementById('btn-confirm-instructor-remove');
+  btn.disabled = !ok;
+  btn.style.opacity = ok ? '1' : '0.5';
+  btn.style.cursor = ok ? 'pointer' : 'not-allowed';
+
+  return ok;
+}
+
 function confirmInstructorRemove() {
   if (!currentInstructorRemoveId) return;
+  if (!validateInstructorRemove()) {
+    const err = document.getElementById('instructor-remove-error');
+    err.textContent = 'Give a reason and type "remove" to confirm.';
+    err.style.display = 'block';
+
+    return;
+  }
+
   const btn = document.getElementById('btn-confirm-instructor-remove');
   btn.disabled = true;
   btn.innerHTML = 'Removing...';
@@ -626,7 +733,12 @@ function confirmInstructorRemove() {
     headers: {
       'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
       'Accept': 'application/json',
+      'Content-Type': 'application/json',
     },
+    body: JSON.stringify({
+      reason: document.getElementById('instructor-remove-reason').value.trim(),
+      confirm: document.getElementById('instructor-remove-confirm').value.trim(),
+    }),
   })
   .then(r => r.json())
   .then(data => {

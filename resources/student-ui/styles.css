@@ -28,7 +28,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
 .brand-badge{display:inline-flex;align-items:center;gap:10px;flex:1}
 .brand-icon{width:38px;height:38px;background:var(--accent);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .brand-icon svg{width:19px;height:19px;stroke:#1e2028;fill:none;stroke-width:2.2}
-.brand-name{font-family:'Space Mono',monospace;font-size:14px;font-weight:700;color:var(--navy-text);letter-spacing:-0.3px;line-height:1.2}
+.brand-name{font-variant-numeric:tabular-nums;font-size:14px;font-weight:700;color:var(--navy-text);letter-spacing:-0.3px;line-height:1.2}
 .brand-sub{font-size:10.5px;color:var(--navy-text2);letter-spacing:0.8px;text-transform:uppercase;margin-top:2px}
 .sidebar-user{padding:14px 16px;border-bottom:1px solid var(--navy-border);display:flex;align-items:center;gap:12px;background:rgba(245,193,0,0.04)}
 .avatar{width:36px;height:36px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--navy-dark);flex-shrink:0;border:2px solid rgba(245,193,0,0.3)}
@@ -162,7 +162,7 @@ select.input{cursor:pointer}
 .slot:hover{border-color:var(--accent);color:#8a6500;background:rgba(245,193,0,0.07)}
 .slot.booked{background:rgba(245,193,0,0.12);border-color:var(--accent);color:#8a6500}
 .slot.taken{background:var(--bg4);color:var(--text3);cursor:not-allowed;opacity:0.5}
-.slot-time{font-family:'Space Mono',monospace;font-size:13px;font-weight:700;margin-bottom:3px;color:inherit}
+.slot-time{font-variant-numeric:tabular-nums;font-size:13px;font-weight:700;margin-bottom:3px;color:inherit}
 
 /* ACTIVITY */
 .activity-item{display:flex;align-items:flex-start;gap:14px;padding:12px 0;border-bottom:1px solid var(--border)}
@@ -184,7 +184,7 @@ select.input{cursor:pointer}
 .sim-score{text-align:center;padding:28px 0}
 .sim-ring{width:130px;height:130px;border-radius:50%;background:conic-gradient(var(--green) 0% 12%,var(--border) 12% 100%);display:flex;align-items:center;justify-content:center;margin:0 auto 18px}
 .sim-inner{width:95px;height:95px;border-radius:50%;background:#ffffff;display:flex;flex-direction:column;align-items:center;justify-content:center}
-.sim-pct{font-family:'Space Mono',monospace;font-size:24px;font-weight:700;color:var(--green)}
+.sim-pct{font-variant-numeric:tabular-nums;font-size:24px;font-weight:700;color:var(--green)}
 .sim-label{font-size:10px;color:var(--text3);letter-spacing:1px;text-transform:uppercase}
 
 /* MEMBERS */
@@ -206,7 +206,7 @@ select.input{cursor:pointer}
 
 /* STAT CHIPS */
 .stat-chip{background:#ffffff;border:1.5px solid var(--border);border-radius:12px;padding:16px 18px;display:flex;flex-direction:column;gap:5px;box-shadow:0 1px 3px rgba(0,0,0,0.04)}
-.stat-n{font-family:'Space Mono',monospace;font-size:24px;font-weight:700;color:var(--text)}
+.stat-n{font-variant-numeric:tabular-nums;font-size:24px;font-weight:700;color:var(--text)}
 .stat-l{font-size:11px;color:var(--text3);letter-spacing:0.5px;text-transform:uppercase;font-weight:600}
 
 /* LOGIN */
@@ -214,7 +214,7 @@ select.input{cursor:pointer}
 .login-card{background:#ffffff;border:1px solid var(--border);border-radius:18px;padding:44px;width:400px;text-align:center;box-shadow:0 8px 32px rgba(245,193,0,0.1),0 2px 8px rgba(0,0,0,0.06)}
 .login-logo{width:66px;height:66px;background:var(--navy-dark);border-radius:16px;display:flex;align-items:center;justify-content:center;margin:0 auto 22px;position:relative;overflow:hidden}
 .login-logo svg{width:30px;height:30px;stroke:var(--accent);fill:none;stroke-width:2}
-.login-title{font-family:'Space Mono',monospace;font-size:22px;font-weight:700;color:var(--text);margin-bottom:5px}
+.login-title{font-variant-numeric:tabular-nums;font-size:22px;font-weight:700;color:var(--text);margin-bottom:5px}
 .login-sub{font-size:13px;color:var(--text3);margin-bottom:28px;line-height:1.6}
 .google-btn{width:100%;padding:11px;border:1.5px solid var(--border);border-radius:10px;text-decoration:none;color:var(--text);font-size:13px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;font-family:'DM Sans',sans-serif;transition:all 0.15s;margin-bottom:10px}
 .google-btn:hover{border-color:var(--accent);background:var(--accent-light)}
@@ -224,7 +224,7 @@ select.input{cursor:pointer}
 /* ARCHIVE */
 .archive-card{background:#fff;border:1.5px solid var(--border);border-radius:12px;padding:16px;cursor:pointer;transition:all 0.2s;display:flex;flex-direction:column;gap:10px;box-shadow:0 1px 3px rgba(0,0,0,0.04)}
 .archive-card:hover{border-color:var(--accent);box-shadow:0 4px 16px rgba(245,193,0,0.14)}
-.archive-year{font-family:'Space Mono',monospace;font-size:10px;color:#8a6500;font-weight:700;letter-spacing:1px;background:rgba(245,193,0,0.12);display:inline-block;padding:2px 7px;border-radius:4px}
+.archive-year{font-variant-numeric:tabular-nums;font-size:10px;color:#8a6500;font-weight:700;letter-spacing:1px;background:rgba(245,193,0,0.12);display:inline-block;padding:2px 7px;border-radius:4px}
 .archive-title{font-size:13px;font-weight:500;color:var(--text);line-height:1.5}
 .archive-proponents{font-size:11px;color:var(--text2);line-height:1.4}
 .archive-tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:2px}
@@ -237,7 +237,7 @@ select.input{cursor:pointer}
 .tag-data{background:rgba(220,38,38,0.08);color:#b91c1c;border:1px solid rgba(220,38,38,0.18)}
 .tag-blockchain{background:rgba(180,83,9,0.08);color:#92400e;border:1px solid rgba(180,83,9,0.18)}
 .archive-footer{display:flex;align-items:center;justify-content:space-between;padding-top:8px;border-top:1px solid var(--border)}
-.sim-mini{font-family:'Space Mono',monospace;font-size:11px;padding:2px 8px;border-radius:4px}
+.sim-mini{font-variant-numeric:tabular-nums;font-size:11px;padding:2px 8px;border-radius:4px}
 .sim-low{background:var(--green-bg);color:var(--green)}
 .sim-mid{background:var(--amber-bg);color:var(--amber)}
 .sim-high{background:var(--red-bg);color:var(--red)}
@@ -254,7 +254,7 @@ select.input{cursor:pointer}
 .res-card:hover{border-color:rgba(201,168,44,0.45);box-shadow:0 4px 18px rgba(201,168,44,0.1);transform:translateY(-1px)}
 
 /* FILE TYPE BADGE */
-.ftype-badge{width:42px;height:42px;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0;font-family:'Space Mono',monospace;font-size:8.5px;font-weight:700;letter-spacing:.4px;gap:2px}
+.ftype-badge{width:42px;height:42px;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0;font-variant-numeric:tabular-nums;font-size:8.5px;font-weight:700;letter-spacing:.4px;gap:2px}
 .ftype-badge svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2}
 .ftype-pdf{background:rgba(220,38,38,0.09);color:#b91c1c;border:1px solid rgba(220,38,38,0.18)}
 .ftype-docx{background:rgba(29,78,216,0.09);color:#1d4ed8;border:1px solid rgba(29,78,216,0.18)}
@@ -352,7 +352,7 @@ mark{background:rgba(201,168,44,0.25);color:inherit;border-radius:2px;padding:0 
 
 /* ── SIGNATURE CREDENTIALS ── */
 .legal-credits{margin-top:60px;padding-top:20px;border-top:1px dashed var(--border);text-align:center;opacity:0.5;padding-bottom:20px}
-.credits-title{font-family:'Space Mono',monospace;font-size:8px;font-weight:600;letter-spacing:1px;color:var(--text3);text-transform:uppercase;margin-bottom:4px}
+.credits-title{font-variant-numeric:tabular-nums;font-size:8px;font-weight:600;letter-spacing:1px;color:var(--text3);text-transform:uppercase;margin-bottom:4px}
 .credits-names{font-size:9px;font-weight:500;color:var(--text3);letter-spacing:0.3px}
 
 /* WIDGETS */
@@ -363,7 +363,7 @@ mark{background:rgba(201,168,44,0.25);color:inherit;border-radius:2px;padding:0 
 .member-dot{width:8px;height:8px;border-radius:50%;background:var(--accent);position:relative}
 .member-dot::before{content:'';position:absolute;top:8px;left:3.5px;width:1px;height:20px;background:var(--border)}
 .history-item:last-child .member-dot::before{display:none}
-.scan-badge{font-family:'Space Mono',monospace;font-size:10px;padding:2px 6px;border-radius:4px;font-weight:700}
+.scan-badge{font-variant-numeric:tabular-nums;font-size:10px;padding:2px 6px;border-radius:4px;font-weight:700}
 .scan-low{background:var(--green-bg);color:var(--green)}
 .scan-high{background:var(--red-bg);color:var(--red)}
 
@@ -385,7 +385,7 @@ mark{background:rgba(201,168,44,0.25);color:inherit;border-radius:2px;padding:0 
 .post-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px;transition:0.2s;display:flex;align-items:center;gap:16px;margin-bottom:12px;position:relative}
 .post-card:hover{border-color:var(--accent);transform:translateX(4px);box-shadow:0 4px 12px rgba(0,0,0,0.05)}
 .post-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px}
-.post-badge{font-family:'Space Mono',monospace;font-size:10px;font-weight:700;padding:4px 10px;border-radius:6px;text-transform:uppercase;letter-spacing:0.5px}
+.post-badge{font-variant-numeric:tabular-nums;font-size:10px;font-weight:700;padding:4px 10px;border-radius:6px;text-transform:uppercase;letter-spacing:0.5px}
 .badge-looking{background:rgba(59,130,246,0.1);color:#3b82f6}
 .badge-hiring{background:rgba(34,197,94,0.1);color:#22c55e}
 .expertise-tag{display:inline-block;background:var(--bg3);color:var(--text2);font-size:11px;padding:5px 12px;border-radius:8px;margin-right:8px;margin-bottom:8px;border:1px solid var(--border);font-weight:600;transition:0.2s}
@@ -394,7 +394,7 @@ mark{background:rgba(201,168,44,0.25);color:inherit;border-radius:2px;padding:0 
 .google-btn:hover{background:var(--bg3);border-color:var(--border2)}
 .post-info-compact{flex:1;display:flex;flex-direction:column;gap:4px}
 .post-meta-compact{display:flex;align-items:center;gap:12px}
-.post-badge-small{font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;text-transform:uppercase;font-family:'Space Mono'}
+.post-badge-small{font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;text-transform:uppercase;font-variant-numeric:tabular-nums}
 .profile-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:20px;margin-top:20px}
 .profile-card-compact{background:var(--bg2);border-radius:16px;padding:20px 10px;text-align:center;transition:0.3s;cursor:pointer;border:1px solid var(--border);position:relative;display:flex;flex-direction:column;align-items:center}
 .profile-card-compact:hover{border-color:var(--accent);transform:translateY(-5px);box-shadow:0 10px 20px rgba(0,0,0,0.1)}
@@ -495,13 +495,13 @@ mark{background:rgba(201,168,44,0.25);color:inherit;border-radius:2px;padding:0 
 .receipt-card__category{font-size:13px;font-weight:500;color:var(--text);margin-bottom:4px;line-height:1.4}
 .receipt-card__meta{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .receipt-card__date{font-size:11px;color:var(--text3);font-weight:500}
-.receipt-card__amount{font-family:'Space Mono',monospace;font-size:12px;font-weight:700;color:var(--text2)}
+.receipt-card__amount{font-variant-numeric:tabular-nums;font-size:12px;font-weight:700;color:var(--text2)}
 .receipt-card__aside{display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0}
 
 /* Total Approved */
 .total-approved{display:flex;justify-content:space-between;align-items:center;margin-top:16px;padding-top:16px;border-top:1px solid var(--border)}
 .total-approved__label{font-size:12px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px}
-.total-approved__value{font-family:'Space Mono',monospace;font-size:15px;font-weight:700;color:var(--green)}
+.total-approved__value{font-variant-numeric:tabular-nums;font-size:15px;font-weight:700;color:var(--green)}
 
 /* Empty State */
 .empty-state{text-align:center;padding:44px 20px;animation:fadeIn 0.3s ease}
@@ -525,7 +525,7 @@ mark{background:rgba(201,168,44,0.25);color:inherit;border-radius:2px;padding:0 
 .modal-title{font-size:16px;font-weight:600;color:var(--text);margin:0;white-space:nowrap}
 .modal-subtitle{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text3);padding:3px 10px;background:var(--bg3);border-radius:6px;border:1px solid var(--border);white-space:nowrap}
 .modal-subtitle__label{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.3px}
-.modal-subtitle__value{font-family:'Space Mono',monospace;font-size:11px;font-weight:600;color:var(--accent3)}
+.modal-subtitle__value{font-variant-numeric:tabular-nums;font-size:11px;font-weight:600;color:var(--accent3)}
 .btn-modal-close{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;border:1.5px solid var(--border);background:transparent;color:var(--text3);cursor:pointer;transition:all 0.15s;padding:0}
 .btn-modal-close:hover{background:var(--bg3);color:var(--text);border-color:var(--border2)}
 .btn-modal-close svg{display:block}
@@ -627,7 +627,7 @@ mark{background:rgba(201,168,44,0.25);color:inherit;border-radius:2px;padding:0 
 .guidelines-card__list li{font-size:12px;color:var(--text3);line-height:1.5}
 
 /* Receipt Number on Cards */
-.receipt-card__receipt-no{font-size:11px;font-weight:600;color:var(--accent3);margin-bottom:3px;font-family:'Space Mono',monospace;letter-spacing:0.3px}
+.receipt-card__receipt-no{font-size:11px;font-weight:600;color:var(--accent3);margin-bottom:3px;font-variant-numeric:tabular-nums;letter-spacing:0.3px}
 
 /* View Details Button */
 .btn-view-details{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:7px;font-size:11px;font-weight:600;cursor:pointer;transition:all 0.15s;border:1.5px solid var(--border);background:transparent;color:var(--text2);font-family:'DM Sans',sans-serif;white-space:nowrap}

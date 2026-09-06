@@ -10,8 +10,8 @@ use App\Models\Milestone;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
 use App\Models\TeamExpertAssignment;
-use App\Services\SimilarityService;
 use App\Support\DefenseProgress;
+use App\Support\MilestoneGrid;
 use App\Support\SectionScope;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -33,7 +33,7 @@ use Illuminate\View\View;
  */
 class TeamManagementController extends Controller
 {
-    public const TABS = ['teams', 'pre_proposals', 'verification', 'papers'];
+    public const TABS = ['teams', 'pre_proposals', 'verification', 'papers', 'milestones'];
 
     /** Shown where a value is genuinely absent rather than empty. */
     private const DASH = '—';
@@ -77,6 +77,28 @@ class TeamManagementController extends Controller
         return view('capsa.team_management', [
             'tab' => $tab,
             'rows' => $rows,
+            // Only the Milestones tab needs the items themselves; every other
+            // tab is served by the counts already in $rows.
+            // The Milestones tab is a grid: deliverables across, teams down.
+            'grid' => $tab === 'milestones' ? $this->milestoneGrid($teams, $rows, $capsaSections) : null,
+            'templates' => \App\Support\MilestoneTemplate::all(),
+            // How many teams a new checklist would actually reach. The grid
+            // lists every team a CaPSA oversees, including ones still forming,
+            // but only a confirmed team can be given one - so the two numbers
+            // differ and the modal has to say which it means.
+            'sectionTeamCount' => $tab === 'milestones' && $selectedSection
+                ? $this->confirmedTeamsIn($selectedSection)
+                : null,
+            // Every section the CaPSA runs, with the number of confirmed teams
+            // in each. The New checklist form asks for the section itself
+            // rather than borrowing whatever the page happens to be filtered
+            // to - a CaPSA who lands on the tab and clicks the button should
+            // be able to finish, not be sent back out to set a filter first.
+            'sectionChoices' => $tab === 'milestones'
+                ? collect($capsaSections)->mapWithKeys(
+                    fn ($section) => [$section => $this->confirmedTeamsIn($section)]
+                )->all()
+                : [],
             'selectedSection' => $selectedSection,
             'allSections' => $capsaSections,
             'sectionOptions' => collect(AdminProfileController::getAllAvailableSections())
@@ -84,6 +106,10 @@ class TeamManagementController extends Controller
                 ->values(),
             'counts' => [
                 'teams' => $rows->count(),
+                // What the CaPSA still has to tick herself. The other kinds
+                // close themselves, so counting them here would ask her to
+                // chase something she cannot act on.
+                'milestones' => $tab === 'milestones' ? 0 : null,
                 'pre_proposals' => $rows->sum(fn ($r) => $r->pendingProposalCount),
                 'verification' => $rows->where('awaitingVerification', true)->count(),
                 'papers' => $rows->sum(fn ($r) => $r->papersToCheck),
@@ -117,6 +143,49 @@ class TeamManagementController extends Controller
         return $this->sections->filterTeams($candidates, $syRecords, $capsaSections, $selectedSection);
     }
 
+    /** Confirmed teams in a section - the ones a checklist can be given to. */
+    private function confirmedTeamsIn(string $section): int
+    {
+        return Team::where('is_confirmed', true)
+            ->get()
+            ->filter(fn (Team $team) => $this->sections->sectionFor($team) === $section)
+            ->count();
+    }
+
+    /**
+     * The Milestones tab: every team in the CaPSA's sections against every
+     * deliverable on their checklist.
+     *
+     * It is both where a checklist gets built and where the papers get ticked
+     * off, because a CaPSA working down a section is doing the two together.
+     */
+    private function milestoneGrid(Collection $teams, Collection $rows, array $capsaSections): object
+    {
+        // Only teams that actually sit in one of the CaPSA's sections.
+        //
+        // The other tabs deliberately surface a team whose section could not
+        // be worked out - a half-formed team is exactly what an oversight page
+        // should show. A checklist is different: it is given to a section, and
+        // a team that belongs to none can never be given one, so listing them
+        // here is a page full of rows nothing can be done to.
+        $scoped = $rows->filter(
+            fn ($row) => $row->section !== SectionScope::UNASSIGNED
+                && $this->sections->covers($capsaSections, $row->section)
+        )->values();
+
+        $milestones = Milestone::whereIn('team_id', $scoped->pluck('team.team_id'))
+            ->with('items')
+            ->orderBy('due_date')
+            ->orderBy('id')
+            ->get();
+
+        // One checklist per team is the shape this grid reads. If a team
+        // somehow has several, the earliest is the one shown.
+        $primary = $milestones->groupBy('team_id')->map->first()->values();
+
+        return MilestoneGrid::build($primary, $scoped);
+    }
+
     /** @return array<int, object{total: int, completed: int, overdue: int, percent: int}> */
     private function milestoneProgress(Collection $teamIds): array
     {
@@ -124,17 +193,30 @@ class TeamManagementController extends Controller
             return [];
         }
 
+        // Counted from the items, not from milestones.status. That column was
+        // written once as 'todo' when a milestone was created and never moved
+        // again, so 'completed' and 'overdue' matched nothing and this column
+        // showed a dash for every team however far along they were.
         return Milestone::whereIn('team_id', $teamIds)
+            ->with('items')
             ->get()
             ->groupBy('team_id')
             ->map(function ($rows) {
-                $total = $rows->count();
-                $completed = $rows->where('status', 'completed')->count();
+                $total = 0;
+                $completed = 0;
+                $overdue = 0;
+
+                foreach ($rows as $milestone) {
+                    $progress = $milestone->progress();
+                    $total += $progress->total;
+                    $completed += $progress->completed;
+                    $overdue += $progress->overdue;
+                }
 
                 return (object) [
                     'total' => $total,
                     'completed' => $completed,
-                    'overdue' => $rows->where('status', 'overdue')->count(),
+                    'overdue' => $overdue,
                     'percent' => $total > 0 ? (int) round($completed / $total * 100) : 0,
                 ];
             })
@@ -320,45 +402,7 @@ class TeamManagementController extends Controller
             'leader' => $leaderName,
             'members' => $members->map(fn ($m) => trim(($m->f_name ?? '').' '.($m->l_name ?? '')))->filter()->values(),
             'member_count' => $members->count(),
-            'pre_proposals' => $team->preProposals->map(fn ($p) => [
-                'id' => $p->id,
-                'slot' => $p->slot,
-                'title' => $p->title,
-                'status' => $p->status,
-                'rejection_reason' => $p->rejection_reason,
-                'sdg_goals' => $p->sdg_goals,
-                'research_agenda' => $p->research_agenda,
-                'problem_statement' => $p->problem_statement,
-                'proposed_solution' => $p->proposed_solution,
-                'scope' => $p->scope,
-                'limitations' => $p->limitations,
-                'sdm' => $p->sdm,
-                // The whole duplication report, not the top three with their
-                // titles. The CAPSA is deciding whether a title is too close
-                // to something already done - she needs the matched
-                // abstracts and what the check said about them, which is
-                // exactly what the team saw before submitting.
-                'duplication' => $p->duplicationCheck ? [
-                    'verdict' => $p->duplicationCheck->verdict,
-                    'top_score' => $p->duplicationCheck->top_score,
-                    'matches' => collect($p->duplicationCheck->matches ?? [])->map(fn ($m) => [
-                        'title' => $m['title'] ?? '',
-                        'score' => $m['score'] ?? null,
-                        'reason' => $m['reason'] ?? null,
-                        'program' => $m['program'] ?? null,
-                        'academic_year' => $m['academic_year'] ?? null,
-                        'abstract' => $m['abstract'] ?? null,
-                        'similarities' => $m['similarities'] ?? null,
-                        'differences' => $m['differences'] ?? null,
-                        'suggestion' => $m['suggestion'] ?? null,
-                    ])->values(),
-                    'highlight_words' => app(SimilarityService::class)
-                        ->extractHighlightWords($p->duplicationCheck->concepts ?? []),
-                ] : null,
-                'document_url' => $p->duplicationCheck ? route('admin.verify_teams.pre_proposals.document', $p->id) : null,
-                'approve_url' => route('admin.verify_teams.pre_proposals.approve', $p->id),
-                'reject_url' => route('admin.verify_teams.pre_proposals.reject', $p->id),
-            ])->values(),
+            'pre_proposals' => \App\Support\PreProposalPayload::forTeam($team),
             'selected_pre_proposal_id' => $team->selected_pre_proposal_id,
         ];
 
@@ -366,6 +410,6 @@ class TeamManagementController extends Controller
         // post it; a verified team is read-only.
         return $team->is_confirmed
             ? $payload + ['verified' => true]
-            : $payload + ['verify_url' => route('admin.verify_teams.verify', $team->team_id)];
+            : $payload + ['verify_url' => route('capsa.verify_teams.verify', $team->team_id)];
     }
 }

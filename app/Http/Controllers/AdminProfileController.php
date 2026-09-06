@@ -25,10 +25,12 @@ class AdminProfileController extends Controller
             }
         }
 
-        $sections = array_values(array_unique(array_filter($sections)));
-        sort($sections);
+        // What an Admin has written down counts as much as what a student is
+        // enrolled in - before a term starts there are no students, and a
+        // section nobody is in yet is still a section somebody covers.
+        $sections = array_merge($sections, \App\Support\SectionCatalog::defined());
 
-        return $sections;
+        return \App\Support\SectionCatalog::tidy($sections);
     }
 
     public function index(): View
@@ -45,7 +47,7 @@ class AdminProfileController extends Controller
 
         $expertiseList = $admin->expertise->pluck('expertise_field')->toArray();
 
-        return view('admin.profile', compact('admin', 'sectionList', 'allAvailableSections', 'schoolYear', 'expertiseList'));
+        return view('capsa.profile', compact('admin', 'sectionList', 'allAvailableSections', 'schoolYear', 'expertiseList'));
     }
 
     public function update(Request $request): RedirectResponse
@@ -87,6 +89,6 @@ class AdminProfileController extends Controller
             ]);
         }
 
-        return redirect()->route('admin.profile')->with('status', 'Profile updated successfully.');
+        return redirect()->route('capsa.profile')->with('status', 'Profile updated successfully.');
     }
 }

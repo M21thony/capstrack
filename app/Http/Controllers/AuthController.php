@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\CapstoneExpert;
 use App\Models\Student;
-use App\Services\GoogleDriveService;
+use App\Models\StudentRoster;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -155,11 +155,16 @@ class AuthController extends Controller
             $lastName = $nameParts[1] ?? $nameParts[0];
         }
 
-        $isStudentDomain = Str::endsWith($email, '@my.cspc.edu.ph');
-        $isExpertDomain = Str::endsWith($email, '@gmail.com');
+        $isStudentDomain = Str::endsWith($email, Student::EMAIL_DOMAIN);
+        // '@cspc.edu.ph' (faculty) is a DIFFERENT domain than the student
+        // '@my.cspc.edu.ph' subdomain above - Str::endsWith only matches the
+        // literal suffix, so there's no overlap risk despite how similar
+        // they look. Lets CAPSA-uploaded Adviser/Consultant/Grammarian
+        // accounts sign in with their real CSPC email, not just @gmail.com.
+        $isExpertDomain = Str::endsWith($email, '@gmail.com') || Str::endsWith($email, '@cspc.edu.ph');
 
         if (! $isStudentDomain && ! $isExpertDomain) {
-            return redirect('/login')->withErrors(['message' => 'Access denied. Use @my.cspc.edu.ph (student) or @gmail.com (instructor/admin).']);
+            return redirect('/login')->withErrors(['message' => 'Access denied. Use @my.cspc.edu.ph (student) or @cspc.edu.ph/@gmail.com (instructor/admin).']);
         }
 
         if ($isExpertDomain) {
@@ -174,7 +179,24 @@ class AuthController extends Controller
                     $existingToken = json_decode($expert->google_token ?? '', true);
                     $refreshToken = $response->json('refresh_token') ?? ($existingToken['refresh_token'] ?? null);
 
-                    $expert->update([
+                    // Whoever added them typed a name from what they knew,
+                    // which is a guess until the person themselves turns up.
+                    // Google is holding the name they actually go by, and
+                    // they cannot edit it here - the profile panel shows it
+                    // locked - so their own account is the only source of it
+                    // there is. Taken on every sign-in, like the photo beside
+                    // it, so a name corrected on Google arrives here too.
+                    $fromGoogle = [];
+
+                    if (filled($userInfo['given_name'] ?? null)) {
+                        $fromGoogle['first_name'] = $userInfo['given_name'];
+                    }
+
+                    if (filled($userInfo['family_name'] ?? null)) {
+                        $fromGoogle['last_name'] = $userInfo['family_name'];
+                    }
+
+                    $expert->update($fromGoogle + [
                         'google_token' => json_encode([
                             'access_token' => $accessToken,
                             'refresh_token' => $refreshToken,
@@ -189,7 +211,7 @@ class AuthController extends Controller
                     // experts never need the separate "Connect Google Drive"
                     // step at all. Never let a hiccup here block login.
                     try {
-                        app(GoogleDriveService::class)->storeToken($expert->expert_id, [
+                        app(\App\Services\GoogleDriveService::class)->storeToken($expert->expert_id, [
                             'access_token' => $accessToken,
                             'refresh_token' => $response->json('refresh_token'),
                             'expires_in' => $response->json('expires_in', 3600),
@@ -206,7 +228,14 @@ class AuthController extends Controller
 
                     $expert->markFirstLogin();
 
-                    $redirectUrl = $expert->is_admin ? '/admin/dashboard' : '/instructor/dashboard';
+                    $redirectUrl = match (true) {
+                        // Admin and CaPSA each have their own copy of the
+                        // dashboard, guarded by their own role - sending an
+                        // Admin to the CaPSA one is a 403 at the door.
+                        (bool) $expert->is_admin => '/admin/dashboard',
+                        (bool) $expert->is_capsa => '/capsa/dashboard',
+                        default => '/instructor/dashboard',
+                    };
 
                     return redirect($redirectUrl);
                 }
@@ -227,17 +256,20 @@ class AuthController extends Controller
                 return view('auth.pending-approval', ['accountRequest' => $expert]);
             }
 
-            return redirect('/request-account?email='.urlencode($email).'&first_name='.urlencode($firstName).'&last_name='.urlencode($lastName));
+            // Applying for an account is switched off - see the commented
+            // routes in routes/web.php. A CaPSA puts faculty in, either on
+            // the uploaded list or one at a time with Add Expert, so an
+            // address nobody has listed has nowhere to go but back.
+            return $this->refuseUnlistedExpert($request);
         }
 
-        $student = Student::firstOrCreate(
-            ['email' => $email],
-            [
-                'f_name' => $firstName,
-                'l_name' => $lastName,
-                'p_picture' => $userInfo['picture'] ?? null,
-            ]
-        );
+        // Who may sign in, and what their account starts as, are the same
+        // two questions in both sign-in paths - see studentSigningIn().
+        $student = $this->studentSigningIn($email, $firstName, $lastName, $userInfo['picture'] ?? null);
+
+        if (! $student) {
+            return $this->refuseUnlistedStudent($request);
+        }
 
         Auth::login($student);
 
@@ -317,7 +349,7 @@ class AuthController extends Controller
         $email = $request->input('email');
         $fullName = $request->input('name', 'Mock User');
 
-        $isStudent = Str::endsWith($email, '@my.cspc.edu.ph');
+        $isStudent = Str::endsWith($email, Student::EMAIL_DOMAIN);
         $isExpert = Str::endsWith($email, '@gmail.com');
 
         if (! $isStudent && ! $isExpert) {
@@ -340,7 +372,14 @@ class AuthController extends Controller
 
                     $expert->markFirstLogin();
 
-                    $redirectUrl = $expert->is_admin ? '/admin/dashboard' : '/instructor/dashboard';
+                    $redirectUrl = match (true) {
+                        // Admin and CaPSA each have their own copy of the
+                        // dashboard, guarded by their own role - sending an
+                        // Admin to the CaPSA one is a 403 at the door.
+                        (bool) $expert->is_admin => '/admin/dashboard',
+                        (bool) $expert->is_capsa => '/capsa/dashboard',
+                        default => '/instructor/dashboard',
+                    };
 
                     if ($request->expectsJson()) {
                         return response()->json([
@@ -376,16 +415,18 @@ class AuthController extends Controller
                 return view('auth.pending-approval', ['accountRequest' => $expert]);
             }
 
-            return redirect('/request-account?email='.urlencode($email).'&first_name='.urlencode($firstName).'&last_name='.urlencode($lastName));
+            // Applying for an account is switched off - see the commented
+            // routes in routes/web.php. A CaPSA puts faculty in, either on
+            // the uploaded list or one at a time with Add Expert, so an
+            // address nobody has listed has nowhere to go but back.
+            return $this->refuseUnlistedExpert($request);
         }
 
-        $student = Student::firstOrCreate(
-            ['email' => $email],
-            [
-                'f_name' => $firstName,
-                'l_name' => $lastName,
-            ]
-        );
+        $student = $this->studentSigningIn($email, $firstName, $lastName);
+
+        if (! $student) {
+            return $this->refuseUnlistedStudent($request);
+        }
 
         Auth::login($student);
 
@@ -411,6 +452,98 @@ class AuthController extends Controller
     /**
      * Log the user out and invalidate the session.
      */
+    /**
+     * The account this student signs in to, or null if nobody has listed them.
+     *
+     * CaPSA uploads the section's list before its students may have accounts,
+     * so being on it is what makes somebody a student here. Anyone who
+     * already has an account keeps it - they were let in before this rule
+     * existed, and taking that away would lock out the students who have been
+     * using the site all along.
+     *
+     * A list uploaded before their first sign-in already says who they are,
+     * so the account arrives filled in rather than empty. This is the only
+     * place that decides either of those things: the real Google callback and
+     * the local mock both come through here, so what happens on a developer's
+     * machine is what happens in front of a student.
+     */
+    private function studentSigningIn(string $email, string $firstName, string $lastName, ?string $picture = null): ?Student
+    {
+        $roster = StudentRoster::where('email', $email)->first();
+
+        if (! $roster && ! Student::whereRaw('LOWER(email) = ?', [$email])->exists()) {
+            return null;
+        }
+
+        return Student::firstOrCreate(
+            ['email' => $email],
+            [
+                'f_name' => $firstName,
+                'l_name' => $lastName,
+                'p_picture' => $picture,
+                'student_number' => $roster->student_number ?? null,
+                // The list stores the program code; everywhere else stores the
+                // course's full name, and a mix of the two means two students
+                // on the same course never match each other.
+                'course' => isset($roster->program)
+                    ? (Student::PROGRAM_COURSES[$roster->program] ?? $roster->program)
+                    : null,
+                'year_section' => $roster->section ?? null,
+            ]
+        );
+    }
+
+    /**
+     * Turn away a faculty member nobody has put in the system.
+     *
+     * They used to be sent to a form to apply, which a CaPSA then approved.
+     * That path is switched off: a CaPSA adds faculty herself, on the list or
+     * one at a time, so an account is only ever made by somebody who already
+     * knows who this person is.
+     *
+     * The message names the way in, because the person reading it cannot fix
+     * this themselves and "access denied" would leave them checking their own
+     * address for a typo that is not there.
+     */
+    private function refuseUnlistedExpert(Request $request)
+    {
+        // "A CaPSA", not "your CaPSA": a student belongs to a section somebody
+        // covers, and faculty belong to nobody - any CaPSA can add them. And
+        // "expert list", because that is what the upload is called on screen.
+        $message = 'There is no account for this address yet. Ask a CaPSA to add you '
+            .'to the expert list, then sign in again.';
+
+        if ($request->expectsJson()) {
+            return response()->json(['success' => false, 'message' => $message], 403);
+        }
+
+        return redirect('/login')->withErrors(['message' => $message]);
+    }
+
+    /**
+     * Turn away a student who is not on any uploaded list.
+     *
+     * CaPSA asked that a section's list be uploaded before its students can
+     * have accounts, so that nobody arrives with a profile the department
+     * never put there. The message names the way out, because the student
+     * cannot fix this themselves and "access denied" would leave them
+     * guessing at which of their details was wrong.
+     */
+    private function refuseUnlistedStudent(Request $request)
+    {
+        $message = "Your account is not on your section's list yet. Ask your CaPSA to upload "
+            .'the student list for your section, then sign in again.';
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => false,
+                'message' => $message,
+            ], 403);
+        }
+
+        return redirect('/login')->withErrors(['message' => $message]);
+    }
+
     public function logout(Request $request)
     {
         Auth::logout();

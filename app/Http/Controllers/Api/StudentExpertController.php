@@ -7,6 +7,8 @@ use App\Http\Resources\AssignmentResource;
 use App\Http\Resources\ExpertResource;
 use App\Models\ActivityLog;
 use App\Models\CapstoneExpert;
+use App\Models\CapstonePreProposal;
+use App\Models\Student;
 use App\Models\StudentSchoolYear;
 use App\Models\TeamExpertAssignment;
 use Illuminate\Http\JsonResponse;
@@ -21,7 +23,10 @@ class StudentExpertController extends Controller
     {
         $student = Auth::user();
 
+        $studentProgram = Student::mapCourseToProgram($student->course ?? '');
+
         $experts = CapstoneExpert::where('approved_status', true)
+            ->acceptsProgram($studentProgram)
             ->whereHas('roles', function ($q) {
                 $q->where('role_name', '!=', 'capstone_adviser');
             })
@@ -77,7 +82,12 @@ class StudentExpertController extends Controller
     {
         $validated = $request->validate([
             'expert_id' => ['required', 'integer', 'exists:capstone_experts,expert_id'],
-            'proposal_file' => ['required', 'file', 'mimes:pdf', 'max:5120'],
+            'expert_role_id' => ['required', 'integer', 'exists:expert_roles,expert_role_id'],
+            // Optional when the team already has an approved pre-proposal:
+            // that PDF is the one the CaPSA read and approved, so making the
+            // team hunt down and re-upload the same file only invited them to
+            // attach a different, unapproved one.
+            'proposal_file' => ['nullable', 'file', 'mimes:pdf', 'max:5120'],
             'message' => ['required', 'string', function ($attribute, $value, $fail) {
                 if (str_word_count($value) > 500) {
                     $fail('The message field must not be greater than 500 words.');
@@ -116,50 +126,141 @@ class StudentExpertController extends Controller
             ], 404);
         }
 
+        // Enforced here too, not just hidden from the list - otherwise a
+        // hand-crafted request could still apply to an expert who doesn't
+        // take this program.
+        $studentProgram = Student::mapCourseToProgram($student->course ?? '');
+
+        if (! $expert->acceptsProgram($studentProgram)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'This expert does not accept teams from your program.',
+            ], 422);
+        }
+
+        // Per-program cap first, when the expert set one. "1 - BSIT, 5 - BSIS"
+        // has to mean one BSIT team, not just six teams in total - the overall
+        // count alone would happily let all six be BSIT.
+        $programCap = $expert->slotsForProgram($studentProgram);
+
+        if ($programCap !== null) {
+            if ($programCap < 1) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'This expert does not accept teams from your program.',
+                ], 422);
+            }
+
+            if ($expert->approvedTeamCountForProgram($studentProgram) >= $programCap) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "This expert has already reached their limit of {$programCap} {$studentProgram} team(s).",
+                ], 422);
+            }
+        }
+
+        // Overall cap still applies on top - an expert with no per-program
+        // split has only this, and one with a split shouldn't exceed the sum.
         $slotsUsed = TeamExpertAssignment::where('expert_id', $expert->expert_id)
             ->where('status', 'approved')
             ->count();
 
-        if ($slotsUsed >= ($expert->max_teams ?? 4)) {
+        // A capacity nobody has set is not a capacity of nought: an expert
+        // who has not opened their profile yet would otherwise be full from
+        // the moment their account was made, and refuse every team.
+        $maxTeams = $expert->max_teams ?? 0;
+
+        if ($maxTeams > 0 && $slotsUsed >= $maxTeams) {
             return response()->json([
                 'success' => false,
                 'message' => 'This expert has reached their maximum number of teams.',
             ], 422);
         }
 
-        $offersQualifyingRole = DB::table('expert_roles')
+        // The chosen role has to be one this expert actually holds, and one a
+        // team may engage them for. Validation only proved the id exists in
+        // expert_roles - it could belong to any other expert entirely.
+        $chosenRole = DB::table('expert_roles')
             ->join('roles', 'roles.role_id', '=', 'expert_roles.role_id')
+            ->where('expert_roles.expert_role_id', $validated['expert_role_id'])
             ->where('expert_roles.expert_id', $expert->expert_id)
-            ->where('roles.role_name', '!=', 'capstone_adviser')
-            ->exists();
+            ->whereIn('roles.role_name', CapstoneExpert::STUDENT_FACING_ROLES)
+            ->first(['roles.role_name']);
 
-        if (! $offersQualifyingRole) {
+        if (! $chosenRole) {
             return response()->json([
                 'success' => false,
-                'message' => 'This expert is not available for team applications.',
+                'message' => 'That role is not available for this expert.',
             ], 422);
         }
 
-        $alreadyApplied = TeamExpertAssignment::where('team_id', $team->team_id)
-            ->where('expert_id', $expert->expert_id)
-            ->whereIn('status', ['pending', 'approved'])
-            ->exists();
+        // One expert per role per team. Once a team's adviser has accepted,
+        // that seat is taken - applying to a second adviser can only end in
+        // two people holding one role, or a rejection the team waited on for
+        // nothing. A role still only pending is left alone: a team may have
+        // applications out to several and take whoever says yes first.
+        $filledBy = TeamExpertAssignment::with('expertRole.role')
+            ->where('team_id', $team->team_id)
+            ->where('status', 'approved')
+            ->get()
+            ->first(fn ($a) => strcasecmp((string) $a->engaged_role_name, $chosenRole->role_name) === 0);
 
-        if ($alreadyApplied) {
+        if ($filledBy) {
+            $heldByName = $filledBy->expert?->name ?? 'another expert';
+
             return response()->json([
                 'success' => false,
-                'message' => 'Your team already has a pending or approved application with this expert.',
+                'message' => 'Your team already has an approved '.ucfirst($chosenRole->role_name).
+                    ' ('.$heldByName.'). Remove them first if you want a different one.',
             ], 409);
         }
 
+        // One role per expert per team: engaging someone as your adviser
+        // takes them off the table as your consultant or grammarian. Another
+        // team is unaffected - they can still take this expert in whichever
+        // role they haven't used them for.
+        $existing = TeamExpertAssignment::where('team_id', $team->team_id)
+            ->where('expert_id', $expert->expert_id)
+            ->whereIn('status', ['pending', 'approved'])
+            ->first();
+
+        if ($existing) {
+            $heldAs = $existing->engaged_role_name;
+
+            return response()->json([
+                'success' => false,
+                'message' => $heldAs
+                    ? "Your team already has a {$existing->status} application with this expert as your ".ucfirst($heldAs).'. An expert can only take one role per team.'
+                    : 'Your team already has a pending or approved application with this expert.',
+            ], 409);
+        }
+
+        // The pre-proposal the CaPSA settled on, when there is one. It is
+        // what the team is actually being advised on, and an expert can trust
+        // it was approved rather than take the team's word for it.
+        $approvedProposal = $team->selected_pre_proposal_id
+            ? CapstonePreProposal::find($team->selected_pre_proposal_id)
+            : null;
+
+        if (! $request->hasFile('proposal_file') && ! $approvedProposal) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Attach your proposal, or get a pre-proposal approved first and it will be sent for you.',
+            ], 422);
+        }
+
         try {
-            $filePath = $request->file('proposal_file')->store('proposals', 'public');
+            $filePath = $request->hasFile('proposal_file')
+                ? $request->file('proposal_file')->store('proposals', 'public')
+                : null;
 
             $assignment = TeamExpertAssignment::create([
                 'team_id' => $team->team_id,
                 'expert_id' => $validated['expert_id'],
+                'expert_role_id' => $validated['expert_role_id'],
                 'status' => 'pending',
                 'proposal_file' => $filePath,
+                'pre_proposal_id' => $approvedProposal?->id,
                 'message' => $validated['message'],
             ]);
 

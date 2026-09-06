@@ -8,6 +8,7 @@ use App\Models\StudentSchoolYear;
 use App\Models\Team;
 use App\Services\OllamaSSHClient;
 use App\Services\SimilarityService;
+use App\Support\StudentTeam;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -18,35 +19,38 @@ use Illuminate\View\View;
 class PreProposalController extends Controller
 {
     /** A team has to keep at least this many titles before turning them in. */
-    public const MINIMUM_PROPOSALS = 3;
+    public const MINIMUM_PROPOSALS = 4;
 
     public function __construct(private SimilarityService $service) {}
 
-    public function edit(Request $request): View|RedirectResponse
+    public function edit(Request $request): View
     {
         $team = $this->currentTeam($request);
 
-        if (! $team) {
-            return redirect()->route('student.team')
-                ->with('error', 'Join or create a team before submitting a Pre-Proposal.');
-        }
-
-        $proposals = $team->preProposals()->with('duplicationCheck')->get()->keyBy('slot');
+        // A student with no team can read this page. It used to bounce them to
+        // Team Management, which - since nothing on that page said why - was
+        // indistinguishable from a broken link. Nothing here can be saved
+        // without a team, and the page says so instead.
+        $proposals = $team
+            ? $team->preProposals()->with('duplicationCheck')->get()->keyBy('slot')
+            : collect();
 
         return view('student.duplication', [
-            'team' => $team->load('members', 'leader', 'selectedPreProposal'),
+            'team' => $team?->load('members', 'leader', 'selectedPreProposal'),
             'proposals' => $proposals,
             'approvedProposals' => $proposals->filter(fn ($p) => $p->approved_status),
             // Saving a pre-proposal keeps it as a draft now; there is always
             // room for another until the set is turned in.
-            'canSubmitMore' => ! $this->isTurnedIn($team),
-            'isLeader' => (int) $team->leader_id === (int) $request->user()->student_id,
-            'turnedIn' => $this->isTurnedIn($team),
+            'canSubmitMore' => (bool) $team && ! $this->isTurnedIn($team),
+            'isLeader' => (bool) $team && (int) $team->leader_id === (int) $request->user()->student_id,
+            'turnedIn' => (bool) $team && $this->isTurnedIn($team),
             'turnedInAt' => $proposals->whereNotNull('submitted_at')->min('submitted_at'),
             'draftCount' => $proposals->whereNull('submitted_at')->count(),
-            'canTurnIn' => $proposals->count() >= self::MINIMUM_PROPOSALS && ! $this->isTurnedIn($team),
+            'canTurnIn' => (bool) $team
+                && $proposals->count() >= self::MINIMUM_PROPOSALS
+                && ! $this->isTurnedIn($team),
             'minimumProposals' => self::MINIMUM_PROPOSALS,
-            'reviewStarted' => $this->reviewStarted($team),
+            'reviewStarted' => (bool) $team && $this->reviewStarted($team),
         ]);
     }
 
@@ -56,12 +60,11 @@ class PreProposalController extends Controller
     // slot this becomes is only decided later, at store() time.
     public function runCheck(Request $request): JsonResponse
     {
-        $team = $this->currentTeam($request);
-
-        if (! $team) {
-            return response()->json(['success' => false, 'message' => 'Join or create a team first.'], 422);
-        }
-
+        // No team needed to run a check. The result is recorded against the
+        // student's own school-year row, not the team, so the gate that used
+        // to be here was asking for something the work never used - and a
+        // student deciding on a title has every reason to check it before
+        // they have a team. Saving and submitting still require one.
         $request->validate([
             'document' => 'required|file|mimes:pdf|max:20480',
         ]);
@@ -115,6 +118,14 @@ class PreProposalController extends Controller
             ], $matches);
 
             $studentSy = StudentSchoolYear::where('student_id', $request->user()->student_id)->first();
+
+            if (! $studentSy) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Your enrolment record is missing, so the result cannot be saved. Tell your CaPSA.',
+                ], 422);
+            }
+
             $permanentPath = 'duplication-checks/'.basename($path);
             Storage::move($path, $permanentPath);
 
@@ -151,8 +162,56 @@ class PreProposalController extends Controller
                 'trace' => $e->getTraceAsString(),
             ]);
 
+            // A student was being shown the raw failure - "Cannot connect to
+            // 127.0.0.1:22. Error 10061..." - which tells them nothing and
+            // reads like they broke something. The checker being unreachable
+            // is not their problem and not their mistake, so say that, and
+            // answer 503 rather than 500: nothing here is wrong, the machine
+            // that does the checking is simply not answering.
+            if ($this->checkerIsUnreachable($e)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'The similarity checker is not responding right now. '
+                        .'Nothing you uploaded was lost - try again in a few minutes, '
+                        .'and tell your CaPSA if it keeps happening.',
+                ], 503);
+            }
+
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
+    }
+
+    /**
+     * Whether a failed check means the machine that does the checking is not
+     * answering, rather than something about the document.
+     *
+     * The messages worth keeping are the ones thrown deliberately above - a
+     * PDF with no text layer, a document that is not a pre-proposal. Those
+     * tell a student what to do. Everything below is the SSH tunnel or Ollama
+     * being unavailable, and none of it means anything to them.
+     */
+    private function checkerIsUnreachable(\Throwable $e): bool
+    {
+        $signatures = [
+            'Cannot connect to',
+            'Connection refused',
+            'Empty response from Ollama',
+            'Failed to decode Ollama JSON',
+            'Failed to get embedding',
+            'Unable to connect',
+            'SSH',
+            'cURL',
+            'timed out',
+            'Operation timed out',
+        ];
+
+        foreach ($signatures as $signature) {
+            if (stripos($e->getMessage(), $signature) !== false) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public function store(Request $request): RedirectResponse
@@ -408,8 +467,6 @@ class PreProposalController extends Controller
 
     private function currentTeam(Request $request): ?Team
     {
-        $studentSy = StudentSchoolYear::where('student_id', $request->user()->student_id)->first();
-
-        return $studentSy?->team_id ? Team::find($studentSy->team_id) : null;
+        return StudentTeam::for($request->user()->student_id);
     }
 }

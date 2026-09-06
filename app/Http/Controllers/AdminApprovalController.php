@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Mail\RequestStatusMail;
+use App\Models\CapstoneExpert;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -31,10 +32,19 @@ class AdminApprovalController extends Controller
 
         $allIds = $pendingIds->merge($approvedIds)->merge($rejectedIds);
 
+        // $allIds is already in display order (pending, then approved, then
+        // rejected - each newest first), so we just need the rows back in
+        // that same order. This used to be done with MySQL's FIELD(), which
+        // no other driver has, and which also produced malformed SQL
+        // ("FIELD(expert_id, )") whenever there were no experts at all.
+        // Sorting the fetched rows avoids both problems.
+        $position = $allIds->values()->flip();
+
         $instructors = DB::table('capstone_experts')
             ->whereIn('expert_id', $allIds)
-            ->orderByRaw('FIELD(expert_id, '.$allIds->map(fn ($id) => (int) $id)->implode(',').')')
             ->get()
+            ->sortBy(fn ($expert) => $position[$expert->expert_id] ?? PHP_INT_MAX)
+            ->values()
             ->map(function ($expert) {
                 $expert->status = $expert->approved_status ? 'approved' : ($expert->rejection_reason ? 'rejected' : 'pending');
 
@@ -71,9 +81,12 @@ class AdminApprovalController extends Controller
             return $expert;
         });
 
-        return view('admin.approval', [
+        return view('capsa.approval', [
             'instructors' => $instructors,
             'pendingCount' => $pendingIds->count(),
+            // Role is assigned here now, not by the applicant at request
+            // time - the review modal needs the real list to check off.
+            'roles' => DB::table('roles')->orderBy('role_name')->get(['role_id', 'role_name']),
         ]);
     }
 
@@ -123,7 +136,7 @@ class AdminApprovalController extends Controller
         return response()->json(['success' => true, 'data' => $experts]);
     }
 
-    public function approve($id): JsonResponse
+    public function approve(Request $request, $id): JsonResponse
     {
         $expert = DB::table('capstone_experts')->where('expert_id', $id)->first();
 
@@ -135,10 +148,24 @@ class AdminApprovalController extends Controller
             return response()->json(['success' => false, 'message' => 'Request already processed.'], 422);
         }
 
-        DB::table('capstone_experts')->where('expert_id', $id)->update([
-            'approved_status' => true,
-            'rejection_reason' => null,
+        // Role used to be picked by the applicant at request time - it's now
+        // CAPSA's call, made here, at approval.
+        $validated = $request->validate([
+            'role_ids' => ['required', 'array', 'min:1'],
+            'role_ids.*' => ['integer', 'exists:roles,role_id'],
         ]);
+
+        DB::transaction(function () use ($id, $validated) {
+            DB::table('capstone_experts')->where('expert_id', $id)->update([
+                'approved_status' => true,
+                'rejection_reason' => null,
+            ]);
+
+            // Diffed rather than delete-all: expert_role_id is what team
+            // assignments point at, so reinserting an unchanged role would
+            // hand it a new id and orphan them.
+            CapstoneExpert::syncRoles((int) $id, $validated['role_ids']);
+        });
 
         $approvedExpert = DB::table('capstone_experts')->where('expert_id', $id)->first();
 

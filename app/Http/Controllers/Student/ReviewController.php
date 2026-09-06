@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\CapstoneDocument;
 use App\Models\CapstoneDocumentReview;
 use App\Models\Student;
-use App\Models\StudentSchoolYear;
+use App\Support\StudentTeam;
 
 class ReviewController extends Controller
 {
@@ -15,8 +15,7 @@ class ReviewController extends Controller
         /** @var Student $student */
         $student = auth()->user();
 
-        $studentSy = StudentSchoolYear::where('student_id', $student->student_id)->first();
-        $teamId = $studentSy?->team_id;
+        $teamId = StudentTeam::idFor($student->student_id);
 
         $documents = CapstoneDocument::where('student_id', $student->student_id)
             ->when($teamId, fn ($q) => $q->orWhereIn('student_id', function ($q) use ($teamId) {

@@ -9,8 +9,7 @@ class StudentRoleSeeder extends Seeder
 {
     public function run(): void
     {
-        StudentRole::create(['role_name' => 'Project Head/Network Engineer']);
-        StudentRole::create(['role_name' => 'UI Designer']);
-        StudentRole::create(['role_name' => 'Document Writer/QA Tester']);
+        StudentRole::create(['role_name' => 'Leader']);
+        StudentRole::create(['role_name' => 'Member']);
     }
 }

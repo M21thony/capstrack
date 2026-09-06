@@ -10,6 +10,8 @@ use App\Models\StudentRole;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
 use App\Models\TeamInvitation;
+use App\Models\Term;
+use App\Support\StudentTeam;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -44,10 +46,12 @@ class TeamController extends Controller
             $studentId = $student ? $student->student_id : 8;
         }
 
-        $studentSy = StudentSchoolYear::where('student_id', $studentId)
-            ->latest('school_year')
-            ->first();
-        $teamId = $studentSy?->team_id;
+        $teamId = StudentTeam::idFor($studentId);
+
+        // The enrolment row itself, for the school year and the role on it -
+        // a different question from which team they are in, and one a student
+        // with no team still has an answer to.
+        $studentSy = StudentSchoolYear::where('student_id', $studentId)->first();
 
         $myTeam = null;
         $teamMembers = collect();
@@ -87,7 +91,7 @@ class TeamController extends Controller
         $teamFull = $myTeam && ! $myTeam->is_confirmed && $isLeader && $teamMembers->count() >= $memberCount;
         $isTeamFull = $myTeam && $teamMembers->count() >= $memberCount;
         $isConfirmed = $myTeam && $myTeam->is_confirmed;
-        $postHidden = $myTeam && in_array($myTeam->team_status, ['complete', 'closed']);
+        $postHidden = $myTeam && ($myTeam->team_status === 'Full' || $myTeam->hasSubmittedPreProposals());
 
         $fullTeamStudentIds = Recruitment::where('recruitment_goal', 'build_a_team')
             ->with('student.team')
@@ -135,7 +139,11 @@ class TeamController extends Controller
             ->where('student_id', '!=', $studentId)
             ->whereNotIn('student_id', $fullTeamStudentIds)
             ->whereDoesntHave('student.team', function ($q) {
-                $q->whereIn('team_status', ['complete', 'closed']);
+                // Off the feed once the team stops taking members OR has
+                // turned its pre-proposals in - two separate reasons, which
+                // is exactly what one status column used to blur.
+                $q->where('team_status', 'Full')
+                    ->orWhereHas('preProposals', fn ($p) => $p->whereNotNull('submitted_at'));
             })
             ->whereIn('student_id', function ($query) use ($student, $currentSchoolYear) {
                 $query->select('student_s_y.student_id')
@@ -165,7 +173,9 @@ class TeamController extends Controller
             ->latest('created_at')
             ->get();
 
-        // Outgoing team invitations sent by this student (as leader) that are still pending
+        // The other direction: invitations this leader has sent that are still
+        // waiting on an answer. Without these the slot they are holding looked
+        // empty, so a leader could invite five people into three places.
         $outgoingInvitations = TeamInvitation::with(['receiver'])
             ->where('sender_id', $studentId)
             ->where('type', 'invite')
@@ -250,8 +260,7 @@ class TeamController extends Controller
                     $fail('The team name has already been taken.');
                 }
             }],
-            'project_title' => ['nullable', 'string', 'max:150'],
-            'team_status' => ['nullable', Rule::in(['on-going', 'complete', 'closed'])],
+            'team_status' => ['nullable', Rule::in(['Active', 'Full'])],
         ]);
 
         $student = $request->user();
@@ -264,24 +273,29 @@ class TeamController extends Controller
             return redirect()->route('student.team')->with('error', 'You are already in a team.');
         }
 
+        // No project_title here: a team's title is not typed, it is whichever
+        // pre-proposal gets approved (see AdminTeamVerificationController's
+        // resolveTitleIfSettled), so a new team simply has none yet.
         $team = Team::create([
             'team_name' => $validated['team_name'],
-            'project_title' => $validated['project_title'] ?? null,
-            'team_status' => $validated['team_status'] ?? 'on-going',
+            'team_status' => $validated['team_status'] ?? 'Active',
             'leader_id' => $student->student_id,
         ]);
 
-        $computedSchoolYear = now()->month >= 8
-            ? now()->year.'-'.(now()->year + 1)
-            : (now()->year - 1).'-'.now()->year;
-
         DB::table('student_s_y')
             ->updateOrInsert(
-                ['student_id' => $student->student_id],
+                // Keyed on the term too: this table is one row per student PER
+                // TERM, so keying on the student alone would overwrite last
+                // semester's record instead of starting this one.
+                ['student_id' => $student->student_id, 'term_id' => Term::activeId()],
                 [
                     'team_id' => $team->team_id,
                     's_role_id' => StudentRole::leaderRoleId(),
-                    'school_year' => $computedSchoolYear,
+                    // Written straight through the query builder, so the
+                    // model's creating hook never fires - the year has to be
+                    // named here or the row lands with none, which is how
+                    // every row on the live database ended up null.
+                    'school_year' => Term::currentSchoolYear(),
                 ]
             );
 
@@ -350,46 +364,27 @@ class TeamController extends Controller
                     $fail('The team name has already been taken.');
                 }
             }],
-            'project_title' => ['nullable', 'string', 'max:150'],
-            'team_status' => ['nullable', Rule::in(['on-going', 'complete', 'closed'])],
+            'team_status' => ['nullable', Rule::in(['Active', 'Full'])],
             'tags' => ['nullable', 'json'],
         ]);
 
-        $projectTitle = $validated['project_title'] ?? $team->project_title;
-        $wordCount = $this->countMeaningfulWords($projectTitle ?? '');
+        // The title used to be typed here, and tags were demanded once it ran
+        // past 11 words. Both are gone: the title is now whichever pre-proposal
+        // the CAPSA approves (or, when two are approved, whichever the team
+        // then picks), so a title typed here could only ever contradict it.
+        // Tags survive on their own terms - they describe the project for the
+        // recruitment feed - and are simply optional.
+        $tags = $request->input('tags');
+        $tagsArray = $tags ? json_decode($tags, true) : null;
 
-        if ($wordCount >= 11) {
-            $tags = $request->input('tags');
-            $tagsArray = $tags ? json_decode($tags, true) : [];
-
-            if (! is_array($tagsArray) || count($tagsArray) < 2) {
-                return redirect()->route('student.team')
-                    ->with('error', 'Please add at least 2 tags related to your project.');
-            }
-
+        if (is_array($tagsArray)) {
             $validated['tags'] = $tagsArray;
-        }
-
-        if (($validated['team_status'] ?? null) === 'complete') {
-            $request->validate([
-                'project_title' => [
-                    'required', 'string', 'max:150',
-                    function ($attr, $value, $fail) {
-                        $count = $this->countMeaningfulWords($value ?? '');
-
-                        if ($count < 11 || $count > 12) {
-                            $fail("Project title must contain 11–12 meaningful words (filler words like 'a', 'of', 'in' don't count). Current count: {$count}.");
-                        }
-                    },
-                ],
-            ]);
         }
 
         $originalStatus = $team->team_status;
 
         $team->update([
             'team_name' => $validated['team_name'],
-            'project_title' => $validated['project_title'] ?? null,
             'tags' => $validated['tags'] ?? $team->tags,
             'team_status' => $validated['team_status'] ?? $team->team_status,
             'member_count' => 5,
@@ -402,10 +397,10 @@ class TeamController extends Controller
 
         // Auto-close team if it has reached full capacity
         $autoClosed = false;
-        if ($team->team_status === 'on-going') {
+        if ($team->team_status === 'Active') {
             $currentCount = StudentSchoolYear::where('team_id', $team->team_id)->count();
             if ($currentCount >= 5) {
-                $team->update(['team_status' => 'closed']);
+                $team->update(['team_status' => 'Full']);
                 $autoClosed = true;
                 $this->logActivity(
                     $studentId,
@@ -445,8 +440,7 @@ class TeamController extends Controller
         $student = $request->user();
         $studentId = $student ? $student->student_id : 8;
 
-        $studentSy = StudentSchoolYear::where('student_id', $studentId)->first();
-        $teamId = $studentSy ? $studentSy->team_id : null;
+        $teamId = StudentTeam::idFor($studentId);
 
         if (! $teamId) {
             return redirect()
@@ -507,8 +501,7 @@ class TeamController extends Controller
         $student = $request->user();
         $studentId = $student->student_id;
 
-        $studentSy = StudentSchoolYear::where('student_id', $studentId)->first();
-        $teamId = $studentSy?->team_id;
+        $teamId = StudentTeam::idFor($studentId);
 
         if (! $teamId) {
             return redirect()
@@ -1204,6 +1197,14 @@ class TeamController extends Controller
         return back();
     }
 
+    /**
+     * The classmates a leader can still invite into their team.
+     *
+     * Brought over from Zzek-08's branch, which is the one thing on it this
+     * branch did not already have. It reads the term through school_year
+     * rather than term_id, and falls back to the computed academic year when
+     * a student's stored one is legacy data that matches nobody.
+     */
     public function getAvailableClassmates(Request $request): JsonResponse
     {
         $student = $request->user();
@@ -1238,19 +1239,19 @@ class TeamController extends Controller
 
         $availableSlots = $maxMembers - $currentCount;
 
-        // Get pending invitation receiver IDs
+        // Anyone already sitting on an unanswered invitation from this team.
+        // They stay in the list, marked, rather than being invited twice.
         $pendingInviteReceiverIds = TeamInvitation::where('team_id', $myTeam->team_id)
             ->where('type', 'invite')
             ->where('status', 'pending')
             ->pluck('receiver_id')
-            ->toArray();
+            ->all();
 
-        // Compute the current academic year the same way PersonalInfoController does.
-        // This is used as a fallback when the leader's stored school_year is
-        // null, corrupted, or doesn't match any classmates (e.g. legacy "26-1" data).
-        $computedSchoolYear = now()->month >= 8
-            ? now()->year.'-'.(now()->year + 1)
-            : (now()->year - 1).'-'.now()->year;
+        // The fallback for a leader whose stored year is null, corrupted, or
+        // simply matches nobody (legacy "26-1" data). Asked of the term
+        // rather than guessed from the month, so it agrees with what the
+        // rest of the app writes.
+        $computedSchoolYear = Term::currentSchoolYear();
 
         $classmates = Student::join('student_s_y', 'students.student_id', '=', 'student_s_y.student_id')
             ->where('student_s_y.school_year', $currentSchoolYear)
@@ -1284,9 +1285,6 @@ class TeamController extends Controller
                 }
             }
 
-            $isPendingInvite = in_array($classmate->student_id, $pendingInviteReceiverIds);
-            $hasTeam = $classmate->team_id !== null;
-
             return [
                 'student_id' => $classmate->student_id,
                 'name' => trim(($classmate->f_name ?? '').' '.($classmate->l_name ?? '')),
@@ -1295,8 +1293,8 @@ class TeamController extends Controller
                 'course' => $classmate->course,
                 'year_section' => $classmate->year_section,
                 'student_number' => $classmate->student_number,
-                'has_team' => $hasTeam,
-                'is_pending_invite' => $isPendingInvite,
+                'has_team' => $classmate->team_id !== null,
+                'is_pending_invite' => in_array($classmate->student_id, $pendingInviteReceiverIds, true),
             ];
         });
 
