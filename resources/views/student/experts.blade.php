@@ -88,6 +88,16 @@
 
 /* Modal base */
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 300; display: none; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
+/* Preview is opened from inside the Apply form, so it is a modal on top of a
+   modal. Both were z-index 300 and the later one in the document won - which
+   is Apply, so pressing Preview appeared to do nothing while the panel sat
+   behind the form. */
+#proposal-preview-modal { z-index: 400; }
+/* Two classes, so this beats .modal-box's 420px rather than losing to it on
+   equal weight and rendering a seven-section document in a narrow column.
+   The rule in experts.css could never win: that stylesheet is linked before
+   this block. */
+.modal-box.pp-box { width: 720px; max-width: 94vw; }
 .modal-overlay.open { display: flex; }
 .modal-box { background: var(--bg2); border-radius: 16px; padding: 28px; width: 420px; max-width: 90vw; box-shadow: 0 20px 60px rgba(0,0,0,0.3); animation: modalIn 0.2s ease; }
 @keyframes modalIn { from { opacity: 0; transform: scale(0.95) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
@@ -336,7 +346,13 @@
         // An approved expert is not a request any more and not available any
         // more - they are yours, and the checklist says so.
         $settledExpertIds = $approvedAssignments->pluck('expert_id')->filter()->all();
-        $openRequests = $assignments->whereNotIn('status', ['approved']);
+
+        // Split, because they were one list called "Pending Applications" and
+        // a rejected application sat in it looking like something still being
+        // decided. One is waiting on somebody; the other is finished.
+        $waitingRequests = $assignments->where('status', 'pending');
+        $closedRequests = $assignments->whereNotIn('status', ['approved', 'pending']);
+        $openRequests = $waitingRequests->concat($closedRequests);
         $shownExperts = $experts->whereNotIn('expert_id', $settledExpertIds);
       @endphp
 
@@ -675,14 +691,20 @@
 
     <aside class="overview-panel">
       <div class="panel">
+        {{-- Filled and empty used to differ by the colour of a 10px pill, so
+             three rows read as three identical rows and a team could not tell
+             at a glance whether they had an adviser. A tick against a hollow
+             ring says it without being read. --}}
+        @php $filledCount = count($filledSlots); @endphp
         <h3>Team Checklist</h3>
+        <p class="panel-count"><b>{{ $filledCount }} of 3</b> {{ $filledCount === 3 ? 'filled - your team is set' : 'filled' }}</p>
         @foreach(['adviser', 'consultant', 'grammarian'] as $slotRole)
           @php $a = $filledSlots[$slotRole] ?? null; $rc = $roleColors[$slotRole]; @endphp
-          <div class="check" data-slot-role="{{ $slotRole }}">
-            <span class="check-dot" style="background: {{ $rc['dot'] }};"></span>
+          <div class="check {{ $a ? 'is-set' : 'is-open' }}" data-slot-role="{{ $slotRole }}">
+            <span class="check-mark">@if($a)<svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>@endif</span>
             <span class="check-role">{{ ucfirst($slotRole) }}</span>
             @if($a)
-              <span class="pill set" title="{{ $a->expert?->name }}">{{ $a->expert?->name }}</span>
+              <span class="check-name" title="{{ $a->expert?->name }}">{{ $a->expert?->name }}</span>
               @if($isLeader)
                 <button class="check-remove" title="Remove {{ $a->expert?->name ?? 'this expert' }}"
                         onclick="openRemoveModal({{ $a->assignment_id }}, '{{ $a->expert?->name ?? '' }}')">
@@ -690,16 +712,16 @@
                 </button>
               @endif
             @else
-              <span class="pill">Not selected</span>
+              <span class="check-open">Not yet</span>
             @endif
           </div>
         @endforeach
 
         @foreach($unslotted as $a)
-          <div class="check">
-            <span class="check-dot" style="background: var(--text3);"></span>
+          <div class="check is-set">
+            <span class="check-mark"><svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg></span>
             <span class="check-role">Assigned</span>
-            <span class="pill set">{{ $a->expert?->name ?? 'Unknown' }}</span>
+            <span class="check-name">{{ $a->expert?->name ?? 'Unknown' }}</span>
             @if($isLeader)
               <button class="check-remove" onclick="openRemoveModal({{ $a->assignment_id }}, '{{ $a->expert?->name ?? '' }}')">
                 <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" fill="none" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
@@ -713,62 +735,25 @@
            slot, so it shows here and the checklist above stays "Not selected"
            until the expert approves. --}}
       <div class="panel">
-        <h3>Pending Applications</h3>
-        @php $pendingCount = $assignments->where('status', 'pending')->count(); @endphp
+        <h3>Applications</h3>
+        @php $pendingCount = $waitingRequests->count(); @endphp
         @if($pendingCount > 0)
           <p class="panel-count"><b>{{ $pendingCount }}</b> {{ $pendingCount === 1 ? 'request waiting on a reply' : 'requests waiting on a reply' }}</p>
         @endif
         @if($openRequests->isNotEmpty())
-        @foreach($openRequests as $assignment)
-          @php
-            // Through the public disk explicitly: the file was stored with
-            // ->store("proposals", "public"), and a bare Storage::url() call
-            // resolves against the DEFAULT disk instead - the same fix the
-            // expert side of this link already carries.
-            $propUrl = $assignment->proposal_file
-                ? Storage::disk("public")->url($assignment->proposal_file)
-                : null;
-            $reqRole = $assignment->engaged_role_name;
-          @endphp
-          <div class="req-card">
-            <div class="avatar" style="width: 36px; height: 36px; font-size: 12px; background: var(--accent); color: white;">
-              {{ $assignment->expert?->avatarInitials() ?? 'NA' }}
-              @if ($assignment->expert?->hasAvatarImage())
-                <img class="avatar-photo" src="{{ $assignment->expert->avatarUrl() }}" alt="" loading="lazy"
-                     referrerpolicy="no-referrer" onerror="this.remove()">
-              @endif
-            </div>
-            <div style="flex: 1; min-width: 0;">
-              <div style="font-size: 13px; font-weight: 600; color: var(--text);">{{ $assignment->expert?->name ?? 'Unknown Expert' }}</div>
-              <div style="font-size: 11px; color: var(--text3); text-transform: uppercase;">{{ $reqRole ? 'Applied as '.$reqRole : ucfirst($assignment->status) }}</div>
-            </div>
-            <span class="status-badge" style="background: {{ $assignment->status === 'approved' ? 'var(--green-bg)' : ($assignment->status === 'pending' ? 'var(--amber-bg)' : 'var(--red-bg)') }}; color: {{ $assignment->status === 'approved' ? 'var(--green)' : ($assignment->status === 'pending' ? 'var(--amber)' : 'var(--red)') }};">
-              {{ ucfirst($assignment->status) }}
-            </span>
-            <button class="btn btn-sm btn-soft" onclick="openReqInfoModal({{ json_encode([
-              'name' => $assignment->expert?->name ?? 'Unknown',
-              'role' => $reqRole ? ucfirst($reqRole) : null,
-              'status' => ucfirst($assignment->status),
-              'message' => $assignment->message ?? 'No message provided.',
-              // Why the expert said no. It was written down and sent in a
-              // notification, then never shown again - so a team that missed
-              // the notification had a rejected application and no idea why.
-              'rejection_reason' => $assignment->rejection_reason,
-              // An application made with the CaPSA-approved pre-proposal has
-              // no uploaded file, and the details said "None attached" - as
-              // though nothing had been sent, when what was sent is the one
-              // document the CaPSA had already passed.
-              'pre_proposal_title' => $assignment->preProposal?->title,
-              'proposal' => $propUrl,
-              'date' => $assignment->created_at ? $assignment->created_at->format('M d, Y g:i A') : 'N/A',
-            ]) }})" title="View details">View</button>
-            @if($isLeader && $assignment->status !== 'approved')
-              <button class="btn btn-sm btn-soft-red" onclick="openRemoveModal({{ $assignment->assignment_id }}, '{{ $assignment->expert?->name ?? '' }}')" title="Remove">
-                <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-              </button>
-            @endif
-          </div>
-        @endforeach
+          @foreach($waitingRequests as $assignment)
+            @include('student.partials.expert-request-card')
+          @endforeach
+
+          @if($closedRequests->isNotEmpty())
+            {{-- Said once, above the finished ones. A team that was turned
+                 down can apply to that expert again - the row stays as a
+                 record of what happened, not as something still out. --}}
+            <p class="req-divider">Already answered &mdash; you can apply to these experts again.</p>
+            @foreach($closedRequests as $assignment)
+              @include('student.partials.expert-request-card')
+            @endforeach
+          @endif
         @else
           <p class="panel-empty">No requests out yet. Choose a role above, then apply to an expert.</p>
         @endif
