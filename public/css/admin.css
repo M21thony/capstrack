@@ -1700,3 +1700,19 @@ tr.rs-on > td{background:var(--accent-light)}
   .page-head-actions{width:100%}
   .page-filter{flex:1 1 45%;min-width:0}
 }
+
+/* ══ list tables: saying whose answer each column is ══ */
+.th-owner{display:inline-block;font-size:8.5px;font-weight:500;letter-spacing:.4px;
+  text-transform:none;color:var(--text3);margin-left:5px;padding:1px 5px;
+  border:1px solid var(--border);border-radius:3px;vertical-align:1px}
+.table-legend{margin:9px 2px 0;font-size:11.5px;color:var(--text3);line-height:1.6}
+.table-legend b{color:var(--text2);font-weight:700}
+
+/* Name over address, so two people with the same surname are told apart in
+   the row rather than in a tooltip nobody hovers. */
+.cx-text{min-width:0;display:flex;flex-direction:column;line-height:1.35}
+.cx-mail{font-size:11px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* The row's actions carried their own labels, which at this row height was
+   most of the width of the table. */
+.expert-actions{display:flex;align-items:center;gap:5px;justify-content:flex-end;flex-wrap:nowrap}

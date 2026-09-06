@@ -158,11 +158,14 @@
     background:var(--accent);
   }
 
+  /* One row, never two. The buttons carried their own labels when this
+     wrapped; as icons they fit across, and a 2x2 block of them read as four
+     separate things rather than one row of actions. */
   .expert-actions{
     display:flex;
-    flex-wrap:wrap;
+    flex-wrap:nowrap;
     align-items:center;
-    gap:8px;
+    gap:5px;
   }
 
   /* Direct icon buttons - one per action, no dropdown. Each is tooltipped
@@ -469,6 +472,13 @@
           </tbody>
         </table>
       </div>
+      {{-- Who owns which column. Without it a reader assumes every column on
+           an editing page is editable, and two of these are not. --}}
+      <p class="table-legend">
+        <b>Roles</b> and <b>Sections</b> are yours to set.
+        <b>Accepts</b> and <b>Expertise</b> belong to the expert &mdash; they choose which programs
+        to take teams from and how many, on their own profile.
+      </p>
     </div>
   </div>
 
@@ -544,7 +554,7 @@
             <th>Role(s)</th>
             <th>Sections</th>
             <th>Expertise</th>
-            <th>Team Slot</th>
+            <th>Accepts <span class="th-owner">expert sets</span></th>
             <th style="text-align:right;padding-right:20px">Action</th>
           </tr>
         </thead>
@@ -612,11 +622,17 @@
               data-roles="{{ $expert->roles->pluck('role_name')->map($roleLabel)->implode(' ') }}"
               data-search="{{ Str::lower($expert->name.' '.$expert->email.' '.$expertiseFull) }}">
             <td style="padding-left:20px" data-label="Expert">
-              <div class="expert-name-trigger cx-who" onclick="openExpertDetail({{ Illuminate\Support\Js::from($detailPayload) }})" title="{{ $expert->email }}">
+              <div class="expert-name-trigger cx-who" onclick="openExpertDetail({{ Illuminate\Support\Js::from($detailPayload) }})">
                 <span class="cx-dot cx-dot-{{ $computedStatus }}" title="{{ ucfirst($computedStatus) }}"></span>
                 <img src="{{ $expert->avatarUrl() }}" alt="" loading="lazy" class="cx-av"
                      onerror="this.onerror=null;this.src='{{ asset('images/default-avatar.jpg') }}';">
-                <span class="td-main">{{ $expert->name }}</span>
+                {{-- The address under the name rather than hidden in a tooltip:
+                     two people share a surname often enough, and the email is
+                     what tells them apart. --}}
+                <span class="cx-text">
+                  <span class="td-main">{{ $expert->name }}</span>
+                  <span class="cx-mail">{{ $expert->email }}</span>
+                </span>
               </div>
             </td>
             <td data-label="Role">
@@ -687,10 +703,9 @@
 
             <td data-label="Action">
               <div class="expert-actions">
-                <button type="button" class="roles-btn"
+                <button type="button" class="icon-btn" title="Manage roles"
                         onclick="openRoles({{ $expert->expert_id }}, {{ Illuminate\Support\Js::from($expert->name) }}, {{ Illuminate\Support\Js::from($expert->roles->pluck('role_name')) }})">
                   <svg viewBox="0 0 24 24"><path d="M20.59 13.41 13.42 20.6a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82Z"/><circle cx="7" cy="7" r="1"/></svg>
-                  Manage Roles
                 </button>
 
                 {{-- Only for someone who already holds the role: changing
@@ -698,10 +713,9 @@
                      doing it through the toggle meant removing them as CaPSA
                      and making them one again. --}}
                 @if ($expert->is_capsa)
-                  <button type="button" class="roles-btn"
+                  <button type="button" class="icon-btn" title="Manage sections"
                           onclick="editCapsaSections({{ $expert->expert_id }}, {{ Illuminate\Support\Js::from($expert->name) }}, {{ Illuminate\Support\Js::from($expert->sections ?? []) }})">
                     <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="6" rx="1"/><rect x="3" y="14" width="18" height="6" rx="1"/></svg>
-                    Manage Sections
                   </button>
                 @endif
 
