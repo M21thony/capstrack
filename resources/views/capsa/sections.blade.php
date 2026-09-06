@@ -157,30 +157,56 @@
 
   <div id="real-content" style="display:none;flex:1;overflow:hidden;flex-direction:column;">
   <div class="content">
-    <div class="card">
-      <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
-        <div>
-          <span class="card-title">Students in Your Sections</span>
-          @if (!empty($adminSections))
-            <div style="font-size:12px;color:var(--text3)">Filtered by: {{ implode(', ', $adminSections) }}</div>
-          @endif
-        </div>
-
-        <div style="display:flex;align-items:center;gap:8px">
-          @if ($viewerIsCapsa)
-          <button type="button" class="btn" onclick="openStudentRosterModal()">Upload List</button>
-          @endif
-          <form method="get" id="sectionFilterForm">
-            <label for="section" style="font-size:13px;color:var(--text2);margin-right:8px">Section</label>
-            <select name="section" id="section" onchange="document.getElementById('sectionFilterForm').submit()" style="padding:6px 10px;border-radius:8px;border:1px solid var(--muted);background:#fff">
-              <option value="">All (assigned)</option>
-              @foreach ($allSections as $section)
-                <option value="{{ $section }}" {{ request()->query('section') == $section ? 'selected' : '' }}>{{ $section }}</option>
-              @endforeach
-            </select>
-          </form>
-        </div>
+    {{-- What the page holds on the left, the ways in on the right. The count
+         used to be a card title with the sections underneath in grey, which
+         said the same thing in two lines and left the buttons sharing a row
+         with a filter. --}}
+    <div class="page-head">
+      <div class="page-head-text">
+        {{ $students->count() }} {{ Str::plural('student', $students->count()) }}
+        @if (! empty($adminSections)) · {{ implode(', ', $adminSections) }} @endif
       </div>
+      @if ($viewerIsCapsa)
+        <div class="page-head-actions">
+          <button type="button" class="btn" onclick="openStudentRosterModal()">Upload list</button>
+          <button type="button" class="btn btn-primary" onclick="openAddStudent()">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 4h16v16H4z"/><path d="M4 7l8 6 8-6"/></svg>
+            Add by email
+          </button>
+        </div>
+      @endif
+    </div>
+
+    {{-- Filters on their own line, the search included: a list this long is
+         read by looking for one person more often than by scrolling. --}}
+    <div class="page-filters">
+      <div class="experts-search">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input class="input" id="student-search" placeholder="Search by name, email or student number..." oninput="filterStudents()"/>
+      </div>
+      <form method="get" id="sectionFilterForm">
+        <select class="input page-filter" name="section" id="section" onchange="document.getElementById('sectionFilterForm').submit()">
+          <option value="">All my sections</option>
+          @foreach ($allSections as $section)
+            <option value="{{ $section }}" {{ request()->query('section') == $section ? 'selected' : '' }}>{{ $section }}</option>
+          @endforeach
+        </select>
+      </form>
+    </div>
+
+    @if ($viewerIsCapsa)
+      @include('partials.row-select', [
+        'table' => '.table',
+        'noun' => 'student',
+        'actions' => [
+          ['id' => 'bulkProgram', 'label' => 'Set program'],
+          ['id' => 'bulkSection', 'label' => 'Set year & section'],
+          ['id' => 'bulkRemove', 'label' => 'Remove from section', 'danger' => true],
+        ],
+      ])
+    @endif
+
+    <div class="card" style="padding:0;overflow:hidden">
 
       <div style="overflow-x:auto">
         @if (! empty($debug))
@@ -208,23 +234,32 @@
         <table class="table">
           <thead>
             <tr>
-              <th style="width:40px">#</th>
-              <th>Student Name</th>
+              <th>Student</th>
+              <th>Student no.</th>
               <th>Program</th>
               <th>Year</th>
               <th>Section</th>
               <th>Team</th>
-              <th>School Year</th>
               <th>Status</th>
+              @if ($viewerIsCapsa)<th style="text-align:right;padding-right:20px">Action</th>@endif
             </tr>
           </thead>
           <tbody>
             @forelse ($students as $index => $student)
               @php $sy = $student->currentSy; @endphp
-              <tr>
-                <td>{{ $index + 1 }}</td>
-                <td style="font-weight:500">{{ $student->l_name }}, {{ $student->f_name }} {{ $student->m_name ? $student->m_name[0] . '.' : '' }}</td>
-                <td>{{ $student->programAbbr ?? '—' }}</td>
+              <tr data-id="{{ $student->student_id }}"
+                  data-search="{{ Str::lower($student->f_name.' '.$student->l_name.' '.$student->email.' '.$student->student_number) }}">
+                <td>
+                  {{-- The address under the name rather than nowhere: two
+                       students share a surname often enough that it is what
+                       tells them apart. --}}
+                  <span class="std-who">
+                    <span class="std-name">{{ $student->l_name }}, {{ $student->f_name }} {{ $student->m_name ? $student->m_name[0] . '.' : '' }}</span>
+                    <span class="std-mail">{{ $student->email }}</span>
+                  </span>
+                </td>
+                <td class="std-mono">{{ $student->student_number ?: '—' }}</td>
+                <td class="std-mono">{{ $student->programAbbr ?? '—' }}</td>
                 {{-- year_section is stored joined - "4th · B" - because that is
                      the shape every section lookup matches on. It is shown apart
                      here: Program, Year and Section are three things a CaPSA
@@ -234,8 +269,8 @@
                   $year = count($ys) === 2 ? $ys[0] : '';
                   $section = count($ys) === 2 ? $ys[1] : ($ys[0] ?? '');
                 @endphp
-                <td>{{ $year !== '' ? $year : '—' }}</td>
-                <td>{{ $section !== '' ? $section : '—' }}</td>
+                <td class="std-mono">{{ $year !== '' ? $year : '—' }}</td>
+                <td class="std-mono">{{ $section !== '' ? $section : '—' }}</td>
                 <td>
                   @if ($sy && $sy->team)
                     {{ $sy->team->team_name ?? 'Team #' . $sy->team->team_id }}
@@ -243,14 +278,39 @@
                     <span style="color:var(--text3)">—</span>
                   @endif
                 </td>
-                <td>{{ $sy->school_year ?? '—' }}</td>
                 <td>
-                  @if ($student->isOnline())
-                    <span style="padding:3px 8px;border-radius:6px;font-size:11px;font-weight:600;background:rgba(22,163,74,0.1);color:var(--green)">Active</span>
+                  {{-- A student added by email exists before they ever sign
+                       in. Without a word for that the row looks broken rather
+                       than waiting. --}}
+                  @if ($student->last_seen_at)
+                    <span class="std-tag std-tag-on">Enrolled</span>
                   @else
-                    <span style="padding:3px 8px;border-radius:6px;font-size:11px;font-weight:600;background:rgba(107,114,128,0.1);color:var(--text3)">Offline</span>
+                    <span class="std-tag std-tag-wait">Not signed in yet</span>
                   @endif
                 </td>
+                @if ($viewerIsCapsa)
+                  <td style="text-align:right;padding-right:20px">
+                    @php
+                      // Built above the tag: a multi-line @json inside an
+                      // attribute is a parse error, and the message points at
+                      // the bracket rather than at the reason.
+                      $editPayload = [
+                        'id' => $student->student_id,
+                        'f_name' => $student->f_name,
+                        'l_name' => $student->l_name,
+                        'student_number' => $student->student_number,
+                        'course' => $student->programAbbr,
+                        'year' => $year,
+                        'section' => $section,
+                        'email' => $student->email,
+                      ];
+                    @endphp
+                    <button type="button" class="icon-btn" title="Edit this student"
+                            onclick="openEditStudent({{ Illuminate\Support\Js::from($editPayload) }})">
+                      <svg viewBox="0 0 24 24"><path d="M11 4H4v16h16v-7"/><path d="M18.5 2.5a2.1 2.1 0 0 1 3 3L12 15l-4 1 1-4z"/></svg>
+                    </button>
+                  </td>
+                @endif
               </tr>
             @empty
               <tr>
@@ -649,6 +709,331 @@ function uploadStudentRoster(btn) {
 }
 </script>
 @endif
+
+
+{{-- ══ Add a student by email ══
+     For the one the roster upload missed. The account is a placeholder until
+     they sign in with this address, which is why nothing here asks for a
+     password. --}}
+<div class="upload-scrim" id="add-student-scrim" hidden onclick="closeAddStudent(event)">
+  <div class="upload-sheet" onclick="event.stopPropagation()">
+    <div class="card" style="padding:16px;box-shadow:none;border:0">
+      <div class="card-header sheet-head">
+        <span class="card-title">Add a student</span>
+        <span class="sheet-head-right">
+          <button class="sheet-x" onclick="closeAddStudent()" aria-label="Close">
+            <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </span>
+      </div>
+
+      <div class="form-group">
+        <label class="label" for="add-student-email">Email address</label>
+        <input class="input" id="add-student-email" type="email" placeholder="name@my.cspc.edu.ph" autocomplete="off">
+        <p class="section-hint" id="add-student-hint">They sign in with this address, so it has to be the one the college gave them.</p>
+      </div>
+
+      <div class="sheet-row">
+        <div class="form-group sheet-col"><label class="label" for="add-student-first">First name</label>
+          <input class="input" id="add-student-first" autocomplete="off"></div>
+        <div class="form-group sheet-col"><label class="label" for="add-student-last">Last name</label>
+          <input class="input" id="add-student-last" autocomplete="off"></div>
+        <div class="form-group sheet-col"><label class="label" for="add-student-number">Student no.</label>
+          <input class="input" id="add-student-number" placeholder="optional" autocomplete="off"></div>
+      </div>
+
+      <div class="sheet-row">
+        <div class="form-group sheet-col"><label class="label" for="add-student-course">Program</label>
+          <select class="input" id="add-student-course">
+            <option value="BSIT">BSIT</option>
+            <option value="BSCS">BSCS</option>
+            <option value="BSIS">BSIS</option>
+            <option value="BLIS">BLIS</option>
+          </select></div>
+        <div class="form-group sheet-col"><label class="label" for="add-student-year">Year</label>
+          <select class="input" id="add-student-year">
+            <option value="1">1</option><option value="2">2</option>
+            <option value="3">3</option><option value="4" selected>4</option><option value="5">5</option>
+          </select></div>
+        <div class="form-group sheet-col"><label class="label" for="add-student-section">Section</label>
+          <input class="input" id="add-student-section" placeholder="A" maxlength="4"></div>
+      </div>
+
+      <p class="section-hint" id="add-student-error" style="color:var(--red);display:none"></p>
+
+      <button class="btn btn-primary" id="add-student-btn" style="width:100%;justify-content:center;font-size:13px;margin-top:4px"
+              onclick="saveNewStudent()">Add student</button>
+    </div>
+  </div>
+</div>
+
+{{-- ══ Edit one student ══
+     Bulk handles what a group shares. This is the only place a name, an
+     address or a number can be changed, because those are one per person. --}}
+<div class="upload-scrim" id="edit-student-scrim" hidden onclick="closeEditStudent(event)">
+  <div class="upload-sheet" onclick="event.stopPropagation()">
+    <div class="card" style="padding:16px;box-shadow:none;border:0">
+      <div class="card-header sheet-head">
+        <span class="card-title" id="edit-student-title">Edit student</span>
+        <span class="sheet-head-right">
+          <button class="sheet-x" onclick="closeEditStudent()" aria-label="Close">
+            <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </span>
+      </div>
+
+      <p class="section-hint" id="edit-student-mail" style="margin:0 0 12px"></p>
+
+      <div class="sheet-row">
+        <div class="form-group sheet-col"><label class="label" for="edit-student-first">First name</label>
+          <input class="input" id="edit-student-first"></div>
+        <div class="form-group sheet-col"><label class="label" for="edit-student-last">Last name</label>
+          <input class="input" id="edit-student-last"></div>
+        <div class="form-group sheet-col"><label class="label" for="edit-student-number">Student no.</label>
+          <input class="input" id="edit-student-number"></div>
+      </div>
+
+      <div class="sheet-row">
+        <div class="form-group sheet-col"><label class="label" for="edit-student-course">Program</label>
+          <select class="input" id="edit-student-course">
+            <option value="BSIT">BSIT</option>
+            <option value="BSCS">BSCS</option>
+            <option value="BSIS">BSIS</option>
+            <option value="BLIS">BLIS</option>
+          </select></div>
+        <div class="form-group sheet-col"><label class="label" for="edit-student-year">Year</label>
+          <select class="input" id="edit-student-year">
+            <option value="1">1</option><option value="2">2</option>
+            <option value="3">3</option><option value="4">4</option><option value="5">5</option>
+          </select></div>
+        <div class="form-group sheet-col"><label class="label" for="edit-student-section">Section</label>
+          <input class="input" id="edit-student-section" maxlength="4"></div>
+      </div>
+
+      <p class="section-hint" id="edit-student-error" style="color:var(--red);display:none"></p>
+
+      <button class="btn btn-primary" id="edit-student-btn" style="width:100%;justify-content:center;font-size:13px;margin-top:4px"
+              onclick="saveEditStudent()">Save changes</button>
+    </div>
+  </div>
+</div>
+
+@include('partials.email-lookup', ['input' => 'add-student-email', 'kind' => 'student'])
+
+<script>
+// ══ the CaPSA's own students ══
+// Every call here goes to one of three routes: post to the collection to take
+// somebody on, patch a record to change part of it, delete to take them off
+// the roster. Bulk is a loop over the patch, so the rule about which sections
+// are yours is written once on the server and cannot drift.
+
+const PROGRAMS = ['BSIT', 'BSCS', 'BSIS', 'BLIS'];
+
+const STUDENT_ROUTES = {
+  store: "{{ route('capsa.students.store') }}",
+  one: (id) => `{{ url('capsa/students') }}/${id}`,
+};
+
+function headers() {
+  return {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+  };
+}
+
+// ── search ──
+function filterStudents() {
+  const q = document.getElementById('student-search').value.trim().toLowerCase();
+  document.querySelectorAll('.table tbody tr[data-id]').forEach(function (tr) {
+    tr.style.display = !q || (tr.dataset.search || '').includes(q) ? '' : 'none';
+  });
+}
+
+// ── add by email ──
+function openAddStudent() {
+  ['add-student-email','add-student-first','add-student-last','add-student-number','add-student-section']
+    .forEach(function (id) { document.getElementById(id).value = ''; });
+  document.getElementById('add-student-error').style.display = 'none';
+  document.getElementById('add-student-scrim').hidden = false;
+  document.body.style.overflow = 'hidden';
+  document.getElementById('add-student-email').focus();
+}
+
+function closeAddStudent(e) {
+  if (e && e.target !== document.getElementById('add-student-scrim')) return;
+  document.getElementById('add-student-scrim').hidden = true;
+  document.body.style.overflow = '';
+}
+
+function saveNewStudent() {
+  const err = document.getElementById('add-student-error');
+  const btn = document.getElementById('add-student-btn');
+  err.style.display = 'none';
+  btn.disabled = true;
+  btn.textContent = 'Adding…';
+
+  fetch(STUDENT_ROUTES.store, {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify({
+      email: document.getElementById('add-student-email').value.trim(),
+      f_name: document.getElementById('add-student-first').value.trim(),
+      l_name: document.getElementById('add-student-last').value.trim(),
+      student_number: document.getElementById('add-student-number').value.trim() || null,
+      course: document.getElementById('add-student-course').value,
+      // The year and the letter go separately - the stored shape has a
+      // separator nobody would guess, so the server puts it together.
+      year: Number(document.getElementById('add-student-year').value),
+      section: document.getElementById('add-student-section').value.trim(),
+    }),
+  })
+    .then(r => r.json().then(d => ({ ok: r.ok, d })))
+    .then(function ({ ok, d }) {
+      if (!ok) {
+        err.textContent = d.message || firstError(d) || 'Could not add that student.';
+        err.style.display = 'block';
+        return;
+      }
+      closeAddStudent();
+      showToast('Student added.', 'success');
+      setTimeout(() => window.location.reload(), 800);
+    })
+    .catch(function () { err.textContent = 'Network error.'; err.style.display = 'block'; })
+    .finally(function () { btn.disabled = false; btn.textContent = 'Add student'; });
+}
+
+function firstError(d) {
+  if (!d || !d.errors) return null;
+  const k = Object.keys(d.errors)[0];
+  return k ? d.errors[k][0] : null;
+}
+
+// ── one student's whole record ──
+let editingStudent = null;
+
+function openEditStudent(student) {
+  editingStudent = student;
+  document.getElementById('edit-student-title').textContent = student.f_name + ' ' + student.l_name;
+  document.getElementById('edit-student-mail').textContent = student.email;
+  document.getElementById('edit-student-first').value = student.f_name || '';
+  document.getElementById('edit-student-last').value = student.l_name || '';
+  document.getElementById('edit-student-number').value = student.student_number || '';
+  document.getElementById('edit-student-course').value = student.course || 'BSIT';
+  document.getElementById('edit-student-year').value = String(student.year || '4').replace(/[^0-9]/g, '') || '4';
+  document.getElementById('edit-student-section').value = student.section || '';
+  document.getElementById('edit-student-error').style.display = 'none';
+  document.getElementById('edit-student-scrim').hidden = false;
+  document.body.style.overflow = 'hidden';
+}
+
+function closeEditStudent(e) {
+  if (e && e.target !== document.getElementById('edit-student-scrim')) return;
+  document.getElementById('edit-student-scrim').hidden = true;
+  document.body.style.overflow = '';
+}
+
+function saveEditStudent() {
+  if (!editingStudent) return;
+  const err = document.getElementById('edit-student-error');
+  const btn = document.getElementById('edit-student-btn');
+  err.style.display = 'none';
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+
+  fetch(STUDENT_ROUTES.one(editingStudent.id), {
+    method: 'PATCH',
+    headers: headers(),
+    body: JSON.stringify({
+      f_name: document.getElementById('edit-student-first').value.trim(),
+      l_name: document.getElementById('edit-student-last').value.trim(),
+      student_number: document.getElementById('edit-student-number').value.trim() || null,
+      course: document.getElementById('edit-student-course').value,
+      year: Number(document.getElementById('edit-student-year').value),
+      section: document.getElementById('edit-student-section').value.trim(),
+    }),
+  })
+    .then(r => r.json().then(d => ({ ok: r.ok, d })))
+    .then(function ({ ok, d }) {
+      if (!ok) {
+        err.textContent = d.message || firstError(d) || 'Could not save.';
+        err.style.display = 'block';
+        return;
+      }
+      closeEditStudent();
+      showToast('Saved.', 'success');
+      setTimeout(() => window.location.reload(), 700);
+    })
+    .catch(function () { err.textContent = 'Network error.'; err.style.display = 'block'; })
+    .finally(function () { btn.disabled = false; btn.textContent = 'Save changes'; });
+}
+
+// ── several at once ──
+function patchEach(ids, body, done) {
+  return Promise.all(ids.map(function (id) {
+    return fetch(STUDENT_ROUTES.one(id), { method: 'PATCH', headers: headers(), body: JSON.stringify(body) })
+      .then(r => r.ok)
+      .catch(() => false);
+  })).then(function (results) {
+    const ok = results.filter(Boolean).length;
+    const failed = results.length - ok;
+    // A loop can half-succeed, so say which it was rather than claiming it all
+    // worked. The usual cause is a section that is not yours.
+    showToast(failed ? ok + ' changed, ' + failed + ' could not be' : done(ok),
+      failed ? 'error' : 'success');
+    setTimeout(() => window.location.reload(), 900);
+  });
+}
+
+function askOne(label, options) {
+  const list = options.map(function (o, i) { return (i + 1) + ') ' + o; }).join('\n');
+  const answer = window.prompt(label + '\n\n' + list + '\n\nType the number:');
+  if (!answer) return null;
+  const i = Number(answer.trim()) - 1;
+  return options[i] || null;
+}
+
+if (typeof onBulk === 'function') {
+  onBulk('bulkProgram', function (ids) {
+    const program = askOne('Set the program for ' + ids.length + ' students', PROGRAMS);
+    if (!program) return;
+    patchEach(ids, { course: program }, n => n + ' moved to ' + program);
+  });
+
+  onBulk('bulkSection', function (ids) {
+    const year = window.prompt('Year for ' + ids.length + ' students (1-5):');
+    if (!year) return;
+    const section = window.prompt('Section letter:');
+    if (!section) return;
+    patchEach(ids, { year: Number(year), section: section.trim() },
+      n => n + ' moved to ' + year + ' · ' + section.trim().toUpperCase());
+  });
+
+  onBulk('bulkRemove', function (ids) {
+    if (!window.confirm('Take ' + ids.length + (ids.length === 1 ? ' student' : ' students')
+        + ' off your section?\n\nTheir accounts and history are kept — only the section is cleared.')) return;
+
+    Promise.all(ids.map(function (id) {
+      return fetch(STUDENT_ROUTES.one(id), {
+        method: 'DELETE',
+        headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' },
+      }).then(r => r.ok).catch(() => false);
+    })).then(function (results) {
+      const ok = results.filter(Boolean).length;
+      const failed = results.length - ok;
+      showToast(failed ? ok + ' removed, ' + failed + ' could not be' : ok + ' removed from your section',
+        failed ? 'error' : 'success');
+      setTimeout(() => window.location.reload(), 900);
+    });
+  });
+}
+
+document.addEventListener('keydown', function (e) {
+  if (e.key !== 'Escape') return;
+  if (!document.getElementById('add-student-scrim').hidden) closeAddStudent();
+  if (!document.getElementById('edit-student-scrim').hidden) closeEditStudent();
+});
+</script>
 
 </body>
 </html>

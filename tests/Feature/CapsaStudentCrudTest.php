@@ -33,7 +33,7 @@ class CapsaStudentCrudTest extends TestCase
         return $expert;
     }
 
-    private function student(string $course = 'BSIT', string $yearSection = '4 · A'): Student
+    private function student(string $course = 'BSIT', string $yearSection = '4th · A'): Student
     {
         return Student::create([
             'email' => 'a.bermudo@my.cspc.edu.ph',
@@ -98,7 +98,7 @@ class CapsaStudentCrudTest extends TestCase
             ->patchJson(route('capsa.students.update', $student), ['year' => 4, 'section' => 'B'])
             ->assertOk();
 
-        $this->assertSame('4 · B', $student->fresh()->year_section);
+        $this->assertSame('4th · B', $student->fresh()->year_section);
     }
 
     public function test_a_partial_change_leaves_everything_else_alone(): void
@@ -118,7 +118,7 @@ class CapsaStudentCrudTest extends TestCase
 
     public function test_you_cannot_touch_a_student_in_someone_elses_section(): void
     {
-        $student = $this->student('BSIT', '3 · A');
+        $student = $this->student('BSIT', '3rd · A');
 
         $this->actingAs($this->capsa(['BSIT-4A']), 'expert')
             ->patchJson(route('capsa.students.update', $student), ['f_name' => 'Changed'])
@@ -137,7 +137,7 @@ class CapsaStudentCrudTest extends TestCase
             ->patchJson(route('capsa.students.update', $student), ['year' => 3, 'section' => 'A'])
             ->assertStatus(422);
 
-        $this->assertSame('4 · A', $student->fresh()->year_section);
+        $this->assertSame('4th · A', $student->fresh()->year_section);
     }
 
     public function test_removing_takes_them_off_the_roster_and_keeps_the_account(): void
@@ -160,7 +160,7 @@ class CapsaStudentCrudTest extends TestCase
 
     public function test_an_admin_is_not_scoped(): void
     {
-        $student = $this->student('BSIT', '3 · A');
+        $student = $this->student('BSIT', '3rd · A');
 
         $admin = CapstoneExpert::factory()->create([
             'approved_status' => true, 'is_admin' => true, 'sections' => [],
