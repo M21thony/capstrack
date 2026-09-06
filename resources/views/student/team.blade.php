@@ -379,7 +379,12 @@
                     <button type="button" onclick="cancelPendingInvite({{ $pendingInvite->id }}, '{{ addslashes(trim(($invitee->f_name ?? '') . ' ' . ($invitee->l_name ?? ''))) }}')" style="background:none;border:none;color:#ef4444;cursor:pointer;padding:4px;font-size:13px;line-height:1;" title="Cancel invitation">&times;</button>
                   @endif
                 </div>
-                @elseif($isLeader && !$myTeam->is_confirmed)
+                {{-- Verification does not close the roster. A member drops out
+                     after the CaPSA verifies a team and the leader still has to
+                     be able to replace them; hiding this left them with no way
+                     to. InvitationController::store() never enforced it either,
+                     so this was a button hidden over a door that was open. --}}
+                @elseif($isLeader)
                 <button type="button" onclick="openOpenSlotInviteModal()" style="display: flex; align-items: center; gap: 10px; border: 1px dashed var(--border2); border-radius: 10px; padding: 6px 12px; opacity: 0.75; background: transparent; cursor: pointer; width: 100%; text-align: left; transition: all 0.2s;" onmouseover="this.style.opacity='1'; this.style.borderColor='var(--blue)'; this.style.background='var(--blue-bg)'" onmouseout="this.style.opacity='0.75'; this.style.borderColor='var(--border2)'; this.style.background='transparent'">
                   <div style="width: 36px; height: 36px; border-radius: 50%; background: var(--bg2); border: 1.5px dashed var(--border2); display: flex; align-items: center; justify-content: center; font-size: 13px; color: var(--text3); flex-shrink: 0;">+</div>
                   <div style="flex: 1;">
