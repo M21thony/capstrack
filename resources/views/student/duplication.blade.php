@@ -709,6 +709,28 @@
   </div>
 </div>
 
+{{-- Handing your titles in is the one act that puts your team in front of
+     your CaPSA, so it asks first - every time, not only when there are fewer
+     than we suggest. It was a window.confirm(), which is the one dialog on
+     this page that looks like nothing else on it. --}}
+<div class="pp-modal-overlay" id="pp-submit-confirm" onclick="if (event.target === this) closeSubmitConfirm()">
+  <div class="card pp-modal-box" style="max-width:430px;padding:22px 24px 20px">
+    <div style="display:flex;align-items:flex-start;gap:13px">
+      <span id="pp-sc-icon" style="width:38px;height:38px;border-radius:11px;flex-shrink:0;display:grid;place-items:center;background:var(--amber-bg);color:var(--amber)">
+        <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
+      </span>
+      <div style="min-width:0">
+        <h3 id="pp-sc-title" style="margin:0 0 5px;font-size:16px;font-weight:700;color:var(--text)"></h3>
+        <p id="pp-sc-body" style="margin:0;font-size:13px;line-height:1.55;color:var(--text2)"></p>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:9px;margin-top:20px">
+      <button type="button" class="btn btn-soft" onclick="closeSubmitConfirm()">Go back</button>
+      <button type="button" class="btn btn-primary" id="pp-sc-ok">Yes, submit</button>
+    </div>
+  </div>
+</div>
+
 <div class="pp-modal-overlay" id="check-loading">
   <div class="card pp-modal-box" style="max-width:360px;text-align:center;padding:30px 26px">
     <div style="width:46px;height:46px;margin:0 auto 18px;border:3px solid var(--border);border-top-color:var(--primary,#5b5bd6);border-radius:50%;animation:spin 0.8s linear infinite"></div>
@@ -747,32 +769,62 @@
 </div>
 
 <script>
-// Turning in fewer titles than we suggest is allowed - it used to be refused,
-// which pushed teams into writing two titles they did not believe in to
-// unlock a button. Asked once, and only when it applies.
+// Handing your titles in is the one act that puts your team in front of your
+// CaPSA, so it always asks - not only when there are fewer than we suggest.
+// Turning in fewer is allowed: it used to be refused outright, which pushed
+// teams into writing titles they did not believe in to unlock a button.
+let ppSubmitForm = null;
+
 function confirmSubmitCount(e) {
   const form = e.target;
+
+  // The second pass, once they have said yes.
+  if (form.dataset.confirmed === '1') return true;
+
+  e.preventDefault();
+  ppSubmitForm = form;
+
   const count = Number(form.dataset.count || 0);
   const recommended = Number(form.dataset.recommended || 4);
+  const short = count < recommended;
+  const titles = count === 1 ? 'one pre-proposal' : count + ' pre-proposals';
 
-  if (count >= recommended) return true;
+  document.getElementById('pp-sc-title').textContent = 'Submit ' + titles + '?';
+  document.getElementById('pp-sc-body').textContent = short
+    ? 'We suggest turning in at least ' + recommended + '. Your CaPSA decides on each '
+      + 'title separately, so if one is turned down you still have others that could be '
+      + 'approved. You can go back and add more first.'
+    : 'Your CaPSA will review all ' + count + '. You can take this back any time until '
+      + 'they start reviewing.';
 
-  const titles = count === 1 ? 'one title' : count + ' titles';
-  const ok = window.confirm(
-    'Submit ' + titles + '?
+  // Amber when it is worth a second thought, gold when it is not.
+  const icon = document.getElementById('pp-sc-icon');
+  icon.style.background = short ? 'var(--amber-bg)' : 'var(--accent-light)';
+  icon.style.color = short ? 'var(--amber)' : 'var(--accent3)';
 
-'
-    + 'We suggest ' + recommended + '. Your CaPSA decides on each title separately, '
-    + 'so the more you turn in, the better the chance one comes back approved - '
-    + 'and if one is turned down you are not starting over.
+  document.getElementById('pp-submit-confirm').classList.add('show');
+  document.body.style.overflow = 'hidden';
+  document.getElementById('pp-sc-ok').focus();
 
-'
-    + 'You can still add more titles before submitting.'
-  );
-
-  if (!ok) e.preventDefault();
-  return ok;
+  return false;
 }
+
+function closeSubmitConfirm() {
+  document.getElementById('pp-submit-confirm').classList.remove('show');
+  document.body.style.overflow = '';
+  ppSubmitForm = null;
+}
+
+document.getElementById('pp-sc-ok').addEventListener('click', function () {
+  if (!ppSubmitForm) return;
+  ppSubmitForm.dataset.confirmed = '1';
+  ppSubmitForm.submit();
+});
+
+document.addEventListener('keydown', function (e) {
+  const box = document.getElementById('pp-submit-confirm');
+  if (e.key === 'Escape' && box && box.classList.contains('show')) closeSubmitConfirm();
+});
 
 // Kept so "Full Report" can rebuild the report modal for a check that was
 // just run - it isn't tied to a saved proposal id yet (that only exists
