@@ -4,38 +4,14 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Student Accounts - CapsTRACK Admin</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="{{ asset('css/admin.css') }}"/>
 <style>
-  /* ── Compact rows ────────────────────────────────────────────────────
-     This list holds every student in the college, so the row height is the
-     thing that decides how much of it you can see at once. */
-  .table td{padding-top:8px;padding-bottom:8px;vertical-align:middle}
-  .table thead th{position:sticky;top:0;z-index:2;background:var(--bg3)}
-  .table tbody tr:hover{background:var(--accent-light)}
-  .std-who{display:flex;align-items:center;gap:9px;min-width:0}
-  .std-email{font-size:12px;color:var(--text3);max-width:230px;
-             overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  /* Figures that line up down the column, which is all the old monospace
-     was ever doing here. */
-  .std-num{font-variant-numeric:tabular-nums;font-size:12px;color:var(--text2)}
-  .std-prog{display:inline-block;padding:2px 7px;border-radius:6px;background:var(--blue-bg);
-            color:var(--blue);font-size:11px;font-weight:600;white-space:nowrap}
-  .std-none{color:var(--text3);font-size:12px}
-  .std-ico{width:28px;height:28px;border-radius:6px;border:1px solid var(--border);background:var(--bg2);
-           display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text2);
-           transition:border-color .12s,background .12s,color .12s}
-  .std-ico svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2.2}
-  .std-ico:hover{border-color:var(--border2);background:var(--bg3);color:var(--text)}
-  .std-ico-danger{color:var(--red);border-color:rgba(220,38,38,0.2)}
-  .std-ico-danger:hover{background:var(--red);border-color:var(--red);color:#fff}
-  .std-actions{justify-content:flex-end}
-
   .std-toolbar{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center;justify-content:space-between}
   .std-search{max-width:360px;flex:1;min-width:220px}
-  .std-av{width:26px;height:26px;border-radius:7px;flex-shrink:0;object-fit:cover}
-  .std-actions{display:flex;gap:5px}
-  .std-name{font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .std-av{width:32px;height:32px;border-radius:8px;flex-shrink:0}
+  .std-actions{display:flex;gap:8px;flex-wrap:wrap}
+  .std-name{font-size:13px;font-weight:600;color:var(--text)}
 
   /* Pill icon-buttons, matching the same convention admin/experts.blade.php
      uses for its row actions. */
@@ -113,10 +89,8 @@
             <th style="padding-left:20px">Name</th>
             <th>Email</th>
             <th>Student No.</th>
-            <th>Program</th>
-            <th>Year</th>
-            <th>Section</th>
-            <th style="padding-right:20px;text-align:right">Action</th>
+            <th>Course / Section</th>
+            <th style="padding-right:20px">Action</th>
           </tr>
         </thead>
         <tbody>
@@ -136,48 +110,31 @@
             @endphp
             <tr id="student-row-{{ $student->student_id }}">
               <td style="padding-left:20px">
-                <div class="std-who">
+                <div style="display:flex;align-items:center;gap:10px">
                   <img src="{{ $student->avatarUrl() }}" alt="" loading="lazy" class="std-av"
+                       style="object-fit:cover;"
                        onerror="this.onerror=null;this.src='{{ asset('images/default-avatar.jpg') }}';">
                   <span class="std-name">{{ trim($student->f_name.' '.$student->l_name) }}</span>
                 </div>
               </td>
-              <td class="std-email" title="{{ $student->email }}">{{ $student->email }}</td>
-              <td class="std-num">{{ $student->student_number ?? '—' }}</td>
-              @php
-                // Program, year and section are three things read down a
-                // column. They were one string - the full course name and
-                // "4th · B" run together - which reads as neither.
-                $program = $student->course ? \App\Models\Student::mapCourseToProgram($student->course) : null;
-                $ys = array_map('trim', explode('·', (string) $student->year_section));
-                $year = count($ys) === 2 ? $ys[0] : '';
-                $section = count($ys) === 2 ? $ys[1] : ($ys[0] ?? '');
-              @endphp
-              <td title="{{ $student->course }}">
-                @if ($program)
-                  <span class="std-prog">{{ $program }}</span>
-                @else
-                  <span class="std-none">{{ $student->course ?: '—' }}</span>
-                @endif
-              </td>
-              <td class="std-num">{{ $year !== '' ? $year : '—' }}</td>
-              <td class="std-num">{{ $section !== '' ? $section : '—' }}</td>
+              <td>{{ $student->email }}</td>
+              <td>{{ $student->student_number ?? '—' }}</td>
+              <td>{{ $student->course ?? '—' }} {{ $student->year_section ?? '' }}</td>
               <td style="padding-right:20px">
-                {{-- A pencil and a bin, with the words on the button rather
-                     than beside it: at this row height the labels were most
-                     of the width of the table. --}}
                 <div class="std-actions">
-                  <button type="button" class="std-ico" title="Edit" aria-label="Edit" onclick='openStudentModal({{ Illuminate\Support\Js::from($studentPayload) }})'>
+                  <button type="button" class="btn-pill btn-edit" onclick='openStudentModal({{ Illuminate\Support\Js::from($studentPayload) }})'>
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                    Edit
                   </button>
-                  <button type="button" class="std-ico std-ico-danger" title="Remove" aria-label="Remove" onclick="openRemoveModal({{ $student->student_id }}, {{ Illuminate\Support\Js::from(trim($student->f_name.' '.$student->l_name)) }})">
+                  <button type="button" class="btn-pill btn-remove-pill" onclick="openRemoveModal({{ $student->student_id }}, {{ Illuminate\Support\Js::from(trim($student->f_name.' '.$student->l_name)) }})">
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M7 6l1 14h8l1-14"/><path d="M10 10v6"/><path d="M14 10v6"/></svg>
+                    Remove
                   </button>
                 </div>
               </td>
             </tr>
           @empty
-            <tr><td colspan="7" style="padding:24px 20px;text-align:center;color:var(--text3);font-size:13px">No student accounts found.</td></tr>
+            <tr><td colspan="5" style="padding:24px 20px;text-align:center;color:var(--text3);font-size:13px">No student accounts found.</td></tr>
           @endforelse
         </tbody>
       </table>

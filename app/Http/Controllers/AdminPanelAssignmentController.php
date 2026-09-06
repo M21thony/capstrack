@@ -6,37 +6,22 @@ use App\Models\CapstoneExpert;
 use App\Models\DefensePanel;
 use App\Models\DefenseSchedule;
 use App\Models\DefenseWindow;
-use App\Models\ExpensePost;
-use App\Models\FinancialRecord;
 use App\Models\Role;
 use App\Models\Student;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
 use App\Models\TeamExpertAssignment;
-use App\Services\GoogleCalendarService;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
 
 class AdminPanelAssignmentController extends Controller
 {
-    public function __construct(private GoogleCalendarService $calendar) {}
-
     private const DEFENSE_TYPES = [
         'Pre-proposal Defense',
-        'Title Defense',
-        'Pre Oral Defense',
-        'Final Oral Defense',
-    ];
-
-    // Pre-proposal Defense has no associated fee - only these three stages
-    // are ever gated on payment (see paidTeamIds() and
-    // generateScheduleForWindow()).
-    private const PAID_DEFENSE_TYPES = [
         'Title Defense',
         'Pre Oral Defense',
         'Final Oral Defense',
@@ -72,34 +57,15 @@ class AdminPanelAssignmentController extends Controller
         'network systems' => ['networking', 'networks'],
     ];
 
-    public function index(Request $request): View
+    public function index(): View
     {
-        $defenseType = $request->query('defense_type', self::PAID_DEFENSE_TYPES[0]);
-        if (! in_array($defenseType, self::DEFENSE_TYPES, true)) {
-            $defenseType = self::PAID_DEFENSE_TYPES[0];
-        }
-
-        $requiresPayment = in_array($defenseType, self::PAID_DEFENSE_TYPES, true);
-
         $teams = Team::where('is_confirmed', true)
-            ->where('team_status', '!=', 'Full')
-            ->with(['members', 'defenseSchedules' => function ($q) {
+            ->where('team_status', '!=', 'closed')
+            ->with(['defenseSchedules' => function ($q) {
                 $q->with(['panels.expert']);
             }])
             ->orderBy('team_name')
             ->get();
-
-        // Pre-proposal Defense has no fee - every confirmed team is simply
-        // "schedulable" for it, no paid/unpaid split to make.
-        if ($requiresPayment) {
-            $paidTeamIds = $this->paidTeamIds($teams, $defenseType);
-            $paidTeams = $teams->filter(fn ($t) => $paidTeamIds->contains($t->team_id))->values();
-            $unpaidTeams = $teams->reject(fn ($t) => $paidTeamIds->contains($t->team_id))->values();
-        } else {
-            $paidTeamIds = $teams->pluck('team_id');
-            $paidTeams = $teams;
-            $unpaidTeams = collect();
-        }
 
         $teamIds = $teams->pluck('team_id');
 
@@ -150,18 +116,10 @@ class AdminPanelAssignmentController extends Controller
             'team_id' => $t->team_id,
             'team_name' => $t->team_name,
             'project_title' => $t->project_title,
-            'is_paid' => $paidTeamIds->contains($t->team_id),
             'excluded_expert_ids' => $this->teamAdviserConsultantIds($t)->values(),
-            // One row per stage: the attempt in play. Earlier attempts are
-            // kept in the table as a record, but this page assigns panels for
-            // the current try, and the JS looks a stage up by defense_type.
-            'schedules' => $t->defenseSchedules
-                ->sortByDesc('attempt')
-                ->unique('defense_type')
-                ->map(fn ($s) => [
+            'schedules' => $t->defenseSchedules->map(fn ($s) => [
                 'defense_id' => $s->defense_id,
                 'defense_type' => $s->defense_type,
-                'attempt' => $s->attempt,
                 'schedule_date' => $s->schedule_date?->format('Y-m-d\TH:i'),
                 'end_date' => $s->end_date?->format('Y-m-d\TH:i'),
                 'venue' => $s->venue,
@@ -177,146 +135,18 @@ class AdminPanelAssignmentController extends Controller
             'tags' => $e->expertise->pluck('expertise_field')->values(),
         ])->values();
 
-        return view('capsa.panel_assignment', compact(
-            'teams',
-            'experts',
-            'teamSections',
-            'allSections',
-            'teamsForJs',
-            'expertsForJs',
-            'paidTeams',
-            'unpaidTeams',
-            'defenseType',
-            'requiresPayment'
-        ))->with('defenseTypes', self::DEFENSE_TYPES);
+        return view('admin.panel_assignment', compact('teams', 'experts', 'teamSections', 'allSections', 'teamsForJs', 'expertsForJs'));
     }
 
     public function store(Request $request, Team $team): JsonResponse
     {
         $validated = $request->validate([
             'defense_type' => ['required', 'string', 'in:'.implode(',', self::DEFENSE_TYPES)],
-            // Nullable, not required - clearing the Chair slot (via its ×)
-            // and saving is how an admin removes a team's panel entirely
-            // for this stage, not an error. See assignPanelToTeam().
-            'chair_expert_id' => ['nullable', 'integer', 'exists:capstone_experts,expert_id'],
+            'chair_expert_id' => ['required', 'integer', 'exists:capstone_experts,expert_id'],
             'member1_expert_id' => ['nullable', 'integer', 'exists:capstone_experts,expert_id', 'different:chair_expert_id'],
             'member2_expert_id' => ['nullable', 'integer', 'exists:capstone_experts,expert_id', 'different:chair_expert_id', 'different:member1_expert_id'],
         ]);
 
-        $result = $this->assignPanelToTeam($team, $validated);
-
-        if (! $result['success']) {
-            return response()->json([
-                'success' => false,
-                'message' => $result['message'],
-            ], 422);
-        }
-
-        return response()->json([
-            'success' => true,
-            'data' => $result['schedule'] ? $this->formatSchedule($result['schedule']) : $this->formatEmptySchedule($validated['defense_type']),
-            'propagated' => $result['propagated'] ?? [],
-        ]);
-    }
-
-    public function storeMultiple(Request $request): JsonResponse
-    {
-        $validated = $request->validate([
-            'team_ids' => ['required', 'array', 'min:1'],
-            'team_ids.*' => ['integer', 'exists:team,team_id'],
-            'defense_type' => ['required', 'string', 'in:'.implode(',', self::DEFENSE_TYPES)],
-            'chair_expert_id' => ['nullable', 'integer', 'exists:capstone_experts,expert_id'],
-            'member1_expert_id' => ['nullable', 'integer', 'exists:capstone_experts,expert_id', 'different:chair_expert_id'],
-            'member2_expert_id' => ['nullable', 'integer', 'exists:capstone_experts,expert_id', 'different:chair_expert_id', 'different:member1_expert_id'],
-        ]);
-
-        $teams = Team::whereIn('team_id', $validated['team_ids'])->get();
-
-        $assigned = [];
-        $skipped = [];
-
-        foreach ($teams as $team) {
-            $result = $this->assignPanelToTeam($team, $validated);
-
-            if ($result['success']) {
-                $formatted = $result['schedule'] ? $this->formatSchedule($result['schedule']) : $this->formatEmptySchedule($validated['defense_type']);
-                $formatted['propagated'] = $result['propagated'] ?? [];
-                $assigned[] = array_merge(['team_id' => $team->team_id], $formatted);
-            } else {
-                $skipped[] = [
-                    'team_id' => $team->team_id,
-                    'team_name' => $team->team_name,
-                    'reason' => $result['message'],
-                ];
-            }
-        }
-
-        return response()->json([
-            'success' => true,
-            'data' => [
-                'assigned' => $assigned,
-                'skipped' => $skipped,
-            ],
-        ]);
-    }
-
-    // Shared by store() and storeMultiple() - runs the adviser/consultant
-    // conflict check, then (if it passes) writes the panel. Payment status
-    // never blocks assignment - only generateScheduleForWindow() (actually
-    // giving a team a date/venue) is gated on payment; an admin can assign
-    // or update a team's panel at any time regardless of payment. Never
-    // throws for an expected rejection - returns
-    // ['success' => false, 'message' => ...] so storeMultiple() can skip
-    // and report a per-team failure instead of aborting the whole batch.
-    //
-    // Pre-proposal Defense establishes a team's panel for its ENTIRE
-    // defense journey - assigning, changing, or removing it here
-    // propagates the identical action to the other three stages,
-    // overwriting whatever they currently have. Each stage still keeps its
-    // own independent Assign/Update action for a targeted one-off swap
-    // (e.g. a panelist unavailable for one specific date) - that override
-    // never propagates anywhere; only a change made via Pre-proposal
-    // Defense itself does. The result's 'propagated' key (only present for
-    // a Pre-proposal Defense action) carries the other three stages'
-    // resulting schedules so callers can keep their own state in sync.
-    private function assignPanelToTeam(Team $team, array $validated): array
-    {
-        $result = empty($validated['chair_expert_id'])
-            ? $this->removePanelFromTeam($team, $validated['defense_type'])
-            : $this->writePanelForStage($team, $validated);
-
-        if ($result['success'] && $validated['defense_type'] === 'Pre-proposal Defense') {
-            $result['propagated'] = $this->propagatePanelToOtherStages($team, $validated);
-        }
-
-        return $result;
-    }
-
-    private function propagatePanelToOtherStages(Team $team, array $validated): array
-    {
-        $propagated = [];
-
-        foreach (self::DEFENSE_TYPES as $stage) {
-            if ($stage === 'Pre-proposal Defense') {
-                continue;
-            }
-
-            $stageResult = empty($validated['chair_expert_id'])
-                ? $this->removePanelFromTeam($team, $stage)
-                : $this->writePanelForStage($team, array_merge($validated, ['defense_type' => $stage]));
-
-            if ($stageResult['success']) {
-                $propagated[] = $stageResult['schedule']
-                    ? $this->formatSchedule($stageResult['schedule'])
-                    : $this->formatEmptySchedule($stage);
-            }
-        }
-
-        return $propagated;
-    }
-
-    private function writePanelForStage(Team $team, array $validated): array
-    {
         $expertIds = array_values(array_filter([
             $validated['chair_expert_id'],
             $validated['member1_expert_id'] ?? null,
@@ -327,10 +157,10 @@ class AdminPanelAssignmentController extends Controller
         $conflicted = array_intersect($expertIds, $excludedIds->all());
 
         if (! empty($conflicted)) {
-            return [
+            return response()->json([
                 'success' => false,
                 'message' => "This team's adviser or consultant can't also sit on their defense panel.",
-            ];
+            ], 422);
         }
 
         // Assigning a panel never touches the schedule itself - day/venue
@@ -339,11 +169,8 @@ class AdminPanelAssignmentController extends Controller
         // workflow: assign panels for everyone first, then generate the
         // schedule once, rather than each assignment racing to grab a slot
         // before a window even exists.
-        // A stage can have more than one attempt now, so "this team's Title
-        // Defense" means the current one - the latest attempt.
         $existing = DefenseSchedule::where('team_id', $team->team_id)
             ->where('defense_type', $validated['defense_type'])
-            ->latestAttempt()
             ->with('panels')
             ->first();
 
@@ -353,14 +180,8 @@ class AdminPanelAssignmentController extends Controller
             : [];
         $panelUnchanged = $existing && $previousExpertIds === $sortedNewExpertIds;
 
-        // Keyed on the attempt too, so assigning a panel edits the attempt in
-        // play rather than silently reaching back over an earlier one.
         $schedule = DefenseSchedule::updateOrCreate(
-            [
-                'team_id' => $team->team_id,
-                'defense_type' => $validated['defense_type'],
-                'attempt' => $existing->attempt ?? 1,
-            ],
+            ['team_id' => $team->team_id, 'defense_type' => $validated['defense_type']],
             $panelUnchanged ? [] : ['schedule_date' => null, 'end_date' => null, 'venue' => null]
         );
 
@@ -387,64 +208,10 @@ class AdminPanelAssignmentController extends Controller
 
         $schedule->load('panels.expert');
 
-        return ['success' => true, 'schedule' => $schedule];
-    }
-
-    // Clearing the Panel Chair slot (its × button) and saving means "remove
-    // this team's panel for this stage entirely" - a schedule with no chair
-    // can't run, so there's nothing meaningful to keep. Best-effort cancels
-    // any Google Calendar events already created for it, same as every
-    // other calendar call site in this controller. A team with no existing
-    // schedule for this stage has nothing to remove, so that's still
-    // treated as "a chair is required" rather than a silent no-op success -
-    // otherwise a brand-new, never-assigned team could be "saved" empty.
-    private function removePanelFromTeam(Team $team, string $defenseType): array
-    {
-        $schedule = DefenseSchedule::where('team_id', $team->team_id)
-            ->where('defense_type', $defenseType)
-            ->latestAttempt()
-            ->with('panels')
-            ->first();
-
-        if (! $schedule) {
-            return [
-                'success' => false,
-                'message' => 'A Panel Chair is required to assign a new panel.',
-            ];
-        }
-
-        foreach ($schedule->panels as $panel) {
-            if (! $panel->google_event_id) {
-                continue;
-            }
-
-            try {
-                $this->calendar->cancelBookingEvent($panel->expert_id, $panel->google_event_id);
-            } catch (\Exception $e) {
-                Log::warning('Defense panel Google Calendar cancel failed', [
-                    'defense_id' => $schedule->defense_id,
-                    'expert_id' => $panel->expert_id,
-                    'error' => $e->getMessage(),
-                ]);
-            }
-        }
-
-        $schedule->panels()->delete();
-        $schedule->delete();
-
-        return ['success' => true, 'schedule' => null];
-    }
-
-    private function formatEmptySchedule(string $defenseType): array
-    {
-        return [
-            'defense_id' => null,
-            'defense_type' => $defenseType,
-            'schedule_date' => null,
-            'end_date' => null,
-            'venue' => null,
-            'panels' => [],
-        ];
+        return response()->json([
+            'success' => true,
+            'data' => $this->formatSchedule($schedule),
+        ]);
     }
 
     // The auto-scheduling algorithm's assignment isn't final — the admin
@@ -463,7 +230,7 @@ class AdminPanelAssignmentController extends Controller
         ]);
 
         $slotStart = Carbon::parse($validated['schedule_date'])->setTimeFromTimeString($validated['start_time']);
-        $defense->loadMissing('panels.expert', 'team.members');
+        $defense->loadMissing('panels.expert', 'team');
 
         $conflicts = $this->conflictsForManualOverride($defense, $slotStart, $validated['venue']);
 
@@ -481,8 +248,6 @@ class AdminPanelAssignmentController extends Controller
             'end_date' => $slotStart->copy()->addHours(self::SESSION_HOURS),
             'venue' => $validated['venue'],
         ]);
-
-        $this->syncDefensePanelToGoogleCalendar($defense);
 
         return response()->json([
             'success' => true,
@@ -577,19 +342,9 @@ class AdminPanelAssignmentController extends Controller
 
         $window = DefenseWindow::updateOrCreate(['defense_type' => $defenseType], $validated);
 
-        $scheduledIds = $this->generateScheduleForWindow($window);
-        $resolvedIds = $this->resolveScheduleConflicts($window);
-        $compactedIds = $this->compactPanelSchedules($window);
-
-        // Every schedule any of the three steps touched, refetched fresh so
-        // the frontend can patch just those rows (updateTeamRow()) instead
-        // of reloading the whole page.
-        $touchedIds = $scheduledIds->merge($resolvedIds)->merge($compactedIds)->unique();
-        $updatedSchedules = DefenseSchedule::whereIn('defense_id', $touchedIds)
-            ->with('panels.expert')
-            ->get()
-            ->map(fn ($s) => array_merge(['team_id' => $s->team_id], $this->formatSchedule($s)))
-            ->values();
+        $scheduledCount = $this->generateScheduleForWindow($window);
+        $resolvedCount = $this->resolveScheduleConflicts($window);
+        $compactedCount = $this->compactPanelSchedules($window);
 
         return response()->json([
             'success' => true,
@@ -598,10 +353,9 @@ class AdminPanelAssignmentController extends Controller
                 'start_date' => $window->start_date->toDateString(),
                 'end_date' => $window->end_date->toDateString(),
             ],
-            'scheduled_count' => $scheduledIds->count(),
-            'resolved_count' => $resolvedIds->count(),
-            'compacted_count' => $compactedIds->count(),
-            'updated_schedules' => $updatedSchedules,
+            'scheduled_count' => $scheduledCount,
+            'resolved_count' => $resolvedCount,
+            'compacted_count' => $compactedCount,
         ]);
     }
 
@@ -615,12 +369,12 @@ class AdminPanelAssignmentController extends Controller
     // actually use that day (skipping only blocks a DIFFERENT panel holds),
     // in defense_id order, moving anyone who's sitting later than they need
     // to be. A no-op wherever nothing has moved.
-    private function compactPanelSchedules(DefenseWindow $window): Collection
+    private function compactPanelSchedules(DefenseWindow $window): int
     {
         $scheduled = DefenseSchedule::where('defense_type', $window->defense_type)
             ->whereNotNull('schedule_date')
             ->whereNotNull('venue')
-            ->with(['panels.expert', 'team.members'])
+            ->with('panels')
             ->orderBy('defense_id')
             ->get();
 
@@ -630,7 +384,7 @@ class AdminPanelAssignmentController extends Controller
             return $expertIds.'|'.$s->schedule_date->toDateString().'|'.$s->venue;
         });
 
-        $compactedIds = collect();
+        $compactedCount = 0;
 
         foreach ($groups as $group) {
             $sorted = $group->sortBy('defense_id')->values();
@@ -676,12 +430,11 @@ class AdminPanelAssignmentController extends Controller
                     'schedule_date' => $newStart,
                     'end_date' => $newStart->copy()->addHours(self::SESSION_HOURS),
                 ]);
-                $this->syncDefensePanelToGoogleCalendar($schedule);
-                $compactedIds->push($schedule->defense_id);
+                $compactedCount++;
             }
         }
 
-        return $compactedIds;
+        return $compactedCount;
     }
 
     // Re-saving the window is also the admin's "fix any conflicts" button:
@@ -691,12 +444,12 @@ class AdminPanelAssignmentController extends Controller
     // edit) can still be sitting on - and re-places every one of them
     // except the earliest via the same conflict-aware algorithm used for
     // brand-new teams.
-    private function resolveScheduleConflicts(DefenseWindow $window): Collection
+    private function resolveScheduleConflicts(DefenseWindow $window): int
     {
         $scheduled = DefenseSchedule::where('defense_type', $window->defense_type)
             ->whereNotNull('schedule_date')
             ->whereNotNull('venue')
-            ->with(['panels.expert', 'team.members'])
+            ->with('panels')
             ->orderBy('defense_id')
             ->get();
 
@@ -705,7 +458,7 @@ class AdminPanelAssignmentController extends Controller
             ->filter(fn ($group) => $group->count() > 1)
             ->flatMap(fn ($group) => $group->slice(1));
 
-        $resolvedIds = collect();
+        $resolvedCount = 0;
 
         foreach ($toReplace as $schedule) {
             $expertIds = $schedule->panels->pluck('expert_id')->all();
@@ -723,60 +476,26 @@ class AdminPanelAssignmentController extends Controller
                 'end_date' => $slot['end_date'],
                 'venue' => $slot['venue'],
             ]);
-            $this->syncDefensePanelToGoogleCalendar($schedule);
-            $resolvedIds->push($schedule->defense_id);
+            $resolvedCount++;
         }
 
-        return $resolvedIds;
+        return $resolvedCount;
     }
 
     // Assigning a panel to a team only ever clears its schedule to
     // unassigned (see store()) - this is the only place day/venue actually
     // get set, run once the admin saves a window covering everyone who's
     // already been given a panel for that defense stage.
-    //
-    // A schedule already sitting OUTSIDE the window's new date range is
-    // treated the same as never having been scheduled at all - cleared and
-    // re-placed inside the new window. Without this, moving the window
-    // (e.g. the defense got pushed back a week) would silently do nothing
-    // for every team that already had a date, which is exactly backwards
-    // from what saving a new window is for.
-    private function generateScheduleForWindow(DefenseWindow $window): Collection
+    private function generateScheduleForWindow(DefenseWindow $window): int
     {
-        $outOfWindowIds = DefenseSchedule::where('defense_type', $window->defense_type)
-            ->whereNotNull('schedule_date')
-            ->where(function ($q) use ($window) {
-                $q->where('schedule_date', '<', $window->start_date->copy()->startOfDay())
-                    ->orWhere('schedule_date', '>', $window->end_date->copy()->endOfDay());
-            })
-            ->pluck('defense_id');
-
-        if ($outOfWindowIds->isNotEmpty()) {
-            DefenseSchedule::whereIn('defense_id', $outOfWindowIds)->update([
-                'schedule_date' => null,
-                'end_date' => null,
-                'venue' => null,
-            ]);
-        }
-
         $pending = DefenseSchedule::where('defense_type', $window->defense_type)
             ->whereNull('schedule_date')
             ->whereHas('panels', fn ($q) => $q->where('panel_role', 'Panel Chair'))
-            ->with(['panels.expert', 'team.members'])
+            ->with('panels')
             ->orderBy('defense_id')
             ->get();
 
-        // Payment only gates the actual scheduling step (giving a team a
-        // real date/venue) - panel assignment itself is never blocked (see
-        // assignPanelToTeam()). Pre-proposal Defense has no fee, so it's
-        // never filtered here.
-        if (in_array($window->defense_type, self::PAID_DEFENSE_TYPES, true)) {
-            $pendingTeams = $pending->pluck('team')->filter()->unique('team_id')->values();
-            $paidTeamIds = $this->paidTeamIds($pendingTeams, $window->defense_type);
-            $pending = $pending->filter(fn ($s) => $paidTeamIds->contains($s->team_id))->values();
-        }
-
-        $scheduledIds = collect();
+        $scheduledCount = 0;
 
         foreach ($pending as $schedule) {
             $expertIds = $schedule->panels->pluck('expert_id')->all();
@@ -795,11 +514,10 @@ class AdminPanelAssignmentController extends Controller
                 'end_date' => $slot['end_date'],
                 'venue' => $slot['venue'],
             ]);
-            $this->syncDefensePanelToGoogleCalendar($schedule);
-            $scheduledIds->push($schedule->defense_id);
+            $scheduledCount++;
         }
 
-        return $scheduledIds;
+        return $scheduledCount;
     }
 
     // Deterministic, no AI - this is a room/person conflict problem (is
@@ -918,35 +636,11 @@ class AdminPanelAssignmentController extends Controller
 
     // A team's own adviser/consultant can't also evaluate them on the
     // defense panel - conflict of interest.
-    private function teamAdviserConsultantIds(Team $team): \Illuminate\Support\Collection
+    private function teamAdviserConsultantIds(Team $team): Collection
     {
         return TeamExpertAssignment::where('team_id', $team->team_id)
             ->where('status', 'approved')
             ->pluck('expert_id');
-    }
-
-    // A team is "paid" for a defense stage once every member has a verified
-    // financial_records row against an expense_posts row tagged with that
-    // stage. Untagged posts (defense_type NULL) never count toward any
-    // stage - that's deliberate, not a bug (see the migration's comment).
-    // Expects $teams to already have 'members' eager-loaded.
-    private function paidTeamIds(Collection $teams, string $defenseType): Collection
-    {
-        $postIds = ExpensePost::where('defense_type', $defenseType)->pluck('id');
-
-        $memberIdsByTeam = $teams->mapWithKeys(
-            fn ($t) => [$t->team_id => $t->members->pluck('student_id')->filter()->values()]
-        );
-
-        $verifiedStudentIds = FinancialRecord::whereIn('expense_post_id', $postIds)
-            ->where('f_record_status', 'verified')
-            ->whereIn('student_id', $memberIdsByTeam->flatten()->unique())
-            ->distinct()
-            ->pluck('student_id');
-
-        return $memberIdsByTeam
-            ->filter(fn ($ids) => $ids->isNotEmpty() && $ids->diff($verifiedStudentIds)->isEmpty())
-            ->keys();
     }
 
     public function suggestExperts(Team $team): JsonResponse
@@ -981,116 +675,6 @@ class AdminPanelAssignmentController extends Controller
         ]);
     }
 
-    // Same idea as suggestExperts() but for bulk mode - matches against the
-    // UNION of every selected team's tags, so an expert only has to be
-    // relevant to SOME of the teams to be starred (a chair covering "AI"
-    // and another covering "Web Dev" both surface an expert who does one or
-    // the other). Still excludes any expert who's an adviser/consultant for
-    // ANY of the selected teams - no point starring someone the per-team
-    // conflict check will just skip and report anyway.
-    public function suggestExpertsMultiple(Request $request): JsonResponse
-    {
-        $validated = $request->validate([
-            'team_ids' => ['required', 'array', 'min:1'],
-            'team_ids.*' => ['integer', 'exists:team,team_id'],
-        ]);
-
-        $teams = Team::whereIn('team_id', $validated['team_ids'])->get();
-
-        $tags = $teams
-            ->flatMap(fn ($t) => array_map(fn ($tag) => trim((string) $tag), $t->tags ?: []))
-            ->filter()
-            ->unique()
-            ->values()
-            ->all();
-
-        $excludedIds = $teams->flatMap(fn ($t) => $this->teamAdviserConsultantIds($t))->unique();
-
-        $experts = CapstoneExpert::where('approved_status', true)
-            ->whereNotIn('expert_id', $excludedIds)
-            ->with('expertise')
-            ->orderBy('last_name')
-            ->orderBy('first_name')
-            ->get();
-
-        $suggestions = $experts->map(function ($expert) use ($tags) {
-            $matched = $this->matchedTags($tags, $expert->expertise->pluck('expertise_field')->all());
-
-            return [
-                'expert_id' => $expert->expert_id,
-                'name' => $expert->name,
-                'matched_tags' => $matched,
-                'score' => count($matched),
-            ];
-        })
-            ->filter(fn ($s) => $s['score'] > 0)
-            ->sortByDesc('score')
-            ->values();
-
-        return response()->json([
-            'success' => true,
-            'data' => $suggestions,
-        ]);
-    }
-
-    // The reverse of suggestExperts()/suggestExpertsMultiple(): the admin
-    // picks the panel FIRST, and this finds which CONFIRMED teams' tags
-    // best match that panel's combined expertise - for building a panel
-    // around a set of experts rather than staffing one team at a time.
-    // Excludes a team outright (not just de-prioritizes it) if any picked
-    // expert is that team's own adviser/consultant, and reuses
-    // paidTeamIds() so the picker can show each suggestion's payment
-    // status for the chosen stage.
-    // Payment is deliberately not considered here (and not returned) - an
-    // assigned panel is that team's panel for every defense stage, not
-    // scoped to one stage's payment status, so it has no bearing on which
-    // teams are worth suggesting for a given panel.
-    public function suggestTeamsForPanel(Request $request): JsonResponse
-    {
-        $validated = $request->validate([
-            'expert_ids' => ['required', 'array', 'min:1'],
-            'expert_ids.*' => ['integer', 'exists:capstone_experts,expert_id'],
-        ]);
-
-        $expertiseFields = CapstoneExpert::whereIn('expert_id', $validated['expert_ids'])
-            ->with('expertise')
-            ->get()
-            ->flatMap(fn ($e) => $e->expertise->pluck('expertise_field'))
-            ->filter()
-            ->unique()
-            ->values()
-            ->all();
-
-        $teams = Team::where('is_confirmed', true)
-            ->where('team_status', '!=', 'Full')
-            ->orderBy('team_name')
-            ->get();
-
-        $suggestions = $teams->map(function ($team) use ($expertiseFields, $validated) {
-            $tags = array_map(fn ($t) => trim((string) $t), $team->tags ?: []);
-            $matched = $this->matchedTags($tags, $expertiseFields);
-            $excludedIds = $this->teamAdviserConsultantIds($team);
-            $conflicted = count(array_intersect($validated['expert_ids'], $excludedIds->all())) > 0;
-
-            return [
-                'team_id' => $team->team_id,
-                'team_name' => $team->team_name,
-                'project_title' => $team->project_title,
-                'matched_tags' => $matched,
-                'score' => count($matched),
-                'conflicted' => $conflicted,
-            ];
-        })
-            ->filter(fn ($s) => $s['score'] > 0 && ! $s['conflicted'])
-            ->sortByDesc('score')
-            ->values();
-
-        return response()->json([
-            'success' => true,
-            'data' => $suggestions,
-        ]);
-    }
-
     // Case-insensitive match between a team's tags and an expert's
     // freeform expertise entries, widened with TAG_SYNONYMS so "AI" and
     // "Artificial Intelligence" (or an expert typing "ML" for "Machine
@@ -1112,6 +696,7 @@ class AdminPanelAssignmentController extends Controller
                 foreach ($candidates as $candidate) {
                     if (str_contains($field, $candidate) || str_contains($candidate, $field)) {
                         $matched[] = $tag;
+
                         continue 3;
                     }
                 }
@@ -1119,78 +704,6 @@ class AdminPanelAssignmentController extends Controller
         }
 
         return array_values(array_unique($matched));
-    }
-
-    // Best-effort, synchronous, never blocks the schedule save (every call
-    // site here follows its own DB update with this, matching how every
-    // other GoogleCalendarService call site in this app works - see
-    // Instructor/ScheduleController). Each CONNECTED panelist (google_token
-    // set) gets their own calendar copy of the event, created via their own
-    // client/token; an unconnected panelist is skipped both as an event
-    // owner and as an attendee on everyone else's copy, so one stray/
-    // unconnected test account never breaks the real invitees' events.
-    // Reschedule cancels the old event and creates a fresh one (same
-    // pattern ScheduleController::updateSlot() already uses) rather than
-    // patching in place.
-    private function syncDefensePanelToGoogleCalendar(DefenseSchedule $schedule): void
-    {
-        if (! $schedule->schedule_date || ! $schedule->venue) {
-            return;
-        }
-
-        $schedule->loadMissing('panels.expert', 'team.members');
-
-        $connectedPanels = $schedule->panels->filter(fn ($p) => $p->expert && $p->expert->google_token);
-
-        if ($connectedPanels->isEmpty()) {
-            return;
-        }
-
-        $teamName = $schedule->team?->team_name ?? 'Team';
-        $memberEmails = $schedule->team
-            ? $schedule->team->members->pluck('email')->filter()->values()->all()
-            : [];
-
-        $connectedByExpertId = $connectedPanels->keyBy('expert_id');
-        $endDate = $schedule->end_date ?? $schedule->schedule_date->copy()->addHours(self::SESSION_HOURS);
-        $date = $schedule->schedule_date->toDateString();
-        $startTime = $schedule->schedule_date->format('H:i');
-        $endTime = $endDate->format('H:i');
-
-        foreach ($connectedPanels as $panel) {
-            $otherConnectedEmails = $connectedByExpertId
-                ->except([$panel->expert_id])
-                ->pluck('expert.email')
-                ->filter()
-                ->values();
-
-            $attendeeEmails = collect($memberEmails)->merge($otherConnectedEmails)->unique()->values()->all();
-
-            try {
-                if ($panel->google_event_id) {
-                    $this->calendar->cancelBookingEvent($panel->expert_id, $panel->google_event_id);
-                }
-
-                $newEventId = $this->calendar->createDefensePanelEvent(
-                    organizerExpertId: $panel->expert_id,
-                    date: $date,
-                    startTime: $startTime,
-                    endTime: $endTime,
-                    defenseType: $schedule->defense_type,
-                    teamName: $teamName,
-                    venue: $schedule->venue,
-                    attendeeEmails: $attendeeEmails,
-                );
-
-                $panel->update(['google_event_id' => $newEventId]);
-            } catch (\Exception $e) {
-                Log::warning('Defense panel Google Calendar sync failed', [
-                    'defense_id' => $schedule->defense_id,
-                    'expert_id' => $panel->expert_id,
-                    'error' => $e->getMessage(),
-                ]);
-            }
-        }
     }
 
     private function formatSchedule(DefenseSchedule $schedule): array

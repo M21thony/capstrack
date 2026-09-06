@@ -32,11 +32,7 @@ return [
     |
     */
 
-    // A week, not two hours. Being logged out mid-work - mid-demo, worse -
-    // is the thing this number does, and nothing here is sensitive enough to
-    // be worth that: an expired session loses whatever was on screen and
-    // sends the person back to the sign-in page with no explanation.
-    'lifetime' => (int) env('SESSION_LIFETIME', 10080),
+    'lifetime' => (int) env('SESSION_LIFETIME', 120),
 
     'expire_on_close' => env('SESSION_EXPIRE_ON_CLOSE', false),
 

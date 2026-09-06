@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Consultation - CapsTrack</title>
 <meta name="csrf-token" content="{{ csrf_token() }}">
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
 @vite('resources/student-ui/Styles/consultation.css')
 <x-dashboard.styles />
 <style>
@@ -13,193 +13,11 @@
   .sk-overlay { position: absolute; inset: 0; background: var(--bg); z-index: 10; }
   .sk { background: linear-gradient(90deg, var(--bg4) 25%, var(--bg2) 50%, var(--bg4) 75%); background-size: 200% 100%; animation: sk-shimmer 1.5s ease-in-out infinite; border-radius: 8px; }
 
-/* ── Booking card ──────────────────────────────────────────────────────
-   Laid out as three numbered steps, because booking is a sequence and the
-   old page presented the expert, the calendar and the slot list as three
-   unrelated panels. Colours are the app's own gold accent, not the mock's
-   indigo - every other student page uses this one. */
-.visually-hidden{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
-
-.book-card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:22px 22px 18px}
-.book-card-head{margin-bottom:20px}
-.book-title{font-size:17px;font-weight:700;color:var(--text);letter-spacing:-0.2px}
-.book-sub{font-size:12.5px;color:var(--text3);margin-top:3px}
-
-.book-step{margin-bottom:22px}
-.step-head{display:flex;gap:8px;align-items:flex-start;margin-bottom:12px}
-.step-n{font-variant-numeric:tabular-nums;font-size:13px;font-weight:700;color:var(--accent3);line-height:1.35}
-.step-title{font-size:13.5px;font-weight:600;color:var(--text)}
-.step-sub{font-size:11.5px;color:var(--text3);margin-top:1px}
-
-/* ── Who to consult ── */
-.role-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px}
-.role-card{display:flex;flex-direction:column;gap:6px;text-align:left;padding:13px 14px;border:1.5px solid var(--border);
-           border-radius:12px;background:var(--bg2);cursor:pointer;font-family:inherit;transition:border-color .15s,background .15s}
-.role-card:hover:not(:disabled){border-color:var(--accent);background:var(--accent-light)}
-.role-card.selected{border-color:var(--accent);background:var(--accent-light)}
-.role-card.empty,.role-card:disabled{opacity:.55;cursor:not-allowed}
-.role-card-top{display:flex;align-items:center;justify-content:space-between}
-.role-ico{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center}
-.role-ico svg{width:17px;height:17px;fill:none;stroke-width:2;stroke:currentColor}
-.role-ico-consultant{background:var(--blue-bg);color:var(--blue)}
-.role-ico-adviser{background:var(--green-bg);color:var(--green)}
-.role-ico-grammarian{background:var(--amber-bg);color:var(--amber)}
-/* The dot is the only thing saying which one is chosen, so it is not
-   decoration - it carries the selection. */
-.role-radio{width:15px;height:15px;border-radius:50%;border:1.5px solid var(--border2);flex-shrink:0}
-.role-card.selected .role-radio{border-color:var(--accent);border-width:4.5px}
-.role-name{font-size:13px;font-weight:600;color:var(--text);line-height:1.3}
-.role-blurb{font-size:11px;color:var(--text3);line-height:1.4}
-.role-who{display:flex;align-items:center;gap:8px;margin-top:6px;padding-top:9px;border-top:1px solid var(--border)}
-.role-who-avatar{width:26px;height:26px;border-radius:50%;background:var(--accent);color:#18191f;font-size:10px;font-weight:700;
-                 display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.role-who-text{display:flex;flex-direction:column;min-width:0}
-.role-who-name{font-size:12px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.role-who-role{font-size:10px;color:var(--text3)}
-.role-who-none{font-size:11px;color:var(--text3);font-style:italic}
-
-/* ── Schedule ── */
-.sched-note{display:flex;align-items:center;gap:8px;padding:9px 12px;border-radius:9px;background:var(--blue-bg);
-            border:1px solid rgba(29,78,216,0.18);color:var(--blue);font-size:11.5px;margin-bottom:14px}
-.sched-note svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2;flex-shrink:0}
-.sched-cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px;align-items:start}
-.sched-cal .calendar-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
-.sched-cal .calendar-header h3{font-size:13.5px;font-weight:600;color:var(--text)}
-.cal-nav-group{display:flex;align-items:center;gap:4px}
-
-.slots-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px;gap:8px}
-.slots-title{font-size:13.5px;font-weight:600;color:var(--text)}
-.slots-hint{font-size:11px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.slot-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px}
-.slot-btn{display:flex;flex-direction:column;gap:1px;align-items:center;padding:9px 6px;border:1.5px solid var(--border);
-          border-radius:9px;background:var(--bg2);cursor:pointer;font-family:inherit;transition:border-color .15s,background .15s}
-.slot-btn:hover{border-color:var(--accent);background:var(--accent-light)}
-.slot-btn.picked{border-color:var(--accent);background:var(--accent-light)}
-.slot-time{font-size:12.5px;font-weight:600;color:var(--text)}
-.slot-meta{font-size:10px;color:var(--text3)}
-.slot-empty{grid-column:1/-1;font-size:11.5px;color:var(--text3);padding:18px 12px;text-align:center;
-            border:1px dashed var(--border);border-radius:10px}
-
-.book-actions{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;
-              padding-top:14px;border-top:1px solid var(--border)}
-.book-note{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--text3)}
-.book-note svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;flex-shrink:0}
-.book-confirm{display:inline-flex;align-items:center;gap:7px;padding:10px 18px;font-size:12.5px;font-weight:600}
-.book-confirm:disabled{opacity:.5;cursor:not-allowed}
-
-.page-title-wrap{display:flex;flex-direction:column;min-width:0}
-.page-subtitle{font-size:11.5px;color:var(--text3);margin-top:1px}
-.slots-len{font-weight:400;color:var(--text3);font-size:11px}
-
-/* A booked time is shown, not hidden: a team needs to see the slot exists
-   and is taken, or an expert's day looks emptier than it is. */
-.slot-btn.taken{opacity:.55;cursor:not-allowed;background:var(--bg3)}
-.slot-btn.taken:hover{border-color:var(--border);background:var(--bg3)}
-
-/* Booking rows read date-first, the way the mock does - the date is what a
-   team scans for. */
-.appt-row{display:flex;align-items:stretch;gap:12px}
-.appt-date{display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0;
-           width:46px;padding:7px 0;border-radius:9px;background:var(--bg3);border:1px solid var(--border)}
-.appt-date-m{font-size:9.5px;font-weight:700;letter-spacing:.5px;color:var(--text3);text-transform:uppercase}
-.appt-date-d{font-size:17px;font-weight:700;color:var(--text);line-height:1.1}
-.appt-date-w{font-size:9px;font-weight:600;color:var(--text3);text-transform:uppercase}
-.appt-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px;justify-content:center}
-.appt-time{font-size:12px;color:var(--text2);font-weight:500}
-.appt-kind{font-size:13px;font-weight:600;color:var(--text)}
-.appt-with{display:flex;align-items:center;gap:5px;font-size:11.5px;color:var(--text3)}
-.appt-with svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2;flex-shrink:0}
-.view-all{display:inline-flex;align-items:center;gap:4px;margin-top:10px;font-size:12px;font-weight:600;
-          color:var(--accent3);background:none;border:none;cursor:pointer;font-family:inherit;padding:0}
-.view-all svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:2.5}
-
-/* Calendar header reads  <  Month Year  >  the way the picker in the brief
-   does: the month centred, the arrows either side of it. */
-.sched-cal .calendar-header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:4px 0 10px}
-.sched-cal .calendar-header{max-width:300px}
-.sched-cal .calendar-header h3{font-size:13.5px;font-weight:600;color:var(--text);text-align:center;flex:1}
-.slot-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
-.slot-btn{align-items:center;padding:11px 6px}
-.book-actions{justify-content:flex-end;border-top:none;padding-top:4px}
-.book-note{justify-content:center;margin-top:10px;padding-top:12px;border-top:1px solid var(--border)}
-.sched-cols{gap:26px}
-
-/* The calendar is a date picker now, not an agenda: the times moved out to
-   step 3, so the cells carry a number and nothing else. Scoped to .sched-cal
-   so the shared .calendar-* rules keep serving whoever else uses them. */
-.sched-cal .calendar-grid{background:transparent;border:none;border-radius:0;gap:1px;overflow:visible}
-.sched-cal .day-label{background:transparent;color:var(--text3);font-size:10.5px;font-weight:600;
-                      letter-spacing:.6px;padding:6px 0 8px}
-/* Capped rather than stretched to the column: a date picker is a fixed,
-   compact thing, and letting seven cells share a 380px column blew each one
-   up to the size of an agenda cell. */
-.sched-cal .calendar-grid{max-width:300px}
-.sched-cal .calendar-day{height:36px;width:36px;margin:0 auto;padding:0;background:transparent;border-radius:50%;
-                         display:flex;align-items:center;justify-content:center;font-size:12px;
-                         font-weight:500;color:var(--text);overflow:visible}
-.sched-cal .calendar-day .cal-date-num{line-height:1}
-/* Times live in step 3, so the pills inside a cell would only repeat them. */
-.sched-cal .cal-slots,.sched-cal .cal-slot-pill,.sched-cal .cal-more,.sched-cal .event-dot{display:none}
-
-.sched-cal .calendar-day.other-month{color:var(--text3);opacity:.45}
-.sched-cal .calendar-day.past{color:var(--text3);opacity:.4;cursor:default}
-/* Available is the only state a plain picker needs to signal - the legend
-   under the times says what the dot means. */
-.sched-cal .calendar-day.available{color:var(--text);font-weight:600;cursor:pointer}
-.sched-cal .calendar-day.available:hover{background:var(--bg4)}
-.sched-cal .calendar-day.not-available{color:var(--text3);opacity:.5;cursor:not-allowed}
-.sched-cal .calendar-day.today{box-shadow:inset 0 0 0 1.5px var(--border2)}
-.sched-cal .calendar-day.selected{background:var(--accent);color:#18191f;font-weight:700;box-shadow:none}
-.sched-cal .calendar-day.selected:hover{background:var(--accent)}
-.sched-cal .calendar-day.my-booking{box-shadow:inset 0 0 0 1.5px var(--accent)}
-
-.col-head{font-size:12.5px;font-weight:600;color:var(--text);margin-bottom:10px}
-.sched-cal .calendar-grid{max-width:340px}
-.sched-cal .calendar-header{max-width:340px}
-.sched-cal .calendar-day{height:44px;width:44px;font-size:13px}
-
-.appt-chev{width:15px;height:15px;fill:none;stroke:var(--text3);stroke-width:2.5;flex-shrink:0;align-self:center}
-.appt-row{align-items:center}
-/* Three at a time keeps the column readable; the link below opens the rest. */
-.session-list:not(.show-all) > .session-list-item:nth-child(n+4){display:none}
-
-/* This panel is its own thing now: a plain white card with the title in
-   normal text, the way the brief has it - the shared .sessions-card gives it
-   a navy bar and an uppercase gold-underlined heading, which belongs to the
-   older pages still using it. */
-.appt-sidebar .sessions-card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;
-                             padding:18px 18px 16px;box-shadow:none;overflow:visible}
-.appt-sidebar .sessions-card-header{background:transparent;padding:0;border-bottom:none;margin-bottom:14px}
-.appt-sidebar .sessions-card-title{font-size:15px;font-weight:700;color:var(--text);text-transform:none;letter-spacing:-0.2px}
-.appt-sidebar .session-list{display:flex;flex-direction:column;gap:10px}
-/* Each booking is a card in its own right, as the brief draws them. */
-.appt-sidebar .session-list-item{background:var(--bg2);border:1px solid var(--border);border-radius:11px;
-                                 padding:12px 13px;gap:8px}
-.appt-sidebar .session-list-item-upcoming{border-color:var(--border)}
-.appt-status-badge{align-self:flex-start;font-size:10px;font-weight:600;padding:3px 8px;border-radius:6px;
-                   background:var(--bg4);color:var(--text3);white-space:nowrap}
-.appt-status-badge-upcoming{background:var(--blue-bg);color:var(--blue)}
-.session-list-item-past .appt-status-badge{background:var(--green-bg);color:var(--green)}
-.appt-cancel-btn{margin-top:2px}
-
-/* ── My Consultations ── */
-.consult-tabs{display:flex;gap:18px;border-bottom:1px solid var(--border);margin-bottom:12px}
-.consult-tab{position:relative;padding:0 0 9px;border:none;background:none;cursor:pointer;font-family:inherit;
-             font-size:12.5px;font-weight:600;color:var(--text3);display:inline-flex;align-items:center;gap:6px}
-.consult-tab.active{color:var(--accent3)}
-.consult-tab.active::after{content:'';position:absolute;left:0;right:0;bottom:-1px;height:2px;background:var(--accent)}
-.consult-tab-n{font-size:10px;font-weight:700;padding:1px 6px;border-radius:999px;background:var(--bg4);color:var(--text3)}
-.consult-tab.active .consult-tab-n{background:var(--accent-light);color:var(--accent3)}
-
-@media (max-width: 900px){
-  .sched-cols{grid-template-columns:1fr}
-}
   #consult-toast { position: fixed; bottom: 30px; right: 30px; background: var(--navy-dark); color: #fff; padding: 14px 22px; border-radius: 12px; font-size: 13px; font-weight: 500; z-index: 2000; box-shadow: 0 8px 30px rgba(0,0,0,0.3); opacity: 0; transform: translateY(12px); pointer-events: none; transition: opacity 0.25s ease, transform 0.25s ease; border-left: 4px solid transparent; display: flex; align-items: center; gap: 10px; }
   #consult-toast.show { opacity: 1; transform: translateY(0); }
   #consult-toast.success { border-left-color: var(--green); }
   #consult-toast.error { border-left-color: var(--red); }
 </style>
-@include('partials.skeleton-head', ['skReveal' => 'opacity'])
 </head>
 <body>
 @include('student.partials.sidebar')
@@ -260,147 +78,45 @@
 
     <div class="left-panel">
 
-      @php
-        // One expert can hold more than one of these roles, so the picker is
-        // built per role rather than per person - a team choosing "who do I
-        // need" thinks in roles, not in names.
-        $expertForRole = [];
-
-        foreach ($experts as $e) {
-            foreach (explode(',', mb_strtolower($e->role_name)) as $role) {
-                $expertForRole[trim($role)] = $e;
-            }
-        }
-
-        $roleCards = [
-            'consultant' => ['title' => 'Consultant Consultation', 'blurb' => 'Capstone project review'],
-            'adviser' => ['title' => 'Adviser Consultation', 'blurb' => 'Academic guidance and concerns'],
-            'grammarian' => ['title' => 'Grammarian Consultation', 'blurb' => 'Grammar & language review'],
-        ];
-      @endphp
-
-      <div class="book-card">
-        <div class="book-card-head">
-          <h2 class="book-title">Book a Consultation</h2>
-          <p class="book-sub">Fill in the details below to schedule your consultation.</p>
-        </div>
-
-        <div class="book-step">
-          <div class="step-head">
-            <span class="step-n">1.</span>
-            <div>
-              <div class="step-title">Who do you want to consult?</div>
-              <div class="step-sub">Pick the type of consultation you need.</div>
-            </div>
-          </div>
-
-          {{-- The select is what every piece of this page's JS already reads,
-               so it stays as the source of truth and the cards drive it. --}}
-          <select id="expertSelect" onchange="onExpertChange()" class="visually-hidden" aria-label="Consultation type">
+      <div class="expert-filter-area">
+        <label class="pm-label" style="margin-bottom:0">Target Expert:</label>
+        <div class="expert-dropdown">
+          <select id="expertSelect" onchange="onExpertChange()">
             @if($experts->isEmpty())
               <option value="" disabled selected>No adviser/expert assigned to your team yet</option>
             @endif
             @foreach($experts as $expert)
               <option value="{{ $expert->expert_id }}" @selected($expert->expert_id === $defaultExpertId)>
-                {{ $expert->first_name }} {{ $expert->last_name }} ({{ $expert->role_name }})
+                {{ $expert->first_name }} {{ $expert->last_name }} ({{ ucfirst($expert->role_name) }})
               </option>
             @endforeach
           </select>
-
-          <div class="role-cards">
-            @foreach($roleCards as $role => $card)
-              @php $who = $expertForRole[$role] ?? null; @endphp
-              <button type="button"
-                      class="role-card {{ $who && $who->expert_id === $defaultExpertId ? 'selected' : '' }} {{ $who ? '' : 'empty' }}"
-                      data-role="{{ $role }}"
-                      @disabled(! $who)
-                      onclick="pickRole(this, {{ $who?->expert_id ?? 'null' }})">
-                <span class="role-card-top">
-                  <span class="role-ico role-ico-{{ $role }}">
-                    @if($role === 'consultant')
-                      <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg>
-                    @elseif($role === 'adviser')
-                      <svg viewBox="0 0 24 24"><path d="M22 10 12 5 2 10l10 5 10-5Z"/><path d="M6 12v5c3 2 9 2 12 0v-5"/></svg>
-                    @else
-                      <svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
-                    @endif
-                  </span>
-                  <span class="role-radio" aria-hidden="true"></span>
-                </span>
-                <span class="role-name">{{ $card['title'] }}</span>
-                <span class="role-blurb">{{ $card['blurb'] }}</span>
-                <span class="role-who">
-                  @if($who)
-                    <span class="role-who-avatar">{{ mb_strtoupper(mb_substr($who->first_name, 0, 1).mb_substr($who->last_name, 0, 1)) }}</span>
-                    <span class="role-who-text">
-                      <span class="role-who-name">{{ $who->first_name }} {{ $who->last_name }}</span>
-                      <span class="role-who-role">{{ ucfirst($role) }}</span>
-                    </span>
-                  @else
-                    <span class="role-who-none">No {{ $role }} assigned yet</span>
-                  @endif
-                </span>
-              </button>
-            @endforeach
-          </div>
         </div>
+        <div style="font-size:11px; color:var(--text3); max-width:150px; line-height:1.3">
+          Availability syncs with their schedule.
+        </div>
+      </div>
 
-        <div class="book-step">
-          <div class="step-head">
-            <span class="step-n">2.</span>
-            <div>
-              <div class="step-title">Select an available schedule</div>
-              <div class="step-sub">Choose from the available dates and times set by your expert.</div>
-            </div>
+      <div class="calendar-card">
+        <div class="calendar-header">
+          <div>
+            <h2 style="font-size:18px; font-weight:600" id="cal-month">Select an Expert</h2>
+            <p style="font-size:11px; color:var(--text3)" id="cal-hint">Choose an expert above to view their available consultation slots.</p>
           </div>
-
-          <div class="sched-note">
-            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
-            <span>You can only book on the dates and times made available by your expert.</span>
-          </div>
-
-          <div class="sched-cols">
-            <div class="sched-cal">
-              <div class="col-head">Select Available Date</div>
-
-              <div class="calendar-header">
-                <button class="cal-btn" onclick="changeMonth(-1)" aria-label="Previous month"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg></button>
-                <h3 id="cal-month">Select an Expert</h3>
-                <div class="cal-nav-group">
-                  <button class="cal-btn" id="consultRefreshBtn" title="Refresh availability and bookings">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><polyline points="21 3 21 9 15 9"/></svg>
-                  </button>
-                  <button class="cal-btn" onclick="changeMonth(1)" aria-label="Next month"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 18l6-6-6-6"/></svg></button>
-                </div>
-              </div>
-
-              <div class="calendar-grid" id="calendar-grid">
-                <div class="day-label">SUN</div><div class="day-label">MON</div><div class="day-label">TUE</div>
-                <div class="day-label">WED</div><div class="day-label">THU</div><div class="day-label">FRI</div><div class="day-label">SAT</div>
-              </div>
-
-              <div class="step-sub" id="cal-hint" style="margin-top:8px">Choose an expert above to see which dates they are free.</div>
-            </div>
-
-            <div class="sched-slots">
-              <div class="col-head">Available Time Slots <span class="slots-len">(30 mins per session)</span></div>
-              <div class="slot-grid" id="slot-grid">
-                <div class="slot-empty">Choose a highlighted date to see its times.</div>
-              </div>
+          <div class="cal-nav-group">
+            <button class="cal-btn" id="consultRefreshBtn" title="Refresh availability and bookings" style="margin-right:4px">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><polyline points="21 3 21 9 15 9"/></svg>
+            </button>
+            <div class="cal-nav">
+              <button class="cal-btn" onclick="changeMonth(-1)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg></button>
+              <button class="cal-btn" onclick="changeMonth(1)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 18l6-6-6-6"/></svg></button>
             </div>
           </div>
         </div>
 
-        <div class="book-actions">
-          <button type="button" class="btn-primary book-confirm" id="confirmBookingBtn" onclick="confirmBooking()" disabled>
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-            Confirm Booking
-          </button>
-        </div>
-
-        <div class="book-note">
-          <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/></svg>
-          A booking can't be cancelled once the session is within {{ \App\Http\Controllers\StudentConsultationController::CANCEL_CUTOFF_DAYS }} days.
+        <div class="calendar-grid" id="calendar-grid">
+          <div class="day-label">Sun</div><div class="day-label">Mon</div><div class="day-label">Tue</div>
+          <div class="day-label">Wed</div><div class="day-label">Thu</div><div class="day-label">Fri</div><div class="day-label">Sat</div>
         </div>
       </div>
 
@@ -453,94 +169,60 @@
     <div class="appt-sidebar">
       <div class="sessions-card">
         <div class="sessions-card-header">
-          <h3 class="sessions-card-title">My Consultations</h3>
+          <h3 class="sessions-card-title">Ongoing / Booked Session</h3>
+          <span class="sessions-card-count">{{ $upcomingBookings->count() }}</span>
         </div>
-
-        {{-- One card, two views. Upcoming is what a team acts on; past is
-             what they look back at, and stacking both open pushed the
-             second one off the screen. --}}
-        <div class="consult-tabs" role="tablist">
-          <button type="button" class="consult-tab active" data-tab="upcoming" role="tab" onclick="switchConsultTab('upcoming')">
-            Upcoming <span class="consult-tab-n">{{ $upcomingBookings->count() }}</span>
-          </button>
-          <button type="button" class="consult-tab" data-tab="past" role="tab" onclick="switchConsultTab('past')">
-            Past <span class="consult-tab-n">{{ $recentBookings->count() }}</span>
-          </button>
-        </div>
-
-        <div class="consult-pane" data-pane="upcoming">
         <div id="upcoming-bookings-list" class="session-list">
           @forelse($upcomingBookings as $booking)
             @php $tc = $slotTypeColors[$booking->schedule->slot_type ?? 'consult'] ?? $slotTypeColors['consult']; @endphp
             <div class="session-list-item session-list-item-upcoming" data-booking-id="{{ $booking->booking_id }}">
-              <div class="appt-row">
-                <div class="appt-date">
-                  <span class="appt-date-m">{{ $booking->session_date?->format('M') ?? '--' }}</span>
-                  <span class="appt-date-d">{{ $booking->session_date?->format('j') ?? '--' }}</span>
-                  <span class="appt-date-w">{{ $booking->session_date?->format('D') ?? '' }}</span>
+              <div class="appt-row-top">
+                <div class="appt-expert">{{ $booking->schedule->expert->first_name ?? 'Expert' }} {{ $booking->schedule->expert->last_name ?? '' }}</div>
+                <div class="appt-badges">
+                  <span class="appt-type-badge" style="background:{{ $tc['bg'] }};color:{{ $tc['color'] }}">{{ ucfirst($booking->schedule->slot_type ?? 'Consult') }}</span>
+                  <span class="appt-status-badge appt-status-badge-upcoming">
+                    {{ $booking->session_date && $booking->session_date->isToday() ? 'Today' : 'Upcoming' }}
+                  </span>
                 </div>
-                <div class="appt-body">
-                  <div class="appt-time">
-                    {{ $booking->schedule?->start_time ? \Carbon\Carbon::parse($booking->schedule->start_time)->format('g:i A') : '—' }}
-                    &ndash;
-                    {{ $booking->schedule?->end_time ? \Carbon\Carbon::parse($booking->schedule->end_time)->format('g:i A') : '—' }}
-                  </div>
-                  <div class="appt-kind">{{ ucfirst($booking->schedule->slot_type ?? 'Consult') }} Consultation</div>
-                  <div class="appt-with">
-                    <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                    {{ $booking->schedule->expert->first_name ?? 'Expert' }} {{ $booking->schedule->expert->last_name ?? '' }}
-                  </div>
-                </div>
-                <span class="appt-status-badge appt-status-badge-upcoming">
-                  {{ $booking->session_date && $booking->session_date->isToday() ? 'Today' : 'Scheduled' }}
-                </span>
-                <svg class="appt-chev" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
               </div>
+              <div class="appt-meta">
+                <span><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg>{{ $booking->session_date ? $booking->session_date->format('M d, Y') : ($booking->schedule?->available_date ?? '—') }}</span>
+                <span><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>{{ $booking->schedule?->start_time ? \Carbon\Carbon::parse($booking->schedule->start_time)->format('h:i A') : '—' }}</span>
+              </div>
+              <div class="appt-team">Team: {{ $booking->team->team_name ?? 'N/A' }}</div>
               <button type="button" class="appt-cancel-btn" data-cancel-booking-id="{{ $booking->booking_id }}">Cancel Booking</button>
             </div>
           @empty
             <div class="session-list-empty">No upcoming consultations.</div>
           @endforelse
         </div>
-          @if($upcomingBookings->count() > 3)
-            <button type="button" class="view-all" onclick="showAll(this, 'upcoming-bookings-list')">
-              View all upcoming <svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
-            </button>
-          @endif
-        </div>
+      </div>
 
-        <div class="consult-pane" data-pane="past" style="display:none">
+      <div class="sessions-card">
+        <div class="sessions-card-header">
+          <h3 class="sessions-card-title">Recent Sessions</h3>
+          <span class="sessions-card-count">{{ $recentBookings->count() }}</span>
+        </div>
         <div id="bookings-list" class="session-list">
           @forelse($recentBookings as $booking)
             @php $tc = $slotTypeColors[$booking->schedule->slot_type ?? 'consult'] ?? $slotTypeColors['consult']; @endphp
             <div class="session-list-item session-list-item-past">
-              <div class="appt-row">
-                <div class="appt-date">
-                  <span class="appt-date-m">{{ $booking->session_date?->format('M') ?? '--' }}</span>
-                  <span class="appt-date-d">{{ $booking->session_date?->format('j') ?? '--' }}</span>
-                  <span class="appt-date-w">{{ $booking->session_date?->format('D') ?? '' }}</span>
+              <div class="appt-row-top">
+                <div class="appt-expert">{{ $booking->schedule->expert->first_name ?? 'Expert' }} {{ $booking->schedule->expert->last_name ?? '' }}</div>
+                <div class="appt-badges">
+                  <span class="appt-type-badge" style="background:{{ $tc['bg'] }};color:{{ $tc['color'] }}">{{ ucfirst($booking->schedule->slot_type ?? 'Consult') }}</span>
+                  <span class="appt-status-badge">Completed</span>
                 </div>
-                <div class="appt-body">
-                  <div class="appt-time">
-                    {{ $booking->schedule?->start_time ? \Carbon\Carbon::parse($booking->schedule->start_time)->format('g:i A') : '—' }}
-                    &ndash;
-                    {{ $booking->schedule?->end_time ? \Carbon\Carbon::parse($booking->schedule->end_time)->format('g:i A') : '—' }}
-                  </div>
-                  <div class="appt-kind">{{ ucfirst($booking->schedule->slot_type ?? 'Consult') }} Consultation</div>
-                  <div class="appt-with">
-                    <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                    {{ $booking->schedule->expert->first_name ?? 'Expert' }} {{ $booking->schedule->expert->last_name ?? '' }}
-                  </div>
-                </div>
-                <span class="appt-status-badge">Completed</span>
-                <svg class="appt-chev" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
               </div>
+              <div class="appt-meta">
+                <span><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg>{{ $booking->session_date ? $booking->session_date->format('M d, Y') : ($booking->schedule?->available_date ?? '—') }}</span>
+                <span><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>{{ $booking->schedule?->start_time ? \Carbon\Carbon::parse($booking->schedule->start_time)->format('h:i A') : '—' }}</span>
+              </div>
+              <div class="appt-team">Team: {{ $booking->team->team_name ?? 'N/A' }}</div>
             </div>
           @empty
             <div class="session-list-empty">No past consultations.</div>
           @endforelse
-        </div>
-
         </div>
       </div>
     </div>
@@ -589,15 +271,6 @@ document.addEventListener('DOMContentLoaded', function () {
   var sk = document.getElementById('skeleton-content');
   var rc = document.getElementById('real-content');
   if (sk && rc) {
-    // partials/skeleton-head already decided this in <head>, before the first
-    // paint: the content is on screen and no skeleton was ever shown. Without
-    // this, every save replayed the 600ms fade over content already there.
-    if (document.documentElement.classList.contains('sk-seen')) {
-      sk.remove();
-
-      return;
-    }
-
     requestAnimationFrame(function () {
       setTimeout(function () {
         sk.style.transition = 'opacity 0.3s ease';
@@ -608,9 +281,6 @@ document.addEventListener('DOMContentLoaded', function () {
           sk.remove();
           rc.style.transition = '';
         }, 350);
-        try {
-          sessionStorage.setItem('sk-seen:{{ substr(sha1(session()->getId()), 0, 12) }}:' + window.location.pathname, '1');
-        } catch (e) {}
       }, 600);
     });
   }
@@ -650,7 +320,6 @@ function isOccurrenceFull(scheduleId, dateKey) {
 }
 
 function getSlotsForExpert(expertId) {
-  if (!expertId) return [];
   return expertSlots.filter(s => s.expert_id == expertId);
 }
 
@@ -681,18 +350,16 @@ function renderCalendar() {
   const monthLabel = document.getElementById('cal-month');
   const hint = document.getElementById('cal-hint');
 
-  // The month is drawn whether or not an expert has been picked. It used to
-  // stop here and render nothing but the seven weekday headings, which read
-  // as a calendar that had failed to load rather than one waiting for a
-  // choice. With no expert chosen every lookup below finds no slots, so the
-  // dates come out plain - the month is there to look at, and picking an
-  // expert fills in their availability.
   const expertId = document.getElementById('expertSelect').value;
+  if (!expertId) {
+    monthLabel.textContent = 'Select an Expert';
+    hint.textContent = 'Choose an expert above to view their available slots.';
+    grid.innerHTML = '<div class="day-label">Sun</div><div class="day-label">Mon</div><div class="day-label">Tue</div><div class="day-label">Wed</div><div class="day-label">Thu</div><div class="day-label">Fri</div><div class="day-label">Sat</div>';
+    return;
+  }
 
   monthLabel.textContent = MONTHS[currentMonth] + ' ' + currentYear;
-  hint.textContent = expertId
-    ? 'Click an available date to book a slot.'
-    : 'Choose an expert above to see which of these dates they are free.';
+  hint.textContent = 'Click an available date to book a slot.';
 
   const slots = getSlotsForExpert(expertId);
 
@@ -703,7 +370,7 @@ function renderCalendar() {
   const today = new Date();
   const todayKey = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
 
-  let html = '<div class="day-label">SUN</div><div class="day-label">MON</div><div class="day-label">TUE</div><div class="day-label">WED</div><div class="day-label">THU</div><div class="day-label">FRI</div><div class="day-label">SAT</div>';
+  let html = '<div class="day-label">Sun</div><div class="day-label">Mon</div><div class="day-label">Tue</div><div class="day-label">Wed</div><div class="day-label">Thu</div><div class="day-label">Fri</div><div class="day-label">Sat</div>';
 
   for (let i = firstDay - 1; i >= 0; i--) {
     html += '<div class="calendar-day other-month">' + (daysInPrevMonth - i) + '</div>';
@@ -727,9 +394,6 @@ function renderCalendar() {
     // the person who booked it, showing an X/blocked pattern read as if
     // something had gone wrong rather than "you're booked here."
     let cls = 'calendar-day';
-    // Held here rather than on the element, because every refresh rebuilds
-    // this grid from scratch and would drop a class set by hand.
-    if (dateKey === selectedDateKey) cls += ' selected';
     if (isPast) cls += ' past';
     else if (isMyBooking) cls += ' my-booking';
     else if (hasBookedSlot && !hasAvailableSlot) cls += ' not-available';
@@ -776,22 +440,12 @@ function changeMonth(delta) {
 }
 
 function onExpertChange() {
-  selectedSlot = null;
-  selectedDateKey = null;
-  updateConfirmButton();
-
-  const grid = document.getElementById('slot-grid');
-  if (grid) grid.innerHTML = '<div class="slot-empty">Choose a highlighted date on the calendar to see its times.</div>';
-
-
   currentMonth = new Date().getMonth();
   currentYear = new Date().getFullYear();
   renderCalendar();
 }
 
 let currentSlotModalDateKey = null;
-let selectedSlot = null;
-let selectedDateKey = null;
 
 function selectDate(d, dayName, dateKey) {
   if (teamHasActiveBooking) {
@@ -801,7 +455,7 @@ function selectDate(d, dayName, dateKey) {
 
   const expertId = document.getElementById('expertSelect').value;
   if (!expertId) {
-    showToast('Choose who you want to consult first.', 'error');
+    showToast('Please select an expert first.', 'error');
     return;
   }
 
@@ -811,80 +465,41 @@ function selectDate(d, dayName, dateKey) {
   }
 
   currentSlotModalDateKey = dateKey;
-  selectedDateKey = dateKey;
-  selectedSlot = null;
-  updateConfirmButton();
-  renderCalendar();
 
-  // The slot column is headed by the brief's own label, so the picked date
-  // is not repeated there - the calendar already shows which one is chosen.
-  const when = document.getElementById('slots-date');
-  if (when) {
-    when.textContent = DAY_NAMES[new Date(currentYear, currentMonth, d).getDay()] + ', ' + MONTHS[currentMonth] + ' ' + d;
-  }
+  const dateLabel = DAY_NAMES[new Date(currentYear, currentMonth, d).getDay()] + ', ' + MONTHS[currentMonth] + ' ' + d;
+  document.getElementById('slot-modal-date').textContent = dateLabel;
 
-  const grid = document.getElementById('slot-grid');
-  grid.innerHTML = '';
+  const slotList = document.getElementById('slot-modal-list');
+  slotList.innerHTML = '';
 
-  daySlots.forEach(slot => {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'slot-btn';
-    btn.innerHTML =
-      '<span class="slot-time">' + formatTime(slot.start_time) + '</span>' +
-      '<span class="slot-meta">' + ucfirst(slot.slot_type || 'consultation') + '</span>';
-    btn.onclick = () => pickSlot(btn, slot, dateKey);
-    forceInteractive(btn);
-    grid.appendChild(btn);
+  daySlots.forEach(s => {
+    const item = document.createElement('div');
+    item.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px;background:var(--bg3);border-radius:8px;margin-bottom:8px;border-left:3px solid var(--accent);cursor:pointer;transition:all 0.15s';
+    item.innerHTML = `
+      <div>
+        <div style="font-weight:600;font-size:13px;color:var(--text)">${formatTime(s.start_time)} – ${formatTime(s.end_time)}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px">${ucfirst(s.slot_type || 'consultation')} · Max ${s.consultation_limit || 1} team(s)</div>
+      </div>
+      <button class="btn-primary" style="padding:6px 14px;font-size:11px;font-weight:600">Book</button>
+    `;
+    item.onmouseenter = () => { item.style.background = 'var(--bg4)'; item.style.borderLeftColor = 'var(--accent2)'; };
+    item.onmouseleave = () => { item.style.background = 'var(--bg3)'; item.style.borderLeftColor = 'var(--accent)'; };
+    item.onclick = () => bookSlot(s.schedule_id);
+    forceInteractive(item);
+    forceInteractive(item.querySelector('button'));
+    slotList.appendChild(item);
   });
-}
 
-/** Choosing a time arms the Confirm button; it does not book on its own. */
-function pickSlot(btn, slot, dateKey) {
-  document.querySelectorAll('#slot-grid .slot-btn').forEach(b => b.classList.remove('picked'));
-  btn.classList.add('picked');
-
-  selectedSlot = { scheduleId: slot.schedule_id, dateKey: dateKey };
-  updateConfirmButton();
-}
-
-function updateConfirmButton() {
-  const btn = document.getElementById('confirmBookingBtn');
-  if (btn) btn.disabled = selectedSlot === null;
-}
-
-function confirmBooking() {
-  if (!selectedSlot) {
-    showToast('Pick a time first.', 'error');
-    return;
-  }
-
-  currentSlotModalDateKey = selectedSlot.dateKey;
-  bookSlot(selectedSlot.scheduleId);
-}
-
-/** The role cards drive the select every other part of this page reads. */
-function pickRole(card, expertId) {
-  if (!expertId) return;
-
-  document.querySelectorAll('.role-card').forEach(c => c.classList.remove('selected'));
-  card.classList.add('selected');
-
-  document.getElementById('expertSelect').value = expertId;
-  onExpertChange();
-}
-
-/** The list shows three; the link reveals the rest rather than paging away. */
-function showAll(btn, listId) {
-  document.getElementById(listId)?.classList.add('show-all');
-  btn.remove();
-}
-
-function switchConsultTab(which) {
-  document.querySelectorAll('.consult-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === which));
-  document.querySelectorAll('.consult-pane').forEach(pane => {
-    pane.style.display = pane.dataset.pane === which ? '' : 'none';
-  });
+  // Same forced-visible/forced-interactive treatment as the cancel-booking
+  // modal - a plain display:flex toggle here was found to render invisible
+  // and unclickable in some browsers, with an external stylesheet zeroing
+  // its opacity and blocking pointer-events with no console error at all.
+  const modal = document.getElementById('slotSelectModal');
+  const content = modal.querySelector('.modal-content');
+  [modal, content].forEach(forceInteractive);
+  modal.style.setProperty('display', 'flex', 'important');
+  modal.style.setProperty('opacity', '1', 'important');
+  modal.style.setProperty('visibility', 'visible', 'important');
 }
 
 function closeSlotModal() {
@@ -924,37 +539,25 @@ function bookingCardHtml(booking, isUpcoming) {
   const dateKey = booking.session_date;
   const dateLabel = dateKey ? formatDateLabel(dateKey) : (booking.available_date || '—');
   const statusBadge = isUpcoming
-    ? '<span class="appt-status-badge appt-status-badge-upcoming">' + (dateKey === todayKeyString() ? 'Today' : 'Scheduled') + '</span>'
+    ? '<span class="appt-status-badge appt-status-badge-upcoming">' + (dateKey === todayKeyString() ? 'Today' : 'Upcoming') + '</span>'
     : '<span class="appt-status-badge">Completed</span>';
   const cancelBtn = isUpcoming
     ? '<button type="button" class="appt-cancel-btn" data-cancel-booking-id="' + booking.booking_id + '">Cancel Booking</button>'
     : '';
 
-  // Same shape the page renders on the server, or a refresh would quietly
-  // swap every row for a differently-built one.
-  const d = dateKey ? new Date(dateKey + 'T00:00:00') : null;
-  const month = d ? MONTHS[d.getMonth()].slice(0, 3).toUpperCase() : '--';
-  const day = d ? d.getDate() : '--';
-  const weekday = d ? DAY_NAMES[d.getDay()].slice(0, 3).toUpperCase() : '';
-  const endTime = booking.end_time ? ' &ndash; ' + formatTime(booking.end_time) : '';
-
   return `
-    <div class="appt-row">
-      <div class="appt-date">
-        <span class="appt-date-m">${month}</span>
-        <span class="appt-date-d">${day}</span>
-        <span class="appt-date-w">${weekday}</span>
+    <div class="appt-row-top">
+      <div class="appt-expert">${booking.expert_name}</div>
+      <div class="appt-badges">
+        <span class="appt-type-badge" style="background:${tc.bg};color:${tc.color}">${ucfirst(booking.slot_type || 'Consult')}</span>
+        ${statusBadge}
       </div>
-      <div class="appt-body">
-        <div class="appt-time">${formatTime(booking.start_time)}${endTime}</div>
-        <div class="appt-kind">${ucfirst(booking.slot_type || 'Consult')} Consultation</div>
-        <div class="appt-with">
-          <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-          ${booking.expert_name}
-        </div>
-      </div>
-      ${statusBadge}
     </div>
+    <div class="appt-meta">
+      <span><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg>${dateLabel}</span>
+      <span><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>${formatTime(booking.start_time)}</span>
+    </div>
+    <div class="appt-team">Team: ${booking.team_name}</div>
     ${cancelBtn}
   `;
 }

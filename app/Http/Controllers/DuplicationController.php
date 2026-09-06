@@ -30,11 +30,9 @@ class DuplicationController extends Controller
         // default max_execution_time (120s on this server) was never
         // raised for it, so a cold model load (~50s alone - confirmed from
         // the Ollama server log) plus several real calls routinely blew
-        // past that and fataled uncatchably mid-request. 300s covers one
-        // cold-start plus the rest of the chain running warm - matches
-        // OllamaSSHClient's own curl --max-time, which must move together
-        // with this or PHP's own limit fatals the request first regardless.
-        set_time_limit(300);
+        // past that and fataled uncatchably mid-request. 240s covers one
+        // cold-start plus the rest of the chain running warm.
+        set_time_limit(240);
 
         try {
             // 0. Warm up Ollama — loads model into GPU before real requests
@@ -92,9 +90,6 @@ class DuplicationController extends Controller
                     'program' => $m['document']->program,
                     'score' => $m['score'],
                     'reason' => $m['reason'],
-                    'similarities' => $m['similarities'] ?? '',
-                    'differences' => $m['differences'] ?? '',
-                    'suggestion' => $m['suggestion'] ?? '',
                     'is_relevant' => $m['is_relevant'] ?? true,
                     'matched_on' => $m['matched_on'] ?? [],
                 ], $matches),

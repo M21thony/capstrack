@@ -16,17 +16,6 @@ use Illuminate\Support\Facades\DB;
 
 class AdminFinancialController extends Controller
 {
-    // Mirrors AdminPanelAssignmentController::DEFENSE_TYPES - kept as its
-    // own copy rather than a cross-controller reference since both are
-    // small, stable, literal lists and this avoids coupling two unrelated
-    // controllers together for a handful of string values.
-    private const DEFENSE_TYPES = [
-        'Pre-proposal Defense',
-        'Title Defense',
-        'Pre Oral Defense',
-        'Final Oral Defense',
-    ];
-
     public function index(Request $request): JsonResponse
     {
         $course = $request->query('course', '');
@@ -46,7 +35,6 @@ class AdminFinancialController extends Controller
             'title' => $post->title,
             'course' => $post->course,
             'year_level' => $post->year_level,
-            'defense_type' => $post->defense_type,
             'amount' => (float) $post->amount,
             'description' => $post->description,
             'is_active' => $post->is_active,
@@ -178,7 +166,6 @@ class AdminFinancialController extends Controller
             'title' => $post->title,
             'course' => $post->course,
             'year_level' => $post->year_level,
-            'defense_type' => $post->defense_type,
             'amount' => (float) $post->amount,
             'description' => $post->description,
             'is_active' => $post->is_active,
@@ -197,7 +184,6 @@ class AdminFinancialController extends Controller
             'title' => ['required', 'string', 'max:255'],
             'course' => ['required', 'string', 'in:BSIT,BSCS,BLIS,BSIS'],
             'year_level' => ['required', 'string', 'in:3rd,4th'],
-            'defense_type' => ['nullable', 'string', 'in:'.implode(',', self::DEFENSE_TYPES)],
             'amount' => ['required', 'numeric', 'min:0'],
             'description' => ['nullable', 'string', 'max:1000'],
         ]);
@@ -210,7 +196,6 @@ class AdminFinancialController extends Controller
             'title' => $validated['title'],
             'course' => $validated['course'],
             'year_level' => $validated['year_level'],
-            'defense_type' => $validated['defense_type'] ?? null,
             'amount' => $validated['amount'],
             'description' => $validated['description'],
         ]);
@@ -223,7 +208,6 @@ class AdminFinancialController extends Controller
                 'title' => $post->title,
                 'course' => $post->course,
                 'year_level' => $post->year_level,
-                'defense_type' => $post->defense_type,
                 'amount' => (float) $post->amount,
                 'description' => $post->description,
                 'is_active' => $post->is_active,
@@ -237,7 +221,6 @@ class AdminFinancialController extends Controller
             'title' => ['required', 'string', 'max:255'],
             'course' => ['required', 'string', 'in:BSIT,BSCS,BLIS,BSIS'],
             'year_level' => ['required', 'string', 'in:3rd,4th'],
-            'defense_type' => ['nullable', 'string', 'in:'.implode(',', self::DEFENSE_TYPES)],
             'amount' => ['required', 'numeric', 'min:0'],
             'description' => ['nullable', 'string', 'max:1000'],
         ]);
@@ -252,7 +235,6 @@ class AdminFinancialController extends Controller
                 'title' => $expensePost->title,
                 'course' => $expensePost->course,
                 'year_level' => $expensePost->year_level,
-                'defense_type' => $expensePost->defense_type,
                 'amount' => (float) $expensePost->amount,
                 'description' => $expensePost->description,
                 'is_active' => $expensePost->is_active,

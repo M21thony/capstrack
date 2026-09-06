@@ -44,23 +44,12 @@
       <div id="vm-preproposals" style="display:flex;flex-direction:column;gap:10px"></div>
     </div>
 
-    {{-- Verify Team is the switch that makes a team official for the
-         semester, and nothing said so - it read as a second, mystery button
-         next to the approvals. Say what it does, and what is still in the
-         way. --}}
     <div id="vm-verify-note" style="display:none;font-size:12px;color:#92400e;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px 12px;margin-bottom:12px">
-      Finish reviewing every title first. This team has a final title once you have
-      decided on all of them &mdash; approve or reject each one &mdash; and if you
-      approve more than one, once the team has picked between them.
+      Approve one of the pre-proposals above before this team can be verified.
     </div>
 
     <form id="vm-form" method="POST" style="border-top:1px solid var(--border);padding-top:16px">
       @csrf
-      <div style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:12px">
-        <strong style="color:var(--text)">Verifying</strong> confirms this team for the semester.
-        Its members and title are settled from then on, and it becomes eligible for
-        a panel, its checklist, and announcements sent to confirmed teams.
-      </div>
       <button type="submit" class="btn btn-primary" id="vm-verify-btn" style="width:100%;padding:10px;font-size:13px">
         <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:-2px;margin-right:6px"><polyline points="20 6 9 17 4 12"/></svg>
         Verify Team
@@ -97,8 +86,7 @@
   .ppdup-toggle:hover{text-decoration:underline}
   .ppdup-panel{display:none;margin-top:5px;padding:7px 9px;border-radius:6px;background:var(--bg3);border:1px solid var(--border)}
   .ppdup-panel.open{display:block}
-  .ppdup-abstract{font-size:11px;color:var(--text2);line-height:1.55;max-height:200px;overflow-y:auto;white-space:pre-wrap;scrollbar-width:none;-ms-overflow-style:none}
-.ppdup-abstract::-webkit-scrollbar{display:none}
+  .ppdup-abstract{font-size:11px;color:var(--text2);line-height:1.55;max-height:200px;overflow-y:auto;white-space:pre-wrap}
   .ppdup-abstract mark{background:rgba(201,168,44,.35);color:inherit;padding:0 1px;border-radius:2px}
 
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1000;opacity:0;pointer-events:none;transition:opacity 0.2s}
@@ -205,18 +193,10 @@ function openVerifyModal(data) {
 }
 function closeVerifyModal() {
   document.getElementById('verify-modal').classList.remove('open');
-
-  // The table behind still shows the counts from before. Refresh it once, on
-  // the way out, instead of after every decision - which is what used to shut
-  // the modal and send you back to click Review again.
-  if (ppDecided) {
-    window.location.reload();
-  }
 }
 
 // ── Per-proposal approve/reject (mirrors admin/approval.blade.php) ────────
 var ppActiveId = null;
-var ppDecided = false;
 
 function renderPreProposals(proposals, selectedId) {
   var wrap = document.getElementById('vm-preproposals');
@@ -264,7 +244,7 @@ function renderPreProposals(proposals, selectedId) {
           return '<div style="border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-top:6px;background:#fff">'
             + '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">'
             + '<span style="font-size:11.5px;font-weight:600;color:var(--text)">' + escapeHtml(m.title || '') + '</span>'
-            + '<span class="badge badge-' + mTone + '" style="font-variant-numeric:tabular-nums;font-weight:700;flex-shrink:0">' + m.score + '%</span>'
+            + '<span class="badge badge-' + mTone + '" style="font-family:\'Space Mono\',monospace;font-weight:700;flex-shrink:0">' + m.score + '%</span>'
             + '</div>'
             + (meta ? '<div style="font-size:10.5px;color:var(--text3);margin-top:2px">' + escapeHtml(meta) + '</div>' : '')
             + (m.reason ? '<div style="font-size:11px;color:var(--text3);margin-top:3px">' + escapeHtml(m.reason) + '</div>' : '')
@@ -275,17 +255,13 @@ function renderPreProposals(proposals, selectedId) {
             + (m.abstract
                 ? '<button type="button" class="ppdup-toggle" onclick="togglePpDup(\'' + absId + '\', this, \'abstract\')">Show abstract</button>'
                   + '<div id="' + absId + '" class="ppdup-panel ppdup-abstract">' + highlightWords(m.abstract, highlight) + '</div>'
-                : '')
-            // The card's own closing div. Without it each match nested inside
-            // the one before, so ten matches drew ten boxes stepping further
-            // right down the report instead of ten cards in a list.
-            + '</div>';
+                : '');
         }).join('')
       : (dup ? '<div style="font-size:11.5px;color:var(--green);margin-top:8px">No similar capstones were found.</div>' : '');
 
     var dupHtml = dup
       ? '<div style="margin-top:8px">'
-        + '<div style="font-size:12px"><span class="badge ' + dupBadgeClass + '">' + dup.verdict + '</span> <span style="font-variant-numeric:tabular-nums;font-weight:700;margin-left:6px">' + dup.top_score + '%</span></div>'
+        + '<div style="font-size:12px"><span class="badge ' + dupBadgeClass + '">' + dup.verdict + '</span> <span style="font-family:\'Space Mono\',monospace;font-weight:700;margin-left:6px">' + dup.top_score + '%</span></div>'
         + matchesHtml
         + '</div>'
       : '<div style="font-size:11.5px;color:var(--text3);margin-top:8px">No duplication check was run for this title.</div>';
@@ -347,41 +323,12 @@ function ppApprove(id, url) {
     .then(function (r) { return r.json(); })
     .then(function (res) {
       if (!res.success) { alert(res.message || 'Failed.'); return; }
-      ppApplyDecision(res);
+      // Reload the modal's data from the page - simplest correct way to
+      // reflect a possible auto-selected final title or new notification
+      // without duplicating that resolution logic in JS.
+      window.location.reload();
     })
     .catch(function () { alert('Failed to process request.'); });
-}
-
-/**
- * Draw a decision into the open modal.
- *
- * The endpoints hand back the team's proposals in the same shape the modal
- * was opened with, so the list, the title and the Verify button can all be
- * redrawn where they stand. A CaPSA gets through all three titles in one
- * sitting instead of reopening the modal after each one.
- */
-function ppApplyDecision(res) {
-  ppDecided = true;
-
-  if (res.proposals) {
-    renderPreProposals(res.proposals, res.selected_pre_proposal_id || null);
-  }
-
-  var title = document.getElementById('vm-title');
-  if (title) {
-    // No title until the review is over and one of them has won it.
-    title.textContent = res.project_title || '—';
-  }
-
-  var verifyBtn = document.getElementById('vm-verify-btn');
-  var verifyNote = document.getElementById('vm-verify-note');
-  if (verifyBtn) {
-    var resolved = !!res.selected_pre_proposal_id;
-    verifyBtn.disabled = !resolved;
-    verifyBtn.style.opacity = resolved ? '1' : '0.5';
-    verifyBtn.style.cursor = resolved ? 'pointer' : 'not-allowed';
-    if (verifyNote) verifyNote.style.display = resolved ? 'none' : 'block';
-  }
 }
 
 function openPpRejectModal(id, url) {
@@ -418,7 +365,7 @@ function confirmPpReject() {
     .then(function (res) {
       closePpRejectModal();
       if (!res.success) { alert(res.message || 'Failed.'); return; }
-      ppApplyDecision(res);
+      window.location.reload();
     })
     .catch(function () { alert('Failed to process request.'); });
 }

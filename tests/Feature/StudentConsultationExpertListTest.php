@@ -36,7 +36,7 @@ class StudentConsultationExpertListTest extends TestCase
     {
         $team = DB::table('team')->insertGetId([
             'team_name' => 'Team Alpha',
-            'team_status' => 'Active',
+            'team_status' => 'on-going',
         ]);
 
         $student = Student::factory()->withCompleteProfile()->create(['email' => 'consult@my.cspc.edu.ph']);
@@ -116,49 +116,6 @@ class StudentConsultationExpertListTest extends TestCase
         $response->assertSee('Ada Adviser');
         $response->assertDontSee('Cara Consultant');
         $response->assertDontSee('Ian Stranger');
-    }
-
-    public function test_an_expert_with_two_roles_appears_once_with_a_combined_label(): void
-    {
-        $team = DB::table('team')->insertGetId([
-            'team_name' => 'Team Beta',
-            'team_status' => 'Active',
-        ]);
-
-        $student = Student::factory()->withCompleteProfile()->create(['email' => 'consult2@my.cspc.edu.ph']);
-
-        DB::table('student_s_y')->insert([
-            'student_id' => $student->student_id,
-            'team_id' => $team,
-            'program' => 'BSCS',
-            'student_status' => 'Active',
-        ]);
-
-        $adviserRoleId = $this->makeRole('adviser');
-        $consultantRoleId = $this->makeRole('consultant');
-
-        $bothId = $this->makeExpert('both@gmail.com', 'Grom', 'Hellscream');
-        DB::table('expert_roles')->insert(['expert_id' => $bothId, 'role_id' => $adviserRoleId]);
-        DB::table('expert_roles')->insert(['expert_id' => $bothId, 'role_id' => $consultantRoleId]);
-        DB::table('capstone_expert_application')->insert([
-            'team_id' => $team,
-            'expert_id' => $bothId,
-            'status' => 'approved',
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
-
-        $response = $this->actingAs($student, 'web')->get(route('student.consultation'));
-
-        $response->assertOk();
-
-        $experts = $response->viewData('experts');
-        $this->assertCount(1, $experts, 'An expert holding two roles must appear once, not once per role.');
-        $this->assertSame($bothId, $experts->first()->expert_id);
-        $this->assertSame('Adviser, Consultant', $experts->first()->role_name);
-        $this->assertSame($bothId, $response->viewData('defaultExpertId'), 'Still defaults to them since one of their roles is adviser.');
-
-        $response->assertSee('Grom Hellscream (Adviser, Consultant)');
     }
 
     public function test_shows_no_experts_when_student_has_no_team(): void

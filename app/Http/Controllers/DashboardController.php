@@ -4,16 +4,15 @@ namespace App\Http\Controllers;
 
 use App\Models\ActivityLog;
 use App\Models\Announcement;
-use App\Models\CapstoneDocumentReview;
 use App\Models\DefenseSchedule;
 use App\Models\FinancialRecord;
 use App\Models\Milestone;
 use App\Models\Notification;
+use App\Models\PanelGrade;
 use App\Models\Student;
 use App\Models\StudentMilestone;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
-use App\Support\StudentTeam;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -26,7 +25,8 @@ class DashboardController extends Controller
         /** @var Student $student */
         $student = auth()->user();
 
-        $teamId = StudentTeam::idFor($student->student_id);
+        $studentSy = StudentSchoolYear::where('student_id', $student->student_id)->first();
+        $teamId = $studentSy?->team_id;
 
         [$myTeam, $teamMembers, $leaderStudentId] = $this->loadTeamData($student, $teamId);
 
@@ -38,7 +38,7 @@ class DashboardController extends Controller
 
         $activities = $this->buildActivities($student, $teamId);
         $milestones = $this->getMilestones($teamId);
-        $announcements = $this->getAnnouncements($student);
+        $announcements = $this->getAnnouncements($student, $studentSy);
         $defenseResults = $this->getDefenseResults($teamId);
 
         // Recent expense receipts for dashboard widget (from
@@ -91,25 +91,23 @@ class DashboardController extends Controller
             return collect();
         }
 
-        $schedules->load('grades');
+        $submittedGrades = PanelGrade::whereIn('defense_id', $schedules->pluck('defense_id'))
+            ->where('status', 'submitted')
+            ->get()
+            ->groupBy('defense_id');
 
-        return $schedules->map(function (DefenseSchedule $schedule) {
-            $grades = $schedule->submittedGrades();
+        return $schedules->map(function (DefenseSchedule $schedule) use ($submittedGrades) {
+            $grades = $submittedGrades->get($schedule->defense_id, collect());
 
             return (object) [
                 'defense_type' => $schedule->defense_type,
-                // A stage can be defended more than once. Both attempts are
-                // listed - a team should see their redefense - so the number
-                // is carried through to tell them apart.
-                'attempt' => (int) $schedule->attempt,
                 'schedule_date' => $schedule->schedule_date,
                 'end_date' => $schedule->end_date,
-                'assigned_count' => $schedule->panelSize(),
+                'assigned_count' => $schedule->panels->count(),
                 'submitted_count' => $grades->count(),
-                // Null until every panelist has graded - see panelAverage().
-                'average_score' => $schedule->panelAverage(),
+                'average_score' => $grades->isNotEmpty() ? round((float) $grades->avg('total_score'), 2) : null,
             ];
-        })->sortBy(fn ($s) => [$s->schedule_date ?? now()->addYears(10), $s->attempt])->values();
+        })->sortBy(fn ($s) => $s->schedule_date ?? now()->addYears(10))->values();
     }
 
     private function loadTeamData(Student $student, ?int $teamId): array
@@ -188,14 +186,7 @@ class DashboardController extends Controller
                         });
                     }
                 })
-                // 'pending' is never written, so this was always zero. This is a
-                // DB::table() builder, not Eloquent, so it cannot use the model's
-                // scope - and the catch below would have swallowed the resulting
-                // error and gone on returning zero.
-                ->whereIn('review_status', [
-                    CapstoneDocumentReview::AWAITING,
-                    CapstoneDocumentReview::IN_PROGRESS,
-                ])
+                ->where('review_status', 'pending')
                 ->count();
         } catch (\Exception $e) {
             return 0;
@@ -345,9 +336,7 @@ class DashboardController extends Controller
         })->values();
     }
 
-    // The enrolment row was passed in and never read - the section comes
-    // from the student's own course and year.
-    private function getAnnouncements(Student $student): Collection
+    private function getAnnouncements(Student $student, ?StudentSchoolYear $studentSy): Collection
     {
         if (! $student->course || ! $student->year_section) {
             return collect();

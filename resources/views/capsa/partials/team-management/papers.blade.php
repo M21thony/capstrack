@@ -1,4 +1,4 @@
-{{-- Document Review: papers students sent to their Subject Adviser, which
+{{-- Paper Format Check: papers students sent to their Subject Adviser, which
      is her CaPSA hat. This is the layout pass - margins, spacing, how the
      paper looks - not a read of what it argues.
 
@@ -20,7 +20,7 @@
 </p>
 
 <div class="card" style="padding:0;overflow:hidden">
-  <div class="tbl-scroll"><table class="table">
+  <table class="tbl">
     <thead>
       <tr>
         <th style="padding-left:20px">Document</th>
@@ -43,7 +43,7 @@
             <div style="font-size:11px;color:var(--text3)">{{ $p->chapter ?: 'Chapter not set' }} &middot; v{{ $p->file_version }}</div>
           </td>
           <td style="font-size:12px;color:var(--text2)">{{ $entry->row->team->team_name }}</td>
-          <td><span class="badge {{ $entry->row->section === \App\Support\SectionScope::UNASSIGNED ? 'badge-gray' : 'badge-gold' }}" style="font-size:10px">{{ $entry->row->section }}</span></td>
+          <td><span class="badge badge-gold" style="font-size:10px">{{ $entry->row->section }}</span></td>
           <td style="font-size:12px;color:var(--text3)">
             {{ $p->submitted_at ? \Illuminate\Support\Carbon::parse($p->submitted_at)->format('M d, Y') : '—' }}
           </td>
@@ -73,5 +73,5 @@
         </tr>
       @endforelse
     </tbody>
-  </table></div>
+  </table>
 </div>

@@ -2,7 +2,7 @@
      Deliberately not limited to teams marked Complete - a team that has
      stalled while still forming is exactly what this page exists to show. --}}
 <div class="card" style="padding:0;overflow:hidden">
-  <div class="tbl-scroll"><table class="table">
+  <table class="tbl">
     <thead>
       <tr>
         <th style="padding-left:20px">Team</th>
@@ -27,7 +27,7 @@
             </div>
           </td>
 
-          <td><span class="badge {{ $row->section === \App\Support\SectionScope::UNASSIGNED ? 'badge-gray' : 'badge-gold' }}" style="font-size:10px">{{ $row->section }}</span></td>
+          <td><span class="badge badge-gold" style="font-size:10px">{{ $row->section }}</span></td>
 
           <td style="max-width:230px">
             @switch($row->titleState)
@@ -116,7 +116,7 @@
         </tr>
       @endforelse
     </tbody>
-  </table></div>
+  </table>
   <div style="padding:14px 20px;border-top:1px solid var(--border)">
     <span style="font-size:12px;color:var(--text3)">{{ $rows->count() }} team(s)</span>
   </div>

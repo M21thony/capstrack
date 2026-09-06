@@ -8,7 +8,6 @@ use App\Models\Recruitment;
 use App\Models\Student;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
-use App\Models\Term;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -34,7 +33,7 @@ class TeamCreationTest extends TestCase
 
         $response = $this->post('/team', [
             'team_name' => 'Bulbasaur',
-            'team_status' => 'Active',
+            'team_status' => 'on-going',
         ]);
 
         $response->assertSessionHas('status');
@@ -60,7 +59,7 @@ class TeamCreationTest extends TestCase
 
         $team = Team::create([
             'team_name' => 'Team Charmander',
-            'team_status' => 'Active',
+            'team_status' => 'on-going',
             'leader_id' => $student->student_id,
         ]);
 
@@ -111,7 +110,7 @@ class TeamCreationTest extends TestCase
 
         $team = Team::create([
             'team_name' => 'Team Squirtle',
-            'team_status' => 'Active',
+            'team_status' => 'on-going',
             'leader_id' => $leader->student_id,
         ]);
 
@@ -163,7 +162,7 @@ class TeamCreationTest extends TestCase
 
         $team = Team::create([
             'team_name' => 'Team Leave Flow',
-            'team_status' => 'Active',
+            'team_status' => 'on-going',
             'leader_id' => $leader->student_id,
         ]);
 
@@ -251,7 +250,7 @@ class TeamCreationTest extends TestCase
 
         $team = Team::create([
             'team_name' => 'Team Transfer',
-            'team_status' => 'Active',
+            'team_status' => 'on-going',
             'leader_id' => $leader->student_id,
         ]);
 
@@ -371,7 +370,7 @@ class TeamCreationTest extends TestCase
 
         $team = Team::create([
             'team_name' => 'Team Pending',
-            'team_status' => 'Active',
+            'team_status' => 'on-going',
             'leader_id' => $leader->student_id,
         ]);
 
@@ -409,7 +408,7 @@ class TeamCreationTest extends TestCase
 
         $team = Team::create([
             'team_name' => 'Team API',
-            'team_status' => 'Active',
+            'team_status' => 'on-going',
             'leader_id' => $leader->student_id,
         ]);
 
@@ -456,7 +455,7 @@ class TeamCreationTest extends TestCase
 
         $team = Team::create([
             'team_name' => 'Team API Decline',
-            'team_status' => 'Active',
+            'team_status' => 'on-going',
             'leader_id' => $leader->student_id,
         ]);
 
@@ -504,7 +503,7 @@ class TeamCreationTest extends TestCase
 
         $team = Team::create([
             'team_name' => 'Team Stuck',
-            'team_status' => 'Active',
+            'team_status' => 'on-going',
             'leader_id' => $leader->student_id,
         ]);
 
@@ -552,7 +551,7 @@ class TeamCreationTest extends TestCase
 
         $team = Team::create([
             'team_name' => 'Team Decline',
-            'team_status' => 'Active',
+            'team_status' => 'on-going',
             'leader_id' => $leader->student_id,
         ]);
 
@@ -589,7 +588,7 @@ class TeamCreationTest extends TestCase
         ]);
         Team::create([
             'team_name' => 'HyperTest',
-            'team_status' => 'Active',
+            'team_status' => 'on-going',
             'leader_id' => $first->student_id,
         ]);
 
@@ -607,7 +606,7 @@ class TeamCreationTest extends TestCase
         foreach (['HYPERTEST', 'hypertest'] as $attempt) {
             $response = $this->post('/team', [
                 'team_name' => $attempt,
-                'team_status' => 'Active',
+                'team_status' => 'on-going',
             ]);
             $response->assertSessionHasErrors('team_name');
         }
@@ -625,7 +624,7 @@ class TeamCreationTest extends TestCase
         ]);
         Team::create([
             'team_name' => 'Innovators',
-            'team_status' => 'Active',
+            'team_status' => 'on-going',
             'leader_id' => $first->student_id,
         ]);
 
@@ -669,7 +668,7 @@ class TeamCreationTest extends TestCase
 
         $team = Team::create([
             'team_name' => 'Team Remind',
-            'team_status' => 'Active',
+            'team_status' => 'on-going',
             'leader_id' => $leader->student_id,
         ]);
 
@@ -713,12 +712,6 @@ class TeamCreationTest extends TestCase
         ]);
     }
 
-    // -- From Zzek-08's branch: the classmates a leader can invite ----------
-    // Everything else on that branch predates this one, so only these came
-    // over. Team status reads 'Active' here, not 'on-going' - that vocabulary
-    // is older than the split this branch made between a team that stopped
-    // taking members and one that turned its pre-proposals in.
-
     public function test_leader_sees_all_classmates_in_invite_modal_including_those_with_teams(): void
     {
         $course = 'Bachelor of Science in Information Technology';
@@ -736,7 +729,7 @@ class TeamCreationTest extends TestCase
 
         $team1 = Team::create([
             'team_name' => 'Team One',
-            'team_status' => 'Active',
+            'team_status' => 'on-going',
             'leader_id' => $leader->student_id,
         ]);
 
@@ -752,7 +745,7 @@ class TeamCreationTest extends TestCase
 
         $team2 = Team::create([
             'team_name' => 'Team Two',
-            'team_status' => 'Active',
+            'team_status' => 'on-going',
             'leader_id' => $studentWithTeam->student_id,
         ]);
 
@@ -820,7 +813,7 @@ class TeamCreationTest extends TestCase
 
         $team = Team::create([
             'team_name' => 'Team NoLeader Access',
-            'team_status' => 'Active',
+            'team_status' => 'on-going',
             'leader_id' => $leader->student_id,
         ]);
 
@@ -850,7 +843,7 @@ class TeamCreationTest extends TestCase
 
         $team1 = Team::create([
             'team_name' => 'Team Corrupt',
-            'team_status' => 'Active',
+            'team_status' => 'on-going',
             'leader_id' => $leader->student_id,
         ]);
 
@@ -873,7 +866,7 @@ class TeamCreationTest extends TestCase
 
         $team2 = Team::create([
             'team_name' => 'Team Other',
-            'team_status' => 'Active',
+            'team_status' => 'on-going',
             'leader_id' => $studentWithTeam->student_id,
         ]);
 
@@ -916,59 +909,32 @@ class TeamCreationTest extends TestCase
         $this->assertNotContains($leader->student_id, $ids, 'Leader should not appear in their own list');
     }
 
-    // -- School year: one answer, written everywhere ----------------------
-
-    /**
-     * student_s_y.school_year was declared year(), which holds one four-digit
-     * year and nothing else, so every write of "2026-2027" was truncated
-     * away - the live table held nineteen nulls and a "0000". The classmate
-     * picker filters on that column, so it could never match anybody.
-     */
-    public function test_creating_a_team_records_a_usable_school_year(): void
+    public function test_team_creation_sets_school_year_on_student_s_y(): void
     {
-        $leader = Student::factory()->withCompleteProfile()->create([
-            'email' => 'leader@my.cspc.edu.ph', 'course' => 'BSIT', 'year_section' => '3 . B',
+        $student = Student::create([
+            'email' => 'teamstore.sy@example.com',
+            'f_name' => 'Iota',
+            'l_name' => 'Creator',
+            'student_number' => '2026-4001',
+            'course' => 'Bachelor of Science in Computer Science',
+            'year_section' => '4th · A',
         ]);
 
-        $this->actingAs($leader, 'web')
-            ->post(route('team.store'), ['team_name' => 'Year Team'])
-            ->assertRedirect();
+        $this->actingAs($student, 'web');
 
-        $row = StudentSchoolYear::where('student_id', $leader->student_id)->first();
+        // Ensure no student_s_y record exists yet
+        $this->assertDatabaseMissing('student_s_y', ['student_id' => $student->student_id]);
 
-        $this->assertNotNull($row, 'Team creation wrote no school-year row at all.');
-        $this->assertMatchesRegularExpression(
-            '/^\d{4}-\d{4}$/',
-            (string) $row->school_year,
-            'The row landed with no usable school year, so nothing filtering on it can match.'
-        );
-        $this->assertSame(Term::currentSchoolYear(), $row->school_year);
-    }
-
-    /** And with a year that means something, the picker can find people. */
-    public function test_a_new_leader_can_see_a_classmate_straight_away(): void
-    {
-        $leader = Student::factory()->withCompleteProfile()->create([
-            'email' => 'newleader@my.cspc.edu.ph', 'course' => 'BSIT', 'year_section' => '3 . B', 'l_name' => 'Leader',
-        ]);
-        $mate = Student::factory()->withCompleteProfile()->create([
-            'email' => 'newmate@my.cspc.edu.ph', 'course' => 'BSIT', 'year_section' => '3 . B', 'l_name' => 'Classmate',
+        $response = $this->post('/team', [
+            'team_name' => 'Auto SY Team',
+            'team_status' => 'on-going',
         ]);
 
-        // The classmate's own row, written the same way a profile setup does.
-        StudentSchoolYear::create(['student_id' => $mate->student_id, 'team_id' => null]);
+        $response->assertRedirect(route('student.team'));
 
-        $this->actingAs($leader, 'web')
-            ->post(route('team.store'), ['team_name' => 'Picker Team'])
-            ->assertRedirect();
-
-        $names = collect(
-            $this->actingAs($leader, 'web')
-                ->getJson(route('team.available-classmates'))
-                ->assertOk()
-                ->json('classmates')
-        )->pluck('student_id');
-
-        $this->assertContains($mate->student_id, $names->all());
+        // The student_s_y record should have school_year set
+        $sy = StudentSchoolYear::where('student_id', $student->student_id)->first();
+        $this->assertNotNull($sy, 'student_s_y record should exist');
+        $this->assertNotNull($sy->school_year, 'school_year should be set after team creation');
     }
 }

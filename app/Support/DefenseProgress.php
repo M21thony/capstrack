@@ -24,8 +24,11 @@ use Illuminate\Support\Collection;
 class DefenseProgress
 {
     public const PASSED = 'passed';
+
     public const IN_PROGRESS = 'in_progress';
+
     public const FAILED = 'failed';
+
     public const NOT_SCHEDULED = 'not_scheduled';
 
     /** @var Collection<string, DefenseWindow>|null */

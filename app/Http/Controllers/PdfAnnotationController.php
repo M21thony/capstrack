@@ -161,10 +161,7 @@ class PdfAnnotationController extends Controller
     {
         $this->authorizeReview($review);
 
-        return response()->json([
-            'review_status' => $review->review_status,
-            'verdict' => $review->verdict,
-        ]);
+        return response()->json(['review_status' => $review->review_status]);
     }
 
     public function updateStatus(Request $request, CapstoneDocumentReview $review)
@@ -172,41 +169,18 @@ class PdfAnnotationController extends Controller
         $this->authorizeReview($review);
 
         $status = $request->input('review_status');
-        $verdict = $request->input('verdict');
 
-        if (! in_array($status, CapstoneDocumentReview::STATUSES, true)) {
+        if (! in_array($status, ['To Review', 'Reviewing', 'Reviewed'], true)) {
             return response()->json([
                 'message' => 'The selected review status is invalid.',
             ], 422);
         }
 
-        $finishing = $status === CapstoneDocumentReview::REVIEWED;
-
-        // Turning a review in is the moment the reviewer decides, so a
-        // verdict is required exactly then - that is the whole point of
-        // recording one. Before this, a review could be finished with the
-        // decision left in a typed remark that nothing could query.
-        if ($finishing && ! in_array($verdict, CapstoneDocumentReview::VERDICTS, true)) {
-            return response()->json([
-                'message' => 'Say whether the document is approved or needs revision.',
-            ], 422);
-        }
-
-        // reviewed_at was only ever read, never written, so every row held
-        // null - including the ones marked Reviewed. Reopening a review
-        // clears both stamps and the verdict, so neither ever claims a
-        // decision that was withdrawn.
-        $review->update([
-            'review_status' => $status,
-            'verdict' => $finishing ? $verdict : null,
-            'reviewed_at' => $finishing ? now() : null,
-            'verdict_at' => $finishing ? now() : null,
-        ]);
+        $review->update(['review_status' => $status]);
 
         return response()->json([
             'success' => true,
             'review_status' => $review->review_status,
-            'verdict' => $review->verdict,
         ]);
     }
 

@@ -3,37 +3,23 @@
 namespace App\Http\Controllers\Student;
 
 use App\Http\Controllers\Controller;
+use App\Models\Announcement;
 use App\Models\Milestone;
 use App\Models\Student;
 use App\Models\StudentMilestone;
+use App\Models\StudentSchoolYear;
 use App\Models\Team;
-use App\Support\MilestoneProgress;
-use App\Support\StudentTeam;
 use Illuminate\Http\Request;
 
 class ProgressController extends Controller
 {
-    /**
-     * The team's checklist, as the CaPSA actually keeps it.
-     *
-     * This used to read announcements: it found every announcement whose
-     * title began "Milestone Reminder:", stripped that prefix, and looked the
-     * milestone up by matching the title string. So what a team saw was
-     * whichever announcements happened to have been posted, not the
-     * deliverables anybody was tracking - and a renamed milestone dropped off
-     * the page entirely.
-     *
-     * It is read-only on purpose. Every line here is closed by somebody else:
-     * the CaPSA sights a signed form, an upload closes a draft, the adviser's
-     * verdict closes a CLF, the panel closes a defense. A team marking its own
-     * deliverable done would be asserting something it is not the one to say.
-     */
     public function index()
     {
         /** @var Student $student */
         $student = auth()->user();
 
-        $teamId = StudentTeam::idFor($student->student_id);
+        $studentSy = StudentSchoolYear::where('student_id', $student->student_id)->first();
+        $teamId = $studentSy?->team_id;
 
         $isLeader = false;
         if ($teamId) {
@@ -41,46 +27,121 @@ class ProgressController extends Controller
             $isLeader = $team && $team->leader_id === $student->student_id;
         }
 
-        $boards = collect();
-        $completed = 0;
-        $pending = 0;
-        $todo = 0;
-        $overdue = 0;
+        $milestoneAnnouncements = collect();
+        $doneMilestoneIds = [];
+        $fileMap = [];
+        $doneByMap = [];
+        $milestoneMap = [];
+        $dueDateMap = [];
 
         if ($teamId) {
-            $boards = Milestone::where('team_id', $teamId)
-                ->with('items')
-                ->orderBy('due_date')
-                ->orderBy('id')
-                ->get()
-                // A checklist with no lines on it yet says nothing a team can
-                // act on - it reads "0 of 0 complete", which looks like a
-                // fault rather than a checklist still being written. A CaPSA
-                // building one by hand should not be pushing an empty card at
-                // their students in the meantime; it appears once it has
-                // something on it.
-                ->filter(fn (Milestone $milestone) => $milestone->items->isNotEmpty())
-                ->values()
-                ->map(fn (Milestone $milestone) => (object) [
-                    'model' => $milestone,
-                    'progress' => $milestone->progress(),
-                ]);
+            $sectionLabel = Student::computeSectionLabel($student->course, $student->year_section);
 
-            foreach ($boards as $board) {
-                $completed += $board->progress->completed;
-                $pending += $board->progress->handed_in;
-                $overdue += $board->progress->overdue;
-                $todo += $board->progress->items
-                    ->where('state', MilestoneProgress::NOT_STARTED)
-                    ->count();
+            $milestoneAnnouncements = Announcement::with('admin', 'team')
+                ->where('title', 'like', 'Milestone Reminder:%')
+                ->where('is_active', true)
+                ->get()
+                ->filter(function ($announcement) use ($student, $sectionLabel) {
+                    $audience = (array) ($announcement->target_audience ?? ['all']);
+
+                    if (! in_array('all', $audience, true) && ! in_array('student', $audience, true)) {
+                        return false;
+                    }
+
+                    if ($announcement->team) {
+                        $memberIds = StudentSchoolYear::where('team_id', $announcement->team->team_id)
+                            ->whereNotNull('student_id')
+                            ->pluck('student_id')
+                            ->toArray();
+
+                        if (in_array($student->student_id, $memberIds, true)) {
+                            return true;
+                        }
+                    }
+
+                    if (! $sectionLabel) {
+                        return false;
+                    }
+
+                    $studentSectionLower = strtolower($sectionLabel);
+
+                    $targetSections = array_values(array_filter(
+                        $audience,
+                        fn ($a) => str_starts_with((string) $a, 'section:')
+                    ));
+                    $targetSections = array_map(fn ($s) => strtolower(substr((string) $s, 8)), $targetSections);
+
+                    if (! empty($targetSections)) {
+                        return in_array($studentSectionLower, $targetSections, true);
+                    }
+
+                    $admin = $announcement->admin;
+                    if ($admin && ! empty($admin->sections)) {
+                        $adminSectionsLower = array_map('strtolower', $admin->sections);
+
+                        return in_array($studentSectionLower, $adminSectionsLower, true);
+                    }
+
+                    return true;
+                })
+                ->sortByDesc('created_at')
+                ->values();
+
+            // Build a map of milestone title -> milestone id from the DB
+            $titles = $milestoneAnnouncements->map(fn ($ann) => str_replace('Milestone Reminder: ', '', $ann->title))->unique();
+            $milestones = Milestone::whereIn('title', $titles)->get(['id', 'title', 'due_date']);
+            foreach ($milestones as $m) {
+                $milestoneMap[strtolower(trim($m->title))] = $m->id;
+                $dueDateMap[strtolower(trim($m->title))] = $m->due_date?->format('M j, Y');
             }
+
+            $doneMilestones = StudentMilestone::where('team_id', $teamId)->with('student')->get(['milestone_id', 'file_path', 'student_id', 'completed_at', 'is_verified']);
+            $doneMilestoneIds = $doneMilestones->pluck('milestone_id')->toArray();
+            $verifiedIds = $doneMilestones->where('is_verified', true)->pluck('milestone_id')->toArray();
+            $fileMap = $doneMilestones->pluck('file_path', 'milestone_id')->map(fn ($p) => $p ? \Storage::url($p) : null)->toArray();
+            $doneByMap = $doneMilestones->keyBy('milestone_id');
+        }
+
+        $verifiedCount = count(array_filter(
+            $milestoneAnnouncements->toArray(),
+            fn ($ann) => in_array(
+                $milestoneMap[strtolower(trim(str_replace('Milestone Reminder: ', '', $ann['title'])))] ?? null,
+                $verifiedIds,
+                true
+            )
+        ));
+        $submittedCount = count(array_filter(
+            $milestoneAnnouncements->toArray(),
+            fn ($ann) => in_array(
+                $milestoneMap[strtolower(trim(str_replace('Milestone Reminder: ', '', $ann['title'])))] ?? null,
+                $doneMilestoneIds,
+                true
+            )
+        ));
+        $pendingCount = $submittedCount - $verifiedCount;
+        $todoCount = $milestoneAnnouncements->count() - $submittedCount;
+
+        // Overdue: milestones with past due_date not yet completed
+        $overdue = 0;
+        if ($teamId) {
+            $now = now()->startOfDay();
+            $titles = $milestoneAnnouncements->map(fn ($ann) => str_replace('Milestone Reminder: ', '', $ann->title));
+            $overdue = Milestone::whereIn('title', $titles)
+                ->where('due_date', '<', $now)
+                ->whereNotIn('id', $verifiedIds)
+                ->count();
         }
 
         return view('student.progress', [
-            'boards' => $boards,
-            'completed' => $completed,
-            'pending' => $pending,
-            'todo' => $todo,
+            'milestoneAnnouncements' => $milestoneAnnouncements,
+            'milestoneMap' => $milestoneMap,
+            'dueDateMap' => $dueDateMap,
+            'fileMap' => $fileMap,
+            'doneByMap' => $doneByMap,
+            'doneMilestoneIds' => $doneMilestoneIds,
+            'completed' => $verifiedCount,
+            'pending' => $pendingCount,
+            'todo' => $todoCount,
             'overdue' => $overdue,
             'teamId' => $teamId,
             'isLeader' => $isLeader,
@@ -96,7 +157,8 @@ class ProgressController extends Controller
 
         /** @var Student $student */
         $student = auth()->user();
-        $teamId = StudentTeam::idFor($student->student_id);
+        $studentSy = StudentSchoolYear::where('student_id', $student->student_id)->first();
+        $teamId = $studentSy?->team_id;
 
         if (! $teamId) {
             return back()->with('error', 'No team found.');
@@ -136,7 +198,8 @@ class ProgressController extends Controller
         ]);
 
         $student = auth()->user();
-        $teamId = StudentTeam::idFor($student->student_id);
+        $studentSy = StudentSchoolYear::where('student_id', $student->student_id)->first();
+        $teamId = $studentSy?->team_id;
 
         if (! $teamId) {
             return back()->with('error', 'No team found.');

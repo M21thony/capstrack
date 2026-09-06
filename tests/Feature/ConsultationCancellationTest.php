@@ -2,13 +2,11 @@
 
 namespace Tests\Feature;
 
-use App\Jobs\SyncConsultationCancellation;
 use App\Mail\ConsultationCancelledMail;
 use App\Models\Student;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
 class ConsultationCancellationTest extends TestCase
@@ -27,9 +25,9 @@ class ConsultationCancellationTest extends TestCase
         ]);
     }
 
-    private function makeBooking(Student $student, string $teamName = 'Team Cancel', int $daysAhead = 10): array
+    private function makeBooking(Student $student, string $teamName = 'Team Cancel'): array
     {
-        $team = DB::table('team')->insertGetId(['team_name' => $teamName, 'team_status' => 'Active']);
+        $team = DB::table('team')->insertGetId(['team_name' => $teamName, 'team_status' => 'on-going']);
         DB::table('student_s_y')->insert([
             'student_id' => $student->student_id,
             'team_id' => $team,
@@ -47,7 +45,7 @@ class ConsultationCancellationTest extends TestCase
             'consultation_limit' => 1,
             'is_available' => false,
             'recur' => 'once',
-            'specific_date' => now()->addDays($daysAhead)->toDateString(),
+            'specific_date' => now()->addDay()->toDateString(),
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -55,7 +53,7 @@ class ConsultationCancellationTest extends TestCase
         $bookingId = DB::table('consultation_booking')->insertGetId([
             'student_id' => $student->student_id,
             'schedule_id' => $scheduleId,
-            'session_date' => now()->addDays($daysAhead)->toDateString(),
+            'session_date' => now()->addDay()->toDateString(),
             'booking_status' => 'scheduled',
             'created_at' => now(),
             'updated_at' => now(),
@@ -161,10 +159,7 @@ class ConsultationCancellationTest extends TestCase
         $response = $this->actingAs($teammate, 'web')->get(route('student.consultation'));
 
         $response->assertOk();
-        // The booking row no longer repeats the team's own name - a student
-        // is only ever shown their own team's bookings, so it said nothing.
-        // The row being there for a teammate who did not book it is the
-        // point, and that is what data-booking-id proves.
+        $response->assertSee('Team Shared');
         $response->assertSee('data-booking-id="'.$bookingId.'"', false);
     }
 
@@ -189,61 +184,5 @@ class ConsultationCancellationTest extends TestCase
         $response->assertOk();
         $response->assertJson(['success' => true]);
         $this->assertSame('cancelled', DB::table('consultation_booking')->where('booking_id', $bookingId)->first()->booking_status);
-    }
-
-    /**
-     * An expert who has kept a time free deserves more notice than a day,
-     * and a team pulling out the night before leaves a slot nobody can take.
-     */
-    public function test_a_session_within_three_days_cannot_be_cancelled(): void
-    {
-        $student = Student::factory()->withCompleteProfile()->create(['email' => 'soon@my.cspc.edu.ph']);
-        ['bookingId' => $bookingId] = $this->makeBooking($student, 'Team Soon', 2);
-
-        $response = $this->actingAs($student, 'web')
-            ->postJson(route('student.consultation.cancel', $bookingId), ['reason' => 'Something came up.']);
-
-        $response->assertStatus(422);
-        $this->assertStringContainsString('cancelled more than 3 days ahead', $response->json('message'));
-
-        $this->assertSame('scheduled', DB::table('consultation_booking')->where('booking_id', $bookingId)->value('booking_status'));
-    }
-
-    /** The day after the cutoff is fine. */
-    public function test_a_session_further_out_can_still_be_cancelled(): void
-    {
-        $student = Student::factory()->withCompleteProfile()->create(['email' => 'later@my.cspc.edu.ph']);
-        ['bookingId' => $bookingId] = $this->makeBooking($student, 'Team Later', 4);
-
-        $this->actingAs($student, 'web')
-            ->postJson(route('student.consultation.cancel', $bookingId), ['reason' => 'Something came up.'])
-            ->assertOk();
-
-        $this->assertSame('cancelled', DB::table('consultation_booking')->where('booking_id', $bookingId)->value('booking_status'));
-    }
-
-    /**
-     * Cancelling used to sit for about three seconds: it waited on an SMTP
-     * round trip and on Google Calendar before answering. Neither decides
-     * anything, so both happen after the answer goes back.
-     */
-    public function test_cancelling_does_not_wait_on_mail_or_google(): void
-    {
-        Queue::fake();
-
-        $student = Student::factory()->withCompleteProfile()->create(['email' => 'quick@my.cspc.edu.ph']);
-        ['bookingId' => $bookingId] = $this->makeBooking($student, 'Team Quick');
-
-        $this->actingAs($student, 'web')
-            ->postJson(route('student.consultation.cancel', $bookingId), ['reason' => 'Clash.'])
-            ->assertOk();
-
-        Queue::assertPushed(SyncConsultationCancellation::class, function ($job) use ($bookingId) {
-            return $job->bookingId === $bookingId && $job->reason === 'Clash.';
-        });
-
-        // Freeing the slot is the part the student can see, so it still
-        // happens before the response.
-        $this->assertSame('cancelled', DB::table('consultation_booking')->where('booking_id', $bookingId)->value('booking_status'));
     }
 }

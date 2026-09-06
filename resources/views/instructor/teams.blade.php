@@ -4,15 +4,14 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>CapsTRACK - Team Overview</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="{{ asset('css/expert.css') }}" />
 <style>
 .team-overview-stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 24px; }
-.team-role-tabs { display: flex; flex-wrap: wrap; width: fit-content; max-width: 100%; border-bottom: 1px solid var(--border); margin-bottom: 20px; }
-.team-role-tab { padding: 10px 16px; border: none; border-bottom: 2px solid transparent; margin-bottom: -1px; background: transparent; color: var(--text2); font-size: 12.5px; font-weight: 600; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: 0.13s; white-space: nowrap; }
-.team-role-tab.active { color: var(--accent3); border-bottom-color: var(--accent); }
-.team-role-tab:hover:not(.active) { color: var(--text); background: var(--bg4); }
-.team-role-tab:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.team-role-tabs { display: flex; gap: 4px; background: var(--bg2); border-radius: 12px; padding: 4px; border: 1px solid var(--border); width: fit-content; margin-bottom: 20px; flex-wrap: wrap; }
+.team-role-tab { padding: 8px 20px; border-radius: 8px; border: none; background: transparent; color: var(--text3); font-size: 13px; font-weight: 500; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: 0.15s; white-space: nowrap; }
+.team-role-tab.active { background: var(--accent); color: #18191f; font-weight: 600; }
+.team-role-tab:hover:not(.active) { color: var(--text); background: var(--bg3); }
 .team-role-panel { display: none; }
 .team-role-panel.active { display: block; }
 
@@ -59,8 +58,7 @@
 /* Team Info Modal */
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 300; display: none; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
 .modal-overlay.open { display: flex; }
-.modal-box { background: var(--bg2); border-radius: 16px; padding: 28px; width: 460px; max-width: 92vw; box-shadow: 0 20px 60px rgba(0,0,0,0.3); animation: modalIn 0.2s ease; max-height: 85vh; overflow-y: auto;scrollbar-width:none;-ms-overflow-style:none}
-.modal-box::-webkit-scrollbar{display:none}
+.modal-box { background: var(--bg2); border-radius: 16px; padding: 28px; width: 460px; max-width: 92vw; box-shadow: 0 20px 60px rgba(0,0,0,0.3); animation: modalIn 0.2s ease; max-height: 85vh; overflow-y: auto; }
 @keyframes modalIn { from { opacity: 0; transform: scale(0.95) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
 .modal-box h3 { font-size: 18px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
 .modal-sub { font-size: 13px; color: var(--text3); margin-bottom: 18px; }
@@ -133,7 +131,7 @@
   .stat-sub { font-size:9px; }
 
   /* Tabs */
-  .team-role-tab { padding:8px 12px; }
+  .team-role-tabs { padding:3px; }
   .team-role-tab { padding:6px 10px; font-size:11px; }
 
   /* -- Team Cards -- */
@@ -190,7 +188,6 @@
   .sk-overlay { padding:10px; }
 }
 </style>
-@include('partials.skeleton-head', ['skReveal' => 'block'])
 </head>
 <body>
 @include('instructor.partials.sidebar', ['currentPage' => 'teams', 'totalTeams' => $totalTeams])
@@ -202,7 +199,10 @@
     </button>
     <div class="page-title">Team Overview</div>
     <div class="topbar-actions">
-      @include('instructor.partials.notification-dropdown')
+      <div class="notif-btn">
+        <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        <div class="notif-dot"></div>
+      </div>
     </div>
   </div>
 
@@ -277,7 +277,7 @@
               $leader = $team?->leader;
               $members = $team?->members ?? collect();
               $initials = $team ? strtoupper(substr($team->team_name ?? 'T', 0, 2)) : 'T';
-              $roleName = $assignment->engaged_role_name ?? '';
+              $roleName = $assignment->role->first()?->role_name ?? '';
             @endphp
             <div class="team-card-modern">
               <div class="team-card-top">

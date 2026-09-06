@@ -14,84 +14,67 @@ use App\Http\Controllers\Api\StudentFinancialController;
 use App\Http\Controllers\Api\TeamController;
 use Illuminate\Support\Facades\Route;
 
-// Admin API routes (session based auth for experts) - split the same way
-// routes/web.php's /admin group is, see that file's comment for what each
-// bucket means.
-Route::middleware(['web', 'expert.auth'])
+// Admin API routes (session based auth for experts)
+Route::middleware(['web', 'expert.auth', 'expert.admin'])
     ->prefix('admin')
     ->group(function () {
+        Route::get('/experts', [AdminExpertController::class, 'index'])->name('api.admin.experts.index');
+        Route::delete('/experts/{expert}', [AdminExpertController::class, 'destroy'])->name('api.admin.experts.destroy');
+        Route::post('/turnover', [AdminExpertController::class, 'transferRights'])->name('api.admin.turnover');
 
-        // Managing the expert roster is shared between Admin and CAPSA -
-        // see routes/web.php's matching comment. Nothing currently calls
-        // this API duplicate of AdminExpertsController, but it's kept in
-        // the same bucket for consistency.
-        Route::middleware('expert.staff')->group(function () {
-            Route::get('/experts', [AdminExpertController::class, 'index'])->name('api.admin.experts.index');
-            Route::delete('/experts/{expert}', [AdminExpertController::class, 'destroy'])->name('api.admin.experts.destroy');
+        // Panel Assignment (index() stays a web route since it returns a
+        // Blade view - these are the JSON-consuming endpoints the page's
+        // fetch() calls hit, which need to live under /api/* so validation
+        // failures render as JSON instead of a redirect - see
+        // bootstrap/app.php's shouldRenderJsonWhen(), which only renders
+        // JSON for api/* routes regardless of the request's Accept header.
+        Route::prefix('panel_assignment')->name('api.admin.panel_assignment.')->group(function () {
+            // Registered before /{team} so "windows" isn't swallowed by
+            // the team route-model-binding parameter.
+            Route::get('/windows', [AdminPanelAssignmentController::class, 'indexWindows'])->name('windows.index');
+            Route::put('/windows/{defenseType}', [AdminPanelAssignmentController::class, 'updateWindow'])->name('windows.update');
+            Route::put('/schedule/{defense}', [AdminPanelAssignmentController::class, 'updateSchedule'])->name('schedule.update');
+            Route::post('/{team}', [AdminPanelAssignmentController::class, 'store'])->name('store');
+            Route::get('/{team}/suggest', [AdminPanelAssignmentController::class, 'suggestExperts'])->name('suggest');
         });
 
-        // ---- CAPSA: review/approve/assign ----
-        Route::middleware('expert.capsa')->group(function () {
-            // Panel Assignment (index() stays a web route since it returns a
-            // Blade view - these are the JSON-consuming endpoints the page's
-            // fetch() calls hit, which need to live under /api/* so validation
-            // failures render as JSON instead of a redirect - see
-            // bootstrap/app.php's shouldRenderJsonWhen(), which only renders
-            // JSON for api/* routes regardless of the request's Accept header.
-            Route::prefix('panel_assignment')->name('api.admin.panel_assignment.')->group(function () {
-                // Registered before /{team} so "windows" isn't swallowed by
-                // the team route-model-binding parameter.
-                Route::get('/windows', [AdminPanelAssignmentController::class, 'indexWindows'])->name('windows.index');
-                Route::put('/windows/{defenseType}', [AdminPanelAssignmentController::class, 'updateWindow'])->name('windows.update');
-                Route::put('/schedule/{defense}', [AdminPanelAssignmentController::class, 'updateSchedule'])->name('schedule.update');
-                Route::post('/bulk', [AdminPanelAssignmentController::class, 'storeMultiple'])->name('store.bulk');
-                Route::get('/suggest-multi', [AdminPanelAssignmentController::class, 'suggestExpertsMultiple'])->name('suggest-multi');
-                Route::get('/suggest-teams', [AdminPanelAssignmentController::class, 'suggestTeamsForPanel'])->name('suggest-teams');
-                Route::post('/{team}', [AdminPanelAssignmentController::class, 'store'])->name('store');
-                Route::get('/{team}/suggest', [AdminPanelAssignmentController::class, 'suggestExperts'])->name('suggest');
-            });
-
-            // Grading Rubrics
-            Route::prefix('grading-rubrics')->name('api.admin.grading-rubrics.')->group(function () {
-                Route::post('/ai-generate', [AdminGradingRubricController::class, 'aiGenerate'])->name('ai-generate');
-                Route::get('/', [AdminGradingRubricController::class, 'index'])->name('index');
-                Route::get('/{gradingRubric}', [AdminGradingRubricController::class, 'show'])->name('show');
-                Route::post('/', [AdminGradingRubricController::class, 'store'])->name('store');
-                Route::put('/{gradingRubric}', [AdminGradingRubricController::class, 'update'])->name('update');
-                Route::delete('/{gradingRubric}', [AdminGradingRubricController::class, 'destroy'])->name('destroy');
-                Route::post('/{gradingRubric}/criteria', [AdminGradingRubricController::class, 'storeCriterion'])->name('criteria.store');
-                Route::put('/{gradingRubric}/criteria/{rubricCriterion}', [AdminGradingRubricController::class, 'updateCriterion'])->name('criteria.update');
-                Route::delete('/{gradingRubric}/criteria/{rubricCriterion}', [AdminGradingRubricController::class, 'destroyCriterion'])->name('criteria.destroy');
-                Route::post('/{gradingRubric}/criteria/sync', [AdminGradingRubricController::class, 'syncCriteria'])->name('criteria.sync');
-            });
-
-            // Financial Records - CAPSA checks uploaded payment receipts to
-            // clear students for defense scheduling, not Admin.
-            Route::prefix('financial')->name('api.admin.financial.')->group(function () {
-                Route::get('/', [AdminFinancialController::class, 'index'])->name('index');
-                Route::get('/stats', [AdminFinancialController::class, 'stats'])->name('stats');
-                Route::get('/teams', [AdminFinancialController::class, 'teams'])->name('teams');
-                Route::get('/records', [AdminFinancialController::class, 'records'])->name('records');
-                Route::get('/records/{financialRecord}', [AdminFinancialController::class, 'record'])->name('record');
-                Route::post('/records/{financialRecord}/approve', [AdminFinancialController::class, 'approve'])->name('approve');
-                Route::post('/records/{financialRecord}/reject', [AdminFinancialController::class, 'reject'])->name('reject');
-                Route::get('/expense-posts', [AdminFinancialController::class, 'expensePosts'])->name('expense-posts');
-                Route::post('/expense-posts', [AdminFinancialController::class, 'storeExpensePost'])->name('expense-posts.store');
-                Route::put('/expense-posts/{expensePost}', [AdminFinancialController::class, 'updateExpensePost'])->name('expense-posts.update');
-                Route::delete('/expense-posts/{expensePost}', [AdminFinancialController::class, 'destroyExpensePost'])->name('expense-posts.destroy');
-            });
-
-            // Archive/Announcements are CaPSA's academic-process content,
-            // not Admin's - see routes/web.php's matching comment.
-            Route::post('/announcements', [AnnouncementController::class, 'store'])->name('api.admin.announcements.store');
-            Route::put('/announcements/{announcement}', [AnnouncementController::class, 'update'])->name('api.admin.announcements.update');
-            Route::delete('/announcements/{announcement}', [AnnouncementController::class, 'destroy'])->name('api.admin.announcements.destroy');
-            Route::post('/announcements/{announcement}/verify-submission', [AnnouncementController::class, 'verifySubmission'])->name('api.admin.announcements.verify-submission');
-
-            Route::post('/archive', [ArchiveController::class, 'store'])->name('api.admin.archive.store');
-            Route::put('/archive/{archive}', [ArchiveController::class, 'update'])->name('api.admin.archive.update');
-            Route::delete('/archive/{archive}', [ArchiveController::class, 'destroy'])->name('api.admin.archive.destroy');
+        // Grading Rubrics
+        Route::prefix('grading-rubrics')->name('api.admin.grading-rubrics.')->group(function () {
+            Route::post('/ai-generate', [AdminGradingRubricController::class, 'aiGenerate'])->name('ai-generate');
+            Route::get('/', [AdminGradingRubricController::class, 'index'])->name('index');
+            Route::get('/{gradingRubric}', [AdminGradingRubricController::class, 'show'])->name('show');
+            Route::post('/', [AdminGradingRubricController::class, 'store'])->name('store');
+            Route::put('/{gradingRubric}', [AdminGradingRubricController::class, 'update'])->name('update');
+            Route::delete('/{gradingRubric}', [AdminGradingRubricController::class, 'destroy'])->name('destroy');
+            Route::post('/{gradingRubric}/criteria', [AdminGradingRubricController::class, 'storeCriterion'])->name('criteria.store');
+            Route::put('/{gradingRubric}/criteria/{rubricCriterion}', [AdminGradingRubricController::class, 'updateCriterion'])->name('criteria.update');
+            Route::delete('/{gradingRubric}/criteria/{rubricCriterion}', [AdminGradingRubricController::class, 'destroyCriterion'])->name('criteria.destroy');
+            Route::post('/{gradingRubric}/criteria/sync', [AdminGradingRubricController::class, 'syncCriteria'])->name('criteria.sync');
         });
+
+        // Financial Records
+        Route::prefix('financial')->name('api.admin.financial.')->group(function () {
+            Route::get('/', [AdminFinancialController::class, 'index'])->name('index');
+            Route::get('/stats', [AdminFinancialController::class, 'stats'])->name('stats');
+            Route::get('/teams', [AdminFinancialController::class, 'teams'])->name('teams');
+            Route::get('/records', [AdminFinancialController::class, 'records'])->name('records');
+            Route::get('/records/{financialRecord}', [AdminFinancialController::class, 'record'])->name('record');
+            Route::post('/records/{financialRecord}/approve', [AdminFinancialController::class, 'approve'])->name('approve');
+            Route::post('/records/{financialRecord}/reject', [AdminFinancialController::class, 'reject'])->name('reject');
+            Route::get('/expense-posts', [AdminFinancialController::class, 'expensePosts'])->name('expense-posts');
+            Route::post('/expense-posts', [AdminFinancialController::class, 'storeExpensePost'])->name('expense-posts.store');
+            Route::put('/expense-posts/{expensePost}', [AdminFinancialController::class, 'updateExpensePost'])->name('expense-posts.update');
+            Route::delete('/expense-posts/{expensePost}', [AdminFinancialController::class, 'destroyExpensePost'])->name('expense-posts.destroy');
+        });
+
+        Route::post('/announcements', [AnnouncementController::class, 'store'])->name('api.admin.announcements.store');
+        Route::put('/announcements/{announcement}', [AnnouncementController::class, 'update'])->name('api.admin.announcements.update');
+        Route::delete('/announcements/{announcement}', [AnnouncementController::class, 'destroy'])->name('api.admin.announcements.destroy');
+        Route::post('/announcements/{announcement}/verify-submission', [AnnouncementController::class, 'verifySubmission'])->name('api.admin.announcements.verify-submission');
+
+        Route::post('/archive', [ArchiveController::class, 'store'])->name('api.admin.archive.store');
+        Route::put('/archive/{archive}', [ArchiveController::class, 'update'])->name('api.admin.archive.update');
+        Route::delete('/archive/{archive}', [ArchiveController::class, 'destroy'])->name('api.admin.archive.destroy');
     });
 
 // Student API routes (session based auth for students)

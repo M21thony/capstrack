@@ -2,54 +2,131 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\CapstonePreProposal;
 use App\Models\Notification;
+use App\Models\Student;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
-use App\Support\PreProposalPayload;
-use App\Support\SectionScope;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
+use Illuminate\Support\Collection;
+use Illuminate\View\View;
 
-/**
- * The pre-proposal and verification ACTIONS.
- *
- * The listing page that used to live here is now a tab on Team Management
- * (Capsa\TeamManagementController) - these actions keep their original route
- * names so every link and redirect to them still resolves.
- */
 class AdminTeamVerificationController extends Controller
 {
-    public function __construct(private SectionScope $sections) {}
+    public function index(Request $request): View
+    {
+        $admin = auth('expert')->user();
+        $adminSections = $admin->sections ?? [];
+
+        $tab = $request->query('tab', 'pending');
+        $selectedSection = $request->query('section');
+
+        $pendingCandidates = Team::with('leader')
+            ->where('team_status', 'complete')
+            ->where('is_confirmed', false)
+            ->orderByDesc('created_at')
+            ->get();
+
+        $verifiedCandidates = Team::with('leader')
+            ->where('is_confirmed', true)
+            ->orderByDesc('created_at')
+            ->get();
+
+        $syRecords = StudentSchoolYear::whereIn('team_id', $pendingCandidates->pluck('team_id')->merge($verifiedCandidates->pluck('team_id'))->unique())
+            ->with('student')
+            ->get()
+            ->groupBy('team_id');
+
+        $pending = $this->buildTeams($pendingCandidates, $syRecords, $adminSections, $selectedSection);
+        $verified = $this->buildTeams($verifiedCandidates, $syRecords, $adminSections, $selectedSection);
+
+        $active = $tab === 'verified' ? $verified : $pending;
+
+        return view('admin.verify_teams', [
+            'teams' => $active['teams'],
+            'teamSections' => $active['teamSections'],
+            'teamMembers' => $active['teamMembers'],
+            'tab' => $tab,
+            'selectedSection' => $selectedSection,
+            'pendingCount' => $pending['count'],
+            'verifiedCount' => $verified['count'],
+            'allSections' => $adminSections,
+        ]);
+    }
+
+    /**
+     * @return array{teams: Collection<int, Team>, teamSections: array<int, string>, teamMembers: array<int, Collection<int, Student>>, count: int}
+     */
+    private function buildTeams($candidates, $syRecords, array $adminSections, ?string $selectedSection): array
+    {
+        $teams = collect();
+        $teamSections = [];
+        $teamMembers = [];
+
+        foreach ($candidates as $team) {
+            $records = $syRecords->get($team->team_id, collect());
+            $members = $records->map(fn ($sy) => $sy->student)->filter()->values();
+
+            $section = $this->sectionLabelFromRecords($records);
+
+            // A team whose members haven't completed their profile (course /
+            // year_section) has no section to match against any admin's
+            // assignment - since the forced personal-info onboarding step
+            // was removed for new student sign-ins, this is now a real,
+            // reachable state, not just a data-migration edge case. Excluding
+            // it here would make it permanently invisible to every admin,
+            // with no one able to ever verify it - shown to every admin
+            // instead, distinctly labeled, rather than silently lost.
+            $hasSection = $section !== '';
+
+            if ($hasSection) {
+                if (! in_array($section, $adminSections, true)) {
+                    continue;
+                }
+
+                if ($selectedSection && $section !== $selectedSection) {
+                    continue;
+                }
+            }
+
+            $teamSections[$team->team_id] = $hasSection ? $section : 'Unassigned (incomplete profile)';
+            $teamMembers[$team->team_id] = $members;
+            $teams->push($team);
+        }
+
+        return [
+            'teams' => $teams,
+            'teamSections' => $teamSections,
+            'teamMembers' => $teamMembers,
+            'count' => $teams->count(),
+        ];
+    }
 
     public function verify(Request $request, Team $team): RedirectResponse
     {
         $admin = auth('expert')->user();
         $team->refresh();
 
-        if (! $team->hasSubmittedPreProposals()) {
-            return redirect()->route('capsa.verify_teams')
-                ->with('error', 'This team has not submitted their pre-proposals for checking yet, so it cannot be verified.');
+        if ($team->team_status !== 'complete') {
+            return redirect()->route('admin.verify_teams')
+                ->with('error', 'Team is not marked as complete, so it cannot be verified yet.');
         }
 
         if ($team->is_confirmed) {
-            return redirect()->route('capsa.verify_teams')
+            return redirect()->route('admin.verify_teams')
                 ->with('error', 'Team <strong>'.e($team->team_name).'</strong> is already verified.');
         }
 
-        if (! $team->selected_pre_proposal_id) {
-            return redirect()->route('capsa.verify_teams')
-                ->with('error', 'This team\'s final title hasn\'t been resolved yet - approve one of their pre-proposals first.');
-        }
-
         $adminSections = $admin->sections ?? [];
-        $section = $this->sections->sectionFor($team);
+        $section = $this->teamSection($team);
 
-        if (! $this->sections->covers($adminSections, $section)) {
-            return redirect()->route('capsa.verify_teams')
+        // A team with no computed section (members haven't completed their
+        // profile) is shown to every admin on the listing page rather than
+        // being permanently invisible to all of them - the verify action
+        // has to allow the same team through, or it just becomes visible
+        // but permanently un-actionable instead.
+        if ($section !== '' && ! in_array($section, $adminSections, true)) {
+            return redirect()->route('admin.verify_teams')
                 ->with('error', 'You can only verify teams assigned to your sections.');
         }
 
@@ -75,195 +152,41 @@ class AdminTeamVerificationController extends Controller
             ]);
         }
 
-        return redirect()->route('capsa.verify_teams')
+        return redirect()->route('admin.verify_teams')
             ->with('status', 'Team <strong>'.e($team->team_name).'</strong> has been verified.');
     }
 
-    // Mirrors AdminApprovalController::approve() exactly - same shape
-    // (approved_status + rejection_reason), same guards.
-    public function approvePreProposal(CapstonePreProposal $preProposal): JsonResponse
+    // Used by verify() to re-check a single team's section server-side. Must
+    // compute it identically to buildTeams() (which the admin's list view
+    // renders from) - a previous version fell back to the raw student_s_y
+    // "program" column when no full section label could be computed, which
+    // silently disagreed with what buildTeams() showed as "Unassigned":
+    // the team looked verifiable in the list but verify() rejected it with
+    // "You can only verify teams assigned to your sections" anyway.
+    private function teamSection(Team $team): string
     {
-        if ($preProposal->approved_status) {
-            return response()->json(['success' => false, 'message' => 'Already processed.'], 422);
-        }
+        $records = StudentSchoolYear::where('team_id', $team->team_id)
+            ->with('student')
+            ->get();
 
-        if (! $preProposal->submitted_at) {
-            return response()->json([
-                'success' => false,
-                'message' => 'This team has not submitted their pre-proposals for checking yet.',
-            ], 422);
-        }
-
-        $preProposal->update(['approved_status' => true, 'rejection_reason' => null]);
-
-        $this->resolveTitleIfSettled($preProposal->team);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Proposal approved.',
-        ] + $this->reviewState($preProposal->team));
-    }
-
-    // Lets the CAPSA open the exact PDF the team uploaded for this title,
-    // not just the AI-extracted fields - part of "include the full content
-    // of the Pre-proposal form" on the submission. Served inline (not as an
-    // attachment) so it renders in the preview modal instead of forcing a
-    // download.
-    public function viewPreProposalDocument(CapstonePreProposal $preProposal)
-    {
-        $check = $preProposal->duplicationCheck;
-
-        if (! $check || ! Storage::exists($check->document_path)) {
-            abort(404, 'The original document could not be found.');
-        }
-
-        $filename = 'Proposal-'.$preProposal->slot.'-'.Str::slug($preProposal->title).'.pdf';
-
-        return Storage::response($check->document_path, $filename, [], 'inline');
-    }
-
-    public function rejectPreProposal(Request $request, CapstonePreProposal $preProposal): JsonResponse
-    {
-        $validated = $request->validate(['reason' => 'required|string|max:1000']);
-
-        if ($preProposal->approved_status) {
-            return response()->json(['success' => false, 'message' => 'Already processed.'], 422);
-        }
-
-        if (! $preProposal->submitted_at) {
-            return response()->json([
-                'success' => false,
-                'message' => 'This team has not submitted their pre-proposals for checking yet.',
-            ], 422);
-        }
-
-        $preProposal->update(['rejection_reason' => $validated['reason']]);
-
-        // A rejection is half of the decision. Rejecting the last undecided
-        // proposal is what settles the title, so this has to run here too.
-        $this->resolveTitleIfSettled($preProposal->team);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Proposal rejected.',
-        ] + $this->reviewState($preProposal->team));
-    }
-
-    // After every approve/reject, check whether the title question is now
-    // settled: exactly one approved auto-resolves it; two or more means the
-    // student has to pick, so they're notified instead.
-    /**
-     * What the review modal needs to redraw itself after a decision.
-     *
-     * It used to reload the page instead, which closed the modal - so a CaPSA
-     * with three titles to get through had to reopen it after each one.
-     */
-    private function reviewState(Team $team): array
-    {
-        $team->refresh()->load('preProposals.duplicationCheck');
-
-        return [
-            'proposals' => PreProposalPayload::forTeam($team),
-            'selected_pre_proposal_id' => $team->selected_pre_proposal_id,
-            'project_title' => $team->project_title,
-        ];
+        return $this->sectionLabelFromRecords($records);
     }
 
     /**
-     * Settle the team's title, but only once the review is actually over.
-     *
-     * Approving one proposal used to set the title there and then. A CaPSA
-     * working down a team's three titles approves one and is still reading
-     * the others, so the team was told its title was decided while two were
-     * still being looked at - and if a second was then approved, the choice
-     * reopened but the title already on the team stayed, which is how an
-     * approved-but-not-chosen title ended up showing on student/team.
-     *
-     * Nothing is settled while a proposal is still undecided. A proposal is
-     * undecided when it has been submitted and carries neither an approval
-     * nor a rejection reason.
+     * @param  Collection<int, StudentSchoolYear>  $records
      */
-    private function resolveTitleIfSettled(Team $team): void
+    private function sectionLabelFromRecords(Collection $records): string
     {
-        $team->refresh();
+        foreach ($records as $sy) {
+            if ($sy->student) {
+                $sectionLabel = Student::computeSectionLabel($sy->student->course, $sy->student->year_section);
 
-        // Already finalized (admin clicked "Verify Team") - a late approval
-        // shouldn't retroactively change a decision that's already locked in.
-        if ($team->is_confirmed) {
-            return;
-        }
-
-        $submitted = $team->preProposals()->whereNotNull('submitted_at')->get();
-
-        if ($submitted->isEmpty()) {
-            return;
-        }
-
-        $undecided = $submitted->filter(
-            fn ($proposal) => ! $proposal->approved_status && $proposal->rejection_reason === null
-        );
-
-        // Still being reviewed. Say nothing and change nothing - the team
-        // finds out when their CaPSA has finished, not partway through.
-        if ($undecided->isNotEmpty()) {
-            return;
-        }
-
-        $approved = $submitted->where('approved_status', true)->values();
-
-        if ($approved->count() === 1) {
-            $winner = $approved->first();
-
-            if ($team->selected_pre_proposal_id !== $winner->id) {
-                $team->update([
-                    'selected_pre_proposal_id' => $winner->id,
-                    'project_title' => $winner->title,
-                ]);
-
-                $this->notifyTeam($team, 'title_approved', 'Title Approved', 'Your title <strong>'.e($winner->title).'</strong> has been approved by your adviser.');
+                if ($sectionLabel) {
+                    return $sectionLabel;
+                }
             }
-
-            return;
         }
 
-        if ($approved->count() >= 2) {
-            // Two or more got through, so the team picks. Until they do, the
-            // team has no title - clearing it matters as much as clearing the
-            // selection, because the title is what the rest of the app shows.
-            if ($team->selected_pre_proposal_id || $team->project_title) {
-                $team->update([
-                    'selected_pre_proposal_id' => null,
-                    'project_title' => null,
-                ]);
-            }
-
-            $this->notifyTeam($team, 'title_pick_required', 'Choose Your Final Title', 'More than one of your submitted titles was approved - please choose which one to proceed with.');
-
-            return;
-        }
-
-        // Everything was rejected: the team has no title, and anything left
-        // over from an earlier round would be a title nobody approved.
-        if ($team->selected_pre_proposal_id || $team->project_title) {
-            $team->update([
-                'selected_pre_proposal_id' => null,
-                'project_title' => null,
-            ]);
-        }
-    }
-
-    private function notifyTeam(Team $team, string $type, string $title, string $message): void
-    {
-        $memberIds = StudentSchoolYear::where('team_id', $team->team_id)->pluck('student_id');
-
-        foreach ($memberIds as $memberId) {
-            Notification::create([
-                'student_id' => $memberId,
-                'type' => $type,
-                'title' => $title,
-                'message' => $message,
-                'link' => route('student.duplication'),
-            ]);
-        }
+        return '';
     }
 }

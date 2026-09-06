@@ -4,7 +4,7 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>CapsTRACK Expert Portal</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="{{ asset('css/expert.css') }}" />
 <x-dashboard.styles />
 <style>
@@ -38,8 +38,7 @@
 
   .ann-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;z-index:1000;opacity:0;pointer-events:none;transition:opacity .2s}
   .ann-modal-overlay.open{opacity:1;pointer-events:auto}
-  .ann-modal-box{background:var(--bg2);border-radius:16px;padding:28px;max-width:520px;width:90%;max-height:80vh;overflow-y:auto;position:relative;scrollbar-width:none;-ms-overflow-style:none}
-.ann-modal-box::-webkit-scrollbar{display:none}
+  .ann-modal-box{background:var(--bg2);border-radius:16px;padding:28px;max-width:520px;width:90%;max-height:80vh;overflow-y:auto;position:relative}
   .ann-modal-close{position:absolute;top:14px;right:16px;background:none;border:none;font-size:22px;color:var(--text3);cursor:pointer;padding:4px;line-height:1}
   .ann-modal-close:hover{color:var(--text)}
   .ann-modal-priority{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px}
@@ -51,7 +50,6 @@
   .ann-modal-sender{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--text)}
   .ann-modal-date{font-size:12px;color:var(--text3)}
 </style>
-@include('partials.skeleton-head', ['skReveal' => 'block'])
 </head>
 <body>
 @include('instructor.partials.sidebar', ['currentPage' => 'dashboard'])
@@ -65,7 +63,10 @@
     </button>
     <div class="page-title">Dashboard</div>
     <div class="topbar-actions">
-      @include('instructor.partials.notification-dropdown')
+      <div class="notif-btn">
+        <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        <div class="notif-dot"></div>
+      </div>
     </div>
   </div>
 
@@ -104,9 +105,7 @@
       <x-dashboard.stat-chip
         value="{{ $docsForReview }}"
         label="Docs for Review"
-        {{-- Waiting since it arrived. It used to read reviewed_at, which is null
-             on anything still waiting, so this rendered "Oldest: " and nothing. --}}
-        sub="{{ $oldestDocReview ? 'Oldest: waiting '.$oldestDocReview->created_at?->diffForHumans(null, true) : 'No pending reviews' }}"
+        sub="{{ $oldestDocReview ? 'Oldest: '.$oldestDocReview->reviewed_at?->diffForHumans() : 'No pending reviews' }}"
         color="var(--red)"
       />
       <x-dashboard.stat-chip value="{{ $upcomingConsults }}" label="Upcoming Consults" sub="Available slots" color="var(--blue)" />
@@ -210,6 +209,8 @@
 
       <x-dashboard.info-card
         title="Upcoming Consultations"
+        :actionUrl="route('instructor.consultations')"
+        actionText="View All"
         :empty="$consultations->isEmpty()"
         emptyMessage="No upcoming consultations."
         scrollable

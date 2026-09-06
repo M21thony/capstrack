@@ -2,11 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use App\Jobs\SyncConsultationCancellation;
 use App\Mail\ConsultationBookedMail;
 use App\Mail\ConsultationCancelledMail;
-use App\Models\ConsultationSchedule;
 use App\Models\ConsultationBooking;
+use App\Models\ConsultationSchedule;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
 use App\Services\GoogleCalendarService;
@@ -14,18 +13,10 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Validator;
 
 class StudentConsultationController extends Controller
 {
-    /**
-     * How near a session can get before it is too late to call it off.
-     *
-     * Public because the booking page states the rule, and a page that says
-     * a different number from the one enforced is worse than one that says
-     * nothing.
-     */
-    public const CANCEL_CUTOFF_DAYS = 3;
-
     public function __construct(private GoogleCalendarService $calendar) {}
 
     public function index()
@@ -102,13 +93,7 @@ class StudentConsultationController extends Controller
         // instructors with no relationship to this student at all).
         $experts = collect();
         if ($teamId) {
-            // An expert can hold more than one of these roles at once (e.g.
-            // both Adviser and Consultant for the same team) - the join
-            // below still returns one row per (expert, role) pair, so
-            // they're grouped back into a single entry per expert with a
-            // combined role label. Without this, the same person shows up
-            // as two separate options in the picker below.
-            $rows = DB::table('capstone_expert_application as a')
+            $experts = DB::table('capstone_expert_application as a')
                 ->join('capstone_experts as e', 'e.expert_id', '=', 'a.expert_id')
                 ->join('expert_roles as er', 'er.expert_id', '=', 'e.expert_id')
                 ->join('roles as r', 'r.role_id', '=', 'er.role_id')
@@ -118,27 +103,13 @@ class StudentConsultationController extends Controller
                 ->whereRaw('LOWER(r.role_name) IN (?, ?, ?)', ['adviser', 'consultant', 'grammarian'])
                 ->select('e.expert_id', 'e.first_name', 'e.last_name', 'r.role_name')
                 ->distinct()
-                ->get();
-
-            $experts = $rows
-                ->groupBy('expert_id')
-                ->map(function ($group) {
-                    $first = $group->first();
-
-                    return (object) [
-                        'expert_id' => $first->expert_id,
-                        'first_name' => $first->first_name,
-                        'last_name' => $first->last_name,
-                        'role_name' => $group->pluck('role_name')->unique()->map('ucfirst')->implode(', '),
-                        'is_adviser' => $group->pluck('role_name')->contains(fn ($r) => strtolower($r) === 'adviser'),
-                    ];
-                })
-                ->sortBy(fn ($e) => $e->is_adviser ? 0 : 1)
+                ->get()
+                ->sortBy(fn ($e) => strtolower($e->role_name) === 'adviser' ? 0 : 1)
                 ->values();
         }
 
         $defaultExpertId = optional(
-            $experts->first(fn ($e) => $e->is_adviser)
+            $experts->first(fn ($e) => strtolower($e->role_name) === 'adviser')
         )->expert_id;
 
         // Both available AND booked slots — the calendar JS needs booked ones
@@ -423,7 +394,7 @@ class StudentConsultationController extends Controller
         // only forces JSON rendering for /api/* routes - this endpoint is
         // called via fetch() and can't follow a redirect, so the error is
         // built manually here to match every other JSON response below.
-        $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
+        $validator = Validator::make($request->all(), [
             'reason' => 'required|string|max:1000',
         ]);
 
@@ -456,22 +427,6 @@ class StudentConsultationController extends Controller
             ->where('booking_status', 'scheduled')
             ->firstOrFail();
 
-        // Too close to call off. An expert who has kept the time free
-        // deserves more notice than a day, and a team pulling out the night
-        // before leaves a slot nobody else can take.
-        $daysAway = now()->startOfDay()->diffInDays(
-            \Illuminate\Support\Carbon::parse($booking->session_date)->startOfDay(),
-            false
-        );
-
-        if ($daysAway < self::CANCEL_CUTOFF_DAYS) {
-            return response()->json([
-                'success' => false,
-                'message' => 'This consultation is in '.($daysAway <= 0 ? 'less than a day' : $daysAway.' day'.($daysAway === 1 ? '' : 's'))
-                    .'. It can only be cancelled more than '.self::CANCEL_CUTOFF_DAYS.' days ahead - message your expert instead.',
-            ], 422);
-        }
-
         $slot = ConsultationSchedule::find($booking->schedule_id);
         $team = $booking->team;
 
@@ -480,20 +435,41 @@ class StudentConsultationController extends Controller
             'cancellation_reason' => $validated['reason'],
         ]);
 
+        if ($slot && $slot->expert) {
+            $this->notifyExpertOfCancellation($booking, $slot->expert, $team, $student, $validated['reason']);
+        }
+
         if ($slot) {
             ConsultationSchedule::where('schedule_id', $booking->schedule_id)
                 ->update(['is_available' => true]);
-        }
 
-        // The email and the calendar tidy-up are the reason cancelling used
-        // to sit for about three seconds: one waits on SMTP, the other on
-        // Google. Neither decides anything and the student cannot see either
-        // result, so they happen after the answer goes back.
-        SyncConsultationCancellation::dispatch(
-            $booking->booking_id,
-            $validated['reason'],
-            trim(($student->f_name ?? '').' '.($student->l_name ?? '')) ?: $student->email,
-        );
+            if (! $slot->expert || ! $slot->expert->google_token) {
+                return response()->json(['success' => true]);
+            }
+
+            if ($slot->recur === 'once') {
+                if ($slot->google_event_id) {
+                    try {
+                        $this->calendar->updateBookingEvent(
+                            expertId: $slot->expert_id,
+                            googleEventId: $slot->google_event_id,
+                            teamName: 'Available Slot'
+                        );
+                    } catch (\Exception $e) {
+                        \Log::warning('Google Calendar update failed on cancel', ['error' => $e->getMessage()]);
+                    }
+                }
+            } elseif ($booking->google_event_id) {
+                // Recurring occurrence — this booking had its own event
+                // (there's no shared placeholder for this specific date to
+                // fall back to), so remove it entirely rather than relabeling.
+                try {
+                    $this->calendar->cancelBookingEvent($slot->expert_id, $booking->google_event_id);
+                } catch (\Exception $e) {
+                    \Log::warning('Google Calendar event deletion failed on cancel', ['error' => $e->getMessage()]);
+                }
+            }
+        }
 
         return response()->json(['success' => true]);
     }

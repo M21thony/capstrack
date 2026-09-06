@@ -9,7 +9,6 @@ use App\Models\StudentRole;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
 use App\Models\TeamInvitation;
-use App\Support\StudentTeam;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -29,7 +28,8 @@ class InvitationController extends Controller
 
         // If the sender already belongs to a team, they cannot send join requests
         if ($validated['type'] === 'request') {
-            if (StudentTeam::has($studentId)) {
+            $senderSy = StudentSchoolYear::where('student_id', $studentId)->first();
+            if ($senderSy?->team_id) {
                 if ($request->expectsJson()) {
                     return response()->json([
                         'success' => false,
@@ -157,10 +157,10 @@ class InvitationController extends Controller
         $joiningStudent = Student::find($joinedStudentId);
 
         // Auto-close team if it has reached full capacity
-        if ($team && $team->team_status === 'Active') {
+        if ($team && $team->team_status === 'on-going') {
             $currentCount = StudentSchoolYear::where('team_id', $team->team_id)->count();
             if ($currentCount >= $team->member_count) {
-                $team->update(['team_status' => 'Full']);
+                $team->update(['team_status' => 'closed']);
                 $this->logActivity(
                     $team->leader_id,
                     'team_auto_closed',
