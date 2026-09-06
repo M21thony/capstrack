@@ -161,24 +161,29 @@
          used to be a card title with the sections underneath in grey, which
          said the same thing in two lines and left the buttons sharing a row
          with a filter. --}}
+@php
+      // The one number a CaPSA is looking for on this page that the list
+      // itself will not tell them without scrolling all of it.
+      $unteamed = $students->filter(fn ($s) => ! ($s->currentSy && $s->currentSy->team))->count();
+    @endphp
     <div class="page-head">
       <div class="page-head-text">
-        {{ $students->count() }} {{ Str::plural('student', $students->count()) }}
-        @if (! empty($adminSections)) · {{ implode(', ', $adminSections) }} @endif
+        <span class="page-count">{{ $students->count() }}</span>
+        <span class="page-count-noun">{{ Str::plural('student', $students->count()) }}</span>
+        <span class="page-facts">
+          @foreach ($adminSections as $label)
+            <span class="fact">{{ $label }}</span>
+          @endforeach
+          @if ($unteamed)
+            <span class="fact fact-warn">{{ $unteamed }} without a team</span>
+          @endif
+        </span>
       </div>
-      @if ($viewerIsCapsa)
-        <div class="page-head-actions">
-          <button type="button" class="btn" onclick="openStudentRosterModal()">Upload List</button>
-          <button type="button" class="btn btn-primary" onclick="openAddStudent()">
-            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 4h16v16H4z"/><path d="M4 7l8 6 8-6"/></svg>
-            Add Student
-          </button>
-        </div>
-      @endif
     </div>
 
-    {{-- Filters on their own line, the search included: a list this long is
-         read by looking for one person more often than by scrolling. --}}
+    {{-- Everything you do to the list on one line: look for someone, narrow
+         it down, or add to it. They were on two, which put a button directly
+         above a dropdown it had nothing to do with. --}}
     <div class="page-filters">
       <div class="experts-search">
         <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -203,13 +208,19 @@
         @endforeach
       </select>
       <select class="input page-filter" id="team-filter" onchange="filterStudents()">
-        {{-- Short enough to leave the select the same width as its two
-             neighbours, which is what keeps the header's buttons sitting on
-             the same grid as the filters. --}}
         <option value="">All students</option>
         <option value="0">Without a team</option>
         <option value="1">In a team</option>
       </select>
+      @if ($viewerIsCapsa)
+        <span class="page-filters-actions">
+          <button type="button" class="btn" onclick="openStudentRosterModal()">Upload List</button>
+          <button type="button" class="btn btn-primary" onclick="openAddStudent()">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 4h16v16H4z"/><path d="M4 7l8 6 8-6"/></svg>
+            Add Student
+          </button>
+        </span>
+      @endif
     </div>
 
     @if ($viewerIsCapsa)

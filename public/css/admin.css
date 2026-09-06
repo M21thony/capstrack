@@ -1688,16 +1688,37 @@ tr.rs-on > td{background:var(--accent-light)}
    get a line of their own underneath. */
 .page-head{display:flex;align-items:center;justify-content:space-between;gap:16px;
   flex-wrap:wrap;margin-bottom:12px}
-.page-head-text{font-size:13px;color:var(--text2);font-variant-numeric:tabular-nums}
+/* The figure first and large, then what it counts, then the facts about it as
+   chips. It was one grey sentence, which is the same information arranged so
+   that none of it is findable at a glance. */
+.page-head-text{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;
+  font-size:13px;color:var(--text2);font-variant-numeric:tabular-nums}
+.page-count{font-size:21px;font-weight:700;color:var(--text);line-height:1.1;
+  font-variant-numeric:tabular-nums}
+.page-count-noun{font-size:13px;color:var(--text2)}
+.page-facts{display:inline-flex;align-items:baseline;gap:5px;flex-wrap:wrap;margin-left:3px}
+/* A chip per fact rather than a comma list: a section label is a thing, and
+   at a glance you count them instead of reading them. */
+.fact{font-size:11px;font-weight:500;color:var(--text2);background:var(--bg2);
+  border:1px solid var(--border);border-radius:5px;padding:2px 7px;white-space:nowrap}
+.fact-warn{color:var(--amber);border-color:#e8d3b4;background:var(--amber-bg)}
 .page-head-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+/* Search, filters and the ways in, all on one line. They were on two, which
+   put a button directly above a dropdown it had nothing to do with. */
+.page-filters-actions{display:flex;align-items:center;gap:8px;margin-left:4px}
 
 .page-filters{display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap}
 .page-filters .experts-search{flex:1;min-width:200px;margin:0}
-.page-filter{width:auto;min-width:150px;font-size:12.5px}
+.page-filter{width:auto;min-width:138px;font-size:12.5px}
 
+@media (max-width:900px){
+  /* Not enough room for one line any more, so the ways in take their own. */
+  .page-filters-actions{margin-left:auto}
+}
 @media (max-width:700px){
   .page-head{align-items:flex-start}
-  .page-head-actions{width:100%}
+  .page-head-actions,.page-filters-actions{width:100%;margin-left:0}
+  .page-filters-actions .btn{flex:1;justify-content:center}
   .page-filter{flex:1 1 45%;min-width:0}
 }
 
@@ -1724,6 +1745,7 @@ tr.rs-on > td{background:var(--accent-light)}
    samples were drawn at. Scoped to these bars, so no form elsewhere moves. */
 .page-filters .input,
 .page-head-actions .btn,
+.page-filters-actions .btn,
 .selbar .btn,
 .selbar .input{
   height:32px;min-height:32px;padding:0 11px;font-size:12.5px;border-radius:6px;line-height:30px}
@@ -1852,9 +1874,11 @@ tr.rs-on > td{background:var(--accent-light)}
    takes its 9px - so "some selected" was drawing off to the right of centre. */
 .rs-box input:indeterminate ~ .rs-tick svg{display:none}
 
-/* A button above a dropdown that is 60px narrower reads as two ragged
-   columns. Same minimum, so the header's actions land on the filters' grid. */
-.page-head-actions .btn{min-width:150px;justify-content:center}
+/* Wide enough to read as a control, not so wide it looks padded out. They
+   used to be stretched to 150px to line up with the dropdowns beneath them;
+   they sit beside those now, so they are sized to their labels again. */
+.page-head-actions .btn,
+.page-filters-actions .btn{min-width:0;justify-content:center;white-space:nowrap}
 
 /* ══ a row's own actions, behind one button ══
    The icons were a luggage tag and a person with a minus beside them, which
@@ -1894,11 +1918,32 @@ tr.rs-on > td{background:var(--accent-light)}
    header for free. */
 .table thead tr[hidden]{display:none}
 .table thead tr.rs-bar th{
-  background:var(--accent-light);
-  border-bottom:2px solid #ecdfae;
+  /* Dark on purpose. A pale tint under pale outlined buttons was hard to tell
+     from the heading row it replaces, and the whole point of this row is that
+     the table is now in a different state. Navy is the app's own second
+     colour - the sidebar is made of it - so it is not a new one. */
+  background:var(--navy-mid);
+  border-bottom:2px solid var(--navy-mid);
+  color:var(--navy-text);
   padding:7px 12px;text-transform:none;letter-spacing:0;
 }
 .rs-bar .selbar{margin:0;padding:0;border:0;background:none;border-radius:0}
+.rs-bar .selbar-count{color:var(--accent)}
+.rs-bar .selbar-sep{background:rgba(255,255,255,.18)}
+.rs-bar .selbar-clear{color:rgba(255,255,255,.55)}
+.rs-bar .selbar-clear:hover{color:#fff}
+.rs-bar .selbar .btn:not(.btn-primary){
+  background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.22);color:#fff}
+.rs-bar .selbar .btn:not(.btn-primary):hover{
+  background:rgba(255,255,255,.16);border-color:rgba(255,255,255,.45);color:#fff}
+/* Both classes, so this outranks the neutral rule above rather than losing to
+   it on selector weight and painting the destructive button plain white. */
+.rs-bar .selbar .btn.selbar-danger{color:#ffb3b3;border-color:rgba(255,179,179,.34)}
+.rs-bar .selbar .btn.selbar-danger:hover{background:rgba(220,38,38,.32);border-color:#ff9b9b;color:#fff}
+/* The tick box has to be visible on navy too. */
+.rs-bar .rs-tick{border-color:rgba(255,255,255,.42);background:transparent}
+.rs-bar .rs-box input:checked ~ .rs-tick,
+.rs-bar .rs-box input:indeterminate ~ .rs-tick{background:var(--accent);border-color:var(--accent)}
 
 /* ══ the confirm sheet ══ (resources/views/partials/confirm-sheet.blade.php) */
 .cf-sheet{max-width:440px}

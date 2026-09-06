@@ -113,10 +113,11 @@
   .ct-modal-card-wide .ct-modal-actions{justify-content:flex-end}
   .ct-modal-card-wide .ct-modal-actions .ct-btn{flex:0 0 auto;min-width:160px}
 
-  /* Expert Management (Admin's copy - full CRUD + Manage Roles). CaPSA has
-     its own separate, leaner copy at resources/views/capsa/experts.blade.php
-     (view + Manage Roles only) - these two used to be one file switching on
-     viewer role, which made neither version easy to read on its own. */
+  /* Expert Management (Admin's copy: CaPSAs only, and naming them is the
+     whole job). The CaPSA's own copy is resources/views/capsa/experts.blade.php
+     - the faculty, their roles, and who advises whom. These two used to be one
+     file switching on the viewer's role, which made neither version easy to
+     read on its own. */
   .expert-role-badges{
     display:flex;
     flex-wrap:wrap;
@@ -462,17 +463,15 @@
          holds, and the two things you can do to it sit opposite. --}}
     <div class="page-head">
       <div class="page-head-text">
-        {{ $experts->count() }} {{ Str::plural('CaPSA', $experts->count()) }}
-        @if ($sectionsCovered)
-          · covering {{ $sectionsCovered }} {{ Str::plural('section', $sectionsCovered) }}
-        @endif
-      </div>
-      <div class="page-head-actions">
-        {{-- Admin's job here is naming CaPSAs. Getting the rest of the faculty
-             into the system is the CaPSA's, from their own copy of this page,
-             so the list upload and the one-off Add Expert form are not offered
-             twice. --}}
-        <button type="button" class="btn btn-primary" onclick="addCapsa()">Add CaPSA</button>
+        <span class="page-count">{{ $experts->count() }}</span>
+        <span class="page-count-noun">{{ Str::plural('CaPSA', $experts->count()) }}</span>
+        <span class="page-facts">
+          @if ($sectionsCovered)
+            <span class="fact">{{ $sectionsCovered }} {{ Str::plural('section', $sectionsCovered) }} covered</span>
+          @else
+            <span class="fact fact-warn">no sections covered yet</span>
+          @endif
+        </span>
       </div>
     </div>
 
@@ -490,6 +489,13 @@
         <option value="full">Full</option>
         <option value="offline">Offline</option>
       </select>
+      <span class="page-filters-actions">
+        {{-- Admin's job here is naming CaPSAs. Getting the rest of the faculty
+             into the system is the CaPSA's, from their own copy of this page,
+             so the list upload and the one-off Add Expert form are not offered
+             twice. --}}
+        <button type="button" class="btn btn-primary" onclick="addCapsa()">Add CaPSA</button>
+      </span>
     </div>
 
     @include('partials.row-select', [
