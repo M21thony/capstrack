@@ -25,7 +25,7 @@ class InvitationController extends Controller
         ]);
 
         $student = $request->user();
-        $studentId = $student ? $student->student_id : 8;
+        $studentId = $student->student_id;
 
         // If the sender already belongs to a team, they cannot send join requests
         if ($validated['type'] === 'request') {
@@ -133,7 +133,7 @@ class InvitationController extends Controller
     public function accept(Request $request, TeamInvitation $invitation): JsonResponse|RedirectResponse
     {
         $student = $request->user();
-        $studentId = $student ? $student->student_id : 8;
+        $studentId = $student->student_id;
 
         $memberRoleId = StudentRole::nextAvailableMemberRoleId($invitation->team_id);
 
@@ -261,7 +261,7 @@ class InvitationController extends Controller
     public function decline(Request $request, TeamInvitation $invitation): JsonResponse|RedirectResponse
     {
         $student = $request->user();
-        $studentId = $student ? $student->student_id : 8;
+        $studentId = $student->student_id;
 
         // User must be sender or receiver to decline
         if ($invitation->sender_id !== $studentId && $invitation->receiver_id !== $studentId) {
@@ -309,10 +309,18 @@ class InvitationController extends Controller
             ->with('status', 'Invitation declined.');
     }
 
-    public function popup(Request $request): JsonResponse
+    /**
+     * GET /invitations — what is waiting for you, minus what you put off.
+     *
+     * This was GET /invitations/popup, named after the thing on screen rather
+     * than the thing being fetched. It is the collection, filtered to the
+     * pending ones addressed to you; the popup is one of the places that
+     * reads it.
+     */
+    public function index(Request $request): JsonResponse
     {
         $student = $request->user();
-        $studentId = $student ? $student->student_id : 8;
+        $studentId = $student->student_id;
 
         $dismissed = (array) $request->session()->get('dismissed_invitations', []);
 

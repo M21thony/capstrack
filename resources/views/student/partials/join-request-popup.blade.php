@@ -295,7 +295,7 @@
     if (act === 'remind') jrpSubmit(remindUrl.replace('__ID__', id));
   });
 
-  fetch('{{ route('invitations.popup') }}', {
+  fetch('{{ route('invitations.index') }}', {
     headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
   })
     .then(function (r) { return r.json(); })
