@@ -120,7 +120,10 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
 .edit-mode .pm-edit-only{display:block}
 
 /* ── SIGNATURE CREDENTIALS ── */
-.legal-credits{margin-top:60px;padding-top:20px;border-top:1px dashed var(--border);text-align:center;opacity:0.5;padding-bottom:20px}
+/* Their 8px: the credits used to sit 60px below everything, which on a short
+   team page left a lane of nothing above them. The face stays ours - Space
+   Mono was dropped from this project deliberately. */
+.legal-credits{margin-top:8px;padding-top:20px;border-top:1px dashed var(--border);text-align:center;opacity:0.5;padding-bottom:20px}
 .credits-title{font-variant-numeric:tabular-nums;font-size:8px;font-weight:600;letter-spacing:1px;color:var(--text3);text-transform:uppercase;margin-bottom:4px}
 .credits-names{font-size:9px;font-weight:500;color:var(--text3);letter-spacing:0.3px}
 
@@ -161,7 +164,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
 .name-label{font-size:12px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:100%}
 .goal-label{font-size:10px;color:var(--text3);margin-top:2px;font-weight:500;text-transform:uppercase;letter-spacing:0.5px}
 .member-count-tag{background:var(--bg3);color:var(--text2);font-size:10px;padding:4px 10px;border-radius:6px;border:1px solid var(--border);font-weight:700;margin-top:5px;display:inline-block}
-.tutorial-note{margin-top:24px;padding:12px 0;display:flex;gap:24px;border-top:1px solid var(--border);justify-content:center}
+.tutorial-note{margin-top:4px;padding:12px 0;display:flex;gap:24px;border-top:1px solid var(--border);justify-content:center}
 .tutorial-item{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px}
 .dot-guide{width:8px;height:8px;border-radius:50%}
 
@@ -481,7 +484,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
   .dot-guide{width:4px!important;height:4px!important}
 
   /* ── Legal Credits ── */
-  .legal-credits{margin-top:20px!important;padding-top:10px!important;padding-bottom:10px!important}
+  .legal-credits{margin-top:8px!important;padding-top:8px!important;padding-bottom:8px!important}
+  .tutorial-note{margin-top:2px!important;padding:6px 0!important}
   .credits-title{font-size:6px!important}
   .credits-names{font-size:7px!important}
 }
@@ -494,4 +498,6 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
   .dot-guide{width:3px!important;height:3px!important}
   .credits-title{font-size:5px!important}
   .credits-names{font-size:6px!important}
+  .legal-credits{margin-top:4px!important;padding-top:6px!important;padding-bottom:6px!important}
+  .tutorial-note{margin-top:2px!important}
 }
