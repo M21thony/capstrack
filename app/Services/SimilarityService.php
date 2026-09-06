@@ -3,6 +3,8 @@
 namespace App\Services;
 
 use App\Models\ArchivedDocument;
+use App\Models\CapstoneExpert;
+use App\Models\Role;
 use Illuminate\Support\Facades\Log;
 use Smalot\PdfParser\Parser;
 
@@ -820,107 +822,147 @@ PROMPT;
         return $results;
     }
 
-    // ── 7. Suggest instructors ────────────────────────────
+    // ── 7. Suggest experts ────────────────────────────────
+
+    /**
+     * What each role is actually for, in the words the model is given.
+     *
+     * This is the whole of the fix a CaPSA asked for. The suggestion used to
+     * rank every student-facing expert against the proposal on expertise
+     * alone and hand back the top three, with no mention anywhere of what
+     * role any of them held - so an adviser whose strength is research
+     * writing competed for the same three slots as a consultant whose
+     * strength is machine learning, and lost, because a proposal about
+     * machine learning reads as a machine-learning problem.
+     *
+     * They are ranked inside their own role now. A team gets an adviser, a
+     * consultant and a grammarian suggestion, each chosen for what that role
+     * is there to do.
+     */
+    private const ROLE_BRIEFS = [
+        'adviser' => 'Guides the study as a whole: the research question, the methodology, '
+            .'how the paper is argued and written. Favour expertise in research methods, '
+            .'academic writing, statistics, or the subject area the study sits in.',
+        'consultant' => 'Advises on building the thing: architecture, the stack, the '
+            .'algorithms, whether it can be built at all. Favour hands-on technical '
+            .'expertise in what the system is made of.',
+        'grammarian' => 'Reads for language, structure and format before submission. '
+            .'Favour expertise in technical writing, editing, or documentation.',
+    ];
+
     public function suggestInstructors(array $concepts): array
     {
-        // Only experts a team can actually engage: approved, and holding at
-        // least one student-facing role. Suggesting an Admin or a CAPSA-only
-        // account gives the student a name they cannot apply to.
-        $experts = \DB::table('capstone_experts as e')
-            ->leftJoin('expert_expertise as ex', 'e.expert_id', '=', 'ex.expert_id')
-            ->where('e.approved_status', 1)
-            ->whereExists(function ($q) {
-                $q->select(\DB::raw(1))
-                    ->from('expert_roles as er')
-                    ->join('roles as r', 'r.role_id', '=', 'er.role_id')
-                    ->whereColumn('er.expert_id', 'e.expert_id')
-                    ->whereIn('r.role_name', \App\Models\CapstoneExpert::STUDENT_FACING_ROLES);
-            })
-            ->select(
-                'e.expert_id',
-                'e.first_name',
-                'e.last_name',
-                'e.credentials',
-                'e.program',
-                \DB::raw('GROUP_CONCAT(ex.expertise_field SEPARATOR ", ") as expertise')
-            )
-            ->groupBy('e.expert_id', 'e.first_name', 'e.last_name', 'e.credentials', 'e.program')
+        // Only experts a team can actually engage: approved, not deactivated,
+        // and holding at least one student-facing role. Suggesting an Admin or
+        // a CaPSA-only account gives the student a name they cannot apply to.
+        $experts = CapstoneExpert::query()
+            ->where('approved_status', true)
+            ->whereHas('roles', fn ($q) => $q->whereIn('role_name', CapstoneExpert::STUDENT_FACING_ROLES))
+            ->with(['roles', 'expertise'])
             ->get();
 
         if ($experts->isEmpty()) {
             return [];
         }
 
-        $validIds = $experts->pluck('expert_id')->toArray();
-        $expertMap = $experts->keyBy('expert_id');
+        // Which experts genuinely hold each role, so the model's answer can be
+        // checked against the database rather than trusted.
+        $byRole = [];
+        foreach (CapstoneExpert::STUDENT_FACING_ROLES as $role) {
+            $byRole[$role] = $experts
+                ->filter(fn ($e) => $e->roles->contains('role_name', $role))
+                ->keyBy('expert_id');
+        }
 
-        $domain = $concepts['domain'];
-        $keywords = implode(', ', $concepts['keywords'] ?? []);
-        $listJson = json_encode($experts->map(fn ($e) => [
+        $results = [];
+
+        foreach (CapstoneExpert::STUDENT_FACING_ROLES as $role) {
+            $candidates = $byRole[$role];
+
+            if ($candidates->isEmpty()) {
+                continue;
+            }
+
+            $pick = $this->bestForRole($role, $candidates, $concepts);
+
+            if ($pick) {
+                $results[] = $pick;
+            }
+        }
+
+        return $results;
+    }
+
+    /**
+     * The best of one role's candidates for this proposal.
+     *
+     * One model call per role rather than one for all of them. It is two extra
+     * round trips, and it is the only way the grammarian slot cannot be won by
+     * a machine-learning specialist: they are not in the list.
+     */
+    private function bestForRole(string $role, $candidates, array $concepts): ?array
+    {
+        $label = Role::labelFor($role);
+
+        $listJson = json_encode($candidates->map(fn ($e) => [
             'id' => $e->expert_id,
-            'name' => $e->first_name.' '.$e->last_name,
-            'expertise' => $e->expertise ?? 'General',
-        ])->values()->toArray());
+            'name' => $e->name,
+            'expertise' => $e->expertise->pluck('expertise_field')->implode(', ') ?: 'General',
+        ])->values()->all());
 
-        $prompt = "You are matching a capstone pre-proposal to instructors using semantic analysis.\n"
-                ."Analyze the meaning and relevance of each instructor's expertise against the proposal.\n"
-                ."IMPORTANT: You MUST only return instructors from the list below using their exact IDs.\n"
-                ."Do NOT invent new instructors. If only 1 instructor exists, return only that 1.\n"
-                ."Return ONLY a valid JSON array. No markdown. No explanation.\n\n"
-                .'[{"id":<exact id from list>,"name":"exact name","reason":"semantic reason why expertise matches"}]'
+        $prompt = "You are matching a capstone pre-proposal to one {$label}.\n"
+                ."What a {$label} does: ".self::ROLE_BRIEFS[$role]."\n\n"
+                ."Pick the single best match from the list. You MUST use an exact id from it.\n"
+                ."Do NOT invent anyone. Return ONLY a valid JSON object, no markdown:\n"
+                .'{"id":<exact id>,"reason":"one sentence, why this person for this role"}'
                 ."\n\nPRE-PROPOSAL:"
-                ."\nDomain: {$domain}"
-                ."\nKeywords: {$keywords}"
+                ."\nDomain: {$concepts['domain']}"
+                ."\nKeywords: ".implode(', ', $concepts['keywords'] ?? [])
                 ."\nTopic: {$concepts['main_topic']}"
                 ."\nProblem: {$concepts['problem_statement']}"
-                ."\n\nINSTRUCTOR LIST (ONLY use these exact IDs):\n{$listJson}";
+                ."\n\n".strtoupper($label)." LIST (ONLY use these exact ids):\n{$listJson}";
 
         try {
-            $raw = $this->ollama->generate($prompt, 800);
+            $raw = $this->ollama->generate($prompt, 300);
             $cleaned = trim(preg_replace('/```json|```/i', '', $raw));
 
-            preg_match('/\[.*\]/s', $cleaned, $matches);
-            $jsonStr = $matches[0] ?? $cleaned;
-            $suggests = json_decode($jsonStr, true);
+            preg_match('/\{.*\}/s', $cleaned, $matches);
+            $decoded = json_decode($matches[0] ?? $cleaned, true);
 
-            if (json_last_error() !== JSON_ERROR_NONE || ! is_array($suggests)) {
-                Log::error('suggestInstructors parse error', ['raw' => $raw]);
-                $suggests = [];
+            $expert = is_array($decoded)
+                ? $candidates->get((int) ($decoded['id'] ?? 0))
+                : null;
+
+            if ($expert) {
+                return $this->suggestion($expert, $role, $label, $decoded['reason'] ?? '');
             }
 
-            $results = [];
-            foreach ($suggests as $s) {
-                $id = (int) ($s['id'] ?? 0);
-                if (! in_array($id, $validIds)) {
-                    continue;
-                }
-
-                $expert = $expertMap->get($id);
-                $results[] = [
-                    'id' => $id,
-                    'name' => $expert->first_name.' '.$expert->last_name,
-                    'expertise' => $expert->expertise ?? 'General',
-                    'reason' => $s['reason'] ?? '',
-                ];
-            }
-
-            if (empty($results)) {
-                foreach ($experts as $e) {
-                    $results[] = [
-                        'id' => $e->expert_id,
-                        'name' => $e->first_name.' '.$e->last_name,
-                        'expertise' => $e->expertise ?? 'General',
-                        'reason' => 'Semantically relevant based on expertise in '.($e->expertise ?? 'computing').'.',
-                    ];
-                }
-            }
-
-            return array_slice($results, 0, 3);
-
+            Log::warning('suggestInstructors: no usable pick', ['role' => $role, 'raw' => $raw]);
         } catch (\Exception $e) {
-            Log::error('suggestInstructors error', ['error' => $e->getMessage()]);
-
-            return [];
+            Log::error('suggestInstructors error', ['role' => $role, 'error' => $e->getMessage()]);
         }
+
+        // A name with a plain reason beats an empty panel: the student can
+        // still see who holds the role and decide for themselves.
+        $expert = $candidates->first();
+
+        return $expert ? $this->suggestion($expert, $role, $label, '') : null;
+    }
+
+    /** @return array<string,mixed> */
+    private function suggestion($expert, string $role, string $label, string $reason): array
+    {
+        $expertise = $expert->expertise->pluck('expertise_field')->implode(', ') ?: 'General';
+
+        return [
+            'id' => $expert->expert_id,
+            'name' => $expert->name,
+            'expertise' => $expertise,
+            'role' => $role,
+            'role_label' => $label,
+            'reason' => $reason !== ''
+                ? $reason
+                : 'Holds the '.strtolower($label).' role, with expertise in '.$expertise.'.',
+        ];
     }
 }

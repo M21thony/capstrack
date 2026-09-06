@@ -253,7 +253,7 @@ class AdminTeamVerificationTest extends TestCase
 
         // Up to whatever submitting currently asks for, rather than a fixed
         // three - the minimum is a rule that moves.
-        foreach (range(2, \App\Http\Controllers\PreProposalController::MINIMUM_PROPOSALS) as $slot) {
+        foreach (range(2, \App\Http\Controllers\PreProposalController::RECOMMENDED_PROPOSALS) as $slot) {
             $this->createPendingProposal($team, $leader, $slot, "Candidate Title Number {$slot} For This Team To Consider Fully");
         }
 

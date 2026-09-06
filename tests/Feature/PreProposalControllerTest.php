@@ -139,7 +139,7 @@ class PreProposalControllerTest extends TestCase
      */
     private function saveTheMinimum(): void
     {
-        foreach (range(1, PreProposalController::MINIMUM_PROPOSALS) as $n) {
+        foreach (range(1, PreProposalController::RECOMMENDED_PROPOSALS) as $n) {
             $this->checkAndStore("p{$n}.pdf");
         }
     }
@@ -156,7 +156,7 @@ class PreProposalControllerTest extends TestCase
         $this->saveTheMinimum();
 
         $this->assertSame('Active', $team->fresh()->team_status);
-        $this->assertSame(PreProposalController::MINIMUM_PROPOSALS, $team->preProposals()->count());
+        $this->assertSame(PreProposalController::RECOMMENDED_PROPOSALS, $team->preProposals()->count());
         $this->assertSame(0, $team->preProposals()->whereNotNull('submitted_at')->count());
     }
 
@@ -184,7 +184,7 @@ class PreProposalControllerTest extends TestCase
         $this->saveTheMinimum();
         $this->checkAndStore('one-more.pdf');
 
-        $beyond = PreProposalController::MINIMUM_PROPOSALS + 1;
+        $beyond = PreProposalController::RECOMMENDED_PROPOSALS + 1;
 
         $this->assertSame($beyond, $team->preProposals()->count());
         $this->assertDatabaseHas('capstone_pre_proposals', ['team_id' => $team->team_id, 'slot' => $beyond]);
@@ -205,7 +205,7 @@ class PreProposalControllerTest extends TestCase
         $this->checkAndStore('p2-revised.pdf');
 
         $this->assertSame(
-            PreProposalController::MINIMUM_PROPOSALS + 1,
+            PreProposalController::RECOMMENDED_PROPOSALS + 1,
             $team->preProposals()->count(),
             'The rejected title should be kept and the replacement saved beside it.',
         );
@@ -215,7 +215,15 @@ class PreProposalControllerTest extends TestCase
         );
     }
 
-    public function test_submitting_requires_the_minimum_number_of_titles(): void
+    /**
+     * Fewer than the suggested four goes through.
+     *
+     * It used to be refused, which pushed a team with two titles they believed
+     * in into writing two they did not, just to unlock the button - and the
+     * CaPSA then had four to read instead of two. The page asks once before
+     * sending fewer; the endpoint does not stand in the way.
+     */
+    public function test_submitting_fewer_than_the_suggested_number_is_allowed(): void
     {
         [$student, $team] = $this->makeLeaderWithTeam();
         $this->mockSimilarityPipeline();
@@ -224,10 +232,36 @@ class PreProposalControllerTest extends TestCase
         $this->checkAndStore('p1.pdf');
         $this->checkAndStore('p2.pdf');
 
-        $this->patch(route('student.pre-proposal.submit'), ['status' => 'submitted'])->assertSessionHas('error');
+        $this->patch(route('student.pre-proposal.submit'), ['status' => 'submitted'])
+            ->assertSessionMissing('error');
 
-        $this->assertSame(0, $team->preProposals()->whereNotNull('submitted_at')->count());
-        $this->assertSame('Active', $team->fresh()->team_status);
+        $this->assertSame(2, $team->preProposals()->whereNotNull('submitted_at')->count());
+    }
+
+    /** One is enough. Nothing at all is not. */
+    public function test_a_single_title_can_be_submitted(): void
+    {
+        [$student, $team] = $this->makeLeaderWithTeam();
+        $this->mockSimilarityPipeline();
+        $this->actingAs($student, 'web');
+
+        $this->checkAndStore('p1.pdf');
+
+        $this->patch(route('student.pre-proposal.submit'), ['status' => 'submitted'])
+            ->assertSessionMissing('error');
+
+        $this->assertSame(1, $team->preProposals()->whereNotNull('submitted_at')->count());
+    }
+
+    public function test_submitting_nothing_is_refused(): void
+    {
+        [$student, $team] = $this->makeLeaderWithTeam();
+        $this->actingAs($student, 'web');
+
+        $this->patch(route('student.pre-proposal.submit'), ['status' => 'submitted'])
+            ->assertSessionHas('error');
+
+        $this->assertSame(0, $team->preProposals()->count());
     }
 
     // Submitting is the one act that hands the team to their CAPSA. It is
@@ -243,7 +277,7 @@ class PreProposalControllerTest extends TestCase
 
         $this->patch(route('student.pre-proposal.submit'), ['status' => 'submitted'])->assertSessionHas('status');
 
-        $this->assertSame(PreProposalController::MINIMUM_PROPOSALS, $team->preProposals()->whereNotNull('submitted_at')->count());
+        $this->assertSame(PreProposalController::RECOMMENDED_PROPOSALS, $team->preProposals()->whereNotNull('submitted_at')->count());
         $this->assertTrue($team->fresh()->hasSubmittedPreProposals());
         $this->assertSame('Active', $team->fresh()->team_status, 'turning in is not a recruitment change');
     }
@@ -292,7 +326,7 @@ class PreProposalControllerTest extends TestCase
         $team->preProposals()->where('slot', 1)->first()->update(['approved_status' => true]);
 
         $this->patch(route('student.pre-proposal.submit'), ['status' => 'draft'])->assertSessionHas('error');
-        $this->assertSame(PreProposalController::MINIMUM_PROPOSALS, $team->preProposals()->whereNotNull('submitted_at')->count());
+        $this->assertSame(PreProposalController::RECOMMENDED_PROPOSALS, $team->preProposals()->whereNotNull('submitted_at')->count());
     }
 
     public function test_a_turned_in_set_cannot_be_added_to(): void
@@ -311,7 +345,7 @@ class PreProposalControllerTest extends TestCase
         $this->post(route('student.pre-proposal.store'), $this->payload($checkId))
             ->assertSessionHas('error');
 
-        $this->assertSame(PreProposalController::MINIMUM_PROPOSALS, $team->preProposals()->count());
+        $this->assertSame(PreProposalController::RECOMMENDED_PROPOSALS, $team->preProposals()->count());
     }
 
     // team_status only carries recruitment now, so "complete" is not a value
@@ -617,9 +651,13 @@ class PreProposalControllerTest extends TestCase
 
     // The locked Submit button has to say what unlocks it, not just sit there
     // greyed out.
-    public function test_the_locked_submit_button_says_how_many_titles_are_needed(): void
+    /**
+     * With one title the button works, and the page carries the number it
+     * suggests plus the prompt that asks before sending fewer.
+     */
+    public function test_one_title_leaves_the_submit_button_usable(): void
     {
-        [$student, $team] = $this->makeLeaderWithTeam();
+        [$student] = $this->makeLeaderWithTeam();
         $this->mockSimilarityPipeline();
         $this->actingAs($student, 'web');
 
@@ -628,7 +666,9 @@ class PreProposalControllerTest extends TestCase
         $response = $this->get(route('student.duplication'));
 
         $response->assertStatus(200);
-        $response->assertSee('Have at least '.PreProposalController::MINIMUM_PROPOSALS.' pre-proposal titles saved before you can submit. You have 1.');
+        $response->assertDontSee('Have at least');
+        $response->assertSee('data-recommended="'.PreProposalController::RECOMMENDED_PROPOSALS.'"', false);
+        $response->assertSee('confirmSubmitCount', false);
     }
 
     /**
