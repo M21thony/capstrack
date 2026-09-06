@@ -216,7 +216,7 @@
         <span class="page-filters-actions">
           <button type="button" class="btn" onclick="openStudentRosterModal()">Upload List</button>
           <button type="button" class="btn btn-primary" onclick="openAddStudent()">
-            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 4h16v16H4z"/><path d="M4 7l8 6 8-6"/></svg>
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             Add Student
           </button>
         </span>
