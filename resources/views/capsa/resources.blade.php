@@ -246,7 +246,27 @@
             <b>viewable by anyone with the link</b>, which is how students open them.</span>
           </p>
 
+          <div class="import-bulk" id="import-bulk" hidden>
+            <span class="import-bulk-count" id="import-bulk-count">0 selected</span>
+            <select class="input" id="import-bulk-cat" onchange="bulkCategory(this)">
+              <option value="">Set category to…</option>
+              <option value="pre-proposal">Pre-Proposal Template</option>
+              <option value="ch1-3">Chapter 1–3 Template</option>
+              <option value="ch4-5">Chapter 4–5 Template</option>
+              <option value="final">Final Manuscript Template</option>
+              <option value="presentation">Presentation Template</option>
+              <option value="lesson">Lesson / Reference Material</option>
+              <option value="forms">Forms &amp; Checklists</option>
+              <option value="other">Other</option>
+            </select>
+            <button class="btn btn-ghost import-bulk-drop" onclick="bulkRemove()">Remove</button>
+          </div>
+
           <div class="import-head">
+            <label class="pick-box import-h-pick" title="Select all">
+              <input type="checkbox" id="import-all" onchange="toggleAllPicked(this.checked)">
+              <span class="pick-tick"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span>
+            </label>
             <span class="import-h-name">File</span>
             <span class="import-h-cat">What kind of file is it?</span>
             <span class="import-h-x"></span>
@@ -603,7 +623,7 @@ function onFolderSelect(e){
   // and each needs saying what it is.
   pickedSource = 'local';
   picked = taking.map(function(f){
-    return { id: null, name: f.name, file: f, category: guessCategory(f.name) };
+    return { id: null, name: f.name, file: f, category: guessCategory(f.name), sel: false };
   });
   openImport();
 }
@@ -758,7 +778,7 @@ function onPicked(data){
 }
 
 function asPicked(d){
-  return { id: d.id, name: d.name, mimeType: d.mimeType, category: guessCategory(d.name) };
+  return { id: d.id, name: d.name, mimeType: d.mimeType, category: guessCategory(d.name), sel: false };
 }
 
 function openImport(){
@@ -807,7 +827,9 @@ function renderImportList(){
   const list = document.getElementById('import-list');
 
   list.innerHTML = picked.map(function(f, i){
-    return '<div class="import-row">'
+    return '<div class="import-row' + (f.sel ? ' is-picked' : '') + '">'
+      + '<label class="pick-box"><input type="checkbox" ' + (f.sel ? 'checked ' : '')
+      + 'onchange="togglePicked(' + i + ', this.checked)"><span class="pick-tick"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span></label>'
       + '<span class="import-name" title="' + esc(f.name) + '">' + esc(f.name) + '</span>'
       + '<select class="input import-cat" onchange="setPickedCategory(' + i + ', this.value)">'
       + CAT_OPTIONS.replace('value="' + f.category + '"', 'value="' + f.category + '" selected')
@@ -817,23 +839,85 @@ function renderImportList(){
       + '</button></div>';
   }).join('');
 
-  const guessed = picked.filter(function(f){ return f.category; }).length;
+  // What is left to answer, not what was guessed - the guess count stops
+  // being true the moment anything is set by hand.
+  const missing = picked.filter(function(f){ return !f.category; }).length;
   const note = document.getElementById('import-guess-note');
   if(note){
-    note.textContent = guessed
-      ? 'Guessed ' + guessed + ' of ' + picked.length + ' from the file names — change any that are wrong.'
-      : 'Set what each file is before taking them on.';
+    note.textContent = missing
+      ? missing + (missing === 1 ? ' file still needs' : ' files still need')
+        + ' a category — the rest were guessed from their names, so check those too.'
+      : 'Every file has a category. Guesses came from the file names, so check them.';
   }
 
   document.getElementById('import-count').textContent = picked.length;
   document.getElementById('import-btn').disabled = !picked.length;
+  refreshBulkBar();
 }
 
 function setPickedCategory(i, value){
   if(picked[i]) picked[i].category = value;
-  const note = document.getElementById('import-guess-note');
-  const missing = picked.filter(function(f){ return !f.category; }).length;
-  if(note && !missing) note.textContent = 'Every file has a category.';
+  renderImportList();
+}
+
+// ── acting on several rows at once ──
+// A wrong guess is usually wrong the same way for a run of files, and dropping
+// them one at a time is the tedious part of a folder with twenty things in it.
+
+function togglePicked(i, on){
+  if(picked[i]) picked[i].sel = on;
+  refreshBulkBar();
+}
+
+function toggleAllPicked(on){
+  picked.forEach(function(f){ f.sel = on; });
+  renderImportList();
+}
+
+function selectedPicked(){
+  return picked.filter(function(f){ return f.sel; });
+}
+
+function refreshBulkBar(){
+  const n = selectedPicked().length;
+  const bar = document.getElementById('import-bulk');
+  const all = document.getElementById('import-all');
+
+  bar.hidden = n === 0;
+  document.getElementById('import-bulk-count').textContent =
+    n + (n === 1 ? ' file selected' : ' files selected');
+
+  if(all){
+    all.checked = n > 0 && n === picked.length;
+    // Neither all nor none, so the box says "some" rather than lying.
+    all.indeterminate = n > 0 && n < picked.length;
+  }
+
+  document.querySelectorAll('.import-row').forEach(function(row, i){
+    row.classList.toggle('is-picked', !!(picked[i] && picked[i].sel));
+  });
+}
+
+function bulkCategory(sel){
+  const value = sel.value;
+  if(!value) return;
+
+  const chosen = selectedPicked();
+  chosen.forEach(function(f){ f.category = value; });
+  sel.value = '';
+
+  renderImportList();
+  showToast(chosen.length + (chosen.length === 1 ? ' file set.' : ' files set.'));
+}
+
+function bulkRemove(){
+  const gone = selectedPicked().length;
+  picked = picked.filter(function(f){ return !f.sel; });
+
+  if(!picked.length){ closeImport(); showToast('Nothing left to add.'); return; }
+
+  renderImportList();
+  showToast(gone + (gone === 1 ? ' file removed.' : ' files removed.'));
 }
 
 function dropPicked(i){
