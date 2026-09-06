@@ -225,9 +225,11 @@ class AdminExpertsPageTest extends TestCase
         $response->assertSee('cx-chip cx-chip-n', false);
         $response->assertSee('+2', false);
 
-        // What the filter reads, so it no longer counts columns.
+        // What the filter reads, so it no longer counts columns. Roles are
+        // not among them any more: Admin's copy of this page lists CaPSAs and
+        // nothing else, so a filter over roles could only ever return nothing.
         $response->assertSee('data-status="', false);
-        $response->assertSee('data-roles="', false);
         $response->assertSee('data-search="', false);
+        $response->assertDontSee('data-roles="', false);
     }
 }

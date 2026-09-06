@@ -90,7 +90,6 @@ $pagesBothRolesOpen = function () {
     Route::get('/experts', [AdminExpertsController::class, 'index'])->name('experts');
     Route::post('/experts', [AdminExpertsController::class, 'store'])->name('experts.store');
     Route::put('/experts/{expert}', [AdminExpertsController::class, 'update'])->name('experts.update');
-    Route::put('/experts/{expert}/roles', [AdminExpertsController::class, 'updateRoles'])->name('experts.update-roles');
     Route::delete('/experts/{expert}', [AdminExpertsController::class, 'destroy'])->name('experts.destroy');
     Route::put('/notifications/seen', function (Request $request) {
         $ids = $request->input('ids', []);
@@ -166,6 +165,12 @@ Route::middleware('expert.capsa')->group(function () {
     // categories is CaPSA's call, not Admin's.
     Route::get('/approval', [AdminApprovalController::class, 'index'])->name('approval');
     Route::patch('/approval/{expert_id}', [AdminApprovalController::class, 'update'])->name('approval.update');
+    // Changing them afterwards is the same call, so it sits beside it rather
+    // than in the shared block. Admin's copy of Expert Management lists
+    // CaPSAs and only CaPSAs, so there was never an expert on that page whose
+    // roles an Admin could be setting - and a button they cannot use is a
+    // smaller problem than an endpoint they still can.
+    Route::put('/experts/{expert}/roles', [AdminExpertsController::class, 'updateRoles'])->name('experts.update-roles');
     Route::get('/panel_assignment', [AdminPanelAssignmentController::class, 'index'])->name('panel_assignment');
     // Team Management is the single page for everything about the teams
     // in a CaPSA's sections. Team Verification's actions keep their old
