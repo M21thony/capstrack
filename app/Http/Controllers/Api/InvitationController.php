@@ -11,6 +11,7 @@ use App\Models\StudentRole;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
 use App\Models\TeamInvitation;
+use App\Support\StudentTeam;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -43,8 +44,7 @@ class InvitationController extends Controller
         $studentId = $student->student_id;
 
         if ($validated['type'] === 'request') {
-            $senderSy = StudentSchoolYear::where('student_id', $studentId)->first();
-            if ($senderSy?->team_id) {
+            if (StudentTeam::has($studentId)) {
                 return response()->json([
                     'message' => 'You are already in a team. Leave your team first before joining another.',
                 ], 422);
@@ -109,6 +109,23 @@ class InvitationController extends Controller
         ], 201);
     }
 
+    /**
+     * Accepting and declining are the same thing to the invitation: its
+     * status changes. So both arrive here as a PATCH carrying the status
+     * they want, and the work stays in the two methods that already did
+     * it - this only decides which one runs.
+     */
+    public function update(Request $request, TeamInvitation $invitation): JsonResponse
+    {
+        $status = $request->validate([
+            'status' => ['required', 'in:accepted,declined'],
+        ])['status'];
+
+        return $status === 'accepted'
+            ? $this->accept($request, $invitation)
+            : $this->decline($request, $invitation);
+    }
+
     public function accept(Request $request, TeamInvitation $invitation): JsonResponse
     {
         $student = $request->user();
@@ -146,10 +163,10 @@ class InvitationController extends Controller
         $team = Team::find($invitation->team_id);
         $joiningStudent = Student::find($joinedStudentId);
 
-        if ($team && $team->team_status === 'on-going') {
+        if ($team && $team->team_status === 'Active') {
             $currentCount = StudentSchoolYear::where('team_id', $team->team_id)->count();
             if ($currentCount >= $team->member_count) {
-                $team->update(['team_status' => 'closed']);
+                $team->update(['team_status' => 'Full']);
                 $this->logActivity(
                     $team->leader_id,
                     'team_auto_closed',

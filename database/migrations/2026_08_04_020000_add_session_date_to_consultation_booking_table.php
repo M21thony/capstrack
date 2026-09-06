@@ -2,7 +2,6 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -35,7 +34,7 @@ return new class extends Migration
             if ($booking->recur === 'once' && $booking->specific_date) {
                 $sessionDate = $booking->specific_date;
             } elseif (isset($days[$booking->available_date])) {
-                $createdAt = Carbon::parse($booking->created_at);
+                $createdAt = \Illuminate\Support\Carbon::parse($booking->created_at);
                 $target = $days[$booking->available_date];
                 $diff = ($target - $createdAt->dayOfWeek + 7) % 7;
                 $sessionDate = $createdAt->copy()->addDays($diff)->toDateString();

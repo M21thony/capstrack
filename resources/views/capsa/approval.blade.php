@@ -4,8 +4,9 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Account Approval - CapsTRACK Admin</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="{{ asset('css/admin.css') }}"/>
+@include('partials.skeleton-head', ['skReveal' => 'flex'])
 </head>
 <body>
 
@@ -349,9 +350,14 @@ function filterCards(){
 function updatePendingCount(){
   const count = Object.values(experts).filter(e => e.status==='pending').length;
   document.getElementById('pending-count').textContent = count + ' pending account' + (count!==1?'s':'');
-  const badge = document.getElementById('sidebar-badge');
-  if(count > 0){ badge.textContent = count; badge.style.display=''; }
-  else badge.style.display='none';
+  // #sidebar-badge has not existed since the sidebar was rewritten, so this
+  // threw on every call - and it is called on load, which took the rest of
+  // the script with it.
+  const badge = document.getElementById('sidebar-pending-badge');
+  if (badge) {
+    badge.textContent = count > 99 ? '99+' : count;
+    badge.style.display = count > 0 ? '' : 'none';
+  }
 }
 
 // ── REVIEW MODAL ──────────────────────────────────────────────────────────
@@ -546,12 +552,15 @@ function confirmInlineReject(id){
 function executeAction(id, type, reasonOverride, roleIds){
   if(!id || !type) return;
 
+  // The status is what the request is for; the rest is the detail that
+  // goes with it - a reason when rejecting, the roles when approving.
+  const status = type === 'approve' ? 'approved' : 'rejected';
   let body = null;
   if(type === 'reject'){
     const reason = typeof reasonOverride === 'string' ? reasonOverride : '';
-    body = JSON.stringify({ reason });
+    body = JSON.stringify({ status, reason });
   } else if(type === 'approve'){
-    body = JSON.stringify({ role_ids: roleIds || [] });
+    body = JSON.stringify({ status, role_ids: roleIds || [] });
   }
 
   setActionBusy(id, type, true);
@@ -560,8 +569,8 @@ function executeAction(id, type, reasonOverride, roleIds){
   const cardEl = document.querySelector(`.expert-card[data-id="${id}"]`);
   if(cardEl) cardEl.style.pointerEvents = 'none';
 
-  fetch(`/admin/approval/${id}/${type}`, {
-    method: 'POST',
+  fetch(`/capsa/approval/${id}`, {
+    method: 'PATCH',
     headers: {
       'Content-Type': 'application/json',
       'X-CSRF-TOKEN': '{{ csrf_token() }}',

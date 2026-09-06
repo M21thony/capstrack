@@ -123,7 +123,7 @@ class PersonalInfoOnboardingTest extends TestCase
         ]);
 
         $this->actingAs($student)
-            ->postJson(route('profile.update'), [
+            ->putJson(route('profile.update'), [
                 'first_name' => $student->f_name,
                 'last_name' => $student->l_name,
                 'student_id' => '221009999',
@@ -142,7 +142,7 @@ class PersonalInfoOnboardingTest extends TestCase
         ]);
 
         $this->actingAs($student)
-            ->postJson(route('profile.update'), [
+            ->putJson(route('profile.update'), [
                 'first_name' => 'Maria',
                 'last_name' => 'Santos',
                 'avatar' => '../../storage/evil.jpg',
@@ -273,7 +273,7 @@ class PersonalInfoOnboardingTest extends TestCase
         ]);
 
         $this->actingAs($student)
-            ->postJson(route('profile.update'), [
+            ->putJson(route('profile.update'), [
                 'first_name' => 'NewName',
                 'last_name' => 'NewLast',
             ])

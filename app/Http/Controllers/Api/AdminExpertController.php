@@ -5,8 +5,6 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\CapstoneExpert;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 class AdminExpertController extends Controller
 {
@@ -33,37 +31,9 @@ class AdminExpertController extends Controller
         ]);
     }
 
-    public function transferRights(Request $request): JsonResponse
-    {
-        $validated = $request->validate([
-            'expert_id' => ['required', 'integer', 'exists:capstone_experts,expert_id'],
-        ]);
-
-        $fromExpert = auth('expert')->user();
-        $toExpertId = (int) $validated['expert_id'];
-
-        if ($fromExpert->expert_id === $toExpertId) {
-            return response()->json([
-                'success' => false,
-                'message' => 'You cannot transfer rights to yourself.',
-            ], 422);
-        }
-
-        DB::transaction(function () use ($fromExpert, $toExpertId) {
-            DB::table('expert_roles')
-                ->where('expert_id', $fromExpert->expert_id)
-                ->where('role_id', 1)
-                ->delete();
-
-            DB::table('expert_roles')->insert([
-                'expert_id' => $toExpertId,
-                'role_id' => 1,
-            ]);
-        });
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Admin rights transferred successfully.',
-        ]);
-    }
+    // transferRights() used to live here - hardcoded role_id 1 and moved an
+    // expert_roles pivot row, never actually touching is_admin/is_capsa
+    // despite its name. Its only route (/api/admin/turnover) is gone;
+    // replaced by AdminExpertsController::toggleCapsa(), the real thing
+    // this was meant to do.
 }

@@ -95,7 +95,7 @@ class ScheduleController extends Controller
         $nextDate = $this->getNextDateForDay($request->available_date);
 
         $newRecur = $request->recur ?? 'weekly';
-        $newDate = $newRecur === 'once' ? $request->specific_date : null;
+        $newDate  = $newRecur === 'once' ? $request->specific_date : null;
 
         // available_date is only a weekday name, not a real date, so a plain
         // weekday+time match here would flag a new one-time slot as
@@ -204,6 +204,11 @@ class ScheduleController extends Controller
             'consultation_limit' => 'sometimes|integer|min:1|max:10',
             'slot_type' => 'sometimes|nullable|string',
             'is_available' => 'sometimes|boolean',
+            // addSlot has always taken these two; this did not, so a slot's
+            // recurrence and its one-off date were dropped on the way in and
+            // editing either of them appeared to do nothing at all.
+            'recur' => 'sometimes|in:once,weekly,biweekly',
+            'specific_date' => 'sometimes|nullable|date',
         ]);
 
         if ($validator->fails()) {
@@ -221,6 +226,45 @@ class ScheduleController extends Controller
             return response()->json(['error' => 'Slot not found.'], 404);
         }
 
+        // What the slot will look like once this edit lands - the new value
+        // where one was sent, the current one where it was not.
+        $newRecur = $request->has('recur') ? $request->recur : ($slot->recur ?? 'weekly');
+        $newDay = $request->has('available_date') ? $request->available_date : $slot->available_date;
+        $newStart = $request->has('start_time') ? $request->start_time : substr((string) $slot->start_time, 0, 5);
+        $newEnd = $request->has('end_time') ? $request->end_time : substr((string) $slot->end_time, 0, 5);
+
+        // A weekly slot has no date of its own, so switching away from 'once'
+        // has to clear it. array_filter dropped nulls, which is why it could
+        // not have been done through that list.
+        $newDate = $newRecur === 'once'
+            ? ($request->has('specific_date') ? $request->specific_date : $slot->specific_date)
+            : null;
+
+        if ($newRecur === 'once' && ! $newDate) {
+            return response()->json(['error' => 'A one-time slot needs a date.'], 422);
+        }
+
+        // The same collision check addSlot makes. Without it an edit could
+        // walk a slot straight into an overlap that adding it would have
+        // refused - itself excluded, since a slot cannot clash with itself.
+        $clashes = DB::table('consultation_schedule')
+            ->where('expert_id', $expert->expert_id)
+            ->where('schedule_id', '!=', $id)
+            ->where('available_date', $newDay)
+            ->where('start_time', '<', $newEnd)
+            ->where('end_time', '>', $newStart)
+            ->get(['recur', 'specific_date'])
+            ->contains(fn ($existing) => $this->occurrencesCanCollide(
+                $newRecur,
+                $newDate,
+                $existing->recur ?? 'weekly',
+                $existing->specific_date
+            ));
+
+        if ($clashes) {
+            return response()->json(['error' => 'That overlaps another slot you already have.'], 422);
+        }
+
         $updates = array_filter([
             'available_date' => $request->available_date,
             'start_time' => $request->start_time,
@@ -230,6 +274,11 @@ class ScheduleController extends Controller
             'is_available' => $request->has('is_available') ? $request->boolean('is_available') : null,
             'updated_at' => now(),
         ], fn ($v) => $v !== null);
+
+        // Set outside the filter above, because null is a real value for
+        // specific_date - it is what a slot that is no longer one-time has.
+        $updates['recur'] = $newRecur;
+        $updates['specific_date'] = $newDate;
 
         DB::table('consultation_schedule')
             ->where('schedule_id', $id)
@@ -255,7 +304,7 @@ class ScheduleController extends Controller
                     teamName: 'Available Slot',
                     studentEmail: $expert->email,
                     expertEmail: $expert->email,
-                    topic: 'Weekly '.($request->slot_type ?? $slot->slot_type ?? 'consultation')." slot — {$day}s",
+                    topic: "Weekly " . ($request->slot_type ?? $slot->slot_type ?? 'consultation') . " slot — {$day}s",
                     recurrence: GoogleCalendarService::recurrenceRuleFor($slot->recur ?? 'weekly'),
                 );
 
@@ -302,8 +351,8 @@ class ScheduleController extends Controller
     }
 
     // Toggle availability without deleting
-    // PATCH /instructor/schedule/slots/{id}/toggle
-    public function toggleAvailability(int $id)
+    // PUT /instructor/schedule/slots/{id}/availability
+    public function setAvailability(Request $request, int $id)
     {
         $expert = Auth::guard('expert')->user();
 
@@ -316,7 +365,11 @@ class ScheduleController extends Controller
             return response()->json(['error' => 'Slot not found.'], 404);
         }
 
-        $newStatus = ! $slot->is_available;
+        // The caller says what it wants; it already knows what it is
+        // showing. Falling back to a flip keeps any caller that does not.
+        $newStatus = $request->has('is_available')
+            ? $request->boolean('is_available')
+            : ! $slot->is_available;
 
         DB::table('consultation_schedule')
             ->where('schedule_id', $id)
@@ -360,7 +413,7 @@ class ScheduleController extends Controller
         // Remaining combinations involve at least one biweekly side —
         // check whether the dates align on the same 14-day cadence.
         $biweeklyDate = $recurA === 'biweekly' ? $dateA : $dateB;
-        $otherDate = $recurA === 'biweekly' ? $dateB : $dateA;
+        $otherDate    = $recurA === 'biweekly' ? $dateB : $dateA;
 
         if (! $biweeklyDate || ! $otherDate) {
             return true; // can't verify alignment — fail safe

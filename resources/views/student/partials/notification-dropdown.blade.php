@@ -42,11 +42,15 @@
             <div class="notif-item-msg">{!! $notif->message !!}</div>
             <div class="notif-item-time">{{ $notif->created_at->diffForHumans() }}</div>
             <div class="notif-actions" style="display:flex;gap:8px;margin-top:10px;">
-              <form method="POST" action="{{ route('team.leadership.accept', $notif->id) }}" style="display:inline;" id="leadership-accept-{{ $notif->id }}">
+              <form method="POST" action="{{ route('team.leadership.update', $notif->id) }}" style="display:inline;" id="leadership-accept-{{ $notif->id }}">
+              @method('PATCH')
+              <input type="hidden" name="status" value="accepted">
                 @csrf
                 <button type="button" class="notif-action-btn" data-accept-id="{{ $notif->id }}" data-team="{{ addslashes($notif->data['team_name'] ?? 'your team') }}" style="flex:1;padding:6px 12px;border-radius:6px;border:1px solid var(--green);background:var(--green-bg);color:var(--green);font-size:11px;font-weight:700;cursor:pointer;">Approve</button>
               </form>
-              <form method="POST" action="{{ route('team.leadership.decline', $notif->id) }}" style="display:inline;" id="leadership-decline-{{ $notif->id }}">
+              <form method="POST" action="{{ route('team.leadership.update', $notif->id) }}" style="display:inline;" id="leadership-decline-{{ $notif->id }}">
+              @method('PATCH')
+              <input type="hidden" name="status" value="declined">
                 @csrf
                 <button type="button" class="notif-action-btn" data-decline-id="{{ $notif->id }}" data-team="{{ addslashes($notif->data['team_name'] ?? 'your team') }}" style="flex:1;padding:6px 12px;border-radius:6px;border:1px solid var(--red);background:var(--red-bg);color:var(--red);font-size:11px;font-weight:700;cursor:pointer;">Decline</button>
               </form>
@@ -78,11 +82,11 @@
     <div class="nld-confirm-icon" id="nld-confirm-icon" style="background:rgba(22,163,74,0.1);color:#16a34a;">
       <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
     </div>
-    <div class="nld-confirm-title" id="nld-confirm-title">Approve and review?</div>
+    <div class="nld-confirm-title" id="nld-confirm-title">Accept Transfer</div>
     <div class="nld-confirm-msg" id="nld-confirm-msg"></div>
     <div class="nld-confirm-actions">
-      <button type="button" class="nld-confirm-btn nld-confirm-cancel" onclick="nldConfirmClose()">Cancel</button>
-      <button type="button" class="nld-confirm-btn" id="nld-confirm-ok" style="background:#16a34a;">Approve &amp; Review</button>
+      <button type="button" class="nld-confirm-btn nld-confirm-cancel" onclick="nldConfirmClose()">No</button>
+      <button type="button" class="nld-confirm-btn" id="nld-confirm-ok" style="background:#16a34a;">Yes</button>
     </div>
   </div>
 </div>
@@ -167,17 +171,17 @@ document.addEventListener('click', function(e) {
     nldConfirmIcon.style.background = 'rgba(22,163,74,0.1)';
     nldConfirmIcon.style.color = '#16a34a';
     nldConfirmIcon.innerHTML = '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
-    nldConfirmTitle.textContent = 'Approve and review?';
+    nldConfirmTitle.textContent = 'Accept Transfer';
     nldConfirmMsg.innerHTML = 'You are about to accept leadership of <strong>' + team + '</strong>. You will become the new team leader, and the current leader will be notified.';
-    nldConfirmOk.textContent = 'Approve & Review';
+    nldConfirmOk.textContent = 'Yes';
     nldConfirmOk.style.background = '#16a34a';
   } else {
     nldConfirmIcon.style.background = 'rgba(239,68,68,0.1)';
     nldConfirmIcon.style.color = '#ef4444';
     nldConfirmIcon.innerHTML = '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
-    nldConfirmTitle.textContent = 'Decline and review?';
+    nldConfirmTitle.textContent = 'Decline';
     nldConfirmMsg.innerHTML = 'You are about to decline leadership of <strong>' + team + '</strong>. You will stay a member, and the current leader will be notified.';
-    nldConfirmOk.textContent = 'Decline & Review';
+    nldConfirmOk.textContent = 'Yes';
     nldConfirmOk.style.background = '#ef4444';
   }
 
@@ -204,7 +208,7 @@ document.addEventListener('click', function(e) {
       var ids = [{{ collect($unreadNotifications ?? [])->pluck('id')->map(fn($id) => $id)->join(',') }}];
       if (ids.length) {
         fetch('/notifications/seen', {
-          method: 'POST',
+          method: 'PUT',
           headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content, 'Content-Type': 'application/json' },
           body: JSON.stringify({ ids: ids })
         }).then(function() {
@@ -230,7 +234,7 @@ document.addEventListener('click', function(e) {
     if (href === '#' || !href) return;
     item.style.opacity = '0.5';
     fetch('/notifications/' + id + '/read', {
-      method: 'POST',
+      method: 'PUT',
       headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content }
     }).then(function() { window.location.href = href; }).catch(function() { window.location.href = href; });
   }
@@ -238,15 +242,15 @@ document.addEventListener('click', function(e) {
 
 document.addEventListener('click', function(e) {
   if (!e.target.closest('#notif-mark-all-btn')) return;
-  fetch('/notifications/mark-all-read', {
-    method: 'POST',
+  fetch('/notifications', {
+    method: 'PATCH',
     headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content }
   }).then(function(r) { return r.json(); }).then(function(data) {
     if (data.success) {
       var dot = document.querySelector('.notif-dot');
       if (dot) dot.remove();
       fetch('/notifications/seen', {
-        method: 'POST',
+        method: 'PUT',
         headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content, 'Content-Type': 'application/json' },
         body: JSON.stringify({ ids: data.ids || [] })
       });

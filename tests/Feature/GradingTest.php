@@ -164,8 +164,8 @@ class GradingTest extends TestCase
         $rubric = $this->makeRubric();
         $criterion = $rubric->criteria()->first();
 
-        $response = $this->actingAs($expert, 'expert')->postJson(
-            "/instructor/grading/{$defense->defense_id}/save",
+        $response = $this->actingAs($expert, 'expert')->putJson(
+            "/instructor/grading/{$defense->defense_id}",
             ['scores' => [$criterion->criterion_id => 40]]
         );
 
@@ -185,8 +185,8 @@ class GradingTest extends TestCase
         $rubric = $this->makeRubric();
         $criterion = $rubric->criteria()->first();
 
-        $response = $this->actingAs($expert, 'expert')->postJson(
-            "/instructor/grading/{$defense->defense_id}/submit",
+        $response = $this->actingAs($expert, 'expert')->patchJson(
+            "/instructor/grading/{$defense->defense_id}",
             ['scores' => [$criterion->criterion_id => 40], 'verdict' => 'approved']
         );
 
@@ -194,7 +194,11 @@ class GradingTest extends TestCase
         $response->assertJson(['success' => false]);
     }
 
-    public function test_submit_requires_verdict(): void
+    // A panelist submits scores and remarks; the verdict is no longer theirs
+    // to give. The panel agrees one outcome in a briefing and the chair
+    // records it, so requiring each panelist to pick one made three verdicts
+    // where the process only ever produces one.
+    public function test_submit_does_not_require_a_verdict_from_each_panelist(): void
     {
         $expert = $this->makeExpert();
         $defense = $this->makeAssignedDefense($expert);
@@ -205,12 +209,17 @@ class GradingTest extends TestCase
             $scores[$c->criterion_id] = (float) $c->max_points;
         }
 
-        $response = $this->actingAs($expert, 'expert')->postJson(
-            "/instructor/grading/{$defense->defense_id}/submit",
+        $response = $this->actingAs($expert, 'expert')->patchJson(
+            "/instructor/grading/{$defense->defense_id}",
             ['scores' => $scores]
         );
 
-        $response->assertStatus(422);
+        $response->assertStatus(200);
+        $this->assertDatabaseHas('panel_grades', [
+            'defense_id' => $defense->defense_id,
+            'expert_id' => $expert->expert_id,
+            'status' => 'submitted',
+        ]);
     }
 
     public function test_submit_saves_complete_grade_and_marks_submitted(): void
@@ -226,8 +235,8 @@ class GradingTest extends TestCase
             $expectedTotal += (float) $c->max_points;
         }
 
-        $response = $this->actingAs($expert, 'expert')->postJson(
-            "/instructor/grading/{$defense->defense_id}/submit",
+        $response = $this->actingAs($expert, 'expert')->patchJson(
+            "/instructor/grading/{$defense->defense_id}",
             ['scores' => $scores, 'verdict' => 'approved', 'remarks' => 'Great job']
         );
 
@@ -249,8 +258,8 @@ class GradingTest extends TestCase
         $rubric = $this->makeRubric();
         $criterion = $rubric->criteria()->first();
 
-        $response = $this->actingAs($expert, 'expert')->postJson(
-            "/instructor/grading/{$defense->defense_id}/save",
+        $response = $this->actingAs($expert, 'expert')->putJson(
+            "/instructor/grading/{$defense->defense_id}",
             ['scores' => [$criterion->criterion_id => 999]]
         );
 
@@ -268,8 +277,8 @@ class GradingTest extends TestCase
             $scores[$c->criterion_id] = (float) $c->max_points;
         }
 
-        $this->actingAs($expert, 'expert')->postJson(
-            "/instructor/grading/{$defense->defense_id}/submit",
+        $this->actingAs($expert, 'expert')->patchJson(
+            "/instructor/grading/{$defense->defense_id}",
             ['scores' => $scores, 'verdict' => 'approved']
         );
 

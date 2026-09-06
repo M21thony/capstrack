@@ -53,6 +53,157 @@ class SkillCatalog
         ],
     ];
 
+    /**
+     * The two groups every capstone needs, whichever programme it is for.
+     *
+     * Research craft and language are about writing a capstone, not about a
+     * discipline: a BLIS study and a BSCS one both need a literature review
+     * and both need proofreading. Splitting these per programme would have
+     * meant four copies of the same list.
+     */
+    private const SHARED_GROUPS = [
+        'Research & Writing (Adviser)',
+        'Language & Editing (Grammarian)',
+    ];
+
+    /**
+     * Which programme each technical skill belongs to.
+     *
+     * CaPSA asked for this: the four programmes are not the same subject, and
+     * offering a BLIS adviser "Embedded Systems" - or a BSCS one "Cataloguing
+     * & Classification" - made the picker longer without making it more
+     * useful. A skill can belong to several, because they genuinely overlap:
+     * every programme here builds databases and every one of them worries
+     * about security.
+     *
+     * The split follows what each degree actually teaches:
+     *   BSCS  computation itself - algorithms, AI, systems
+     *   BSIT  applying and running it - deployment, networks, infrastructure
+     *   BSIS  what an organisation does with it - process, records, decisions
+     *   BLIS  organising information so it can be found again
+     *
+     * It is a starting point and CaPSA's to correct, not a rule: an expert
+     * can still type any skill at all, including one from another programme.
+     */
+    private const PROGRAM_SKILLS = [
+        'BSCS' => [
+            'Machine Learning', 'Artificial Intelligence', 'Data Mining', 'Data Analytics',
+            'Data Visualization', 'Embedded Systems', 'Game Development',
+            'Software Testing / QA', 'System Analysis & Design', 'API Development',
+            'Database Systems', 'Desktop Applications', 'Version Control (Git)',
+            'Cloud Computing', 'Cybersecurity',
+        ],
+        'BSIT' => [
+            'Web Development', 'Mobile Apps', 'Database Systems', 'API Development',
+            'Software Testing / QA', 'System Analysis & Design', 'UI/UX Design',
+            'Game Development', 'Version Control (Git)', 'Network Systems',
+            'Cloud Computing', 'Cybersecurity', 'Internet of Things (IoT)',
+            'Embedded Systems', 'Desktop Applications',
+        ],
+        'BSIS' => [
+            'System Analysis & Design', 'Database Systems', 'Data Analytics',
+            'Data Visualization', 'Information Management', 'Records Management',
+            'Web Development', 'UI/UX Design', 'Cloud Computing', 'Cybersecurity',
+            'Software Testing / QA',
+        ],
+        'BLIS' => [
+            'Information Management', 'Records Management', 'Knowledge Organization',
+            'Cataloguing & Classification', 'Digital Archiving', 'Library Systems',
+            'Database Systems', 'Web Development', 'Data Visualization', 'UI/UX Design',
+        ],
+    ];
+
+    /** The programmes a skill is offered for, empty when it is offered to all. */
+    public static function programsFor(string $skill): array
+    {
+        $needle = self::normalise($skill);
+
+        $codes = [];
+
+        foreach (self::PROGRAM_SKILLS as $code => $skills) {
+            foreach ($skills as $item) {
+                if (self::normalise($item) === $needle) {
+                    $codes[] = $code;
+                    break;
+                }
+            }
+        }
+
+        return $codes;
+    }
+
+    /**
+     * The catalogue as one programme's adviser would want to see it.
+     *
+     * Given no programmes - an expert who has not said which they take teams
+     * from - this is the whole catalogue, because narrowing it to nothing
+     * would leave them with a picker of research skills and no technical ones.
+     *
+     * @param  string[]  $codes
+     * @return array<string, string[]>
+     */
+    public static function groupsForPrograms(array $codes): array
+    {
+        $codes = array_values(array_intersect($codes, array_keys(self::PROGRAM_SKILLS)));
+
+        if ($codes === []) {
+            return self::GROUPS;
+        }
+
+        $allowed = [];
+
+        foreach ($codes as $code) {
+            foreach (self::PROGRAM_SKILLS[$code] as $skill) {
+                $allowed[self::normalise($skill)] = true;
+            }
+        }
+
+        $out = [];
+
+        foreach (self::GROUPS as $group => $items) {
+            // The shared groups are every programme's, so they are not filtered.
+            if (in_array($group, self::SHARED_GROUPS, true)) {
+                $out[$group] = $items;
+
+                continue;
+            }
+
+            $kept = array_values(array_filter(
+                $items,
+                fn ($item) => isset($allowed[self::normalise($item)])
+            ));
+
+            if ($kept !== []) {
+                $out[$group] = $kept;
+            }
+        }
+
+        return $out;
+    }
+
+    /**
+     * The per-programme skill lists, for a picker that narrows as programmes
+     * are ticked.
+     *
+     * @return array<string, string[]>
+     */
+    public static function programSkills(): array
+    {
+        return self::PROGRAM_SKILLS;
+    }
+
+    /** The groups every programme shares, so a picker knows not to filter them. */
+    public static function sharedGroups(): array
+    {
+        return self::SHARED_GROUPS;
+    }
+
+    /** The programme codes this catalogue knows about. */
+    public static function programCodes(): array
+    {
+        return array_keys(self::PROGRAM_SKILLS);
+    }
+
     /** @return array<string, string[]> */
     public static function groups(): array
     {

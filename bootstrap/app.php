@@ -3,6 +3,8 @@
 use App\Http\Middleware\CheckExpertApproval;
 use App\Http\Middleware\EnsureExpertIsAdmin;
 use App\Http\Middleware\EnsureExpertIsAuthenticated;
+use App\Http\Middleware\EnsureExpertIsCapsa;
+use App\Http\Middleware\EnsureExpertIsStaff;
 use App\Http\Middleware\EnsureProfileIsComplete;
 use App\Http\Middleware\PreventBackHistory;
 use App\Http\Middleware\TrackExpertActivity;
@@ -27,6 +29,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'profile.complete' => EnsureProfileIsComplete::class,
             'expert.auth' => EnsureExpertIsAuthenticated::class,
             'expert.admin' => EnsureExpertIsAdmin::class,
+            'expert.capsa' => EnsureExpertIsCapsa::class,
+            'expert.staff' => EnsureExpertIsStaff::class,
             'expert.approved' => CheckExpertApproval::class,
             'no.cache' => PreventBackHistory::class,
             'track.expert' => TrackExpertActivity::class,
@@ -40,7 +44,13 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        // Anything under api/* answers in JSON whatever the caller asked for.
+        // Everywhere else, honour what the caller actually asked for: a
+        // fetch() sending Accept: application/json was being handed an HTML
+        // error page, and calling .json() on that is where the student-facing
+        // "Unexpected token '<'" came from. Ordinary form posts send no such
+        // header, so they still redirect back with the errors in the session.
         $exceptions->shouldRenderJsonWhen(
-            fn (Request $request) => $request->is('api/*'),
+            fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
         );
     })->create();

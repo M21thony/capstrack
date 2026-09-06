@@ -8,8 +8,9 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>CapsTRACK — Expert Portal</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="{{ asset('css/expert.css') }}" />
+@include('partials.skeleton-head', ['skReveal' => 'block'])
 </head>
 <body>
 
@@ -134,34 +135,71 @@
         @endforeach
 
         <div class="rubric-page active">
+          {{-- Remarks are this panelist's own. The verdict is not: the panel
+               confers and gives the team one result, so it is recorded once
+               by the chair below rather than collected from each panelist
+               and tallied - there was never a rule for what a split meant. --}}
           <div class="card" style="margin-bottom:14px">
-            <div class="card-header"><span class="card-title">Verdict</span></div>
-            <div class="verdict-options">
-              <label class="verdict-option verdict-approved">
-                <input type="radio" name="verdict" value="approved" @if($grade?->verdict === 'approved') checked @endif/>
-                <div class="verdict-option-label">
-                  <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
-                  Approved
-                </div>
-              </label>
-              <label class="verdict-option verdict-revision">
-                <input type="radio" name="verdict" value="revision" @if($grade?->verdict === 'revision') checked @endif/>
-                <div class="verdict-option-label">
-                  <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                  Approved with Revision
-                </div>
-              </label>
-              <label class="verdict-option verdict-rejected">
-                <input type="radio" name="verdict" value="rejected" @if($grade?->verdict === 'rejected') checked @endif/>
-                <div class="verdict-option-label">
-                  <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
-                  Disapproved / Rejected
-                </div>
-              </label>
+            <div class="card-header"><span class="card-title">Your Remarks</span></div>
+            <textarea name="remarks" class="remarks-field" placeholder="Your comments for the team - what you want them to fix, or what worked.">{{ $grade?->remarks }}</textarea>
+          </div>
+
+          <div class="card" style="margin-bottom:14px">
+            <div class="card-header">
+              <span class="card-title">Panel Decision</span>
+              @if ($defense->hasOutcome())
+                <span class="badge badge-green" style="margin-left:auto">Recorded</span>
+              @endif
             </div>
 
-            <div class="card-header" style="margin-top:8px"><span class="card-title">Remarks</span></div>
-            <textarea name="remarks" class="remarks-field" placeholder="Write your remarks, suggestions, or feedback for the team…">{{ $grade?->remarks }}</textarea>
+            @if ($defense->hasOutcome())
+              <div class="outcome-recorded">
+                <div class="outcome-recorded-label">{{ $defense->outcomeLabel() }}</div>
+                <div class="outcome-recorded-sub">
+                  {{ \App\Support\DefenseOutcome::description($defense->outcome, $defense->defense_type) }}
+                </div>
+                @if ($defense->outcome_remarks)
+                  <div class="outcome-recorded-remarks">{{ $defense->outcome_remarks }}</div>
+                @endif
+                <div class="outcome-recorded-meta">
+                  Recorded by {{ $defense->outcomeRecordedBy?->name ?? 'the Panel Chair' }}
+                  @if ($defense->outcome_recorded_at)
+                    on {{ $defense->outcome_recorded_at->format('M j, Y \a\t g:i A') }}
+                  @endif
+                </div>
+              </div>
+            @elseif (! $isChair)
+              <p class="outcome-note">
+                Your Panel Chair records the panel&rsquo;s decision after the briefing. Score the rubric and leave your remarks.
+              </p>
+            @elseif ($gradesIn < $panelSize)
+              <p class="outcome-note">
+                {{ $gradesIn }} of {{ $panelSize }} panelists have submitted their scores. The decision can be recorded once everyone has.
+              </p>
+            @else
+              <p class="outcome-note">
+                All {{ $panelSize }} panelists have scored. Record what the panel agreed &mdash; the team is told this, and it is what happens next.
+              </p>
+
+              <div class="outcome-options">
+                @foreach ($outcomeOptions as $option)
+                  <label class="outcome-option outcome-{{ str_replace('_', '-', $option) }}">
+                    <input type="radio" name="panel_outcome" value="{{ $option }}"/>
+                    <div class="outcome-option-body">
+                      <div class="outcome-option-label">{{ \App\Support\DefenseOutcome::label($option, $defense->defense_type) }}</div>
+                      <div class="outcome-option-desc">{{ \App\Support\DefenseOutcome::description($option, $defense->defense_type) }}</div>
+                    </div>
+                  </label>
+                @endforeach
+              </div>
+
+              <div class="card-header" style="margin-top:10px"><span class="card-title">Panel Remarks (optional)</span></div>
+              <textarea id="outcome-remarks" class="remarks-field" placeholder="What the panel wants the team to know about this decision."></textarea>
+
+              <button type="button" class="btn btn-primary" id="record-outcome-btn" style="margin-top:10px;width:100%;justify-content:center" onclick="recordOutcome()">
+                Record Panel Decision
+              </button>
+            @endif
           </div>
         </div>
       </div>
@@ -240,18 +278,58 @@ function collectPayload() {
     const match = input.name.match(/scores\[(\d+)\]/);
     if (match) scores[match[1]] = parseFloat(input.value);
   });
-  const verdict = form.querySelector('input[name="verdict"]:checked');
-  const remarks = form.querySelector('textarea[name="remarks"]').value;
-  return { scores: scores, verdict: verdict ? verdict.value : null, remarks: remarks };
+  // No verdict here - that is the panel's one decision, recorded by the
+  // chair through /outcome, not gathered from each panelist.
+  return { scores: scores, remarks: remarks };
 }
 
-function postGrade(url, statusMsg) {
+// The panel's one decision, recorded by the chair after the briefing.
+function recordOutcome() {
+  const picked = document.querySelector('input[name="panel_outcome"]:checked');
+
+  if (!picked) {
+    showFormError('Choose what the panel decided.');
+    return;
+  }
+
+  const btn = document.getElementById('record-outcome-btn');
+  const remarksEl = document.getElementById('outcome-remarks');
+  btn.disabled = true;
+  btn.textContent = 'Recording...';
+
+  fetch('{{ route('instructor.grading.outcome', $defense->defense_id) }}', {
+    method: 'POST',
+    headers: {
+      'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ outcome: picked.value, remarks: remarksEl ? remarksEl.value : null }),
+  })
+    .then(function (r) { return r.json(); })
+    .then(function (res) {
+      if (!res.success) {
+        showFormError(res.message || 'Could not record the outcome.');
+        btn.disabled = false;
+        btn.textContent = 'Record Panel Decision';
+        return;
+      }
+      window.location.reload();
+    })
+    .catch(function () {
+      showFormError('Could not reach the server.');
+      btn.disabled = false;
+      btn.textContent = 'Record Panel Decision';
+    });
+}
+
+function postGrade(url, statusMsg, method) {
   showFormError('');
   const saveStatus = document.getElementById('saveStatus');
   saveStatus.textContent = 'Saving…';
 
   fetch(url, {
-    method: 'POST',
+    method: method || 'POST',
     credentials: 'same-origin',
     headers: {
       'X-CSRF-TOKEN': document.querySelector('input[name="_token"]').value,
@@ -278,8 +356,8 @@ function postGrade(url, statusMsg) {
     });
 }
 
-function saveDraft() { postGrade('{{ route('instructor.grading.save', $defense->defense_id) }}', 'Draft saved.'); }
-function submitGrade() { postGrade('{{ route('instructor.grading.submit', $defense->defense_id) }}', 'Submitted! Redirecting…'); }
+function saveDraft() { postGrade('{{ route('instructor.grading.save', $defense->defense_id) }}', 'Draft saved.', 'PUT'); }
+function submitGrade() { postGrade('{{ route('instructor.grading.submit', $defense->defense_id) }}', 'Submitted! Redirecting…', 'PATCH'); }
 
 updateScore();
 

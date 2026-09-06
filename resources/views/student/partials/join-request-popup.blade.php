@@ -1,19 +1,29 @@
 <style>
-  /* This partial is included on every student page via the sidebar, but
-     several pages (submission, personal-info, archive, duplication,
-     resources, review, profile) never define .modal-overlay/.pm-close-btn
-     themselves - without a base rule here, these two overlays render as
-     plain unstyled, unpositioned, always-visible boxes stacked in normal
-     page flow instead of a centered fixed backdrop. Additive only: on
-     pages that already define .modal-overlay for their own modals, this
-     just adds the opacity/pointer-events toggle their JS doesn't already
-     provide - it never overrides their base display/background rules. */
-  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1000;opacity:0;pointer-events:none;transition:opacity .2s}
-  .modal-overlay.active{opacity:1;pointer-events:auto}
+  /* This partial is included on every student page via the sidebar, and
+     consultation, dashboard and team all use .modal-overlay without styling
+     it themselves - without a base rule here their overlays render as plain
+     unpositioned always-visible boxes in normal page flow.
+
+     Wrapped in :where() so it is genuinely what the old comment here claimed
+     it was: a fallback. :where() contributes nothing to specificity, so any
+     page with its own .modal-overlay rule wins outright. Unwrapped, this
+     block came after the page's own <style> and quietly took over - which is
+     how every modal on Find Your Team Experts ended up at z-index 1000
+     instead of the 300 that page sets, and why opening Preview from inside
+     the Apply form painted it behind the form. */
+  :where(.modal-overlay){position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1000;opacity:0;pointer-events:none;transition:opacity .2s}
+  :where(.modal-overlay.active){opacity:1;pointer-events:auto}
+
+  /* The two this partial owns keep the behaviour outright, since a page's
+     own rule has no business deciding whether these are visible. */
+  #jrp-overlay,#jrp-confirm-overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s}
+  #jrp-overlay{z-index:1000}
+  #jrp-overlay.active,#jrp-confirm-overlay.active{opacity:1;pointer-events:auto}
   .pm-close-btn{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;padding:0;background-color:var(--bg2);color:var(--text3);border:none;border-radius:50%;cursor:pointer;transition:all .15s ease-in-out;outline:none}
   .pm-close-btn:hover{background-color:var(--border);color:var(--text);transform:scale(1.05)}
 
   #jrp-overlay{background:rgba(24,25,31,0.5);backdrop-filter:blur(3px);cursor:default}
+  /* the card sits above the overlay, so the close button needs to sit above the card */
   #jrp-overlay .pm-close-btn{z-index:100;position:relative}
   #jrp-overlay .card{padding:0!important;border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,0.18),0 8px 24px rgba(0,0,0,0.12);overflow:hidden;display:flex;flex-direction:column;animation:jrpIn 0.2s ease forwards}
   @keyframes jrpIn{from{opacity:0;transform:translateY(10px) scale(0.985)}to{opacity:1;transform:translateY(0) scale(1)}}
@@ -114,7 +124,7 @@
     <div id="jrp-confirm-title"></div>
     <div id="jrp-confirm-sub"></div>
     <div id="jrp-confirm-actions">
-      <button type="button" class="jrp-btn jrp-btn-cancel" onclick="jrpConfirmClose()">Cancel</button>
+      <button type="button" class="jrp-btn jrp-btn-cancel" onclick="jrpConfirmClose()">No</button>
       <button type="button" class="jrp-btn" id="jrp-confirm-ok"></button>
     </div>
   </div>
@@ -125,8 +135,7 @@
   var overlay = document.getElementById('jrp-overlay');
   if (!overlay) return;
 
-  var acceptUrl = '{{ route('invitations.accept', '__ID__') }}';
-  var declineUrl = '{{ route('invitations.decline', '__ID__') }}';
+  var updateUrl = '{{ route('invitations.update', '__ID__') }}';
   var remindUrl = '{{ route('invitations.remind-later', '__ID__') }}';
   var itemsById = {};
 
@@ -173,10 +182,27 @@
     });
   }
 
-  function jrpSubmit(url) {
+  function jrpSubmit(url, status) {
     var form = document.createElement('form');
     form.method = 'POST';
     form.action = url;
+
+    // A form can only send GET or POST, so the real verb rides along in
+    // _method the way a Blade method directive does it. Both of these need
+    // one: accepting and declining are a PATCH, and Later is a PUT. Later
+    // used to send a bare POST, which the router answered with
+    // MethodNotAllowed - so clicking it crashed the page.
+    var fields = status
+      ? [['_method', 'PATCH'], ['status', status]]
+      : [['_method', 'PUT']];
+
+    fields.forEach(function (pair) {
+      var f = document.createElement('input');
+      f.type = 'hidden';
+      f.name = pair[0];
+      f.value = pair[1];
+      form.appendChild(f);
+    });
     var csrf = document.createElement('input');
     csrf.type = 'hidden';
     csrf.name = '_token';
@@ -193,13 +219,14 @@
   }
 
   function jrpClose() {
-    // Call remind-later for all items so they don't reappear
-    var ids = Object.keys(itemsById);
+    // Dismissing is "remind me later" for everything in the popup. Without
+    // this it reopened on the next page load, so closing it did nothing.
     var meta = document.querySelector('meta[name="csrf-token"]');
     var token = meta ? meta.getAttribute('content') : '{{ csrf_token() }}';
-    var promises = ids.map(function(id) {
+
+    var pending = Object.keys(itemsById).map(function (id) {
       return fetch(remindUrl.replace('__ID__', id), {
-        method: 'POST',
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
@@ -207,7 +234,8 @@
         }
       });
     });
-    Promise.all(promises).finally(function() {
+
+    Promise.all(pending).finally(function () {
       overlay.classList.remove('active');
     });
   }
@@ -218,10 +246,12 @@
   var confirmSub = document.getElementById('jrp-confirm-sub');
   var confirmOk = document.getElementById('jrp-confirm-ok');
   var confirmUrl = null;
+  var confirmStatus = null;
 
   function jrpConfirmClose() {
     confirmOverlay.classList.remove('active');
     confirmUrl = null;
+    confirmStatus = null;
   }
   window.jrpConfirmClose = jrpConfirmClose;
 
@@ -231,22 +261,26 @@
     var team = item.team_name || 'the team';
 
     if (act === 'accept') {
-      confirmUrl = acceptUrl.replace('__ID__', id);
+      confirmUrl = updateUrl.replace('__ID__', id);
+      confirmStatus = 'accepted';
       confirmIcon.className = 'accept';
-      confirmTitle.textContent = 'Approve and review?';
+      // A request to join and an invitation to you are different things, so
+      // the title says which one is being answered.
+      confirmTitle.textContent = isRequest ? 'Accept Request' : 'Accept Invitation';
       confirmSub.innerHTML = 'You are about to accept <strong>'+name+'</strong>\'s '+
         (isRequest ? 'request to join <strong>'+team+'</strong>' : 'invitation to <strong>'+team+'</strong>')+
         '. They will be added as a member of your team.';
-      confirmOk.textContent = 'Approve & Review';
+      confirmOk.textContent = 'Yes';
       confirmOk.className = 'jrp-btn jrp-btn-accept';
     } else {
-      confirmUrl = declineUrl.replace('__ID__', id);
+      confirmUrl = updateUrl.replace('__ID__', id);
+      confirmStatus = 'declined';
       confirmIcon.className = 'decline';
-      confirmTitle.textContent = 'Decline and review?';
+      confirmTitle.textContent = 'Decline';
       confirmSub.innerHTML = 'You are about to decline <strong>'+name+'</strong>\'s '+
         (isRequest ? 'request to join <strong>'+team+'</strong>' : 'invitation to <strong>'+team+'</strong>')+
         '. They will be notified that you declined.';
-      confirmOk.textContent = 'Decline & Review';
+      confirmOk.textContent = 'Yes';
       confirmOk.className = 'jrp-btn jrp-btn-decline';
     }
 
@@ -254,7 +288,7 @@
   }
 
   confirmOk.addEventListener('click', function () {
-    if (confirmUrl) jrpSubmit(confirmUrl);
+    if (confirmUrl) jrpSubmit(confirmUrl, confirmStatus);
   });
 
   document.addEventListener('click', function (e) {
@@ -270,7 +304,7 @@
     if (act === 'remind') jrpSubmit(remindUrl.replace('__ID__', id));
   });
 
-  fetch('{{ route('invitations.popup') }}', {
+  fetch('{{ route('invitations.index') }}', {
     headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
   })
     .then(function (r) { return r.json(); })

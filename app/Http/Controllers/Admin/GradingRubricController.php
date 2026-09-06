@@ -9,6 +9,6 @@ class GradingRubricController extends Controller
 {
     public function index(): View
     {
-        return view('admin.rubric_management');
+        return view('capsa.rubric_management');
     }
 }

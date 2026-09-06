@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Instructor;
 
 use App\Http\Controllers\Controller;
+use App\Models\CapstoneExpert;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
 class ProfileController extends Controller
@@ -16,6 +18,12 @@ class ProfileController extends Controller
         ]);
     }
 
+    /**
+     * The only two things an expert may change about their own account:
+     * which programs they accept teams from (and how many of each), and
+     * their areas of expertise. Everything else - name, email, roles, the
+     * program they belong to - stays under CaPSA/Admin control.
+     */
     public function update(Request $request): JsonResponse
     {
         // This is a web route, not under api/*, so $request->validate()'s
@@ -23,8 +31,30 @@ class ProfileController extends Controller
         // JSON (see bootstrap/app.php's shouldRenderJsonWhen()) - the JS
         // here expects JSON either way, so validate manually.
         $validator = Validator::make($request->all(), [
-            'max_teams' => ['required', 'integer', 'min:1', 'max:10'],
+            'program_slots' => ['required', 'array'],
+            'program_slots.*' => ['integer', 'min:0', 'max:20'],
+            'expertise' => ['present', 'array'],
+            'expertise.*' => ['string', 'max:100'],
         ]);
+
+        $validator->after(function ($v) use ($request) {
+            $slots = $request->input('program_slots', []);
+
+            foreach (array_keys($slots) as $program) {
+                if (! in_array($program, CapstoneExpert::PROGRAMS, true)) {
+                    $v->errors()->add('program_slots', "\"{$program}\" isn't a program you can accept teams from.");
+
+                    return;
+                }
+            }
+
+            // An expert with zero slots everywhere can never be assigned, so
+            // it's almost certainly a mis-save rather than an intent - reject
+            // it here rather than silently making them unassignable.
+            if (array_sum($slots) < 1) {
+                $v->errors()->add('program_slots', 'Accept at least one team in at least one program.');
+            }
+        });
 
         if ($validator->fails()) {
             return response()->json([
@@ -33,13 +63,61 @@ class ProfileController extends Controller
             ], 422);
         }
 
+        $validated = $validator->validated();
         $expert = auth('expert')->user();
-        $expert->update(['max_teams' => $validator->validated()['max_teams']]);
+
+        // Keep only programs they actually take teams from, in the canonical
+        // PROGRAMS order so the saved text is stable between saves.
+        $accepted = [];
+        foreach (CapstoneExpert::PROGRAMS as $program) {
+            $count = (int) ($validated['program_slots'][$program] ?? 0);
+            if ($count > 0) {
+                $accepted[$program] = $count;
+            }
+        }
+
+        // program_slots is what CapstoneExpert::parsedCapacity() reads for
+        // the per-program Capacity column, and it already understands this
+        // "<n> - <PROGRAM>" shape (it's the format the roster upload's own
+        // free-text cells used). max_teams stays the overall total so the
+        // existing full/slots-left checks keep working unchanged.
+        $raw = implode(', ', array_map(
+            fn ($program, $count) => $count.' - '.$program,
+            array_keys($accepted),
+            $accepted
+        ));
+
+        $expertise = collect($validated['expertise'])
+            ->map(fn ($e) => trim($e))
+            ->filter()
+            ->unique()
+            ->values();
+
+        DB::transaction(function () use ($expert, $accepted, $raw, $expertise) {
+            $expert->update([
+                'program_slots' => $raw,
+                'max_teams' => array_sum($accepted),
+            ]);
+
+            // Replace rather than merge - the panel sends the full list it
+            // is showing, so anything missing from it was removed there.
+            DB::table('expert_expertise')->where('expert_id', $expert->expert_id)->delete();
+            foreach ($expertise as $field) {
+                DB::table('expert_expertise')->insert([
+                    'expert_id' => $expert->expert_id,
+                    'expertise_field' => $field,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
+        });
 
         return response()->json([
             'success' => true,
-            'message' => 'Team capacity updated.',
-            'max_teams' => $expert->max_teams,
+            'message' => 'Profile updated.',
+            'program_slots' => $accepted,
+            'max_teams' => $expert->fresh()->max_teams,
+            'expertise' => $expertise,
         ]);
     }
 }

@@ -19,10 +19,10 @@ class AdminFinancialTest extends TestCase
     {
         parent::setUp();
 
-        $this->admin = CapstoneExpert::factory()->create([
+        $this->admin = $this->makeCapsa(CapstoneExpert::factory()->create([
             'is_admin' => true,
             'approved_status' => true,
-        ]);
+        ]));
     }
 
     /**
@@ -86,8 +86,9 @@ class AdminFinancialTest extends TestCase
             'uploaded_at' => now(),
         ]);
 
-        $response = $this->actingAsExpertOnly()->postJson(
-            route('api.admin.financial.approve', $record->id)
+        $response = $this->actingAsExpertOnly()->patchJson(
+            route('api.admin.financial.update', $record->id),
+            ['status' => 'approved']
         );
 
         $response->assertOk()->assertJson(['success' => true]);
@@ -113,9 +114,9 @@ class AdminFinancialTest extends TestCase
             'uploaded_at' => now(),
         ]);
 
-        $response = $this->actingAsExpertOnly()->postJson(
-            route('api.admin.financial.reject', $record->id),
-            ['rejection_reason' => 'Illegible receipt']
+        $response = $this->actingAsExpertOnly()->patchJson(
+            route('api.admin.financial.update', $record->id),
+            ['status' => 'rejected', 'rejection_reason' => 'Illegible receipt']
         );
 
         $response->assertOk()->assertJson(['success' => true]);

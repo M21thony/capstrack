@@ -8,6 +8,7 @@ use App\Models\Recruitment;
 use App\Models\Student;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
+use App\Models\Term;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -33,7 +34,7 @@ class TeamCreationTest extends TestCase
 
         $response = $this->post('/team', [
             'team_name' => 'Bulbasaur',
-            'team_status' => 'on-going',
+            'team_status' => 'Active',
         ]);
 
         $response->assertSessionHas('status');
@@ -59,7 +60,7 @@ class TeamCreationTest extends TestCase
 
         $team = Team::create([
             'team_name' => 'Team Charmander',
-            'team_status' => 'on-going',
+            'team_status' => 'Active',
             'leader_id' => $student->student_id,
         ]);
 
@@ -110,7 +111,7 @@ class TeamCreationTest extends TestCase
 
         $team = Team::create([
             'team_name' => 'Team Squirtle',
-            'team_status' => 'on-going',
+            'team_status' => 'Active',
             'leader_id' => $leader->student_id,
         ]);
 
@@ -162,7 +163,7 @@ class TeamCreationTest extends TestCase
 
         $team = Team::create([
             'team_name' => 'Team Leave Flow',
-            'team_status' => 'on-going',
+            'team_status' => 'Active',
             'leader_id' => $leader->student_id,
         ]);
 
@@ -178,7 +179,7 @@ class TeamCreationTest extends TestCase
 
         $this->actingAs($member, 'web');
 
-        $response = $this->post('/team/leave');
+        $response = $this->post('/team/leave-requests');
         $response->assertRedirect(route('student.team'));
         $response->assertSessionHas('status');
 
@@ -193,15 +194,15 @@ class TeamCreationTest extends TestCase
         $this->actingAs($leader, 'web');
         $teamPage = $this->get(route('student.team'));
         $teamPage->assertOk();
-        $teamPage->assertSee('/team/leave/'.$approval->id.'/approve', false);
-        $teamPage->assertSee('/team/leave/'.$approval->id.'/decline', false);
+        $teamPage->assertSee('/team/leave-requests/'.$approval->id, false);
+        $teamPage->assertSee('value="declined"', false);
 
-        $this->post('/team/leave/'.$approval->id.'/decline');
+        $this->patch('/team/leave-requests/'.$approval->id, ['status' => 'declined']);
         $approval->refresh();
         $this->assertSame('declined', $approval->status);
 
         $this->actingAs($member, 'web');
-        $this->post('/team/leave');
+        $this->post('/team/leave-requests');
         $secondApproval = LeaveApproval::where('student_id', $member->student_id)
             ->where('team_id', $team->team_id)
             ->latest('id')
@@ -210,12 +211,12 @@ class TeamCreationTest extends TestCase
         $this->assertSame(2, $secondApproval->attempt);
 
         $this->actingAs($leader, 'web');
-        $this->post('/team/leave/'.$secondApproval->id.'/decline');
+        $this->patch('/team/leave-requests/'.$secondApproval->id, ['status' => 'declined']);
         $secondApproval->refresh();
         $this->assertSame('declined', $secondApproval->status);
 
         $this->actingAs($member, 'web');
-        $this->post('/team/leave');
+        $this->post('/team/leave-requests');
         $thirdApproval = LeaveApproval::where('student_id', $member->student_id)
             ->where('team_id', $team->team_id)
             ->latest('id')
@@ -224,7 +225,7 @@ class TeamCreationTest extends TestCase
         $this->assertSame(3, $thirdApproval->attempt);
 
         $this->actingAs($leader, 'web');
-        $this->post('/team/leave/'.$thirdApproval->id.'/decline');
+        $this->patch('/team/leave-requests/'.$thirdApproval->id, ['status' => 'declined']);
 
         $memberSy = StudentSchoolYear::where('student_id', $member->student_id)->first();
         $this->assertNull($memberSy->team_id);
@@ -250,7 +251,7 @@ class TeamCreationTest extends TestCase
 
         $team = Team::create([
             'team_name' => 'Team Transfer',
-            'team_status' => 'on-going',
+            'team_status' => 'Active',
             'leader_id' => $leader->student_id,
         ]);
 
@@ -274,7 +275,7 @@ class TeamCreationTest extends TestCase
         $this->actingAs($leader, 'web');
 
         // Send leadership transfer request
-        $response = $this->post('/team/transfer-leadership', [
+        $response = $this->put('/team/leader', [
             'new_leader_id' => $member->student_id,
         ]);
 
@@ -310,7 +311,7 @@ class TeamCreationTest extends TestCase
 
         // Member accepts the request
         $this->actingAs($member, 'web');
-        $response = $this->post('/team/leadership/'.$requestNotif->id.'/accept');
+        $response = $this->patch('/team/leadership/'.$requestNotif->id, ['status' => 'accepted']);
 
         $response->assertRedirect(route('student.team'));
         $response->assertSessionHas('status');
@@ -337,7 +338,7 @@ class TeamCreationTest extends TestCase
 
         // New leader approves the leave request
         $this->actingAs($member, 'web');
-        $this->post('/team/leave/'.$leaveApproval->id.'/approve');
+        $this->patch('/team/leave-requests/'.$leaveApproval->id, ['status' => 'approved']);
 
         // Verify the original leader's team_id is null
         $this->assertNull(StudentSchoolYear::where('student_id', $leader->student_id)->value('team_id'));
@@ -370,7 +371,7 @@ class TeamCreationTest extends TestCase
 
         $team = Team::create([
             'team_name' => 'Team Pending',
-            'team_status' => 'on-going',
+            'team_status' => 'Active',
             'leader_id' => $leader->student_id,
         ]);
 
@@ -379,7 +380,7 @@ class TeamCreationTest extends TestCase
 
         $this->actingAs($leader, 'web');
 
-        $this->post('/team/transfer-leadership', ['new_leader_id' => $member->student_id]);
+        $this->put('/team/leader', ['new_leader_id' => $member->student_id]);
 
         // Leadership must NOT be transferred until the member approves
         $this->assertDatabaseHas('team', ['team_id' => $team->team_id, 'leader_id' => $leader->student_id]);
@@ -408,7 +409,7 @@ class TeamCreationTest extends TestCase
 
         $team = Team::create([
             'team_name' => 'Team API',
-            'team_status' => 'on-going',
+            'team_status' => 'Active',
             'leader_id' => $leader->student_id,
         ]);
 
@@ -417,7 +418,7 @@ class TeamCreationTest extends TestCase
 
         // Leader requests transfer via API
         $this->actingAs($leader, 'web');
-        $response = $this->post('/api/teams/'.$team->team_id.'/transfer-leadership', [
+        $response = $this->put('/api/teams/'.$team->team_id.'/leader', [
             'new_leader_id' => $member->student_id,
         ]);
         $response->assertOk();
@@ -434,7 +435,7 @@ class TeamCreationTest extends TestCase
 
         // Member approves via API
         $this->actingAs($member, 'web');
-        $this->post('/api/team/leadership/'.$requestNotif->id.'/accept');
+        $this->patch('/api/team/leadership/'.$requestNotif->id, ['status' => 'accepted']);
 
         $this->assertDatabaseHas('team', ['team_id' => $team->team_id, 'leader_id' => $member->student_id]);
     }
@@ -455,7 +456,7 @@ class TeamCreationTest extends TestCase
 
         $team = Team::create([
             'team_name' => 'Team API Decline',
-            'team_status' => 'on-going',
+            'team_status' => 'Active',
             'leader_id' => $leader->student_id,
         ]);
 
@@ -463,7 +464,7 @@ class TeamCreationTest extends TestCase
         StudentSchoolYear::create(['student_id' => $member->student_id, 'team_id' => $team->team_id]);
 
         $this->actingAs($leader, 'web');
-        $this->post('/api/teams/'.$team->team_id.'/transfer-leadership', ['new_leader_id' => $member->student_id]);
+        $this->put('/api/teams/'.$team->team_id.'/leader', ['new_leader_id' => $member->student_id]);
 
         $requestNotif = Notification::where('student_id', $member->student_id)
             ->where('type', 'leadership_transfer_request')
@@ -472,7 +473,7 @@ class TeamCreationTest extends TestCase
         $this->assertNotNull($requestNotif);
 
         $this->actingAs($member, 'web');
-        $this->post('/api/team/leadership/'.$requestNotif->id.'/decline');
+        $this->patch('/api/team/leadership/'.$requestNotif->id, ['status' => 'declined']);
 
         $this->assertDatabaseHas('team', ['team_id' => $team->team_id, 'leader_id' => $leader->student_id]);
         $this->assertDatabaseHas('notifications', [
@@ -503,7 +504,7 @@ class TeamCreationTest extends TestCase
 
         $team = Team::create([
             'team_name' => 'Team Stuck',
-            'team_status' => 'on-going',
+            'team_status' => 'Active',
             'leader_id' => $leader->student_id,
         ]);
 
@@ -514,12 +515,12 @@ class TeamCreationTest extends TestCase
         $this->actingAs($leader, 'web');
 
         // First transfer attempt to member 1 (never approved/declined -> stuck)
-        $this->post('/team/transfer-leadership', ['new_leader_id' => $firstMember->student_id]);
+        $this->put('/team/leader', ['new_leader_id' => $firstMember->student_id]);
 
         $this->assertDatabaseHas('team', ['team_id' => $team->team_id, 'leader_id' => $leader->student_id]);
 
         // Leader picks another member — must NOT be blocked by the stuck request
-        $response = $this->post('/team/transfer-leadership', ['new_leader_id' => $secondMember->student_id]);
+        $response = $this->put('/team/leader', ['new_leader_id' => $secondMember->student_id]);
 
         $response->assertRedirect(route('student.team'));
         $response->assertSessionHas('status');
@@ -551,7 +552,7 @@ class TeamCreationTest extends TestCase
 
         $team = Team::create([
             'team_name' => 'Team Decline',
-            'team_status' => 'on-going',
+            'team_status' => 'Active',
             'leader_id' => $leader->student_id,
         ]);
 
@@ -559,7 +560,7 @@ class TeamCreationTest extends TestCase
         StudentSchoolYear::create(['student_id' => $member->student_id, 'team_id' => $team->team_id]);
 
         $this->actingAs($leader, 'web');
-        $this->post('/team/transfer-leadership', ['new_leader_id' => $member->student_id]);
+        $this->put('/team/leader', ['new_leader_id' => $member->student_id]);
 
         $requestNotif = Notification::where('student_id', $member->student_id)
             ->where('type', 'leadership_transfer_request')
@@ -567,7 +568,7 @@ class TeamCreationTest extends TestCase
             ->first();
 
         $this->actingAs($member, 'web');
-        $this->post('/team/leadership/'.$requestNotif->id.'/decline');
+        $this->patch('/team/leadership/'.$requestNotif->id, ['status' => 'declined']);
 
         // Leader remains unchanged
         $this->assertDatabaseHas('team', ['team_id' => $team->team_id, 'leader_id' => $leader->student_id]);
@@ -588,7 +589,7 @@ class TeamCreationTest extends TestCase
         ]);
         Team::create([
             'team_name' => 'HyperTest',
-            'team_status' => 'on-going',
+            'team_status' => 'Active',
             'leader_id' => $first->student_id,
         ]);
 
@@ -606,7 +607,7 @@ class TeamCreationTest extends TestCase
         foreach (['HYPERTEST', 'hypertest'] as $attempt) {
             $response = $this->post('/team', [
                 'team_name' => $attempt,
-                'team_status' => 'on-going',
+                'team_status' => 'Active',
             ]);
             $response->assertSessionHasErrors('team_name');
         }
@@ -624,7 +625,7 @@ class TeamCreationTest extends TestCase
         ]);
         Team::create([
             'team_name' => 'Innovators',
-            'team_status' => 'on-going',
+            'team_status' => 'Active',
             'leader_id' => $first->student_id,
         ]);
 
@@ -668,7 +669,7 @@ class TeamCreationTest extends TestCase
 
         $team = Team::create([
             'team_name' => 'Team Remind',
-            'team_status' => 'on-going',
+            'team_status' => 'Active',
             'leader_id' => $leader->student_id,
         ]);
 
@@ -676,7 +677,7 @@ class TeamCreationTest extends TestCase
         StudentSchoolYear::create(['student_id' => $member->student_id, 'team_id' => $team->team_id]);
 
         $this->actingAs($leader, 'web');
-        $this->post('/team/transfer-leadership', ['new_leader_id' => $member->student_id]);
+        $this->put('/team/leader', ['new_leader_id' => $member->student_id]);
 
         $requestNotif = Notification::where('student_id', $member->student_id)
             ->where('type', 'leadership_transfer_request')
@@ -694,7 +695,7 @@ class TeamCreationTest extends TestCase
         $page->assertSee('Remind Me Later');
 
         // Member chooses "Remind Me Later" — sets a 3-hour reminder, request stays pending
-        $response = $this->post('/team/leadership/'.$requestNotif->id.'/remind-later', [], ['Accept' => 'application/json']);
+        $response = $this->put('/team/leadership/'.$requestNotif->id.'/reminder', [], ['Accept' => 'application/json']);
         $response->assertOk();
 
         $requestNotif->refresh();
@@ -711,6 +712,12 @@ class TeamCreationTest extends TestCase
             'is_read' => false,
         ]);
     }
+
+    // -- From Zzek-08's branch: the classmates a leader can invite ----------
+    // Everything else on that branch predates this one, so only these came
+    // over. Team status reads 'Active' here, not 'on-going' - that vocabulary
+    // is older than the split this branch made between a team that stopped
+    // taking members and one that turned its pre-proposals in.
 
     public function test_leader_sees_all_classmates_in_invite_modal_including_those_with_teams(): void
     {
@@ -729,7 +736,7 @@ class TeamCreationTest extends TestCase
 
         $team1 = Team::create([
             'team_name' => 'Team One',
-            'team_status' => 'on-going',
+            'team_status' => 'Active',
             'leader_id' => $leader->student_id,
         ]);
 
@@ -745,7 +752,7 @@ class TeamCreationTest extends TestCase
 
         $team2 = Team::create([
             'team_name' => 'Team Two',
-            'team_status' => 'on-going',
+            'team_status' => 'Active',
             'leader_id' => $studentWithTeam->student_id,
         ]);
 
@@ -813,7 +820,7 @@ class TeamCreationTest extends TestCase
 
         $team = Team::create([
             'team_name' => 'Team NoLeader Access',
-            'team_status' => 'on-going',
+            'team_status' => 'Active',
             'leader_id' => $leader->student_id,
         ]);
 
@@ -843,7 +850,7 @@ class TeamCreationTest extends TestCase
 
         $team1 = Team::create([
             'team_name' => 'Team Corrupt',
-            'team_status' => 'on-going',
+            'team_status' => 'Active',
             'leader_id' => $leader->student_id,
         ]);
 
@@ -866,7 +873,7 @@ class TeamCreationTest extends TestCase
 
         $team2 = Team::create([
             'team_name' => 'Team Other',
-            'team_status' => 'on-going',
+            'team_status' => 'Active',
             'leader_id' => $studentWithTeam->student_id,
         ]);
 
@@ -909,32 +916,59 @@ class TeamCreationTest extends TestCase
         $this->assertNotContains($leader->student_id, $ids, 'Leader should not appear in their own list');
     }
 
-    public function test_team_creation_sets_school_year_on_student_s_y(): void
+    // -- School year: one answer, written everywhere ----------------------
+
+    /**
+     * student_s_y.school_year was declared year(), which holds one four-digit
+     * year and nothing else, so every write of "2026-2027" was truncated
+     * away - the live table held nineteen nulls and a "0000". The classmate
+     * picker filters on that column, so it could never match anybody.
+     */
+    public function test_creating_a_team_records_a_usable_school_year(): void
     {
-        $student = Student::create([
-            'email' => 'teamstore.sy@example.com',
-            'f_name' => 'Iota',
-            'l_name' => 'Creator',
-            'student_number' => '2026-4001',
-            'course' => 'Bachelor of Science in Computer Science',
-            'year_section' => '4th · A',
+        $leader = Student::factory()->withCompleteProfile()->create([
+            'email' => 'leader@my.cspc.edu.ph', 'course' => 'BSIT', 'year_section' => '3 . B',
         ]);
 
-        $this->actingAs($student, 'web');
+        $this->actingAs($leader, 'web')
+            ->post(route('team.store'), ['team_name' => 'Year Team'])
+            ->assertRedirect();
 
-        // Ensure no student_s_y record exists yet
-        $this->assertDatabaseMissing('student_s_y', ['student_id' => $student->student_id]);
+        $row = StudentSchoolYear::where('student_id', $leader->student_id)->first();
 
-        $response = $this->post('/team', [
-            'team_name' => 'Auto SY Team',
-            'team_status' => 'on-going',
+        $this->assertNotNull($row, 'Team creation wrote no school-year row at all.');
+        $this->assertMatchesRegularExpression(
+            '/^\d{4}-\d{4}$/',
+            (string) $row->school_year,
+            'The row landed with no usable school year, so nothing filtering on it can match.'
+        );
+        $this->assertSame(Term::currentSchoolYear(), $row->school_year);
+    }
+
+    /** And with a year that means something, the picker can find people. */
+    public function test_a_new_leader_can_see_a_classmate_straight_away(): void
+    {
+        $leader = Student::factory()->withCompleteProfile()->create([
+            'email' => 'newleader@my.cspc.edu.ph', 'course' => 'BSIT', 'year_section' => '3 . B', 'l_name' => 'Leader',
+        ]);
+        $mate = Student::factory()->withCompleteProfile()->create([
+            'email' => 'newmate@my.cspc.edu.ph', 'course' => 'BSIT', 'year_section' => '3 . B', 'l_name' => 'Classmate',
         ]);
 
-        $response->assertRedirect(route('student.team'));
+        // The classmate's own row, written the same way a profile setup does.
+        StudentSchoolYear::create(['student_id' => $mate->student_id, 'team_id' => null]);
 
-        // The student_s_y record should have school_year set
-        $sy = StudentSchoolYear::where('student_id', $student->student_id)->first();
-        $this->assertNotNull($sy, 'student_s_y record should exist');
-        $this->assertNotNull($sy->school_year, 'school_year should be set after team creation');
+        $this->actingAs($leader, 'web')
+            ->post(route('team.store'), ['team_name' => 'Picker Team'])
+            ->assertRedirect();
+
+        $names = collect(
+            $this->actingAs($leader, 'web')
+                ->getJson(route('team.available-classmates'))
+                ->assertOk()
+                ->json('classmates')
+        )->pluck('student_id');
+
+        $this->assertContains($mate->student_id, $names->all());
     }
 }
