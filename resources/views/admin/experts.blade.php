@@ -1031,9 +1031,9 @@ removeBtn.addEventListener('click', function () {
   if (removeInput.value.trim().toLowerCase() !== 'deactivate') { return; }
 
   this.disabled = true;
-  this.textContent = 'Deleting…';
+  this.textContent = 'Deactivating…';
 
-  fetch(`{{ route('capsa.experts.destroy', ['expert' => 'EXPERT_ID']) }}`.replace('EXPERT_ID', expertId), {
+  fetch(`{{ route('admin.experts.destroy', ['expert' => 'EXPERT_ID']) }}`.replace('EXPERT_ID', expertId), {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -1051,7 +1051,7 @@ removeBtn.addEventListener('click', function () {
         showToast(data.message, 'success');
         setTimeout(() => window.location.reload(), 1500);
       } else {
-        showToast(data.message || 'Failed to delete expert.', 'error');
+        showToast(data.message || 'Could not deactivate that account.', 'error');
         this.disabled = false;
         this.textContent = 'Delete';
       }

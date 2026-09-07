@@ -88,6 +88,13 @@ class DirectoryController extends Controller
             ->map(fn (Student $student) => [
                 'email' => $student->email,
                 'name' => trim($student->f_name.' '.$student->l_name),
+                // The pieces a form has separate boxes for. Picking somebody
+                // who was removed from a section should fill in what is
+                // already known about them, leaving only the section to say.
+                'first_name' => $student->f_name,
+                'last_name' => $student->l_name,
+                'student_number' => $student->student_number,
+                'in_section' => filled($student->year_section),
                 // Where they are now, so pulling someone out of a colleague's
                 // section is a visible decision rather than an accident.
                 'detail' => trim(implode(' · ', array_filter([
