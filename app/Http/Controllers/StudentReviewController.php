@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\CapstoneDocument;
 use App\Models\CapstoneDocumentReview;
 use App\Models\PdfRemark;
+use App\Support\StudentTeam;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -12,11 +13,20 @@ use Illuminate\Support\Facades\Storage;
 class StudentReviewController extends Controller
 {
     /**
-     * Ensure the authenticated student owns the document this review is on.
+     * Ensure this review is on a document belonging to the student's team.
+     *
+     * It used to be the uploader's own document and nobody else's, which
+     * meant a teammate could not open a review of work their team submitted -
+     * not the annotated copy, not the remarks, nothing. A capstone document
+     * is the team's; who happened to click Upload is not who it belongs to.
      */
     private function authorizeReview(CapstoneDocumentReview $review): void
     {
-        abort_unless($review->document && $review->document->student_id === Auth::id(), 403);
+        abort_unless(
+            $review->document
+            && in_array((int) $review->document->student_id, StudentTeam::memberIdsFor(Auth::id()), true),
+            403
+        );
     }
 
     public function index(Request $request)
@@ -24,9 +34,9 @@ class StudentReviewController extends Controller
         $studentId = Auth::id();
 
         // Every review that's actually been turned in (status = Reviewed) for
-        // documents this student uploaded, newest first — a document can have
-        // more than one, since it may go to several reviewer roles.
-        $turnedIn = CapstoneDocument::where('student_id', $studentId)
+        // documents anybody on this team uploaded, newest first — a document
+        // can have more than one, since it may go to several reviewer roles.
+        $turnedIn = CapstoneDocument::whereIn('student_id', StudentTeam::memberIdsFor($studentId))
             ->with(['reviews' => function ($q) {
                 $q->where('review_status', 'Reviewed')
                     ->with('expert')
