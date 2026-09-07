@@ -206,7 +206,12 @@ class BugsFromTestingRoundTest extends TestCase
             ->getContent();
 
         $this->assertStringContainsString(route('student.pre-proposal.document', $proposal), $html);
-        $this->assertStringContainsString('View PDF', $html);
+        // A button opening a panel of its own, the way the expert side shows
+        // a student's proposal - not an iframe wedged above seven text
+        // fields, which is neither a readable document nor a readable
+        // summary.
+        $this->assertStringContainsString('View Original PDF', $html);
+        $this->assertStringContainsString('id="original-pdf-modal"', $html);
     }
 
     /** A button leading to a 404 is worse than no button. */
@@ -216,7 +221,8 @@ class BugsFromTestingRoundTest extends TestCase
 
         $html = $this->actingAs($student, 'web')->get(route('student.experts'))->assertOk()->getContent();
 
-        $this->assertStringNotContainsString('View PDF', $html);
+        $this->assertStringNotContainsString('View Original PDF', $html);
+        $this->assertStringNotContainsString('id="original-pdf-modal"', $html);
     }
 
     public function test_a_team_can_open_its_own_document(): void
