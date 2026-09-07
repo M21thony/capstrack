@@ -9,6 +9,36 @@ class Team extends Model
 {
     protected $table = 'team';
 
+    /**
+     * Which half of the subject the department is currently running.
+     *
+     * Capstone 1 is the second semester of 3rd year; Capstone 2 is the first
+     * semester of 4th year. So it is not something a student's year answers -
+     * a 3rd year in the first semester has not started Capstone 1 yet, and
+     * the year label alone cannot tell those apart.
+     *
+     * The active term already carries it, declared by the Admin, and that is
+     * the only thing that knows. Capstone 1 when nothing is set up, because a
+     * fresh install has no terms and refusing every member would be worse
+     * than allowing them.
+     */
+    public static function capstoneStage(): int
+    {
+        return (int) (Term::active()?->capstone_stage ?: 1);
+    }
+
+    /**
+     * Whether teams may still take members.
+     *
+     * Only during Capstone 1. Somebody joining in Capstone 2 was not there
+     * for the title, the proposal, or any of the work being graded - which is
+     * what the department's rule is about.
+     */
+    public function mayAddMembers(): bool
+    {
+        return static::capstoneStage() === 1;
+    }
+
     /** The smallest and largest team a CaPSA may allow. */
     public const MIN_MEMBERS = 3;
 

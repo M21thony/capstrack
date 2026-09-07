@@ -32,6 +32,21 @@ class InvitationController extends Controller
         return InvitationResource::collection($invitations)->response();
     }
 
+    /** The team is past the point where its roster can change. */
+    private function refuseIfCapstoneTwo(?int $teamId): ?JsonResponse
+    {
+        $team = $teamId ? Team::with(['members', 'leader'])->find($teamId) : null;
+
+        if (! $team || $team->mayAddMembers()) {
+            return null;
+        }
+
+        return response()->json([
+            'message' => 'Members can only be added during Capstone 1 (3rd year). '
+                .'This team is in Capstone 2, so its members are settled.',
+        ], 422);
+    }
+
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
@@ -42,6 +57,16 @@ class InvitationController extends Controller
 
         $student = $request->user();
         $studentId = $student->student_id;
+
+        $teamId = $validated['team_id'] ?? StudentTeam::idFor($studentId);
+
+        // Capstone 2 teams are closed. Somebody joining in 4th year was not
+        // there for the title, the proposal or any of the work being graded,
+        // which is what the department's rule is about. Checked here as well
+        // as in the page, because the page can only hide a button.
+        if ($closed = $this->refuseIfCapstoneTwo($teamId)) {
+            return $closed;
+        }
 
         if ($validated['type'] === 'request') {
             if (StudentTeam::has($studentId)) {
@@ -162,6 +187,12 @@ class InvitationController extends Controller
     {
         $student = $request->user();
         $studentId = $student->student_id;
+
+        // An invitation sent in 3rd year and accepted in 4th would slip
+        // through a check made only at sending.
+        if ($closed = $this->refuseIfCapstoneTwo($invitation->team_id)) {
+            return $closed;
+        }
 
         $memberRoleId = $this->roleFromTeamPost($invitation->team_id);
 
