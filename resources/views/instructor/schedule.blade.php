@@ -74,6 +74,8 @@
                 <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
               </button>
               <div class="mode-toggle">
+                <button class="mode-btn view-btn is-on" id="btn-view-month" onclick="setCalView('month')">Month</button>
+                <button class="mode-btn view-btn" id="btn-view-week" onclick="setCalView('week')">Week</button>
                 {{-- Set a term's worth of hours in one go, instead of one
                      slot at a time through the form on the right. --}}
                 <button class="mode-btn" onclick="openAvail()">Set availability</button>
@@ -85,6 +87,16 @@
           <!-- Calendar Grid -->
           <div class="cal-grid" id="cal-grid">
             <!-- Rendered by JS -->
+          </div>
+
+          {{-- The same slots against a time axis. A month answers "which
+               day"; only a week answers "am I free Thursday afternoon",
+               which is the question this page actually gets asked. It reads
+               the same slots[] the month grid does, so nothing here has its
+               own idea of what is booked. --}}
+          <div class="wk" id="week-grid" hidden>
+            <div class="wk-head" id="wk-head"></div>
+            <div class="wk-body" id="wk-body"></div>
           </div>
         </div>
 
@@ -290,6 +302,48 @@
   border-radius:20px;padding:5px 11px;font:600 11px/1.3 inherit;cursor:pointer;transition:.15s}
 .dur-chip:hover{border-color:var(--accent)}
 .dur-chip.is-on{background:var(--accent-light);border-color:var(--accent);color:var(--accent3)}
+
+/* The week view. Hours are rows, days are columns, and a slot is drawn at
+   its real position and length - so an empty afternoon looks empty. */
+
+/* [hidden] is display:none from the browser's own stylesheet, which any
+   class setting a display loses to - .cal-grid{display:grid} kept the month
+   on screen underneath the week. */
+[hidden]{display:none!important}
+.view-btn.is-on{background:var(--accent-light);border-color:var(--accent);color:var(--accent3)}
+/* One scroll container, so the header and the body are the same width and
+   their columns cannot drift apart when a scrollbar appears. */
+.wk{border:1px solid var(--border);border-radius:12px;background:var(--bg2);
+  max-height:560px;overflow-y:auto}
+.wk-head{display:grid;grid-template-columns:52px repeat(7,1fr);background:var(--bg3);
+  border-bottom:1px solid var(--border);position:sticky;top:0;z-index:2}
+.wk-head div{padding:7px 4px;text-align:center;font-size:11px;font-weight:600;color:var(--text2);
+  border-left:1px solid var(--border)}
+.wk-head div:first-child{border-left:none}
+.wk-head div.is-today{background:var(--accent-light);color:var(--accent3)}
+.wk-head div.is-blocked{color:var(--red)}
+.wk-head span{display:block;font-size:15px;font-weight:700;color:var(--text);
+  font-variant-numeric:tabular-nums;line-height:1.25}
+.wk-head div.is-today span{color:var(--accent3)}
+.wk-body{display:grid;grid-template-columns:52px repeat(7,1fr)}
+.wk-hours{position:relative}
+.wk-hours i{display:block;height:44px;font-style:normal;font-size:10px;color:var(--text3);
+  text-align:right;padding:1px 6px 0 0;font-family:inherit;font-variant-numeric:tabular-nums}
+.wk-col{position:relative;border-left:1px solid var(--border);cursor:pointer;
+  background:repeating-linear-gradient(var(--bg2) 0 43px, var(--border) 43px 44px)}
+.wk-col:hover{background:repeating-linear-gradient(var(--bg3) 0 43px, var(--border) 43px 44px)}
+.wk-col.is-selected{background:repeating-linear-gradient(var(--accent-light) 0 43px, var(--border) 43px 44px)}
+.wk-col.is-blocked{background:repeating-linear-gradient(var(--bg4) 0 43px, var(--border) 43px 44px);cursor:not-allowed}
+.wk-slot{position:absolute;left:2px;right:2px;border-radius:5px;padding:3px 5px;overflow:hidden;
+  font-size:10px;line-height:1.25;cursor:pointer;border-left:3px solid;background:var(--bg2)}
+.wk-slot b{display:block;font-weight:700;color:var(--text);white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis}
+.wk-slot span{color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+.wk-slot.is-booked{background:var(--navy-dark,#1e2028);border-left-color:var(--accent)}
+.wk-slot.is-booked b{color:#fff}
+.wk-slot.is-booked span{color:rgba(255,255,255,.6)}
+.wk-slot.is-open{background:var(--accent-light);border-left-color:var(--accent)}
+.wk-empty{padding:26px 8px;text-align:center;font-size:12px;color:var(--text3);grid-column:1/-1}
 
 /* Setting a term's worth of availability in one go. */
 .av-rows{display:flex;flex-direction:column;gap:7px;margin-bottom:14px}
@@ -692,7 +746,7 @@ async function initCalendar() {
 
   await loadSlots();
 
-  renderCalendar();
+  redrawCalendar();
   renderUpcoming();
   renderSlotStats();
 }
@@ -701,22 +755,45 @@ async function initCalendar() {
 //  MONTH NAVIGATION
 // ══════════════════════════════════════════════════════════════
 function prevMonth() {
+  if (calView === 'week') {
+    weekAnchor.setDate(weekAnchor.getDate() - 7);
+    renderWeek();
+
+    return;
+  }
+
   viewMonth--;
   if (viewMonth < 0) { viewMonth = 11; viewYear--; }
   fanOutSlots();   // re-fan for new month — no duplicate risk
-  renderCalendar();
+  redrawCalendar();
 }
 
 function nextMonth() {
+  if (calView === 'week') {
+    weekAnchor.setDate(weekAnchor.getDate() + 7);
+    renderWeek();
+
+    return;
+  }
+
   viewMonth++;
   if (viewMonth > 11) { viewMonth = 0; viewYear++; }
   fanOutSlots();
-  renderCalendar();
+  redrawCalendar();
 }
 
 // ══════════════════════════════════════════════════════════════
 //  CALENDAR RENDER
 // ══════════════════════════════════════════════════════════════
+/** Redraw whatever is on screen - month grid or week grid. */
+function redrawCalendar() {
+  if (calView === 'week') {
+    renderWeek();
+  } else {
+    renderCalendar();
+  }
+}
+
 function renderCalendar() {
   const grid    = document.getElementById('cal-grid');
   const today   = new Date();
@@ -841,6 +918,147 @@ function renderCalendar() {
 }
 
 // ══════════════════════════════════════════════════════════════
+//  WEEK VIEW
+//  The same slots against a time axis. renderCalendar() is left
+//  alone; this is a second way of drawing slots[], so there is no
+//  second idea of what is booked.
+// ══════════════════════════════════════════════════════════════
+const WK_FIRST_HOUR = 7;    // 7am
+const WK_LAST_HOUR  = 19;   // 7pm
+const WK_HOUR_PX    = 44;
+
+let calView    = 'month';
+let weekAnchor = null;      // any date inside the week being shown
+
+/** The Sunday of the week containing this date. */
+function weekStart(date) {
+  const start = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  start.setDate(start.getDate() - start.getDay());
+
+  return start;
+}
+
+function setCalView(view) {
+  calView = view;
+
+  document.getElementById('btn-view-month').classList.toggle('is-on', view === 'month');
+  document.getElementById('btn-view-week').classList.toggle('is-on', view === 'week');
+  document.getElementById('cal-grid').hidden = view !== 'month';
+  document.getElementById('week-grid').hidden = view !== 'week';
+
+  if (view === 'week') {
+    if (!weekAnchor) {
+      // Open on the week you were already looking at, or this one.
+      const [y, m, d] = (selectedDate || '').split('-').map(Number);
+      weekAnchor = selectedDate ? makeDate(y, m, d) : new Date();
+    }
+    renderWeek();
+  } else {
+    renderCalendar();
+  }
+}
+
+function renderWeek() {
+  const head  = document.getElementById('wk-head');
+  const body  = document.getElementById('wk-body');
+  const start = weekStart(weekAnchor);
+  const today = new Date();
+  const todayKey = formatKey(today.getFullYear(), today.getMonth(), today.getDate());
+
+  head.innerHTML = '';
+  body.innerHTML = '';
+
+  // The label above the grid follows the week, not the month it starts in.
+  const last = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 6);
+  const sameMonth = start.getMonth() === last.getMonth();
+  document.getElementById('cal-month-display').textContent =
+    `${start.getDate()} ${MONTHS[start.getMonth()].substring(0, 3).toUpperCase()}`
+    + ` – ${last.getDate()} ${MONTHS[last.getMonth()].substring(0, 3).toUpperCase()}`;
+  document.getElementById('cal-month-label').textContent = sameMonth
+    ? `${MONTHS[start.getMonth()]} ${start.getFullYear()}`
+    : `${MONTHS[start.getMonth()]} – ${MONTHS[last.getMonth()]} ${last.getFullYear()}`;
+
+  head.appendChild(document.createElement('div'));
+
+  const hours = document.createElement('div');
+  hours.className = 'wk-hours';
+
+  for (let h = WK_FIRST_HOUR; h <= WK_LAST_HOUR; h++) {
+    const label = document.createElement('i');
+    label.textContent = h === 12 ? '12pm' : (h > 12 ? (h - 12) + 'pm' : h + 'am');
+    hours.appendChild(label);
+  }
+
+  body.appendChild(hours);
+
+  for (let i = 0; i < 7; i++) {
+    const date = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
+    const key  = formatKey(date.getFullYear(), date.getMonth(), date.getDate());
+    const isBlocked = blockedDates.has(key);
+
+    const th = document.createElement('div');
+    th.className = (key === todayKey ? 'is-today' : '') + (isBlocked ? ' is-blocked' : '');
+    th.innerHTML = DAYS[date.getDay()] + '<span>' + date.getDate() + '</span>';
+    head.appendChild(th);
+
+    const col = document.createElement('div');
+    col.className = 'wk-col'
+      + (key === selectedDate ? ' is-selected' : '')
+      + (isBlocked ? ' is-blocked' : '');
+    col.style.height = ((WK_LAST_HOUR - WK_FIRST_HOUR + 1) * WK_HOUR_PX) + 'px';
+
+    if (!isBlocked) {
+      col.addEventListener('click', () => {
+        selectDate(key, date.getDate());
+        renderWeek();
+      });
+    }
+
+    (slots[key] || []).forEach((slot, index) => {
+      const from = timeToMinutes(slot.start || slot.start_time);
+      const to   = timeToMinutes(slot.end || slot.end_time);
+      const top  = ((from - WK_FIRST_HOUR * 60) / 60) * WK_HOUR_PX;
+
+      // A slot outside the drawn hours would otherwise land on top of the
+      // 7am row; clamp it into view rather than lose it.
+      const height = Math.max(((to - from) / 60) * WK_HOUR_PX, 17);
+
+      const el = document.createElement('div');
+      el.className = 'wk-slot ' + (slot.booked ? 'is-booked' : 'is-open');
+      el.style.top = Math.max(top, 0) + 'px';
+      el.style.height = height + 'px';
+      el.style.borderLeftColor = TYPE_COLORS[slot.type] || 'var(--accent)';
+      el.title = hr12(slot.start || slot.start_time) + '–' + hr12(slot.end || slot.end_time)
+        + ' · ' + (TYPE_LABELS[slot.type] || 'Consultation')
+        + (slot.teamName ? ' · ' + slot.teamName : '');
+
+      const name = document.createElement('b');
+      name.textContent = slot.booked ? (slot.teamName || 'Booked') : 'Open';
+      el.appendChild(name);
+
+      if (height > 30) {
+        const when = document.createElement('span');
+        when.textContent = hr12(slot.start || slot.start_time).replace(':00', '');
+        el.appendChild(when);
+      }
+
+      el.addEventListener('click', (event) => {
+        // Otherwise the column underneath also takes the click and the
+        // panel jumps back to "add a slot" the moment you open one.
+        event.stopPropagation();
+        selectDate(key, date.getDate());
+        renderWeek();
+        editSlot(slot.schedule_id, key, index);
+      });
+
+      col.appendChild(el);
+    });
+
+    body.appendChild(col);
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
 //  CELL CLICK
 //  View and Add are merged — clicking any (non-blocked) date shows
 //  its existing slots and the add form together in the side panel.
@@ -851,7 +1069,7 @@ function handleCellClick(key, dayNum, isDisabled, dayName) {
   if (currentMode === 'block') {
     if (blockedDates.has(key)) {
       blockedDates.delete(key);
-      renderCalendar();
+      redrawCalendar();
       showToast('Date unblocked — students can now book this day.');
     } else {
       pendingBlockDate = { key, dayNum };
@@ -917,7 +1135,7 @@ function selectDate(key, dayNum) {
   document.getElementById('add-slot-fields').style.display    = 'block';
   checkTimeOverlap();
   renderSelectedDateSlots(key);
-  renderCalendar();
+  redrawCalendar();
 
   // Re-apply selected highlight after renderCalendar rebuilds the grid
   const selectedCell = document.querySelector(`.cal-cell[data-key="${key}"]`);
@@ -939,7 +1157,7 @@ function clearSelectedDate() {
   document.getElementById('time-overlap-warning').style.display = 'none';
   document.getElementById('selected-date-slots').style.display = 'none';
   document.querySelectorAll('.cal-cell.has-conflict').forEach(el => el.classList.remove('has-conflict'));
-  renderCalendar();
+  redrawCalendar();
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -1022,7 +1240,11 @@ function checkTimeOverlap() {
     return;
   }
 
-  const daySlots = slots[selectedDate] || [];
+  // A slot being edited is not a conflict with itself. saveSlot() already
+  // knew that; this warning did not, so opening any existing slot said it
+  // overlapped a 9-10 consultation - which was the slot in the form.
+  const daySlots = (slots[selectedDate] || [])
+    .filter(s => !editingSlotId || s.schedule_id !== editingSlotId);
   const startMin = timeToMinutes(start);
   const endMin = timeToMinutes(end);
   const overlapping = daySlots.filter(s => {
@@ -1133,7 +1355,7 @@ async function saveSlot() {
       }
 
       fanOutSlots();
-      renderCalendar();
+      redrawCalendar();
       renderSlotStats();
       renderUpcoming();
       renderSelectedDateSlots(selectedDate);
@@ -1185,7 +1407,7 @@ async function saveSlot() {
 
     // FIX: single re-fan covers the whole month correctly
     fanOutSlots();
-    renderCalendar();
+    redrawCalendar();
     renderSlotStats();
     renderUpcoming();
 
@@ -1210,7 +1432,7 @@ async function saveSlot() {
   } catch (e) {
     // API failed — fall back to local-only, same pattern
     await loadSlots();
-    renderCalendar();
+    redrawCalendar();
     renderSlotStats();
     renderUpcoming();
     showToast(`Slot saved locally (server error: ${e.message})`, 'error');
@@ -1316,7 +1538,7 @@ async function toggleSlot(scheduleId, key, index) {
       }
     }
 
-    renderCalendar();
+    redrawCalendar();
 
     // FIX: refresh the panel in place — no modal to worry about anymore.
     if (selectedDate === key) renderSelectedDateSlots(key);
@@ -1333,7 +1555,7 @@ async function refreshGcalSlot(scheduleId) {
     const data = await apiFetch(`/instructor/schedule/slots/${scheduleId}/refresh-gcal`, { method: 'PATCH' });
 
     showToast('Google Calendar event refreshed with correct timezone ✓');
-    renderCalendar();
+    redrawCalendar();
   } catch (e) {
     showToast('Failed to refresh: ' + e.message, 'error');
   }
@@ -1372,7 +1594,7 @@ async function deleteSlot(key, index, scheduleId) {
       }
     }
 
-    renderCalendar();
+    redrawCalendar();
     renderSlotStats();
     renderUpcoming();
 
@@ -1497,7 +1719,7 @@ function renderSlotModal(key) {
 function confirmBlock() {
   if (!pendingBlockDate) return;
   blockedDates.add(pendingBlockDate.key);
-  renderCalendar();
+  redrawCalendar();
   closeBlockConfirm();
   showToast('Date blocked — students cannot book this day.');
 }
@@ -1831,7 +2053,7 @@ initCalendar();
 // slot flips from 'Booked' to 'Ongoing' — and back to past — without the
 // user needing to refresh the page.
 setInterval(() => {
-  renderCalendar();
+  redrawCalendar();
   if (selectedDate) renderSelectedDateSlots(selectedDate);
   renderUpcoming();
 }, 60000);
