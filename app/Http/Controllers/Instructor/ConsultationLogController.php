@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Instructor;
 
 use App\Http\Controllers\Controller;
 use App\Models\PdfRemark;
+use App\Support\StudentTeam;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -29,9 +30,17 @@ class ConsultationLogController extends Controller
         }
 
         // Experts can pull any CLF today (pre-existing behavior); a student
-        // may only download the log for a document they themselves uploaded.
+        // may download the log for anything their team submitted. It used to
+        // be the uploader alone, which the block directly below contradicts:
+        // it lists every member of the team as a proponent on the form. One
+        // teammate could download a log naming all of them, and the rest got
+        // a 403.
         if (! Auth::guard('expert')->check()) {
-            abort_unless(Auth::check() && (int) $review->student_id === Auth::id(), 403);
+            abort_unless(
+                Auth::check()
+                && in_array((int) $review->student_id, StudentTeam::memberIdsFor(Auth::id()), true),
+                403
+            );
         }
 
         // Proponents: every student on this team, across all school-year rows
