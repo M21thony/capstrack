@@ -174,6 +174,26 @@ class Student extends Authenticatable
      *
      * Returns null when the course cannot be mapped or inputs are empty.
      */
+    /**
+     * Deleting a student withdraws their invitation as well.
+     *
+     * student_rosters is what admits somebody at sign-in - not this table.
+     * So deleting the account on its own achieves nothing: the next sign-in
+     * reads the roster, finds them still listed, and builds the account
+     * again. It looks exactly like the deletion never happened, and it has
+     * been reported three times as "the gate is not working".
+     *
+     * This closes every path through the application. A row deleted by hand
+     * in a database tool still leaves the roster entry behind, because
+     * nothing in PHP runs for that - both tables have to go.
+     */
+    protected static function booted(): void
+    {
+        static::deleting(function (self $student) {
+            StudentRoster::whereRaw('LOWER(email) = ?', [Str::lower($student->email)])->delete();
+        });
+    }
+
     /** Capstone is a 3rd and 4th year subject; no other year uses this system. */
     public const CAPSTONE_YEARS = [3, 4];
 

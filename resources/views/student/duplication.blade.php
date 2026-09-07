@@ -1205,10 +1205,16 @@ function clearScanResult() {
     return;
   }
 
-  if (!confirm('Clear this result? The scan is thrown away. Your saved pre-proposals are not touched.')) {
-    return;
-  }
+  // Asked in the page's own dialog, the same one that asks before removing a
+  // pre-proposal. pendingRemoveId stays null, which is how the Yes button
+  // below tells the two apart.
+  pendingClearCheck = true;
+  document.getElementById('pp-confirm-message').textContent =
+    'Clear this result? The scan is thrown away. Your saved pre-proposals are not touched.';
+  document.getElementById('pp-confirm-modal').classList.add('show');
+}
 
+function reallyClearScanResult() {
   fetch('{{ url('pre-proposal/duplication-checks') }}/' + lastCheckData.duplication_check_id, {
     method: 'DELETE',
     headers: {
@@ -1444,6 +1450,8 @@ function openFreshReportModal() {
 
 let pendingRemoveId = null;
 
+let pendingClearCheck = false;
+
 function openRemoveConfirm(proposalId) {
   pendingRemoveId = proposalId;
   document.getElementById('pp-confirm-message').textContent = 'Remove this proposal? This cannot be undone.';
@@ -1453,9 +1461,18 @@ function openRemoveConfirm(proposalId) {
 function closePpConfirmModal() {
   document.getElementById('pp-confirm-modal').classList.remove('show');
   pendingRemoveId = null;
+  pendingClearCheck = false;
 }
 
 document.getElementById('pp-confirm-yes-btn').addEventListener('click', function () {
+  if (pendingClearCheck) {
+    pendingClearCheck = false;
+    closePpConfirmModal();
+    reallyClearScanResult();
+
+    return;
+  }
+
   if (pendingRemoveId) {
     document.getElementById('remove-form-' + pendingRemoveId).submit();
   }
