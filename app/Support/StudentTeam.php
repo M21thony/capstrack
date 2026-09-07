@@ -76,4 +76,36 @@ class StudentTeam
     {
         return self::idFor($student) !== null;
     }
+
+    /**
+     * Everyone whose work counts as this student's team's work.
+     *
+     * Capstone documents record only who uploaded them, so "our team's
+     * submissions" has to be asked as "submissions by anybody on our team".
+     * A student in no team is a team of one, which keeps every caller's
+     * query the same shape whether or not they have teammates yet.
+     *
+     * @return array<int, int>
+     */
+    public static function memberIdsFor(Student|int|null $student): array
+    {
+        $studentId = $student instanceof Student ? $student->student_id : $student;
+
+        if (! $studentId) {
+            return [];
+        }
+
+        $teamId = self::idFor($studentId);
+
+        if ($teamId === null) {
+            return [(int) $studentId];
+        }
+
+        return StudentSchoolYear::where('team_id', $teamId)
+            ->pluck('student_id')
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
+    }
 }
