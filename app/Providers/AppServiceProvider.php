@@ -4,6 +4,9 @@ namespace App\Providers;
 
 use App\Models\CapstoneDocumentReview;
 use App\Models\Notification;
+use App\Models\StudentRole;
+use App\Models\StudentSchoolYear;
+use App\Models\Team;
 use App\Models\TeamInvitation;
 use App\Services\OllamaSSHClient;
 use App\Services\SimilarityService;
@@ -60,7 +63,23 @@ class AppServiceProvider extends ServiceProvider
                     ->whereNotIn('id', $dismissedInvitationIds)
                     ->latest('created_at')
                     ->get();
-                $view->with(compact('unreadNotifications', 'unreadCount', 'joinRequestPopups'));
+                // The profile panel in the sidebar shows where this student
+                // stands in their capstone, and the sidebar is on every
+                // student page - so it is fetched once, here, rather than in
+                // each of a dozen controllers.
+                $enrolment = StudentSchoolYear::with('role')
+                    ->where('student_id', $studentId)
+                    ->first();
+
+                $panelTeam = $enrolment?->team_id ? Team::find($enrolment->team_id) : null;
+                $panelRole = $panelTeam && (int) $panelTeam->leader_id === (int) $studentId
+                    ? StudentRole::LEADER_ROLE_NAME
+                    : $enrolment?->role?->s_role_name;
+
+                $view->with(compact(
+                    'unreadNotifications', 'unreadCount', 'joinRequestPopups',
+                    'panelTeam', 'panelRole'
+                ));
             }
         });
 
