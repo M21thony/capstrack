@@ -645,12 +645,12 @@
                     @if ($isOff)
                       <button type="button" class="rowmenu-item"
                               onclick="reactivateExpert({{ $expert->expert_id }}, {{ Illuminate\Support\Js::from($expert->name) }})">
-                        <svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> Switch this account back on
+                        <svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> Reactivate
                       </button>
                     @else
                     <button type="button" class="rowmenu-item danger"
                             onclick="removeOneExpert({{ $expert->expert_id }}, {{ Illuminate\Support\Js::from($expert->name) }})">
-                      <svg viewBox="0 0 24 24"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg> Deactivate this account
+                      <svg viewBox="0 0 24 24"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg> Deactivate
                     </button>
                     @endif
                   </div>
@@ -1512,5 +1512,6 @@ onBulk('bulkRemove', function (ids, rows) {
 @include('partials.row-menu')
 @include('partials.email-lookup', ['input' => 'addExpertEmail', 'kind' => 'expert', 'nameInput' => 'addExpertName'])
 
+@include('partials.escape-closes-modals')
 </body>
 </html>

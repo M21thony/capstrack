@@ -13,5 +13,6 @@
 </head>
 <body>
     @yield('content')
+@include('partials.escape-closes-modals')
 </body>
 </html>

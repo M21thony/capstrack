@@ -259,5 +259,6 @@ function showToast(message, type = 'success') {
 }
 
 </script>
+@include('partials.escape-closes-modals')
 </body>
 </html>

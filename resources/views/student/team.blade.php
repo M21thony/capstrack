@@ -1446,7 +1446,7 @@
      behind it is unusable without it: every roster row, and the CaPSA's own
      verification list, reads this field. --}}
 @if(!empty($needsRole) && !empty($roleChoices))
-<div class="modal-overlay active" id="roleChoiceModal" style="z-index:1200">
+<div class="modal-overlay active" id="roleChoiceModal" data-no-escape style="z-index:1200">
   <div class="card modal-card modal-card--team" style="width:460px;max-width:94vw;padding:28px;position:relative">
     <div style="width:46px;height:46px;border-radius:12px;background:var(--accent);display:flex;align-items:center;justify-content:center;margin:0 auto 14px">
       <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#1a1a1a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="m19 8 2 2 3-3"/></svg>
@@ -1566,7 +1566,7 @@ function pickRole(roleId, btn) {
     <div style="width:56px;height:56px;border-radius:50%;background:rgba(239,68,68,0.08);color:#ef4444;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
       <svg width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
     </div>
-    <h3 style="font-size:17px;font-weight:700;color:#1e2128;margin:0 0 6px;letter-spacing:-0.3px;">Expert Removed</h3>
+    <h3 style="font-size:17px;font-weight:700;color:#1e2128;margin:0 0 6px;letter-spacing:-0.3px;">Expert No Longer Available</h3>
     <div id="expertRemovedContent" style="font-size:13px;color:#6b7280;line-height:1.6;margin:0 0 8px;text-align:left;max-height:200px;overflow-y:auto;padding:0 4px;">
       @foreach($expertRemovedNotifications as $notif)
         <div class="expert-removed-item" style="padding:12px 0;@if(!$loop->last)border-bottom:1px solid #f3f4f6;@endif">
@@ -2941,5 +2941,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
+@include('partials.escape-closes-modals')
 </body>
 </html>

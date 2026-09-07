@@ -227,5 +227,6 @@
 </div>
 @include('capsa.partials.skeleton-toggle')
 @include('capsa.partials.team-review-modal')
+@include('partials.escape-closes-modals')
 </body>
 </html>

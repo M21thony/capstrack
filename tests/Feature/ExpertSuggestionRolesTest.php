@@ -70,12 +70,22 @@ class ExpertSuggestionRolesTest extends TestCase
             $mock->shouldReceive('generate')->andReturnUsing(function (string $prompt) {
                 preg_match('/"id":(\d+)/', $prompt, $m);
 
-                return '{"id":'.($m[1] ?? 0).',"reason":"Because."}';
+                // A one-entry shortlist: the answer is now an array, and the
+                // first candidate is the only one it ever names.
+                return '[{"id":'.($m[1] ?? 0).',"reason":"Because."}]';
             });
         });
     }
 
-    public function test_one_suggestion_per_role_each_labelled(): void
+    /**
+     * Adviser and consultant, and nobody else.
+     *
+     * A grammarian is engaged for how the paper reads rather than what it is
+     * about, so ranking one against the proposal's subject recommends on the
+     * wrong grounds entirely. Teams pick theirs from the full list, where
+     * every grammarian is equally visible.
+     */
+    public function test_only_advisers_and_consultants_are_recommended(): void
     {
         $this->expert('Neil Inocencio', 'adviser', ['Research Methodology', 'Academic Writing']);
         $this->expert('Rosa Villanueva', 'consultant', ['Machine Learning']);
@@ -85,21 +95,40 @@ class ExpertSuggestionRolesTest extends TestCase
 
         $out = app(SimilarityService::class)->suggestInstructors($this->concepts());
 
-        $this->assertCount(3, $out);
-        $this->assertSame(
-            ['adviser', 'consultant', 'grammarian'],
-            array_column($out, 'role')
-        );
+        $this->assertSame(['adviser', 'consultant'], array_unique(array_column($out, 'role')));
+        $this->assertNotContains('grammarian', array_column($out, 'role'));
+        $this->assertNotContains('Marites Bandola', array_column($out, 'name'));
+
         // The bare role is what is stored; "Recommended" is added where the
         // panel is drawn, so a scan that already ran reads the same way.
+        $this->assertSame(['Adviser', 'Consultant'], array_unique(array_column($out, 'role_label')));
+    }
+
+    /**
+     * Several names per role, not one.
+     *
+     * Which consultant suits a study is a judgement the team is better placed
+     * to make. One name reads as an instruction; a shortlist reads as what it
+     * actually is.
+     */
+    public function test_more_than_one_expert_is_named_for_a_role(): void
+    {
+        foreach (['Neil Inocencio', 'Rosa Villanueva', 'Ana Cruz', 'Rico Dizon'] as $name) {
+            $this->expert($name, 'consultant', ['Machine Learning']);
+        }
+
+        $this->alwaysPicksTheFirst();
+
+        $consultants = collect(app(SimilarityService::class)->suggestInstructors($this->concepts()))
+            ->where('role', 'consultant');
+
+        $this->assertGreaterThan(1, $consultants->count());
+        // Capped, so the panel stays a shortlist rather than the whole roster.
+        $this->assertLessThanOrEqual(3, $consultants->count());
+        // And never the same person twice, however often the model says them.
         $this->assertSame(
-            ['Adviser', 'Consultant', 'Grammarian'],
-            array_column($out, 'role_label')
-        );
-        // One each, and the right one each.
-        $this->assertSame(
-            ['Neil Inocencio', 'Rosa Villanueva', 'Marites Bandola'],
-            array_column($out, 'name')
+            $consultants->pluck('id')->unique()->count(),
+            $consultants->count()
         );
     }
 
