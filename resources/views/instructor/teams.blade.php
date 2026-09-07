@@ -42,6 +42,16 @@
 
 .team-card-footer { padding-top: 14px; margin-top: 14px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; }
 
+/* The team's progress, on the team's own card. A bar rather than a number
+   alone because the question is "how far along", which is a length. */
+.team-progress-strip { margin-top: 14px; padding-top: 13px; border-top: 1px solid var(--border); }
+.tps-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 6px; }
+.tps-label { font-size: 10px; font-weight: 700; letter-spacing: 0.7px; text-transform: uppercase; color: var(--text3); }
+.tps-pct { font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.tps-bar { height: 6px; border-radius: 3px; background: var(--bg4); overflow: hidden; }
+.tps-bar i { display: block; height: 100%; border-radius: 3px; transition: width 0.3s; }
+.tps-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 7px; font-size: 11px; color: var(--text3); }
+
 /* Member Popover */
 .popover-overlay { display: none; position: fixed; inset: 0; z-index: 200; }
 .popover-overlay.open { display: block; }
@@ -245,6 +255,27 @@
         @endforeach
       </div>
 
+      {{-- Progress Monitoring used to be a page of its own, so seeing how a
+           team was doing meant leaving the team. These are its numbers, and
+           every card below now carries that team's share of them. --}}
+      <div class="team-overview-stat-row">
+        <div class="stat-chip">
+          <div class="stat-n" style="color:var(--accent3)">{{ $avgCompletion }}%</div>
+          <div class="stat-l">Avg. Completion</div>
+          <div class="stat-sub">Across your teams</div>
+        </div>
+        <div class="stat-chip">
+          <div class="stat-n" style="color:{{ $overdueMilestones > 0 ? 'var(--red)' : 'var(--text3)' }}">{{ $overdueMilestones }}</div>
+          <div class="stat-l">Overdue Items</div>
+          <div class="stat-sub">{{ $overdueMilestones > 0 ? 'Need chasing' : 'Nothing late' }}</div>
+        </div>
+        <div class="stat-chip">
+          <div class="stat-n" style="color:var(--green)">{{ $onTrack }}</div>
+          <div class="stat-l">On Track</div>
+          <div class="stat-sub">No overdue items</div>
+        </div>
+      </div>
+
       <div class="team-role-tabs">
         @foreach($tabs as $index => $tab)
           @php $label = $tab === 'panel' ? 'Panel' : ($tab === 'all' ? 'All' : Str::title($tab)); @endphp
@@ -313,6 +344,29 @@
                   </div>
                 @endif
               </div>
+
+              @php $tp = $progress->get($team?->team_id); @endphp
+              @if($tp)
+                <div class="team-progress-strip">
+                  <div class="tps-head">
+                    <span class="tps-label">Progress</span>
+                    <span class="tps-pct" style="color:{{ $tp->percent >= 70 ? 'var(--green)' : ($tp->percent >= 40 ? 'var(--accent3)' : 'var(--red)') }}">{{ $tp->percent }}%</span>
+                  </div>
+                  <div class="tps-bar">
+                    <i style="width:{{ max($tp->percent, 2) }}%;background:{{ $tp->percent >= 70 ? 'var(--green)' : ($tp->percent >= 40 ? 'var(--accent)' : 'var(--red)') }}"></i>
+                  </div>
+                  <div class="tps-foot">
+                    <span>{{ $tp->completed }} of {{ $tp->total }} items done</span>
+                    @if($tp->overdue > 0)
+                      <span class="badge badge-red" style="font-size:10px">{{ $tp->overdue }} overdue</span>
+                    @elseif($tp->total > 0)
+                      <span class="badge badge-green" style="font-size:10px">On track</span>
+                    @else
+                      <span style="color:var(--text3)">No milestones set</span>
+                    @endif
+                  </div>
+                </div>
+              @endif
 
               <div class="team-card-footer">
                 <button class="btn btn-ghost" onclick="openTeamInfoModal({{ $assignment->assignment_id }})">

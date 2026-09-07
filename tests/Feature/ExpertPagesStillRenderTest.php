@@ -37,7 +37,6 @@ class ExpertPagesStillRenderTest extends TestCase
         return [
             'dashboard' => ['/instructor/dashboard'],
             'teams' => ['/instructor/teams'],
-            'progress' => ['/instructor/progress'],
             'document review' => ['/instructor/docreview'],
             'assignments' => ['/instructor/assignments'],
             'schedule' => ['/instructor/schedule'],
@@ -48,6 +47,24 @@ class ExpertPagesStillRenderTest extends TestCase
     public function test_the_page_renders(string $url): void
     {
         $this->actingAs($this->expert, 'expert')->get($url)->assertOk();
+    }
+
+    /** Progress folded into Team Overview; the old URL still lands somewhere. */
+    public function test_progress_monitoring_now_goes_to_team_overview(): void
+    {
+        $this->actingAs($this->expert, 'expert')
+            ->get('/instructor/progress')
+            ->assertRedirect(route('instructor.teams'));
+    }
+
+    /** And the team's own numbers arrived on the page that took it over. */
+    public function test_team_overview_carries_the_progress_numbers(): void
+    {
+        $html = $this->actingAs($this->expert, 'expert')->get('/instructor/teams')->content();
+
+        $this->assertStringContainsString('Avg. Completion', $html);
+        $this->assertStringContainsString('Overdue Items', $html);
+        $this->assertStringContainsString('On Track', $html);
     }
 
     /** The controls the redesign must not lose. */

@@ -9,6 +9,36 @@ class Team extends Model
 {
     protected $table = 'team';
 
+    /**
+     * How far along this team is, counted from milestone items.
+     *
+     * Lives here because two pages ask the same question - Progress
+     * Monitoring did, and Team Overview does now that the two are one page.
+     * Counting from the items rather than milestones.status matters: that
+     * column never moves off 'todo', so anything reading it reports every
+     * team at zero however much work they have done.
+     */
+    public function progressSummary(): object
+    {
+        $total = 0;
+        $completed = 0;
+        $overdue = 0;
+
+        foreach (Milestone::where('team_id', $this->team_id)->with('items')->get() as $milestone) {
+            $progress = $milestone->progress();
+            $total += $progress->total;
+            $completed += $progress->completed;
+            $overdue += $progress->overdue;
+        }
+
+        return (object) [
+            'total' => $total,
+            'completed' => $completed,
+            'overdue' => $overdue,
+            'percent' => $total > 0 ? (int) round(($completed / $total) * 100) : 0,
+        ];
+    }
+
     protected $primaryKey = 'team_id';
 
     public $timestamps = false;
