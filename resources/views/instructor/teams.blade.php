@@ -361,7 +361,7 @@
                 <div class="tr-name">
                   {{ $team?->team_name ?? 'Unknown Team' }}
                   <span class="role-pill-sm role-pill-{{ $roleName }}">{{ Str::title(str_replace('_', ' ', $roleName)) }}</span>
-                  <span class="tr-count">{{ $members->count() }} of 5</span>
+                  <span class="tr-count">{{ $members->count() }} of {{ \App\Models\Team::maxMembers() }}</span>
                 </div>
                 <div class="tr-sub">
                   @if($leader)<span class="tr-lead">{{ $leader->displayFirstName() }} {{ $leader->l_name ?? '' }}</span> &middot; @endif

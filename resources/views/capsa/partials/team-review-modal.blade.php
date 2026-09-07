@@ -195,7 +195,10 @@ function openVerifyModal(data) {
   }
 
   document.getElementById('vm-leader').textContent = data.leader;
-  document.getElementById('vm-member-count').textContent = '(' + data.member_count + ' / 5)';
+  // The CaPSA's number, rendered in rather than written out - this said 5
+  // whatever they had set.
+  document.getElementById('vm-member-count').textContent =
+    '(' + data.member_count + ' / {{ \App\Models\Team::maxMembers() }})';
 
   var membersEl = document.getElementById('vm-members');
   membersEl.innerHTML = '';
