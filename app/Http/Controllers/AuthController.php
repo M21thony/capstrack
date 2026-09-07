@@ -477,10 +477,30 @@ class AuthController extends Controller
      */
     private function studentSigningIn(string $email, string $firstName, string $lastName, ?string $picture = null): ?Student
     {
-        $roster = StudentRoster::where('email', $email)->first();
+        // The class list is the whole of the answer. A student is on it
+        // because a CaPSA put them there, and taking them off it is how
+        // access is withdrawn - it is the only removal the system has.
+        //
+        // This used to also admit anyone who already had a students row,
+        // which made an account permanent once created: removing somebody
+        // from their section deletes their roster row, and they signed
+        // straight back in on the account instead. Nothing revoked
+        // anything. Their account is still kept on removal - work and
+        // history hang off it - it just stops being a way in.
+        //
+        // Matched without regard to case, because Google hands back the
+        // address as the person typed it and a capital letter was enough
+        // to miss the list.
+        $roster = StudentRoster::whereRaw('LOWER(email) = ?', [Str::lower($email)])->first();
 
-        if (! $roster && ! Student::whereRaw('LOWER(email) = ?', [$email])->exists()) {
+        if (! $roster) {
             return null;
+        }
+
+        $existing = Student::whereRaw('LOWER(email) = ?', [Str::lower($email)])->first();
+
+        if ($existing) {
+            return $existing;
         }
 
         return Student::firstOrCreate(

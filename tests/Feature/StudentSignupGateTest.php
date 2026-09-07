@@ -76,12 +76,17 @@ class StudentSignupGateTest extends TestCase
     }
 
     /**
-     * Somebody who was already using the site keeps their account.
+     * An account on its own is not a way in.
      *
-     * They were let in before this rule existed. Applying it to them would
-     * lock out every student who has been working here all along.
+     * This used to say the opposite: anyone holding a students row signed in
+     * whether or not they were listed. It was written to grandfather people
+     * who predated the list, and it quietly made every account permanent -
+     * removing a student deletes their roster row, and they came straight
+     * back in on the account instead, so nothing revoked anything. By the
+     * time it was found there was nobody left to grandfather: every student
+     * in the database was on the list.
      */
-    public function test_an_existing_account_still_signs_in_without_a_list(): void
+    public function test_an_account_without_a_listing_is_turned_away(): void
     {
         Student::create([
             'email' => 'already.here@my.cspc.edu.ph',
@@ -91,9 +96,9 @@ class StudentSignupGateTest extends TestCase
 
         $this->assertSame(0, StudentRoster::count());
 
-        $this->signIn('already.here@my.cspc.edu.ph')->assertOk();
+        $this->signIn('already.here@my.cspc.edu.ph')->assertStatus(403);
 
-        $this->assertAuthenticated();
+        $this->assertGuest();
     }
 
     /** The upload prepares the account, so signing in lands in that one. */
@@ -104,6 +109,14 @@ class StudentSignupGateTest extends TestCase
             'f_name' => 'Prepared',
             'l_name' => 'Account',
             'student_number' => '221001199',
+        ]);
+
+        // The upload writes both - the listing is what admits them, the
+        // account is what they land in.
+        StudentRoster::create([
+            'email' => 'prepared@my.cspc.edu.ph', 'name' => 'Prepared Account',
+            'student_number' => '221001199', 'section' => '4th B',
+            'program' => 'BSIT', 'school_year' => Student::schoolYearLabel(),
         ]);
 
         $this->signIn('prepared@my.cspc.edu.ph')->assertOk();

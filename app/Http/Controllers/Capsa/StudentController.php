@@ -148,6 +148,21 @@ class StudentController extends Controller
         // Taking back a student who was removed from a section, rather than
         // making a second account for the same person. Their team, their
         // submissions and everything else hanging off student_id stay.
+        // The invitation. Being on this list is what lets a student sign
+        // in - the upload writes it for a whole class, and adding one by
+        // hand has to write it too, or the student a CaPSA just added is
+        // turned away at the door.
+        StudentRoster::updateOrCreate(
+            ['email' => $email],
+            [
+                'name' => trim($data['f_name'].' '.$data['l_name']),
+                'student_number' => $data['student_number'] ?? null,
+                'section' => $yearSection,
+                'program' => $data['course'],
+                'school_year' => Student::schoolYearLabel(),
+            ]
+        );
+
         if ($existing) {
             $existing->update($fields);
 
