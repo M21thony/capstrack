@@ -288,5 +288,6 @@ function paintLetters(){
 paintLetters();
 previewSections();
 </script>
+@include('partials.escape-closes-modals')
 </body>
 </html>

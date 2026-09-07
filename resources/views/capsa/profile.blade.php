@@ -976,5 +976,6 @@ if (folderListContainer) {
 }
 </script>
 
+@include('partials.escape-closes-modals')
 </body>
 </html>

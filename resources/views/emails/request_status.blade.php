@@ -46,5 +46,6 @@
             You have received this email to update you about the status of your CapsTrack account request.
         </div>
     </div>
+@include('partials.escape-closes-modals')
 </body>
 </html>

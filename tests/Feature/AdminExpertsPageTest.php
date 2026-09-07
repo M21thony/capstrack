@@ -84,9 +84,9 @@ class AdminExpertsPageTest extends TestCase
 
         // Row actions that still belong to Admin. Setting roles is not among
         // them - see AdminHasNoRoleManagementTest for why.
-        $response->assertSee('Which sections they cover', false);
-        $response->assertSee('Take away the CaPSA role', false);
-        $response->assertSee('Deactivate this account', false);
+        $response->assertSee('Edit sections', false);
+        $response->assertSee('Remove CaPSA role', false);
+        $response->assertSee('Deactivate', false);
         $response->assertDontSee('Transfer Rights', false);
     }
 

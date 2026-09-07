@@ -1316,5 +1316,6 @@ function closeSidebar() {
   document.body.style.overflow = '';
 }
 </script>
+@include('partials.escape-closes-modals')
 </body>
 </html>

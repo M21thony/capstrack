@@ -138,9 +138,9 @@ class RowActionsAndBulkSheetsTest extends TestCase
 
         // The two used to be a person-plus and a person-minus icon, which is
         // the shape of an add-friend button and said nothing about capstone.
-        $this->assertStringContainsString('Take away the CaPSA role', $html);
-        $this->assertStringContainsString('Deactivate this account', $html);
-        $this->assertStringContainsString('Which sections they cover', $html);
+        $this->assertStringContainsString('Remove CaPSA role', $html);
+        $this->assertStringContainsString('Deactivate', $html);
+        $this->assertStringContainsString('Edit sections', $html);
         $this->assertStringNotContainsString('window.confirm(', $html);
     }
 

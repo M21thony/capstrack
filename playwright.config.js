@@ -14,6 +14,11 @@ export default defineConfig({
     baseURL: 'http://127.0.0.1:8000',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
+    // Off by default - recording every run costs seconds and disk for
+    // nothing. `PW_VIDEO=1 npx playwright test` records the lot, which is
+    // how you watch what the tests actually do rather than read that they
+    // passed.
+    video: process.env.PW_VIDEO ? 'on' : 'off',
   },
   projects: [
     {

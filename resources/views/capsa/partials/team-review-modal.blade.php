@@ -121,6 +121,15 @@ function togglePpDup(id, btn, kind) {
   if (!el) return;
 
   var open = el.classList.toggle('open');
+
+  // The report toggle counts its matches in the label, so it keeps whatever
+  // it was given and only swaps the verb.
+  if (kind === 'report') {
+    btn.textContent = btn.textContent.replace(/^(Show|Hide)/, open ? 'Hide' : 'Show');
+
+    return;
+  }
+
   var label = kind === 'abstract' ? 'abstract' : 'similarities &amp; differences';
   btn.innerHTML = (open ? 'Hide ' : 'Show ') + label;
 }
@@ -228,6 +237,21 @@ function renderPreProposals(proposals, selectedId) {
     return;
   }
 
+  // A team with two approved titles has chosen one of them, and that is the
+  // title being verified. Showing both side by side, each marked Approved,
+  // is what made it unclear which one the verification is actually about.
+  var approvedCount = proposals.filter(function (p) { return p.status === 'approved'; }).length;
+  var collapseOthers = !!selectedId && approvedCount >= 2;
+
+  if (collapseOthers) {
+    var note = document.createElement('div');
+    note.style.cssText = 'display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--text3)';
+    note.innerHTML = 'Showing the title this team chose.'
+      + '<button type="button" class="ppdup-toggle" style="margin-left:auto" onclick="toggleOtherProposals(this)">'
+      + 'Show the other ' + (proposals.length - 1) + '</button>';
+    wrap.appendChild(note);
+  }
+
   proposals.forEach(function (p) {
     var card = document.createElement('div');
     card.id = 'pp-card-' + p.id;
@@ -284,10 +308,23 @@ function renderPreProposals(proposals, selectedId) {
         }).join('')
       : (dup ? '<div style="font-size:11.5px;color:var(--green);margin-top:8px">No similar capstones were found.</div>' : '');
 
+    // The verdict and the score stay on the card; the report itself folds
+    // away behind them. It is the longest thing in this modal by a wide
+    // margin, and scrolling past every matched abstract to reach the next
+    // proposal was the whole complaint.
+    var reportId = 'ppdup-report-' + p.id;
+    var matchCount = (dup && dup.matches && dup.matches.length) || 0;
+
     var dupHtml = dup
       ? '<div style="margin-top:8px">'
-        + '<div style="font-size:12px"><span class="badge ' + dupBadgeClass + '">' + dup.verdict + '</span> <span style="font-variant-numeric:tabular-nums;font-weight:700;margin-left:6px">' + dup.top_score + '%</span></div>'
-        + matchesHtml
+        + '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'
+          + '<span class="badge ' + dupBadgeClass + '">' + dup.verdict + '</span>'
+          + '<span style="font-variant-numeric:tabular-nums;font-weight:700;font-size:12px">' + dup.top_score + '%</span>'
+          + '<button type="button" class="ppdup-toggle" style="margin:0 0 0 auto"'
+            + ' onclick="togglePpDup(\'' + reportId + '\', this, \'report\')">'
+            + 'Show report' + (matchCount ? ' (' + matchCount + ')' : '') + '</button>'
+        + '</div>'
+        + '<div id="' + reportId + '" class="ppdup-panel">' + matchesHtml + '</div>'
         + '</div>'
       : '<div style="font-size:11.5px;color:var(--text3);margin-top:8px">No duplication check was run for this title.</div>';
 
@@ -312,6 +349,13 @@ function renderPreProposals(proposals, selectedId) {
       ? '<button type="button" onclick="openPdfPreview(\'' + p.document_url + '\')" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;color:var(--primary,#5b5bd6);background:none;border:none;padding:0;cursor:pointer;margin-top:6px">📄 View Original PDF</button>'
       : '';
 
+    // Everything that is not the chosen title starts hidden, and is marked
+    // so the toggle above can find it.
+    if (collapseOthers && !isSelected) {
+      card.dataset.otherProposal = '1';
+      card.hidden = true;
+    }
+
     card.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px">'
       + '<span style="font-size:13px;font-weight:600;color:var(--text)">Proposal ' + p.slot + (isSelected ? ' ⭐ Final Title' : '') + '</span>'
       + '<span class="badge ' + badgeClass + '">' + p.status.charAt(0).toUpperCase() + p.status.slice(1) + '</span>'
@@ -322,6 +366,17 @@ function renderPreProposals(proposals, selectedId) {
 
     wrap.appendChild(card);
   });
+}
+
+function toggleOtherProposals(btn) {
+  var others = document.querySelectorAll('#vm-preproposals [data-other-proposal]');
+  var showing = btn.dataset.open === '1';
+
+  others.forEach(function (card) { card.hidden = showing; });
+  btn.dataset.open = showing ? '' : '1';
+  btn.textContent = showing
+    ? 'Show the other ' + others.length
+    : 'Hide the other ' + others.length;
 }
 
 function escapeHtml(str) {

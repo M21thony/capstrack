@@ -51,6 +51,11 @@ class DirectoryController extends Controller
     private function experts(string $like): array
     {
         return CapstoneExpert::with('roles')
+            // Never the Admin. This box adds experts and names CaPSAs, and
+            // the Admin is neither - so listing them only hands their address
+            // to whoever types three letters of it, which on this system is
+            // every CaPSA.
+            ->where('is_admin', false)
             ->where(fn ($w) => $w
                 ->where('email', 'like', $like)
                 ->orWhere('first_name', 'like', $like)

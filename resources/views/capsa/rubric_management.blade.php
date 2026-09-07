@@ -1856,5 +1856,6 @@ loadRubrics();
   #pg-info { font-size: 7px; white-space: normal; word-break: break-word; }
 }
 </style>
+@include('partials.escape-closes-modals')
 </body>
 </html>

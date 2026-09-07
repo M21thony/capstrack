@@ -1586,5 +1586,6 @@ function showToast(msg, type = 'success') {
   paToastTimer = setTimeout(() => toast.classList.remove('show'), 3500);
 }
 </script>
+@include('partials.escape-closes-modals')
 </body>
 </html>

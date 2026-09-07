@@ -169,5 +169,6 @@
 </table>
 @endif
 
+@include('partials.escape-closes-modals')
 </body>
 </html>

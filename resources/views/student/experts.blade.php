@@ -98,6 +98,16 @@
    The rule in experts.css could never win: that stylesheet is linked before
    this block. */
 .modal-box.pp-box { width: 720px; max-width: 94vw; }
+/* Same reason, and the same trap I had already written down once: the
+   .pdf-box rule in experts.css lost to .modal-box's 420px, so the document
+   opened in a column narrower than a phone. A PDF page is the one thing on
+   this site with a fixed aspect ratio - too narrow is unreadable, not just
+   cramped. */
+.modal-box.pdf-box { width: 1000px; max-width: 95vw; height: 90vh; max-height: 90vh; }
+#original-pdf-modal { z-index: 500; }
+/* The header is a strip above the document, not a heading block: a long
+   title wrapped onto four lines and took a fifth of the reading area. */
+.pdf-box .pdf-box-header h3 { font-size: 14px; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .modal-overlay.open { display: flex; }
 .modal-box { background: var(--bg2); border-radius: 16px; padding: 28px; width: 420px; max-width: 90vw; box-shadow: 0 20px 60px rgba(0,0,0,0.3); animation: modalIn 0.2s ease; }
 @keyframes modalIn { from { opacity: 0; transform: scale(0.95) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
@@ -1827,5 +1837,6 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 });
 </script>
+@include('partials.escape-closes-modals')
 </body>
 </html>

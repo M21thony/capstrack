@@ -1371,5 +1371,6 @@ document.addEventListener('keydown', function (e) {
 });
 </script>
 
+@include('partials.escape-closes-modals')
 </body>
 </html>
