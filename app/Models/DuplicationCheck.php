@@ -24,6 +24,59 @@ class DuplicationCheck extends Model
         'top_score' => 'integer',
     ];
 
+    /**
+     * The suggestions, with a role on every one of them.
+     *
+     * instructors_suggested is written once and read forever, so a check run
+     * before the panel knew about roles has entries carrying only a name, an
+     * expertise string and a reason. Nothing displays a label it has not got,
+     * which is why those cards looked bare while newer ones read correctly -
+     * and no amount of changing the template fixes a field that was never
+     * stored.
+     *
+     * The role is recovered from the expert instead. Only adviser and
+     * consultant are recommended now, so anything else is dropped rather than
+     * relabelled: a grammarian on an old check was picked on grounds this
+     * panel no longer uses.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function suggestionsForDisplay(): array
+    {
+        $stored = collect((array) $this->instructors_suggested)->filter(fn ($s) => is_array($s));
+
+        if ($stored->isEmpty()) {
+            return [];
+        }
+
+        $missing = $stored->filter(fn ($s) => blank($s['role_label'] ?? null))->pluck('id')->filter();
+
+        $roles = $missing->isEmpty()
+            ? collect()
+            : CapstoneExpert::with('roles')->whereIn('expert_id', $missing)->get()->keyBy('expert_id');
+
+        return $stored->map(function (array $suggestion) use ($roles) {
+            if (filled($suggestion['role_label'] ?? null)) {
+                return $suggestion;
+            }
+
+            $held = $roles->get($suggestion['id'] ?? 0)?->roles->pluck('role_name') ?? collect();
+
+            // Adviser first: somebody who holds both is far more often
+            // suggested here for the study than for the build.
+            $role = collect(['adviser', 'consultant'])->first(fn ($r) => $held->contains($r));
+
+            if (! $role) {
+                return null;
+            }
+
+            return $suggestion + ['role' => $role, 'role_label' => Role::labelFor($role)];
+        })
+            ->filter()
+            ->values()
+            ->all();
+    }
+
     public function studentSchoolYear(): BelongsTo
     {
         return $this->belongsTo(StudentSchoolYear::class, 'student_s_y_id', 's_y_id');

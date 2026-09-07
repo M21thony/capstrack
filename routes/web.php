@@ -355,6 +355,7 @@ Route::middleware(['auth', 'no.cache', 'track.expert'])->group(function () {
     Route::post('/duplication-checks', [DuplicationController::class, 'check'])->name('duplication-checks.store');
 
     Route::post('/pre-proposal/duplication-checks', [PreProposalController::class, 'runCheck'])->name('student.pre-proposal.check');
+    Route::delete('/pre-proposal/duplication-checks/{check}', [PreProposalController::class, 'destroyCheck'])->name('student.pre-proposal.check.destroy');
     Route::post('/pre-proposal', [PreProposalController::class, 'store'])->name('student.pre-proposal.store');
     Route::patch('/pre-proposal', [PreProposalController::class, 'updateStatus'])->name('student.pre-proposal.submit');
     Route::post('/pre-proposal/{preProposal}/choose', [PreProposalController::class, 'choose'])->name('student.pre-proposal.choose');

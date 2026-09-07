@@ -352,6 +352,13 @@
         <div style="font-size:11px;color:var(--text3);margin-top:2px" id="doc-meta">Upload a pre-proposal PDF to begin</div>
       </div>
       <button type="button" class="btn" id="full-report-btn" style="display:none;flex-shrink:0" onclick="openFreshReportModal()">Full Report</button>
+      {{-- The result survives a reload now, which is the point - and means
+           there has to be a way to be rid of it. A panel that cannot be
+           dismissed is its own kind of stuck. --}}
+      <button type="button" class="btn" id="clear-result-btn" title="Clear this result"
+              style="display:none;flex-shrink:0;padding:6px 10px" onclick="clearScanResult()">
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
     </div>
 
     <div class="dup-layout">
@@ -579,7 +586,7 @@
                       @endphp
                       <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
                         <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text3);margin-bottom:6px;letter-spacing:0.4px">Suggested Experts</div>
-                        @foreach ($check->instructors_suggested as $i)
+                        @foreach ($check->suggestionsForDisplay() as $i)
                           <div class="instructor-item">
                             <div class="avatar">{{ strtoupper(substr($i['name'] ?? '?', 0, 1)) }}</div>
                             <div style="min-width:0">
@@ -1172,7 +1179,7 @@ function cancelCheck() {
       'top_score' => $lastCheck->top_score,
       'verdict' => $lastCheck->verdict,
       'matches' => $lastCheck->matches,
-      'instructors' => $lastCheck->instructors_suggested,
+      'instructors' => $lastCheck->suggestionsForDisplay(),
       'highlight_words' => app(\App\Services\SimilarityService::class)
           ->extractHighlightWords($lastCheck->concepts ?? []),
   ];
@@ -1189,6 +1196,40 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 @endif
 
+// Throw the current scan away.
+//
+// The row goes with it: leaving it behind would only have the page draw it
+// again on the next load, which is the very thing being cleared.
+function clearScanResult() {
+  if (!lastCheckData || !lastCheckData.duplication_check_id) {
+    return;
+  }
+
+  if (!confirm('Clear this result? The scan is thrown away. Your saved pre-proposals are not touched.')) {
+    return;
+  }
+
+  fetch('{{ url('pre-proposal/duplication-checks') }}/' + lastCheckData.duplication_check_id, {
+    method: 'DELETE',
+    headers: {
+      'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+      'Accept': 'application/json',
+    },
+  })
+    .then(r => r.json())
+    .then(function (d) {
+      if (!d.success) {
+        showToast(d.message || 'Could not clear that result.', 'error');
+
+        return;
+      }
+
+      showToast(d.message, 'success');
+      setTimeout(() => window.location.reload(), 600);
+    })
+    .catch(() => showToast('Network error while clearing.', 'error'));
+}
+
 function renderResult(data, fileName) {
   lastCheckData = data;
 
@@ -1198,6 +1239,9 @@ function renderResult(data, fileName) {
   const ppForm = document.getElementById('pp-form');
   const checkIdEl = document.getElementById('check-id');
   if (checkIdEl) checkIdEl.value = data.duplication_check_id;
+
+  const clearBtn = document.getElementById('clear-result-btn');
+  if (clearBtn) clearBtn.style.display = 'inline-flex';
 
   const badge = document.getElementById('result-badge');
   badge.textContent = data.verdict;
@@ -1231,6 +1275,7 @@ function renderResult(data, fileName) {
       <div class="instructor-item">
         <div class="avatar">${escapeHtml((i.name || '?').charAt(0))}</div>
         <div style="min-width:0">
+          ${i.role_label ? `<div class="sx-role">Recommended ${escapeHtml(i.role_label)}</div>` : ''}
           <div style="font-size:12px;font-weight:500;color:var(--text)">${escapeHtml(i.name)}</div>
           <div style="font-size:10px;color:var(--primary,#5b5bd6);margin-top:1px">${escapeHtml(i.expertise || '')}</div>
           <div style="font-size:10px;color:var(--text3);margin-top:2px">${escapeHtml(i.reason || '')}</div>
