@@ -44,7 +44,12 @@ class StudentExpertsPageRolesTest extends TestCase
 
     private function makeExpertWithRoles(array $roleNames): CapstoneExpert
     {
-        $expert = CapstoneExpert::factory()->create(['approved_status' => true, 'max_teams' => 4]);
+        $expert = CapstoneExpert::factory()->create([
+            'approved_status' => true, 'max_teams' => 4,
+            // Without this the card shows "Not Accepting Yet" instead of
+            // the apply button, and there are no roles to offer.
+            'program_slots' => '4 - BSIT',
+        ]);
 
         foreach ($roleNames as $roleName) {
             $expert->roles()->attach(Role::firstOrCreate(['role_name' => $roleName])->role_id);
