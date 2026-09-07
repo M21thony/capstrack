@@ -9,6 +9,7 @@ use App\Models\StudentSchoolYear;
 use App\Models\TeamExpertAssignment;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
@@ -235,6 +236,12 @@ class AdminExpertsController extends Controller
      */
     public function update(Request $request, CapstoneExpert $expert): JsonResponse
     {
+        // Editing the address is as effective a lock-out as deactivating:
+        // change it and the Admin's Google account matches nobody.
+        if ($refusal = $this->refuseIfAdmin($expert)) {
+            return $refusal;
+        }
+
         $validated = $request->validate([
             'first_name' => ['required', 'string', 'max:100'],
             'last_name' => ['required', 'string', 'max:100'],
@@ -255,10 +262,46 @@ class AdminExpertsController extends Controller
     }
 
     /**
+     * The Admin's account is not editable from here, by anyone.
+     *
+     * They run the system. There is no second Admin and nobody above them,
+     * so an Admin who is deactivated - or whose address is edited into one
+     * Google will never return - is the whole system locked out with no way
+     * back in short of the database. Every route that changes an expert
+     * comes through here first.
+     *
+     * A CaPSA is told nothing that identifies the account. The directory
+     * already hides the Admin from them, and a refusal that says "that is
+     * the administrator" hands back exactly what the hiding was for. The
+     * Admin acting on themselves gets the real reason, because they know
+     * who they are and a blank refusal would read as a bug.
+     */
+    private function refuseIfAdmin(CapstoneExpert $expert): ?JsonResponse
+    {
+        if (! $expert->is_admin) {
+            return null;
+        }
+
+        $viewer = Auth::guard('expert')->user();
+        $itIsThem = $viewer && (int) $viewer->expert_id === (int) $expert->expert_id;
+
+        return response()->json([
+            'success' => false,
+            'message' => $itIsThem
+                ? 'You cannot change your own administrator account here - there would be nobody left to undo it.'
+                : 'That account cannot be changed here.',
+        ], 422);
+    }
+
+    /**
      * Delete an expert and notify all affected team members.
      */
     public function destroy(Request $request, CapstoneExpert $expert): JsonResponse
     {
+        if ($refusal = $this->refuseIfAdmin($expert)) {
+            return $refusal;
+        }
+
         $reason = trim($request->input('reason', ''));
         $expertName = $expert->name;
         $notifiedTeams = 0;
@@ -385,6 +428,10 @@ class AdminExpertsController extends Controller
      */
     public function updateSections(Request $request, CapstoneExpert $expert): JsonResponse
     {
+        if ($refusal = $this->refuseIfAdmin($expert)) {
+            return $refusal;
+        }
+
         // Checked by hand rather than through $request->validate(): the only
         // caller is a fetch(), and a failed validate() on a route outside
         // api/* answers with a redirect - which reaches the browser as a page
@@ -589,6 +636,10 @@ class AdminExpertsController extends Controller
     }
     public function toggleCapsa(Request $request, CapstoneExpert $expert): JsonResponse
     {
+        if ($refusal = $this->refuseIfAdmin($expert)) {
+            return $refusal;
+        }
+
         $validated = $request->validate([
             'sections' => ['nullable', 'array'],
             'sections.*' => ['string'],
