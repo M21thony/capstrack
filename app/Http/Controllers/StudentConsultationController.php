@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Jobs\SyncConsultationCancellation;
 use App\Mail\ConsultationBookedMail;
 use App\Mail\ConsultationCancelledMail;
+use App\Models\CapstoneExpert;
 use App\Models\ConsultationSchedule;
 use App\Models\ConsultationBooking;
 use App\Models\StudentSchoolYear;
@@ -42,7 +43,7 @@ class StudentConsultationController extends Controller
             'recentBookings' => $data['recentBookings'],
             'teamId' => $data['teamId'],
             'student' => $student,
-            'teamHasActiveBooking' => $data['teamHasActiveBooking'],
+            'bookedExpertIds' => $data['bookedExpertIds'],
         ]);
     }
 
@@ -58,7 +59,7 @@ class StudentConsultationController extends Controller
         return response()->json([
             'availableSlots' => $data['availableSlots'],
             'fullOccurrences' => $this->computeFullOccurrences($data['availableSlots']),
-            'teamHasActiveBooking' => $data['teamHasActiveBooking'],
+            'bookedExpertIds' => $data['bookedExpertIds'],
             'myBookedDates' => $data['upcomingBookings']->merge($data['recentBookings'])
                 ->filter(fn ($b) => $b->session_date)
                 ->map(fn ($b) => [
@@ -125,20 +126,38 @@ class StudentConsultationController extends Controller
                 ->distinct()
                 ->get();
 
+            // Adviser, consultant, grammarian - the order the department
+            // names them in, used for both the list and the label on a
+            // person holding more than one.
+            //
+            // The list used to sort on "is this the adviser" alone, which
+            // left consultant and grammarian tied and falling back to
+            // expert_id; and the label joined the roles in whatever order the
+            // query returned them, so the same person could read "Consultant,
+            // Adviser" one load and the other way the next.
+            $rank = ['adviser' => 0, 'consultant' => 1, 'grammarian' => 2];
+            $rankOf = fn ($role) => $rank[strtolower((string) $role)] ?? 99;
+
             $experts = $rows
                 ->groupBy('expert_id')
-                ->map(function ($group) {
+                ->map(function ($group) use ($rankOf) {
                     $first = $group->first();
+                    $roles = $group->pluck('role_name')->unique()->sortBy($rankOf)->values();
 
                     return (object) [
                         'expert_id' => $first->expert_id,
                         'first_name' => $first->first_name,
                         'last_name' => $first->last_name,
-                        'role_name' => $group->pluck('role_name')->unique()->map('ucfirst')->implode(', '),
-                        'is_adviser' => $group->pluck('role_name')->contains(fn ($r) => strtolower($r) === 'adviser'),
+                        'role_name' => $roles->map('ucfirst')->implode(', '),
+                        'is_adviser' => $roles->contains(fn ($r) => strtolower($r) === 'adviser'),
+                        // Their most senior role, which is where they sit.
+                        'role_rank' => $rankOf($roles->first()),
                     ];
                 })
-                ->sortBy(fn ($e) => $e->is_adviser ? 0 : 1)
+                ->sortBy([
+                    fn ($a, $b) => $a->role_rank <=> $b->role_rank,
+                    fn ($a, $b) => strcmp($a->last_name, $b->last_name),
+                ])
                 ->values();
         }
 
@@ -185,15 +204,24 @@ class StudentConsultationController extends Controller
             ->sortByDesc(fn ($b) => $b->session_date)
             ->values();
 
-        // Team-wide, not just this student's own bookings — one active
-        // booking is allowed per team at a time, across every expert/slot.
-        $teamHasActiveBooking = $teamId
+        // Which experts this team already has a session waiting with. One
+        // live booking per expert, not one per team: a team due to see their
+        // adviser on Thursday should still be able to book their consultant
+        // for Friday - different people, different things. This used to be a
+        // single yes/no across every expert, which blocked all of it.
+        $bookedExpertIds = $teamId
             ? ConsultationBooking::where('booking_status', 'scheduled')
                 ->whereIn('student_id', StudentSchoolYear::where('team_id', $teamId)->pluck('student_id'))
-                ->exists()
-            : false;
+                ->with('schedule')
+                ->get()
+                ->pluck('schedule.expert_id')
+                ->filter()
+                ->map(fn ($id) => (int) $id)
+                ->unique()
+                ->values()
+            : collect();
 
-        return compact('experts', 'defaultExpertId', 'availableSlots', 'upcomingBookings', 'recentBookings', 'teamId', 'teamHasActiveBooking');
+        return compact('experts', 'defaultExpertId', 'availableSlots', 'upcomingBookings', 'recentBookings', 'teamId', 'bookedExpertIds');
     }
 
     public function book(Request $request)
@@ -216,26 +244,39 @@ class StudentConsultationController extends Controller
 
         $team = $studentYear ? Team::where('team_id', $studentYear->team_id)->first() : null;
 
-        // One active booking per team at a time, across every expert/slot -
-        // not just this one. Frees up automatically once that booking is
-        // cancelled or its session has passed (markPastAsDone flips it to
-        // 'done' above), no separate "release" step needed.
-        if ($team) {
-            $teamHasActiveBooking = ConsultationBooking::where('booking_status', 'scheduled')
-                ->whereIn('student_id', StudentSchoolYear::where('team_id', $team->team_id)->pluck('student_id'))
-                ->exists();
-
-            if ($teamHasActiveBooking) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Your team already has an active consultation booking. You can book another once that session is finished.',
-                ], 422);
-            }
-        }
-
         $slot = ConsultationSchedule::find($request->schedule_id);
         if (! $slot || ! $slot->is_available) {
             return response()->json(['success' => false, 'message' => 'This slot is no longer available.'], 422);
+        }
+
+        // One live booking per expert, not one per team.
+        //
+        // This used to refuse any second booking at all, across every expert
+        // - so a team waiting to see their adviser on Thursday could not book
+        // their consultant for Friday, which are different people about
+        // different things. What it should stop is booking the same person
+        // twice while the first session is still ahead of them.
+        //
+        // Frees up on its own once that session is cancelled or has passed
+        // (markPastAsDone flips it to 'done' above), so there is no separate
+        // release step.
+        if ($team) {
+            $teamStudentIds = StudentSchoolYear::where('team_id', $team->team_id)->pluck('student_id');
+
+            $alreadyWithThisExpert = ConsultationBooking::where('booking_status', 'scheduled')
+                ->whereIn('student_id', $teamStudentIds)
+                ->whereHas('schedule', fn ($q) => $q->where('expert_id', $slot->expert_id))
+                ->exists();
+
+            if ($alreadyWithThisExpert) {
+                $who = CapstoneExpert::find($slot->expert_id)?->name;
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Your team already has a session booked with '
+                        .($who ?: 'this expert').'. You can book them again once that one is done.',
+                ], 422);
+            }
         }
 
         // The date the student actually clicked in the calendar. Recurring

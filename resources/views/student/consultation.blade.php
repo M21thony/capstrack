@@ -272,9 +272,12 @@
             }
         }
 
+        // Adviser, consultant, grammarian - the order the department names
+        // them in, and the order a team engages them. The cards are drawn in
+        // the order of this array, and it had the consultant first.
         $roleCards = [
-            'consultant' => ['title' => 'Consultant Consultation', 'blurb' => 'Capstone project review'],
             'adviser' => ['title' => 'Adviser Consultation', 'blurb' => 'Academic guidance and concerns'],
+            'consultant' => ['title' => 'Consultant Consultation', 'blurb' => 'Capstone project review'],
             'grammarian' => ['title' => 'Grammarian Consultation', 'blurb' => 'Grammar & language review'],
         ];
       @endphp
@@ -635,7 +638,10 @@ let myBookedDates = @json($upcomingBookings->merge($recentBookings)->filter(fn (
 // One active booking per team at a time — mirrors the server-side check in
 // StudentConsultationController::book(), so clicking a date short-circuits
 // with a clear toast instead of opening the modal and failing on submit.
-let teamHasActiveBooking = @json($teamHasActiveBooking);
+// The experts this team already has a session waiting with. One live
+// booking per expert, not one per team - a team due to see their adviser on
+// Thursday can still book their consultant for Friday.
+let bookedExpertIds = @json($bookedExpertIds).map(Number);
 const slotTypeColors = @json($slotTypeColors);
 
 // Weekly/biweekly slots share a single schedule row across every future
@@ -794,12 +800,15 @@ let selectedSlot = null;
 let selectedDateKey = null;
 
 function selectDate(d, dayName, dateKey) {
-  if (teamHasActiveBooking) {
-    showToast('Your team already has an active consultation booking. You can book another once that session is finished.', 'error');
+  const expertId = document.getElementById('expertSelect').value;
+
+  if (expertId && bookedExpertIds.includes(Number(expertId))) {
+    const who = document.querySelector('#expertSelect option:checked')?.textContent?.trim();
+    showToast('Your team already has a session booked with ' + (who || 'this expert')
+      + '. You can book them again once that one is done.', 'error');
     return;
   }
 
-  const expertId = document.getElementById('expertSelect').value;
   if (!expertId) {
     showToast('Choose who you want to consult first.', 'error');
     return;
@@ -1013,7 +1022,7 @@ async function refreshConsultationData(showFeedback) {
 
     expertSlots = data.availableSlots;
     fullOccurrences = new Set(data.fullOccurrences || []);
-    teamHasActiveBooking = data.teamHasActiveBooking;
+    bookedExpertIds = (data.bookedExpertIds || []).map(Number);
     myBookedDates = data.myBookedDates;
 
     renderCalendar();
@@ -1061,8 +1070,13 @@ async function bookSlot(scheduleId) {
       closeSlotModal();
 
       fullOccurrences = new Set(data.fullOccurrences || []);
-      teamHasActiveBooking = true;
       const bookedExpertId = document.getElementById('expertSelect').value;
+
+      // Only this expert is now spoken for; the others stay bookable.
+      if (! bookedExpertIds.includes(Number(bookedExpertId))) {
+        bookedExpertIds.push(Number(bookedExpertId));
+      }
+
       if (dateKey && ! myBookedDates.some(b => b.date === dateKey && String(b.expert_id) === String(bookedExpertId))) {
         myBookedDates.push({ date: dateKey, expert_id: bookedExpertId });
       }
