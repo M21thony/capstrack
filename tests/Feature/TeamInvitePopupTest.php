@@ -251,6 +251,6 @@ class TeamInvitePopupTest extends TestCase
         $html = $this->actingAs($leader, 'web')->get(route('student.team'))->getContent();
 
         $this->assertStringNotContainsString('Click to invite a classmate', $html);
-        $this->assertStringContainsString('Members are settled', $html);
+        $this->assertStringContainsString('Members Addition no longer available.', $html);
     }
 }
