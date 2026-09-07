@@ -9,6 +9,40 @@ class Team extends Model
 {
     protected $table = 'team';
 
+    /** The smallest and largest team a CaPSA may allow. */
+    public const MIN_MEMBERS = 3;
+
+    public const MAX_MEMBERS = 5;
+
+    /**
+     * How many members a team may have, as the CaPSA has set it.
+     *
+     * The number was written out as 5 in seven places - the invitation
+     * check, two recruitment paths, the team page - so changing it meant
+     * finding them all, and they had already drifted. This is the one
+     * answer; a team may still carry its own member_count to override it.
+     */
+    public static function maxMembers(): int
+    {
+        $set = (int) Setting::get('max_team_members', self::MAX_MEMBERS);
+
+        return max(self::MIN_MEMBERS, min(self::MAX_MEMBERS, $set ?: self::MAX_MEMBERS));
+    }
+
+    /**
+     * This team's limit, which is the CaPSA's number.
+     *
+     * Not team.member_count. That column is written as a flat 5 whenever a
+     * team or a recruitment post is made and never deliberately varied, so
+     * reading it as a per-team override meant every team carried an
+     * "override" of 5 and the CaPSA's setting changed nothing. It is kept on
+     * the table because other code stores a headcount in it.
+     */
+    public function memberLimit(): int
+    {
+        return static::maxMembers();
+    }
+
     /**
      * How far along this team is, counted from milestone items.
      *

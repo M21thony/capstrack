@@ -1372,7 +1372,7 @@ class TeamController extends Controller
         $currentSchoolYear = $studentSy->school_year;
 
         $currentCount = StudentSchoolYear::where('team_id', $myTeam->team_id)->count();
-        $maxMembers = $myTeam->member_count ?? 5;
+        $maxMembers = $myTeam->memberLimit();
 
         if ($currentCount >= $maxMembers) {
             return response()->json(['classmates' => [], 'error' => 'Team is already full.']);

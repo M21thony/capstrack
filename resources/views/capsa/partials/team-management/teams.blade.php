@@ -22,7 +22,7 @@
               <div style="width:28px;height:28px;border-radius:7px;background:linear-gradient(135deg,{{ $row->gradient }});display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0">{{ $row->initials }}</div>
               <div style="min-width:0">
                 <div class="td-main">{{ $row->team->team_name }}</div>
-                <div style="font-size:11px;color:var(--text3)">{{ $row->members->count() }}/5 members &middot; {{ $row->leaderName }}</div>
+                <div style="font-size:11px;color:var(--text3)">{{ $row->members->count() }}/{{ \App\Models\Team::maxMembers() }} members &middot; {{ $row->leaderName }}</div>
               </div>
             </div>
           </td>

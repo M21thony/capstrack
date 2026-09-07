@@ -31,7 +31,7 @@ class RecruitmentController extends Controller
                     return false;
                 }
 
-                return StudentSchoolYear::where('team_id', $team->team_id)->count() >= ($team->member_count ?? $recruit->member_count ?? 5);
+                return StudentSchoolYear::where('team_id', $team->team_id)->count() >= $team->memberLimit();
             })
             ->pluck('student_id')
             ->toArray();
@@ -115,7 +115,7 @@ class RecruitmentController extends Controller
                 'roles' => $roles,
                 'looking_for' => $validated['looking_for'] ?? null,
                 'introduction' => $validated['introduction'] ?? null,
-                'member_count' => 5,
+                'member_count' => \App\Models\Team::maxMembers(),
             ]);
         });
 
@@ -163,7 +163,7 @@ class RecruitmentController extends Controller
             'roles' => $validated['roles'],
             'looking_for' => $validated['looking_for'] ?? null,
             'introduction' => $validated['introduction'] ?? null,
-            'member_count' => 5,
+            'member_count' => \App\Models\Team::maxMembers(),
         ]);
 
         $this->logActivity(

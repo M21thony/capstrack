@@ -7,12 +7,14 @@ use App\Http\Controllers\Controller;
 use App\Models\CapstoneExpert;
 use App\Models\DefenseSchedule;
 use App\Models\Milestone;
+use App\Models\Setting;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
 use App\Models\TeamExpertAssignment;
 use App\Support\DefenseProgress;
 use App\Support\MilestoneGrid;
 use App\Support\SectionScope;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -34,6 +36,32 @@ use Illuminate\View\View;
 class TeamManagementController extends Controller
 {
     public const TABS = ['teams', 'pre_proposals', 'verification', 'papers', 'milestones'];
+
+    /**
+     * PUT /capsa/team-size - the largest team a CaPSA will allow.
+     *
+     * Three to five, because that is the range the department works in, and
+     * because the seat maths for the shared roles divides a team of three to
+     * five exactly. Stored once for every team rather than set per group: a
+     * CaPSA setting it forty times is the same number forty times.
+     */
+    public function updateTeamSize(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'max_members' => ['required', 'integer', 'min:'.Team::MIN_MEMBERS, 'max:'.Team::MAX_MEMBERS],
+        ], [
+            'max_members.min' => 'A capstone team is at least '.Team::MIN_MEMBERS.'.',
+            'max_members.max' => 'A capstone team is at most '.Team::MAX_MEMBERS.'.',
+        ]);
+
+        Setting::set('max_team_members', (string) $validated['max_members']);
+
+        return response()->json([
+            'success' => true,
+            'max_members' => Team::maxMembers(),
+            'message' => 'Teams may now have up to '.$validated['max_members'].' members.',
+        ]);
+    }
 
     /** Shown where a value is genuinely absent rather than empty. */
     private const DASH = '—';

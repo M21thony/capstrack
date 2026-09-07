@@ -998,7 +998,7 @@
         <option value="individual">Find a Team (Join Others)</option>
       </select>
       <div class="modal-tutorial" id="modal-note-box">
-        <p id="modal-note-text"><strong>CapsTip:</strong> Your team can have up to 5 members including you (the leader). Slots are filled automatically as members join.</p>
+        <p id="modal-note-text"><strong>CapsTip:</strong> Your team can have up to {{ \App\Models\Team::maxMembers() }} members including you (the leader). Slots are filled automatically as members join.</p>
       </div>
       <div id="leader-fields">
         <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 8px;">Team Name</label>
@@ -1176,7 +1176,7 @@
       <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 8px;">Team Status</label>
       @if($isTeamFull)
       <div style="background:#fef3c7;border:1px solid #fde68a;border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:12px;color:#92400e;">
-        <strong>Team is now full!</strong> Your team has reached {{ $teamMembers->count() }}/5 members. You can now update the status to <strong>Complete</strong> or <strong>Closed</strong>.
+        <strong>Team is now full!</strong> Your team has reached {{ $teamMembers->count() }}/{{ \App\Models\Team::maxMembers() }} members. You can now update the status to <strong>Complete</strong> or <strong>Closed</strong>.
       </div>
       @endif
       <select name="team_status" id="teamStatusSelect" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;margin-bottom:8px;box-sizing:border-box;@if($myTeam->is_confirmed) cursor:not-allowed;opacity:0.6;@endif" @if($myTeam->is_confirmed) disabled @endif>
@@ -2686,7 +2686,7 @@ function updateModalUI() {
     const isLeader = (goal === 'leader');
     document.getElementById('modal-title').textContent = isLeader ? 'Build a Team' : 'Find a Team';
     document.getElementById('modal-note-text').innerHTML = isLeader 
-        ? '<strong>CapsTip:</strong> Your team can have up to 5 members including you (the leader). Slots are filled automatically as members join.' 
+        ? '<strong>CapsTip:</strong> Your team can have up to {{ \App\Models\Team::maxMembers() }} members including you (the leader). Slots are filled automatically as members join.' 
         : '<strong>CapsTip:</strong> Highlight your best technical strengths. Teams search for specific skills when filling up their empty slots.';
     
     document.getElementById('leader-fields').style.display = isLeader ? 'block' : 'none';
