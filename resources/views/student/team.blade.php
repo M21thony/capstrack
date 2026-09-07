@@ -340,9 +340,13 @@
       <div class="team-dashboard-grid" style="display: grid; grid-template-columns: 1.1fr 1fr; gap: 12px;">
         <!-- Team Members -->
         <div style="background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 16px;">
-          <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 14px;">TEAM MEMBERS <span style="color: var(--accent3); font-weight: 600;">· Max 5</span></div>
+          <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 14px;">TEAM MEMBERS <span style="color: var(--accent3); font-weight: 600;">· Max {{ \App\Models\Team::maxMembers() }}</span></div>
           @php
-            $memberSlots = 5;
+            // The number of seats drawn, which is the number the CaPSA set.
+            // Spelled out as 5, this page went on showing five rows however
+            // many a team was allowed - so setting three changed the labels
+            // and left two slots nobody could ever fill.
+            $memberSlots = \App\Models\Team::maxMembers();
             // Invitations already sent and unanswered. They hold a slot, so
             // the leader can see the team is fuller than the member count.
             $pendingInvites = collect($outgoingInvitations ?? []);
@@ -484,7 +488,7 @@
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 6px;">
               <div class="stat-chip" style="display: flex; justify-content: space-between; align-items: center; gap: 4px; padding: 5px 8px; background: var(--bg2); border-radius: 8px;">
                 <span style="font-size: 9px; color: var(--text3);">Members</span>
-                <span style="font-size: 9px; font-weight: 700; color: var(--text);">{{ \App\Models\StudentSchoolYear::where('team_id', $myTeam->team_id)->count() }} / 5</span>
+                <span style="font-size: 9px; font-weight: 700; color: var(--text);">{{ \App\Models\StudentSchoolYear::where('team_id', $myTeam->team_id)->count() }} / {{ \App\Models\Team::maxMembers() }}</span>
               </div>
               <div class="stat-chip" style="display: flex; justify-content: space-between; align-items: center; gap: 4px; padding: 5px 8px; background: var(--bg2); border-radius: 8px;">
                 <span style="font-size: 9px; color: var(--text3);">Your Role</span>
@@ -1036,7 +1040,10 @@
           <input type="hidden" name="looking_for" id="looking-for-input" value="">
           <input type="hidden" name="introduction" id="introduction-input" value="">
           <input type="hidden" name="team_name" id="team-name-hidden" value="">
-          <input type="hidden" name="member_count" id="member-count-input" value="5">
+          {{-- Posted when a team is created. It is the CaPSA's number, not a
+               fixed 5 - the column is only a record, since the cap itself is
+               read from the setting. --}}
+          <input type="hidden" name="member_count" id="member-count-input" value="{{ \App\Models\Team::maxMembers() }}">
           <input type="hidden" name="tags" id="tags-hidden-input" value="">
           <button type="submit" class="btn-primary" style="width: 100%; background: var(--blue-bg); color: var(--blue); border: 1.5px solid rgba(29,78,216,0.25); box-shadow: none;" id="form-submit-btn">Publish Post</button>
         </form>
@@ -1176,7 +1183,7 @@
       <div style="padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text3);font-size:12px;margin-bottom:16px;box-sizing:border-box;">
         Fixed at 5 members (including the leader). Slots fill automatically as members join.
       </div>
-      <input type="hidden" name="member_count" value="5">
+      <input type="hidden" name="member_count" value="{{ \App\Models\Team::maxMembers() }}">
       <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 8px;">Team Status</label>
       @if($isTeamFull)
       <div style="background:#fef3c7;border:1px solid #fde68a;border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:12px;color:#92400e;">
@@ -2836,13 +2843,13 @@ function publishPost(event) {
             return;
         }
     }
-    document.getElementById('member-count-input').value = 5;
+    document.getElementById('member-count-input').value = {{ \App\Models\Team::maxMembers() }};
     document.getElementById('tags-hidden-input').value = JSON.stringify(activeTags);
 
     if (isEditing) {
         event.preventDefault();
         document.getElementById('recruitment-goal-input').value = goal === 'leader' ? 'build_a_team' : 'find_a_team';
-        document.getElementById('member-count-input').value = 5;
+        document.getElementById('member-count-input').value = {{ \App\Models\Team::maxMembers() }};
         if (goal === 'leader') {
             document.getElementById('team-name-hidden').value = document.getElementById('team-name').value;
             document.getElementById('looking-for-input').value = document.getElementById('leader-looking-for').value;

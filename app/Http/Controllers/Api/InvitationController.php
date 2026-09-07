@@ -32,6 +32,45 @@ class InvitationController extends Controller
         return InvitationResource::collection($invitations)->response();
     }
 
+    /**
+     * No room left, counting invitations already out.
+     *
+     * Nothing checked this at all: a leader could pick five classmates for a
+     * team of three and every invitation was accepted, because the only
+     * capacity test in this file ran after somebody had already joined - and
+     * only to mark the team Full, never to turn anyone away.
+     *
+     * Pending invitations count as taken. Sending three for one seat is the
+     * same overflow arriving a day later, when the leader has forgotten and
+     * the members involved have not.
+     */
+    private function refuseIfFull(?int $teamId, bool $countPending = true): ?JsonResponse
+    {
+        $team = $teamId ? Team::find($teamId) : null;
+
+        if (! $team) {
+            return null;
+        }
+
+        $limit = $team->memberLimit();
+        $members = StudentSchoolYear::where('team_id', $team->team_id)->count();
+        $pending = $countPending
+            ? TeamInvitation::where('team_id', $team->team_id)->where('status', 'pending')->count()
+            : 0;
+
+        if ($members + $pending < $limit) {
+            return null;
+        }
+
+        return response()->json([
+            'message' => $pending > 0 && $members < $limit
+                ? 'That would go over '.$limit.'. Your team has '.$members.' '
+                    .($members === 1 ? 'member' : 'members').' and '.$pending.' invitation'
+                    .($pending === 1 ? '' : 's').' still waiting to be answered.'
+                : 'Your team already has the maximum of '.$limit.' members.',
+        ], 422);
+    }
+
     /** The team is past the point where its roster can change. */
     private function refuseIfCapstoneTwo(?int $teamId): ?JsonResponse
     {
@@ -66,6 +105,13 @@ class InvitationController extends Controller
         // as in the page, because the page can only hide a button.
         if ($closed = $this->refuseIfCapstoneTwo($teamId)) {
             return $closed;
+        }
+
+        // Only when inviting. A request is somebody asking to be let in, and
+        // the leader decides on it - refusing at this end would tell the
+        // asker the team is full before the leader has even seen them.
+        if ($validated['type'] === 'invite' && $full = $this->refuseIfFull($teamId)) {
+            return $full;
         }
 
         if ($validated['type'] === 'request') {
@@ -192,6 +238,12 @@ class InvitationController extends Controller
         // through a check made only at sending.
         if ($closed = $this->refuseIfCapstoneTwo($invitation->team_id)) {
             return $closed;
+        }
+
+        // Seats, not invitations: the other pending ones are what this
+        // person is racing, and one of them has to lose.
+        if ($full = $this->refuseIfFull($invitation->team_id, countPending: false)) {
+            return $full;
         }
 
         $memberRoleId = $this->roleFromTeamPost($invitation->team_id);
