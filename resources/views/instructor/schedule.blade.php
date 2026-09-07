@@ -176,59 +176,76 @@
           </div>
 
           <div id="add-slot-fields" style="display:none">
-            <div class="time-row" style="margin-bottom:11px">
-              <div class="f-group" style="margin-bottom:0">
-                <label class="f-label">Start Time</label>
-                <input class="f-input" type="time" id="f-start" value="09:00" onchange="checkTimeOverlap()" oninput="checkTimeOverlap()"/>
-              </div>
-              <div class="f-group" style="margin-bottom:0">
-                <label class="f-label">End Time</label>
-                <input class="f-input" type="time" id="f-end" value="10:00" onchange="checkTimeOverlap()" oninput="checkTimeOverlap()"/>
-              </div>
+            {{-- Two decisions carry this form: when it starts and how long it
+                 runs. Type, teams and repeat have a sensible answer already,
+                 so they read as a sentence you skim past rather than three
+                 more fields at the same volume - and they are one tap away
+                 when a slot is not the usual kind. --}}
+            <div class="f-group">
+              <label class="f-label" for="f-start">Starts</label>
+              <input class="f-input" type="time" id="f-start" value="09:00"
+                     style="max-width:130px"
+                     onchange="onStartChanged()" oninput="onStartChanged()"/>
             </div>
 
-            {{-- An end time is arithmetic on a start time, and nobody
-                 thinks in end times - they think "45 minutes". The field is
-                 still there for an odd length; these cover the rest. --}}
-            <div class="f-group" style="margin-bottom:11px">
+            <div class="f-group">
               <label class="f-label">Runs for</label>
               <div class="dur-row">
-                <button type="button" class="dur-chip" data-mins="30" onclick="setDuration(30)">30 min</button>
-                <button type="button" class="dur-chip is-on" data-mins="60" onclick="setDuration(60)">1 hour</button>
-                <button type="button" class="dur-chip" data-mins="90" onclick="setDuration(90)">1&frac12; hours</button>
-                <button type="button" class="dur-chip" data-mins="120" onclick="setDuration(120)">2 hours</button>
+                {{-- Short labels so all four sit on one line; "2 hours" spelt
+                     out wrapped alone onto a second row. --}}
+                <button type="button" class="dur-chip" data-mins="30" onclick="setDuration(30)" title="30 minutes">30m</button>
+                <button type="button" class="dur-chip is-on" data-mins="60" onclick="setDuration(60)" title="1 hour">1h</button>
+                <button type="button" class="dur-chip" data-mins="90" onclick="setDuration(90)" title="1 hour 30 minutes">1&frac12;h</button>
+                <button type="button" class="dur-chip" data-mins="120" onclick="setDuration(120)" title="2 hours">2h</button>
               </div>
             </div>
 
-            <div id="time-overlap-warning" style="display:none;padding:8px 12px;margin-bottom:12px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:8px;color:#dc2626;font-size:12px;font-weight:600;align-items:center;gap:8px">
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" style="flex-shrink:0">
+            <p class="slot-derived" id="slot-derived"></p>
+
+            <div id="time-overlap-warning" style="display:none">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5">
                 <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
               </svg>
               <span id="time-overlap-text">This time overlaps with an existing slot.</span>
             </div>
 
-            <div class="f-group">
-              <label class="f-label">Slot Type</label>
-              <select class="f-input" id="f-type">
-                <option value="consult">Consultation</option>
-                <option value="docreview">Document Review</option>
-                <option value="defense">Defense</option>
-              </select>
-            </div>
+            <button type="button" class="slot-more-toggle" id="slot-more-toggle"
+                    aria-expanded="false" aria-controls="slot-more" onclick="toggleSlotMore()">
+              Change type, teams or repeat
+              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+            </button>
 
-            <div class="f-group">
-              <label class="f-label">Max Teams per Slot</label>
-              <input class="f-input" type="number" id="f-max" value="1" min="1" max="5"/>
-            </div>
+            <div id="slot-more" hidden>
+              <div class="f-group">
+                <label class="f-label" for="f-end">Ends</label>
+                <input class="f-input" type="time" id="f-end" value="10:00"
+                       style="max-width:130px"
+                       onchange="onEndChanged()" oninput="onEndChanged()"/>
+              </div>
 
-            <div class="f-group" style="margin-bottom:0" id="f-recur-group">
-              <label class="f-label">Recurrence</label>
-              <select class="f-input" id="f-recur">
-                <option value="once">One-time only</option>
-                <option value="weekly">Every week (same day)</option>
-                <option value="biweekly">Every 2 weeks</option>
-              </select>
-              <div id="f-recur-locked-note" style="display:none;font-size:11px;color:var(--text3);margin-top:4px">Switching to a single date? Pick the date above.</div>
+              <div class="f-group">
+                <label class="f-label" for="f-type">Slot Type</label>
+                <select class="f-input" id="f-type" onchange="updateSlotDerived()">
+                  <option value="consult">Consultation</option>
+                  <option value="docreview">Document Review</option>
+                  <option value="defense">Defense</option>
+                </select>
+              </div>
+
+              <div class="f-group">
+                <label class="f-label" for="f-max">Max Teams per Slot</label>
+                <input class="f-input" type="number" id="f-max" value="1" min="1" max="5" onchange="updateSlotDerived()"/>
+              </div>
+
+              <div class="f-group" style="margin-bottom:0" id="f-recur-group">
+                <label class="f-label" for="f-recur">Recurrence</label>
+                <select class="f-input" id="f-recur" onchange="updateSlotDerived()">
+                  <option value="once">One-time only</option>
+                  <option value="weekly">Every week (same day)</option>
+                  <option value="biweekly">Every 2 weeks</option>
+                </select>
+                <div id="f-recur-locked-note" style="display:none;font-size:11px;color:var(--text3);margin-top:4px">Switching to a single date? Pick the date above.</div>
+              </div>
             </div>
 
             <div id="edit-mode-banner" style="display:none;padding:8px 12px;margin-bottom:11px;background:var(--accent-glow,rgba(0,229,255,0.08));border:1px solid var(--accent,#00e5ff);border-radius:8px;color:var(--accent,#00e5ff);font-size:12px;font-weight:600">
@@ -295,6 +312,25 @@
 </div>
 <style>
 #sched-toast.show{opacity:1;transform:translateY(0);pointer-events:auto}
+
+/* The defaults, as a sentence rather than three more fields at the same
+   volume as the two decisions that matter. */
+.slot-derived{font-size:11.5px;color:var(--text3);line-height:1.5;
+  margin:-4px 0 12px;padding-left:1px}
+.slot-derived b{color:var(--text2);font-weight:600}
+
+.slot-more-toggle{display:flex;align-items:center;gap:5px;background:none;border:none;
+  padding:0 0 12px;font:600 11.5px 'DM Sans',sans-serif;color:var(--accent3);cursor:pointer}
+.slot-more-toggle svg{transition:transform .15s}
+.slot-more-toggle.is-open svg{transform:rotate(90deg)}
+.slot-more-toggle:hover{color:var(--accent2)}
+
+/* Small and inline. It was a red block in the middle of the form, louder
+   than anything it sat between. */
+#time-overlap-warning{display:flex;align-items:flex-start;gap:7px;
+  background:var(--red-bg);border-radius:7px;padding:7px 9px;margin-bottom:12px;
+  font-size:11.5px;line-height:1.4;color:var(--red)}
+#time-overlap-warning svg{flex-shrink:0;margin-top:1px}
 
 /* Duration as a tap rather than a typed end time. */
 .dur-row{display:flex;gap:5px;flex-wrap:wrap}
@@ -1113,7 +1149,17 @@ function selectDate(key, dayNum) {
   document.getElementById('selected-date-chip').style.display = 'flex';
   document.getElementById('no-date-hint').style.display       = 'none';
   document.getElementById('add-slot-fields').style.display    = 'block';
+
+  // Open on a time this date is actually free, so clicking a busy morning
+  // does not greet you with a warning about a clash the form just created.
+  if (!editingSlotId) {
+    const free = firstFreeStart(key);
+    document.getElementById('f-start').value = free;
+    document.getElementById('f-end').value = minutesToTime(timeToMinutes(free) + (currentDurationMinutes() || 60));
+  }
+
   checkTimeOverlap();
+  updateSlotDerived();
   renderSelectedDateSlots(key);
   redrawCalendar();
 
@@ -1473,6 +1519,9 @@ function editSlot(scheduleId, key, index) {
   checkTimeOverlap();
 
   document.getElementById('add-slot-form')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+  markDurationChip(timeToMinutes(document.getElementById('f-end').value) - timeToMinutes(document.getElementById('f-start').value));
+  updateSlotDerived();
 }
 
 function cancelEdit() {
@@ -1499,6 +1548,12 @@ function resetForm() {
   document.getElementById('f-type').value  = 'consult';
   document.getElementById('f-max').value   = '1';
   document.getElementById('f-recur').value = 'once';
+  markDurationChip(60);
+
+  const more = document.getElementById('slot-more');
+  if (more && !more.hidden) toggleSlotMore();
+
+  updateSlotDerived();
 }
 
 // ── Toggle availability ────────────────────────────────────────
@@ -1757,11 +1812,110 @@ function setDuration(mins) {
     document.getElementById('f-end').value = minutesToTime(timeToMinutes(start) + mins);
   }
 
+  markDurationChip(mins);
+  checkTimeOverlap();
+  updateSlotDerived();
+}
+
+function markDurationChip(mins) {
   document.querySelectorAll('#add-slot-fields .dur-chip').forEach((c) => {
     c.classList.toggle('is-on', Number(c.dataset.mins) === mins);
   });
+}
 
-  if (typeof checkTimeOverlap === 'function') checkTimeOverlap();
+/** Moving the start carries the length with it, rather than the end. */
+function onStartChanged() {
+  const start = document.getElementById('f-start').value;
+  const end = document.getElementById('f-end');
+
+  if (start && end.value) {
+    const length = currentDurationMinutes();
+
+    if (length > 0) {
+      end.value = minutesToTime(timeToMinutes(start) + length);
+    }
+  }
+
+  checkTimeOverlap();
+  updateSlotDerived();
+}
+
+/** Typing an odd end time is still allowed; the chips just stop claiming one. */
+function onEndChanged() {
+  const start = document.getElementById('f-start').value;
+  const end = document.getElementById('f-end').value;
+
+  markDurationChip(start && end ? timeToMinutes(end) - timeToMinutes(start) : -1);
+  checkTimeOverlap();
+  updateSlotDerived();
+}
+
+function currentDurationMinutes() {
+  const lit = document.querySelector('#add-slot-fields .dur-chip.is-on');
+
+  if (lit) return Number(lit.dataset.mins);
+
+  const start = document.getElementById('f-start').value;
+  const end = document.getElementById('f-end').value;
+
+  return start && end ? timeToMinutes(end) - timeToMinutes(start) : 0;
+}
+
+function toggleSlotMore() {
+  const more = document.getElementById('slot-more');
+  const toggle = document.getElementById('slot-more-toggle');
+  const opening = more.hidden;
+
+  more.hidden = !opening;
+  toggle.classList.toggle('is-open', opening);
+  toggle.setAttribute('aria-expanded', String(opening));
+}
+
+/**
+ * The settings that are not worth a field each, said as a sentence.
+ *
+ * Type, teams and repeat almost always keep their defaults, so three more
+ * labelled controls at the same weight as the time buried the two decisions
+ * that matter. This is what they currently say; the toggle above opens them.
+ */
+function updateSlotDerived() {
+  const out = document.getElementById('slot-derived');
+
+  if (!out) return;
+
+  const end = document.getElementById('f-end').value;
+  const type = document.getElementById('f-type');
+  const max = parseInt(document.getElementById('f-max').value, 10) || 1;
+  const recur = document.getElementById('f-recur').value;
+
+  const typeLabel = (type.options[type.selectedIndex]?.text || 'Consultation').toLowerCase();
+  const repeats = { once: 'once', weekly: 'every week', biweekly: 'every 2 weeks' }[recur] || 'every week';
+
+  out.innerHTML = (end ? 'Ends <b>' + hr12(end).toLowerCase() + '</b> · ' : '')
+    + 'a ' + typeLabel + ' for <b>' + max + ' team' + (max === 1 ? '' : 's') + '</b>, <b>' + repeats + '</b>';
+}
+
+/**
+ * The first time this date is free, so the form does not open on a clash.
+ *
+ * It used to default to 09:00 whatever was already booked, which meant
+ * clicking a busy morning greeted you with an overlap warning about a slot
+ * the form had just put you on top of.
+ */
+function firstFreeStart(key) {
+  const taken = (slots[key] || [])
+    .map((s) => [timeToMinutes(s.start_time || s.start), timeToMinutes(s.end_time || s.end)])
+    .sort((a, b) => a[0] - b[0]);
+
+  const length = currentDurationMinutes() || 60;
+  let at = 9 * 60;
+
+  for (const [from, until] of taken) {
+    if (at + length > from && until > at) at = until;
+  }
+
+  // Past the end of a working day is no better than the clash; leave it.
+  return at + length > 21 * 60 ? '09:00' : minutesToTime(at);
 }
 
 // ── the weekly window ──

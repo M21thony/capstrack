@@ -42,6 +42,65 @@
 
 .team-card-footer { padding-top: 14px; margin-top: 14px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; }
 
+/* ── ONE SUMMARY LINE ──
+   Seven tiles opened this page, five of them showing zero, and they were
+   the loudest thing on it. The lead figure is the one an adviser is asked
+   about; the rest are counts that only need to be legible. */
+.teams-summary { display: flex; align-items: baseline; flex-wrap: wrap; gap: 0;
+  background: var(--bg2); border: 1px solid var(--border); border-radius: 12px;
+  padding: 13px 17px; margin-bottom: 14px; }
+.ts-lead { display: flex; align-items: baseline; }
+.ts-n { font-size: 28px; font-weight: 700; line-height: 1; letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums; color: var(--text); }
+.ts-pc { font-size: 16px; }
+.ts-l { font-size: 12.5px; color: var(--text2); margin-left: 8px; }
+.ts-sep { width: 1px; align-self: stretch; background: var(--border); margin: 0 17px; }
+.ts-stat { display: flex; align-items: baseline; }
+.ts-m { font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.ts-ml { font-size: 11.5px; color: var(--text3); margin-left: 6px; }
+.ts-say { margin-left: auto; font-size: 11.5px; color: var(--text3); }
+
+/* ── A ROW PER TEAM ──
+   Three teams used to fill a screen and a half, because every card listed
+   every member. The members are behind the row now; what stays is what you
+   scan a list for - who, as what, how far along, and whether it is late. */
+.team-row { display: grid; grid-template-columns: 34px 1fr 132px 82px 14px;
+  gap: 13px; align-items: center; background: var(--bg2);
+  border: 1px solid var(--border); border-radius: 10px; padding: 11px 14px;
+  margin-bottom: 7px; cursor: pointer; transition: border-color 0.15s, background 0.15s; }
+.team-row:hover, .team-row:focus-visible { border-color: var(--accent);
+  background: var(--accent-light); outline: none; }
+.team-row.is-flagged { box-shadow: inset 3px 0 0 var(--red); }
+.tr-avatar { width: 34px; height: 34px; border-radius: 8px; color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 12px; flex-shrink: 0; }
+.tr-who { min-width: 0; }
+.tr-name { display: flex; align-items: center; gap: 8px; font-size: 13.5px;
+  font-weight: 600; color: var(--text); }
+.tr-count { font-size: 10px; font-weight: 600; letter-spacing: 0.04em;
+  text-transform: uppercase; padding: 2px 7px; border-radius: 20px;
+  background: var(--bg4); color: var(--text3); flex-shrink: 0; }
+.tr-sub { font-size: 11.5px; color: var(--text3); margin-top: 2px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tr-lead { color: var(--text2); font-weight: 500; }
+.tr-prog { display: flex; align-items: center; gap: 9px; }
+.tr-bar { flex: 1; height: 5px; border-radius: 3px; background: var(--bg4); overflow: hidden; }
+.tr-bar i { display: block; height: 100%; border-radius: 3px; }
+.tr-pct { font-size: 12.5px; font-weight: 700; font-variant-numeric: tabular-nums;
+  min-width: 34px; text-align: right; }
+.tr-flag { font-size: 11px; color: var(--text3); white-space: nowrap; }
+.tr-flag .is-late { color: var(--red); font-weight: 700; }
+.tr-chev { color: var(--text3); font-size: 17px; line-height: 1; text-align: center; }
+
+@media (max-width: 900px) {
+  /* Progress and the flag fall under the name rather than squeezing it. */
+  .team-row { grid-template-columns: 34px 1fr 14px; row-gap: 9px; }
+  .tr-prog { grid-column: 2 / 4; }
+  .tr-flag { grid-column: 2 / 4; margin-top: -4px; }
+  .teams-summary { gap: 10px 0; }
+  .ts-say { margin-left: 0; width: 100%; }
+}
+
 /* The team's progress, on the team's own card. A bar rather than a number
    alone because the question is "how far along", which is a length. */
 .team-progress-strip { margin-top: 14px; padding-top: 13px; border-top: 1px solid var(--border); }
@@ -234,48 +293,27 @@
 
   <div id="real-content" style="display:none;flex:1;overflow:hidden;flex-direction:column;">
     <div class="content">
-      <div class="team-overview-stat-row">
-        @php
-          $statColors = ['all' => 'var(--blue)', 'adviser' => 'var(--accent)', 'consultant' => '#3b82f6', 'panel' => '#9333ea'];
-          $statLabels = ['all' => 'All', 'adviser' => 'Adviser', 'consultant' => 'Consultant', 'panel' => 'Panel'];
-        @endphp
-        @foreach($tabs as $tab)
-          @php
-            if ($tab === 'all') {
-              $count = $approvedAssignments->count();
-            } elseif ($tab === 'panel') {
-              $count = ($grouped->get('grammarian', collect())->count() + $grouped->get('capstone_adviser', collect())->count());
-            } else {
-              $count = $grouped->get($tab, collect())->count();
-            }
-          @endphp
-          <div class="stat-chip">
-            <div class="stat-n" style="color:{{ $statColors[$tab] ?? 'var(--text)' }}">{{ $count }}</div>
-            <div class="stat-l">{{ $statLabels[$tab] ?? ucfirst($tab) }}</div>
-            <div class="stat-sub">Assigned teams</div>
-          </div>
-        @endforeach
-      </div>
-
-      {{-- Progress Monitoring used to be a page of its own, so seeing how a
-           team was doing meant leaving the team. These are its numbers, and
-           every card below now carries that team's share of them. --}}
-      <div class="team-overview-stat-row">
-        <div class="stat-chip">
-          <div class="stat-n" style="color:var(--accent3)">{{ $avgCompletion }}%</div>
-          <div class="stat-l">Avg. Completion</div>
-          <div class="stat-sub">Across your teams</div>
+      {{-- Seven tiles, most of them zero, used to open this page and were the
+           loudest thing on it. The same facts read as one line, which gives
+           the page back to the teams underneath. --}}
+      <div class="teams-summary">
+        <div class="ts-lead">
+          <span class="ts-n">{{ $avgCompletion }}<span class="ts-pc">%</span></span>
+          <span class="ts-l">average completion</span>
         </div>
-        <div class="stat-chip">
-          <div class="stat-n" style="color:{{ $overdueMilestones > 0 ? 'var(--red)' : 'var(--text3)' }}">{{ $overdueMilestones }}</div>
-          <div class="stat-l">Overdue Items</div>
-          <div class="stat-sub">{{ $overdueMilestones > 0 ? 'Need chasing' : 'Nothing late' }}</div>
+        <span class="ts-sep"></span>
+        <div class="ts-stat"><span class="ts-m">{{ $totalTeams }}</span><span class="ts-ml">{{ Str::plural('team', $totalTeams) }}</span></div>
+        <span class="ts-sep"></span>
+        <div class="ts-stat">
+          <span class="ts-m" style="color:{{ $overdueMilestones > 0 ? 'var(--red)' : 'var(--text3)' }}">{{ $overdueMilestones }}</span>
+          <span class="ts-ml">{{ Str::plural('item', $overdueMilestones) }} overdue</span>
         </div>
-        <div class="stat-chip">
-          <div class="stat-n" style="color:var(--green)">{{ $onTrack }}</div>
-          <div class="stat-l">On Track</div>
-          <div class="stat-sub">No overdue items</div>
-        </div>
+        @php $needChasing = $progress->where('overdue', '>', 0)->count(); @endphp
+        <span class="ts-say">
+          {{ $needChasing > 0
+              ? $needChasing.' '.Str::plural('team', $needChasing).' '.($needChasing === 1 ? 'needs' : 'need').' chasing'
+              : 'Everyone on track' }}
+        </span>
       </div>
 
       <div class="team-role-tabs">
@@ -312,70 +350,47 @@
               $initials = $team ? strtoupper(substr($team->team_name ?? 'T', 0, 2)) : 'T';
               $roleName = $assignment->engaged_role_name ?? '';
             @endphp
-            <div class="team-card-modern">
-              <div class="team-card-top">
-                <div class="team-avatar-lg" style="background:{{ $avatarColor }}">{{ $initials }}</div>
-                <div class="team-meta">
-                  <div class="team-name-row">
-                    <span class="team-name">{{ $team?->team_name ?? 'Unknown Team' }}</span>
-                    <span class="role-pill-sm role-pill-{{ $roleName }}">{{ Str::title(str_replace('_', ' ', $roleName)) }}</span>
-                  </div>
-                  <div class="team-project">{{ $team?->project_title ?? 'No project title' }}</div>
+            @php $tp = $progress->get($team?->team_id); @endphp
+            <div class="team-row {{ $tp && $tp->overdue > 0 ? 'is-flagged' : '' }}"
+                 onclick="openTeamInfoModal({{ $assignment->assignment_id }})"
+                 role="button" tabindex="0"
+                 onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openTeamInfoModal({{ $assignment->assignment_id }})}">
+              <div class="tr-avatar" style="background:{{ $avatarColor }}">{{ $initials }}</div>
+
+              <div class="tr-who">
+                <div class="tr-name">
+                  {{ $team?->team_name ?? 'Unknown Team' }}
+                  <span class="role-pill-sm role-pill-{{ $roleName }}">{{ Str::title(str_replace('_', ' ', $roleName)) }}</span>
+                  <span class="tr-count">{{ $members->count() }} of 5</span>
+                </div>
+                <div class="tr-sub">
+                  @if($leader)<span class="tr-lead">{{ $leader->displayFirstName() }} {{ $leader->l_name ?? '' }}</span> &middot; @endif
+                  {{ $team?->project_title ?: 'No title chosen yet' }}
                 </div>
               </div>
 
-              <div class="team-members-section">
-                @foreach($members as $member)
-                  <div class="team-member-row" onclick="openPopover(event, this, {{ $member->student_id }})">
-                    <div class="member-avatar-sm">
-                      @if($member->avatarUrl())
-                        <img src="{{ $member->avatarUrl() }}" alt="">
-                      @else
-                        {{ $member->avatarInitials() ?: '?' }}
-                      @endif
-                    </div>
-                    <div class="member-name-text">{{ $member->displayFirstName() }} {{ $member->l_name ?? '' }}</div>
-                    @if($member->student_id === $team?->leader_id)
-                      <div class="member-lead-badge">Team Lead</div>
-                    @endif
-                  </div>
-                @endforeach
-                @if($members->isEmpty())
-                  <div class="team-member-row" style="cursor:default;">
-                    <div class="member-name-text" style="color:var(--text3);font-style:italic;">No members loaded</div>
-                  </div>
-                @endif
-              </div>
-
-              @php $tp = $progress->get($team?->team_id); @endphp
               @if($tp)
-                <div class="team-progress-strip">
-                  <div class="tps-head">
-                    <span class="tps-label">Progress</span>
-                    <span class="tps-pct" style="color:{{ $tp->percent >= 70 ? 'var(--green)' : ($tp->percent >= 40 ? 'var(--accent3)' : 'var(--red)') }}">{{ $tp->percent }}%</span>
-                  </div>
-                  <div class="tps-bar">
-                    <i style="width:{{ max($tp->percent, 2) }}%;background:{{ $tp->percent >= 70 ? 'var(--green)' : ($tp->percent >= 40 ? 'var(--accent)' : 'var(--red)') }}"></i>
-                  </div>
-                  <div class="tps-foot">
-                    <span>{{ $tp->completed }} of {{ $tp->total }} items done</span>
-                    @if($tp->overdue > 0)
-                      <span class="badge badge-red" style="font-size:10px">{{ $tp->overdue }} overdue</span>
-                    @elseif($tp->total > 0)
-                      <span class="badge badge-green" style="font-size:10px">On track</span>
-                    @else
-                      <span style="color:var(--text3)">No milestones set</span>
-                    @endif
-                  </div>
+                @php
+                  $tone = $tp->percent >= 70 ? 'var(--green)' : ($tp->percent >= 40 ? 'var(--accent)' : 'var(--red)');
+                @endphp
+                <div class="tr-prog">
+                  <div class="tr-bar"><i style="width:{{ max($tp->percent, 2) }}%;background:{{ $tone }}"></i></div>
+                  <span class="tr-pct" style="color:{{ $tone }}">{{ $tp->percent }}%</span>
                 </div>
+                <div class="tr-flag">
+                  @if($tp->overdue > 0)
+                    <span class="is-late">{{ $tp->overdue }} overdue</span>
+                  @elseif($tp->total > 0)
+                    <span>On track</span>
+                  @else
+                    <span>No milestones</span>
+                  @endif
+                </div>
+              @else
+                <div class="tr-prog"></div><div class="tr-flag"></div>
               @endif
 
-              <div class="team-card-footer">
-                <button class="btn btn-ghost" onclick="openTeamInfoModal({{ $assignment->assignment_id }})">
-                  <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-                  View Details
-                </button>
-              </div>
+              <span class="tr-chev" aria-hidden="true">&rsaquo;</span>
             </div>
           @empty
             <div class="empty-state">
