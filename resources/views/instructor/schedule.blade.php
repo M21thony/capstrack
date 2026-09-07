@@ -449,7 +449,7 @@
       <div class="av-count" id="av-count"></div>
 
       <div class="form-actions" style="margin-top:14px">
-        <button class="btn btn-primary" id="av-save" onclick="saveAvailability()">Create these slots</button>
+        <button class="btn btn-primary" id="av-save" onclick="saveAvailability()">Save availability</button>
         <button class="btn btn-ghost" onclick="closeAvail()" style="flex:none;padding:7px 12px">Cancel</button>
       </div>
     </div>
@@ -2124,11 +2124,11 @@ function countAvailSlots() {
 
   box.innerHTML = parts.join(' ');
 
-  const nothingToDo = !changes.adding.length && !changes.removing.length;
-  save.disabled = nothingToDo;
-  save.textContent = nothingToDo
-    ? 'No changes'
-    : (made.length ? 'Save availability' : 'Clear my availability');
+  // One button, one label. Turning every day off and saving is how you take
+  // your availability down - it does not need a second name for the same
+  // action, and the panel above already says what saving will do.
+  save.disabled = !changes.adding.length && !changes.removing.length;
+  save.textContent = 'Save availability';
 }
 
 /**
