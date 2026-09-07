@@ -189,11 +189,11 @@ class SubmissionController extends Controller
             ->orderByDesc('school_year')
             ->first();
 
-        if (! $studentYear || ! $studentYear->program) {
+        if (! $studentYear || ! $studentYear->team_id) {
             return response()->json(['folders' => []]);
         }
 
-        $expertId = $this->resolver->resolveSubjectAdviserAdmin($studentYear->program);
+        $expertId = $this->resolver->resolveSubjectAdviserAdmin($studentYear->team_id);
 
         if (! $expertId) {
             return response()->json(['folders' => []]);
