@@ -168,8 +168,14 @@
 .modal-box textarea { width: 100%; padding: 14px 16px; border-radius: 12px; border: 1.5px solid var(--border); background: var(--bg2); color: var(--text); font-size: 15px; font-family: 'DM Sans', sans-serif; outline: none; resize: vertical; min-height: 100px; box-sizing: border-box; transition: border-color 0.2s, box-shadow 0.2s; line-height: 1.5; }
 .modal-box textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
 .modal-box textarea::placeholder { color: var(--text3); font-size: 14px; }
-.modal-actions { display: flex; gap: 10px; margin-top: 18px; }
-.modal-actions .btn { flex: 1; justify-content: center; padding: 10px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: 0.15s; border: none; font-family: 'DM Sans', sans-serif; display: inline-flex; align-items: center; gap: 6px; }
+/* Dialog buttons size to their words and sit at the end, which is what
+   expert.css already says (.modal-actions{justify-content:flex-end}) and
+   what every dialog convention expects. flex:1 here overrode that and made
+   a one-word Close into a 422px bar across the whole panel - the wider the
+   modal, the more absurd the button. Full width is right on a phone, and
+   the narrow breakpoint below still does that. */
+.modal-actions { display: flex; gap: 10px; margin-top: 18px; justify-content: flex-end; }
+.modal-actions .btn { justify-content: center; padding: 9px 18px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: 0.15s; border: none; font-family: 'DM Sans', sans-serif; display: inline-flex; align-items: center; gap: 6px; }
 .modal-actions .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
 /* Confirmation modal */
@@ -474,7 +480,7 @@
 <!-- Reject Modal -->
 <div class="modal-overlay" id="reject-modal">
   <div class="modal-box">
-    <h3>Reject Team Request</h3>
+    <h3>Decline Team Request</h3>
     <div class="modal-sub" id="reject-modal-sub"></div>
 
     <div class="modal-divider"></div>
@@ -492,7 +498,7 @@
       <button class="btn btn-soft" onclick="closeModal('reject-modal')">Cancel</button>
       <button class="btn btn-danger" id="btn-confirm-reject" onclick="confirmReject()">
         <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-        Reject Request
+        Decline
       </button>
     </div>
   </div>
@@ -740,7 +746,7 @@ function openRejectModal(id) {
   document.getElementById('reject-reason').value = '';
   validateReject();
   document.getElementById('btn-confirm-reject').innerHTML =
-    '<svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Reject Request';
+    '<svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Decline';
   openModal('reject-modal');
 }
 
@@ -799,7 +805,7 @@ function confirmReject() {
   if (reason.length < 20) return;
   const btn = document.getElementById('btn-confirm-reject');
   btn.disabled = true;
-  btn.innerHTML = 'Rejecting...';
+  btn.innerHTML = 'Declining...';
 
   fetch('{{ url("instructor/assignments") }}/' + currentRejectId, {
     method: 'PATCH',
@@ -817,16 +823,16 @@ function confirmReject() {
       showToast(data.message, 'success');
       setTimeout(() => location.reload(), 1000);
     } else {
-      showToast(data.message || 'Failed to reject', 'error');
+      showToast(data.message || 'Failed to decline', 'error');
       btn.disabled = false;
-      btn.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Reject Request';
+      btn.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Decline';
     }
   })
   .catch(() => {
     closeModal('reject-modal');
     showToast('Network error. Please try again.', 'error');
     btn.disabled = false;
-    btn.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Reject Request';
+    btn.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Decline';
   });
 }
 

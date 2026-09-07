@@ -90,8 +90,10 @@
 .btn { display: inline-flex; align-items: center; gap: 6px; border: none; font-family: 'DM Sans', sans-serif; font-weight: 600; cursor: pointer; transition: all 0.15s; border-radius: 8px; }
 .btn-ghost { background: transparent; color: var(--text2); border: 1.5px solid var(--border); padding: 8px 16px; font-size: 12px; }
 .btn-ghost:hover { background: var(--accent-light); color: var(--accent3); border-color: var(--accent); }
-.modal-actions { display: flex; gap: 10px; margin-top: 18px; }
-.modal-actions .btn { flex: 1; justify-content: center; padding: 10px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: 0.15s; border: none; font-family: 'DM Sans', sans-serif; display: inline-flex; align-items: center; gap: 6px; }
+/* Content-width and at the end - see the same note on the assignments
+   page. flex:1 made a one-word Close span the whole panel. */
+.modal-actions { display: flex; gap: 10px; margin-top: 18px; justify-content: flex-end; }
+.modal-actions .btn { justify-content: center; padding: 9px 18px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: 0.15s; border: none; font-family: 'DM Sans', sans-serif; display: inline-flex; align-items: center; gap: 6px; }
 .modal-actions .btn-soft { background: var(--bg3); color: var(--text2); border: 1px solid var(--border); }
 .modal-actions .btn-soft:hover { background: var(--border); border-color: var(--text3); }
 

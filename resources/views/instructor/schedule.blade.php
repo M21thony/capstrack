@@ -236,11 +236,11 @@
             </div>
 
             <div class="form-actions">
-              <button class="btn btn-primary content" id="save-slot-btn" onclick="saveSlot()">
+              <button class="btn btn-primary" id="save-slot-btn" onclick="saveSlot()">
                 <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
                 Save Slot
               </button>
-              <button class="btn btn-ghost content" onclick="resetForm()" style="flex:none;padding:7px 12px">Clear</button>
+              <button class="btn btn-ghost" onclick="resetForm()" style="flex:none;padding:7px 12px">Clear</button>
             </div>
           </div>
         </div>
@@ -371,8 +371,8 @@
     </div>
     <div class="block-confirm-sub" id="bc-sub">Students won't be able to book any slot on this day. Any existing open slots will be hidden to students.</div>
     <div class="block-confirm-actions">
-      <button class="btn btn-danger-solid btn content" id="bc-confirm-btn" onclick="confirmBlock()">Block Date</button>
-      <button class="btn btn-ghost content" onclick="closeBlockConfirm()">Cancel</button>
+      <button class="btn btn-danger-solid" id="bc-confirm-btn" onclick="confirmBlock()">Block Date</button>
+      <button class="btn btn-ghost" onclick="closeBlockConfirm()">Cancel</button>
     </div>
   </div>
 </div>
@@ -431,8 +431,8 @@
       <div class="av-count" id="av-count"></div>
 
       <div class="form-actions" style="margin-top:14px">
-        <button class="btn btn-primary content" id="av-save" onclick="saveAvailability()">Create these slots</button>
-        <button class="btn btn-ghost content" onclick="closeAvail()" style="flex:none;padding:7px 12px">Cancel</button>
+        <button class="btn btn-primary" id="av-save" onclick="saveAvailability()">Create these slots</button>
+        <button class="btn btn-ghost" onclick="closeAvail()" style="flex:none;padding:7px 12px">Cancel</button>
       </div>
     </div>
   </div>
