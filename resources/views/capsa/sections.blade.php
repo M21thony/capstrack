@@ -803,8 +803,7 @@ function uploadStudentRoster(btn) {
           </select></div>
         <div class="form-group sheet-col"><label class="label" for="add-student-year">Year</label>
           <select class="input" id="add-student-year">
-            <option value="1">1</option><option value="2">2</option>
-            <option value="3">3</option><option value="4" selected>4</option><option value="5">5</option>
+            <option value="3">3</option><option value="4" selected>4</option>
           </select></div>
         <div class="form-group sheet-col"><label class="label" for="add-student-section">Section</label>
           <input class="input" id="add-student-section" placeholder="A" maxlength="4"></div>
@@ -854,8 +853,7 @@ function uploadStudentRoster(btn) {
           </select></div>
         <div class="form-group sheet-col"><label class="label" for="edit-student-year">Year</label>
           <select class="input" id="edit-student-year">
-            <option value="1">1</option><option value="2">2</option>
-            <option value="3">3</option><option value="4">4</option><option value="5">5</option>
+            <option value="3">3</option><option value="4">4</option>
           </select></div>
         <div class="form-group sheet-col"><label class="label" for="edit-student-section">Section</label>
           <input class="input" id="edit-student-section" maxlength="4"></div>
@@ -978,7 +976,15 @@ function uploadStudentRoster(btn) {
 
 @include('partials.confirm-sheet')
 @include('partials.row-menu')
-@include('partials.email-lookup', ['input' => 'add-student-email', 'kind' => 'student'])
+@include('partials.email-lookup', [
+    'input' => 'add-student-email',
+    'kind' => 'student',
+    'fields' => [
+        'first_name' => 'add-student-first',
+        'last_name' => 'add-student-last',
+        'student_number' => 'add-student-number',
+    ],
+])
 
 <script>
 // ══ the CaPSA's own students ══

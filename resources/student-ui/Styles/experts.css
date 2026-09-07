@@ -764,10 +764,13 @@ select.input{cursor:pointer}
 .pp-label{font-size:9.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--text3);margin-bottom:5px}
 .pp-field p{margin:0;font-size:13px;line-height:1.6;color:var(--text2);white-space:pre-wrap}
 .pp-foot{padding:12px 20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px;background:var(--bg3)}
-/* The uploaded document, shown above the fields the team typed. Fixed
-   height because the body scrolls: a full-page PDF here would push the
-   written sections out of reach. */
-.pp-pdf{width:100%;height:430px;border:1px solid var(--border);border-radius:8px;background:var(--bg3);display:block}
+/* The uploaded document, in a panel of its own over the summary - the same
+   shape the expert side uses for a student's proposal. */
+.pdf-box{width:900px;max-width:95vw;height:88vh;max-height:88vh;display:flex;flex-direction:column;overflow:hidden}
+.pdf-box .pdf-box-header{display:flex;align-items:flex-start;gap:12px;justify-content:space-between;margin-bottom:12px;flex-shrink:0}
+.pdf-box iframe{flex:1;width:100%;border:1px solid var(--border);border-radius:8px;min-height:0;background:var(--bg3)}
+/* Over the preview it was opened from, which is itself over the apply form. */
+#original-pdf-modal{z-index:500}
 
 /* ── phones: the strip becomes a plain list, as it always did ── */
 @media (max-width:1024px){
