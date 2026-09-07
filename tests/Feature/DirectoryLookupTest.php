@@ -223,6 +223,36 @@ class DirectoryLookupTest extends TestCase
         $this->assertCount(0, $admin->fresh()->roles);
     }
 
+    /**
+     * And the refusal does not say why.
+     *
+     * "That is the system administrator account" confirms which address
+     * belongs to the Admin to anybody who guesses it - the refusal itself is
+     * already a weak signal, and there is no reason to make it a plain one.
+     */
+    public function test_the_refusal_does_not_name_the_admin(): void
+    {
+        $admin = CapstoneExpert::factory()->create([
+            'approved_status' => true, 'is_admin' => true,
+            'email' => 'the.admin@cspc.edu.ph',
+        ]);
+
+        foreach (CapstoneExpert::STUDENT_FACING_ROLES as $role) {
+            Role::firstOrCreate(['role_name' => $role]);
+        }
+
+        $message = $this->actingAs($this->staff(), 'expert')
+            ->postJson(route('capsa.experts.store'), [
+                'email' => $admin->email, 'name' => 'Somebody', 'roles' => ['consultant'],
+            ])
+            ->assertStatus(422)
+            ->json('message');
+
+        foreach (['administrator', 'admin', 'system'] as $word) {
+            $this->assertStringNotContainsStringIgnoringCase($word, $message);
+        }
+    }
+
     /** Nor made a CaPSA by the same route. */
     public function test_the_admin_cannot_be_made_a_capsa(): void
     {

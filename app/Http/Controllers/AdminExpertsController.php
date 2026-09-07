@@ -148,12 +148,18 @@ class AdminExpertsController extends Controller
         // front of every team on student/experts. Hiding them from the
         // directory stopped the suggestion, not this - an address typed out
         // in full arrives here just the same.
+        //
+        // The refusal does not say why. Naming the account confirms which
+        // address belongs to the administrator to anybody who guesses it,
+        // and a CaPSA has no reason to be told. It is still a weak signal -
+        // this is the only address that is refused - but a signal that
+        // confirms nothing is worth more than one that does.
         $existing = CapstoneExpert::withTrashed()->where('email', $email)->first();
 
         if ($existing && $existing->is_admin) {
             return response()->json([
                 'success' => false,
-                'message' => 'That is the system administrator account. It cannot be given a role here.',
+                'message' => 'That address cannot be given a role here.',
             ], 422);
         }
 
@@ -488,12 +494,18 @@ class AdminExpertsController extends Controller
         // front of every team on student/experts. Hiding them from the
         // directory stopped the suggestion, not this - an address typed out
         // in full arrives here just the same.
+        //
+        // The refusal does not say why. Naming the account confirms which
+        // address belongs to the administrator to anybody who guesses it,
+        // and a CaPSA has no reason to be told. It is still a weak signal -
+        // this is the only address that is refused - but a signal that
+        // confirms nothing is worth more than one that does.
         $existing = CapstoneExpert::withTrashed()->where('email', $email)->first();
 
         if ($existing && $existing->is_admin) {
             return response()->json([
                 'success' => false,
-                'message' => 'That is the system administrator account. It cannot be given a role here.',
+                'message' => 'That address cannot be given a role here.',
             ], 422);
         }
 
