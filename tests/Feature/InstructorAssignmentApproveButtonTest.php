@@ -55,9 +55,16 @@ class InstructorAssignmentApproveButtonTest extends TestCase
         $response->assertDontSee("openRejectModal({$assignment->assignment_id}, '", false);
 
         // Only the id is passed now - the rest is looked up client-side
-        // from the safely JSON-encoded assignmentData object.
-        $response->assertSee("openApproveModal({$assignment->assignment_id})", false);
-        $response->assertSee("openRejectModal({$assignment->assignment_id})", false);
+        // from the safely JSON-encoded assignmentData object. Since the
+        // redesign the row selects rather than decides, so the id travels
+        // through selectAssignment and the panel calls the same two
+        // functions with it; what must never come back is a team name
+        // interpolated into an attribute, which is what the two assertions
+        // above pin down.
+        $response->assertSee("selectAssignment({$assignment->assignment_id})", false);
+        $response->assertDontSee("selectAssignment({$assignment->assignment_id}, '", false);
+        $response->assertSee('openApproveModal(id)', false);
+        $response->assertSee('openRejectModal(id)', false);
 
         // The team name still reaches the page - just through the safe
         // Js::from()-encoded assignmentData object, not raw string

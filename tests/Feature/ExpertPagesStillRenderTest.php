@@ -1,0 +1,62 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\CapstoneExpert;
+use App\Models\Role;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
+
+/**
+ * Every expert page still renders.
+ *
+ * The four pages below are being redesigned together, and a redesign breaks
+ * a page in one of two ways: a Blade error, or a template that renders but
+ * has lost the control the page existed for. The first is what this catches,
+ * cheaply, on every page at once - so a change to one of them cannot quietly
+ * take out the other three.
+ */
+class ExpertPagesStillRenderTest extends TestCase
+{
+    use RefreshDatabase;
+
+    private CapstoneExpert $expert;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->expert = CapstoneExpert::factory()->create([
+            'approved_status' => true, 'is_admin' => false,
+        ]);
+        $this->expert->roles()->attach(Role::firstOrCreate(['role_name' => 'adviser'])->role_id);
+    }
+
+    public static function pages(): array
+    {
+        return [
+            'dashboard' => ['/instructor/dashboard'],
+            'teams' => ['/instructor/teams'],
+            'progress' => ['/instructor/progress'],
+            'document review' => ['/instructor/docreview'],
+            'assignments' => ['/instructor/assignments'],
+            'schedule' => ['/instructor/schedule'],
+        ];
+    }
+
+    #[\PHPUnit\Framework\Attributes\DataProvider('pages')]
+    public function test_the_page_renders(string $url): void
+    {
+        $this->actingAs($this->expert, 'expert')->get($url)->assertOk();
+    }
+
+    /** The controls the redesign must not lose. */
+    public function test_document_review_keeps_its_actions(): void
+    {
+        $html = $this->actingAs($this->expert, 'expert')->get('/instructor/docreview')->content();
+
+        $this->assertStringContainsString('Search documents or teams', $html);
+        $this->assertStringContainsString('Waiting on you', $html);
+        $this->assertStringContainsString('Over 5 days', $html);
+    }
+}

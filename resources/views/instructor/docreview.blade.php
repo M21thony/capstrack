@@ -71,6 +71,29 @@
       </div>
     </div>
 
+    {{-- Waiting, overdue, done. "Over 5 days" is the one that matters: a
+         status column says a document is unreviewed, it does not say for how
+         long, and length is what a team complains about. --}}
+    @php
+      $pendingReviews = $reviews->where('review_status', '!=', 'Reviewed');
+      $overdueReviews = $pendingReviews->filter(
+        fn ($r) => \Illuminate\Support\Carbon::parse($r->submitted_at)->diffInDays(now()) >= 5
+      );
+    @endphp
+    <div class="grid-3" style="margin-bottom:14px">
+      <x-dashboard.stat-chip
+        value="{{ $pendingReviews->count() }}" label="Waiting on you"
+        sub="{{ $pendingReviews->isEmpty() ? 'Nothing outstanding' : 'Oldest first below' }}"
+        color="var(--accent3)" />
+      <x-dashboard.stat-chip
+        value="{{ $overdueReviews->count() }}" label="Over 5 days"
+        sub="{{ $overdueReviews->isEmpty() ? 'None running late' : 'These are late' }}"
+        color="{{ $overdueReviews->isEmpty() ? 'var(--text3)' : 'var(--red)' }}" />
+      <x-dashboard.stat-chip
+        value="{{ $reviews->where('review_status', 'Reviewed')->count() }}" label="Reviewed"
+        sub="All time" color="var(--green)" />
+    </div>
+
     <div class="row" style="margin-bottom:14px;gap:8px">
       <input class="input" placeholder="Search documents or teams..." style="max-width:280px"/>
       <select class="input" style="width:160px">
@@ -99,7 +122,13 @@
         </thead>
         <tbody>
           @forelse ($reviews as $review)
-            <tr>
+            @php
+              $waitingDays = (int) \Illuminate\Support\Carbon::parse($review->submitted_at)->diffInDays(now());
+              $rowState = $review->review_status === 'Reviewed'
+                ? 'is-done'
+                : ($waitingDays >= 5 ? 'is-late' : 'is-waiting');
+            @endphp
+            <tr class="dr-row {{ $rowState }}">
               <td style="padding-left:20px">
                 <div style="display:flex;align-items:center;gap:10px">
                   <div class="doc-icon" @if($review->review_status === 'Reviewed') style="background:rgba(22,163,74,0.08);border:1px solid rgba(22,163,74,0.2)" @endif>
@@ -112,15 +141,17 @@
                 </div>
               </td>
               <td><span class="badge badge-gold">{{ $review->team_name ?? '—' }}</span></td>
-              <td style="font-size:12px">{{ \Illuminate\Support\Carbon::parse($review->submitted_at)->format('M j, Y') }}</td>
+              <td style="font-size:12px;font-variant-numeric:tabular-nums">{{ \Illuminate\Support\Carbon::parse($review->submitted_at)->format('M j, Y') }}</td>
               <td style="font-variant-numeric:tabular-nums;font-size:12px">v{{ $review->version ?? '1.0' }}</td>
               <td>
                 @if ($review->review_status === 'Reviewed')
                   <span class="badge badge-green">Reviewed</span>
                 @elseif ($review->review_status === 'Reviewing')
-                  <span class="badge badge-gold">In Review</span>
+                  <span class="badge badge-gold">In Review{{ $waitingDays >= 1 ? ' · '.$waitingDays.'d' : '' }}</span>
+                @elseif ($waitingDays >= 5)
+                  <span class="badge badge-red">{{ $waitingDays }} days waiting</span>
                 @else
-                  <span class="badge badge-red">To Review</span>
+                  <span class="badge badge-gold">{{ $waitingDays < 1 ? 'Waiting' : $waitingDays.' days waiting' }}</span>
                 @endif
               </td>
               <td>
