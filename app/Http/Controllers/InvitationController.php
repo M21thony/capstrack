@@ -27,6 +27,26 @@ class InvitationController extends Controller
         $student = $request->user();
         $studentId = $student->student_id;
 
+        // The rule lives on the team because there are two of these
+        // controllers and it was written into the other one, which this page
+        // does not post to - so a team of two could be sent three invitations
+        // for two seats and every one went through.
+        //
+        // Only for invitations. A request is somebody asking to be let in and
+        // the leader decides on it; refusing here would answer for a leader
+        // who has not seen them.
+        if ($validated['type'] === 'invite') {
+            $team = Team::find($validated['team_id'] ?? StudentTeam::idFor($studentId));
+
+            if ($team && $reason = $team->inviteBlockReason()) {
+                if ($request->expectsJson()) {
+                    return response()->json(['success' => false, 'message' => $reason], 422);
+                }
+
+                return back()->with('error', $reason);
+            }
+        }
+
         // If the sender already belongs to a team, they cannot send join requests
         if ($validated['type'] === 'request') {
             if (StudentTeam::has($studentId)) {

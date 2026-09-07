@@ -2222,6 +2222,11 @@ function loadOpenSlotClassmates() {
     .then(function(data) {
         if (loadingEl) loadingEl.style.display = 'none';
 
+        if (typeof data.available_slots === 'number') {
+            OPEN_SLOT_SEATS_FREE = data.available_slots;
+            refreshOpenSlotSendButton();
+        }
+
         if (data.error) {
             showToast(data.error, 'error');
             if (emptyEl) {
@@ -2341,6 +2346,14 @@ function selectOpenSlotClassmate(el) {
     refreshOpenSlotSendButton();
 }
 
+// Seats left after the members already on the team and the invitations
+// already waiting to be answered. The server refuses anything over this;
+// the point of having it here is that the leader can see it before picking
+// five people for two seats. Rendered with the page, then re-read from the
+// classmate list every time the dialog opens, so it does not go stale after
+// invitations are sent without a reload.
+var OPEN_SLOT_SEATS_FREE = {{ $myTeam->seatsFree() }};
+
 /** How many are picked, and whether Send Invite is worth pressing. */
 function refreshOpenSlotSendButton() {
     var picked = document.querySelectorAll('.open-slot-classmate-option.selected');
@@ -2348,15 +2361,30 @@ function refreshOpenSlotSendButton() {
     var label = document.getElementById('osl-count');
     if (!btn) return;
 
-    btn.disabled = picked.length === 0;
-    btn.style.opacity = picked.length ? '1' : '.5';
-    btn.style.cursor = picked.length ? 'pointer' : 'not-allowed';
+    var tooMany = picked.length > OPEN_SLOT_SEATS_FREE;
+
+    btn.disabled = picked.length === 0 || tooMany;
+    btn.style.opacity = btn.disabled ? '.5' : '1';
+    btn.style.cursor = btn.disabled ? 'not-allowed' : 'pointer';
     btn.textContent = picked.length > 1 ? 'Send ' + picked.length + ' Invites' : 'Send Invite';
 
     if (label) {
-        label.textContent = picked.length
-            ? picked.length + (picked.length === 1 ? ' classmate picked' : ' classmates picked')
-            : 'Pick who to invite.';
+        if (tooMany) {
+            label.style.color = 'var(--red)';
+            label.textContent = OPEN_SLOT_SEATS_FREE === 0
+                ? 'No seats left on your team.'
+                : 'Only ' + OPEN_SLOT_SEATS_FREE + ' seat' + (OPEN_SLOT_SEATS_FREE === 1 ? '' : 's')
+                  + ' left - you have picked ' + picked.length + '.';
+        } else {
+            label.style.color = 'var(--text3)';
+            label.textContent = picked.length
+                ? picked.length + (picked.length === 1 ? ' classmate picked' : ' classmates picked')
+                  + ' · ' + OPEN_SLOT_SEATS_FREE + ' seat' + (OPEN_SLOT_SEATS_FREE === 1 ? '' : 's') + ' free'
+                : (OPEN_SLOT_SEATS_FREE
+                    ? 'Pick who to invite - ' + OPEN_SLOT_SEATS_FREE + ' seat'
+                      + (OPEN_SLOT_SEATS_FREE === 1 ? '' : 's') + ' free.'
+                    : 'No seats left on your team.');
+        }
     }
 }
 
@@ -2379,7 +2407,11 @@ function sendOpenSlotInvites() {
     var csrf = document.querySelector('meta[name="csrf-token"]');
     var token = csrf ? csrf.getAttribute('content') : '{{ csrf_token() }}';
 
-    Promise.all(picked.map(function (el) {
+    // One after another, not Promise.all. Sent together, every request asks
+    // "is there a seat?" before any of them has taken one, so three
+    // invitations for two seats all passed. In order, the second sees the
+    // first waiting.
+    var sendOne = function (el) {
         return fetch('{{ route('invitations.store') }}', {
             method: 'POST',
             headers: {
@@ -2396,7 +2428,13 @@ function sendOpenSlotInvites() {
             .then(function (r) { return r.json(); })
             .then(function (d) { return { ok: !!(d && d.success), name: el.getAttribute('data-name'), message: d && d.message }; })
             .catch(function () { return { ok: false, name: el.getAttribute('data-name') }; });
-    })).then(function (results) {
+    };
+
+    picked.reduce(function (chain, el) {
+        return chain.then(function (results) {
+            return sendOne(el).then(function (result) { return results.concat(result); });
+        });
+    }, Promise.resolve([])).then(function (results) {
         var sent = results.filter(function (r) { return r.ok; });
         var failed = results.filter(function (r) { return !r.ok; });
 

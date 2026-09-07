@@ -66,7 +66,7 @@ class TeamCannotOverfillTest extends TestCase
         // The third would go over, even though nobody has accepted yet.
         $this->invite($leader, $team, $this->student('three@my.cspc.edu.ph'))
             ->assertStatus(422)
-            ->assertJson(fn ($j) => $j->where('message', fn ($m) => str_contains($m, 'waiting to be answered'))->etc());
+            ->assertJson(fn ($j) => $j->where('message', fn ($m) => str_contains($m, 'already out'))->etc());
 
         $this->assertSame(2, TeamInvitation::count());
     }
@@ -86,6 +86,59 @@ class TeamCannotOverfillTest extends TestCase
         $this->invite($leader, $team, $this->student('extra@my.cspc.edu.ph'))
             ->assertStatus(422)
             ->assertJson(fn ($j) => $j->where('message', fn ($m) => str_contains($m, 'maximum of 3'))->etc());
+    }
+
+    /**
+     * The page does not post to /api/invitations - it posts to the web route,
+     * and only the api controller had the capacity check. This is the route
+     * the leader actually used when four invitations went out for two seats.
+     */
+    public function test_the_route_the_page_posts_to_is_guarded_too(): void
+    {
+        Setting::set('max_team_members', '3');
+
+        $leader = $this->student('lead4@my.cspc.edu.ph');
+        $team = Team::create(['team_name' => 'T4', 'leader_id' => $leader->student_id, 'team_status' => 'Active']);
+        StudentSchoolYear::where('student_id', $leader->student_id)->update(['team_id' => $team->team_id]);
+
+        $send = fn (Student $to) => $this->actingAs($leader, 'web')->postJson('/invitations', [
+            'receiver_id' => $to->student_id,
+            'team_id' => $team->team_id,
+            'type' => 'invite',
+        ]);
+
+        $send($this->student('w1@my.cspc.edu.ph'))->assertSuccessful();
+        $send($this->student('w2@my.cspc.edu.ph'))->assertSuccessful();
+        $send($this->student('w3@my.cspc.edu.ph'))->assertStatus(422);
+
+        $this->assertSame(2, TeamInvitation::count());
+    }
+
+    /** The leader is told how many seats are left before picking anybody. */
+    public function test_the_page_carries_the_seats_left(): void
+    {
+        Setting::set('max_team_members', '4');
+
+        $leader = $this->student('lead5@my.cspc.edu.ph');
+        $team = Team::create(['team_name' => 'T5', 'leader_id' => $leader->student_id, 'team_status' => 'Active']);
+        $member = $this->student('m5@my.cspc.edu.ph');
+
+        foreach ([$leader, $member] as $s) {
+            StudentSchoolYear::where('student_id', $s->student_id)->update(['team_id' => $team->team_id]);
+        }
+
+        // Four seats, two members, one invitation out: one seat left.
+        TeamInvitation::create([
+            'sender_id' => $leader->student_id,
+            'receiver_id' => $this->student('out5@my.cspc.edu.ph')->student_id,
+            'team_id' => $team->team_id, 'type' => 'invite', 'status' => 'pending',
+        ]);
+
+        $this->assertSame(1, $team->fresh()->seatsFree());
+
+        $this->actingAs($leader, 'web')->get('/student/team')
+            ->assertStatus(200)
+            ->assertSee('OPEN_SLOT_SEATS_FREE = 1;', false);
     }
 
     /** Two invitations out, one seat: the second to answer is turned away. */
