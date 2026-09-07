@@ -7,6 +7,7 @@ use App\Models\CapstoneDocumentReview;
 use App\Models\GoogleDriveToken;
 use App\Services\GoogleDriveService;
 use App\Services\RecipientResolver;
+use App\Support\StudentTeam;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -66,7 +67,10 @@ class SubmissionController extends Controller
         // filename - it survives a changing date/suffix around it. Files
         // with no detectable chapter fall back to exact filename matching,
         // same as before.
-        $lastVersion = CapstoneDocument::where('student_id', $studentId)
+        // Counted across the whole team, not the one account uploading. A
+        // chapter is the team's, so two members each sending "Chapter 1" were
+        // both told they were on Version 1 of it.
+        $lastVersion = CapstoneDocument::whereIn('student_id', StudentTeam::memberIdsFor($studentId))
             ->when(
                 $chapter,
                 fn ($query) => $query->where('chapter', $chapter),
@@ -146,7 +150,10 @@ class SubmissionController extends Controller
         $title = $request->input('title');
         $chapter = $this->detectChapter($title);
 
-        $lastVersion = CapstoneDocument::where('student_id', $studentId)
+        // Counted across the whole team, not the one account uploading. A
+        // chapter is the team's, so two members each sending "Chapter 1" were
+        // both told they were on Version 1 of it.
+        $lastVersion = CapstoneDocument::whereIn('student_id', StudentTeam::memberIdsFor($studentId))
             ->when(
                 $chapter,
                 fn ($query) => $query->where('chapter', $chapter),
