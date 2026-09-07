@@ -298,8 +298,11 @@ Route::get('/login/rejected', [AuthController::class, 'rejected'])->name('login.
 // How a faculty member who is not on any uploaded list gets an account. The
 // login page has always told them to "request account access"; for a while
 // these two lines were commented out and there was nowhere to do it.
-Route::get('/request-account', [ExpertController::class, 'showRequestForm'])->name('account.request');
-Route::post('/request-account', [ExpertController::class, 'storeRequest'])->name('account.request.store');
+// Applying for an account is gone. Faculty arrive one of two ways - on the
+// list a CaPSA uploads, or added one at a time by address - so an account is
+// only ever made by somebody who already knows who this person is. Asking a
+// stranger to fill in a form and then queueing it for approval was a third
+// way in that duplicated both and needed policing.
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 Route::prefix('expert')->group(function () {
