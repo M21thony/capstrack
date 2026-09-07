@@ -228,21 +228,28 @@ class StudentRosterController extends Controller
         ]);
     }
 
-    /** The headings the template is written with, in the order it writes them. */
+    /**
+     * The headings the template is written with, in the order it writes them.
+     *
+     * No School Year column. The Admin declares the school year for the
+     * whole system, so a column for it on every row only creates a way for
+     * a file to disagree with that - and a wrongly typed one used to skip
+     * the row outright. Every upload is stamped with the current year.
+     */
     private const TEMPLATE_HEADINGS = [
         'Email', 'Last Name', 'First Name', 'Middle Name',
-        'Student No.', 'Course/Program', 'Year', 'Section', 'School Year',
+        'Student No.', 'Course/Program', 'Year', 'Section',
     ];
 
     /**
      * The blank list, with the headings this reads and one filled-in row.
      *
      * The modal described the columns in prose, which left a CaPSA to type
-     * nine headings by hand - and "Students No." for "Student No." reads as
+     * the headings by hand - and "Students No." for "Student No." reads as
      * no column at all, so the number silently never arrives. Handing over
      * the file removes that whole class of mistake, and the example row
-     * shows the two things prose kept having to explain: the school year is
-     * written 2026-2027, and the year is a bare number.
+     * shows the thing prose kept having to explain: the year is a bare
+     * number, separate from the section letter.
      */
     public function template(): BinaryFileResponse
     {
@@ -253,12 +260,12 @@ class StudentRosterController extends Controller
         $sheet->fromArray([self::TEMPLATE_HEADINGS], null, 'A1');
         $sheet->fromArray([[
             'juan.delacruz'.Student::EMAIL_DOMAIN,
-            'Dela Cruz', 'Juan', 'Bautista', '221001135', 'BSIT', 4, 'B', Term::currentSchoolYear(),
+            'Dela Cruz', 'Juan', 'Bautista', '221001135', 'BSIT', 4, 'B',
         ]], null, 'A2');
 
-        $sheet->getStyle('A1:I1')->getFont()->setBold(true);
+        $sheet->getStyle('A1:H1')->getFont()->setBold(true);
 
-        foreach (range('A', 'I') as $column) {
+        foreach (range('A', 'H') as $column) {
             $sheet->getColumnDimension($column)->setAutoSize(true);
         }
 
@@ -325,22 +332,12 @@ class StudentRosterController extends Controller
                 continue;
             }
 
-            // A school year has one written form here - "2026-2027" - and
-            // every reader filters on an exact match, so a hand-typed
-            // "2026-27" or "26-27" has to be brought to it rather than
-            // stored as-is and quietly matching nobody.
+            // The Admin declares the school year, so every row of every
+            // upload gets that one. A per-row column used to be able to
+            // disagree with it, and a mistyped "26-27" skipped the student
+            // rather than the column. A file that still carries the column
+            // is not an error - it is simply not read.
             $rowSchoolYear = $schoolYear;
-
-            if ($get('school_year') !== '') {
-                $rowSchoolYear = $this->normaliseSchoolYear($get('school_year'));
-
-                if ($rowSchoolYear === null) {
-                    $skipped++;
-                    $errors[] = "Row {$rowNum}: '".$get('school_year')."' is not a school year - write it as 2026-2027 - skipped.";
-
-                    continue;
-                }
-            }
 
             $courseCode = Student::mapCourseToProgram($get('course'));
             [$year, $section] = $this->yearAndSection($get('year'), $get('section'), $get('year_section'));
