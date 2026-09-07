@@ -292,6 +292,11 @@
   </div>
   </div>
 </div>
+{{-- The sidebar draws a clickable name that calls openExpertProfile(),
+     which is declared in this partial. Without it the trigger was on the
+     page and the function was not, so clicking your own name here did
+     nothing at all. --}}
+@include('instructor.partials.expert-profile')
 @include('instructor.partials.skeleton-toggle')
 
 {{-- The expert profile panel is included once for every instructor page by
@@ -1944,6 +1949,18 @@ function openAvail() {
   countAvailSlots();
 
   document.getElementById('avail-overlay').classList.add('open');
+}
+
+/**
+ * Close it.
+ *
+ * The X, Cancel, a click on the backdrop and the end of a save all call
+ * this. It was lost when this block was rewritten, so every one of them
+ * called a function that no longer existed - which throws and leaves the
+ * dialog sitting there.
+ */
+function closeAvail() {
+  document.getElementById('avail-overlay').classList.remove('open');
 }
 
 /** Read the week back out of the slots that exist. */
