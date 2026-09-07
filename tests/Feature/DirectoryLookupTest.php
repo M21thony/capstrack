@@ -130,6 +130,58 @@ class DirectoryLookupTest extends TestCase
             ->assertJsonCount(0, 'people');
     }
 
+    /**
+     * The Admin is not in the directory.
+     *
+     * This box adds experts and names CaPSAs, and the Admin is neither - so
+     * listing them did nothing but hand their address to anybody who typed
+     * three letters of it, which on this system is every CaPSA.
+     */
+    public function test_the_admin_is_never_listed(): void
+    {
+        $admin = CapstoneExpert::factory()->create([
+            'approved_status' => true,
+            'is_admin' => true,
+            'first_name' => 'Marites',
+            'last_name' => 'Bandola',
+            'email' => 'the.admin@cspc.edu.ph',
+        ]);
+
+        $capsa = $this->staff();
+
+        foreach (['Marites', 'Bandola', 'the.admin'] as $query) {
+            $found = $this->actingAs($capsa, 'expert')
+                ->getJson(route('directory.people', ['q' => $query, 'kind' => 'expert']))
+                ->assertOk()
+                ->json('people');
+
+            $this->assertNotContains(
+                $admin->email,
+                array_column($found, 'email'),
+                "searching '{$query}' does not surface the admin"
+            );
+        }
+    }
+
+    /** An ordinary expert is still found, so the filter is not a blanket. */
+    public function test_a_plain_expert_is_still_listed(): void
+    {
+        $expert = CapstoneExpert::factory()->create([
+            'approved_status' => true,
+            'is_admin' => false,
+            'first_name' => 'Marites',
+            'last_name' => 'Bandola',
+            'email' => 'plain.expert@cspc.edu.ph',
+        ]);
+
+        $found = $this->actingAs($this->staff(), 'expert')
+            ->getJson(route('directory.people', ['q' => 'Bandola', 'kind' => 'expert']))
+            ->assertOk()
+            ->json('people');
+
+        $this->assertContains($expert->email, array_column($found, 'email'));
+    }
+
     public function test_a_guest_cannot_use_it(): void
     {
         $this->student();

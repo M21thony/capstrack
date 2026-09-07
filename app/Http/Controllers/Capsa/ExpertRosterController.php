@@ -40,7 +40,9 @@ class ExpertRosterController extends Controller
     private const SHEETS = ['Adviser', 'Consultant', 'Grammarian'];
 
     /** The headings the template writes, in the order it writes them. */
-    private const TEMPLATE_HEADINGS = ['Name', 'Email Address', 'Role', 'Expertise'];
+    private const TEMPLATE_HEADINGS = [
+        'Name', 'Email Address', 'Role', 'Expertise', 'Accepted Programs', 'Team Slots',
+    ];
 
     /**
      * The file, read into the people it names. Nothing is written.
@@ -82,6 +84,11 @@ class ExpertRosterController extends Controller
             $nameCol = $columnIndex['name'] ?? null;
             $roleCol = $columnIndex['role'] ?? $columnIndex['roles'] ?? null;
             $expertiseCol = $columnIndex['expertise'] ?? $columnIndex['areas of expertise'] ?? null;
+            // Both optional, and both something the expert can set for
+            // themselves - a CaPSA filling them in is a head start, not the
+            // only way they get there.
+            $programsCol = $columnIndex['accepted programs'] ?? $columnIndex['programs'] ?? null;
+            $slotsCol = $columnIndex['team slots'] ?? $columnIndex['slots'] ?? $columnIndex['max teams'] ?? null;
 
             if ($emailCol === null || $nameCol === null) {
                 // A sheet named after a role was meant to be read, so say it
@@ -141,7 +148,10 @@ class ExpertRosterController extends Controller
                     continue;
                 }
 
-                $people[$email] ??= ['name' => $name, 'roles' => [], 'expertise' => null];
+                $people[$email] ??= [
+                    'name' => $name, 'roles' => [], 'expertise' => null,
+                    'programs' => null, 'slots' => null,
+                ];
 
                 [$roles, $unknown] = $this->readRoles(
                     $roleCol !== null ? (string) ($row[$roleCol] ?? '') : '',
@@ -165,6 +175,28 @@ class ExpertRosterController extends Controller
                         $people[$email]['expertise'] = array_values(array_unique(
                             [...($people[$email]['expertise'] ?? []), ...$expertise]
                         ));
+                    }
+                }
+
+                // Same rule for both of these: an empty cell says nothing and
+                // leaves whatever the expert has already set alone.
+                if ($programsCol !== null) {
+                    $programs = $this->readPrograms((string) ($row[$programsCol] ?? ''), $where, $errors);
+
+                    if ($programs !== []) {
+                        $people[$email]['programs'] = $programs;
+                    }
+                }
+
+                if ($slotsCol !== null) {
+                    $slots = trim((string) ($row[$slotsCol] ?? ''));
+
+                    if ($slots !== '') {
+                        if (! ctype_digit($slots) || (int) $slots < 1) {
+                            $errors[] = "{$where}: 'Team Slots' has to be a whole number of teams. The account was still created.";
+                        } else {
+                            $people[$email]['slots'] = (int) $slots;
+                        }
                     }
                 }
             }
@@ -243,6 +275,33 @@ class ExpertRosterController extends Controller
                     ExpertExpertise::create(['expert_id' => $expertId, 'expertise_field' => $field]);
                 }
             }
+
+            // program_slots is the same "1 - BSIT, 5 - BSIS" free text the
+            // request form writes, so one shape is read everywhere. Without
+            // a per-programme count, the slot number is spread across the
+            // programmes named; without programmes, only the overall cap is
+            // set and the expert says which programmes themselves.
+            if ($person['programs'] !== null || $person['slots'] !== null) {
+                $account = CapstoneExpert::withTrashed()->find($expertId);
+
+                if ($account) {
+                    $each = $person['slots'] ?? 1;
+
+                    if ($person['programs'] !== null) {
+                        $account->program_slots = collect($person['programs'])
+                            ->map(fn ($program) => $each.' - '.$program)
+                            ->implode(', ');
+                    }
+
+                    if ($person['slots'] !== null) {
+                        $account->max_teams = $person['programs'] !== null
+                            ? $each * count($person['programs'])
+                            : $person['slots'];
+                    }
+
+                    $account->save();
+                }
+            }
         }
 
         return response()->json([
@@ -295,6 +354,10 @@ class ExpertRosterController extends Controller
                 'email' => $email,
                 'roles' => $person['roles'],
                 'expertise' => $person['expertise'] ?? [],
+                // Shown in the preview so a CaPSA sees what the sheet is
+                // about to set before it sets it.
+                'programs' => $person['programs'] ?? [],
+                'slots' => $person['slots'],
                 'action' => $action,
                 // Named, not counted: "roles" says what an upload is about to
                 // change about somebody who already has an account.
@@ -384,13 +447,15 @@ class ExpertRosterController extends Controller
 
         $sheet->fromArray([self::TEMPLATE_HEADINGS], null, 'A1');
         $sheet->fromArray([
-            ['Juan Dela Cruz', 'juan.delacruz@gmail.com', 'Adviser', 'Research Methodology, Data Analytics'],
-            ['Maria Santos', 'maria.santos@gmail.com', 'Consultant, Grammarian', ''],
+            ['Juan Dela Cruz', 'juan.delacruz@gmail.com', 'Adviser', 'Research Methodology, Data Analytics', 'BSIT, BSIS', 2],
+            // The last two are optional: leave them blank and the expert
+            // sets their own programmes and capacity.
+            ['Maria Santos', 'maria.santos@gmail.com', 'Consultant, Grammarian', '', '', ''],
         ], null, 'A2');
 
-        $sheet->getStyle('A1:D1')->getFont()->setBold(true);
+        $sheet->getStyle('A1:F1')->getFont()->setBold(true);
 
-        foreach (range('A', 'D') as $column) {
+        foreach (range('A', 'F') as $column) {
             $sheet->getColumnDimension($column)->setAutoSize(true);
         }
 
@@ -398,6 +463,35 @@ class ExpertRosterController extends Controller
         (new Xlsx($book))->save($path);
 
         return response()->download($path, 'Expert List Template.xlsx')->deleteFileAfterSend();
+    }
+
+    /**
+     * The programme codes named in one cell.
+     *
+     * "BSIT, BSIS" or "BSIT/BSIS" - anything that is not one of the four is
+     * reported and dropped rather than written, since a programme nobody
+     * offers would quietly stop every student matching against it.
+     *
+     * @param  array<int, string>  $errors
+     * @return array<int, string>
+     */
+    private function readPrograms(string $cell, string $where, array &$errors): array
+    {
+        $named = collect(preg_split('/[,;\/|]+/', $cell))
+            ->map(fn ($part) => strtoupper(trim((string) $part)))
+            ->filter()
+            ->unique();
+
+        $unknown = $named->reject(fn ($program) => in_array($program, CapstoneExpert::PROGRAMS, true));
+
+        if ($unknown->isNotEmpty()) {
+            $errors[] = "{$where}: '".$unknown->implode("', '")."' is not a program - use "
+                .implode(', ', CapstoneExpert::PROGRAMS).'. The account was still created.';
+        }
+
+        return $named->filter(fn ($program) => in_array($program, CapstoneExpert::PROGRAMS, true))
+            ->values()
+            ->all();
     }
 
     /**
