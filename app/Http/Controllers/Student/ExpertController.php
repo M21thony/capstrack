@@ -12,6 +12,7 @@ use App\Support\SkillCatalog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class ExpertController extends Controller
 {
@@ -220,6 +221,10 @@ class ExpertController extends Controller
                 return $expert;
             });
 
+        $approvedProposal = $team?->selected_pre_proposal_id
+            ? CapstonePreProposal::with('duplicationCheck')->find($team->selected_pre_proposal_id)
+            : null;
+
         return view('student.experts', [
             'experts' => $experts,
             'assignments' => $assignments,
@@ -228,9 +233,12 @@ class ExpertController extends Controller
             // applying does not need a PDF - that document already went
             // through the CaPSA, and asking for it again only invited a
             // different, unapproved file to be attached instead.
-            'approvedProposal' => $team?->selected_pre_proposal_id
-                ? CapstonePreProposal::find($team->selected_pre_proposal_id)
-                : null,
+            'approvedProposal' => $approvedProposal,
+            // Null unless the file is genuinely there. A stored path is not
+            // proof of one: an older team can have a proposal whose check has
+            // lost its upload, and a "View PDF" button leading to a 404 is
+            // worse than no button. One stat call per page render buys that.
+            'proposalPdfUrl' => $this->proposalPdfUrl($approvedProposal),
             'isLeader' => $isLeader,
             'teamConfirmed' => $team?->is_confirmed ?? false,
             'skillGroups' => $skillGroups,
@@ -250,5 +258,17 @@ class ExpertController extends Controller
     private function escapeLike(string $value): string
     {
         return str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $value);
+    }
+
+    /** The team's uploaded pre-proposal, or null when there is no file to open. */
+    private function proposalPdfUrl(?CapstonePreProposal $proposal): ?string
+    {
+        $path = $proposal?->duplicationCheck?->document_path;
+
+        if (! $path || ! Storage::exists($path)) {
+            return null;
+        }
+
+        return route('student.pre-proposal.document', $proposal);
     }
 }
