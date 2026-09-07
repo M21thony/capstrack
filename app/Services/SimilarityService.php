@@ -959,10 +959,10 @@ PROMPT;
             'name' => $expert->name,
             'expertise' => $expertise,
             'role' => $role,
-            // "Recommended Adviser", not "Adviser". This panel sits next to a
-            // team's actual experts, and the bare role name read as though
-            // this person already held it.
-            'role_label' => 'Recommended '.$label,
+            // The bare role. "Recommended" is added where it is drawn, not
+            // here: this array is stored on the duplication check, so a word
+            // baked in now would never reach a scan that already ran.
+            'role_label' => $label,
             'reason' => $reason !== ''
                 ? $reason
                 : 'Holds the '.strtolower($label).' role, with expertise in '.$expertise.'.',

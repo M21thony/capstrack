@@ -453,14 +453,43 @@ Route::middleware(['expert.auth', 'track.expert'])->prefix('admin/gdrive')->name
     Route::delete('/resources/{resource}', [GoogleDriveController::class, 'destroy'])->name('resources.destroy');
 });
 
-// TEMPORARY - local-only, for visually verifying the student/duplication
-// redesign via Playwright. Logs in as the real student behind tonight's
-// actual testing (id 11) and redirects straight to the page. Remove
-// after the visual check is done - never enable outside local.
+// Local only, so the browser tests can reach a signed-in page: the real way
+// in is Google, which cannot be driven from a test run.
+//
+// It used to log in as student id 11 by number. That student was deleted at
+// some point, loginUsingId() answered false without complaining, and every
+// browser test since has been quietly redirected to /login and failed on the
+// assertion after it rather than on the sign-in. It resolves a real student
+// now - one who is in a team, since every page worth looking at needs one.
 if (app()->environment('local')) {
-    Route::get('/__dev-login-student', function () {
-        Auth::guard('web')->loginUsingId(11);
+    Route::get('/__dev-login-student/{page?}', function (?string $page = null) {
+        $studentId = App\Models\StudentSchoolYear::whereNotNull('team_id')->value('student_id')
+            ?? App\Models\Student::query()->value('student_id');
 
-        return redirect()->route('student.duplication');
-    });
+        abort_unless($studentId && Auth::guard('web')->loginUsingId($studentId), 404, 'No student to sign in as.');
+
+        $route = 'student.'.($page ?: 'duplication');
+
+        return redirect()->route(Route::has($route) ? $route : 'student.duplication');
+    })->name('dev.login.student');
+
+    // The same door for the staff side. Admin and CaPSA are different
+    // accounts with different pages, and a browser test cannot sign in
+    // through Google any more than a student one can.
+    Route::get('/__dev-login-expert/{role}/{page?}', function (string $role, ?string $page = null) {
+        $expert = $role === 'admin'
+            ? App\Models\CapstoneExpert::where('is_admin', true)->first()
+            : App\Models\CapstoneExpert::whereHas(
+                'roles',
+                fn ($q) => $q->where('role_name', App\Models\CapstoneExpert::CAPSA_ROLE)
+            )->first();
+
+        abort_unless($expert, 404, 'No '.$role.' account to sign in as.');
+
+        Auth::guard('expert')->login($expert);
+
+        $route = ($role === 'admin' ? 'admin.' : 'capsa.').($page ?: 'dashboard');
+
+        return redirect()->route(Route::has($route) ? $route : ($role === 'admin' ? 'admin.dashboard' : 'capsa.dashboard'));
+    })->name('dev.login.expert');
 }

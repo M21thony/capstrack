@@ -241,7 +241,13 @@ class ExpertListUploadTest extends TestCase
 
         $sheet = IOFactory::load($response->baseResponse->getFile()->getPathname())->getActiveSheet();
 
-        $this->assertSame(['Name', 'Email Address', 'Role', 'Expertise'], $sheet->toArray()[0]);
+        // The last two are optional - an expert who has set neither cannot
+        // be applied to, so a CaPSA already typing the list can save a round
+        // of chasing by filling them in.
+        $this->assertSame(
+            ['Name', 'Email Address', 'Role', 'Expertise', 'Accepted Programs', 'Team Slots'],
+            $sheet->toArray()[0]
+        );
     }
 
     /**

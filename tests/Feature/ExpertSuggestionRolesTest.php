@@ -90,10 +90,10 @@ class ExpertSuggestionRolesTest extends TestCase
             ['adviser', 'consultant', 'grammarian'],
             array_column($out, 'role')
         );
-        // "Recommended", because this panel sits beside the team's actual
-        // experts and a bare role name read as though this person held it.
+        // The bare role is what is stored; "Recommended" is added where the
+        // panel is drawn, so a scan that already ran reads the same way.
         $this->assertSame(
-            ['Recommended Adviser', 'Recommended Consultant', 'Recommended Grammarian'],
+            ['Adviser', 'Consultant', 'Grammarian'],
             array_column($out, 'role_label')
         );
         // One each, and the right one each.
