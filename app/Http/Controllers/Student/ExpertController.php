@@ -32,6 +32,8 @@ class ExpertController extends Controller
 
         $assignments = collect();
         $isLeader = false;
+        /** @var array<string, \App\Models\TeamExpertAssignment> */
+        $rolesSpokenFor = [];
         $roleAssignments = [
             'adviser' => null,
             'consultant' => null,
@@ -65,6 +67,23 @@ class ExpertController extends Controller
                 $roleName = $a->engaged_role_name;
                 if ($roleName && array_key_exists($roleName, $roleAssignments)) {
                     $roleAssignments[$roleName] = $a;
+                }
+            }
+
+            // A role the team has already asked somebody for is not on offer
+            // anywhere else until that is settled, so the apply dialog can
+            // stop showing it. An expert who is both an adviser and a
+            // consultant still appears - as a consultant, which is the part
+            // of them the team can still use.
+            //
+            // Approved before pending, so a role that is both reads as the
+            // settled thing it is.
+            foreach (['approved', 'pending'] as $status) {
+                foreach ($assignments->where('status', $status) as $a) {
+                    $roleName = $a->engaged_role_name;
+                    if ($roleName && ! isset($rolesSpokenFor[$roleName])) {
+                        $rolesSpokenFor[$roleName] = $a;
+                    }
                 }
             }
         }
@@ -241,6 +260,10 @@ class ExpertController extends Controller
         return view('student.experts', [
             'experts' => $experts,
             'assignments' => $assignments,
+            // Roles this team has an application out for, or has settled,
+            // keyed by role name - so the apply dialog offers only what is
+            // still open.
+            'rolesSpokenFor' => $rolesSpokenFor,
             'team' => $team,
             // The pre-proposal the CaPSA settled on. When a team has one,
             // applying does not need a PDF - that document already went

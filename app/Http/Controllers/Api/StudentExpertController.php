@@ -205,24 +205,35 @@ class StudentExpertController extends Controller
             ], 422);
         }
 
-        // One expert per role per team. Once a team's adviser has accepted,
-        // that seat is taken - applying to a second adviser can only end in
-        // two people holding one role, or a rejection the team waited on for
-        // nothing. A role still only pending is left alone: a team may have
-        // applications out to several and take whoever says yes first.
-        $filledBy = TeamExpertAssignment::with('expertRole.role')
+        // One application per role per team, waiting or settled.
+        //
+        // An approved role is plainly taken. A pending one used to be left
+        // alone, on the reasoning that a team could apply to several and
+        // take whoever said yes first - but that is a team asking four
+        // people to be their one adviser, and three of them read, thought
+        // about and answered a request that was never really theirs to
+        // accept. The team waits on the first answer instead, and applies
+        // again if it is no.
+        $spokenFor = TeamExpertAssignment::with(['expertRole.role', 'expert'])
             ->where('team_id', $team->team_id)
-            ->where('status', 'approved')
+            ->whereIn('status', ['approved', 'pending'])
+            // Approved before pending, so a role that is both reads as the
+            // settled thing it is.
+            ->orderByRaw("CASE WHEN status = 'approved' THEN 0 ELSE 1 END")
             ->get()
             ->first(fn ($a) => strcasecmp((string) $a->engaged_role_name, $chosenRole->role_name) === 0);
 
-        if ($filledBy) {
-            $heldByName = $filledBy->expert?->name ?? 'another expert';
+        if ($spokenFor) {
+            $heldByName = $spokenFor->expert?->name ?? 'another expert';
+            $role = ucfirst($chosenRole->role_name);
 
             return response()->json([
                 'success' => false,
-                'message' => 'Your team already has an approved '.ucfirst($chosenRole->role_name).
-                    ' ('.$heldByName.'). Remove them first if you want a different one.',
+                'message' => $spokenFor->status === 'approved'
+                    ? 'Your team already has an approved '.$role.' ('.$heldByName.
+                        '). Remove them first if you want a different one.'
+                    : 'Your team is already waiting on '.$heldByName.' to answer as your '.$role.
+                        '. Wait for that answer, or withdraw it, before applying to another.',
             ], 409);
         }
 
