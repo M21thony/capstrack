@@ -702,18 +702,18 @@
                            CaPSA and making them one again. --}}
                       <button type="button" class="rowmenu-item"
                               onclick="editCapsaSections({{ $expert->expert_id }}, {{ Illuminate\Support\Js::from($displayName) }}, {{ Illuminate\Support\Js::from($expert->sections ?? []) }})">
-                        <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="6" rx="1"/><rect x="3" y="14" width="18" height="6" rx="1"/></svg> Which sections they cover
+                        <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="6" rx="1"/><rect x="3" y="14" width="18" height="6" rx="1"/></svg> Edit sections
                       </button>
                     @endif
                     <button type="button" class="rowmenu-item warn"
                             onclick="toggleCapsa({{ $expert->expert_id }}, {{ $expert->is_capsa ? 'true' : 'false' }}, {{ Illuminate\Support\Js::from($displayName) }})">
-                      <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="17" y1="11" x2="23" y2="11"/></svg> {{ $expert->is_capsa ? 'Take away the CaPSA role' : 'Make them a CaPSA' }}
+                      <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="17" y1="11" x2="23" y2="11"/></svg> {{ $expert->is_capsa ? 'Remove CaPSA role' : 'Make CaPSA' }}
                     </button>
                     <div class="rowmenu-sep"></div>
                     @if ($isOff)
                       <button type="button" class="rowmenu-item"
                               onclick="reactivateExpert({{ $expert->expert_id }}, {{ Illuminate\Support\Js::from($expert->name) }})">
-                        <svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> Switch this account back on
+                        <svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> Reactivate
                       </button>
                     @else
                       {{-- Deactivate rather than delete: a CaPSA who steps down for a
@@ -721,7 +721,7 @@
                            come back, and their sections and history hang off the row. --}}
                       <button type="button" class="rowmenu-item danger remove-trigger"
                               data-id="{{ $expert->expert_id }}" data-name="{{ $displayName }}">
-                        <svg viewBox="0 0 24 24"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg> Deactivate this account
+                        <svg viewBox="0 0 24 24"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg> Deactivate
                       </button>
                     @endif
                   </div>
@@ -1053,11 +1053,11 @@ removeBtn.addEventListener('click', function () {
       } else {
         showToast(data.message || 'Could not deactivate that account.', 'error');
         this.disabled = false;
-        this.textContent = 'Delete';
+        this.textContent = 'Deactivate';
       }
     })
     .catch(() => {
-      showToast('Network error during deletion.', 'error');
+      showToast('Network error while deactivating.', 'error');
       this.disabled = false;
       this.textContent = 'Delete';
     })
@@ -1586,5 +1586,6 @@ onBulk('bulkRemove', function (ids, rows) {
 @include('partials.row-menu')
 @include('partials.email-lookup', ['input' => 'capsaEmail', 'kind' => 'expert', 'nameInput' => 'capsaName'])
 
+@include('partials.escape-closes-modals')
 </body>
 </html>

@@ -602,6 +602,7 @@ function closeReceiptPreview() {
 <div class="modal-overlay" id="receiptPreviewModal" onclick="if(event.target===this)closeReceiptPreview()">
   <img id="receiptPreviewFull" src="" alt="Receipt preview" class="modal-img" />
 </div>
+@include('partials.escape-closes-modals')
 </body>
 </html>
 

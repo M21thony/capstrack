@@ -1160,6 +1160,35 @@ function cancelCheck() {
   showToast('Similarity check cancelled.', 'error');
 }
 
+@if(!empty($lastCheck))
+@php
+  // Built here rather than inline: @json() cannot take an array literal
+  // spread over several lines - it reads to the first newline and leaves the
+  // bracket unclosed, which is a parse error in the compiled view rather
+  // than anything Blade complains about.
+  $lastCheckPayload = [
+      'duplication_check_id' => $lastCheck->id,
+      'concepts' => $lastCheck->concepts,
+      'top_score' => $lastCheck->top_score,
+      'verdict' => $lastCheck->verdict,
+      'matches' => $lastCheck->matches,
+      'instructors' => $lastCheck->instructors_suggested,
+      'highlight_words' => app(\App\Services\SimilarityService::class)
+          ->extractHighlightWords($lastCheck->concepts ?? []),
+  ];
+  $lastCheckName = basename($lastCheck->document_path ?? 'your document');
+@endphp
+// The last check this team ran, drawn again on load.
+//
+// runCheck() writes the result to the database before it answers, so it was
+// never actually lost - it just was not drawn a second time, and every
+// reload therefore looked like the scan had been thrown away. Unsubmitting
+// reloads. So does a rejected form, or pressing back.
+document.addEventListener('DOMContentLoaded', function () {
+  renderResult(@json($lastCheckPayload), @json($lastCheckName));
+});
+@endif
+
 function renderResult(data, fileName) {
   lastCheckData = data;
 
@@ -1432,5 +1461,6 @@ document.querySelectorAll('.nav-item').forEach(function(el) {
 @endif
 </script>
 
+@include('partials.escape-closes-modals')
 </body>
 </html>

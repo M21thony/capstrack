@@ -261,7 +261,7 @@ class AdminExpertsController extends Controller
                 ->pluck('student_id');
 
             foreach ($memberIds as $studentId) {
-                $message = 'Your expert <strong>'.e($expertName)."</strong> ({$roleName}) has been removed from <strong>".e($teamName).'</strong>.';
+                $message = '<strong>'.e($expertName)."</strong> ({$roleName}) is no longer available to <strong>".e($teamName).'</strong>, so your team will need to apply to somebody else for that role.';
                 if ($reason) {
                     $message .= ' Reason: '.e($reason);
                 }
@@ -269,7 +269,7 @@ class AdminExpertsController extends Controller
                 Notification::create([
                     'student_id' => $studentId,
                     'type' => 'expert_removed',
-                    'title' => 'Expert Removed from Your Team',
+                    'title' => 'Your Expert Is No Longer Available',
                     'message' => $message,
                     'link' => route('student.team'),
                     'is_read' => false,

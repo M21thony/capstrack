@@ -630,5 +630,6 @@
   show(1);
 })();
 </script>
+@include('partials.escape-closes-modals')
 </body>
 </html>

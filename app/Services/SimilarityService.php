@@ -850,6 +850,25 @@ PROMPT;
             .'Favour expertise in technical writing, editing, or documentation.',
     ];
 
+    /**
+     * The roles this panel recommends for.
+     *
+     * Adviser and consultant. A grammarian is engaged for how the paper reads
+     * rather than what it is about, so matching one against the proposal's
+     * subject recommends on the wrong grounds entirely - a team picks theirs
+     * from the list, where every grammarian is equally visible.
+     */
+    private const RECOMMENDED_ROLES = ['adviser', 'consultant'];
+
+    /**
+     * How many to name per role.
+     *
+     * More than one, because "the best consultant for this" is a judgement a
+     * team should make. One name reads as an instruction; three read as a
+     * shortlist, which is what it actually is.
+     */
+    private const PER_ROLE = 3;
+
     public function suggestInstructors(array $concepts): array
     {
         // Only experts a team can actually engage: approved, not deactivated,
@@ -876,16 +895,14 @@ PROMPT;
 
         $results = [];
 
-        foreach (CapstoneExpert::STUDENT_FACING_ROLES as $role) {
-            $candidates = $byRole[$role];
+        foreach (self::RECOMMENDED_ROLES as $role) {
+            $candidates = $byRole[$role] ?? collect();
 
             if ($candidates->isEmpty()) {
                 continue;
             }
 
-            $pick = $this->bestForRole($role, $candidates, $concepts);
-
-            if ($pick) {
+            foreach ($this->bestForRole($role, $candidates, $concepts) as $pick) {
                 $results[] = $pick;
             }
         }
@@ -894,15 +911,22 @@ PROMPT;
     }
 
     /**
-     * The best of one role's candidates for this proposal.
+     * A shortlist of one role's candidates for this proposal.
      *
-     * One model call per role rather than one for all of them. It is two extra
-     * round trips, and it is the only way the grammarian slot cannot be won by
-     * a machine-learning specialist: they are not in the list.
+     * One model call per role rather than one for all of them, which is what
+     * stops a machine-learning specialist winning the adviser slot: they are
+     * not in the adviser list to begin with.
+     *
+     * Several names, not one. Which consultant suits a study is a judgement
+     * the team is better placed to make than the model - it can say who is
+     * worth reading about, and should not pretend to more than that.
+     *
+     * @return array<int, array<string, mixed>>
      */
-    private function bestForRole(string $role, $candidates, array $concepts): ?array
+    private function bestForRole(string $role, $candidates, array $concepts): array
     {
         $label = Role::labelFor($role);
+        $wanted = min(self::PER_ROLE, $candidates->count());
 
         $listJson = json_encode($candidates->map(fn ($e) => [
             'id' => $e->expert_id,
@@ -910,11 +934,12 @@ PROMPT;
             'expertise' => $e->expertise->pluck('expertise_field')->implode(', ') ?: 'General',
         ])->values()->all());
 
-        $prompt = "You are matching a capstone pre-proposal to one {$label}.\n"
+        $prompt = "You are matching a capstone pre-proposal to {$label}s.\n"
                 ."What a {$label} does: ".self::ROLE_BRIEFS[$role]."\n\n"
-                ."Pick the single best match from the list. You MUST use an exact id from it.\n"
-                ."Do NOT invent anyone. Return ONLY a valid JSON object, no markdown:\n"
-                .'{"id":<exact id>,"reason":"one sentence, why this person for this role"}'
+                ."Pick the {$wanted} best matches from the list, best first. You MUST use exact "
+                ."ids from it. Do NOT invent anyone and do NOT repeat an id.\n"
+                ."Return ONLY a valid JSON array, no markdown:\n"
+                .'[{"id":<exact id>,"reason":"one sentence, why this person for this role"}]'
                 ."\n\nPRE-PROPOSAL:"
                 ."\nDomain: {$concepts['domain']}"
                 ."\nKeywords: ".implode(', ', $concepts['keywords'] ?? [])
@@ -922,31 +947,56 @@ PROMPT;
                 ."\nProblem: {$concepts['problem_statement']}"
                 ."\n\n".strtoupper($label)." LIST (ONLY use these exact ids):\n{$listJson}";
 
+        $picked = [];
+
         try {
-            $raw = $this->ollama->generate($prompt, 300);
+            $raw = $this->ollama->generate($prompt, 600);
             $cleaned = trim(preg_replace('/```json|```/i', '', $raw));
 
-            preg_match('/\{.*\}/s', $cleaned, $matches);
+            // An array if it followed instructions, a single object if it did
+            // not - both are readable, so take either rather than throwing
+            // away a usable answer over its shape.
+            preg_match('/\[.*\]|\{.*\}/s', $cleaned, $matches);
             $decoded = json_decode($matches[0] ?? $cleaned, true);
 
-            $expert = is_array($decoded)
-                ? $candidates->get((int) ($decoded['id'] ?? 0))
-                : null;
-
-            if ($expert) {
-                return $this->suggestion($expert, $role, $label, $decoded['reason'] ?? '');
+            if (is_array($decoded) && isset($decoded['id'])) {
+                $decoded = [$decoded];
             }
 
-            Log::warning('suggestInstructors: no usable pick', ['role' => $role, 'raw' => $raw]);
+            foreach (is_array($decoded) ? $decoded : [] as $entry) {
+                $expert = $candidates->get((int) ($entry['id'] ?? 0));
+
+                // Checked against the database, and never the same person
+                // twice however often the model names them.
+                if ($expert && ! isset($picked[$expert->expert_id])) {
+                    $picked[$expert->expert_id] = $this->suggestion(
+                        $expert, $role, $label, $entry['reason'] ?? ''
+                    );
+                }
+
+                if (count($picked) >= $wanted) {
+                    break;
+                }
+            }
+
+            if ($picked === []) {
+                Log::warning('suggestInstructors: no usable pick', ['role' => $role, 'raw' => $raw]);
+            }
         } catch (\Exception $e) {
             Log::error('suggestInstructors error', ['role' => $role, 'error' => $e->getMessage()]);
         }
 
-        // A name with a plain reason beats an empty panel: the student can
-        // still see who holds the role and decide for themselves.
-        $expert = $candidates->first();
+        // Names with a plain reason beat an empty panel: the student can still
+        // see who holds the role and decide for themselves.
+        foreach ($candidates as $expert) {
+            if (count($picked) >= $wanted) {
+                break;
+            }
 
-        return $expert ? $this->suggestion($expert, $role, $label, '') : null;
+            $picked[$expert->expert_id] ??= $this->suggestion($expert, $role, $label, '');
+        }
+
+        return array_values($picked);
     }
 
     /** @return array<string,mixed> */

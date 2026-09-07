@@ -26,5 +26,6 @@
 </div>
 
 </script>
+@include('partials.escape-closes-modals')
 </body>
 </html>
