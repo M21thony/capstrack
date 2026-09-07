@@ -43,7 +43,12 @@ class StudentExpertApplyTest extends TestCase
 
     private function makeAdviserExpert(): CapstoneExpert
     {
-        $expert = CapstoneExpert::factory()->create(['approved_status' => true, 'max_teams' => 4]);
+        $expert = CapstoneExpert::factory()->create([
+            'approved_status' => true, 'max_teams' => 4,
+            // Applying is refused outright until an expert has said which
+            // programmes they take teams from.
+            'program_slots' => '4 - BSIT',
+        ]);
         $adviserRole = Role::firstOrCreate(['role_name' => 'adviser']);
         $expert->roles()->attach($adviserRole->role_id);
 
@@ -198,7 +203,9 @@ class StudentExpertApplyTest extends TestCase
     public function test_apply_rejects_an_expert_with_no_qualifying_role(): void
     {
         [$student, $team] = $this->makeLeaderWithTeam();
-        $expert = CapstoneExpert::factory()->create(['approved_status' => true]);
+        $expert = CapstoneExpert::factory()->create([
+            'approved_status' => true, 'program_slots' => '4 - BSIT',
+        ]);
         $capstoneAdviserRole = Role::firstOrCreate(['role_name' => 'capstone_adviser']);
         $expert->roles()->attach($capstoneAdviserRole->role_id);
 

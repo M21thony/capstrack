@@ -56,14 +56,18 @@ class SubmissionControllerTest extends TestCase
             'program' => 'BSCS',
         ]);
 
-        // RecipientResolver::resolveTeamRoleExpert matches against the
-        // capitalized role_name values ('Adviser'/'Consultant'/'Grammarian').
-        $adviserRoleId = $this->makeRole('Adviser');
+        $adviserRoleId = $this->makeRole('adviser');
         $adviserId = $this->makeExpert(['email' => 'adviser@gmail.com', 'first_name' => 'Ada', 'last_name' => 'Adviser']);
         DB::table('expert_roles')->insert(['expert_id' => $adviserId, 'role_id' => $adviserRoleId]);
+        $expertRoleId = DB::table('expert_roles')
+            ->where('expert_id', $adviserId)->where('role_id', $adviserRoleId)
+            ->value('expert_role_id');
         DB::table('capstone_expert_application')->insert([
             'team_id' => $team->team_id,
             'expert_id' => $adviserId,
+            // The role this team engaged them as, which is what the resolver
+            // reads - not every role the person happens to hold.
+            'expert_role_id' => $expertRoleId,
             'status' => 'approved',
             'created_at' => now(),
             'updated_at' => now(),
@@ -116,7 +120,8 @@ class SubmissionControllerTest extends TestCase
             'first_name' => 'Capstone',
             'last_name' => 'Admin',
             'is_admin' => true,
-            'program' => 'BSIT',
+            // withCompleteProfile() puts the student in BSCS-4A.
+            'sections' => json_encode(['BSCS-4A']),
         ]);
         DB::table('expert_roles')->insert(['expert_id' => $adminId, 'role_id' => $capstoneAdviserRoleId]);
 
