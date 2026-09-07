@@ -99,7 +99,7 @@
         </thead>
         <tbody>
           @forelse ($reviews as $review)
-            <tr @if($review->review_status === 'Reviewed') style="opacity:0.65" @endif>
+            <tr>
               <td style="padding-left:20px">
                 <div style="display:flex;align-items:center;gap:10px">
                   <div class="doc-icon" @if($review->review_status === 'Reviewed') style="background:rgba(22,163,74,0.08);border:1px solid rgba(22,163,74,0.2)" @endif>
