@@ -329,10 +329,14 @@ class StudentExpertApplyTest extends TestCase
     }
 
     /**
-     * Only an accepted one takes the seat. A team may have applications out
-     * to several advisers and take whoever says yes first.
+     * A waiting application holds the role too.
+     *
+     * It used to be left alone, on the reasoning that a team could apply to
+     * several advisers and take whoever said yes first - but that is a team
+     * asking four people to be their one adviser, and three of them read,
+     * thought about and answered a request that was never theirs to accept.
      */
-    public function test_a_pending_application_does_not_block_applying_elsewhere(): void
+    public function test_a_pending_application_blocks_a_second_one_for_the_same_role(): void
     {
         [$student, $team] = $this->makeLeaderWithTeam();
         $first = $this->makeAdviserExpert();
@@ -352,7 +356,70 @@ class StudentExpertApplyTest extends TestCase
             'expert_role_id' => $this->expertRoleId($second, 'adviser'),
             'proposal_file' => UploadedFile::fake()->create('proposal.pdf', 100, 'application/pdf'),
             'message' => 'Be our adviser.',
+        ])
+            ->assertStatus(409)
+            ->assertJson(fn ($j) => $j->where('message', fn ($m) => str_contains($m, 'already waiting on'))->etc());
+
+        $this->assertSame(1, TeamExpertAssignment::where('team_id', $team->team_id)->count());
+    }
+
+    /** One role being spoken for does not touch the others. */
+    public function test_a_pending_adviser_does_not_block_applying_for_a_consultant(): void
+    {
+        [$student, $team] = $this->makeLeaderWithTeam();
+        $first = $this->makeAdviserExpert();
+        $second = $this->makeAdviserExpert();
+
+        TeamExpertAssignment::create([
+            'team_id' => $team->team_id,
+            'expert_id' => $first->expert_id,
+            'expert_role_id' => $this->expertRoleId($first, 'adviser'),
+            'status' => 'pending',
+        ]);
+
+        $this->actingAs($student, 'web');
+
+        $this->postJson('/api/assignments', [
+            'expert_id' => $second->expert_id,
+            'expert_role_id' => $this->expertRoleId($second, 'consultant'),
+            'proposal_file' => UploadedFile::fake()->create('proposal.pdf', 100, 'application/pdf'),
+            'message' => 'Be our consultant.',
         ])->assertOk();
+    }
+
+    /**
+     * The apply dialog offers only what is still open.
+     *
+     * An expert who is both an adviser and a consultant is still worth
+     * applying to while the adviser question is out with somebody else - as
+     * a consultant, which is the part of them the team can still use.
+     */
+    public function test_the_apply_dialog_drops_a_role_the_team_has_already_asked_for(): void
+    {
+        [$student, $team] = $this->makeLeaderWithTeam();
+        $team->update(['is_confirmed' => true]);
+
+        $pendingAdviser = $this->makeAdviserExpert();
+
+        $both = $this->makeAdviserExpert();
+        $this->expertRoleId($both, 'consultant');
+
+        TeamExpertAssignment::create([
+            'team_id' => $team->team_id,
+            'expert_id' => $pendingAdviser->expert_id,
+            'expert_role_id' => $this->expertRoleId($pendingAdviser, 'adviser'),
+            'status' => 'pending',
+        ]);
+
+        $html = $this->actingAs($student, 'web')
+            ->get('/student/experts')->assertOk()->getContent();
+
+        // The dual-role expert is still applied to, as a consultant only.
+        // Js::from writes the payload with \u0022 for its quotes.
+        $label = fn ($role) => '\u0022label\u0022:\u0022'.$role.'\u0022';
+
+        $this->assertStringContainsString($label('Consultant'), $html);
+        $this->assertStringNotContainsString($label('Adviser'), $html);
     }
 
     /** An approved pre-proposal for a team, the way the CaPSA leaves one. */
