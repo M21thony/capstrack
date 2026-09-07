@@ -197,6 +197,21 @@ class Student extends Authenticatable
     /** Capstone is a 3rd and 4th year subject; no other year uses this system. */
     public const CAPSTONE_YEARS = [3, 4];
 
+    /**
+     * The school year a roster row written today belongs to.
+     *
+     * The upload takes this from the file; adding one student by hand has
+     * nothing to read it off, and the column will not take null. The year
+     * turns over in June, which is when the first semester starts here.
+     */
+    public static function schoolYearLabel(?\DateTimeInterface $on = null): string
+    {
+        $date = $on ? \Illuminate\Support\Carbon::instance($on) : now();
+        $start = $date->month >= 6 ? $date->year : $date->year - 1;
+
+        return $start.'-'.($start + 1);
+    }
+
     public static function computeSectionLabel(?string $course, ?string $yearSection): ?string
     {
         if (! $course || ! $yearSection) {
