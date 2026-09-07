@@ -76,10 +76,10 @@ class PreProposalControllerTest extends TestCase
         });
     }
 
-    private function payload(int $checkId): array
+    private function payload(int $checkId, ?string $title = null): array
     {
         return [
-            'title' => self::TITLE,
+            'title' => $title ?? self::TITLE,
             'sdg_goals' => 'SDG 4 – Quality Education',
             'research_agenda' => ['Applications and Systems Development'],
             'problem_statement' => 'A problem.',
@@ -121,13 +121,32 @@ class PreProposalControllerTest extends TestCase
         $this->assertDatabaseMissing('capstone_pre_proposals', ['team_id' => $team->team_id]);
     }
 
+    /**
+     * Each saved proposal is a different one.
+     *
+     * These used to send self::TITLE every time, so a team saving four
+     * proposals saved the same title four times - which the endpoint now
+     * refuses, because turning in one title four times is not the choice the
+     * CaPSA is being offered. The first word varies instead, which keeps the
+     * 11-12 meaningful words the title rule wants.
+     */
     private function checkAndStore(string $fileName): void
     {
         $checkId = $this->post(route('student.pre-proposal.check'), [
             'document' => UploadedFile::fake()->create($fileName, 10, 'application/pdf'),
         ])->json('duplication_check_id');
 
-        $this->post(route('student.pre-proposal.store'), $this->payload($checkId));
+        $this->post(route('student.pre-proposal.store'), $this->payload($checkId, $this->distinctTitle()));
+    }
+
+    private int $titlesSaved = 0;
+
+    private function distinctTitle(): string
+    {
+        $opener = ['Smart', 'Adaptive', 'Predictive', 'Integrated', 'Distributed', 'Autonomous', 'Networked'];
+        $word = $opener[$this->titlesSaved++ % count($opener)];
+
+        return $word.' '.mb_substr(self::TITLE, mb_strlen('Smart '));
     }
 
     /**

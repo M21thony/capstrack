@@ -282,6 +282,28 @@ class PreProposalController extends Controller
         return response()->json(['success' => true, 'message' => 'Result cleared.']);
     }
 
+    /**
+     * A proposal this team has already turned in that this one repeats.
+     *
+     * Two ways of being the same: the same document - one duplication check
+     * cannot stand as evidence for two different titles - or the same title
+     * written out again, allowing for capitals, spacing and punctuation,
+     * since retyping it rarely comes out character-for-character.
+     */
+    private function clashingProposal(Team $team, string $title, int $checkId): ?CapstonePreProposal
+    {
+        $normalise = fn (string $t) => preg_replace('/[^a-z0-9 ]/', '', mb_strtolower(
+            trim(preg_replace('/\s+/', ' ', $t))
+        ));
+
+        $wanted = $normalise($title);
+
+        return $team->preProposals()
+            ->get()
+            ->first(fn ($existing) => (int) $existing->duplication_check_id === $checkId
+                || $normalise((string) $existing->title) === $wanted);
+    }
+
     public function store(Request $request): RedirectResponse
     {
         $team = $this->currentTeam($request);
@@ -328,6 +350,20 @@ class PreProposalController extends Controller
         if (! $check) {
             return redirect()->route('student.duplication')
                 ->with('error', 'Run the duplication check for this proposal first.');
+        }
+
+        // The point of turning in more than one title is to offer the CaPSA
+        // a choice. The same title twice, or the same scanned document twice,
+        // is not a choice - and it went in silently, so a team could fill
+        // every slot with one proposal and think they had done the work.
+        if ($clash = $this->clashingProposal($team, $validated['title'], $check->id)) {
+            return redirect()->route('student.duplication')->with(
+                'error',
+                $clash->duplication_check_id === $check->id
+                    ? 'That is the same document you already turned in as Pre-Proposal '
+                        .$clash->slot.'. Each one needs its own title and its own duplication check.'
+                    : 'You already turned that title in as Pre-Proposal '.$clash->slot.'.'
+            );
         }
 
         $duplicationStatus = $check->verdict === 'Passed' ? 'free' : 'contains_duplication';

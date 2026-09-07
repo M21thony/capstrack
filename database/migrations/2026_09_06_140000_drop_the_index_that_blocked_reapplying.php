@@ -1,7 +1,7 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
@@ -30,7 +30,15 @@ return new class extends Migration
             return;
         }
 
-        DB::statement('ALTER TABLE `capstone_expert_application` DROP INDEX `'.self::INDEX.'`');
+        // Through the schema builder rather than a raw ALTER TABLE: that
+        // statement is MySQL's spelling, so on sqlite - which is what the
+        // tests run on - this migration ran, changed nothing, and left the
+        // index in place. Every test therefore still had the constraint this
+        // was written to remove, and no test could reach the state the fix
+        // was for.
+        Schema::table('capstone_expert_application', function (Blueprint $table) {
+            $table->dropUnique(self::INDEX);
+        });
     }
 
     public function down(): void

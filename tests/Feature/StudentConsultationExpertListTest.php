@@ -183,32 +183,41 @@ class StudentConsultationExpertListTest extends TestCase
     }
 
     /**
-     * A team cannot engage the same expert twice, so two labels was never a
-     * state the data could reach - the old join invented it by reading every
-     * role the person held anywhere.
+     * Engaged for both jobs by the same team: one row, both labels.
+     *
+     * This was impossible while capstone_expert_application carried a unique
+     * (team_id, expert_id) - a leftover from when it also had role_id. That
+     * constraint stopped a team re-applying after being turned down, so it is
+     * gone, and engaging one person for two jobs is reachable again. The
+     * grouping is what keeps them one entry rather than two.
      */
-    public function test_a_team_cannot_engage_one_expert_for_two_roles(): void
+    public function test_an_expert_engaged_for_two_roles_shows_both(): void
     {
         $team = DB::table('team')->insertGetId(['team_name' => 'Team Gamma', 'team_status' => 'Active']);
+
+        $student = Student::factory()->withCompleteProfile()->create(['email' => 'consult4@my.cspc.edu.ph']);
+        DB::table('student_s_y')->insert([
+            'student_id' => $student->student_id, 'team_id' => $team,
+            'program' => 'BSCS', 'student_status' => 'Active',
+        ]);
+
         $expertId = $this->makeExpert('both2@gmail.com', 'Mark', 'Balilla');
+        $links = [
+            DB::table('expert_roles')->insertGetId(['expert_id' => $expertId, 'role_id' => $this->makeRole('adviser')]),
+            DB::table('expert_roles')->insertGetId(['expert_id' => $expertId, 'role_id' => $this->makeRole('consultant')]),
+        ];
 
-        $asAdviser = DB::table('expert_roles')->insertGetId(
-            ['expert_id' => $expertId, 'role_id' => $this->makeRole('adviser')]
-        );
-        $asConsultant = DB::table('expert_roles')->insertGetId(
-            ['expert_id' => $expertId, 'role_id' => $this->makeRole('consultant')]
-        );
+        foreach ($links as $link) {
+            DB::table('capstone_expert_application')->insert([
+                'team_id' => $team, 'expert_id' => $expertId, 'expert_role_id' => $link,
+                'status' => 'approved', 'created_at' => now(), 'updated_at' => now(),
+            ]);
+        }
 
-        DB::table('capstone_expert_application')->insert([
-            'team_id' => $team, 'expert_id' => $expertId, 'expert_role_id' => $asAdviser,
-            'status' => 'approved', 'created_at' => now(), 'updated_at' => now(),
-        ]);
+        $experts = $this->actingAs($student, 'web')
+            ->get(route('student.consultation'))->assertOk()->viewData('experts');
 
-        $this->expectException(\Illuminate\Database\QueryException::class);
-
-        DB::table('capstone_expert_application')->insert([
-            'team_id' => $team, 'expert_id' => $expertId, 'expert_role_id' => $asConsultant,
-            'status' => 'approved', 'created_at' => now(), 'updated_at' => now(),
-        ]);
+        $this->assertCount(1, $experts, 'one person, one entry');
+        $this->assertSame('Adviser, Consultant', $experts->first()->role_name);
     }
 }
