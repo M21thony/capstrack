@@ -95,17 +95,21 @@
     </div>
 
     <div class="row" style="margin-bottom:14px;gap:8px">
-      <input class="input" placeholder="Search documents or teams..." style="max-width:280px"/>
-      <select class="input" style="width:160px">
-        <option>All Teams</option>
+      <input class="input" id="dr-search" placeholder="Search documents or teams..." style="max-width:280px"/>
+      <select class="input" id="dr-team" style="width:160px">
+        <option value="">All Teams</option>
         @foreach ($teams as $team)
-          <option>{{ $team->team_name }}</option>
+          <option value="{{ $team->team_name }}">{{ $team->team_name }}</option>
         @endforeach
       </select>
-      <select class="input" style="width:150px"><option>All Status</option><option>Pending</option><option>Reviewed</option></select>
+      <select class="input" id="dr-status" style="width:150px">
+        <option value="">All Status</option>
+        <option value="pending">Pending</option>
+        <option value="reviewed">Reviewed</option>
+      </select>
       <span style="flex:1"></span>
-      <span style="font-size:12px;color:var(--text3)">
-        {{ $reviews->count() }} documents &middot; {{ $reviews->where('review_status', 'To Review')->count() }} pending
+      <span style="font-size:12px;color:var(--text3)" id="dr-count">
+        {{ $reviews->count() }} documents &middot; {{ $reviews->where('review_status', '!=', 'Reviewed')->count() }} pending
       </span>
     </div>
     <div class="card" style="padding:0;overflow:hidden">
@@ -128,7 +132,10 @@
                 ? 'is-done'
                 : ($waitingDays >= 5 ? 'is-late' : 'is-waiting');
             @endphp
-            <tr class="dr-row {{ $rowState }}">
+            <tr class="dr-row {{ $rowState }}"
+              data-search="{{ Str::lower($review->file_name.' '.($review->team_name ?? '').' '.$review->role) }}"
+              data-team="{{ $review->team_name ?? '' }}"
+              data-status="{{ $review->review_status === 'Reviewed' ? 'reviewed' : 'pending' }}">
               <td style="padding-left:20px">
                 <div style="display:flex;align-items:center;gap:10px">
                   <div class="doc-icon" @if($review->review_status === 'Reviewed') style="background:rgba(22,163,74,0.08);border:1px solid rgba(22,163,74,0.2)" @endif>
@@ -194,6 +201,9 @@
               <td colspan="6" style="text-align:center;padding:24px;color:var(--text3)">No documents assigned for review yet.</td>
             </tr>
           @endforelse
+          <tr id="dr-no-match" style="display:none">
+            <td colspan="6" style="text-align:center;padding:24px;color:var(--text3)">No documents match these filters.</td>
+          </tr>
         </tbody>
       </table>
     </div>
@@ -203,6 +213,53 @@
 @include('instructor.partials.expert-profile')
 @include('instructor.partials.skeleton-toggle')
 <script>
+/* The three controls above the table were markup only - typing in the box
+   or picking a team did nothing at all. They filter the rows now, and the
+   count on the right says what is being shown rather than what exists. */
+(function () {
+  var search = document.getElementById('dr-search');
+  var team   = document.getElementById('dr-team');
+  var status = document.getElementById('dr-status');
+  var count  = document.getElementById('dr-count');
+  var noMatch = document.getElementById('dr-no-match');
+  var rows = Array.prototype.slice.call(document.querySelectorAll('tr.dr-row'));
+
+  if (!rows.length) return;
+
+  function filterRows() {
+    var q = search ? search.value.toLowerCase().trim() : '';
+    var wantTeam = team ? team.value : '';
+    var wantStatus = status ? status.value : '';
+    var shown = 0;
+    var pending = 0;
+
+    rows.forEach(function (row) {
+      // Read off the row rather than out of the cells - counting columns to
+      // find the status breaks the moment one moves.
+      var matches = (!q || (row.dataset.search || '').indexOf(q) !== -1)
+        && (!wantTeam || row.dataset.team === wantTeam)
+        && (!wantStatus || row.dataset.status === wantStatus);
+
+      row.style.display = matches ? '' : 'none';
+
+      if (matches) {
+        shown++;
+        if (row.dataset.status === 'pending') pending++;
+      }
+    });
+
+    if (noMatch) noMatch.style.display = shown ? 'none' : '';
+    if (count) {
+      count.textContent = shown + (shown === 1 ? ' document' : ' documents')
+        + ' · ' + pending + ' pending';
+    }
+  }
+
+  if (search) search.addEventListener('input', filterRows);
+  if (team) team.addEventListener('change', filterRows);
+  if (status) status.addEventListener('change', filterRows);
+})();
+
 function disconnectDrive(){
   if (!confirm('Disconnect Google Drive? Annotated PDFs will stop syncing until you reconnect.')) return;
 
