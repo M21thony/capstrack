@@ -424,11 +424,13 @@
                      year - because somebody joining then was not there for the
                      title, the proposal or any of the work being graded. The
                      endpoint refuses it too; this only saves them the click. --}}
-                {{-- Capstone 2: the roster is settled, so say so rather than
-                     leaving a gap where the invite button was. Shown once,
-                     on the first empty seat - repeating it down every
-                     remaining slot says the same thing four times. --}}
-                @elseif($myTeam->capstoneStage() !== 1 && $i === $slotCount)
+                {{-- Capstone 2: every remaining seat comes down this branch,
+                     not just the first, or the ones after it fall through to
+                     the Open Slot button below and the team looks half
+                     locked. The notice is printed once; the rest render
+                     nothing, because those seats cannot be filled. --}}
+                @elseif($myTeam->capstoneStage() !== 1)
+                @if($i === $slotCount)
                 <div style="display:flex;align-items:center;gap:10px;border:1px dashed var(--border2);border-radius:10px;padding:8px 12px;background:var(--bg3)">
                   <div style="width:36px;height:36px;border-radius:50%;background:var(--bg2);border:1.5px dashed var(--border2);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--text3)">
                     <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
@@ -438,6 +440,7 @@
                     <div style="font-size:11px;color:var(--text3);line-height:1.45">Capstone 2 has started, so a team keeps the members it finished Capstone 1 with.</div>
                   </div>
                 </div>
+                @endif
                 @elseif($isLeader)
                 <button type="button" onclick="openOpenSlotInviteModal()" style="display: flex; align-items: center; gap: 10px; border: 1px dashed var(--border2); border-radius: 10px; padding: 6px 12px; opacity: 0.75; background: transparent; cursor: pointer; width: 100%; text-align: left; transition: all 0.2s;" onmouseover="this.style.opacity='1'; this.style.borderColor='var(--blue)'; this.style.background='var(--blue-bg)'" onmouseout="this.style.opacity='0.75'; this.style.borderColor='var(--border2)'; this.style.background='transparent'">
                   <div style="width: 36px; height: 36px; border-radius: 50%; background: var(--bg2); border: 1.5px dashed var(--border2); display: flex; align-items: center; justify-content: center; font-size: 13px; color: var(--text3); flex-shrink: 0;">+</div>
