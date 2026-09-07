@@ -74,6 +74,9 @@
                 <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
               </button>
               <div class="mode-toggle">
+                {{-- Set a term's worth of hours in one go, instead of one
+                     slot at a time through the form on the right. --}}
+                <button class="mode-btn" onclick="openAvail()">Set availability</button>
                 <button class="mode-btn block-mode" id="btn-block" onclick="toggleBlockMode()">🚫 Block Mode</button>
               </div>
             </div>
@@ -172,6 +175,19 @@
               </div>
             </div>
 
+            {{-- An end time is arithmetic on a start time, and nobody
+                 thinks in end times - they think "45 minutes". The field is
+                 still there for an odd length; these cover the rest. --}}
+            <div class="f-group" style="margin-bottom:11px">
+              <label class="f-label">Runs for</label>
+              <div class="dur-row">
+                <button type="button" class="dur-chip" data-mins="30" onclick="setDuration(30)">30 min</button>
+                <button type="button" class="dur-chip is-on" data-mins="60" onclick="setDuration(60)">1 hour</button>
+                <button type="button" class="dur-chip" data-mins="90" onclick="setDuration(90)">1&frac12; hours</button>
+                <button type="button" class="dur-chip" data-mins="120" onclick="setDuration(120)">2 hours</button>
+              </div>
+            </div>
+
             <div id="time-overlap-warning" style="display:none;padding:8px 12px;margin-bottom:12px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:8px;color:#dc2626;font-size:12px;font-weight:600;align-items:center;gap:8px">
               <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" style="flex-shrink:0">
                 <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
@@ -265,7 +281,30 @@
   pointer-events:none;">
   <span id="toast-msg"></span>
 </div>
-<style>#sched-toast.show{opacity:1;transform:translateY(0);pointer-events:auto}</style>
+<style>
+#sched-toast.show{opacity:1;transform:translateY(0);pointer-events:auto}
+
+/* Duration as a tap rather than a typed end time. */
+.dur-row{display:flex;gap:5px;flex-wrap:wrap}
+.dur-chip{border:1px solid var(--border);background:var(--bg2);color:var(--text2);
+  border-radius:20px;padding:5px 11px;font:600 11px/1.3 inherit;cursor:pointer;transition:.15s}
+.dur-chip:hover{border-color:var(--accent)}
+.dur-chip.is-on{background:var(--accent-light);border-color:var(--accent);color:var(--accent3)}
+
+/* Setting a term's worth of availability in one go. */
+.av-rows{display:flex;flex-direction:column;gap:7px;margin-bottom:14px}
+.av-row{display:flex;align-items:center;gap:8px}
+.av-day{width:52px;flex-shrink:0;border:1px solid var(--border);background:var(--bg2);
+  color:var(--text3);border-radius:20px;padding:5px 0;font:700 10px/1.3 inherit;cursor:pointer;text-align:center}
+.av-day.is-on{background:var(--accent-light);border-color:var(--accent);color:var(--accent3)}
+.av-row input[type=time]{flex:1;min-width:0;padding:5px 8px;border:1px solid var(--border);
+  border-radius:7px;background:var(--bg2);color:var(--text);font:inherit;font-size:12px}
+.av-row.is-off input[type=time]{opacity:.35;pointer-events:none}
+.av-row em{font-style:normal;font-size:11px;color:var(--text3);flex-shrink:0}
+.av-count{background:var(--accent-light);border:1px solid var(--accent);border-radius:8px;
+  padding:9px 11px;font-size:12px;color:var(--text2);line-height:1.5}
+.av-count b{color:var(--accent3)}
+</style>
 
 <!-- ─── BLOCK CONFIRM ─────────────────────────────────────────────────────── -->
 <div class="slot-modal-overlay" id="block-confirm-overlay" onclick="if(event.target===this)closeBlockConfirm()">
@@ -298,6 +337,49 @@
     </div>
     <div class="slot-modal-body" id="slot-modal-body">
       <!-- rendered by JS -->
+    </div>
+  </div>
+</div>
+
+<!-- ─── SET AVAILABILITY ──────────────────────────────────────────────────
+     Adding slots one at a time is why setting up a term is a chore: nine
+     consultations a week is nine trips through the form. Google Calendar's
+     answer is that you never make a slot - you say which hours you are free
+     and how long a consultation runs, and the slots follow. Same idea here,
+     and it needs no new endpoint: a window is just several of the slots the
+     add form already posts. -->
+<div class="slot-modal-overlay" id="avail-overlay" onclick="if(event.target===this)closeAvail()">
+  <div class="slot-modal" style="max-width:440px">
+    <div class="slot-modal-header">
+      <div style="flex:1;min-width:0">
+        <div class="slot-modal-title">Set your weekly availability</div>
+        <div class="slot-modal-sub">Repeats every week until you change it</div>
+      </div>
+      <button class="slot-modal-close" onclick="closeAvail()">
+        <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="slot-modal-body">
+      <div class="f-group">
+        <label class="f-label">Each consultation runs</label>
+        <div class="dur-row" id="av-durations">
+          <button type="button" class="dur-chip" data-mins="30" onclick="setAvailDuration(30)">30 min</button>
+          <button type="button" class="dur-chip is-on" data-mins="60" onclick="setAvailDuration(60)">1 hour</button>
+          <button type="button" class="dur-chip" data-mins="90" onclick="setAvailDuration(90)">1&frac12; hours</button>
+        </div>
+      </div>
+
+      <div class="f-group">
+        <label class="f-label">Hours you are free</label>
+        <div class="av-rows" id="av-rows"></div>
+      </div>
+
+      <div class="av-count" id="av-count"></div>
+
+      <div class="form-actions" style="margin-top:14px">
+        <button class="btn btn-primary content" id="av-save" onclick="saveAvailability()">Create these slots</button>
+        <button class="btn btn-ghost content" onclick="closeAvail()" style="flex:none;padding:7px 12px">Cancel</button>
+      </div>
     </div>
   </div>
 </div>
@@ -1536,6 +1618,203 @@ function renderSlotStats() {
 //  TOAST
 // ══════════════════════════════════════════════════════════════
 let toastTimer;
+// ══════════════════════════════════════════════════════════════
+//  DURATION AND AVAILABILITY
+// ══════════════════════════════════════════════════════════════
+
+/** Minutes since midnight -> "HH:MM", clamped to the end of the day. */
+function minutesToTime(mins) {
+  const capped = Math.min(mins, 23 * 60 + 59);
+
+  return String(Math.floor(capped / 60)).padStart(2, '0') + ':' + String(capped % 60).padStart(2, '0');
+}
+
+/** The end time is arithmetic on the start time; nobody thinks in end times. */
+function setDuration(mins) {
+  const start = document.getElementById('f-start').value;
+
+  if (start) {
+    document.getElementById('f-end').value = minutesToTime(timeToMinutes(start) + mins);
+  }
+
+  document.querySelectorAll('#add-slot-fields .dur-chip').forEach((c) => {
+    c.classList.toggle('is-on', Number(c.dataset.mins) === mins);
+  });
+
+  if (typeof checkTimeOverlap === 'function') checkTimeOverlap();
+}
+
+// ── the weekly window ──
+const AV_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+let avDuration = 60;
+const avWindows = {};
+
+AV_DAYS.forEach((day) => {
+  // Off by default: an expert saying which days they are free is the point,
+  // and a form that has already answered for them gets saved unread.
+  avWindows[day] = { on: false, from: '09:00', until: '12:00' };
+});
+
+function openAvail() {
+  drawAvailRows();
+  document.getElementById('avail-overlay').classList.add('open');
+}
+
+function closeAvail() {
+  document.getElementById('avail-overlay').classList.remove('open');
+}
+
+function setAvailDuration(mins) {
+  avDuration = mins;
+  document.querySelectorAll('#av-durations .dur-chip').forEach((c) => {
+    c.classList.toggle('is-on', Number(c.dataset.mins) === mins);
+  });
+  countAvailSlots();
+}
+
+function toggleAvailDay(day) {
+  avWindows[day].on = !avWindows[day].on;
+  drawAvailRows();
+}
+
+function drawAvailRows() {
+  const host = document.getElementById('av-rows');
+  host.innerHTML = '';
+
+  AV_DAYS.forEach((day) => {
+    const w = avWindows[day];
+    const row = document.createElement('div');
+    row.className = 'av-row' + (w.on ? '' : ' is-off');
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'av-day' + (w.on ? ' is-on' : '');
+    btn.textContent = day.slice(0, 3);
+    btn.addEventListener('click', () => toggleAvailDay(day));
+    row.appendChild(btn);
+
+    const time = (value, key) => {
+      const input = document.createElement('input');
+      input.type = 'time';
+      input.value = value;
+      input.addEventListener('change', () => {
+        w[key] = input.value;
+        countAvailSlots();
+      });
+
+      return input;
+    };
+
+    row.appendChild(time(w.from, 'from'));
+
+    const to = document.createElement('em');
+    to.textContent = 'to';
+    row.appendChild(to);
+
+    row.appendChild(time(w.until, 'until'));
+    host.appendChild(row);
+  });
+
+  countAvailSlots();
+}
+
+/** Every slice a window makes, which is what "set availability" produces. */
+function availSlots() {
+  const out = [];
+
+  AV_DAYS.forEach((day) => {
+    const w = avWindows[day];
+
+    if (!w.on) return;
+
+    const from = timeToMinutes(w.from);
+    const until = timeToMinutes(w.until);
+
+    for (let at = from; at + avDuration <= until; at += avDuration) {
+      out.push({ day, start: minutesToTime(at), end: minutesToTime(at + avDuration) });
+    }
+  });
+
+  return out;
+}
+
+function countAvailSlots() {
+  const made = availSlots();
+  const label = avDuration === 60 ? 'one-hour' : avDuration + '-minute';
+  const box = document.getElementById('av-count');
+  const save = document.getElementById('av-save');
+
+  if (!made.length) {
+    box.innerHTML = 'Pick at least one day, and make sure its hours are long enough for one consultation.';
+    save.disabled = true;
+
+    return;
+  }
+
+  box.innerHTML = 'That makes <b>' + made.length + ' bookable slot' + (made.length === 1 ? '' : 's')
+    + ' a week</b>, in ' + label + ' pieces. Teams choose their own; you are not booking anyone in.';
+  save.disabled = false;
+}
+
+/**
+ * Writes the window out as ordinary weekly slots.
+ *
+ * One request each, through the endpoint the add form already uses - a
+ * window is not a new kind of thing to store, it is just several of these.
+ * Anything that clashes with a slot already there is skipped rather than
+ * failing the lot, so running this twice does not double up a week.
+ */
+async function saveAvailability() {
+  const made = availSlots();
+
+  if (!made.length) return;
+
+  const save = document.getElementById('av-save');
+  save.disabled = true;
+  save.textContent = 'Creating…';
+
+  let created = 0;
+  let skipped = 0;
+
+  for (const slot of made) {
+    const clash = (slotsByDay[slot.day] || []).some((s) =>
+      timeToMinutes(s.start_time) < timeToMinutes(slot.end)
+      && timeToMinutes(s.end_time) > timeToMinutes(slot.start));
+
+    if (clash) { skipped++; continue; }
+
+    try {
+      await apiFetch('/instructor/schedule/slots', {
+        method: 'POST',
+        body: JSON.stringify({
+          available_date: slot.day,
+          start_time: slot.start,
+          end_time: slot.end,
+          consultation_limit: 1,
+          slot_type: 'consult',
+          recur: 'weekly',
+          specific_date: null,
+        }),
+      });
+      created++;
+    } catch (e) {
+      skipped++;
+    }
+  }
+
+  save.disabled = false;
+  save.textContent = 'Create these slots';
+  closeAvail();
+
+  showToast(
+    created + ' slot' + (created === 1 ? '' : 's') + ' opened'
+      + (skipped ? ', ' + skipped + ' skipped as already taken' : ''),
+    created ? 'success' : 'error'
+  );
+
+  setTimeout(() => window.location.reload(), 1200);
+}
+
 function showToast(msg, type = 'success') {
   const toast = document.getElementById('sched-toast');
   document.getElementById('toast-msg').textContent = msg;
