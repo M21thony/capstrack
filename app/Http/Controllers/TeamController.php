@@ -209,6 +209,12 @@ class TeamController extends Controller
 
         $userRole = $studentSy?->role?->s_role_name;
 
+        // A member who has joined but not yet said what they do. The team
+        // page asks them once, and only once - a role is settled for the
+        // semester after that.
+        $needsRole = $myTeam && ! $isLeader && ! $studentSy?->s_role_id;
+        $roleChoices = $needsRole ? $this->roleChoicesFor($myTeam) : [];
+
         $expertRemovedNotifications = Notification::where('student_id', $studentId)
             ->where('type', 'expert_removed')
             ->where('is_read', false)
@@ -227,6 +233,11 @@ class TeamController extends Controller
 
         return view('student.team', [
             'myTeam' => $myTeam,
+            // What a recruitment post may advertise for. Project Head is left
+            // out: that seat belongs to whoever leads the team.
+            'memberRoleNames' => StudentRole::memberRoles()->pluck('s_role_name')->all(),
+            'needsRole' => $needsRole,
+            'roleChoices' => $roleChoices,
             'teamMembers' => $teamMembers,
             'myRecruitment' => $myRecruitment,
             'myRecruitmentGoal' => $myRecruitment?->recruitment_goal,
@@ -250,6 +261,109 @@ class TeamController extends Controller
             'expertRemovedNotifications' => $expertRemovedNotifications,
             'pendingLeadershipTransfer' => $pendingLeadershipTransfer,
         ]);
+    }
+
+    /**
+     * The roles this team's next member may pick from.
+     *
+     * Narrowed to what the team's recruitment post asked for, when it asked
+     * for anything - a team advertising for a programmer and a tester should
+     * not have somebody arrive as a UI designer. With no post, or none of its
+     * roles left with a seat, every member role with room is on the table,
+     * because the alternative is a student who cannot answer the question.
+     *
+     * @return array<int, array{id: int, name: string, duties: ?string, taken: int, seats: int, held_by: array<int, string>, full: bool}>
+     */
+    private function roleChoicesFor(Team $team): array
+    {
+        $seating = StudentRole::seatingFor($team->team_id);
+
+        $wanted = collect((array) Recruitment::where('student_id', $team->leader_id)
+            ->where('recruitment_goal', 'build_a_team')
+            ->value('roles'))->filter();
+
+        $asked = collect($seating)
+            ->filter(fn ($row) => $wanted->contains($row['role']->s_role_name))
+            ->filter(fn ($row) => $row['taken'] < $row['seats']);
+
+        $offer = $asked->isNotEmpty() ? $asked : collect($seating);
+
+        return $offer->map(fn ($row) => [
+            'id' => $row['role']->s_role_id,
+            'name' => $row['role']->s_role_name,
+            'duties' => $row['role']->s_role_description,
+            'taken' => $row['taken'],
+            'seats' => $row['seats'],
+            'held_by' => $row['held_by'],
+            'full' => $row['taken'] >= $row['seats'],
+        ])->values()->all();
+    }
+
+    /**
+     * PUT /team/role - a member records what they do on the team.
+     *
+     * Once. The leader does not choose for anybody, and nobody changes their
+     * mind afterwards; the only thing that moves a role once it is set is a
+     * transfer of leadership, which swaps two of them at once.
+     */
+    public function updateRole(Request $request): JsonResponse|RedirectResponse
+    {
+        $studentId = $request->user()->student_id;
+        $studentSy = StudentSchoolYear::where('student_id', $studentId)->first();
+        $team = $studentSy?->team_id ? Team::find($studentSy->team_id) : null;
+
+        if (! $team) {
+            return $this->roleAnswer($request, false, 'Join a team before choosing a role.');
+        }
+
+        if ((int) $team->leader_id === (int) $studentId) {
+            return $this->roleAnswer($request, false, 'The team leader is the Project Head.');
+        }
+
+        if ($studentSy->s_role_id) {
+            return $this->roleAnswer($request, false, 'Your role is already set for this semester.');
+        }
+
+        $roleId = (int) $request->validate([
+            'role_id' => ['required', 'integer'],
+        ])['role_id'];
+
+        $allowed = collect($this->roleChoicesFor($team))
+            ->reject(fn ($choice) => $choice['full'])
+            ->pluck('id');
+
+        if (! $allowed->contains($roleId)) {
+            return $this->roleAnswer($request, false, 'That role is not open on this team.');
+        }
+
+        // Checked again at the moment of writing: two people can be sitting
+        // on this dialog at once, and the list they were shown is as old as
+        // whenever the page last loaded.
+        if (! StudentRole::hasSeat($team->team_id, $roleId)) {
+            return $this->roleAnswer($request, false, 'Somebody just took the last seat in that role. Pick another.');
+        }
+
+        $studentSy->update(['s_role_id' => $roleId]);
+
+        $roleName = StudentRole::find($roleId)?->s_role_name ?? 'a role';
+
+        $this->logActivity(
+            $studentId,
+            'role_chosen',
+            'Took the role of <strong>'.e($roleName).'</strong>',
+            ['team_id' => $team->team_id, 's_role_id' => $roleId]
+        );
+
+        return $this->roleAnswer($request, true, 'You are the '.$roleName.'.');
+    }
+
+    private function roleAnswer(Request $request, bool $ok, string $message): JsonResponse|RedirectResponse
+    {
+        if ($request->expectsJson()) {
+            return response()->json(['success' => $ok, 'message' => $message], $ok ? 200 : 422);
+        }
+
+        return redirect()->route('student.team')->with($ok ? 'status' : 'error', $message);
     }
 
     public function store(Request $request): JsonResponse|RedirectResponse
@@ -1107,11 +1221,11 @@ class TeamController extends Controller
             ->where('recruitment_goal', '!=', 'build_a_team')
             ->delete();
 
-        // There's no separate "Leader" role - Project Head/Network Engineer
-        // is the leader role, and the other two are member roles. On
-        // transfer, the new leader takes the Project Head role and the
-        // outgoing leader takes over whatever specific role the new leader
-        // previously held (so nobody ends up with an undefined role).
+        // A straight swap, and the only thing that moves a settled role.
+        // Project Head seats one person, so the outgoing leader has to land
+        // somewhere: they take the role the new leader just vacated. Nothing
+        // is created or freed, so every seat count stays correct by
+        // construction and neither of them is asked to choose again.
         $newLeaderPreviousRoleId = StudentSchoolYear::where('student_id', $newLeaderId)->value('s_role_id');
 
         StudentSchoolYear::where('student_id', $oldLeaderId)->update(['s_role_id' => $newLeaderPreviousRoleId]);

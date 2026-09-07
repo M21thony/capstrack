@@ -130,12 +130,50 @@ class InvitationController extends Controller
             : $this->decline($request, $invitation);
     }
 
+    /**
+     * The role a student joining this team should be given outright.
+     *
+     * The team's recruitment post says what they were short of. When it
+     * names exactly one role that still has a seat, that is the answer and
+     * the student is never asked. Naming two or more is a genuine choice, so
+     * this returns null and the team page asks them once, on arrival.
+     *
+     * Null is also the answer when there is no post at all, which is every
+     * directly-invited member.
+     */
+    private function roleFromTeamPost(int $teamId): ?int
+    {
+        $team = Team::find($teamId);
+
+        if (! $team) {
+            return null;
+        }
+
+        $wanted = Recruitment::where('student_id', $team->leader_id)
+            ->where('recruitment_goal', 'build_a_team')
+            ->value('roles');
+
+        $wanted = collect((array) $wanted)->filter()->values();
+
+        if ($wanted->isEmpty()) {
+            return null;
+        }
+
+        $open = StudentRole::memberRoles()
+            ->filter(fn ($role) => $wanted->contains($role->s_role_name))
+            ->filter(fn ($role) => StudentRole::hasSeat($teamId, $role->s_role_id))
+            ->values();
+
+        // One and only one - anything else is the student's to decide.
+        return $open->count() === 1 ? $open->first()->s_role_id : null;
+    }
+
     public function accept(Request $request, TeamInvitation $invitation): JsonResponse|RedirectResponse
     {
         $student = $request->user();
         $studentId = $student->student_id;
 
-        $memberRoleId = StudentRole::nextAvailableMemberRoleId($invitation->team_id);
+        $memberRoleId = $this->roleFromTeamPost($invitation->team_id);
 
         if ($invitation->type === 'invite') {
             // Logged in user is the receiver of the invite
