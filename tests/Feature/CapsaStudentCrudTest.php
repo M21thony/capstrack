@@ -198,15 +198,18 @@ class CapsaStudentCrudTest extends TestCase
         $this->assertSame('Angelo', $student->fresh()->f_name);
     }
 
-    public function test_you_cannot_push_a_student_into_someone_elses_section(): void
+    public function test_you_cannot_push_a_student_into_someone_elses_section_by_accident(): void
     {
         $student = $this->student();
 
-        // Reachable now, but the change would put them beyond reach - so it is
-        // refused rather than performed and then unfixable.
+        // Reachable now, and the change would put them beyond reach - so it
+        // is refused until the request says a transfer is what was meant.
+        // Refusing outright left a genuine handover with nowhere to go, which
+        // is the other half of this: see CapsaSectionScopeAndTransferTest.
         $this->actingAs($this->capsa(['BSIT-4A']), 'expert')
             ->patchJson(route('capsa.students.update', $student), ['year' => 3, 'section' => 'A'])
-            ->assertStatus(422);
+            ->assertStatus(409)
+            ->assertJson(['needs_transfer' => true]);
 
         $this->assertSame('4th · A', $student->fresh()->year_section);
     }

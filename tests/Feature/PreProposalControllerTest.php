@@ -622,6 +622,16 @@ class PreProposalControllerTest extends TestCase
         [$student, $team] = $this->makeLeaderWithTeam();
         $sy = StudentSchoolYear::where('student_id', $student->student_id)->first();
 
+        // A real adviser: a suggestion naming somebody who is not an expert
+        // is dropped on the way to the page rather than shown as a name the
+        // team cannot act on.
+        $adviser = \App\Models\CapstoneExpert::factory()->create([
+            'first_name' => 'Ana', 'last_name' => 'Reyes, MIT', 'approved_status' => true,
+        ]);
+        $adviser->roles()->attach(
+            \App\Models\Role::firstOrCreate(['role_name' => 'adviser'])->role_id
+        );
+
         $check = DuplicationCheck::create([
             'student_s_y_id' => $sy->s_y_id, 'document_path' => 'x.pdf', 'concepts' => [],
             'top_score' => 68, 'verdict' => 'High Similarity',
@@ -629,7 +639,7 @@ class PreProposalControllerTest extends TestCase
                 ['title' => 'Flood Monitoring System for Rural Barangays', 'abstract' => 'An IoT-based early warning study.', 'academic_year' => '2023-2024', 'program' => 'BSIT', 'score' => 68, 'reason' => 'Both target flood detection using IoT sensors.', 'is_relevant' => true],
             ],
             'instructors_suggested' => [
-                ['id' => 1, 'name' => 'Ana Reyes, MIT', 'expertise' => 'IoT, Embedded Systems'],
+                ['id' => $adviser->expert_id, 'name' => 'Ana Reyes, MIT', 'expertise' => 'IoT, Embedded Systems'],
             ],
         ]);
         CapstonePreProposal::create([

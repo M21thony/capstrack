@@ -239,6 +239,49 @@ class PreProposalController extends Controller
         return false;
     }
 
+    /**
+     * DELETE /pre-proposal/duplication-checks/{check} — throw a scan away.
+     *
+     * The result is drawn again on every load now, which is what stops a
+     * reload, a rejected form or the back button costing a team the check
+     * they just waited on. The other half of that is a way to be rid of it:
+     * a panel that cannot be dismissed is its own kind of stuck.
+     *
+     * Only a scan that has not become a pre-proposal. Once it has, the check
+     * is the evidence behind a saved title and belongs to the CaPSA reviewing
+     * it as much as to the team.
+     */
+    public function destroyCheck(Request $request, DuplicationCheck $check): JsonResponse
+    {
+        $team = $this->currentTeam($request);
+
+        $mine = $team && StudentSchoolYear::where('team_id', $team->team_id)
+            ->where('s_y_id', $check->student_s_y_id)
+            ->exists();
+
+        if (! $mine) {
+            return response()->json([
+                'success' => false,
+                'message' => 'That check does not belong to your team.',
+            ], 403);
+        }
+
+        if (CapstonePreProposal::where('duplication_check_id', $check->id)->exists()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'This check belongs to a saved pre-proposal. Remove the pre-proposal instead.',
+            ], 422);
+        }
+
+        if ($check->document_path) {
+            Storage::delete($check->document_path);
+        }
+
+        $check->delete();
+
+        return response()->json(['success' => true, 'message' => 'Result cleared.']);
+    }
+
     public function store(Request $request): RedirectResponse
     {
         $team = $this->currentTeam($request);

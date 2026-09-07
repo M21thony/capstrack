@@ -1113,31 +1113,68 @@ function saveEditStudent() {
   btn.disabled = true;
   btn.textContent = 'Saving…';
 
-  fetch(STUDENT_ROUTES.one(editingStudent.id), {
-    method: 'PATCH',
-    headers: headers(),
-    body: JSON.stringify({
-      f_name: document.getElementById('edit-student-first').value.trim(),
-      l_name: document.getElementById('edit-student-last').value.trim(),
-      student_number: document.getElementById('edit-student-number').value.trim() || null,
-      course: document.getElementById('edit-student-course').value,
-      year: Number(document.getElementById('edit-student-year').value),
-      section: document.getElementById('edit-student-section').value.trim(),
-    }),
-  })
-    .then(r => r.json().then(d => ({ ok: r.ok, d })))
-    .then(function ({ ok, d }) {
-      if (!ok) {
-        err.textContent = d.message || firstError(d) || 'Could not save.';
-        err.style.display = 'block';
-        return;
-      }
-      closeEditStudent();
-      showToast('Saved.', 'success');
-      setTimeout(() => window.location.reload(), 700);
+  send(false);
+
+  // transfer=true is the second attempt, after the CaPSA has been told what
+  // moving a student out of their sections means. The server refuses the
+  // first one on purpose - handing a student to a colleague is correct to
+  // allow, wrong to do by accident, and impossible to undo from this side.
+  function send(transfer) {
+    fetch(STUDENT_ROUTES.one(editingStudent.id), {
+      method: 'PATCH',
+      headers: headers(),
+      body: JSON.stringify({
+        f_name: document.getElementById('edit-student-first').value.trim(),
+        l_name: document.getElementById('edit-student-last').value.trim(),
+        student_number: document.getElementById('edit-student-number').value.trim() || null,
+        course: document.getElementById('edit-student-course').value,
+        year: Number(document.getElementById('edit-student-year').value),
+        section: document.getElementById('edit-student-section').value.trim(),
+        transfer: transfer,
+      }),
     })
-    .catch(function () { err.textContent = 'Network error.'; err.style.display = 'block'; })
-    .finally(function () { btn.disabled = false; btn.textContent = 'Save changes'; });
+      .then(r => r.json().then(d => ({ ok: r.ok, d })))
+      .then(function ({ ok, d }) {
+        if (!ok && d.needs_transfer) {
+          const name = document.getElementById('edit-student-first').value.trim();
+          const where = d.section ? ' to ' + d.section : '';
+
+          if (confirm('Transfer ' + (name || 'this student') + where + '?
+
+'
+              + 'They will belong to the CaPSA who handles that section, and you will '
+              + 'not be able to edit them afterwards.')) {
+            send(true);
+
+            return;
+          }
+
+          btn.disabled = false;
+          btn.textContent = 'Save changes';
+
+          return;
+        }
+
+        if (!ok) {
+          err.textContent = d.message || firstError(d) || 'Could not save.';
+          err.style.display = 'block';
+          btn.disabled = false;
+          btn.textContent = 'Save changes';
+
+          return;
+        }
+
+        closeEditStudent();
+        showToast(d.message || 'Saved.', 'success');
+        setTimeout(() => window.location.reload(), 700);
+      })
+      .catch(function () {
+        err.textContent = 'Network error.';
+        err.style.display = 'block';
+        btn.disabled = false;
+        btn.textContent = 'Save changes';
+      });
+  }
 }
 
 // ── several at once ──
