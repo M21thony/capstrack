@@ -1139,9 +1139,12 @@ function saveEditStudent() {
           const name = document.getElementById('edit-student-first').value.trim();
           const where = d.section ? ' to ' + d.section : '';
 
-          if (confirm('Transfer ' + (name || 'this student') + where + '?
-
-'
+          // The blank line between the question and the warning was typed
+          // as two real newlines inside the string. A literal newline in a
+          // single-quoted JS string is a syntax error, and it took the whole
+          // script block with it - which is why nothing on this page worked,
+          // including the Add Student button.
+          if (confirm('Transfer ' + (name || 'this student') + where + '?\n\n'
               + 'They will belong to the CaPSA who handles that section, and you will '
               + 'not be able to edit them afterwards.')) {
             send(true);
