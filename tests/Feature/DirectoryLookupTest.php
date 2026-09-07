@@ -190,4 +190,71 @@ class DirectoryLookupTest extends TestCase
 
         $this->assertNotSame(200, $response->getStatusCode());
     }
+
+    /**
+     * Hiding the Admin from the directory stopped the suggestion, not the
+     * submission. An address typed out in full still reached the add
+     * endpoint, which looked the account up by email, found the Admin, and
+     * attached a student-facing role to it - so they never appeared in the
+     * CaPSA's own list, and did appear in front of every team on
+     * student/experts.
+     */
+    public function test_the_admin_cannot_be_added_as_an_expert(): void
+    {
+        $admin = CapstoneExpert::factory()->create([
+            'approved_status' => true, 'is_admin' => true,
+            'first_name' => 'Mark', 'last_name' => 'Balilla',
+            'email' => 'the.admin@cspc.edu.ph',
+        ]);
+
+        foreach (CapstoneExpert::STUDENT_FACING_ROLES as $role) {
+            Role::firstOrCreate(['role_name' => $role]);
+        }
+
+        $this->actingAs($this->staff(), 'expert')
+            ->postJson(route('capsa.experts.store'), [
+                'email' => $admin->email,
+                'name' => 'Mark Balilla',
+                'roles' => ['consultant'],
+            ])
+            ->assertStatus(422)
+            ->assertJsonFragment(['success' => false]);
+
+        $this->assertCount(0, $admin->fresh()->roles);
+    }
+
+    /** Nor made a CaPSA by the same route. */
+    public function test_the_admin_cannot_be_made_a_capsa(): void
+    {
+        $admin = CapstoneExpert::factory()->create([
+            'approved_status' => true, 'is_admin' => true,
+            'email' => 'the.admin@cspc.edu.ph',
+        ]);
+
+        Role::firstOrCreate(['role_name' => CapstoneExpert::CAPSA_ROLE]);
+
+        $this->actingAs($this->staff(true), 'expert')
+            ->postJson(route('admin.experts.capsa.store'), ['email' => $admin->email])
+            ->assertStatus(422);
+
+        $this->assertCount(0, $admin->fresh()->roles);
+    }
+
+    /** An ordinary expert still goes through, so this is not a blanket. */
+    public function test_a_plain_expert_can_still_be_added(): void
+    {
+        foreach (CapstoneExpert::STUDENT_FACING_ROLES as $role) {
+            Role::firstOrCreate(['role_name' => $role]);
+        }
+
+        $this->actingAs($this->staff(), 'expert')
+            ->postJson(route('capsa.experts.store'), [
+                'email' => 'new.expert@cspc.edu.ph',
+                'name' => 'Rosa Villanueva',
+                'roles' => ['consultant'],
+            ])
+            ->assertSuccessful();
+
+        $this->assertNotNull(CapstoneExpert::where('email', 'new.expert@cspc.edu.ph')->first());
+    }
 }
