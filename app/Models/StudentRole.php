@@ -36,12 +36,16 @@ class StudentRole extends Model
     }
 
     /**
-     * The role everybody on the team holds a share of.
+     * The role every member already holds.
      *
-     * The course is explicit that writing and testing the system "must be
-     * played partly by each team member", so this one is not a seat anybody
-     * can take from anybody else. It never fills, and it is never shown as
-     * full.
+     * The course says writing and testing the system "must be played partly
+     * by each team member" - so it is not a designation anybody is given, it
+     * is what everybody on the team is doing, the leader included. It is
+     * never offered as a choice and no s_role_id ever points at it.
+     *
+     * The seats prove it: with only the other two to choose between, a team
+     * divides exactly. Two members into two seats, four into four. Putting
+     * this one on the list would have left those seats unfilled.
      */
     public const SHARED_ROLE_NAME = 'Software Engineer/Programmer';
 
@@ -56,9 +60,10 @@ class StudentRole extends Model
      * offered to anybody else. Programmer has no limit, because the course
      * says every member plays it partly.
      *
-     * The other two scale with the size of the team, which the CaPSA sets
-     * between three and five. A team of N is the leader plus N-1 members
-     * split across two seated roles, so each holds ceil((N-1)/2):
+     * The other two are the whole of the choice, and they scale with the
+     * size of the team, which the CaPSA sets between three and five. A team
+     * of N is the leader plus N-1 members split across exactly these two, so
+     * each holds ceil((N-1)/2):
      *
      *   3 members  ->  2 members, 1 each
      *   4 members  ->  3 members, 2 each
@@ -73,6 +78,7 @@ class StudentRole extends Model
             return 1;
         }
 
+        // Held by everybody, so counting it makes no sense either way.
         if ($roleName === self::SHARED_ROLE_NAME) {
             return null;
         }
@@ -89,10 +95,16 @@ class StudentRole extends Model
             ?: self::DEFAULT_TEAM_SIZE);
     }
 
-    /** The three roles a member may choose between. */
+    /**
+     * The roles a member chooses between: Network Designer/UI Designer and
+     * QA Tester/Documentation Writer.
+     *
+     * Project Head is the leader's, and Programmer is everybody's, so
+     * neither is on the list.
+     */
     public static function memberRoles()
     {
-        return static::where('s_role_name', '!=', self::LEADER_ROLE_NAME)
+        return static::whereNotIn('s_role_name', [self::LEADER_ROLE_NAME, self::SHARED_ROLE_NAME])
             ->orderBy('s_role_id')
             ->get();
     }
@@ -133,20 +145,15 @@ class StudentRole extends Model
     {
         $role = static::find($roleId);
 
-        if (! $role || $role->s_role_name === self::LEADER_ROLE_NAME) {
+        // Neither the leader's seat nor the one everybody already holds is
+        // something a member can be given.
+        if (! $role || in_array($role->s_role_name, [self::LEADER_ROLE_NAME, self::SHARED_ROLE_NAME], true)) {
             return false;
-        }
-
-        $seats = self::seatsFor($role->s_role_name, self::teamSize($teamId));
-
-        // No limit: everybody programs, so there is always room.
-        if ($seats === null) {
-            return true;
         }
 
         return StudentSchoolYear::where('team_id', $teamId)
             ->where('s_role_id', $roleId)
-            ->count() < $seats;
+            ->count() < self::seatsFor($role->s_role_name, self::teamSize($teamId));
     }
 
     public function studentSchoolYears(): HasMany

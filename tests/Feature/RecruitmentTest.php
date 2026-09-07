@@ -47,7 +47,7 @@ class RecruitmentTest extends TestCase
             'recruitment_goal' => 'build_a_team',
             'team_name' => 'Innovators',
             'looking_for' => 'Need a Frontend Developer',
-            'tags' => json_encode(['Software Engineer/Programmer', 'Network Designer/UI Designer']),
+            'tags' => json_encode(['QA Tester/Documentation Writer', 'Network Designer/UI Designer']),
         ]);
 
         $response->assertRedirect(route('student.team'));
@@ -66,7 +66,7 @@ class RecruitmentTest extends TestCase
         $this->assertNotNull($recruitment);
         $this->assertEquals('build_a_team', $recruitment->recruitment_goal);
         $this->assertEquals('Need a Frontend Developer', $recruitment->looking_for);
-        $this->assertEquals(['Software Engineer/Programmer', 'Network Designer/UI Designer'], $recruitment->roles);
+        $this->assertEquals(['QA Tester/Documentation Writer', 'Network Designer/UI Designer'], $recruitment->roles);
         $this->assertEquals(5, $recruitment->member_count);
     }
 
@@ -92,7 +92,7 @@ class RecruitmentTest extends TestCase
         $response = $this->post('/recruitment', [
             'recruitment_goal' => 'find_a_team',
             'introduction' => 'I am a backend developer',
-            'tags' => json_encode(['Software Engineer/Programmer']),
+            'tags' => json_encode(['QA Tester/Documentation Writer']),
         ]);
 
         $response->assertRedirect(route('student.team'));
@@ -105,7 +105,7 @@ class RecruitmentTest extends TestCase
         $this->assertNotNull($recruitment);
         $this->assertEquals('find_a_team', $recruitment->recruitment_goal);
         $this->assertEquals('Jane Smith', $student->f_name.' '.$student->l_name);
-        $this->assertEquals(['Software Engineer/Programmer'], $recruitment->roles);
+        $this->assertEquals(['QA Tester/Documentation Writer'], $recruitment->roles);
     }
 
     public function test_student_in_team_cannot_publish_recruitment_post(): void
@@ -135,7 +135,7 @@ class RecruitmentTest extends TestCase
         $response = $this->post('/recruitment', [
             'recruitment_goal' => 'find_a_team',
             'introduction' => 'Should fail',
-            'tags' => json_encode(['Software Engineer/Programmer']),
+            'tags' => json_encode(['QA Tester/Documentation Writer']),
         ]);
 
         $response->assertSessionHasErrors(['error']);
@@ -181,7 +181,7 @@ class RecruitmentTest extends TestCase
             Recruitment::create([
                 'student_id' => $otherStudent->student_id,
                 'recruitment_goal' => 'find_a_team',
-                'roles' => ['Software Engineer/Programmer'],
+                'roles' => ['QA Tester/Documentation Writer'],
                 'introduction' => "Intro {$i}",
             ]);
         }
@@ -258,7 +258,7 @@ class RecruitmentTest extends TestCase
         Recruitment::create([
             'student_id' => $otherDiffSection->student_id,
             'recruitment_goal' => 'find_a_team',
-            'roles' => ['Software Engineer/Programmer'],
+            'roles' => ['QA Tester/Documentation Writer'],
         ]);
 
         // 4. Other student in different course but same section: BSCS, "3rd · A"
@@ -498,14 +498,14 @@ class RecruitmentTest extends TestCase
         $recruitment = Recruitment::create([
             'student_id' => $student->student_id,
             'recruitment_goal' => 'find_a_team',
-            'roles' => ['Software Engineer/Programmer'],
+            'roles' => ['QA Tester/Documentation Writer'],
             'introduction' => 'Original intro',
         ]);
 
         $response = $this->put("/recruitment/{$recruitment->recruitment_id}", [
             'recruitment_goal' => 'find_a_team',
             'introduction' => 'Updated introduction',
-            'roles' => ['Software Engineer/Programmer', 'Network Designer/UI Designer'],
+            'roles' => ['QA Tester/Documentation Writer', 'Network Designer/UI Designer'],
         ]);
 
         $response->assertRedirect();
@@ -514,7 +514,7 @@ class RecruitmentTest extends TestCase
         $recruitment->refresh();
         $this->assertEquals('find_a_team', $recruitment->recruitment_goal);
         $this->assertEquals('Updated introduction', $recruitment->introduction);
-        $this->assertEquals(['Software Engineer/Programmer', 'Network Designer/UI Designer'], $recruitment->roles);
+        $this->assertEquals(['QA Tester/Documentation Writer', 'Network Designer/UI Designer'], $recruitment->roles);
     }
 
     public function test_student_can_update_build_a_team_post(): void
@@ -539,7 +539,7 @@ class RecruitmentTest extends TestCase
         $recruitment = Recruitment::create([
             'student_id' => $student->student_id,
             'recruitment_goal' => 'build_a_team',
-            'roles' => ['Software Engineer/Programmer'],
+            'roles' => ['QA Tester/Documentation Writer'],
             'looking_for' => 'Looking for a backend dev',
             'member_count' => 3,
         ]);
@@ -591,7 +591,7 @@ class RecruitmentTest extends TestCase
         $recruitment = Recruitment::create([
             'student_id' => $owner->student_id,
             'recruitment_goal' => 'find_a_team',
-            'roles' => ['Software Engineer/Programmer'],
+            'roles' => ['QA Tester/Documentation Writer'],
         ]);
 
         $response = $this->put("/recruitment/{$recruitment->recruitment_id}", [
@@ -625,7 +625,7 @@ class RecruitmentTest extends TestCase
         $response = $this->post('/recruitment', [
             'recruitment_goal' => 'build_a_team',
             'team_name' => 'Test Team',
-            'tags' => json_encode(['Software Engineer/Programmer']),
+            'tags' => json_encode(['QA Tester/Documentation Writer']),
             'member_count' => 2,
         ]);
 
@@ -653,7 +653,7 @@ class RecruitmentTest extends TestCase
             'recruitment_goal' => 'build_a_team',
             'team_name' => 'AutoTeam',
             'looking_for' => 'Need members',
-            'tags' => json_encode(['Software Engineer/Programmer']),
+            'tags' => json_encode(['QA Tester/Documentation Writer']),
             'member_count' => 4,
         ]);
 
