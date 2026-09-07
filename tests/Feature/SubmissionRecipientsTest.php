@@ -9,7 +9,9 @@ use App\Models\StudentSchoolYear;
 use App\Models\Team;
 use App\Services\RecipientResolver;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 /**
@@ -217,5 +219,92 @@ class SubmissionRecipientsTest extends TestCase
         $this->assertSame($mark->expert_id, $this->resolver()->resolve('adviser', $team->team_id));
         $this->assertNull($this->resolver()->resolve('consultant', $team->team_id));
         $this->assertSame($capsa->expert_id, $this->resolver()->resolve('subject_adviser', $team->team_id));
+    }
+
+    // ----------------------------------------------------------------
+    // Applying to an expert who has not said what they take
+    // ----------------------------------------------------------------
+
+    /**
+     * program_slots empty means "no restriction" for listing, so an expert
+     * who has not filled it in still appears - hiding them helps nobody. It
+     * cannot mean the same for applying: there is no answer yet to whether
+     * they have room for this team, or take teams like it at all.
+     */
+    public function test_an_expert_who_has_not_set_programs_cannot_be_applied_to(): void
+    {
+        $team = $this->teamInSection();
+        $leader = Student::find($team->leader_id);
+
+        $expert = $this->expertHolding('Neil Inocencio', ['adviser']);
+        $expert->update(['program_slots' => null, 'max_teams' => 2]);
+
+        $this->assertFalse($expert->hasSetPrograms());
+
+        $expertRoleId = DB::table('expert_roles')
+            ->where('expert_id', $expert->expert_id)->value('expert_role_id');
+
+        $this->actingAs($leader, 'web')
+            ->postJson(route('api.student.assignments.store'), [
+                'expert_id' => $expert->expert_id,
+                'expert_role_id' => $expertRoleId,
+                'message' => 'Good morning sir, we would like you as our adviser.',
+            ])
+            ->assertStatus(422)
+            ->assertJsonFragment(['success' => false]);
+
+        $this->assertDatabaseCount('capstone_expert_application', 0);
+    }
+
+    /** Once they have said, the application goes through. */
+    public function test_an_expert_who_has_set_programs_can_be_applied_to(): void
+    {
+        $team = $this->teamInSection();
+        $leader = Student::find($team->leader_id);
+
+        $expert = $this->expertHolding('Neil Inocencio', ['adviser']);
+        $expert->update(['program_slots' => '2 - BSIT', 'max_teams' => 2]);
+
+        $this->assertTrue($expert->hasSetPrograms());
+
+        $expertRoleId = DB::table('expert_roles')
+            ->where('expert_id', $expert->expert_id)->value('expert_role_id');
+
+        // A team with no approved pre-proposal has to attach one.
+        Storage::fake('public');
+
+        $this->actingAs($leader, 'web')
+            ->post(route('api.student.assignments.store'), [
+                'expert_id' => $expert->expert_id,
+                'expert_role_id' => $expertRoleId,
+                'message' => 'Good morning sir, we would like you as our adviser.',
+                'proposal_file' => UploadedFile::fake()->create('proposal.pdf', 40, 'application/pdf'),
+            ], ['Accept' => 'application/json'])
+            ->assertSuccessful();
+
+        $this->assertDatabaseCount('capstone_expert_application', 1);
+    }
+
+    /** They are still listed, with the reason shown where Apply would be. */
+    public function test_they_are_still_listed_and_the_button_says_why(): void
+    {
+        $team = $this->teamInSection();
+        $leader = Student::find($team->leader_id);
+
+        // An unverified team is told to get verified first, before any of
+        // this is reached.
+        $team->update(['is_confirmed' => true]);
+
+        $expert = $this->expertHolding('Neil Inocencio', ['adviser']);
+        $expert->update(['program_slots' => null]);
+
+        $html = $this->actingAs($leader, 'web')
+            ->get(route('student.experts'))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString('Neil Inocencio', $html);
+        $this->assertStringContainsString('Not Accepting Yet', $html);
+        $this->assertStringNotContainsString('data-apply-expert="'.$expert->expert_id.'"', $html);
     }
 }
