@@ -124,7 +124,7 @@ class ExpertDeactivationTest extends TestCase
 
         $this->assertStringContainsString($expert->email, $html);
         $this->assertStringContainsString('Deactivated', $html);
-        $this->assertStringContainsString('Switch this account back on', $html);
+        $this->assertStringContainsString('Reactivate', $html);
     }
 
     public function test_an_active_row_offers_the_way_off_and_not_the_way_back(): void
@@ -136,9 +136,9 @@ class ExpertDeactivationTest extends TestCase
             ->assertOk()
             ->getContent();
 
-        $this->assertStringContainsString('Deactivate this account', $html);
+        $this->assertStringContainsString('Deactivate', $html);
         // Nobody on the page is off, so nothing offers the way back.
-        $this->assertStringNotContainsString('Switch this account back on', $html);
+        $this->assertStringNotContainsString('Reactivate', $html);
     }
 
     /**

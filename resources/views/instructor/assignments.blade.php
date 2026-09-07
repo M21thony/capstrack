@@ -775,6 +775,7 @@ function closeSidebar() { document.body.classList.remove('sidebar-open'); }
 </script>
 
 @include('instructor.partials.expert-profile')
+@include('partials.escape-closes-modals')
 </body>
 </html>
 

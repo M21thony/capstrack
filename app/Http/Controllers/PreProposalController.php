@@ -58,6 +58,23 @@ class PreProposalController extends Controller
                 && $proposals->count() >= 1
                 && ! $this->isTurnedIn($team),
             'recommendedProposals' => self::RECOMMENDED_PROPOSALS,
+            // The most recent check this team ran that has not been turned
+            // into a saved pre-proposal yet.
+            //
+            // runCheck() writes the result to the database before it answers,
+            // so it has always survived - it simply was not drawn again, and
+            // every reload therefore looked like the scan had been thrown
+            // away. Unsubmitting reloads. So does a rejected form. So does
+            // pressing back.
+            'lastCheck' => $team
+                ? DuplicationCheck::whereIn(
+                    'student_s_y_id',
+                    StudentSchoolYear::where('team_id', $team->team_id)->pluck('s_y_id')
+                )
+                    ->whereNotIn('id', $proposals->pluck('duplication_check_id')->filter())
+                    ->latest('id')
+                    ->first()
+                : null,
             'reviewStarted' => (bool) $team && $this->reviewStarted($team),
         ]);
     }

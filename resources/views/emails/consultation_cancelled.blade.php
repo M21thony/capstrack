@@ -53,5 +53,6 @@
             You're receiving this because you were the assigned expert for this session.
         </div>
     </div>
+@include('partials.escape-closes-modals')
 </body>
 </html>

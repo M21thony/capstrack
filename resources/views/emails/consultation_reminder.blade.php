@@ -41,5 +41,6 @@
             You're receiving this because you're a member of {{ $team->team_name }} or the assigned expert.
         </div>
     </div>
+@include('partials.escape-closes-modals')
 </body>
 </html>

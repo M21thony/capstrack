@@ -475,5 +475,6 @@ document.querySelectorAll('.nav-item').forEach(function(el) {
 });
 </script>
 
+@include('partials.escape-closes-modals')
 </body>
 </html>

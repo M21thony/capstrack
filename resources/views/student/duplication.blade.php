@@ -584,7 +584,9 @@
                             <div class="avatar">{{ strtoupper(substr($i['name'] ?? '?', 0, 1)) }}</div>
                             <div style="min-width:0">
                               @if (! empty($i['role_label']))
-                                <div class="sx-role">{{ $i['role_label'] }}</div>
+                                {{-- Said where it is drawn, so scans that
+                                     already ran read the same way. --}}
+                                <div class="sx-role">Recommended {{ $i['role_label'] }}</div>
                               @endif
                               <div style="font-size:12px;font-weight:500;color:var(--text)">{{ $i['name'] ?? '' }}</div>
                               <div style="font-size:10px;color:var(--primary,#5b5bd6);margin-top:1px">{{ $i['expertise'] ?? '' }}</div>
@@ -1158,6 +1160,35 @@ function cancelCheck() {
   showToast('Similarity check cancelled.', 'error');
 }
 
+@if(!empty($lastCheck))
+@php
+  // Built here rather than inline: @json() cannot take an array literal
+  // spread over several lines - it reads to the first newline and leaves the
+  // bracket unclosed, which is a parse error in the compiled view rather
+  // than anything Blade complains about.
+  $lastCheckPayload = [
+      'duplication_check_id' => $lastCheck->id,
+      'concepts' => $lastCheck->concepts,
+      'top_score' => $lastCheck->top_score,
+      'verdict' => $lastCheck->verdict,
+      'matches' => $lastCheck->matches,
+      'instructors' => $lastCheck->instructors_suggested,
+      'highlight_words' => app(\App\Services\SimilarityService::class)
+          ->extractHighlightWords($lastCheck->concepts ?? []),
+  ];
+  $lastCheckName = basename($lastCheck->document_path ?? 'your document');
+@endphp
+// The last check this team ran, drawn again on load.
+//
+// runCheck() writes the result to the database before it answers, so it was
+// never actually lost - it just was not drawn a second time, and every
+// reload therefore looked like the scan had been thrown away. Unsubmitting
+// reloads. So does a rejected form, or pressing back.
+document.addEventListener('DOMContentLoaded', function () {
+  renderResult(@json($lastCheckPayload), @json($lastCheckName));
+});
+@endif
+
 function renderResult(data, fileName) {
   lastCheckData = data;
 
@@ -1335,7 +1366,7 @@ function openFreshReportModal() {
           <div class="instructor-item">
             <div class="avatar">${escapeHtml((i.name || '?').charAt(0))}</div>
             <div style="min-width:0">
-              ${i.role_label ? `<div class="sx-role">${escapeHtml(i.role_label)}</div>` : ''}
+              ${i.role_label ? `<div class="sx-role">Recommended ${escapeHtml(i.role_label)}</div>` : ''}
               <div style="font-size:12px;font-weight:500;color:var(--text)">${escapeHtml(i.name)}</div>
               <div style="font-size:10px;color:var(--primary,#5b5bd6);margin-top:1px">${escapeHtml(i.expertise || '')}</div>
               <div style="font-size:10px;color:var(--text3);margin-top:2px">${escapeHtml(i.reason || '')}</div>
@@ -1430,5 +1461,6 @@ document.querySelectorAll('.nav-item').forEach(function(el) {
 @endif
 </script>
 
+@include('partials.escape-closes-modals')
 </body>
 </html>

@@ -9,5 +9,6 @@
 </head>
 <body>
     <div id="pdf-annotator-root"></div>
+@include('partials.escape-closes-modals')
 </body>
 </html>

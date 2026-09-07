@@ -179,5 +179,6 @@ function openSidebar() { sidebarEl.classList.add('mobile-open'); sidebarOverlay.
 function closeSidebar() { sidebarEl.classList.remove('mobile-open'); sidebarOverlay.classList.remove('open'); }
 </script>
 
+@include('partials.escape-closes-modals')
 </body>
 </html>

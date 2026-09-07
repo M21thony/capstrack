@@ -680,5 +680,6 @@ if (expertRemovedModal && expertRemovedOkBtn) {
     });
 }
 </script>
+@include('partials.escape-closes-modals')
 </body>
 </html>
