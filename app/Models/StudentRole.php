@@ -45,24 +45,48 @@ class StudentRole extends Model
      */
     public const SHARED_ROLE_NAME = 'Software Engineer/Programmer';
 
-    /** How many of a team may hold one role. */
-    public const SEATS = 2;
+    /** A team of five when nobody has said otherwise. */
+    public const DEFAULT_TEAM_SIZE = 5;
 
     /**
      * The number of people who may hold a role, or null when there is no
      * limit.
      *
      * Project Head seats one, and that one is the leader's - it is never
-     * offered to anybody else. Programmer has no limit, for the reason
-     * above. The remaining two seat a pair each.
+     * offered to anybody else. Programmer has no limit, because the course
+     * says every member plays it partly.
+     *
+     * The other two scale with the size of the team, which the CaPSA sets
+     * between three and five. A team of N is the leader plus N-1 members
+     * split across two seated roles, so each holds ceil((N-1)/2):
+     *
+     *   3 members  ->  2 members, 1 each
+     *   4 members  ->  3 members, 2 each
+     *   5 members  ->  4 members, 2 each
+     *
+     * Rounded up rather than down so the seats always cover the team; a
+     * member who finds both full is not stuck, because Programmer is open.
      */
-    public static function seatsFor(string $roleName): ?int
+    public static function seatsFor(string $roleName, ?int $teamSize = null): ?int
     {
-        return match ($roleName) {
-            self::LEADER_ROLE_NAME => 1,
-            self::SHARED_ROLE_NAME => null,
-            default => self::SEATS,
-        };
+        if ($roleName === self::LEADER_ROLE_NAME) {
+            return 1;
+        }
+
+        if ($roleName === self::SHARED_ROLE_NAME) {
+            return null;
+        }
+
+        $size = max(3, min(5, $teamSize ?: self::DEFAULT_TEAM_SIZE));
+
+        return (int) ceil(($size - 1) / 2);
+    }
+
+    /** The size the CaPSA set for this team, or the default. */
+    public static function teamSize(int $teamId): int
+    {
+        return (int) (Team::where('team_id', $teamId)->value('member_count')
+            ?: self::DEFAULT_TEAM_SIZE);
     }
 
     /** The three roles a member may choose between. */
@@ -80,19 +104,21 @@ class StudentRole extends Model
      */
     public static function seatingFor(int $teamId): array
     {
+        $size = self::teamSize($teamId);
+
         $holders = StudentSchoolYear::where('team_id', $teamId)
             ->whereNotNull('s_role_id')
             ->with('student')
             ->get()
             ->groupBy('s_role_id');
 
-        return static::memberRoles()->map(function ($role) use ($holders) {
+        return static::memberRoles()->map(function ($role) use ($holders, $size) {
             $held = $holders->get($role->s_role_id, collect());
 
             return [
                 'role' => $role,
                 'taken' => $held->count(),
-                'seats' => self::seatsFor($role->s_role_name),
+                'seats' => self::seatsFor($role->s_role_name, $size),
                 'held_by' => $held
                     ->map(fn ($row) => trim(($row->student->f_name ?? '').' '.($row->student->l_name ?? '')))
                     ->filter()
@@ -111,7 +137,7 @@ class StudentRole extends Model
             return false;
         }
 
-        $seats = self::seatsFor($role->s_role_name);
+        $seats = self::seatsFor($role->s_role_name, self::teamSize($teamId));
 
         // No limit: everybody programs, so there is always room.
         if ($seats === null) {
