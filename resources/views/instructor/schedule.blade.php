@@ -377,24 +377,6 @@
   </div>
 </div>
 
-<!-- ─── SLOT DETAIL MODAL ─────────────────────────────────────────────────── -->
-<div class="slot-modal-overlay" id="slot-modal-overlay" onclick="if(event.target===this)closeSlotModal()">
-  <div class="slot-modal">
-    <div class="slot-modal-header">
-      <div style="flex:1;min-width:0">
-        <div class="slot-modal-title" id="slot-modal-title">Slots</div>
-        <div class="slot-modal-sub" id="slot-modal-sub"></div>
-      </div>
-      <button class="slot-modal-close" onclick="closeSlotModal()">
-        <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </button>
-    </div>
-    <div class="slot-modal-body" id="slot-modal-body">
-      <!-- rendered by JS -->
-    </div>
-  </div>
-</div>
-
 <!-- ─── SET AVAILABILITY ──────────────────────────────────────────────────
      Adding slots one at a time is why setting up a term is a chore: nine
      consultations a week is nine trips through the form. Google Calendar's
@@ -1088,12 +1070,10 @@ function handleCellClick(key, dayNum, isDisabled, dayName) {
   const cell = document.querySelector(`.cal-cell[data-key="${key}"]`);
   if (cell) cell.classList.add('selected');
 
-  // Show slot modal if date has slots
-  const daySlots = slots[key] || [];
-  if (daySlots.length > 0) {
-    openSlotModal(key, dayNum, dayName);
-  }
-
+  // The side panel lists this date's slots already, right beside the form
+  // for changing them. This used to also pop a modal listing the same
+  // slots with its own delete button - a leftover from before View and Add
+  // were merged into that panel.
   selectDate(key, dayNum);
 }
 
@@ -1184,7 +1164,14 @@ function renderSelectedDateSlots(key) {
     const startStr = hr12(s.start || s.start_time);
     const endStr   = hr12(s.end   || s.end_time);
     const status   = getSlotStatusLabel(s, key);
-    const statusText = status === 'ongoing' ? ' · 🔴 Ongoing' : (status === 'booked' ? ' · Booked' : '');
+
+    // A team's name already says the slot is taken, so "Booked" beside it is
+    // the same fact twice. Max only means anything while nobody has it.
+    const who = s.teamName
+      ? ' · ' + s.teamName
+      : (status === 'booked' ? ' · Booked' : ' · Max ' + (s.maxBookings || s.consultation_limit || 1));
+    const statusText = (status === 'ongoing' ? ' · 🔴 Ongoing' : who)
+      + (s.topic ? ' · “' + s.topic + '”' : '');
     const row = document.createElement('div');
     row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 8px;background:var(--bg3);border-radius:6px;font-size:11px;color:var(--text2)';
 
@@ -1627,95 +1614,6 @@ function closeBlockConfirm() {
 // ══════════════════════════════════════════════════════════════
 //  SLOT DETAIL MODAL
 // ══════════════════════════════════════════════════════════════
-function openSlotModal(key, dayNum, dayName) {
-  const [y, m1, d] = key.split('-').map(Number);
-  const dateObj = makeDate(y, m1, d);
-  const label = `${DAYS[dateObj.getDay()]}, ${MONTHS[m1 - 1]} ${d}, ${y}`;
-
-  document.getElementById('slot-modal-title').textContent = label;
-  document.getElementById('slot-modal-sub').textContent   = `${slots[key]?.length || 0} slot(s) scheduled`;
-  renderSlotModal(key);
-
-  document.getElementById('slot-modal-overlay').classList.add('open');
-}
-
-function closeSlotModal() {
-  document.getElementById('slot-modal-overlay').classList.remove('open');
-}
-
-function renderSlotModal(key) {
-  const body = document.getElementById('slot-modal-body');
-  const daySlots = slots[key] || [];
-
-  if (daySlots.length === 0) {
-    body.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text3);font-size:13px">No slots scheduled for this date.</div>';
-    return;
-  }
-
-  body.innerHTML = '';
-  daySlots.forEach((s, i) => {
-    const startStr = hr12(s.start || s.start_time);
-    const endStr   = hr12(s.end   || s.end_time);
-    const type     = TYPE_LABELS[s.type] || 'Consultation';
-    const typeColor= TYPE_COLORS[s.type] || 'var(--blue)';
-    const done     = isSlotDone(s, key);
-    const status   = done
-      ? '<span style="color:#9ca3af;font-weight:600;font-size:11px">Done</span>'
-      : (s.booked || !s.is_available)
-        ? '<span style="color:var(--red);font-weight:600;font-size:11px">Booked</span>'
-        : '<span style="color:var(--green);font-weight:600;font-size:11px">Open</span>';
-    const row = document.createElement('div');
-    row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;background:var(--bg3);border-radius:8px;margin-bottom:8px;border-left:3px solid ' + typeColor;
-
-    const info = document.createElement('div');
-    info.style.flex = '1';
-    info.innerHTML = `
-      <div style="font-weight:600;font-size:13px;color:var(--text)">${startStr} – ${endStr}</div>
-      <div style="font-size:11px;color:var(--text3);margin-top:2px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-        <span style="font-weight:600;color:${typeColor}">${type}</span>
-        ${status}
-        <span>· Max ${s.maxBookings || s.consultation_limit || 1}</span>
-        ${s.teamName ? `<span>· ${s.teamName}</span>` : ''}
-        ${s.topic ? `<span>· "${s.topic}"</span>` : ''}
-      </div>`;
-
-    const actions = document.createElement('div');
-    actions.style.display = 'flex';
-    actions.style.gap = '4px';
-
-    if (s.schedule_id) {
-      const toggleBtn = document.createElement('button');
-      toggleBtn.title = s.is_available ? 'Mark unavailable' : 'Mark available';
-      toggleBtn.style.cssText = 'background:none;border:none;cursor:pointer;color:var(--text3);padding:4px;border-radius:4px;transition:background 0.15s';
-      toggleBtn.innerHTML = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>`;
-      toggleBtn.onmouseenter = () => toggleBtn.style.background = 'rgba(0,0,0,0.06)';
-      toggleBtn.onmouseleave = () => toggleBtn.style.background = 'none';
-      toggleBtn.onclick = () => {
-        toggleSlot(s.schedule_id, key, i);
-        setTimeout(() => renderSlotModal(key), 600);
-      };
-
-      const delBtn = document.createElement('button');
-      delBtn.title = 'Delete slot';
-      delBtn.style.cssText = 'background:none;border:none;cursor:pointer;color:var(--red,#f87171);padding:4px;border-radius:4px;transition:background 0.15s';
-      delBtn.innerHTML = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>`;
-      delBtn.onmouseenter = () => delBtn.style.background = 'rgba(239,68,68,0.08)';
-      delBtn.onmouseleave = () => delBtn.style.background = 'none';
-      delBtn.onclick = () => {
-        deleteSlot(key, i, s.schedule_id);
-        setTimeout(() => renderSlotModal(key), 400);
-      };
-
-      actions.appendChild(toggleBtn);
-      actions.appendChild(delBtn);
-    }
-
-    row.appendChild(info);
-    row.appendChild(actions);
-    body.appendChild(row);
-  });
-}
-
 function confirmBlock() {
   if (!pendingBlockDate) return;
   blockedDates.add(pendingBlockDate.key);

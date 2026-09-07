@@ -78,7 +78,22 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
 .notif-btn{width:36px;height:36px;border-radius:9px;background:rgba(255,255,255,0.06);border:1px solid rgba(201,168,44,0.2);display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative}
 .notif-btn svg{width:16px;height:16px;stroke:rgba(255,255,200,0.7);fill:none;stroke-width:2}
 .notif-dot{position:absolute;top:5px;right:5px;width:6px;height:6px;border-radius:50%;background:var(--red);border:1.5px solid var(--navy-mid)}
-.content{flex:1;overflow-y:auto;padding:26px}
+/* min-height:0 is what makes the scrolling work. A flex item defaults to
+   min-height:auto, which means this box refuses to shrink below its own
+   content - so instead of becoming as tall as .main and scrolling, it grew
+   past it, and .main's overflow:hidden cut the rest off with no way to
+   reach it. */
+.content{flex:1;min-height:0;overflow-y:auto;padding:26px}
+
+/* The skeleton wrapper sits between .main and .content, and the reveal
+   script sets its display inline - usually block. That broke the scroll
+   chain: .content's flex:1 and overflow-y:auto mean nothing inside a plain
+   block parent, so it grew to its full height, overflowed .main, and
+   .main's overflow:hidden cut the rest off with no way to reach it.
+
+   Making the wrapper itself the scroller works whichever display the
+   script sets, because it IS a flex item of .main. */
+#real-content{flex:1;min-height:0;overflow-y:auto}
 .content::-webkit-scrollbar{width:4px}
 .content::-webkit-scrollbar-thumb{background:var(--border)}
 
