@@ -62,9 +62,10 @@ class ExpertPagesStillRenderTest extends TestCase
     {
         $html = $this->actingAs($this->expert, 'expert')->get('/instructor/teams')->content();
 
-        $this->assertStringContainsString('Avg. Completion', $html);
-        $this->assertStringContainsString('Overdue Items', $html);
-        $this->assertStringContainsString('On Track', $html);
+        // The tiles became one summary line, so these are its words now.
+        $this->assertStringContainsString('average completion', $html);
+        $this->assertStringContainsString('overdue', $html);
+        $this->assertStringContainsString('teams-summary', $html);
     }
 
     /** The controls the redesign must not lose. */
