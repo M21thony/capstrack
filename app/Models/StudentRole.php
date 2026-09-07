@@ -15,14 +15,20 @@ class StudentRole extends Model
     // any write through this model asked for columns that are not there.
     public $timestamps = false;
 
+    // s_role_description was missing here, so anything writing a role's
+    // duties had them dropped without a word. It only appeared to work when
+    // seeded through `artisan db:seed`, which unguards every model first.
     protected $fillable = [
         's_role_name',
+        's_role_description',
     ];
 
-    // There's no separate "Leader" role in student_roles - the Project
-    // Head/Network Engineer is always the team leader, so that's the role_id
-    // assigned whenever code needs "the leader's role".
-    public const LEADER_ROLE_NAME = 'Project Head/Network Engineer';
+    // There is no separate "Leader" role in student_roles. The Project
+    // Head is always the team leader, so this is the role_id assigned
+    // wherever the code needs "the leader's role". The name has to match
+    // StudentRoleSeeder exactly or leaderRoleId() answers null, which is
+    // silent - every leader created then gets no role at all.
+    public const LEADER_ROLE_NAME = 'Project Head/Database Designer';
 
     public static function leaderRoleId(): ?int
     {
