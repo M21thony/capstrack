@@ -1378,7 +1378,14 @@ class TeamController extends Controller
             return response()->json(['classmates' => [], 'error' => 'Team is already full.']);
         }
 
-        $availableSlots = $maxMembers - $currentCount;
+        // Seats left, counting invitations already out - those hold a seat
+        // until they are answered.
+        $pendingCount = TeamInvitation::where('team_id', $myTeam->team_id)
+            ->where('type', 'invite')
+            ->where('status', 'pending')
+            ->count();
+
+        $availableSlots = max(0, $maxMembers - $currentCount - $pendingCount);
 
         // Anyone already sitting on an unanswered invitation from this team.
         // They stay in the list, marked, rather than being invited twice.
@@ -1437,7 +1444,17 @@ class TeamController extends Controller
                 'has_team' => $classmate->team_id !== null,
                 'is_pending_invite' => in_array($classmate->student_id, $pendingInviteReceiverIds, true),
             ];
-        });
+        })
+            // Somebody already on a team is not somebody you can invite, so
+            // they are not on the list. They used to be shown greyed out with
+            // "Has team", which fills the list with names that are only there
+            // to be scrolled past.
+            //
+            // Anyone holding an unanswered invitation from THIS team stays,
+            // marked, so a leader can see they have already asked them rather
+            // than wondering where they went.
+            ->reject(fn ($c) => $c['has_team'])
+            ->values();
 
         return response()->json([
             'classmates' => $classmates,

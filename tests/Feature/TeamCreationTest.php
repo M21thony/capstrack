@@ -719,7 +719,14 @@ class TeamCreationTest extends TestCase
     // is older than the split this branch made between a team that stopped
     // taking members and one that turned its pre-proposals in.
 
-    public function test_leader_sees_all_classmates_in_invite_modal_including_those_with_teams(): void
+    /**
+     * The picker lists classmates a leader can actually invite.
+     *
+     * It used to list everyone in the section and grey out the ones already
+     * on a team, which filled the list with names that were only there to be
+     * scrolled past. They are left out now.
+     */
+    public function test_the_invite_list_leaves_out_classmates_who_already_have_a_team(): void
     {
         $course = 'Bachelor of Science in Information Technology';
         $yearSection = '3rd · B';
@@ -781,17 +788,14 @@ class TeamCreationTest extends TestCase
 
         $ids = array_column($data['classmates'], 'student_id');
 
-        // Leader should see both classmates (same course + year_section + school_year)
-        $this->assertContains($studentWithTeam->student_id, $ids, 'Classmate with existing team should appear in list');
+        // Same course, year and school year - so the only reason to leave
+        // one out is that they are already on a team.
         $this->assertContains($studentWithoutTeam->student_id, $ids, 'Classmate without team should appear in list');
+        $this->assertNotContains($studentWithTeam->student_id, $ids, 'A classmate already on a team cannot be invited');
         $this->assertNotContains($leader->student_id, $ids, 'Leader should not appear in their own list');
 
-        // Verify has_team flags
-        $withTeam = collect($data['classmates'])->firstWhere('student_id', $studentWithTeam->student_id);
         $withoutTeam = collect($data['classmates'])->firstWhere('student_id', $studentWithoutTeam->student_id);
-
-        $this->assertTrue($withTeam['has_team'], 'Classmate with team should have has_team = true');
-        $this->assertFalse($withoutTeam['has_team'], 'Classmate without team should have has_team = false');
+        $this->assertFalse($withoutTeam['has_team']);
     }
 
     public function test_non_leader_cannot_access_available_classmates(): void
@@ -910,9 +914,14 @@ class TeamCreationTest extends TestCase
 
         $ids = array_column($data['classmates'], 'student_id');
 
-        // Both classmates should appear despite the school_year mismatch
-        $this->assertContains($studentWithTeam->student_id, $ids, 'Classmate with team should appear despite corrupted leader school_year');
+        // The fallback is what this is testing: the classmate who can be
+        // invited is found despite the school_year mismatch.
         $this->assertContains($studentWithoutTeam->student_id, $ids, 'Classmate without team should appear despite corrupted leader school_year');
+
+        // Somebody already on a team is not on the list at all now - they
+        // cannot be invited, so listing them greyed out only filled the
+        // picker with names to scroll past.
+        $this->assertNotContains($studentWithTeam->student_id, $ids, 'A classmate who already has a team is not invitable');
         $this->assertNotContains($leader->student_id, $ids, 'Leader should not appear in their own list');
     }
 

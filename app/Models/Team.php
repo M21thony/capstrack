@@ -43,6 +43,65 @@ class Team extends Model
         return $this->capstoneStage() === 1;
     }
 
+    /**
+     * Why this team cannot take another invitation, or null if it can.
+     *
+     * On the model because there are two invitation controllers - a web one
+     * and an api one - and the rules were written into only one of them. The
+     * page posts to the other, so a team of two could be sent three
+     * invitations for two seats and every one of them went through.
+     *
+     * @param  int  $adding  How many invitations are about to be sent at once.
+     */
+    public function inviteBlockReason(int $adding = 1): ?string
+    {
+        if (! $this->mayAddMembers()) {
+            return 'Capstone 2 has started, so a team keeps the members it '
+                .'finished Capstone 1 with. Members cannot be added now.';
+        }
+
+        $limit = $this->memberLimit();
+        $members = StudentSchoolYear::where('team_id', $this->team_id)->count();
+        $pending = $this->pendingInvitationCount();
+        $free = $this->seatsFree();
+
+        if ($free >= $adding) {
+            return null;
+        }
+
+        if ($free <= 0) {
+            return $pending > 0
+                ? 'Your team is full once the '.$pending.' invitation'.($pending === 1 ? '' : 's')
+                    .' already out '.($pending === 1 ? 'is' : 'are').' answered - '.$members.' of '.$limit.' seats taken.'
+                : 'Your team already has the maximum of '.$limit.' members.';
+        }
+
+        return 'Only '.$free.' seat'.($free === 1 ? '' : 's').' left, and you picked '.$adding.'.'
+            .($pending > 0 ? ' '.$pending.' invitation'.($pending === 1 ? ' is' : 's are').' still waiting to be answered.' : '');
+    }
+
+    /**
+     * Seats a leader may still fill.
+     *
+     * Invitations already out hold a seat. Three sent for one seat is the
+     * same overflow arriving a day later, when the leader has forgotten and
+     * the people involved have not.
+     */
+    public function seatsFree(): int
+    {
+        $taken = StudentSchoolYear::where('team_id', $this->team_id)->count()
+            + $this->pendingInvitationCount();
+
+        return max(0, $this->memberLimit() - $taken);
+    }
+
+    public function pendingInvitationCount(): int
+    {
+        return TeamInvitation::where('team_id', $this->team_id)
+            ->where('status', 'pending')
+            ->count();
+    }
+
     /** The smallest and largest team a CaPSA may allow. */
     public const MIN_MEMBERS = 3;
 

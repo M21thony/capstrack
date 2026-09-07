@@ -103,15 +103,15 @@ class InvitationController extends Controller
         // there for the title, the proposal or any of the work being graded,
         // which is what the department's rule is about. Checked here as well
         // as in the page, because the page can only hide a button.
-        if ($closed = $this->refuseIfCapstoneTwo($teamId)) {
-            return $closed;
-        }
-
         // Only when inviting. A request is somebody asking to be let in, and
         // the leader decides on it - refusing at this end would tell the
         // asker the team is full before the leader has even seen them.
-        if ($validated['type'] === 'invite' && $full = $this->refuseIfFull($teamId)) {
-            return $full;
+        if ($validated['type'] === 'invite') {
+            $team = Team::find($teamId);
+
+            if ($team && $reason = $team->inviteBlockReason()) {
+                return response()->json(['message' => $reason], 422);
+            }
         }
 
         if ($validated['type'] === 'request') {
