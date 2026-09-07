@@ -458,7 +458,7 @@
            the only way to change them was editing each one. This is the way
            back out: replace what is open, keep anything a team has booked. --}}
       <label class="av-replace" id="av-replace-wrap" style="display:none">
-        <input type="checkbox" id="av-replace">
+        <input type="checkbox" id="av-replace" onchange="countAvailSlots()">
         <span>
           <b>Replace what I have open now</b>
           <em id="av-replace-detail"></em>
@@ -1969,6 +1969,11 @@ function openAvail() {
       + 'Untick to keep them and add to them. Booked slots are never touched.';
   }
 
+  // After the tick box is set, not before: drawAvailRows() counts at the end
+  // of its own run, when the box still holds the last state, so the button
+  // was reading a stale answer and never offered to clear.
+  countAvailSlots();
+
   document.getElementById('avail-overlay').classList.add('open');
 }
 
@@ -2072,10 +2077,27 @@ function countAvailSlots() {
   const label = avDuration === 60 ? 'one-hour' : avDuration + '-minute';
   const box = document.getElementById('av-count');
   const save = document.getElementById('av-save');
+  const replacing = document.getElementById('av-replace').checked;
+  const clearable = replaceableSlots().length;
 
   if (!made.length) {
+    // No days AND replace ticked is not a mistake - it is how you take your
+    // availability down. There was no other way to do it: the button was
+    // simply disabled, so replacing could only ever swap one set of slots
+    // for another and never leave you with none.
+    if (replacing && clearable) {
+      box.innerHTML = 'No days picked, so this <b>clears your availability</b> - the '
+        + clearable + ' slot' + (clearable === 1 ? '' : 's') + ' nobody has booked. '
+        + 'Teams will have nothing of yours to book until you set some again.';
+      save.disabled = false;
+      save.textContent = 'Clear my availability';
+
+      return;
+    }
+
     box.innerHTML = 'Pick at least one day, and make sure its hours are long enough for one consultation.';
     save.disabled = true;
+    save.textContent = 'Create these slots';
 
     return;
   }
@@ -2083,6 +2105,7 @@ function countAvailSlots() {
   box.innerHTML = 'That makes <b>' + made.length + ' bookable slot' + (made.length === 1 ? '' : 's')
     + ' a week</b>, in ' + label + ' pieces. Teams choose their own; you are not booking anyone in.';
   save.disabled = false;
+  save.textContent = replacing && clearable ? 'Replace with these slots' : 'Create these slots';
 }
 
 /**
@@ -2095,18 +2118,20 @@ function countAvailSlots() {
  */
 async function saveAvailability() {
   const made = availSlots();
+  const replacing = document.getElementById('av-replace').checked;
 
-  if (!made.length) return;
+  // Nothing to create and nothing to clear is the only real no-op.
+  if (!made.length && !(replacing && replaceableSlots().length)) return;
 
   const save = document.getElementById('av-save');
   save.disabled = true;
-  save.textContent = 'Creating…';
+  save.textContent = made.length ? 'Saving…' : 'Clearing…';
 
   let created = 0;
   let skipped = 0;
   let removed = 0;
 
-  if (document.getElementById('av-replace').checked) {
+  if (replacing) {
     for (const old of replaceableSlots()) {
       try {
         await apiFetch('/instructor/schedule/slots/' + old.schedule_id, { method: 'DELETE' });
@@ -2155,9 +2180,11 @@ async function saveAvailability() {
   closeAvail();
 
   showToast(
-    (removed ? removed + ' cleared, ' : '')
-      + created + ' slot' + (created === 1 ? '' : 's') + ' opened'
-      + (skipped ? ', ' + skipped + ' skipped as already taken' : ''),
+    made.length
+      ? (removed ? removed + ' cleared, ' : '')
+        + created + ' slot' + (created === 1 ? '' : 's') + ' opened'
+        + (skipped ? ', ' + skipped + ' skipped as already taken' : '')
+      : 'Availability cleared - ' + removed + ' slot' + (removed === 1 ? '' : 's') + ' removed.',
     created || removed ? 'success' : 'error'
   );
 
