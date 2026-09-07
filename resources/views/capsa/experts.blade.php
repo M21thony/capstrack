@@ -887,15 +887,17 @@ const ROLE_NAME_TO_ID = {{ Illuminate\Support\Js::from($roleNameToId) }};
     </div>
 
     <div class="ae-field">
-      <label class="ae-label" for="addExpertName">Full name <span class="ae-req">(required)</span></label>
-      <input type="text" id="addExpertName" class="ct-modal-input" placeholder="Mark Anthony Balilla" autocomplete="off" style="margin-bottom:0">
+      <label class="ae-label" for="addExpertName">Full name <span class="ae-opt">(optional)</span></label>
+      <input type="text" id="addExpertName" class="ct-modal-input" placeholder="Fills in when they first sign in" autocomplete="off" style="margin-bottom:0">
     </div>
 
-    {{-- Required here, unlike the bulk upload: adding one person is a
-         deliberate act, and one with no role in it leaves an account that can
-         sign in and do nothing. --}}
+    {{-- Neither name nor role is asked for. The address is the whole of
+         what is needed to make the account; Google gives the real spelling
+         of their name the first time they sign in, and the role is the
+         CaPSA's to set, now or from the row afterwards. Add CaPSA has always
+         worked this way. --}}
     <div class="ae-field">
-      <label class="ae-label">Role <span class="ae-req">(required)</span></label>
+      <label class="ae-label">Role <span class="ae-opt">(optional)</span></label>
       <div class="ae-roles">
         <label class="ae-role"><input type="checkbox" value="adviser">Adviser</label>
         <label class="ae-role"><input type="checkbox" value="consultant">Consultant</label>
@@ -1024,8 +1026,6 @@ function addExpert() {
   // Said beside the fields rather than in a toast that has gone by the time
   // they look back at what they typed.
   if (!document.getElementById('addExpertEmail').value.trim()) return fail('Type an email address.');
-  if (!document.getElementById('addExpertName').value.trim()) return fail('Type their full name.');
-  if (!roles.length) return fail('Choose at least one role.');
 
   box.style.display = 'none';
   btn.disabled = true;
