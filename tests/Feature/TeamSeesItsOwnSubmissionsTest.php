@@ -159,6 +159,36 @@ class TeamSeesItsOwnSubmissionsTest extends TestCase
     }
 
     /**
+     * The Consultation Log Form names every member of the team as a
+     * proponent, and only the one who uploaded could download it. Everybody
+     * else got a 403 on a form with their own name printed on it.
+     */
+    public function test_a_teammate_can_download_the_consultation_log(): void
+    {
+        $review = $this->reviewedDocumentBy($this->uploader);
+
+        $this->actingAs($this->teammate, 'web')
+            ->get(route('student.review.clf', $review->review_id))
+            ->assertOk();
+    }
+
+    /** Still not somebody else's log, though. */
+    public function test_another_team_cannot_download_the_consultation_log(): void
+    {
+        $review = $this->reviewedDocumentBy($this->uploader);
+
+        $outsider = $this->student('Rosa', 'clf-outsider@my.cspc.edu.ph');
+        $otherTeam = Team::create(['team_name' => 'Others', 'leader_id' => $outsider->student_id]);
+        StudentSchoolYear::create([
+            'student_id' => $outsider->student_id, 'team_id' => $otherTeam->team_id,
+        ]);
+
+        $this->actingAs($outsider, 'web')
+            ->get(route('student.review.clf', $review->review_id))
+            ->assertForbidden();
+    }
+
+    /**
      * A chapter is the team's, so its version count is too. Both members
      * sending "Chapter 1" used to be told they were on Version 1 of it.
      */
