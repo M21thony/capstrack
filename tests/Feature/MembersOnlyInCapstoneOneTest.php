@@ -27,18 +27,6 @@ class MembersOnlyInCapstoneOneTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function term(int $stage, int $semester): void
-    {
-        Term::query()->update(['is_active' => false]);
-        Term::create([
-            'school_year' => Term::currentSchoolYear(),
-            'semester' => $semester,
-            'capstone_stage' => $stage,
-            'is_active' => true,
-        ]);
-        Term::forgetActive();
-    }
-
     private function student(string $email, string $yearSection = '3rd · A'): Student
     {
         $s = Student::create([
@@ -61,35 +49,44 @@ class MembersOnlyInCapstoneOneTest extends TestCase
         return $team;
     }
 
-    public function test_capstone_one_leaves_the_team_open(): void
+    public function test_a_third_year_team_is_capstone_one_and_open(): void
     {
-        $this->term(stage: 1, semester: 2);
+        $team = $this->teamOf($this->student('a@my.cspc.edu.ph', '3rd · A'));
 
-        $this->assertSame(1, Team::capstoneStage());
-        $this->assertTrue($this->teamOf($this->student('a@my.cspc.edu.ph'))->mayAddMembers());
+        $this->assertSame(1, $team->capstoneStage());
+        $this->assertTrue($team->mayAddMembers());
     }
 
-    public function test_capstone_two_settles_the_team(): void
+    public function test_a_fourth_year_team_is_capstone_two_and_settled(): void
     {
-        $this->term(stage: 2, semester: 1);
+        $team = $this->teamOf($this->student('b@my.cspc.edu.ph', '4th · A'));
 
-        $this->assertSame(2, Team::capstoneStage());
-        $this->assertFalse($this->teamOf($this->student('b@my.cspc.edu.ph'))->mayAddMembers());
+        $this->assertSame(2, $team->fresh()->capstoneStage());
+        $this->assertFalse($team->fresh()->mayAddMembers());
     }
 
-    /** A fresh install has no term at all; refusing everybody would be worse. */
-    public function test_no_term_set_up_is_treated_as_capstone_one(): void
+    /** One member in 4th year settles the whole team. */
+    public function test_any_fourth_year_member_settles_the_team(): void
     {
-        Term::query()->delete();
-        Term::forgetActive();
+        $team = $this->teamOf($this->student('lead@my.cspc.edu.ph', '3rd · A'));
 
-        $this->assertSame(1, Team::capstoneStage());
+        $older = $this->student('older@my.cspc.edu.ph', '4th · A');
+        StudentSchoolYear::create(['student_id' => $older->student_id, 'team_id' => $team->team_id]);
+
+        $this->assertSame(2, $team->fresh()->capstoneStage());
+    }
+
+    /** No year recorded is read as 3rd year - refusing everybody is worse. */
+    public function test_an_unknown_year_is_treated_as_capstone_one(): void
+    {
+        $student = $this->student('noyear@my.cspc.edu.ph');
+        $student->update(['year_section' => '']);
+
+        $this->assertSame(1, $student->fresh()->capstoneStage());
     }
 
     public function test_inviting_during_capstone_two_is_refused(): void
     {
-        $this->term(stage: 2, semester: 1);
-
         $leader = $this->student('lead@my.cspc.edu.ph', '4th · A');
         $team = $this->teamOf($leader);
         $outsider = $this->student('out@my.cspc.edu.ph', '4th · A');
@@ -109,16 +106,15 @@ class MembersOnlyInCapstoneOneTest extends TestCase
     /**
      * An invitation sent in Capstone 1 cannot be accepted in Capstone 2.
      *
-     * The term turns over between the two, so a check made only at sending
-     * would let a stale invitation add a member after the cut-off.
+     * The list is uploaded again as 4th year between the two, so a check made
+     * only at sending would let a stale invitation add a member after the
+     * team has already moved up.
      */
-    public function test_accepting_after_the_term_turns_over_is_refused(): void
+    public function test_accepting_after_the_team_moves_up_is_refused(): void
     {
-        $this->term(stage: 1, semester: 2);
-
-        $leader = $this->student('lead2@my.cspc.edu.ph');
+        $leader = $this->student('lead2@my.cspc.edu.ph', '3rd · A');
         $team = $this->teamOf($leader);
-        $joiner = $this->student('join@my.cspc.edu.ph');
+        $joiner = $this->student('join@my.cspc.edu.ph', '3rd · A');
 
         $invitation = TeamInvitation::create([
             'sender_id' => $leader->student_id,
@@ -128,7 +124,8 @@ class MembersOnlyInCapstoneOneTest extends TestCase
             'status' => 'pending',
         ]);
 
-        $this->term(stage: 2, semester: 1);
+        // The section is uploaded again as 4th year: the team has moved up.
+        $leader->update(['year_section' => '4th · A']);
 
         $this->actingAs($joiner, 'web')
             ->patchJson('/api/invitations/'.$invitation->id, ['status' => 'accepted'])

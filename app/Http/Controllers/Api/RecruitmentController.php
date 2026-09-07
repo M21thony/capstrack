@@ -61,6 +61,15 @@ class RecruitmentController extends Controller
 
     public function store(Request $request): JsonResponse
     {
+        // Capstone 2: teams are settled, so there is nothing to recruit for
+        // or form. Refused here as well as hidden on the page, and with a
+        // reason - an empty list with no explanation reads as a broken page.
+        if ($request->user()->capstoneStage() !== 1) {
+            return response()->json([
+                'message' => 'Capstone 2 has started. Teams keep the members they '
+                    .'finished Capstone 1 with, so new teams and recruitment posts are closed.',
+            ], 422);
+        }
         $validated = $request->validate([
             'recruitment_goal' => ['required', 'string', 'in:build_a_team,find_a_team'],
             'looking_for' => ['nullable', 'string', 'max:500'],

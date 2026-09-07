@@ -10,25 +10,29 @@ class Team extends Model
     protected $table = 'team';
 
     /**
-     * Which half of the subject the department is currently running.
+     * Which Capstone this team is in, read from its members' year.
      *
-     * Capstone 1 is the second semester of 3rd year; Capstone 2 is the first
-     * semester of 4th year. So it is not something a student's year answers -
-     * a 3rd year in the first semester has not started Capstone 1 yet, and
-     * the year label alone cannot tell those apart.
+     * A CaPSA uploads a section's list when it starts capstone and uploads it
+     * again as 4th year when it moves up, so the year on the roster turns
+     * over exactly when the stage does. That makes it the signal - no
+     * separate declaration to keep in step with the lists.
      *
-     * The active term already carries it, declared by the Admin, and that is
-     * the only thing that knows. Capstone 1 when nothing is set up, because a
-     * fresh install has no terms and refusing every member would be worse
-     * than allowing them.
+     * Any member in 4th year settles the whole team. That is the safe way
+     * round: it closes the roster rather than reopening it.
      */
-    public static function capstoneStage(): int
+    public function capstoneStage(): int
     {
-        return (int) (Term::active()?->capstone_stage ?: 1);
+        $years = $this->members->map(fn ($m) => $m->yearNumber())->filter();
+
+        if ($years->isEmpty()) {
+            return ($this->leader?->yearNumber() ?? 3) >= 4 ? 2 : 1;
+        }
+
+        return $years->max() >= 4 ? 2 : 1;
     }
 
     /**
-     * Whether teams may still take members.
+     * Whether this team may still take members.
      *
      * Only during Capstone 1. Somebody joining in Capstone 2 was not there
      * for the title, the proposal, or any of the work being graded - which is
@@ -36,7 +40,7 @@ class Team extends Model
      */
     public function mayAddMembers(): bool
     {
-        return static::capstoneStage() === 1;
+        return $this->capstoneStage() === 1;
     }
 
     /** The smallest and largest team a CaPSA may allow. */

@@ -95,6 +95,7 @@
             <div style="font-size:11px;color:var(--red);margin-top:4px">{{ $message }}</div>
           @enderror
         </div>
+
         <button type="submit" class="btn btn-primary">Save</button>
       </form>
     </div>
