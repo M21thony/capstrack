@@ -142,7 +142,22 @@ class AdminExpertsController extends Controller
             ], 422);
         }
 
-        $expert = CapstoneExpert::where('email', $email)->first();
+
+        // Never the Admin. Their account runs the system; it is not an
+        // expert, and giving it a student-facing role is what put them in
+        // front of every team on student/experts. Hiding them from the
+        // directory stopped the suggestion, not this - an address typed out
+        // in full arrives here just the same.
+        $existing = CapstoneExpert::withTrashed()->where('email', $email)->first();
+
+        if ($existing && $existing->is_admin) {
+            return response()->json([
+                'success' => false,
+                'message' => 'That is the system administrator account. It cannot be given a role here.',
+            ], 422);
+        }
+
+        $expert = $existing;
         $created = false;
 
         if (! $expert) {
@@ -467,7 +482,22 @@ class AdminExpertsController extends Controller
             ], 500);
         }
 
-        $expert = CapstoneExpert::where('email', $email)->first();
+
+        // Never the Admin. Their account runs the system; it is not an
+        // expert, and giving it a student-facing role is what put them in
+        // front of every team on student/experts. Hiding them from the
+        // directory stopped the suggestion, not this - an address typed out
+        // in full arrives here just the same.
+        $existing = CapstoneExpert::withTrashed()->where('email', $email)->first();
+
+        if ($existing && $existing->is_admin) {
+            return response()->json([
+                'success' => false,
+                'message' => 'That is the system administrator account. It cannot be given a role here.',
+            ], 422);
+        }
+
+        $expert = $existing;
         $created = false;
 
         if (! $expert) {
