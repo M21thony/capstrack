@@ -76,7 +76,8 @@ class CapsaStudentCrudTest extends TestCase
         $this->assertSame(0, Student::count());
     }
 
-    public function test_the_same_address_is_not_added_twice(): void
+    /** Somebody already in a section is not added a second time. */
+    public function test_a_student_already_in_a_section_is_not_added_again(): void
     {
         $existing = $this->student();
 
@@ -87,7 +88,77 @@ class CapsaStudentCrudTest extends TestCase
                 'course' => 'BSIT', 'year' => 4, 'section' => 'A',
             ])
             ->assertStatus(422)
-            ->assertJsonValidationErrors('email');
+            ->assertJsonFragment(['success' => false]);
+
+        $this->assertSame(1, Student::where('email', $existing->email)->count());
+        // And not quietly renamed by the attempt.
+        $this->assertSame('Angelo', $existing->fresh()->f_name);
+    }
+
+    /** Nor is somebody another CaPSA is handling. */
+    public function test_a_student_in_another_section_cannot_be_taken(): void
+    {
+        $theirs = $this->student('BSIT', '4th · C');
+
+        $this->actingAs($this->capsa(['BSIT-4A']), 'expert')
+            ->postJson(route('capsa.students.store'), [
+                'email' => $theirs->email,
+                'f_name' => 'Angelo', 'l_name' => 'Bermudo',
+                'course' => 'BSIT', 'year' => 4, 'section' => 'A',
+            ])
+            ->assertStatus(422);
+
+        $this->assertSame('4th · C', $theirs->fresh()->year_section);
+    }
+
+    /**
+     * Removing a student keeps their account and only clears the section, so
+     * the address is still in the table afterwards. Adding refused any
+     * address already there, which made a removal impossible to undo: the
+     * CaPSA was told the email already exists, with no way forward.
+     */
+    public function test_a_removed_student_can_be_added_back(): void
+    {
+        $student = $this->student();
+        $capsa = $this->capsa();
+
+        $this->actingAs($capsa, 'expert')
+            ->deleteJson(route('capsa.students.destroy', $student))
+            ->assertOk();
+
+        $this->assertNull($student->fresh()->year_section);
+
+        $this->actingAs($capsa, 'expert')
+            ->postJson(route('capsa.students.store'), [
+                'email' => $student->email,
+                'f_name' => 'Angelo', 'l_name' => 'Bermudo',
+                'course' => 'BSIT', 'year' => 4, 'section' => 'A',
+            ])
+            ->assertOk()
+            ->assertJsonFragment(['readded' => true]);
+
+        $this->assertSame('4th · A', $student->fresh()->year_section);
+        // The same person, not a second account for them.
+        $this->assertSame(1, Student::where('email', $student->email)->count());
+        $this->assertSame($student->student_id, Student::where('email', $student->email)->first()->student_id);
+    }
+
+    /** Only the years that take capstone can be assigned. */
+    public function test_a_student_cannot_be_put_in_first_or_second_year(): void
+    {
+        $capsa = $this->capsa(['BSIT-1A', 'BSIT-4A']);
+
+        $this->actingAs($capsa, 'expert')
+            ->postJson(route('capsa.students.store'), [
+                'email' => 'new.student@my.cspc.edu.ph',
+                'f_name' => 'New', 'l_name' => 'Student',
+                'course' => 'BSIT', 'year' => 1, 'section' => 'A',
+            ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('year');
+
+        $this->assertSame(3, Student::CAPSTONE_YEARS[0]);
+        $this->assertSame(4, Student::CAPSTONE_YEARS[1]);
     }
 
     public function test_a_section_can_be_changed(): void

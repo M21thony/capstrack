@@ -174,6 +174,9 @@ class Student extends Authenticatable
      *
      * Returns null when the course cannot be mapped or inputs are empty.
      */
+    /** Capstone is a 3rd and 4th year subject; no other year uses this system. */
+    public const CAPSTONE_YEARS = [3, 4];
+
     public static function computeSectionLabel(?string $course, ?string $yearSection): ?string
     {
         if (! $course || ! $yearSection) {

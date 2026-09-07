@@ -96,12 +96,20 @@ class StudentController extends Controller
     public function store(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'email' => ['required', 'email', 'max:190', Rule::unique('students', 'email')],
+            // Not unique:students. Removing a student from a section keeps
+            // their account and only clears the section, so the address of
+            // somebody you removed a minute ago is still in the table -
+            // refusing it here made that removal impossible to undo. An
+            // address that belongs to somebody another CaPSA still handles
+            // is refused below, where the reason can be stated.
+            'email' => ['required', 'email', 'max:190'],
             'f_name' => ['required', 'string', 'max:60'],
             'l_name' => ['required', 'string', 'max:60'],
             'student_number' => ['nullable', 'string', 'max:30'],
             'course' => ['required', Rule::in(array_keys(Student::PROGRAM_COURSES))],
-            'year' => ['required', 'integer', 'between:1,5'],
+            // Only 3rd and 4th year take capstone, so those are the only
+            // years a student can be put into from here.
+            'year' => ['required', 'integer', Rule::in(Student::CAPSTONE_YEARS)],
             'section' => ['required', 'string', 'max:4', 'regex:/^[A-Za-z]+$/'],
         ]);
 
@@ -115,16 +123,44 @@ class StudentController extends Controller
             ], 422);
         }
 
-        // The account is a placeholder until they sign in with this address -
-        // which is why nothing here asks for a password.
-        $student = Student::create([
-            'email' => $email,
+        $existing = Student::whereRaw('LOWER(email) = ?', [$email])->first();
+
+        // Somebody already in a section is somebody else's student, or
+        // already yours - either way this is not the way to move them.
+        if ($existing && filled($existing->year_section)) {
+            return response()->json([
+                'success' => false,
+                'message' => $this->mine($existing)
+                    ? 'That student is already in one of your sections.'
+                    : 'That address belongs to a student in another section.',
+            ], 422);
+        }
+
+        $fields = [
             'f_name' => trim($data['f_name']),
             'l_name' => trim($data['l_name']),
             'student_number' => $data['student_number'] ?? null,
             'course' => $data['course'],
             'year_section' => $yearSection,
-        ]);
+        ];
+
+        // Taking back a student who was removed from a section, rather than
+        // making a second account for the same person. Their team, their
+        // submissions and everything else hanging off student_id stay.
+        if ($existing) {
+            $existing->update($fields);
+
+            return response()->json([
+                'success' => true,
+                'student' => $existing,
+                'readded' => true,
+                'message' => trim($existing->f_name.' '.$existing->l_name).' is back in your section, with their account and history intact.',
+            ]);
+        }
+
+        // The account is a placeholder until they sign in with this address -
+        // which is why nothing here asks for a password.
+        $student = Student::create(['email' => $email] + $fields);
 
         return response()->json(['success' => true, 'student' => $student], 201);
     }
@@ -148,7 +184,7 @@ class StudentController extends Controller
             'l_name' => ['sometimes', 'string', 'max:60'],
             'student_number' => ['sometimes', 'nullable', 'string', 'max:30'],
             'course' => ['sometimes', Rule::in(array_keys(Student::PROGRAM_COURSES))],
-            'year' => ['sometimes', 'integer', 'between:1,5'],
+            'year' => ['sometimes', 'integer', Rule::in(Student::CAPSTONE_YEARS)],
             'section' => ['sometimes', 'string', 'max:4', 'regex:/^[A-Za-z]+$/'],
         ]);
 

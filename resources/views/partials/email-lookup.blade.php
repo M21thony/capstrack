@@ -19,6 +19,10 @@
 
   const kind = @json($kind ?? 'expert');
   const nameInput = @json($nameInput ?? null);
+  // Optional: id of a box per field, filled in when somebody is picked. This
+  // is what makes re-adding a student you removed a matter of choosing their
+  // section rather than retyping everything you already had.
+  const fillMap = @json($fields ?? []);
   const url = @json(route('directory.people'));
 
   // The list hangs off a wrapper so it lands under the box wherever the box
@@ -50,6 +54,13 @@
       // Only fill a name nobody has typed over.
       if (el && !el.value.trim()) el.value = person.name;
     }
+
+    Object.keys(fillMap).forEach(function (key) {
+      const el = document.getElementById(fillMap[key]);
+      // Same rule: never overwrite something already typed.
+      if (el && !el.value.trim() && person[key]) el.value = person[key];
+    });
+
     close();
     input.dispatchEvent(new Event('change', { bubbles: true }));
   }
