@@ -116,7 +116,7 @@ class StudentSignupGateTest extends TestCase
         StudentRoster::create([
             'email' => 'prepared@my.cspc.edu.ph', 'name' => 'Prepared Account',
             'student_number' => '221001199', 'section' => '4th B',
-            'program' => 'BSIT', 'school_year' => Student::schoolYearLabel(),
+            'program' => 'BSIT', 'school_year' => \App\Models\Term::currentSchoolYear(),
         ]);
 
         $this->signIn('prepared@my.cspc.edu.ph')->assertOk();

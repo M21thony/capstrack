@@ -159,7 +159,8 @@ class StudentController extends Controller
                 'student_number' => $data['student_number'] ?? null,
                 'section' => $yearSection,
                 'program' => $data['course'],
-                'school_year' => Student::schoolYearLabel(),
+                // The school year, from wherever the Admin set it.
+                'school_year' => \App\Models\Term::currentSchoolYear(),
             ]
         );
 
