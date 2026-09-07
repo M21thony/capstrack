@@ -460,7 +460,7 @@
       <label class="av-replace" id="av-replace-wrap" style="display:none">
         <input type="checkbox" id="av-replace">
         <span>
-          <b>Replace my current open slots</b>
+          <b>Replace what I have open now</b>
           <em id="av-replace-detail"></em>
         </span>
       </label>
@@ -1956,22 +1956,37 @@ function openAvail() {
   const detail = document.getElementById('av-replace-detail');
 
   wrap.style.display = clearable.length ? 'flex' : 'none';
-  document.getElementById('av-replace').checked = false;
+
+  // On by default. "Set your weekly availability" reads as a statement of
+  // what the week is, not an addition to it - leaving it off meant the
+  // dialog quietly added a second set beside the old one, and the old slots
+  // looked impossible to get rid of. Untick it to add rather than replace.
+  document.getElementById('av-replace').checked = clearable.length > 0;
 
   if (clearable.length) {
-    detail.textContent = 'Removes the ' + clearable.length + ' weekly slot'
-      + (clearable.length === 1 ? '' : 's') + ' nobody has booked, then opens the ones above.';
+    detail.textContent = 'Clears the ' + clearable.length + ' slot'
+      + (clearable.length === 1 ? '' : 's') + ' nobody has booked and opens these instead. '
+      + 'Untick to keep them and add to them. Booked slots are never touched.';
   }
 
   document.getElementById('avail-overlay').classList.add('open');
 }
 
-/** Every weekly slot of mine that no team has taken. */
+/**
+ * Every slot of mine that can be cleared: unbooked, and either recurring or
+ * a one-off whose date has already gone by.
+ *
+ * A one-off still ahead is left alone - somebody opened that deliberately for
+ * a particular day. One already past cannot be booked by anyone and only
+ * clutters the list.
+ */
 function replaceableSlots() {
+  const today = new Date().toISOString().slice(0, 10);
+
   return Object.values(slotsByDay)
     .flat()
-    .filter((s) => (s.recur ?? 'weekly') !== 'once')
-    .filter((s) => !(s.bookings || []).length);
+    .filter((s) => !(s.bookings || []).length)
+    .filter((s) => (s.recur ?? 'weekly') !== 'once' || (s.specific_date && s.specific_date < today));
 }
 
 function closeAvail() {
