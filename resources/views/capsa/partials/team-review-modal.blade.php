@@ -82,17 +82,37 @@
   </div>
 </div>
 
+{{-- The original document, over the verification panel.
+
+     It was an iframe in a box roughly a third the size a page of A4 needs,
+     then briefly a new tab, which is worse: it takes the CaPSA away from
+     the team they are half-way through verifying. It is the same panel the
+     student side uses to show this same file - 1000px and 90vh, which is
+     enough to read. --}}
 <div class="modal-overlay" id="pdf-preview-modal" onclick="if(event.target===this)closePdfPreview()">
-  <div class="modal-box" style="max-width:900px;width:95%;height:85vh;display:flex;flex-direction:column;padding:16px">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-shrink:0">
-      <span style="font-size:14px;font-weight:700;color:var(--text)">Original Pre-Proposal PDF</span>
-      <button type="button" onclick="closePdfPreview()" style="border:none;background:none;font-size:20px;line-height:1;cursor:pointer;color:var(--text3)" aria-label="Close">&times;</button>
+  <div class="modal-box pdf-box">
+    <div class="pdf-box-header">
+      <span class="pdf-box-title">Original Pre-Proposal</span>
+      <button type="button" onclick="closePdfPreview()" class="pdf-box-x" aria-label="Close">&times;</button>
     </div>
-    <iframe id="pdf-preview-frame" src="" style="flex:1;width:100%;border:1px solid var(--border);border-radius:8px"></iframe>
+    <iframe id="pdf-preview-frame" src="about:blank" title="Original pre-proposal PDF"></iframe>
   </div>
 </div>
 
 <style>
+  /* Wide enough to read a page in, and its own scrolling rather than the
+     panel behind it. */
+  #pdf-preview-modal{z-index:1400}
+  #pdf-preview-modal .modal-box.pdf-box{
+    width:1000px;max-width:95vw;height:90vh;max-height:90vh;
+    display:flex;flex-direction:column;padding:16px;overflow:hidden;
+  }
+  .pdf-box-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-shrink:0}
+  .pdf-box-title{font-size:14px;font-weight:700;color:var(--text)}
+  .pdf-box-x{border:none;background:none;font-size:22px;line-height:1;cursor:pointer;color:var(--text3);padding:0}
+  .pdf-box-x:hover{color:var(--text)}
+  #pdf-preview-frame{flex:1;width:100%;border:1px solid var(--border);border-radius:8px;min-height:0;background:var(--bg3)}
+
   /* Collapsed detail on each match in the duplication report. */
   .ppdup-toggle{display:block;margin-top:6px;padding:0;border:none;background:none;font-family:inherit;font-size:11px;font-weight:600;color:var(--primary,#5b5bd6);cursor:pointer;text-align:left}
   .ppdup-toggle:hover{text-decoration:underline}
@@ -346,7 +366,7 @@ function renderPreProposals(proposals, selectedId) {
       : (p.status === 'rejected' ? '<div style="font-size:11px;color:#991b1b;margin-top:6px">Rejected: ' + escapeHtml(p.rejection_reason || '') + '</div>' : '');
 
     var documentLinkHtml = p.document_url
-      ? '<button type="button" onclick="openPdfPreview(\'' + p.document_url + '\')" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;color:var(--primary,#5b5bd6);background:none;border:none;padding:0;cursor:pointer;margin-top:6px">📄 View Original PDF</button>'
+      ? '<button type="button" onclick="openPdfPreview(\'' + p.document_url + '\')" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;color:var(--primary,#5b5bd6);background:none;border:none;padding:0;cursor:pointer;margin-top:6px">View Original PDF</button>'
       : '';
 
     // Everything that is not the chosen title starts hidden, and is marked
@@ -455,13 +475,19 @@ function closePpRejectModal() {
   document.getElementById('pp-reject-modal').classList.remove('open');
 }
 
+// The document, over the panel it was opened from.
+//
+// The frame is filled on open and emptied on close: a PDF left in a hidden
+// iframe keeps its plugin alive and fetches itself again behind a panel
+// nobody is looking at.
 function openPdfPreview(url) {
-  document.getElementById('pdf-preview-frame').src = url;
-  document.getElementById('pdf-preview-modal').classList.add('open');
+  document.getElementById('pdf-preview-frame').src = url + '#toolbar=0';
+  document.getElementById('pdf-preview-modal').classList.add('open', 'active');
 }
+
 function closePdfPreview() {
-  document.getElementById('pdf-preview-modal').classList.remove('open');
-  document.getElementById('pdf-preview-frame').src = '';
+  document.getElementById('pdf-preview-modal').classList.remove('open', 'active');
+  document.getElementById('pdf-preview-frame').src = 'about:blank';
 }
 function confirmPpReject() {
   var reason = document.getElementById('pp-reject-reason').value.trim();

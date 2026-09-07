@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Capsa;
 
 use App\Http\Controllers\Controller;
 use App\Models\Student;
+use App\Models\StudentRoster;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -186,6 +187,10 @@ class StudentController extends Controller
             'course' => ['sometimes', Rule::in(array_keys(Student::PROGRAM_COURSES))],
             'year' => ['sometimes', 'integer', Rule::in(Student::CAPSTONE_YEARS)],
             'section' => ['sometimes', 'string', 'max:4', 'regex:/^[A-Za-z]+$/'],
+            // Deliberate, and asked for in the dialog. A CaPSA may hand a
+            // student to a colleague; they may not do it by accident, and
+            // they may not reach back afterwards.
+            'transfer' => ['sometimes', 'boolean'],
         ]);
 
         // Where they would end up, not just where they are - otherwise a move
@@ -198,17 +203,35 @@ class StudentController extends Controller
         $section = $data['section'] ?? ($parts[1] ?? '');
         $yearSection = self::yearSection((string) $year, (string) $section);
 
-        if (! $this->targetAllowed($course, $yearSection)) {
+        $leavingYou = ! $this->targetAllowed($course, $yearSection);
+
+        // A student moving to another CaPSA's section is a transfer, not an
+        // edit: correct to allow, wrong to do without meaning to, and beyond
+        // your reach to undo once it is done. So it is refused unless the
+        // request says that is what it is - which the dialog asks first.
+        if ($leavingYou && ! ($data['transfer'] ?? false)) {
             return response()->json([
                 'success' => false,
-                'message' => 'That would move them into a section you do not handle.',
-            ], 422);
+                'needs_transfer' => true,
+                'section' => Student::computeSectionLabel($course, $yearSection),
+                'message' => 'That section is not one of yours. Transferring hands this student to '
+                    .'the CaPSA who handles it, and you will not be able to edit them afterwards.',
+            ], 409);
         }
 
-        unset($data['year'], $data['section']);
+        unset($data['year'], $data['section'], $data['transfer']);
         $student->fill($data + ['course' => $course, 'year_section' => $yearSection])->save();
 
-        return response()->json(['success' => true, 'student' => $student->fresh()]);
+        $moved = Student::computeSectionLabel($course, $yearSection);
+
+        return response()->json([
+            'success' => true,
+            'student' => $student->fresh(),
+            'transferred' => $leavingYou,
+            'message' => $leavingYou
+                ? trim($student->f_name.' '.$student->l_name).' has been transferred to '.$moved.'.'
+                : 'Saved.',
+        ]);
     }
 
     /**
@@ -217,6 +240,11 @@ class StudentController extends Controller
      * The account stays. Deleting it would take their team history and their
      * submissions with it, and a student leaving your section is usually
      * joining someone else's rather than leaving the college.
+     *
+     * The roster entry goes, though. That row - not the account - is what
+     * admits somebody at sign-in, so leaving it behind meant a student
+     * removed here signed in again and had their account rebuilt from it,
+     * looking for all the world like the removal had never happened.
      */
     public function destroy(Student $student): JsonResponse
     {
@@ -228,6 +256,11 @@ class StudentController extends Controller
         }
 
         $student->update(['course' => null, 'year_section' => null]);
+
+        // The invitation, withdrawn. Without this the next sign-in reads the
+        // roster, finds them still listed, and puts the section straight
+        // back.
+        StudentRoster::whereRaw('LOWER(email) = ?', [Str::lower($student->email)])->delete();
 
         return response()->json([
             'success' => true,
