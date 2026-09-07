@@ -42,7 +42,20 @@ class ExpertController extends Controller
             $isLeader = $team->leader_id === $student->student_id;
             $assignments = TeamExpertAssignment::where('team_id', $team->team_id)
                 ->with(['expert.roles', 'expert.expertise', 'expertRole.role', 'preProposal'])
-                ->get();
+                ->get()
+                // One card per expert-and-role: the most recent attempt.
+                // Re-applying after a decline makes a second row rather than
+                // replacing the first - the index that stopped that was
+                // dropped so a team could try again - and the declined one
+                // then sat beside the approved one, telling the team they
+                // had been both refused and accepted by the same person.
+                //
+                // Keyed on the role as well as the expert, because applying
+                // to somebody as consultant after being declined as adviser
+                // is a different application, not a repeat of the same one.
+                ->sortByDesc(fn ($a) => [$a->created_at, $a->assignment_id])
+                ->unique(fn ($a) => $a->expert_id.'-'.$a->expert_role_id)
+                ->values();
 
             // Keyed by the role the team actually engaged each expert as,
             // which is what expert_role_id records. This used to read
