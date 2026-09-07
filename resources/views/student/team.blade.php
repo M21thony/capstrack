@@ -2891,12 +2891,15 @@ document.addEventListener('DOMContentLoaded', function() {
     // partials/skeleton-head already decided this in <head>, before the first
     // paint: the content is on screen and no skeleton was ever shown. Without
     // this, every save replayed the 600ms fade over content already there.
+    // Skipping the fade must not skip the rest of this handler. This used
+    // to `return`, which leaves the whole DOMContentLoaded callback - so on
+    // every visit after the first, the leadership-transfer popup and the
+    // expert-removed modal below simply never opened. The member being
+    // handed the team was asked exactly once, on a page they had never
+    // opened before, and never again.
     if (document.documentElement.classList.contains('sk-seen')) {
       sk.remove();
-
-      return;
-    }
-
+    } else {
         requestAnimationFrame(function () {
             setTimeout(function () {
                 sk.style.transition = 'opacity 0.3s ease';
@@ -2912,6 +2915,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 } catch (e) {}
             }, 600);
         });
+    }
     }
 
     @if(isset($pendingLeadershipTransfer) && $pendingLeadershipTransfer)
