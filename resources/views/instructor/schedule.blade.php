@@ -394,6 +394,12 @@
 .av-count{background:var(--accent-light);border:1px solid var(--accent);border-radius:8px;
   padding:9px 11px;font-size:12px;color:var(--text2);line-height:1.5}
 .av-count b{color:var(--accent3)}
+.av-replace{display:flex;gap:9px;align-items:flex-start;margin-top:10px;padding:9px 11px;
+  border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:12px}
+.av-replace:hover{border-color:var(--accent)}
+.av-replace input{margin-top:2px;flex-shrink:0}
+.av-replace b{display:block;color:var(--text);font-weight:600}
+.av-replace em{display:block;font-style:normal;color:var(--text3);font-size:11px;margin-top:2px}
 </style>
 
 <!-- ─── BLOCK CONFIRM ─────────────────────────────────────────────────────── -->
@@ -447,6 +453,17 @@
       </div>
 
       <div class="av-count" id="av-count"></div>
+
+      {{-- Setting a week's availability in one go made a dozen slots, and
+           the only way to change them was editing each one. This is the way
+           back out: replace what is open, keep anything a team has booked. --}}
+      <label class="av-replace" id="av-replace-wrap" style="display:none">
+        <input type="checkbox" id="av-replace">
+        <span>
+          <b>Replace my current open slots</b>
+          <em id="av-replace-detail"></em>
+        </span>
+      </label>
 
       <div class="form-actions" style="margin-top:14px">
         <button class="btn btn-primary" id="av-save" onclick="saveAvailability()">Create these slots</button>
@@ -1931,7 +1948,30 @@ AV_DAYS.forEach((day) => {
 
 function openAvail() {
   drawAvailRows();
+
+  // Only open, recurring slots can be swept away - a booked one belongs to
+  // a team who is expecting to turn up to it.
+  const clearable = replaceableSlots();
+  const wrap = document.getElementById('av-replace-wrap');
+  const detail = document.getElementById('av-replace-detail');
+
+  wrap.style.display = clearable.length ? 'flex' : 'none';
+  document.getElementById('av-replace').checked = false;
+
+  if (clearable.length) {
+    detail.textContent = 'Removes the ' + clearable.length + ' weekly slot'
+      + (clearable.length === 1 ? '' : 's') + ' nobody has booked, then opens the ones above.';
+  }
+
   document.getElementById('avail-overlay').classList.add('open');
+}
+
+/** Every weekly slot of mine that no team has taken. */
+function replaceableSlots() {
+  return Object.values(slotsByDay)
+    .flat()
+    .filter((s) => (s.recur ?? 'weekly') !== 'once')
+    .filter((s) => !(s.bookings || []).length);
 }
 
 function closeAvail() {
@@ -2049,6 +2089,25 @@ async function saveAvailability() {
 
   let created = 0;
   let skipped = 0;
+  let removed = 0;
+
+  if (document.getElementById('av-replace').checked) {
+    for (const old of replaceableSlots()) {
+      try {
+        await apiFetch('/instructor/schedule/slots/' + old.schedule_id, { method: 'DELETE' });
+        removed++;
+      } catch (e) {
+        // Left in place; the clash check below steps around it.
+      }
+    }
+
+    // The clash check reads slotsByDay, which still lists what was deleted.
+    Object.keys(slotsByDay).forEach((day) => {
+      slotsByDay[day] = (slotsByDay[day] || []).filter(
+        (s) => (s.recur ?? 'weekly') === 'once' || (s.bookings || []).length
+      );
+    });
+  }
 
   for (const slot of made) {
     const clash = (slotsByDay[slot.day] || []).some((s) =>
@@ -2081,9 +2140,10 @@ async function saveAvailability() {
   closeAvail();
 
   showToast(
-    created + ' slot' + (created === 1 ? '' : 's') + ' opened'
+    (removed ? removed + ' cleared, ' : '')
+      + created + ' slot' + (created === 1 ? '' : 's') + ' opened'
       + (skipped ? ', ' + skipped + ' skipped as already taken' : ''),
-    created ? 'success' : 'error'
+    created || removed ? 'success' : 'error'
   );
 
   setTimeout(() => window.location.reload(), 1200);
