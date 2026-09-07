@@ -32,12 +32,23 @@ class TeamController extends Controller
 
         $totalTeams = $approvedAssignments->unique('team_id')->count();
 
+        // Progress used to be its own page, which meant an adviser looking at
+        // a team had to leave it to find out how that team was doing. Same
+        // teams, same cards - the numbers just come with them now. Keyed by
+        // team so a team advised in two roles is only counted once.
+        $progress = $approvedAssignments->pluck('team')->filter()->unique('team_id')
+            ->mapWithKeys(fn ($team) => [$team->team_id => $team->progressSummary()]);
+
         return view('instructor.teams', [
             'grouped' => $grouped,
             'tabs' => $tabs,
             'totalTeams' => $totalTeams,
             'expert' => $expert,
             'approvedAssignments' => $approvedAssignments,
+            'progress' => $progress,
+            'avgCompletion' => $progress->isEmpty() ? 0 : (int) round($progress->avg('percent')),
+            'overdueMilestones' => $progress->sum('overdue'),
+            'onTrack' => $progress->where('overdue', 0)->count(),
         ]);
     }
 }

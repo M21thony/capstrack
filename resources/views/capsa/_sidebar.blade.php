@@ -341,10 +341,6 @@
           <span class="nav-badge red">{{ $unseenExpertDocReviewCount > 99 ? '99+' : $unseenExpertDocReviewCount }}</span>
         @endif
       </a>
-      <a href="{{ route('instructor.progress') }}" class="nav-item {{ $currentRoute === 'instructor.progress' ? 'active' : '' }}">
-        <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-        Progress Monitoring
-      </a>
       </div>
     @endif
     <form id="admin-logout-form" action="{{ route('expert.logout') }}" method="POST" style="display: none;">
