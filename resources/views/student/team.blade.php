@@ -1469,11 +1469,7 @@
             @endif
           </span>
           <span class="rolepick-seats">
-            @if($choice['seats'] === null)
-              {{-- Everybody writes and tests the system, so this one never
-                   runs out and saying "2 of 2 free" would be a lie. --}}
-              Open to all
-            @elseif($choice['full'])
+            @if($choice['full'])
               Full<br><span style="font-weight:500;opacity:.8">{{ implode(', ', $choice['held_by']) }}</span>
             @else
               {{ $choice['seats'] - $choice['taken'] }} of {{ $choice['seats'] }} free
@@ -1482,6 +1478,14 @@
         </button>
       @endforeach
     </div>
+
+    {{-- Not one of the buttons above: the course has it played partly by
+         every member, so it is already true of whoever is reading this. --}}
+    <p class="rolepick-shared">
+      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 18l6-6-6-6"/><path d="M8 6l-6 6 6 6"/></svg>
+      Everyone on the team is a <strong>{{ \App\Models\StudentRole::SHARED_ROLE_NAME }}</strong> as
+      well — writing and testing the system is shared by all of you.
+    </p>
 
     <form method="POST" action="{{ route('team.role.update') }}" id="role-choice-form" style="display:none">
       @csrf
@@ -1507,6 +1511,13 @@
     flex-shrink:0;font-size:10.5px;font-weight:700;color:var(--text3);
     text-align:right;line-height:1.45;padding-top:2px;
   }
+  .rolepick-shared{
+    display:flex;align-items:flex-start;gap:8px;margin:14px 0 0;
+    padding:10px 12px;border-radius:9px;background:var(--bg3);
+    font-size:11.5px;line-height:1.55;color:var(--text3);text-align:left;
+  }
+  .rolepick-shared svg{flex-shrink:0;margin-top:2px;color:var(--text3)}
+  .rolepick-shared strong{color:var(--text2);font-weight:700}
 </style>
 
 <script>
