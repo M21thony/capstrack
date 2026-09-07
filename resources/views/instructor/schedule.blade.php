@@ -687,6 +687,7 @@ function fanOutSlots() {
           : '';
 
         return {
+          hasBooking:         !!dateBooking,
           schedule_id:        s.schedule_id,
           google_event_id:    s.google_event_id ?? null,
           id:                 s.schedule_id,
@@ -1699,7 +1700,12 @@ function renderUpcoming() {
     .filter(([k]) => k >= todayKey)
     .sort(([a], [b]) => a.localeCompare(b))
     .forEach(([k, daySlots]) => {
-      daySlots.filter(s => s.booked || !s.is_available).forEach(s => {
+      // Only slots somebody has actually booked. This used to ask for
+      // `booked || !is_available`, but `booked` is itself true whenever a
+      // slot is unavailable - so every slot the expert had blocked, and
+      // every duplicate the server had flagged, was listed as an
+      // appointment with a dash where the team name goes.
+      daySlots.filter(s => s.hasBooking).forEach(s => {
         // For today specifically, a slot whose end time has already
         // passed is done, not upcoming (the backend marks its booking
         // 'done' the same way — this just keeps the list in sync without
@@ -1714,7 +1720,7 @@ function renderUpcoming() {
 
         const [y, m1, d] = k.split('-').map(Number);
         upcoming.push({
-          team:  s.teamName || '—',
+          team:  s.teamName || 'Booked',
           date:  `${MONTHS[m1 - 1]} ${d}`,
           time:  `${hr12(s.start || s.start_time)}–${hr12(s.end || s.end_time)}`,
           type:  s.type || 'consult',
