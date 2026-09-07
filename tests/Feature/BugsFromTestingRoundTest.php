@@ -7,6 +7,7 @@ use App\Models\CapstonePreProposal;
 use App\Models\DuplicationCheck;
 use App\Models\Role;
 use App\Models\Student;
+use App\Models\StudentRole;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -79,6 +80,62 @@ class BugsFromTestingRoundTest extends TestCase
         $html = $this->actingAs($student, 'web')->get(route('student.team'))->assertOk()->getContent();
 
         $this->assertSame(1, substr_count($html, 'function setAvatar('));
+    }
+
+    /**
+     * The leader is shown as the leader on their own team.
+     *
+     * The roster decided this by asking whether a member's role was the
+     * string "Leader". No row has ever held that: the leader's role is
+     * spelled out as "Project Head/Network Engineer", and most rows have no
+     * role recorded at all. So the test was false for everybody, and the
+     * person who created the team read "Team Member / MEMBER" beside their
+     * own name. It reads teams.leader_id now, which is what the rest of the
+     * page - and every permission check on it - has always used.
+     */
+    public function test_the_leader_is_not_labelled_a_member(): void
+    {
+        $leader = $this->student('head@my.cspc.edu.ph');
+        $team = Team::create(['team_name' => 'Bulbasaurus', 'leader_id' => $leader->student_id]);
+        StudentSchoolYear::create([
+            'student_id' => $leader->student_id, 'team_id' => $team->team_id,
+        ]);
+
+        $mate = Student::create([
+            'email' => 'mate@my.cspc.edu.ph', 'f_name' => 'John', 'l_name' => 'Aurillas',
+            'course' => 'BSIT', 'year_section' => '4th · A',
+        ]);
+        StudentSchoolYear::create([
+            'student_id' => $mate->student_id, 'team_id' => $team->team_id,
+        ]);
+
+        $html = $this->actingAs($leader, 'web')
+            ->get(route('student.team'))
+            ->assertOk()
+            ->getContent();
+
+        // One LEADER badge and one MEMBER badge, not two MEMBERs.
+        $this->assertSame(1, substr_count($html, '>LEADER</div>'));
+        $this->assertSame(1, substr_count($html, '>MEMBER</div>'));
+    }
+
+    /** A role that is recorded is shown instead of the generic wording. */
+    public function test_a_recorded_role_is_shown(): void
+    {
+        $role = StudentRole::firstOrCreate(['s_role_name' => StudentRole::LEADER_ROLE_NAME]);
+
+        $leader = $this->student('head@my.cspc.edu.ph');
+        $team = Team::create(['team_name' => 'Bulbasaurus', 'leader_id' => $leader->student_id]);
+        StudentSchoolYear::create([
+            'student_id' => $leader->student_id,
+            'team_id' => $team->team_id,
+            's_role_id' => $role->s_role_id,
+        ]);
+
+        $html = $this->actingAs($leader, 'web')->get(route('student.team'))->assertOk()->getContent();
+
+        $this->assertStringContainsString(StudentRole::LEADER_ROLE_NAME, $html);
+        $this->assertSame(1, substr_count($html, '>LEADER</div>'));
     }
 
     // ---------------------------------------------------------------
