@@ -24,10 +24,14 @@ class TeamInvitePopupTest extends TestCase
 
     private function leaderWithTeam(): array
     {
+        // 3rd year, so the team is in Capstone 1 and its roster is open.
+        // These tests are about the invite button and verification; a 4th
+        // year leader would close the roster and hide the button for a
+        // reason none of them is testing.
         $leader = Student::create([
             'email' => 'j.abella@my.cspc.edu.ph',
             'f_name' => 'Jerome', 'l_name' => 'Abella',
-            'course' => 'BSIT', 'year_section' => '4th · A',
+            'course' => 'BSIT', 'year_section' => '3rd · A',
         ]);
 
         $team = Team::create([
@@ -234,5 +238,19 @@ class TeamInvitePopupTest extends TestCase
         $html = $this->actingAs($leader, 'web')->get(route('student.team'))->getContent();
 
         $this->assertStringContainsString('window.location.reload()', $html);
+    }
+
+    /** Capstone 2 does close it, which is a different rule from verification. */
+    public function test_a_capstone_two_team_has_no_invite_button(): void
+    {
+        [$leader, $team] = $this->leaderWithTeam();
+
+        // The section is uploaded again as 4th year: the team has moved up.
+        $leader->update(['year_section' => '4th · A']);
+
+        $html = $this->actingAs($leader, 'web')->get(route('student.team'))->getContent();
+
+        $this->assertStringNotContainsString('Click to invite a classmate', $html);
+        $this->assertStringContainsString('Members are settled', $html);
     }
 }
