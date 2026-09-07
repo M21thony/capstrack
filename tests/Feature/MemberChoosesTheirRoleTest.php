@@ -108,6 +108,11 @@ class MemberChoosesTheirRoleTest extends TestCase
         return substr($html, $at, strpos($html, 'role-choice-form', $at) - $at);
     }
 
+    private function roleId(string $name): int
+    {
+        return (int) StudentRole::where('s_role_name', $name)->value('s_role_id');
+    }
+
     private function roleOf(Student $student): ?string
     {
         return StudentSchoolYear::with('role')
@@ -123,21 +128,21 @@ class MemberChoosesTheirRoleTest extends TestCase
     public function test_a_post_naming_one_role_assigns_it_on_accept(): void
     {
         [$leader, $team] = $this->team();
-        $this->advertise($team, [self::PROGRAMMER]);
+        $this->advertise($team, [self::DESIGNER]);
         [$joiner, $invite] = $this->inviteeOf($team, $leader);
 
         $this->actingAs($joiner, 'web')
             ->patch(route('invitations.update', $invite), ['status' => 'accepted'])
             ->assertRedirect();
 
-        $this->assertSame(self::PROGRAMMER, $this->roleOf($joiner));
+        $this->assertSame(self::DESIGNER, $this->roleOf($joiner));
     }
 
     /** Two named roles is a real choice, so nothing is decided for them. */
     public function test_a_post_naming_two_roles_leaves_the_choice_open(): void
     {
         [$leader, $team] = $this->team();
-        $this->advertise($team, [self::PROGRAMMER, self::TESTER]);
+        $this->advertise($team, [self::DESIGNER, self::TESTER]);
         [$joiner, $invite] = $this->inviteeOf($team, $leader);
 
         $this->actingAs($joiner, 'web')
@@ -166,11 +171,12 @@ class MemberChoosesTheirRoleTest extends TestCase
     // Being asked
     // ----------------------------------------------------------------
 
-    /** The team page asks, and offers only what the post asked for. */
-    public function test_the_team_page_asks_and_offers_the_posted_roles(): void
+    /** One role advertised with a seat free needs no dialog at all. */
+    public function test_one_advertised_role_is_assigned_without_asking(): void
     {
         [$leader, $team] = $this->team();
-        $this->advertise($team, [self::PROGRAMMER, self::TESTER]);
+        $this->advertise($team, [self::TESTER]);
+        $team->update(['member_count' => 3]);
         [$joiner, $invite] = $this->inviteeOf($team, $leader);
 
         $this->actingAs($joiner, 'web')
@@ -179,13 +185,9 @@ class MemberChoosesTheirRoleTest extends TestCase
         $html = $this->actingAs($joiner, 'web')
             ->get(route('student.team'))->assertOk()->getContent();
 
-        $this->assertStringContainsString('Choose your role', $html);
-
-        $dialog = $this->dialog($html);
-        $this->assertStringContainsString(self::PROGRAMMER, $dialog);
-        $this->assertStringContainsString(self::TESTER, $dialog);
-        // Not advertised, so not on the list.
-        $this->assertStringNotContainsString(self::DESIGNER, $dialog);
+        // One role advertised and a seat free, so it was assigned outright.
+        $this->assertSame(self::TESTER, $this->roleOf($joiner));
+        $this->assertStringNotContainsString('Choose your role', $html);
     }
 
     /** With no post to go on, every member role with a seat is offered. */
@@ -201,7 +203,7 @@ class MemberChoosesTheirRoleTest extends TestCase
             $this->actingAs($joiner, 'web')->get(route('student.team'))->assertOk()->getContent()
         );
 
-        foreach ([self::PROGRAMMER, self::DESIGNER, self::TESTER] as $role) {
+        foreach ([self::DESIGNER, self::TESTER] as $role) {
             $this->assertStringContainsString($role, $dialog);
         }
     }
@@ -227,13 +229,11 @@ class MemberChoosesTheirRoleTest extends TestCase
         [$joiner, $invite] = $this->inviteeOf($team, $leader);
         $this->actingAs($joiner, 'web')->patch(route('invitations.update', $invite), ['status' => 'accepted']);
 
-        $roleId = StudentRole::where('s_role_name', self::PROGRAMMER)->value('s_role_id');
-
         $this->actingAs($joiner, 'web')
-            ->put(route('team.role.update'), ['role_id' => $roleId])
+            ->put(route('team.role.update'), ['role_id' => $this->roleId(self::DESIGNER)])
             ->assertRedirect(route('student.team'));
 
-        $this->assertSame(self::PROGRAMMER, $this->roleOf($joiner));
+        $this->assertSame(self::DESIGNER, $this->roleOf($joiner));
     }
 
     /** Chosen once. Changing your mind later is not on offer. */
@@ -243,13 +243,12 @@ class MemberChoosesTheirRoleTest extends TestCase
         [$joiner, $invite] = $this->inviteeOf($team, $leader);
         $this->actingAs($joiner, 'web')->patch(route('invitations.update', $invite), ['status' => 'accepted']);
 
-        $programmer = StudentRole::where('s_role_name', self::PROGRAMMER)->value('s_role_id');
-        $tester = StudentRole::where('s_role_name', self::TESTER)->value('s_role_id');
+        $this->actingAs($joiner, 'web')
+            ->put(route('team.role.update'), ['role_id' => $this->roleId(self::DESIGNER)]);
+        $this->actingAs($joiner, 'web')
+            ->put(route('team.role.update'), ['role_id' => $this->roleId(self::TESTER)]);
 
-        $this->actingAs($joiner, 'web')->put(route('team.role.update'), ['role_id' => $programmer]);
-        $this->actingAs($joiner, 'web')->put(route('team.role.update'), ['role_id' => $tester]);
-
-        $this->assertSame(self::PROGRAMMER, $this->roleOf($joiner));
+        $this->assertSame(self::DESIGNER, $this->roleOf($joiner));
     }
 
     /** Project Head belongs to the leader and cannot be taken. */
@@ -292,40 +291,12 @@ class MemberChoosesTheirRoleTest extends TestCase
     }
 
     /**
-     * Programmer is the exception, and the course says why: writing and
-     * testing the system "must be played partly by each team member". It is
-     * not a seat anybody can take from anybody else, so it never fills and
-     * is never shown as full.
+     * Programmer is not a choice, because it is not a designation anybody is
+     * given. The course has it "played partly by each team member", so it is
+     * already true of everyone on the team, the leader included, and no
+     * s_role_id ever points at it.
      */
-    public function test_everybody_can_be_the_programmer(): void
-    {
-        [$leader, $team] = $this->team();
-        $programmer = StudentRole::where('s_role_name', self::PROGRAMMER)->value('s_role_id');
-
-        // A full team's worth already on it.
-        foreach (['a', 'b', 'c', 'd'] as $tag) {
-            $held = $this->student('Held'.$tag, "held{$tag}@my.cspc.edu.ph");
-            StudentSchoolYear::create([
-                'student_id' => $held->student_id,
-                'team_id' => $team->team_id,
-                's_role_id' => $programmer,
-            ]);
-        }
-
-        $this->assertTrue(StudentRole::hasSeat($team->team_id, $programmer));
-        $this->assertNull(StudentRole::seatsFor(self::PROGRAMMER));
-
-        [$joiner, $invite] = $this->inviteeOf($team, $leader);
-        $this->actingAs($joiner, 'web')->patch(route('invitations.update', $invite), ['status' => 'accepted']);
-
-        $this->actingAs($joiner, 'web')
-            ->put(route('team.role.update'), ['role_id' => $programmer]);
-
-        $this->assertSame(self::PROGRAMMER, $this->roleOf($joiner));
-    }
-
-    /** And it is offered as open rather than counted down. */
-    public function test_the_programmer_row_is_not_counted_in_seats(): void
+    public function test_the_programmer_role_is_never_offered(): void
     {
         [$leader, $team] = $this->team();
         [$joiner, $invite] = $this->inviteeOf($team, $leader);
@@ -335,7 +306,40 @@ class MemberChoosesTheirRoleTest extends TestCase
             $this->actingAs($joiner, 'web')->get(route('student.team'))->assertOk()->getContent()
         );
 
-        $this->assertStringContainsString('Open to all', $dialog);
+        // Named as something they already are, not offered as a button.
+        $this->assertStringContainsString('Everyone on the team is a', $dialog);
+        $this->assertStringNotContainsString('pickRole('.$this->roleId(self::PROGRAMMER), $dialog);
+
+        $this->assertFalse(StudentRole::hasSeat($team->team_id, $this->roleId(self::PROGRAMMER)));
+        $this->assertNotContains(self::PROGRAMMER, StudentRole::memberRoles()->pluck('s_role_name')->all());
+    }
+
+    /** And it cannot be taken by going straight at the endpoint. */
+    public function test_the_programmer_role_cannot_be_claimed(): void
+    {
+        [$leader, $team] = $this->team();
+        [$joiner, $invite] = $this->inviteeOf($team, $leader);
+        $this->actingAs($joiner, 'web')->patch(route('invitations.update', $invite), ['status' => 'accepted']);
+
+        $this->actingAs($joiner, 'web')
+            ->put(route('team.role.update'), ['role_id' => $this->roleId(self::PROGRAMMER)]);
+
+        $this->assertNull($this->roleOf($joiner));
+    }
+
+    /**
+     * The two seated roles divide the team exactly.
+     *
+     * This is the arithmetic that shows Programmer was never meant to be on
+     * the list: a team of three is two members into two seats, and a team of
+     * five is four into four. A third option would leave those seats empty.
+     */
+    public function test_the_seats_account_for_every_member(): void
+    {
+        foreach ([3 => 1, 5 => 2] as $size => $each) {
+            $this->assertSame($each, StudentRole::seatsFor(self::TESTER, $size));
+            $this->assertSame($size - 1, 2 * StudentRole::seatsFor(self::TESTER, $size));
+        }
     }
 
     /** A full role is still shown, with who is in it, rather than vanishing. */
@@ -433,10 +437,11 @@ class MemberChoosesTheirRoleTest extends TestCase
         $this->actingAs($joiner, 'web')->put(route('team.role.update'), ['role_id' => $tester]);
         $this->assertNull($this->roleOf($joiner));
 
-        // But Programmer is still open to them, as it is to everybody.
-        $programmer = StudentRole::where('s_role_name', self::PROGRAMMER)->value('s_role_id');
-        $this->actingAs($joiner, 'web')->put(route('team.role.update'), ['role_id' => $programmer]);
-        $this->assertSame(self::PROGRAMMER, $this->roleOf($joiner));
+        // The other seat is theirs, and on a team of three that is the last
+        // one - which is right, because a third member would not fit anyway.
+        $this->actingAs($joiner, 'web')
+            ->put(route('team.role.update'), ['role_id' => $this->roleId(self::DESIGNER)]);
+        $this->assertSame(self::DESIGNER, $this->roleOf($joiner));
     }
 
     // ----------------------------------------------------------------
@@ -511,13 +516,13 @@ class MemberChoosesTheirRoleTest extends TestCase
             'recruitment_goal' => 'find_a_team',
             'introduction' => 'I can build things.',
             'member_count' => 5,
-            'tags' => json_encode([self::PROGRAMMER]),
+            'tags' => json_encode([self::TESTER]),
         ]);
 
         $post = Recruitment::where('student_id', $applicant->student_id)->first();
 
         $this->assertNotNull($post);
-        $this->assertSame([self::PROGRAMMER], (array) $post->roles);
+        $this->assertSame([self::TESTER], (array) $post->roles);
     }
 
     /** Anything invented is dropped, and what is real survives beside it. */
@@ -530,7 +535,7 @@ class MemberChoosesTheirRoleTest extends TestCase
             'recruitment_goal' => 'find_a_team',
             'introduction' => 'I can build things.',
             'member_count' => 5,
-            'tags' => json_encode(['Backend Dev', self::TESTER, 'Fullstack Dev']),
+            'tags' => json_encode(['Backend Dev', self::TESTER, self::PROGRAMMER]),
         ]);
 
         $post = Recruitment::where('student_id', $applicant->student_id)->first();
@@ -549,12 +554,13 @@ class MemberChoosesTheirRoleTest extends TestCase
         $this->assertStringContainsString('>Roles</label>', $html);
         $this->assertStringNotContainsString('Expertise & Roles', $html);
 
-        foreach ([self::PROGRAMMER, self::DESIGNER, self::TESTER] as $role) {
+        foreach ([self::DESIGNER, self::TESTER] as $role) {
             $this->assertStringContainsString($role, $html);
         }
 
         $names = StudentRole::memberRoles()->pluck('s_role_name')->all();
         $this->assertNotContains(StudentRole::LEADER_ROLE_NAME, $names);
-        $this->assertCount(3, $names);
+        $this->assertNotContains(self::PROGRAMMER, $names);
+        $this->assertCount(2, $names);
     }
 }
