@@ -127,17 +127,19 @@ class AdminExpertsController extends Controller
         // api/* answers with a redirect - HTML where JSON was expected.
         $validator = Validator::make($request->all(), [
             'email' => ['required', 'email', 'max:190'],
-            'name' => ['required', 'string', 'max:120'],
-            'roles' => ['required', 'array', 'min:1'],
+            // The address is the whole of what is needed. A name typed here
+            // is a guess at how somebody spells their own - Google gives the
+            // real one the first time they sign in, which is how Add CaPSA
+            // has always worked. Roles are the CaPSA's to set and can be set
+            // now or from the row afterwards.
+            'name' => ['nullable', 'string', 'max:120'],
+            'roles' => ['nullable', 'array'],
             'roles.*' => ['string', 'in:'.implode(',', CapstoneExpert::STUDENT_FACING_ROLES)],
             'expertise' => ['nullable', 'array'],
             'expertise.*' => ['string', 'max:100'],
         ], [
             'email.required' => 'Type the email address of the person to add.',
             'email.email' => 'That is not an email address.',
-            'name.required' => 'Type their full name.',
-            'roles.required' => 'Choose at least one role.',
-            'roles.min' => 'Choose at least one role.',
         ]);
 
         if ($validator->fails()) {
@@ -181,7 +183,8 @@ class AdminExpertsController extends Controller
         $created = false;
 
         if (! $expert) {
-            [$firstName, $lastName] = $this->nameFrom($request->input('name'));
+            // Blank stays blank until they sign in and Google says.
+            [$firstName, $lastName] = $this->nameFrom((string) $request->input('name'));
 
             $expert = CapstoneExpert::create([
                 'email' => $email,
@@ -200,21 +203,30 @@ class AdminExpertsController extends Controller
             ->whereIn('role_name', CapstoneExpert::STUDENT_FACING_ROLES)
             ->pluck('role_id', 'role_name');
 
-        $wanted = collect($request->input('roles'))
+        $asked = collect($request->input('roles', []))->filter();
+
+        $wanted = $asked
             ->filter(fn ($r) => $roleIds->has($r))
             ->map(fn ($r) => $roleIds[$r])
             ->all();
 
-        if ($wanted === []) {
+        // Named roles that this system has never heard of is a broken
+        // install, not an empty form.
+        if ($asked->isNotEmpty() && $wanted === []) {
             return response()->json([
                 'success' => false,
                 'message' => 'Those roles are not set up on this system.',
             ], 500);
         }
 
-        // Scoped to the student-facing roles, so this can neither grant nor
-        // revoke CaPSA - that stays Admin's own action.
-        CapstoneExpert::syncRoles($expert->expert_id, $wanted, $roleIds->values());
+        // No roles asked for is a perfectly good state: the person exists and
+        // the CaPSA decides what they are later. Syncing an empty list would
+        // strip the roles an existing expert already has.
+        if ($wanted !== []) {
+            // Scoped to the student-facing roles, so this can neither grant
+            // nor revoke CaPSA - that stays Admin's own action.
+            CapstoneExpert::syncRoles($expert->expert_id, $wanted, $roleIds->values());
+        }
 
         // Blank means "not saying", the same as an empty column on the list -
         // an expert fills their own areas in from their profile.
@@ -232,13 +244,17 @@ class AdminExpertsController extends Controller
             }
         }
 
+        // Their own name once they have signed in; until then the address is
+        // the only thing anybody can recognise them by.
+        $label = trim($expert->name) !== '' ? $expert->name : $email;
+
         return response()->json([
             'success' => true,
             'created' => $created,
             'expert_id' => $expert->expert_id,
             'message' => $created
-                ? "{$expert->name} was added. They can sign in with {$email}."
-                : "{$expert->name} already had an account - their roles were updated.",
+                ? $label.' was added. They can sign in with '.$email.'.'
+                : $label.' already had an account'.($wanted !== [] ? ' - their roles were updated.' : '.'),
         ]);
     }
 
