@@ -184,9 +184,21 @@
 .role-choice-note { font-size: 11px; color: var(--text3); margin-top: 8px; line-height: 1.5; }
 .modal-box .form-group .field-error { font-size: 11px; color: var(--red); margin-top: 4px; display: none; }
 .modal-box .form-group .field-error.show { display: block; }
-.modal-actions { display: flex; gap: 10px; margin-top: 20px; }
-.modal-actions .btn { flex: 1; justify-content: center; padding: 10px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: 0.15s; border: none; font-family: 'DM Sans', sans-serif; display: inline-flex; align-items: center; gap: 6px; }
+/* Content-width and at the end, the same as the expert side's dialogs.
+   flex:1 stretched every button across its panel, so a one-word Close came
+   out as a bar the full width of the modal. The narrow breakpoint below
+   still stacks them full-width, which is right on a phone. */
+.modal-actions { display: flex; gap: 10px; margin-top: 20px; justify-content: flex-end; }
+.modal-actions .btn { justify-content: center; padding: 9px 18px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: 0.15s; border: none; font-family: 'DM Sans', sans-serif; display: inline-flex; align-items: center; gap: 6px; }
 .modal-actions .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* On a phone there is no room for two buttons side by side once they are
+   sized to their words, so they stack and fill - matching what the expert
+   side's dialogs already do at this width. */
+@media (max-width: 480px) {
+  .modal-actions { flex-direction: column; }
+  .modal-actions .btn { width: 100%; }
+}
 
 /* Confirmation modal */
 .confirm-box { width: 380px; text-align: center; }
