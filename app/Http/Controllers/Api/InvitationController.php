@@ -197,7 +197,7 @@ class InvitationController extends Controller
 
         if ($team && $team->team_status === 'Active') {
             $currentCount = StudentSchoolYear::where('team_id', $team->team_id)->count();
-            if ($currentCount >= $team->member_count) {
+            if ($currentCount >= $team->memberLimit()) {
                 $team->update(['team_status' => 'Full']);
                 $this->logActivity(
                     $team->leader_id,

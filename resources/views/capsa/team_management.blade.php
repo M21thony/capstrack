@@ -209,6 +209,20 @@
       @if ($selectedSection)
         <a href="{{ route('capsa.team_management', ['tab' => $tab]) }}" style="font-size:12px;color:var(--text3);text-decoration:none">Clear</a>
       @endif
+
+      {{-- How many members a team may have. One number for every team: a
+           CaPSA setting it per group is the same number typed forty times.
+           It decides the invitation cap, what a recruitment post advertises,
+           and how many seats each shared role has. --}}
+      <span style="margin-left:auto;display:flex;align-items:center;gap:8px">
+        <label for="tm-team-size" style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.4px">Members per team</label>
+        <select id="tm-team-size" onchange="saveTeamSize(this)"
+                style="padding:7px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:12px;font-family:inherit">
+          @for ($n = \App\Models\Team::MIN_MEMBERS; $n <= \App\Models\Team::MAX_MEMBERS; $n++)
+            <option value="{{ $n }}" @selected($n === \App\Models\Team::maxMembers())>{{ $n }}</option>
+          @endfor
+        </select>
+      </span>
     </form>
 
     @if ($allSections === [])
@@ -227,6 +241,50 @@
 </div>
 @include('capsa.partials.skeleton-toggle')
 @include('capsa.partials.team-review-modal')
+<div id="tm-toast" class="toast"></div>
+
+<script>
+// The size is saved on change rather than through the filter form beside it,
+// which reloads to re-filter - changing the number should not throw away the
+// tab and section they were looking at.
+function tmToast(message, ok) {
+  const el = document.getElementById('tm-toast');
+  el.textContent = message;
+  el.style.borderLeftColor = ok ? 'var(--green)' : 'var(--red)';
+  el.classList.add('show');
+  clearTimeout(tmToast.timer);
+  tmToast.timer = setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+function saveTeamSize(select) {
+  const previous = select.dataset.was || select.value;
+
+  fetch(@json(route('capsa.team_size.update'), JSON_UNESCAPED_SLASHES), {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+    },
+    body: JSON.stringify({ max_members: Number(select.value) }),
+  })
+    .then((r) => r.json())
+    .then((data) => {
+      if (data.success) {
+        select.dataset.was = select.value;
+        tmToast(data.message, true);
+      } else {
+        select.value = previous;
+        tmToast(data.message || 'Could not save that.', false);
+      }
+    })
+    .catch(() => {
+      select.value = previous;
+      tmToast('Network error. Please try again.', false);
+    });
+}
+</script>
+
 @include('partials.escape-closes-modals')
 </body>
 </html>

@@ -154,7 +154,7 @@ class TeamController extends Controller
         $team->update([
             'team_name' => $validated['team_name'],
             'team_status' => $validated['team_status'] ?? $team->team_status,
-            'member_count' => 5,
+            'member_count' => \App\Models\Team::maxMembers(),
         ]);
 
         Recruitment::where('student_id', $studentId)
