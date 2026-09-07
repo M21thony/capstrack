@@ -35,18 +35,67 @@ class StudentRole extends Model
         return static::where('s_role_name', self::LEADER_ROLE_NAME)->value('s_role_id');
     }
 
-    // Picks whichever non-leader role (UI Designer, Document Writer/QA
-    // Tester) isn't already held by someone on the team, for a new member
-    // joining without having chosen a specific role yet.
-    public static function nextAvailableMemberRoleId(int $teamId): ?int
-    {
-        $takenRoleIds = StudentSchoolYear::where('team_id', $teamId)
-            ->whereNotNull('s_role_id')
-            ->pluck('s_role_id');
+    /**
+     * How many people may hold each role on one team.
+     *
+     * Only the Project Head is singular, and that seat is the leader's - it
+     * is never offered to anybody. The other three take two each, which is
+     * six member seats against a maximum team of five, so a student joining
+     * always has something left to choose.
+     */
+    public const SEATS = 2;
 
+    public const LEADER_SEATS = 1;
+
+    /** The three roles a member may choose between. */
+    public static function memberRoles()
+    {
         return static::where('s_role_name', '!=', self::LEADER_ROLE_NAME)
-            ->whereNotIn('s_role_id', $takenRoleIds)
-            ->value('s_role_id');
+            ->orderBy('s_role_id')
+            ->get();
+    }
+
+    /**
+     * The member roles this team still has room for, with who holds each.
+     *
+     * @return array<int, array{role: StudentRole, taken: int, seats: int, held_by: array<int, string>}>
+     */
+    public static function seatingFor(int $teamId): array
+    {
+        $holders = StudentSchoolYear::where('team_id', $teamId)
+            ->whereNotNull('s_role_id')
+            ->with('student')
+            ->get()
+            ->groupBy('s_role_id');
+
+        return static::memberRoles()->map(function ($role) use ($holders) {
+            $held = $holders->get($role->s_role_id, collect());
+
+            return [
+                'role' => $role,
+                'taken' => $held->count(),
+                'seats' => self::SEATS,
+                'held_by' => $held
+                    ->map(fn ($row) => trim(($row->student->f_name ?? '').' '.($row->student->l_name ?? '')))
+                    ->filter()
+                    ->values()
+                    ->all(),
+            ];
+        })->all();
+    }
+
+    /** Can one more person take this role on this team? */
+    public static function hasSeat(int $teamId, int $roleId): bool
+    {
+        if ($roleId === self::leaderRoleId()) {
+            return false;
+        }
+
+        $taken = StudentSchoolYear::where('team_id', $teamId)
+            ->where('s_role_id', $roleId)
+            ->count();
+
+        return $taken < self::SEATS;
     }
 
     public function studentSchoolYears(): HasMany

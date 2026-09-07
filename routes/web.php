@@ -318,6 +318,7 @@ Route::middleware(['auth', 'no.cache', 'track.expert'])->group(function () {
     // Above /team/{team}, or route-model binding tries to resolve a team
     // called "leader" and 404s before this is ever reached.
     Route::put('/team/leader', [TeamController::class, 'transferLeadership'])->name('team.transfer-leadership');
+    Route::put('/team/role', [TeamController::class, 'updateRole'])->name('team.role.update');
     Route::put('/team/{team}', [TeamController::class, 'update'])->name('team.update');
     Route::get('/team/check-name', [TeamController::class, 'checkName'])->name('team.check-name');
     // Before anything matching /team/{something}, so the literal path is not
