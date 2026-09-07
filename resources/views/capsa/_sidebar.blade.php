@@ -31,7 +31,14 @@
         session()->put('admin_seen_pending_expert_ids', array_unique(array_merge($seenPendingExpertIds, $pendingExpertIds)));
     }
 
+    // Counted from whatever the badge's own page actually lists. Admin's
+    // Expert Management is CaPSAs and nothing else, so counting every
+    // approved expert put a 10 beside a page showing three.
     $approvedExpertIds = App\Models\CapstoneExpert::where('approved_status', true)
+        ->when($rolePrefix === 'admin.', fn ($q) => $q->whereHas(
+            'roles',
+            fn ($r) => $r->where('role_name', App\Models\CapstoneExpert::CAPSA_ROLE)
+        ))
         ->pluck('expert_id')
         ->toArray();
     $seenExpertIds = session('admin_seen_expert_ids', []);

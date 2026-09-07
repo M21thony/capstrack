@@ -843,16 +843,6 @@
       </button>
     </div>
     <div class="pp-body">
-      {{-- The typed fields below are what the team keyed in; this is the file
-           they actually uploaded and the CaPSA actually approved. The form
-           says this document is sent with the application, so it has to be
-           possible to look at it. --}}
-      @if($proposalPdfUrl)
-        <div class="pp-field">
-          <div class="pp-label">Original PDF</div>
-          <iframe class="pp-pdf" src="{{ $proposalPdfUrl }}#toolbar=0" title="Approved pre-proposal PDF"></iframe>
-        </div>
-      @endif
       @foreach([
         'Problem statement' => $approvedProposal->problem_statement,
         'Proposed solution' => $approvedProposal->proposed_solution,
@@ -872,13 +862,36 @@
     </div>
     <div class="pp-foot">
       @if($proposalPdfUrl)
-        <a class="btn btn-sm btn-primary" href="{{ $proposalPdfUrl }}" target="_blank" rel="noopener">
+        {{-- Opens over this panel rather than leaving the application form,
+             which is where the expert side already puts a proposal PDF. --}}
+        <button type="button" class="btn btn-sm btn-primary" onclick="openOriginalPdf()">
           <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-          View PDF
-        </a>
+          View Original PDF
+        </button>
       @endif
       <button class="btn btn-sm btn-soft" onclick="closeModal('proposal-preview-modal')">Close</button>
     </div>
+  </div>
+</div>
+@endif
+
+@if($proposalPdfUrl)
+{{-- The uploaded document, full size. The frame is loaded on open and
+     emptied on close: a PDF left in a hidden iframe keeps its plugin alive
+     and, on a slow connection, downloads again behind a panel nobody is
+     looking at. --}}
+<div class="modal-overlay" id="original-pdf-modal" onclick="if (event.target === this) closeOriginalPdf()">
+  <div class="modal-box pdf-box">
+    <div class="pdf-box-header">
+      <div style="min-width:0">
+        <div class="pp-eyebrow">Original PDF</div>
+        <h3 style="margin:0">{{ $approvedProposal->title }}</h3>
+      </div>
+      <button class="pp-x" onclick="closeOriginalPdf()" aria-label="Close">
+        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <iframe id="original-pdf-frame" src="about:blank" title="Approved pre-proposal PDF"></iframe>
   </div>
 </div>
 @endif
@@ -1073,6 +1086,24 @@ function forceInteractive(el) {
   el.style.setProperty('pointer-events', 'auto', 'important');
   el.style.setProperty('user-select', 'auto', 'important');
 }
+
+@if($proposalPdfUrl)
+const originalPdfUrl = @json($proposalPdfUrl, JSON_UNESCAPED_SLASHES);
+
+function openOriginalPdf() {
+  const frame = document.getElementById('original-pdf-frame');
+  // #toolbar=0 hides the viewer's own download bar; the button that opened
+  // this is the way to get the file.
+  if (frame) frame.src = originalPdfUrl + '#toolbar=0';
+  openModal('original-pdf-modal');
+}
+
+function closeOriginalPdf() {
+  closeModal('original-pdf-modal');
+  const frame = document.getElementById('original-pdf-frame');
+  if (frame) frame.src = 'about:blank';
+}
+@endif
 
 function openModal(id) {
   const modal = document.getElementById(id);

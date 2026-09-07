@@ -959,7 +959,10 @@ PROMPT;
             'name' => $expert->name,
             'expertise' => $expertise,
             'role' => $role,
-            'role_label' => $label,
+            // "Recommended Adviser", not "Adviser". This panel sits next to a
+            // team's actual experts, and the bare role name read as though
+            // this person already held it.
+            'role_label' => 'Recommended '.$label,
             'reason' => $reason !== ''
                 ? $reason
                 : 'Holds the '.strtolower($label).' role, with expertise in '.$expertise.'.',
