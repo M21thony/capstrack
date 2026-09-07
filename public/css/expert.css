@@ -127,6 +127,17 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
 .table td{padding:12px 14px;border-bottom:1px solid var(--border);font-size:14px;color:var(--text2);vertical-align:middle}
 .table tr:last-child td{border-bottom:none}
 .table tr:hover td{background:var(--accent-light)}
+
+/* ── DOCUMENT REVIEW ROWS ──
+   A reviewed row used to be dimmed, which reads as "switched off" rather
+   than "finished" and made the done work the hardest thing on the page to
+   read. State goes on the leading edge instead: a colour you can scan down
+   the left of the table at full contrast. */
+.dr-row td:first-child{box-shadow:inset 3px 0 0 var(--border)}
+.dr-row.is-done td:first-child{box-shadow:inset 3px 0 0 var(--green)}
+.dr-row.is-waiting td:first-child{box-shadow:inset 3px 0 0 var(--accent3)}
+.dr-row.is-late td:first-child{box-shadow:inset 3px 0 0 var(--red)}
+.dr-row td{opacity:1}
 .td-main{color:var(--text)!important;font-weight:500}
 
 /* ── FORM ── */

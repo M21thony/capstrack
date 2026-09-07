@@ -478,19 +478,35 @@ if (app()->environment('local')) {
     // accounts with different pages, and a browser test cannot sign in
     // through Google any more than a student one can.
     Route::get('/__dev-login-expert/{role}/{page?}', function (string $role, ?string $page = null) {
-        $expert = $role === 'admin'
-            ? App\Models\CapstoneExpert::where('is_admin', true)->first()
-            : App\Models\CapstoneExpert::whereHas(
+        // admin and capsa reach their own portals; any other role name means
+        // a working expert - somebody holding it who is neither, which is
+        // whose instructor/* pages are under test.
+        // A numeric role is an expert id, for when the page under test only
+        // has data on one particular account.
+        $expert = ctype_digit($role) ? App\Models\CapstoneExpert::find($role) : match ($role) {
+            'admin' => App\Models\CapstoneExpert::where('is_admin', true)->first(),
+            'capsa' => App\Models\CapstoneExpert::whereHas(
                 'roles',
                 fn ($q) => $q->where('role_name', App\Models\CapstoneExpert::CAPSA_ROLE)
-            )->first();
+            )->first(),
+            default => App\Models\CapstoneExpert::where('is_admin', false)
+                ->whereHas('roles', fn ($q) => $q->whereRaw('LOWER(role_name) = ?', [strtolower($role)]))
+                ->whereDoesntHave('roles', fn ($q) => $q->where('role_name', App\Models\CapstoneExpert::CAPSA_ROLE))
+                ->first(),
+        };
 
         abort_unless($expert, 404, 'No '.$role.' account to sign in as.');
 
         Auth::guard('expert')->login($expert);
 
-        $route = ($role === 'admin' ? 'admin.' : 'capsa.').($page ?: 'dashboard');
+        $prefix = ctype_digit($role) ? 'instructor.' : match ($role) {
+            'admin' => 'admin.',
+            'capsa' => 'capsa.',
+            default => 'instructor.',
+        };
 
-        return redirect()->route(Route::has($route) ? $route : ($role === 'admin' ? 'admin.dashboard' : 'capsa.dashboard'));
+        $route = $prefix.($page ?: 'dashboard');
+
+        return redirect()->route(Route::has($route) ? $route : $prefix.'dashboard');
     })->name('dev.login.expert');
 }
