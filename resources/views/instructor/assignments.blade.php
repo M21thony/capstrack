@@ -455,9 +455,13 @@
     <div class="modal-divider"></div>
 
     <label style="font-size: 13px; font-weight: 600; color: var(--text2); display: block; margin-bottom: 8px;">
-      Reason for Rejection <span style="color: var(--text3); font-weight: 400;">(optional)</span>
+      Reason for Declining <span style="color: var(--red)">*</span>
     </label>
-    <textarea id="reject-reason" placeholder="The team will be notified of your reason..."></textarea>
+    <textarea id="reject-reason" maxlength="500" oninput="validateReject()"
+              placeholder="Most teams can apply again. Say what to fix, or that they should look elsewhere."></textarea>
+    <div id="reject-hint" style="font-size:12px;color:var(--text3);margin-top:6px">
+      The team reads this and can apply again.
+    </div>
 
     <div class="modal-actions">
       <button class="btn btn-soft" onclick="closeModal('reject-modal')">Cancel</button>
@@ -609,7 +613,7 @@ function openRejectModal(id) {
   currentRejectId = id;
   document.getElementById('reject-modal-sub').textContent = d.team + ' — ' + d.role;
   document.getElementById('reject-reason').value = '';
-  document.getElementById('btn-confirm-reject').disabled = false;
+  validateReject();
   document.getElementById('btn-confirm-reject').innerHTML =
     '<svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Reject Request';
   openModal('reject-modal');
@@ -650,9 +654,24 @@ function confirmApprove() {
   });
 }
 
+// A decline lands on the team as something they have to act on, and most of
+// the time what an expert means is "tighten this and come back". That is
+// unsayable without a sentence, so the button stays off until there is one.
+function validateReject() {
+  const reason = document.getElementById('reject-reason').value.trim();
+  const btn = document.getElementById('btn-confirm-reject');
+  const hint = document.getElementById('reject-hint');
+
+  btn.disabled = reason.length < 20;
+  hint.textContent = reason.length === 0
+    ? 'The team reads this and can apply again.'
+    : (reason.length < 20 ? 'A line or two, so they know what to change.' : 'The team reads this and can apply again.');
+}
+
 function confirmReject() {
   if (!currentRejectId) return;
   const reason = document.getElementById('reject-reason').value.trim();
+  if (reason.length < 20) return;
   const btn = document.getElementById('btn-confirm-reject');
   btn.disabled = true;
   btn.innerHTML = 'Rejecting...';
@@ -664,7 +683,7 @@ function confirmReject() {
       'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
       'Accept': 'application/json',
     },
-    body: JSON.stringify({ status: 'rejected', reason: reason || null }),
+    body: JSON.stringify({ status: 'rejected', reason: reason }),
   })
   .then(r => r.json())
   .then(data => {
