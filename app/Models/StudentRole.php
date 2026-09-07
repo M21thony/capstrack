@@ -11,6 +11,10 @@ class StudentRole extends Model
 
     protected $primaryKey = 's_role_id';
 
+    // The table is a fixed list of roles with no created_at/updated_at, so
+    // any write through this model asked for columns that are not there.
+    public $timestamps = false;
+
     protected $fillable = [
         's_role_name',
     ];

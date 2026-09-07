@@ -78,22 +78,29 @@ class AddCapsaByEmailTest extends TestCase
     }
 
     /**
-     * A name is required, because a guessed one is wrong on every screen.
+     * The address is the only thing asked for.
      *
-     * It used to be read off the address when blank, which works for
-     * "juan.delacruz@" and gives "Markanthonybalilla21" for an address with
-     * nothing to split on.
+     * A name was required here until a round of testing pointed out that
+     * whoever types it is guessing: Google hands over the real one at the
+     * person's first sign-in and overwrites whatever was typed. What must
+     * never happen is the old behaviour of reading a name off the address -
+     * that works for "juan.delacruz@" and gives "Markanthonybalilla21" for
+     * an address with nothing to split on. Blank stays blank, and the list
+     * says so in the row.
      */
-    public function test_a_capsa_cannot_be_added_without_a_name(): void
+    public function test_a_capsa_can_be_added_with_nothing_but_an_email(): void
     {
         $this->actingAs($this->admin(), 'expert');
 
         $this->postJson(route('admin.experts.capsa.store'), [
             'email' => 'noname@cspc.edu.ph',
-            'sections' => ['BSIT-4B'],
-        ])->assertStatus(422)->assertJson(['success' => false]);
+        ])->assertOk()->assertJson(['success' => true, 'created' => true]);
 
-        $this->assertNull(CapstoneExpert::where('email', 'noname@cspc.edu.ph')->first());
+        $made = CapstoneExpert::where('email', 'noname@cspc.edu.ph')->first();
+
+        $this->assertNotNull($made);
+        $this->assertSame('', $made->name);
+        $this->assertTrue($this->isCapsa('noname@cspc.edu.ph'));
     }
 
     /**
@@ -225,8 +232,14 @@ class AddCapsaByEmailTest extends TestCase
         }
     }
 
-    /** A CaPSA covers sections, so it cannot be granted without any. */
-    public function test_a_capsa_cannot_be_added_without_a_section(): void
+    /**
+     * Sections can come later.
+     *
+     * They used to be required at this moment, which meant an Admin who
+     * knew who to add but not yet which sections they would cover could not
+     * add them at all. The same modal assigns sections afterwards.
+     */
+    public function test_a_capsa_can_be_added_before_their_sections_are_known(): void
     {
         $this->actingAs($this->admin(), 'expert');
 
@@ -234,9 +247,13 @@ class AddCapsaByEmailTest extends TestCase
             'name' => 'Test Person',
             'email' => 'nosections@cspc.edu.ph',
             'sections' => [],
-        ])->assertStatus(422)->assertJson(['success' => false]);
+        ])->assertOk()->assertJson(['success' => true]);
 
-        $this->assertNull(CapstoneExpert::where('email', 'nosections@cspc.edu.ph')->first());
+        $made = CapstoneExpert::where('email', 'nosections@cspc.edu.ph')->first();
+
+        $this->assertNotNull($made);
+        $this->assertSame([], $made->sections ?? []);
+        $this->assertTrue($this->isCapsa('nosections@cspc.edu.ph'));
     }
 
     /** Granting CaPSA is Admin's, so a CaPSA cannot hand it out. */

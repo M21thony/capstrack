@@ -525,6 +525,11 @@
         <tbody>
           @foreach($experts as $expert)
           @php
+              // Whatever a dialog should call this person. An account added by
+              // address alone has no name until its owner signs in, and every
+              // modal that said "Deactivate <blank>?" was unanswerable.
+              $displayName = $expert->name !== '' ? $expert->name : $expert->email;
+
               $expertiseList = $expert->expertise->pluck('expertise_field');
               $expertiseFull = $expertiseList->join(', ') ?: 'None specified';
               $expertiseShown = $expertiseList->take(2)->join(', ');
@@ -562,7 +567,7 @@
 
               $detailPayload = [
                 'avatar' => $expert->avatarUrl(),
-                'name' => $expert->name,
+                'name' => $displayName,
                 'email' => $expert->email,
                 'credentials' => $expert->credentials,
                 'program' => $expert->program,
@@ -597,8 +602,17 @@
                      two people share a surname often enough, and the email is
                      what tells them apart. --}}
                 <span class="cx-text">
-                  <span class="td-main">{{ $expert->name }}</span>
-                  <span class="cx-mail">{{ $expert->email }}</span>
+                  {{-- Add CaPSA only asks for an address, so a row can exist
+                       before anybody knows whose it is. The address stands in
+                       as the name until they sign in, when Google hands over
+                       the one they actually go by. --}}
+                  @if ($expert->name === '')
+                    <span class="td-main">{{ $expert->email }}</span>
+                    <span class="cx-await">Name fills in when they first sign in</span>
+                  @else
+                    <span class="td-main">{{ $expert->name }}</span>
+                    <span class="cx-mail">{{ $expert->email }}</span>
+                  @endif
                 </span>
               </div>
             </td>
@@ -687,12 +701,12 @@
                            doing it through the toggle meant removing them as
                            CaPSA and making them one again. --}}
                       <button type="button" class="rowmenu-item"
-                              onclick="editCapsaSections({{ $expert->expert_id }}, {{ Illuminate\Support\Js::from($expert->name) }}, {{ Illuminate\Support\Js::from($expert->sections ?? []) }})">
+                              onclick="editCapsaSections({{ $expert->expert_id }}, {{ Illuminate\Support\Js::from($displayName) }}, {{ Illuminate\Support\Js::from($expert->sections ?? []) }})">
                         <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="6" rx="1"/><rect x="3" y="14" width="18" height="6" rx="1"/></svg> Which sections they cover
                       </button>
                     @endif
                     <button type="button" class="rowmenu-item warn"
-                            onclick="toggleCapsa({{ $expert->expert_id }}, {{ $expert->is_capsa ? 'true' : 'false' }}, {{ Illuminate\Support\Js::from($expert->name) }})">
+                            onclick="toggleCapsa({{ $expert->expert_id }}, {{ $expert->is_capsa ? 'true' : 'false' }}, {{ Illuminate\Support\Js::from($displayName) }})">
                       <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="17" y1="11" x2="23" y2="11"/></svg> {{ $expert->is_capsa ? 'Take away the CaPSA role' : 'Make them a CaPSA' }}
                     </button>
                     <div class="rowmenu-sep"></div>
@@ -706,7 +720,7 @@
                            term should not have to be created from nothing when they
                            come back, and their sections and history hang off the row. --}}
                       <button type="button" class="rowmenu-item danger remove-trigger"
-                              data-id="{{ $expert->expert_id }}" data-name="{{ $expert->name }}">
+                              data-id="{{ $expert->expert_id }}" data-name="{{ $displayName }}">
                         <svg viewBox="0 0 24 24"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg> Deactivate this account
                       </button>
                     @endif
@@ -815,32 +829,32 @@
   <div class="ct-modal-card">
     <div class="ct-modal-icon danger">
       <svg width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
-        <polyline points="3 6 5 6 21 6"/>
-        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-        <line x1="10" y1="11" x2="10" y2="17"/>
-        <line x1="14" y1="11" x2="14" y2="17"/>
+        <path d="M18.36 6.64a9 9 0 1 1-12.73 0"/>
+        <line x1="12" y1="2" x2="12" y2="12"/>
       </svg>
     </div>
-    <h3 class="ct-modal-title">Remove Expert</h3>
+    <h3 class="ct-modal-title">Deactivate Account</h3>
     <p class="ct-modal-desc">
-      You are about to permanently remove <strong id="removeExpertName" style="color:#0f172a;"></strong> from the system.<br>
-      This action <span style="color:#ef4444;font-weight:600;">cannot be undone</span>.
+      <strong id="removeExpertName" style="color:#0f172a;"></strong> will not be able to sign in, and will
+      disappear from the expert lists students choose from.<br>
+      Their record, expertise and team history are <span style="color:#0f172a;font-weight:600;">kept</span> —
+      you can switch the account back on at any time.
     </p>
     <div style="margin-bottom:16px;text-align:left;">
       <label class="ct-modal-label">
-        Reason for removal <span style="color:#ef4444;font-weight:400;">(sent to affected teams)</span>
+        Reason <span style="color:#ef4444;font-weight:400;">(sent to their teams, and cannot be unsent)</span>
       </label>
-      <textarea id="removeReasonInput" class="ct-modal-input" rows="3" placeholder="Why is this expert being removed? This message will be sent to all affected team members..." style="resize:vertical;min-height:60px;font-family:inherit;"></textarea>
+      <textarea id="removeReasonInput" class="ct-modal-input" rows="3" placeholder="Why is this account being switched off? Every team they are working with will be told." style="resize:vertical;min-height:60px;font-family:inherit;"></textarea>
     </div>
     <div style="margin-bottom:20px;text-align:left;">
       <label class="ct-modal-label">
-        Type <code style="background:#fee2e2;color:#dc2626;padding:2px 6px;border-radius:4px;font-family:monospace;">remove</code> to confirm
+        Type <code style="background:#fee2e2;color:#dc2626;padding:2px 6px;border-radius:4px;font-family:monospace;">deactivate</code> to confirm
       </label>
-      <input type="text" id="removeConfirmInput" class="ct-modal-input" placeholder="type remove" autocomplete="off">
+      <input type="text" id="removeConfirmInput" class="ct-modal-input" placeholder="type deactivate" autocomplete="off">
     </div>
     <div class="ct-modal-actions">
       <button type="button" id="removeCancelBtn" class="ct-btn ct-btn-secondary">Cancel</button>
-      <button type="button" id="removeConfirmBtn" class="ct-btn ct-btn-danger" disabled>Delete</button>
+      <button type="button" id="removeConfirmBtn" class="ct-btn ct-btn-danger" disabled>Deactivate</button>
     </div>
   </div>
 </div>
@@ -874,15 +888,18 @@
         <input type="email" id="capsaEmail" class="ct-modal-input" placeholder="name@cspc.edu.ph" autocomplete="off">
       </div>
       <div class="section-field">
-        <label class="ct-modal-label" for="capsaName" style="margin-bottom:6px">Full name <span style="color:#ef4444;font-weight:400;">(required)</span></label>
+        <label class="ct-modal-label" for="capsaName" style="margin-bottom:6px">Full name <span style="color:#64748b;font-weight:400;">(optional)</span></label>
         <input type="text" id="capsaName" class="ct-modal-input" placeholder="Rosa Villanueva" autocomplete="off">
+        <p style="margin:6px 0 0;font-size:11.5px;color:#64748b;text-align:left;line-height:1.5;">
+          Leave this blank and their real name arrives by itself the first time they sign in.
+        </p>
       </div>
       <p id="capsaEmailError" style="display:none;color:#dc2626;font-size:12px;margin:-6px 0 12px;text-align:left;"></p>
     </div>
 
     <div class="section-field">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-        <label class="ct-modal-label" style="margin:0">Section(s) to assign <span style="color:#ef4444;font-weight:400;">(required)</span></label>
+        <label class="ct-modal-label" style="margin:0">Section(s) to assign <span style="color:#64748b;font-weight:400;">(optional)</span></label>
         <span class="section-count" id="sectionCount">0 / {{ $groupedSections->flatten()->count() }}</span>
       </div>
       <div class="section-search">
@@ -995,14 +1012,14 @@ document.querySelectorAll('.remove-trigger').forEach(btn => {
     removeInput.value = '';
     removeReason.value = '';
     removeBtn.disabled = true;
-    removeBtn.textContent = 'Delete';
+    removeBtn.textContent = 'Deactivate';
     removeModal.style.display = 'flex';
     setTimeout(() => removeReason.focus(), 60);
   });
 });
 
 removeInput.addEventListener('input', function () {
-  removeBtn.disabled = this.value.trim().toLowerCase() !== 'remove';
+  removeBtn.disabled = this.value.trim().toLowerCase() !== 'deactivate';
 });
 
 document.getElementById('removeCancelBtn').addEventListener('click', () => {
@@ -1011,7 +1028,7 @@ document.getElementById('removeCancelBtn').addEventListener('click', () => {
 
 removeBtn.addEventListener('click', function () {
   const expertId = removeModal.dataset.expertId;
-  if (removeInput.value.trim().toLowerCase() !== 'remove') { return; }
+  if (removeInput.value.trim().toLowerCase() !== 'deactivate') { return; }
 
   this.disabled = true;
   this.textContent = 'Deleting…';
@@ -1187,15 +1204,11 @@ document.getElementById('capsaCancelBtn').addEventListener('click', () => {
 capsaConfirmBtn.addEventListener('click', function () {
   const sections = [...document.querySelectorAll('#sectionList .section-opt input:checked')]
     .map(cb => cb.closest('.section-opt').querySelector('span').textContent);
-  if (sections.length === 0) {
-    capsaSectionsError.style.display = 'block';
-    return;
-  }
-
-  // Said before the request goes, beside the field it is about.
-  if (capsaAdding && !document.getElementById('capsaName').value.trim()) {
+  // Only the address is required. A name is overwritten at sign-in anyway,
+  // and sections can be given to them from this same modal later.
+  if (capsaAdding && !document.getElementById('capsaEmail').value.trim()) {
     const box = document.getElementById('capsaEmailError');
-    box.textContent = 'Type their full name.';
+    box.textContent = 'Type the email address of the person to make a CaPSA.';
     box.style.display = 'block';
     return;
   }
@@ -1530,7 +1543,7 @@ function bulkNames(rows) {
 
 // Switching one back on undoes something, so it asks nothing.
 function reactivateExpert(id, name) {
-  fetch(`{{ route('admin.experts.reactivate', ['expert' => 'EXPERT_ID']) }}`.replace('EXPERT_ID', id), {
+  fetch(`{{ route('admin.experts.activation.update', ['expert' => 'EXPERT_ID']) }}`.replace('EXPERT_ID', id), {
     method: 'PUT',
     headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' },
   }).then(function (r) {

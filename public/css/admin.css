@@ -1975,3 +1975,9 @@ tr.cx-off:hover > td{opacity:.8}
 .cx-off-tag{font-size:10px;font-weight:600;letter-spacing:.03em;text-transform:uppercase;
   color:var(--text2);background:var(--bg4);border:1px solid var(--border2);
   border-radius:4px;padding:1px 6px;white-space:nowrap;flex-shrink:0}
+
+/* An expert added by address alone, before their first sign-in. Not an error
+   and not a warning - just a fact about the row - so it borrows the muted
+   tone of the address it replaces rather than a colour that means trouble. */
+.cx-await{font-size:11px;font-style:italic;color:var(--text3);white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis}
