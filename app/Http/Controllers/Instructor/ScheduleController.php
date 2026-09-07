@@ -26,14 +26,10 @@ class ScheduleController extends Controller
     {
         ConsultationBooking::markPastAsDone();
 
-        Log::info('getSlots reached');
-
+        // Debug logging used to sit here dumping the whole expert model,
+        // which writes their Google access and refresh tokens into
+        // laravel.log in plain text on every page load of the schedule.
         $expert = Auth::guard('expert')->user();
-
-        Log::info([
-            'auth_id' => Auth::guard('expert')->id(),
-            'expert' => $expert,
-        ]);
 
         // Scoped to booking_status in ('scheduled', 'done') in the join's ON
         // clause (not a WHERE) so schedule rows with no booking, or only a

@@ -322,6 +322,7 @@ class GoogleAuthTest extends TestCase
         Http::fake([
             'oauth2.googleapis.com/token' => Http::response([
                 'access_token' => 'fake-access-token',
+                'refresh_token' => 'fake-refresh-token',
                 'token_type' => 'Bearer',
                 'expires_in' => 3600,
             ]),
@@ -356,6 +357,7 @@ class GoogleAuthTest extends TestCase
         Http::fake([
             'oauth2.googleapis.com/token' => Http::response([
                 'access_token' => 'fake-access-token',
+                'refresh_token' => 'fake-refresh-token',
                 'token_type' => 'Bearer',
                 'expires_in' => 3600,
             ]),

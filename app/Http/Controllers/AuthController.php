@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\CapstoneExpert;
+use App\Models\GoogleDriveToken;
 use App\Models\Student;
 use App\Models\StudentRoster;
 use Illuminate\Http\JsonResponse;
@@ -72,30 +73,43 @@ class AuthController extends Controller
             ], 500);
         }
 
-        $query = http_build_query([
-            'client_id' => $clientId,
+        return response()->json([
+            'success' => true,
+            'auth_url' => $this->googleAuthUrl($state),
+            'state' => $state,
+        ]);
+    }
+
+    /**
+     * Where sign-in sends people.
+     *
+     * access_type=offline (without forcing prompt=consent) still gets a
+     * refresh_token on first-ever authorization, and again anytime Google
+     * has no valid grant on file (e.g. after a revoke) — it's only omitted
+     * on routine repeat logins, where handleGoogleCallback just keeps
+     * reusing the previously stored one. Forcing prompt=consent
+     * unconditionally used to make every single login show the full
+     * permissions screen again, which is exactly the "asked to continue and
+     * continue" friction this avoids.
+     *
+     * $forceConsent is the way back for an account we hold no refresh token
+     * for at all — see the retry in handleGoogleCallback.
+     */
+    private function googleAuthUrl(string $state, bool $forceConsent = false): string
+    {
+        $query = http_build_query(array_filter([
+            'client_id' => config('services.google.client_id'),
             'redirect_uri' => config('services.google.redirect_uri'),
             'response_type' => 'code',
             // Added Drive scope (drive.file = access only to files the app creates/opens,
             // safer than full 'drive' scope) alongside the existing calendar/profile scopes.
             'scope' => 'openid email profile https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/drive.file',
             'state' => $state,
-            // access_type=offline (without forcing prompt=consent) still gets
-            // a refresh_token on first-ever authorization, and again anytime
-            // Google has no valid grant on file (e.g. after a revoke) — it's
-            // only omitted on routine repeat logins, where handleGoogleCallback
-            // just keeps reusing the previously stored one. Forcing
-            // prompt=consent unconditionally used to make every single login
-            // show the full permissions screen again, which is exactly the
-            // "asked to continue and continue" friction this avoids.
             'access_type' => 'offline',
-        ]);
+            'prompt' => $forceConsent ? 'consent' : null,
+        ]));
 
-        return response()->json([
-            'success' => true,
-            'auth_url' => 'https://accounts.google.com/o/oauth2/v2/auth?'.$query,
-            'state' => $state,
-        ]);
+        return 'https://accounts.google.com/o/oauth2/v2/auth?'.$query;
     }
 
     /**
@@ -181,7 +195,33 @@ class AuthController extends Controller
                     // this time rather than overwriting a working connection with
                     // null (see the same fix in GoogleDriveService::storeToken).
                     $existingToken = json_decode($expert->google_token ?? '', true);
-                    $refreshToken = $response->json('refresh_token') ?? ($existingToken['refresh_token'] ?? null);
+                    $refreshToken = $response->json('refresh_token')
+                        ?? ($existingToken['refresh_token'] ?? null)
+                        // The Drive connection is the same grant stored a
+                        // second time, and the dedicated connect flow forces
+                        // consent - so it can be holding one when the expert
+                        // row is not.
+                        ?? GoogleDriveToken::where('user_id', $expert->expert_id)->value('refresh_token');
+
+                    // Google issues a refresh token on an account's FIRST
+                    // consent and never again, so asking politely a second
+                    // time returns nothing. An expert whose row was removed
+                    // and remade comes back with none - the grant is on the
+                    // Google account, not on our row, so Google sees nothing
+                    // new to consent to - and without one the Drive and
+                    // Calendar sync stops the moment the hour-long access
+                    // token expires, with nothing able to renew it.
+                    //
+                    // The consent screen is the only thing that makes Google
+                    // send another, so ask for it, once, and only for an
+                    // account we hold nothing for.
+                    if (! $refreshToken && ! $request->session()->pull('google_forced_consent', false)) {
+                        $state = Str::random(40);
+                        $request->session()->put('oauth_state', $state);
+                        $request->session()->put('google_forced_consent', true);
+
+                        return redirect()->away($this->googleAuthUrl($state, forceConsent: true));
+                    }
 
                     // Whoever added them typed a name from what they knew,
                     // which is a guess until the person themselves turns up.
@@ -217,7 +257,11 @@ class AuthController extends Controller
                     try {
                         app(\App\Services\GoogleDriveService::class)->storeToken($expert->expert_id, [
                             'access_token' => $accessToken,
-                            'refresh_token' => $response->json('refresh_token'),
+                            // The one resolved above, not the raw response -
+                            // a repeat login sends none, and passing that
+                            // through left the two stores disagreeing about
+                            // whether this account could refresh at all.
+                            'refresh_token' => $refreshToken,
                             'expires_in' => $response->json('expires_in', 3600),
                             'token_type' => $response->json('token_type'),
                         ]);
