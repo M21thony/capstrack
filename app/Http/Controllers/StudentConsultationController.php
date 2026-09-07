@@ -110,7 +110,12 @@ class StudentConsultationController extends Controller
             // as two separate options in the picker below.
             $rows = DB::table('capstone_expert_application as a')
                 ->join('capstone_experts as e', 'e.expert_id', '=', 'a.expert_id')
-                ->join('expert_roles as er', 'er.expert_id', '=', 'e.expert_id')
+                // Through the application, not the expert. Joining on
+                // er.expert_id asks "what roles does this person hold
+                // anywhere", so an expert who is an adviser to one team and
+                // a consultant to another showed up to THIS team as both.
+                // a.expert_role_id is the role they were engaged as here.
+                ->join('expert_roles as er', 'er.expert_role_id', '=', 'a.expert_role_id')
                 ->join('roles as r', 'r.role_id', '=', 'er.role_id')
                 ->where('a.team_id', $teamId)
                 ->where('a.status', 'approved')

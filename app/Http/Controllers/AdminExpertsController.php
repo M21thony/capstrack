@@ -68,9 +68,22 @@ class AdminExpertsController extends Controller
         // as the route names, which is how a bulk rename of route('admin.x')
         // to route('capsa.x') silently pointed both branches at the CaPSA
         // page and took Add CaPSA away from Admin.
+        // Which sections another CaPSA already covers, so the picker can
+        // leave them out - a section handled twice means two people
+        // approving the same teams.
+        $sectionOwners = CapstoneExpert::whereHas(
+            'roles',
+            fn ($q) => $q->where('role_name', CapstoneExpert::CAPSA_ROLE)
+        )->get()->flatMap(
+            fn ($capsa) => collect($capsa->sections ?? [])->mapWithKeys(
+                fn ($section) => [$section => $capsa->expert_id]
+            )
+        )->all();
+
         return view($isCapsaOnly ? 'capsa.experts' : 'admin.experts', [
             'experts' => $experts,
             'groupedSections' => $groupedSections,
+            'sectionOwners' => $sectionOwners,
         ]);
     }
 

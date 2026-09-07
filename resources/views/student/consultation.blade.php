@@ -567,7 +567,7 @@
   </div>
 </div>
 
-<div id="cancelBookingModal" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:100000;display:none;align-items:center;justify-content:center;box-sizing:border-box;">
+<div id="cancelBookingModal" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:1000;display:none;align-items:center;justify-content:center;box-sizing:border-box;">
   <div id="cancelBookingModalBox" style="background:var(--bg2);width:450px;max-width:90vw;border-radius:20px;padding:30px;box-shadow:0 20px 40px rgba(0,0,0,0.2);box-sizing:border-box;">
     <div style="margin-bottom:20px;">
       <h2 style="font-size:18px;font-weight:600;margin:0;">Cancel Booking</h2>
