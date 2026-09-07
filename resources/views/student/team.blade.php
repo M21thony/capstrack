@@ -352,9 +352,26 @@
           <div style="display: flex; flex-direction: column; gap: 10px;">
             @for($i = 0; $i < $memberSlots; $i++)
               @if($i < $slotCount)
-                @php $member = $teamMembers[$i]; $isThisUser = $member->student_id === auth()->user()->student_id; @endphp
+                @php
+                  $member = $teamMembers[$i];
+                  $isThisUser = $member->student_id === auth()->user()->student_id;
+
+                  // Who leads is teams.leader_id, the same fact the rest of
+                  // this page reads. It used to be decided by comparing the
+                  // student's role to the string "Leader", which no row has
+                  // ever held - the leader's role is spelled out in full as
+                  // "Project Head/Network Engineer" - so the comparison was
+                  // false for everybody and the leader was labelled a member
+                  // on their own team.
+                  $isTeamLeader = (int) $member->student_id === (int) $myTeam->leader_id;
+
+                  // Their actual job on the team when one is recorded, and a
+                  // plain description of where they stand when it is not.
+                  $memberRole = $member->s_role_name
+                      ?: ($isTeamLeader ? 'Team Leader' : 'Team Member');
+                @endphp
                 <div style="display: flex; align-items: center; gap: 10px;">
-                  <div style="width: 36px; height: 36px; border-radius: 50%; background: {{ $member->s_role_name === 'Leader' ? '#fbbf24' : ($isThisUser ? '#fbbf24' : '#7c3aed') }}; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #1a1a1a; overflow: hidden; flex-shrink: 0;">
+                  <div style="width: 36px; height: 36px; border-radius: 50%; background: {{ $isTeamLeader || $isThisUser ? '#fbbf24' : '#7c3aed' }}; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #1a1a1a; overflow: hidden; flex-shrink: 0;">
                     @if ($member->avatarUrl())
                       <img src="{{ $member->avatarUrl() }}" alt="" style="width: 100%; height: 100%; object-fit: cover;">
                     @else
@@ -363,9 +380,9 @@
                   </div>
                   <div style="flex: 1;">
                     <div style="font-size: 13px; font-weight: 600; color: var(--text);">{{ trim(($member->f_name ?? '') . ' ' . ($member->l_name ?? '')) ?: $member->email ?? 'Member' }}</div>
-                    <div style="font-size: 11px; color: var(--text3);">{{ $member->s_role_name === 'Leader' ? 'Team Leader' : 'Team Member' }}</div>
+                    <div style="font-size: 11px; color: var(--text3);">{{ $memberRole }}</div>
                   </div>
-                  <div style="background: {{ $member->s_role_name === 'Leader' ? '#fef3c7' : 'var(--bg2)' }}; color: {{ $member->s_role_name === 'Leader' ? '#92400e' : 'var(--text3)' }}; padding: 3px 8px; border-radius: 6px; font-size: 10px; font-weight: 700;">{{ $member->s_role_name ?? 'MEMBER' }}</div>
+                  <div style="background: {{ $isTeamLeader ? '#fef3c7' : 'var(--bg2)' }}; color: {{ $isTeamLeader ? '#92400e' : 'var(--text3)' }}; padding: 3px 8px; border-radius: 6px; font-size: 10px; font-weight: 700;">{{ $isTeamLeader ? 'LEADER' : 'MEMBER' }}</div>
                   @if($isLeader && !$isThisUser && !$myTeam->is_confirmed)
                     <button type="button" onclick="openRemoveMemberModal({{ $member->student_id }}, '{{ addslashes($member->f_name . ' ' . $member->l_name) }}', '{{ addslashes($member->email ?? '') }}', '{{ addslashes(($member->course ?? '') . ($member->year_section ? ' · ' . $member->year_section : '')) }}', '{{ addslashes($member->avatarUrl()) }}')" style="background:none;border:none;color:#ef4444;cursor:pointer;padding:4px;font-size:14px;line-height:1;" title="Remove member">✕</button>
                   @endif
