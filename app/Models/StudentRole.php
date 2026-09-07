@@ -36,16 +36,34 @@ class StudentRole extends Model
     }
 
     /**
-     * How many people may hold each role on one team.
+     * The role everybody on the team holds a share of.
      *
-     * Only the Project Head is singular, and that seat is the leader's - it
-     * is never offered to anybody. The other three take two each, which is
-     * six member seats against a maximum team of five, so a student joining
-     * always has something left to choose.
+     * The course is explicit that writing and testing the system "must be
+     * played partly by each team member", so this one is not a seat anybody
+     * can take from anybody else. It never fills, and it is never shown as
+     * full.
      */
+    public const SHARED_ROLE_NAME = 'Software Engineer/Programmer';
+
+    /** How many of a team may hold one role. */
     public const SEATS = 2;
 
-    public const LEADER_SEATS = 1;
+    /**
+     * The number of people who may hold a role, or null when there is no
+     * limit.
+     *
+     * Project Head seats one, and that one is the leader's - it is never
+     * offered to anybody else. Programmer has no limit, for the reason
+     * above. The remaining two seat a pair each.
+     */
+    public static function seatsFor(string $roleName): ?int
+    {
+        return match ($roleName) {
+            self::LEADER_ROLE_NAME => 1,
+            self::SHARED_ROLE_NAME => null,
+            default => self::SEATS,
+        };
+    }
 
     /** The three roles a member may choose between. */
     public static function memberRoles()
@@ -58,7 +76,7 @@ class StudentRole extends Model
     /**
      * The member roles this team still has room for, with who holds each.
      *
-     * @return array<int, array{role: StudentRole, taken: int, seats: int, held_by: array<int, string>}>
+     * @return array<int, array{role: StudentRole, taken: int, seats: ?int, held_by: array<int, string>}>
      */
     public static function seatingFor(int $teamId): array
     {
@@ -74,7 +92,7 @@ class StudentRole extends Model
             return [
                 'role' => $role,
                 'taken' => $held->count(),
-                'seats' => self::SEATS,
+                'seats' => self::seatsFor($role->s_role_name),
                 'held_by' => $held
                     ->map(fn ($row) => trim(($row->student->f_name ?? '').' '.($row->student->l_name ?? '')))
                     ->filter()
@@ -87,15 +105,22 @@ class StudentRole extends Model
     /** Can one more person take this role on this team? */
     public static function hasSeat(int $teamId, int $roleId): bool
     {
-        if ($roleId === self::leaderRoleId()) {
+        $role = static::find($roleId);
+
+        if (! $role || $role->s_role_name === self::LEADER_ROLE_NAME) {
             return false;
         }
 
-        $taken = StudentSchoolYear::where('team_id', $teamId)
-            ->where('s_role_id', $roleId)
-            ->count();
+        $seats = self::seatsFor($role->s_role_name);
 
-        return $taken < self::SEATS;
+        // No limit: everybody programs, so there is always room.
+        if ($seats === null) {
+            return true;
+        }
+
+        return StudentSchoolYear::where('team_id', $teamId)
+            ->where('s_role_id', $roleId)
+            ->count() < $seats;
     }
 
     public function studentSchoolYears(): HasMany
