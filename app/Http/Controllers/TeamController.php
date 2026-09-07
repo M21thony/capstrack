@@ -284,7 +284,7 @@ class TeamController extends Controller
 
         $asked = collect($seating)
             ->filter(fn ($row) => $wanted->contains($row['role']->s_role_name))
-            ->filter(fn ($row) => $row['taken'] < $row['seats']);
+            ->filter(fn ($row) => $row['seats'] === null || $row['taken'] < $row['seats']);
 
         $offer = $asked->isNotEmpty() ? $asked : collect($seating);
 
@@ -295,7 +295,8 @@ class TeamController extends Controller
             'taken' => $row['taken'],
             'seats' => $row['seats'],
             'held_by' => $row['held_by'],
-            'full' => $row['taken'] >= $row['seats'],
+            // A role with no seat limit never fills.
+            'full' => $row['seats'] !== null && $row['taken'] >= $row['seats'],
         ])->values()->all();
     }
 

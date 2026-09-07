@@ -14,6 +14,16 @@ class RecruitmentTest extends TestCase
 {
     use RefreshDatabase;
 
+    /**
+     * A post can only ask for a role that exists, so the roles have to be
+     * there before any of these can publish one.
+     */
+    protected function setUp(): void
+    {
+        parent::setUp();
+        (new \Database\Seeders\StudentRoleSeeder)->run();
+    }
+
     public function test_student_can_publish_build_a_team_post(): void
     {
         $student = Student::create([
@@ -37,7 +47,7 @@ class RecruitmentTest extends TestCase
             'recruitment_goal' => 'build_a_team',
             'team_name' => 'Innovators',
             'looking_for' => 'Need a Frontend Developer',
-            'tags' => json_encode(['Web Dev', 'UI Designer']),
+            'tags' => json_encode(['Software Engineer/Programmer', 'Network Designer/UI Designer']),
         ]);
 
         $response->assertRedirect(route('student.team'));
@@ -56,7 +66,7 @@ class RecruitmentTest extends TestCase
         $this->assertNotNull($recruitment);
         $this->assertEquals('build_a_team', $recruitment->recruitment_goal);
         $this->assertEquals('Need a Frontend Developer', $recruitment->looking_for);
-        $this->assertEquals(['Web Dev', 'UI Designer'], $recruitment->roles);
+        $this->assertEquals(['Software Engineer/Programmer', 'Network Designer/UI Designer'], $recruitment->roles);
         $this->assertEquals(5, $recruitment->member_count);
     }
 
@@ -82,7 +92,7 @@ class RecruitmentTest extends TestCase
         $response = $this->post('/recruitment', [
             'recruitment_goal' => 'find_a_team',
             'introduction' => 'I am a backend developer',
-            'tags' => json_encode(['Backend Dev']),
+            'tags' => json_encode(['Software Engineer/Programmer']),
         ]);
 
         $response->assertRedirect(route('student.team'));
@@ -95,7 +105,7 @@ class RecruitmentTest extends TestCase
         $this->assertNotNull($recruitment);
         $this->assertEquals('find_a_team', $recruitment->recruitment_goal);
         $this->assertEquals('Jane Smith', $student->f_name.' '.$student->l_name);
-        $this->assertEquals(['Backend Dev'], $recruitment->roles);
+        $this->assertEquals(['Software Engineer/Programmer'], $recruitment->roles);
     }
 
     public function test_student_in_team_cannot_publish_recruitment_post(): void
@@ -125,7 +135,7 @@ class RecruitmentTest extends TestCase
         $response = $this->post('/recruitment', [
             'recruitment_goal' => 'find_a_team',
             'introduction' => 'Should fail',
-            'tags' => json_encode(['Backend Dev']),
+            'tags' => json_encode(['Software Engineer/Programmer']),
         ]);
 
         $response->assertSessionHasErrors(['error']);
@@ -171,7 +181,7 @@ class RecruitmentTest extends TestCase
             Recruitment::create([
                 'student_id' => $otherStudent->student_id,
                 'recruitment_goal' => 'find_a_team',
-                'roles' => ['Web Dev'],
+                'roles' => ['Software Engineer/Programmer'],
                 'introduction' => "Intro {$i}",
             ]);
         }
@@ -226,7 +236,7 @@ class RecruitmentTest extends TestCase
         Recruitment::create([
             'student_id' => $otherSame->student_id,
             'recruitment_goal' => 'find_a_team',
-            'roles' => ['Frontend Dev'],
+            'roles' => ['Network Designer/UI Designer'],
         ]);
 
         // 3. Other student in same course but different section: BSIT, "3rd · B"
@@ -248,7 +258,7 @@ class RecruitmentTest extends TestCase
         Recruitment::create([
             'student_id' => $otherDiffSection->student_id,
             'recruitment_goal' => 'find_a_team',
-            'roles' => ['Backend Dev'],
+            'roles' => ['Software Engineer/Programmer'],
         ]);
 
         // 4. Other student in different course but same section: BSCS, "3rd · A"
@@ -270,7 +280,7 @@ class RecruitmentTest extends TestCase
         Recruitment::create([
             'student_id' => $otherDiffCourse->student_id,
             'recruitment_goal' => 'find_a_team',
-            'roles' => ['Database Admin'],
+            'roles' => ['QA Tester/Documentation Writer'],
         ]);
 
         $response = $this->get('/student/team');
@@ -488,14 +498,14 @@ class RecruitmentTest extends TestCase
         $recruitment = Recruitment::create([
             'student_id' => $student->student_id,
             'recruitment_goal' => 'find_a_team',
-            'roles' => ['Web Dev'],
+            'roles' => ['Software Engineer/Programmer'],
             'introduction' => 'Original intro',
         ]);
 
         $response = $this->put("/recruitment/{$recruitment->recruitment_id}", [
             'recruitment_goal' => 'find_a_team',
             'introduction' => 'Updated introduction',
-            'roles' => ['Web Dev', 'UI Designer'],
+            'roles' => ['Software Engineer/Programmer', 'Network Designer/UI Designer'],
         ]);
 
         $response->assertRedirect();
@@ -504,7 +514,7 @@ class RecruitmentTest extends TestCase
         $recruitment->refresh();
         $this->assertEquals('find_a_team', $recruitment->recruitment_goal);
         $this->assertEquals('Updated introduction', $recruitment->introduction);
-        $this->assertEquals(['Web Dev', 'UI Designer'], $recruitment->roles);
+        $this->assertEquals(['Software Engineer/Programmer', 'Network Designer/UI Designer'], $recruitment->roles);
     }
 
     public function test_student_can_update_build_a_team_post(): void
@@ -529,7 +539,7 @@ class RecruitmentTest extends TestCase
         $recruitment = Recruitment::create([
             'student_id' => $student->student_id,
             'recruitment_goal' => 'build_a_team',
-            'roles' => ['Backend Dev'],
+            'roles' => ['Software Engineer/Programmer'],
             'looking_for' => 'Looking for a backend dev',
             'member_count' => 3,
         ]);
@@ -537,7 +547,7 @@ class RecruitmentTest extends TestCase
         $response = $this->put("/recruitment/{$recruitment->recruitment_id}", [
             'recruitment_goal' => 'build_a_team',
             'looking_for' => 'Now looking for a frontend dev',
-            'roles' => ['Frontend Dev', 'UI Designer'],
+            'roles' => ['Network Designer/UI Designer'],
             'member_count' => 5,
         ]);
 
@@ -547,7 +557,7 @@ class RecruitmentTest extends TestCase
         $recruitment->refresh();
         $this->assertEquals('build_a_team', $recruitment->recruitment_goal);
         $this->assertEquals('Now looking for a frontend dev', $recruitment->looking_for);
-        $this->assertEquals(['Frontend Dev', 'UI Designer'], $recruitment->roles);
+        $this->assertEquals(['Network Designer/UI Designer'], $recruitment->roles);
         $this->assertEquals(5, $recruitment->member_count);
     }
 
@@ -581,7 +591,7 @@ class RecruitmentTest extends TestCase
         $recruitment = Recruitment::create([
             'student_id' => $owner->student_id,
             'recruitment_goal' => 'find_a_team',
-            'roles' => ['Web Dev'],
+            'roles' => ['Software Engineer/Programmer'],
         ]);
 
         $response = $this->put("/recruitment/{$recruitment->recruitment_id}", [
@@ -615,7 +625,7 @@ class RecruitmentTest extends TestCase
         $response = $this->post('/recruitment', [
             'recruitment_goal' => 'build_a_team',
             'team_name' => 'Test Team',
-            'tags' => json_encode(['Web Dev']),
+            'tags' => json_encode(['Software Engineer/Programmer']),
             'member_count' => 2,
         ]);
 
@@ -643,7 +653,7 @@ class RecruitmentTest extends TestCase
             'recruitment_goal' => 'build_a_team',
             'team_name' => 'AutoTeam',
             'looking_for' => 'Need members',
-            'tags' => json_encode(['Web Dev']),
+            'tags' => json_encode(['Software Engineer/Programmer']),
             'member_count' => 4,
         ]);
 

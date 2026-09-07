@@ -54,6 +54,21 @@ class RecruitmentController extends Controller
             $roles = json_decode($tagsJson, true) ?? [];
         }
 
+        // A post names capstone team roles, and nothing else. Anything not in
+        // student_roles can never be assigned to whoever joins, so the post
+        // would be advertising something the system cannot deliver.
+        $roles = array_values(array_intersect((array) $roles, self::advertisableRoles()));
+
+        if ($roles === []) {
+            $message = 'Choose at least one capstone team role.';
+
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'message' => $message], 422);
+            }
+
+            return back()->withErrors(['roles' => $message]);
+        }
+
         $recruitment = DB::transaction(function () use ($validated, $studentId, $roles): Recruitment {
             // If goal is build_a_team and team_name is provided, create team and link it
             if ($validated['recruitment_goal'] === 'build_a_team' && ! empty($validated['team_name'])) {
@@ -113,6 +128,19 @@ class RecruitmentController extends Controller
             ->with('status', 'Recruitment post published!');
     }
 
+    /**
+     * The roles a recruitment post may ask for.
+     *
+     * The three member roles, straight out of student_roles. Project Head is
+     * excluded: that seat is the leader's and is never advertised.
+     *
+     * @return array<int, string>
+     */
+    private static function advertisableRoles(): array
+    {
+        return StudentRole::memberRoles()->pluck('s_role_name')->all();
+    }
+
     public function update(Request $request, Recruitment $recruitment): JsonResponse|RedirectResponse
     {
         $student = $request->user();
@@ -126,7 +154,7 @@ class RecruitmentController extends Controller
             'looking_for' => ['nullable', 'string', 'max:500'],
             'introduction' => ['nullable', 'string', 'max:500'],
             'roles' => ['required', 'array', 'min:1'],
-            'roles.*' => ['string', 'max:50'],
+            'roles.*' => [Rule::in(self::advertisableRoles())],
         ]);
 
         $recruitment->update([
