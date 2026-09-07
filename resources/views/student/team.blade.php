@@ -1280,7 +1280,11 @@
       </div>
     </div>
 
-    <div style="flex: 1; overflow-y: auto; padding: 18px 26px 26px; min-height: 0;">
+    {{-- Not a scroller. This scrolled AND the list inside it scrolled, so
+         the dialog had two bars down its right edge and the search box slid
+         away under the header. It lays the search and the list out; the list
+         is the only thing that moves. --}}
+    <div style="flex: 1; display: flex; flex-direction: column; min-height: 0; overflow: hidden; padding: 18px 26px 26px;">
       <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px;">
         <div style="position: relative; flex: 1;">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text3); pointer-events: none;"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
@@ -1288,7 +1292,7 @@
         </div>
       </div>
 
-      <div id="open-slot-classmates-list" style="display: flex; flex-direction: column; gap: 8px; max-height: 400px; overflow-y: auto; padding-right: 4px;">
+      <div id="open-slot-classmates-list" style="display: flex; flex-direction: column; gap: 8px; flex: 1; min-height: 0; overflow-y: auto; padding-right: 4px;">
         {{-- Classmates will be loaded dynamically --}}
         <div id="open-slot-loading" style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 20px; color: var(--text3); font-size: 13px;">
           <div class="sk" style="width: 32px; height: 32px; border-radius: 50%; border: 2px solid var(--border); border-top-color: var(--blue); animation: spin 1s linear infinite; margin-bottom: 12px;"></div>
