@@ -1472,7 +1472,7 @@ function removeOneExpert(id, name) {
 // Switching one back on asks nothing: it undoes something, and it is the
 // deactivate above that was worth a confirmation.
 function reactivateExpert(id, name) {
-  fetch(`{{ route('capsa.experts.reactivate', ['expert' => 'EXPERT_ID']) }}`.replace('EXPERT_ID', id), {
+  fetch(`{{ route('capsa.experts.activation.update', ['expert' => 'EXPERT_ID']) }}`.replace('EXPERT_ID', id), {
     method: 'PUT',
     headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' },
   }).then(function (r) {

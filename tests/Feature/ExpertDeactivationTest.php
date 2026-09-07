@@ -70,7 +70,7 @@ class ExpertDeactivationTest extends TestCase
         $expert->delete();
 
         $this->actingAs($this->capsa(), 'expert')
-            ->putJson(route('capsa.experts.reactivate', $expert->expert_id))
+            ->putJson(route('capsa.experts.activation.update', $expert->expert_id))
             ->assertOk()
             ->assertJson(['success' => true]);
 
@@ -87,7 +87,7 @@ class ExpertDeactivationTest extends TestCase
         $expert = $this->expert();
 
         $this->actingAs($this->capsa(), 'expert')
-            ->putJson(route('capsa.experts.reactivate', $expert->expert_id))
+            ->putJson(route('capsa.experts.activation.update', $expert->expert_id))
             ->assertStatus(422);
     }
 

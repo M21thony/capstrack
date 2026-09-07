@@ -1638,15 +1638,6 @@ function openRemoveMemberModal(studentId, name, email, info, avatarUrl) {
     document.getElementById('removeMemberModal').classList.add('active');
 }
 
-function setAvatar(avatarEl, url, name) {
-    if (url) {
-        avatarEl.innerHTML = '<img src="' + url + '" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">';
-    } else {
-        avatarEl.innerHTML = '';
-        avatarEl.textContent = (name || 'U').charAt(0).toUpperCase();
-    }
-}
-
 function closeRemoveMemberModal() {
     document.getElementById('removeMemberModal').classList.remove('active');
     removeMemberId = null;
@@ -1731,6 +1722,15 @@ function closeEditTeamModal() {
     document.getElementById('editTeamModal').classList.remove('active');
 }
 @endif
+
+function setAvatar(avatarEl, url, name) {
+    if (url) {
+        avatarEl.innerHTML = '<img src="' + url + '" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">';
+    } else {
+        avatarEl.innerHTML = '';
+        avatarEl.textContent = (name || 'U').charAt(0).toUpperCase();
+    }
+}
 
 var declineInvitationId = null;
 

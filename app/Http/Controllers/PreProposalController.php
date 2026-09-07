@@ -434,6 +434,40 @@ class PreProposalController extends Controller
             ->with('status', 'Unsubmitted. Your titles are drafts again - submit for checking when you are ready.');
     }
 
+    /**
+     * The PDF the team actually uploaded, served back to that same team.
+     *
+     * The CaPSA has had this since they started reviewing; the students who
+     * wrote it had no way to open it again. It matters most on the expert
+     * application form, which tells a team their approved pre-proposal goes
+     * out with the application without ever showing them which file that is.
+     *
+     * The document is not on the proposal - it belongs to the duplication
+     * check the proposal was created from.
+     */
+    public function document(Request $request, CapstonePreProposal $preProposal)
+    {
+        $team = $this->currentTeam($request);
+
+        if (! $team || $preProposal->team_id !== $team->team_id) {
+            abort(403);
+        }
+
+        $check = $preProposal->duplicationCheck;
+
+        if (! $check || ! $check->document_path || ! Storage::exists($check->document_path)) {
+            abort(404, 'The original document could not be found.');
+        }
+
+        // Inline, so it opens in the browser's reader rather than downloading.
+        return Storage::response(
+            $check->document_path,
+            'Pre-Proposal-'.$preProposal->slot.'.pdf',
+            [],
+            'inline'
+        );
+    }
+
     public function destroy(Request $request, CapstonePreProposal $preProposal): RedirectResponse
     {
         $team = $this->currentTeam($request);
