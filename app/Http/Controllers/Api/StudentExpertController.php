@@ -126,6 +126,17 @@ class StudentExpertController extends Controller
             ], 404);
         }
 
+        // Nobody is engaged before they have said what they take. An expert
+        // who has never filled in their programmes and slots is still listed
+        // - hiding them helps nobody - but a team cannot apply to them,
+        // because there is no answer yet to whether they have room.
+        if (! $expert->hasSetPrograms()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'This expert has not set which programs they take teams from yet, so they cannot be applied to.',
+            ], 422);
+        }
+
         // Enforced here too, not just hidden from the list - otherwise a
         // hand-crafted request could still apply to an expert who doesn't
         // take this program.

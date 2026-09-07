@@ -403,6 +403,21 @@ class CapstoneExpert extends Authenticatable
             ->all();
     }
 
+    /**
+     * Has this expert said which programmes they take teams from?
+     *
+     * program_slots empty means "no restriction" everywhere else, which is
+     * right for listing them - an expert who has not filled it in should
+     * still be visible rather than silently vanishing from every student's
+     * page. It is not right for applying: a team should not be able to
+     * engage somebody who has not yet said they take teams like theirs, and
+     * how many. So they stay browsable and the apply is refused.
+     */
+    public function hasSetPrograms(): bool
+    {
+        return filled($this->program_slots);
+    }
+
     public function acceptsProgram(?string $program): bool
     {
         if (! $program) {
