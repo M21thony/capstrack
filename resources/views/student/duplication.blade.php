@@ -78,6 +78,10 @@
 }
 .score-ring-sm > div { position: relative; z-index: 1; }
 
+.pp-chosen{display:inline-flex;align-items:center;gap:5px;font-weight:700;color:var(--green,#16a34a)}
+.pp-row.is-chosen{border-left:3px solid var(--green,#16a34a);padding-left:9px}
+/* Still readable, just plainly not the one being worked on. */
+.pp-row.is-set-aside{opacity:.62}
 .sx-role{font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;
     color:var(--accent3,#8a6e10);margin-bottom:2px}
   .instructor-item {
@@ -427,8 +431,15 @@
             </div>
           @else
             @foreach ($proposals as $proposal)
-              @php $check = $proposal->duplicationCheck; @endphp
-              <div style="padding:10px 0;border-top:1px solid var(--border)">
+              @php
+                $check = $proposal->duplicationCheck;
+                $rowChosen = $team?->selected_pre_proposal_id
+                    && (int) $team->selected_pre_proposal_id === (int) $proposal->id;
+                $rowSetAside = $team?->selected_pre_proposal_id && ! $rowChosen
+                    && $proposal->status === 'approved';
+              @endphp
+              <div class="pp-row @if($rowChosen) is-chosen @elseif($rowSetAside) is-set-aside @endif"
+                   style="padding:10px 0;border-top:1px solid var(--border)">
                 <div style="font-size:12px;font-weight:500;margin-bottom:4px;{{ $proposal->status === 'rejected' ? 'color:var(--text3);text-decoration:line-through' : 'color:var(--text)' }}">{{ $proposal->title }}</div>
                 @if ($proposal->submitted_at || $proposal->status !== 'pending')
                   <span class="badge {{ $proposal->status === 'approved' ? 'badge-green' : ($proposal->status === 'rejected' ? 'badge-red' : 'badge-amber') }}">{{ ucfirst($proposal->status) }}</span>
@@ -439,7 +450,16 @@
                 @if ($proposal->status === 'rejected')
                   <div class="pp-hint" style="color:var(--red)">{{ $proposal->rejection_reason }}</div>
                 @elseif ($proposal->status === 'approved')
-                  <div class="pp-hint">Locked in as a candidate.</div>
+                  @if ($team?->selected_pre_proposal_id && (int) $team->selected_pre_proposal_id === (int) $proposal->id)
+                    <div class="pp-hint pp-chosen">
+                      <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                      This is your team's title.
+                    </div>
+                  @elseif ($team?->selected_pre_proposal_id)
+                    <div class="pp-hint">Approved, but not the title your team chose.</div>
+                  @else
+                    <div class="pp-hint">Locked in as a candidate.</div>
+                  @endif
                 @elseif ($proposal->submitted_at)
                   <div class="pp-hint">Awaiting adviser review.</div>
                 @else
@@ -534,15 +554,26 @@
                         // Pre-proposal approval is CaPSA's, which is what the
                         // locked button's tooltip needs to say: "approved" on
                         // its own doesn't tell the student who to chase.
-                        $applyOpen = $proposal->status === 'approved' && $isLeader;
+                        // A team with two approved pre-proposals picks one
+                        // to be their title. Applying belongs to that one
+                        // alone - an expert asked to advise the title the
+                        // team set aside is being asked about work nobody is
+                        // doing.
+                        $chosenId = $team?->selected_pre_proposal_id;
+                        $isChosen = $chosenId && (int) $chosenId === (int) $proposal->id;
+                        $setAside = $chosenId && ! $isChosen;
+
+                        $applyOpen = $proposal->status === 'approved' && $isLeader && ! $setAside;
                         $applyLockShort = match (true) {
                             $proposal->status === 'rejected' => 'Pre-proposal rejected',
                             $proposal->status !== 'approved' => 'Needs CaPSA approval',
+                            $setAside => 'Not your chosen title',
                             default => 'Team leader only',
                         };
                         $applyLockReason = match (true) {
                             $proposal->status === 'rejected' => 'This pre-proposal was rejected, so you cannot apply to an expert with it. Revise it or use one that was approved.',
                             $proposal->status !== 'approved' => 'Your CaPSA has to approve this pre-proposal before your team can apply to an expert with it. It is still awaiting review.',
+                            $setAside => 'Your team chose a different title, so this one is no longer the one you apply with.',
                             default => 'Only your team leader can apply to an expert.',
                         };
                       @endphp
@@ -658,7 +689,8 @@
           <span class="card-title">Pre-Proposal Details</span>
           <span style="font-size:12px;color:var(--text3);font-weight:400">Pulled from your uploaded PDF — review and edit before saving.</span>
         </div>
-        <form method="POST" action="{{ route('student.pre-proposal.store') }}" id="pp-form">
+        <form method="POST" action="{{ route('student.pre-proposal.store') }}" id="pp-form"
+              onsubmit="return ppFormIsComplete(this)">
           @csrf
           <input type="hidden" name="duplication_check_id" id="check-id" value="">
 
@@ -884,6 +916,55 @@ function countMeaningfulWords(text) {
     var cleaned = w.replace(/[^a-zA-Z0-9']/g, '');
     return cleaned.length > 0 && !stopWords.has(cleaned.toLowerCase());
   }).length;
+}
+
+// Everything the server would reject, checked before the form is posted.
+//
+// A rejection there answers with a redirect, which reloads the page - and the
+// duplication result the student just waited on is on that page. Losing a
+// scan to a title one word short is a bad trade, and the count that catches
+// it has been sitting on screen the whole time.
+function ppFormIsComplete(form) {
+  const title = document.getElementById('title');
+  const words = countMeaningfulWords(title ? title.value : '');
+
+  if (words < 11 || words > 12) {
+    showToast('Your title needs 11-12 meaningful words. It currently has ' + words + '.', 'error');
+    if (title) { title.focus(); }
+
+    return false;
+  }
+
+  // The rest are plain "required" rules, named the way the form labels them.
+  const needed = [
+    ['sdg', 'Choose a Sustainable Development Goal.'],
+    ['problem', 'Fill in the problem statement.'],
+    ['solution', 'Fill in the proposed solution.'],
+    ['scope', 'Fill in the scope.'],
+    ['limitations', 'Fill in the limitations.'],
+    ['sdm', 'Fill in the software development methodology.'],
+  ];
+
+  for (const [id, message] of needed) {
+    const field = document.getElementById(id);
+
+    if (field && !String(field.value || '').trim()) {
+      showToast(message, 'error');
+      field.focus();
+
+      return false;
+    }
+  }
+
+  if (!form.querySelectorAll('input[name="research_agenda[]"]').length) {
+    showToast('Add at least one research agenda or priority area.', 'error');
+    const agenda = document.getElementById('agenda-input');
+    if (agenda) { agenda.focus(); }
+
+    return false;
+  }
+
+  return true;
 }
 
 function updateWordCount() {
