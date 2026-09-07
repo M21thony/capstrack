@@ -389,6 +389,56 @@ class MemberChoosesTheirRoleTest extends TestCase
         $this->assertNull($this->roleOf($joiner));
     }
 
+    /**
+     * The two seated roles scale with the size the CaPSA set.
+     *
+     * A team is the leader plus everybody else, split across Network
+     * Designer and QA Tester, so each takes half rounded up. Programmer sits
+     * outside the arithmetic entirely.
+     */
+    public function test_seats_follow_the_size_of_the_team(): void
+    {
+        $this->assertSame(1, StudentRole::seatsFor(self::TESTER, 3));
+        $this->assertSame(2, StudentRole::seatsFor(self::TESTER, 4));
+        $this->assertSame(2, StudentRole::seatsFor(self::TESTER, 5));
+
+        $this->assertSame(1, StudentRole::seatsFor(self::DESIGNER, 3));
+        $this->assertSame(2, StudentRole::seatsFor(self::DESIGNER, 5));
+
+        // Neither of these is a seat anybody competes for.
+        $this->assertNull(StudentRole::seatsFor(self::PROGRAMMER, 3));
+        $this->assertSame(1, StudentRole::seatsFor(StudentRole::LEADER_ROLE_NAME, 5));
+    }
+
+    /** On a team of three, one person to a seated role and no more. */
+    public function test_a_team_of_three_seats_one_each(): void
+    {
+        [$leader, $team] = $this->team();
+        $team->update(['member_count' => 3]);
+
+        $tester = StudentRole::where('s_role_name', self::TESTER)->value('s_role_id');
+
+        $held = $this->student('Ana', 'ana@my.cspc.edu.ph');
+        StudentSchoolYear::create([
+            'student_id' => $held->student_id,
+            'team_id' => $team->team_id,
+            's_role_id' => $tester,
+        ]);
+
+        $this->assertFalse(StudentRole::hasSeat($team->team_id, $tester));
+
+        [$joiner, $invite] = $this->inviteeOf($team, $leader);
+        $this->actingAs($joiner, 'web')->patch(route('invitations.update', $invite), ['status' => 'accepted']);
+
+        $this->actingAs($joiner, 'web')->put(route('team.role.update'), ['role_id' => $tester]);
+        $this->assertNull($this->roleOf($joiner));
+
+        // But Programmer is still open to them, as it is to everybody.
+        $programmer = StudentRole::where('s_role_name', self::PROGRAMMER)->value('s_role_id');
+        $this->actingAs($joiner, 'web')->put(route('team.role.update'), ['role_id' => $programmer]);
+        $this->assertSame(self::PROGRAMMER, $this->roleOf($joiner));
+    }
+
     // ----------------------------------------------------------------
     // The one thing that moves a settled role
     // ----------------------------------------------------------------
