@@ -977,7 +977,7 @@
           </div>
 
           <div style="margin-bottom: 18px;">
-              <div style="font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 8px; letter-spacing: 0.5px;">Expertise</div>
+              <div style="font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 8px; letter-spacing: 0.5px;">Roles</div>
               <div id="detail-skills" style="display: flex; flex-wrap: wrap; gap: 6px;"></div>
           </div>
 
@@ -1011,7 +1011,13 @@
         <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 8px;">Short Introduction</label>
         <textarea id="individual-intro" rows="3" placeholder="Briefly introduce what you contribute to the team..." style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg2); color: var(--text); font-size: 13px; resize: vertical; margin-bottom: 16px; box-sizing: border-box;"></textarea>
       </div>
-      <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 8px;">Expertise & Roles</label>
+      <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 8px;">Roles</label>
+      {{-- What the post names decides what the joining student ends up as:
+           one role is given to them on accept, two or more and they pick
+           between exactly these. --}}
+      <p style="margin:-2px 0 8px;font-size:11px;color:var(--text3);line-height:1.5">
+        Name one and whoever joins becomes that. Name more and they choose between them.
+      </p>
       <div class="tag-wrapper-box" style="position: relative; margin-bottom: 25px;">
         <div class="tag-input-field" id="tag-container" onclick="document.getElementById('tag-search-input').focus()">
           <input type="text" id="tag-search-input" placeholder="" oninput="filterTagSuggestions()" onfocus="filterTagSuggestions()">
@@ -1429,6 +1435,88 @@
   </div>
 </div>
 
+{{-- Choose your role.
+
+     Shown to a member who has joined but has no role yet. That is anybody
+     invited directly, and anybody whose team's post named more than one
+     thing it was short of - a post naming exactly one role assigns it on
+     accept and this never appears.
+
+     It has no close button on purpose. The choice is one click and the page
+     behind it is unusable without it: every roster row, and the CaPSA's own
+     verification list, reads this field. --}}
+@if(!empty($needsRole) && !empty($roleChoices))
+<div class="modal-overlay active" id="roleChoiceModal" style="z-index:1200">
+  <div class="card modal-card modal-card--team" style="width:460px;max-width:94vw;padding:28px;position:relative">
+    <div style="width:46px;height:46px;border-radius:12px;background:var(--accent);display:flex;align-items:center;justify-content:center;margin:0 auto 14px">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#1a1a1a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="m19 8 2 2 3-3"/></svg>
+    </div>
+    <div class="section-title" style="text-align:center">Choose your role</div>
+    <p style="margin:8px 0 0;font-size:12.5px;color:var(--text3);text-align:center;line-height:1.55">
+      You are on <strong style="color:var(--text)">{{ $myTeam->team_name }}</strong>. Pick what you
+      will be doing — this is set for the semester, so choose carefully.
+    </p>
+
+    <div style="display:flex;flex-direction:column;gap:9px;margin-top:18px">
+      @foreach($roleChoices as $choice)
+        <button type="button"
+                class="rolepick {{ $choice['full'] ? 'is-full' : '' }}"
+                @if($choice['full']) disabled @else onclick="pickRole({{ $choice['id'] }}, this)" @endif>
+          <span class="rolepick-main">
+            <span class="rolepick-name">{{ $choice['name'] }}</span>
+            @if($choice['duties'])
+              <span class="rolepick-duties">{{ $choice['duties'] }}</span>
+            @endif
+          </span>
+          <span class="rolepick-seats">
+            @if($choice['full'])
+              Full<br><span style="font-weight:500;opacity:.8">{{ implode(', ', $choice['held_by']) }}</span>
+            @else
+              {{ $choice['seats'] - $choice['taken'] }} of {{ $choice['seats'] }} free
+            @endif
+          </span>
+        </button>
+      @endforeach
+    </div>
+
+    <form method="POST" action="{{ route('team.role.update') }}" id="role-choice-form" style="display:none">
+      @csrf
+      @method('PUT')
+      <input type="hidden" name="role_id" id="role-choice-input">
+    </form>
+  </div>
+</div>
+
+<style>
+  .rolepick{
+    display:flex;align-items:flex-start;gap:12px;width:100%;text-align:left;
+    padding:13px 14px;border-radius:11px;cursor:pointer;
+    background:var(--bg2);border:1.5px solid var(--border);
+    transition:border-color .13s ease, background .13s ease;
+  }
+  .rolepick:hover:not(.is-full){border-color:var(--accent);background:var(--bg3)}
+  .rolepick.is-full{opacity:.5;cursor:not-allowed}
+  .rolepick-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+  .rolepick-name{font-size:13.5px;font-weight:700;color:var(--text);line-height:1.3}
+  .rolepick-duties{font-size:11px;color:var(--text3);line-height:1.5}
+  .rolepick-seats{
+    flex-shrink:0;font-size:10.5px;font-weight:700;color:var(--text3);
+    text-align:right;line-height:1.45;padding-top:2px;
+  }
+</style>
+
+<script>
+function pickRole(roleId, btn) {
+  // Every button off at once - a double click was two people's worth of
+  // seat, and the answer to the second one is an error message.
+  document.querySelectorAll('#roleChoiceModal .rolepick').forEach(function (b) { b.disabled = true; });
+  btn.style.borderColor = 'var(--accent)';
+  document.getElementById('role-choice-input').value = roleId;
+  document.getElementById('role-choice-form').submit();
+}
+</script>
+@endif
+
 {{-- Review & Decline Modal --}}
 <div class="modal-overlay" id="declineModal" onclick="if(event.target==this) closeDeclineModal()">
   <div class="card modal-card modal-card--team" style="width: 420px; padding: 30px; text-align: center; position: relative;">
@@ -1530,8 +1618,10 @@ const hasPendingRequest = @json($hasPendingRequest ?? false);
 let activeTags = [];
 let isEditing = false;
 let editingId = null;
-const leaderPresets = ["UI Designer", "App Developer", "Backend Dev", "Documentation", "Fullstack Dev", "Web Dev", "Mobile Dev", "Project Manager"];
-const individualPresets = ["Leadership", "Research", "Design", "Testing", "Frontend Dev", "Database Admin", "QA Engineer", "Web Dev", "UI Designer", "Backend Dev"];
+// The capstone team roles, straight out of student_roles. Project Head is
+// not among them: that seat is the leader's and is never advertised.
+const leaderPresets = @json($memberRoleNames, JSON_UNESCAPED_SLASHES);
+const individualPresets = @json($memberRoleNames, JSON_UNESCAPED_SLASHES);
 
 const myTeamId = {{ $myTeam?->team_id ?? 'null' }};
 
@@ -2693,7 +2783,7 @@ function filterFeed() {
 function publishPost(event) {
     if (activeTags.length === 0) {
         event.preventDefault();
-        showToast('Please select at least one expertise/role.', 'error');
+        showToast('Choose at least one role.', 'error');
         return;
     }
     const goal = document.getElementById('post-goal').value;

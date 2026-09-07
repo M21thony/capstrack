@@ -186,19 +186,60 @@
   .pm-edit-profile-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; flex: 1; padding: 10px 16px; background-color: #2563eb; color: #ffffff !important; font-size: 13px; font-weight: 600; text-decoration: none; border-radius: 8px; border: none; transition: background-color 0.15s ease, transform 0.1s ease; box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2); text-align: center; }
   .pm-edit-profile-btn:hover { background-color: #1d4ed8; box-shadow: 0 4px 6px rgba(37, 99, 235, 0.3); }
   .pm-edit-profile-btn:active { transform: scale(0.98); }
+
+  /* ---- profile panel, rebuilt without the avatar ----
+     The stylesheets under resources/student-ui carry the old .pm-* rules and
+     there is a copy of them per page, so the new ones live here: one file,
+     included on every student page, and no build step to forget. */
+  .pm-header { align-items: flex-start; }
+  .pm-header-name { font-size: 16px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.25; white-space: normal; overflow-wrap: anywhere; }
+  .pm-header-sub { font-size: 11.5px; color: rgba(255,255,255,0.6); margin-top: 5px; display: flex; align-items: center; flex-wrap: wrap; }
+  .pm-sep { margin: 0 6px; color: rgba(255,255,255,0.3); }
+  .pm-no { font-variant-numeric: tabular-nums; letter-spacing: 0.02em; }
+
+  .pm-body { padding: 0; }
+  .pm-zone { padding: 15px 18px; }
+  .pm-zone + .pm-zone { border-top: 1px solid var(--border); }
+  .pm-zone-capstone { background: var(--bg3); }
+  .pm-zone-head { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+  .pm-zone-head .pm-label { margin-bottom: 0; color: var(--text2); }
+  .pm-rule { flex: 1; height: 1px; background: var(--border); }
+
+  .pm-team { display: flex; align-items: center; gap: 11px; background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 11px 12px; }
+  .pm-team-mark { width: 34px; height: 34px; border-radius: 9px; flex-shrink: 0; background: var(--accent); color: #1a1a1a; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; letter-spacing: -0.02em; }
+  .pm-team-name { font-size: 14px; font-weight: 600; line-height: 1.3; letter-spacing: -0.01em; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pm-team-meta { font-size: 11px; color: var(--text3); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pm-pill { flex-shrink: 0; padding: 3px 9px; border-radius: 20px; font-size: 9.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+  .pm-pill-ok { background: var(--green-bg); color: var(--green); }
+  .pm-pill-wait { background: var(--amber-bg); color: var(--amber); }
+
+  .pm-role { display: flex; align-items: center; gap: 12px; margin-top: 9px; background: var(--accent-light, rgba(201,168,44,0.09)); border: 1px solid rgba(201,168,44,0.35); border-radius: 10px; padding: 11px 12px; }
+  .pm-role-name { font-size: 12.5px; font-weight: 700; color: var(--accent3); line-height: 1.35; overflow-wrap: anywhere; }
+  .pm-lock { flex-shrink: 0; color: var(--accent3); opacity: 0.55; }
+
+  .pm-rows { display: flex; flex-direction: column; gap: 11px; }
+  .pm-row { display: flex; align-items: baseline; justify-content: space-between; gap: 14px; }
+  .pm-row .pm-label { margin-bottom: 0; flex-shrink: 0; }
+  /* Beats the boxed .pm-value the old stylesheets still define. */
+  .pm-rows .pm-value { background: none; border: 0; padding: 0; font-size: 12.5px; text-align: right; min-width: 0; overflow-wrap: anywhere; }
 </style>
 
 <div class="profile-overlay" id="profile-overlay" onclick="handleOverlayClick(event)">
+  {{-- No picture and no Sign Out: both are in the sidebar this panel opens
+       from, four inches away. What is left is what the sidebar cannot show -
+       the details, and where this student stands in their capstone. --}}
   <div class="profile-modal" id="profile-modal" onclick="event.stopPropagation()">
     <div class="pm-header">
-      @if ($student->avatarUrl())
-        <img src="{{ $student->avatarUrl() }}" alt="" class="pm-avatar-img">
-      @else
-        <div class="pm-avatar">{{ $student->avatarInitials() }}</div>
-      @endif
       <div style="flex:1;min-width:0">
+        {{-- With the avatar gone the name is the only thing anchoring the
+             header, so it carries the weight the picture used to. --}}
         <div class="pm-header-name">{{ $student->f_name }} {{ $student->m_name }} {{ $student->l_name }}{{ $student->suffix ? ', ' . $student->suffix : '' }}</div>
-        <div class="pm-header-role">{{ $student->role ?? 'Student' }}</div>
+        <div class="pm-header-sub">
+          {{ $sidebarYearSection ?: 'Student' }}
+          @if ($student->student_number)
+            <span class="pm-sep">·</span><span class="pm-no">{{ $student->student_number }}</span>
+          @endif
+        </div>
       </div>
       <button type="button" onclick="closeProfile()" class="pm-close-btn" aria-label="Close">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -206,38 +247,53 @@
         </svg>
       </button>
     </div>
+
     <div class="pm-body" id="pm-body">
-      <div class="pm-field">
-        <div class="pm-label">Full Name</div>
-        <div class="pm-value">{{ trim($student->l_name . ', ' . $student->f_name . ($student->m_name ? ' ' . $student->m_name : '') . ($student->suffix ? ' ' . $student->suffix : '')) . '.' }}</div>
-      </div>
-      <div class="pm-field">
-        <div class="pm-label">Institutional Email</div>
-        <div class="pm-value readonly">
-          <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-          {{ $student->email }}
+      @if ($panelTeam)
+        <div class="pm-zone pm-zone-capstone">
+          <div class="pm-zone-head"><span class="pm-label">Capstone</span><span class="pm-rule"></span></div>
+
+          <div class="pm-team">
+            <div class="pm-team-mark">{{ mb_strtoupper(mb_substr($panelTeam->team_name, 0, 1)) }}{{ mb_strtolower(mb_substr($panelTeam->team_name, 1, 1)) }}</div>
+            <div style="min-width:0;flex:1">
+              <div class="pm-team-name">{{ $panelTeam->team_name }}</div>
+              <div class="pm-team-meta">{{ $panelTeam->project_title ? Str::limit($panelTeam->project_title, 42) : 'No title chosen yet' }}</div>
+            </div>
+            @if ($panelTeam->is_confirmed)
+              <span class="pm-pill pm-pill-ok">Verified</span>
+            @else
+              <span class="pm-pill pm-pill-wait">Pending</span>
+            @endif
+          </div>
+
+          {{-- Chosen once when they joined, then settled for the semester.
+               The padlock says so without a dead button inviting clicks. --}}
+          <div class="pm-role">
+            <div style="min-width:0;flex:1">
+              <div class="pm-label" style="margin-bottom:3px">Your role</div>
+              <div class="pm-role-name">{{ $panelRole ?: 'Not chosen yet' }}</div>
+            </div>
+            @if ($panelRole)
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" class="pm-lock" aria-label="Set for the semester">
+                <rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>
+              </svg>
+            @endif
+          </div>
+        </div>
+      @endif
+
+      <div class="pm-zone">
+        <div class="pm-zone-head"><span class="pm-label">Account</span><span class="pm-rule"></span></div>
+        <div class="pm-rows">
+          <div class="pm-row"><span class="pm-label">Email</span><span class="pm-value">{{ $student->email }}</span></div>
+          <div class="pm-row"><span class="pm-label">Course</span><span class="pm-value">{{ $student->course }}</span></div>
         </div>
       </div>
-      <div class="pm-divider"></div>
-      <div class="pm-field">
-        <div class="pm-label">Course</div>
-        <div class="pm-value">{{ $student->course }}</div>
-      </div>
-      <div class="pm-field">
-        <div class="pm-label">Year &amp; Section</div>
-        <div class="pm-value">{{ $sidebarYearSection }}</div>
-      </div>
-      <div class="pm-field">
-        <div class="pm-label">Student ID</div>
-        <div class="pm-value">{{ $student->student_number ?? '—' }}</div>
-      </div>
     </div>
+
     <div class="pm-footer">
       <a href="{{ route('student.personal-info.edit') }}" class="pm-edit-profile-btn" style="text-decoration:none;">
         Edit Profile
-        @if ($studentHasTeam)
-
-        @endif
       </a>
     </div>
   </div>
