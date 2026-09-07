@@ -93,7 +93,7 @@ $pagesBothRolesOpen = function () {
     Route::delete('/experts/{expert}', [AdminExpertsController::class, 'destroy'])->name('experts.destroy');
     // Not bound to the model: route-model binding cannot find a deactivated
     // account, which is the only kind this is ever called on.
-    Route::put('/experts/{expert}/reactivate', [AdminExpertsController::class, 'reactivate'])->name('experts.reactivate');
+    Route::put('/experts/{expert}/activation', [AdminExpertsController::class, 'reactivate'])->name('experts.activation.update');
     Route::put('/notifications/seen', function (Request $request) {
         $ids = $request->input('ids', []);
         if (! empty($ids)) {
@@ -358,6 +358,7 @@ Route::middleware(['auth', 'no.cache', 'track.expert'])->group(function () {
     Route::patch('/pre-proposal', [PreProposalController::class, 'updateStatus'])->name('student.pre-proposal.submit');
     Route::post('/pre-proposal/{preProposal}/choose', [PreProposalController::class, 'choose'])->name('student.pre-proposal.choose');
     Route::delete('/pre-proposal/{preProposal}', [PreProposalController::class, 'destroy'])->name('student.pre-proposal.destroy');
+    Route::get('/pre-proposal/{preProposal}/document', [PreProposalController::class, 'document'])->name('student.pre-proposal.document');
 
     Route::middleware(['track.student'])->prefix('student')->group(function () {
         Route::get('/personal-info', [PersonalInfoController::class, 'show'])->name('student.personal-info');

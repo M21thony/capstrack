@@ -843,6 +843,16 @@
       </button>
     </div>
     <div class="pp-body">
+      {{-- The typed fields below are what the team keyed in; this is the file
+           they actually uploaded and the CaPSA actually approved. The form
+           says this document is sent with the application, so it has to be
+           possible to look at it. --}}
+      @if($proposalPdfUrl)
+        <div class="pp-field">
+          <div class="pp-label">Original PDF</div>
+          <iframe class="pp-pdf" src="{{ $proposalPdfUrl }}#toolbar=0" title="Approved pre-proposal PDF"></iframe>
+        </div>
+      @endif
       @foreach([
         'Problem statement' => $approvedProposal->problem_statement,
         'Proposed solution' => $approvedProposal->proposed_solution,
@@ -861,6 +871,12 @@
       @endforeach
     </div>
     <div class="pp-foot">
+      @if($proposalPdfUrl)
+        <a class="btn btn-sm btn-primary" href="{{ $proposalPdfUrl }}" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          View PDF
+        </a>
+      @endif
       <button class="btn btn-sm btn-soft" onclick="closeModal('proposal-preview-modal')">Close</button>
     </div>
   </div>

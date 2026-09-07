@@ -301,7 +301,7 @@ class AdminExpertsController extends Controller
         ]);
     }
 
-    /** PUT /experts/{expert}/reactivate — switch the account back on. */
+    /** PUT /experts/{expert}/activation — switch the account back on. */
     public function reactivate(int $expertId): JsonResponse
     {
         $expert = CapstoneExpert::withTrashed()->findOrFail($expertId);
@@ -427,15 +427,16 @@ class AdminExpertsController extends Controller
         // of HTML where JSON was expected, and fails in silence.
         $validator = Validator::make($request->all(), [
             'email' => ['required', 'email'],
-            'name' => ['required', 'string', 'max:120'],
-            'sections' => ['required', 'array', 'min:1'],
+            // Only the address is required. A name typed here is a guess that
+            // Google overwrites on the person's first sign-in anyway, and the
+            // sections they cover can be given to them later from this same
+            // modal - neither is worth blocking the invitation on.
+            'name' => ['nullable', 'string', 'max:120'],
+            'sections' => ['nullable', 'array'],
             'sections.*' => ['string'],
         ], [
             'email.required' => 'Type the email address of the person to make a CaPSA.',
             'email.email' => 'That is not an email address.',
-            'name.required' => 'Type their full name.',
-            'sections.required' => 'Choose at least one section.',
-            'sections.min' => 'Choose at least one section.',
         ]);
 
         if ($validator->fails()) {
@@ -470,7 +471,9 @@ class AdminExpertsController extends Controller
         $created = false;
 
         if (! $expert) {
-            [$firstName, $lastName] = $this->nameFrom($request->input('name'));
+            // Blank stays blank rather than becoming something derived from
+            // the address; the list says so in the row itself.
+            [$firstName, $lastName] = $this->nameFrom((string) $request->input('name'));
 
             $expert = CapstoneExpert::create([
                 'email' => $email,
@@ -490,16 +493,24 @@ class AdminExpertsController extends Controller
             'role_id' => $roleId,
         ]);
 
-        $expert->sections = $request->input('sections');
+        // Optional now, so an empty submission must not wipe the sections an
+        // existing CaPSA already handles.
+        if ($request->has('sections')) {
+            $expert->sections = $request->input('sections', []);
+        }
+
         $expert->save();
+
+        // Their name if it is known, their address if it is not.
+        $label = $expert->name !== '' ? $expert->name : $email;
 
         return response()->json([
             'success' => true,
             'created' => $created,
             'name' => $expert->name,
             'message' => $created
-                ? "{$expert->name} was made a CaPSA. They can sign in with {$email}."
-                : "{$expert->name} is now a CaPSA.",
+                ? "{$label} was made a CaPSA. They can sign in with {$email}."
+                : "{$label} is now a CaPSA.",
         ]);
     }
 
@@ -510,12 +521,13 @@ class AdminExpertsController extends Controller
      * Anthony Balilla, not Mark, of the family Anthony Balilla. Two given
      * names is the ordinary case here, not the exception.
      *
-     * The name is required. It used to be optional and read off the address
-     * when blank, which works for "juan.delacruz@" and produces
-     * "Markanthonybalilla21" for an address with nothing to split on - and
-     * that lands on every screen showing a name, in every panel list, and in
-     * the emails the system sends. Three seconds of typing beats a name
-     * nobody can correct but its owner.
+     * Add Expert still asks for a name; Add CaPSA does not, and a blank one
+     * gives back two blank strings. It must never be read off the address
+     * instead: that works for "juan.delacruz@" but produces
+     * "Markanthonybalilla21" for an address with nothing to split on, which
+     * would then land on every screen showing a name, in every panel list,
+     * and in the emails the system sends. Nothing at all is easier to read
+     * as "not known yet" - and Google fills it in at sign-in.
      *
      * @return array{0: string, 1: string} first, last
      */
