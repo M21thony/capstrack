@@ -1469,7 +1469,11 @@
             @endif
           </span>
           <span class="rolepick-seats">
-            @if($choice['full'])
+            @if($choice['seats'] === null)
+              {{-- Everybody writes and tests the system, so this one never
+                   runs out and saying "2 of 2 free" would be a lie. --}}
+              Open to all
+            @elseif($choice['full'])
               Full<br><span style="font-weight:500;opacity:.8">{{ implode(', ', $choice['held_by']) }}</span>
             @else
               {{ $choice['seats'] - $choice['taken'] }} of {{ $choice['seats'] }} free

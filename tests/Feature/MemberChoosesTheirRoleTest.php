@@ -269,10 +269,42 @@ class MemberChoosesTheirRoleTest extends TestCase
     public function test_a_role_holds_two_and_no_more(): void
     {
         [$leader, $team] = $this->team();
-        $programmer = StudentRole::where('s_role_name', self::PROGRAMMER)->value('s_role_id');
+        $tester = StudentRole::where('s_role_name', self::TESTER)->value('s_role_id');
 
         foreach (['a', 'b'] as $i => $tag) {
             $held = $this->student('Held'.$i, "held{$tag}@my.cspc.edu.ph");
+            StudentSchoolYear::create([
+                'student_id' => $held->student_id,
+                'team_id' => $team->team_id,
+                's_role_id' => $tester,
+            ]);
+        }
+
+        $this->assertFalse(StudentRole::hasSeat($team->team_id, $tester));
+
+        [$joiner, $invite] = $this->inviteeOf($team, $leader);
+        $this->actingAs($joiner, 'web')->patch(route('invitations.update', $invite), ['status' => 'accepted']);
+
+        $this->actingAs($joiner, 'web')
+            ->put(route('team.role.update'), ['role_id' => $tester]);
+
+        $this->assertNull($this->roleOf($joiner));
+    }
+
+    /**
+     * Programmer is the exception, and the course says why: writing and
+     * testing the system "must be played partly by each team member". It is
+     * not a seat anybody can take from anybody else, so it never fills and
+     * is never shown as full.
+     */
+    public function test_everybody_can_be_the_programmer(): void
+    {
+        [$leader, $team] = $this->team();
+        $programmer = StudentRole::where('s_role_name', self::PROGRAMMER)->value('s_role_id');
+
+        // A full team's worth already on it.
+        foreach (['a', 'b', 'c', 'd'] as $tag) {
+            $held = $this->student('Held'.$tag, "held{$tag}@my.cspc.edu.ph");
             StudentSchoolYear::create([
                 'student_id' => $held->student_id,
                 'team_id' => $team->team_id,
@@ -280,7 +312,8 @@ class MemberChoosesTheirRoleTest extends TestCase
             ]);
         }
 
-        $this->assertFalse(StudentRole::hasSeat($team->team_id, $programmer));
+        $this->assertTrue(StudentRole::hasSeat($team->team_id, $programmer));
+        $this->assertNull(StudentRole::seatsFor(self::PROGRAMMER));
 
         [$joiner, $invite] = $this->inviteeOf($team, $leader);
         $this->actingAs($joiner, 'web')->patch(route('invitations.update', $invite), ['status' => 'accepted']);
@@ -288,21 +321,35 @@ class MemberChoosesTheirRoleTest extends TestCase
         $this->actingAs($joiner, 'web')
             ->put(route('team.role.update'), ['role_id' => $programmer]);
 
-        $this->assertNull($this->roleOf($joiner));
+        $this->assertSame(self::PROGRAMMER, $this->roleOf($joiner));
+    }
+
+    /** And it is offered as open rather than counted down. */
+    public function test_the_programmer_row_is_not_counted_in_seats(): void
+    {
+        [$leader, $team] = $this->team();
+        [$joiner, $invite] = $this->inviteeOf($team, $leader);
+        $this->actingAs($joiner, 'web')->patch(route('invitations.update', $invite), ['status' => 'accepted']);
+
+        $dialog = $this->dialog(
+            $this->actingAs($joiner, 'web')->get(route('student.team'))->assertOk()->getContent()
+        );
+
+        $this->assertStringContainsString('Open to all', $dialog);
     }
 
     /** A full role is still shown, with who is in it, rather than vanishing. */
     public function test_a_full_role_is_shown_as_full(): void
     {
         [$leader, $team] = $this->team();
-        $programmer = StudentRole::where('s_role_name', self::PROGRAMMER)->value('s_role_id');
+        $tester = StudentRole::where('s_role_name', self::TESTER)->value('s_role_id');
 
         foreach ([['Ana', 'ana'], ['Rico', 'rico']] as [$first, $tag]) {
             $held = $this->student($first, "{$tag}@my.cspc.edu.ph");
             StudentSchoolYear::create([
                 'student_id' => $held->student_id,
                 'team_id' => $team->team_id,
-                's_role_id' => $programmer,
+                's_role_id' => $tester,
             ]);
         }
 
@@ -324,15 +371,15 @@ class MemberChoosesTheirRoleTest extends TestCase
     public function test_a_post_naming_a_full_role_falls_back_to_asking(): void
     {
         [$leader, $team] = $this->team();
-        $programmer = StudentRole::where('s_role_name', self::PROGRAMMER)->value('s_role_id');
-        $this->advertise($team, [self::PROGRAMMER]);
+        $tester = StudentRole::where('s_role_name', self::TESTER)->value('s_role_id');
+        $this->advertise($team, [self::TESTER]);
 
         foreach (['x', 'y'] as $i => $tag) {
             $held = $this->student('Held'.$i, "held{$tag}@my.cspc.edu.ph");
             StudentSchoolYear::create([
                 'student_id' => $held->student_id,
                 'team_id' => $team->team_id,
-                's_role_id' => $programmer,
+                's_role_id' => $tester,
             ]);
         }
 
@@ -380,6 +427,66 @@ class MemberChoosesTheirRoleTest extends TestCase
     // ----------------------------------------------------------------
     // The post
     // ----------------------------------------------------------------
+
+    /**
+     * A post can only ask for a role that exists.
+     *
+     * The picker used to offer eight invented options - "App Developer",
+     * "Backend Dev", "Project Manager" - none of them in student_roles. A
+     * post carrying those can never assign anybody anything: there is no
+     * such role to give. It is refused at the door now, at both ends.
+     */
+    public function test_a_post_cannot_advertise_a_role_that_does_not_exist(): void
+    {
+        $applicant = $this->student('Ana', 'poster@my.cspc.edu.ph');
+        StudentSchoolYear::create(['student_id' => $applicant->student_id]);
+
+        $this->actingAs($applicant, 'web')->post(route('recruitment.store'), [
+            'recruitment_goal' => 'find_a_team',
+            'introduction' => 'I can build things.',
+            'member_count' => 5,
+            'tags' => json_encode(['App Developer', 'Backend Dev']),
+        ]);
+
+        $this->assertNull(Recruitment::where('student_id', $applicant->student_id)->first());
+    }
+
+    /** And the real ones get through. */
+    public function test_a_post_asking_for_a_real_role_is_published(): void
+    {
+        $applicant = $this->student('Ana', 'poster@my.cspc.edu.ph');
+        StudentSchoolYear::create(['student_id' => $applicant->student_id]);
+
+        $this->actingAs($applicant, 'web')->post(route('recruitment.store'), [
+            'recruitment_goal' => 'find_a_team',
+            'introduction' => 'I can build things.',
+            'member_count' => 5,
+            'tags' => json_encode([self::PROGRAMMER]),
+        ]);
+
+        $post = Recruitment::where('student_id', $applicant->student_id)->first();
+
+        $this->assertNotNull($post);
+        $this->assertSame([self::PROGRAMMER], (array) $post->roles);
+    }
+
+    /** Anything invented is dropped, and what is real survives beside it. */
+    public function test_invented_roles_are_stripped_from_a_mixed_post(): void
+    {
+        $applicant = $this->student('Ana', 'poster@my.cspc.edu.ph');
+        StudentSchoolYear::create(['student_id' => $applicant->student_id]);
+
+        $this->actingAs($applicant, 'web')->post(route('recruitment.store'), [
+            'recruitment_goal' => 'find_a_team',
+            'introduction' => 'I can build things.',
+            'member_count' => 5,
+            'tags' => json_encode(['Backend Dev', self::TESTER, 'Fullstack Dev']),
+        ]);
+
+        $post = Recruitment::where('student_id', $applicant->student_id)->first();
+
+        $this->assertSame([self::TESTER], (array) $post->roles);
+    }
 
     /** The post advertises the real roles, and never the leader's seat. */
     public function test_the_post_offers_the_member_roles_only(): void
