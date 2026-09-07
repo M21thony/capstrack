@@ -180,12 +180,9 @@
 </div>
 
 <style>
-  .pm-close-btn { display: inline-flex; align-items: center; justify-content: center; margin-left: auto; flex-shrink: 0; padding: 4px; background: none; color: rgba(255,255,255,0.4); border: none; line-height: 1; cursor: pointer; transition: color 0.13s ease-in-out; outline: none; }
-  .pm-close-btn:hover { color: rgba(255,255,255,0.85); }
-  .pm-close-btn svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 2.5; }
-  .pm-edit-profile-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; flex: 1; padding: 10px 16px; background-color: #2563eb; color: #ffffff !important; font-size: 13px; font-weight: 600; text-decoration: none; border-radius: 8px; border: none; transition: background-color 0.15s ease, transform 0.1s ease; box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2); text-align: center; }
-  .pm-edit-profile-btn:hover { background-color: #1d4ed8; box-shadow: 0 4px 6px rgba(37, 99, 235, 0.3); }
-  .pm-edit-profile-btn:active { transform: scale(0.98); }
+  .profile-modal .pm-close-btn { display: inline-flex; align-items: center; justify-content: center; margin-left: auto; flex-shrink: 0; width: auto; height: auto; padding: 4px; background: none; background-color: transparent; color: rgba(255,255,255,0.4); border: none; border-radius: 0; line-height: 1; cursor: pointer; transition: color 0.13s ease-in-out; outline: none; }
+  .profile-modal .pm-close-btn:hover { background-color: transparent; color: rgba(255,255,255,0.85); transform: none; }
+  .profile-modal .pm-close-btn svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 2.5; }
 
   /* ---- profile panel, rebuilt without the avatar ----
      The stylesheets under resources/student-ui carry the old .pm-* rules and
@@ -291,11 +288,6 @@
       </div>
     </div>
 
-    <div class="pm-footer">
-      <a href="{{ route('student.personal-info.edit') }}" class="pm-edit-profile-btn" style="text-decoration:none;">
-        Edit Profile
-      </a>
-    </div>
   </div>
 </div>
 
