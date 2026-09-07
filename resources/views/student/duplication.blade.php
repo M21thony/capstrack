@@ -758,7 +758,11 @@
   <div class="card pp-modal-box" style="max-width:430px;padding:22px 24px 20px">
     <div style="display:flex;align-items:flex-start;gap:13px">
       <span id="pp-sc-icon" style="width:38px;height:38px;border-radius:11px;flex-shrink:0;display:grid;place-items:center;background:var(--amber-bg);color:var(--amber)">
-        <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
+        {{-- Swapped for a tick when the team has turned in the number they
+             were asked for. It used to be a hazard triangle either way, so
+             doing the right thing was met with a warning sign. --}}
+        <svg id="pp-sc-glyph-warn" viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
+        <svg id="pp-sc-glyph-ok" viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" hidden><path d="M20 6 9 17l-5-5"/></svg>
       </span>
       <div style="min-width:0">
         <h3 id="pp-sc-title" style="margin:0 0 5px;font-size:16px;font-weight:700;color:var(--text)"></h3>
@@ -838,10 +842,13 @@ function confirmSubmitCount(e) {
     : 'Your CaPSA will review all ' + count + '. You can take this back any time until '
       + 'they start reviewing.';
 
-  // Amber when it is worth a second thought, gold when it is not.
+  // Amber and a warning triangle when it is worth a second thought; gold
+  // and a tick when it is not.
   const icon = document.getElementById('pp-sc-icon');
   icon.style.background = short ? 'var(--amber-bg)' : 'var(--accent-light)';
   icon.style.color = short ? 'var(--amber)' : 'var(--accent3)';
+  document.getElementById('pp-sc-glyph-warn').hidden = ! short;
+  document.getElementById('pp-sc-glyph-ok').hidden = short;
 
   document.getElementById('pp-submit-confirm').classList.add('show');
   document.body.style.overflow = 'hidden';
