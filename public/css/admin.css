@@ -1981,3 +1981,15 @@ tr.cx-off:hover > td{opacity:.8}
    tone of the address it replaces rather than a colour that means trouble. */
 .cx-await{font-size:11px;font-style:italic;color:var(--text3);white-space:nowrap;
   overflow:hidden;text-overflow:ellipsis}
+
+/* ── .content ON A CONTROL ──
+   .content is the page's scrolling layout box: flex:1, overflow-y:auto,
+   padding:26px. A handful of buttons wear it as well, to pick up the
+   light-background ".content .btn-*" colours - and took the page's padding
+   with them. That is what made a 12px-font button 48px tall.
+
+   The class keeps doing its colour job on those buttons; the layout half of
+   it stops at the control. */
+button.content,
+a.btn.content,
+.btn.content{padding:7px 16px;overflow:visible}
