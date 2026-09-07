@@ -97,6 +97,34 @@ class ScheduleController extends Controller
         $newRecur = $request->recur ?? 'weekly';
         $newDate  = $newRecur === 'once' ? $request->specific_date : null;
 
+        // A slot identical to one that already exists is nobody's intention.
+        // It used to be inserted anyway, then flagged unavailable by the
+        // overlap check below - and an unavailable slot reads as a booked
+        // one, so a repeated save left phantom appointments behind. Hand
+        // back the slot that is already there instead.
+        // Times are compared trimmed to H:i on both sides - the column holds
+        // '09:00:00' and the request sends '09:00', and only MySQL treats
+        // those as equal.
+        $hm = fn ($t) => substr((string) $t, 0, 5);
+
+        $duplicate = DB::table('consultation_schedule')
+            ->where('expert_id', $expert->expert_id)
+            ->where('available_date', $request->available_date)
+            ->get()
+            ->first(fn ($row) => $hm($row->start_time) === $hm($request->start_time)
+                && $hm($row->end_time) === $hm($request->end_time)
+                && ($row->recur ?? 'weekly') === $newRecur
+                && ($row->specific_date ?? null) === $newDate);
+
+        if ($duplicate) {
+            return response()->json([
+                'schedule_id' => $duplicate->schedule_id,
+                'google_synced' => $duplicate->google_event_id !== null,
+                'is_available' => (bool) $duplicate->is_available,
+                'already_existed' => true,
+            ]);
+        }
+
         // available_date is only a weekday name, not a real date, so a plain
         // weekday+time match here would flag a new one-time slot as
         // "overlapping" against any unrelated once/biweekly slot that merely
