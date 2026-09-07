@@ -1523,8 +1523,15 @@ function layoutRail() {
   // Two rows only when there are enough cards to fill two. The strip fills
   // downwards first, so four cards against a fixed two rows made two narrow
   // columns with the page empty beside them.
-  var fits = room() >= one * 2 + 10 ? 2 : 1;
   var needed = Math.ceil(rail.children.length / cols);
+
+  // room() holds back 24px for the pager. When a second row would take every
+  // card, there is no pager to hold back for - and that reservation was
+  // enough on its own to send the last expert onto a page of their own with
+  // the space for them sitting empty underneath.
+  var spare = rail.children.length <= cols * 2 ? 24 : 0;
+
+  var fits = room() + spare >= one * 2 + 10 ? 2 : 1;
   rail.style.setProperty('--rows', Math.max(1, Math.min(fits, needed)));
 
   fitAllTags();
@@ -1541,7 +1548,16 @@ function updateRail() {
   // Counted from the cards rather than from scrollWidth: a few sub-pixels of
   // rounding on the last column was enough to invent an empty page.
   var pages = Math.max(1, Math.ceil(rail.children.length / per));
-  var at = Math.min(pages - 1, Math.round(rail.scrollLeft / rail.clientWidth));
+
+  // Which page is showing, measured across the whole scrollable distance
+  // rather than in units of one screen width. A last page holding one card
+  // is only a third of a screen wide, so dividing by clientWidth rounded the
+  // position straight back to zero: the counter stayed on "1 of 2" and the
+  // back arrow, which hides itself on the first page, never appeared.
+  var max = rail.scrollWidth - rail.clientWidth;
+  var at = max <= 1
+    ? 0
+    : Math.min(pages - 1, Math.round((rail.scrollLeft / max) * (pages - 1)));
 
   var prev = document.querySelector('.rail-nav.prev');
   var next = document.querySelector('.rail-nav.next');
