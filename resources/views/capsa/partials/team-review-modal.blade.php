@@ -301,24 +301,6 @@ function renderPreProposals(proposals, selectedId) {
         + dup.matches.map(function (m, i) {
           var mTone = m.score >= 65 ? 'red' : (m.score >= 55 ? 'amber' : 'green');
           var meta = [m.academic_year, m.program].filter(Boolean).join(' \u00b7 ');
-          // The overlap itself, named, so "why is this similar" is
-          // answerable without reading the whole abstract and taking a
-          // sentence on trust. Same terms that are lit up in it below.
-          var hay = ((m.title || '') + ' ' + (m.abstract || '')).toLowerCase();
-          var shared = (highlight || []).filter(function (w) {
-            return hay.indexOf(String(w).toLowerCase()) !== -1;
-          });
-          var sharedHtml = shared.length
-            ? '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:5px;margin-top:6px">'
-              + '<span style="font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.4px;color:var(--text3)">Both studies talk about</span>'
-              + shared.slice(0, 8).map(function (t) {
-                  return '<span style="font-size:10.5px;font-weight:600;color:var(--text);background:rgba(201,168,44,0.22);border-radius:5px;padding:1px 6px">'
-                    + escapeHtml(t) + '</span>';
-                }).join('')
-              + (shared.length > 8 ? '<span style="font-size:9.5px;color:var(--text3)">+' + (shared.length - 8) + ' more</span>' : '')
-              + '</div>'
-            : '';
-
           var notesId = 'ppdup-notes-' + p.id + '-' + i;
           var absId = 'ppdup-abs-' + p.id + '-' + i;
 
@@ -337,7 +319,6 @@ function renderPreProposals(proposals, selectedId) {
             + (m.authors ? '<div style="font-size:10.5px;color:var(--text2);margin-top:3px">By ' + escapeHtml(m.authors) + '</div>' : '')
             + (meta ? '<div style="font-size:10.5px;color:var(--text3);margin-top:2px">' + escapeHtml(meta) + '</div>' : '')
             + (m.reason ? '<div style="font-size:11px;color:var(--text3);margin-top:3px">' + escapeHtml(m.reason) + '</div>' : '')
-            + sharedHtml
             + (notes
                 ? '<button type="button" class="ppdup-toggle" onclick="togglePpDup(\'' + notesId + '\', this, \'notes\')">Show similarities &amp; differences</button>'
                   + '<div id="' + notesId + '" class="ppdup-panel" style="font-size:11px;color:var(--text2);line-height:1.5">' + notes + '</div>'
