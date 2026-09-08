@@ -419,8 +419,17 @@ PROMPT;
             $verdict = $verdicts[$position] ?? null;
             $hasVerdict = $verdict !== null;
 
+            // Whether a model actually looked at this one. Everything below
+            // still computes a number for ordering, but a number nobody
+            // judged is not a similarity score and must not be shown as one:
+            // it used to reach the student as "27%", which reads as a
+            // verdict when it is arithmetic on a retrieval rank.
+            $item['assessed'] = $hasVerdict;
+
             $item['reason'] = $verdict['reason']
-                ?? 'Semantically similar based on vector embedding analysis.';
+                ?? ($hasVerdict
+                    ? 'Semantically similar based on vector embedding analysis.'
+                    : 'Not assessed - this one was outside the set the checker examined.');
             $item['similarities'] = $verdict['similarities'] ?? '';
             $item['differences'] = $verdict['differences'] ?? '';
             $item['suggestion'] = $verdict['suggestion'] ?? '';

@@ -330,7 +330,9 @@ function renderPreProposals(proposals, selectedId) {
           return '<div style="border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-top:6px;background:#fff">'
             + '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">'
             + '<span style="font-size:11.5px;font-weight:600;color:var(--text)">' + escapeHtml(m.title || '') + '</span>'
-            + '<span class="badge badge-' + mTone + '" style="font-variant-numeric:tabular-nums;font-weight:700;flex-shrink:0">' + m.score + '%</span>'
+            + (m.assessed === false
+                ? '<span class="badge" style="background:var(--bg3);color:var(--text3);flex-shrink:0">Not assessed</span>'
+                : '<span class="badge badge-' + mTone + '" style="font-variant-numeric:tabular-nums;font-weight:700;flex-shrink:0">' + m.score + '%</span>')
             + '</div>'
             + (m.authors ? '<div style="font-size:10.5px;color:var(--text2);margin-top:3px">By ' + escapeHtml(m.authors) + '</div>' : '')
             + (meta ? '<div style="font-size:10.5px;color:var(--text3);margin-top:2px">' + escapeHtml(meta) + '</div>' : '')
