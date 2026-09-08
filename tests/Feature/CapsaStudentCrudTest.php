@@ -5,6 +5,8 @@ namespace Tests\Feature;
 use App\Models\CapstoneExpert;
 use App\Models\Role;
 use App\Models\Student;
+use App\Models\StudentSchoolYear;
+use App\Models\Term;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -43,6 +45,60 @@ class CapsaStudentCrudTest extends TestCase
             'course' => $course,
             'year_section' => $yearSection,
         ]);
+    }
+
+    /**
+     * Adding one student writes their enrolment row, the way the upload does.
+     *
+     * The roster row is what admits them at sign-in; student_s_y is what the
+     * app reads afterwards. Adding somebody one at a time wrote the first and
+     * not the second, so the student signed in perfectly well and was then
+     * told by the duplication check that their enrolment record was missing.
+     */
+    public function test_adding_a_student_gives_them_an_enrolment_row(): void
+    {
+        $this->actingAs($this->capsa(), 'expert')
+            ->postJson(route('capsa.students.store'), [
+                'email' => 'n.enriquez@my.cspc.edu.ph',
+                'f_name' => 'Nadine',
+                'l_name' => 'Enriquez',
+                'course' => 'BSIT',
+                'year' => 4,
+                'section' => 'A',
+            ])
+            ->assertStatus(201);
+
+        $student = Student::whereRaw('LOWER(email) = ?', ['n.enriquez@my.cspc.edu.ph'])->firstOrFail();
+
+        $this->assertDatabaseHas('student_s_y', [
+            'student_id' => $student->student_id,
+            'school_year' => Term::currentSchoolYear(),
+        ]);
+    }
+
+    /** Taking somebody back does not leave them without one either. */
+    public function test_re_adding_a_removed_student_restores_their_enrolment_row(): void
+    {
+        $capsa = $this->capsa();
+
+        // Removed from a section: the account stays, the section is cleared.
+        $student = $this->student();
+        $student->update(['course' => null, 'year_section' => null]);
+
+        $this->actingAs($capsa, 'expert')
+            ->postJson(route('capsa.students.store'), [
+                'email' => $student->email,
+                'f_name' => 'Angelo',
+                'l_name' => 'Bermudo',
+                'course' => 'BSIT',
+                'year' => 4,
+                'section' => 'A',
+            ])
+            ->assertOk();
+
+        $this->assertNotNull(
+            StudentSchoolYear::where('student_id', $student->student_id)->first()
+        );
     }
 
     public function test_a_student_can_be_added_by_email(): void

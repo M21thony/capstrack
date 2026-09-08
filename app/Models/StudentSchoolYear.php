@@ -24,6 +24,35 @@ class StudentSchoolYear extends Model
     ];
 
     /**
+     * Make sure this student has an enrolment row, carrying the school year.
+     *
+     * The roster row is a record of what was uploaded or typed; this is what
+     * the app actually reads - the classmate picker, every section lookup,
+     * the team they join, and the duplication check, which cannot save a
+     * result without one.
+     *
+     * On the model because both ways of adding a student need it and only
+     * one of them did it: the spreadsheet upload wrote the row, adding
+     * somebody one at a time did not, and that student signed in fine and
+     * was then told their enrolment record was missing.
+     */
+    public static function recordFor(int $studentId, string $schoolYear): self
+    {
+        $row = static::where('student_id', $studentId)->first();
+
+        if ($row) {
+            $row->update(['school_year' => $schoolYear]);
+
+            return $row;
+        }
+
+        return static::create([
+            'student_id' => $studentId,
+            'school_year' => $schoolYear,
+        ]);
+    }
+
+    /**
      * Rows are scoped to the term that is running, everywhere, by default.
      *
      * This table is one row per student PER TERM - it is named "student
