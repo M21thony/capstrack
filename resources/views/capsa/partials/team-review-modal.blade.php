@@ -1,4 +1,4 @@
-{{-- The team review modal: pre-proposal approve/reject with the original
+{{-- The team review modal: pre-proposal recommend/reject with the original
      PDF and duplication report, plus the Verify action.
 
      Extracted from capsa/verify_teams.blade.php so Team Management can open
@@ -50,8 +50,8 @@
          way. --}}
     <div id="vm-verify-note" style="display:none;font-size:12px;color:#92400e;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px 12px;margin-bottom:12px">
       Finish reviewing every title first. This team has a final title once you have
-      decided on all of them &mdash; approve or reject each one &mdash; and if you
-      approve more than one, once the team has picked between them.
+      decided on all of them &mdash; recommend or reject each one &mdash; and if
+      you recommend more than one, once the team has picked between them.
     </div>
 
     <form id="vm-form" method="POST" style="border-top:1px solid var(--border);padding-top:16px">
@@ -247,7 +247,7 @@ function closeVerifyModal() {
   }
 }
 
-// ── Per-proposal approve/reject (mirrors admin/approval.blade.php) ────────
+// ── Per-proposal recommend/reject (mirrors admin/approval.blade.php) ──────
 var ppActiveId = null;
 var ppDecided = false;
 
@@ -260,8 +260,8 @@ function renderPreProposals(proposals, selectedId) {
     return;
   }
 
-  // A team with two approved titles has chosen one of them, and that is the
-  // title being verified. Showing both side by side, each marked Approved,
+  // A team with two recommended titles has chosen one of them, and that is
+  // the title being verified. Showing both side by side, each marked,
   // is what made it unclear which one the verification is actually about.
   var approvedCount = proposals.filter(function (p) { return p.status === 'approved'; }).length;
   var collapseOthers = !!selectedId && approvedCount >= 2;
@@ -363,7 +363,7 @@ function renderPreProposals(proposals, selectedId) {
 
     var actionsHtml = p.status === 'pending'
       ? '<div style="display:flex;gap:8px;margin-top:10px" id="pp-actions-' + p.id + '">'
-        + '<button type="button" class="btn btn-primary" style="font-size:11px;padding:5px 12px" onclick="ppApprove(' + p.id + ', \'' + p.update_url + '\')">Approve</button>'
+        + '<button type="button" class="btn btn-primary" style="font-size:11px;padding:5px 12px" onclick="ppApprove(' + p.id + ', \'' + p.update_url + '\')">Recommend</button>'
         + '<button type="button" class="btn" style="font-size:11px;padding:5px 12px;background:transparent;border:1px solid var(--border);color:var(--text2)" onclick="openPpRejectModal(' + p.id + ', \'' + p.update_url + '\')">Reject</button>'
         + '</div>'
       : (p.status === 'rejected' ? '<div style="font-size:11px;color:#991b1b;margin-top:6px">Rejected: ' + escapeHtml(p.rejection_reason || '') + '</div>' : '');
@@ -381,7 +381,7 @@ function renderPreProposals(proposals, selectedId) {
 
     card.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px">'
       + '<span style="font-size:13px;font-weight:600;color:var(--text)">Proposal ' + p.slot + (isSelected ? ' ⭐ Final Title' : '') + '</span>'
-      + '<span class="badge ' + badgeClass + '">' + p.status.charAt(0).toUpperCase() + p.status.slice(1) + '</span>'
+      + '<span class="badge ' + badgeClass + '">' + ppStatusLabel(p.status) + '</span>'
       + '</div>'
       + '<div style="font-size:13px;font-weight:500;color:var(--text);margin-top:4px">' + escapeHtml(p.title) + '</div>'
       + documentLinkHtml
@@ -416,6 +416,19 @@ function joinStringList(list) {
     .map(function (item) { return typeof item === 'string' ? item : ''; })
     .filter(function (s) { return s.length > 0; })
     .join(', ');
+}
+
+/**
+ * What a decision is called on screen.
+ *
+ * The CaPSA is not approving the title - the expert the team takes it to
+ * decides that. They are saying it is worth taking, which is a
+ * recommendation. The stored status stays 'approved'; only the word changes.
+ */
+function ppStatusLabel(status) {
+  if (status === 'approved') return 'Recommended';
+
+  return status.charAt(0).toUpperCase() + status.slice(1);
 }
 
 function ppApprove(id, url) {

@@ -808,7 +808,7 @@
         <div class="steps">
           <div class="step"><span class="n">1</span><div><b>Choose a role</b><span>Pick the slot your team still needs to fill.</span></div></div>
           <div class="step"><span class="n">2</span><div><b>Browse experts</b><span>Only the people who can hold that role are listed.</span></div></div>
-          <div class="step"><span class="n">3</span><div><b>Submit request</b><span>Your approved pre-proposal goes with it.</span></div></div>
+          <div class="step"><span class="n">3</span><div><b>Submit request</b><span>Your recommended pre-proposal goes with it.</span></div></div>
           <div class="step"><span class="n">4</span><div><b>Wait for approval</b><span>The expert reviews and decides.</span></div></div>
         </div>
       </details>
@@ -857,7 +857,7 @@
   <div class="modal-box pp-box">
     <div class="pp-head">
       <div style="min-width:0">
-        <div class="pp-eyebrow">Approved pre-proposal</div>
+        <div class="pp-eyebrow">Recommended pre-proposal</div>
         <h3 style="margin:0">{{ $approvedProposal->title }}</h3>
       </div>
       <button class="pp-x" onclick="closeModal('proposal-preview-modal')" aria-label="Close">
@@ -913,7 +913,7 @@
         <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
     </div>
-    <iframe id="original-pdf-frame" src="about:blank" title="Approved pre-proposal PDF"></iframe>
+    <iframe id="original-pdf-frame" src="about:blank" title="Recommended pre-proposal PDF"></iframe>
   </div>
 </div>
 @endif
@@ -937,7 +937,7 @@
          its place. Teams still waiting on a decision attach a PDF as before. --}}
     @if($approvedProposal)
     <div class="form-group">
-      <label>Approved Pre-Proposal</label>
+      <label>Recommended Pre-Proposal</label>
       <div style="display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border:1px solid var(--green);background:var(--green-bg);border-radius:10px">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="var(--green)" stroke-width="2.4" style="flex-shrink:0;margin-top:1px"><polyline points="20 6 9 17 4 12"/></svg>
         <div style="min-width:0;flex:1">
@@ -955,13 +955,13 @@
     </div>
     @else
     <div class="form-group">
-      <label>Approved Pre-Proposal <span class="req">*</span></label>
+      <label>Recommended Pre-Proposal <span class="req">*</span></label>
       <div class="file-input-wrap">
         <svg class="file-icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="12" y2="12"/><line x1="15" y1="15" x2="12" y2="12"/></svg>
         <span class="file-label" id="file-label">Choose PDF file...</span>
         <input type="file" id="proposal-file" accept=".pdf,application/pdf" onchange="handleFileSelect(this)" />
       </div>
-      <div class="field-error" id="err-file">Please upload your approved pre-proposal (PDF).</div>
+      <div class="field-error" id="err-file">Please upload your recommended pre-proposal (PDF).</div>
     </div>
     @endif
 
@@ -1352,7 +1352,7 @@ function reviewApply() {
   // '+' here, not PHP's '.': this is JavaScript by the time the browser
   // sees it, and the directive below has already rendered a quoted string.
   currentFileName = APPLY_HAS_APPROVED_PROPOSAL
-    ? @json($approvedProposal?->title ?? '') + ' (approved pre-proposal)'
+    ? @json($approvedProposal?->title ?? '') + ' (recommended pre-proposal)'
     : fileInput.files[0].name;
   currentMessage = message;
 
@@ -1435,7 +1435,7 @@ function openReqInfoModal(data) {
     // Named, not linked: the team already has this on their Duplication
     // Checker page, and there is no student-facing route to the file.
     proposalEl.innerHTML =
-      '<div style="color:var(--green);font-weight:600;font-size:12px">&#10003; CaPSA-approved pre-proposal</div>'
+      '<div style="color:var(--green);font-weight:600;font-size:12px">&#10003; CaPSA-recommended pre-proposal</div>'
       + '<div style="font-size:12px;color:var(--text2);margin-top:2px">' + escapeHtmlText(data.pre_proposal_title) + '</div>';
   } else if (data.proposal) {
     proposalEl.innerHTML = '<a href="' + data.proposal + '" target="_blank" style="color:var(--accent);">View Proposal <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" fill="none" stroke-width="2" style="display:inline;vertical-align:middle;"><path d="M7 17l9.2-9.2M17 17V7H7"/></svg></a>';
