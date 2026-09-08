@@ -71,7 +71,18 @@ class PreProposalController extends Controller
                     'student_s_y_id',
                     StudentSchoolYear::where('team_id', $team->team_id)->pluck('s_y_id')
                 )
-                    ->whereNotIn('id', $proposals->pluck('duplication_check_id')->filter())
+                    // Any pre-proposal, not just this team's. A check is
+                    // recorded against the student, so leaving a team and
+                    // making a new one carries the old scan across - while
+                    // the pre-proposal it fed stays with the team they left.
+                    // Excluding only this team's put that spent scan back on
+                    // the page, where clearing it was refused and the reason
+                    // named a document that is not there to remove.
+                    ->whereNotExists(function ($q) {
+                        $q->selectRaw(1)
+                            ->from('capstone_pre_proposals')
+                            ->whereColumn('capstone_pre_proposals.duplication_check_id', 'duplication_checks.id');
+                    })
                     ->latest('id')
                     ->first()
                 : null,
@@ -275,6 +286,13 @@ class PreProposalController extends Controller
             ], 403);
         }
 
+        // Any pre-proposal, including another team's. The column carries
+        // ON DELETE CASCADE, so removing the check takes the pre-proposal
+        // with it wherever foreign keys are enforced - and leaves a dangling
+        // reference on MyISAM, where they are not. Neither is something a
+        // student clearing their own workspace should be able to do to a
+        // team they have left. The scan simply is not offered to them any
+        // more (see edit()), so this is now only reachable directly.
         if (CapstonePreProposal::where('duplication_check_id', $check->id)->exists()) {
             return response()->json([
                 'success' => false,
