@@ -603,6 +603,65 @@ class PreProposalControllerTest extends TestCase
         $this->assertDatabaseHas('capstone_pre_proposals', ['id' => $proposal->id]);
     }
 
+    /**
+     * Leaving a team and making a new one does not carry the old scan over.
+     *
+     * A duplication check is recorded against the student's enrolment row,
+     * not the team, so it followed them. The pre-proposal it fed stayed with
+     * the team they left - so the new team's page showed a scan that could
+     * not be cleared, and the refusal told them to remove a pre-proposal that
+     * was not on their page and could not be.
+     */
+    public function test_a_spent_scan_is_not_offered_to_the_next_team(): void
+    {
+        [$student, $old] = $this->makeLeaderWithTeam();
+        $this->mockSimilarityPipeline();
+        $this->actingAs($student, 'web');
+
+        $this->checkAndStore('p1.pdf');
+
+        $proposal = $old->preProposals()->firstOrFail();
+        $check = DuplicationCheck::findOrFail($proposal->duplication_check_id);
+
+        // They leave, and start again somewhere else.
+        $new = Team::create([
+            'team_name' => 'Second Team', 'team_status' => 'Active',
+            'leader_id' => $student->student_id, 'is_confirmed' => false, 'member_count' => 5,
+        ]);
+        StudentSchoolYear::where('student_id', $student->student_id)
+            ->update(['team_id' => $new->team_id]);
+
+        // The scan is simply not there any more. Before, it was - with a
+        // Clear button that refused and named a document they could not see.
+        $this->get(route('student.duplication'))->assertOk()->assertViewHas('lastCheck', null);
+
+        // Reached directly it is still refused, and that refusal is doing
+        // real work: duplication_check_id cascades, so deleting the check
+        // would take the old team's pre-proposal with it.
+        $this->deleteJson(route('student.pre-proposal.check.destroy', $check->id))
+            ->assertStatus(422);
+
+        $this->assertNotNull($proposal->fresh(), 'the team they left keeps its pre-proposal');
+        $this->assertNotNull(DuplicationCheck::find($check->id));
+    }
+
+    /** The advice still stands when the pre-proposal really is theirs. */
+    public function test_a_scan_backing_this_teams_own_pre_proposal_still_cannot_be_cleared(): void
+    {
+        [$student, $team] = $this->makeLeaderWithTeam();
+        $this->mockSimilarityPipeline();
+        $this->actingAs($student, 'web');
+
+        $this->checkAndStore('p1.pdf');
+        $check = DuplicationCheck::findOrFail($team->preProposals()->value('duplication_check_id'));
+
+        $this->deleteJson(route('student.pre-proposal.check.destroy', $check->id))
+            ->assertStatus(422)
+            ->assertJson(fn ($j) => $j->where('message', fn ($m) => str_contains($m, 'Remove the pre-proposal'))->etc());
+
+        $this->assertNotNull(DuplicationCheck::find($check->id));
+    }
+
     public function test_a_non_member_cannot_remove_another_teams_proposal(): void
     {
         [$student, $team] = $this->makeLeaderWithTeam();
