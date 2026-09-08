@@ -74,26 +74,37 @@
       </div>
       <div class="grid-2" style="gap:12px">
         <div>
-          <div class="form-group"><label class="label">Capstone Title</label><input class="input" placeholder="Full title of the capstone study"/></div>
-          <div class="form-group"><label class="label">Proponents (comma-separated)</label><input class="input" placeholder="e.g. Dela Cruz, J., Santos, M."/></div>
+          {{-- These fields had no ids and the Save button had no handler, so
+               the whole form was drawn and did nothing. An archive nobody can
+               add to is an archive that cannot name who wrote anything. --}}
+          <div class="form-group"><label class="label">Capstone Title</label><input class="input" id="arch-title" placeholder="Full title of the capstone study"/></div>
+          <div class="form-group"><label class="label">Proponents (comma-separated)</label><input class="input" id="arch-authors" placeholder="e.g. Dela Cruz, J., Santos, M."/></div>
           <div class="grid-2" style="gap:8px">
-            <div class="form-group"><label class="label">Year</label><select class="input"><option>2025</option><option>2024</option><option>2023</option><option>2022</option></select></div>
-            <div class="form-group"><label class="label">Program</label><select class="input"><option>BSIT</option><option>BSCS</option><option>BSIS</option><option>BLIS</option></select></div>
+            <div class="form-group"><label class="label">Year</label><select class="input" id="arch-year">
+              @for ($y = (int) date('Y'); $y >= (int) date('Y') - 10; $y--)
+                <option>{{ $y }}</option>
+              @endfor
+            </select></div>
+            <div class="form-group"><label class="label">Program</label><select class="input" id="arch-program"><option>BSIT</option><option>BSCS</option><option>BSIS</option><option>BLIS</option></select></div>
           </div>
-          <div class="form-group"><label class="label">Category Tags</label>
-            <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:2px">
-              <label style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer"><input type="checkbox" style="accent-color:var(--accent)"/> Web-Based</label>
-              <label style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer"><input type="checkbox" style="accent-color:var(--accent)"/> Mobile</label>
-              <label style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer"><input type="checkbox" style="accent-color:var(--accent)"/> IoT</label>
-              <label style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer"><input type="checkbox" style="accent-color:var(--accent)"/> AI/ML</label>
-              <label style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer"><input type="checkbox" style="accent-color:var(--accent)"/> Desktop</label>
-              <label style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer"><input type="checkbox" style="accent-color:var(--accent)"/> Data Analytics</label>
-              <label style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer"><input type="checkbox" style="accent-color:var(--accent)"/> Blockchain</label>
+          {{-- Tags come from archived_doc_tags. The seven that used to be
+               typed in here were checkboxes with no value and no tag behind
+               them, so ticking one did nothing and could not. --}}
+          @if ($tags->isNotEmpty())
+            <div class="form-group"><label class="label">Category Tags</label>
+              <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:2px">
+                @foreach ($tags as $tag)
+                  <label style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer">
+                    <input type="checkbox" class="arch-tag" value="{{ $tag->tag_id }}" style="accent-color:var(--accent)"/>
+                    {{ $tag->tag_name }}
+                  </label>
+                @endforeach
+              </div>
             </div>
-          </div>
+          @endif
         </div>
         <div>
-          <div class="form-group"><label class="label">Abstract</label><textarea class="input" style="min-height:120px" placeholder="Paste the capstone abstract here..."></textarea></div>
+          <div class="form-group"><label class="label">Abstract</label><textarea class="input" id="arch-abstract" style="min-height:120px" placeholder="Paste the capstone abstract here..."></textarea></div>
           <div class="form-group"><label class="label">Upload PDF (optional)</label>
             <div style="border:1.5px dashed var(--border2);border-radius:8px;padding:20px;text-align:center;cursor:pointer;transition:all 0.15s" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border2)'">
               <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="var(--text3)" stroke-width="2" style="margin-bottom:6px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
@@ -101,7 +112,8 @@
               <div style="font-size:10px;color:var(--text3)">PDF up to 50MB</div>
             </div>
           </div>
-          <button class="btn btn-primary" style="width:100%;justify-content:center;padding:10px;font-size:13px">Save to Archive</button>
+          <div id="arch-error" hidden style="font-size:12px;color:var(--red);margin-bottom:8px"></div>
+          <button class="btn btn-primary" id="arch-save" style="width:100%;justify-content:center;padding:10px;font-size:13px" onclick="saveArchive()">Save to Archive</button>
         </div>
       </div>
     </div>
@@ -114,7 +126,7 @@
         data-title="{{ strtolower($archive->title) }}">
         <div class="archive-year">{{ $archive->academic_year ?? 'N/A' }}</div>
         <div class="archive-title-text">{{ $archive->title }}</div>
-        <div class="archive-proponents">{{ Str::limit($archive->abstract ?? 'No description', 60) }}</div>
+        <div class="archive-proponents">{{ $archive->authors ?: Str::limit($archive->abstract ?? 'No description', 60) }}</div>
         <div class="archive-tags">
           @foreach($archive->tags as $tag)
           <span class="atag" style="background:{{ $tag->tag_color ?? 'var(--accent-glow)' }}">{{ $tag->tag_name }}</span>
@@ -157,6 +169,62 @@ function filterArch(){
   document.getElementById('arch-count').textContent='Showing '+c+' studies';
   document.getElementById('arch-empty').style.display=c===0?'block':'none';
 }
+function saveArchive() {
+  const title = document.getElementById('arch-title').value.trim();
+  const err = document.getElementById('arch-error');
+  const btn = document.getElementById('arch-save');
+
+  err.hidden = true;
+
+  if (!title) {
+    err.textContent = 'A capstone needs a title.';
+    err.hidden = false;
+
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Saving...';
+
+  fetch('/api/admin/archive', {
+    method: 'POST',
+    headers: {
+      'X-CSRF-TOKEN': CSRF_TOKEN,
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      title: title,
+      authors: document.getElementById('arch-authors').value.trim() || null,
+      academic_year: document.getElementById('arch-year').value,
+      program: document.getElementById('arch-program').value,
+      abstract: document.getElementById('arch-abstract').value.trim() || null,
+      tag_ids: Array.prototype.slice.call(document.querySelectorAll('.arch-tag:checked'))
+        .map(function (c) { return Number(c.value); }),
+    }),
+  })
+    .then(function (r) { return r.json().then(function (body) { return { ok: r.ok, body: body }; }); })
+    .then(function (res) {
+      if (!res.ok) {
+        const messages = res.body && res.body.errors ? Object.values(res.body.errors).flat() : [];
+        err.textContent = messages[0] || (res.body && res.body.message) || 'Could not save.';
+        err.hidden = false;
+        btn.disabled = false;
+        btn.textContent = 'Save to Archive';
+
+        return;
+      }
+
+      location.reload();
+    })
+    .catch(function () {
+      err.textContent = 'Could not reach the server. Please try again.';
+      err.hidden = false;
+      btn.disabled = false;
+      btn.textContent = 'Save to Archive';
+    });
+}
+
 async function deleteArchive(id) {
   const agreed = await confirmSheet({
     title: 'Delete this archived capstone?',

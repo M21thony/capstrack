@@ -14,6 +14,7 @@ class ArchivedDocument extends Model
         'team_id',
         'title',
         'abstract',
+        'authors',
         'academic_year',
         'program',
         'file_name',

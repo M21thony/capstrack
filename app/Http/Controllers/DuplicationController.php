@@ -88,6 +88,7 @@ class DuplicationController extends Controller
                     'archived_id' => $m['document']->archived_id,
                     'title' => $m['document']->title,
                     'abstract' => $m['document']->abstract,
+                    'authors' => $m['document']->authors,
                     'academic_year' => $m['document']->academic_year,
                     'program' => $m['document']->program,
                     'score' => $m['score'],

@@ -253,9 +253,34 @@ PROMPT;
     // signal the student can verify with their own eyes, instead of trusting
     // another AI-generated similarities/differences sentence (which kept
     // being wrong - see enrichWithReasons()'s history).
+    /**
+     * Words that are true of nearly every capstone, so lighting one up says
+     * nothing about why two studies are alike.
+     *
+     * Separate from stopWordsList() on purpose. That list also feeds the
+     * embedding, and every stored embedding was generated with it - changing
+     * it would make old vectors and new queries disagree. These are dropped
+     * from the highlighting only, where "system" lighting up in an abstract
+     * about barangay records was the whole of the explanation.
+     */
+    private function genericCapstoneWords(): array
+    {
+        return [
+            'system', 'systems', 'software', 'website', 'site', 'program',
+            'information', 'data', 'database', 'record', 'records',
+            'management', 'managing', 'monitoring', 'monitor', 'tracking',
+            'automated', 'automation', 'computerized', 'integrated', 'smart',
+            'development', 'developing', 'design', 'designing', 'implementation',
+            'implementing', 'study', 'research', 'project', 'capstone', 'thesis',
+            'proposed', 'proposal', 'analysis', 'process', 'processing',
+            'solution', 'tool', 'module', 'features', 'feature', 'user', 'users',
+            'management_system',
+        ];
+    }
+
     public function extractHighlightWords(array $concepts): array
     {
-        $stopWords = $this->stopWordsList();
+        $stopWords = array_merge($this->stopWordsList(), $this->genericCapstoneWords());
 
         $blob = trim(($concepts['title'] ?? '').' '.($concepts['main_topic'] ?? ''));
         $blob = preg_replace('/[\/\\\,\.\(\)\[\]\{\}:;!?"\'\-_]/', ' ', $blob);
