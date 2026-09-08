@@ -275,7 +275,42 @@ PROMPT;
             'proposed', 'proposal', 'analysis', 'process', 'processing',
             'solution', 'tool', 'module', 'features', 'feature', 'user', 'users',
             'management_system',
+            // The delivery and the paperwork, not the subject. Every capstone
+            // is web-based, centralized and built with a methodology.
+            'web-based', 'webbased', 'centralized', 'centralised',
+            'agile', 'agile development methodology', 'scrum', 'prototyping',
+            'methodology', 'sdm',
+            // Plurals of the above, and the two words every study in a
+            // computer-studies archive contains.
+            'projects', 'studies', 'computer', 'computing', 'technologies',
+            'technology', 'proposals', 'solutions', 'tools', 'modules',
         ];
+    }
+
+    /**
+     * Institution and place names, which say where a study was done and
+     * nothing about what it did.
+     *
+     * The judge prompt already tells the model to ignore these. The
+     * highlighting did not, so two unrelated studies were reported as
+     * sharing "college of computer studies" - true of most of the archive,
+     * and the reason a chip row could be entirely school letterhead.
+     */
+    private function isInstitutional(string $term): bool
+    {
+        $noise = array_merge($this->locationNames(), [
+            'college', 'colleges', 'department', 'university', 'school',
+            'cict', 'ccs', 'bsit', 'bscs', 'bsis', 'blis', 'institute',
+            'campus', 'academy', 'cspc',
+        ]);
+
+        foreach (preg_split('/[\s\-]+/', $term) as $word) {
+            if (in_array($word, $noise, true)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public function extractHighlightWords(array $concepts): array
@@ -314,6 +349,8 @@ PROMPT;
         // and an archived abstract is far likelier to contain the fragment
         // than the phrase - so the fragments were the only thing a reader
         // ever saw. "Both studies talk about: problem" explains nothing.
+        $all = array_filter($all, fn ($t) => ! $this->isInstitutional($t));
+
         $phrases = array_filter($all, fn ($t) => str_contains($t, ' '));
 
         $all = array_filter($all, function ($term) use ($phrases) {
