@@ -7,8 +7,9 @@
 @endphp
 
 <p class="tm-note">
-  Approving a title is what sets a team's project title. Approve one and it is theirs;
-  approve two and the team chooses between them on their Duplication Checker page.
+  Recommending a title is what sets a team's project title. Recommend one and it is
+  theirs; recommend two and the team chooses between them on their Duplication
+  Checker page.
 </p>
 
 <div class="card" style="padding:0;overflow:hidden">

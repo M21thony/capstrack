@@ -420,11 +420,11 @@
       <div class="info-label">Message</div>
       <div class="info-value" id="tm-message"></div>
     </div>
-    {{-- When the team applied with the pre-proposal their CaPSA approved,
+    {{-- When the team applied with the pre-proposal their CaPSA recommended,
          name it. An expert should be able to see the title got through
          rather than take the team's word for a PDF they attached. --}}
     <div class="info-row" id="tm-approved-row" style="display:none;">
-      <div class="info-label">Approved title</div>
+      <div class="info-label">Recommended title</div>
       <div class="info-value" id="tm-approved"></div>
     </div>
     <div class="info-row">
@@ -587,7 +587,7 @@ function selectAssignment(id) {
   status.textContent = d.status.charAt(0).toUpperCase() + d.status.slice(1);
   status.style.color = statusColors[d.status] || 'var(--text3)';
 
-  // The CaPSA-approved title is the one that matters; the team's own field
+  // The CaPSA-recommended title is the one that matters; the team's own field
   // is the fallback for an application made before they had one.
   const title = document.getElementById('asg-title');
   title.textContent = d.approved_title || d.project || 'No title yet';
@@ -676,7 +676,7 @@ function openTeamModal(id) {
   const approvedRow = document.getElementById('tm-approved-row');
   if (d.approved_title) {
     document.getElementById('tm-approved').innerHTML =
-      '<span style="color:var(--green);font-weight:600">✓ CaPSA-approved</span> &middot; ' + d.approved_title;
+      '<span style="color:var(--green);font-weight:600">✓ CaPSA-recommended</span> &middot; ' + d.approved_title;
     approvedRow.style.display = 'flex';
   } else {
     approvedRow.style.display = 'none';

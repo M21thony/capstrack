@@ -1,6 +1,6 @@
 {{-- Verification: teams marked Complete, waiting on her, then those already
      verified. The blocked case is stated rather than left as a dead button -
-     a team whose two approved titles nobody has picked between cannot be
+     a team whose two recommended titles nobody has picked between cannot be
      verified, and that is not the CaPSA's to fix. --}}
 @php
   $awaiting = $rows->filter(fn ($r) => $r->awaitingVerification)->values();
@@ -44,12 +44,12 @@
             @elseif ($row->titleState === 'awaiting_team_choice')
               <span class="tm-pill tm-pill-amber">Team choosing</span>
               <div style="font-size:11px;color:var(--text3);margin-top:3px;max-width:190px;line-height:1.45">
-                {{ $row->approvedProposalCount }} titles approved &mdash; they pick which one stands before you can verify.
+                {{ $row->approvedProposalCount }} titles recommended &mdash; they pick which one stands before you can verify.
               </div>
             @else
-              <span class="tm-pill tm-pill-red">No approved title</span>
+              <span class="tm-pill tm-pill-red">No recommended title</span>
               <div style="font-size:11px;color:var(--text3);margin-top:3px;max-width:190px;line-height:1.45">
-                Approve one of their pre-proposals first.
+                Recommend one of their pre-proposals first.
               </div>
             @endif
           </td>

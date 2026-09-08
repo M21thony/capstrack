@@ -142,6 +142,22 @@
   }
 
   .tm-empty{text-align:center;padding:44px 20px;color:var(--text3);font-size:13px;line-height:1.6}
+  /* A setting, not a filter: it changes how teams work rather than what this
+     page is showing, so it is stated and sits on its own. */
+  .tm-setting{display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;
+              border:1px solid var(--border);border-radius:12px;background:var(--bg2);
+              padding:14px 16px;margin-bottom:18px}
+  .tm-setting-text{min-width:0}
+  .tm-setting-name{font-size:13px;font-weight:600;color:var(--text)}
+  .tm-setting-note{font-size:12px;color:var(--text3);line-height:1.5;margin-top:2px;max-width:56ch}
+  .tm-sizes{display:flex;gap:4px;padding:3px;border:1px solid var(--border);border-radius:9px;background:var(--bg3)}
+  .tm-size{min-width:42px;padding:7px 0;border:none;border-radius:6px;background:transparent;
+           color:var(--text2);font:inherit;font-size:13px;font-weight:600;cursor:pointer;
+           font-variant-numeric:tabular-nums;transition:background .15s,color .15s}
+  .tm-size:hover:not(.is-on){background:var(--bg4,rgba(0,0,0,.05));color:var(--text)}
+  .tm-size.is-on{background:var(--accent,#5b5bd6);color:#fff}
+  .tm-size:focus-visible{outline:2px solid var(--accent,#5b5bd6);outline-offset:2px}
+  .tm-size[disabled]{opacity:.6;cursor:default}
 </style>
 @include('partials.skeleton-head', ['skReveal' => 'flex'])
 </head>
@@ -210,20 +226,30 @@
         <a href="{{ route('capsa.team_management', ['tab' => $tab]) }}" style="font-size:12px;color:var(--text3);text-decoration:none">Clear</a>
       @endif
 
-      {{-- How many members a team may have. One number for every team: a
-           CaPSA setting it per group is the same number typed forty times.
-           It decides the invitation cap, what a recruitment post advertises,
-           and how many seats each shared role has. --}}
-      <span style="margin-left:auto;display:flex;align-items:center;gap:8px">
-        <label for="tm-team-size" style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.4px">Members per team</label>
-        <select id="tm-team-size" onchange="saveTeamSize(this)"
-                style="padding:7px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:12px;font-family:inherit">
-          @for ($n = \App\Models\Team::MIN_MEMBERS; $n <= \App\Models\Team::MAX_MEMBERS; $n++)
-            <option value="{{ $n }}" @selected($n === \App\Models\Team::maxMembers())>{{ $n }}</option>
-          @endfor
-        </select>
-      </span>
     </form>
+
+    {{-- How many members a team may have. One number for every team: a CaPSA
+         setting it per group is the same number typed forty times. It decides
+         the invitation cap, what a recruitment post advertises, and how many
+         seats each shared role has - which is why it reads as a setting here
+         rather than as one more filter in the bar above. --}}
+    <div class="tm-setting">
+      <div class="tm-setting-text">
+        <div class="tm-setting-name">Members per team</div>
+        <div class="tm-setting-note">
+          Applies to every team you handle. It caps invitations, sets what a
+          recruitment post advertises, and decides how many people may take
+          each role.
+        </div>
+      </div>
+      <div class="tm-sizes" id="tm-team-size" role="radiogroup" aria-label="Members per team">
+        @for ($n = \App\Models\Team::MIN_MEMBERS; $n <= \App\Models\Team::MAX_MEMBERS; $n++)
+          <button type="button" class="tm-size{{ $n === \App\Models\Team::maxMembers() ? ' is-on' : '' }}"
+                  role="radio" aria-checked="{{ $n === \App\Models\Team::maxMembers() ? 'true' : 'false' }}"
+                  data-size="{{ $n }}" onclick="saveTeamSize({{ $n }})">{{ $n }}</button>
+        @endfor
+      </div>
+    </div>
 
     @if ($allSections === [])
       <div class="card"><div class="tm-empty">
@@ -256,8 +282,30 @@ function tmToast(message, ok) {
   tmToast.timer = setTimeout(() => el.classList.remove('show'), 3000);
 }
 
-function saveTeamSize(select) {
-  const previous = select.dataset.was || select.value;
+function teamSizeButtons() {
+  return Array.prototype.slice.call(document.querySelectorAll('#tm-team-size .tm-size'));
+}
+
+/** Show a number as the chosen one. */
+function markTeamSize(size) {
+  teamSizeButtons().forEach(function (b) {
+    const on = Number(b.dataset.size) === Number(size);
+    b.classList.toggle('is-on', on);
+    b.setAttribute('aria-checked', on ? 'true' : 'false');
+  });
+}
+
+function saveTeamSize(size) {
+  const buttons = teamSizeButtons();
+  const previous = Number((buttons.find((b) => b.classList.contains('is-on')) || {}).dataset?.size || size);
+
+  if (Number(size) === previous) return;
+
+  // Shown as chosen straight away, and put back if the server disagrees -
+  // the alternative is a control that ignores the click until the round trip
+  // finishes.
+  markTeamSize(size);
+  buttons.forEach((b) => { b.disabled = true; });
 
   fetch(@json(route('capsa.team_size.update'), JSON_UNESCAPED_SLASHES), {
     method: 'PUT',
@@ -266,21 +314,24 @@ function saveTeamSize(select) {
       'Accept': 'application/json',
       'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
     },
-    body: JSON.stringify({ max_members: Number(select.value) }),
+    body: JSON.stringify({ max_members: Number(size) }),
   })
     .then((r) => r.json())
     .then((data) => {
       if (data.success) {
-        select.dataset.was = select.value;
+        markTeamSize(data.max_members);
         tmToast(data.message, true);
       } else {
-        select.value = previous;
+        markTeamSize(previous);
         tmToast(data.message || 'Could not save that.', false);
       }
     })
     .catch(() => {
-      select.value = previous;
+      markTeamSize(previous);
       tmToast('Network error. Please try again.', false);
+    })
+    .finally(() => {
+      buttons.forEach((b) => { b.disabled = false; });
     });
 }
 </script>

@@ -321,16 +321,20 @@
       <div class="card" style="margin-bottom:16px;border-color:rgba(180,83,9,0.25);background:var(--amber-bg);">
         <div class="card-header"><span class="card-title">Choose Your Final Title</span></div>
         <div style="font-size:12px;color:var(--amber);margin-bottom:12px">
-          More than one of your titles was approved —
+          More than one of your titles was recommended &mdash;
           @if ($isLeader) pick the one your team will proceed with. @else your team leader needs to pick which one to proceed with. @endif
         </div>
         @foreach ($approvedProposals as $approved)
           <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-top:1px solid var(--border)">
             <span style="font-size:13px;font-weight:500;color:var(--text)">{{ $approved->title }}</span>
             @if ($isLeader)
-              <form method="POST" action="{{ route('student.pre-proposal.choose', $approved->id) }}">
+              {{-- Asked first. This is the title the team carries through the
+                   rest of the year, and the other one is dropped by it. --}}
+              <form method="POST" action="{{ route('student.pre-proposal.choose', $approved->id) }}"
+                    id="choose-form-{{ $approved->id }}">
                 @csrf
-                <button type="submit" class="btn btn-primary" style="font-size:12px;padding:6px 14px;">Choose This One</button>
+                <button type="button" class="btn btn-primary" style="font-size:12px;padding:6px 14px;"
+                        onclick="confirmChooseTitle({{ $approved->id }}, {{ Js::from($approved->title) }})">Choose This One</button>
               </form>
             @endif
           </div>
@@ -799,6 +803,28 @@
     <div style="display:flex;gap:8px">
       <button type="button" class="btn" style="flex:1;justify-content:center;background:transparent;border:1px solid var(--border);color:var(--text2)" onclick="closePpConfirmModal()">No</button>
       <button type="button" class="btn btn-primary" style="flex:1;justify-content:center;background:#dc3545;border-color:#dc3545" id="pp-confirm-yes-btn">Yes, Remove</button>
+    </div>
+  </div>
+</div>
+
+<div class="pp-modal-overlay" id="pp-choose-confirm" onclick="if (event.target === this) closeChooseConfirm()">
+  <div class="card pp-modal-box" style="max-width:420px;padding:22px 24px 20px">
+    <div style="display:flex;align-items:flex-start;gap:13px">
+      <span style="width:38px;height:38px;border-radius:11px;flex-shrink:0;display:grid;place-items:center;background:var(--amber-bg);color:var(--amber)">
+        <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+      </span>
+      <div style="min-width:0">
+        <h3 style="margin:0 0 5px;font-size:16px;font-weight:700;color:var(--text)">Are you sure you want to take on this title?</h3>
+        <p style="margin:0;font-size:13px;line-height:1.55;color:var(--text2)">
+          <span id="pp-cc-title" style="font-weight:600;color:var(--text)"></span>
+          is the title your team carries from here. The other recommended title is
+          set aside.
+        </p>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:9px;margin-top:20px">
+      <button type="button" class="btn btn-soft" onclick="closeChooseConfirm()">Cancel</button>
+      <button type="button" class="btn btn-primary" id="pp-cc-ok">Confirm</button>
     </div>
   </div>
 </div>
@@ -1463,6 +1489,24 @@ function openRemoveConfirm(proposalId) {
   pendingRemoveId = proposalId;
   document.getElementById('pp-confirm-message').textContent = 'Remove this proposal? This cannot be undone.';
   document.getElementById('pp-confirm-modal').classList.add('show');
+}
+
+/**
+ * Ask before a title is settled on.
+ *
+ * Choosing is not reversible from this page - the other recommended title is
+ * set aside by it - and the button sat one click away from doing that.
+ */
+function confirmChooseTitle(id, title) {
+  document.getElementById('pp-cc-title').textContent = title;
+  document.getElementById('pp-cc-ok').onclick = function () {
+    document.getElementById('choose-form-' + id).submit();
+  };
+  document.getElementById('pp-choose-confirm').classList.add('show');
+}
+
+function closeChooseConfirm() {
+  document.getElementById('pp-choose-confirm').classList.remove('show');
 }
 
 function closePpConfirmModal() {

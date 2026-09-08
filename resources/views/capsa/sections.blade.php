@@ -265,8 +265,6 @@
             <tr>
               <th>Student</th>
               <th>Student no.</th>
-              <th>Program</th>
-              <th>Year</th>
               <th>Section</th>
               <th>Team</th>
               <th>Status</th>
@@ -301,11 +299,11 @@
                   </span>
                 </td>
                 <td class="std-mono">{{ $student->student_number ?: '—' }}</td>
-                <td class="std-mono">{{ $student->programAbbr ?? '—' }}</td>
-                {{-- Program, Year and Section are three things a CaPSA reads
-                     down a column, not one string to pick through. --}}
-                <td class="std-mono">{{ $year !== '' ? $year : '—' }}</td>
-                <td class="std-mono">{{ $section !== '' ? $section : '—' }}</td>
+                {{-- One column, the way a section is written everywhere else
+                     in the app - BSIT-4A. Split across three it read as three
+                     unrelated facts, and no other screen names a section that
+                     way, so the same student looked different here. --}}
+                <td class="std-mono">{{ \App\Models\Student::computeSectionLabel($student->course, $student->year_section) ?? '—' }}</td>
                 <td>
                   @if ($sy && $sy->team)
                     {{ $sy->team->team_name ?? 'Team #' . $sy->team->team_id }}
@@ -365,7 +363,7 @@
               </tr>
             @empty
               <tr>
-                <td colspan="8" style="text-align:center;padding:40px 0;color:var(--text3);font-size:13px">
+                <td colspan="6" style="text-align:center;padding:40px 0;color:var(--text3);font-size:13px">
                   @if (empty($adminSections))
                     No sections assigned yet. <a href="{{ route('capsa.profile') }}" style="color:var(--accent)">Set your sections</a> to view students.
                   @else
