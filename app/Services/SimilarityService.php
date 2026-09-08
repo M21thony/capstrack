@@ -308,6 +308,31 @@ PROMPT;
         // before its own individual words would otherwise match separately.
         usort($all, fn ($a, $b) => mb_strlen($b) <=> mb_strlen($a));
 
+        // A word that is only a piece of a phrase already on the list is
+        // dropped. "smart facility maintenance" is worth saying; the bare
+        // "maintenance", "facility" and "smart" left over from it are not,
+        // and an archived abstract is far likelier to contain the fragment
+        // than the phrase - so the fragments were the only thing a reader
+        // ever saw. "Both studies talk about: problem" explains nothing.
+        $phrases = array_filter($all, fn ($t) => str_contains($t, ' '));
+
+        $all = array_filter($all, function ($term) use ($phrases) {
+            if (str_contains($term, ' ')) {
+                return true;
+            }
+
+            foreach ($phrases as $phrase) {
+                // Split on hyphens too - the title pass breaks "AR-Assisted"
+                // into "assisted", which is a fragment of the phrase just as
+                // much as a space-separated word is.
+                if (in_array($term, preg_split('/[\s\-]+/', $phrase), true)) {
+                    return false;
+                }
+            }
+
+            return true;
+        });
+
         return array_values($all);
     }
 
