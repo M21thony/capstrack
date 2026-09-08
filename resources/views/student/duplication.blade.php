@@ -607,7 +607,15 @@
                                 <div style="font-size:10px;color:var(--text3);margin-top:4px;line-height:1.4">{{ $m['reason'] }}</div>
                               @endif
                             </div>
-                            <span class="match-score-pill" style="background:var(--{{ $mTone }}-bg);color:var(--{{ $mTone }})">{{ $mScore }}%</span>
+                            @if (($m['assessed'] ?? true))
+                              <span class="match-score-pill" style="background:var(--{{ $mTone }}-bg);color:var(--{{ $mTone }})">{{ $mScore }}%</span>
+                            @else
+                              {{-- No model looked at this one. The number it
+                                   carries is a demoted retrieval rank, which
+                                   is not a similarity and was reaching the
+                                   student as though it were. --}}
+                              <span class="match-score-pill" style="background:var(--bg3);color:var(--text3)">Not assessed</span>
+                            @endif
                           </div>
                           @if ($hasBreakdown)
                             <button type="button" class="match-abstract-toggle" onclick="toggleBreakdown(this)">Show similarities, differences &amp; suggestion ▾</button>
@@ -1536,6 +1544,7 @@ function sharedTermsHtml(m, highlightWords) {
 }
 
 function renderMatchItem(m, highlightWords) {
+  const assessed = m.assessed !== false;
   const tone = m.score >= 65 ? 'red' : m.score >= 55 ? 'amber' : 'green';
   const hasBreakdown = m.similarities || m.differences || m.suggestion;
   return `
@@ -1547,7 +1556,9 @@ function renderMatchItem(m, highlightWords) {
           <div style="font-size:10px;color:var(--text3);margin-top:2px">${m.academic_year || 'N/A'} · ${escapeHtml(m.program || '')}</div>
           ${m.reason ? `<div style="font-size:10px;color:var(--text3);margin-top:4px;line-height:1.4">${escapeHtml(m.reason)}</div>` : ''}
         </div>
-        <span class="match-score-pill" style="background:var(--${tone}-bg);color:var(--${tone})">${m.score}%</span>
+        ${assessed
+          ? `<span class="match-score-pill" style="background:var(--${tone}-bg);color:var(--${tone})">${m.score}%</span>`
+          : '<span class="match-score-pill" style="background:var(--bg3);color:var(--text3)">Not assessed</span>'}
       </div>
       ${sharedTermsHtml(m, highlightWords)}
       ${hasBreakdown ? `

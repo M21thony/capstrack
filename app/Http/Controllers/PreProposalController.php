@@ -123,7 +123,11 @@ class PreProposalController extends Controller
             $matches = $this->service->findSimilarDocuments($concepts, 10);
             $instructors = $this->service->suggestInstructors($concepts);
 
-            $topScore = $matches[0]['score'] ?? 0;
+            // Only a judged match may set the verdict. An unassessed one
+            // carries a demoted embedding number, which is an ordering
+            // device, not a similarity.
+            $topScore = collect($matches)
+                ->first(fn ($m) => $m['assessed'] ?? true)['score'] ?? 0;
             $verdict = $topScore >= 65 ? 'High Similarity'
                     : ($topScore >= 55 ? 'Moderate Similarity' : 'Passed');
 
@@ -143,6 +147,7 @@ class PreProposalController extends Controller
                 'differences' => $m['differences'] ?? '',
                 'suggestion' => $m['suggestion'] ?? '',
                 'is_relevant' => $m['is_relevant'] ?? true,
+                'assessed' => $m['assessed'] ?? true,
                 'matched_on' => $m['matched_on'] ?? [],
             ], $matches);
 
