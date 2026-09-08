@@ -53,6 +53,25 @@ return [
         'model' => env('OLLAMA_MODEL', 'qwen2.5:7B'),
         'embed_model' => env('OLLAMA_EMBED_MODEL', 'nomic-embed-text'),
 
+        // The model that judges one archived capstone against a pre-proposal.
+        //
+        // Separate from the one above because the fine-tune is better at some
+        // of its jobs and worse at this one. Asked to judge, it returns the
+        // same sentence every time - "Different core domain and target
+        // users.", which appears fifteen times verbatim in its own training
+        // data - and the same score, whether the archived study is genuinely
+        // close or has nothing to do with the proposal. It is reciting.
+        //
+        // The base model writes a reason about the actual two documents. It
+        // stays the fine-tune's job to read a PDF into concepts and to
+        // suggest experts, which it does better: asked for the domain of a
+        // mobile app, the base answered "AI/ML" and the fine-tune answered
+        // "Mobile App".
+        //
+        // Both are 3B and both stay resident: 4.6GB with the embedder, on a
+        // 6GB card.
+        'judge_model' => env('OLLAMA_JUDGE_MODEL', 'qwen2.5:3B'),
+
         // How long Ollama holds a model in memory after answering. Its own
         // default is five minutes, and a duplication check takes longer than
         // that to work through a team's titles - so the model was being

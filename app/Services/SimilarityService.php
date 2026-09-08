@@ -496,12 +496,19 @@ PROMPT;
     // the pre-proposal side gets its problem statement, proposed solution,
     // and scope (previously just topic/domain/keywords) - comparing actual
     // proposal content against title-and-abstract, not summaries of both.
+    /** The model that judges, which is not always the one that reads. */
+    private function judgeModel(): string
+    {
+        return config('services.ollama.judge_model')
+            ?: config('services.ollama.model', 'qwen2.5:7b');
+    }
+
     private function judgeOneCandidate(array $concepts, ArchivedDocument $doc, int $embeddingScore): ?array
     {
         $prompt = $this->buildJudgePrompt($concepts, $doc, $embeddingScore);
 
         try {
-            return $this->readVerdict($this->ollama->generate($prompt, 700));
+            return $this->readVerdict($this->ollama->generate($prompt, 700, $this->judgeModel()));
         } catch (\Exception $e) {
             Log::warning('judgeOneCandidate failed', ['archived_id' => $doc->archived_id, 'error' => $e->getMessage()]);
 
@@ -554,7 +561,7 @@ PROMPT;
         $verdicts = [];
 
         try {
-            $answers = $this->ollama->generateMany(array_values($worthJudging), 700);
+            $answers = $this->ollama->generateMany(array_values($worthJudging), 700, $this->judgeModel());
 
             foreach ($answers as $i => $raw) {
                 $verdicts[$positions[$i]] = $this->readVerdict($raw);
