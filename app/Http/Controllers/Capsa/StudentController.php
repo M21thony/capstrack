@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Capsa;
 use App\Http\Controllers\Controller;
 use App\Models\Student;
 use App\Models\StudentRoster;
+use App\Models\StudentSchoolYear;
+use App\Models\Term;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -116,6 +118,7 @@ class StudentController extends Controller
 
         $email = Str::lower(trim($data['email']));
         $yearSection = self::yearSection((string) $data['year'], $data['section']);
+        $schoolYear = Term::currentSchoolYear();
 
         if (! $this->targetAllowed($data['course'], $yearSection)) {
             return response()->json([
@@ -160,12 +163,13 @@ class StudentController extends Controller
                 'section' => $yearSection,
                 'program' => $data['course'],
                 // The school year, from wherever the Admin set it.
-                'school_year' => \App\Models\Term::currentSchoolYear(),
+                'school_year' => $schoolYear,
             ]
         );
 
         if ($existing) {
             $existing->update($fields);
+            StudentSchoolYear::recordFor($existing->student_id, $schoolYear);
 
             return response()->json([
                 'success' => true,
@@ -178,6 +182,8 @@ class StudentController extends Controller
         // The account is a placeholder until they sign in with this address -
         // which is why nothing here asks for a password.
         $student = Student::create(['email' => $email] + $fields);
+
+        StudentSchoolYear::recordFor($student->student_id, $schoolYear);
 
         return response()->json(['success' => true, 'student' => $student], 201);
     }

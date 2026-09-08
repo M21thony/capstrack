@@ -144,7 +144,7 @@ class StudentRosterController extends Controller
         }
 
         foreach ($enrolments as [$studentId, $year]) {
-            $this->recordSchoolYear($studentId, $year);
+            StudentSchoolYear::recordFor($studentId, $year);
         }
 
         return response()->json([
@@ -440,33 +440,6 @@ class StudentRosterController extends Controller
         }
 
         return null;
-    }
-
-    /**
-     * Put the school year on the student's enrolment row.
-     *
-     * The roster row is a record of the upload; student_s_y is what the app
-     * actually reads - the classmate picker and every section lookup filter
-     * on this column. Writing it to the roster alone left them unchanged,
-     * which is how a list could be imported and change nothing anyone sees.
-     */
-    private function recordSchoolYear(int $studentId, string $schoolYear): void
-    {
-        $row = StudentSchoolYear::where('student_id', $studentId)->first();
-
-        if ($row) {
-            $row->update(['school_year' => $schoolYear]);
-
-            return;
-        }
-
-        // No enrolment row yet - a prepared account has none until they join
-        // a team. Make one now so the year is on record and the student is
-        // findable in their section straight away.
-        StudentSchoolYear::create([
-            'student_id' => $studentId,
-            'school_year' => $schoolYear,
-        ]);
     }
 
     /** Which spreadsheet column holds what, by its heading. */
