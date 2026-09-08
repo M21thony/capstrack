@@ -475,23 +475,51 @@ class PreProposalController extends Controller
                 ->with('error', 'Your pre-proposals are already turned in.');
         }
 
-        $count = $team->preProposals()->count();
+        // Which of the drafts to turn in. A team that scanned five titles
+        // and wants their CaPSA to see three used to have to delete the
+        // other two - the only way to leave a title out was to lose it and
+        // its report. Left out, every draft goes, which is what the page
+        // sends when nobody has unticked anything.
+        // 'choose' says the page sent a selection at all - without it,
+        // unticking every box would look exactly like an older page that
+        // sends no ids, and turn in all of them.
+        $validated = $request->validate([
+            'choose' => ['sometimes', 'boolean'],
+            'ids' => ['sometimes', 'array'],
+            'ids.*' => ['integer'],
+        ]);
+
+        $chosen = ($validated['choose'] ?? false) ? ($validated['ids'] ?? []) : null;
+
+        $drafts = $team->preProposals()->whereNull('submitted_at');
+
+        if ($chosen !== null) {
+            $drafts->whereIn('id', $chosen);
+        }
+
+        $count = (clone $drafts)->count();
 
         // One is enough to be worth reading. The page says four is wiser and
         // asks before letting fewer through; it does not refuse them.
         if ($count < 1) {
             return redirect()->route('student.duplication')
-                ->with('error', 'Save a pre-proposal title before submitting.');
+                ->with('error', $chosen === null
+                    ? 'Save a pre-proposal title before submitting.'
+                    : 'Choose at least one pre-proposal to submit.');
         }
 
         // Only the pre-proposals are touched. Turning in used to also set
         // team_status to 'complete', which is what let one column mean both
         // "not recruiting" and "under review"; team_status is recruitment
         // only now, and Team::hasSubmittedPreProposals() answers the rest.
-        $team->preProposals()->whereNull('submitted_at')->update(['submitted_at' => now()]);
+        $drafts->update(['submitted_at' => now()]);
+
+        $held = $team->preProposals()->whereNull('submitted_at')->count();
 
         return redirect()->route('student.duplication')
-            ->with('status', 'Submitted for checking. Your CaPSA can now review your '.$count.' titles.');
+            ->with('status', 'Submitted for checking. Your CaPSA can now review your '
+                .$count.' '.($count === 1 ? 'title' : 'titles').'.'
+                .($held > 0 ? ' '.$held.' kept as '.($held === 1 ? 'a draft' : 'drafts').'.' : ''));
     }
 
     /**
