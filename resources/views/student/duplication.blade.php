@@ -192,6 +192,38 @@
   padding: 0 2px;
 }
 
+/* The overlap, said out loud. The highlighting inside the abstract shows
+   where the shared terms appear; this says what they are before the abstract
+   is even opened, because "why is it similar" was otherwise one AI sentence
+   a student had no way to check. */
+.match-shared {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+  margin-top: 8px;
+}
+.match-shared-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--text3);
+  margin-right: 2px;
+}
+.match-shared-term {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text);
+  background: rgba(201,168,44,0.22);
+  border-radius: 5px;
+  padding: 2px 7px;
+}
+.match-shared-more {
+  font-size: 10px;
+  color: var(--text3);
+}
+
 .match-breakdown {
   display: none;
   margin-top: 10px;
@@ -517,6 +549,18 @@
                     // student-verifiable signal in place of an AI-written
                     // similarities sentence.
                     $highlightWords = app(\App\Services\SimilarityService::class)->extractHighlightWords($check->concepts ?? []);
+                    // Which of those words the matched study actually uses.
+                    // This is the answer to "why is it similar" - not one
+                    // AI-written sentence, but the terms a student can go and
+                    // find in the abstract below for themselves.
+                    $sharedTerms = function (array $match) use ($highlightWords): array {
+                        $hay = mb_strtolower(($match['title'] ?? '').' '.($match['abstract'] ?? ''));
+
+                        return array_values(array_filter(
+                            $highlightWords,
+                            fn ($w) => $hay !== '' && str_contains($hay, mb_strtolower($w))
+                        ));
+                    };
                     $highlightAbstract = function (?string $text) use ($highlightWords): string {
                         $escaped = e($text ?? '');
                         if (empty($highlightWords)) {
@@ -551,11 +595,17 @@
                         <div class="match-item">
                           <div class="match-item-row">
                             <div style="flex:1;min-width:0;margin-right:10px">
-                              <div style="font-size:12px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ $m['title'] ?? '' }}</div>
-                              @if (! empty($m['reason']))
-                                <div style="font-size:10px;color:var(--text3);margin-top:2px;line-height:1.4">{{ $m['reason'] }}</div>
+                              {{-- The title in full. It used to be cut to one
+                                   line with an ellipsis, which is the one part
+                                   of a matched study nobody can do without. --}}
+                              <div style="font-size:12px;font-weight:500;color:var(--text);line-height:1.4">{{ $m['title'] ?? '' }}</div>
+                              @if (! empty($m['authors']))
+                                <div style="font-size:10px;color:var(--text2);margin-top:3px">By {{ $m['authors'] }}</div>
                               @endif
                               <div style="font-size:10px;color:var(--text3);margin-top:2px">{{ $m['academic_year'] ?? 'N/A' }} · {{ $m['program'] ?? '' }}</div>
+                              @if (! empty($m['reason']))
+                                <div style="font-size:10px;color:var(--text3);margin-top:4px;line-height:1.4">{{ $m['reason'] }}</div>
+                              @endif
                             </div>
                             <span class="match-score-pill" style="background:var(--{{ $mTone }}-bg);color:var(--{{ $mTone }})">{{ $mScore }}%</span>
                           </div>
@@ -565,6 +615,23 @@
                               @if (! empty($m['similarities']))<div><strong>Similarities:</strong> {{ $m['similarities'] }}</div>@endif
                               @if (! empty($m['differences']))<div><strong>Differences:</strong> {{ $m['differences'] }}</div>@endif
                               @if (! empty($m['suggestion']))<div class="match-suggestion"><strong>Suggestion:</strong> {{ $m['suggestion'] }}</div>@endif
+                            </div>
+                          @endif
+                          @php $shared = $sharedTerms($m); @endphp
+                          @if (! empty($shared))
+                            {{-- The overlap itself, named. A sentence saying
+                                 the two are "both management systems" is not
+                                 something a student can check; these are the
+                                 words, and they are lit up in the abstract
+                                 below where they appear. --}}
+                            <div class="match-shared">
+                              <span class="match-shared-label">Both studies talk about</span>
+                              @foreach (array_slice($shared, 0, 8) as $term)
+                                <span class="match-shared-term">{{ $term }}</span>
+                              @endforeach
+                              @if (count($shared) > 8)
+                                <span class="match-shared-more">+{{ count($shared) - 8 }} more</span>
+                              @endif
                             </div>
                           @endif
                           @if (! empty($m['abstract']))
@@ -1446,6 +1513,28 @@ function highlightAbstract(text, words) {
   return escaped.replace(pattern, '<mark>$1</mark>');
 }
 
+/** Which of the pre-proposal's own terms this study actually uses. */
+function sharedTerms(m, highlightWords) {
+  const hay = ((m.title || '') + ' ' + (m.abstract || '')).toLowerCase();
+
+  return (highlightWords || []).filter((w) => hay.indexOf(String(w).toLowerCase()) !== -1);
+}
+
+function sharedTermsHtml(m, highlightWords) {
+  const shared = sharedTerms(m, highlightWords);
+
+  if (!shared.length) return '';
+
+  const shown = shared.slice(0, 8)
+    .map((t) => '<span class="match-shared-term">' + escapeHtml(t) + '</span>').join('');
+  const rest = shared.length > 8
+    ? '<span class="match-shared-more">+' + (shared.length - 8) + ' more</span>'
+    : '';
+
+  return '<div class="match-shared"><span class="match-shared-label">Both studies talk about</span>'
+    + shown + rest + '</div>';
+}
+
 function renderMatchItem(m, highlightWords) {
   const tone = m.score >= 65 ? 'red' : m.score >= 55 ? 'amber' : 'green';
   const hasBreakdown = m.similarities || m.differences || m.suggestion;
@@ -1453,12 +1542,14 @@ function renderMatchItem(m, highlightWords) {
     <div class="match-item">
       <div class="match-item-row">
         <div style="flex:1;min-width:0;margin-right:10px">
-          <div style="font-size:12px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(m.title)}</div>
-          ${m.reason ? `<div style="font-size:10px;color:var(--text3);margin-top:2px;line-height:1.4">${escapeHtml(m.reason)}</div>` : ''}
+          <div style="font-size:12px;font-weight:500;color:var(--text);line-height:1.4">${escapeHtml(m.title)}</div>
+          ${m.authors ? `<div style="font-size:10px;color:var(--text2);margin-top:3px">By ${escapeHtml(m.authors)}</div>` : ''}
           <div style="font-size:10px;color:var(--text3);margin-top:2px">${m.academic_year || 'N/A'} · ${escapeHtml(m.program || '')}</div>
+          ${m.reason ? `<div style="font-size:10px;color:var(--text3);margin-top:4px;line-height:1.4">${escapeHtml(m.reason)}</div>` : ''}
         </div>
         <span class="match-score-pill" style="background:var(--${tone}-bg);color:var(--${tone})">${m.score}%</span>
       </div>
+      ${sharedTermsHtml(m, highlightWords)}
       ${hasBreakdown ? `
         <button type="button" class="match-abstract-toggle" onclick="toggleBreakdown(this)">Show similarities, differences &amp; suggestion ▾</button>
         <div class="match-breakdown">

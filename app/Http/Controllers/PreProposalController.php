@@ -131,6 +131,10 @@ class PreProposalController extends Controller
                 'archived_id' => $m['document']->archived_id,
                 'title' => $m['document']->title,
                 'abstract' => $m['document']->abstract,
+                // Who wrote it. A team told their topic is close to something
+                // already done asks whose work it was first, and the report
+                // named a year and a programme and stopped there.
+                'authors' => $m['document']->authors,
                 'academic_year' => $m['document']->academic_year,
                 'program' => $m['document']->program,
                 'score' => $m['score'],
