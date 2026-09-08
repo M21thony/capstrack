@@ -1966,6 +1966,9 @@ tr.rs-on > td{background:var(--accent-light)}
 .rs-bar .rs-box input:indeterminate ~ .rs-tick{background:var(--accent);border-color:var(--accent)}
 
 /* ══ the confirm sheet ══ (resources/views/partials/confirm-sheet.blade.php) */
+/* A confirmation is always about something already on screen, so it sits
+   above it - including the panel and picker dialogs, which are 100 and 200. */
+#cf-scrim{z-index:300}
 .cf-sheet{max-width:440px}
 .cf-names{border:1px solid var(--border);border-radius:8px;background:var(--bg3);
   padding:9px 11px;margin:0 0 12px;font-size:12px;color:var(--text2);line-height:1.7;
