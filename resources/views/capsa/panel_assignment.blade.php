@@ -929,8 +929,16 @@ async function savePanelAssignment() {
     const team = TEAMS_BY_ID[currentTeamId];
     const stage = document.getElementById('modal-defense').value;
     const hasExisting = team.schedules.some(s => s.defense_type === stage && s.chair_expert_id);
-    if (hasExisting && !confirm(`Remove ${team.team_name}'s panel for ${stage} entirely? You'll need to assign a new panel to bring it back.`)) {
-      return;
+    if (hasExisting) {
+      const agreed = await confirmSheet({
+        title: `Remove ${team.team_name}'s ${stage} panel?`,
+        body: "The panel and its schedule are deleted. You'll need to assign a new "
+          + 'panel to bring it back.',
+        confirmLabel: 'Remove panel',
+        danger: true,
+      });
+
+      if (!agreed) return;
     }
   }
 
@@ -978,9 +986,17 @@ async function saveBulkPanelAssignment() {
   // other per-team failure in this bulk flow).
   if (!chairId) {
     const stage = document.getElementById('modal-defense').value;
-    if (!confirm(`Remove the ${stage} panel for the ${bulkSelectedTeamIds.length} selected team(s) that already have one? You'll need to assign new panels to bring them back.`)) {
-      return;
-    }
+    const agreed = await confirmSheet({
+      title: `Remove the ${stage} panel from ${bulkSelectedTeamIds.length} team`
+        + (bulkSelectedTeamIds.length === 1 ? '?' : 's?'),
+      body: 'Only the selected teams that already have one are affected. Their '
+        + "panels and schedules are deleted, and you'll need to assign new panels "
+        + 'to bring them back.',
+      confirmLabel: 'Remove panels',
+      danger: true,
+    });
+
+    if (!agreed) return;
   }
 
   const payload = {
@@ -1586,6 +1602,7 @@ function showToast(msg, type = 'success') {
   paToastTimer = setTimeout(() => toast.classList.remove('show'), 3500);
 }
 </script>
+@include('partials.confirm-sheet')
 @include('partials.escape-closes-modals')
 </body>
 </html>

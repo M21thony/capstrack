@@ -145,9 +145,11 @@
       <table class="table">
         <thead>
           <tr>
-            <th style="padding-left:20px">Name</th>
+            {{-- The unique key first: a student number names exactly one
+                 person, and a name does not. --}}
+            <th style="padding-left:20px">Student No.</th>
+            <th>Name</th>
             <th>Email</th>
-            <th>Student No.</th>
             <th>Program</th>
             <th>Year</th>
             <th>Section</th>
@@ -170,7 +172,8 @@
               ];
             @endphp
             <tr id="student-row-{{ $student->student_id }}">
-              <td style="padding-left:20px">
+              <td class="std-num" style="padding-left:20px">{{ $student->student_number ?? '—' }}</td>
+              <td>
                 <div class="std-who">
                   <img src="{{ $student->avatarUrl() }}" alt="" loading="lazy" class="std-av"
                        onerror="this.onerror=null;this.src='{{ asset('images/default-avatar.jpg') }}';">
@@ -178,7 +181,6 @@
                 </div>
               </td>
               <td class="std-email" title="{{ $student->email }}">{{ $student->email }}</td>
-              <td class="std-num">{{ $student->student_number ?? '—' }}</td>
               @php
                 // Program, year and section are three things read down a
                 // column. They were one string - the full course name and

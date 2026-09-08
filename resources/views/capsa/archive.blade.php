@@ -157,8 +157,17 @@ function filterArch(){
   document.getElementById('arch-count').textContent='Showing '+c+' studies';
   document.getElementById('arch-empty').style.display=c===0?'block':'none';
 }
-function deleteArchive(id) {
-  if (!confirm('Delete this archived capstone?')) return;
+async function deleteArchive(id) {
+  const agreed = await confirmSheet({
+    title: 'Delete this archived capstone?',
+    body: 'It leaves the archive for good, and similarity checks will stop '
+      + 'comparing new titles against it.',
+    confirmLabel: 'Delete',
+    danger: true,
+  });
+
+  if (!agreed) return;
+
   fetch('/api/admin/archive/' + id, {
     method: 'DELETE',
     headers: { 'X-CSRF-TOKEN': CSRF_TOKEN, 'Accept': 'application/json' },
@@ -186,6 +195,7 @@ function closeSidebar() {
   document.body.style.overflow = '';
 }
 </script>
+@include('partials.confirm-sheet')
 @include('partials.escape-closes-modals')
 </body>
 </html>

@@ -263,8 +263,11 @@
         <table class="table">
           <thead>
             <tr>
+              {{-- The unique key first: a student number is the one thing on
+                   the row that names exactly one person. Two students share a
+                   surname often enough that a name column cannot. --}}
+              <th style="padding-left:20px">Student no.</th>
               <th>Student</th>
-              <th>Student no.</th>
               <th>Section</th>
               <th>Team</th>
               <th>Status</th>
@@ -289,6 +292,7 @@
                   data-letter="{{ strtoupper($section) }}"
                   data-team="{{ $sy && $sy->team ? '1' : '0' }}"
                   data-search="{{ Str::lower($student->f_name.' '.$student->l_name.' '.$student->email.' '.$student->student_number) }}">
+                <td class="std-mono" style="padding-left:20px">{{ $student->student_number ?: '—' }}</td>
                 <td>
                   {{-- The address under the name rather than nowhere: two
                        students share a surname often enough that it is what
@@ -298,7 +302,6 @@
                     <span class="std-mail">{{ $student->email }}</span>
                   </span>
                 </td>
-                <td class="std-mono">{{ $student->student_number ?: '—' }}</td>
                 {{-- One column, the way a section is written everywhere else
                      in the app - BSIT-4A. Split across three it read as three
                      unrelated facts, and no other screen names a section that
@@ -1137,21 +1140,25 @@ function saveEditStudent() {
           const name = document.getElementById('edit-student-first').value.trim();
           const where = d.section ? ' to ' + d.section : '';
 
-          // The blank line between the question and the warning was typed
-          // as two real newlines inside the string. A literal newline in a
-          // single-quoted JS string is a syntax error, and it took the whole
-          // script block with it - which is why nothing on this page worked,
-          // including the Add Student button.
-          if (confirm('Transfer ' + (name || 'this student') + where + '?\n\n'
-              + 'They will belong to the CaPSA who handles that section, and you will '
-              + 'not be able to edit them afterwards.')) {
-            send(true);
+          // Asked in the app's own voice. This page already carries the
+          // confirm sheet for removals; a transfer is the more final of the
+          // two and was still going through the browser's own box.
+          confirmSheet({
+            title: 'Transfer ' + (name || 'this student') + where + '?',
+            body: 'They will belong to the CaPSA who handles that section, and you '
+              + 'will not be able to edit them afterwards.',
+            confirmLabel: 'Transfer',
+            danger: true,
+          }).then(function (agreed) {
+            if (agreed) {
+              send(true);
 
-            return;
-          }
+              return;
+            }
 
-          btn.disabled = false;
-          btn.textContent = 'Save changes';
+            btn.disabled = false;
+            btn.textContent = 'Save changes';
+          });
 
           return;
         }

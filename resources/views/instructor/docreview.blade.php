@@ -210,6 +210,22 @@
   </div>
   </div>
 </div>
+<div class="modal-overlay" id="dr-confirm" onclick="if (event.target === this) closeDisconnectConfirm()">
+  <div class="modal-box" style="width:380px">
+    <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:6px">Disconnect Google Drive?</div>
+    <p style="margin:0 0 16px;font-size:13px;line-height:1.55;color:var(--text2)">
+      Annotated PDFs will stop syncing until you reconnect. The files already in
+      Drive stay where they are.
+    </p>
+    <p id="dr-confirm-error" hidden style="margin:0 0 16px;font-size:12px;color:var(--red)">
+      Could not disconnect Google Drive. Please try again.
+    </p>
+    <div style="display:flex;justify-content:flex-end;gap:8px">
+      <button type="button" class="btn btn-ghost" style="font-size:12px" onclick="closeDisconnectConfirm()">Cancel</button>
+      <button type="button" class="btn btn-primary" style="font-size:12px" id="dr-confirm-ok" onclick="doDisconnectDrive()">Disconnect</button>
+    </div>
+  </div>
+</div>
 @include('instructor.partials.expert-profile')
 @include('instructor.partials.skeleton-toggle')
 <script>
@@ -260,8 +276,21 @@
   if (status) status.addEventListener('change', filterRows);
 })();
 
+/* Asked in the page's own voice rather than the browser's. A second
+   window.confirm() in the same minute offers "don't ask me again" on some
+   browsers, which turns the next irreversible action into a silent yes. */
 function disconnectDrive(){
-  if (!confirm('Disconnect Google Drive? Annotated PDFs will stop syncing until you reconnect.')) return;
+  document.getElementById('dr-confirm').classList.add('show');
+}
+
+function closeDisconnectConfirm(){
+  document.getElementById('dr-confirm').classList.remove('show');
+}
+
+function doDisconnectDrive(){
+  const btn = document.getElementById('dr-confirm-ok');
+  btn.disabled = true;
+  btn.textContent = 'Disconnecting...';
 
   fetch("{{ route('gdrive.connection.destroy') }}", {
     method: 'DELETE',
@@ -269,7 +298,11 @@ function disconnectDrive(){
   })
     .then((r) => r.json())
     .then(() => window.location.reload())
-    .catch(() => alert('Could not disconnect Google Drive. Please try again.'));
+    .catch(() => {
+      btn.disabled = false;
+      btn.textContent = 'Disconnect';
+      document.getElementById('dr-confirm-error').hidden = false;
+    });
 }
 
 
