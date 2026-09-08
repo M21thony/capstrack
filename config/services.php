@@ -61,11 +61,18 @@ return [
         // else needs the memory.
         'keep_alive' => env('OLLAMA_KEEP_ALIVE', '30m'),
 
-        // How many of a check's candidates get an AI-written verdict. The
-        // rest keep the embedding line they were already showing. Each
+        // How many of a check's candidates get an AI-written verdict. Each
         // verdict is a model call, so this is the main lever on how long a
-        // check takes on a weak connection.
-        'judge_limit' => env('OLLAMA_JUDGE_LIMIT', 4),
+        // check takes.
+        //
+        // Ten, because that is how many the retriever returns and anything
+        // less leaves some of them unread. Measured against the labelled
+        // examples in the fine-tuning set: the genuine match is inside the
+        // top four 92% of the time and inside the top ten 98%, so a limit of
+        // four left about one check in twelve with the real duplicate never
+        // looked at. Whatever is not judged is shown as "Not assessed"
+        // rather than given a number.
+        'judge_limit' => env('OLLAMA_JUDGE_LIMIT', 10),
 
         // ...and how close a candidate has to be to be worth explaining.
         // The top match is always explained whatever it scored.
