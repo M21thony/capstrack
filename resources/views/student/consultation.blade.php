@@ -499,7 +499,8 @@
                 </span>
                 <svg class="appt-chev" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
               </div>
-              <button type="button" class="appt-cancel-btn" data-cancel-booking-id="{{ $booking->booking_id }}">Cancel Booking</button>
+              <button type="button" class="appt-cancel-btn" data-cancel-booking-id="{{ $booking->booking_id }}"
+                      data-session-date="{{ $booking->session_date?->format('Y-m-d') }}">Cancel Booking</button>
             </div>
           @empty
             <div class="session-list-empty">No upcoming consultations.</div>
@@ -936,7 +937,8 @@ function bookingCardHtml(booking, isUpcoming) {
     ? '<span class="appt-status-badge appt-status-badge-upcoming">' + (dateKey === todayKeyString() ? 'Today' : 'Scheduled') + '</span>'
     : '<span class="appt-status-badge">Completed</span>';
   const cancelBtn = isUpcoming
-    ? '<button type="button" class="appt-cancel-btn" data-cancel-booking-id="' + booking.booking_id + '">Cancel Booking</button>'
+    ? '<button type="button" class="appt-cancel-btn" data-cancel-booking-id="' + booking.booking_id
+        + '" data-session-date="' + (booking.session_date || '') + '">Cancel Booking</button>'
     : '';
 
   // Same shape the page renders on the server, or a refresh would quietly
@@ -1108,6 +1110,43 @@ function forceInteractive(el) {
   el.style.setProperty('user-select', 'auto', 'important');
 }
 
+const CANCEL_CUTOFF_DAYS = {{ \App\Http\Controllers\StudentConsultationController::CANCEL_CUTOFF_DAYS }};
+
+/**
+ * Whole days between today and the session, counted the way the server
+ * counts them.
+ */
+function daysUntil(sessionDate) {
+  if (!sessionDate) return null;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const when = new Date(sessionDate + 'T00:00:00');
+  if (isNaN(when)) return null;
+
+  return Math.round((when - today) / 86400000);
+}
+
+/**
+ * Why this booking cannot be called off, or null when it can.
+ *
+ * Asked before the dialog opens. The server refuses a late cancellation
+ * either way, but it used to be the only thing that knew - so the student
+ * wrote out a reason, sent it, and was told then that they could not cancel
+ * at all. The date is on the button; there is no reason to make them type
+ * first to find out.
+ */
+function cancelBlockedReason(sessionDate) {
+  const days = daysUntil(sessionDate);
+
+  if (days === null || days >= CANCEL_CUTOFF_DAYS) return null;
+
+  return 'This consultation is in ' + (days <= 0 ? 'less than a day' : days + ' day' + (days === 1 ? '' : 's'))
+    + '. It can only be cancelled more than ' + CANCEL_CUTOFF_DAYS
+    + ' days ahead - message your expert instead.';
+}
+
 function openCancelModal(bookingId) {
   cancelBookingId = bookingId;
   const modal = document.getElementById('cancelBookingModal');
@@ -1144,6 +1183,14 @@ function closeCancelModal() {
 document.addEventListener('click', function (event) {
   const cancelBtn = event.target.closest('.appt-cancel-btn');
   if (cancelBtn) {
+    const blocked = cancelBlockedReason(cancelBtn.dataset.sessionDate);
+
+    if (blocked) {
+      showToast(blocked, 'error');
+
+      return;
+    }
+
     openCancelModal(cancelBtn.dataset.cancelBookingId);
     return;
   }

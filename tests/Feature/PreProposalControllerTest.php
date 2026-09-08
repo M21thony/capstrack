@@ -272,6 +272,56 @@ class PreProposalControllerTest extends TestCase
         $this->assertSame(1, $team->preProposals()->whereNotNull('submitted_at')->count());
     }
 
+    /**
+     * A team can leave a title out without losing it.
+     *
+     * Turning in used to stamp every draft, so the only way to keep one back
+     * was to delete it - and deleting took its duplication report with it.
+     */
+    public function test_only_the_chosen_titles_are_turned_in(): void
+    {
+        [$student, $team] = $this->makeLeaderWithTeam();
+        $this->mockSimilarityPipeline();
+        $this->actingAs($student, 'web');
+
+        $this->checkAndStore('p1.pdf');
+        $this->checkAndStore('p2.pdf');
+        $this->checkAndStore('p3.pdf');
+
+        $ids = $team->preProposals()->orderBy('id')->pluck('id');
+
+        $this->patch(route('student.pre-proposal.submit'), [
+            'status' => 'submitted',
+            'choose' => 1,
+            'ids' => [$ids[0], $ids[2]],
+        ])->assertSessionMissing('error');
+
+        $this->assertSame(2, $team->preProposals()->whereNotNull('submitted_at')->count());
+
+        // The one left out is still there, still a draft.
+        $held = CapstonePreProposal::find($ids[1]);
+        $this->assertNotNull($held);
+        $this->assertNull($held->submitted_at);
+    }
+
+    /** Ticking nothing is not the same as sending no selection at all. */
+    public function test_choosing_no_titles_is_refused_rather_than_submitting_all(): void
+    {
+        [$student, $team] = $this->makeLeaderWithTeam();
+        $this->mockSimilarityPipeline();
+        $this->actingAs($student, 'web');
+
+        $this->checkAndStore('p1.pdf');
+        $this->checkAndStore('p2.pdf');
+
+        $this->patch(route('student.pre-proposal.submit'), [
+            'status' => 'submitted',
+            'choose' => 1,
+        ])->assertSessionHas('error');
+
+        $this->assertSame(0, $team->preProposals()->whereNotNull('submitted_at')->count());
+    }
+
     public function test_submitting_nothing_is_refused(): void
     {
         [$student, $team] = $this->makeLeaderWithTeam();

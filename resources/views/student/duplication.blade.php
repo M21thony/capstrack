@@ -451,7 +451,25 @@
               @endphp
               <div class="pp-row @if($rowChosen) is-chosen @elseif($rowSetAside) is-set-aside @endif"
                    style="padding:10px 0;border-top:1px solid var(--border)">
-                <div style="font-size:12px;font-weight:500;margin-bottom:4px;{{ $proposal->status === 'rejected' ? 'color:var(--text3);text-decoration:line-through' : 'color:var(--text)' }}">{{ $proposal->title }}</div>
+                @php
+                  // A draft the leader could still choose to turn in. Nothing
+                  // to tick once the set is in, and nothing for a member to
+                  // tick at all.
+                  $pickable = $isLeader && ! $turnedIn && ! $proposal->submitted_at;
+                @endphp
+                <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:4px">
+                  @if ($pickable)
+                    {{-- Attached to the submit form further down the page by
+                         its id, so unticking one is all it takes to leave a
+                         title out. Before this the only way was to delete it,
+                         which threw away its duplication report with it. --}}
+                    <input type="checkbox" class="pp-pick" name="ids[]" value="{{ $proposal->id }}"
+                           form="pp-submit-form" checked onchange="refreshSubmitCount()"
+                           aria-label="Submit {{ $proposal->title }}"
+                           style="margin-top:2px;width:15px;height:15px;flex-shrink:0;accent-color:var(--accent,#5b5bd6);cursor:pointer">
+                  @endif
+                  <div style="font-size:12px;font-weight:500;min-width:0;{{ $proposal->status === 'rejected' ? 'color:var(--text3);text-decoration:line-through' : 'color:var(--text)' }}">{{ $proposal->title }}</div>
+                </div>
                 @if ($proposal->submitted_at || $proposal->status !== 'pending')
                   <span class="badge {{ $proposal->status === 'approved' ? 'badge-green' : ($proposal->status === 'rejected' ? 'badge-red' : 'badge-amber') }}">{{ ucfirst($proposal->status) }}</span>
                 @else
@@ -670,20 +688,23 @@
               {{-- Turning in fewer than the suggested number is a decision, not
                    an error, so it is asked about once rather than forbidden. --}}
               <form method="POST" action="{{ route('student.pre-proposal.submit') }}"
+                    id="pp-submit-form"
                     onsubmit="return confirmSubmitCount(event)"
-                    data-count="{{ $proposals->count() }}"
                     data-recommended="{{ $recommendedProposals }}">
                 @method('PATCH')
                 <input type="hidden" name="status" value="submitted">
+                {{-- Says a selection was sent, so unticking everything is
+                     told apart from sending nothing. --}}
+                <input type="hidden" name="choose" value="1">
                 @csrf
-                <button type="submit" class="btn btn-primary pp-btn-submit">
+                <button type="submit" class="btn btn-primary pp-btn-submit" id="pp-submit-btn">
                   <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4 20-7z"/></svg>
                   Submit for Checking
                 </button>
               </form>
-              <div class="pp-submit-note">
+              <div class="pp-submit-note" id="pp-submit-note">
                 Hands
-                {{ $proposals->count() === 1 ? 'your title' : 'all '.$proposals->count().' titles' }}
+                {{ $draftCount === 1 ? 'your title' : 'all '.$draftCount.' titles' }}
                 to your CaPSA to review.
               </div>
             @else
@@ -855,18 +876,29 @@ function confirmSubmitCount(e) {
   e.preventDefault();
   ppSubmitForm = form;
 
-  const count = Number(form.dataset.count || 0);
+  // What is ticked, not what is saved - the two are the same until somebody
+  // leaves a title out.
+  const count = pickedProposals().length;
+  const total = document.querySelectorAll('.pp-pick').length;
   const recommended = Number(form.dataset.recommended || 4);
+
+  if (count === 0) return false;
+
   const short = count < recommended;
   const titles = count === 1 ? 'one pre-proposal' : count + ' pre-proposals';
+  const holding = total - count;
+  const heldNote = holding > 0
+    ? ' The ' + (holding === 1 ? 'other one stays a draft' : 'other ' + holding + ' stay drafts')
+      + ', report and all.'
+    : '';
 
   document.getElementById('pp-sc-title').textContent = 'Submit ' + titles + '?';
-  document.getElementById('pp-sc-body').textContent = short
+  document.getElementById('pp-sc-body').textContent = (short
     ? 'We suggest turning in at least ' + recommended + '. Your CaPSA decides on each '
       + 'title separately, so if one is turned down you still have others that could be '
       + 'approved. You can go back and add more first.'
     : 'Your CaPSA will review all ' + count + '. You can take this back any time until '
-      + 'they start reviewing.';
+      + 'they start reviewing.') + heldNote;
 
   // Amber and a warning triangle when it is worth a second thought; gold
   // and a tick when it is not.
@@ -882,6 +914,44 @@ function confirmSubmitCount(e) {
 
   return false;
 }
+
+/** Ticked boxes, or an empty list. */
+function pickedProposals() {
+  return Array.prototype.slice.call(document.querySelectorAll('.pp-pick:checked'));
+}
+
+/**
+ * Keep the button and the line under it honest about what is being sent.
+ *
+ * Untick a title and it stays saved, with its report - it simply is not part
+ * of this submission.
+ */
+function refreshSubmitCount() {
+  const picked = pickedProposals().length;
+  const total = document.querySelectorAll('.pp-pick').length;
+  const btn = document.getElementById('pp-submit-btn');
+  const note = document.getElementById('pp-submit-note');
+
+  if (!btn) return;
+
+  btn.disabled = picked === 0;
+  btn.style.opacity = picked === 0 ? '.5' : '';
+  btn.style.cursor = picked === 0 ? 'not-allowed' : '';
+
+  if (!note) return;
+
+  if (picked === 0) {
+    note.textContent = 'Tick at least one title to submit.';
+  } else if (picked === total) {
+    note.textContent = 'Hands ' + (total === 1 ? 'your title' : 'all ' + total + ' titles')
+      + ' to your CaPSA to review.';
+  } else {
+    note.textContent = 'Hands ' + picked + ' of ' + total + ' to your CaPSA. The '
+      + (total - picked === 1 ? 'other stays a draft' : 'others stay drafts') + ', report and all.';
+  }
+}
+
+document.addEventListener('DOMContentLoaded', refreshSubmitCount);
 
 function closeSubmitConfirm() {
   document.getElementById('pp-submit-confirm').classList.remove('show');
