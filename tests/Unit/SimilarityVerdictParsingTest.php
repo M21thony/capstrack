@@ -78,6 +78,37 @@ class SimilarityVerdictParsingTest extends TestCase
         }
     }
 
+    /** The real reply that lost the closest study in a MediTrack scan. */
+    public function test_a_missing_comma_between_fields_does_not_lose_the_verdict(): void
+    {
+        $verdict = $this->read(
+            '{"matches": true, "score": 75, "reason": "Both digitalise medical inventory.",'
+            .'"similarities": "Medical inventory and patient records",'
+            .'"differences": "One covers patient records; the other inventory." '
+            .'"suggestion": "Narrow the scope."}'
+        );
+
+        $this->assertNotNull($verdict, 'one missing comma must not cost the whole verdict');
+        $this->assertSame(75, $verdict['score']);
+        $this->assertSame('Narrow the scope.', $verdict['suggestion']);
+    }
+
+    public function test_a_trailing_comma_is_tolerated(): void
+    {
+        $verdict = $this->read(
+            '{"matches": false, "score": 20, "reason": "Different subjects.",'
+            .'"similarities": "none", "differences": "x", "suggestion": "y",}'
+        );
+
+        $this->assertSame(20, $verdict['score']);
+    }
+
+    /** The repair is punctuation only - it must never invent a verdict. */
+    public function test_repairing_cannot_manufacture_a_score(): void
+    {
+        $this->assertNull($this->read('{"matches": true "reason": '));
+    }
+
     public function test_a_reply_with_no_object_is_still_rejected(): void
     {
         $this->assertNull($this->read('I am not able to answer that.'));
