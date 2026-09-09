@@ -649,6 +649,59 @@ PROMPT;
         return $verdicts;
     }
 
+    /**
+     * The first complete JSON object in a reply, by brace depth.
+     *
+     * A greedy /{.*}/ ran to the LAST brace in the reply, so one stray
+     * closing brace mid-answer swallowed the rest and the whole verdict was
+     * discarded - which the student saw as \"Not assessed\" on a study the
+     * model had in fact judged. Stopping at the brace that closes the object
+     * keeps the fields that completed, so a score and a reason survive an
+     * answer that goes wrong after them.
+     */
+    private function firstJsonObject(string $text): ?string
+    {
+        $start = strpos($text, '{');
+        if ($start === false) {
+            return null;
+        }
+
+        $depth = 0;
+        $inString = false;
+        $escaped = false;
+
+        for ($i = $start, $len = strlen($text); $i < $len; $i++) {
+            $ch = $text[$i];
+
+            if ($escaped) {
+                $escaped = false;
+                continue;
+            }
+            if ($ch === '\\') {
+                $escaped = true;
+                continue;
+            }
+            if ($ch === '"') {
+                $inString = ! $inString;
+                continue;
+            }
+            if ($inString) {
+                continue;
+            }
+
+            if ($ch === '{') {
+                $depth++;
+            } elseif ($ch === '}') {
+                $depth--;
+                if ($depth === 0) {
+                    return substr($text, $start, $i - $start + 1);
+                }
+            }
+        }
+
+        return null;
+    }
+
     /** The prompt that asks for one candidate's verdict. */
     private function buildJudgePrompt(array $concepts, ArchivedDocument $doc, int $embeddingScore): string
     {
@@ -761,8 +814,7 @@ PROMPT;
     {
         $cleaned = trim(preg_replace('/```json|```/i', '', $raw));
 
-        preg_match('/\{.*\}/s', $cleaned, $matches);
-        $r = json_decode($matches[0] ?? $cleaned, true);
+        $r = json_decode($this->firstJsonObject($cleaned) ?? $cleaned, true);
 
         if (json_last_error() !== JSON_ERROR_NONE || ! is_array($r)) {
             return null;
