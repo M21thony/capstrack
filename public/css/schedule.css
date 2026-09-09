@@ -1052,3 +1052,23 @@ a.btn.content,
   gap:6px;color:var(--text2);font-size:12.5px;line-height:1.5}
 .guide-list li::marker{color:var(--text3)}
 @media (max-width:900px){.legend-row{grid-template-columns:1fr}}
+
+/* ── fit the screen ───────────────────────────────────────────────────
+   Turning 1px grid lines into 6px gaps added 30px of height across six
+   rows and pushed the legend below the fold. The room comes back off the
+   chrome, not off the calendar. */
+.content{padding:20px 22px}
+.cal-card{padding:14px 16px}
+.cal-cell{min-height:70px;padding:6px 7px;gap:3px}
+.cal-day-label{padding:2px 0 6px}
+.legend-row{margin-top:14px}
+.legend-row .legend-section{padding:13px 15px}
+.cal-slot-pill{font-size:10px;gap:5px}
+
+/* The count badge repeated what the chips underneath already showed, and
+   sat where the date number wants to be. */
+.cell-slot-count{display:none}
+.gcal-note{display:flex;align-items:center;gap:8px;margin-top:11px;
+  padding-top:11px;border-top:1px solid var(--border);
+  font-size:11.5px;color:var(--text3)}
+.gcal-note svg{color:var(--green);flex:none}
