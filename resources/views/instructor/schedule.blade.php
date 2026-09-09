@@ -18,7 +18,7 @@
     <button class="hamburger-btn" onclick="toggleSidebar()" aria-label="Toggle sidebar">
       <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
     </button>
-    <div class="page-title">Schedule Management</div>
+    <div class="page-title">Consultations</div>
     <div class="topbar-actions">
       @include('instructor.partials.notification-dropdown')
     </div>
@@ -62,8 +62,8 @@
         <div class="cal-card">
           <div class="cal-header">
             <div class="cal-title-group">
-              <div class="cal-title">Availability Calendar</div>
-              <div class="cal-month-label" id="cal-month-label">Loading…</div>
+              <div class="cal-title">Availability</div>
+              <div class="cal-month-label" id="cal-month-label">Occurrences of your weekly slots</div>
             </div>
             <div class="cal-controls">
               <button class="cal-nav-btn" onclick="prevMonth()">
@@ -79,7 +79,7 @@
                 {{-- Set a term's worth of hours in one go, instead of one
                      slot at a time through the form on the right. --}}
                 <button class="mode-btn" onclick="openAvail()">Set availability</button>
-                <button class="mode-btn block-mode" id="btn-block" onclick="toggleBlockMode()">🚫 Block Mode</button>
+                <button class="mode-btn block-mode" id="btn-block" onclick="toggleBlockMode()">Block a day</button>
               </div>
             </div>
           </div>
@@ -242,6 +242,13 @@
               </button>
               <button class="btn btn-ghost" onclick="resetForm()" style="flex:none;padding:7px 12px">Clear</button>
             </div>
+            <!-- Slots are pushed to the adviser's calendar on save. Saying so
+                 here is the difference between trusting the button and going
+                 to check. -->
+            <div class="gcal-note">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              Saved slots appear in your Google Calendar
+            </div>
           </div>
         </div>
 
@@ -250,7 +257,7 @@
           <div class="upcoming-header">
             <div class="upcoming-title">
               <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-              Upcoming Appointments
+              Next sessions
             </div>
             <div class="upcoming-count" id="apt-count">0</div>
           </div>
@@ -263,7 +270,7 @@
         <div class="form-card" style="padding:16px">
           <div class="form-card-title" style="margin-bottom:12px">
             <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-            This Month's Slots
+            This month&rsquo;s slots
           </div>
           <div style="display:flex;flex-direction:column;gap:8px" id="slot-stats">
             <!-- Rendered by JS -->
@@ -893,7 +900,9 @@ function renderCalendar() {
   const todayKey = formatKey(today.getFullYear(), today.getMonth(), today.getDate());
 
   document.getElementById('cal-month-display').textContent = `${MONTHS[viewMonth].substring(0, 3).toUpperCase()} ${viewYear}`;
-  document.getElementById('cal-month-label').textContent   = `${MONTHS[viewMonth]} ${viewYear}`;
+  // Says what the grid is showing. The month is already in the control to
+  // its right, so repeating it there spent the line on a duplicate.
+  document.getElementById('cal-month-label').textContent   = 'Occurrences of your weekly slots';
 
   grid.innerHTML = '';
 
@@ -961,7 +970,7 @@ function renderCalendar() {
           pill.textContent = `🔴 Ongoing · ${TYPE_LABELS[s.type] || 'Consultation'}`;
           pill.style.fontWeight = '700';
         } else {
-          pill.textContent = `${hr12(s.start || s.start_time).replace(' AM','a').replace(' PM','p')} ${TYPE_LABELS[s.type] || 'Consultation'}${s.teamName ? ' · ' + s.teamName : ''}`;
+          pill.textContent = hr12(s.start || s.start_time).replace(' AM', 'a').replace(' PM', 'p');
         }
         pill.title = `${hr12(s.start || s.start_time)}–${hr12(s.end || s.end_time)} · Max ${s.maxBookings || s.consultation_limit}${s.teamName ? ' · Team: ' + s.teamName : ''}${status === 'ongoing' ? ' · Ongoing now' : ''}`;
         el.appendChild(pill);
