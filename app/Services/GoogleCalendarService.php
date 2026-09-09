@@ -174,6 +174,45 @@ class GoogleCalendarService
         return $created->getId();
     }
 
+    /**
+     * Take one date out of a recurring event, leaving the series intact.
+     *
+     * Moving a single week creates a separate one-off event for the new time.
+     * Without this the original series still fires on that date too, so the
+     * adviser's calendar shows the slot twice - once where they moved it, and
+     * once where it used to be.
+     *
+     * EXDATE has to name the exact start instant of the occurrence being
+     * removed, not just the day, so the time comes from the event itself
+     * rather than from the caller.
+     */
+    public function excludeDateFromSeries(int $expertId, string $googleEventId, string $date): void
+    {
+        $service = new Calendar($this->getClient($expertId));
+        $event = $service->events->get('primary', $googleEventId);
+
+        $recurrence = $event->getRecurrence() ?: [];
+        if ($recurrence === []) {
+            return; // not a series - nothing to exclude it from
+        }
+
+        $startsAt = $event->getStart()->getDateTime() ?: $event->getStart()->getDate();
+        $timeOfDay = Carbon::parse($startsAt, 'Asia/Manila')->format('His');
+        $exdate = 'EXDATE;TZID=Asia/Manila:'
+            .Carbon::parse($date, 'Asia/Manila')->format('Ymd').'T'.$timeOfDay;
+
+        if (in_array($exdate, $recurrence, true)) {
+            return; // already excluded, and pressing skip twice must be safe
+        }
+
+        $recurrence[] = $exdate;
+        $event->setRecurrence($recurrence);
+
+        $service->events->update('primary', $googleEventId, $event, [
+            'sendUpdates' => 'all',
+        ]);
+    }
+
     public function cancelBookingEvent(int $expertId, string $googleEventId): void
     {
         $client = $this->getClient($expertId);

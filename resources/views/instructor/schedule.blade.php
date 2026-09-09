@@ -399,6 +399,27 @@
 .av-count{background:var(--accent-light);border:1px solid var(--accent);border-radius:8px;
   padding:9px 11px;font-size:12px;color:var(--text2);line-height:1.5}
 .av-count b{color:var(--accent3)}
+
+/* Which edit did they mean? A weekly slot is a rule, and rewriting the rule
+   when they meant one week is how a whole term's Mondays used to move at
+   once. Asked as a modal rather than a browser confirm, so the two outcomes
+   can be spelled out instead of compressed into OK and Cancel. */
+#scope-ask{position:fixed;inset:0;z-index:120;display:none;align-items:center;
+  justify-content:center;background:rgba(15,17,23,.45);padding:20px}
+#scope-ask.show{display:flex}
+#scope-ask .box{background:var(--bg2);border:1px solid var(--border);border-radius:14px;
+  max-width:400px;width:100%;padding:20px;box-shadow:0 18px 44px -18px rgba(0,0,0,.45)}
+#scope-ask h3{margin:0 0 6px;font:600 15px 'DM Sans',sans-serif;color:var(--text)}
+#scope-ask p{margin:0 0 15px;font-size:12.5px;line-height:1.5;color:var(--text3)}
+#scope-ask .opt{display:block;width:100%;text-align:left;background:var(--bg3);
+  border:1px solid var(--border);border-radius:9px;padding:10px 12px;margin-bottom:8px;
+  cursor:pointer;font:inherit;color:var(--text)}
+#scope-ask .opt:hover{border-color:var(--accent);background:var(--accent-light)}
+#scope-ask .opt b{display:block;font:600 13px 'DM Sans',sans-serif}
+#scope-ask .opt span{display:block;font-size:11.5px;color:var(--text3);margin-top:2px}
+#scope-ask .cancel{width:100%;background:none;border:none;padding:6px;cursor:pointer;
+  font:500 12.5px 'DM Sans',sans-serif;color:var(--text3)}
+#scope-ask .cancel:hover{color:var(--text)}
 </style>
 
 <!-- ─── BLOCK CONFIRM ─────────────────────────────────────────────────────── -->
@@ -462,6 +483,22 @@
 </div>
 
 <!-- ─── EXPERT PROFILE SIDE PANEL ─────────────────────────────────────────── -->
+<div id="scope-ask" role="dialog" aria-modal="true" aria-labelledby="scope-ask-title">
+  <div class="box">
+    <h3 id="scope-ask-title">Change which weeks?</h3>
+    <p id="scope-ask-note">This slot repeats every week.</p>
+    <button type="button" class="opt" data-scope="occurrence">
+      <b id="scope-ask-one">Just this date</b>
+      <span>Every other week keeps the time it has now.</span>
+    </button>
+    <button type="button" class="opt" data-scope="series">
+      <b id="scope-ask-all">Every week</b>
+      <span>Changes this date and every one after it.</span>
+    </button>
+    <button type="button" class="cancel" data-scope="">Cancel</button>
+  </div>
+</div>
+
 <script>
 // ══════════════════════════════════════════════════════════════
 //  CONSTANTS
@@ -597,11 +634,57 @@ async function apiFetch(url, options = {}) {
 }
 
 // ══════════════════════════════════════════════════════════════
+// Dates a repeating slot has been taken out of, keyed by schedule_id. A slot
+// stores a weekday, so without these the calendar would still draw the week
+// the adviser moved, next to the one-off that replaced it.
+let skippedDates = {};
+
+function isSkipped(scheduleId, dateKey) {
+  return (skippedDates[scheduleId] || []).indexOf(dateKey) !== -1;
+}
+
+// Which weeks an edit should touch. Resolves to 'occurrence', 'series', or
+// '' when the adviser backs out.
+function askEditScope(dayName) {
+  return new Promise(resolve => {
+    const box = document.getElementById('scope-ask');
+    document.getElementById('scope-ask-note').textContent =
+      'This slot repeats every ' + dayName + '.';
+    document.getElementById('scope-ask-all').textContent = 'Every ' + dayName;
+    box.classList.add('show');
+
+    function done(scope) {
+      box.classList.remove('show');
+      box.removeEventListener('click', onClick);
+      document.removeEventListener('keydown', onKey);
+      resolve(scope);
+    }
+    function onClick(e) {
+      const btn = e.target.closest('[data-scope]');
+      if (btn) { done(btn.dataset.scope); return; }
+      if (e.target === box) { done(''); }
+    }
+    function onKey(e) { if (e.key === 'Escape') { done(''); } }
+
+    box.addEventListener('click', onClick);
+    document.addEventListener('keydown', onKey);
+  });
+}
+
 //  LOAD SLOTS FROM DB
 // ══════════════════════════════════════════════════════════════
 async function loadSlots() {
   try {
-    const data = await apiFetch('/instructor/schedule/slots');
+    const payload = await apiFetch('/instructor/schedule/slots');
+
+    // The endpoint used to return a bare array. It now also reports the dates
+    // each repeating slot has been taken out of, so both shapes are read.
+    const data = Array.isArray(payload) ? payload : (payload.slots || []);
+    skippedDates = {};
+    ((Array.isArray(payload) ? [] : payload.exceptions) || []).forEach(x => {
+      const key = String(x.exception_date).slice(0, 10);
+      (skippedDates[x.schedule_id] = skippedDates[x.schedule_id] || []).push(key);
+    });
 
     // The API returns one row per (schedule, booking) pair — a recurring
     // slot booked on several different weeks comes back as several rows
@@ -657,6 +740,9 @@ function fanOutSlots() {
     if (!slotsByDay[dayName]) continue;
 
     const matchingSlots = slotsByDay[dayName].filter(s => {
+      // A week this slot was moved out of, or skipped, is not one of its
+      // occurrences any more - whatever replaced it stands on its own.
+      if (isSkipped(s.schedule_id, key)) return false;
       // One-time slots: only show on their specific date
       if (s.recur === 'once' || (!s.recur && s.specific_date)) {
         return s.specific_date === key;
@@ -1367,7 +1453,42 @@ async function saveSlot() {
 
   if (editingSlotId) {
     const scheduleId = editingSlotId;
+
+    // A repeating slot is a rule covering every one of those weekdays, so
+    // saving it blindly rewrites the whole term. Ask which was meant.
+    const editing = (slotsByDay[dayName] || []).find(s => s.schedule_id === scheduleId);
+    const repeats = editing && (editing.recur || 'weekly') !== 'once';
+    let scope = 'series';
+
+    if (repeats) {
+      scope = await askEditScope(dayName);
+      if (!scope) {
+        isSaving = false;
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Save Slot';
+        }
+        return;
+      }
+    }
+
     try {
+      // One week is its own resource under the slot, addressed by its date.
+      // Replacing it leaves the weekly rule, and every other week, alone.
+      if (scope === 'occurrence') {
+        await apiFetch(`/instructor/schedule/slots/${scheduleId}/occurrences/${selectedDate}`, {
+          method: 'PUT',
+          body: JSON.stringify({ start_time: start, end_time: end, slot_type: type }),
+        });
+
+        // The rule did not change and a new slot now holds this date, so
+        // there is no local record to mutate - read the day back instead.
+        await loadSlots();
+        showToast('This ' + dayName + ' updated. Every other ' + dayName + ' is unchanged.');
+        cancelEdit();
+        return;
+      }
+
       const data = await apiFetch(`/instructor/schedule/slots/${scheduleId}`, {
         method: 'PATCH',
         body: JSON.stringify({
