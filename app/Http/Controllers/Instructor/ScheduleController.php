@@ -61,7 +61,28 @@ class ScheduleController extends Controller
             )
             ->get();
 
-        return response()->json($slots);
+        // The dates a weekly slot does NOT happen on. Without these the page
+        // would draw an occurrence the adviser has already moved or skipped,
+        // and it would sit there beside the one-off that replaced it.
+        $exceptions = DB::table('consultation_schedule_exception')
+            ->whereIn('schedule_id', $slots->pluck('schedule_id')->unique()->all())
+            ->get(['schedule_id', 'exception_date']);
+
+        return response()->json(['slots' => $slots, 'exceptions' => $exceptions]);
+    }
+
+    /**
+     * The dates this weekly slot has been taken out of.
+     *
+     * @return array<int, string>
+     */
+    private function exceptionDates(int $scheduleId): array
+    {
+        return DB::table('consultation_schedule_exception')
+            ->where('schedule_id', $scheduleId)
+            ->pluck('exception_date')
+            ->map(fn ($d) => substr((string) $d, 0, 10))
+            ->all();
     }
 
     // POST /instructor/schedule/slots
@@ -250,6 +271,7 @@ class ScheduleController extends Controller
             return response()->json(['error' => 'Slot not found.'], 404);
         }
 
+
         // What the slot will look like once this edit lands - the new value
         // where one was sent, the current one where it was not.
         $newRecur = $request->has('recur') ? $request->recur : ($slot->recur ?? 'weekly');
@@ -344,6 +366,210 @@ class ScheduleController extends Controller
         return response()->json(['updated' => true]);
     }
 
+    /**
+     * Change one week of a repeating slot, and only that week.
+     *
+     * The slot itself is never touched. The date is taken out of it, and a
+     * one-off slot carrying the new time takes its place - so next Monday and
+     * every Monday after it stay exactly as they were, which is what made
+     * editing a single week impossible before.
+     */
+    // PUT /instructor/schedule/slots/{id}/occurrences/{date}
+    public function replaceOccurrence(Request $request, int $id, string $date)
+    {
+        $validator = Validator::make($request->all(), [
+            'start_time' => 'sometimes|date_format:H:i',
+            'end_time' => 'sometimes|date_format:H:i|after:start_time',
+            'slot_type' => 'sometimes|nullable|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['error' => $validator->errors()->first()], 422);
+        }
+
+        $expert = Auth::guard('expert')->user();
+
+        $slot = DB::table('consultation_schedule')
+            ->where('schedule_id', $id)
+            ->where('expert_id', $expert->expert_id)
+            ->first();
+
+        if (! $slot) {
+            return response()->json(['error' => 'Slot not found.'], 404);
+        }
+
+        if (($slot->recur ?? 'weekly') === 'once') {
+            return response()->json([
+                'error' => 'This slot already happens on one date only - edit it directly.',
+            ], 422);
+        }
+
+        if (Carbon::parse($date)->format('l') !== $slot->available_date) {
+            return response()->json([
+                'error' => "That date is not a {$slot->available_date}.",
+            ], 422);
+        }
+
+        // A week somebody has booked cannot be moved out from under them.
+        $booked = DB::table('consultation_booking')
+            ->where('schedule_id', $slot->schedule_id)
+            ->whereDate('session_date', $date)
+            ->where('booking_status', 'scheduled')
+            ->exists();
+
+        if ($booked) {
+            return response()->json([
+                'error' => 'A student has booked this date. Cancel the booking first.',
+            ], 422);
+        }
+
+        $start = $request->start_time ?? substr((string) $slot->start_time, 0, 5);
+        $end = $request->end_time ?? substr((string) $slot->end_time, 0, 5);
+        $type = $request->slot_type ?? $slot->slot_type;
+
+        // The rule being replaced is excluded from this date, so it must not
+        // count as a collision here - nor must any other rule already excluded
+        // from it. Every remaining slot on that weekday still does.
+        $excluded = DB::table('consultation_schedule_exception')
+            ->whereDate('exception_date', $date)
+            ->pluck('schedule_id')
+            ->push($slot->schedule_id)
+            ->all();
+
+        $clashes = DB::table('consultation_schedule')
+            ->where('expert_id', $expert->expert_id)
+            ->whereNotIn('schedule_id', $excluded)
+            ->where('available_date', $slot->available_date)
+            ->where('start_time', '<', $end)
+            ->where('end_time', '>', $start)
+            ->get(['recur', 'specific_date'])
+            ->contains(fn ($existing) => $this->occurrencesCanCollide(
+                'once', $date, $existing->recur ?? 'weekly', $existing->specific_date
+            ));
+
+        if ($clashes) {
+            return response()->json(['error' => 'That overlaps another slot on this date.'], 422);
+        }
+
+        // updateOrInsert, not insert: pressing this twice on the same date is
+        // an ordinary thing to do and must not fail on the unique key.
+        DB::table('consultation_schedule_exception')->updateOrInsert(
+            ['schedule_id' => $slot->schedule_id, 'exception_date' => $date],
+            ['updated_at' => now(), 'created_at' => now()]
+        );
+
+        $newId = DB::table('consultation_schedule')->insertGetId([
+            'expert_id' => $expert->expert_id,
+            'available_date' => $slot->available_date,
+            'specific_date' => $date,
+            'recur' => 'once',
+            'start_time' => $start,
+            'end_time' => $end,
+            'consultation_limit' => $slot->consultation_limit,
+            'slot_type' => $type,
+            'is_available' => 1,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        if ($slot->google_event_id && $expert->google_token) {
+            try {
+                $this->calendar->excludeDateFromSeries($expert->expert_id, $slot->google_event_id, $date);
+
+                $eventId = $this->calendar->createBookingEvent(
+                    expertId: $expert->expert_id,
+                    date: $date,
+                    startTime: $start,
+                    endTime: $end,
+                    slotType: ucfirst($type ?? 'Consultation'),
+                    teamName: 'Available Slot',
+                    studentEmail: $expert->email,
+                    expertEmail: $expert->email,
+                    topic: 'Moved '.($type ?? 'consultation')." slot — {$date}",
+                );
+
+                DB::table('consultation_schedule')
+                    ->where('schedule_id', $newId)
+                    ->update(['google_event_id' => $eventId]);
+            } catch (\Exception $e) {
+                // The slot has already moved in CapsTrack. A calendar that
+                // failed to follow is worth a line in the log, not a 500 that
+                // makes the adviser think the move did not happen.
+                Log::warning('Calendar did not follow a moved occurrence', [
+                    'schedule_id' => $slot->schedule_id,
+                    'date' => $date,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        return response()->json([
+            'updated' => true,
+            'scope' => 'occurrence',
+            'schedule_id' => $newId,
+            'moved_from' => $slot->schedule_id,
+            'date' => $date,
+        ]);
+    }
+
+    // DELETE /instructor/schedule/slots/{id}/occurrences/{date}
+    //
+    // Removing one week is not removing the slot. Before this, the only way
+    // to clear a single date was to delete the rule, which took every other
+    // week with it.
+    public function removeOccurrence(int $id, string $date)
+    {
+        $expert = Auth::guard('expert')->user();
+
+        $slot = DB::table('consultation_schedule')
+            ->where('schedule_id', $id)
+            ->where('expert_id', $expert->expert_id)
+            ->first();
+
+        if (! $slot) {
+            return response()->json(['error' => 'Slot not found.'], 404);
+        }
+
+        if (($slot->recur ?? 'weekly') === 'once') {
+            return response()->json(['error' => 'This slot is a single date already.'], 422);
+        }
+
+        if (Carbon::parse($date)->format('l') !== $slot->available_date) {
+            return response()->json(['error' => "That date is not a {$slot->available_date}."], 422);
+        }
+
+        $booked = DB::table('consultation_booking')
+            ->where('schedule_id', $id)
+            ->whereDate('session_date', $date)
+            ->where('booking_status', 'scheduled')
+            ->exists();
+
+        if ($booked) {
+            return response()->json([
+                'error' => 'A student has booked this date. Cancel the booking first.',
+            ], 422);
+        }
+
+        // updateOrInsert, not insert: removing the same week twice is an
+        // ordinary thing to do and must not fail on the unique key.
+        DB::table('consultation_schedule_exception')->updateOrInsert(
+            ['schedule_id' => $id, 'exception_date' => $date],
+            ['updated_at' => now(), 'created_at' => now()]
+        );
+
+        if ($slot->google_event_id && $expert->google_token) {
+            try {
+                $this->calendar->excludeDateFromSeries($expert->expert_id, $slot->google_event_id, $date);
+            } catch (\Exception $e) {
+                Log::warning('Calendar did not follow a skipped week', [
+                    'schedule_id' => $id, 'date' => $date, 'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        return response()->json(['removed' => true, 'date' => $date]);
+    }
+
     // DELETE /instructor/schedule/slots/{id}
     public function deleteSlot(int $id)
     {
@@ -370,6 +596,11 @@ class ScheduleController extends Controller
         DB::table('consultation_schedule')
             ->where('schedule_id', $id)
             ->delete();
+
+        // No foreign keys on MyISAM, so nothing cascades. Left behind, these
+        // rows would attach themselves to whichever slot inherits this id -
+        // TRUNCATE resets the counter, so that is a real possibility.
+        DB::table('consultation_schedule_exception')->where('schedule_id', $id)->delete();
 
         return response()->json(['deleted' => true]);
     }

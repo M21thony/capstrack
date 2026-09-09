@@ -419,6 +419,14 @@ Route::prefix('instructor/schedule')
         Route::patch('slots/{id}', [ScheduleController::class, 'updateSlot']);
         Route::delete('slots/{id}', [ScheduleController::class, 'deleteSlot']);
         Route::put('slots/{id}/availability', [ScheduleController::class, 'setAvailability']);
+
+        // One week of a repeating slot, addressed by its date. A slot stores a
+        // weekday, so 'Monday 10:00' is a rule; a single Monday is a resource
+        // under it, and is replaced or removed like any other.
+        Route::put('slots/{id}/occurrences/{date}', [ScheduleController::class, 'replaceOccurrence'])
+            ->where('date', '[0-9]{4}-[0-9]{2}-[0-9]{2}');
+        Route::delete('slots/{id}/occurrences/{date}', [ScheduleController::class, 'removeOccurrence'])
+            ->where('date', '[0-9]{4}-[0-9]{2}-[0-9]{2}');
     });
 
 Route::post('/session/keep-alive', function () {
