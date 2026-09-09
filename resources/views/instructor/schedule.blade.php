@@ -1311,7 +1311,11 @@ function renderSelectedDateSlots(key) {
     const statusText = (status === 'ongoing' ? ' · 🔴 Ongoing' : who)
       + (s.topic ? ' · “' + s.topic + '”' : '');
     const row = document.createElement('div');
-    row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 8px;background:var(--bg3);border-radius:6px;font-size:11px;color:var(--text2)';
+    // Two lines, not one: the times and who has them, then what the slot IS.
+    // A slot stores a weekday, so most of these rows repeat every week and
+    // the row never said so - which is how a term's Mondays got edited at
+    // once by someone who thought they were editing this one.
+    row.style.cssText = 'display:flex;flex-direction:column;gap:3px;padding:7px 9px;background:var(--bg3);border-radius:6px;font-size:11px;color:var(--text2)';
 
     const toggleBtn = s.schedule_id ? `
       <button onclick="toggleSlot(${s.schedule_id}, '${key}', ${i})"
@@ -1331,17 +1335,54 @@ function renderSelectedDateSlots(key) {
         </svg>
       </button>` : '';
 
+    const repeats = (s.recur || 'weekly') !== 'once';
+    // slotsByDay is keyed by weekday, so available_date is always set here;
+    // the date is only a fallback for a row built some other way.
+    const [ky, km, kd] = key.split('-').map(Number);
+    const dayWord = s.available_date || DAY_NAMES[makeDate(ky, km, kd).getDay()];
+    const recurLine = repeats
+      ? 'Every ' + dayWord
+      : 'This date only';
+
+    // Skipping one week is not deleting the slot, so it is its own control.
+    const skipBtn = (repeats && s.schedule_id && !s.hasBooking) ? `
+      <button onclick="skipThisWeek(${s.schedule_id}, '${key}')"
+              style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:10.5px;padding:0;text-decoration:underline"
+              title="Remove only this week">skip this week</button>` : '';
+
     row.innerHTML = `
-      <span>${startStr}–${endStr} · ${TYPE_LABELS[s.type] || 'Consultation'}${statusText}</span>
-      <span style="display:flex;align-items:center;gap:2px;flex-shrink:0">
-        ${editBtn}
-        ${toggleBtn}
-        <button onclick="deleteSlot('${key}', ${i}${s.schedule_id ? ',' + s.schedule_id : ''})"
-                style="background:none;border:none;color:var(--red,#f87171);cursor:pointer;font-size:14px;line-height:1;padding:2px 4px"
-                title="Delete slot">✕</button>
+      <span style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+        <span style="font-variant-numeric:tabular-nums">${startStr}–${endStr} · ${TYPE_LABELS[s.type] || 'Consultation'}${statusText}</span>
+        <span style="display:flex;align-items:center;gap:2px;flex-shrink:0">
+          ${editBtn}
+          ${toggleBtn}
+          <button onclick="deleteSlot('${key}', ${i}${s.schedule_id ? ',' + s.schedule_id : ''})"
+                  style="background:none;border:none;color:var(--red,#f87171);cursor:pointer;font-size:14px;line-height:1;padding:2px 4px"
+                  title="${repeats ? 'Delete every week' : 'Delete slot'}">✕</button>
+        </span>
+      </span>
+      <span style="display:flex;align-items:center;gap:8px;font-size:10.5px;color:var(--text3)">
+        <span>${recurLine}</span>${skipBtn}
       </span>`;
     list.appendChild(row);
   });
+}
+
+// Remove one week from a repeating slot. The slot stays; every other week
+// keeps the time it has. This is the only way to clear a single date -
+// deleting the slot takes the whole term with it.
+async function skipThisWeek(scheduleId, dateKey) {
+  const dayWord = DAY_NAMES[makeDate(...dateKey.split('-').map(Number)).getDay()];
+
+  try {
+    await apiFetch(`/instructor/schedule/slots/${scheduleId}/occurrences/${dateKey}`, {
+      method: 'DELETE',
+    });
+    await loadSlots();
+    showToast('Skipped this ' + dayWord + '. Every other ' + dayWord + ' is unchanged.');
+  } catch (e) {
+    showToast('Could not skip this week: ' + e.message, 'error');
+  }
 }
 
 function checkTimeOverlap() {
@@ -1636,8 +1677,20 @@ function editSlot(scheduleId, key, index) {
   if (recurSelect) recurSelect.disabled = false;
   if (recurNote) recurNote.style.display = 'block';
 
+  // Say what is being edited. "Editing existing slot" is true of a one-off
+  // and of a rule covering every Monday for the rest of the term, and the
+  // difference is the whole risk of this screen.
   const banner = document.getElementById('edit-mode-banner');
-  if (banner) banner.style.display = 'block';
+  if (banner) {
+    const repeats = (s.recur || 'weekly') !== 'once';
+    const dayWord = s.available_date || DAY_NAMES[makeDate(...key.split('-').map(Number)).getDay()];
+    banner.textContent = repeats
+      ? 'Editing a slot that repeats every ' + dayWord + '. You will be asked whether to change this ' + dayWord + ' or all of them.'
+      : 'Editing a slot that happens on this date only.';
+    banner.style.fontWeight = '500';
+    banner.style.lineHeight = '1.45';
+    banner.style.display = 'block';
+  }
 
   const btn = document.getElementById('save-slot-btn');
   if (btn) btn.innerHTML = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Update Slot';
@@ -1661,7 +1714,10 @@ function cancelEdit() {
   if (recurNote) recurNote.style.display = 'none';
 
   const banner = document.getElementById('edit-mode-banner');
-  if (banner) banner.style.display = 'none';
+  if (banner) {
+    banner.textContent = 'Editing existing slot';
+    banner.style.display = 'none';
+  }
 
   const btn = document.getElementById('save-slot-btn');
   if (btn) btn.innerHTML = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Save Slot';
