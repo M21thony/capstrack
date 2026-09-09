@@ -101,47 +101,30 @@
         </div>
 
         <!-- Legend + Guide -->
-        <div class="legend-section">
-          <div class="legend-section-title">
-            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-            Legend, Guide &amp; Tips
+        <!-- Two sibling cards, not one card wrapping two more. The nesting
+             made the guidance look like a subsection of the legend, and the
+             legend like a heading for it. They are separate things. -->
+        <div class="legend-row">
+          <div class="legend-section">
+            <div class="legend-section-title">Legend</div>
+            <div class="legend-grid">
+              <div class="legend-item"><div class="legend-swatch sw-consult"></div>Consultation</div>
+              <div class="legend-item"><div class="legend-swatch sw-booked"></div>Booked</div>
+              <div class="legend-item"><div class="legend-swatch sw-docreview"></div>Doc Review</div>
+              <div class="legend-item"><div class="legend-swatch sw-defense"></div>Defense</div>
+              <div class="legend-item"><div class="legend-swatch sw-today"></div>Today</div>
+              <div class="legend-item"><div class="legend-swatch sw-blocked"></div>Blocked</div>
+            </div>
           </div>
 
-          <div class="legend-grid">
-            <div class="legend-item"><div class="legend-swatch sw-consult"></div>Consultation</div>
-            <div class="legend-item"><div class="legend-swatch sw-docreview"></div>Doc Review</div>
-            <div class="legend-item"><div class="legend-swatch sw-defense"></div>Defense</div>
-            <div class="legend-item"><div class="legend-swatch sw-booked"></div>Booked</div>
-            <div class="legend-item"><div class="legend-swatch sw-blocked"></div>Blocked Day</div>
-            <div class="legend-item"><div class="legend-swatch sw-today"></div>Today</div>
-          </div>
-
-          <div class="guide-tips-grid">
-            <div class="guide-box">
-              <div class="guide-box-title">
-                <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                How to Use
-              </div>
-              <div class="guide-list">
-                <div class="guide-step"><div class="guide-step-num">1</div>Click any date on the calendar. Its existing slots (if any) will appear right here, along with a form to add a new one.</div>
-                <div class="guide-step"><div class="guide-step-num">2</div>Fill in the time, slot type, and max bookings, then choose <strong style="color:var(--accent)">One-time</strong> or <strong style="color:var(--accent)">Recurring</strong> and click Save.</div>
-                <div class="guide-step"><div class="guide-step-num">3</div>The date stays selected afterward so you can keep adding more slots to it without reclicking the calendar.</div>
-                <div class="guide-step"><div class="guide-step-num">4</div>Toggle a slot's availability or delete it directly from the list next to the form — no need to open anything else.</div>
-                <div class="guide-step"><div class="guide-step-num">5</div>Use <strong style="color:var(--red)">Block Mode</strong> to mark days you're unavailable – students won't be able to book them.</div>
-              </div>
-            </div>
-            <div class="guide-box">
-              <div class="guide-box-title">
-                <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                Tips for Experts
-              </div>
-              <div class="guide-list">
-                <div class="tip-item"><div class="tip-icon">💡</div><span>Set recurring slots for days you're regularly available – saves you time every week.</span></div>
-                <div class="tip-item"><div class="tip-icon">⚠️</div><span>Block entire days in advance for holidays, meetings, or personal leave.</span></div>
-                <div class="tip-item"><div class="tip-icon">📋</div><span>Keep max bookings at 1–2 per slot for focused, quality consultations.</span></div>
-                <div class="tip-item"><div class="tip-icon">🔵</div><span>A cyan dot on a date means it has recurring slots. These apply every week automatically.</span></div>
-              </div>
-            </div>
+          <div class="legend-section">
+            <div class="legend-section-title">How weekly slots work</div>
+            <ul class="guide-list">
+              <li>A slot repeats on its weekday until you delete it.</li>
+              <li>Blocking a day hides that one date without touching the weekly slot.</li>
+              <li>A slot with a booking can't be moved &mdash; cancel the booking first.</li>
+              <li>Editing a repeating slot asks whether to change one week or all of them.</li>
+            </ul>
           </div>
         </div>
       </div>
@@ -1308,14 +1291,16 @@ function renderSelectedDateSlots(key) {
     const who = s.teamName
       ? ' · ' + s.teamName
       : (status === 'booked' ? ' · Booked' : ' · Max ' + (s.maxBookings || s.consultation_limit || 1));
-    const statusText = (status === 'ongoing' ? ' · 🔴 Ongoing' : who)
+    // The tag beside it already names the type, so this carries only who
+    // has it and what for.
+    const statusText = (status === 'ongoing' ? '🔴 Ongoing' : who.replace(/^ · /, ''))
       + (s.topic ? ' · “' + s.topic + '”' : '');
     const row = document.createElement('div');
     // Two lines, not one: the times and who has them, then what the slot IS.
     // A slot stores a weekday, so most of these rows repeat every week and
     // the row never said so - which is how a term's Mondays got edited at
     // once by someone who thought they were editing this one.
-    row.style.cssText = 'display:flex;flex-direction:column;gap:3px;padding:7px 9px;background:var(--bg3);border-radius:6px;font-size:11px;color:var(--text2)';
+    row.className = 'slot-row';
 
     const toggleBtn = s.schedule_id ? `
       <button onclick="toggleSlot(${s.schedule_id}, '${key}', ${i})"
@@ -1350,9 +1335,16 @@ function renderSelectedDateSlots(key) {
               style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:10.5px;padding:0;text-decoration:underline"
               title="Remove only this week">skip this week</button>` : '';
 
+    const tagClass = s.hasBooking ? 'is-booked' : ('type-' + (s.type || 'consult'));
+    const tagText = s.hasBooking ? 'Booked' : (TYPE_LABELS[s.type] || 'Consultation');
+
     row.innerHTML = `
-      <span style="display:flex;align-items:center;justify-content:space-between;gap:8px">
-        <span style="font-variant-numeric:tabular-nums">${startStr}–${endStr} · ${TYPE_LABELS[s.type] || 'Consultation'}${statusText}</span>
+      <span class="slot-row-top">
+        <span style="display:flex;align-items:center;gap:7px;min-width:0">
+          <span>${startStr}–${endStr}</span>
+          <span class="slot-tag ${tagClass}">${tagText}</span>
+          <span style="color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${statusText}</span>
+        </span>
         <span style="display:flex;align-items:center;gap:2px;flex-shrink:0">
           ${editBtn}
           ${toggleBtn}
@@ -1361,7 +1353,7 @@ function renderSelectedDateSlots(key) {
                   title="${repeats ? 'Delete every week' : 'Delete slot'}">✕</button>
         </span>
       </span>
-      <span style="display:flex;align-items:center;gap:8px;font-size:10.5px;color:var(--text3)">
+      <span class="slot-row-meta">
         <span>${recurLine}</span>${skipBtn}
       </span>`;
     list.appendChild(row);
