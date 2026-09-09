@@ -650,6 +650,27 @@ PROMPT;
     }
 
     /**
+     * Patch the two ways this model writes JSON that will not parse.
+     *
+     * It dropped the comma between two fields once on a real scan - and did
+     * it on the closest study in the whole check, so the strongest match in
+     * the report was the one that came back blank. The content was complete
+     * and correct either side of the missing character.
+     *
+     * Both repairs are punctuation between fields, never the fields
+     * themselves: nothing here can invent a score or change a verdict.
+     */
+    private function repairJson(string $json): string
+    {
+        // Quote, whitespace, next key - with no comma between them. \s already
+        // matches a newline, so the pattern does not need one spelled out.
+        $json = preg_replace('/"\s+"([a-z_]+)"\s*:/i', '", "$1":', $json);
+
+        // A trailing comma before the closing brace.
+        return preg_replace('/,\s*\}/', '}', $json);
+    }
+
+    /**
      * The first complete JSON object in a reply, by brace depth.
      *
      * A greedy /{.*}/ ran to the LAST brace in the reply, so one stray
@@ -814,7 +835,12 @@ PROMPT;
     {
         $cleaned = trim(preg_replace('/```json|```/i', '', $raw));
 
-        $r = json_decode($this->firstJsonObject($cleaned) ?? $cleaned, true);
+        $object = $this->firstJsonObject($cleaned) ?? $cleaned;
+        $r = json_decode($object, true);
+
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            $r = json_decode($this->repairJson($object), true);
+        }
 
         if (json_last_error() !== JSON_ERROR_NONE || ! is_array($r)) {
             return null;
