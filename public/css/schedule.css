@@ -922,3 +922,67 @@ select.f-input{cursor:pointer}
 button.content,
 a.btn.content,
 .btn.content{padding:7px 16px;overflow:visible}
+
+/* ══════════════════════════════════════════════════════════════════════
+   SCHEDULE REDESIGN
+   Same tokens as everything above - this changes the treatment, not the
+   palette. The grid was a hairline table (gap:1px over a border-coloured
+   background) with a solid navy strip for the weekday names, which reads as
+   a spreadsheet: every cell equally loud, and the days carrying slots no
+   louder than the empty ones. Separated cells let the ones with something
+   in them come forward on their own.
+   Appended, so these win over the originals at equal specificity.
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* ── the grid becomes cells, not a table ── */
+.cal-grid{gap:6px;background:transparent;border:0;border-radius:0;overflow:visible}
+.cal-day-label{background:transparent;color:var(--text3);font-weight:600;
+  font-size:10.5px;letter-spacing:1px;padding:4px 0 8px}
+.cal-cell{min-height:96px;border:1px solid var(--border);border-radius:12px;
+  padding:7px 8px;gap:4px}
+.cal-cell:not(.other-month):not(.past-day):hover{border-color:var(--border2)}
+.cal-cell.other-month{background:var(--bg3);border-color:transparent}
+.cal-cell.has-slot{background:#fff;border-color:var(--border2)}
+.cal-cell.today{background:rgba(201,168,44,0.05);border-color:var(--accent)}
+.cal-cell.selected{background:#fff!important;
+  border-color:var(--navy-dark)!important;box-shadow:0 0 0 1px var(--navy-dark)!important}
+.cal-cell.selected .cal-date-num{background:var(--navy-dark);color:#fff;border-radius:50%}
+.cal-cell.is-blocked{background:var(--bg4)!important;border-color:var(--border)}
+.cal-date-num{font-size:12px}
+
+/* ── a slot reads as a time with a colour, not a bordered label ── */
+.cal-slot-pill{display:flex;align-items:center;gap:5px;font-size:10px;font-weight:500;
+  padding:1px 2px;border-radius:0;border-left:0!important;background:transparent!important;
+  color:var(--text2)!important;font-variant-numeric:tabular-nums}
+.cal-slot-pill::before{content:'';width:7px;height:7px;border-radius:2px;flex:none;
+  background:currentColor}
+.cal-slot-pill.type-consult::before{background:var(--blue)}
+.cal-slot-pill.type-docreview::before{background:var(--purple)}
+.cal-slot-pill.type-defense::before{background:var(--amber)}
+.cal-slot-pill.is-booked{text-decoration:none;color:var(--text3)!important}
+.cal-slot-pill.is-booked::before{background:var(--green)}
+.cal-more{font-size:10px;font-weight:500;color:var(--text3)}
+
+/* ── panels: lifted a little, and lifted equally ── */
+.cal-card,.form-card,.upcoming-card,.legend-section{
+  border-radius:16px;box-shadow:0 1px 2px rgba(24,25,31,.05),0 8px 24px -14px rgba(24,25,31,.18)}
+.cal-card{padding:16px 18px}
+
+/* A black strip on a white card said "this panel is important" three times
+   over on one screen, which is the same as saying it nowhere. */
+.upcoming-header{background:transparent;border-bottom:1px solid var(--border);
+  padding:14px 16px 12px}
+.upcoming-header,.upcoming-header *{color:var(--text)!important}
+.upcoming-title{font-weight:600;font-size:13.5px}
+.upcoming-count{background:var(--bg4)!important;color:var(--text2)!important;
+  font-weight:600}
+
+/* ── legend and tips: notes, not banners ── */
+.guide-box{background:var(--bg3);border:1px solid var(--border);border-radius:12px}
+.guide-box,.guide-box *{color:var(--text2)!important}
+.guide-box-title{color:var(--text)!important;font-weight:600}
+.guide-box-title svg{color:var(--accent3)!important}
+
+/* ── times line up in a column, so a wrong hour is visible ── */
+.apt-row,.apt-row-top,#selected-date-slots-list,.cal-date-num,.cal-slot-pill{
+  font-variant-numeric:tabular-nums}
