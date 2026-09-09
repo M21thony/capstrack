@@ -986,3 +986,69 @@ a.btn.content,
 /* ── times line up in a column, so a wrong hour is visible ── */
 .apt-row,.apt-row-top,#selected-date-slots-list,.cal-date-num,.cal-slot-pill{
   font-variant-numeric:tabular-nums}
+
+/* ── panel headings ───────────────────────────────────────────────────
+   Small uppercase grey lettering is a label, and every panel on the page
+   wore one, so nothing on the right column read as a heading. A heading is
+   the panel's name at the panel's own weight, with the icon carrying the
+   quieter colour. */
+.form-card-title{font-size:13.5px;font-weight:600;color:var(--text);
+  text-transform:none;letter-spacing:0;margin-bottom:12px;gap:8px}
+.form-card-title svg{color:var(--text3);width:16px;height:16px}
+
+/* The selected date is a statement of where you are, not a warning. It was
+   gold on gold, the same treatment the page gives today and the accent. */
+.selected-date-chip{background:var(--bg3);border:1px solid var(--border);
+  border-radius:8px;padding:9px 11px;color:var(--text)}
+.selected-date-chip svg{color:var(--text3)}
+
+/* ── form controls ── */
+.f-label{font-size:11.5px;font-weight:600;color:var(--text2)}
+.f-input{border-width:1px;border-radius:7px;background:#fff;font-size:13px}
+.f-input:focus{border-color:var(--accent);outline:none;
+  box-shadow:0 0 0 3px var(--accent-glow)}
+
+/* One action carries the page. Making it navy rather than gold leaves the
+   gold to mean "today" and "selected", which is all it should mean. */
+.btn{border-radius:7px;font-weight:600}
+.btn-primary{background:var(--navy-dark);border-color:var(--navy-dark);color:#fff}
+.btn-primary:hover{background:var(--navy-light);border-color:var(--navy-light)}
+
+/* ── appointments read as a list, not as eight more cards ── */
+.apt-row{background:transparent;border:0;border-top:1px solid var(--border);
+  border-radius:0;padding:10px 2px}
+.apt-row:first-child{border-top:0}
+.apt-team{font-weight:600;color:var(--text)}
+
+/* ── legend sits on one line when it fits ── */
+.legend-grid{display:flex;flex-wrap:wrap;gap:10px 22px;margin-bottom:14px}
+.legend-item{font-size:12.5px}
+
+/* ── the slots on the selected date, as cards ── */
+.slot-row{display:flex;flex-direction:column;gap:4px;padding:9px 10px;
+  background:#fff;border:1px solid var(--border);border-radius:8px;
+  font-size:11.5px;color:var(--text2);font-variant-numeric:tabular-nums}
+.slot-row-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.slot-row-meta{display:flex;align-items:center;gap:9px;font-size:10.5px;
+  color:var(--text3)}
+.slot-tag{font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;
+  white-space:nowrap;letter-spacing:.2px}
+.slot-tag.type-consult{background:var(--blue-bg);color:var(--blue)}
+.slot-tag.type-docreview{background:var(--purple-bg);color:var(--purple)}
+.slot-tag.type-defense{background:var(--amber-bg);color:var(--amber)}
+.slot-tag.is-booked{background:var(--green-bg);color:var(--green)}
+
+/* ── legend row: two cards side by side ──────────────────────────────
+   It was one card wrapping two dark boxes, so the guidance read as a
+   subsection of the legend and the whole block was heavier than the
+   calendar it explains. */
+.legend-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}
+.legend-row .legend-section{margin-top:0;padding:15px 17px}
+.legend-section-title{font-size:11px;font-weight:600;color:var(--text3);
+  text-transform:uppercase;letter-spacing:1px;margin-bottom:11px;
+  display:block;gap:0}
+.legend-section-title svg{display:none}
+.guide-list{margin:0;padding-left:17px;display:flex;flex-direction:column;
+  gap:6px;color:var(--text2);font-size:12.5px;line-height:1.5}
+.guide-list li::marker{color:var(--text3)}
+@media (max-width:900px){.legend-row{grid-template-columns:1fr}}
