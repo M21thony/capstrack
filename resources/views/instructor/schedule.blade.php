@@ -1442,11 +1442,17 @@ function renderSelectedDateSlots(key) {
           <span class="slot-tag ${tagClass}">${tagText}</span>
         </span>
         <span class="date-slot-actions">
+          ${s.hasBooking ? `
+            <span class="slot-held" title="A team has booked this slot - cancel the booking to change it">
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+              </svg>
+            </span>` : `
           <button onclick="event.stopPropagation();deleteSlot('${key}', ${i}${s.schedule_id ? ',' + s.schedule_id : ''})"
                   class="slot-del"
                   title="${repeats ? 'Delete every week' : 'Delete slot'}">
             <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
-          </button>
+          </button>`}
         </span>
       </span>
       ${bookingBlock}

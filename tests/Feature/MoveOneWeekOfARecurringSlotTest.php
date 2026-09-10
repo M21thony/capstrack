@@ -173,6 +173,59 @@ class MoveOneWeekOfARecurringSlotTest extends TestCase
             'the slot must still be available to the team holding it');
     }
 
+    /** Deleting the rule would take the team's session with it. */
+    public function test_a_booked_slot_cannot_be_deleted(): void
+    {
+        $id = $this->weeklySlot();
+        $student = Student::factory()->withCompleteProfile()->create([
+            'email' => 'holder.team@my.cspc.edu.ph',
+        ]);
+
+        DB::table('consultation_booking')->insert([
+            'student_id' => $student->student_id, 'schedule_id' => $id,
+            'session_date' => $this->aMonday(), 'booking_status' => 'scheduled',
+            'created_at' => now(), 'updated_at' => now(),
+        ]);
+
+        $this->actingAs($this->expert, 'expert')
+            ->deleteJson("/instructor/schedule/slots/{$id}")
+            ->assertStatus(422);
+
+        $this->assertDatabaseHas('consultation_schedule', ['schedule_id' => $id]);
+    }
+
+    /** A booking on one week still protects the whole rule. */
+    public function test_one_booked_week_protects_every_other_week_too(): void
+    {
+        $id = $this->weeklySlot();
+        $student = Student::factory()->withCompleteProfile()->create([
+            'email' => 'oneweek.team@my.cspc.edu.ph',
+        ]);
+
+        DB::table('consultation_booking')->insert([
+            'student_id' => $student->student_id, 'schedule_id' => $id,
+            'session_date' => $this->aMonday(4), 'booking_status' => 'scheduled',
+            'created_at' => now(), 'updated_at' => now(),
+        ]);
+
+        // A month away, but deleting the rule would still remove it.
+        $this->actingAs($this->expert, 'expert')
+            ->deleteJson("/instructor/schedule/slots/{$id}")
+            ->assertStatus(422);
+    }
+
+    /** An unbooked slot still deletes. */
+    public function test_an_unbooked_slot_still_deletes(): void
+    {
+        $id = $this->weeklySlot();
+
+        $this->actingAs($this->expert, 'expert')
+            ->deleteJson("/instructor/schedule/slots/{$id}")
+            ->assertOk();
+
+        $this->assertDatabaseMissing('consultation_schedule', ['schedule_id' => $id]);
+    }
+
     /** A cancelled booking is not a booking - the slot frees up again. */
     public function test_a_cancelled_booking_does_not_block_it(): void
     {

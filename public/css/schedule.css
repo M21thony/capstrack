@@ -1166,3 +1166,6 @@ a.btn.content,
 .date-slot-meta{gap:5px;line-height:1.4}
 .recur-mark{margin-right:1px}
 
+/* A booked slot cannot be deleted or hidden, so it says so rather than
+   offering controls that refuse. */
+.slot-held{display:flex;color:var(--green);padding:2px 3px;cursor:help}

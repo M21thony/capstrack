@@ -584,6 +584,22 @@ class ScheduleController extends Controller
             return response()->json(['error' => 'Slot not found.'], 404);
         }
 
+        // Deleting the rule deletes every week of it, so a single booking
+        // anywhere ahead is enough to stop it. The team is expecting that
+        // session; removing the slot would take it away without telling them,
+        // where cancelling the booking emails them.
+        $booked = DB::table('consultation_booking')
+            ->where('schedule_id', $id)
+            ->where('booking_status', 'scheduled')
+            ->whereDate('session_date', '>=', now()->toDateString())
+            ->exists();
+
+        if ($booked) {
+            return response()->json([
+                'error' => 'A team has booked this slot. Cancel the booking first.',
+            ], 422);
+        }
+
         // Delete from Google Calendar
         if ($slot->google_event_id && $expert->google_token) {
             try {
