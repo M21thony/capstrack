@@ -1113,3 +1113,26 @@ a.btn.content,
 .slot-row[title]:hover{border-color:var(--border2);background:var(--bg3)}
 .slot-row-meta button{white-space:nowrap}
 .slot-row-meta button:hover{color:var(--text)}
+
+/* ── the slot card, matched to the sample ─────────────────────────────
+   Two underlined links sat in the meta row shouting over the thing they
+   describe. The sample's card states what the slot IS; what you can do to
+   it waits until you are on it. */
+.slot-row{padding:11px 12px;gap:6px}
+.slot-row .slot-times{font-family:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+  font-size:12.5px;font-weight:500;letter-spacing:-.2px}
+.slot-row .slot-arrow{font-size:12px;margin:0 1px}
+.slot-row-meta{gap:6px;align-items:center}
+.recur-mark{width:12px;height:12px;flex:none;color:var(--text3)}
+
+.slot-acts{display:flex;gap:9px;margin-left:auto;opacity:0;transition:opacity .12s}
+.slot-row:hover .slot-acts,.slot-row:focus-within .slot-acts{opacity:1}
+.slot-act{background:none;border:0;padding:0;cursor:pointer;font-size:10.5px;
+  color:var(--text3);text-decoration:underline;white-space:nowrap}
+.slot-act:hover{color:var(--text)}
+
+/* Grey, and the same weight as the other marks on the card. A red cross is
+   the loudest thing in the panel, on the one action nobody arrives wanting. */
+.slot-del{background:none;border:0;cursor:pointer;color:var(--text3);
+  padding:2px 3px;line-height:1;display:flex}
+.slot-del:hover{color:var(--red)}
