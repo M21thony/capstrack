@@ -1110,3 +1110,6 @@ a.btn.content,
   margin-bottom:12px;background:none;cursor:pointer;font:600 12.5px 'DM Sans',sans-serif;
   color:var(--text2)}
 .add-slot-lead:hover{border-color:var(--accent);background:var(--accent-light);color:var(--text)}
+.slot-row[title]:hover{border-color:var(--border2);background:var(--bg3)}
+.slot-row-meta button{white-space:nowrap}
+.slot-row-meta button:hover{color:var(--text)}
