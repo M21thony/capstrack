@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <meta name="csrf-token" content="{{ csrf_token() }}">
 <title>CapsTRACK – Expert Portal</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="{{ asset('css/schedule.css') }}" />
 @include('partials.skeleton-head', ['skReveal' => 'block'])
 </head>
@@ -1396,6 +1396,11 @@ function renderSelectedDateSlots(key) {
     // the date is only a fallback for a row built some other way.
     const [ky, km, kd] = key.split('-').map(Number);
     const dayWord = s.available_date || DAY_NAMES[makeDate(ky, km, kd).getDay()];
+    // The sample says what the slot is, not only when it repeats: unchanged,
+    // or booked for this one date with the rule left alone.
+    const stateWord = s.hasBooking
+      ? ''
+      : (s.is_available ? ' · unchanged' : ' · unavailable');
     const recurLine = repeats
       ? 'Every ' + dayWord
       : 'This date only';
@@ -1405,11 +1410,11 @@ function renderSelectedDateSlots(key) {
     // control on the card nobody could name without hovering it.
     const availLink = s.schedule_id ? `
       <button onclick="event.stopPropagation();toggleSlot(${s.schedule_id}, '${key}', ${i})"
-              style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:10.5px;padding:0;text-decoration:underline">${s.is_available ? 'mark unavailable' : 'mark available'}</button>` : '';
+              class="slot-act">${s.is_available ? 'mark unavailable' : 'mark available'}</button>` : '';
 
     const skipBtn = (repeats && s.schedule_id && !s.hasBooking) ? `
       <button onclick="event.stopPropagation();skipThisWeek(${s.schedule_id}, '${key}')"
-              style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:10.5px;padding:0;text-decoration:underline"
+              class="slot-act"
               title="Remove only this week">skip this week</button>` : '';
 
     const tagClass = s.hasBooking ? 'is-booked' : ('type-' + (s.type || 'consult'));
@@ -1433,13 +1438,20 @@ function renderSelectedDateSlots(key) {
         </span>
         <span class="slot-row-actions">
           <button onclick="event.stopPropagation();deleteSlot('${key}', ${i}${s.schedule_id ? ',' + s.schedule_id : ''})"
-                  style="background:none;border:none;color:var(--red,#f87171);cursor:pointer;font-size:14px;line-height:1;padding:2px 4px"
-                  title="${repeats ? 'Delete every week' : 'Delete slot'}">✕</button>
+                  class="slot-del"
+                  title="${repeats ? 'Delete every week' : 'Delete slot'}">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
+          </button>
         </span>
       </span>
       ${bookingBlock}
       <span class="slot-row-meta">
-        <span>${recurLine}</span>${skipBtn}${availLink}
+        <svg class="recur-mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M17 2.1 21 6l-4 3.9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+          <path d="M7 21.9 3 18l4-3.9"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+        </svg>
+        <span>${recurLine}${stateWord}</span>
+        <span class="slot-acts">${skipBtn}${availLink}</span>
       </span>`;
     list.appendChild(row);
   });
