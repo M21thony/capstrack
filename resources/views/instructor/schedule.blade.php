@@ -1384,7 +1384,7 @@ function renderSelectedDateSlots(key) {
     // A slot stores a weekday, so most of these rows repeat every week and
     // the row never said so - which is how a term's Mondays got edited at
     // once by someone who thought they were editing this one.
-    row.className = 'slot-row';
+    row.className = 'date-slot';
     if (s.schedule_id) {
       row.style.cursor = 'pointer';
       row.title = 'Edit this slot';
@@ -1431,12 +1431,12 @@ function renderSelectedDateSlots(key) {
       </span>` : '';
 
     row.innerHTML = `
-      <span class="slot-row-top">
+      <span class="date-slot-top">
         <span class="slot-times">
           <span>${startStr}</span><span class="slot-arrow">→</span><span>${endStr}</span>
           <span class="slot-tag ${tagClass}">${tagText}</span>
         </span>
-        <span class="slot-row-actions">
+        <span class="date-slot-actions">
           <button onclick="event.stopPropagation();deleteSlot('${key}', ${i}${s.schedule_id ? ',' + s.schedule_id : ''})"
                   class="slot-del"
                   title="${repeats ? 'Delete every week' : 'Delete slot'}">
@@ -1445,7 +1445,7 @@ function renderSelectedDateSlots(key) {
         </span>
       </span>
       ${bookingBlock}
-      <span class="slot-row-meta">
+      <span class="date-slot-meta">
         <svg class="recur-mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M17 2.1 21 6l-4 3.9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>
           <path d="M7 21.9 3 18l4-3.9"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
