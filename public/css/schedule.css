@@ -1025,11 +1025,11 @@ a.btn.content,
 .legend-item{font-size:12.5px}
 
 /* ── the slots on the selected date, as cards ── */
-.slot-row{display:flex;flex-direction:column;gap:4px;padding:9px 10px;
+.date-slot{display:flex;flex-direction:column;gap:4px;padding:9px 10px;
   background:#fff;border:1px solid var(--border);border-radius:8px;
   font-size:11.5px;color:var(--text2);font-variant-numeric:tabular-nums}
-.slot-row-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
-.slot-row-meta{display:flex;align-items:center;gap:9px;font-size:10.5px;
+.date-slot-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.date-slot-meta{display:flex;align-items:center;gap:9px;font-size:10.5px;
   color:var(--text3)}
 .slot-tag{font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;
   white-space:nowrap;letter-spacing:.2px}
@@ -1090,9 +1090,9 @@ a.btn.content,
 .content .btn-primary:hover{background:var(--navy-light)}
 
 /* ── slot cards ── */
-.slot-row .slot-times{display:flex;align-items:center;gap:6px;white-space:nowrap;
+.date-slot .slot-times{display:flex;align-items:center;gap:6px;white-space:nowrap;
   font-size:12px;font-weight:500;color:var(--text)}
-.slot-row .slot-arrow{color:var(--text3);font-size:11px}
+.date-slot .slot-arrow{color:var(--text3);font-size:11px}
 .slot-booking{display:flex;align-items:center;gap:8px;padding:7px 9px;
   background:var(--green-bg);border-radius:6px;font-size:11px;color:var(--text2);
   line-height:1.4}
@@ -1100,8 +1100,8 @@ a.btn.content,
   background:var(--green);color:#fff;display:flex;align-items:center;
   justify-content:center;font-size:9px;font-weight:700}
 .slot-booking b{color:var(--text);font-weight:600}
-.slot-row-actions{display:flex;align-items:center;gap:1px;flex-shrink:0}
-.slot-row-actions button{padding:2px 3px}
+.date-slot-actions{display:flex;align-items:center;gap:1px;flex-shrink:0}
+.date-slot-actions button{padding:2px 3px}
 
 /* "+ Add a weekly slot on Mondays" - the sample says what adding one means
    before you add it, not after. */
@@ -1110,23 +1110,23 @@ a.btn.content,
   margin-bottom:12px;background:none;cursor:pointer;font:600 12.5px 'DM Sans',sans-serif;
   color:var(--text2)}
 .add-slot-lead:hover{border-color:var(--accent);background:var(--accent-light);color:var(--text)}
-.slot-row[title]:hover{border-color:var(--border2);background:var(--bg3)}
-.slot-row-meta button{white-space:nowrap}
-.slot-row-meta button:hover{color:var(--text)}
+.date-slot[title]:hover{border-color:var(--border2);background:var(--bg3)}
+.date-slot-meta button{white-space:nowrap}
+.date-slot-meta button:hover{color:var(--text)}
 
 /* ── the slot card, matched to the sample ─────────────────────────────
    Two underlined links sat in the meta row shouting over the thing they
    describe. The sample's card states what the slot IS; what you can do to
    it waits until you are on it. */
-.slot-row{padding:11px 12px;gap:6px}
-.slot-row .slot-times{font-family:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+.date-slot{padding:11px 12px;gap:6px}
+.date-slot .slot-times{font-family:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
   font-size:12.5px;font-weight:500;letter-spacing:-.2px}
-.slot-row .slot-arrow{font-size:12px;margin:0 1px}
-.slot-row-meta{gap:6px;align-items:center}
+.date-slot .slot-arrow{font-size:12px;margin:0 1px}
+.date-slot-meta{gap:6px;align-items:center}
 .recur-mark{width:12px;height:12px;flex:none;color:var(--text3)}
 
 .slot-acts{display:flex;gap:9px;margin-left:auto;opacity:0;transition:opacity .12s}
-.slot-row:hover .slot-acts,.slot-row:focus-within .slot-acts{opacity:1}
+.date-slot:hover .slot-acts,.date-slot:focus-within .slot-acts{opacity:1}
 .slot-act{background:none;border:0;padding:0;cursor:pointer;font-size:10.5px;
   color:var(--text3);text-decoration:underline;white-space:nowrap}
 .slot-act:hover{color:var(--text)}
@@ -1136,3 +1136,16 @@ a.btn.content,
 .slot-del{background:none;border:0;cursor:pointer;color:var(--text3);
   padding:2px 3px;line-height:1;display:flex}
 .slot-del:hover{color:var(--red)}
+
+/* ── the card's own room ──────────────────────────────────────────────
+   "Every Monday · unchanged" was breaking over three lines in a 300px
+   column. The hover actions were the cause: opacity:0 still occupies
+   width, so they squeezed the line they sit beside every time. Taken out
+   of flow, the meta row has the card to itself. */
+.date-slot{position:relative;padding:12px 13px;gap:7px}
+.date-slot-meta{gap:6px;white-space:nowrap;min-width:0;color:var(--text3)}
+.date-slot-meta > span{overflow:hidden;text-overflow:ellipsis}
+.slot-acts{position:absolute;right:11px;bottom:10px;margin:0;
+  background:var(--bg2);padding-left:8px}
+.date-slot:hover .slot-acts,.date-slot:focus-within .slot-acts{opacity:1}
+.date-slot-top{gap:8px}
