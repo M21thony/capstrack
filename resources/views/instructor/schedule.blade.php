@@ -110,7 +110,6 @@
             <div class="legend-grid">
               <div class="legend-item"><div class="legend-swatch sw-consult"></div>Consultation</div>
               <div class="legend-item"><div class="legend-swatch sw-booked"></div>Booked</div>
-              <div class="legend-item"><div class="legend-swatch sw-docreview"></div>Doc Review</div>
               <div class="legend-item"><div class="legend-swatch sw-defense"></div>Defense</div>
               <div class="legend-item"><div class="legend-swatch sw-today"></div>Today</div>
               <div class="legend-item"><div class="legend-swatch sw-blocked"></div>Blocked</div>
@@ -227,7 +226,6 @@
                 <label class="f-label" for="f-type">Slot Type</label>
                 <select class="f-input" id="f-type" onchange="updateSlotDerived()">
                   <option value="consult">Consultation</option>
-                  <option value="docreview">Document Review</option>
                   <option value="defense">Defense</option>
                 </select>
               </div>
@@ -513,6 +511,9 @@
 const DAYS        = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 const DAY_NAMES   = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 const MONTHS      = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+// Consultation is the only type a slot is created as. The others stay in the
+// lookups so a row saved before that still draws with a name and a colour
+// rather than as 'undefined' in grey.
 const TYPE_LABELS = { consult:'Consultation', docreview:'Doc Review', defense:'Defense' };
 const TYPE_CLASS  = { consult:'type-consult', docreview:'type-docreview', defense:'type-defense' };
 const TYPE_COLORS = { consult:'var(--blue)', docreview:'var(--purple)', defense:'var(--amber)' };
@@ -815,11 +816,9 @@ function seedDemoData() {
   const offsets = [1, 2, 3, 5, 7, 8];
   const sampleSlots = [
     { start_time:'09:00', end_time:'10:00', slot_type:'consult',   consultation_limit:2, recur:'weekly',   is_available:false, teamName:'Team Nexus',  topic:'Chapter 3 Discussion' },
-    { start_time:'14:00', end_time:'15:00', slot_type:'docreview', consultation_limit:1, recur:'once',     is_available:false, teamName:'Team Alpha',  topic:'Document Formatting Check' },
     { start_time:'10:00', end_time:'11:00', slot_type:'consult',   consultation_limit:1, recur:'weekly',   is_available:true,  teamName:'',            topic:'' },
     { start_time:'15:00', end_time:'16:00', slot_type:'defense',   consultation_limit:3, recur:'biweekly', is_available:false, teamName:'Team Sigma',  topic:'Final Defense Rehearsal' },
     { start_time:'13:00', end_time:'14:00', slot_type:'consult',   consultation_limit:2, recur:'once',     is_available:true,  teamName:'',            topic:'' },
-    { start_time:'09:30', end_time:'10:30', slot_type:'docreview', consultation_limit:1, recur:'weekly',   is_available:false, teamName:'Team Orion',  topic:'Abstract & Introduction Review' },
   ];
 
   offsets.forEach((offset, i) => {
@@ -2045,7 +2044,13 @@ function renderSlotStats() {
   const container = document.getElementById('slot-stats');
   container.innerHTML = '';
 
-  let counts = { consult: 0, docreview: 0, defense: 0 };
+  // A type nobody can pick any more should not hold a permanent zero row in
+  // the panel. It reappears on its own if a slot saved earlier still has it.
+  let counts = { consult: 0, defense: 0 };
+  Object.values(slots).forEach(daySlots => daySlots.forEach(s => {
+    const t = s.type || s.slot_type;
+    if (t === 'docreview') counts.docreview = counts.docreview || 0;
+  }));
   Object.values(slots).forEach(daySlots => {
     daySlots.forEach(s => {
       const t = s.type || s.slot_type || 'consult';
