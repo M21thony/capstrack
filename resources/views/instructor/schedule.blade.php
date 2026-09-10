@@ -153,6 +153,17 @@
 
           <!-- Existing slots for the selected date — lets you view/toggle/remove
                them right here, in the same panel used to add new ones. -->
+          <!-- Every row below is a weekly rule, not an entry on this date.
+               Said once here so the modal that asks is not the first the
+               adviser hears of it. -->
+          <div class="recur-banner" id="recur-banner" style="display:none">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M17 2.1 21 6l-4 3.9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+              <path d="M7 21.9 3 18l4-3.9"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+            </svg>
+            <span id="recur-banner-text"></span>
+          </div>
+
           <div id="selected-date-slots" style="display:none;margin-bottom:12px;">
             <div style="font-size:11px;color:var(--text3);margin-bottom:6px;font-weight:600;">Existing slots on this date</div>
             <div id="selected-date-slots-list" style="display:flex;flex-direction:column;gap:6px;"></div>
@@ -236,11 +247,11 @@
             </div>
 
             <div class="form-actions">
+              <button class="btn btn-ghost" onclick="resetForm()" style="flex:none;padding:7px 14px">Cancel</button>
               <button class="btn btn-primary" id="save-slot-btn" onclick="saveSlot()">
                 <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
                 Save Slot
               </button>
-              <button class="btn btn-ghost" onclick="resetForm()" style="flex:none;padding:7px 12px">Clear</button>
             </div>
             <!-- Slots are pushed to the adviser's calendar on save. Saying so
                  here is the difference between trusting the button and going
@@ -1276,13 +1287,44 @@ function clearSelectedDate() {
 //  they've selected, right alongside the add-slot form — no separate
 //  modal needed anymore.
 // ══════════════════════════════════════════════════════════════
+// The commit button says which weeks it commits. "Save Slot" is true of a
+// one-off and of a rule covering the rest of the term.
+function labelSaveButton(key) {
+  const btn = document.getElementById('save-slot-btn');
+  if (!btn || !key) return;
+  const [y, m, d] = key.split('-').map(Number);
+  const day = DAY_NAMES[makeDate(y, m, d).getDay()];
+  const recur = (document.getElementById('f-recur') || {}).value || 'weekly';
+  const tick = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> ';
+  btn.innerHTML = tick + (recur === 'once' ? 'Save this date' : 'Save every ' + day);
+}
+
 function renderSelectedDateSlots(key) {
   const wrap = document.getElementById('selected-date-slots');
   const list = document.getElementById('selected-date-slots-list');
   if (!wrap || !list) return;
 
+  labelSaveButton(key);
+
   const daySlots = slots[key] || [];
   list.innerHTML = '';
+
+  // The banner belongs to the date, not to any one row: if anything here
+  // repeats, everything the adviser does on this panel needs the warning.
+  const banner = document.getElementById('recur-banner');
+  const repeating = daySlots.filter(s => (s.recur || 'weekly') !== 'once');
+  if (banner) {
+    if (repeating.length) {
+      const [by, bm, bd] = key.split('-').map(Number);
+      const day = repeating[0].available_date || DAY_NAMES[makeDate(by, bm, bd).getDay()];
+      document.getElementById('recur-banner-text').innerHTML =
+        'These are <b>weekly slots</b>. Editing one changes <b>every ' + day +
+        '</b> — not just ' + bd + ' ' + MONTHS[bm - 1] + '.';
+      banner.style.display = 'flex';
+    } else {
+      banner.style.display = 'none';
+    }
+  }
 
   if (daySlots.length === 0) {
     wrap.style.display = 'none';
@@ -1347,14 +1389,23 @@ function renderSelectedDateSlots(key) {
     const tagClass = s.hasBooking ? 'is-booked' : ('type-' + (s.type || 'consult'));
     const tagText = s.hasBooking ? 'Booked' : (TYPE_LABELS[s.type] || 'Consultation');
 
+    // Who has the slot and what for, in its own block rather than trailing
+    // off the end of the time as truncated text.
+    const initials = (s.teamName || '')
+      .split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase();
+    const bookingBlock = s.hasBooking ? `
+      <span class="slot-booking">
+        <span class="who-dot">${initials || '—'}</span>
+        <span><b>${s.teamName || 'Booked'}</b>${s.topic ? '<br>' + s.topic : ''}</span>
+      </span>` : '';
+
     row.innerHTML = `
       <span class="slot-row-top">
-        <span style="display:flex;align-items:center;gap:7px;min-width:0">
-          <span>${startStr}–${endStr}</span>
+        <span class="slot-times">
+          <span>${startStr}</span><span class="slot-arrow">→</span><span>${endStr}</span>
           <span class="slot-tag ${tagClass}">${tagText}</span>
-          <span style="color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${statusText}</span>
         </span>
-        <span style="display:flex;align-items:center;gap:2px;flex-shrink:0">
+        <span class="slot-row-actions">
           ${editBtn}
           ${toggleBtn}
           <button onclick="deleteSlot('${key}', ${i}${s.schedule_id ? ',' + s.schedule_id : ''})"
@@ -1362,6 +1413,7 @@ function renderSelectedDateSlots(key) {
                   title="${repeats ? 'Delete every week' : 'Delete slot'}">✕</button>
         </span>
       </span>
+      ${bookingBlock}
       <span class="slot-row-meta">
         <span>${recurLine}</span>${skipBtn}
       </span>`;
@@ -1508,7 +1560,7 @@ async function saveSlot() {
         isSaving = false;
         if (btn) {
           btn.disabled = false;
-          btn.innerHTML = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Save Slot';
+          labelSaveButton(selectedDate);
         }
         return;
       }
@@ -1570,7 +1622,7 @@ async function saveSlot() {
       isSaving = false;
       if (btn) {
         btn.disabled = false;
-        btn.innerHTML = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Save Slot';
+        labelSaveButton(selectedDate);
       }
     }
     return;
@@ -1645,7 +1697,7 @@ async function saveSlot() {
     isSaving = false;
     if (btn) {
       btn.disabled = false;
-      btn.innerHTML = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Save Slot';
+      labelSaveButton(selectedDate);
     }
   }
 }
@@ -1694,7 +1746,7 @@ function editSlot(scheduleId, key, index) {
   }
 
   const btn = document.getElementById('save-slot-btn');
-  if (btn) btn.innerHTML = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Update Slot';
+  if (btn) labelSaveButton(selectedDate);
 
   document.getElementById('add-slot-fields').style.display = 'block';
   checkTimeOverlap();
@@ -1721,7 +1773,7 @@ function cancelEdit() {
   }
 
   const btn = document.getElementById('save-slot-btn');
-  if (btn) btn.innerHTML = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Save Slot';
+  if (btn) labelSaveButton(selectedDate);
 }
 
 function resetForm() {

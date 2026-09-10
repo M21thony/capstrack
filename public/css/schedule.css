@@ -1072,3 +1072,41 @@ a.btn.content,
   padding-top:11px;border-top:1px solid var(--border);
   font-size:11.5px;color:var(--text3)}
 .gcal-note svg{color:var(--green);flex:none}
+
+/* ── the banner the sample leads with ─────────────────────────────────
+   A slot stores a weekday, so every row in this panel is a rule covering
+   the rest of the term. Saying it once, at the top, is the difference
+   between an adviser editing a Monday and editing every Monday. */
+.recur-banner{display:flex;gap:9px;align-items:flex-start;padding:10px 12px;
+  margin:0 0 12px;border-radius:8px;background:var(--accent-glow);
+  border:1px solid var(--accent);font-size:12px;line-height:1.45;color:var(--text)}
+.recur-banner svg{width:15px;height:15px;flex:none;margin-top:2px;color:var(--accent3)}
+.recur-banner b{font-weight:700}
+
+/* The primary action lost to `.content .btn-primary` above - two classes
+   beat one - so it stayed gold. Gold means "today" and "selected" on this
+   page; the action that commits a change should not also be gold. */
+.content .btn-primary{background:var(--navy-dark);color:#fff;border:none}
+.content .btn-primary:hover{background:var(--navy-light)}
+
+/* ── slot cards ── */
+.slot-row .slot-times{display:flex;align-items:center;gap:6px;white-space:nowrap;
+  font-size:12px;font-weight:500;color:var(--text)}
+.slot-row .slot-arrow{color:var(--text3);font-size:11px}
+.slot-booking{display:flex;align-items:center;gap:8px;padding:7px 9px;
+  background:var(--green-bg);border-radius:6px;font-size:11px;color:var(--text2);
+  line-height:1.4}
+.slot-booking .who-dot{width:22px;height:22px;border-radius:50%;flex:none;
+  background:var(--green);color:#fff;display:flex;align-items:center;
+  justify-content:center;font-size:9px;font-weight:700}
+.slot-booking b{color:var(--text);font-weight:600}
+.slot-row-actions{display:flex;align-items:center;gap:1px;flex-shrink:0}
+.slot-row-actions button{padding:2px 3px}
+
+/* "+ Add a weekly slot on Mondays" - the sample says what adding one means
+   before you add it, not after. */
+.add-slot-lead{width:100%;display:flex;align-items:center;justify-content:center;
+  gap:7px;border:1px dashed var(--border2);border-radius:8px;padding:9px;
+  margin-bottom:12px;background:none;cursor:pointer;font:600 12.5px 'DM Sans',sans-serif;
+  color:var(--text2)}
+.add-slot-lead:hover{border-color:var(--accent);background:var(--accent-light);color:var(--text)}
