@@ -142,9 +142,7 @@
           <div class="selected-date-chip" id="selected-date-chip" style="display:none">
             <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
             <span id="selected-date-text">No date selected</span>
-            <button class="clear-date" onclick="clearSelectedDate()">
-              <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-            </button>
+            
           </div>
 
           <div id="no-date-hint" style="font-size:12px;color:var(--text3);margin-bottom:12px;padding:10px;background:var(--bg3);border-radius:8px;border:1px dashed var(--border);text-align:center;">
@@ -168,6 +166,14 @@
             <div style="font-size:11px;color:var(--text3);margin-bottom:6px;font-weight:600;">Existing slots on this date</div>
             <div id="selected-date-slots-list" style="display:flex;flex-direction:column;gap:6px;"></div>
           </div>
+
+          <!-- The sample opens with what adding one MEANS, not with two time
+               fields. The form is one tap behind it. -->
+          <button type="button" class="add-slot-lead" id="add-slot-lead"
+                  onclick="openAddSlot()" style="display:none">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg>
+            <span id="add-slot-lead-text">Add a weekly slot</span>
+          </button>
 
           <div id="add-slot-fields" style="display:none">
             {{-- Two decisions carry this form: when it starts and how long it
@@ -234,8 +240,8 @@
               <div class="f-group" style="margin-bottom:0" id="f-recur-group">
                 <label class="f-label" for="f-recur">Recurrence</label>
                 <select class="f-input" id="f-recur" onchange="updateSlotDerived()">
+                  <option value="weekly" selected>Every week (same day)</option>
                   <option value="once">One-time only</option>
-                  <option value="weekly">Every week (same day)</option>
                   <option value="biweekly">Every 2 weeks</option>
                 </select>
                 <div id="f-recur-locked-note" style="display:none;font-size:11px;color:var(--text3);margin-top:4px">Switching to a single date? Pick the date above.</div>
@@ -1289,6 +1295,32 @@ function clearSelectedDate() {
 // ══════════════════════════════════════════════════════════════
 // The commit button says which weeks it commits. "Save Slot" is true of a
 // one-off and of a rule covering the rest of the term.
+// The form starts closed. Opening it is a decision - "add a weekly slot on
+// Mondays" - rather than two time inputs sitting there waiting.
+function openAddSlot() {
+  const fields = document.getElementById('add-slot-fields');
+  const lead = document.getElementById('add-slot-lead');
+  if (fields) fields.style.display = 'block';
+  if (lead) lead.style.display = 'none';
+  const actions = document.querySelector('.form-actions');
+  if (actions) actions.style.display = 'flex';
+}
+
+// Shown whenever a date is selected and the form is not already open.
+function showAddSlotLead(key) {
+  const lead = document.getElementById('add-slot-lead');
+  const fields = document.getElementById('add-slot-fields');
+  if (!lead || !key) return;
+  const [y, m, d] = key.split('-').map(Number);
+  const day = DAY_NAMES[makeDate(y, m, d).getDay()];
+  document.getElementById('add-slot-lead-text').textContent =
+    'Add a weekly slot on ' + day + 's';
+  const open = fields && fields.style.display !== 'none';
+  lead.style.display = open ? 'none' : 'flex';
+  const actions = document.querySelector('.form-actions');
+  if (actions) actions.style.display = open ? 'flex' : 'none';
+}
+
 function labelSaveButton(key) {
   const btn = document.getElementById('save-slot-btn');
   if (!btn || !key) return;
@@ -1305,6 +1337,7 @@ function renderSelectedDateSlots(key) {
   if (!wrap || !list) return;
 
   labelSaveButton(key);
+  showAddSlotLead(key);
 
   const daySlots = slots[key] || [];
   list.innerHTML = '';
@@ -1352,24 +1385,11 @@ function renderSelectedDateSlots(key) {
     // the row never said so - which is how a term's Mondays got edited at
     // once by someone who thought they were editing this one.
     row.className = 'slot-row';
-
-    const toggleBtn = s.schedule_id ? `
-      <button onclick="toggleSlot(${s.schedule_id}, '${key}', ${i})"
-              style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:13px;line-height:1;padding:2px 4px;flex-shrink:0"
-              title="${s.is_available ? 'Mark unavailable' : 'Mark available'}">
-        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
-        </svg>
-      </button>` : '';
-
-    const editBtn = s.schedule_id ? `
-      <button onclick="editSlot(${s.schedule_id}, '${key}', ${i})"
-              style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:13px;line-height:1;padding:2px 4px;flex-shrink:0"
-              title="Edit slot">
-        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-        </svg>
-      </button>` : '';
+    if (s.schedule_id) {
+      row.style.cursor = 'pointer';
+      row.title = 'Edit this slot';
+      row.onclick = () => editSlot(s.schedule_id, key, i);
+    }
 
     const repeats = (s.recur || 'weekly') !== 'once';
     // slotsByDay is keyed by weekday, so available_date is always set here;
@@ -1381,8 +1401,14 @@ function renderSelectedDateSlots(key) {
       : 'This date only';
 
     // Skipping one week is not deleting the slot, so it is its own control.
+    // Availability in words. The crossed circle it replaces was the one
+    // control on the card nobody could name without hovering it.
+    const availLink = s.schedule_id ? `
+      <button onclick="event.stopPropagation();toggleSlot(${s.schedule_id}, '${key}', ${i})"
+              style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:10.5px;padding:0;text-decoration:underline">${s.is_available ? 'mark unavailable' : 'mark available'}</button>` : '';
+
     const skipBtn = (repeats && s.schedule_id && !s.hasBooking) ? `
-      <button onclick="skipThisWeek(${s.schedule_id}, '${key}')"
+      <button onclick="event.stopPropagation();skipThisWeek(${s.schedule_id}, '${key}')"
               style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:10.5px;padding:0;text-decoration:underline"
               title="Remove only this week">skip this week</button>` : '';
 
@@ -1406,16 +1432,14 @@ function renderSelectedDateSlots(key) {
           <span class="slot-tag ${tagClass}">${tagText}</span>
         </span>
         <span class="slot-row-actions">
-          ${editBtn}
-          ${toggleBtn}
-          <button onclick="deleteSlot('${key}', ${i}${s.schedule_id ? ',' + s.schedule_id : ''})"
+          <button onclick="event.stopPropagation();deleteSlot('${key}', ${i}${s.schedule_id ? ',' + s.schedule_id : ''})"
                   style="background:none;border:none;color:var(--red,#f87171);cursor:pointer;font-size:14px;line-height:1;padding:2px 4px"
                   title="${repeats ? 'Delete every week' : 'Delete slot'}">✕</button>
         </span>
       </span>
       ${bookingBlock}
       <span class="slot-row-meta">
-        <span>${recurLine}</span>${skipBtn}
+        <span>${recurLine}</span>${skipBtn}${availLink}
       </span>`;
     list.appendChild(row);
   });
