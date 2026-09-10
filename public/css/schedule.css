@@ -1149,3 +1149,20 @@ a.btn.content,
   background:var(--bg2);padding-left:8px}
 .date-slot:hover .slot-acts,.date-slot:focus-within .slot-acts{opacity:1}
 .date-slot-top{gap:8px}
+
+/* ── the column the sample actually uses ──────────────────────────────
+   300px could not hold a time range, a type tag and a delete on one line,
+   so the delete was pushed past the card edge. The sample's column is
+   336px and everything sits inside it. */
+.sched-layout{grid-template-columns:1fr 336px}
+.date-slot{overflow:hidden}
+.date-slot-top{gap:8px;min-width:0}
+.date-slot .slot-times{min-width:0;flex:1}
+.date-slot-actions{flex:none}
+.date-slot .slot-tag{flex:none}
+
+/* One phrase, one line: mark, weekday, state - with the gaps of a sentence
+   rather than of a toolbar. */
+.date-slot-meta{gap:5px;line-height:1.4}
+.recur-mark{margin-right:1px}
+

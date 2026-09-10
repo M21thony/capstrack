@@ -987,7 +987,9 @@ function renderCalendar() {
           pill.textContent = `🔴 Ongoing · ${TYPE_LABELS[s.type] || 'Consultation'}`;
           pill.style.fontWeight = '700';
         } else {
-          pill.textContent = hr12(s.start || s.start_time).replace(' AM', 'a').replace(' PM', 'p');
+          // "9:00a" saved four pixels and cost the reader a word. The space
+          // goes, the meridiem stays.
+          pill.textContent = hr12(s.start || s.start_time).replace(' ', '');
         }
         pill.title = `${hr12(s.start || s.start_time)}–${hr12(s.end || s.end_time)} · Max ${s.maxBookings || s.consultation_limit}${s.teamName ? ' · Team: ' + s.teamName : ''}${status === 'ongoing' ? ' · Ongoing now' : ''}`;
         el.appendChild(pill);
