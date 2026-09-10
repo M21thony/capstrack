@@ -1410,7 +1410,10 @@ function renderSelectedDateSlots(key) {
     // Skipping one week is not deleting the slot, so it is its own control.
     // Availability in words. The crossed circle it replaces was the one
     // control on the card nobody could name without hovering it.
-    const availLink = s.schedule_id ? `
+    // Not offered when a team has the slot. The server refuses it anyway, but
+    // a control that always fails is worse than no control - it reads as
+    // something the adviser did wrong.
+    const availLink = (s.schedule_id && !s.hasBooking) ? `
       <button onclick="event.stopPropagation();toggleSlot(${s.schedule_id}, '${key}', ${i})"
               class="slot-act">${s.is_available ? 'mark unavailable' : 'mark available'}</button>` : '';
 

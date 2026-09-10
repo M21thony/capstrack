@@ -419,7 +419,7 @@ class ScheduleController extends Controller
 
         if ($booked) {
             return response()->json([
-                'error' => 'A student has booked this date. Cancel the booking first.',
+                'error' => 'A team has booked this date. Cancel the booking first.',
             ], 422);
         }
 
@@ -546,7 +546,7 @@ class ScheduleController extends Controller
 
         if ($booked) {
             return response()->json([
-                'error' => 'A student has booked this date. Cancel the booking first.',
+                'error' => 'A team has booked this date. Cancel the booking first.',
             ], 422);
         }
 
@@ -625,6 +625,25 @@ class ScheduleController extends Controller
         $newStatus = $request->has('is_available')
             ? $request->boolean('is_available')
             : ! $slot->is_available;
+
+        // is_available belongs to the rule, not to a date, so switching it off
+        // hides every occurrence - including one a team is expecting to turn up
+        // to. A slot somebody has booked cannot be withdrawn from underneath
+        // them; the booking is cancelled first, which is a conversation rather
+        // than a toggle. Past bookings do not count: those already happened.
+        if (! $newStatus) {
+            $booked = DB::table('consultation_booking')
+                ->where('schedule_id', $id)
+                ->where('booking_status', 'scheduled')
+                ->whereDate('session_date', '>=', now()->toDateString())
+                ->exists();
+
+            if ($booked) {
+                return response()->json([
+                    'error' => 'A team has booked this slot. Cancel the booking first.',
+                ], 422);
+            }
+        }
 
         DB::table('consultation_schedule')
             ->where('schedule_id', $id)

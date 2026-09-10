@@ -150,6 +150,88 @@ class MoveOneWeekOfARecurringSlotTest extends TestCase
         $this->assertDatabaseMissing('consultation_schedule_exception', ['schedule_id' => $id]);
     }
 
+    /** A slot a team is expecting to turn up to cannot be hidden from them. */
+    public function test_a_booked_slot_cannot_be_marked_unavailable(): void
+    {
+        $id = $this->weeklySlot();
+        $student = Student::factory()->withCompleteProfile()->create([
+            'email' => 'booked.team@my.cspc.edu.ph',
+        ]);
+
+        DB::table('consultation_booking')->insert([
+            'student_id' => $student->student_id, 'schedule_id' => $id,
+            'session_date' => $this->aMonday(), 'booking_status' => 'scheduled',
+            'created_at' => now(), 'updated_at' => now(),
+        ]);
+
+        $this->actingAs($this->expert, 'expert')
+            ->putJson("/instructor/schedule/slots/{$id}/availability", ['is_available' => false])
+            ->assertStatus(422);
+
+        $this->assertSame(1, (int) DB::table('consultation_schedule')
+            ->where('schedule_id', $id)->value('is_available'),
+            'the slot must still be available to the team holding it');
+    }
+
+    /** A cancelled booking is not a booking - the slot frees up again. */
+    public function test_a_cancelled_booking_does_not_block_it(): void
+    {
+        $id = $this->weeklySlot();
+        $student = Student::factory()->withCompleteProfile()->create([
+            'email' => 'cancelled.team@my.cspc.edu.ph',
+        ]);
+
+        DB::table('consultation_booking')->insert([
+            'student_id' => $student->student_id, 'schedule_id' => $id,
+            'session_date' => $this->aMonday(), 'booking_status' => 'cancelled',
+            'created_at' => now(), 'updated_at' => now(),
+        ]);
+
+        $this->actingAs($this->expert, 'expert')
+            ->putJson("/instructor/schedule/slots/{$id}/availability", ['is_available' => false])
+            ->assertOk();
+    }
+
+    /** Yesterday's session already happened; it cannot be turned up to. */
+    public function test_a_past_booking_does_not_block_it(): void
+    {
+        $id = $this->weeklySlot();
+        $student = Student::factory()->withCompleteProfile()->create([
+            'email' => 'past.team@my.cspc.edu.ph',
+        ]);
+
+        DB::table('consultation_booking')->insert([
+            'student_id' => $student->student_id, 'schedule_id' => $id,
+            'session_date' => now()->subWeeks(2)->format('Y-m-d'),
+            'booking_status' => 'scheduled',
+            'created_at' => now(), 'updated_at' => now(),
+        ]);
+
+        $this->actingAs($this->expert, 'expert')
+            ->putJson("/instructor/schedule/slots/{$id}/availability", ['is_available' => false])
+            ->assertOk();
+    }
+
+    /** Turning a slot back ON is never blocked. */
+    public function test_making_a_slot_available_again_is_always_allowed(): void
+    {
+        $id = $this->weeklySlot();
+        DB::table('consultation_schedule')->where('schedule_id', $id)->update(['is_available' => 0]);
+
+        $student = Student::factory()->withCompleteProfile()->create([
+            'email' => 'reopen.team@my.cspc.edu.ph',
+        ]);
+        DB::table('consultation_booking')->insert([
+            'student_id' => $student->student_id, 'schedule_id' => $id,
+            'session_date' => $this->aMonday(), 'booking_status' => 'scheduled',
+            'created_at' => now(), 'updated_at' => now(),
+        ]);
+
+        $this->actingAs($this->expert, 'expert')
+            ->putJson("/instructor/schedule/slots/{$id}/availability", ['is_available' => true])
+            ->assertOk();
+    }
+
     public function test_a_date_that_is_not_that_weekday_is_refused(): void
     {
         $id = $this->weeklySlot('Monday');
