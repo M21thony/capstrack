@@ -17,6 +17,7 @@ class GradingRubric extends Model
         'description',
         'total_points',
         'is_active',
+        'is_archived',
     ];
 
     protected function casts(): array
@@ -24,6 +25,7 @@ class GradingRubric extends Model
         return [
             'total_points' => 'decimal:2',
             'is_active' => 'boolean',
+            'is_archived' => 'boolean',
             'created_at' => 'datetime',
             'updated_at' => 'datetime',
         ];

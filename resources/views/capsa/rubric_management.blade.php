@@ -11,15 +11,15 @@
 </head>
 <body>
 
-<!-- DELETE MODAL -->
+<!-- ARCHIVE MODAL -->
 <div class="modal-overlay" id="del-modal">
   <div class="modal-box">
-    <div class="modal-icon-wrap"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="var(--red)" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg></div>
-    <div class="modal-title">Delete Rubric?</div>
-    <div class="modal-sub" id="del-modal-sub">This will permanently delete the rubric and all its criteria.</div>
+    <div class="modal-icon-wrap"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="var(--amber)" stroke-width="2.5"><path d="M12 5v14"/><polyline points="18 11 12 17 6 11"/></svg></div>
+    <div class="modal-title" id="del-modal-title">Archive Rubric?</div>
+    <div class="modal-sub" id="del-modal-sub">This will archive the rubric. You can restore it later from the Archived tab.</div>
     <div class="modal-actions">
       <button class="btn btn-ghost" style="color:var(--text2);border-color:var(--border)" onclick="closeDelModal()">Cancel</button>
-      <button class="btn rb-btn-danger" id="del-confirm-btn">Delete</button>
+      <button class="btn" id="del-confirm-btn" style="background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber)">Archive</button>
     </div>
   </div>
 </div>
@@ -270,6 +270,9 @@
           </button>
           <button class="rb-tab-btn" onclick="filterType('final_oral_defense',this)" data-type="final_oral_defense">
             Final Oral <span class="rb-tab-count" id="tc-final_oral_defense">0</span>
+          </button>
+          <button class="rb-tab-btn rb-tab-archived" onclick="filterType('archived',this)" data-type="archived">
+            Archived <span class="rb-tab-count" id="tc-archived">0</span>
           </button>
         </div>
         <div class="rb-tab-search">
@@ -585,6 +588,7 @@ function normalizeRubric(r) {
     name: r.rubric_name,
     type: r.rubric_type,
     description: r.description || '',
+    isArchived: r.is_archived || false,
     criteria: (r.criteria || []).map(normalizeCriterion),
   };
 }
@@ -1153,28 +1157,31 @@ function editRubric(id) {
   document.getElementById('rubric-modal').classList.add('show');
 }
 
-// ── DELETE via API ────────────────────────────────────────────────────────────
+// ── ARCHIVE via API ────────────────────────────────────────────────────────────────
 var pendingDelId = null;
 var isDeleting = false;
+var pendingRestoreId = null;
+var isRestoring = false;
 function confirmDelete(id) {
   isDeleting = false;
   pendingDelId = id;
   var btn = document.getElementById('del-confirm-btn');
   btn.disabled = false;
-  btn.textContent = 'Delete';
+  btn.textContent = 'Archive';
+  document.getElementById('del-modal-title').textContent = 'Archive Rubric?';
   var rb = rubrics.find(function(r) { return r.id === id; });
-  document.getElementById('del-modal-sub').textContent = '"' + (rb ? rb.name : '') + '" and all its criteria will be permanently deleted.';
+  document.getElementById('del-modal-sub').textContent = '"' + (rb ? rb.name : '') + '" will be archived. You can restore it later from the Archived tab.';
   document.getElementById('del-modal').classList.add('show');
-  btn.onclick = executeDelete;
+  btn.onclick = executeArchive;
 }
 
-async function executeDelete() {
+async function executeArchive() {
   if (isDeleting) return;
   isDeleting = true;
   var id = pendingDelId;
   var btn = document.getElementById('del-confirm-btn');
   btn.disabled = true;
-  btn.textContent = 'Deleting...';
+  btn.textContent = 'Archiving...';
   try {
     var res = await fetch('/api/admin/grading-rubrics/' + id, {
       method: 'DELETE',
@@ -1189,28 +1196,80 @@ async function executeDelete() {
       } else {
         toast(json.message || 'Something went wrong.');
         btn.disabled = false;
-        btn.textContent = 'Delete';
+        btn.textContent = 'Archive';
       }
       isDeleting = false;
       return;
     }
     closeDelModal();
     await loadRubrics();
-    toast('Rubric deleted.');
+    toast('Rubric archived.');
   } catch (e) {
     toast('Something went wrong.');
     btn.disabled = false;
-    btn.textContent = 'Delete';
+    btn.textContent = 'Archive';
   }
   isDeleting = false;
 }
 
-function closeDelModal() {
-  isDeleting = false;
-  pendingDelId = null;
+function confirmRestore(id) {
+  isRestoring = false;
+  pendingRestoreId = id;
   var btn = document.getElementById('del-confirm-btn');
   btn.disabled = false;
-  btn.textContent = 'Delete';
+  btn.textContent = 'Restore';
+  document.getElementById('del-modal-title').textContent = 'Restore Rubric?';
+  document.getElementById('del-modal-sub').textContent = 'This will restore the rubric and make it available for grading again.';
+  document.getElementById('del-modal').classList.add('show');
+  btn.onclick = executeRestore;
+}
+
+async function executeRestore() {
+  if (isRestoring) return;
+  isRestoring = true;
+  var id = pendingRestoreId;
+  var btn = document.getElementById('del-confirm-btn');
+  btn.disabled = true;
+  btn.textContent = 'Restoring...';
+  try {
+    var res = await fetch('/api/admin/grading-rubrics/' + id + '/restore', {
+      method: 'PUT',
+      headers: { 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json', 'Content-Type': 'application/json' },
+    });
+    var json = await res.json();
+    if (!res.ok) {
+      if (res.status === 404) {
+        closeDelModal();
+        await loadRubrics();
+        toast('Rubric not found. List refreshed.');
+      } else {
+        toast(json.message || 'Something went wrong.');
+        btn.disabled = false;
+        btn.textContent = 'Restore';
+      }
+      isRestoring = false;
+      return;
+    }
+    closeDelModal();
+    await loadRubrics();
+    toast('Rubric restored.');
+  } catch (e) {
+    toast('Something went wrong.');
+    btn.disabled = false;
+    btn.textContent = 'Restore';
+  }
+  isRestoring = false;
+}
+
+function closeDelModal() {
+  isDeleting = false;
+  isRestoring = false;
+  pendingDelId = null;
+  pendingRestoreId = null;
+  var btn = document.getElementById('del-confirm-btn');
+  btn.disabled = false;
+  btn.textContent = 'Archive';
+  document.getElementById('del-modal-title').textContent = 'Archive Rubric?';
   document.getElementById('del-modal').classList.remove('show');
 }
 
@@ -1226,7 +1285,13 @@ function filterType(type, btn) {
 // ── PAGINATION ────────────────────────────────────────────────────────────────
 function getFiltered() {
   var q = (document.getElementById('rb-search').value || '').trim().toLowerCase();
-  var list = activeFilter === 'all' ? rubrics : rubrics.filter(function(r) { return r.type === activeFilter; });
+  if (activeFilter === 'all') {
+    var list = rubrics.filter(function(r) { return !r.isArchived; });
+  } else if (activeFilter === 'archived') {
+    var list = rubrics.filter(function(r) { return r.isArchived; });
+  } else {
+    var list = rubrics.filter(function(r) { return r.type === activeFilter && !r.isArchived; });
+  }
   if (q) {
     list = list.filter(function(r) {
       return r.name.toLowerCase().includes(q) ||
@@ -1254,9 +1319,9 @@ function renderList() {
   var start = (currentPage - 1) * ITEMS_PER_PAGE;
   var paged = filtered.slice(start, start + ITEMS_PER_PAGE);
 
-  ['all', 'pre_proposal', 'title_defense', 'pre_oral_defense', 'final_oral_defense'].forEach(function(t) {
+  ['all', 'pre_proposal', 'title_defense', 'pre_oral_defense', 'final_oral_defense', 'archived'].forEach(function(t) {
     var el = document.getElementById('tc-' + t);
-    if (el) el.textContent = t === 'all' ? rubrics.length : rubrics.filter(function(r) { return r.type === t; }).length;
+    if (el) el.textContent = t === 'all' ? rubrics.filter(function(r) { return !r.isArchived; }).length : (t === 'archived' ? rubrics.filter(function(r) { return r.isArchived; }).length : rubrics.filter(function(r) { return r.type === t && !r.isArchived; }).length);
   });
 
   var el = document.getElementById('rubric-list');
@@ -1285,10 +1350,10 @@ function renderList() {
     // and doing something with it.
     var open = openRubric === rb.id;
 
-    return '<div class="card rb-rubric-card' + (open ? ' open' : '') + '" style="padding:0;overflow:hidden">' +
+    return '<div class="card rb-rubric-card' + (open ? ' open' : '') + '" style="padding:0;overflow:hidden' + (rb.isArchived ? ';opacity:0.6' : '') + '">' +
       '<div class="rb-rubric-header">' +
       '<div style="flex:1;min-width:0">' +
-      '<div style="margin-bottom:6px"><span class="badge" style="background:' + bg + ';color:' + col + ';font-size:10px;font-weight:600">' + (TYPE_LABEL[rb.type] || rb.type) + '</span></div>' +
+      '<div style="margin-bottom:6px"><span class="badge" style="background:' + bg + ';color:' + col + ';font-size:10px;font-weight:600">' + (TYPE_LABEL[rb.type] || rb.type) + '</span>' + (rb.isArchived ? ' <span class="badge" style="background:var(--amber-bg);color:var(--amber);font-size:9px;font-weight:600;border:1px solid rgba(217,119,6,0.2)">ARCHIVED</span>' : '') + '</div>' +
       '<div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:3px">' + rb.name + '</div>' +
       (rb.description ? '<div style="font-size:12px;color:var(--text3)">' + rb.description + '</div>' : '') +
       '</div>' +
@@ -1299,10 +1364,14 @@ function renderList() {
       '<div style="font-size:11px;color:var(--text3)">' + rb.criteria.length + ' criteria</div>' +
       '</div>' +
       '<div class="rb-card-actions">' +
-      '<button class="btn btn-ghost" style="font-size:11px;padding:5px 14px" onclick="editRubric(' + rb.id + ')">' +
-      '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="m18.5 2.5 3 3L12 15l-4 1 1-4z"/></svg> Edit</button>' +
-      '<button class="btn rb-btn-danger" style="font-size:11px;padding:5px 14px" onclick="confirmDelete(' + rb.id + ')">' +
-      '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg> Delete</button>' +
+      (rb.isArchived
+        ? '<button class="btn" style="font-size:11px;padding:5px 14px;background:var(--green-bg);color:var(--green);border:1px solid var(--green)" onclick="confirmRestore(' + rb.id + ')">' +
+          '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14"/><polyline points="18 11 12 17 6 11"/></svg> Restore</button>'
+        : '<button class="btn btn-ghost" style="font-size:11px;padding:5px 14px" onclick="editRubric(' + rb.id + ')">' +
+          '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="m18.5 2.5 3 3L12 15l-4 1 1-4z"/></svg> Edit</button>' +
+          '<button class="btn rb-btn-danger" style="font-size:11px;padding:5px 14px" onclick="confirmDelete(' + rb.id + ')">' +
+          '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg> Archive</button>'
+      ) +
       '</div>' +
       '</div>' +
       '</div>' +
@@ -1354,9 +1423,10 @@ function renderPagination(total, totalPages) {
 }
 
 function updateStats() {
-  document.getElementById('stat-total').textContent = rubrics.length;
-  document.getElementById('stat-criteria').textContent = rubrics.reduce(function(s, r) { return s + r.criteria.length; }, 0);
-  document.getElementById('stat-types').textContent = new Set(rubrics.map(function(r) { return r.type; })).size;
+  var visible = getFiltered();
+  document.getElementById('stat-total').textContent = visible.length;
+  document.getElementById('stat-criteria').textContent = visible.reduce(function(s, r) { return s + r.criteria.length; }, 0);
+  document.getElementById('stat-types').textContent = new Set(visible.map(function(r) { return r.type; })).size;
 }
 
 function toast(msg) {

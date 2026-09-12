@@ -32,7 +32,6 @@ class AdminGradingRubricTest extends TestCase
         ]));
     }
 
-
     public function test_index_returns_all_rubrics(): void
     {
         GradingRubric::create([
@@ -147,10 +146,10 @@ class AdminGradingRubricTest extends TestCase
         ]);
     }
 
-    public function test_destroy_deletes_rubric_and_criteria(): void
+    public function test_archive_marks_rubric_as_archived(): void
     {
         $rubric = GradingRubric::create([
-            'rubric_name' => 'To Delete',
+            'rubric_name' => 'To Archive',
             'rubric_type' => 'Pre-Proposal Defense',
         ]);
 
@@ -166,14 +165,16 @@ class AdminGradingRubricTest extends TestCase
         $response->assertStatus(200)
             ->assertJson([
                 'success' => true,
-                'message' => 'Rubric deleted successfully.',
+                'message' => 'Rubric archived successfully.',
             ]);
 
-        $this->assertDatabaseMissing('grading_rubrics', [
+        $this->assertDatabaseHas('grading_rubrics', [
             'rubric_id' => $rubric->rubric_id,
+            'is_archived' => 1,
+            'is_active' => false,
         ]);
 
-        $this->assertDatabaseMissing('rubric_criteria', [
+        $this->assertDatabaseHas('rubric_criteria', [
             'rubric_id' => $rubric->rubric_id,
         ]);
     }
@@ -185,6 +186,89 @@ class AdminGradingRubricTest extends TestCase
 
         $response->assertStatus(404)
             ->assertJsonStructure(['message']);
+    }
+
+    public function test_restore_unarchives_rubric(): void
+    {
+        $rubric = GradingRubric::create([
+            'rubric_name' => 'To Restore',
+            'rubric_type' => 'Pre-Proposal Defense',
+            'is_archived' => true,
+            'is_active' => false,
+        ]);
+
+        $response = $this->actingAs($this->admin, 'expert')
+            ->putJson("/api/admin/grading-rubrics/{$rubric->rubric_id}/restore");
+
+        $response->assertStatus(200)
+            ->assertJson([
+                'success' => true,
+                'message' => 'Rubric restored successfully.',
+            ]);
+
+        $this->assertDatabaseHas('grading_rubrics', [
+            'rubric_id' => $rubric->rubric_id,
+            'is_archived' => 0,
+            'is_active' => true,
+        ]);
+    }
+
+    public function test_archive_then_restore_preserves_criteria(): void
+    {
+        $rubric = GradingRubric::create([
+            'rubric_name' => 'Archive and Restore',
+            'rubric_type' => 'Title Defense',
+        ]);
+
+        $rubric->criteria()->create([
+            'criterion_name' => 'Criterion 1',
+            'max_points' => 100,
+            'score_levels' => '[]',
+        ]);
+
+        $response = $this->actingAs($this->admin, 'expert')
+            ->deleteJson("/api/admin/grading-rubrics/{$rubric->rubric_id}");
+
+        $response->assertStatus(200);
+
+        $this->assertDatabaseHas('rubric_criteria', [
+            'rubric_id' => $rubric->rubric_id,
+        ]);
+
+        $response = $this->actingAs($this->admin, 'expert')
+            ->putJson("/api/admin/grading-rubrics/{$rubric->rubric_id}/restore");
+
+        $response->assertStatus(200)
+            ->assertJson([
+                'success' => true,
+                'message' => 'Rubric restored successfully.',
+            ]);
+
+        $this->assertDatabaseHas('rubric_criteria', [
+            'rubric_id' => $rubric->rubric_id,
+        ]);
+    }
+
+    public function test_show_works_for_archived_rubric(): void
+    {
+        $rubric = GradingRubric::create([
+            'rubric_name' => 'Archived Show',
+            'rubric_type' => 'Final Oral Defense',
+            'is_archived' => true,
+            'is_active' => false,
+        ]);
+
+        $response = $this->actingAs($this->admin, 'expert')
+            ->getJson("/api/admin/grading-rubrics/{$rubric->rubric_id}");
+
+        $response->assertStatus(200)
+            ->assertJson([
+                'success' => true,
+                'data' => [
+                    'rubric_id' => $rubric->rubric_id,
+                    'rubric_name' => 'Archived Show',
+                ],
+            ]);
     }
 
     public function test_sync_criteria_replaces_all_criteria(): void
