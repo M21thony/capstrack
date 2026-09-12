@@ -9,6 +9,7 @@ use App\Services\OllamaSSHClient;
 use Closure;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -1220,12 +1221,25 @@ class AdminGradingRubricController extends Controller
 
     public function destroy(GradingRubric $gradingRubric): JsonResponse
     {
-        $gradingRubric->criteria()->delete();
-        $gradingRubric->delete();
+        $gradingRubric->is_archived = true;
+        $gradingRubric->is_active = false;
+        $gradingRubric->save();
 
         return response()->json([
             'success' => true,
-            'message' => 'Rubric deleted successfully.',
+            'message' => 'Rubric archived successfully.',
+        ]);
+    }
+
+    public function restore(GradingRubric $gradingRubric): JsonResponse
+    {
+        $gradingRubric->is_archived = false;
+        $gradingRubric->is_active = true;
+        $gradingRubric->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Rubric restored successfully.',
         ]);
     }
 
@@ -1392,12 +1406,12 @@ class AdminGradingRubricController extends Controller
             $gradingRubric->load('criteria');
 
             // Keep the rubric's declared total honest - it is the denominator a
-        // score is out of, so it has to be what the criteria really sum to.
-        $gradingRubric->update([
-            'total_points' => round($this->criteriaMaxPointsTotal($gradingRubric->criteria()->get()), 2),
-        ]);
+            // score is out of, so it has to be what the criteria really sum to.
+            $gradingRubric->update([
+                'total_points' => round($this->criteriaMaxPointsTotal($gradingRubric->criteria()->get()), 2),
+            ]);
 
-        return response()->json([
+            return response()->json([
                 'success' => true,
                 'message' => 'Criteria synced successfully.',
                 'data' => $this->formatRubric($gradingRubric),
@@ -1479,8 +1493,8 @@ class AdminGradingRubricController extends Controller
      * absorbed by the largest criterion, so the rubric lands on exactly
      * $targetTotal rather than 99.98.
      *
-     * @param  \Illuminate\Support\Collection<int, RubricCriterion>  $criteria
-     * @return int  how many criteria were changed
+     * @param  Collection<int, RubricCriterion>  $criteria
+     * @return int how many criteria were changed
      */
     private function rebalanceCriteria($criteria, float $targetTotal): int
     {
@@ -1615,6 +1629,7 @@ class AdminGradingRubricController extends Controller
             'description' => $rubric->description,
             'total_points' => (float) ($rubric->total_points ?? 100),
             'is_active' => (bool) $rubric->is_active,
+            'is_archived' => (bool) $rubric->is_archived,
             'criteria' => $rubric->relationLoaded('criteria')
                 ? $rubric->criteria->map(fn ($c) => $this->formatCriterion($c))->values()->toArray()
                 : [],
@@ -1639,7 +1654,7 @@ class AdminGradingRubricController extends Controller
      * OTHER criteria too - the page would otherwise still be showing their
      * old point values.
      *
-     * @param  \Illuminate\Support\Collection<int, RubricCriterion>  $criteria
+     * @param  Collection<int, RubricCriterion>  $criteria
      */
     private function formatCriteria($criteria): array
     {
