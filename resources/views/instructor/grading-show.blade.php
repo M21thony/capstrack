@@ -1,16 +1,131 @@
 @php
     $categories = $rubric->criteria->groupBy(fn ($c) => $c->category ?? 'General');
     $existingScores = $grade?->scores ?? [];
+    $fmt = fn ($n) => rtrim(rtrim(number_format((float) $n, 2), '0'), '.');
+
+    // The rubric as the sheet draws it: sections of criteria, each criterion
+    // with its own levels. Built here so the page script only lays it out.
+    $sections = $categories->map(fn ($criteria, $name) => [
+        'name' => $name,
+        'max' => (float) ($criteria->first()->category_max_points ?? $criteria->sum('max_points')),
+        'items' => $criteria->map(fn ($c) => [
+            'id' => (string) $c->criterion_id,
+            'n' => $c->criterion_name,
+            'd' => $c->description,
+            'levels' => collect($c->decodedScoreLevels())->map(fn ($l) => [
+                's' => (float) ($l['score'] ?? 0),
+                'label' => $l['label'] ?? '',
+                'desc' => $l['desc'] ?? '',
+            ])->values(),
+        ])->values(),
+    ])->values();
+
+    $savedScores = collect($existingScores)->mapWithKeys(fn ($v, $k) => [(string) $k => (float) $v]);
 @endphp
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>CapsTRACK — Expert Portal</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<meta name="csrf-token" content="{{ csrf_token() }}"/>
+<title>Grading {{ $defense->team?->team_name }} — CapsTRACK</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="{{ asset('css/expert.css') }}" />
 @include('partials.skeleton-head', ['skReveal' => 'block'])
+<style>
+  /* The grading sheet fills the screen and never scrolls: a section that is
+     too long for the window is split into pages that fit it. */
+  #real-content{flex:1;min-height:0}
+  .gs-content{height:100%;padding:0;overflow:hidden;display:flex;flex-direction:column}
+  .gs{flex:1;min-height:0;display:grid;grid-template-rows:auto auto auto 1fr auto}
+  .gs .num{font-variant-numeric:tabular-nums}
+  .gs :focus-visible{outline:2px solid var(--accent3);outline-offset:2px}
+
+  .gs-alert{margin:10px 20px 0;padding:9px 14px;border-radius:6px;font-size:13px}
+  .gs-alert.ok{border:1px solid var(--green);background:var(--green-bg);color:var(--green)}
+  .gs-alert.err{border:1px solid var(--red);background:var(--red-bg);color:var(--red)}
+
+  .gs-top{display:flex;align-items:center;gap:18px;padding:10px 20px;background:var(--bg2);border-bottom:1px solid var(--border)}
+  .gs-who{flex:1;min-width:0}
+  .gs-who b{display:block;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .gs-who small{font-size:12px;color:var(--text3)}
+  .gs-stat{text-align:right;white-space:nowrap}
+  .gs-stat b{font-size:22px;line-height:1}
+  .gs-stat small{display:block;font-size:11.5px;color:var(--text3)}
+  .gs-btn{font:inherit;font-size:13px;font-weight:600;padding:8px 14px;border-radius:6px;border:1px solid var(--border);background:var(--bg2);cursor:pointer;color:var(--text2);white-space:nowrap}
+  .gs-btn:hover:not(:disabled){border-color:var(--border2);color:var(--text)}
+  .gs-btn-primary{background:var(--navy-dark);border-color:var(--navy-dark);color:#fff}
+  .gs-btn-primary:hover:not(:disabled){color:#fff}
+  .gs-btn:disabled{opacity:.4;cursor:default}
+
+  .gs-steps{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);background:var(--bg2);border-bottom:1px solid var(--border)}
+  .gs-step{font:inherit;border:none;background:none;border-bottom:2px solid transparent;padding:8px 10px;text-align:left;cursor:pointer;min-width:0;display:grid;gap:1px}
+  .gs-step + .gs-step{border-left:1px solid var(--border)}
+  .gs-step .nm{font-size:12px;font-weight:600;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .gs-step .st{font-size:11.5px;color:var(--text3);display:flex;justify-content:space-between;gap:6px}
+  .gs-step.on{border-bottom-color:var(--accent);background:var(--bg3)}
+  .gs-step.on .nm{color:var(--text)}
+  .gs-step.done .mark{color:var(--green);font-weight:600}
+  .gs-step.part .mark{color:var(--amber)}
+
+  .gs-area{min-height:0;display:flex;flex-direction:column;padding:12px 20px 0}
+  .gs-head{display:flex;align-items:baseline;gap:12px;margin-bottom:8px}
+  .gs-head h2{margin:0;font-size:16px}
+  .gs-head .meta{font-size:12px;color:var(--text3)}
+  .gs-head .pg{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text3)}
+  .gs-head .pg .gs-btn{padding:4px 10px;font-size:12px}
+
+  .gs-sheet{flex:1;min-height:0;background:var(--bg2);border:1px solid var(--border);border-radius:12px;display:flex;flex-direction:column;overflow:hidden;margin-bottom:12px}
+  .gs-rows{flex:1;min-height:0;overflow:hidden}
+  .gs table{width:100%;border-collapse:collapse;table-layout:fixed}
+  .gs th{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text3);text-align:left;padding:7px 12px;background:var(--bg3);border-bottom:1px solid var(--border)}
+  .gs th:first-child{width:23%}
+  .gs th.sc{width:84px;text-align:right}
+  .gs th .key{display:inline-block;margin-right:6px;font-size:10px;padding:0 5px;border:1px solid var(--border2);border-bottom-width:2px;border-radius:4px;letter-spacing:0}
+  .gs td{border-bottom:1px solid var(--border);padding:0;vertical-align:top}
+  .gs tr.cur td{background:var(--bg3)}
+  .gs tr.cur td:first-child{box-shadow:inset 3px 0 0 var(--accent)}
+  .gs-crit{padding:9px 12px;cursor:pointer}
+  .gs-crit b{display:block;font-size:13px}
+  .gs-crit small{color:var(--text3);font-size:11.5px}
+  .gs-cell{font:inherit;display:flex;flex-direction:column;gap:2px;width:100%;height:100%;min-height:62px;text-align:left;border:none;border-left:1px solid var(--border);background:none;padding:8px 12px;cursor:pointer;position:relative;color:var(--text)}
+  .gs-cell b{font-size:13px;color:var(--accent3)}
+  .gs-cell .lb{font-size:11px;font-weight:600;color:var(--text3)}
+  .gs-cell span.ds{font-size:11.5px;color:var(--text2);line-height:1.35;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+  .gs-cell:hover{background:var(--accent-light)}
+  .gs tr.scored .gs-cell{opacity:.55}
+  .gs tr.scored .gs-cell:hover{opacity:1}
+  .gs-cell[aria-pressed="true"]{opacity:1!important;background:var(--accent-light);box-shadow:inset 0 0 0 2px var(--accent)}
+  .gs-cell[aria-pressed="true"]::after{content:"✓";position:absolute;top:7px;right:9px;font-size:12px;color:var(--accent3);font-weight:700}
+  .gs-score{padding:9px 12px;text-align:right;font-weight:600}
+  .gs-score.empty{color:var(--border2);font-weight:400}
+  .gs-subtotal{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-top:1px solid var(--border);background:var(--bg3);font-size:12.5px;color:var(--text2)}
+  .gs-subtotal b{color:var(--text)}
+
+  .gs-remarks{flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr;gap:14px;padding-bottom:12px}
+  .gs-panel{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:8px;min-height:0;overflow:auto}
+  .gs-panel h3{margin:0;font-size:13px}
+  .gs-panel .remarks-field{flex:1;min-height:90px;resize:none}
+  .gs-overview{display:grid;grid-template-columns:1fr auto;gap:4px 12px;font-size:12.5px;color:var(--text2);margin-bottom:6px}
+  .gs-overview b{color:var(--text)}
+
+  .gs-foot{display:flex;align-items:center;gap:10px;padding:9px 20px;background:var(--bg2);border-top:1px solid var(--border)}
+  .gs-foot .hint{flex:1;font-size:12px;color:var(--text3)}
+  .gs-foot kbd{font:inherit;font-size:10.5px;padding:0 5px;border:1px solid var(--border2);border-bottom-width:2px;border-radius:4px;background:var(--bg3)}
+  .gs-saved{font-size:12px;color:var(--text3)}
+
+  /* A phone cannot fit a rubric sheet; there it scrolls instead of paging. */
+  @media (max-width: 900px){
+    .gs-content{overflow:auto}
+    .gs{display:block}
+    .gs-steps{grid-auto-flow:row;grid-template-columns:repeat(2,minmax(0,1fr))}
+    .gs-sheet,.gs-rows{overflow:auto}
+    .gs table{min-width:720px}
+    .gs-remarks{grid-template-columns:1fr}
+    .gs-foot .hint{display:none}
+  }
+  @media (prefers-reduced-motion: reduce){.gs *{transition:none!important}}
+</style>
 </head>
 <body>
 
@@ -29,158 +144,75 @@
   </div>
 
   <div id="skeleton-content" class="sk-overlay">
-    <div class="sk" style="height:88px;border-radius:14px;margin-bottom:16px"></div>
-    <div class="sk" style="height:70px;border-radius:14px;margin-bottom:20px"></div>
-    <div class="card" style="margin-bottom:14px">
-      <div class="sk" style="width:140px;height:16px;border-radius:4px;margin-bottom:14px"></div>
-      <div class="sk" style="height:64px;border-radius:10px;margin-bottom:10px"></div>
-      <div class="sk" style="height:64px;border-radius:10px;margin-bottom:10px"></div>
-      <div class="sk" style="height:64px;border-radius:10px"></div>
-    </div>
-    <div class="card">
-      <div class="sk" style="width:100px;height:16px;border-radius:4px;margin-bottom:14px"></div>
-      <div class="sk" style="height:80px;border-radius:10px"></div>
-    </div>
+    <div class="sk" style="height:60px;border-radius:12px;margin-bottom:12px"></div>
+    <div class="sk" style="height:44px;border-radius:12px;margin-bottom:12px"></div>
+    <div class="sk" style="height:320px;border-radius:12px"></div>
   </div>
 
   <div id="real-content" style="display:none">
-  <div class="content">
+  <div class="content gs-content">
+  <div class="gs">
 
-    <p class="pi-wizard-error" id="formError" role="alert" hidden style="color:var(--red);font-size:13px;margin-bottom:12px"></p>
-
-    @if($grade?->status === 'submitted')
-      <div class="card" style="border-color:var(--green);background:var(--green-bg);color:var(--green);padding:12px 16px;margin-bottom:16px;font-size:13px">
-        You already submitted a grade for this team. You can still update it below — saving will replace your previous submission.
-      </div>
-    @endif
-
-    <div class="team-selector-wrap">
-      <div class="team-selector-avatar" style="background:linear-gradient(135deg,#1d4ed8,#7c3aed)">{{ substr($defense->team?->team_name ?? '??', 0, 2) }}</div>
-      <div style="flex:1">
-        <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:6px">Grading For</div>
-        <div style="font-size:16px;font-weight:700">{{ $defense->team?->team_name ?? 'Unknown Team' }} — {{ $defense->team?->project_title ?? 'No title' }}</div>
-      </div>
-      <div style="text-align:right">
-        <div style="font-size:11px;color:var(--text3);margin-bottom:4px">Rubric</div>
-        <span class="badge badge-gold">{{ $rubric->rubric_name }}</span>
-      </div>
-      <div style="text-align:right">
-        <div style="font-size:11px;color:var(--text3);margin-bottom:4px">Your Role</div>
-        <span class="role-pill role-panel">{{ $panelRole }}</span>
-      </div>
+    <div>
+      <p class="gs-alert err" id="formError" role="alert" hidden></p>
+      @if($grade?->status === 'submitted')
+        <div class="gs-alert ok">You already submitted a grade for this team. You can still change it - submitting again replaces your previous grade.</div>
+      @endif
     </div>
 
-    <div class="tally-bar">
-      <div>
-        <div class="tally-total" id="tallyTotal">{{ $grade?->total_score !== null ? rtrim(rtrim(number_format((float) $grade->total_score, 2), '0'), '.') : 0 }}</div>
-        <div class="tally-label">/ {{ rtrim(rtrim(number_format((float) $rubric->total_points, 2), '0'), '.') }} pts</div>
+    <header class="gs-top">
+      <div class="gs-who">
+        <b>{{ $defense->team?->team_name ?? 'Unknown Team' }} — {{ $defense->team?->project_title ?? 'No title' }}</b>
+        <small>{{ $defense->defense_type }} · You are {{ $panelRole }} · {{ $rubric->rubric_name }}</small>
       </div>
-      <div style="width:1px;height:40px;background:var(--border)"></div>
-      <div class="tally-breakdown" id="categoryTally">
-        @foreach($categories as $categoryName => $criteria)
-          <div class="tally-part">
-            <div class="tally-part-n" id="cat-total-{{ $loop->index }}" data-cat-index="{{ $loop->index }}">0<span style="font-size:10px;color:var(--text3)">/{{ rtrim(rtrim(number_format((float) ($criteria->first()->category_max_points ?? $criteria->sum('max_points')), 2), '0'), '.') }}</span></div>
-            <div class="tally-part-l">{{ $categoryName }}</div>
-          </div>
-        @endforeach
-      </div>
-      <div class="tally-progress-wrap" style="max-width:220px">
-        <div class="tally-progress-track">
-          <div class="tally-progress-fill" id="tallyFill" style="width:0%"></div>
-        </div>
-        <div class="tally-progress-labels">
-          <span>0</span>
-          <span id="tallyPct">0%</span>
-          <span>{{ rtrim(rtrim(number_format((float) $rubric->total_points, 2), '0'), '.') }}</span>
-        </div>
-      </div>
-    </div>
+      <div class="gs-stat"><b class="num" id="gs-left">0</b><small>criteria left</small></div>
+      <div class="gs-stat"><b class="num"><span id="gs-total">0</span><small style="display:inline;font-size:12px"> / {{ $fmt($rubric->total_points) }}</small></b><small>points</small></div>
+      <button type="button" class="gs-btn" id="gs-jump">Next unscored</button>
+    </header>
 
-    <form id="gradingForm">
-      @csrf
+    <nav class="gs-steps" id="gs-steps" aria-label="Rubric sections"></nav>
 
-      <div class="rubric-pages-container">
-        @foreach($categories as $categoryName => $criteria)
-          <div class="rubric-page active">
-            <div class="rubric-section">
-              <div class="rubric-section-header">
-                <div class="rubric-section-title">{{ $categoryName }}</div>
-                <span class="rubric-section-max">Max: {{ rtrim(rtrim(number_format((float) ($criteria->first()->category_max_points ?? $criteria->sum('max_points')), 2), '0'), '.') }} pts</span>
-              </div>
+    <div style="min-height:0;display:grid">
+      <section class="gs-area" id="gs-sheet-area" aria-live="polite"></section>
 
-              @foreach($criteria as $criterion)
-                <div class="criterion" data-cat-index="{{ $loop->parent->index }}">
-                  <div class="criterion-desc"><strong>{{ $criterion->criterion_name }}</strong>@if($criterion->description) — {{ $criterion->description }}@endif</div>
-                  <div class="score-options">
-                    @foreach($criterion->decodedScoreLevels() as $level)
-                      <label class="score-option">
-                        <input
-                          type="radio"
-                          name="scores[{{ $criterion->criterion_id }}]"
-                          value="{{ $level['score'] }}"
-                          onchange="updateScore()"
-                          @if(array_key_exists($criterion->criterion_id, $existingScores) && abs((float) $existingScores[$criterion->criterion_id] - (float) $level['score']) < 0.001) checked @endif
-                        />
-                        <div class="score-option-label">
-                          <span class="score-val">{{ rtrim(rtrim(number_format((float) $level['score'], 2), '0'), '.') }}</span>
-                          <span class="score-desc">{{ $level['desc'] ?? ($level['label'] ?? '') }}</span>
-                        </div>
-                      </label>
-                    @endforeach
-                  </div>
-                </div>
-              @endforeach
-            </div>
-          </div>
-        @endforeach
-
-        <div class="rubric-page active">
-          {{-- Remarks are this panelist's own. The verdict is not: the panel
-               confers and gives the team one result, so it is recorded once
-               by the chair below rather than collected from each panelist
-               and tallied - there was never a rule for what a split meant. --}}
-          <div class="card" style="margin-bottom:14px">
-            <div class="card-header"><span class="card-title">Your Remarks</span></div>
+      <section class="gs-area" id="gs-remarks-area" hidden>
+        <div class="gs-head"><h2>Remarks and decision</h2></div>
+        <div class="gs-remarks">
+          <form id="gradingForm" class="gs-panel" onsubmit="return false">
+            @csrf
+            <h3>Your remarks</h3>
+            {{-- Remarks are this panelist's own. The verdict is not: the panel
+                 confers and gives the team one result, recorded once by the
+                 chair beside this. --}}
             <textarea name="remarks" class="remarks-field" placeholder="Your comments for the team - what you want them to fix, or what worked.">{{ $grade?->remarks }}</textarea>
-          </div>
+          </form>
 
-          <div class="card" style="margin-bottom:14px">
-            <div class="card-header">
-              <span class="card-title">Panel Decision</span>
-              @if ($defense->hasOutcome())
-                <span class="badge badge-green" style="margin-left:auto">Recorded</span>
-              @endif
-            </div>
+          <div class="gs-panel">
+            <h3>Before you submit</h3>
+            <div class="gs-overview" id="gs-overview"></div>
+
+            <h3 style="display:flex;align-items:center;gap:8px">Panel decision
+              @if ($defense->hasOutcome())<span class="badge badge-green">Recorded</span>@endif
+            </h3>
 
             @if ($defense->hasOutcome())
               <div class="outcome-recorded">
                 <div class="outcome-recorded-label">{{ $defense->outcomeLabel() }}</div>
-                <div class="outcome-recorded-sub">
-                  {{ \App\Support\DefenseOutcome::description($defense->outcome, $defense->defense_type) }}
-                </div>
+                <div class="outcome-recorded-sub">{{ \App\Support\DefenseOutcome::description($defense->outcome, $defense->defense_type) }}</div>
                 @if ($defense->outcome_remarks)
                   <div class="outcome-recorded-remarks">{{ $defense->outcome_remarks }}</div>
                 @endif
                 <div class="outcome-recorded-meta">
                   Recorded by {{ $defense->outcomeRecordedBy?->name ?? 'the Panel Chair' }}
-                  @if ($defense->outcome_recorded_at)
-                    on {{ $defense->outcome_recorded_at->format('M j, Y \a\t g:i A') }}
-                  @endif
+                  @if ($defense->outcome_recorded_at) on {{ $defense->outcome_recorded_at->format('M j, Y \a\t g:i A') }} @endif
                 </div>
               </div>
             @elseif (! $isChair)
-              <p class="outcome-note">
-                Your Panel Chair records the panel&rsquo;s decision after the briefing. Score the rubric and leave your remarks.
-              </p>
+              <p class="outcome-note">Your Panel Chair records the panel&rsquo;s decision after the briefing. Score the rubric and leave your remarks.</p>
             @elseif ($gradesIn < $panelSize)
-              <p class="outcome-note">
-                {{ $gradesIn }} of {{ $panelSize }} panelists have submitted their scores. The decision can be recorded once everyone has.
-              </p>
+              <p class="outcome-note">{{ $gradesIn }} of {{ $panelSize }} panelists have submitted their scores. The decision can be recorded once everyone has.</p>
             @else
-              <p class="outcome-note">
-                All {{ $panelSize }} panelists have scored. Record what the panel agreed &mdash; the team is told this, and it is what happens next.
-              </p>
-
+              <p class="outcome-note">All {{ $panelSize }} panelists have scored. Record what the panel agreed &mdash; the team is told this, and it is what happens next.</p>
               <div class="outcome-options">
                 @foreach ($outcomeOptions as $option)
                   <label class="outcome-option outcome-{{ str_replace('_', '-', $option) }}">
@@ -192,32 +224,23 @@
                   </label>
                 @endforeach
               </div>
-
-              <div class="card-header" style="margin-top:10px"><span class="card-title">Panel Remarks (optional)</span></div>
-              <textarea id="outcome-remarks" class="remarks-field" placeholder="What the panel wants the team to know about this decision."></textarea>
-
-              <button type="button" class="btn btn-primary" id="record-outcome-btn" style="margin-top:10px;width:100%;justify-content:center" onclick="recordOutcome()">
-                Record Panel Decision
-              </button>
+              <label for="outcome-remarks" style="font-size:12.5px;font-weight:600">Panel remarks (optional)</label>
+              <textarea id="outcome-remarks" class="remarks-field" style="min-height:70px" placeholder="What the panel wants the team to know about this decision."></textarea>
+              <button type="button" class="gs-btn gs-btn-primary" id="record-outcome-btn" onclick="recordOutcome()">Record panel decision</button>
             @endif
           </div>
         </div>
-      </div>
+      </section>
+    </div>
 
-      <div class="grading-footer">
-        <div class="footer-left">
-          <span style="font-size:12px;color:var(--text3)" id="saveStatus"></span>
-        </div>
-        <div style="display: flex; gap: 10px;">
-          <button type="button" class="btn btn-ghost" onclick="saveDraft()">Save Draft</button>
-          <button type="button" class="btn btn-primary" onclick="submitGrade()">
-            Submit Grade
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-left:4px;"><polyline points="20 6 9 17 4 12"/></svg>
-          </button>
-        </div>
-      </div>
-    </form>
+    <footer class="gs-foot">
+      <div class="hint"><kbd>←</kbd><kbd>→</kbd> sections · <kbd>↑</kbd><kbd>↓</kbd> rows · <kbd>1</kbd>–<kbd>4</kbd> score and move on</div>
+      <span class="gs-saved" id="saveStatus">{{ $grade ? ($grade->status === 'submitted' ? 'Submitted' : 'Draft saved') : '' }}</span>
+      <button type="button" class="gs-btn" onclick="saveDraft()">Save draft</button>
+      <button type="button" class="gs-btn gs-btn-primary" id="gs-submit" onclick="submitGrade()" disabled>Submit grade</button>
+    </footer>
 
+  </div>
   </div>
   </div>
 </div>
@@ -226,77 +249,243 @@
 @include('instructor.partials.skeleton-toggle')
 
 <script>
-const rubricTotalPoints = {{ (float) $rubric->total_points }};
+const SECTIONS = {{ Js::from($sections) }};
+const scores = {{ Js::from((object) $savedScores->all()) }};
+const RUBRIC_TOTAL = {{ (float) $rubric->total_points }};
 
-function fmt(n) {
-  return n % 1 === 0 ? n : n.toFixed(2).replace(/\.?0+$/, '');
+const ALL = SECTIONS.flatMap((s, si) => s.items.map(c => Object.assign(c, { sec: si })));
+const REMARKS = SECTIONS.length;
+const $ = id => document.getElementById(id);
+const el = (t, c, x) => { const e = document.createElement(t); if (c) e.className = c; if (x != null) e.textContent = x; return e; };
+const fmt = n => +(+n).toFixed(2);
+const same = (a, b) => a !== undefined && Math.abs(a - b) < 0.001;
+const secScore = s => fmt(s.items.reduce((a, c) => a + (scores[c.id] ?? 0), 0));
+const secDone = s => s.items.filter(c => c.id in scores).length;
+const narrow = () => window.matchMedia('(max-width: 900px)').matches;
+
+let sec = 0, page = 0, pages = [[]], cur = 0;
+let dirty = false;
+
+// Open on the first criterion still to score.
+(function start() {
+  const first = ALL.find(c => !(c.id in scores));
+  if (first) { cur = ALL.indexOf(first); sec = first.sec; } else { sec = REMARKS; }
+})();
+
+/* ── Section strip ───────────────────────────────────────────── */
+function drawSteps() {
+  const nav = $('gs-steps'); nav.innerHTML = '';
+  SECTIONS.forEach((s, i) => {
+    const done = secDone(s);
+    const b = el('button', 'gs-step' + (i === sec ? ' on' : '') + (done === s.items.length ? ' done' : done ? ' part' : ''));
+    b.type = 'button'; b.title = s.name; b.setAttribute('aria-current', i === sec ? 'step' : 'false');
+    const st = el('span', 'st');
+    st.append(el('span', 'num', fmt(secScore(s)) + '/' + fmt(s.max)), el('span', 'mark num', done === s.items.length ? '✓ done' : done + '/' + s.items.length));
+    b.append(el('span', 'nm', s.name), st);
+    b.onclick = () => go(i, 0);
+    nav.append(b);
+  });
+  const r = el('button', 'gs-step' + (sec === REMARKS ? ' on' : ''));
+  r.type = 'button';
+  const st = el('span', 'st'); st.append(el('span', '', 'and decision'));
+  r.append(el('span', 'nm', 'Remarks'), st);
+  r.onclick = () => go(REMARKS, 0);
+  nav.append(r);
 }
 
-function updateScore() {
-  const criteria = document.querySelectorAll('.criterion');
-  const catTotals = {};
+/* ── The sheet ───────────────────────────────────────────────── */
+// Column headers are shared only when every criterion in the section has the
+// same levels; otherwise each cell names its own level.
+function sharedLabels(s) {
+  const first = s.items[0]?.levels.map(l => l.label).join('|');
+  return s.items.every(c => c.levels.map(l => l.label).join('|') === first) ? s.items[0].levels.map(l => l.label) : null;
+}
 
-  criteria.forEach(function (el) {
-    const catIndex = el.dataset.catIndex;
-    const checked = el.querySelector('input[type="radio"]:checked');
-    const val = checked ? parseFloat(checked.value) : 0;
-    catTotals[catIndex] = (catTotals[catIndex] || 0) + val;
-  });
+function shell(box, s) {
+  const labels = sharedLabels(s);
+  const cols = Math.max(...s.items.map(c => c.levels.length));
+  const t = el('table'); const h = el('tr');
+  h.append(el('th', '', 'Criterion'));
+  for (let k = 0; k < cols; k++) {
+    const th = el('th');
+    if (k < 9) th.append(el('span', 'key', k + 1));
+    th.append(labels ? labels[k] : 'Level ' + (k + 1));
+    h.append(th);
+  }
+  h.append(el('th', 'sc', 'Score'));
+  const thead = el('thead'); thead.append(h);
+  const tb = el('tbody'); t.append(thead, tb); box.append(t);
+  return { tb, labels, cols };
+}
 
-  let total = 0;
-  Object.keys(catTotals).forEach(function (idx) {
-    total += catTotals[idx];
-    const el = document.getElementById('cat-total-' + idx);
-    if (el) {
-      const maxSpan = el.querySelector('span');
-      el.innerHTML = fmt(catTotals[idx]) + (maxSpan ? maxSpan.outerHTML : '');
+function row(c, shared, cols) {
+  const tr = el('tr', (c.id in scores ? 'scored' : '') + (ALL.indexOf(c) === cur ? ' cur' : ''));
+  const first = el('td'); const d = el('div', 'gs-crit');
+  d.append(el('b', '', c.n)); if (c.d) d.append(el('small', '', c.d));
+  d.onclick = () => { cur = ALL.indexOf(c); draw(); };
+  first.append(d); tr.append(first);
+  for (let k = 0; k < cols; k++) {
+    const td = el('td'); const l = c.levels[k];
+    if (l) {
+      const b = el('button', 'gs-cell'); b.type = 'button';
+      b.setAttribute('aria-pressed', same(scores[c.id], l.s));
+      b.setAttribute('aria-label', c.n + ': ' + (l.label || 'level ' + (k + 1)) + ', ' + fmt(l.s) + ' points. ' + (l.desc || ''));
+      b.append(el('b', 'num', fmt(l.s)));
+      if (!shared && l.label) b.append(el('span', 'lb', l.label));
+      if (l.desc) b.append(el('span', 'ds', l.desc));
+      b.onclick = () => score(c, l.s);
+      td.append(b);
     }
-  });
-
-  const t = document.getElementById('tallyTotal');
-  t.textContent = fmt(total);
-  t.style.color = total >= rubricTotalPoints * 0.75 ? 'var(--green)' : total >= rubricTotalPoints * 0.5 ? 'var(--accent3)' : 'var(--red)';
-
-  const pct = rubricTotalPoints > 0 ? Math.round((total / rubricTotalPoints) * 100) : 0;
-  document.getElementById('tallyFill').style.width = Math.min(pct, 100) + '%';
-  document.getElementById('tallyFill').style.background = total >= rubricTotalPoints * 0.75 ? 'var(--green)' : total >= rubricTotalPoints * 0.5 ? 'var(--accent)' : 'var(--red)';
-  document.getElementById('tallyPct').textContent = pct + '%';
+    tr.append(td);
+  }
+  tr.append(el('td', 'gs-score num' + (c.id in scores ? '' : ' empty'), c.id in scores ? fmt(scores[c.id]) : '—'));
+  return tr;
 }
 
+function drawSheet() {
+  const s = SECTIONS[sec];
+  const area = $('gs-sheet-area'); area.innerHTML = '';
+  const head = el('div', 'gs-head');
+  head.append(el('h2', '', s.name), el('span', 'meta num', s.items.length + ' criteria · max ' + fmt(s.max) + ' pts'));
+  const pg = el('div', 'pg'); const label = el('span', 'num');
+  const prev = el('button', 'gs-btn', 'Previous'); const next = el('button', 'gs-btn', 'Next');
+  prev.type = next.type = 'button';
+  pg.append(label, prev, next); head.append(pg);
+  const sheet = el('div', 'gs-sheet'); const rows = el('div', 'gs-rows'); const sub = el('div', 'gs-subtotal');
+  sheet.append(rows, sub); area.append(head, sheet);
+
+  // Fill a page until the next row would overflow, then start another.
+  pages = [[]];
+  if (narrow()) {
+    pages = [s.items.slice()];
+  } else {
+    let sh = shell(rows, s);
+    s.items.forEach(c => {
+      sh.tb.append(row(c, sh.labels, sh.cols));
+      if (rows.scrollHeight > rows.clientHeight + 1 && pages[pages.length - 1].length) {
+        rows.innerHTML = ''; sh = shell(rows, s); sh.tb.append(row(c, sh.labels, sh.cols)); pages.push([]);
+      }
+      pages[pages.length - 1].push(c);
+    });
+  }
+  page = Math.max(0, Math.min(page, pages.length - 1));
+  rows.innerHTML = '';
+  const sh = shell(rows, s);
+  pages[page].forEach(c => sh.tb.append(row(c, sh.labels, sh.cols)));
+
+  const first = s.items.indexOf(pages[page][0]) + 1, last = first + pages[page].length - 1;
+  label.textContent = pages.length > 1 ? 'Criteria ' + first + '–' + last + ' of ' + s.items.length : '';
+  prev.disabled = sec === 0 && page === 0;
+  next.textContent = page < pages.length - 1 ? 'Next page' : (sec < SECTIONS.length - 1 ? 'Next section' : 'Remarks');
+  prev.onclick = () => page > 0 ? go(sec, page - 1) : go(sec - 1, 99);
+  next.onclick = () => page < pages.length - 1 ? go(sec, page + 1) : go(sec + 1, 0);
+
+  sub.append(el('span', 'num', secDone(s) + ' of ' + s.items.length + ' scored in this section'), el('b', 'num', fmt(secScore(s)) + ' / ' + fmt(s.max)));
+}
+
+function drawOverview() {
+  const ov = $('gs-overview'); ov.innerHTML = '';
+  SECTIONS.forEach(s => { ov.append(el('span', '', s.name)); ov.append(el('b', 'num', fmt(secScore(s)) + ' / ' + fmt(s.max))); });
+  const left = ALL.filter(c => !(c.id in scores)).length;
+  ov.append(el('span', '', left ? left + ' criteria still to score' : 'Every criterion is scored'));
+  ov.append(el('b', 'num', fmt(ALL.reduce((a, c) => a + (scores[c.id] ?? 0), 0)) + ' / ' + fmt(RUBRIC_TOTAL)));
+}
+
+function go(s, p) {
+  if (s < 0 || s > REMARKS) return;
+  sec = s; page = p;
+  draw();
+  if (sec < REMARKS && !pages[page].some(c => ALL.indexOf(c) === cur)) { cur = ALL.indexOf(pages[page][0]); draw(); }
+}
+
+function score(c, s) {
+  scores[c.id] = s;
+  dirty = true;
+  $('saveStatus').textContent = 'Unsaved changes';
+  const next = SECTIONS[c.sec].items.find(x => !(x.id in scores));
+  if (next) {
+    cur = ALL.indexOf(next);
+    const p = pages.findIndex(pg => pg.includes(next));
+    if (p >= 0) page = p;
+  }
+  draw();
+}
+
+function draw() {
+  const onRemarks = sec === REMARKS;
+  $('gs-sheet-area').hidden = onRemarks;
+  $('gs-remarks-area').hidden = !onRemarks;
+  drawSteps();
+  if (onRemarks) drawOverview(); else drawSheet();
+  const n = Object.keys(scores).length;
+  const total = fmt(ALL.reduce((a, c) => a + (scores[c.id] ?? 0), 0));
+  $('gs-total').textContent = total;
+  $('gs-left').textContent = ALL.length - n;
+  $('gs-jump').disabled = n === ALL.length;
+  // The server refuses a submission with any criterion unscored.
+  $('gs-submit').disabled = n < ALL.length;
+  $('gs-submit').title = n < ALL.length ? 'Score every criterion first' : '';
+}
+
+$('gs-jump').onclick = () => {
+  const c = ALL.find(x => !(x.id in scores)); if (!c) return;
+  cur = ALL.indexOf(c); sec = c.sec; page = 0; draw();
+  const p = pages.findIndex(pg => pg.includes(c)); if (p > 0) { page = p; draw(); }
+};
+
+document.addEventListener('keydown', e => {
+  if (e.target.closest && e.target.closest('textarea, input, select')) return;
+  if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+    e.preventDefault();
+    const forward = e.key === 'ArrowRight';
+    if (sec < REMARKS && forward && page < pages.length - 1) go(sec, page + 1);
+    else if (sec < REMARKS && !forward && page > 0) go(sec, page - 1);
+    else go(sec + (forward ? 1 : -1), forward ? 0 : 99);
+    return;
+  }
+  if (sec === REMARKS) return;
+  const items = SECTIONS[sec].items, i = items.indexOf(ALL[cur]);
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    e.preventDefault();
+    const j = Math.max(0, Math.min(items.length - 1, (i < 0 ? 0 : i) + (e.key === 'ArrowDown' ? 1 : -1)));
+    cur = ALL.indexOf(items[j]);
+    const p = pages.findIndex(pg => pg.includes(items[j])); if (p !== page) page = p;
+    draw();
+  } else if (/^[1-9]$/.test(e.key) && i >= 0) {
+    const level = items[i].levels[+e.key - 1];
+    if (level) score(items[i], level.s);
+  }
+});
+
+// The sheet measures the space it has, so draw once the page is shown and
+// again whenever the window changes size.
+(function whenVisible() {
+  if ($('gs-sheet-area').offsetParent !== null || $('gs-remarks-area').offsetParent !== null) { draw(); return; }
+  requestAnimationFrame(whenVisible);
+})();
+let resizeTimer;
+window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(draw, 120); });
+window.addEventListener('beforeunload', e => { if (dirty) { e.preventDefault(); e.returnValue = ''; } });
+
+/* ── Saving ──────────────────────────────────────────────────── */
 function showFormError(msg) {
-  const el = document.getElementById('formError');
-  if (!msg) { el.hidden = true; el.textContent = ''; return; }
-  el.hidden = false;
-  el.textContent = msg;
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  const box = $('formError');
+  box.hidden = !msg;
+  box.textContent = msg || '';
 }
 
 function collectPayload() {
-  const form = document.getElementById('gradingForm');
-  const scores = {};
-  form.querySelectorAll('input[name^="scores["]:checked').forEach(function (input) {
-    const match = input.name.match(/scores\[(\d+)\]/);
-    if (match) scores[match[1]] = parseFloat(input.value);
-  });
-  // No verdict here - that is the panel's one decision, recorded by the
-  // chair through /outcome, not gathered from each panelist.
-  // The remarks box, read at the moment of saving. This read a variable that
-  // was never declared, so Save Draft and Submit Grade stopped before sending.
-  const remarksField = form.querySelector('textarea[name="remarks"]');
+  const remarksField = document.querySelector('#gradingForm textarea[name="remarks"]');
   return { scores: scores, remarks: remarksField ? remarksField.value : null };
 }
 
 // The panel's one decision, recorded by the chair after the briefing.
 function recordOutcome() {
   const picked = document.querySelector('input[name="panel_outcome"]:checked');
+  if (!picked) { showFormError('Choose what the panel decided.'); return; }
 
-  if (!picked) {
-    showFormError('Choose what the panel decided.');
-    return;
-  }
-
-  const btn = document.getElementById('record-outcome-btn');
-  const remarksEl = document.getElementById('outcome-remarks');
+  const btn = $('record-outcome-btn');
+  const remarksEl = $('outcome-remarks');
   btn.disabled = true;
   btn.textContent = 'Recording...';
 
@@ -309,80 +498,74 @@ function recordOutcome() {
     },
     body: JSON.stringify({ outcome: picked.value, remarks: remarksEl ? remarksEl.value : null }),
   })
-    .then(function (r) { return r.json(); })
-    .then(function (res) {
+    .then(r => r.json())
+    .then(res => {
       if (!res.success) {
         showFormError(res.message || 'Could not record the outcome.');
-        btn.disabled = false;
-        btn.textContent = 'Record Panel Decision';
+        btn.disabled = false; btn.textContent = 'Record panel decision';
         return;
       }
+      dirty = false;
       window.location.reload();
     })
-    .catch(function () {
+    .catch(() => {
       showFormError('Could not reach the server.');
-      btn.disabled = false;
-      btn.textContent = 'Record Panel Decision';
+      btn.disabled = false; btn.textContent = 'Record panel decision';
     });
 }
 
 function postGrade(url, statusMsg, method) {
   showFormError('');
-  const saveStatus = document.getElementById('saveStatus');
+  const saveStatus = $('saveStatus');
   saveStatus.textContent = 'Saving…';
 
   fetch(url, {
-    method: method || 'POST',
+    method: method,
     credentials: 'same-origin',
     headers: {
-      'X-CSRF-TOKEN': document.querySelector('input[name="_token"]').value,
+      'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
       'Content-Type': 'application/json',
       'Accept': 'application/json',
     },
     body: JSON.stringify(collectPayload()),
   })
-    .then(function (res) { return res.json().then(function (data) { return { ok: res.ok, data: data }; }); })
-    .then(function ({ ok, data }) {
+    .then(res => res.json().then(data => ({ ok: res.ok, data })))
+    .then(({ ok, data }) => {
       if (!ok || !data.success) {
-        saveStatus.textContent = '';
+        saveStatus.textContent = 'Not saved';
         showFormError(data.message || 'Something went wrong. Please try again.');
         return;
       }
+      dirty = false;
       saveStatus.textContent = statusMsg;
       if (data.data && data.data.status === 'submitted') {
-        setTimeout(function () { window.location.href = '{{ route('instructor.grading') }}'; }, 900);
+        setTimeout(() => { window.location.href = '{{ route('instructor.grading') }}'; }, 900);
       }
     })
-    .catch(function () {
-      saveStatus.textContent = '';
-      showFormError('Network error. Please try again.');
+    .catch(() => {
+      saveStatus.textContent = 'Not saved';
+      showFormError('Network error. Nothing was saved.');
     });
 }
 
-function saveDraft() { postGrade('{{ route('instructor.grading.save', $defense->defense_id) }}', 'Draft saved.', 'PUT'); }
-function submitGrade() { postGrade('{{ route('instructor.grading.submit', $defense->defense_id) }}', 'Submitted! Redirecting…', 'PATCH'); }
-
-updateScore();
+function saveDraft() { postGrade('{{ route('instructor.grading.save', $defense->defense_id) }}', 'Draft saved', 'PUT'); }
+function submitGrade() { postGrade('{{ route('instructor.grading.submit', $defense->defense_id) }}', 'Submitted - returning to your teams…', 'PATCH'); }
 
 /* Mobile sidebar toggle */
 var sidebarEl = document.querySelector('.sidebar');
 var sidebarOverlay = document.getElementById('sidebar-overlay');
-
 function toggleSidebar() {
   if (!sidebarEl) return;
-  var isOpen = sidebarEl.classList.contains('mobile-open');
-  if (isOpen) { closeSidebar(); } else { openSidebar(); }
+  sidebarEl.classList.contains('mobile-open') ? closeSidebar() : openSidebar();
 }
 function openSidebar() {
   if (!sidebarEl || !sidebarOverlay) return;
-  sidebarEl.classList.add('mobile-open');
-  sidebarOverlay.classList.add('open');
+  sidebarEl.classList.add('mobile-open'); sidebarOverlay.classList.add('open');
   document.body.style.overflow = 'hidden';
 }
 function closeSidebar() {
   if (!sidebarEl || !sidebarOverlay) return;
-  sidebarEl.classList.remove('mobile-open');
-  sidebarOverlay.classList.remove('open');
+  sidebarEl.classList.remove('mobile-open'); sidebarOverlay.classList.remove('open');
   document.body.style.overflow = '';
 }
 </script>
