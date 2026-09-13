@@ -1232,8 +1232,8 @@ async function executeRestore() {
   btn.disabled = true;
   btn.textContent = 'Restoring...';
   try {
-    var res = await fetch('/api/admin/grading-rubrics/' + id + '/restore', {
-      method: 'PUT',
+    var res = await fetch('/api/admin/grading-rubrics/' + id + '/archive', {
+      method: 'DELETE',
       headers: { 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json', 'Content-Type': 'application/json' },
     });
     var json = await res.json();
