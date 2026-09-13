@@ -636,8 +636,16 @@ PROMPT;
 
         // Anything the batch did not answer for is asked individually, so a
         // partial batch degrades to slower rather than to nothing.
+        // A null here is a verdict the batch could not be read out of, which
+        // is not the same as one that was never asked for - and the caller
+        // cannot tell the difference, so it showed both as "Not assessed".
+        //
+        // Worth re-asking, because the two paths are not the same request.
+        // The batch runs one PowerShell job per candidate, all writing to a
+        // single stdout captured over SSH, so answers can arrive interleaved
+        // or clipped. Asking once more, on its own, is a clean call.
         foreach ($positions as $position) {
-            if (! array_key_exists($position, $verdicts)) {
+            if (($verdicts[$position] ?? null) === null) {
                 $verdicts[$position] = $this->judgeOneCandidate(
                     $concepts,
                     $topCandidates[$position]['document'],
