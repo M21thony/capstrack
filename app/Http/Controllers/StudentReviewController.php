@@ -33,40 +33,98 @@ class StudentReviewController extends Controller
     {
         $studentId = Auth::id();
 
-        // Every review that's actually been turned in (status = Reviewed) for
-        // documents anybody on this team uploaded, newest first — a document
-        // can have more than one, since it may go to several reviewer roles.
-        $turnedIn = CapstoneDocument::whereIn('student_id', StudentTeam::memberIdsFor($studentId))
-            ->with(['reviews' => function ($q) {
-                $q->where('review_status', 'Reviewed')
-                    ->with('expert')
-                    ->orderByDesc('reviewed_at');
-            }])
+        // Every document anybody on this team uploaded, with all its reviews -
+        // turned in or not, since the picker also says who is still reviewing.
+        $documents = CapstoneDocument::whereIn('student_id', StudentTeam::memberIdsFor($studentId))
+            ->with([
+                'milestoneItem.milestone',
+                'reviews' => fn ($q) => $q->with('expert')->orderByDesc('reviewed_at'),
+            ])
             ->orderByDesc('created_at')
-            ->get()
-            ->flatMap(fn ($document) => $document->reviews->map(fn ($review) => [
-                'document' => $document,
-                'review' => $review,
-            ]))
+            ->get();
+
+        // The reviews actually turned in, newest document first - a document
+        // can have more than one, since it may go to several reviewer roles.
+        $turnedIn = $documents
+            ->flatMap(fn ($document) => $document->reviews
+                ->where('review_status', CapstoneDocumentReview::REVIEWED)
+                ->map(fn ($review) => ['document' => $document, 'review' => $review]))
             ->values();
 
         $selectedReviewId = (int) $request->query('review_id', 0);
         $selected = $turnedIn->firstWhere('review.review_id', $selectedReviewId) ?? $turnedIn->first();
 
-        $grouped = $selected
-            ? PdfRemark::groupedForReview($selected['review']->review_id)
-            : ['bySection' => collect(), 'remarks' => collect(), 'general' => collect()];
-
-        $totalAnnotations = $grouped['bySection']->flatten(1)->count() + $grouped['remarks']->count() + $grouped['general']->count();
-
         return view('student.review', [
             'turnedIn' => $turnedIn,
             'selected' => $selected,
-            'remarksBySection' => $grouped['bySection'],
-            'remarks' => $grouped['remarks'],
-            'generalRemarks' => $grouped['general'],
-            'totalAnnotations' => $totalAnnotations,
+            'documents' => $documents->filter(fn ($d) => $d->reviews->isNotEmpty())->values(),
+            'general' => $selected ? $this->generalRemarks($selected['review']) : [],
+            'decision' => $selected ? $this->decision($selected['document'], $selected['review']) : null,
+            'others' => $selected ? $this->otherReviews($selected['document'], $selected['review']) : [],
         ]);
+    }
+
+    public static function roleLabel(?string $role): string
+    {
+        return $role ? ucwords(str_replace('_', ' ', $role)) : 'Reviewer';
+    }
+
+    public static function verdictLabel(CapstoneDocumentReview $review): string
+    {
+        return match (true) {
+            $review->review_status !== CapstoneDocumentReview::REVIEWED => 'Still reviewing',
+            $review->verdict === CapstoneDocumentReview::APPROVED => 'Approved',
+            $review->verdict === CapstoneDocumentReview::NEEDS_REVISION => 'Needs revision',
+            default => 'Reviewed',
+        };
+    }
+
+    /** @return array<int, array{id: int, text: string, section: ?string}> */
+    private function generalRemarks(CapstoneDocumentReview $review): array
+    {
+        return PdfRemark::where('review_id', $review->review_id)
+            ->where('is_general', true)
+            ->orderBy('created_at')
+            ->get(['id', 'comment', 'section'])
+            ->filter(fn ($r) => filled($r->comment))
+            ->map(fn ($r) => ['id' => $r->id, 'text' => $r->comment, 'section' => $r->section])
+            ->values()
+            ->all();
+    }
+
+    /** What the reviewer decided, and what the team does next. */
+    private function decision(CapstoneDocument $document, CapstoneDocumentReview $review): array
+    {
+        $item = $document->milestoneItem;
+
+        return [
+            'verdict' => $review->verdict,
+            'reviewer' => $review->expert?->name ?? 'your reviewer',
+            'role' => self::roleLabel($review->role),
+            'date' => $review->reviewed_at?->format('M j'),
+            'round' => $document->roundLabel(),
+            'next' => $document->nextRoundLabel(),
+            'due' => $item?->dueOn()?->format('M j'),
+            'requirement' => $item?->title,
+            'submitUrl' => $item
+                ? route('student.submission', ['item' => $item->id])
+                : route('student.submission'),
+        ];
+    }
+
+    /** The same document's other reviewers, one click away once they have turned theirs in. */
+    private function otherReviews(CapstoneDocument $document, CapstoneDocumentReview $selected): array
+    {
+        return $document->reviews
+            ->reject(fn ($r) => $r->review_id === $selected->review_id)
+            ->map(fn ($r) => [
+                'label' => self::roleLabel($r->role).' · '.mb_strtolower(self::verdictLabel($r)),
+                'url' => $r->review_status === CapstoneDocumentReview::REVIEWED
+                    ? route('student.review', ['review_id' => $r->review_id])
+                    : null,
+            ])
+            ->values()
+            ->all();
     }
 
     /**
@@ -75,8 +133,8 @@ class StudentReviewController extends Controller
      * The Drive copy synced by the annotator has every annotation permanently
      * drawn onto the page pixels — fine as a one-off downloadable export, but
      * not something to preview inline. Comments are shown from pdf_remarks
-     * instead (see index() above), same as the annotator itself always reads
-     * the clean local file rather than the baked Drive copy.
+     * instead, same as the annotator itself always reads the clean local file
+     * rather than the baked Drive copy.
      */
     public function file(CapstoneDocumentReview $review)
     {
@@ -93,9 +151,9 @@ class StudentReviewController extends Controller
     }
 
     /**
-     * Page-anchored remarks for the read-only viewer's highlight overlays.
-     * General/sectioned comments are already rendered server-side in
-     * index() — this only needs to carry per-page geometry.
+     * Page-anchored remarks for the viewer's highlights and remark cards.
+     * General remarks come with the page itself - this only carries the ones
+     * with a place on a page.
      */
     public function remarks(CapstoneDocumentReview $review)
     {
@@ -103,7 +161,7 @@ class StudentReviewController extends Controller
 
         return $review->pdfRemarks()->where('is_general', false)->get([
             'id', 'page_number', 'top_position', 'left_position',
-            'highlight_width', 'highlight_height', 'color', 'comment', 'selected_text',
+            'highlight_width', 'highlight_height', 'color', 'comment', 'selected_text', 'section',
         ]);
     }
 }

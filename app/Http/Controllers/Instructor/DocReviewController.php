@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Instructor;
 
 use App\Http\Controllers\Controller;
 use App\Services\GoogleDriveService;
+use App\Support\StudentTeam;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -61,10 +62,27 @@ class DocReviewController extends Controller
     {
         abort_if($review->expert_id !== Auth::guard('expert')->id(), 403);
 
-        $review->load('document');
+        $review->load('document.milestoneItem.milestone');
+
+        $document = $review->document;
+        $item = $document?->milestoneItem;
 
         return view('instructor.docreview-annotate', [
             'review' => $review,
+            // What the annotator's top bar says about the document in front
+            // of the reviewer: whose it is, which requirement, which round.
+            'context' => [
+                'reviewId' => $review->review_id,
+                'title' => $item?->title ?? $document?->file_name,
+                'fileName' => $document?->file_name,
+                'team' => $document ? StudentTeam::for($document->student_id)?->team_name : null,
+                'role' => $review->role,
+                'round' => $document?->roundLabel(),
+                'nextRound' => $document?->nextRoundLabel(),
+                'requirement' => $item?->title,
+                'due' => $item?->dueOn()?->format('M j'),
+                'backUrl' => route('instructor.docreview'),
+            ],
         ]);
     }
 }
