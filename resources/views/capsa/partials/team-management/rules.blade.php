@@ -1,12 +1,3 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Team Rules - CapsTRACK Admin</title>
-<meta name="csrf-token" content="{{ csrf_token() }}"/>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
-<link rel="stylesheet" href="{{ asset('css/admin.css') }}"/>
 <style>
   .tr-page{max-width:860px}
   .tr-head{margin-bottom:18px}
@@ -85,23 +76,10 @@
 
   @media (prefers-reduced-motion:reduce){.tr-switch,.tr-switch::after,.tr-size{transition:none}}
 </style>
-</head>
-<body>
 
-@include('capsa._sidebar')
-<div class="main">
-  <div class="topbar">
-    <div class="page-title">Team Rules</div>
-    <div class="topbar-actions">
-      @include('capsa.partials.notification-dropdown')
-    </div>
-  </div>
-
-  <div class="content">
-  <div class="tr-page">
+<div class="tr-page">
 
     <div class="tr-head">
-      <div class="tr-title">Team Rules</div>
       <div class="tr-sub">The rules every team in CapsTrack is formed under.</div>
     </div>
 
@@ -190,8 +168,6 @@
     </div>
 
   </div>
-  </div>
-</div>
 
 <div class="tr-modal" id="tr-confirm" role="dialog" aria-modal="true" aria-labelledby="tr-confirm-title">
   <div class="tr-modal-box">
@@ -385,6 +361,3 @@
   render();
 })();
 </script>
-
-</body>
-</html>

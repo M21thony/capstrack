@@ -33,7 +33,7 @@ use Illuminate\View\View;
  */
 class TeamManagementController extends Controller
 {
-    public const TABS = ['teams', 'pre_proposals', 'verification', 'papers', 'milestones'];
+    public const TABS = ['teams', 'pre_proposals', 'verification', 'papers', 'milestones', 'leave_requests', 'rules'];
 
     /** Shown where a value is genuinely absent rather than empty. */
     private const DASH = '—';
@@ -99,6 +99,13 @@ class TeamManagementController extends Controller
                     fn ($section) => [$section => $this->confirmedTeamsIn($section)]
                 )->all()
                 : [],
+            // The two tabs that were pages of their own bring their own data,
+            // built only when they are the one open.
+            'tabData' => match ($tab) {
+                'rules' => TeamRulesController::pageData(),
+                'leave_requests' => app(LeaveRequestController::class)->pageData($capsa),
+                default => [],
+            },
             'selectedSection' => $selectedSection,
             'allSections' => $capsaSections,
             'sectionOptions' => collect(AdminProfileController::getAllAvailableSections())
@@ -113,6 +120,7 @@ class TeamManagementController extends Controller
                 'pre_proposals' => $rows->sum(fn ($r) => $r->pendingProposalCount),
                 'verification' => $rows->where('awaitingVerification', true)->count(),
                 'papers' => $rows->sum(fn ($r) => $r->papersToCheck),
+                'leave_requests' => \App\Models\MemberLeaveRequest::pendingCountFor($capsa),
             ],
         ]);
     }

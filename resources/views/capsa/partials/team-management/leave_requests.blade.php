@@ -1,12 +1,3 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Roster Requests - CapsTRACK Admin</title>
-<meta name="csrf-token" content="{{ csrf_token() }}"/>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
-<link rel="stylesheet" href="{{ asset('css/admin.css') }}"/>
 <style>
   .rr-page{max-width:900px}
   .rr-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:18px}
@@ -79,24 +70,11 @@
   .rr-error{margin-top:10px;font-size:12.5px;color:var(--red)}
   .rr-modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:16px}
 </style>
-</head>
-<body>
 
-@include('capsa._sidebar')
-<div class="main">
-  <div class="topbar">
-    <div class="page-title">Roster Requests</div>
-    <div class="topbar-actions">
-      @include('capsa.partials.notification-dropdown')
-    </div>
-  </div>
-
-  <div class="content">
-  <div class="rr-page">
+<div class="rr-page">
 
     <div class="rr-head">
       <div>
-        <div class="rr-title">Roster Requests</div>
         <div class="rr-sub">A team that passes Title Defense keeps its members. When one of them has to leave, the request comes to you with a reason.</div>
       </div>
       <span class="rr-locked">
@@ -123,8 +101,8 @@
             $now = (int) ($memberCounts[$r->team_id] ?? 0);
             $after = max(0, $now - 1);
             $belowMin = $after < \App\Models\Team::MIN_MEMBERS;
-            $lockedAt = $r->team->rosterLockedAt();
-            $isLeave = $r->type === \App\Models\RosterChangeRequest::LEAVE;
+            $lockedAt = $r->team->teamLockedAt();
+            $isLeave = $r->type === \App\Models\MemberLeaveRequest::LEAVE;
           @endphp
           <article class="rr-card" id="req-{{ $r->id }}"
                    data-id="{{ $r->id }}"
@@ -221,8 +199,6 @@
     </section>
 
   </div>
-  </div>
-</div>
 
 <div class="rr-modal" id="rr-confirm" role="dialog" aria-modal="true" aria-labelledby="rr-confirm-title">
   <div class="rr-modal-box">
@@ -245,7 +221,7 @@
 <script>
 (function () {
   const $ = (id) => document.getElementById(id);
-  const updateUrl = @json(url('capsa/roster-requests'), JSON_UNESCAPED_SLASHES);
+  const updateUrl = @json(url('capsa/leave-requests'), JSON_UNESCAPED_SLASHES);
   let current = null; // { card, decision }
   let lastFocus = null;
 
@@ -435,6 +411,3 @@
   });
 })();
 </script>
-
-</body>
-</html>

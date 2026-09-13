@@ -8,7 +8,7 @@ use App\Models\LeaveApproval;
 use App\Models\Notification;
 use App\Models\Recruitment;
 use App\Models\Role;
-use App\Models\RosterChangeRequest;
+use App\Models\MemberLeaveRequest;
 use App\Models\Student;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
@@ -24,7 +24,7 @@ use Tests\TestCase;
  * Nobody joins after it, and nobody leaves on their own or the leader's
  * say-so - a member who has to go asks the section's CaPSA, with a reason.
  */
-class TitleDefenseRosterLockTest extends TestCase
+class TitleDefenseTeamLockTest extends TestCase
 {
     use RefreshDatabase;
 
@@ -88,8 +88,8 @@ class TitleDefenseRosterLockTest extends TestCase
 
     private function askToLeave(Student $member, string $reason = 'My family is moving to Cebu next month.')
     {
-        return $this->actingAs($member, 'web')->postJson(route('team.roster-requests.store'), [
-            'type' => RosterChangeRequest::LEAVE, 'reason' => $reason,
+        return $this->actingAs($member, 'web')->postJson(route('team.capsa-leave-requests.store'), [
+            'type' => MemberLeaveRequest::LEAVE, 'reason' => $reason,
         ]);
     }
 
@@ -112,9 +112,9 @@ class TitleDefenseRosterLockTest extends TestCase
         (new DefenseOutcomeRecorder)->record($schedule, DefenseOutcome::PASSED, $chair);
 
         $team = $team->fresh();
-        $this->assertTrue($team->isRosterLocked());
+        $this->assertTrue($team->isTeamLocked());
         $this->assertSame(2, $team->capstoneStage());
-        $this->assertNotNull($team->rosterLockedAt());
+        $this->assertNotNull($team->teamLockedAt());
 
         $this->assertSame('declined', $invite->fresh()->status);
         $this->assertSame('declined', $request->fresh()->status);
@@ -122,9 +122,9 @@ class TitleDefenseRosterLockTest extends TestCase
         $this->assertSame(LeaveApproval::STATUS_CANCELLED, $leave->fresh()->status);
 
         // Everyone it touched is told, not left to find out.
-        $this->assertTrue(Notification::where('student_id', $outsider->student_id)->where('type', 'team_roster_locked')->exists());
-        $this->assertTrue(Notification::where('student_id', $asker->student_id)->where('type', 'team_roster_locked')->exists());
-        $this->assertSame(3, Notification::where('type', 'team_roster_locked')->where('title', 'Team members locked')->count());
+        $this->assertTrue(Notification::where('student_id', $outsider->student_id)->where('type', 'team_locked')->exists());
+        $this->assertTrue(Notification::where('student_id', $asker->student_id)->where('type', 'team_locked')->exists());
+        $this->assertSame(3, Notification::where('type', 'team_locked')->where('title', 'Team members locked')->count());
     }
 
     public function test_a_redefense_does_not_lock_the_team(): void
@@ -134,7 +134,7 @@ class TitleDefenseRosterLockTest extends TestCase
 
         (new DefenseOutcomeRecorder)->record($this->titleDefense($team, null), DefenseOutcome::REDEFENSE, $chair);
 
-        $this->assertFalse($team->fresh()->isRosterLocked());
+        $this->assertFalse($team->fresh()->isTeamLocked());
         $this->assertTrue($team->fresh()->mayAddMembers());
     }
 
@@ -144,7 +144,7 @@ class TitleDefenseRosterLockTest extends TestCase
         [$team] = $this->team();
         DefenseSchedule::create(['team_id' => $team->team_id, 'defense_type' => DefenseOutcome::PRE_PROPOSAL, 'attempt' => 1, 'outcome' => DefenseOutcome::PASSED]);
 
-        $this->assertFalse($team->fresh()->isRosterLocked());
+        $this->assertFalse($team->fresh()->isTeamLocked());
     }
 
     /** Listed as 4th year, but still defending the title: the members are not settled yet. */
@@ -179,8 +179,8 @@ class TitleDefenseRosterLockTest extends TestCase
     {
         [$team, , $a] = $this->lockedTeam();
 
-        $this->actingAs($a, 'web')->delete(route('team.destroy'))->assertSessionHas('error', Team::ROSTER_LOCKED);
-        $this->actingAs($a, 'web')->post(route('team.leave-request'))->assertSessionHas('error', Team::ROSTER_LOCKED);
+        $this->actingAs($a, 'web')->delete(route('team.destroy'))->assertSessionHas('error', Team::TEAM_LOCKED);
+        $this->actingAs($a, 'web')->post(route('team.leave-request'))->assertSessionHas('error', Team::TEAM_LOCKED);
         $this->actingAs($a, 'web')->deleteJson('/api/teams/'.$team->team_id)->assertStatus(422);
 
         $this->assertTrue($this->inTeam($a, $team));
@@ -191,7 +191,7 @@ class TitleDefenseRosterLockTest extends TestCase
     {
         [$team, $leader, $a] = $this->lockedTeam();
 
-        $this->actingAs($leader, 'web')->delete(route('team.members.remove', $a))->assertSessionHas('error', Team::ROSTER_LOCKED);
+        $this->actingAs($leader, 'web')->delete(route('team.members.remove', $a))->assertSessionHas('error', Team::TEAM_LOCKED);
         $this->actingAs($leader, 'web')->deleteJson('/api/teams/'.$team->team_id.'/members/'.$a->student_id)->assertStatus(422);
 
         $this->assertTrue($this->inTeam($a, $team));
@@ -218,12 +218,12 @@ class TitleDefenseRosterLockTest extends TestCase
 
         $this->askToLeave($a)->assertCreated();
 
-        $this->assertDatabaseHas('roster_change_requests', [
+        $this->assertDatabaseHas('member_leave_requests', [
             'team_id' => $team->team_id, 'student_id' => $a->student_id, 'requested_by' => $a->student_id,
             'type' => 'leave', 'status' => 'pending',
         ]);
         $this->assertTrue($this->inTeam($a, $team), 'asking is not leaving');
-        $this->assertTrue(Notification::where('student_id', $leader->student_id)->where('type', 'roster_request_sent')->exists());
+        $this->assertTrue(Notification::where('student_id', $leader->student_id)->where('type', 'leave_request_sent')->exists());
     }
 
     public function test_a_request_needs_a_real_reason(): void
@@ -231,23 +231,23 @@ class TitleDefenseRosterLockTest extends TestCase
         [, , $a] = $this->lockedTeam();
 
         $this->askToLeave($a, 'bye')->assertStatus(422)->assertJsonValidationErrors('reason');
-        $this->assertSame(0, RosterChangeRequest::count());
+        $this->assertSame(0, MemberLeaveRequest::count());
     }
 
     /** Before Title Defense, leaving still goes through the leader - this is not a way around them. */
-    public function test_an_unlocked_team_cannot_use_roster_requests(): void
+    public function test_an_unlocked_team_cannot_use_leave_requests(): void
     {
         [, , $a] = $this->team();
 
         $this->askToLeave($a)->assertStatus(422);
-        $this->assertSame(0, RosterChangeRequest::count());
+        $this->assertSame(0, MemberLeaveRequest::count());
     }
 
     public function test_the_leader_asks_to_remove_and_the_member_is_told(): void
     {
         [$team, $leader, $a] = $this->lockedTeam();
 
-        $this->actingAs($leader, 'web')->postJson(route('team.roster-requests.store'), [
+        $this->actingAs($leader, 'web')->postJson(route('team.capsa-leave-requests.store'), [
             'type' => 'remove', 'student_id' => $a->student_id, 'reason' => 'Has not attended a single meeting since June.',
         ])->assertCreated();
 
@@ -262,11 +262,11 @@ class TitleDefenseRosterLockTest extends TestCase
         // A leader leaving would leave nobody leading.
         $this->askToLeave($leader)->assertStatus(422);
         // Only the leader asks for a removal.
-        $this->actingAs($a, 'web')->postJson(route('team.roster-requests.store'), ['type' => 'remove', 'student_id' => $b->student_id, 'reason' => $reason])->assertStatus(403);
+        $this->actingAs($a, 'web')->postJson(route('team.capsa-leave-requests.store'), ['type' => 'remove', 'student_id' => $b->student_id, 'reason' => $reason])->assertStatus(403);
         // And not of themself.
-        $this->actingAs($leader, 'web')->postJson(route('team.roster-requests.store'), ['type' => 'remove', 'student_id' => $leader->student_id, 'reason' => $reason])->assertStatus(422);
+        $this->actingAs($leader, 'web')->postJson(route('team.capsa-leave-requests.store'), ['type' => 'remove', 'student_id' => $leader->student_id, 'reason' => $reason])->assertStatus(422);
 
-        $this->assertSame(0, RosterChangeRequest::count());
+        $this->assertSame(0, MemberLeaveRequest::count());
     }
 
     public function test_one_request_about_a_member_at_a_time(): void
@@ -274,23 +274,23 @@ class TitleDefenseRosterLockTest extends TestCase
         [, $leader, $a] = $this->lockedTeam();
 
         $this->askToLeave($a)->assertCreated();
-        $this->actingAs($leader, 'web')->postJson(route('team.roster-requests.store'), [
+        $this->actingAs($leader, 'web')->postJson(route('team.capsa-leave-requests.store'), [
             'type' => 'remove', 'student_id' => $a->student_id, 'reason' => 'Asked to go anyway, removing to be sure.',
         ])->assertStatus(422);
 
-        $this->assertSame(1, RosterChangeRequest::count());
+        $this->assertSame(1, MemberLeaveRequest::count());
     }
 
     public function test_the_student_who_asked_can_withdraw_while_it_waits(): void
     {
         [, $leader, $a] = $this->lockedTeam();
         $this->askToLeave($a);
-        $request = RosterChangeRequest::first();
+        $request = MemberLeaveRequest::first();
 
-        $this->actingAs($leader, 'web')->patchJson(route('team.roster-requests.update', $request), ['status' => 'withdrawn'])->assertStatus(403);
-        $this->actingAs($a, 'web')->patchJson(route('team.roster-requests.update', $request), ['status' => 'withdrawn'])->assertOk();
+        $this->actingAs($leader, 'web')->patchJson(route('team.capsa-leave-requests.update', $request), ['status' => 'withdrawn'])->assertStatus(403);
+        $this->actingAs($a, 'web')->patchJson(route('team.capsa-leave-requests.update', $request), ['status' => 'withdrawn'])->assertOk();
 
-        $this->assertSame(RosterChangeRequest::WITHDRAWN, $request->fresh()->status);
+        $this->assertSame(MemberLeaveRequest::WITHDRAWN, $request->fresh()->status);
     }
 
     // ── the CaPSA decides ────────────────────────────────────────────────
@@ -299,11 +299,11 @@ class TitleDefenseRosterLockTest extends TestCase
     {
         [$team, $leader, $a, $b] = $this->lockedTeam();
         $this->askToLeave($a);
-        $request = RosterChangeRequest::first();
+        $request = MemberLeaveRequest::first();
         $capsa = $this->capsa();
 
         $this->actingAs($capsa, 'expert')
-            ->patchJson(route('capsa.roster_requests.update', $request), ['status' => 'approved', 'note' => 'Transfer papers seen.'])
+            ->patchJson(route('capsa.leave_requests.update', $request), ['status' => 'approved', 'note' => 'Transfer papers seen.'])
             ->assertOk()
             ->assertJsonPath('request.status', 'approved');
 
@@ -318,16 +318,16 @@ class TitleDefenseRosterLockTest extends TestCase
     {
         [$team, , $a] = $this->lockedTeam();
         $this->askToLeave($a);
-        $request = RosterChangeRequest::first();
+        $request = MemberLeaveRequest::first();
         $capsa = $this->capsa();
 
         $this->actingAs($capsa, 'expert')
-            ->patchJson(route('capsa.roster_requests.update', $request), ['status' => 'declined'])
+            ->patchJson(route('capsa.leave_requests.update', $request), ['status' => 'declined'])
             ->assertStatus(422)
             ->assertJsonValidationErrors('note');
 
         $this->actingAs($capsa, 'expert')
-            ->patchJson(route('capsa.roster_requests.update', $request), ['status' => 'declined', 'note' => 'Finish the defense first; we can talk after.'])
+            ->patchJson(route('capsa.leave_requests.update', $request), ['status' => 'declined', 'note' => 'Finish the defense first; we can talk after.'])
             ->assertOk();
 
         $this->assertTrue($this->inTeam($a, $team));
@@ -340,7 +340,7 @@ class TitleDefenseRosterLockTest extends TestCase
         $this->askToLeave($a);
 
         $this->actingAs($this->capsa(['BSIT-3B']), 'expert')
-            ->patchJson(route('capsa.roster_requests.update', RosterChangeRequest::first()), ['status' => 'approved'])
+            ->patchJson(route('capsa.leave_requests.update', MemberLeaveRequest::first()), ['status' => 'approved'])
             ->assertStatus(403);
 
         $this->assertTrue($this->inTeam($a, $team));
@@ -350,11 +350,11 @@ class TitleDefenseRosterLockTest extends TestCase
     {
         [, , $a] = $this->lockedTeam();
         $this->askToLeave($a);
-        $request = RosterChangeRequest::first();
+        $request = MemberLeaveRequest::first();
         $capsa = $this->capsa();
 
-        $this->actingAs($capsa, 'expert')->patchJson(route('capsa.roster_requests.update', $request), ['status' => 'declined', 'note' => 'Not now.'])->assertOk();
-        $this->actingAs($capsa, 'expert')->patchJson(route('capsa.roster_requests.update', $request), ['status' => 'approved'])->assertStatus(409);
+        $this->actingAs($capsa, 'expert')->patchJson(route('capsa.leave_requests.update', $request), ['status' => 'declined', 'note' => 'Not now.'])->assertOk();
+        $this->actingAs($capsa, 'expert')->patchJson(route('capsa.leave_requests.update', $request), ['status' => 'approved'])->assertStatus(409);
     }
 
     /** Leadership moved to the member while the request waited. */
@@ -365,7 +365,7 @@ class TitleDefenseRosterLockTest extends TestCase
         $team->update(['leader_id' => $a->student_id]);
 
         $this->actingAs($this->capsa(), 'expert')
-            ->patchJson(route('capsa.roster_requests.update', RosterChangeRequest::first()), ['status' => 'approved'])
+            ->patchJson(route('capsa.leave_requests.update', MemberLeaveRequest::first()), ['status' => 'approved'])
             ->assertStatus(422);
 
         $this->assertTrue($this->inTeam($a, $team));
@@ -376,12 +376,20 @@ class TitleDefenseRosterLockTest extends TestCase
         [, , $a] = $this->lockedTeam();
         $this->askToLeave($a, 'My family is moving to Cebu next month.');
 
-        $this->actingAs($this->capsa(), 'expert')
-            ->get(route('capsa.roster_requests'))
+        $capsa = $this->capsa();
+
+        // The old address still lands on it.
+        $this->actingAs($capsa, 'expert')
+            ->get(route('capsa.leave_requests'))
+            ->assertRedirect(route('capsa.team_management', ['tab' => 'leave_requests']));
+
+        $this->actingAs($capsa, 'expert')
+            ->get(route('capsa.team_management', ['tab' => 'leave_requests']))
             ->assertOk()
+            ->assertSee('Leave Requests')
             ->assertSee('My family is moving to Cebu next month.')
             ->assertSee('below the minimum of 3')
-            ->assertViewHas('lockedTeams', 1);
+            ->assertViewHas('tabData', fn ($data) => $data['lockedTeams'] === 1);
     }
 
     public function test_the_team_page_shows_the_lock(): void

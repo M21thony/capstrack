@@ -29,13 +29,13 @@ class Team extends Model
      * Chair records an outcome once and it cannot be changed, so the pass is
      * the fact itself - there is no second copy to fall out of step with it.
      */
-    public function isRosterLocked(): bool
+    public function isTeamLocked(): bool
     {
         return $this->titleDefenseAttempts()->contains(fn ($s) => DefenseOutcome::isPass($s->outcome));
     }
 
     /** When the members were locked - the day the pass was recorded. */
-    public function rosterLockedAt(): ?CarbonInterface
+    public function teamLockedAt(): ?CarbonInterface
     {
         return $this->titleDefenseAttempts()
             ->filter(fn ($s) => DefenseOutcome::isPass($s->outcome))
@@ -61,7 +61,7 @@ class Team extends Model
      */
     public function capstoneStage(): int
     {
-        if ($this->isRosterLocked()) {
+        if ($this->isTeamLocked()) {
             return 2;
         }
 
@@ -103,7 +103,7 @@ class Team extends Model
     public const LOCKED_NO_JOINING = 'This team passed Title Defense, so its members are locked. No one can be added.';
 
     /** Said at every door a member could leave, or be removed, by. */
-    public const ROSTER_LOCKED = 'Your team passed Title Defense, so its members are locked. '
+    public const TEAM_LOCKED = 'Your team passed Title Defense, so its members are locked. '
         .'A member can only leave with your CaPSA\'s approval - send the request from the Team page.';
 
     public const NO_NEW_TEAMS ='Capstone 2 has started. Teams keep the members they '
@@ -144,7 +144,7 @@ class Team extends Model
             return self::JOINING_CLOSED;
         }
 
-        if ($this->isRosterLocked()) {
+        if ($this->isTeamLocked()) {
             return self::LOCKED_NO_JOINING;
         }
 
@@ -178,7 +178,7 @@ class Team extends Model
             return self::JOINING_CLOSED;
         }
 
-        if ($this->isRosterLocked()) {
+        if ($this->isTeamLocked()) {
             return self::LOCKED_NO_JOINING;
         }
 

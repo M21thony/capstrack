@@ -20,7 +20,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('roster_change_requests', function (Blueprint $table) {
+        Schema::create('member_leave_requests', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('team_id');
             // The member who would leave the team.
@@ -42,6 +42,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('roster_change_requests');
+        Schema::dropIfExists('member_leave_requests');
     }
 };

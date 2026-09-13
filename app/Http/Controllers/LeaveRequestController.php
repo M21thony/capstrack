@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Notification;
-use App\Models\RosterChangeRequest;
+use App\Models\MemberLeaveRequest;
 use App\Models\Student;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
@@ -19,17 +19,17 @@ use Illuminate\Validation\Rule;
  * Only for teams that passed Title Defense. Before that, leaving goes through
  * the leader the way it always has; this is not a second way around them.
  */
-class RosterRequestController extends Controller
+class LeaveRequestController extends Controller
 {
     public function store(Request $request): JsonResponse|RedirectResponse
     {
         $validated = $request->validate([
-            'type' => ['required', Rule::in([RosterChangeRequest::LEAVE, RosterChangeRequest::REMOVE])],
-            'student_id' => ['nullable', 'integer', 'required_if:type,'.RosterChangeRequest::REMOVE],
-            'reason' => ['required', 'string', 'min:'.RosterChangeRequest::REASON_MIN, 'max:1000'],
+            'type' => ['required', Rule::in([MemberLeaveRequest::LEAVE, MemberLeaveRequest::REMOVE])],
+            'student_id' => ['nullable', 'integer', 'required_if:type,'.MemberLeaveRequest::REMOVE],
+            'reason' => ['required', 'string', 'min:'.MemberLeaveRequest::REASON_MIN, 'max:1000'],
         ], [
             'reason.required' => 'Tell your CaPSA why.',
-            'reason.min' => 'Give your CaPSA a reason they can decide on - at least '.RosterChangeRequest::REASON_MIN.' characters.',
+            'reason.min' => 'Give your CaPSA a reason they can decide on - at least '.MemberLeaveRequest::REASON_MIN.' characters.',
         ]);
 
         $me = $request->user();
@@ -39,13 +39,13 @@ class RosterRequestController extends Controller
             return $this->refuse($request, 'You are not in a team.');
         }
 
-        if (! $team->isRosterLocked()) {
+        if (! $team->isTeamLocked()) {
             return $this->refuse($request, 'Your team has not passed Title Defense, so members still leave through the team leader.');
         }
 
         $isLeader = (int) $team->leader_id === (int) $me->student_id;
 
-        if ($validated['type'] === RosterChangeRequest::LEAVE) {
+        if ($validated['type'] === MemberLeaveRequest::LEAVE) {
             // The leader cannot be the one to go: a team with nobody leading it
             // has nobody to schedule, submit or answer for it.
             if ($isLeader) {
@@ -72,71 +72,71 @@ class RosterRequestController extends Controller
         // One question about a member at a time. A leave and a removal of the
         // same person both pending would let the CaPSA approve one and leave
         // the other hanging over someone who is already gone.
-        if (RosterChangeRequest::pending()->where('team_id', $team->team_id)->where('student_id', $subjectId)->exists()) {
+        if (MemberLeaveRequest::pending()->where('team_id', $team->team_id)->where('student_id', $subjectId)->exists()) {
             return $this->refuse($request, 'A request about this member is already waiting on your CaPSA.');
         }
 
-        $rosterRequest = RosterChangeRequest::create([
+        $leaveRequest = MemberLeaveRequest::create([
             'team_id' => $team->team_id,
             'student_id' => $subjectId,
             'requested_by' => $me->student_id,
             'type' => $validated['type'],
             'reason' => trim($validated['reason']),
-            'status' => RosterChangeRequest::PENDING,
+            'status' => MemberLeaveRequest::PENDING,
         ]);
 
         $myName = e(trim($me->f_name.' '.$me->l_name));
         $teamName = '<strong>'.e($team->team_name).'</strong>';
 
         // Whoever it concerns hears about it from the system, not second hand.
-        Notification::create($validated['type'] === RosterChangeRequest::LEAVE
+        Notification::create($validated['type'] === MemberLeaveRequest::LEAVE
             ? [
                 'student_id' => $team->leader_id,
-                'type' => 'roster_request_sent',
+                'type' => 'leave_request_sent',
                 'title' => 'Member asked to leave',
                 'message' => '<strong>'.$myName.'</strong> asked your CaPSA to let them leave '.$teamName.'.',
                 'link' => route('student.team'),
             ]
             : [
                 'student_id' => $subjectId,
-                'type' => 'roster_request_sent',
+                'type' => 'leave_request_sent',
                 'title' => 'Removal requested',
                 'message' => 'Your team leader asked your CaPSA to remove you from '.$teamName.'. '
-                    .'Their reason: "'.e($rosterRequest->reason).'" You stay on the team unless your CaPSA approves.',
+                    .'Their reason: "'.e($leaveRequest->reason).'" You stay on the team unless your CaPSA approves.',
                 'link' => route('student.team'),
             ]);
 
         $subject = Student::find($subjectId);
         $this->logActivity(
             $me->student_id,
-            'roster_request_sent',
-            $validated['type'] === RosterChangeRequest::LEAVE
+            'leave_request_sent',
+            $validated['type'] === MemberLeaveRequest::LEAVE
                 ? 'Asked the CaPSA to leave '.$teamName
                 : 'Asked the CaPSA to remove <strong>'.e(trim(($subject->f_name ?? '').' '.($subject->l_name ?? ''))).'</strong> from '.$teamName,
-            ['team_id' => $team->team_id, 'roster_request_id' => $rosterRequest->id]
+            ['team_id' => $team->team_id, 'leave_request_id' => $leaveRequest->id]
         );
 
         $message = 'Sent to your CaPSA. You will be notified when they decide.';
 
         return $request->expectsJson()
-            ? response()->json(['success' => true, 'message' => $message, 'request' => $rosterRequest], 201)
+            ? response()->json(['success' => true, 'message' => $message, 'request' => $leaveRequest], 201)
             : redirect()->route('student.team')->with('status', $message);
     }
 
     /** Withdrawing is the one change a student makes to a request once it is sent. */
-    public function update(Request $request, RosterChangeRequest $rosterRequest): JsonResponse|RedirectResponse
+    public function update(Request $request, MemberLeaveRequest $leaveRequest): JsonResponse|RedirectResponse
     {
-        $request->validate(['status' => ['required', Rule::in([RosterChangeRequest::WITHDRAWN])]]);
+        $request->validate(['status' => ['required', Rule::in([MemberLeaveRequest::WITHDRAWN])]]);
 
-        if ((int) $rosterRequest->requested_by !== (int) $request->user()->student_id) {
+        if ((int) $leaveRequest->requested_by !== (int) $request->user()->student_id) {
             return $this->refuse($request, 'Only whoever sent this request can withdraw it.', 403);
         }
 
-        if (! $rosterRequest->isPending()) {
+        if (! $leaveRequest->isPending()) {
             return $this->refuse($request, 'Your CaPSA has already decided on this request.', 409);
         }
 
-        $rosterRequest->update(['status' => RosterChangeRequest::WITHDRAWN]);
+        $leaveRequest->update(['status' => MemberLeaveRequest::WITHDRAWN]);
 
         return $request->expectsJson()
             ? response()->json(['success' => true, 'message' => 'Request withdrawn.'])

@@ -8,7 +8,7 @@ use App\Models\StudentSchoolYear;
 use App\Models\Team;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\View\View;
+use Illuminate\Http\RedirectResponse;
 
 /**
  * The rules every team is formed under: how large it may grow, and whether
@@ -21,10 +21,16 @@ use Illuminate\View\View;
  */
 class TeamRulesController extends Controller
 {
-    // GET /capsa/team-rules
-    public function show(): View
+    // GET /capsa/team-rules - a tab on Team Management now; old links land on it.
+    public function show(): RedirectResponse
     {
-        return view('capsa.team_rules', [
+        return redirect()->route('capsa.team_management', ['tab' => 'rules']);
+    }
+
+    /** What the Team Rules tab shows. */
+    public static function pageData(): array
+    {
+        return [
             'maxMembers' => Team::maxMembers(),
             'allowCreation' => Team::creationAllowed(),
             'allowJoining' => Team::joiningAllowed(),
@@ -37,7 +43,7 @@ class TeamRulesController extends Controller
                 ->pluck('members')
                 ->countBy()
                 ->all(),
-        ]);
+        ];
     }
 
     /**

@@ -7,7 +7,7 @@ use App\Models\CapstoneExpert;
 use App\Models\LeaveApproval;
 use App\Models\Notification;
 use App\Models\Recruitment;
-use App\Models\RosterChangeRequest;
+use App\Models\MemberLeaveRequest;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
 use App\Models\TeamInvitation;
@@ -19,13 +19,13 @@ use App\Models\TeamInvitation;
  * people on the team are the people who earned it, so from then on nobody
  * joins and nobody leaves on their own say-so.
  *
- * Locking is not just refusing at the doors (Team::isRosterLocked() does
+ * Locking is not just refusing at the doors (Team::isTeamLocked() does
  * that). Things already in motion would otherwise finish on their own: an
  * invitation sent last week could still be accepted, and a leave request
  * would still approve itself when its 3-hour timer ran out. lock() closes
  * all of it once, at the moment of the pass, and tells everyone it touched.
  */
-class RosterLock
+class TeamLock
 {
     public function lock(Team $team): void
     {
@@ -46,7 +46,7 @@ class RosterLock
 
             Notification::create([
                 'student_id' => $isInvite ? $invitation->receiver_id : $invitation->sender_id,
-                'type' => 'team_roster_locked',
+                'type' => 'team_locked',
                 'title' => $isInvite ? 'Invitation closed' : 'Join request closed',
                 'message' => $teamName.' passed Title Defense, so its members are locked. Your '
                     .($isInvite ? 'invitation' : 'join request').' was closed.',
@@ -68,7 +68,7 @@ class RosterLock
 
             Notification::create([
                 'student_id' => $leave->student_id,
-                'type' => 'team_roster_locked',
+                'type' => 'team_locked',
                 'title' => 'Leave request closed',
                 'message' => 'Your request to leave '.$teamName.' was closed because the team passed Title Defense. '
                     .'If you still need to leave, ask your CaPSA from the Team page.',
@@ -79,7 +79,7 @@ class RosterLock
         foreach ($memberIds as $memberId) {
             Notification::create([
                 'student_id' => $memberId,
-                'type' => 'team_roster_locked',
+                'type' => 'team_locked',
                 'title' => 'Team members locked',
                 'message' => $teamName.' passed Title Defense, so its members are locked. No one can join, '
                     .'and a member can only leave with your CaPSA\'s approval.',
@@ -89,7 +89,7 @@ class RosterLock
     }
 
     /** Take a member off a locked team, as a CaPSA approved. */
-    public function release(RosterChangeRequest $request, CapstoneExpert $capsa, ?string $note): void
+    public function release(MemberLeaveRequest $request, CapstoneExpert $capsa, ?string $note): void
     {
         $team = $request->team;
         $member = $request->student;
@@ -104,7 +104,7 @@ class RosterLock
         Recruitment::where('student_id', $request->student_id)->delete();
 
         $request->update([
-            'status' => RosterChangeRequest::APPROVED,
+            'status' => MemberLeaveRequest::APPROVED,
             'decided_by' => $capsa->expert_id,
             'decision_note' => $note,
             'decided_at' => now(),
@@ -112,9 +112,9 @@ class RosterLock
 
         Notification::create([
             'student_id' => $request->student_id,
-            'type' => 'roster_request_approved',
-            'title' => $request->type === RosterChangeRequest::LEAVE ? 'Leave approved' : 'Removed from team',
-            'message' => ($request->type === RosterChangeRequest::LEAVE
+            'type' => 'leave_request_approved',
+            'title' => $request->type === MemberLeaveRequest::LEAVE ? 'Leave approved' : 'Removed from team',
+            'message' => ($request->type === MemberLeaveRequest::LEAVE
                 ? 'Your CaPSA approved your request to leave '.$teamName.'.'
                 : 'Your CaPSA approved your leader\'s request to remove you from '.$teamName.'.')
                 .' You are no longer on the team.'.$noteText,
@@ -124,7 +124,7 @@ class RosterLock
         foreach (StudentSchoolYear::where('team_id', $request->team_id)->pluck('student_id') as $memberId) {
             Notification::create([
                 'student_id' => $memberId,
-                'type' => 'roster_request_approved',
+                'type' => 'leave_request_approved',
                 'title' => 'Member left the team',
                 'message' => '<strong>'.$name.'</strong> is no longer on '.$teamName.'. Your CaPSA approved it.'.$noteText,
                 'link' => route('student.team'),
@@ -135,7 +135,7 @@ class RosterLock
             'student_id' => $request->student_id,
             'type' => 'team_left',
             'description' => 'Left team '.$teamName.' with CaPSA approval',
-            'metadata' => ['team_id' => $request->team_id, 'roster_request_id' => $request->id],
+            'metadata' => ['team_id' => $request->team_id, 'leave_request_id' => $request->id],
             'created_at' => now(),
         ]);
     }
