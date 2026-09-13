@@ -29,6 +29,9 @@
 .sp-title-done{color:var(--text3);font-weight:400}
 .sp-meta{font-size:11.5px;color:var(--text3);margin-top:2px;text-transform:capitalize}
 .sp-flag{font-variant-numeric:tabular-nums;font-size:8.5px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:1px 6px;border-radius:3px;background:var(--red-bg);color:var(--red);margin-left:7px}
+.sp-rev{font-size:10.5px;font-weight:600;padding:1px 8px;border-radius:999px;background:var(--bg4);color:var(--text2);margin-left:7px;white-space:nowrap}
+.sp-submit{align-self:center;margin-left:auto;flex-shrink:0;font-size:12px;font-weight:600;color:var(--text);border:1px solid var(--border);border-radius:6px;padding:5px 11px;text-decoration:none;white-space:nowrap}
+.sp-submit:hover{border-color:var(--accent)}
 </style>
 @include('partials.skeleton-head', ['skReveal' => 'opacity'])
 </head>
@@ -128,7 +131,21 @@
 
     <div style="padding:4px 0">
       @foreach($p->items as $row)
-      @php $i = $row->item; $done = in_array($row->state, ['done', 'done_late'], true); @endphp
+      @php
+        $i = $row->item;
+        $done = in_array($row->state, ['done', 'done_late'], true);
+        $ord = fn (int $n) => $n.(in_array($n % 100, [11, 12, 13], true) ? 'th' : ([1 => 'st', 2 => 'nd', 3 => 'rd'][$n % 10] ?? 'th'));
+        // First submission, then the 1st, 2nd... revision after each request for changes.
+        $revisionLabel = match (true) {
+            ! $row->revision => null,
+            $done => 'Approved on '.$ord($row->revision).' revision',
+            $row->changes_requested => $ord($row->revision).' revision requested',
+            default => $ord($row->revision).' revision',
+        };
+        // Everything is handed in through Document Submission; a defense is not.
+        $canSubmit = ! $done && $i->kind !== 'defense'
+            && (in_array($row->state, ['not_started', 'overdue'], true) || $row->changes_requested);
+      @endphp
       <div class="sp-item">
         <div class="sp-dot sp-{{ $row->state }}">
           @if($done)
@@ -145,6 +162,9 @@
             {{ $i->title }}
             @if($row->state === 'done_late')
               <span class="sp-flag">{{ $row->days_late }} {{ Str::plural('day', $row->days_late) }} late</span>
+            @endif
+            @if($revisionLabel)
+              <span class="sp-rev">{{ $revisionLabel }}</span>
             @endif
           </div>
           <div class="sp-meta">
@@ -169,6 +189,11 @@
             &middot; {{ $i->kind === 'custom' ? 'set by your CaPSA' : $i->kind }}
           </div>
         </div>
+        @if($canSubmit)
+          <a class="sp-submit" href="{{ route('student.submission', ['item' => $i->id]) }}">
+            {{ $row->changes_requested ? 'Submit '.$ord($row->revision).' revision' : 'Submit' }}
+          </a>
+        @endif
       </div>
       @endforeach
     </div>

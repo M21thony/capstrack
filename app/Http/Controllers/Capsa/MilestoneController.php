@@ -247,6 +247,15 @@ class MilestoneController extends Controller
             'completed_at' => ['nullable', 'date'],
         ]);
 
+        // An approval is only the CaPSA's to check once the reviewer approved it.
+        if ($item->kind === MilestoneItem::APPROVAL && $validated['done']) {
+            $state = $item->milestone->progress()->items->firstWhere('item.id', $item->id);
+
+            if ($state?->waiting_on !== \App\Support\MilestoneProgress::WAITING_ON_CAPSA) {
+                return response()->json(['message' => 'This has not been approved yet, so there is nothing to check.'], 422);
+            }
+        }
+
         $item->update([
             'completed_at' => $validated['done']
                 ? ($validated['completed_at'] ?? now())

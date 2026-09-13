@@ -14,9 +14,10 @@
   <div>
     <div class="ms-intro-title">Checklists</div>
     <div class="ms-intro-note">
-      Only the <strong>forms</strong> are ticked here. A draft closes when the team uploads it, a CLF
-      when the adviser or consultant approves it, and a defense when the panel's decision is
-      recorded &mdash; those are drawn dashed and say what they are waiting on.
+      You check the <strong>signed forms</strong> here: open what the team uploaded, then mark it checked.
+      A draft closes when the team uploads it, a CLF when the adviser or consultant approves it in
+      Document Review, and a defense when the panel's decision is recorded &mdash; those are drawn
+      dashed and say what they are waiting on.
     </div>
   </div>
   <button type="button" class="btn btn-primary" style="font-size:12px;padding:8px 14px;white-space:nowrap"
@@ -148,13 +149,18 @@
                     {{-- This team's checklist does not carry that line at all,
                          which is not the same as having it and not doing it. --}}
                     <span class="ms-na">&middot;</span>
-                  @elseif ($col->ticked_by_hand)
+                  @elseif ($col->ticked_by_hand || ($cell->item->needs_check && ($cell->waiting_on === 'capsa' || $done)))
                     <button type="button"
-                            class="ms-mk {{ $done ? 'on' : '' }} {{ $cell->state === 'overdue' ? 'over' : '' }}"
+                            class="ms-mk {{ $done ? 'on' : '' }} {{ $cell->state === 'overdue' ? 'over' : '' }} {{ $cell->waiting_on === 'capsa' ? 'wait' : '' }}"
                             onclick="toggleItem({{ $cell->item->id }}, {{ $done ? 'false' : 'true' }})"
-                            title="{{ $done ? 'Mark as not sighted' : 'Mark as sighted' }}">
+                            title="{{ $done ? 'Mark as not checked' : ($cell->waiting_on === 'capsa' ? 'Mark as checked — open what they uploaded first' : 'Mark as checked') }}">
                       @include('capsa.partials.team-management.milestone-mark', ['state' => $cell->state])
                     </button>
+                    @if ($cell->file_id)
+                      <a href="{{ route('capsa.documents.file', $cell->file_id) }}" target="_blank" rel="noopener"
+                         title="Open what {{ $row->team->team_name }} uploaded"
+                         style="display:block;font-size:10px;font-weight:600;color:var(--accent3);margin-top:2px">view</a>
+                    @endif
                   @else
                     {{-- Closes itself, so there is nothing to press. --}}
                     <span class="ms-mk auto {{ $done ? 'on' : '' }} {{ $cell->state === 'overdue' ? 'over' : '' }} {{ $cell->state === 'handed_in' ? 'wait' : '' }}"
