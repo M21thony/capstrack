@@ -124,6 +124,26 @@
           $assignedRecipients = collect($roleLabels)->filter(fn ($label, $roleKey) => ! is_null(($recipients[$roleKey]['expert_id'] ?? null)));
       @endphp
 
+      @if ($checklistItems->isNotEmpty())
+      <div class="form-section">
+        <div class="section-label">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+          What is this for?
+        </div>
+        <select class="input" id="checklistItem" aria-label="Checklist requirement this file is for">
+          <option value="">Not a checklist requirement (feedback only)</option>
+          @foreach ($checklistItems->groupBy('phase') as $phase => $group)
+            <optgroup label="{{ $phase }}">
+              @foreach ($group as $ci)
+                <option value="{{ $ci->id }}" @selected($ci->id === $selectedItemId) data-kind="{{ $ci->kind }}" data-role="{{ $ci->role }}">{{ $ci->title }}{{ $ci->note ? ' — '.$ci->note : '' }}</option>
+              @endforeach
+            </optgroup>
+          @endforeach
+        </select>
+        <p class="recipient-hint" id="checklistHint">Pick the requirement and your Progress Tracker updates on its own.</p>
+      </div>
+      @endif
+
       <div class="form-section">
         <div class="section-label">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
@@ -325,10 +345,47 @@ fileInput.addEventListener('change', (e) => {
   if (e.target.files.length) handleFile(e.target.files[0]);
 });
 
+// -- Checklist requirement --
+// A signed paper goes to the CaPSA to check, so it needs no reviewer and a
+// phone photo will do. A CLF goes to whoever approves it.
+const checklistSelect = document.getElementById('checklistItem');
+const checklistHint = document.getElementById('checklistHint');
+
+function selectedKind() {
+  const option = checklistSelect && checklistSelect.selectedOptions[0];
+  return option && option.value ? option.dataset.kind : '';
+}
+function isPaper() { return ['form', 'custom'].includes(selectedKind()); }
+
+function applyChecklistItem() {
+  if (!checklistSelect) return;
+  const option = checklistSelect.selectedOptions[0];
+  const boxes = document.querySelectorAll('#recipientGroup input[type="checkbox"]:not(:disabled)');
+
+  if (isPaper()) {
+    boxes.forEach(cb => { cb.checked = false; });
+    checklistHint.textContent = 'Upload a scan or a clear phone photo of the signed paper. It goes to your CaPSA to check — no reviewer needed.';
+  } else if (selectedKind() === 'approval' && option.dataset.role) {
+    boxes.forEach(cb => { cb.checked = cb.value === option.dataset.role; });
+    checklistHint.textContent = 'Sent to your ' + option.dataset.role + '. It counts once they approve it in Document Review.';
+  } else {
+    checklistHint.textContent = 'Pick the requirement and your Progress Tracker updates on its own.';
+  }
+
+  fileInput.accept = isPaper() ? '.pdf,.jpg,.jpeg,.png' : '.pdf';
+  if (!selectedFile) dropSub.textContent = isPaper() ? 'PDF, JPG or PNG up to 25MB' : 'PDF up to 25MB';
+}
+
+if (checklistSelect) {
+  checklistSelect.addEventListener('change', applyChecklistItem);
+  applyChecklistItem();
+}
+
 function handleFile(file) {
   const ext = file.name.split('.').pop().toLowerCase();
-  if (ext !== 'pdf') {
-    showToast('Only PDF files are accepted.', 'error');
+  const allowed = isPaper() ? ['pdf', 'jpg', 'jpeg', 'png'] : ['pdf'];
+  if (!allowed.includes(ext)) {
+    showToast(isPaper() ? 'Only PDF, JPG or PNG files are accepted.' : 'Only PDF files are accepted.', 'error');
     return;
   }
   if (file.size > 25 * 1024 * 1024) {
@@ -401,13 +458,13 @@ if (folderWrap && folderSelect) {
 
 document.getElementById('submitBtn').addEventListener('click', function () {
   const checked = Array.from(document.querySelectorAll('#recipientGroup input[type="checkbox"]:checked')).map(cb => cb.value);
-  if (checked.length === 0) {
+  if (checked.length === 0 && !isPaper()) {
     showToast('Please select at least one recipient before submitting.', 'error');
     return;
   }
 
   if (!selectedFile) {
-    showToast('Please attach a PDF file before submitting.', 'error');
+    showToast('Please attach a file before submitting.', 'error');
     return;
   }
 
@@ -419,6 +476,9 @@ document.getElementById('submitBtn').addEventListener('click', function () {
   const fd = new FormData();
   fd.append('file', selectedFile);
   checked.forEach(role => fd.append('recipients[]', role));
+  if (checklistSelect && checklistSelect.value) {
+    fd.append('milestone_item_id', checklistSelect.value);
+  }
   if (folderWrap && folderWrap.style.display !== 'none' && folderSelect.value) {
     fd.append('subject_adviser_folder_id', folderSelect.value);
   }
