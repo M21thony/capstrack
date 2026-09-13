@@ -43,9 +43,13 @@ class MemberChoosesTheirRoleTest extends TestCase
 
     private function student(string $first, string $email): Student
     {
+        // 3rd year. These students join a team, and a team only takes members
+        // during Capstone 1 - as 4th years they were joining in Capstone 2,
+        // which the accept path now refuses. It used to check nothing, so the
+        // fixture got away with a scene the course does not allow.
         return Student::create([
             'email' => $email, 'f_name' => $first, 'l_name' => 'Dela Cruz',
-            'course' => 'BSIT', 'year_section' => '4th · A',
+            'course' => 'BSIT', 'year_section' => '3rd · A',
         ]);
     }
 

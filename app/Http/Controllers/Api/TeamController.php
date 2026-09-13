@@ -52,6 +52,11 @@ class TeamController extends Controller
                     .'finished Capstone 1 with, so new teams and recruitment posts are closed.',
             ], 422);
         }
+
+        if (! Team::creationAllowed()) {
+            return response()->json(['message' => Team::CREATION_CLOSED], 422);
+        }
+
         $validated = $request->validate([
             'team_name' => ['required', 'string', 'max:100'],
             'team_status' => ['nullable', Rule::in(['Active', 'Full'])],

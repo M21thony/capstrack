@@ -43,6 +43,60 @@ class Team extends Model
         return $this->capstoneStage() === 1;
     }
 
+    /** Said wherever a student is turned away by the CaPSA's Team Rules. */
+    public const CREATION_CLOSED = 'Creating a team is closed right now - your CaPSA has turned it off.';
+
+    public const JOINING_CLOSED = 'Joining a team is closed right now - your CaPSA has turned it off.';
+
+    /**
+     * Whether students may start a team, as set on the CaPSA's Team Rules.
+     *
+     * Open unless switched off. An unset rule is what every existing team was
+     * formed under, and a fresh install must not start with teams closed.
+     */
+    public static function creationAllowed(): bool
+    {
+        return Setting::get('allow_team_creation', '1') !== '0';
+    }
+
+    /** Whether students may join a team - by request, by invitation, or by accepting one. */
+    public static function joiningAllowed(): bool
+    {
+        return Setting::get('allow_team_joining', '1') !== '0';
+    }
+
+    /**
+     * Why somebody cannot join this team at the moment they would, or null.
+     *
+     * Asked when an invitation is accepted, not when it was sent. One sent
+     * while a seat was free can be accepted after the last seat went, after
+     * Capstone 2 began, or after the CaPSA closed joining - and the accept
+     * path the page uses checked none of the three, so two invitations for
+     * one seat could both be accepted.
+     *
+     * Pending invitations are not counted here. They are the other people
+     * racing for the seat, and one of them has to lose.
+     */
+    public function joinBlockReason(): ?string
+    {
+        if (! static::joiningAllowed()) {
+            return self::JOINING_CLOSED;
+        }
+
+        if (! $this->mayAddMembers()) {
+            return 'Capstone 2 has started, so a team keeps the members it '
+                .'finished Capstone 1 with. Members cannot be added now.';
+        }
+
+        $limit = $this->memberLimit();
+
+        if (StudentSchoolYear::where('team_id', $this->team_id)->count() >= $limit) {
+            return 'This team already has the maximum of '.$limit.' members.';
+        }
+
+        return null;
+    }
+
     /**
      * Why this team cannot take another invitation, or null if it can.
      *
@@ -55,6 +109,10 @@ class Team extends Model
      */
     public function inviteBlockReason(int $adding = 1): ?string
     {
+        if (! static::joiningAllowed()) {
+            return self::JOINING_CLOSED;
+        }
+
         if (! $this->mayAddMembers()) {
             return 'Capstone 2 has started, so a team keeps the members it '
                 .'finished Capstone 1 with. Members cannot be added now.';

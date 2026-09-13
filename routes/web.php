@@ -18,6 +18,7 @@ use App\Http\Controllers\AdminProfileController;
 use App\Http\Controllers\AdminTeamVerificationController;
 use App\Http\Controllers\Capsa\MilestoneController;
 use App\Http\Controllers\Capsa\TeamManagementController;
+use App\Http\Controllers\Capsa\TeamRulesController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Capsa\ExpertRosterController;
 use App\Http\Controllers\Capsa\StudentRosterController;
@@ -180,9 +181,10 @@ Route::middleware('expert.capsa')->group(function () {
     // route names so nothing that links to them breaks, but its page
     // redirects here - it was only ever half of this.
     Route::get('/team-management', [TeamManagementController::class, 'index'])->name('team_management');
-    // How many members a team may have. A CaPSA's call - the module asks for
-    // it - and one number for every team rather than a column each.
-    Route::put('/team-size', [TeamManagementController::class, 'updateTeamSize'])->name('team_size.update');
+    // The rules every team is formed under: its size, and whether students
+    // may create or join one. One resource, replaced whole on save.
+    Route::get('/team-rules', [TeamRulesController::class, 'show'])->name('team_rules');
+    Route::put('/team-rules', [TeamRulesController::class, 'update'])->name('team_rules.update');
     Route::get('/verify-teams', fn () => redirect()->route('capsa.team_management', ['tab' => 'verification']))->name('verify_teams');
     Route::patch('/verify-teams/{team}', [AdminTeamVerificationController::class, 'verify'])->name('verify_teams.verify');
     Route::patch('/verify-teams/pre-proposals/{preProposal}', [AdminTeamVerificationController::class, 'updatePreProposal'])->name('verify_teams.pre_proposals.update');

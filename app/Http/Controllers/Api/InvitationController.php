@@ -32,60 +32,6 @@ class InvitationController extends Controller
         return InvitationResource::collection($invitations)->response();
     }
 
-    /**
-     * No room left, counting invitations already out.
-     *
-     * Nothing checked this at all: a leader could pick five classmates for a
-     * team of three and every invitation was accepted, because the only
-     * capacity test in this file ran after somebody had already joined - and
-     * only to mark the team Full, never to turn anyone away.
-     *
-     * Pending invitations count as taken. Sending three for one seat is the
-     * same overflow arriving a day later, when the leader has forgotten and
-     * the members involved have not.
-     */
-    private function refuseIfFull(?int $teamId, bool $countPending = true): ?JsonResponse
-    {
-        $team = $teamId ? Team::find($teamId) : null;
-
-        if (! $team) {
-            return null;
-        }
-
-        $limit = $team->memberLimit();
-        $members = StudentSchoolYear::where('team_id', $team->team_id)->count();
-        $pending = $countPending
-            ? TeamInvitation::where('team_id', $team->team_id)->where('status', 'pending')->count()
-            : 0;
-
-        if ($members + $pending < $limit) {
-            return null;
-        }
-
-        return response()->json([
-            'message' => $pending > 0 && $members < $limit
-                ? 'That would go over '.$limit.'. Your team has '.$members.' '
-                    .($members === 1 ? 'member' : 'members').' and '.$pending.' invitation'
-                    .($pending === 1 ? '' : 's').' still waiting to be answered.'
-                : 'Your team already has the maximum of '.$limit.' members.',
-        ], 422);
-    }
-
-    /** The team is past the point where its roster can change. */
-    private function refuseIfCapstoneTwo(?int $teamId): ?JsonResponse
-    {
-        $team = $teamId ? Team::with(['members', 'leader'])->find($teamId) : null;
-
-        if (! $team || $team->mayAddMembers()) {
-            return null;
-        }
-
-        return response()->json([
-            'message' => 'Members can only be added during Capstone 1 (3rd year). '
-                .'This team is in Capstone 2, so its members are settled.',
-        ], 422);
-    }
-
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
@@ -115,6 +61,10 @@ class InvitationController extends Controller
         }
 
         if ($validated['type'] === 'request') {
+            if (! Team::joiningAllowed()) {
+                return response()->json(['message' => Team::JOINING_CLOSED], 422);
+            }
+
             if (StudentTeam::has($studentId)) {
                 return response()->json([
                     'message' => 'You are already in a team. Leave your team first before joining another.',
@@ -234,16 +184,12 @@ class InvitationController extends Controller
         $student = $request->user();
         $studentId = $student->student_id;
 
-        // An invitation sent in 3rd year and accepted in 4th would slip
-        // through a check made only at sending.
-        if ($closed = $this->refuseIfCapstoneTwo($invitation->team_id)) {
-            return $closed;
-        }
+        // Asked of the model, so this and the web accept path cannot drift
+        // apart again: joining closed, Capstone 2 begun, or the last seat gone.
+        $joining = Team::find($invitation->team_id);
 
-        // Seats, not invitations: the other pending ones are what this
-        // person is racing, and one of them has to lose.
-        if ($full = $this->refuseIfFull($invitation->team_id, countPending: false)) {
-            return $full;
+        if ($joining && $reason = $joining->joinBlockReason()) {
+            return response()->json(['message' => $reason], 422);
         }
 
         $memberRoleId = $this->roleFromTeamPost($invitation->team_id);
