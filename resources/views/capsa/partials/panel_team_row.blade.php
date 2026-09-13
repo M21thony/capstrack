@@ -18,6 +18,10 @@
   $member1 = $latestSchedule?->panels->firstWhere('panel_role', 'Panel Member 1');
   $member2 = $latestSchedule?->panels->firstWhere('panel_role', 'Panel Member 2');
   $status = $chair ? 'complete' : 'not_assigned';
+  // A panel cannot be assigned until the team has its adviser, consultant
+  // and grammarian - Getting started on their checklist.
+  $missingRoles = $team->missingExpertRoles();
+  $notReady = $missingRoles !== [];
   $scheduleTimeLabel = null;
   $scheduleTimeValue = null;
   if ($latestSchedule?->schedule_date && $latestSchedule->schedule_date->format('H:i') !== '00:00') {
@@ -28,12 +32,21 @@
 @endphp
 <tr data-panel-status="{{ $status }}" data-section="{{ $section }}" data-team-id="{{ $team->team_id }}" data-paid="{{ $isPaid ? '1' : '0' }}" id="team-row-{{ $team->team_id }}">
   <td style="padding-left:20px;width:34px">
-    <input type="checkbox" class="team-bulk-checkbox" value="{{ $team->team_id }}" onchange="onBulkCheckboxChange()"/>
+    @if ($notReady)
+      <input type="checkbox" disabled aria-label="{{ $team->team_name }} cannot be given a panel yet" title="Needs {{ implode(', ', $missingRoles) }} first"/>
+    @else
+      <input type="checkbox" class="team-bulk-checkbox" value="{{ $team->team_id }}" onchange="onBulkCheckboxChange()"/>
+    @endif
   </td>
   <td>
     <div style="display:flex;align-items:center;gap:8px">
       <div style="width:28px;height:28px;border-radius:7px;background:linear-gradient(135deg,{{ $gradient }});display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0">{{ $initials }}</div>
-      <span class="td-main">{{ $team->team_name }}</span>
+      <div style="min-width:0">
+        <span class="td-main">{{ $team->team_name }}</span>
+        @if ($notReady)
+          <div style="font-size:11px;color:var(--amber);margin-top:2px">Needs {{ implode(', ', $missingRoles) }}</div>
+        @endif
+      </div>
     </div>
   </td>
   <td style="font-size:12px;color:var(--text2);white-space:normal;word-break:break-word">{{ $team->project_title ?? '—' }}</td>
@@ -61,9 +74,16 @@
   </td>
   <td class="cell-status"><span class="badge {{ $chair ? 'badge-green' : 'badge-red' }}" style="font-size:10px">{{ $chair ? 'Assigned' : 'Unassigned' }}</span></td>
   <td>
-    <button class="btn btn-primary cell-assign-btn" style="font-size:10px;padding:4px 10px" onclick="openPanelModal({{ $team->team_id }})">
-      <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-      <span class="assign-btn-label">{{ $chair ? 'Update' : 'Assign' }}</span>
-    </button>
+    @if ($notReady)
+      <button type="button" class="btn cell-assign-btn" disabled style="font-size:10px;padding:4px 10px;opacity:.5;cursor:not-allowed"
+              title="{{ $team->team_name }} needs {{ implode(', ', $missingRoles) }} before a panel can be assigned">
+        <span class="assign-btn-label">Not ready</span>
+      </button>
+    @else
+      <button class="btn btn-primary cell-assign-btn" style="font-size:10px;padding:4px 10px" onclick="openPanelModal({{ $team->team_id }})">
+        <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        <span class="assign-btn-label">{{ $chair ? 'Update' : 'Assign' }}</span>
+      </button>
+    @endif
   </td>
 </tr>

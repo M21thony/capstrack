@@ -152,6 +152,8 @@ class AdminPanelAssignmentController extends Controller
             'project_title' => $t->project_title,
             'is_paid' => $paidTeamIds->contains($t->team_id),
             'excluded_expert_ids' => $this->teamAdviserConsultantIds($t)->values(),
+            // Empty once the team has its adviser, consultant and grammarian.
+            'missing_roles' => $t->missingExpertRoles(),
             // One row per stage: the attempt in play. Earlier attempts are
             // kept in the table as a record, but this page assigns panels for
             // the current try, and the JS looks a stage up by defense_type.
@@ -175,6 +177,8 @@ class AdminPanelAssignmentController extends Controller
             'id' => $e->expert_id,
             'name' => $e->name,
             'tags' => $e->expertise->pluck('expertise_field')->values(),
+            'degree' => $e->degreeLabel(),
+            'can_chair' => $e->canChairPanel(),
         ])->values();
 
         return view('capsa.panel_assignment', compact(
@@ -317,6 +321,29 @@ class AdminPanelAssignmentController extends Controller
 
     private function writePanelForStage(Team $team, array $validated): array
     {
+        // No panel until the team has its adviser, consultant and grammarian -
+        // the Getting started part of the checklist.
+        if ($missing = $team->missingExpertRoles()) {
+            return [
+                'success' => false,
+                'message' => $team->team_name.' still needs '.$this->listRoles($missing)
+                    .' before a panel can be assigned.',
+            ];
+        }
+
+        // The department's rule: a Panel Chair has a Master's degree or higher.
+        // Checked here because every way of saving a panel - one team, many,
+        // or copied down from the pre-proposal stage - comes through here.
+        $chair = CapstoneExpert::find($validated['chair_expert_id']);
+
+        if ($chair && ! $chair->canChairPanel()) {
+            return [
+                'success' => false,
+                'message' => $chair->name.' has '.($chair->degreeLabel() ? 'a '.$chair->degreeLabel().' degree' : 'no degree on record')
+                    .'. A Panel Chair needs a Master\'s degree or higher.',
+            ];
+        }
+
         $expertIds = array_values(array_filter([
             $validated['chair_expert_id'],
             $validated['member1_expert_id'] ?? null,
@@ -483,6 +510,7 @@ class AdminPanelAssignmentController extends Controller
         ]);
 
         $this->syncDefensePanelToGoogleCalendar($defense);
+        app(\App\Services\DefenseScheduleNotifier::class)->scheduled($defense);
 
         return response()->json([
             'success' => true,
@@ -677,6 +705,7 @@ class AdminPanelAssignmentController extends Controller
                     'end_date' => $newStart->copy()->addHours(self::SESSION_HOURS),
                 ]);
                 $this->syncDefensePanelToGoogleCalendar($schedule);
+            app(\App\Services\DefenseScheduleNotifier::class)->scheduled($schedule);
                 $compactedIds->push($schedule->defense_id);
             }
         }
@@ -724,6 +753,7 @@ class AdminPanelAssignmentController extends Controller
                 'venue' => $slot['venue'],
             ]);
             $this->syncDefensePanelToGoogleCalendar($schedule);
+            app(\App\Services\DefenseScheduleNotifier::class)->scheduled($schedule);
             $resolvedIds->push($schedule->defense_id);
         }
 
@@ -796,6 +826,7 @@ class AdminPanelAssignmentController extends Controller
                 'venue' => $slot['venue'],
             ]);
             $this->syncDefensePanelToGoogleCalendar($schedule);
+            app(\App\Services\DefenseScheduleNotifier::class)->scheduled($schedule);
             $scheduledIds->push($schedule->defense_id);
         }
 
@@ -1063,12 +1094,27 @@ class AdminPanelAssignmentController extends Controller
 
         $teams = Team::where('is_confirmed', true)
             ->where('team_status', '!=', 'Full')
+            ->with('preProposals')
             ->orderBy('team_name')
             ->get();
 
         $suggestions = $teams->map(function ($team) use ($expertiseFields, $validated) {
-            $tags = array_map(fn ($t) => trim((string) $t), $team->tags ?: []);
-            $matched = $this->matchedTags($tags, $expertiseFields);
+            // What the project is about: the team's own tags, the tags on
+            // its approved pre-proposals, and the words of its title. A
+            // team is suggested only when one of those meets the panel's
+            // expertise.
+            $tags = collect($team->tags ?: [])
+                ->merge($team->preProposals->where('approved_status', true)->flatMap(fn ($p) => $p->tags ?? []))
+                ->map(fn ($t) => trim((string) $t))
+                ->filter()
+                ->unique()
+                ->values()
+                ->all();
+
+            $matched = array_values(array_unique(array_merge(
+                $this->matchedTags($tags, $expertiseFields),
+                $this->matchedTitleWords((string) $team->project_title, $expertiseFields),
+            )));
             $excludedIds = $this->teamAdviserConsultantIds($team);
             $conflicted = count(array_intersect($validated['expert_ids'], $excludedIds->all())) > 0;
 
@@ -1079,9 +1125,12 @@ class AdminPanelAssignmentController extends Controller
                 'matched_tags' => $matched,
                 'score' => count($matched),
                 'conflicted' => $conflicted,
+                'ready' => $team->missingExpertRoles() === [],
             ];
         })
-            ->filter(fn ($s) => $s['score'] > 0 && ! $s['conflicted'])
+            // A team without its adviser, consultant and grammarian cannot
+            // take a panel, so suggesting it would only lead to a refusal.
+            ->filter(fn ($s) => $s['score'] > 0 && ! $s['conflicted'] && $s['ready'])
             ->sortByDesc('score')
             ->values();
 
@@ -1119,6 +1168,43 @@ class AdminPanelAssignmentController extends Controller
         }
 
         return array_values(array_unique($matched));
+    }
+
+    /** ['consultant', 'grammarian'] reads as "a consultant and a grammarian". */
+    private function listRoles(array $roles): string
+    {
+        $named = array_map(fn ($r) => (in_array($r[0], ['a', 'e', 'i', 'o', 'u'], true) ? 'an ' : 'a ').$r, $roles);
+
+        return count($named) > 1
+            ? implode(', ', array_slice($named, 0, -1)).' and '.end($named)
+            : ($named[0] ?? '');
+    }
+
+    /** Words too common in capstone titles to say what a project is about. */
+    private const TITLE_NOISE = [
+        'system', 'systems', 'based', 'using', 'with', 'from', 'into', 'through', 'development',
+        'application', 'app', 'platform', 'tool', 'online', 'digital', 'smart', 'automated',
+        'design', 'implementation', 'students', 'student', 'school', 'college', 'campus',
+    ];
+
+    /**
+     * Words of a team's title that appear, as whole words, in the panel's
+     * expertise - "Crop Yield Prediction Using Machine Learning" meets an
+     * expert in "Machine Learning" even when the team never tagged it.
+     */
+    private function matchedTitleWords(string $title, array $expertiseFields): array
+    {
+        $words = collect(preg_split('/[^a-z0-9]+/i', strtolower($title)))
+            ->filter(fn ($w) => strlen($w) >= 4 && ! in_array($w, self::TITLE_NOISE, true))
+            ->unique();
+
+        return $words
+            ->filter(fn ($w) => collect($expertiseFields)->contains(
+                fn ($field) => preg_match('/\b'.preg_quote($w, '/').'\b/i', (string) $field) === 1
+            ))
+            ->map(fn ($w) => ucfirst($w))
+            ->values()
+            ->all();
     }
 
     // Best-effort, synchronous, never blocks the schedule save (every call

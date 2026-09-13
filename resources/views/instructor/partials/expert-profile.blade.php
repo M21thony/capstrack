@@ -180,6 +180,20 @@
 
       <div class="ep-divider"></div>
 
+      <!-- Highest degree: what the Panel Chair rule reads -->
+      <div class="ep-field">
+        <label class="ep-label" for="ep-degree">Highest Degree</label>
+        <select id="ep-degree" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg2);color:var(--text);font:inherit;font-size:13px">
+          <option value="">Not on record</option>
+          @foreach (\App\Models\CapstoneExpert::DEGREES as $degreeKey => $degreeLabel)
+            <option value="{{ $degreeKey }}" @selected($expert?->highest_degree === $degreeKey)>{{ $degreeLabel }}</option>
+          @endforeach
+        </select>
+        <div style="font-size:11px;color:var(--text3);margin-top:6px">A Panel Chair needs a Master's degree or higher.</div>
+      </div>
+
+      <div class="ep-divider"></div>
+
       <!-- Programs Accepted + per-program team slots -->
       @php
         // Prefer what they last saved (parsed back out of program_slots);
@@ -580,7 +594,11 @@ async function saveExpertProfile(){
       // epTags is the live expertise list this panel is showing. It used to
       // be left out of this request entirely, so every edit an expert made
       // to their expertise was silently thrown away on close.
-      body: JSON.stringify({ program_slots: programSlots, expertise: epTags }),
+      body: JSON.stringify({
+        program_slots: programSlots,
+        expertise: epTags,
+        highest_degree: (document.getElementById('ep-degree') || {}).value || null,
+      }),
     });
     const json = await res.json();
 

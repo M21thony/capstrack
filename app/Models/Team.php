@@ -78,6 +78,31 @@ class Team extends Model
         return $years->max() >= 4 ? 2 : 1;
     }
 
+    /** The experts a team must have before it can be given a defense panel. */
+    public const REQUIRED_EXPERT_ROLES = ['adviser', 'consultant', 'grammarian'];
+
+    /**
+     * Which of those roles the team has not filled yet.
+     *
+     * Getting started on the checklist is securing all three. Until then
+     * nobody has read the work, so there is nothing for a panel to defend.
+     *
+     * @return array<int, string>
+     */
+    public function missingExpertRoles(): array
+    {
+        $filled = TeamExpertAssignment::where('team_id', $this->team_id)
+            ->where('status', 'approved')
+            ->with('expertRole.role')
+            ->get()
+            ->map(fn (TeamExpertAssignment $a) => $a->engaged_role_name)
+            ->filter()
+            ->unique()
+            ->all();
+
+        return array_values(array_diff(self::REQUIRED_EXPERT_ROLES, $filled));
+    }
+
     /**
      * Whether this team may still take members.
      *

@@ -549,7 +549,10 @@
   pointer-events:none;">
   <span id="pa-toast-msg"></span>
 </div>
-<style>#pa-toast.show{opacity:1;transform:translateY(0);pointer-events:auto}</style>
+<style>#pa-toast.show{opacity:1;transform:translateY(0);pointer-events:auto}
+.expert-picker-option .opt-degree{display:block;font-size:11px;color:var(--text3);margin-top:2px}
+.expert-picker-option.is-blocked{opacity:.55;cursor:not-allowed}
+.expert-picker-option.is-blocked .opt-degree{color:var(--amber)}</style>
 
 <script>
 const csrfToken = document.querySelector('meta[name="csrf-token"]');
@@ -639,9 +642,14 @@ function renderExpertPickerResults(term) {
       || e.tags.some(t => t.toLowerCase().includes(normalizedTerm));
   });
 
-  const suggested = matches.filter(e => currentSuggestedIds.includes(e.id));
-  const rest = matches.filter(e => !currentSuggestedIds.includes(e.id));
-  const ordered = suggested.concat(rest);
+  // Choosing a Chair: anyone without a Master's or higher is listed last and
+  // cannot be picked, with the reason beside their name.
+  const choosingChair = currentPickerRole === 'chair' || currentPickerRole === 'suggest-chair';
+  const blocked = e => choosingChair && !e.can_chair;
+
+  const suggested = matches.filter(e => currentSuggestedIds.includes(e.id) && !blocked(e));
+  const rest = matches.filter(e => !currentSuggestedIds.includes(e.id) && !blocked(e));
+  const ordered = suggested.concat(rest, matches.filter(blocked));
 
   const results = document.getElementById('expert-picker-results');
 
@@ -652,8 +660,12 @@ function renderExpertPickerResults(term) {
 
   results.innerHTML = ordered.map(e => {
     const isSuggested = currentSuggestedIds.includes(e.id);
-    return '<div class="expert-picker-option' + (isSuggested ? ' suggested' : '') + '" data-id="' + e.id + '">'
+    const isBlocked = blocked(e);
+    return '<div class="expert-picker-option' + (isSuggested && !isBlocked ? ' suggested' : '') + (isBlocked ? ' is-blocked' : '') + '" data-id="' + e.id + '"'
+      + (isBlocked ? ' aria-disabled="true" title="A Panel Chair needs a Master\'s degree or higher"' : '') + '>'
       + '<span class="opt-name">' + escHtml(e.name) + '</span>'
+      + '<span class="opt-degree">' + escHtml(e.degree || 'No degree on record')
+      + (isBlocked ? " · can't chair - needs a Master's or higher" : '') + '</span>'
       + (e.tags.length ? '<span class="opt-tags">' + escHtml(e.tags.join(', ')) + '</span>' : '')
       + '</div>';
   }).join('');
@@ -677,6 +689,7 @@ document.getElementById('expert-picker-search').addEventListener('input', (ev) =
 document.getElementById('expert-picker-results').addEventListener('click', (ev) => {
   const opt = ev.target.closest('.expert-picker-option');
   if (!opt || !currentPickerRole) return;
+  if (opt.classList.contains('is-blocked')) return;
   const pickedRole = currentPickerRole;
   setPickerValue(pickedRole, parseInt(opt.getAttribute('data-id'), 10));
   closeExpertPicker();
@@ -758,6 +771,16 @@ function openPanelModal(teamId) {
   document.getElementById('modal-team-name').textContent = team.team_name;
   document.getElementById('modal-team-title').textContent = team.project_title || '';
   document.getElementById('modal-error').style.display = 'none';
+
+  // A team without its adviser, consultant and grammarian cannot be given a
+  // panel yet. Said up front, rather than after the CaPSA has picked three people.
+  const missing = team.missing_roles || [];
+  if (missing.length) {
+    const err = document.getElementById('modal-error');
+    err.textContent = team.team_name + ' still needs ' + missing.join(', ')
+      + ' before you can assign a panel. They finish this in Getting started.';
+    err.style.display = 'block';
+  }
 
   // Defaults to whichever stage the page is currently filtered to (same
   // stage the row itself is showing) rather than the team's most-recently-

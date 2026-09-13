@@ -291,6 +291,33 @@ class AdminExpertsController extends Controller
     }
 
     /**
+     * PUT /experts/{expert}/degree - the one fact the Panel Chair rule reads.
+     *
+     * Its own resource because it is set from the expert's detail window,
+     * which edits nothing else.
+     */
+    public function updateDegree(Request $request, CapstoneExpert $expert): JsonResponse
+    {
+        if ($refusal = $this->refuseIfAdmin($expert)) {
+            return $refusal;
+        }
+
+        $validated = $request->validate([
+            'highest_degree' => ['nullable', 'in:'.implode(',', array_keys(CapstoneExpert::DEGREES))],
+        ]);
+
+        $expert->update(['highest_degree' => $validated['highest_degree'] ?? null]);
+
+        return response()->json([
+            'success' => true,
+            'message' => $expert->name.': '.($expert->degreeLabel() ?? 'no degree on record').' saved.'
+                .($expert->canChairPanel() ? ' They can be Panel Chair.' : ' They cannot be Panel Chair.'),
+            'highest_degree' => $expert->highest_degree,
+            'can_chair' => $expert->canChairPanel(),
+        ]);
+    }
+
+    /**
      * The Admin's account is not editable from here, by anyone.
      *
      * They run the system. There is no second Admin and nobody above them,

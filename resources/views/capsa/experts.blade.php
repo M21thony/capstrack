@@ -525,6 +525,8 @@
                 'name' => $expert->name,
                 'email' => $expert->email,
                 'credentials' => $expert->credentials,
+                'expert_id' => $expert->expert_id,
+                'highest_degree' => $expert->highest_degree,
                 'program' => $expert->program,
                 'is_capsa' => (bool) $expert->is_capsa,
                 'sections' => $expert->sections ?? [],
@@ -732,6 +734,18 @@
       <div>
         <div class="expert-detail-field-label">Credentials</div>
         <div class="expert-detail-field-value" id="detailCredentials">—</div>
+      </div>
+      <div>
+        <label class="expert-detail-field-label" for="detailDegree">Highest degree</label>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:4px">
+          <select id="detailDegree" class="input" style="max-width:200px" onchange="saveExpertDegree(this)">
+            <option value="">Not on record</option>
+            @foreach (\App\Models\CapstoneExpert::DEGREES as $degreeKey => $degreeLabel)
+              <option value="{{ $degreeKey }}">{{ $degreeLabel }}</option>
+            @endforeach
+          </select>
+          <span id="detailDegreeNote" style="font-size:11.5px;font-weight:600"></span>
+        </div>
       </div>
       <div>
         <div class="expert-detail-field-label">Program</div>
@@ -1334,11 +1348,48 @@ function showToast(message, type = 'info', title = null) {
 // ── EXPERT DETAILS DETAILS ────────────────────────────────────
 const expertDetailModal = document.getElementById('expertDetailModal');
 
+// Highest degree, which decides who can chair a panel. Saved the moment it
+// is picked; kept here too, so reopening the same expert shows the new value
+// without reloading the page.
+let currentDetailExpertId = null;
+const degreeSaved = {};
+
+function updateDegreeNote(degree) {
+  const canChair = degree === 'master' || degree === 'doctorate';
+  const note = document.getElementById('detailDegreeNote');
+  note.textContent = canChair ? 'Can be Panel Chair' : "Cannot be Panel Chair - needs a Master's or higher";
+  note.style.color = canChair ? 'var(--green)' : 'var(--text3)';
+}
+
+function saveExpertDegree(select) {
+  if (!currentDetailExpertId) return;
+  const id = currentDetailExpertId;
+  const value = select.value;
+  select.disabled = true;
+
+  fetch('{{ url('capsa/experts') }}/' + id + '/degree', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' },
+    body: JSON.stringify({ highest_degree: value || null }),
+  })
+    .then(r => r.json().then(d => ({ ok: r.ok && d.success, d })))
+    .then(({ ok, d }) => {
+      showToast(d.message || (ok ? 'Degree saved' : 'Could not save the degree'), ok ? 'success' : 'error');
+      if (ok) { degreeSaved[id] = value; updateDegreeNote(value); }
+    })
+    .catch(() => showToast('Network error. Nothing was saved.', 'error'))
+    .finally(() => { select.disabled = false; });
+}
+
 function openExpertDetail(data) {
   document.getElementById('detailAvatar').src = data.avatar;
   document.getElementById('detailName').textContent = data.name;
   document.getElementById('detailEmail').textContent = data.email;
   document.getElementById('detailCredentials').textContent = data.credentials || 'None on file';
+  currentDetailExpertId = data.expert_id;
+  const degree = data.expert_id in degreeSaved ? degreeSaved[data.expert_id] : (data.highest_degree || '');
+  document.getElementById('detailDegree').value = degree;
+  updateDegreeNote(degree);
   document.getElementById('detailProgram').textContent = data.program || 'Not set';
   document.getElementById('detailExpertise').textContent = data.expertise.length ? data.expertise.join(', ') : 'None specified';
   document.getElementById('detailCapacity').textContent = data.capacity.length ? data.capacity.join(' · ') : 'Not set';

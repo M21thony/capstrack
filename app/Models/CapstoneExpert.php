@@ -17,6 +17,7 @@ use Illuminate\Support\Str;
     'middle_name',
     'suffix',
     'credentials',
+    'highest_degree',
     'profile_picture',
     'is_admin',
     'approved_status',
@@ -545,5 +546,28 @@ class CapstoneExpert extends Authenticatable
         $startYear = (int) ($prefix.str_pad((string) $lastTwo, 2, '0', STR_PAD_LEFT));
 
         return $startYear.'-'.($startYear + 1);
+    }
+
+    /** Highest degree an expert holds. A Panel Chair needs a Master's or higher. */
+    public const DEGREES = [
+        'bachelor' => "Bachelor's",
+        'master' => "Master's",
+        'doctorate' => 'Doctorate',
+    ];
+
+    public function degreeLabel(): ?string
+    {
+        return self::DEGREES[$this->highest_degree] ?? null;
+    }
+
+    /**
+     * Whether this expert may chair a defense panel.
+     *
+     * The department's rule: a Master's degree or higher. No degree on
+     * record is not proof of one, so it does not qualify either.
+     */
+    public function canChairPanel(): bool
+    {
+        return in_array($this->highest_degree, ['master', 'doctorate'], true);
     }
 }
