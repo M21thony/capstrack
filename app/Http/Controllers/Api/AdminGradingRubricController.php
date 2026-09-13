@@ -1207,7 +1207,9 @@ class AdminGradingRubricController extends Controller
             'rubric_type' => $dbType,
             'description' => $validated['description'] ?? null,
             'total_points' => $validated['total_points'] ?? 100.00,
-            'is_active' => $validated['is_active'] ?? true,
+            // Editing an archived rubric must not quietly put it back into use -
+            // restoring it is the only way out of the archive.
+            'is_active' => $gradingRubric->is_archived ? false : ($validated['is_active'] ?? true),
         ]);
 
         $gradingRubric->load('criteria');

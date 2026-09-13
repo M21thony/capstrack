@@ -313,8 +313,11 @@ class GradingController extends Controller
     // byte-identical.
     private function rubricFor(string $defenseType): ?GradingRubric
     {
+        // An archived rubric is out of use, whatever its active flag says.
         return GradingRubric::whereRaw('LOWER(rubric_type) = ?', [mb_strtolower($defenseType)])
             ->where('is_active', true)
+            ->where('is_archived', false)
+            ->latest('rubric_id')
             ->first();
     }
 }
