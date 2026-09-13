@@ -210,6 +210,8 @@ Route::middleware('expert.capsa')->group(function () {
     // Its own path: PUT /milestone-items/{item} already edits the item, and
     // two routes cannot share a name without route() picking one of them.
     Route::put('/milestone-items/{item}/done', [MilestoneController::class, 'toggleItem'])->name('milestones.items.done');
+    // The file a team uploaded for a line, opened by the CaPSA to check it.
+    Route::get('/documents/{document}/file', [App\Http\Controllers\Capsa\DocumentFileController::class, 'show'])->name('documents.file');
     Route::get('/rubric_management', [GradingRubricController::class, 'index'])->name('rubric_management');
     Route::get('/financial', [AdminFinancialController::class, 'index'])->name('financial');
     Route::post('/financial/expense-post', [AdminFinancialController::class, 'storeExpensePost'])->name('financial.expense-post.store');
