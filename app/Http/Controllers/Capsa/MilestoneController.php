@@ -205,6 +205,7 @@ class MilestoneController extends Controller
             'chapter' => ['nullable', 'string', 'max:50'],
             'role' => ['nullable', 'string', 'max:32'],
             'defense_type' => ['nullable', 'string', 'max:64'],
+            'needs_check' => ['sometimes', 'boolean'],
         ]);
 
         $item->update($validated);
@@ -222,19 +223,20 @@ class MilestoneController extends Controller
     }
 
     /**
-     * Tick or untick a deliverable, carrying the date it was accomplished -
+     * Check or uncheck a deliverable, carrying the date it was accomplished -
      * the Date Accomplished column off the paper checklist.
      *
-     * Only the hand-ticked kinds. A chapter draft, a CLF or a defense is
-     * answered by the upload, the verdict or the panel's outcome, and letting
-     * a CaPSA tick those by hand would put a second, disagreeing answer next
-     * to the real one.
+     * Only the lines the CaPSA's check closes: forms, their own lines, and an
+     * approval they asked to see. A chapter draft, an ordinary CLF or a
+     * defense is answered by the upload, the verdict or the panel's outcome,
+     * and letting a CaPSA tick those by hand would put a second, disagreeing
+     * answer next to the real one.
      */
     public function toggleItem(Request $request, MilestoneItem $item): JsonResponse
     {
         $this->authorizeMilestone($item->milestone);
 
-        if (! $item->isTickedByHand()) {
+        if (! $item->isCheckedByCapsa()) {
             return response()->json([
                 'message' => 'This one closes itself when the document, approval or defense it points at happens.',
             ], 422);
