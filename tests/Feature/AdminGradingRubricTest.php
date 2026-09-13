@@ -198,7 +198,7 @@ class AdminGradingRubricTest extends TestCase
         ]);
 
         $response = $this->actingAs($this->admin, 'expert')
-            ->putJson("/api/admin/grading-rubrics/{$rubric->rubric_id}/restore");
+            ->deleteJson("/api/admin/grading-rubrics/{$rubric->rubric_id}/archive");
 
         $response->assertStatus(200)
             ->assertJson([
@@ -236,7 +236,7 @@ class AdminGradingRubricTest extends TestCase
         ]);
 
         $response = $this->actingAs($this->admin, 'expert')
-            ->putJson("/api/admin/grading-rubrics/{$rubric->rubric_id}/restore");
+            ->deleteJson("/api/admin/grading-rubrics/{$rubric->rubric_id}/archive");
 
         $response->assertStatus(200)
             ->assertJson([

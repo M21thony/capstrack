@@ -59,7 +59,8 @@ Route::middleware(['web', 'expert.auth'])
                 Route::post('/', [AdminGradingRubricController::class, 'store'])->name('store');
                 Route::put('/{gradingRubric}', [AdminGradingRubricController::class, 'update'])->name('update');
                 Route::delete('/{gradingRubric}', [AdminGradingRubricController::class, 'destroy'])->name('destroy');
-                Route::put('/{gradingRubric}/restore', [AdminGradingRubricController::class, 'restore'])->name('restore');
+                // Out of the archive: the archive is the resource, deleting from it restores.
+                Route::delete('/{gradingRubric}/archive', [AdminGradingRubricController::class, 'restore'])->name('restore');
                 Route::post('/{gradingRubric}/criteria', [AdminGradingRubricController::class, 'storeCriterion'])->name('criteria.store');
                 Route::put('/{gradingRubric}/criteria/{rubricCriterion}', [AdminGradingRubricController::class, 'updateCriterion'])->name('criteria.update');
                 Route::delete('/{gradingRubric}/criteria/{rubricCriterion}', [AdminGradingRubricController::class, 'destroyCriterion'])->name('criteria.destroy');
