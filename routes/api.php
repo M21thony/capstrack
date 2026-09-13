@@ -44,6 +44,9 @@ Route::middleware(['web', 'expert.auth'])
                 Route::get('/windows', [AdminPanelAssignmentController::class, 'indexWindows'])->name('windows.index');
                 Route::put('/windows/{defenseType}', [AdminPanelAssignmentController::class, 'updateWindow'])->name('windows.update');
                 Route::put('/schedule/{defense}', [AdminPanelAssignmentController::class, 'updateSchedule'])->name('schedule.update');
+                // Generate a stage's schedule at once: suggest every ready team a slot, then save the reviewed set.
+                Route::post('/schedule-drafts', [AdminPanelAssignmentController::class, 'draftSchedule'])->name('schedule-drafts.store');
+                Route::put('/schedules', [AdminPanelAssignmentController::class, 'applySchedule'])->name('schedules.update');
                 Route::post('/', [AdminPanelAssignmentController::class, 'storeMultiple'])->name('store.bulk');
                 Route::get('/suggest-multi', [AdminPanelAssignmentController::class, 'suggestExpertsMultiple'])->name('suggest-multi');
                 Route::get('/suggest-teams', [AdminPanelAssignmentController::class, 'suggestTeamsForPanel'])->name('suggest-teams');
