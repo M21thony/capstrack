@@ -220,7 +220,7 @@
       </select>
 
       <div id="ms-title-wrap" style="display:none">
-        <label class="ms-label">Name</label>
+        <label class="ms-label" for="ms-title">Milestone Name</label>
         <input class="input" name="title" id="ms-title" placeholder="e.g. Capstone 2" maxlength="255"/>
       </div>
 
