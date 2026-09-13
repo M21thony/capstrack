@@ -46,6 +46,9 @@ class TeamController extends Controller
             'expert' => $expert,
             'approvedAssignments' => $approvedAssignments,
             'progress' => $progress,
+            // Shown only on the cards of teams this expert advises - the
+            // adviser is who the department lets see a team's defense scores.
+            'defenseScores' => \App\Support\DefenseScores::forTeams($approvedAssignments->pluck('team_id')),
             'avgCompletion' => $progress->isEmpty() ? 0 : (int) round($progress->avg('percent')),
             'overdueMilestones' => $progress->sum('overdue'),
             'onTrack' => $progress->where('overdue', 0)->count(),

@@ -12,6 +12,7 @@ use App\Models\Team;
 use App\Models\TeamExpertAssignment;
 use App\Support\DefenseProgress;
 use App\Support\MilestoneGrid;
+use App\Support\DefenseScores;
 use App\Support\SectionScope;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -77,6 +78,8 @@ class TeamManagementController extends Controller
         return view('capsa.team_management', [
             'tab' => $tab,
             'rows' => $rows,
+            // Each team's score at every defense, once its whole panel has graded.
+            'defenseScores' => $tab === 'teams' ? DefenseScores::forTeams($teamIds) : collect(),
             // Only the Milestones tab needs the items themselves; every other
             // tab is served by the counts already in $rows.
             // The Milestones tab is a grid: deliverables across, teams down.

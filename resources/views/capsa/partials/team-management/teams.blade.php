@@ -10,6 +10,7 @@
         <th>Title</th>
         <th>Experts</th>
         <th>Milestones</th>
+        <th>Defense Scores</th>
         <th>Status</th>
         <th></th>
       </tr>
@@ -77,6 +78,23 @@
           </td>
 
           <td>
+            {{-- The panel's average: every panelist's total over the size of
+                 the panel, shown only once all of them have graded. --}}
+            @forelse ($defenseScores->get($row->team->team_id, collect()) as $score)
+              <div class="tm-score">
+                <span class="tm-score-stage">{{ $score->label }}@if ($score->attempt > 1) &middot; redefense @endif</span>
+                @if ($score->average !== null)
+                  <b>{{ \App\Support\DefenseScores::format($score->average) }}</b>
+                @else
+                  <span class="tm-score-wait">{{ $score->graded }}/{{ $score->panel_size }} graded</span>
+                @endif
+              </div>
+            @empty
+              <span style="font-size:12px;color:var(--text3)">—</span>
+            @endforelse
+          </td>
+
+          <td>
             @if ($row->team->is_confirmed)
               <span class="tm-pill tm-pill-green">Verified</span>
             @elseif ($row->awaitingVerification)
@@ -109,7 +127,7 @@
         </tr>
       @empty
         <tr>
-          <td colspan="7" class="tm-empty">
+          <td colspan="8" class="tm-empty">
             No teams in {{ $selectedSection ? 'section '.$selectedSection : 'your sections' }} yet.<br>
             Teams appear here as soon as students form them.
           </td>
