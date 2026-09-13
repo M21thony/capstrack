@@ -105,6 +105,10 @@
           <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
           Defense Schedule
         </button>
+        <button class="btn btn-primary" style="font-size:12px" onclick="openGenerateModal()">
+          <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><polyline points="9 15 11 17 15 13"/></svg>
+          Generate Schedule
+        </button>
         <button class="btn btn-ghost" style="font-size:12px;color:var(--text2);border-color:var(--border)" onclick="openSuggestTeamsModal()">
           <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2l2.4 6.6L21 11l-6.6 2.4L12 20l-2.4-6.6L3 11l6.6-2.4L12 2z"/></svg>
           Suggest Teams for Panel
@@ -141,6 +145,48 @@
         </div>
         <div id="bulk-selected-chips" style="display:flex;flex-wrap:wrap;gap:6px"></div>
       </div>
+
+      <!-- Generate schedule: every ready team gets a suggested slot to review,
+           then one confirm saves them all. -->
+      <div id="generate-modal" role="dialog" aria-modal="true" aria-labelledby="gen-title" style="display:none;position:fixed;inset:0;background:rgba(24,25,31,0.6);z-index:100;align-items:center;justify-content:center">
+        <div style="background:#fff;border-radius:14px;padding:20px 24px;width:1040px;max-width:95vw;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:12px">
+            <div>
+              <div style="font-size:15px;font-weight:600;color:var(--text)" id="gen-title">Generate schedule</div>
+              <div style="font-size:12px;color:var(--text3);margin-top:2px" id="gen-sub">Suggested slots for every team ready to defend. Review them, then save.</div>
+            </div>
+            <button type="button" onclick="closeGenerateModal()" aria-label="Close" style="background:none;border:none;font-size:22px;color:var(--text3);cursor:pointer;line-height:1">&times;</button>
+          </div>
+          <div id="gen-msg" role="alert" style="display:none;font-size:12.5px;border-radius:8px;padding:10px 12px;margin-bottom:12px"></div>
+          <div id="gen-body" style="flex:1;min-height:0;overflow:auto"></div>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">
+            <span id="gen-summary" style="flex:1;font-size:12.5px;color:var(--text2)"></span>
+            <button type="button" class="btn btn-ghost" style="font-size:13px;color:var(--text2);border-color:var(--border)" onclick="closeGenerateModal()">Cancel</button>
+            <button type="button" class="btn btn-primary" style="font-size:13px" id="gen-save" onclick="saveGeneratedSchedule()" disabled>Save schedule</button>
+          </div>
+        </div>
+      </div>
+      <style>
+        .gen-counts{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+        .gen-count{font-size:12px;padding:4px 10px;border-radius:999px;background:var(--bg3);border:1px solid var(--border);color:var(--text2)}
+        .gen-count b{color:var(--text)}
+        .gen-table{width:100%;border-collapse:collapse;font-size:12.5px}
+        .gen-table th{position:sticky;top:0;background:var(--bg3);text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--text3);padding:7px 8px;border-bottom:1px solid var(--border)}
+        .gen-table td{padding:7px 8px;border-bottom:1px solid var(--border);vertical-align:middle}
+        .gen-table tr.off td{opacity:.45}
+        .gen-table .team b{display:block;color:var(--text)}
+        .gen-table .team small,.gen-table .panel small{color:var(--text3);font-size:11.5px}
+        .gen-table .panel{font-size:12px;color:var(--text2);line-height:1.4}
+        .gen-table input[type=date],.gen-table select{font:inherit;font-size:12.5px;padding:5px 7px;border:1px solid var(--border);border-radius:6px;background:#fff}
+        .gen-table tr.clash td{background:rgba(220,38,38,0.05)}
+        .gen-clash{display:block;color:var(--red);font-size:11.5px;margin-top:3px}
+        .gen-section{margin-top:16px}
+        .gen-section h4{margin:0 0 6px;font-size:12.5px;color:var(--text)}
+        .gen-list{margin:0;padding:0;list-style:none;display:grid;gap:4px}
+        .gen-list li{display:flex;gap:10px;font-size:12.5px;padding:6px 10px;background:var(--bg3);border-radius:6px}
+        .gen-list li b{min-width:180px;color:var(--text)}
+        .gen-list li span{color:var(--text2)}
+      </style>
 
       <!-- Defense window modal overlay -->
       <div id="window-modal" style="display:none;position:fixed;inset:0;background:rgba(24,25,31,0.6);z-index:100;align-items:center;justify-content:center">
@@ -1354,6 +1400,235 @@ async function saveScheduleOverride() {
     btn.disabled = false;
   }
 }
+
+// ── Generate schedule ───────────────────────────────────────────────────
+// Asks the server for a suggested slot for every ready team, lets the CaPSA
+// change any of them, then saves the ones left ticked in one request.
+let genDraft = null;
+
+function genMsg(text, isError) {
+  const el = document.getElementById('gen-msg');
+  el.style.display = text ? 'block' : 'none';
+  el.textContent = text || '';
+  el.style.background = isError ? 'rgba(220,38,38,0.07)' : 'rgba(22,163,74,0.07)';
+  el.style.color = isError ? 'var(--red)' : 'var(--green)';
+}
+
+function fmtTime(hhmm, addHours) {
+  const [h, m] = hhmm.split(':').map(Number);
+  const d = new Date(2000, 0, 1, h + (addHours || 0), m);
+  return d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+}
+
+async function openGenerateModal() {
+  const stage = document.getElementById('payment-defense-type')?.value || 'Pre-proposal Defense';
+  genDraft = null;
+  genMsg('');
+  document.getElementById('gen-title').textContent = 'Generate ' + stage + ' schedule';
+  document.getElementById('gen-body').innerHTML = '<div style="padding:30px;text-align:center;font-size:13px;color:var(--text3)">Finding a slot for every ready team…</div>';
+  document.getElementById('gen-summary').textContent = '';
+  document.getElementById('gen-save').disabled = true;
+  document.getElementById('generate-modal').style.display = 'flex';
+
+  try {
+    const res = await fetch('/api/admin/panel_assignment/schedule-drafts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': csrf },
+      body: JSON.stringify({ defense_type: stage }),
+    });
+    const json = await res.json();
+    if (!res.ok || !json.success) {
+      document.getElementById('gen-body').innerHTML = '';
+      genMsg(json.message || 'Could not generate a schedule.', true);
+      return;
+    }
+    genDraft = json.data;
+    renderGenerate();
+  } catch (e) {
+    document.getElementById('gen-body').innerHTML = '';
+    genMsg('Network error. Nothing was generated.', true);
+  }
+}
+
+function closeGenerateModal() {
+  document.getElementById('generate-modal').style.display = 'none';
+}
+
+function renderGenerate() {
+  const d = genDraft;
+  const body = document.getElementById('gen-body');
+  const fmtDate = s => new Date(s + 'T00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+  document.getElementById('gen-sub').textContent = 'Window: ' + fmtDate(d.window.start_date) + ' – ' + fmtDate(d.window.end_date)
+    + '. Every slot below is suggested so no venue or panelist is double-booked. Change any of them before saving.';
+
+  body.innerHTML = '';
+  const counts = document.createElement('div');
+  counts.className = 'gen-counts';
+  [[d.draft.length, 'ready to schedule'], [d.not_ready.length, 'not ready'], [d.unplaced.length, 'no free slot'], [d.already_scheduled, 'already scheduled']]
+    .forEach(([n, label]) => { const c = document.createElement('span'); c.className = 'gen-count'; c.innerHTML = '<b>' + n + '</b> ' + label; counts.appendChild(c); });
+  body.appendChild(counts);
+
+  if (d.draft.length) {
+    const table = document.createElement('table');
+    table.className = 'gen-table';
+    table.innerHTML = '<thead><tr><th style="width:34px"><input type="checkbox" id="gen-all" checked aria-label="Include every team"></th><th>Team</th><th>Panel</th><th>Date</th><th>Time</th><th>Venue</th></tr></thead><tbody></tbody>';
+    const tbody = table.querySelector('tbody');
+
+    d.draft.forEach((row, i) => {
+      const tr = document.createElement('tr');
+      tr.dataset.i = i;
+
+      const inc = document.createElement('td');
+      const cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = true; cb.className = 'gen-inc';
+      cb.setAttribute('aria-label', 'Include ' + row.team_name);
+      inc.appendChild(cb);
+
+      const team = document.createElement('td'); team.className = 'team';
+      const tb = document.createElement('b'); tb.textContent = row.team_name;
+      const ts = document.createElement('small'); ts.textContent = row.project_title || 'No title';
+      team.append(tb, ts);
+
+      const panel = document.createElement('td'); panel.className = 'panel';
+      row.panel.forEach(p => {
+        const line = document.createElement('div');
+        line.textContent = (p.name || '—') + ' ';
+        const sm = document.createElement('small'); sm.textContent = p.role === 'Panel Chair' ? '(Chair)' : '';
+        line.appendChild(sm); panel.appendChild(line);
+      });
+
+      const date = document.createElement('td');
+      const di = document.createElement('input'); di.type = 'date'; di.value = row.date; di.min = d.window.start_date; di.max = d.window.end_date;
+      di.className = 'gen-date'; di.setAttribute('aria-label', 'Date for ' + row.team_name);
+      date.appendChild(di);
+
+      const time = document.createElement('td');
+      const ti = document.createElement('select'); ti.className = 'gen-time'; ti.setAttribute('aria-label', 'Time for ' + row.team_name);
+      d.time_slots.forEach(t => { const o = document.createElement('option'); o.value = t; o.textContent = fmtTime(t) + ' – ' + fmtTime(t, d.session_hours); o.selected = t === row.start_time; ti.appendChild(o); });
+      time.appendChild(ti);
+
+      const venue = document.createElement('td');
+      const vi = document.createElement('select'); vi.className = 'gen-venue'; vi.setAttribute('aria-label', 'Venue for ' + row.team_name);
+      d.venues.forEach(v => { const o = document.createElement('option'); o.value = v; o.textContent = v; o.selected = v === row.venue; vi.appendChild(o); });
+      venue.appendChild(vi);
+
+      tr.append(inc, team, panel, date, time, venue);
+      tbody.appendChild(tr);
+    });
+
+    table.addEventListener('change', ev => {
+      if (ev.target.id === 'gen-all') table.querySelectorAll('.gen-inc').forEach(c => { c.checked = ev.target.checked; });
+      checkGenerateClashes();
+    });
+    body.appendChild(table);
+  } else {
+    const none = document.createElement('div');
+    none.style.cssText = 'padding:20px;text-align:center;font-size:13px;color:var(--text3);background:var(--bg3);border-radius:8px';
+    none.textContent = 'No team is ready to schedule for this stage yet. The lists below say what each one still needs.';
+    body.appendChild(none);
+  }
+
+  [['Not ready', d.not_ready], ['No free slot in the window', d.unplaced]].forEach(([title, list]) => {
+    if (!list.length) return;
+    const sec = document.createElement('div'); sec.className = 'gen-section';
+    const h = document.createElement('h4'); h.textContent = title + ' (' + list.length + ')';
+    const ul = document.createElement('ul'); ul.className = 'gen-list';
+    list.forEach(item => {
+      const li = document.createElement('li');
+      const b = document.createElement('b'); b.textContent = item.team_name;
+      const s = document.createElement('span'); s.textContent = item.reason;
+      li.append(b, s); ul.appendChild(li);
+    });
+    sec.append(h, ul); body.appendChild(sec);
+  });
+
+  checkGenerateClashes();
+}
+
+// A CaPSA who edits a suggestion can put two teams in one room at once, or a
+// panelist in two places the same day. Flagged here as it happens; the server
+// checks again when saving.
+function checkGenerateClashes() {
+  const rows = Array.from(document.querySelectorAll('.gen-table tbody tr'));
+  const picked = rows.map(tr => {
+    const i = +tr.dataset.i;
+    const on = tr.querySelector('.gen-inc').checked;
+    tr.classList.toggle('off', !on);
+    tr.querySelector('.gen-clash')?.remove();
+    tr.classList.remove('clash');
+    return { tr, on, row: genDraft.draft[i], date: tr.querySelector('.gen-date').value, time: tr.querySelector('.gen-time').value, venue: tr.querySelector('.gen-venue').value };
+  }).filter(p => p.on);
+
+  let clashes = 0;
+  picked.forEach((a, i) => {
+    const names = a.row.panel.map(p => p.name).sort().join('|');
+    const reasons = [];
+    picked.forEach((b, j) => {
+      if (i === j) return;
+      const bNames = b.row.panel.map(p => p.name).sort().join('|');
+      if (a.date === b.date && a.time === b.time && a.venue === b.venue) reasons.push(b.row.team_name + ' has this room at this time');
+      if (a.date === b.date && a.time === b.time && names === bNames) reasons.push('this panel is with ' + b.row.team_name + ' at this time');
+      if (a.date === b.date && names !== bNames && a.row.panel.some(p => b.row.panel.some(q => q.name && q.name === p.name))) reasons.push('a panelist sits with ' + b.row.team_name + ' that day');
+    });
+    if (reasons.length) {
+      clashes++;
+      a.tr.classList.add('clash');
+      const note = document.createElement('span'); note.className = 'gen-clash';
+      note.textContent = 'Clash: ' + reasons.join('; ') + '.';
+      a.tr.querySelector('.team').appendChild(note);
+    }
+  });
+
+  const n = picked.length;
+  document.getElementById('gen-summary').textContent = n
+    ? n + ' ' + (n === 1 ? 'team' : 'teams') + ' will be scheduled, added to each panelist\'s Google Calendar, and told by email and announcement.'
+      + (clashes ? ' Fix ' + clashes + ' clash' + (clashes === 1 ? '' : 'es') + ' first.' : '')
+    : 'Tick at least one team to save.';
+  const save = document.getElementById('gen-save');
+  save.disabled = n === 0 || clashes > 0;
+  save.textContent = n ? 'Save schedule for ' + n + ' ' + (n === 1 ? 'team' : 'teams') : 'Save schedule';
+}
+
+async function saveGeneratedSchedule() {
+  const items = Array.from(document.querySelectorAll('.gen-table tbody tr'))
+    .filter(tr => tr.querySelector('.gen-inc').checked)
+    .map(tr => ({
+      defense_id: genDraft.draft[+tr.dataset.i].defense_id,
+      date: tr.querySelector('.gen-date').value,
+      start_time: tr.querySelector('.gen-time').value,
+      venue: tr.querySelector('.gen-venue').value,
+    }));
+  if (!items.length) return;
+
+  const btn = document.getElementById('gen-save');
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+
+  try {
+    const res = await fetch('/api/admin/panel_assignment/schedules', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': csrf },
+      body: JSON.stringify({ defense_type: genDraft.defense_type, items }),
+    });
+    const json = await res.json();
+    if (!res.ok || !json.success) {
+      genMsg(json.message || 'Could not save the schedule.', true);
+      checkGenerateClashes();
+      return;
+    }
+    const skipped = json.data.skipped || [];
+    if (skipped.length) {
+      genMsg(json.message + ' ' + skipped.map(s => s.team_name + ': ' + s.reason).join(' '), true);
+    } else {
+      genMsg(json.message, false);
+    }
+    if (json.data.scheduled.length) setTimeout(() => window.location.reload(), skipped.length ? 3500 : 1200);
+  } catch (e) {
+    genMsg('Network error. Nothing was saved.', true);
+    checkGenerateClashes();
+  }
+}
+
+document.getElementById('generate-modal').addEventListener('click', ev => { if (ev.target.id === 'generate-modal') closeGenerateModal(); });
 
 // ── Defense Window (single form, reused per defense type) ────────────────
 let WINDOWS_BY_TYPE = {};

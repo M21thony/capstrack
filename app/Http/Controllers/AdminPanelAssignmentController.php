@@ -14,6 +14,8 @@ use App\Models\StudentSchoolYear;
 use App\Models\Team;
 use App\Models\TeamExpertAssignment;
 use App\Services\GoogleCalendarService;
+use App\Support\DefenseOutcome;
+use App\Support\DefenseProgress;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
 use Illuminate\Http\JsonResponse;
@@ -575,6 +577,240 @@ class AdminPanelAssignmentController extends Controller
         return array_values(array_unique($conflicts));
     }
 
+    /**
+     * POST /panel_assignment/schedule-drafts - a suggested date, time and
+     * venue for every team ready to defend this stage. Nothing is saved.
+     *
+     * "Ready" is everything a team must have before it defends: its adviser,
+     * consultant and grammarian, the previous stage passed, a panel with a
+     * Chair, and - for a paid stage - every member's fee verified. A team that
+     * falls short is listed with the reason instead of being left out quietly.
+     *
+     * Suggestions are worked out in memory. The tables cannot roll back a
+     * trial save, so each suggestion is held in a list the next team's search
+     * treats as booked, which is how two teams never get the same slot.
+     */
+    public function draftSchedule(Request $request): JsonResponse
+    {
+        $type = $request->validate([
+            'defense_type' => ['required', 'string', 'in:'.implode(',', self::DEFENSE_TYPES)],
+        ])['defense_type'];
+
+        $window = DefenseWindow::where('defense_type', $type)->first();
+
+        if (! $window) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Set the '.$type.' window first - the dates this stage is defended within.',
+            ], 422);
+        }
+
+        [$ready, $notReady, $alreadyScheduled] = $this->schedulingCandidates($type);
+
+        $held = collect();
+        $draft = [];
+        $unplaced = [];
+
+        foreach ($ready as $schedule) {
+            try {
+                $slot = $this->findSlotForPanel($window, $schedule->panels->pluck('expert_id')->all(), $schedule->defense_id, $held);
+            } catch (\RuntimeException $e) {
+                $unplaced[] = [
+                    'team_id' => $schedule->team_id,
+                    'team_name' => $schedule->team->team_name,
+                    'reason' => 'No free slot for this panel inside the window. Widen the window or change the panel.',
+                ];
+
+                continue;
+            }
+
+            $suggested = new DefenseSchedule([
+                'defense_type' => $type,
+                'schedule_date' => $slot['schedule_date'],
+                'end_date' => $slot['end_date'],
+                'venue' => $slot['venue'],
+            ]);
+            $suggested->defense_id = $schedule->defense_id;
+            $suggested->setRelation('panels', $schedule->panels);
+            $held->push($suggested);
+
+            $draft[] = [
+                'defense_id' => $schedule->defense_id,
+                'team_id' => $schedule->team_id,
+                'team_name' => $schedule->team->team_name,
+                'project_title' => $schedule->team->project_title,
+                'panel' => $schedule->panels->sortBy('panel_role')
+                    ->map(fn ($p) => ['role' => $p->panel_role, 'name' => $p->expert?->name])
+                    ->values(),
+                'date' => $slot['schedule_date']->toDateString(),
+                'start_time' => $slot['schedule_date']->format('H:i'),
+                'venue' => $slot['venue'],
+            ];
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'defense_type' => $type,
+                'window' => [
+                    'start_date' => $window->start_date->toDateString(),
+                    'end_date' => $window->end_date->toDateString(),
+                ],
+                'time_slots' => self::TIME_SLOTS,
+                'venues' => self::VENUES,
+                'session_hours' => self::SESSION_HOURS,
+                'draft' => $draft,
+                'unplaced' => $unplaced,
+                'not_ready' => $notReady,
+                'already_scheduled' => $alreadyScheduled,
+            ],
+        ]);
+    }
+
+    /**
+     * PUT /panel_assignment/schedules - save the reviewed draft, all at once.
+     *
+     * Every row is checked again as it is saved: the team still ready, the
+     * date inside the window, and nothing booked in that slot since the draft
+     * was made. A row that fails is skipped with its reason; the rest are
+     * saved, put on the panel's Google Calendar, and announced to the team.
+     */
+    public function applySchedule(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'defense_type' => ['required', 'string', 'in:'.implode(',', self::DEFENSE_TYPES)],
+            'items' => ['required', 'array', 'min:1'],
+            'items.*.defense_id' => ['required', 'integer'],
+            'items.*.date' => ['required', 'date_format:Y-m-d'],
+            'items.*.start_time' => ['required', 'in:'.implode(',', self::TIME_SLOTS)],
+            'items.*.venue' => ['required', 'in:'.implode(',', self::VENUES)],
+        ]);
+
+        $type = $validated['defense_type'];
+        $window = DefenseWindow::where('defense_type', $type)->first();
+
+        if (! $window) {
+            return response()->json(['success' => false, 'message' => 'Set the '.$type.' window first.'], 422);
+        }
+
+        $readyById = $this->schedulingCandidates($type)[0]->keyBy('defense_id');
+        $saved = [];
+        $skipped = [];
+
+        foreach ($validated['items'] as $item) {
+            $schedule = $readyById->get($item['defense_id']);
+            // A full closure, not fn(): an arrow function copies $skipped and
+            // the appended row would be lost.
+            $skip = function (string $reason) use (&$skipped, $item, $schedule): void {
+                $skipped[] = [
+                    'defense_id' => $item['defense_id'],
+                    'team_name' => $schedule?->team?->team_name ?? DefenseSchedule::find($item['defense_id'])?->team?->team_name ?? 'A team',
+                    'reason' => $reason,
+                ];
+            };
+
+            if (! $schedule) {
+                $skip('No longer ready to schedule, or already has a date.');
+
+                continue;
+            }
+
+            $start = Carbon::parse($item['date'].' '.$item['start_time']);
+
+            if ($start->lt($window->start_date->copy()->startOfDay()) || $start->gt($window->end_date->copy()->endOfDay())) {
+                $skip('That date is outside the '.$type.' window.');
+
+                continue;
+            }
+
+            if ($conflicts = $this->conflictsForManualOverride($schedule, $start, $item['venue'])) {
+                $skip(implode(' ', $conflicts));
+
+                continue;
+            }
+
+            $schedule->update([
+                'schedule_date' => $start,
+                'end_date' => $start->copy()->addHours(self::SESSION_HOURS),
+                'venue' => $item['venue'],
+            ]);
+
+            $this->syncDefensePanelToGoogleCalendar($schedule);
+            app(\App\Services\DefenseScheduleNotifier::class)->scheduled($schedule);
+
+            $saved[] = array_merge(['team_id' => $schedule->team_id], $this->formatSchedule($schedule->fresh(['panels.expert'])));
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => count($saved).' '.(count($saved) === 1 ? 'team' : 'teams').' scheduled'
+                .($skipped ? ', '.count($skipped).' skipped.' : '.'),
+            'data' => ['scheduled' => $saved, 'skipped' => $skipped],
+        ]);
+    }
+
+    /**
+     * Every confirmed team, sorted into ready to schedule for this stage and
+     * not - with the reason.
+     *
+     * @return array{0: Collection<int, DefenseSchedule>, 1: array<int, array{team_id: int, team_name: string, reason: string}>, 2: int}
+     */
+    private function schedulingCandidates(string $type): array
+    {
+        $teams = Team::where('is_confirmed', true)
+            ->with(['members', 'defenseSchedules' => fn ($q) => $q->where('defense_type', $type)->with('panels.expert')])
+            ->orderBy('team_name')
+            ->get();
+
+        $paidTeamIds = in_array($type, self::PAID_DEFENSE_TYPES, true)
+            ? $this->paidTeamIds($teams, $type)
+            : $teams->pluck('team_id');
+
+        $stage = array_search($type, DefenseProgress::STAGES, true);
+        $previous = $stage > 0 ? DefenseProgress::STAGES[$stage - 1] : null;
+        $progress = app(DefenseProgress::class);
+
+        $ready = collect();
+        $notReady = [];
+        $alreadyScheduled = 0;
+
+        foreach ($teams as $team) {
+            $schedule = $team->defenseSchedules->sortByDesc('attempt')->first();
+
+            // Through this stage already, or on the calendar for it.
+            if ($schedule && DefenseOutcome::isPass($schedule->outcome)) {
+                continue;
+            }
+
+            if ($schedule?->schedule_date) {
+                $alreadyScheduled++;
+
+                continue;
+            }
+
+            $missing = $team->missingExpertRoles();
+
+            $reason = match (true) {
+                $missing !== [] => 'Needs '.$this->listRoles($missing).'.',
+                $previous && ! $progress->hasPassed($team, $previous) => 'Has not passed the '.$previous.' yet.',
+                ! $schedule || ! $schedule->panels->contains('panel_role', 'Panel Chair') => 'No panel assigned yet.',
+                ! $paidTeamIds->contains($team->team_id) => 'Fees for this stage are not verified for every member.',
+                default => null,
+            };
+
+            if ($reason) {
+                $notReady[] = ['team_id' => $team->team_id, 'team_name' => $team->team_name, 'reason' => $reason];
+
+                continue;
+            }
+
+            $schedule->setRelation('team', $team);
+            $ready->push($schedule);
+        }
+
+        return [$ready, $notReady, $alreadyScheduled];
+    }
+
     public function indexWindows(): JsonResponse
     {
         $windows = DefenseWindow::whereIn('defense_type', self::DEFENSE_TYPES)->get()->keyBy('defense_type');
@@ -855,7 +1091,11 @@ class AdminPanelAssignmentController extends Controller
     //    even if the blocks don't literally overlap. Two different panels
     //    CAN still share the same day, just never the same block, and
     //    never the same panelist.
-    private function findSlotForPanel(DefenseWindow $window, array $expertIds, ?int $excludeScheduleId = null): array
+    /**
+     * @param  Collection<int, DefenseSchedule>|null  $held  Slots already suggested in a draft but
+     *                                                       not saved - booked as far as this search is concerned.
+     */
+    private function findSlotForPanel(DefenseWindow $window, array $expertIds, ?int $excludeScheduleId = null, ?Collection $held = null): array
     {
         $sortedExpertIds = collect($expertIds)->sort()->values()->all();
 
@@ -867,7 +1107,9 @@ class AdminPanelAssignmentController extends Controller
             ->whereNotNull('venue')
             ->when($excludeScheduleId, fn ($q) => $q->where('defense_id', '!=', $excludeScheduleId))
             ->with('panels')
-            ->get();
+            ->get()
+            ->toBase()
+            ->concat($held ?? []);
 
         // True when this exact panel could sit in $venue at $slotStart:
         // the venue must be free in that exact block, but an expert
