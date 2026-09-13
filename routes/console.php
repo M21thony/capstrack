@@ -12,3 +12,7 @@ Artisan::command('inspire', function () {
 // students/experts get emailed as early as possible on the exact day of a
 // booked session, not near/at the session's own start time.
 Schedule::command('consultations:send-reminders')->dailyAt('00:05');
+
+// Every morning, each adviser/consultant with checklist documents still
+// waiting on their review gets one email listing them.
+Schedule::command('milestones:send-review-reminders')->dailyAt('07:00');
