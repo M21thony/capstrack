@@ -19,6 +19,7 @@ class CapstonePreProposal extends Model
         'scope',
         'limitations',
         'sdm',
+        'tags',
         'duplication_status',
         'approved_status',
         'rejection_reason',
@@ -27,6 +28,7 @@ class CapstonePreProposal extends Model
 
     protected $casts = [
         'research_agenda' => 'array',
+        'tags' => 'array',
         'approved_status' => 'boolean',
         'submitted_at' => 'datetime',
     ];

@@ -8,12 +8,14 @@ use App\Models\StudentSchoolYear;
 use App\Models\Team;
 use App\Services\OllamaSSHClient;
 use App\Services\SimilarityService;
+use App\Support\ProjectTags;
 use App\Support\StudentTeam;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class PreProposalController extends Controller
@@ -366,7 +368,14 @@ class PreProposalController extends Controller
             'scope' => ['required', 'string'],
             'limitations' => ['required', 'string'],
             'sdm' => ['required', 'string', 'max:100'],
+            'tags' => ['required', 'array', 'min:'.ProjectTags::MIN, 'max:'.ProjectTags::MAX],
+            'tags.*' => ['string', 'distinct', Rule::in(ProjectTags::OPTIONS)],
             'duplication_check_id' => ['required', 'integer'],
+        ], [
+            'tags.required' => 'Pick at least one tag for what kind of project this is.',
+            'tags.min' => 'Pick at least one tag for what kind of project this is.',
+            'tags.max' => 'Pick at most '.ProjectTags::MAX.' tags.',
+            'tags.*.in' => 'Pick tags from the list.',
         ]);
 
         $check = DuplicationCheck::whereHas(
@@ -407,6 +416,7 @@ class PreProposalController extends Controller
                 'scope' => $validated['scope'],
                 'limitations' => $validated['limitations'],
                 'sdm' => $validated['sdm'],
+                'tags' => array_values($validated['tags']),
                 'duplication_status' => $duplicationStatus,
                 'approved_status' => false,
                 'rejection_reason' => null,

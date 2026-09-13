@@ -87,6 +87,7 @@ class PreProposalControllerTest extends TestCase
             'scope' => 'A scope.',
             'limitations' => 'A limitation.',
             'sdm' => 'Agile Development Methodology',
+            'tags' => ['Web-based', 'Management System'],
             'duplication_check_id' => $checkId,
         ];
     }
