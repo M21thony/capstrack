@@ -200,6 +200,17 @@ class TeamController extends Controller
                 ->get()
             : collect();
 
+        // After Title Defense: the members are locked, and anything about one
+        // of them leaving is waiting on the CaPSA.
+        $rosterLocked = $myTeam?->isRosterLocked() ?? false;
+        $rosterRequests = $rosterLocked
+            ? \App\Models\RosterChangeRequest::with(['student', 'requester'])
+                ->pending()
+                ->where('team_id', $myTeam->team_id)
+                ->oldest()
+                ->get()
+            : collect();
+
         $teamLeaderName = null;
 
         if ($myTeam && $myTeam->leader_id) {
@@ -256,6 +267,9 @@ class TeamController extends Controller
             'hasPendingRequest' => $hasPendingRequest,
             'hasPendingLeaveApproval' => $hasPendingLeaveApproval,
             'pendingLeaveApprovals' => $pendingLeaveApprovals,
+            'rosterLocked' => $rosterLocked,
+            'rosterLockedAt' => $rosterLocked ? $myTeam->rosterLockedAt() : null,
+            'rosterRequests' => $rosterRequests,
             'leaderIds' => $leaderIds,
             'userRole' => $userRole,
             'expertRemovedNotifications' => $expertRemovedNotifications,
@@ -579,6 +593,10 @@ class TeamController extends Controller
         $team = Team::find($teamId);
         $isLeader = $team && (int) $team->leader_id === (int) $studentId;
 
+        if ($team?->isRosterLocked()) {
+            return redirect()->route('student.team')->with('error', Team::ROSTER_LOCKED);
+        }
+
         if ($isLeader) {
             $memberCount = StudentSchoolYear::where('team_id', $team->team_id)->count();
 
@@ -639,6 +657,10 @@ class TeamController extends Controller
 
         $team = Team::find($teamId);
         $isLeader = $team && (int) $team->leader_id === (int) $studentId;
+
+        if ($team?->isRosterLocked()) {
+            return redirect()->route('student.team')->with('error', Team::ROSTER_LOCKED);
+        }
 
         if ($isLeader) {
             $memberCount = StudentSchoolYear::where('team_id', $team->team_id)->count();
@@ -756,6 +778,14 @@ class TeamController extends Controller
                 ->with('error', 'Only the team leader can approve this leave request.');
         }
 
+        // Asked before the team passed Title Defense. The leader no longer
+        // decides it - the CaPSA does, through a roster request.
+        if ($team->isRosterLocked()) {
+            $approval->update(['status' => LeaveApproval::STATUS_CANCELLED]);
+
+            return redirect()->route('student.team')->with('error', Team::ROSTER_LOCKED);
+        }
+
         $approval->refresh();
 
         if (! $approval->isPending()) {
@@ -818,6 +848,14 @@ class TeamController extends Controller
             return redirect()
                 ->route('student.team')
                 ->with('error', 'Only the team leader can decline this leave request.');
+        }
+
+        // Declining a third time removes the member, which a locked team
+        // cannot do on the leader's say-so.
+        if ($team->isRosterLocked()) {
+            $approval->update(['status' => LeaveApproval::STATUS_CANCELLED]);
+
+            return redirect()->route('student.team')->with('error', Team::ROSTER_LOCKED);
         }
 
         $approval->refresh();
@@ -935,6 +973,13 @@ class TeamController extends Controller
                 continue;
             }
 
+            // The timer must not do what the leader no longer can.
+            if ($team->isRosterLocked()) {
+                $approval->update(['status' => LeaveApproval::STATUS_CANCELLED]);
+
+                continue;
+            }
+
             if (StudentSchoolYear::where('student_id', $approval->student_id)->where('team_id', $team->team_id)->exists()) {
                 $this->performMemberLeave($approval->student_id, $team);
             }
@@ -1017,6 +1062,10 @@ class TeamController extends Controller
         if ((int) $myTeam->leader_id !== (int) $authId) {
             return redirect()->route('student.team')
                 ->with('error', 'Only the team leader can remove members.');
+        }
+
+        if ($myTeam->isRosterLocked()) {
+            return redirect()->route('student.team')->with('error', Team::ROSTER_LOCKED);
         }
 
         if ($student->student_id === $authId) {

@@ -341,6 +341,15 @@
         <!-- Team Members -->
         <div style="background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 16px;">
           <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 14px;">TEAM MEMBERS <span style="color: var(--accent3); font-weight: 600;">· Max {{ \App\Models\Team::maxMembers() }}</span></div>
+          @if($rosterLocked)
+          <div role="status" style="display:flex;gap:10px;align-items:flex-start;margin:-4px 0 14px;padding:10px 12px;border-radius:10px;background:var(--bg2);border:1px solid var(--border);">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="var(--accent3)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none;margin-top:1px;" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            <div style="font-size:11.5px;line-height:1.5;color:var(--text2);">
+              <strong style="color:var(--text);">Members locked{{ $rosterLockedAt ? ' since '.$rosterLockedAt->format('M j, Y') : '' }}.</strong>
+              Your team passed Title Defense, so no one can join, and a member leaves only with your CaPSA's approval.
+            </div>
+          </div>
+          @endif
           @php
             // The number of seats drawn, which is the number the CaPSA set.
             // Spelled out as 5, this page went on showing five rows however
@@ -387,7 +396,11 @@
                     <div style="font-size: 11px; color: var(--text3);">{{ $memberRole }}</div>
                   </div>
                   <div style="background: {{ $isTeamLeader ? '#fef3c7' : 'var(--bg2)' }}; color: {{ $isTeamLeader ? '#92400e' : 'var(--text3)' }}; padding: 3px 8px; border-radius: 6px; font-size: 10px; font-weight: 700;">{{ $isTeamLeader ? 'LEADER' : 'MEMBER' }}</div>
-                  @if($isLeader && !$isThisUser && !$myTeam->is_confirmed)
+                  @if($rosterLocked && $rosterRequests->contains('student_id', $member->student_id))
+                    <span title="A request about this member is waiting on your CaPSA" style="font-size:9px;font-weight:700;color:var(--amber);background:var(--amber-bg);padding:2px 6px;border-radius:4px;white-space:nowrap;">WITH CAPSA</span>
+                  @elseif($rosterLocked && $isLeader && !$isThisUser)
+                    <button type="button" onclick="openRosterRequestModal('remove', {{ $member->student_id }}, '{{ addslashes(trim($member->f_name . ' ' . $member->l_name)) }}')" style="background:none;border:none;color:#ef4444;cursor:pointer;padding:4px;font-size:14px;line-height:1;" title="Ask your CaPSA to remove this member" aria-label="Ask your CaPSA to remove {{ trim($member->f_name . ' ' . $member->l_name) }}">✕</button>
+                  @elseif($isLeader && !$isThisUser && !$myTeam->is_confirmed)
                     <button type="button" onclick="openRemoveMemberModal({{ $member->student_id }}, '{{ addslashes($member->f_name . ' ' . $member->l_name) }}', '{{ addslashes($member->email ?? '') }}', '{{ addslashes(($member->course ?? '') . ($member->year_section ? ' · ' . $member->year_section : '')) }}', '{{ addslashes($member->avatarUrl()) }}')" style="background:none;border:none;color:#ef4444;cursor:pointer;padding:4px;font-size:14px;line-height:1;" title="Remove member">✕</button>
                   @endif
                 </div>
@@ -436,8 +449,8 @@
                     <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                   </div>
                   <div style="flex:1">
-                    <div style="font-size:12.5px;font-weight:600;color:var(--text3)">Members Addition no longer available.</div>
-                    <div style="font-size:11px;color:var(--text3);line-height:1.45">Capstone 2 has started, so a team keeps the members it finished Capstone 1 with.</div>
+                    <div style="font-size:12.5px;font-weight:600;color:var(--text3)">{{ $rosterLocked ? 'Members are locked.' : 'Members Addition no longer available.' }}</div>
+                    <div style="font-size:11px;color:var(--text3);line-height:1.45">{{ $rosterLocked ? 'Your team passed Title Defense, so no one can be added.' : 'Capstone 2 has started, so a team keeps the members it finished Capstone 1 with.' }}</div>
                   </div>
                 </div>
                 @endif
@@ -569,6 +582,39 @@
       </div>
       @endif
 
+      @if($rosterRequests->isNotEmpty())
+      <div style="margin-top: 16px; background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 16px;">
+        <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3);">WAITING ON YOUR CAPSA</div>
+        <div style="font-size: 11px; color: var(--text3); margin: 3px 0 12px;">Your team's members are locked, so these need your CaPSA's decision.</div>
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          @foreach($rosterRequests as $rr)
+            @php
+              $rrMember = trim(($rr->student->f_name ?? '').' '.($rr->student->l_name ?? '')) ?: 'A member';
+              $rrBy = trim(($rr->requester->f_name ?? '').' '.($rr->requester->l_name ?? '')) ?: 'The leader';
+              $rrMine = (int) $rr->requested_by === (int) auth()->user()->student_id;
+            @endphp
+            <div style="display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px;">
+              <div style="flex: 1; min-width: 0;">
+                <div style="font-size: 13px; font-weight: 600; color: var(--text);">
+                  {{ $rr->type === 'leave' ? $rrMember.' asked to leave' : $rrBy.' asked to remove '.$rrMember }}
+                </div>
+                <div style="font-size: 12px; color: var(--text2); margin-top: 3px; line-height: 1.5; overflow-wrap: anywhere;">“{{ $rr->reason }}”</div>
+                <div style="font-size: 10.5px; color: var(--text3); margin-top: 4px;">Sent {{ $rr->created_at->diffForHumans() }}</div>
+              </div>
+              @if($rrMine)
+              <form method="POST" action="{{ route('team.roster-requests.update', $rr->id) }}" style="flex-shrink: 0;">
+                @csrf
+                @method('PATCH')
+                <input type="hidden" name="status" value="withdrawn">
+                <button type="submit" style="padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg2); color: var(--text2); font-size: 11px; font-weight: 700; cursor: pointer;">Withdraw</button>
+              </form>
+              @endif
+            </div>
+          @endforeach
+        </div>
+      </div>
+      @endif
+
       <div class="team-actions" style="margin-top: 18px; display: flex; justify-content: flex-end; gap: 8px; padding-top: 10px; border-top: 1px solid var(--border);">
         @if($isLeader && $myTeam->hasSubmittedPreProposals() && !$myTeam->is_confirmed)
           <span class="pending-badge-standalone" style="display:inline-flex;align-items:center;gap:6px;background:linear-gradient(135deg,#d97706,#b45309);color:#fff;padding:6px 14px 6px 10px;border-radius:20px;font-size:11px;font-weight:600;box-shadow:0 2px 8px rgba(217,119,6,0.35);border:none;letter-spacing:0.2px;">
@@ -593,6 +639,9 @@
             @method('DELETE')
             <button type="button" onclick="confirmLeaveTeam()" style="padding: 5px 10px; border-radius: 6px; border: 1px solid var(--red); background: var(--red-bg); color: var(--red); font-size: 10px; font-weight: 700; cursor: pointer;">Leave Team</button>
           </form>
+        @elseif($rosterLocked)
+          @php $myRosterRequest = $rosterRequests->firstWhere('student_id', auth()->user()->student_id); @endphp
+          <button type="button" @if(!$myRosterRequest) onclick="openRosterRequestModal('leave')" @endif title="{{ $myRosterRequest ? 'Your request is waiting on your CaPSA' : 'Ask your CaPSA to let you leave' }}" style="padding: 5px 10px; border-radius: 6px; border: 1px solid var(--red); background: var(--red-bg); color: var(--red); font-size: 10px; font-weight: 700; {{ $myRosterRequest ? 'opacity:0.6;cursor:not-allowed;' : 'cursor:pointer;' }}">{{ $myRosterRequest ? 'Leave Request with CaPSA' : 'Ask CaPSA to Leave' }}</button>
         @else
           @php
             $leavePending = $hasPendingLeaveApproval;
@@ -1158,6 +1207,38 @@
       <button type="button" class="btn-primary" style="flex:1;background:#ef4444;border-color:#ef4444;" onclick="submitLeaveRequest()">Send Leave Request</button>
       <button type="button" class="google-btn" style="flex:1;border:none;" onclick="closeLeaveRequestModal()">Cancel</button>
     </div>
+  </div>
+</div>
+@endif
+
+@if($myTeam && $rosterLocked)
+{{-- Roster request: leaving, or removing a member, after Title Defense --}}
+<div class="modal-overlay" id="rosterRequestModal" onclick="if(event.target==this) closeRosterRequestModal()">
+  <div class="card modal-card modal-card--team" role="dialog" aria-modal="true" aria-labelledby="rrm-title" style="width: 460px; padding: 30px; position: relative;">
+    <button type="button" onclick="closeRosterRequestModal()" class="pm-close-btn" aria-label="Close" style="position: absolute; top: 20px; right: 20px;">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+    <div style="width:48px;height:48px;border-radius:50%;background:var(--bg2);color:var(--accent3);display:flex;align-items:center;justify-content:center;margin-bottom:14px;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+    </div>
+    <div class="section-title" id="rrm-title">Ask your CaPSA</div>
+    <p id="rrm-lede" style="margin-top:8px;font-size:13px;color:var(--text2);line-height:1.6;"></p>
+    <form method="POST" action="{{ route('team.roster-requests.store') }}" id="roster-request-form" style="margin-top:14px;">
+      @csrf
+      <input type="hidden" name="type" id="rrm-type">
+      <input type="hidden" name="student_id" id="rrm-student">
+      <label for="rrm-reason" style="display:block;font-size:12px;font-weight:600;color:var(--text);margin-bottom:6px;">Reason for your CaPSA</label>
+      <textarea id="rrm-reason" name="reason" rows="4" minlength="{{ \App\Models\RosterChangeRequest::REASON_MIN }}" maxlength="1000" required placeholder="What happened, and why it cannot be worked out within the team" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--bg2);color:var(--text);font:inherit;font-size:13px;line-height:1.5;resize:vertical;"></textarea>
+      <div style="display:flex;justify-content:space-between;gap:10px;font-size:11px;color:var(--text3);margin-top:4px;">
+        <span>At least {{ \App\Models\RosterChangeRequest::REASON_MIN }} characters. Your team sees this too.</span>
+        <span id="rrm-count">0 / 1000</span>
+      </div>
+      <ul id="rrm-effects" style="margin:12px 0 0;padding-left:18px;font-size:12px;color:var(--text2);line-height:1.7;"></ul>
+      <div style="display:flex;gap:10px;margin-top:18px;">
+        <button type="submit" class="btn-primary" id="rrm-submit" style="flex:1;" disabled>Send to CaPSA</button>
+        <button type="button" class="google-btn" style="flex:1;border:none;" onclick="closeRosterRequestModal()">Cancel</button>
+      </div>
+    </form>
   </div>
 </div>
 @endif
@@ -1759,6 +1840,8 @@ function confirmLeaveTeam() {
             openTransferModal();
         }
     });
+    @elseif($isLeader && $rosterLocked)
+    showToast('Your team passed Title Defense, so it cannot be ended by leaving. Talk to your CaPSA.', 'error');
     @elseif($isLeader)
     showConfirm({
         title: 'Leave & Terminate Team',
@@ -1821,6 +1904,54 @@ function submitRemoveMember() {
     form.action = '{{ url("/team/members") }}/' + removeMemberId;
     form.submit();
 }
+
+@if($rosterLocked)
+var ROSTER_REASON_MIN = {{ \App\Models\RosterChangeRequest::REASON_MIN }};
+
+function openRosterRequestModal(type, studentId, name) {
+    var leave = type === 'leave';
+    document.getElementById('rrm-type').value = type;
+    document.getElementById('rrm-student').value = leave ? '' : studentId;
+    document.getElementById('rrm-title').textContent = leave ? 'Ask your CaPSA to leave' : 'Ask your CaPSA to remove ' + name;
+    document.getElementById('rrm-lede').textContent = leave
+        ? 'Your team passed Title Defense, so its members are locked. Your CaPSA reads your reason and decides whether you can leave.'
+        : 'Your team passed Title Defense, so you cannot remove members yourself. Your CaPSA reads your reason and decides.';
+
+    var effects = leave
+        ? ['Your team leader is told you asked.', 'You stay on the team unless your CaPSA approves.', 'You can withdraw the request while it is waiting.']
+        : [name + ' is told you asked, and sees your reason.', name + ' stays on the team unless your CaPSA approves.', 'No one can be added to replace them.'];
+    var list = document.getElementById('rrm-effects');
+    list.innerHTML = '';
+    effects.forEach(function (text) {
+        var li = document.createElement('li');
+        li.textContent = text;
+        list.appendChild(li);
+    });
+
+    var reason = document.getElementById('rrm-reason');
+    reason.value = '';
+    updateRosterReason();
+    document.getElementById('rosterRequestModal').classList.add('active');
+    reason.focus();
+}
+
+function closeRosterRequestModal() {
+    document.getElementById('rosterRequestModal').classList.remove('active');
+}
+
+function updateRosterReason() {
+    var n = document.getElementById('rrm-reason').value.trim().length;
+    document.getElementById('rrm-count').textContent = n + ' / 1000';
+    document.getElementById('rrm-submit').disabled = n < ROSTER_REASON_MIN;
+}
+
+document.getElementById('rrm-reason').addEventListener('input', updateRosterReason);
+document.getElementById('roster-request-form').addEventListener('submit', function () {
+    var btn = document.getElementById('rrm-submit');
+    btn.disabled = true;
+    btn.textContent = 'Sending…';
+});
+@endif
 
 function openTransferModal() {
     document.getElementById('transferModal').classList.add('active');

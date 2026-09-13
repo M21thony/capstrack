@@ -185,6 +185,9 @@ Route::middleware('expert.capsa')->group(function () {
     // may create or join one. One resource, replaced whole on save.
     Route::get('/team-rules', [TeamRulesController::class, 'show'])->name('team_rules');
     Route::put('/team-rules', [TeamRulesController::class, 'update'])->name('team_rules.update');
+    // A member leaving a team that passed Title Defense - the CaPSA decides.
+    Route::get('/roster-requests', [App\Http\Controllers\Capsa\RosterRequestController::class, 'index'])->name('roster_requests');
+    Route::patch('/roster-requests/{rosterRequest}', [App\Http\Controllers\Capsa\RosterRequestController::class, 'update'])->name('roster_requests.update');
     Route::get('/verify-teams', fn () => redirect()->route('capsa.team_management', ['tab' => 'verification']))->name('verify_teams');
     Route::patch('/verify-teams/{team}', [AdminTeamVerificationController::class, 'verify'])->name('verify_teams.verify');
     Route::patch('/verify-teams/pre-proposals/{preProposal}', [AdminTeamVerificationController::class, 'updatePreProposal'])->name('verify_teams.pre_proposals.update');
@@ -339,6 +342,9 @@ Route::middleware(['auth', 'no.cache', 'track.expert'])->group(function () {
     Route::post('/team/leave-requests', [TeamController::class, 'requestLeave'])->name('team.leave-request');
     Route::patch('/team/leave-requests/{approval}', [TeamController::class, 'updateLeave'])->name('team.leave.update');
     Route::get('/team/leave/popups', [TeamController::class, 'leavePopups'])->name('team.leave.popups');
+    // After Title Defense, leaving or removing a member is asked of the CaPSA.
+    Route::post('/team/roster-requests', [App\Http\Controllers\RosterRequestController::class, 'store'])->name('team.roster-requests.store');
+    Route::patch('/team/roster-requests/{rosterRequest}', [App\Http\Controllers\RosterRequestController::class, 'update'])->name('team.roster-requests.update');
     Route::post('/recruitment', [RecruitmentController::class, 'store'])->name('recruitment.store');
     Route::put('/recruitment/{recruitment}', [RecruitmentController::class, 'update'])->name('recruitment.update');
     Route::delete('/recruitment/{recruitment}', [RecruitmentController::class, 'destroy'])->name('recruitment.destroy');

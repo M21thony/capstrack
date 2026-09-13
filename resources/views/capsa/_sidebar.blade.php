@@ -171,7 +171,7 @@
       // always-expanded section for them.
       $adminDutiesRoutes = [
         'capsa.dashboard', 'capsa.approval', 'capsa.experts', 'capsa.panel_assignment',
-        'capsa.team_management', 'capsa.team_rules', 'capsa.sections', 'capsa.archive', 'capsa.resources',
+        'capsa.team_management', 'capsa.team_rules', 'capsa.roster_requests','capsa.sections', 'capsa.archive', 'capsa.resources',
         'capsa.rubric_management', 'capsa.announcements', 'capsa.analytics', 'capsa.activitylog',
         'capsa.profile', 'capsa.financial',
       ];
@@ -263,6 +263,14 @@
     <a href="{{ route('capsa.team_rules') }}" class="nav-item {{ $currentRoute === 'capsa.team_rules' ? 'active' : '' }}">
       <svg viewBox="0 0 24 24"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
       Team Rules
+    </a>
+    @php $pendingRosterRequests = $admin?->is_capsa ? App\Models\RosterChangeRequest::pendingCountFor($admin) : 0; @endphp
+    <a href="{{ route('capsa.roster_requests') }}" class="nav-item {{ $currentRoute === 'capsa.roster_requests' ? 'active' : '' }}">
+      <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      Roster Requests
+      @if($pendingRosterRequests > 0)
+        <span class="nav-badge red">{{ $pendingRosterRequests > 99 ? '99+' : $pendingRosterRequests }}</span>
+      @endif
     </a>
     <a href="{{ route('capsa.rubric_management') }}" class="nav-item {{ $currentRoute === 'capsa.rubric_management' ? 'active' : '' }}">
       <svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>

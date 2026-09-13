@@ -223,6 +223,10 @@ class TeamController extends Controller
 
         $isLeader = (int) $team->leader_id === (int) $studentId;
 
+        if ($team->isRosterLocked()) {
+            return response()->json(['message' => Team::ROSTER_LOCKED], 422);
+        }
+
         if ($isLeader) {
             $memberCount = StudentSchoolYear::where('team_id', $team->team_id)->count();
 
@@ -528,6 +532,10 @@ class TeamController extends Controller
 
         if ((int) $team->leader_id !== (int) $authId) {
             return response()->json(['message' => 'Only the team leader can remove members.'], 403);
+        }
+
+        if ($team->isRosterLocked()) {
+            return response()->json(['message' => Team::ROSTER_LOCKED], 422);
         }
 
         if ($student->student_id === $authId) {

@@ -2,26 +2,73 @@
 
 namespace App\Models;
 
+use App\Support\DefenseOutcome;
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Collection;
 
 class Team extends Model
 {
     protected $table = 'team';
 
+    /** This team's Title Defense attempts, fetched once per instance. */
+    private ?Collection $titleDefenseAttempts = null;
+
+    private function titleDefenseAttempts(): Collection
+    {
+        return $this->titleDefenseAttempts ??= DefenseSchedule::where('team_id', $this->team_id)
+            ->where('defense_type', DefenseOutcome::TITLE_DEFENSE)
+            ->get();
+    }
+
     /**
-     * Which Capstone this team is in, read from its members' year.
+     * Whether this team's members are locked: it has passed Title Defense.
      *
-     * A CaPSA uploads a section's list when it starts capstone and uploads it
-     * again as 4th year when it moves up, so the year on the roster turns
-     * over exactly when the stage does. That makes it the signal - no
-     * separate declaration to keep in step with the lists.
+     * Read from the recorded outcome rather than stored as a flag. A Panel
+     * Chair records an outcome once and it cannot be changed, so the pass is
+     * the fact itself - there is no second copy to fall out of step with it.
+     */
+    public function isRosterLocked(): bool
+    {
+        return $this->titleDefenseAttempts()->contains(fn ($s) => DefenseOutcome::isPass($s->outcome));
+    }
+
+    /** When the members were locked - the day the pass was recorded. */
+    public function rosterLockedAt(): ?CarbonInterface
+    {
+        return $this->titleDefenseAttempts()
+            ->filter(fn ($s) => DefenseOutcome::isPass($s->outcome))
+            ->map(fn ($s) => $s->outcome_recorded_at ?? $s->schedule_date)
+            ->filter()
+            ->sort()
+            ->first();
+    }
+
+    /**
+     * Which Capstone this team is in.
      *
-     * Any member in 4th year settles the whole team. That is the safe way
-     * round: it closes the roster rather than reopening it.
+     * Passing Title Defense is what ends Capstone 1, so that decides it
+     * first. A team scheduled for Title Defense that has not passed is still
+     * in Capstone 1 - defending, or retaking it after missing the window -
+     * whatever year its members' list now says, because their title is not
+     * settled and neither are they.
+     *
+     * Only a team that has never been scheduled falls back to its members'
+     * year: the section list is uploaded again as 4th year when it moves up.
+     * Any member in 4th year settles the whole team, which closes the roster
+     * rather than reopening it.
      */
     public function capstoneStage(): int
     {
+        if ($this->isRosterLocked()) {
+            return 2;
+        }
+
+        if ($this->titleDefenseAttempts()->isNotEmpty()) {
+            return 1;
+        }
+
         $years = $this->members->map(fn ($m) => $m->yearNumber())->filter();
 
         if ($years->isEmpty()) {
@@ -52,7 +99,14 @@ class Team extends Model
     public const MEMBERS_SETTLED = 'Capstone 2 has started, so a team keeps the members it '
         .'finished Capstone 1 with. Members cannot be added now.';
 
-    public const NO_NEW_TEAMS = 'Capstone 2 has started. Teams keep the members they '
+    /** Said to anyone trying to add a member to a team that passed Title Defense. */
+    public const LOCKED_NO_JOINING = 'This team passed Title Defense, so its members are locked. No one can be added.';
+
+    /** Said at every door a member could leave, or be removed, by. */
+    public const ROSTER_LOCKED = 'Your team passed Title Defense, so its members are locked. '
+        .'A member can only leave with your CaPSA\'s approval - send the request from the Team page.';
+
+    public const NO_NEW_TEAMS ='Capstone 2 has started. Teams keep the members they '
         .'finished Capstone 1 with, so new teams and recruitment posts are closed.';
 
     /**
@@ -90,6 +144,10 @@ class Team extends Model
             return self::JOINING_CLOSED;
         }
 
+        if ($this->isRosterLocked()) {
+            return self::LOCKED_NO_JOINING;
+        }
+
         // A 4th year joining a 3rd-year team is still a member added in Capstone 2.
         if (! $this->mayAddMembers() || $joiner?->capstoneStage() === 2) {
             return self::MEMBERS_SETTLED;
@@ -118,6 +176,10 @@ class Team extends Model
     {
         if (! static::joiningAllowed()) {
             return self::JOINING_CLOSED;
+        }
+
+        if ($this->isRosterLocked()) {
+            return self::LOCKED_NO_JOINING;
         }
 
         if (! $this->mayAddMembers() || $invitee?->capstoneStage() === 2) {
