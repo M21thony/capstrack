@@ -69,6 +69,17 @@ class RecruitmentController extends Controller
             return back()->withErrors(['roles' => $message]);
         }
 
+        // A build-a-team post with a name creates the team as it posts - team
+        // creation by a second door - so it closes with the first.
+        if ($validated['recruitment_goal'] === 'build_a_team' && ! empty($validated['team_name'])
+            && ! Team::creationAllowed()) {
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'message' => Team::CREATION_CLOSED], 422);
+            }
+
+            return back()->withErrors(['error' => Team::CREATION_CLOSED]);
+        }
+
         $recruitment = DB::transaction(function () use ($validated, $studentId, $roles): Recruitment {
             // If goal is build_a_team and team_name is provided, create team and link it
             if ($validated['recruitment_goal'] === 'build_a_team' && ! empty($validated['team_name'])) {

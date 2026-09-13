@@ -85,6 +85,11 @@ class RecruitmentController extends Controller
             'tags' => ['nullable', 'string'],
         ]);
 
+        if ($validated['recruitment_goal'] === 'build_a_team' && ! empty($validated['team_name'])
+            && ! Team::creationAllowed()) {
+            return response()->json(['message' => Team::CREATION_CLOSED], 422);
+        }
+
         $student = $request->user();
         $studentId = $student->student_id;
 

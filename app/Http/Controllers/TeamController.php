@@ -369,6 +369,16 @@ class TeamController extends Controller
 
     public function store(Request $request): JsonResponse|RedirectResponse
     {
+        // Before validation, so a closed rule is the answer a student gets -
+        // not a complaint about the team name they typed into it.
+        if (! Team::creationAllowed()) {
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'message' => Team::CREATION_CLOSED], 422);
+            }
+
+            return redirect()->route('student.team')->with('error', Team::CREATION_CLOSED);
+        }
+
         $validated = $request->validate([
             'team_name' => ['required', 'string', 'max:100', function ($attribute, $value, $fail) {
                 if (Team::nameExists($value)) {

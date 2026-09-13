@@ -30,6 +30,12 @@ class CapsaSetsTeamSizeTest extends TestCase
         return $capsa;
     }
 
+    /** The team rules are one resource, so every save carries all of them. */
+    private function rules(int $max): array
+    {
+        return ['max_members' => $max, 'allow_creation' => true, 'allow_joining' => true];
+    }
+
     public function test_five_until_a_capsa_says_otherwise(): void
     {
         $this->assertSame(5, Team::maxMembers());
@@ -38,7 +44,7 @@ class CapsaSetsTeamSizeTest extends TestCase
     public function test_a_capsa_can_set_it(): void
     {
         $this->actingAs($this->capsa(), 'expert')
-            ->putJson(route('capsa.team_size.update'), ['max_members' => 3])
+            ->putJson(route('capsa.team_rules.update'), $this->rules(3))
             ->assertOk()
             ->assertJson(['success' => true, 'max_members' => 3]);
 
@@ -50,7 +56,7 @@ class CapsaSetsTeamSizeTest extends TestCase
     {
         foreach ([2, 6, 0] as $bad) {
             $this->actingAs($this->capsa(), 'expert')
-                ->putJson(route('capsa.team_size.update'), ['max_members' => $bad])
+                ->putJson(route('capsa.team_rules.update'), $this->rules($bad))
                 ->assertStatus(422);
         }
 
