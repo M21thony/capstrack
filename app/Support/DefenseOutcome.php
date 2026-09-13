@@ -28,6 +28,9 @@ class DefenseOutcome
 
     public const PRE_PROPOSAL = 'Pre-proposal Defense';
 
+    /** The end of Capstone 1 - passing it locks the team's members. */
+    public const TITLE_DEFENSE = 'Title Defense';
+
     /**
      * The outcomes a stage may end in, in the order a panel would consider
      * them - best first.
