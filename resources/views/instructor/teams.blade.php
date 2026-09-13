@@ -367,6 +367,21 @@
                   @if($leader)<span class="tr-lead">{{ $leader->displayFirstName() }} {{ $leader->l_name ?? '' }}</span> &middot; @endif
                   {{ $team?->project_title ?: 'No title chosen yet' }}
                 </div>
+                @php $teamScores = $roleName === 'adviser' ? $defenseScores->get($team?->team_id, collect()) : collect(); @endphp
+                @if($teamScores->isNotEmpty())
+                  <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px" aria-label="Defense scores">
+                    @foreach($teamScores as $score)
+                      <span style="display:inline-flex;align-items:center;gap:6px;padding:2px 9px;border-radius:999px;border:1px solid var(--border);font-size:11px;color:var(--text3);white-space:nowrap">
+                        {{ $score->label }}@if($score->attempt > 1) &middot; redefense @endif
+                        @if($score->average !== null)
+                          <b style="color:var(--text);font-variant-numeric:tabular-nums">{{ \App\Support\DefenseScores::format($score->average) }}</b>
+                        @else
+                          <span style="color:var(--amber);font-variant-numeric:tabular-nums">{{ $score->graded }}/{{ $score->panel_size }} graded</span>
+                        @endif
+                      </span>
+                    @endforeach
+                  </div>
+                @endif
               </div>
 
               @if($tp)

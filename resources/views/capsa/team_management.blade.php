@@ -23,6 +23,10 @@
   .tm-bar-label{font-size:11px;color:var(--text3);font-variant-numeric:tabular-nums;}
 
   .tm-roles{display:flex;gap:4px;flex-wrap:nowrap}
+  .tm-score{display:flex;justify-content:space-between;gap:12px;font-size:11.5px;line-height:1.7;white-space:nowrap}
+  .tm-score-stage{color:var(--text3)}
+  .tm-score b{color:var(--text);font-variant-numeric:tabular-nums}
+  .tm-score-wait{color:var(--amber);font-variant-numeric:tabular-nums}
   .tm-role{font-size:9.5px;font-weight:700;padding:2px 7px;border-radius:5px;text-transform:uppercase;letter-spacing:0.3px}
   .tm-role-on{background:var(--accent-light);color:var(--accent3)}
   .tm-role-off{background:var(--bg4);color:var(--text3);opacity:.75}
