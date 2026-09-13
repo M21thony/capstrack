@@ -153,7 +153,12 @@
             @elseif($row->state === 'handed_in')
               {{-- Naming who is holding it is the point: "pending" alone never
                    told a team whether to chase anybody. --}}
-              <span style="color:var(--amber)">{{ $row->waiting_on ? 'With your '.$row->waiting_on : 'In progress' }}</span>
+              <span style="color:var(--amber)">{{ match ($row->waiting_on) {
+                  'team' => 'Changes requested — revise and resubmit',
+                  'capsa' => 'With your CaPSA to check',
+                  null => 'In progress',
+                  default => 'With your '.$row->waiting_on,
+              } }}</span>
             @elseif($row->state === 'overdue')
               <span style="color:var(--red)">Overdue{{ $row->due_on ? ' since '.$row->due_on->format('j M') : '' }}</span>
             @elseif($row->due_on)

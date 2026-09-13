@@ -17,6 +17,7 @@ class CapstoneDocument extends Model
         'file_version',
         'document_status',
         'chapter',
+        'milestone_item_id',
     ];
 
     public function reviews()

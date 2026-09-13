@@ -158,7 +158,7 @@
                   @else
                     {{-- Closes itself, so there is nothing to press. --}}
                     <span class="ms-mk auto {{ $done ? 'on' : '' }} {{ $cell->state === 'overdue' ? 'over' : '' }} {{ $cell->state === 'handed_in' ? 'wait' : '' }}"
-                          title="{{ $cell->state === 'handed_in' ? ($cell->waiting_on ? 'With the '.$cell->waiting_on : 'In progress') : 'Closes on its own when the '.$col->kind.' happens' }}">
+                          title="{{ $cell->state === 'handed_in' ? match ($cell->waiting_on) { 'team' => 'Changes requested — the team is revising', 'capsa' => 'Waiting for you to check', null => 'In progress', default => 'With the '.$cell->waiting_on } : 'Closes on its own when the '.$col->kind.' happens' }}">
                       @include('capsa.partials.team-management.milestone-mark', ['state' => $cell->state])
                     </span>
                   @endif
