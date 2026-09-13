@@ -18,6 +18,9 @@ class CapstoneExpertFactory extends Factory
             'is_admin' => false,
             'approved_status' => false,
             'max_teams' => 4,
+            // Qualified to chair by default, so a test about something else
+            // is not tripped by the Panel Chair rule.
+            'highest_degree' => 'master',
             'reject_attempts' => 1,
             'created_at' => now(),
         ];

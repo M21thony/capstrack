@@ -53,7 +53,30 @@ class AdminPanelAssignmentTest extends TestCase
             $this->payTeamForTitleDefense($team);
         }
 
+        $this->staffTeam($team);
+
         return $team;
+    }
+
+    /**
+     * An approved adviser, consultant and grammarian - a team without all
+     * three cannot be given a panel, and these tests are about other rules.
+     */
+    private function staffTeam(Team $team): void
+    {
+        foreach (Team::REQUIRED_EXPERT_ROLES as $roleName) {
+            $expert = CapstoneExpert::factory()->create(['approved_status' => true]);
+            $role = \App\Models\Role::firstOrCreate(['role_name' => $roleName]);
+            $expert->roles()->attach($role->role_id);
+
+            TeamExpertAssignment::create([
+                'team_id' => $team->team_id,
+                'expert_id' => $expert->expert_id,
+                'status' => 'approved',
+                'expert_role_id' => \App\Models\ExpertRole::where('expert_id', $expert->expert_id)
+                    ->where('role_id', $role->role_id)->value('expert_role_id'),
+            ]);
+        }
     }
 
     private function titleDefenseExpensePost(): ExpensePost

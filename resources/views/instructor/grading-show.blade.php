@@ -280,7 +280,10 @@ function collectPayload() {
   });
   // No verdict here - that is the panel's one decision, recorded by the
   // chair through /outcome, not gathered from each panelist.
-  return { scores: scores, remarks: remarks };
+  // The remarks box, read at the moment of saving. This read a variable that
+  // was never declared, so Save Draft and Submit Grade stopped before sending.
+  const remarksField = form.querySelector('textarea[name="remarks"]');
+  return { scores: scores, remarks: remarksField ? remarksField.value : null };
 }
 
 // The panel's one decision, recorded by the chair after the briefing.

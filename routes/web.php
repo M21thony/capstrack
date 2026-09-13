@@ -91,6 +91,8 @@ $pagesBothRolesOpen = function () {
     Route::get('/experts', [AdminExpertsController::class, 'index'])->name('experts');
     Route::post('/experts', [AdminExpertsController::class, 'store'])->name('experts.store');
     Route::put('/experts/{expert}', [AdminExpertsController::class, 'update'])->name('experts.update');
+    // What the Panel Chair rule reads: Master's degree or higher.
+    Route::put('/experts/{expert}/degree', [AdminExpertsController::class, 'updateDegree'])->name('experts.degree.update');
     Route::delete('/experts/{expert}', [AdminExpertsController::class, 'destroy'])->name('experts.destroy');
     // Not bound to the model: route-model binding cannot find a deactivated
     // account, which is the only kind this is ever called on.
