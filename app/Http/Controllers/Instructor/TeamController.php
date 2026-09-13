@@ -36,7 +36,12 @@ class TeamController extends Controller
         // a team had to leave it to find out how that team was doing. Same
         // teams, same cards - the numbers just come with them now. Keyed by
         // team so a team advised in two roles is only counted once.
-        $progress = $approvedAssignments->pluck('team')->filter()->unique('team_id')
+        // Only for the teams this expert advises or consults for: a team's
+        // checklist is its own, its CaPSA's and the two experts it chose, not
+        // its grammarian's or its panel's.
+        $progress = $approvedAssignments
+            ->filter(fn ($a) => in_array($a->engaged_role_name, ['adviser', 'consultant'], true))
+            ->pluck('team')->filter()->unique('team_id')
             ->mapWithKeys(fn ($team) => [$team->team_id => $team->progressSummary()]);
 
         return view('instructor.teams', [
