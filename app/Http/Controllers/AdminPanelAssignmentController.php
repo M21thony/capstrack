@@ -793,6 +793,8 @@ class AdminPanelAssignmentController extends Controller
             $reason = match (true) {
                 $missing !== [] => 'Needs '.$this->listRoles($missing).'.',
                 $previous && ! $progress->hasPassed($team, $previous) => 'Has not passed the '.$previous.' yet.',
+                ($blockers = $team->checklistBlockersFor($type)) !== [] => 'Checklist: '.$blockers[0].' not done yet'
+                    .(count($blockers) > 1 ? ' (and '.(count($blockers) - 1).' more)' : '').'.',
                 ! $schedule || ! $schedule->panels->contains('panel_role', 'Panel Chair') => 'No panel assigned yet.',
                 ! $paidTeamIds->contains($team->team_id) => 'Fees for this stage are not verified for every member.',
                 default => null,

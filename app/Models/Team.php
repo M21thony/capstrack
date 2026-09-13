@@ -296,6 +296,40 @@ class Team extends Model
      * column never moves off 'todo', so anything reading it reports every
      * team at zero however much work they have done.
      */
+    /**
+     * What on the checklist still stands between this team and a defense:
+     * every line listed above that defense's own line that is not done. The
+     * Pre-Proposal therefore waits on Getting started, and the Title Defense
+     * on everything through the signed Hearing Notice - but never on what
+     * comes after it, like the revised manuscript.
+     *
+     * A team whose checklist has no line for that defense, or no checklist at
+     * all, is not held up: nobody has asked for this gate on it.
+     *
+     * @return array<int, string> titles, in checklist order
+     */
+    public function checklistBlockersFor(string $defenseType): array
+    {
+        foreach (Milestone::where('team_id', $this->team_id)->orderBy('id')->get() as $milestone) {
+            $rows = $milestone->progress()->items->values();
+
+            $at = $rows->search(fn ($row) => $row->item->kind === MilestoneItem::DEFENSE
+                && $row->item->defense_type === $defenseType);
+
+            if ($at === false) {
+                continue;
+            }
+
+            return $rows->take($at)
+                ->reject(fn ($row) => in_array($row->state, \App\Support\MilestoneProgress::COMPLETE_STATES, true))
+                ->map(fn ($row) => $row->item->title)
+                ->values()
+                ->all();
+        }
+
+        return [];
+    }
+
     public function progressSummary(): object
     {
         $total = 0;
