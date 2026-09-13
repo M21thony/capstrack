@@ -55,7 +55,7 @@ class InvitationController extends Controller
         if ($validated['type'] === 'invite') {
             $team = Team::find($teamId);
 
-            if ($team && $reason = $team->inviteBlockReason()) {
+            if ($team && $reason = $team->inviteBlockReason(1, Student::find($validated['receiver_id']))) {
                 return response()->json(['message' => $reason], 422);
             }
         }
@@ -63,6 +63,10 @@ class InvitationController extends Controller
         if ($validated['type'] === 'request') {
             if (! Team::joiningAllowed()) {
                 return response()->json(['message' => Team::JOINING_CLOSED], 422);
+            }
+
+            if ($student->capstoneStage() !== 1) {
+                return response()->json(['message' => Team::MEMBERS_SETTLED], 422);
             }
 
             if (StudentTeam::has($studentId)) {
@@ -188,7 +192,9 @@ class InvitationController extends Controller
         // apart again: joining closed, Capstone 2 begun, or the last seat gone.
         $joining = Team::find($invitation->team_id);
 
-        if ($joining && $reason = $joining->joinBlockReason()) {
+        $joiner = $invitation->type === 'invite' ? $student : Student::find($invitation->sender_id);
+
+        if ($joining && $reason = $joining->joinBlockReason($joiner)) {
             return response()->json(['message' => $reason], 422);
         }
 

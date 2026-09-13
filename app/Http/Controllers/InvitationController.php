@@ -38,7 +38,7 @@ class InvitationController extends Controller
         if ($validated['type'] === 'invite') {
             $team = Team::find($validated['team_id'] ?? StudentTeam::idFor($studentId));
 
-            if ($team && $reason = $team->inviteBlockReason()) {
+            if ($team && $reason = $team->inviteBlockReason(1, Student::find($validated['receiver_id']))) {
                 if ($request->expectsJson()) {
                     return response()->json(['success' => false, 'message' => $reason], 422);
                 }
@@ -52,12 +52,15 @@ class InvitationController extends Controller
             // Asking to join is joining. With it closed on Team Rules the
             // request is refused now, rather than sent to a leader who could
             // only accept it into a rule that forbids it.
-            if (! Team::joiningAllowed()) {
+            $closed = ! Team::joiningAllowed() ? Team::JOINING_CLOSED
+                : ($student->capstoneStage() !== 1 ? Team::MEMBERS_SETTLED : null);
+
+            if ($closed) {
                 if ($request->expectsJson()) {
-                    return response()->json(['success' => false, 'message' => Team::JOINING_CLOSED], 422);
+                    return response()->json(['success' => false, 'message' => $closed], 422);
                 }
 
-                return back()->with('error', Team::JOINING_CLOSED);
+                return back()->with('error', $closed);
             }
 
             if (StudentTeam::has($studentId)) {
@@ -211,7 +214,9 @@ class InvitationController extends Controller
         // for the last seat both got in.
         $joining = Team::find($invitation->team_id);
 
-        if ($joining && $reason = $joining->joinBlockReason()) {
+        $joiner = $invitation->type === 'invite' ? $student : Student::find($invitation->sender_id);
+
+        if ($joining && $reason = $joining->joinBlockReason($joiner)) {
             if ($request->expectsJson()) {
                 return response()->json(['success' => false, 'message' => $reason], 422);
             }
