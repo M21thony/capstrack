@@ -48,6 +48,13 @@ class Team extends Model
 
     public const JOINING_CLOSED = 'Joining a team is closed right now - your CaPSA has turned it off.';
 
+    /** Members join in Capstone 1 (3rd year) only - said to a team and to a joiner alike. */
+    public const MEMBERS_SETTLED = 'Capstone 2 has started, so a team keeps the members it '
+        .'finished Capstone 1 with. Members cannot be added now.';
+
+    public const NO_NEW_TEAMS = 'Capstone 2 has started. Teams keep the members they '
+        .'finished Capstone 1 with, so new teams and recruitment posts are closed.';
+
     /**
      * Whether students may start a team, as set on the CaPSA's Team Rules.
      *
@@ -77,15 +84,15 @@ class Team extends Model
      * Pending invitations are not counted here. They are the other people
      * racing for the seat, and one of them has to lose.
      */
-    public function joinBlockReason(): ?string
+    public function joinBlockReason(?Student $joiner = null): ?string
     {
         if (! static::joiningAllowed()) {
             return self::JOINING_CLOSED;
         }
 
-        if (! $this->mayAddMembers()) {
-            return 'Capstone 2 has started, so a team keeps the members it '
-                .'finished Capstone 1 with. Members cannot be added now.';
+        // A 4th year joining a 3rd-year team is still a member added in Capstone 2.
+        if (! $this->mayAddMembers() || $joiner?->capstoneStage() === 2) {
+            return self::MEMBERS_SETTLED;
         }
 
         $limit = $this->memberLimit();
@@ -107,15 +114,14 @@ class Team extends Model
      *
      * @param  int  $adding  How many invitations are about to be sent at once.
      */
-    public function inviteBlockReason(int $adding = 1): ?string
+    public function inviteBlockReason(int $adding = 1, ?Student $invitee = null): ?string
     {
         if (! static::joiningAllowed()) {
             return self::JOINING_CLOSED;
         }
 
-        if (! $this->mayAddMembers()) {
-            return 'Capstone 2 has started, so a team keeps the members it '
-                .'finished Capstone 1 with. Members cannot be added now.';
+        if (! $this->mayAddMembers() || $invitee?->capstoneStage() === 2) {
+            return self::MEMBERS_SETTLED;
         }
 
         $limit = $this->memberLimit();

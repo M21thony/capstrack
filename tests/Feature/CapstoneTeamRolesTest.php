@@ -95,7 +95,7 @@ class CapstoneTeamRolesTest extends TestCase
 
         $student = Student::create([
             'email' => 'head@my.cspc.edu.ph', 'f_name' => 'Mark', 'l_name' => 'Balilla',
-            'course' => 'BSIT', 'year_section' => '4th · A',
+            'course' => 'BSIT', 'year_section' => '3rd · A',
         ]);
         StudentSchoolYear::create(['student_id' => $student->student_id]);
 

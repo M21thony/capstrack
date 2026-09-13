@@ -133,4 +133,78 @@ class MembersOnlyInCapstoneOneTest extends TestCase
 
         $this->assertNull(StudentSchoolYear::where('student_id', $joiner->student_id)->value('team_id'));
     }
+
+    // ── the web routes the page actually posts to ────────────────────────
+
+    public function test_a_fourth_year_cannot_start_a_team(): void
+    {
+        $this->actingAs($this->student('maker@my.cspc.edu.ph', '4th · A'), 'web')
+            ->postJson(route('team.store'), ['team_name' => 'Late Team'])
+            ->assertStatus(422)
+            ->assertJson(['message' => Team::NO_NEW_TEAMS]);
+
+        $this->assertSame(0, Team::count());
+    }
+
+    public function test_a_fourth_year_cannot_post_a_recruitment(): void
+    {
+        $this->actingAs($this->student('poster@my.cspc.edu.ph', '4th · A'), 'web')
+            ->postJson(route('recruitment.store'), [
+                'recruitment_goal' => 'find_a_team',
+                'tags' => json_encode(['QA Tester/Documentation Writer']),
+            ])
+            ->assertStatus(422)
+            ->assertJson(['message' => Team::NO_NEW_TEAMS]);
+    }
+
+    /** The team is still Capstone 1, but the person joining it is not. */
+    public function test_a_fourth_year_cannot_ask_to_join_a_third_year_team(): void
+    {
+        $leader = $this->student('lead3@my.cspc.edu.ph', '3rd · A');
+        $team = $this->teamOf($leader);
+
+        $this->actingAs($this->student('senior@my.cspc.edu.ph', '4th · A'), 'web')
+            ->postJson(route('invitations.store'), [
+                'receiver_id' => $leader->student_id, 'team_id' => $team->team_id, 'type' => 'request',
+            ])
+            ->assertStatus(422)
+            ->assertJson(['message' => Team::MEMBERS_SETTLED]);
+
+        $this->assertSame(0, TeamInvitation::count());
+    }
+
+    public function test_a_third_year_team_cannot_invite_a_fourth_year(): void
+    {
+        $leader = $this->student('lead4@my.cspc.edu.ph', '3rd · A');
+        $team = $this->teamOf($leader);
+
+        $this->actingAs($leader, 'web')
+            ->postJson(route('invitations.store'), [
+                'receiver_id' => $this->student('senior2@my.cspc.edu.ph', '4th · A')->student_id,
+                'team_id' => $team->team_id, 'type' => 'invite',
+            ])
+            ->assertStatus(422)
+            ->assertJson(['message' => Team::MEMBERS_SETTLED]);
+    }
+
+    /** A request sent in 3rd year, accepted after the requester's list was re-uploaded as 4th. */
+    public function test_a_request_cannot_be_accepted_once_the_requester_is_fourth_year(): void
+    {
+        $leader = $this->student('lead5@my.cspc.edu.ph', '3rd · A');
+        $team = $this->teamOf($leader);
+        $asker = $this->student('asker@my.cspc.edu.ph', '3rd · B');
+        StudentSchoolYear::create(['student_id' => $asker->student_id]);
+
+        $request = TeamInvitation::create([
+            'sender_id' => $asker->student_id, 'receiver_id' => $leader->student_id,
+            'team_id' => $team->team_id, 'type' => 'request', 'status' => 'pending',
+        ]);
+        $asker->update(['year_section' => '4th · B']);
+
+        $this->actingAs($leader, 'web')
+            ->patchJson(route('invitations.update', $request), ['status' => 'accepted'])
+            ->assertStatus(422);
+
+        $this->assertNull(StudentSchoolYear::where('student_id', $asker->student_id)->value('team_id'));
+    }
 }

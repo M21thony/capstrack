@@ -35,6 +35,15 @@ class RecruitmentController extends Controller
         $student = $request->user();
         $studentId = $student ? $student->student_id : 8;
 
+        // Capstone 2: teams are settled, so there is nothing to recruit for.
+        if ($student && $student->capstoneStage() !== 1) {
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'message' => Team::NO_NEW_TEAMS], 422);
+            }
+
+            return back()->withErrors(['error' => Team::NO_NEW_TEAMS]);
+        }
+
         // Prevent posting if the student already belongs to a team
         if (StudentTeam::has($studentId)) {
             if ($request->expectsJson()) {

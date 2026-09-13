@@ -371,12 +371,15 @@ class TeamController extends Controller
     {
         // Before validation, so a closed rule is the answer a student gets -
         // not a complaint about the team name they typed into it.
-        if (! Team::creationAllowed()) {
+        $closed = $request->user()->capstoneStage() !== 1 ? Team::NO_NEW_TEAMS
+            : (Team::creationAllowed() ? null : Team::CREATION_CLOSED);
+
+        if ($closed) {
             if ($request->expectsJson()) {
-                return response()->json(['success' => false, 'message' => Team::CREATION_CLOSED], 422);
+                return response()->json(['success' => false, 'message' => $closed], 422);
             }
 
-            return redirect()->route('student.team')->with('error', Team::CREATION_CLOSED);
+            return redirect()->route('student.team')->with('error', $closed);
         }
 
         $validated = $request->validate([
