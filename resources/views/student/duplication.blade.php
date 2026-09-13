@@ -221,6 +221,19 @@
 }
 .pp-field textarea { min-height: 70px; resize: vertical; }
 .pp-hint { font-size: 11px; color: var(--text3); margin-top: 4px; }
+.pp-tags { border: none; padding: 0; margin: 0 0 16px; min-width: 0; }
+.pp-tags legend { display: flex; align-items: center; gap: 8px; padding: 0; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); letter-spacing: 0.4px; margin-bottom: 4px; }
+.pp-required { font-size: 9.5px; font-weight: 700; letter-spacing: .3px; color: var(--red); background: var(--red-bg, rgba(220,38,38,.07)); padding: 1px 6px; border-radius: 999px; }
+.pp-pills { display: flex; flex-wrap: wrap; gap: 6px; }
+.pp-pill { position: relative; cursor: pointer; }
+.pp-pill input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.pp-pill span { display: inline-flex; align-items: center; min-height: 32px; padding: 5px 12px; border: 1px solid var(--border); border-radius: 999px; background: var(--bg2); font-size: 12px; color: var(--text2); transition: background .15s, border-color .15s, color .15s; }
+.pp-pill:hover span { border-color: var(--text3); color: var(--text); }
+.pp-pill input:checked + span { background: var(--accent, #c9a82c); border-color: var(--accent, #c9a82c); color: #18191f; font-weight: 600; }
+.pp-pill input:checked + span::before { content: "✓"; margin-right: 5px; font-size: 11px; }
+.pp-pill input:focus-visible + span { outline: 2px solid var(--accent3, #8a6e10); outline-offset: 2px; }
+.pp-pill input:disabled + span { opacity: .45; cursor: not-allowed; }
+@media (prefers-reduced-motion: reduce) { .pp-pill span { transition: none; } }
 
 /* Turn-in bar at the foot of the Your Pre-Proposals card. */
 .pp-submit-bar { flex-shrink: 0; border-top: 1px solid var(--border); padding: 12px 0 4px; margin-top: 10px; }
@@ -557,6 +570,8 @@
                               <div style="font-size:12px;font-weight:500;color:var(--text);line-height:1.4">{{ $m['title'] ?? '' }}</div>
                               @if (! empty($m['authors']))
                                 <div style="font-size:10px;color:var(--text2);margin-top:3px">By {{ $m['authors'] }}</div>
+                              @else
+                                <div style="font-size:10px;color:var(--text3);margin-top:3px">Authors not recorded yet</div>
                               @endif
                               <div style="font-size:10px;color:var(--text3);margin-top:2px">{{ $m['academic_year'] ?? 'N/A' }} · {{ $m['program'] ?? '' }}</div>
                               @if (! empty($m['reason']))
@@ -780,6 +795,20 @@
             <div class="pp-field"><label>Limitations</label><textarea name="limitations" id="limitations" style="min-height:48px"></textarea></div>
           </div>
           <div class="pp-field"><label>Software Development Methodology</label><input type="text" name="sdm" id="sdm" value="Agile Development Methodology"></div>
+
+          <fieldset class="pp-field pp-tags" id="pp-tags">
+            <legend>Project Tags <span class="pp-required">Required</span></legend>
+            <div class="pp-hint" style="margin:0 0 8px">What kind of project is this? Pick {{ \App\Support\ProjectTags::MIN }} to {{ \App\Support\ProjectTags::MAX }}.</div>
+            <div class="pp-pills">
+              @foreach (\App\Support\ProjectTags::OPTIONS as $tag)
+                <label class="pp-pill">
+                  <input type="checkbox" name="tags[]" value="{{ $tag }}" onchange="updateTagPills()">
+                  <span>{{ $tag }}</span>
+                </label>
+              @endforeach
+            </div>
+            <div class="pp-hint" id="pp-tag-count" aria-live="polite">0 of {{ \App\Support\ProjectTags::MAX }} picked</div>
+          </fieldset>
 
           <button type="submit" class="btn btn-primary">Save This Pre-Proposal</button>
         </form>
@@ -1090,7 +1119,29 @@ function ppFormIsComplete(form) {
     return false;
   }
 
+  if (!form.querySelectorAll('input[name="tags[]"]:checked').length) {
+    showToast('Pick at least one tag for what kind of project this is.', 'error');
+    const firstTag = form.querySelector('input[name="tags[]"]');
+    if (firstTag) { firstTag.focus(); }
+
+    return false;
+  }
+
   return true;
+}
+
+// Tag pills: at most MAX picked. Once the limit is reached the rest are
+// disabled rather than silently ignored, so it is clear why a click did nothing.
+const TAG_MAX = {{ \App\Support\ProjectTags::MAX }};
+
+function updateTagPills() {
+  const boxes = Array.from(document.querySelectorAll('#pp-tags input[name="tags[]"]'));
+  const picked = boxes.filter(b => b.checked).length;
+  boxes.forEach(b => { b.disabled = !b.checked && picked >= TAG_MAX; });
+  const count = document.getElementById('pp-tag-count');
+  if (count) {
+    count.textContent = picked + ' of ' + TAG_MAX + ' picked' + (picked >= TAG_MAX ? ' - that is the most you can pick' : '');
+  }
 }
 
 function updateWordCount() {
@@ -1415,6 +1466,9 @@ function renderResult(data, fileName) {
     document.getElementById('scope').value = data.concepts.scope || '';
     document.getElementById('limitations').value = data.concepts.limitations || '';
     if (data.concepts.sdm) document.getElementById('sdm').value = data.concepts.sdm;
+    // A new document is a new project: its tags are chosen fresh.
+    document.querySelectorAll('#pp-tags input[name="tags[]"]').forEach(b => { b.checked = false; });
+    updateTagPills();
     updateWordCount();
     selectSdgOption(data.concepts.sdg_goals);
 
@@ -1469,7 +1523,7 @@ function renderMatchItem(m, highlightWords) {
       <div class="match-item-row">
         <div style="flex:1;min-width:0;margin-right:10px">
           <div style="font-size:12px;font-weight:500;color:var(--text);line-height:1.4">${escapeHtml(m.title)}</div>
-          ${m.authors ? `<div style="font-size:10px;color:var(--text2);margin-top:3px">By ${escapeHtml(m.authors)}</div>` : ''}
+          ${m.authors ? `<div style="font-size:10px;color:var(--text2);margin-top:3px">By ${escapeHtml(m.authors)}</div>` : `<div style="font-size:10px;color:var(--text3);margin-top:3px">Authors not recorded yet</div>`}
           <div style="font-size:10px;color:var(--text3);margin-top:2px">${m.academic_year || 'N/A'} · ${escapeHtml(m.program || '')}</div>
           ${m.reason ? `<div style="font-size:10px;color:var(--text3);margin-top:4px;line-height:1.4">${escapeHtml(m.reason)}</div>` : ''}
         </div>

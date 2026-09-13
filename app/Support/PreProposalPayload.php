@@ -35,6 +35,7 @@ class PreProposalPayload
                 'scope' => $p->scope,
                 'limitations' => $p->limitations,
                 'sdm' => $p->sdm,
+                'tags' => $p->tags ?? [],
                 // The whole duplication report, not the top three with their
                 // titles. The CAPSA is deciding whether a title is too close
                 // to something already done - she needs the matched

@@ -362,6 +362,7 @@ function renderPreProposals(proposals, selectedId) {
       + '<div><strong style="color:var(--text)">Scope:</strong> ' + escapeHtml(p.scope || '—') + '</div>'
       + '<div><strong style="color:var(--text)">Limitations:</strong> ' + escapeHtml(p.limitations || '—') + '</div>'
       + '<div><strong style="color:var(--text)">SDM:</strong> ' + escapeHtml(p.sdm || '—') + '</div>'
+      + '<div><strong style="color:var(--text)">Tags:</strong> ' + escapeHtml(joinStringList(p.tags) || 'None - saved before tags were required') + '</div>'
       + '</div>';
 
     var actionsHtml = p.status === 'pending'

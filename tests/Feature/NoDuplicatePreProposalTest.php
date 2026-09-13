@@ -62,6 +62,7 @@ class NoDuplicatePreProposalTest extends TestCase
             'sdg_goals' => 'SDG 4', 'research_agenda' => ['Education'],
             'problem_statement' => 'x', 'proposed_solution' => 'x',
             'scope' => 'x', 'limitations' => 'x', 'sdm' => 'Agile',
+            'tags' => ['Mobile App'],
             'duplication_check_id' => $check->id,
         ]);
     }
