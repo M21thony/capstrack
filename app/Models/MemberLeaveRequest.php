@@ -9,10 +9,10 @@ use Illuminate\Support\Collection;
 /**
  * A member leaving a team whose members are locked, waiting on a CaPSA.
  *
- * See Team::isRosterLocked() for when that is, and RosterLock for what
+ * See Team::isTeamLocked() for when that is, and TeamLock for what
  * approving one does.
  */
-class RosterChangeRequest extends Model
+class MemberLeaveRequest extends Model
 {
     /** The member asks to leave. */
     public const LEAVE = 'leave';

@@ -182,7 +182,11 @@
         'verification' => 'Verification',
         'papers' => 'Document Review',
         'milestones' => 'Milestones',
+        'leave_requests' => 'Leave Requests',
+        'rules' => 'Team Rules',
       ];
+      // Neither of these is a list of teams to filter by section.
+      $sectionFiltered = ! in_array($tab, ['leave_requests', 'rules'], true);
       $qs = fn (string $t) => ['tab' => $t] + ($selectedSection ? ['section' => $selectedSection] : []);
     @endphp
 
@@ -197,6 +201,7 @@
       @endforeach
     </div>
 
+    @if ($sectionFiltered)
     <form method="get" action="{{ route('capsa.team_management') }}" style="display:flex;align-items:center;gap:8px;padding-bottom:16px">
       <input type="hidden" name="tab" value="{{ $tab }}"/>
       <label style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.4px">Section</label>
@@ -211,6 +216,7 @@
       @endif
 
     </form>
+    @endif
 
     @if ($allSections === [])
       <div class="card"><div class="tm-empty">
@@ -219,7 +225,7 @@
       </div></div>
     @else
 
-      @include('capsa.partials.team-management.' . $tab)
+      @include('capsa.partials.team-management.' . $tab, $tabData)
 
     @endif
 

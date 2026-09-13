@@ -129,7 +129,7 @@ class TeamRulesTest extends TestCase
     public function test_the_page_opens_for_a_capsa(): void
     {
         $this->actingAs($this->capsa(), 'expert')
-            ->get(route('capsa.team_rules'))
+            ->get(route('capsa.team_management', ['tab' => 'rules']))
             ->assertOk()
             ->assertSee('Maximum members per team')
             ->assertSee('Allow students to create teams')
@@ -145,9 +145,9 @@ class TeamRulesTest extends TestCase
         ]);
 
         $this->actingAs($this->capsa(), 'expert')
-            ->get(route('capsa.team_rules'))
+            ->get(route('capsa.team_management', ['tab' => 'rules']))
             ->assertOk()
-            ->assertViewHas('teamSizes', fn ($sizes) => ($sizes[4] ?? 0) === 1);
+            ->assertViewHas('tabData', fn ($data) => ($data['teamSizes'][4] ?? 0) === 1);
     }
 
     // ── creation ──────────────────────────────────────────────────────────

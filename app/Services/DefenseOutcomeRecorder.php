@@ -52,7 +52,7 @@ class DefenseOutcomeRecorder
 
         // Capstone 1 is over for this team: its members are locked from here.
         if ($defense->defense_type === DefenseOutcome::TITLE_DEFENSE && DefenseOutcome::isPass($outcome) && $defense->team) {
-            (new RosterLock)->lock($defense->team);
+            (new TeamLock)->lock($defense->team);
         }
 
         return [
