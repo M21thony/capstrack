@@ -1099,10 +1099,11 @@ async function saveRubric() {
       return;
     }
 
-    // Sync criteria
+    // Replace the rubric's criteria with the ones on the form. PUT is the
+    // whole list; POST to the same address adds a single criterion.
     var rubricId = json.data.rubric_id;
     var syncRes = await fetch('/api/admin/grading-rubrics/' + rubricId + '/criteria', {
-      method: 'POST',
+      method: 'PUT',
       headers: { 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json', 'Content-Type': 'application/json' },
       body: JSON.stringify({ criteria: draftCriteria.map(function(c) {
         return {
