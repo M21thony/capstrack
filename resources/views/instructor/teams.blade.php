@@ -329,7 +329,7 @@
           if ($tab === 'all') {
             $teams = $approvedAssignments;
           } elseif ($tab === 'panel') {
-            $teams = $grouped->get('grammarian', collect())->merge($grouped->get('capstone_adviser', collect()));
+            $teams = collect();
           } else {
             $teams = $grouped->get($tab, collect());
           }
@@ -343,6 +343,28 @@
         @endphp
         <div id="tab-{{ $tab }}" class="team-role-panel {{ $index === 0 ? 'active' : '' }}">
 
+          @if($tab === 'panel')
+            @forelse($panelSeats as $seat)
+              <a class="team-row" href="{{ route('instructor.grading') }}" style="text-decoration:none;color:inherit">
+                <div class="tr-avatar" style="background:#b45309">{{ strtoupper(substr($seat->team->team_name ?? 'T', 0, 2)) }}</div>
+                <div class="tr-who">
+                  <div class="tr-name">
+                    {{ $seat->team->team_name }}
+                    <span class="role-pill-sm">{{ $seat->role }}</span>
+                  </div>
+                  <div class="tr-sub">{{ $seat->team->project_title ?: 'No title chosen yet' }}</div>
+                </div>
+                <div class="tr-prog"></div>
+                <div class="tr-flag"><span>{{ $seat->scheduled->isEmpty() ? 'No defense scheduled yet' : $seat->scheduled->join(', ') }}</span></div>
+                <span class="tr-chev" aria-hidden="true">&rsaquo;</span>
+              </a>
+            @empty
+              <div class="empty-state">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                <p>You are not on any team's defense panel yet.</p>
+              </div>
+            @endforelse
+          @else
           @forelse($teams as $assignment)
             @php
               $team = $assignment->team;
@@ -414,6 +436,7 @@
               <p>No teams assigned as {{ $tab === 'panel' ? 'panel' : ($tab === 'all' ? 'any role' : strtolower($tab)) }}.</p>
             </div>
           @endforelse
+          @endif
         </div>
       @endforeach
     </div>

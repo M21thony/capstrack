@@ -31,7 +31,9 @@ class GradingController extends Controller
         $assignments = DefensePanel::where('expert_id', $expert->expert_id)
             ->with(['schedule.team'])
             ->get()
-            ->filter(fn ($panel) => $panel->schedule !== null)
+            // A panel is copied to every later stage when it is assigned; only
+            // a defense with a date is one to grade.
+            ->filter(fn ($panel) => $panel->schedule?->schedule_date !== null)
             ->sortBy(fn ($panel) => $panel->schedule->team?->team_name ?? '');
 
         $defenseIds = $assignments->pluck('schedule.defense_id')->unique()->values();
@@ -50,6 +52,8 @@ class GradingController extends Controller
                 'team_name' => $schedule->team?->team_name ?? 'Unknown Team',
                 'project_title' => $schedule->team?->project_title,
                 'defense_type' => $schedule->defense_type,
+                'attempt' => max(1, (int) $schedule->attempt),
+                'outcome' => $schedule->hasOutcome() ? $schedule->outcomeLabel() : null,
                 'panel_role' => $panel->panel_role,
                 'schedule_date' => $schedule->schedule_date,
                 'end_date' => $schedule->end_date,
@@ -57,7 +61,10 @@ class GradingController extends Controller
                 'status' => $grade?->status ?? 'not_started',
                 'total_score' => $grade?->total_score,
             ];
-        })->values();
+        })
+            // Still to grade first, then by date.
+            ->sortBy(fn ($r) => ($r->status === 'submitted' ? '1' : '0').$r->schedule_date->format('YmdHi'))
+            ->values();
 
         return view('instructor.grading', ['rows' => $rows]);
     }

@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Jobs\SyncConsultationCancellation;
 use App\Mail\ConsultationBookedMail;
 use App\Mail\ConsultationCancelledMail;
 use App\Models\CapstoneExpert;
@@ -82,6 +81,7 @@ class StudentConsultationController extends Controller
             'start_time' => $b->schedule?->start_time,
             'end_time' => $b->schedule?->end_time,
             'team_name' => $b->team->team_name ?? 'N/A',
+            'cancel_requested' => $b->cancellation_requested_at !== null,
         ];
     }
 
@@ -190,17 +190,19 @@ class StudentConsultationController extends Controller
 
         $today = now()->startOfDay();
 
-        // A booking with no session_date yet (shouldn't happen for anything
-        // booked after the session_date migration, but guards older rows
-        // that predate it) is treated as upcoming rather than silently
-        // dropped from both lists.
+        // Over once its end time has passed, not only from the next day. A
+        // booking with no session_date (older rows) stays upcoming rather
+        // than silently dropping from both lists.
+        $ended = fn ($b) => $b->session_date
+            && $b->session_date->copy()->setTimeFromTimeString($b->schedule?->end_time ?: '23:59:59')->isPast();
+
         $upcomingBookings = $myBookings
-            ->filter(fn ($b) => ! $b->session_date || $b->session_date->greaterThanOrEqualTo($today))
+            ->reject($ended)
             ->sortBy(fn ($b) => $b->session_date ?? $today)
             ->values();
 
         $recentBookings = $myBookings
-            ->filter(fn ($b) => $b->session_date && $b->session_date->lt($today))
+            ->filter($ended)
             ->sortByDesc(fn ($b) => $b->session_date)
             ->values();
 
@@ -518,28 +520,20 @@ class StudentConsultationController extends Controller
             ], 422);
         }
 
-        $slot = ConsultationSchedule::find($booking->schedule_id);
-        $team = $booking->team;
-
-        $booking->update([
-            'booking_status' => 'cancelled',
-            'cancellation_reason' => $validated['reason'],
-        ]);
-
-        if ($slot) {
-            ConsultationSchedule::where('schedule_id', $booking->schedule_id)
-                ->update(['is_available' => true]);
+        if ($booking->cancellation_requested_at) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You already asked to cancel this. Your expert will approve or decline it.',
+            ], 422);
         }
 
-        // The email and the calendar tidy-up are the reason cancelling used
-        // to sit for about three seconds: one waits on SMTP, the other on
-        // Google. Neither decides anything and the student cannot see either
-        // result, so they happen after the answer goes back.
-        SyncConsultationCancellation::dispatch(
-            $booking->booking_id,
-            $validated['reason'],
-            trim(($student->f_name ?? '').' '.($student->l_name ?? '')) ?: $student->email,
-        );
+        // The expert decides. The booking stays on and the slot stays held
+        // until they approve it - see Instructor\ScheduleController::updateCancellation.
+        $booking->update([
+            'cancellation_reason' => $validated['reason'],
+            'cancellation_requested_at' => now(),
+            'cancellation_requested_by' => trim(($student->f_name ?? '').' '.($student->l_name ?? '')) ?: $student->email,
+        ]);
 
         return response()->json(['success' => true]);
     }

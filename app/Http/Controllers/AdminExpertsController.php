@@ -55,7 +55,10 @@ class AdminExpertsController extends Controller
                 $q->where('status', 'approved');
             }])
             ->orderBy('created_at', 'desc')
-            ->get();
+            ->get()
+            // Your own account is always the first row.
+            ->sortBy(fn ($e) => $e->expert_id === $viewer?->expert_id ? 0 : 1)
+            ->values();
 
         // Section picker for the "Make CaPSA" modal - grouped by program
         // (the part of the label before the dash, e.g. "BSIT-3A" -> "BSIT")

@@ -69,6 +69,7 @@
   .gs-step.part .mark{color:var(--amber)}
 
   .gs-area{min-height:0;display:flex;flex-direction:column;padding:12px 20px 0}
+  .gs-area[hidden]{display:none}
   .gs-head{display:flex;align-items:baseline;gap:12px;margin-bottom:8px}
   .gs-head h2{margin:0;font-size:16px}
   .gs-head .meta{font-size:12px;color:var(--text3)}
@@ -460,7 +461,12 @@ document.addEventListener('keydown', e => {
 // The sheet measures the space it has, so draw once the page is shown and
 // again whenever the window changes size.
 (function whenVisible() {
-  if ($('gs-sheet-area').offsetParent !== null || $('gs-remarks-area').offsetParent !== null) { draw(); return; }
+  if ($('gs-sheet-area').offsetParent !== null || $('gs-remarks-area').offsetParent !== null) {
+    draw();
+    // Rows are measured to fill the page; measure again once the font has loaded.
+    document.fonts.ready.then(draw);
+    return;
+  }
   requestAnimationFrame(whenVisible);
 })();
 let resizeTimer;

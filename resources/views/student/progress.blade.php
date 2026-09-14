@@ -128,6 +128,7 @@
       <b>{{ $next ? $next->due_on->format('M j') : '—' }}</b>
       <span>{{ $next ? 'Next due: '.$next->item->title : 'Nothing left to do' }}</span>
     </div>
+    <a class="spm-upload" href="{{ route('student.defense-scores') }}" style="align-self:center">Panel scores</a>
   </div>
 </div>
 

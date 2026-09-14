@@ -421,6 +421,7 @@ Route::middleware(['auth', 'no.cache', 'track.expert'])->group(function () {
             Route::post('/consultation/book', [StudentConsultationController::class, 'book'])->name('student.consultation.book');
             Route::post('/consultation/cancel/{bookingId}', [StudentConsultationController::class, 'cancel'])->name('student.consultation.cancel');
             Route::get('/progress', [StudentProgressController::class, 'index'])->name('student.progress');
+            Route::get('/defense-scores', [\App\Http\Controllers\Student\DefenseScoresController::class, 'index'])->name('student.defense-scores');
             Route::patch('/progress/milestones', [StudentProgressController::class, 'markDone'])->name('student.progress.milestones.mark-done');
             Route::put('/progress/milestones/picture', [StudentProgressController::class, 'updatePicture'])->name('student.progress.milestones.update-picture');
             Route::get('/financial', [StudentFinancialController::class, 'index'])->name('student.financial');
@@ -443,6 +444,7 @@ Route::prefix('instructor/schedule')
     ->middleware(['expert.auth', 'no.cache', 'track.expert'])
     ->group(function () {
         Route::get('slots', [ScheduleController::class, 'getSlots']);
+        Route::patch('bookings/{bookingId}/cancellation', [ScheduleController::class, 'updateCancellation'])->whereNumber('bookingId');
         Route::post('slots', [ScheduleController::class, 'addSlot']);
         Route::patch('slots/{id}', [ScheduleController::class, 'updateSlot']);
         Route::delete('slots/{id}', [ScheduleController::class, 'deleteSlot']);

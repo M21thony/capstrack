@@ -43,8 +43,8 @@ class AdminPanelAssignmentController extends Controller
 
     public function index(Request $request): View
     {
-        $stage = DefenseBoard::stageOrDefault($request->query('defense_type'));
         $capsa = $this->capsa();
+        $stage = $this->board->openingStage($capsa, $request->query('defense_type'));
 
         $rows = $this->board->rows($capsa, $stage);
 

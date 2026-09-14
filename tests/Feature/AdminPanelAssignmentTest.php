@@ -144,7 +144,7 @@ class AdminPanelAssignmentTest extends TestCase
         ]);
 
         $response = $this->actingAs($this->admin, 'expert')
-            ->get(route('capsa.panel_assignment'));
+            ->get(route('capsa.panel_assignment', ['defense_type' => 'Title Defense']));
 
         $response->assertStatus(200)
             ->assertSee('Ada Lovelace')

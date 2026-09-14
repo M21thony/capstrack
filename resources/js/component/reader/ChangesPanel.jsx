@@ -28,7 +28,7 @@ export default function ChangesPanel({ top, base, diff, selectedChange, onOpenCh
         <h2>What changed <span className="rr-count">{changes.length}</span></h2>
       </div>
       <p className="rr-help">
-        Since <b>{base?.round}</b>. New and reworded words are underlined in green. Removed words are only listed here.
+        Since <b>{base?.round}</b>. New and reworded words are underlined in green; a red mark shows where words were removed.
       </p>
       <div className="rr-side-body">
         {message ? (
@@ -62,8 +62,13 @@ export default function ChangesPanel({ top, base, diff, selectedChange, onOpenCh
                       <span className={`rr-tag ${KIND[c.kind][1]}`}>{KIND[c.kind][0]}</span>
                       <span className="rr-where">p.{c.page}</span>
                     </div>
-                    {c.oldText && <div className="rr-was">{c.oldText}</div>}
-                    {c.newText && <div className="rr-t">{c.newText}</div>}
+                    <div className="rr-diffline">
+                      {c.before && <>…{c.before} </>}
+                      {c.oldText && <del>{c.oldText}</del>}
+                      {c.oldText && c.newText && " "}
+                      {c.newText && <ins>{c.newText}</ins>}
+                      {c.after && <> {c.after}…</>}
+                    </div>
                   </div>
                 )}
               />

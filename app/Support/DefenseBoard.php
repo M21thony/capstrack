@@ -54,9 +54,22 @@ class DefenseBoard
 
     public function __construct(private SectionScope $scope, private DefenseProgress $progress) {}
 
-    public static function stageOrDefault(?string $stage, string $default = 'Title Defense'): string
+    /**
+     * The stage a page shows: the one asked for, else the earliest stage any
+     * of this CaPSA's teams is still working through - where the work is.
+     */
+    public function openingStage(CapstoneExpert $capsa, ?string $asked): string
     {
-        return in_array($stage, self::STAGES, true) ? $stage : $default;
+        if (in_array($asked, self::STAGES, true)) {
+            return $asked;
+        }
+
+        $earliest = $this->teamsFor($capsa)['teams']
+            ->map(fn (Team $team) => array_search($this->progress->currentStage($team, $team->defenseSchedules), self::STAGES, true))
+            ->reject(fn ($i) => $i === false)
+            ->min();
+
+        return self::STAGES[$earliest ?? 0];
     }
 
     /**

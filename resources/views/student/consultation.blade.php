@@ -495,12 +495,14 @@
                   </div>
                 </div>
                 <span class="appt-status-badge appt-status-badge-upcoming">
-                  {{ $booking->session_date && $booking->session_date->isToday() ? 'Today' : 'Scheduled' }}
+                  {{ $booking->cancellation_requested_at ? 'Cancel requested' : ($booking->session_date && $booking->session_date->isToday() ? 'Today' : 'Scheduled') }}
                 </span>
                 <svg class="appt-chev" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
               </div>
+              @unless ($booking->cancellation_requested_at)
               <button type="button" class="appt-cancel-btn" data-cancel-booking-id="{{ $booking->booking_id }}"
                       data-session-date="{{ $booking->session_date?->format('Y-m-d') }}">Cancel Booking</button>
+              @endunless
             </div>
           @empty
             <div class="session-list-empty">No upcoming consultations.</div>
@@ -536,7 +538,7 @@
                     {{ $booking->schedule->expert->first_name ?? 'Expert' }} {{ $booking->schedule->expert->last_name ?? '' }}
                   </div>
                 </div>
-                <span class="appt-status-badge">Completed</span>
+                <span class="appt-status-badge">Ended</span>
                 <svg class="appt-chev" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
               </div>
             </div>
@@ -934,9 +936,9 @@ function bookingCardHtml(booking, isUpcoming) {
   const dateKey = booking.session_date;
   const dateLabel = dateKey ? formatDateLabel(dateKey) : (booking.available_date || '—');
   const statusBadge = isUpcoming
-    ? '<span class="appt-status-badge appt-status-badge-upcoming">' + (dateKey === todayKeyString() ? 'Today' : 'Scheduled') + '</span>'
-    : '<span class="appt-status-badge">Completed</span>';
-  const cancelBtn = isUpcoming
+    ? '<span class="appt-status-badge appt-status-badge-upcoming">' + (booking.cancel_requested ? 'Cancel requested' : (dateKey === todayKeyString() ? 'Today' : 'Scheduled')) + '</span>'
+    : '<span class="appt-status-badge">Ended</span>';
+  const cancelBtn = isUpcoming && !booking.cancel_requested
     ? '<button type="button" class="appt-cancel-btn" data-cancel-booking-id="' + booking.booking_id
         + '" data-session-date="' + (booking.session_date || '') + '">Cancel Booking</button>'
     : '';
@@ -1234,18 +1236,9 @@ async function submitCancelBooking() {
 
     const data = await res.json();
     if (data.success) {
-      const card = document.querySelector('.session-list-item[data-booking-id="' + cancelBookingId + '"]');
-      if (card) { card.remove(); }
-
-      const list = document.getElementById('upcoming-bookings-list');
-      if (list && !list.querySelector('.session-list-item')) {
-        list.innerHTML = '<div class="session-list-empty">No upcoming consultations.</div>';
-      }
-      const count = document.querySelector('#upcoming-bookings-list')?.closest('.sessions-card')?.querySelector('.sessions-card-count');
-      if (count) { count.textContent = String(Math.max(0, Number(count.textContent || '0') - 1)); }
-
       closeCancelModal();
-      showToast('Booking cancelled. The expert has been notified.', 'success');
+      showToast('Cancellation requested. Your expert will approve or decline it.', 'success');
+      refreshConsultationData(false);
     } else {
       showToast(data.message || 'Failed to cancel booking.', 'error');
     }
