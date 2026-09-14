@@ -1,4 +1,4 @@
-import { el, btn, icon, fmtDate, plural, fill, api, toast, say, redraw, confirmRemove } from './common.js';
+import { el, btn, iconBtn, icon, fmtDate, plural, fill, api, toast, say, redraw, confirmRemove } from './common.js';
 
 /*
  * The Edit milestones window.
@@ -227,7 +227,7 @@ export function openEditor({ urls, checklistId = null, onClose = null }) {
     const missing = E.list.missing || [];
     missing.forEach(m => {
       const row = el('div', 'ms-create-row');
-      row.append(el('b', '', m.program), btn(`Start from the ${m.program} department checklist`, 'ms-btn-gold', () => create({ program: m.program })));
+      row.append(el('b', '', m.program), btn(`Start from the ${m.program} department checklist`, 'ms-btn-gold', () => create({ program: m.program }), 'plus'));
       if (m.copies.length) {
         const select = el('select', 'ms-select');
         select.setAttribute('aria-label', `Copy another CaPSA's ${m.program} checklist`);
@@ -264,8 +264,8 @@ export function openEditor({ urls, checklistId = null, onClose = null }) {
       bar.append(
         el('span', 'ms-hint', 'Drag by the grip, or focus it and press ↑ ↓, to reorder · click any name, type or date to edit'),
         el('span', 'ms-spacer'),
-        btn('Open all', 'ms-btn-link', () => { E.collapsed.clear(); render(); }),
-        btn('Close all', 'ms-btn-link', () => { live().forEach(m => E.collapsed.add(m.id)); render(); }),
+        btn('Open all', 'ms-btn-link', () => { E.collapsed.clear(); render(); }, 'expand'),
+        btn('Close all', 'ms-btn-link', () => { live().forEach(m => E.collapsed.add(m.id)); render(); }, 'collapse'),
         el('span', 'ms-scope', 'Applies to ' + E.cl.used_by),
       );
       return;
@@ -322,16 +322,16 @@ export function openEditor({ urls, checklistId = null, onClose = null }) {
       const n = parseInt(days.value, 10);
       if (!n) return days.focus();
       bulk({ shift_days: n }, `Moved ${N} ${plural(Math.abs(n), 'day')} ${n > 0 ? 'later' : 'earlier'}.`);
-    }));
+    }, 'calendar'));
 
     bar.append(
       el('b', '', chosen.length + ' selected'), move, type, due, shift, el('span', 'ms-spacer'),
       btn('Archive', '', () => {
         E.picked.clear();
         bulk({ archived: true }, `Archived ${N}. Teams no longer see ${chosen.length === 1 ? 'it' : 'them'}.`);
-      }),
-      btn('Remove', 'ms-btn-warn', () => removeDeliverables(chosen)),
-      btn('Clear', 'ms-btn-link', () => { E.picked.clear(); render(); }),
+      }, 'archive'),
+      btn('Remove', 'ms-btn-warn', () => removeDeliverables(chosen), 'trash'),
+      btn('Clear', 'ms-btn-link', () => { E.picked.clear(); render(); }, 'x'),
     );
   }
 
@@ -349,8 +349,9 @@ export function openEditor({ urls, checklistId = null, onClose = null }) {
     if (!phases.length) wrap.append(el('p', 'ms-drop-hint', 'No milestones yet. Add one to start.'));
     phases.forEach((m, idx) => wrap.append(group(m, phases, idx)));
 
-    const add = el('button', 'ms-add-ms', '+ Add milestone');
+    const add = el('button', 'ms-add-ms');
     add.type = 'button';
+    add.append(icon('plus'), 'Add milestone');
     add.addEventListener('click', () => {
       let created;
       run(
@@ -417,13 +418,13 @@ export function openEditor({ urls, checklistId = null, onClose = null }) {
     h.append(
       hd, chev, el('span', 'ms-ord', String(idx + 1)), name,
       el('span', 'ms-ecount', plural(items.length, 'deliverable')), el('span', 'ms-spacer'),
-      btn('+ Add deliverables', 'ms-btn-link', () => openAdd(m)),
+      btn('Add deliverables', 'ms-btn-link', () => openAdd(m), 'plus'),
       btn('Archive', 'ms-btn-link', () => run(
         async () => { await api('PATCH', fill(urls.milestone, m.id), { archived: true }); await reload(); },
         `Archived the ${m.name} milestone. Teams no longer see it or its deliverables.`,
         async () => { await api('PATCH', fill(urls.milestone, m.id), { archived: false }); await reload(); },
-      )),
-      btn('Remove', 'ms-btn-link ms-btn-warn', () => removeMilestone(m)),
+      ), 'archive'),
+      btn('Remove', 'ms-btn-link ms-btn-warn', () => removeMilestone(m), 'trash'),
     );
     g.append(h);
 
@@ -559,7 +560,7 @@ export function openEditor({ urls, checklistId = null, onClose = null }) {
 
     const acts = el('span', 'ms-acts');
     acts.append(
-      btn('Archive', 'ms-btn-link', () => {
+      iconBtn('archive', `Archive “${d.title}”`, 'ms-btn-link', () => {
         E.picked.delete(d.id);
         run(
           async () => { await api('PATCH', fill(urls.deliverable, d.id), { archived: true }); await reload(); },
@@ -567,7 +568,7 @@ export function openEditor({ urls, checklistId = null, onClose = null }) {
           async () => { await api('PATCH', fill(urls.deliverable, d.id), { archived: false }); await reload(); },
         );
       }),
-      btn('Remove', 'ms-btn-link ms-btn-warn', () => removeDeliverables([d])),
+      iconBtn('trash', `Remove “${d.title}”`, 'ms-btn-link ms-btn-warn', () => removeDeliverables([d])),
     );
 
     row.append(pickBox(d.id, d.title), hd, title, type, due, acts);
@@ -619,7 +620,7 @@ export function openEditor({ urls, checklistId = null, onClose = null }) {
     const acts = el('div', 'ms-acts');
     acts.append(
       btn('Cancel', '', () => box.close()),
-      btn('Add deliverables', 'ms-btn-gold', () => {
+      btn('Add deliverables', 'ms-btn-gold', function addLines() {
         const titles = lines.value.split('\n').map(s => s.trim()).filter(Boolean);
         if (!titles.length) return lines.focus();
         box.close();
@@ -636,7 +637,7 @@ export function openEditor({ urls, checklistId = null, onClose = null }) {
           `Added ${plural(titles.length, 'deliverable')} to ${targetName}.`,
           async () => { await api('DELETE', urls.deliverables, { ids }); await reload(); },
         );
-      }),
+      }, 'plus'),
     );
 
     const form = el('div', 'ms-sd');
@@ -747,9 +748,9 @@ export function openEditor({ urls, checklistId = null, onClose = null }) {
     bar.classList.add('ms-on');
     bar.append(
       el('b', '', chosen.length + ' selected'), el('span', 'ms-spacer'),
-      btn('Restore', '', () => restoreEntries(chosen)),
-      btn('Remove', 'ms-btn-warn', () => removeEntries(chosen)),
-      btn('Clear', 'ms-btn-link', () => { E.picked.clear(); render(); }),
+      btn('Restore', '', () => restoreEntries(chosen), 'restore'),
+      btn('Remove', 'ms-btn-warn', () => removeEntries(chosen), 'trash'),
+      btn('Clear', 'ms-btn-link', () => { E.picked.clear(); render(); }, 'x'),
     );
   }
 
@@ -763,7 +764,7 @@ export function openEditor({ urls, checklistId = null, onClose = null }) {
     entries.forEach(x => {
       const row = el('div', 'ms-arow' + (E.picked.has(x.key) ? ' ms-picked' : ''));
       const acts = el('span', 'ms-acts');
-      acts.append(btn('Restore', '', () => restoreEntries([x])), btn('Remove', 'ms-btn-warn', () => removeEntries([x])));
+      acts.append(btn('Restore', '', () => restoreEntries([x]), 'restore'), btn('Remove', 'ms-btn-warn', () => removeEntries([x]), 'trash'));
       row.append(pickBox(x.key, x.name), el('span', 'ms-arow-title', x.name), el('span', 'ms-hint', x.meta), acts);
       list.append(row);
     });
