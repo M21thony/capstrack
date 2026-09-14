@@ -244,6 +244,9 @@ class TeamController extends Controller
 
         return view('student.team', [
             'myTeam' => $myTeam,
+            // The CaPSA's Team Rules, so a closed door is said before anyone fills in a form.
+            'creationAllowed' => Team::creationAllowed(),
+            'joiningAllowed' => Team::joiningAllowed(),
             // What a recruitment post may advertise for. Project Head is left
             // out: that seat belongs to whoever leads the team.
             'memberRoleNames' => StudentRole::memberRoles()->pluck('s_role_name')->all(),

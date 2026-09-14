@@ -527,6 +527,7 @@
                 'credentials' => $expert->credentials,
                 'expert_id' => $expert->expert_id,
                 'highest_degree' => $expert->highest_degree,
+                'degree_title' => $expert->degree_title,
                 'program' => $expert->program,
                 'is_capsa' => (bool) $expert->is_capsa,
                 'sections' => $expert->sections ?? [],
@@ -649,7 +650,8 @@
                               onclick="reactivateExpert({{ $expert->expert_id }}, {{ Illuminate\Support\Js::from($expert->name) }})">
                         <svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> Reactivate
                       </button>
-                    @else
+                    @elseif ((int) $expert->expert_id !== (int) auth('expert')->id())
+                    {{-- Never on your own row: nobody would be left to switch you back on. --}}
                     <button type="button" class="rowmenu-item danger"
                             onclick="removeOneExpert({{ $expert->expert_id }}, {{ Illuminate\Support\Js::from($expert->name) }})">
                       <svg viewBox="0 0 24 24"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg> Deactivate
@@ -736,14 +738,9 @@
         <div class="expert-detail-field-value" id="detailCredentials">—</div>
       </div>
       <div>
-        <label class="expert-detail-field-label" for="detailDegree">Highest degree</label>
+        <label class="expert-detail-field-label" for="detailDegree">Degree</label>
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:4px">
-          <select id="detailDegree" class="input" style="max-width:200px" onchange="saveExpertDegree(this)">
-            <option value="">Not on record</option>
-            @foreach (\App\Models\CapstoneExpert::DEGREES as $degreeKey => $degreeLabel)
-              <option value="{{ $degreeKey }}">{{ $degreeLabel }}</option>
-            @endforeach
-          </select>
+          @include('partials.degree-select', ['id' => 'detailDegree', 'attrs' => 'class="input" style="max-width:200px" onchange="saveExpertDegree(this)"'])
           <span id="detailDegreeNote" style="font-size:11.5px;font-weight:600"></span>
         </div>
       </div>
@@ -919,6 +916,11 @@ const ROLE_NAME_TO_ID = {{ Illuminate\Support\Js::from($roleNameToId) }};
       </div>
     </div>
 
+    <div class="ae-field">
+      <label class="ae-label" for="addExpertDegree">Degree <span class="ae-opt">(optional)</span></label>
+      @include('partials.degree-select', ['id' => 'addExpertDegree', 'blank' => 'Not now', 'attrs' => 'class="ct-modal-input" style="margin-bottom:0"'])
+    </div>
+
     <p class="ae-note">They are approved straight away &mdash; naming them here is the vetting, the same as putting them on the list. Their areas of expertise are theirs to fill in from their own profile.</p>
 
     <div id="addExpertResult" style="display:none;font-size:12px;margin-bottom:12px"></div>
@@ -1056,6 +1058,7 @@ function addExpert() {
       email: document.getElementById('addExpertEmail').value.trim(),
       name: document.getElementById('addExpertName').value.trim(),
       roles: roles,
+      degree: document.getElementById('addExpertDegree').value || null,
     }),
   })
     .then(function (r) { return r.json(); })
@@ -1354,8 +1357,8 @@ const expertDetailModal = document.getElementById('expertDetailModal');
 let currentDetailExpertId = null;
 const degreeSaved = {};
 
-function updateDegreeNote(degree) {
-  const canChair = degree === 'master' || degree === 'doctorate';
+function updateDegreeNote(level) {
+  const canChair = level === 'master' || level === 'doctorate';
   const note = document.getElementById('detailDegreeNote');
   note.textContent = canChair ? 'Can be Panel Chair' : "Cannot be Panel Chair - needs a Master's or higher";
   note.style.color = canChair ? 'var(--green)' : 'var(--text3)';
@@ -1370,12 +1373,13 @@ function saveExpertDegree(select) {
   fetch('{{ url('capsa/experts') }}/' + id + '/degree', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' },
-    body: JSON.stringify({ highest_degree: value || null }),
+    // The title (MIT, PhD); the server works out the level from it.
+    body: JSON.stringify({ degree: value || null }),
   })
     .then(r => r.json().then(d => ({ ok: r.ok && d.success, d })))
     .then(({ ok, d }) => {
       showToast(d.message || (ok ? 'Degree saved' : 'Could not save the degree'), ok ? 'success' : 'error');
-      if (ok) { degreeSaved[id] = value; updateDegreeNote(value); }
+      if (ok) { degreeSaved[id] = { title: value, level: d.highest_degree || '' }; updateDegreeNote(d.highest_degree || ''); }
     })
     .catch(() => showToast('Network error. Nothing was saved.', 'error'))
     .finally(() => { select.disabled = false; });
@@ -1387,9 +1391,9 @@ function openExpertDetail(data) {
   document.getElementById('detailEmail').textContent = data.email;
   document.getElementById('detailCredentials').textContent = data.credentials || 'None on file';
   currentDetailExpertId = data.expert_id;
-  const degree = data.expert_id in degreeSaved ? degreeSaved[data.expert_id] : (data.highest_degree || '');
-  document.getElementById('detailDegree').value = degree;
-  updateDegreeNote(degree);
+  const savedDegree = degreeSaved[data.expert_id];
+  document.getElementById('detailDegree').value = savedDegree ? savedDegree.title : (data.degree_title || '');
+  updateDegreeNote(savedDegree ? savedDegree.level : (data.highest_degree || ''));
   document.getElementById('detailProgram').textContent = data.program || 'Not set';
   document.getElementById('detailExpertise').textContent = data.expertise.length ? data.expertise.join(', ') : 'None specified';
   document.getElementById('detailCapacity').textContent = data.capacity.length ? data.capacity.join(' · ') : 'Not set';

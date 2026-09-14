@@ -1,6 +1,37 @@
 import '../../css/milestones.css';
+import * as pdfjsLib from 'pdfjs-dist';
 import { el, btn, icon, fmtDate, plural, ordinal, fill, api, toast, redraw } from './common.js';
 import { openEditor } from './editor.js';
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).toString();
+
+/**
+ * A scanned PDF drawn page by page onto canvases, the width of the box. No
+ * iframe: the browser's own viewer brought its toolbar, and sometimes a
+ * download prompt instead of the paper.
+ */
+async function drawPdf(box, url, label) {
+  box.replaceChildren(el('div', 'ms-scan-note', 'Loading the scan…'));
+  try {
+    const pdf = await pdfjsLib.getDocument({ url, withCredentials: true }).promise;
+    box.replaceChildren();
+    const width = Math.max(320, box.clientWidth - 8);
+    const ratio = window.devicePixelRatio || 1;
+    for (let n = 1; n <= pdf.numPages; n++) {
+      const page = await pdf.getPage(n);
+      const viewport = page.getViewport({ scale: (width / page.getViewport({ scale: 1 }).width) * ratio });
+      const canvas = el('canvas');
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+      canvas.setAttribute('role', 'img');
+      canvas.setAttribute('aria-label', `${label}, page ${n} of ${pdf.numPages}`);
+      box.append(canvas);
+      await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+    }
+  } catch {
+    box.replaceChildren(el('div', 'ms-scan-note', 'This file cannot be shown here. Open it in a new tab to check it.'));
+  }
+}
 
 /*
  * The milestone tracker.
@@ -438,10 +469,10 @@ function start(root) {
       img.alt = 'Uploaded scan of ' + r.title;
       scan.append(img);
     } else {
-      const frame = el('iframe');
-      frame.src = r.file_url;
-      frame.title = 'Uploaded scan of ' + r.title;
-      scan.append(frame);
+      const pages = el('div', 'ms-scan-pages');
+      scan.append(pages);
+      // After the window opens, so the pages are drawn at its real width.
+      requestAnimationFrame(() => drawPdf(pages, r.file_url, 'Uploaded scan of ' + r.title));
     }
     const newTab = el('a', 'ms-scan-open', 'Open in a new tab');
     newTab.href = r.file_url;

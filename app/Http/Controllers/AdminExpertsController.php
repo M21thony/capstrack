@@ -137,6 +137,7 @@ class AdminExpertsController extends Controller
             'roles.*' => ['string', 'in:'.implode(',', CapstoneExpert::STUDENT_FACING_ROLES)],
             'expertise' => ['nullable', 'array'],
             'expertise.*' => ['string', 'max:100'],
+            'degree' => ['nullable', 'in:'.implode(',', CapstoneExpert::degreeTitles())],
         ], [
             'email.required' => 'Type the email address of the person to add.',
             'email.email' => 'That is not an email address.',
@@ -228,6 +229,10 @@ class AdminExpertsController extends Controller
             CapstoneExpert::syncRoles($expert->expert_id, $wanted, $roleIds->values());
         }
 
+        if ($request->filled('degree')) {
+            $expert->update(CapstoneExpert::degreeFromTitle($request->input('degree')));
+        }
+
         // Blank means "not saying", the same as an empty column on the list -
         // an expert fills their own areas in from their profile.
         $expertise = collect($request->input('expertise', []))
@@ -303,16 +308,21 @@ class AdminExpertsController extends Controller
         }
 
         $validated = $request->validate([
+            // The degree as written after a name (MIT, PhD); it sets the level too.
+            'degree' => ['nullable', 'in:'.implode(',', CapstoneExpert::degreeTitles())],
             'highest_degree' => ['nullable', 'in:'.implode(',', array_keys(CapstoneExpert::DEGREES))],
         ]);
 
-        $expert->update(['highest_degree' => $validated['highest_degree'] ?? null]);
+        $expert->update($request->has('degree')
+            ? CapstoneExpert::degreeFromTitle($validated['degree'] ?? null)
+            : ['highest_degree' => $validated['highest_degree'] ?? null, 'degree_title' => null]);
 
         return response()->json([
             'success' => true,
-            'message' => $expert->name.': '.($expert->degreeLabel() ?? 'no degree on record').' saved.'
+            'message' => $expert->name.': '.($expert->degreeText() ?? 'no degree').' saved.'
                 .($expert->canChairPanel() ? ' They can be Panel Chair.' : ' They cannot be Panel Chair.'),
             'highest_degree' => $expert->highest_degree,
+            'degree' => $expert->degree_title,
             'can_chair' => $expert->canChairPanel(),
         ]);
     }
@@ -356,6 +366,15 @@ class AdminExpertsController extends Controller
     {
         if ($refusal = $this->refuseIfAdmin($expert)) {
             return $refusal;
+        }
+
+        // Switching yourself off signs you out for good, with nobody on your
+        // side of the screen left to switch you back on.
+        if ((int) $expert->expert_id === (int) Auth::guard('expert')->id()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You cannot deactivate your own account. Ask another CaPSA or the admin if it needs to be switched off.',
+            ], 422);
         }
 
         $reason = trim($request->input('reason', ''));
@@ -558,6 +577,7 @@ class AdminExpertsController extends Controller
             'name' => ['nullable', 'string', 'max:120'],
             'sections' => ['nullable', 'array'],
             'sections.*' => ['string'],
+            'degree' => ['nullable', 'in:'.implode(',', CapstoneExpert::degreeTitles())],
         ], [
             'email.required' => 'Type the email address of the person to make a CaPSA.',
             'email.email' => 'That is not an email address.',
@@ -642,6 +662,10 @@ class AdminExpertsController extends Controller
         // existing CaPSA already handles.
         if ($request->has('sections')) {
             $expert->sections = $request->input('sections', []);
+        }
+
+        if ($request->filled('degree')) {
+            $expert->fill(CapstoneExpert::degreeFromTitle($request->input('degree')));
         }
 
         $expert->save();

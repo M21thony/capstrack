@@ -122,11 +122,11 @@ function drawAssign() {
     const rows = EXPERTS
       .filter(e => !own.has(e.id) && !takenElsewhere.has(e.id))
       .filter(e => !eq || `${e.name} ${e.tags.join(' ')}`.toLowerCase().includes(eq))
-      .sort((a, b) => (k === 'chair' ? b.chair - a.chair : 0) || suggested(b) - suggested(a))
-      .map(e => {
-        const noChair = k === 'chair' && !e.chair;
-        return `<label class="dx-pick ${noChair ? 'dx-off' : ''}"><input type="radio" name="a-${k}" data-seat="${k}" value="${e.id}" ${A[k] === e.id ? 'checked' : ''} ${noChair ? 'disabled' : ''}><span class="dx-avatar">${esc(initials(e.name))}</span><span class="dx-grow"><span class="dx-strong">${suggested(e) && !noChair ? '<span class="dx-star" title="Matches the teams\' project tags">★</span> ' : ''}${esc(e.name)}</span> <span class="dx-deg">${esc(e.degree)}</span><span class="dx-muted" style="display:block">${noChair ? '<span class="dx-warn">Can\'t chair, needs a Master\'s or higher</span>' : esc(e.tags.join(', '))}</span></span></label>`;
-      }).join('') || '<div class="dx-empty-note" style="padding:10px 12px">No expert left for this seat.</div>';
+      // Only someone who may chair is offered for the Chair seat.
+      .filter(e => k !== 'chair' || e.chair)
+      .sort((a, b) => suggested(b) - suggested(a))
+      .map(e => `<label class="dx-pick"><input type="radio" name="a-${k}" data-seat="${k}" value="${e.id}" ${A[k] === e.id ? 'checked' : ''}><span class="dx-avatar">${esc(initials(e.name))}</span><span class="dx-grow"><span class="dx-strong">${suggested(e) ? '<span class="dx-star" title="Matches the teams\' project tags">★</span> ' : ''}${esc(e.name)}</span>${e.degree ? ` <span class="dx-deg">${esc(e.degree)}</span>` : ''}${e.tags.length ? `<span class="dx-muted" style="display:block">${esc(e.tags.join(', '))}</span>` : ''}</span></label>`)
+      .join('') || '<div class="dx-empty-note" style="padding:10px 12px">No expert left for this seat.</div>';
     const picked = A[k] && E(A[k]);
     return `<div class="dx-group"><div class="dx-group-head"><span class="dx-dot ${picked ? 'dx-ok' : ''}"></span>${label} <span class="dx-muted">(${rule})</span><span class="dx-grow"></span>${picked ? `<span class="dx-muted">${esc(picked.name)}</span><button class="dx-icon-btn" data-unseat="${k}" aria-label="Clear ${label}"><svg><use href="#dx-i-x"/></svg></button>` : '<span class="dx-muted">Not selected</span>'}</div><div class="dx-group-list">${rows}</div></div>`;
   }).join('');

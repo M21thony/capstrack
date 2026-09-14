@@ -218,8 +218,9 @@ class DefenseBoard
             ->get()
             ->map(fn (CapstoneExpert $e) => [
                 'id' => (int) $e->expert_id,
-                'name' => $e->name,
-                'degree' => $e->degreeLabel() ?? 'No degree on record',
+                // The name alone: the degree is shown beside it, and credentials would repeat it.
+                'name' => trim(implode(' ', array_filter([$e->first_name, $e->middle_name ? mb_substr($e->middle_name, 0, 1).'.' : null, $e->last_name, $e->suffix]))) ?: $e->name,
+                'degree' => $e->degreeText(),
                 'chair' => $e->canChairPanel(),
                 'tags' => $e->expertise->pluck('expertise_field')->filter()->values()->all(),
             ]);

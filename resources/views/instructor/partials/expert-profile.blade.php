@@ -182,13 +182,12 @@
 
       <!-- Highest degree: what the Panel Chair rule reads -->
       <div class="ep-field">
-        <label class="ep-label" for="ep-degree">Highest Degree</label>
-        <select id="ep-degree" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg2);color:var(--text);font:inherit;font-size:13px">
-          <option value="">Not on record</option>
-          @foreach (\App\Models\CapstoneExpert::DEGREES as $degreeKey => $degreeLabel)
-            <option value="{{ $degreeKey }}" @selected($expert?->highest_degree === $degreeKey)>{{ $degreeLabel }}</option>
-          @endforeach
-        </select>
+        <label class="ep-label" for="ep-degree">Degree</label>
+        @include('partials.degree-select', [
+            'id' => 'ep-degree',
+            'selected' => $expert?->degree_title,
+            'attrs' => 'style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg2);color:var(--text);font:inherit;font-size:13px"',
+        ])
         <div style="font-size:11px;color:var(--text3);margin-top:6px">A Panel Chair needs a Master's degree or higher.</div>
       </div>
 
@@ -597,7 +596,7 @@ async function saveExpertProfile(){
       body: JSON.stringify({
         program_slots: programSlots,
         expertise: epTags,
-        highest_degree: (document.getElementById('ep-degree') || {}).value || null,
+        degree: (document.getElementById('ep-degree') || {}).value || null,
       }),
     });
     const json = await res.json();

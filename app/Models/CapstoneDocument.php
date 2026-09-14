@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Collection;
 
 class CapstoneDocument extends Model
 {
@@ -45,6 +46,31 @@ class CapstoneDocument extends Model
     public function nextRoundLabel(): string
     {
         return self::round(max(1, (int) $this->file_version));
+    }
+
+    /**
+     * The team's earlier uploads of the same requirement, newest first - what
+     * a reviewer compares this one against to see what changed. Matched the
+     * way versions are counted: the checklist line, else the chapter, else
+     * the file name.
+     *
+     * @return Collection<int, self>
+     */
+    public function earlierVersions(): Collection
+    {
+        $teamId = StudentSchoolYear::where('student_id', $this->student_id)->whereNotNull('team_id')->value('team_id');
+        $students = $teamId ? StudentSchoolYear::where('team_id', $teamId)->pluck('student_id') : collect([$this->student_id]);
+
+        return self::whereIn('student_id', $students)
+            ->where('file_id', '!=', $this->file_id)
+            ->where('file_version', '<', (int) $this->file_version)
+            ->when(
+                $this->deliverable_id,
+                fn ($q) => $q->where('deliverable_id', $this->deliverable_id),
+                fn ($q) => $this->chapter ? $q->where('chapter', $this->chapter) : $q->where('file_name', $this->file_name)
+            )
+            ->orderByDesc('file_version')
+            ->get();
     }
 
     private static function round(int $revision): string

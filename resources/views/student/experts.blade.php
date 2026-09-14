@@ -1660,7 +1660,7 @@ function fitTags(box) {
 }
 
 function fitAllTags() {
-  Array.prototype.forEach.call(document.querySelectorAll('.rail .tags'), fitTags);
+  Array.prototype.forEach.call(document.querySelectorAll('.rail .tags, .listwrap .ltags'), fitTags);
 }
 
 document.addEventListener('click', function (ev) {
