@@ -445,9 +445,9 @@
             default => 'badge',
           };
           $badgeText = match ($expense->f_record_status) {
-            'pending' => 'Pending',
+            'pending' => 'Waiting',
             'verified' => 'Verified',
-            'rejected' => 'Rejected',
+            'rejected' => 'Sent back',
             default => $expense->f_record_status,
           };
           $expenseTitle = $expense->expensePost?->title ?? $expense->payment_for ?? 'N/A';

@@ -45,19 +45,48 @@ class AdminFinancialTest extends TestCase
         $response = $this->actingAsExpertOnly()->postJson(
             route('api.admin.financial.expense-posts.store'),
             [
-                'title' => 'Binding Fee',
                 'course' => 'BSIT',
-                'year_level' => '4th',
-                'amount' => 500,
-                'description' => 'Final manuscript binding',
+                'defense_type' => 'Pre Oral Defense',
+                'amount' => 750,
+                'description' => "Cashier's Office",
             ]
         );
 
         $response->assertStatus(201)->assertJson(['success' => true]);
         $this->assertDatabaseHas('expense_posts', [
-            'title' => 'Binding Fee',
+            'title' => 'Pre Oral Defense Fee',
+            'defense_type' => 'Pre Oral Defense',
             'admin_id' => $this->admin->expert_id,
         ]);
+    }
+
+    public function test_pre_proposal_defense_cannot_have_a_fee_and_a_defense_gets_one_fee_per_program(): void
+    {
+        $this->actingAsExpertOnly()
+            ->postJson(route('api.admin.financial.expense-posts.store'), ['course' => 'BSIT', 'defense_type' => 'Pre-proposal Defense', 'amount' => 100])
+            ->assertStatus(422);
+
+        $fee = ['course' => 'BSIT', 'defense_type' => 'Title Defense', 'amount' => 500];
+        $this->actingAsExpertOnly()->postJson(route('api.admin.financial.expense-posts.store'), $fee)->assertStatus(201);
+        $this->actingAsExpertOnly()->postJson(route('api.admin.financial.expense-posts.store'), $fee)->assertStatus(422);
+    }
+
+    public function test_several_waiting_receipts_are_verified_at_once(): void
+    {
+        $post = $this->makeExpensePost();
+        $records = collect(['pending', 'pending', 'rejected'])->map(fn ($status) => FinancialRecord::create([
+            'student_id' => Student::factory()->withCompleteProfile()->create()->student_id,
+            'expense_post_id' => $post->id, 'receipt_image' => 'receipts/x.jpg',
+            'f_record_status' => $status, 'payment_for' => $post->title, 'amount' => $post->amount, 'uploaded_at' => now(),
+        ]));
+
+        $this->actingAsExpertOnly()
+            ->patchJson(route('api.admin.financial.update-many'), ['ids' => $records->pluck('id')->all(), 'status' => 'approved'])
+            ->assertOk()
+            ->assertJsonCount(2, 'data.verified');
+
+        // A receipt that was sent back is not verified by a bulk action.
+        $this->assertSame(['verified', 'verified', 'rejected'], $records->map(fn ($r) => $r->fresh()->f_record_status)->all());
     }
 
     private function makeExpensePost(): ExpensePost

@@ -121,7 +121,8 @@ class PanelChairAndReadinessTest extends TestCase
         $this->actingAs($this->capsa, 'expert')
             ->get(route('capsa.panel_assignment', ['defense_type' => 'Pre-proposal Defense']))
             ->assertOk()
-            ->assertViewHas('teamsForJs', fn ($teams) => collect($teams)->firstWhere('team_id', $unready->team_id)['missing_roles'] === ['consultant', 'grammarian']);
+            ->assertViewHas('state', fn ($state) => collect($state['teams'])->firstWhere('id', $unready->team_id)['blockers'][0]
+                === ['key' => 'experts', 'text' => 'Needs a consultant and a grammarian']);
     }
 
     // ── the chair's degree ───────────────────────────────────────────────
@@ -202,63 +203,24 @@ class PanelChairAndReadinessTest extends TestCase
         $this->assertSame('master', $expert->fresh()->highest_degree);
     }
 
-    // ── suggested teams ──────────────────────────────────────────────────
+    // ── suggested panelists ──────────────────────────────────────────────
 
-    private function expertIn(string $field): CapstoneExpert
+    /** A panelist whose expertise meets the team's tags is starred for that team. */
+    public function test_a_panelist_is_suggested_when_their_expertise_meets_the_teams_tags(): void
     {
-        $expert = CapstoneExpert::factory()->create(['approved_status' => true]);
-        ExpertExpertise::create(['expert_id' => $expert->expert_id, 'expertise_field' => $field]);
+        $team = $this->team('Sensor Team');
+        $team->update(['tags' => ['IoT']]);
 
-        return $expert;
-    }
+        $match = CapstoneExpert::factory()->create(['approved_status' => true]);
+        $other = CapstoneExpert::factory()->create(['approved_status' => true]);
+        foreach ([[$match, 'Internet of Things (IoT)'], [$other, 'Accounting']] as [$expert, $field]) {
+            $expert->roles()->attach(Role::firstOrCreate(['role_name' => 'adviser'])->role_id);
+            ExpertExpertise::create(['expert_id' => $expert->expert_id, 'expertise_field' => $field]);
+        }
 
-    private function suggestFor(CapstoneExpert $expert): array
-    {
-        return collect($this->actingAs($this->capsa, 'expert')
-            ->getJson(route('api.admin.panel_assignment.suggest-teams', ['expert_ids' => [$expert->expert_id]]))
+        $this->actingAs($this->capsa, 'expert')
+            ->get(route('capsa.panel_assignment'))
             ->assertOk()
-            ->json('data'))->pluck('team_name')->all();
-    }
-
-    public function test_a_team_is_suggested_when_its_title_meets_the_panels_expertise(): void
-    {
-        $this->team('Chain Team', 'Blockchain Ledger For Barangay Certificate Requests');
-        $this->team('Farm Team', 'Crop Yield Monitoring For Rice Farmers');
-
-        $this->assertSame(['Chain Team'], $this->suggestFor($this->expertIn('Blockchain Technology')));
-    }
-
-    public function test_a_team_is_suggested_by_its_approved_pre_proposal_tags(): void
-    {
-        $team = $this->team('Sensor Team', 'Water Level Warning For Flood Prone Areas');
-        $leader = Student::factory()->withCompleteProfile()->create();
-        $sy = StudentSchoolYear::create(['student_id' => $leader->student_id, 'team_id' => $team->team_id]);
-        $check = DuplicationCheck::create([
-            'student_s_y_id' => $sy->s_y_id, 'document_path' => 'x.pdf', 'concepts' => [],
-            'top_score' => 10, 'verdict' => 'Passed', 'matches' => [], 'instructors_suggested' => [],
-        ]);
-        CapstonePreProposal::create([
-            'team_id' => $team->team_id, 'duplication_check_id' => $check->id, 'slot' => 1,
-            'title' => $team->project_title, 'sdg_goals' => 'SDG 11', 'research_agenda' => ['x'],
-            'problem_statement' => 'p', 'proposed_solution' => 's', 'scope' => 'sc', 'limitations' => 'l',
-            'sdm' => 'Agile', 'tags' => ['IoT'], 'approved_status' => true,
-        ]);
-
-        $this->assertSame(['Sensor Team'], $this->suggestFor($this->expertIn('IoT')));
-    }
-
-    public function test_a_team_that_is_not_ready_is_not_suggested(): void
-    {
-        $this->team('Unready Chain', 'Blockchain Ledger For Barangay Certificate Requests', staffed: false);
-
-        $this->assertSame([], $this->suggestFor($this->expertIn('Blockchain Technology')));
-    }
-
-    /** Generic title words ("System", "Development") match nothing on their own. */
-    public function test_common_title_words_do_not_count_as_a_match(): void
-    {
-        $this->team('Generic Team', 'Online Management System Development');
-
-        $this->assertSame([], $this->suggestFor($this->expertIn('Systems Development')));
+            ->assertViewHas('state', fn ($state) => collect($state['teams'])->firstWhere('id', $team->team_id)['suggested']->all() === [$match->expert_id]);
     }
 }
