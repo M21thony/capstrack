@@ -38,6 +38,9 @@ function App() {
   const versions = ctx.versions || [];
   const [compareId, setCompareId] = useState(null);
   const compareVersion = versions.find((v) => v.id === compareId) || null;
+  // Changes are measured against the version open beside it, else the latest earlier one.
+  const baseVersion = compareVersion || versions[0] || null;
+  const [showChanges, setShowChanges] = useState(true);
   const params = new URLSearchParams(window.location.search);
   const reviewId = ctx.reviewId || params.get("reviewId") || params.get("fileID");
 
@@ -414,6 +417,8 @@ function App() {
         versions={versions}
         comparing={Boolean(compareVersion)}
         onCompare={() => setCompareId(compareVersion ? null : versions[0]?.id ?? null)}
+        showChanges={showChanges}
+        onToggleChanges={() => setShowChanges((on) => !on)}
       />
       <div className={compareVersion ? "an-split" : "an-single"}>
         <PDFChecker
@@ -427,6 +432,8 @@ function App() {
           selectedId={selectedId}
           setSelectedId={setSelectedId}
           notify={showToast}
+          base={baseVersion}
+          showChanges={showChanges}
         />
         {compareVersion && (
           <section className="an-compare" aria-label="Earlier version of this document">

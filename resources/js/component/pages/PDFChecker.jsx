@@ -5,6 +5,8 @@ import {
   Highlights, KINDS, PageStrip, ReaderTools, RemarksPanel,
   kindOf, mergeRectsByLine, numberRemarks, rectStyle, usePageColumn,
 } from "../reader/Reader";
+import ChangesPanel from "../reader/ChangesPanel";
+import { useVersionDiff } from "../reader/useVersionDiff";
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   "pdfjs-dist/build/pdf.worker.min.mjs",
@@ -29,12 +31,30 @@ const block = (e) => e.preventDefault();
  */
 function PDFChecker({
   pdfUrl, comments, setComments, generalComments, onAddGeneral, onDeleteGeneral,
-  onDeleteComment, selectedId, setSelectedId, notify,
+  onDeleteComment, selectedId, setSelectedId, notify, base = null, showChanges = true,
 }) {
   const [numPages, setNumPages] = useState(null);
   const [error, setError] = useState(null);
   const [rendered, setRendered] = useState(() => new Set());
   const col = usePageColumn(numPages);
+
+  // Changes since an earlier version are only drawn here, never kept as remarks.
+  const diff = useVersionDiff(pdfUrl, base);
+  const [tab, setTab] = useState("remarks");
+  const [changeId, setChangeId] = useState(null);
+  const marks = showChanges && diff.status === "ready" ? diff.marks : {};
+  const openChange = (c) => { setChangeId(c.id); if (c.rect) col.goToRect(c.page, c.rect); };
+  const openOldRemark = (r) => {
+    setChangeId(r.changeIds[0] ?? null);
+    if (r.target) col.goToRect(r.target.page, r.target.rect);
+  };
+  const tabs = base && (
+    <div className="rr-tabs" role="tablist" aria-label="Side panel">
+      {[["remarks", "Remarks"], ["changes", "What changed"]].map(([k, label]) => (
+        <button key={k} type="button" role="tab" className="rr-tab" aria-selected={tab === k} onClick={() => setTab(k)}>{label}</button>
+      ))}
+    </div>
+  );
 
   const [draft, setDraft] = useState(null);
   const [editingId, setEditingId] = useState(null);
@@ -261,6 +281,9 @@ function PDFChecker({
                       />
                     )}
                     <div className="rr-overlay" contentEditable={false}>
+                      {(marks[n] || []).map((m) => m.rects.map((r, idx) => (
+                        <div key={`d${m.id}-${idx}`} className={`rr-hl rr-diff${changeId === m.id ? " on" : ""}`} style={rectStyle(r)} />
+                      )))}
                       <Highlights
                         remarks={pageRemarks}
                         numbers={numbers}
@@ -323,7 +346,11 @@ function PDFChecker({
         <ReaderTools currentPage={col.currentPage} numPages={numPages} zoom={col.zoom} onGo={col.goToPage} onZoom={col.setZoom} />
       </section>
 
+      {tabs && tab === "changes" ? (
+        <ChangesPanel top={tabs} base={base} diff={diff} selectedChange={changeId} onOpenChange={openChange} onOpenRemark={openOldRemark} />
+      ) : (
       <RemarksPanel
+        top={tabs}
         title="Remarks"
         remarks={comments}
         general={generalComments}
@@ -335,6 +362,7 @@ function PDFChecker({
         onAddGeneral={onAddGeneral}
         onDeleteGeneral={onDeleteGeneral}
       />
+      )}
     </div>
   );
 }
