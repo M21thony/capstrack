@@ -58,6 +58,9 @@ textarea.rr-input{min-height:64px;resize:none}
 .rr-hl.c-blue,.rr-sw.c-blue{background:rgba(56,189,248,.32)}
 .rr-hl.c-orange,.rr-sw.c-orange{background:rgba(249,115,22,.30)}
 .rr-hl.on{outline:2px solid #8a6e10;outline-offset:1px}
+/* Words that are new since the earlier version: underlined so they never read as a "Good" remark */
+.rr-hl.rr-diff{background:rgba(34,197,94,.14);box-shadow:inset 0 -2px 0 #16a34a;border-radius:0}
+.rr-hl.rr-diff.on{background:rgba(34,197,94,.3);outline:2px solid #16a34a}
 .rr-hl.pending{outline:1.5px dashed #18191f;outline-offset:1px}
 /* A remark's number sits in the page margin beside its words, never on them. */
 .rr-num{position:absolute;left:1.5%;transform:translateY(-50%);pointer-events:auto;min-width:20px;height:20px;border-radius:999px;border:1px solid #e3d08f;background:#f5ecd0;color:#6b5410;font:700 11px/18px "DM Sans",system-ui,sans-serif;padding:0 5px;cursor:pointer;user-select:none}
@@ -107,6 +110,13 @@ textarea.rr-input{min-height:64px;resize:none}
 .rr-no{min-width:18px;height:18px;border-radius:999px;background:#f5ecd0;color:#6b5410;font-size:10.5px;font-weight:700;display:grid;place-items:center;padding:0 5px;flex:none}
 .rr-tag{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:1px 6px;border-radius:4px;background:#eceef2;color:#23242b;white-space:nowrap;flex:none}
 .rr-tag.gen{background:#f5ecd0;color:#6b5410}
+.rr-tag.add{background:#dcfce7;color:#166534}
+.rr-tag.del{background:#fee2e2;color:#991b1b}
+.rr-tag.mod{background:#e0f2fe;color:#075985}
+.rr-was{font-size:12.5px;line-height:1.45;color:#8a3b3b;text-decoration:line-through;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.rr-tabs{display:flex;border-bottom:1px solid #e0e2e8;padding:0 8px}
+.rr-tab{flex:1;border:0;background:none;padding:10px 6px 8px;font:600 13px/1.2 "DM Sans",system-ui,sans-serif;color:#656b7a;border-bottom:2px solid transparent;cursor:pointer;min-height:40px}
+.rr-tab[aria-selected="true"]{color:#1e2128;border-bottom-color:#c9a82c}
 .rr-where{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .rr-acts{display:flex;gap:2px;margin-left:auto;flex:none}
 .rr-q{font-family:"Times New Roman",Georgia,serif;font-style:italic;font-size:12.5px;color:#656b7a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-left:3px solid #c8cad4;padding-left:7px}
