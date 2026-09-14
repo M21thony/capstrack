@@ -951,6 +951,11 @@ export function openEditor({ urls, checklistId = null, onClose = null }) {
 
     // The browser's own button-to-popover link: opens and closes it, and puts focus back on the button.
     trigger.popoverTargetElement = menu;
+    // The toggle event comes after the menu has already been drawn once, in the page's
+    // top-left corner. Keep it invisible from just before it opens until it is placed.
+    menu.addEventListener('beforetoggle', e => {
+      if (e.newState === 'open') menu.style.visibility = 'hidden';
+    });
     menu.addEventListener('toggle', e => {
       const open = e.newState === 'open';
       trigger.setAttribute('aria-expanded', String(open));
@@ -960,6 +965,7 @@ export function openEditor({ urls, checklistId = null, onClose = null }) {
       const below = r.bottom + 4 + menu.offsetHeight <= window.innerHeight;
       menu.style.top = (below ? r.bottom + 4 : r.top - 4 - menu.offsetHeight) + 'px';
       menu.style.left = Math.max(8, r.right - menu.offsetWidth) + 'px';
+      menu.style.visibility = '';
       menu.querySelector('button')?.focus();
     });
     menu.addEventListener('keydown', e => {
