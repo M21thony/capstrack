@@ -805,20 +805,8 @@ let selectedDateKey = null;
 function selectDate(d, dayName, dateKey) {
   const expertId = document.getElementById('expertSelect').value;
 
-  // The date the team already has with this expert: say that, not the
-  // general "one session at a time" rule.
-  if (expertId && myBookedDates.some(b => b.date === dateKey && String(b.expert_id) === String(expertId))) {
-    showToast('You already booked this date with ' + (document.querySelector('#expertSelect option:checked')?.textContent?.trim() || 'this expert') + '. See it under Upcoming.', 'error');
-    return;
-  }
-
-  if (expertId && bookedExpertIds.includes(Number(expertId))) {
-    const who = document.querySelector('#expertSelect option:checked')?.textContent?.trim();
-    showToast('Your team already has a session booked with ' + (who || 'this expert')
-      + '. You can book them again once that one is done.', 'error');
-    return;
-  }
-
+  // A date always opens, the booked one included - whether this team may
+  // book is asked when they confirm, not by refusing to show the day.
   if (!expertId) {
     showToast('Choose who you want to consult first.', 'error');
     return;
@@ -875,6 +863,21 @@ function updateConfirmButton() {
 function confirmBooking() {
   if (!selectedSlot) {
     showToast('Pick a time first.', 'error');
+    return;
+  }
+
+  const expertId = document.getElementById('expertSelect').value;
+  const who = document.querySelector('#expertSelect option:checked')?.textContent?.trim() || 'this expert';
+
+  // The date the team already has with this expert: say that, not the
+  // general "one session at a time" rule.
+  if (myBookedDates.some(b => b.date === selectedSlot.dateKey && String(b.expert_id) === String(expertId))) {
+    showToast('You already booked this date with ' + who + '. See it under Upcoming.', 'error');
+    return;
+  }
+
+  if (bookedExpertIds.includes(Number(expertId))) {
+    showToast('Your team already has a session booked with ' + who + '. You can book them again once that one is done.', 'error');
     return;
   }
 
