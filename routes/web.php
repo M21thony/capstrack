@@ -183,6 +183,8 @@ Route::middleware('expert.capsa')->group(function () {
     // smaller problem than an endpoint they still can.
     Route::put('/experts/{expert}/roles', [AdminExpertsController::class, 'updateRoles'])->name('experts.update-roles');
     Route::get('/panel_assignment', [AdminPanelAssignmentController::class, 'index'])->name('panel_assignment');
+    // Dates for the teams that can defend - its actions are the panel_assignment scheduling endpoints.
+    Route::get('/defense-scheduling', [App\Http\Controllers\Capsa\DefenseSchedulingController::class, 'index'])->name('defense_scheduling');
     // Team Management is the single page for everything about the teams
     // in a CaPSA's sections. Team Verification's actions keep their old
     // route names so nothing that links to them breaks, but its page

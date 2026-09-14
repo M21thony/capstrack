@@ -129,7 +129,6 @@ class StudentFinancialController extends Controller
         $validated = $request->validate([
             'expense_post_id' => ['required', 'exists:expense_posts,id'],
             'receipt_image' => ['required', 'image', 'max:10240'],
-            'receipt_number' => ['required', 'string', 'max:100'],
         ]);
 
         /** @var Student $student */
@@ -152,21 +151,8 @@ class StudentFinancialController extends Controller
             ], 422);
         }
 
-        $expensePost = ExpensePost::findOrFail($validated['expense_post_id']);
-
-        $imagePath = $request->file('receipt_image')->store('receipts', 'public');
-
-        $record = FinancialRecord::create([
-            'student_id' => $student->student_id,
-            'expense_post_id' => $expensePost->id,
-            'receipt_image' => $imagePath,
-            'receipt_number' => $validated['receipt_number'],
-            'f_record_status' => 'pending',
-            'payment_for' => $expensePost->title,
-            'amount' => $expensePost->amount,
-            'description' => $expensePost->description,
-            'uploaded_at' => now(),
-        ]);
+        // A first receipt, or a new photo for one still waiting or sent back.
+        $record = FinancialRecord::submitFor($student, ExpensePost::findOrFail($validated['expense_post_id']), $request->file('receipt_image'));
 
         $record->load('expensePost');
 

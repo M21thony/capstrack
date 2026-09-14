@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\CapstoneExpert;
+use App\Models\DefensePanel;
 use App\Models\DefenseSchedule;
 use App\Models\Notification;
 use App\Models\StudentSchoolYear;
@@ -65,8 +66,9 @@ class DefenseOutcomeRecorder
     /**
      * The next try at the same stage.
      *
-     * Scheduling and the panel are left blank on purpose - both are the
-     * CAPSA's to set from Panel Assignment, the same as any first attempt.
+     * The same panel hears it - a team's panel stays theirs to the end of
+     * Capstone 2. Only the date is left blank: it comes from Generate
+     * schedule on Defense Scheduling, like any other defense.
      */
     private function openNextAttempt(DefenseSchedule $defense): DefenseSchedule
     {
@@ -74,11 +76,22 @@ class DefenseOutcomeRecorder
             ->where('defense_type', $defense->defense_type)
             ->max('attempt') + 1;
 
-        return DefenseSchedule::create([
+        $redefense = DefenseSchedule::create([
             'team_id' => $defense->team_id,
             'defense_type' => $defense->defense_type,
             'attempt' => $next,
         ]);
+
+        foreach ($defense->panels()->get() as $panel) {
+            DefensePanel::create([
+                'defense_id' => $redefense->defense_id,
+                'expert_id' => $panel->expert_id,
+                'panel_role' => $panel->panel_role,
+                'created_at' => now(),
+            ]);
+        }
+
+        return $redefense;
     }
 
     /**
