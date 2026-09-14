@@ -44,12 +44,13 @@ class PreProposalPayload
                 'duplication' => $p->duplicationCheck ? [
                     'verdict' => $p->duplicationCheck->verdict,
                     'top_score' => $p->duplicationCheck->top_score,
-                    'matches' => collect($p->duplicationCheck->matches ?? [])->map(fn ($m) => [
+                    'matches' => collect($p->duplicationCheck->matchesWithAuthors())->map(fn ($m) => [
                         'title' => $m['title'] ?? '',
                         'score' => $m['score'] ?? null,
                         'reason' => $m['reason'] ?? null,
                         'program' => $m['program'] ?? null,
                         'academic_year' => $m['academic_year'] ?? null,
+                        'authors' => $m['authors'] ?? null,
                         'abstract' => $m['abstract'] ?? null,
                         'similarities' => $m['similarities'] ?? null,
                         'differences' => $m['differences'] ?? null,
