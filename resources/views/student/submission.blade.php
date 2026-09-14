@@ -6,7 +6,7 @@
 <title>Document Submission - CapsTrack</title>
 <meta name="csrf-token" content="{{ csrf_token() }}">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
-@vite('resources/student-ui/Styles/submission.css')
+@vite(['resources/student-ui/Styles/submission.css', 'resources/js/submission-preview.js'])
 <x-dashboard.styles />
 <style>
   @keyframes sk-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
@@ -217,9 +217,28 @@
           .file-row select{min-width:0;font-size:12.5px}
           .file-row-remove{font:inherit;font-size:12px;font-weight:600;border:1px solid var(--border);background:var(--bg2);color:var(--text2);border-radius:6px;padding:5px 10px;cursor:pointer}
           .file-row-remove:hover{border-color:var(--red);color:var(--red)}
+          .file-row-acts{display:flex;gap:6px}
+          .file-row-preview{font:inherit;font-size:12px;font-weight:600;border:1px solid var(--border);background:var(--bg2);color:var(--text);border-radius:6px;padding:5px 10px;cursor:pointer}
+          .file-row-preview:hover{border-color:var(--accent)}
           @media (max-width:700px){.file-row{grid-template-columns:1fr auto}.file-row select{grid-column:1 / -1}}
+          /* The preview window: the file as it will be sent, before sending it. */
+          .preview-dialog{border:0;border-radius:12px;padding:0;margin:auto;inset:0;width:min(860px,calc(100vw - 32px));height:calc(100vh - 48px);box-shadow:0 24px 70px rgba(24,25,31,.3);background:var(--bg2,#fff)}
+          .preview-dialog::backdrop{background:rgba(24,25,31,.55)}
+          .preview-dialog[open]{display:flex;flex-direction:column}
+          .preview-head{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--border)}
+          .preview-head h2{margin:0;flex:1;min-width:0;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+          .preview-body{flex:1;min-height:0;overflow:auto;background:var(--bg3,#f2f3f5);padding:12px;display:grid;justify-items:center;align-content:start;gap:12px}
+          .preview-body canvas,.preview-body img{max-width:100%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.15)}
+          .preview-note{color:var(--text3);font-size:13px;margin:40px 0}
         </style>
         <div class="file-list" id="fileList" aria-label="Files to submit"></div>
+        <dialog class="preview-dialog" id="previewDialog" aria-labelledby="previewTitle">
+          <div class="preview-head">
+            <h2 id="previewTitle">Preview</h2>
+            <form method="dialog"><button class="file-row-remove" type="submit">Close</button></form>
+          </div>
+          <div class="preview-body" id="previewBody"></div>
+        </dialog>
       </div>
 
       <div class="form-section">
@@ -478,7 +497,18 @@ function renderFiles() {
     remove.className = 'file-row-remove';
     remove.textContent = 'Remove';
     remove.addEventListener('click', () => { files.splice(i, 1); renderFiles(); applyChecklistItem(); });
-    row.appendChild(remove);
+
+    // Drawn from the file itself - pages on canvases, no iframe or viewer menus.
+    const preview = document.createElement('button');
+    preview.type = 'button';
+    preview.className = 'file-row-preview';
+    preview.textContent = 'Preview';
+    preview.addEventListener('click', () => window.previewSubmissionFile && window.previewSubmissionFile(entry.file));
+
+    const acts = document.createElement('div');
+    acts.className = 'file-row-acts';
+    acts.append(preview, remove);
+    row.appendChild(acts);
 
     fileList.appendChild(row);
   });
