@@ -13,9 +13,23 @@ export function el(tag, cls, text) {
   return node;
 }
 
-export function btn(label, cls = '', onClick = null) {
-  const b = el('button', ('ms-btn ' + cls).trim(), label);
+/** A button with its words, and an icon in front of them when one is named. */
+export function btn(label, cls = '', onClick = null, iconName = null) {
+  const b = el('button', ('ms-btn ' + cls).trim());
   b.type = 'button';
+  if (iconName) b.append(icon(iconName));
+  b.append(label);
+  if (onClick) b.addEventListener('click', onClick);
+  return b;
+}
+
+/** An icon on its own, for actions repeated on every row. Its name shows on hover and is read out. */
+export function iconBtn(iconName, label, cls = '', onClick = null) {
+  const b = el('button', ('ms-btn ms-btn-icon ' + cls).trim());
+  b.type = 'button';
+  b.title = label;
+  b.setAttribute('aria-label', label);
+  b.append(icon(iconName));
   if (onClick) b.addEventListener('click', onClick);
   return b;
 }
@@ -26,6 +40,14 @@ const SPRITE = `<svg xmlns="http://www.w3.org/2000/svg" style="position:absolute
 <symbol id="ms-i-handed" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></symbol>
 <symbol id="ms-i-overdue" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><line x1="12" y1="7.5" x2="12" y2="13"/><circle cx="12" cy="16.3" r=".6" fill="currentColor"/></symbol>
 <symbol id="ms-i-chev" viewBox="0 0 24 24"><polyline points="9 6 15 12 9 18"/></symbol>
+<symbol id="ms-i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+<symbol id="ms-i-archive" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="5" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/></symbol>
+<symbol id="ms-i-trash" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M10 11v6M14 11v6"/></symbol>
+<symbol id="ms-i-restore" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></symbol>
+<symbol id="ms-i-expand" viewBox="0 0 24 24"><path d="m7 6 5 5 5-5"/><path d="m7 13 5 5 5-5"/></symbol>
+<symbol id="ms-i-collapse" viewBox="0 0 24 24"><path d="m17 11-5-5-5 5"/><path d="m17 18-5-5-5 5"/></symbol>
+<symbol id="ms-i-calendar" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></symbol>
+<symbol id="ms-i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
 <symbol id="ms-i-grip" viewBox="0 0 24 24"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></symbol>
 </svg>`;
 
@@ -189,7 +211,7 @@ export function confirmRemove(title, body) {
 
     let answer = false;
     const cancel = btn('Cancel', '', () => dialog.close());
-    const ok = btn('Remove', 'ms-btn-danger', () => { answer = true; dialog.close(); });
+    const ok = btn('Remove', 'ms-btn-danger', () => { answer = true; dialog.close(); }, 'trash');
 
     const acts = el('div', 'ms-acts');
     acts.append(cancel, ok);
