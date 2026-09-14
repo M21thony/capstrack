@@ -117,10 +117,10 @@ textarea.rr-input{min-height:64px;resize:none}
 .rr-diffline del{background:#ffebe9;color:#82071e;border-radius:3px;padding:0 2px}
 .rr-diffline ins{background:#dafbe1;color:#116329;text-decoration:none;border-radius:3px;padding:0 2px}
 .rr-hl.rr-diff.del{background:#cf222e;box-shadow:none;mix-blend-mode:normal}
-/* On the earlier version: what was taken out, struck through inside a dashed
-   box - a shape no remark highlight has, so it never reads as "Must fix". */
-.rr-hl.rr-diff.old{background:linear-gradient(transparent 42%,#cf222e 42%,#cf222e 60%,transparent 60%);box-shadow:none;border:1.5px dashed #cf222e;border-radius:3px;mix-blend-mode:normal}
-.rr-hl.rr-diff.old.on{background-color:rgba(207,34,46,.12);border-style:solid;outline:2px solid #cf222e;outline-offset:1px}
+/* On the earlier version: what was taken out, struck through like deleted
+   text - a line, not a fill, so it never reads as a "Must fix" highlight. */
+.rr-hl.rr-diff.old{background:linear-gradient(#cf222e,#cf222e) 0 54% / 100% 2px no-repeat;box-shadow:none;border-radius:0;mix-blend-mode:normal}
+.rr-hl.rr-diff.old.on{background:linear-gradient(#cf222e,#cf222e) 0 54% / 100% 2px no-repeat,rgba(207,34,46,.1);outline:1px solid #cf222e;outline-offset:1px}
 .rr-hl.rr-diff.old.ins{background:#1a7f37;box-shadow:none;mix-blend-mode:normal}
 .rr-tabs{display:flex;border-bottom:1px solid #e0e2e8;padding:0 8px}
 .rr-tab{flex:1;border:0;background:none;padding:10px 6px 8px;font:600 13px/1.2 "DM Sans",system-ui,sans-serif;color:#656b7a;border-bottom:2px solid transparent;cursor:pointer;min-height:40px}
