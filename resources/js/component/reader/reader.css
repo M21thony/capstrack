@@ -53,7 +53,7 @@ textarea.rr-input{min-height:64px;resize:none}
 .rr-hl{position:absolute;border-radius:2px;mix-blend-mode:multiply}
 .rr-hl.click{pointer-events:auto;cursor:pointer}
 .rr-hl.c-yellow,.rr-sw.c-yellow{background:rgba(250,204,21,.42)}
-.rr-hl.c-pink,.rr-sw.c-pink{background:rgba(239,68,68,.28)}
+.rr-hl.c-pink,.rr-sw.c-pink{background:rgba(239,68,68,.15)}
 .rr-hl.c-green,.rr-sw.c-green{background:rgba(34,197,94,.28)}
 .rr-hl.c-blue,.rr-sw.c-blue{background:rgba(56,189,248,.32)}
 .rr-hl.c-orange,.rr-sw.c-orange{background:rgba(249,115,22,.30)}
@@ -117,10 +117,10 @@ textarea.rr-input{min-height:64px;resize:none}
 .rr-diffline del{background:#ffebe9;color:#82071e;border-radius:3px;padding:0 2px}
 .rr-diffline ins{background:#dafbe1;color:#116329;text-decoration:none;border-radius:3px;padding:0 2px}
 .rr-hl.rr-diff.del{background:#cf222e;box-shadow:none;mix-blend-mode:normal}
-/* On the earlier version: what was taken out, struck through like deleted
-   text - a line, not a fill, so it never reads as a "Must fix" highlight. */
-.rr-hl.rr-diff.old{background:linear-gradient(#cf222e,#cf222e) 0 54% / 100% 2px no-repeat;box-shadow:none;border-radius:0;mix-blend-mode:normal}
-.rr-hl.rr-diff.old.on{background:linear-gradient(#cf222e,#cf222e) 0 54% / 100% 2px no-repeat,rgba(207,34,46,.1);outline:1px solid #cf222e;outline-offset:1px}
+/* On the earlier version: what was taken out, marked the same way as new
+   words but in red. The underline is what sets it apart from "Must fix". */
+.rr-hl.rr-diff.old{background:rgba(207,34,46,.16);box-shadow:inset 0 -2px 0 #cf222e}
+.rr-hl.rr-diff.old.on{background:rgba(207,34,46,.3);outline:2px solid #cf222e}
 .rr-hl.rr-diff.old.ins{background:#1a7f37;box-shadow:none;mix-blend-mode:normal}
 .rr-tabs{display:flex;border-bottom:1px solid #e0e2e8;padding:0 8px}
 .rr-tab{flex:1;border:0;background:none;padding:10px 6px 8px;font:600 13px/1.2 "DM Sans",system-ui,sans-serif;color:#656b7a;border-bottom:2px solid transparent;cursor:pointer;min-height:40px}
