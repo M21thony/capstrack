@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use App\Support\DefenseOutcome;
+use App\Support\MilestoneProgress;
+use App\Support\TeamChecklist;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
@@ -310,45 +312,45 @@ class Team extends Model
      */
     public function checklistBlockersFor(string $defenseType): array
     {
-        foreach (Milestone::where('team_id', $this->team_id)->orderBy('id')->get() as $milestone) {
-            $rows = $milestone->progress()->items->values();
+        $progress = $this->checklistProgress();
 
-            $at = $rows->search(fn ($row) => $row->item->kind === MilestoneItem::DEFENSE
-                && $row->item->defense_type === $defenseType);
-
-            if ($at === false) {
-                continue;
-            }
-
-            return $rows->take($at)
-                ->reject(fn ($row) => in_array($row->state, \App\Support\MilestoneProgress::COMPLETE_STATES, true))
-                ->map(fn ($row) => $row->item->title)
-                ->values()
-                ->all();
+        if (! $progress) {
+            return [];
         }
 
-        return [];
+        $rows = $progress->items->values();
+        $at = $rows->search(fn ($row) => $row->item->kind === Deliverable::DEFENSE
+            && $row->item->defense_type === $defenseType);
+
+        if ($at === false) {
+            return [];
+        }
+
+        return $rows->take($at)
+            ->reject(fn ($row) => in_array($row->state, MilestoneProgress::COMPLETE_STATES, true))
+            ->map(fn ($row) => $row->item->title)
+            ->values()
+            ->all();
     }
 
     public function progressSummary(): object
     {
-        $total = 0;
-        $completed = 0;
-        $overdue = 0;
-
-        foreach (Milestone::where('team_id', $this->team_id)->with('items')->get() as $milestone) {
-            $progress = $milestone->progress();
-            $total += $progress->total;
-            $completed += $progress->completed;
-            $overdue += $progress->overdue;
-        }
+        $progress = $this->checklistProgress();
 
         return (object) [
-            'total' => $total,
-            'completed' => $completed,
-            'overdue' => $overdue,
-            'percent' => $total > 0 ? (int) round(($completed / $total) * 100) : 0,
+            'total' => $progress->total ?? 0,
+            'completed' => $progress->completed ?? 0,
+            'overdue' => $progress->overdue ?? 0,
+            'percent' => $progress->percent ?? 0,
         ];
+    }
+
+    /** This team's progress on its section CaPSA's checklist, or null when it has none. */
+    public function checklistProgress(): ?object
+    {
+        $checklist = app(TeamChecklist::class)->for($this);
+
+        return $checklist ? MilestoneProgress::forTeam($checklist, $this->team_id) : null;
     }
 
     protected $primaryKey = 'team_id';

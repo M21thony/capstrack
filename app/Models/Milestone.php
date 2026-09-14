@@ -29,17 +29,4 @@ class Milestone extends Model
     {
         return $this->belongsTo(Team::class, 'team_id', 'team_id');
     }
-
-    /**
-     * How far along this team is, worked out from the items.
-     *
-     * Deliberately not read from the status column: that was written once as
-     * 'todo' when the milestone was created and never moved again, so
-     * 'completed' and 'overdue' were unreachable and every count of them came
-     * back zero.
-     */
-    public function progress(): object
-    {
-        return \App\Support\MilestoneProgress::for($this);
-    }
 }

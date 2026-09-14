@@ -6,14 +6,15 @@ use App\Http\Controllers\AdminProfileController;
 use App\Http\Controllers\Controller;
 use App\Models\CapstoneExpert;
 use App\Models\DefenseSchedule;
-use App\Models\Milestone;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
 use App\Models\TeamExpertAssignment;
+use App\Support\ChecklistTracker;
 use App\Support\DefenseProgress;
-use App\Support\MilestoneGrid;
 use App\Support\DefenseScores;
+use App\Support\MilestoneProgress;
 use App\Support\SectionScope;
+use App\Support\TeamChecklist;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -42,6 +43,7 @@ class TeamManagementController extends Controller
     public function __construct(
         private SectionScope $sections,
         private DefenseProgress $progress,
+        private TeamChecklist $checklists,
     ) {}
 
     public function index(Request $request): View
@@ -60,7 +62,7 @@ class TeamManagementController extends Controller
         $teams = $scoped['teams'];
         $teamIds = $teams->pluck('team_id');
 
-        $milestones = $this->milestoneProgress($teamIds);
+        $milestones = $this->milestoneProgress($teams, $scoped['teamSections']);
         $defenseSchedules = DefenseSchedule::whereIn('team_id', $teamIds)->get()->groupBy('team_id');
         $engagedRoles = $this->engagedRoles($teamIds);
         $papers = $this->paperChecks($capsa->expert_id, $teamIds);
@@ -75,33 +77,18 @@ class TeamManagementController extends Controller
             $defenseSchedules[$team->team_id] ?? collect(),
         ));
 
+        // The Milestones tab is its own tracker: one section at a time, with
+        // its own section tabs, so it ignores the page's section filter.
+        $tracker = $tab === 'milestones'
+            ? app(ChecklistTracker::class)->overview($capsaSections, $selectedSection)
+            : null;
+
         return view('capsa.team_management', [
             'tab' => $tab,
             'rows' => $rows,
             // Each team's score at every defense, once its whole panel has graded.
             'defenseScores' => $tab === 'teams' ? DefenseScores::forTeams($teamIds) : collect(),
-            // Only the Milestones tab needs the items themselves; every other
-            // tab is served by the counts already in $rows.
-            // The Milestones tab is a grid: deliverables across, teams down.
-            'grid' => $tab === 'milestones' ? $this->milestoneGrid($teams, $rows, $capsaSections) : null,
-            'templates' => \App\Support\MilestoneTemplate::all(),
-            // How many teams a new checklist would actually reach. The grid
-            // lists every team a CaPSA oversees, including ones still forming,
-            // but only a confirmed team can be given one - so the two numbers
-            // differ and the modal has to say which it means.
-            'sectionTeamCount' => $tab === 'milestones' && $selectedSection
-                ? $this->confirmedTeamsIn($selectedSection)
-                : null,
-            // Every section the CaPSA runs, with the number of confirmed teams
-            // in each. The New checklist form asks for the section itself
-            // rather than borrowing whatever the page happens to be filtered
-            // to - a CaPSA who lands on the tab and clicks the button should
-            // be able to finish, not be sent back out to set a filter first.
-            'sectionChoices' => $tab === 'milestones'
-                ? collect($capsaSections)->mapWithKeys(
-                    fn ($section) => [$section => $this->confirmedTeamsIn($section)]
-                )->all()
-                : [],
+            'tracker' => $tracker,
             // The two tabs that were pages of their own bring their own data,
             // built only when they are the one open.
             'tabData' => match ($tab) {
@@ -116,10 +103,9 @@ class TeamManagementController extends Controller
                 ->values(),
             'counts' => [
                 'teams' => $rows->count(),
-                // What the CaPSA still has to tick herself. The other kinds
-                // close themselves, so counting them here would ask her to
-                // chase something she cannot act on.
-                'milestones' => $tab === 'milestones' ? 0 : null,
+                // Signed papers waiting for her check, the one thing on the
+                // tracker that is hers to act on.
+                'milestones' => $tracker ? collect($tracker['sections'])->sum('to_check') : null,
                 'pre_proposals' => $rows->sum(fn ($r) => $r->pendingProposalCount),
                 'verification' => $rows->where('awaitingVerification', true)->count(),
                 'papers' => $rows->sum(fn ($r) => $r->papersToCheck),
@@ -154,84 +140,35 @@ class TeamManagementController extends Controller
         return $this->sections->filterTeams($candidates, $syRecords, $capsaSections, $selectedSection);
     }
 
-    /** Confirmed teams in a section - the ones a checklist can be given to. */
-    private function confirmedTeamsIn(string $section): int
-    {
-        return Team::where('is_confirmed', true)
-            ->get()
-            ->filter(fn (Team $team) => $this->sections->sectionFor($team) === $section)
-            ->count();
-    }
-
     /**
-     * The Milestones tab: every team in the CaPSA's sections against every
-     * deliverable on their checklist.
+     * Each team's progress on its section's checklist, worked out a section at
+     * a time so the whole page costs a handful of queries.
      *
-     * It is both where a checklist gets built and where the papers get ticked
-     * off, because a CaPSA working down a section is doing the two together.
+     * @param  array<int, string>  $teamSections
+     * @return array<int, object{total: int, completed: int, overdue: int, percent: int}>
      */
-    private function milestoneGrid(Collection $teams, Collection $rows, array $capsaSections): object
+    private function milestoneProgress(Collection $teams, array $teamSections): array
     {
-        // Only teams that actually sit in one of the CaPSA's sections.
-        //
-        // The other tabs deliberately surface a team whose section could not
-        // be worked out - a half-formed team is exactly what an oversight page
-        // should show. A checklist is different: it is given to a section, and
-        // a team that belongs to none can never be given one, so listing them
-        // here is a page full of rows nothing can be done to.
-        $scoped = $rows->filter(
-            fn ($row) => $row->section !== SectionScope::UNASSIGNED
-                && $this->sections->covers($capsaSections, $row->section)
-        )->values();
+        $out = [];
 
-        $milestones = Milestone::whereIn('team_id', $scoped->pluck('team.team_id'))
-            ->with('items')
-            ->orderBy('due_date')
-            ->orderBy('id')
-            ->get();
+        foreach ($teams->groupBy(fn (Team $team) => $teamSections[$team->team_id] ?? '') as $section => $group) {
+            $checklist = $this->checklists->forSection((string) $section);
 
-        // One checklist per team is the shape this grid reads. If a team
-        // somehow has several, the earliest is the one shown.
-        $primary = $milestones->groupBy('team_id')->map->first()->values();
+            if (! $checklist) {
+                continue;
+            }
 
-        return MilestoneGrid::build($primary, $scoped);
-    }
-
-    /** @return array<int, object{total: int, completed: int, overdue: int, percent: int}> */
-    private function milestoneProgress(Collection $teamIds): array
-    {
-        if ($teamIds->isEmpty()) {
-            return [];
+            foreach (MilestoneProgress::forTeams($checklist, $group->pluck('team_id')) as $teamId => $progress) {
+                $out[$teamId] = (object) [
+                    'total' => $progress->total,
+                    'completed' => $progress->completed,
+                    'overdue' => $progress->overdue,
+                    'percent' => $progress->percent,
+                ];
+            }
         }
 
-        // Counted from the items, not from milestones.status. That column was
-        // written once as 'todo' when a milestone was created and never moved
-        // again, so 'completed' and 'overdue' matched nothing and this column
-        // showed a dash for every team however far along they were.
-        return Milestone::whereIn('team_id', $teamIds)
-            ->with('items')
-            ->get()
-            ->groupBy('team_id')
-            ->map(function ($rows) {
-                $total = 0;
-                $completed = 0;
-                $overdue = 0;
-
-                foreach ($rows as $milestone) {
-                    $progress = $milestone->progress();
-                    $total += $progress->total;
-                    $completed += $progress->completed;
-                    $overdue += $progress->overdue;
-                }
-
-                return (object) [
-                    'total' => $total,
-                    'completed' => $completed,
-                    'overdue' => $overdue,
-                    'percent' => $total > 0 ? (int) round($completed / $total * 100) : 0,
-                ];
-            })
-            ->all();
+        return $out;
     }
 
     /**

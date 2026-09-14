@@ -37,7 +37,7 @@ class StudentReviewController extends Controller
         // turned in or not, since the picker also says who is still reviewing.
         $documents = CapstoneDocument::whereIn('student_id', StudentTeam::memberIdsFor($studentId))
             ->with([
-                'milestoneItem.milestone',
+                'deliverable',
                 'reviews' => fn ($q) => $q->with('expert')->orderByDesc('reviewed_at'),
             ])
             ->orderByDesc('created_at')
@@ -95,7 +95,7 @@ class StudentReviewController extends Controller
     /** What the reviewer decided, and what the team does next. */
     private function decision(CapstoneDocument $document, CapstoneDocumentReview $review): array
     {
-        $item = $document->milestoneItem;
+        $item = $document->deliverable;
 
         return [
             'verdict' => $review->verdict,
@@ -104,7 +104,7 @@ class StudentReviewController extends Controller
             'date' => $review->reviewed_at?->format('M j'),
             'round' => $document->roundLabel(),
             'next' => $document->nextRoundLabel(),
-            'due' => $item?->dueOn()?->format('M j'),
+            'due' => $item?->due_date?->format('M j'),
             'requirement' => $item?->title,
             'submitUrl' => $item
                 ? route('student.submission', ['item' => $item->id])

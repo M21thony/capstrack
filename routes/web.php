@@ -16,7 +16,12 @@ use App\Http\Controllers\AdminFinancialController;
 use App\Http\Controllers\AdminPanelAssignmentController;
 use App\Http\Controllers\AdminProfileController;
 use App\Http\Controllers\AdminTeamVerificationController;
-use App\Http\Controllers\Capsa\MilestoneController;
+use App\Http\Controllers\Capsa\ChecklistController;
+use App\Http\Controllers\Capsa\ChecklistMilestoneController;
+use App\Http\Controllers\Capsa\DeliverableCheckController;
+use App\Http\Controllers\Capsa\DeliverableController;
+use App\Http\Controllers\Capsa\RemovalController;
+use App\Http\Controllers\Capsa\SectionProgressController;
 use App\Http\Controllers\Capsa\TeamManagementController;
 use App\Http\Controllers\Capsa\TeamRulesController;
 use App\Http\Controllers\AuthController;
@@ -194,22 +199,28 @@ Route::middleware('expert.capsa')->group(function () {
     Route::patch('/verify-teams/{team}', [AdminTeamVerificationController::class, 'verify'])->name('verify_teams.verify');
     Route::patch('/verify-teams/pre-proposals/{preProposal}', [AdminTeamVerificationController::class, 'updatePreProposal'])->name('verify_teams.pre_proposals.update');
     Route::get('/verify-teams/pre-proposals/{preProposal}/document', [AdminTeamVerificationController::class, 'viewPreProposalDocument'])->name('verify_teams.pre_proposals.document');
-    // Milestones are created and edited deliberately here, rather than
-    // falling out of posting an announcement - which is how the one
-    // milestone in the database ended up with no team and no way to be
-    // changed or removed.
-    Route::post('/milestones', [MilestoneController::class, 'store'])->name('milestones.store');
-    Route::post('/milestones/deliverable-due', [MilestoneController::class, 'setDeliverableDue'])->name('milestones.deliverable_due');
-    Route::put('/milestones/{milestone}', [MilestoneController::class, 'update'])->name('milestones.update');
-    Route::delete('/milestones/{milestone}', [MilestoneController::class, 'destroy'])->name('milestones.destroy');
-    Route::post('/milestones/{milestone}/template', [MilestoneController::class, 'applyTemplate'])->name('milestones.template');
-    Route::post('/milestones/{milestone}/items', [MilestoneController::class, 'storeItem'])->name('milestones.items.store');
-    Route::post('/milestones/{milestone}/items/reorder', [MilestoneController::class, 'reorderItems'])->name('milestones.items.reorder');
-    Route::put('/milestone-items/{item}', [MilestoneController::class, 'updateItem'])->name('milestones.items.update');
-    Route::delete('/milestone-items/{item}', [MilestoneController::class, 'destroyItem'])->name('milestones.items.destroy');
-    // Its own path: PUT /milestone-items/{item} already edits the item, and
-    // two routes cannot share a name without route() picking one of them.
-    Route::put('/milestone-items/{item}/done', [MilestoneController::class, 'toggleItem'])->name('milestones.items.done');
+    // A CaPSA's checklists, edited in the Edit milestones window on the
+    // Milestones tab. One per program serves every section of that program.
+    Route::get('/checklists', [ChecklistController::class, 'index'])->name('checklists.index');
+    Route::post('/checklists', [ChecklistController::class, 'store'])->name('checklists.store');
+    Route::get('/checklists/{checklist}', [ChecklistController::class, 'show'])->name('checklists.show');
+    // Any drag or arrow-key move sends the whole order at once.
+    Route::put('/checklists/{checklist}/order', [ChecklistController::class, 'updateOrder'])->name('checklists.order.update');
+    Route::post('/checklists/{checklist}/milestones', [ChecklistMilestoneController::class, 'store'])->name('checklists.milestones.store');
+    Route::patch('/checklist-milestones/{milestone}', [ChecklistMilestoneController::class, 'update'])->name('checklist_milestones.update');
+    Route::delete('/checklist-milestones/{milestone}', [ChecklistMilestoneController::class, 'destroy'])->name('checklist_milestones.destroy');
+    Route::post('/checklist-milestones/{milestone}/deliverables', [DeliverableController::class, 'store'])->name('checklist_milestones.deliverables.store');
+    // The bulk bar changes or removes several at once.
+    Route::patch('/deliverables', [DeliverableController::class, 'updateMany'])->name('deliverables.update_many');
+    Route::delete('/deliverables', [DeliverableController::class, 'destroyMany'])->name('deliverables.destroy_many');
+    Route::patch('/deliverables/{deliverable}', [DeliverableController::class, 'update'])->name('deliverables.update');
+    // Undo for a remove.
+    Route::put('/removals', [RemovalController::class, 'update'])->name('removals.update');
+    // The CaPSA's check of one team's signed paper.
+    Route::put('/deliverables/{deliverable}/checks/{team}', [DeliverableCheckController::class, 'update'])->name('deliverables.checks.update');
+    Route::delete('/deliverables/{deliverable}/checks/{team}', [DeliverableCheckController::class, 'destroy'])->name('deliverables.checks.destroy');
+    // One section of the tracker, loaded when its tab is picked.
+    Route::get('/sections/{section}/progress', [SectionProgressController::class, 'show'])->name('sections.progress');
     // The file a team uploaded for a line, opened by the CaPSA to check it.
     Route::get('/documents/{document}/file', [App\Http\Controllers\Capsa\DocumentFileController::class, 'show'])->name('documents.file');
     Route::get('/rubric_management', [GradingRubricController::class, 'index'])->name('rubric_management');

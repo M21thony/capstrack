@@ -4,22 +4,20 @@ namespace Tests\Feature;
 
 use App\Models\CapstoneExpert;
 use App\Models\ExpertRole;
-use App\Models\Milestone;
-use App\Models\MilestoneItem;
 use App\Models\Role;
-use App\Models\Student;
-use App\Models\StudentSchoolYear;
 use App\Models\Team;
 use App\Models\TeamExpertAssignment;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\BuildsChecklists;
 use Tests\TestCase;
 
 /**
- * A team's checklist progress is for the team, its section's CaPSA, and the
+ * A team's milestone progress is for the team, its section's CaPSA, and the
  * adviser and consultant it chose - not for its grammarian or its panel.
  */
 class ChecklistProgressVisibilityTest extends TestCase
 {
+    use BuildsChecklists;
     use RefreshDatabase;
 
     private Team $team;
@@ -28,15 +26,9 @@ class ChecklistProgressVisibilityTest extends TestCase
     {
         parent::setUp();
 
-        $leader = Student::factory()->withCompleteProfile()->create(['course' => 'BSIT', 'year_section' => '3rd · A']);
-        $this->team = Team::create(['team_name' => 'Tracked Team', 'leader_id' => $leader->student_id, 'team_status' => 'Active']);
-        StudentSchoolYear::create(['student_id' => $leader->student_id, 'team_id' => $this->team->team_id]);
-
-        $milestone = Milestone::create([
-            'team_id' => $this->team->team_id, 'title' => 'Capstone 1', 'status' => 'todo',
-            'due_date' => now()->subWeek()->toDateString(),
-        ]);
-        $milestone->items()->create(['title' => 'Signed Project Team Assignment Form', 'kind' => MilestoneItem::FORM]);
+        [$this->team] = $this->teamInSection('Tracked Team');
+        $checklist = $this->emptyChecklist($this->capsaFor());
+        $this->addDeliverable($checklist, ['title' => 'Signed Project Team Assignment Form', 'due_date' => now()->subWeek()->toDateString()]);
     }
 
     private function engage(string $roleName): CapstoneExpert
@@ -56,17 +48,39 @@ class ChecklistProgressVisibilityTest extends TestCase
     public function test_the_adviser_and_consultant_see_the_teams_progress(): void
     {
         foreach (['adviser', 'consultant'] as $role) {
-            $this->actingAs($this->engage($role), 'expert')->get(route('instructor.teams'))
+            $expert = $this->engage($role);
+
+            $this->actingAs($expert, 'expert')->get(route('instructor.teams'))
                 ->assertOk()
                 ->assertSee('1 overdue');
+
+            $this->actingAs($expert, 'expert')->get(route('instructor.progress'))
+                ->assertOk()
+                ->assertSee('Tracked Team')
+                ->assertSee('Signed Project Team Assignment Form');
         }
     }
 
     public function test_the_grammarian_does_not(): void
     {
-        $this->actingAs($this->engage('grammarian'), 'expert')->get(route('instructor.teams'))
+        $grammarian = $this->engage('grammarian');
+
+        $this->actingAs($grammarian, 'expert')->get(route('instructor.teams'))
             ->assertOk()
             ->assertSee('Tracked Team')
             ->assertDontSee('1 overdue');
+
+        $this->actingAs($grammarian, 'expert')->get(route('instructor.progress'))
+            ->assertOk()
+            ->assertDontSee('Tracked Team');
+    }
+
+    /** The adviser's tracker is read-only: there is nothing on it to check. */
+    public function test_the_advisers_tracker_offers_no_checks(): void
+    {
+        $this->actingAs($this->engage('adviser'), 'expert')->get(route('instructor.progress'))
+            ->assertOk()
+            ->assertSee('data-mode="adviser"', false)
+            ->assertDontSee('/checks/', false);
     }
 }

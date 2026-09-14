@@ -4,56 +4,44 @@ namespace Tests\Feature;
 
 use App\Models\CapstoneDocumentReview;
 use App\Models\CapstoneExpert;
-use App\Models\Milestone;
-use App\Models\MilestoneItem;
+use App\Models\Checklist;
+use App\Models\Deliverable;
 use App\Models\Student;
-use App\Models\StudentSchoolYear;
 use App\Models\Team;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\DB;
+use Tests\Concerns\BuildsChecklists;
 use Tests\TestCase;
 
 /**
  * The tracker shows where things stand and sends people to where the work
- * happens: a student to Document Submission, the CaPSA to the uploaded file.
+ * happens: a student to Document Submission, the CaPSA to the uploaded scan.
  */
 class ChecklistScreensLinkOutTest extends TestCase
 {
+    use BuildsChecklists;
     use RefreshDatabase;
 
     private Student $student;
 
     private Team $team;
 
-    private Milestone $milestone;
+    private CapstoneExpert $capsa;
+
+    private Checklist $checklist;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->student = Student::factory()->withCompleteProfile()->create([
-            'course' => 'Bachelor of Science in Information Technology', 'year_section' => '3rd · A',
-        ]);
-        $this->team = Team::create([
-            'team_name' => 'Linked Team', 'team_status' => 'Active', 'leader_id' => $this->student->student_id,
-            'is_confirmed' => true, 'member_count' => 5,
-        ]);
-        StudentSchoolYear::create(['student_id' => $this->student->student_id, 'team_id' => $this->team->team_id]);
-        $this->milestone = Milestone::create(['team_id' => $this->team->team_id, 'title' => 'Capstone 1', 'status' => 'todo']);
+        [$this->team, $this->student] = $this->teamInSection('Linked Team');
+        $this->capsa = $this->capsaFor();
+        $this->checklist = $this->emptyChecklist($this->capsa);
     }
 
-    private function upload(MilestoneItem $item): int
+    public function test_a_student_uploads_an_open_deliverable_from_the_tracker(): void
     {
-        return DB::table('capstone_documents')->insertGetId([
-            'student_id' => $this->student->student_id, 'file_name' => 'x', 'file_path' => 'submissions/x.pdf',
-            'milestone_item_id' => $item->id, 'document_status' => 'Pending', 'created_at' => now()->subDay(), 'updated_at' => now()->subDay(),
-        ]);
-    }
-
-    public function test_a_student_submits_an_open_line_from_the_tracker(): void
-    {
-        $draft = $this->milestone->items()->create(['title' => 'Chapter 1 Draft', 'kind' => MilestoneItem::DOCUMENT]);
-        $defense = $this->milestone->items()->create(['title' => 'Title Defense', 'kind' => MilestoneItem::DEFENSE, 'defense_type' => 'Title Defense']);
+        $draft = $this->addDeliverable($this->checklist, ['title' => 'Chapter 1 Draft', 'kind' => Deliverable::DOCUMENT]);
+        $defense = $this->addDeliverable($this->checklist, ['title' => 'Title Defense', 'kind' => Deliverable::DEFENSE, 'defense_type' => 'Title Defense']);
 
         $this->actingAs($this->student)->get('/student/progress')
             ->assertOk()
@@ -61,11 +49,14 @@ class ChecklistScreensLinkOutTest extends TestCase
             ->assertDontSee(route('student.submission', ['item' => $defense->id]), false);
     }
 
-    public function test_a_line_sent_back_says_which_revision_is_owed(): void
+    /** Changes are asked for on the draft, so the revision goes up against the draft. */
+    public function test_a_clf_sent_back_for_changes_says_which_revision_is_owed(): void
     {
-        $clf = $this->milestone->items()->create(['title' => 'Signed CLF Approving Chapter 1', 'kind' => MilestoneItem::APPROVAL, 'role' => 'adviser']);
+        $draft = $this->addDeliverable($this->checklist, ['title' => 'Chapter 1 Draft', 'kind' => Deliverable::DOCUMENT, 'chapter' => '1']);
+        $this->addDeliverable($this->checklist, ['title' => 'Signed CLF Approving Chapter 1', 'kind' => Deliverable::APPROVAL, 'role' => 'adviser', 'chapter' => '1']);
+
         CapstoneDocumentReview::create([
-            'file_id' => $this->upload($clf), 'role' => 'adviser',
+            'file_id' => $this->upload($this->student, $draft, now()->subDay()->toDateTimeString()), 'role' => 'adviser',
             'expert_id' => CapstoneExpert::factory()->create(['approved_status' => true])->expert_id,
             'review_status' => CapstoneDocumentReview::REVIEWED,
             'verdict' => CapstoneDocumentReview::NEEDS_REVISION, 'verdict_at' => now(),
@@ -74,43 +65,19 @@ class ChecklistScreensLinkOutTest extends TestCase
         $this->actingAs($this->student)->get('/student/progress')
             ->assertOk()
             ->assertSee('1st revision requested')
-            ->assertSee('Submit 1st revision');
+            ->assertSee('Upload 1st revision')
+            ->assertSee(route('student.submission', ['item' => $draft->id]), false);
     }
 
-    /** An approval the CaPSA asked to see is hers to check only after the reviewer approved it. */
-    public function test_the_capsa_cannot_check_an_approval_nobody_approved(): void
+    public function test_the_capsa_opens_an_uploaded_scan_from_the_tracker(): void
     {
-        $clf = $this->milestone->items()->create([
-            'title' => 'CLF Recommending for Title Defense', 'kind' => MilestoneItem::APPROVAL, 'role' => 'adviser', 'needs_check' => true,
-        ]);
-        $capsa = $this->makeCapsa(CapstoneExpert::factory()->create(['approved_status' => true, 'sections' => ['BSIT-3A']]));
-        $check = fn () => $this->actingAs($capsa, 'expert')->putJson(route('capsa.milestones.items.done', $clf), ['done' => true]);
+        $form = $this->addDeliverable($this->checklist, ['title' => 'Signed Final Project Title Form']);
+        $fileId = $this->upload($this->student, $form, path: 'submissions/title.jpg');
 
-        $check()->assertStatus(422);
-        $this->assertNull($clf->fresh()->completed_at);
-
-        CapstoneDocumentReview::create([
-            'file_id' => $this->upload($clf), 'role' => 'adviser',
-            'expert_id' => CapstoneExpert::factory()->create(['approved_status' => true])->expert_id,
-            'review_status' => CapstoneDocumentReview::REVIEWED,
-            'verdict' => CapstoneDocumentReview::APPROVED, 'verdict_at' => now(),
-        ]);
-
-        $check()->assertOk();
-        $this->assertNotNull($clf->fresh()->completed_at);
-    }
-
-    public function test_the_capsa_opens_a_scanned_form_from_the_grid_and_checks_it(): void
-    {
-        $form = $this->milestone->items()->create(['title' => 'Signed Final Project Title Form', 'kind' => MilestoneItem::FORM]);
-        $fileId = $this->upload($form);
-
-        $capsa = $this->makeCapsa(CapstoneExpert::factory()->create(['approved_status' => true, 'sections' => ['BSIT-3A']]));
-
-        $this->actingAs($capsa, 'expert')->get(route('capsa.team_management', ['tab' => 'milestones']))
+        $this->actingAs($this->capsa, 'expert')->get(route('capsa.team_management', ['tab' => 'milestones']))
             ->assertOk()
+            ->assertSee('id="ms-tracker"', false)
             ->assertSee(route('capsa.documents.file', $fileId), false)
-            ->assertSee('Mark as checked')
-            ->assertDontSee('sighted');
+            ->assertSee(route('capsa.deliverables.checks.update', [$form->id, $this->team->team_id]), false);
     }
 }

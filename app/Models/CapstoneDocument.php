@@ -17,7 +17,7 @@ class CapstoneDocument extends Model
         'file_version',
         'document_status',
         'chapter',
-        'milestone_item_id',
+        'deliverable_id',
     ];
 
     public function reviews()
@@ -25,10 +25,10 @@ class CapstoneDocument extends Model
         return $this->hasMany(CapstoneDocumentReview::class, 'file_id', 'file_id');
     }
 
-    /** The checklist requirement this file was sent for, if any. */
-    public function milestoneItem()
+    /** The checklist deliverable this file was sent for, if any. */
+    public function deliverable()
     {
-        return $this->belongsTo(MilestoneItem::class, 'milestone_item_id');
+        return $this->belongsTo(Deliverable::class);
     }
 
     /**

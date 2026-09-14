@@ -62,10 +62,10 @@ class DocReviewController extends Controller
     {
         abort_if($review->expert_id !== Auth::guard('expert')->id(), 403);
 
-        $review->load('document.milestoneItem.milestone');
+        $review->load('document.deliverable');
 
         $document = $review->document;
-        $item = $document?->milestoneItem;
+        $item = $document?->deliverable;
 
         return view('instructor.docreview-annotate', [
             'review' => $review,
@@ -80,7 +80,7 @@ class DocReviewController extends Controller
                 'round' => $document?->roundLabel(),
                 'nextRound' => $document?->nextRoundLabel(),
                 'requirement' => $item?->title,
-                'due' => $item?->dueOn()?->format('M j'),
+                'due' => $item?->due_date?->format('M j'),
                 'backUrl' => route('instructor.docreview'),
             ],
         ]);

@@ -346,8 +346,9 @@ fileInput.addEventListener('change', (e) => {
 });
 
 // -- Checklist requirement --
-// A signed paper goes to the CaPSA to check, so it needs no reviewer and a
-// phone photo will do. A CLF goes to whoever approves it.
+// A signed paper - a form, or a CLF your adviser or consultant signed by
+// hand - goes to the CaPSA to check, so it needs no reviewer and a phone
+// photo will do.
 const checklistSelect = document.getElementById('checklistItem');
 const checklistHint = document.getElementById('checklistHint');
 
@@ -355,19 +356,15 @@ function selectedKind() {
   const option = checklistSelect && checklistSelect.selectedOptions[0];
   return option && option.value ? option.dataset.kind : '';
 }
-function isPaper() { return ['form', 'custom'].includes(selectedKind()); }
+function isPaper() { return ['form', 'approval', 'custom'].includes(selectedKind()); }
 
 function applyChecklistItem() {
   if (!checklistSelect) return;
-  const option = checklistSelect.selectedOptions[0];
   const boxes = document.querySelectorAll('#recipientGroup input[type="checkbox"]:not(:disabled)');
 
   if (isPaper()) {
     boxes.forEach(cb => { cb.checked = false; });
     checklistHint.textContent = 'Upload a scan or a clear phone photo of the signed paper. It goes to your CaPSA to check — no reviewer needed.';
-  } else if (selectedKind() === 'approval' && option.dataset.role) {
-    boxes.forEach(cb => { cb.checked = cb.value === option.dataset.role; });
-    checklistHint.textContent = 'Sent to your ' + option.dataset.role + '. It counts once they approve it in Document Review.';
   } else {
     checklistHint.textContent = 'Pick the requirement and your Progress Tracker updates on its own.';
   }
@@ -477,7 +474,7 @@ document.getElementById('submitBtn').addEventListener('click', function () {
   fd.append('file', selectedFile);
   checked.forEach(role => fd.append('recipients[]', role));
   if (checklistSelect && checklistSelect.value) {
-    fd.append('milestone_item_id', checklistSelect.value);
+    fd.append('deliverable_id', checklistSelect.value);
   }
   if (folderWrap && folderWrap.style.display !== 'none' && folderSelect.value) {
     fd.append('subject_adviser_folder_id', folderSelect.value);

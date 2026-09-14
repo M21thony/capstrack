@@ -12,6 +12,7 @@ export default defineConfig({
                 'resources/js/legacy.js',
                 'resources/js/main.jsx',
                 'resources/js/student-review.jsx',
+                'resources/js/milestones/tracker.js',
                 'resources/student-ui/styles.css',
                 'resources/student-ui/student.js',
                 'resources/student-ui/Styles/dashboard.css',
