@@ -666,15 +666,18 @@ export function openEditor({ urls, checklistId = null, onClose = null }) {
         btn('Save', 'ms-btn-gold', () => saveEdits([d.id], []), 'check'),
         btn('Discard', '', () => { E.pending.delete(d.id); render(); }, 'undo'),
       ] : [
-        btn('Archive', '', () => {
-          E.picked.delete(d.id);
-          run(
-            async () => { await api('PATCH', fill(urls.deliverable, d.id), { archived: true }); await reload(); },
-            `Archived “${d.title}”. Teams no longer see it.`,
-            async () => { await api('PATCH', fill(urls.deliverable, d.id), { archived: false }); await reload(); },
-          );
-        }, 'archive'),
-        btn('Remove', 'ms-btn-warn', () => removeDeliverables([d]), 'trash'),
+        // One quiet button per row instead of Archive and Remove repeated down the whole list.
+        moreMenu(`More actions for “${d.title}”`, [
+          ['Archive', 'archive', '', () => {
+            E.picked.delete(d.id);
+            run(
+              async () => { await api('PATCH', fill(urls.deliverable, d.id), { archived: true }); await reload(); },
+              `Archived “${d.title}”. Teams no longer see it.`,
+              async () => { await api('PATCH', fill(urls.deliverable, d.id), { archived: false }); await reload(); },
+            );
+          }],
+          ['Remove', 'trash', 'ms-menu-warn', () => removeDeliverables([d])],
+        ]),
       ]));
       fillPendingSlot();
     };
@@ -923,6 +926,53 @@ export function openEditor({ urls, checklistId = null, onClose = null }) {
       render();
     });
     return box;
+  }
+
+  /**
+   * A "More" button opening a short menu of labelled actions. Up/down move
+   * between them, Escape or a click elsewhere closes it, and focus goes back
+   * to the button.
+   */
+  function moreMenu(label, items) {
+    const trigger = btn('More', 'ms-btn-more', null, 'more');
+    trigger.setAttribute('aria-label', label);
+    trigger.setAttribute('aria-haspopup', 'menu');
+    trigger.setAttribute('aria-expanded', 'false');
+
+    const menu = el('div', 'ms-menu');
+    menu.setAttribute('popover', 'auto');
+    menu.setAttribute('role', 'menu');
+    menu.setAttribute('aria-label', label);
+    items.forEach(([text, iconName, cls, action]) => {
+      const item = btn(text, ('ms-menu-item ' + cls).trim(), () => { menu.hidePopover(); action(); }, iconName);
+      item.setAttribute('role', 'menuitem');
+      menu.append(item);
+    });
+
+    // The browser's own button-to-popover link: opens and closes it, and puts focus back on the button.
+    trigger.popoverTargetElement = menu;
+    menu.addEventListener('toggle', e => {
+      const open = e.newState === 'open';
+      trigger.setAttribute('aria-expanded', String(open));
+      if (!open) return;
+      // Under the button, right edges lined up - or above it when there is no room below.
+      const r = trigger.getBoundingClientRect();
+      const below = r.bottom + 4 + menu.offsetHeight <= window.innerHeight;
+      menu.style.top = (below ? r.bottom + 4 : r.top - 4 - menu.offsetHeight) + 'px';
+      menu.style.left = Math.max(8, r.right - menu.offsetWidth) + 'px';
+      menu.querySelector('button')?.focus();
+    });
+    menu.addEventListener('keydown', e => {
+      if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+      e.preventDefault();
+      const buttons = [...menu.querySelectorAll('button')];
+      const at = buttons.indexOf(document.activeElement);
+      buttons[(at + (e.key === 'ArrowDown' ? 1 : -1) + buttons.length) % buttons.length].focus();
+    });
+
+    const wrap = el('span', 'ms-more');
+    wrap.append(trigger, menu);
+    return wrap;
   }
 
   function handle(key, label) {
