@@ -805,6 +805,13 @@ let selectedDateKey = null;
 function selectDate(d, dayName, dateKey) {
   const expertId = document.getElementById('expertSelect').value;
 
+  // The date the team already has with this expert: say that, not the
+  // general "one session at a time" rule.
+  if (expertId && myBookedDates.some(b => b.date === dateKey && String(b.expert_id) === String(expertId))) {
+    showToast('You already booked this date with ' + (document.querySelector('#expertSelect option:checked')?.textContent?.trim() || 'this expert') + '. See it under Upcoming.', 'error');
+    return;
+  }
+
   if (expertId && bookedExpertIds.includes(Number(expertId))) {
     const who = document.querySelector('#expertSelect option:checked')?.textContent?.trim();
     showToast('Your team already has a session booked with ' + (who || 'this expert')
