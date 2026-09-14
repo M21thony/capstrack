@@ -555,7 +555,7 @@
                       </div>
                     @else
                       <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text3);margin-bottom:6px;letter-spacing:0.4px">Matched Capstone Projects</div>
-                      @foreach ($check->matches as $m)
+                      @foreach ($check->matchesWithAuthors() as $m)
                         @php
                           $mScore = $m['score'] ?? 0;
                           $mTone = $mScore >= 65 ? 'red' : ($mScore >= 55 ? 'amber' : 'green');
