@@ -282,7 +282,7 @@ function PDFChecker({
                     )}
                     <div className="rr-overlay" contentEditable={false}>
                       {(marks[n] || []).map((m) => m.rects.map((r, idx) => (
-                        <div key={`d${m.id}-${idx}`} className={`rr-hl rr-diff${changeId === m.id ? " on" : ""}`} style={rectStyle(r)} />
+                        <div key={`d${m.id}-${idx}`} className={`rr-hl rr-diff${m.removed ? " del" : ""}${changeId === m.id ? " on" : ""}`} style={rectStyle(r)} />
                       )))}
                       <Highlights
                         remarks={pageRemarks}

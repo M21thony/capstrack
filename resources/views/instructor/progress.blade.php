@@ -17,7 +17,7 @@
     <button class="hamburger-btn" onclick="toggleSidebar()" aria-label="Toggle sidebar">
       <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
     </button>
-    <div class="page-title">Milestone progress</div>
+    <div class="page-title"><a href="{{ route('instructor.teams') }}" style="color:var(--text3);text-decoration:none">Teams</a> <span style="color:var(--text3)">›</span> Milestone progress</div>
     <div class="topbar-actions">@include('instructor.partials.notification-dropdown')</div>
   </div>
   <div id="skeleton-content" class="sk-overlay">

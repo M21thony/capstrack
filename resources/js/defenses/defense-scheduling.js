@@ -222,8 +222,6 @@ async function saveOverride() {
 }
 
 /* ---------------- Events ---------------- */
-$('#s-stage').value = STAGE;
-$('#s-stage').addEventListener('change', e => { window.location.href = `${URLS.self}?defense_type=${encodeURIComponent(e.target.value)}`; });
 document.querySelectorAll('[data-tab]').forEach(b => b.addEventListener('click', () => { schedTab = b.dataset.tab; render(); }));
 $('#reason-filter').addEventListener('change', render);
 $('#s-others').addEventListener('change', render);

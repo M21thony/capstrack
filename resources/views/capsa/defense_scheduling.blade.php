@@ -49,12 +49,8 @@
     </header>
 
     <div class="dx-sched-top">
+      @include('capsa.partials.defense-stage-tabs')
       <div class="dx-filters" style="padding:0;border:0">
-        <select class="dx-field" id="s-stage" aria-label="Defense stage">
-          @foreach ($state['stages'] as $stage)
-            <option>{{ $stage }}</option>
-          @endforeach
-        </select>
         <button class="dx-btn" id="open-window"><svg><use href="#dx-i-cal"/></svg>Defense window: <span id="window-label"></span></button>
         <span class="dx-scope">Your sections: <b id="my-sections"></b></span>
         <span class="dx-grow"></span>

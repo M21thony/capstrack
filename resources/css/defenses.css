@@ -109,6 +109,11 @@
 .dx-when{font-weight:600;white-space:nowrap}
 .dx-panel-names{font-size:12px;color:var(--dx-ink2);line-height:1.35}
 .dx-sched-top{display:grid;gap:8px}
+.dx-stages{display:flex;gap:2px;padding:0 14px;border-bottom:1px solid var(--dx-line);overflow-x:auto}
+.dx-stages a{padding:10px 14px 9px;font-weight:600;font-size:13px;color:var(--dx-ink3);text-decoration:none;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap}
+.dx-stages a:hover{color:var(--dx-ink)}
+.dx-stages a[aria-current="page"]{color:var(--dx-ink);border-bottom-color:var(--dx-gold)}
+.dx-sched-top .dx-stages{background:var(--dx-surface);border:1px solid var(--dx-line);border-radius:var(--dx-r-lg);padding:0 8px}
 
 /* Dialogs and popovers sit in the top layer, outside .dx, so they carry their own tokens. */
 .dx-dialog,.dx-menu,.dx-toast{
@@ -139,6 +144,8 @@
 .dx-dialog .dx-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:34px;padding:0 14px;border-radius:var(--dx-r-sm);border:1px solid var(--dx-line2);background:#fff;font-weight:600;white-space:nowrap}
 .dx-dialog .dx-btn:hover{background:var(--dx-sunk)}
 .dx-dialog .dx-btn-gold{background:var(--dx-gold);border-color:var(--dx-gold);color:#1e2028}
+.dx-dialog .dx-btn-danger{background:var(--dx-red);border-color:var(--dx-red);color:#fff}
+.dx-dialog .dx-btn-danger:hover{background:#b91c1c}
 .dx-dialog .dx-btn:disabled{opacity:.45;cursor:not-allowed}
 .dx-dialog .dx-icon-btn{flex:none;width:28px;height:28px;display:grid;place-items:center;border:0;background:none;border-radius:var(--dx-r-sm);color:var(--dx-ink3)}
 .dx-dialog .dx-icon-btn svg,.dx-dialog .dx-btn svg{width:16px;height:16px}

@@ -161,7 +161,6 @@
                     name="recipients[]"
                     value="{{ $roleKey }}"
                     data-role="{{ $roleKey }}"
-                    {{ $isAssigned ? 'checked' : '' }}
                     {{ ! $isAssigned ? 'disabled' : '' }}
                 >
                 <span class="recipient-icon">
@@ -177,7 +176,7 @@
         @if ($assignedRecipients->isEmpty())
           <p class="recipient-hint">No adviser, consultant, grammarian, or subject adviser is assigned to your team yet — once one is, you'll be able to select them here.</p>
         @else
-          <p class="recipient-hint">Uncheck anyone you don't want this particular submission sent to.</p>
+          <p class="recipient-hint">Tick who this submission goes to.</p>
         @endif
 
         @if ($assignedRecipients->has('subject_adviser'))

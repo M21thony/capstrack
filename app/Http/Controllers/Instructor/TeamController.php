@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Instructor;
 
 use App\Http\Controllers\Controller;
+use App\Models\DefensePanel;
 use App\Models\TeamExpertAssignment;
 use Illuminate\Support\Facades\Auth;
 
@@ -32,6 +33,21 @@ class TeamController extends Controller
 
         $totalTeams = $approvedAssignments->unique('team_id')->count();
 
+        // The teams this expert sits on a defense panel for, one row per team.
+        // A panel is not an application, so these come from the panels themselves.
+        $panelSeats = DefensePanel::where('expert_id', $expert->expert_id)
+            ->with('schedule.team')
+            ->get()
+            ->filter(fn ($p) => $p->schedule?->team)
+            ->groupBy(fn ($p) => $p->schedule->team_id)
+            ->map(fn ($seats) => (object) [
+                'team' => $seats->first()->schedule->team,
+                'role' => $seats->first()->panel_role,
+                'scheduled' => $seats->filter(fn ($p) => $p->schedule->schedule_date)->pluck('schedule.defense_type')->unique()->values(),
+            ])
+            ->sortBy(fn ($s) => $s->team->team_name)
+            ->values();
+
         // Progress used to be its own page, which meant an adviser looking at
         // a team had to leave it to find out how that team was doing. Same
         // teams, same cards - the numbers just come with them now. Keyed by
@@ -50,6 +66,7 @@ class TeamController extends Controller
             'totalTeams' => $totalTeams,
             'expert' => $expert,
             'approvedAssignments' => $approvedAssignments,
+            'panelSeats' => $panelSeats,
             'progress' => $progress,
             // Shown only on the cards of teams this expert advises - the
             // adviser is who the department lets see a team's defense scores.

@@ -64,7 +64,7 @@ function renderRows() {
     const need = expertsBlocker(t)?.text;
     const main = s === 'notready'
       ? `<button class="dx-btn dx-btn-sm" disabled title="${esc(need)} first">Assign Panel</button>`
-      : t.panel ? `<button class="dx-btn dx-btn-sm dx-btn-dark" data-assign="${t.id}">Change panel</button>`
+      : t.panel ? `<button class="dx-btn dx-btn-sm" data-assign="${t.id}">Change panel</button>`
       : `<button class="dx-btn dx-btn-sm dx-btn-gold" data-assign="${t.id}">Assign Panel</button>`;
     const more = t.panel
       ? `<button class="dx-icon-btn" data-menu="${t.id}" aria-label="More actions for ${esc(t.name)}" aria-haspopup="menu"><svg><use href="#dx-i-more"/></svg></button>`
@@ -176,20 +176,27 @@ function openMenu(btn, id) {
   m.querySelector('button').focus();
 }
 
-async function removePanel() {
+function removePanel() {
   $('#row-menu').hidePopover();
   const t = T(menuFor);
-  if (!confirm(`Remove Team ${t.name}'s ${STAGE} panel? A defense already scheduled for it is cancelled too.`)) return;
+  $('#d-remove-text').textContent = `Team ${t.name}'s ${STAGE} panel will be removed. A defense already scheduled for it is cancelled too.`;
+  $('#d-remove-yes').disabled = false;
+  $('#d-remove').showModal();
+}
+
+async function confirmRemove() {
+  const t = T(menuFor);
+  $('#d-remove-yes').disabled = true;
   try {
     await api('POST', URLS.store.replace('__ID__', t.id), { defense_type: STAGE, chair_expert_id: null });
     reloadWith(`Removed Team ${t.name}'s panel.`);
   } catch (e) {
     toast(e.message);
+    $('#d-remove-yes').disabled = false;
   }
 }
 
 /* ---------------- Events ---------------- */
-$('#f-stage').addEventListener('change', e => { window.location.href = `${URLS.self}?defense_type=${encodeURIComponent(e.target.value)}`; });
 ['#f-search', '#f-section', '#f-status', '#f-paid'].forEach(s => $(s).addEventListener('input', renderRows));
 $('#rows').addEventListener('change', e => {
   const id = +e.target.dataset.pick;
@@ -205,6 +212,7 @@ $('#rows').addEventListener('click', e => {
   if (b.dataset.menu) openMenu(b, +b.dataset.menu);
 });
 $('#menu-remove').addEventListener('click', removePanel);
+$('#d-remove-yes').addEventListener('click', confirmRemove);
 $('#sel-chips').addEventListener('click', e => { const b = e.target.closest('[data-unpick]'); if (b) { A.teams.delete(+b.dataset.unpick); renderRows(); } });
 $('#sel-clear').addEventListener('click', () => { A.teams.clear(); renderRows(); });
 $('#sel-assign').addEventListener('click', openAssign);
@@ -218,7 +226,6 @@ $('#a-save').addEventListener('click', saveAssign);
 
 // The sections filter lists only the sections these teams are in.
 $('#f-section').insertAdjacentHTML('beforeend', [...new Set(TEAMS.map(t => t.section))].sort().map(s => `<option>${esc(s)}</option>`).join(''));
-$('#f-stage').value = STAGE;
 
 wireDialogs();
 renderRows();

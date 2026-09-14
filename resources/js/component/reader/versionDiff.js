@@ -83,7 +83,7 @@ const snippet = (words, s, e) =>
   words.slice(s, Math.min(e, s + 60)).map((w) => w.raw).join(" ") + (e - s > 60 ? " …" : "");
 
 /**
- * Words are {t: normalised word, raw, page, line, rect}. Returns the changes
+ * Words are {t: normalised word, raw, page, line, rects}. Returns the changes
  * (added, removed or reworded passages, anchored on the new version) and the
  * rectangles to mark on each page of the new version.
  */
@@ -112,17 +112,25 @@ export function compareVersions(oldWords, newWords) {
   const marks = {};
   const changes = hunks(removed, added).map(([a0, a1, b0, b1], id) => {
     const byPage = {};
-    for (let j = b0; j < b1; j++) (byPage[newWords[j].page] ||= []).push(newWords[j].rect);
+    for (let j = b0; j < b1; j++) (byPage[newWords[j].page] ||= []).push(...newWords[j].rects);
     Object.entries(byPage).forEach(([page, rects]) => (marks[page] ||= []).push({ id, rects: mergeRectsByLine(rects) }));
-    // A removal has no words of its own on the new version: point at the words after it.
+    // A removal has no words of its own on the new version: a thin mark just
+    // before the words that now follow it.
     const anchor = newWords[Math.min(b0, newWords.length - 1)];
+    const first = anchor?.rects[0];
+    if (b0 === b1 && first) {
+      (marks[anchor.page] ||= []).push({ id, removed: true, rects: [{ ...first, left_position: Math.max(0, first.left_position - 0.004), highlight_width: 0.003 }] });
+    }
     return {
       id,
       kind: a0 === a1 ? "added" : b0 === b1 ? "removed" : "reworded",
       page: anchor?.page ?? 1,
-      rect: anchor?.rect ?? null,
+      rect: first ?? null,
+      // A few words either side, the way a code review shows a changed line.
+      before: snippet(newWords, Math.max(0, b0 - 6), b0),
       oldText: snippet(oldWords, a0, a1),
       newText: snippet(newWords, b0, b1),
+      after: snippet(newWords, b1, b1 + 6),
       a0,
       a1,
     };
@@ -149,10 +157,11 @@ export function remarksNearChanges(remarks, oldWords, newWords, { removed, added
     const base = { id: r.id, page, quote: r.selected_text, text: r.comment, changeIds: [], target: null };
 
     let s = oldWords.findIndex((w) => {
-      const mid = w.rect.top_position + w.rect.highlight_height / 2;
-      return w.page === page && mid >= top - 0.005 && mid <= bottom + 0.005 && w.rect.left_position + w.rect.highlight_width >= left;
+      const r = w.rects[0];
+      const mid = r.top_position + r.highlight_height / 2;
+      return w.page === page && mid >= top - 0.005 && mid <= bottom + 0.005 && r.left_position + r.highlight_width >= left;
     });
-    if (s < 0) s = oldWords.findIndex((w) => w.page === page && w.rect.top_position >= top - 0.01);
+    if (s < 0) s = oldWords.findIndex((w) => w.page === page && w.rects[0].top_position >= top - 0.01);
     if (s < 0) return base;
     const e = s + Math.max(1, (r.selected_text || "").split(/\s+/).filter(Boolean).length);
 
@@ -162,7 +171,7 @@ export function remarksNearChanges(remarks, oldWords, newWords, { removed, added
       let k = s;
       while (k < oldWords.length && oldToNew[k] < 0) k++;
       const w = newWords[oldToNew[k]];
-      if (w) target = { page: w.page, rect: w.rect };
+      if (w) target = { page: w.page, rect: w.rects[0] };
     }
     return { ...base, changeIds: near.map((c) => c.id), target };
   });

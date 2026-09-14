@@ -60,13 +60,9 @@
 
     <div class="dx-main">
       <section class="dx-board" aria-label="Teams">
+        @include('capsa.partials.defense-stage-tabs')
         <div class="dx-filters">
           <label class="dx-field dx-search"><svg><use href="#dx-i-search"/></svg><input id="f-search" type="search" placeholder="Search team or capstone title" aria-label="Search team or capstone title"></label>
-          <select class="dx-field" id="f-stage" aria-label="Defense stage">
-            @foreach ($state['stages'] as $stage)
-              <option>{{ $stage }}</option>
-            @endforeach
-          </select>
           <select class="dx-field" id="f-section" aria-label="Section"><option value="">All sections</option></select>
           <select class="dx-field" id="f-status" aria-label="Status"><option value="">All statuses</option><option value="notready">Missing experts</option><option value="unassigned">Unassigned</option><option value="assigned">Assigned</option><option value="scheduled">Scheduled</option><option value="passed">Passed</option></select>
           <select class="dx-field" id="f-paid" aria-label="Fees"><option value="">All fees</option><option value="paid">Fees verified</option><option value="unpaid">Fees not verified</option></select>
@@ -111,6 +107,14 @@
       </div>
     </div>
     <div class="dx-dlg-foot"><span class="dx-muted dx-grow" id="a-summary"></span><button class="dx-btn" data-close>Cancel</button><button class="dx-btn dx-btn-gold" id="a-save">Save panel</button></div>
+  </div>
+</dialog>
+
+<dialog id="d-remove" class="dx-dialog" aria-labelledby="d-remove-t">
+  <div class="dx-dlg">
+    <div class="dx-dlg-head"><div class="dx-grow"><h2 id="d-remove-t">Remove this panel?</h2></div><button class="dx-icon-btn" data-close aria-label="Close"><svg><use href="#dx-i-x"/></svg></button></div>
+    <div class="dx-dlg-body"><p id="d-remove-text" style="margin:0"></p></div>
+    <div class="dx-dlg-foot"><span class="dx-grow"></span><button class="dx-btn" data-close>No, keep it</button><button class="dx-btn dx-btn-danger" id="d-remove-yes">Yes, remove</button></div>
   </div>
 </dialog>
 

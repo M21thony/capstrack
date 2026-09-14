@@ -24,7 +24,7 @@ class DefenseSchedulingController extends Controller
     {
         /** @var CapstoneExpert $capsa */
         $capsa = auth('expert')->user();
-        $stage = DefenseBoard::stageOrDefault($request->query('defense_type'));
+        $stage = $this->board->openingStage($capsa, $request->query('defense_type'));
         $rows = $this->board->rows($capsa, $stage);
         $other = $this->board->otherBookings(array_column($rows, 'id'));
 

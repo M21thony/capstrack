@@ -69,9 +69,11 @@ class GradingTest extends TestCase
     {
         $team = Team::create(['team_name' => 'Test Team', 'project_title' => 'A Great Capstone']);
 
+        // A date: only a scheduled defense is on the grading list.
         $schedule = DefenseSchedule::create([
             'team_id' => $team->team_id,
             'defense_type' => $defenseType,
+            'schedule_date' => now()->addDay()->setTime(8, 0),
         ]);
 
         DefensePanel::create([
@@ -93,7 +95,7 @@ class GradingTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('Test Team');
-        $response->assertSee('Not Started');
+        $response->assertSee('Not started');
     }
 
     /** An archived rubric is out of use - even one whose active flag was left on. */

@@ -1369,7 +1369,7 @@ function renderList() {
           '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14"/><polyline points="18 11 12 17 6 11"/></svg> Restore</button>'
         : '<button class="btn btn-ghost" style="font-size:11px;padding:5px 14px" onclick="editRubric(' + rb.id + ')">' +
           '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="m18.5 2.5 3 3L12 15l-4 1 1-4z"/></svg> Edit</button>' +
-          '<button class="btn rb-btn-danger" style="font-size:11px;padding:5px 14px" onclick="confirmDelete(' + rb.id + ')">' +
+          '<button class="btn btn-ghost" style="font-size:11px;padding:5px 14px" onclick="confirmDelete(' + rb.id + ')">' +
           '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="5" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><line x1="10" y1="12" x2="14" y2="12"/></svg> Archive</button>'
       ) +
       '</div>' +

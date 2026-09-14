@@ -389,6 +389,13 @@
 .wk-slot.is-booked b{color:#fff}
 .wk-slot.is-booked span{color:rgba(255,255,255,.6)}
 .wk-slot.is-open{background:var(--accent-light);border-left-color:var(--accent)}
+/* A session whose time has passed: still shown, plainly finished. */
+.cal-slot-pill.is-ended,.slot-tag.is-ended{background:var(--bg4,#eceef2);color:var(--text3);border-color:var(--border)}
+/* A team asked to cancel: the expert approves or keeps the booking. */
+.slot-tag.is-request{background:var(--amber-bg,#fdf6e9);color:var(--amber,#b45309);border-color:#f0d9a8}
+.slot-request{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin-top:6px;padding:7px 9px;border-radius:8px;background:var(--amber-bg,#fdf6e9);border:1px solid #f0d9a8;font-size:12px;color:var(--text2)}
+.slot-request b{color:var(--amber,#b45309)}
+.slot-request .slot-acts{margin-left:auto;display:flex;gap:6px}
 .wk-empty{padding:26px 8px;text-align:center;font-size:12px;color:var(--text3);grid-column:1/-1}
 
 /* Setting a term's worth of availability in one go. */
@@ -617,6 +624,8 @@ function isSlotDone(s, key) {
 // priority over plain 'booked', which takes priority over 'open'.
 function getSlotStatusLabel(s, key) {
   if ((s.booked || !s.is_available) && isSlotOngoing(s, key)) return 'ongoing';
+  // A team's session whose end time has passed.
+  if ((s.teamName || s.hasBooking) && isSlotDone(s, key)) return 'ended';
   if (s.booked || !s.is_available) return 'booked';
   return 'open';
 }
@@ -707,6 +716,9 @@ async function loadSlots() {
       }
       if (s.booking_id && s.session_date) {
         bySchedule[s.schedule_id].bookings.push({
+          booking_id: s.booking_id,
+          cancel_requested: !!s.cancellation_requested_at,
+          cancel_reason: s.cancellation_reason || '',
           session_date: s.session_date,
           team_name: s.team_name,
           student_fname: s.student_fname,
@@ -782,6 +794,7 @@ function fanOutSlots() {
 
         return {
           hasBooking:         !!dateBooking,
+          booking:            dateBooking || null,
           schedule_id:        s.schedule_id,
           google_event_id:    s.google_event_id ?? null,
           id:                 s.schedule_id,
@@ -981,10 +994,13 @@ function renderCalendar() {
         const status = getSlotStatusLabel(s, key);
         let cls = TYPE_CLASS[s.type] || 'type-consult';
         if (status === 'booked' || status === 'ongoing') cls = 'is-booked';
+        if (status === 'ended') cls = 'is-ended';
         pill.className = `cal-slot-pill ${cls}`;
         if (status === 'ongoing') {
           pill.textContent = `🔴 Ongoing · ${TYPE_LABELS[s.type] || 'Consultation'}`;
           pill.style.fontWeight = '700';
+        } else if (status === 'ended') {
+          pill.textContent = 'Ended ' + hr12(s.start || s.start_time).replace(' ', '');
         } else {
           // "9:00a" saved four pixels and cost the reader a word. The space
           // goes, the meridiem stays.
@@ -1421,8 +1437,10 @@ function renderSelectedDateSlots(key) {
               class="slot-act"
               title="Remove only this week">skip this week</button>` : '';
 
-    const tagClass = s.hasBooking ? 'is-booked' : ('type-' + (s.type || 'consult'));
-    const tagText = s.hasBooking ? 'Booked' : (TYPE_LABELS[s.type] || 'Consultation');
+    const ended = status === 'ended';
+    const asked = !ended && !!(s.booking && s.booking.cancel_requested);
+    const tagClass = s.hasBooking ? (ended ? 'is-ended' : asked ? 'is-request' : 'is-booked') : ('type-' + (s.type || 'consult'));
+    const tagText = s.hasBooking ? (ended ? 'Ended' : asked ? 'Cancel requested' : 'Booked') : (TYPE_LABELS[s.type] || 'Consultation');
 
     // Who has the slot and what for, in its own block rather than trailing
     // off the end of the time as truncated text.
@@ -1432,6 +1450,16 @@ function renderSelectedDateSlots(key) {
       <span class="slot-booking">
         <span class="who-dot">${initials || '—'}</span>
         <span><b>${s.teamName || 'Booked'}</b>${s.topic ? '<br>' + s.topic : ''}</span>
+      </span>` : '';
+
+    // The team asked to cancel; nothing changes until the expert says so.
+    const requestBlock = asked ? `
+      <span class="slot-request">
+        <span><b>Cancellation requested</b>${s.booking.cancel_reason ? ' · “' + escHtml(s.booking.cancel_reason) + '”' : ''}</span>
+        <span class="slot-acts">
+          <button type="button" class="slot-act" onclick="event.stopPropagation();decideCancellation(${s.booking.booking_id}, 'approve', '${key}')">Approve</button>
+          <button type="button" class="slot-act" onclick="event.stopPropagation();decideCancellation(${s.booking.booking_id}, 'decline', '${key}')">Keep booking</button>
+        </span>
       </span>` : '';
 
     row.innerHTML = `
@@ -1454,7 +1482,7 @@ function renderSelectedDateSlots(key) {
           </button>`}
         </span>
       </span>
-      ${bookingBlock}
+      ${bookingBlock}${requestBlock}
       <span class="date-slot-meta">
         <svg class="recur-mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M17 2.1 21 6l-4 3.9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>
@@ -2510,6 +2538,25 @@ function showToast(msg, type = 'success') {
 }
 
 // ── KICK OFF ────────────────────────────────────────────────────
+const escHtml = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+// A team asked to cancel: approve frees the slot, keep leaves it booked.
+async function decideCancellation(bookingId, decision, key) {
+  try {
+    await apiFetch(`/instructor/schedule/bookings/${bookingId}/cancellation`, {
+      method: 'PATCH',
+      body: JSON.stringify({ decision }),
+    });
+    showToast(decision === 'approve' ? 'Cancellation approved. The slot is open again.' : 'Booking kept. The team has been told.', 'success');
+    await loadSlots();
+    redrawCalendar();
+    renderUpcoming();
+    renderSelectedDateSlots(key);
+  } catch (e) {
+    showToast(e.message, 'error');
+  }
+}
+
 initCalendar();
 
 // Re-render time-dependent UI (the 'Ongoing' status) once a minute, so a

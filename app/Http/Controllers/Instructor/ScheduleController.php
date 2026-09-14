@@ -3,7 +3,10 @@
 namespace App\Http\Controllers\Instructor;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\SyncConsultationCancellation;
 use App\Mail\NewConsultationSlotMail;
+use App\Models\Notification;
+use App\Models\StudentSchoolYear;
 use App\Models\CapstoneExpert;
 use App\Models\ConsultationBooking;
 use App\Models\ConsultationSchedule;
@@ -54,6 +57,8 @@ class ScheduleController extends Controller
                 'consultation_booking.booking_id',
                 'consultation_booking.session_date',
                 'consultation_booking.booking_status',
+                'consultation_booking.cancellation_requested_at',
+                'consultation_booking.cancellation_reason',
                 'consultation_booking.created_at as booked_at',
                 'students.f_name as student_fname',
                 'students.l_name as student_lname',
@@ -69,6 +74,58 @@ class ScheduleController extends Controller
             ->get(['schedule_id', 'exception_date']);
 
         return response()->json(['slots' => $slots, 'exceptions' => $exceptions]);
+    }
+
+    // PATCH /instructor/schedule/bookings/{bookingId}/cancellation
+    // A team asked to call a consultation off; the expert approves or declines.
+    public function updateCancellation(Request $request, int $bookingId)
+    {
+        $validator = Validator::make($request->all(), ['decision' => 'required|in:approve,decline']);
+
+        if ($validator->fails()) {
+            return response()->json(['message' => $validator->errors()->first()], 422);
+        }
+
+        $booking = ConsultationBooking::where('booking_id', $bookingId)
+            ->where('booking_status', 'scheduled')
+            ->whereNotNull('cancellation_requested_at')
+            ->whereHas('schedule', fn ($q) => $q->where('expert_id', Auth::guard('expert')->id()))
+            ->firstOrFail();
+
+        $approve = $request->input('decision') === 'approve';
+
+        if ($approve) {
+            $booking->update(['booking_status' => 'cancelled', 'cancellation_requested_at' => null]);
+            ConsultationSchedule::where('schedule_id', $booking->schedule_id)->update(['is_available' => true]);
+
+            // Mail and Google Calendar wait on other servers, so they run after the answer.
+            SyncConsultationCancellation::dispatch(
+                $booking->booking_id,
+                (string) $booking->cancellation_reason,
+                (string) $booking->cancellation_requested_by,
+            );
+        } else {
+            $booking->update(['cancellation_requested_at' => null, 'cancellation_requested_by' => null, 'cancellation_reason' => null]);
+        }
+
+        $when = $booking->session_date ? Carbon::parse($booking->session_date)->format('M j') : 'the booked date';
+        $studentIds = $booking->team
+            ? StudentSchoolYear::where('team_id', $booking->team->team_id)->pluck('student_id')
+            : collect([$booking->student_id]);
+
+        foreach ($studentIds as $studentId) {
+            Notification::create([
+                'student_id' => $studentId,
+                'type' => 'consultation_cancellation',
+                'title' => $approve ? 'Cancellation approved' : 'Cancellation declined',
+                'message' => $approve
+                    ? "Your consultation on {$when} is cancelled."
+                    : "Your expert kept your consultation on {$when}. It is still on.",
+                'link' => route('student.consultation'),
+            ]);
+        }
+
+        return response()->json(['success' => true]);
     }
 
     /**

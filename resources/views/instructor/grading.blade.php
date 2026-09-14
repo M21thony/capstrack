@@ -7,6 +7,32 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="{{ asset('css/expert.css') }}" />
 @include('partials.skeleton-head', ['skReveal' => 'block'])
+<style>
+  /* One row per defense you sit on: what is left to grade reads first. */
+  .gl{background:var(--bg2);border:1px solid var(--border);border-radius:12px;display:flex;flex-direction:column;max-height:calc(100vh - 120px);overflow:hidden}
+  .gl-head{display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid var(--border);flex-wrap:wrap}
+  .gl-head b{font-size:14px}
+  .gl-head .sub{font-size:12.5px;color:var(--text3)}
+  .gl-filter{margin-left:auto;display:flex;gap:4px}
+  .gl-filter button{font:inherit;font-size:12px;font-weight:600;border:1px solid var(--border);background:var(--bg2);color:var(--text2);border-radius:999px;padding:3px 11px;cursor:pointer;min-height:28px}
+  .gl-filter button[aria-pressed="true"]{background:var(--accent-light);border-color:var(--accent);color:var(--accent3)}
+  .gl-scroll{overflow:auto;min-height:0}
+  .gl table{width:100%;border-collapse:collapse}
+  .gl th{position:sticky;top:0;background:var(--bg3);font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);text-align:left;padding:8px 14px;border-bottom:1px solid var(--border);white-space:nowrap}
+  .gl td{padding:10px 14px;border-bottom:1px solid var(--border);font-size:13px;vertical-align:middle}
+  .gl tr:last-child td{border-bottom:0}
+  .gl tbody tr{cursor:pointer}
+  .gl tbody tr:hover td{background:var(--bg3)}
+  .gl-team{display:flex;align-items:center;gap:10px;min-width:0}
+  .gl-av{flex:none;width:32px;height:32px;border-radius:50%;background:var(--navy-dark,#1e2028);color:#fff;font-size:11px;font-weight:700;display:grid;place-items:center}
+  .gl-team b{display:block;font-size:13.5px}
+  .gl-team small{display:block;color:var(--text3);font-size:12px;max-width:44ch;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .gl-muted{color:var(--text3);font-size:12px}
+  .gl-num{font-variant-numeric:tabular-nums}
+  .gl-go{font:inherit;font-size:12px;font-weight:600;border-radius:6px;padding:6px 12px;border:1px solid var(--border2);background:var(--bg2);color:var(--text);text-decoration:none;white-space:nowrap}
+  .gl-go.primary{background:var(--accent);border-color:var(--accent);color:#18191f}
+  .gl-empty{padding:40px 16px;text-align:center;color:var(--text3);font-size:13px}
+</style>
 </head>
 <body>
 
@@ -50,47 +76,62 @@
         <div style="font-size:13px;color:var(--text3);max-width:400px;margin:0 auto">You haven't been placed on a defense panel yet. Once an admin assigns you to a team's panel, it will show up here.</div>
       </div>
     @else
-      <div class="team-progress-grid">
-        @foreach($rows as $row)
-        <a href="{{ route('instructor.grading.show', $row->defense_id) }}" class="team-progress-card" style="text-decoration:none;color:inherit;display:block">
-          <div class="tp-header">
-            <div class="tp-avatar" style="background:linear-gradient(135deg,#1d4ed8,#7c3aed)">{{ substr($row->team_name, 0, 2) }}</div>
-            <div style="flex:1;min-width:0">
-              <div class="tp-team">{{ $row->team_name }}</div>
-              <div class="tp-title">{{ $row->project_title ?? 'No title set' }}</div>
-            </div>
+      @php $toGrade = $rows->where('status', '!=', 'submitted')->count(); @endphp
+      <section class="gl" aria-label="Defenses to grade">
+        <div class="gl-head">
+          <b>Your defenses</b>
+          <span class="sub">{{ $toGrade }} to grade · {{ $rows->count() - $toGrade }} submitted</span>
+          <div class="gl-filter" role="group" aria-label="Show">
+            <button type="button" data-show="all" aria-pressed="true">All</button>
+            <button type="button" data-show="todo" aria-pressed="false">To grade</button>
+            <button type="button" data-show="done" aria-pressed="false">Submitted</button>
           </div>
-
-          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">
-            <span class="badge badge-gold" style="font-size:10px">{{ $row->defense_type }}</span>
-            <span class="badge badge-blue" style="font-size:10px">{{ $row->panel_role }}</span>
-          </div>
-
-          <div style="font-size:12px;color:var(--text3);margin-bottom:10px">
-            @if($row->schedule_date)
-              {{ $row->schedule_date->format('M j, Y') }}
-              @if($row->schedule_date->format('H:i') !== '00:00')
-                {{ $row->schedule_date->format('g:i A') }}–{{ ($row->end_date ?? $row->schedule_date->copy()->addHours(2))->format('g:i A') }}
-              @endif
-              · {{ $row->venue }}
-            @else
-              Not yet scheduled
-            @endif
-          </div>
-
-          <div style="padding-top:10px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
-            @if($row->status === 'submitted')
-              <span class="badge badge-green" style="font-size:10px">Submitted{{ $row->total_score !== null ? ' · '.rtrim(rtrim(number_format((float) $row->total_score, 2), '0'), '.') : '' }}</span>
-            @elseif($row->status === 'draft')
-              <span class="badge badge-amber" style="font-size:10px">Draft Saved</span>
-            @else
-              <span class="badge badge-gray" style="font-size:10px">Not Started</span>
-            @endif
-            <span style="font-size:11px;color:var(--accent3);font-weight:600">Grade Team →</span>
-          </div>
-        </a>
-        @endforeach
-      </div>
+        </div>
+        <div class="gl-scroll">
+          <table>
+            <thead><tr><th>Team</th><th>Defense</th><th>Your seat</th><th>When</th><th>Your grade</th><th></th></tr></thead>
+            <tbody>
+              @foreach($rows as $row)
+                @php $url = route('instructor.grading.show', $row->defense_id); $done = $row->status === 'submitted'; @endphp
+                <tr data-state="{{ $done ? 'done' : 'todo' }}" onclick="location.href='{{ $url }}'">
+                  <td>
+                    <div class="gl-team">
+                      <span class="gl-av" aria-hidden="true">{{ strtoupper(substr($row->team_name, 0, 2)) }}</span>
+                      <span style="min-width:0"><b>{{ $row->team_name }}</b><small title="{{ $row->project_title }}">{{ $row->project_title ?? 'No title set' }}</small></span>
+                    </div>
+                  </td>
+                  <td>
+                    {{ $row->defense_type }}
+                    @if($row->attempt > 1)<span class="badge badge-amber" style="font-size:10px;margin-left:4px">Redefense</span>@endif
+                    @if($row->outcome)<div class="gl-muted">{{ $row->outcome }}</div>@endif
+                  </td>
+                  <td>{{ $row->panel_role }}</td>
+                  <td class="gl-num">
+                    {{ $row->schedule_date->format('M j, Y') }}
+                    <div class="gl-muted">
+                      @if($row->schedule_date->format('H:i') !== '00:00')
+                        {{ $row->schedule_date->format('g:i A') }}–{{ ($row->end_date ?? $row->schedule_date->copy()->addHours(2))->format('g:i A') }} ·
+                      @endif
+                      {{ $row->venue }}
+                    </div>
+                  </td>
+                  <td>
+                    @if($done)
+                      <span class="badge badge-green" style="font-size:10px">Submitted{{ $row->total_score !== null ? ' · '.rtrim(rtrim(number_format((float) $row->total_score, 2), '0'), '.') : '' }}</span>
+                    @elseif($row->status === 'draft')
+                      <span class="badge badge-amber" style="font-size:10px">Draft saved</span>
+                    @else
+                      <span class="badge badge-gray" style="font-size:10px">Not started</span>
+                    @endif
+                  </td>
+                  <td style="text-align:right"><a class="gl-go {{ $done ? '' : 'primary' }}" href="{{ $url }}">{{ $done ? 'Open' : ($row->status === 'draft' ? 'Continue' : 'Grade') }}</a></td>
+                </tr>
+              @endforeach
+              <tr class="gl-none" hidden><td colspan="6" class="gl-empty">Nothing here.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
     @endif
 
   </div>
@@ -101,6 +142,18 @@
 @include('instructor.partials.skeleton-toggle')
 
 <script>
+document.querySelectorAll('.gl-filter button').forEach(function (b) {
+  b.addEventListener('click', function () {
+    document.querySelectorAll('.gl-filter button').forEach(function (x) { x.setAttribute('aria-pressed', x === b); });
+    var shown = 0;
+    document.querySelectorAll('.gl tbody tr[data-state]').forEach(function (tr) {
+      tr.hidden = b.dataset.show !== 'all' && tr.dataset.state !== b.dataset.show;
+      if (!tr.hidden) shown++;
+    });
+    document.querySelector('.gl-none').hidden = shown > 0;
+  });
+});
+
 /* Mobile sidebar toggle */
 var sidebarEl = document.querySelector('.sidebar');
 var sidebarOverlay = document.getElementById('sidebar-overlay');

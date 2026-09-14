@@ -141,7 +141,7 @@ class DefenseOutcomeRecorder
                 'title' => $defense->defense_type.' result',
                 'message' => 'Your panel decided: <strong>'.e($label).'</strong>. '
                     .e(DefenseOutcome::description($outcome, $defense->defense_type)),
-                'link' => route('student.dashboard'),
+                'link' => route('student.defense-scores'),
             ]);
         }
     }
