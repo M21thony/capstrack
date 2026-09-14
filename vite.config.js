@@ -13,6 +13,7 @@ export default defineConfig({
                 'resources/js/main.jsx',
                 'resources/js/student-review.jsx',
                 'resources/js/milestones/tracker.js',
+                'resources/js/submission-preview.js',
                 'resources/css/defenses.css',
                 'resources/js/defenses/panel-assignment.js',
                 'resources/js/defenses/defense-scheduling.js',
