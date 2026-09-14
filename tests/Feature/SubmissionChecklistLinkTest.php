@@ -4,8 +4,9 @@ namespace Tests\Feature;
 
 use App\Models\CapstoneDocument;
 use App\Models\CapstoneDocumentReview;
-use App\Models\Milestone;
-use App\Models\MilestoneItem;
+use App\Models\CapstoneExpert;
+use App\Models\Checklist;
+use App\Models\Deliverable;
 use App\Models\Student;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
@@ -14,21 +15,23 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Tests\Concerns\BuildsChecklists;
 use Tests\TestCase;
 
 /**
  * Document Submission is the one place a file goes in. A student sending one
- * for a checklist line says which, and that is what moves the checklist.
+ * for a deliverable says which, and that is what moves the tracker.
  */
 class SubmissionChecklistLinkTest extends TestCase
 {
+    use BuildsChecklists;
     use RefreshDatabase;
 
     private Student $student;
 
     private Team $team;
 
-    private Milestone $milestone;
+    private Checklist $checklist;
 
     protected function setUp(): void
     {
@@ -36,7 +39,9 @@ class SubmissionChecklistLinkTest extends TestCase
         Storage::fake('local');
 
         $this->team = Team::create(['team_name' => 'Team Alpha', 'project_title' => 'Alpha', 'team_status' => 'Active']);
-        $this->student = Student::factory()->withCompleteProfile()->create();
+        $this->student = Student::factory()->withCompleteProfile()->create([
+            'course' => 'Bachelor of Science in Information Technology', 'year_section' => '3rd · A',
+        ]);
         StudentSchoolYear::create(['student_id' => $this->student->student_id, 'team_id' => $this->team->team_id, 'program' => 'BSIT']);
 
         $roleId = DB::table('roles')->insertGetId(['role_name' => 'adviser', 'created_at' => now(), 'updated_at' => now()]);
@@ -51,7 +56,7 @@ class SubmissionChecklistLinkTest extends TestCase
             'status' => 'approved', 'created_at' => now(), 'updated_at' => now(),
         ]);
 
-        $this->milestone = Milestone::create(['team_id' => $this->team->team_id, 'title' => 'Capstone 1', 'status' => 'todo']);
+        $this->checklist = $this->emptyChecklist($this->capsaFor());
     }
 
     private function send(array $data)
@@ -59,100 +64,107 @@ class SubmissionChecklistLinkTest extends TestCase
         return $this->actingAs($this->student)->post(route('student.submission.store'), $data);
     }
 
-    public function test_a_file_sent_for_a_line_is_recorded_against_it_and_closes_it(): void
+    public function test_a_file_sent_for_a_deliverable_is_recorded_against_it_and_closes_it(): void
     {
-        $item = $this->milestone->items()->create(['title' => 'Business Process Analysis', 'kind' => MilestoneItem::DOCUMENT]);
+        $bpa = $this->addDeliverable($this->checklist, ['title' => 'Business Process Analysis', 'kind' => Deliverable::DOCUMENT]);
 
         $this->send([
             'file' => UploadedFile::fake()->create('final_na_final.pdf', 50, 'application/pdf'),
             'recipients' => ['adviser'],
-            'milestone_item_id' => $item->id,
+            'deliverable_id' => $bpa->id,
         ])->assertOk()->assertJson(['success' => true]);
 
-        $this->assertSame($item->id, (int) CapstoneDocument::first()->milestone_item_id);
-        $this->assertSame(MilestoneProgress::DONE, $this->milestone->progress()->items->first()->state);
+        $this->assertSame($bpa->id, (int) CapstoneDocument::first()->deliverable_id);
+        $this->assertSame(MilestoneProgress::DONE, $this->progressOf($this->checklist, $this->team, $bpa)->state);
     }
 
-    public function test_another_teams_line_is_refused(): void
+    public function test_a_deliverable_from_another_checklist_is_refused(): void
     {
-        $other = Team::create(['team_name' => 'Team Other', 'project_title' => 'Other', 'team_status' => 'Active']);
-        $theirs = Milestone::create(['team_id' => $other->team_id, 'title' => 'Capstone 1', 'status' => 'todo'])
-            ->items()->create(['title' => 'Chapter 1 Draft', 'kind' => MilestoneItem::DOCUMENT]);
+        $theirs = $this->addDeliverable(
+            $this->emptyChecklist(CapstoneExpert::factory()->create(['approved_status' => true, 'sections' => ['BSIT-3B']])),
+            ['title' => 'Chapter 1 Draft', 'kind' => Deliverable::DOCUMENT],
+        );
 
         $this->send([
             'file' => UploadedFile::fake()->create('ch1.pdf', 50, 'application/pdf'),
             'recipients' => ['adviser'],
-            'milestone_item_id' => $theirs->id,
+            'deliverable_id' => $theirs->id,
         ])->assertStatus(422);
 
         $this->assertSame(0, CapstoneDocument::count());
     }
 
-    /** A signed paper goes to the CaPSA to check, not to a reviewer - and a phone photo is fine. */
-    public function test_a_photo_of_a_signed_form_needs_no_reviewer(): void
+    public function test_an_archived_deliverable_is_refused(): void
     {
-        $form = $this->milestone->items()->create(['title' => 'Signed Title Defense Hearing Notice', 'kind' => MilestoneItem::FORM]);
+        $gone = $this->addDeliverable($this->checklist, ['title' => 'Old form', 'archived_at' => now()]);
 
-        $this->send([
-            'file' => UploadedFile::fake()->image('notice.jpg'),
-            'milestone_item_id' => $form->id,
-        ])->assertOk()->assertJson(['success' => true]);
-
-        $this->assertSame(0, CapstoneDocumentReview::count());
-
-        $state = $this->milestone->progress()->items->first();
-        $this->assertSame(MilestoneProgress::HANDED_IN, $state->state);
-        $this->assertSame(MilestoneProgress::WAITING_ON_CAPSA, $state->waiting_on);
+        $this->send(['file' => UploadedFile::fake()->image('old.jpg'), 'deliverable_id' => $gone->id])->assertStatus(422);
     }
 
-    public function test_a_photo_is_only_accepted_for_a_signed_form(): void
+    /** A signed paper goes to the CaPSA to check, not to a reviewer - and a phone photo is fine. */
+    public function test_a_photo_of_a_signed_form_or_clf_needs_no_reviewer(): void
     {
-        $draft = $this->milestone->items()->create(['title' => 'Chapter 1 Draft', 'kind' => MilestoneItem::DOCUMENT]);
+        $form = $this->addDeliverable($this->checklist, ['title' => 'Signed Title Defense Hearing Notice']);
+        $clf = $this->addDeliverable($this->checklist, ['title' => 'Signed CLF Approving Chapter 1', 'kind' => Deliverable::APPROVAL, 'role' => 'adviser']);
+
+        foreach ([$form, $clf] as $paper) {
+            $this->send(['file' => UploadedFile::fake()->image('scan.jpg'), 'deliverable_id' => $paper->id])
+                ->assertOk()->assertJson(['success' => true]);
+
+            $this->assertSame(MilestoneProgress::WAITING_ON_CAPSA, $this->progressOf($this->checklist, $this->team, $paper)->waiting_on);
+        }
+
+        $this->assertSame(0, CapstoneDocumentReview::count());
+    }
+
+    public function test_a_photo_is_only_accepted_for_a_signed_paper(): void
+    {
+        $draft = $this->addDeliverable($this->checklist, ['title' => 'Chapter 1 Draft', 'kind' => Deliverable::DOCUMENT]);
 
         $this->send([
             'file' => UploadedFile::fake()->image('draft.jpg'),
             'recipients' => ['adviser'],
-            'milestone_item_id' => $draft->id,
+            'deliverable_id' => $draft->id,
         ])->assertStatus(422);
     }
 
-    public function test_anything_but_a_signed_form_still_needs_someone_to_send_it_to(): void
+    public function test_anything_but_a_signed_paper_still_needs_someone_to_send_it_to(): void
     {
-        $draft = $this->milestone->items()->create(['title' => 'Chapter 1 Draft', 'kind' => MilestoneItem::DOCUMENT]);
+        $draft = $this->addDeliverable($this->checklist, ['title' => 'Chapter 1 Draft', 'kind' => Deliverable::DOCUMENT]);
 
         $this->send([
             'file' => UploadedFile::fake()->create('ch1.pdf', 50, 'application/pdf'),
-            'milestone_item_id' => $draft->id,
+            'deliverable_id' => $draft->id,
         ])->assertStatus(422);
 
         $this->assertSame(0, CapstoneDocument::count());
     }
 
-    /** A revision of the same line continues that line's version count, whatever the file is called. */
-    public function test_a_resubmission_for_the_same_line_is_the_next_version(): void
+    /** A revision of the same deliverable continues its version count, whatever the file is called. */
+    public function test_a_resubmission_for_the_same_deliverable_is_the_next_version(): void
     {
-        $item = $this->milestone->items()->create(['title' => 'Business Process Analysis', 'kind' => MilestoneItem::DOCUMENT]);
+        $bpa = $this->addDeliverable($this->checklist, ['title' => 'Business Process Analysis', 'kind' => Deliverable::DOCUMENT]);
 
         foreach (['bpa.pdf', 'bpa_revised_final.pdf'] as $name) {
             $this->send([
                 'file' => UploadedFile::fake()->create($name, 50, 'application/pdf'),
                 'recipients' => ['adviser'],
-                'milestone_item_id' => $item->id,
+                'deliverable_id' => $bpa->id,
             ])->assertOk();
         }
 
         $this->assertSame([1, 2], CapstoneDocument::orderBy('file_id')->pluck('file_version')->all());
     }
 
-    /** Opened from the checklist, the form arrives with the line already picked. */
-    public function test_the_form_opens_with_the_line_already_picked(): void
+    /** Opened from the tracker, the form arrives with the deliverable already picked. */
+    public function test_the_form_opens_with_the_deliverable_already_picked(): void
     {
-        $item = $this->milestone->items()->create(['title' => 'Chapter 1 Draft', 'kind' => MilestoneItem::DOCUMENT]);
+        $draft = $this->addDeliverable($this->checklist, ['title' => 'Chapter 1 Draft', 'kind' => Deliverable::DOCUMENT]);
 
         $this->actingAs($this->student)
-            ->get(route('student.submission', ['item' => $item->id]))
+            ->get(route('student.submission', ['item' => $draft->id]))
             ->assertOk()
             ->assertSee('Chapter 1 Draft')
-            ->assertSee('value="'.$item->id.'" selected', false);
+            ->assertSee('value="'.$draft->id.'" selected', false);
     }
 }

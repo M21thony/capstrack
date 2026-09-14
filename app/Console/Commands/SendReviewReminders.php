@@ -29,12 +29,14 @@ class SendReviewReminders extends Command
     {
         $waiting = DB::table('capstone_document_review as r')
             ->join('capstone_documents as d', 'd.file_id', '=', 'r.file_id')
-            ->join('milestone_items as i', 'i.id', '=', 'd.milestone_item_id')
-            ->join('milestones as m', 'm.id', '=', 'i.milestone_id')
-            ->leftJoin('team as t', 't.team_id', '=', 'm.team_id')
+            ->join('deliverables as i', 'i.id', '=', 'd.deliverable_id')
+            ->join('student_s_y as sy', 'sy.student_id', '=', 'd.student_id')
+            ->leftJoin('team as t', 't.team_id', '=', 'sy.team_id')
+            ->whereNull('i.deleted_at')
             ->whereIn('r.review_status', [CapstoneDocumentReview::AWAITING, CapstoneDocumentReview::IN_PROGRESS])
-            ->select('r.expert_id', 'i.title', 't.team_name', 'd.created_at as submitted_at', DB::raw('COALESCE(i.due_date, m.due_date) as due_on'))
-            ->get();
+            ->select('r.review_id', 'r.expert_id', 'i.title', 't.team_name', 'd.created_at as submitted_at', 'i.due_date as due_on')
+            ->get()
+            ->unique('review_id');
 
         $sent = 0;
 

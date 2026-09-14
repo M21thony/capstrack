@@ -49,12 +49,17 @@ class ExpertPagesStillRenderTest extends TestCase
         $this->actingAs($this->expert, 'expert')->get($url)->assertOk();
     }
 
-    /** Progress folded into Team Overview; the old URL still lands somewhere. */
-    public function test_progress_monitoring_now_goes_to_team_overview(): void
+    /** Milestone progress is the CaPSA's tracker, read-only, and Team Overview links to it. */
+    public function test_milestone_progress_renders_and_is_linked_from_team_overview(): void
     {
         $this->actingAs($this->expert, 'expert')
             ->get('/instructor/progress')
-            ->assertRedirect(route('instructor.teams'));
+            ->assertOk()
+            ->assertSee('id="ms-tracker"', false);
+
+        $this->actingAs($this->expert, 'expert')
+            ->get('/instructor/teams')
+            ->assertSee(route('instructor.progress'), false);
     }
 
     /** And the team's own numbers arrived on the page that took it over. */

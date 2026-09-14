@@ -3,8 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\CapstoneExpert;
-use App\Models\Milestone;
-use App\Models\MilestoneItem;
+use App\Models\Checklist;
+use App\Models\Deliverable;
 use App\Models\Student;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
@@ -25,7 +25,7 @@ class ReaderScreensTest extends TestCase
 
     private CapstoneExpert $adviser;
 
-    private MilestoneItem $item;
+    private Deliverable $item;
 
     private int $reviewId;
 
@@ -37,15 +37,16 @@ class ReaderScreensTest extends TestCase
         $team = Team::create(['team_name' => 'CapsTrack', 'team_status' => 'Active', 'leader_id' => $this->student->student_id, 'is_confirmed' => true]);
         StudentSchoolYear::create(['student_id' => $this->student->student_id, 'team_id' => $team->team_id]);
 
-        $milestone = Milestone::create(['team_id' => $team->team_id, 'title' => 'Capstone 1', 'status' => 'todo']);
-        $this->item = $milestone->items()->create(['title' => 'Chapter 2 Draft', 'kind' => MilestoneItem::DOCUMENT, 'due_date' => '2026-10-17']);
+        $this->item = Checklist::create(['capsa_id' => CapstoneExpert::factory()->create()->expert_id, 'program' => 'BSIT', 'title' => 'Capstone 1 Checklist'])
+            ->milestones()->create(['name' => 'Chapter 2', 'position' => 0])
+            ->deliverables()->create(['title' => 'Chapter 2 Draft', 'kind' => Deliverable::DOCUMENT, 'due_date' => '2026-10-17']);
 
         $this->adviser = CapstoneExpert::factory()->create(['approved_status' => true, 'first_name' => 'Ana', 'last_name' => 'Reyes']);
 
         // The team's second upload of this requirement: its 1st revision.
         $fileId = DB::table('capstone_documents')->insertGetId([
             'student_id' => $this->student->student_id, 'file_name' => 'Chapter2_final', 'file_path' => 'submissions/ch2.pdf',
-            'file_version' => 2, 'milestone_item_id' => $this->item->id, 'document_status' => 'Pending',
+            'file_version' => 2, 'deliverable_id' => $this->item->id, 'document_status' => 'Pending',
             'created_at' => now(), 'updated_at' => now(),
         ]);
 

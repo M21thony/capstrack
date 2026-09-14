@@ -16,3 +16,7 @@ Schedule::command('consultations:send-reminders')->dailyAt('00:05');
 // Every morning, each adviser/consultant with checklist documents still
 // waiting on their review gets one email listing them.
 Schedule::command('milestones:send-review-reminders')->dailyAt('07:00');
+
+// Milestones and deliverables a CaPSA removed are kept a few days so Undo can
+// bring them back, then deleted for good.
+Schedule::command('checklists:purge-removed')->dailyAt('02:00');

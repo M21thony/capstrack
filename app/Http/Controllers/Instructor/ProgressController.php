@@ -3,72 +3,38 @@
 namespace App\Http\Controllers\Instructor;
 
 use App\Http\Controllers\Controller;
-use App\Models\CapstoneExpert;
-use App\Models\StudentSchoolYear;
-use App\Models\Team;
 use App\Models\TeamExpertAssignment;
+use App\Support\ChecklistTracker;
 
 class ProgressController extends Controller
 {
     /**
-     * Progress lives on Team Overview now.
-     *
-     * The two pages listed the same teams and answered halves of the same
-     * question, so an adviser looking at a team had to leave it to find out
-     * how that team was doing. The route stays so a bookmark still lands
-     * somewhere; everything it used to draw is on the team's own card.
+     * Milestone progress for the teams this expert advises or consults for:
+     * the CaPSA's tracker, read-only. Teams they grade as a panelist or read
+     * as a grammarian are not theirs to follow.
      */
-    public function index()
+    public function index(ChecklistTracker $tracker)
     {
-        return redirect()->route('instructor.teams');
-    }
-
-    /** Kept for reference until the merged page has been through a term. */
-    public function legacyIndex()
-    {
-        /** @var CapstoneExpert $expert */
         $expert = auth()->guard('expert')->user();
 
         $teamIds = TeamExpertAssignment::where('expert_id', $expert->expert_id)
             ->where('status', 'approved')
-            ->pluck('team_id');
-
-        $teams = Team::whereIn('team_id', $teamIds)
-            ->with('leader', 'members')
+            ->with(['expertRole.role', 'role'])
             ->get()
-            ->map(function ($team) {
-                // Counted from the items, on the model, because Team
-                // Overview asks the same question.
-                $summary = $team->progressSummary();
+            ->filter(fn ($assignment) => in_array($assignment->engaged_role_name, ['adviser', 'consultant'], true))
+            ->pluck('team_id')
+            ->unique()
+            ->values()
+            ->all();
 
-                $studentSy = StudentSchoolYear::where('team_id', $team->team_id)->first();
+        $overview = $tracker->overview([], null, false, $teamIds);
 
-                return (object) [
-                    'team' => $team,
-                    'progress' => $summary->percent,
-                    'completed' => $summary->completed,
-                    'total' => $summary->total,
-                    'overdue' => $summary->overdue,
-                    'section' => $studentSy?->program ?? 'N/A',
-                ];
-            });
+        // An expert follows a handful of teams, so every section comes at once
+        // and switching between them needs no request.
+        $overview['all'] = collect($overview['sections'])
+            ->mapWithKeys(fn ($section) => [$section['name'] => $tracker->section($section['name'], false, $teamIds)])
+            ->all();
 
-        $teamsMonitored = $teams->count();
-        $avgCompletion = $teamsMonitored > 0 ? round($teams->avg('progress')) : 0;
-        $overdueMilestones = $teams->sum('overdue');
-        $onTrack = $teams->where('overdue', 0)->count();
-
-        $sections = StudentSchoolYear::whereNotNull('program')
-            ->distinct('program')
-            ->pluck('program');
-
-        return view('instructor.progress', [
-            'teams' => $teams,
-            'teamsMonitored' => $teamsMonitored,
-            'avgCompletion' => $avgCompletion,
-            'overdueMilestones' => $overdueMilestones,
-            'onTrack' => $onTrack,
-            'sections' => $sections,
-        ]);
+        return view('instructor.progress', ['tracker' => $overview]);
     }
 }

@@ -4,13 +4,14 @@ namespace App\Http\Controllers;
 
 use App\Models\CapstoneDocument;
 use App\Models\CapstoneDocumentReview;
+use App\Models\Deliverable;
 use App\Models\GoogleDriveToken;
-use App\Models\Milestone;
-use App\Models\MilestoneItem;
-use App\Support\MilestoneProgress;
+use App\Models\Team;
 use App\Services\GoogleDriveService;
 use App\Services\RecipientResolver;
+use App\Support\MilestoneProgress;
 use App\Support\StudentTeam;
+use App\Support\TeamChecklist;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -32,7 +33,7 @@ class SubmissionController extends Controller
             'recipients' => 'nullable|array',
             'recipients.*' => 'in:adviser,consultant,grammarian,subject_adviser',
             'subject_adviser_folder_id' => 'nullable|string',
-            'milestone_item_id' => 'nullable|integer',
+            'deliverable_id' => 'nullable|integer',
         ]);
 
         $studentId = Auth::id(); // adjust guard if students use a named guard
@@ -59,10 +60,11 @@ class SubmissionController extends Controller
         // for feedback only and moves nothing on the checklist.
         $item = null;
 
-        if ($request->filled('milestone_item_id')) {
-            $item = MilestoneItem::with('milestone')->find($request->integer('milestone_item_id'));
+        if ($request->filled('deliverable_id')) {
+            $checklist = ($teamModel = Team::find($studentYear->team_id)) ? app(TeamChecklist::class)->for($teamModel) : null;
+            $item = Deliverable::active()->with('milestone')->find($request->integer('deliverable_id'));
 
-            if (! $item || (int) $item->milestone?->team_id !== (int) $studentYear->team_id) {
+            if (! $item || ! $checklist || (int) $item->milestone->checklist_id !== $checklist->id) {
                 return response()->json([
                     'success' => false,
                     'message' => 'That requirement is not on your team\'s checklist.',
@@ -70,10 +72,11 @@ class SubmissionController extends Controller
             }
         }
 
-        // A signed paper is checked by the CaPSA, not reviewed, so it needs no
-        // recipient - and a phone photo of it is as good as a scan. Anything
-        // else goes to a reviewer's annotator, which reads documents.
-        $isPaper = $item?->isTickedByHand() ?? false;
+        // A signed paper - a form, or a CLF signed by hand - is checked by the
+        // CaPSA, not reviewed, so it needs no recipient and a phone photo of
+        // it is as good as a scan. Anything else goes to a reviewer's
+        // annotator, which reads documents.
+        $isPaper = $item && in_array($item->kind, Deliverable::CHECKED_BY_CAPSA, true);
         $allowed = $isPaper ? ['pdf', 'jpg', 'jpeg', 'png'] : ['pdf', 'doc', 'docx', 'ppt', 'pptx'];
 
         if ($item && ! in_array($originalExt, $allowed, true)) {
@@ -114,7 +117,7 @@ class SubmissionController extends Controller
         $lastVersion = CapstoneDocument::whereIn('student_id', StudentTeam::memberIdsFor($studentId))
             ->when(
                 $item,
-                fn ($query) => $query->where('milestone_item_id', $item->id),
+                fn ($query) => $query->where('deliverable_id', $item->id),
                 fn ($query) => $query->when(
                     $chapter,
                     fn ($query) => $query->where('chapter', $chapter),
@@ -127,7 +130,7 @@ class SubmissionController extends Controller
             'student_id' => $studentId,
             'file_name' => $title,
             'chapter' => $chapter,
-            'milestone_item_id' => $item?->id,
+            'deliverable_id' => $item?->id,
             'file_path' => $storedPath,
             'file_version' => $lastVersion + 1,
             'document_status' => 'Pending',
@@ -271,18 +274,26 @@ class SubmissionController extends Controller
         // arrives already picked.
         $checklistItems = collect();
 
-        if ($studentYear && $studentYear->team_id) {
-            $checklistItems = Milestone::where('team_id', $studentYear->team_id)->get()
-                ->flatMap(fn (Milestone $milestone) => $milestone->progress()->items)
-                ->reject(fn ($row) => $row->item->kind === MilestoneItem::DEFENSE
+        $progress = $studentYear && $studentYear->team_id
+            ? Team::find($studentYear->team_id)?->checklistProgress()
+            : null;
+
+        if ($progress) {
+            $checklistItems = $progress->items
+                ->reject(fn ($row) => $row->item->kind === Deliverable::DEFENSE
                     || in_array($row->state, MilestoneProgress::COMPLETE_STATES, true))
                 ->map(fn ($row) => (object) [
                     'id' => $row->item->id,
                     'title' => $row->item->title,
-                    'phase' => $row->item->phase ?: 'Other requirements',
+                    'phase' => $row->milestone->name,
                     'kind' => $row->item->kind,
                     'role' => $row->item->role,
-                    'note' => $row->changes_requested ? self::ordinal($row->revision).' revision requested' : null,
+                    'note' => match (true) {
+                        (bool) $row->note => 'sent back: '.$row->note,
+                        $row->changes_requested => self::ordinal($row->revision).' revision requested',
+                        $row->waiting_on === MilestoneProgress::WAITING_ON_SIGNED_COPY => 'approved, upload the signed copy',
+                        default => null,
+                    },
                 ])
                 ->values();
         }

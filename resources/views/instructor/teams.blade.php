@@ -314,6 +314,7 @@
               ? $needChasing.' '.Str::plural('team', $needChasing).' '.($needChasing === 1 ? 'needs' : 'need').' chasing'
               : 'Everyone on track' }}
         </span>
+        <a href="{{ route('instructor.progress') }}" style="margin-left:auto;font-size:12px;font-weight:600;color:var(--accent3);text-decoration:none;white-space:nowrap">Milestone progress &rarr;</a>
       </div>
 
       <div class="team-role-tabs">
