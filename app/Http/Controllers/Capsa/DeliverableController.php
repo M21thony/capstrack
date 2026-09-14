@@ -16,6 +16,15 @@ use Illuminate\Validation\Rule;
  */
 class DeliverableController extends Controller
 {
+    /** A real due date. A half-typed year like 0200 is a date too, so the range is what refuses it. */
+    private const DATE_RULE = ['date', 'after_or_equal:2000-01-01', 'before_or_equal:2100-12-31'];
+
+    private const DATE_MESSAGES = [
+        'due_date.date' => 'Enter a real due date.',
+        'due_date.after_or_equal' => 'Enter a due date from the year 2000 on.',
+        'due_date.before_or_equal' => 'Enter a due date before the year 2101.',
+    ];
+
     public function __construct(private ChecklistAccess $access) {}
 
     /** One deliverable per line pasted into "Add deliverables", all with the same settings. */
@@ -28,8 +37,8 @@ class DeliverableController extends Controller
             'titles.*' => ['required', 'string', 'max:255'],
             'kind' => ['required', Rule::in(Deliverable::KINDS)],
             'role' => ['nullable', 'required_if:kind,'.Deliverable::APPROVAL, Rule::in(['adviser', 'consultant'])],
-            'due_date' => ['nullable', 'date'],
-        ]);
+            'due_date' => ['nullable', ...self::DATE_RULE],
+        ], self::DATE_MESSAGES);
 
         $next = (int) $milestone->deliverables()->withTrashed()->max('position') + 1;
 
@@ -49,7 +58,7 @@ class DeliverableController extends Controller
     {
         $this->access->deliverable($deliverable);
 
-        $deliverable->update($this->changes($request->validate($this->rules())));
+        $deliverable->update($this->changes($request->validate($this->rules(), self::DATE_MESSAGES)));
 
         return response()->json(ChecklistController::deliverable($deliverable->fresh()));
     }
@@ -78,7 +87,7 @@ class DeliverableController extends Controller
         $change = validator($data['change'], $this->rules() + [
             'milestone_id' => ['sometimes', 'integer'],
             'shift_days' => ['sometimes', 'integer', 'between:-365,365'],
-        ])->validate();
+        ], self::DATE_MESSAGES)->validate();
 
         $rows = $this->access->deliverables($data['ids'])->sortBy('position')->values();
 
@@ -129,7 +138,7 @@ class DeliverableController extends Controller
             $valid = validator($item, $this->rules() + [
                 'checklist_milestone_id' => ['sometimes', 'integer'],
                 'position' => ['sometimes', 'integer', 'min:0'],
-            ])->validate();
+            ], self::DATE_MESSAGES)->validate();
 
             $deliverable = $rows[(int) $item['id']];
 
@@ -151,7 +160,7 @@ class DeliverableController extends Controller
             'title' => ['sometimes', 'required', 'string', 'max:255'],
             'kind' => ['sometimes', 'required', Rule::in(Deliverable::KINDS)],
             'role' => ['sometimes', 'nullable', Rule::in(['adviser', 'consultant'])],
-            'due_date' => ['sometimes', 'nullable', 'date'],
+            'due_date' => ['sometimes', 'nullable', ...self::DATE_RULE],
             'archived' => ['sometimes', 'boolean'],
         ];
     }

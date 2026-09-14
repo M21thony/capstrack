@@ -141,6 +141,37 @@ class MilestoneProgressTest extends TestCase
         $this->assertSame(MilestoneProgress::DONE, $this->progressOf($checklist, $this->team, $defense)->state);
     }
 
+    /** A panel asking for a re-defense leaves the defense open, and the attempts are counted. */
+    public function test_a_redefense_keeps_the_defense_open_until_a_later_attempt_passes(): void
+    {
+        $checklist = $this->emptyChecklist($this->capsa);
+        $defense = $this->addDeliverable($checklist, ['title' => 'Title Defense', 'kind' => Deliverable::DEFENSE, 'defense_type' => 'Title Defense']);
+
+        DB::table('defense_schedule')->insert([
+            'team_id' => $this->team->team_id, 'defense_type' => 'Title Defense', 'attempt' => 1,
+            'outcome' => DefenseOutcome::REDEFENSE, 'outcome_recorded_at' => now()->subWeek(),
+        ]);
+
+        $state = $this->progressOf($checklist, $this->team, $defense);
+        $this->assertSame(MilestoneProgress::HANDED_IN, $state->state);
+        $this->assertSame(MilestoneProgress::WAITING_ON_REDEFENSE, $state->waiting_on);
+        $this->assertSame(1, $state->revision);
+
+        $second = DB::table('defense_schedule')->insertGetId([
+            'team_id' => $this->team->team_id, 'defense_type' => 'Title Defense', 'attempt' => 2,
+        ]);
+
+        $state = $this->progressOf($checklist, $this->team, $defense);
+        $this->assertNull($state->waiting_on, 'the re-defense is on the calendar now');
+        $this->assertSame(1, $state->revision);
+
+        DB::table('defense_schedule')->where('defense_id', $second)->update([
+            'outcome' => DefenseOutcome::PASSED, 'outcome_recorded_at' => now(),
+        ]);
+
+        $this->assertSame(MilestoneProgress::DONE, $this->progressOf($checklist, $this->team, $defense)->state);
+    }
+
     public function test_late_and_overdue_are_worked_out_from_the_dates(): void
     {
         $checklist = $this->emptyChecklist($this->capsa);

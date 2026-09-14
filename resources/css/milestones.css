@@ -21,10 +21,24 @@
 
 /* Buttons */
 .ms-btn { display: inline-flex; align-items: center; justify-content: center; gap: 5px; border: 1px solid var(--border2); background: var(--bg2); border-radius: 6px; padding: 4px 11px; font-size: 12.5px; font-weight: 600; cursor: pointer; color: var(--text2); min-height: 30px; white-space: nowrap; }
-.ms-btn .ms-i { width: 14px; height: 14px; }
-.ms-btn-icon { padding: 0; width: 30px; }
-.ms-btn-link.ms-btn-icon:hover { background: var(--bg4); }
-.ms-btn-link.ms-btn-warn.ms-btn-icon:hover { background: var(--red-bg); }
+/* An action's icon sits on its own tinted tile, so the buttons read at a glance. */
+.ms-btn:has(.ms-ico) { padding-left: 4px; }
+.ms-ico { width: 22px; height: 22px; border-radius: 6px; display: grid; place-items: center; flex: none; background: var(--bg4); color: var(--text2); }
+.ms-ico .ms-i { width: 13px; height: 13px; stroke-width: 2.4; }
+.ms-btn-gold .ms-ico { background: rgba(24,25,31,.14); color: var(--navy-dark, #18191f); }
+.ms-btn-warn .ms-ico { background: var(--red-bg); color: var(--red); }
+.ms-btn-add { color: var(--accent3); border-color: #e3d08f; }
+.ms-btn-add:hover { background: var(--accent-light); color: var(--accent3); }
+.ms-btn-add .ms-ico { background: #f5ecd0; color: var(--accent3); }
+.ms-btn-danger .ms-ico { background: rgba(255,255,255,.2); color: #fff; }
+.ms-bulk.ms-on .ms-ico { background: rgba(255,255,255,.16); color: #fff; }
+.ms-bulk.ms-on .ms-btn-warn .ms-ico { background: rgba(255,120,120,.22); color: #ffb4b4; }
+.ms-bulk.ms-on .ms-btn-gold { background: var(--accent); border-color: var(--accent); color: var(--navy-dark, #18191f); }
+.ms-unsaved { color: var(--amber); font-size: 12.5px; }
+.ms-pending-slot { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+/* A row or name with edits not saved yet. */
+.ms-erow.ms-dirty { background: var(--amber-bg); box-shadow: inset 3px 0 0 var(--amber); }
+.ms-dirty-field { border-color: var(--amber) !important; background: var(--bg2) !important; }
 .ms-btn:hover { background: var(--bg3); color: var(--text); }
 .ms-btn-gold { background: var(--accent); border-color: var(--accent); color: var(--navy-dark, #18191f); }
 .ms-btn-gold:hover { background: var(--accent2); color: var(--navy-dark, #18191f); }
@@ -181,13 +195,13 @@
    bulk bar, inheriting would paint white text on these white fields. */
 .ms-dialog .ms-select, .ms-app .ms-select { border: 1px solid var(--border2); border-radius: 6px; padding: 3px 6px; min-height: 30px; background: var(--bg2); color: var(--text); font-size: 12.5px; }
 .ms-dialog .ms-select::placeholder { color: var(--text3); }
-.ms-days { width: 76px; }
+.ms-days { width: 58px; }
 .ms-grp { display: flex; gap: 4px; align-items: center; }
 .ms-divider { width: 1px; align-self: stretch; background: var(--border); margin: 4px; }
 .ms-bulk.ms-on .ms-divider { background: rgba(255,255,255,.2); }
 
 .ms-ed-list { padding: 0 14px 14px; display: grid; align-content: start; gap: 6px; }
-.ms-labels, .ms-erow { display: grid; grid-template-columns: 18px 26px minmax(200px, 1fr) 190px 140px 68px; gap: 8px; align-items: center; }
+.ms-labels, .ms-erow { display: grid; grid-template-columns: 18px 26px minmax(200px, 1fr) 190px 140px 196px; gap: 8px; align-items: center; }
 .ms-labels { position: sticky; top: 0; z-index: 2; padding: 8px 12px 4px 42px; background: var(--bg, #f2f3f5); font-size: 10.5px; text-transform: uppercase; letter-spacing: .04em; color: var(--text3); font-weight: 600; }
 .ms-egroup { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; }
 .ms-ehead { display: flex; align-items: center; gap: 5px; padding: 4px 9px 4px 4px; background: var(--bg3); border-radius: 10px; }
@@ -197,7 +211,7 @@
 .ms-ord { width: 22px; height: 22px; border-radius: 999px; background: var(--navy-dark, #18191f); color: #fff; font-size: 11px; font-weight: 700; display: grid; place-items: center; flex: none; }
 .ms-ename { font-weight: 700; font-size: 14px; border: 1px solid transparent; border-radius: 6px; padding: 3px 8px; background: transparent; width: 270px; min-width: 0; }
 .ms-ecount { font-size: 12px; color: var(--text3); white-space: nowrap; }
-.ms-ehead .ms-btn { min-height: 28px; padding: 2px 8px; }
+.ms-ehead .ms-btn { min-height: 30px; padding-right: 9px; font-size: 12px; }
 .ms-erow { padding: 2px 12px 2px 42px; border-top: 1px solid var(--border); }
 .ms-ebody > .ms-erow:first-child { border-top: 0; }
 .ms-erow.ms-picked { background: var(--accent-light); }
@@ -205,8 +219,8 @@
 .ms-erow input[type=text] { font-weight: 600; }
 .ms-erow input:hover, .ms-erow select:hover, .ms-ename:hover { border-color: var(--border); }
 .ms-erow input:focus, .ms-erow select:focus, .ms-ename:focus { outline: none; border-color: var(--accent); background: var(--bg2); }
-.ms-erow .ms-acts { gap: 2px; }
-.ms-erow .ms-acts .ms-btn { min-height: 28px; width: 30px; }
+.ms-erow .ms-acts { gap: 4px; }
+.ms-erow .ms-acts .ms-btn { min-height: 30px; font-size: 12px; }
 .ms-drop-hint { margin: 8px 12px 8px 42px; padding: 12px; border: 1px dashed var(--border2); border-radius: 8px; color: var(--text3); font-size: 12.5px; text-align: center; }
 .ms-add-ms { display: flex; align-items: center; justify-content: center; gap: 6px; border: 2px dashed var(--border2); background: transparent; border-radius: 10px; min-height: 40px; font-weight: 700; color: var(--text2); cursor: pointer; font-size: 13px; }
 .ms-add-ms:hover { border-color: var(--accent); color: var(--accent3); background: var(--accent-light); }
@@ -234,7 +248,7 @@
 .ms-toast button { background: none; border: 1px solid rgba(255,255,255,.25); color: var(--accent, #c9a82c); border-radius: 6px; padding: 3px 10px; cursor: pointer; font-weight: 600; font: inherit; }
 
 @media (max-width: 1300px) {
-  .ms-labels, .ms-erow { grid-template-columns: 18px 26px minmax(160px, 1fr) 170px 136px 68px; }
+  .ms-labels, .ms-erow { grid-template-columns: 18px 26px minmax(160px, 1fr) 160px 136px 190px; }
   .ms-ename { width: 200px; }
   .ms-item { grid-template-columns: 16px minmax(160px, 1.3fr) 160px minmax(0, 1fr) auto; }
 }

@@ -1,13 +1,14 @@
-import { el, btn, iconBtn, icon, fmtDate, plural, fill, api, toast, say, redraw, confirmRemove } from './common.js';
+import { el, btn, icon, fmtDate, plural, fill, api, toast, say, redraw, confirmRemove, confirmBox } from './common.js';
 
 /*
  * The Edit milestones window.
  *
  * One list: numbered milestones that open to their deliverables. Drag either
  * by its grip, or focus the grip and press the up/down arrows, to reorder.
- * Names, types and due dates are edited in place. Tick deliverables to change
- * several together. Archive hides something from teams until it is restored;
- * remove deletes it, with Undo on the toast. Every change saves as it is made.
+ * Names, types and due dates are edited in place and kept aside until Save is
+ * pressed - saving as you typed once stored a half-typed year. Tick
+ * deliverables to change several together. Archive hides something from teams
+ * until it is restored; Remove deletes it, with Undo on the message after.
  */
 
 // One Type choice also says who signs a CLF.
@@ -26,6 +27,18 @@ const splitType = value => {
   return { kind, role: role || null };
 };
 
+// The same range the server accepts, so the date picker cannot offer a year like 200.
+const DATE_MIN = '2000-01-01';
+const DATE_MAX = '2100-12-31';
+
+function dateInput(cls = '') {
+  const input = el('input', cls);
+  input.type = 'date';
+  input.min = DATE_MIN;
+  input.max = DATE_MAX;
+  return input;
+}
+
 export function openEditor({ urls, checklistId = null, onClose = null }) {
   const E = {
     list: null,
@@ -35,7 +48,10 @@ export function openEditor({ urls, checklistId = null, onClose = null }) {
     collapsed: new Set(),
     drag: null,
     focusKey: null,
-    savedText: 'Changes save as you make them',
+    savedText: '',
+    // Edits typed but not saved yet: deliverable id -> changed fields, milestone id -> new name.
+    pending: new Map(),
+    pendingNames: new Map(),
   };
   let changed = false;
 
@@ -49,6 +65,13 @@ export function openEditor({ urls, checklistId = null, onClose = null }) {
   dialog.addEventListener('close', () => {
     dialog.remove();
     if (changed && onClose) onClose();
+  });
+  // Escape asks first when there are unsaved edits.
+  dialog.addEventListener('cancel', e => {
+    if (pendingCount()) {
+      e.preventDefault();
+      leave(() => dialog.close());
+    }
   });
   dialog.showModal();
   load(checklistId);
@@ -92,6 +115,19 @@ export function openEditor({ urls, checklistId = null, onClose = null }) {
       try { await reload(); } catch { /* keep what is shown */ }
       render();
     }
+  }
+
+  const pendingCount = () => E.pending.size + E.pendingNames.size;
+
+  /** Do something that would lose unsaved edits - after asking, if there are any. */
+  async function leave(action) {
+    const n = pendingCount();
+    if (n && !await confirmBox('Discard unsaved changes?', `You have ${plural(n, 'unsaved change')}. They will be lost.`, 'Discard changes', 'x')) {
+      return;
+    }
+    E.pending.clear();
+    E.pendingNames.clear();
+    action();
   }
 
   const orderUrl = () => fill(urls.order, E.cl.id);
@@ -143,6 +179,48 @@ export function openEditor({ urls, checklistId = null, onClose = null }) {
     }
   }
 
+  /** Save the edits typed on these deliverables and milestone names. */
+  async function saveEdits(deliverableIds = [...E.pending.keys()], milestoneIds = [...E.pendingNames.keys()]) {
+    const rows = deliverableIds.filter(id => E.pending.has(id) && where(id));
+    const names = milestoneIds.filter(id => E.pendingNames.has(id));
+    if (!rows.length && !names.length) return;
+
+    const before = rows.map(id => {
+      const { d } = where(id);
+      return { id, title: d.title, kind: d.kind, role: d.role, due_date: d.due };
+    });
+    const oldNames = names.map(id => ({ id, name: E.cl.milestones.find(m => m.id === id).name }));
+
+    try {
+      for (const id of names) {
+        const res = await api('PATCH', fill(urls.milestone, id), { name: E.pendingNames.get(id) });
+        E.cl.milestones.find(m => m.id === id).name = res.name;
+        E.pendingNames.delete(id);
+      }
+      for (const id of rows) {
+        const res = await api('PATCH', fill(urls.deliverable, id), E.pending.get(id));
+        Object.assign(where(id).d, { title: res.title, kind: res.kind, role: res.role, due: res.due });
+        E.pending.delete(id);
+      }
+    } catch (e) {
+      // Whatever saved stays saved; what the server refused stays in the field to fix.
+      toast(e.message);
+      render();
+      return;
+    }
+
+    saved();
+    render();
+    const count = rows.length + names.length;
+    toast(count === 1 ? 'Saved.' : `Saved ${plural(count, 'change')}.`, async () => {
+      for (const { id, name } of oldNames) await api('PATCH', fill(urls.milestone, id), { name });
+      if (before.length) await api('PATCH', urls.deliverables, { items: before });
+      await reload();
+      saved();
+      render();
+    });
+  }
+
   function render() {
     redraw(dialog, () => { drawHead(); drawBody(); }, E);
   }
@@ -160,7 +238,7 @@ export function openEditor({ urls, checklistId = null, onClose = null }) {
       b.type = 'button';
       b.setAttribute('aria-pressed', String(E.cl?.id === c.id));
       b.append(el('b', '', `${c.program} · ${c.title}`), el('small', '', c.used_by));
-      b.addEventListener('click', () => { E.tab = 'active'; load(c.id); });
+      b.addEventListener('click', () => leave(() => { E.tab = 'active'; load(c.id); }));
       lists.append(b);
     });
     if (E.list?.missing?.length) {
@@ -168,14 +246,14 @@ export function openEditor({ urls, checklistId = null, onClose = null }) {
       b.type = 'button';
       b.setAttribute('aria-pressed', String(!E.cl));
       b.append(el('b', '', '+ New checklist'), el('small', '', E.list.missing.map(m => m.program).join(', ')));
-      b.addEventListener('click', () => { E.cl = null; render(); });
+      b.addEventListener('click', () => leave(() => { E.cl = null; render(); }));
       lists.append(b);
     }
 
     const close = el('button', 'ms-x', '×');
     close.type = 'button';
     close.setAttribute('aria-label', 'Close');
-    close.addEventListener('click', () => dialog.close());
+    close.addEventListener('click', () => leave(() => dialog.close()));
 
     head.append(lists, el('span', 'ms-saved', E.savedText), close);
   }
@@ -232,10 +310,9 @@ export function openEditor({ urls, checklistId = null, onClose = null }) {
         const select = el('select', 'ms-select');
         select.setAttribute('aria-label', `Copy another CaPSA's ${m.program} checklist`);
         select.append(new Option("Or copy another CaPSA's…", ''), ...m.copies.map(c => new Option(c.label, c.id)));
-        select.addEventListener('change', () => {
+        row.append(select, btn('Copy', '', () => {
           if (select.value) create({ program: m.program, copy_of: Number(select.value) });
-        });
-        row.append(select);
+        }, 'check'));
       }
       box.append(row);
     });
@@ -255,19 +332,36 @@ export function openEditor({ urls, checklistId = null, onClose = null }) {
     }
   }
 
-  // ── Bulk bar ──────────────────────────────────────────────────────────
+  // ── The bar above the list ────────────────────────────────────────────
+
+  /** Unsaved edits, or the hint when there are none. Refilled in place while typing, so focus stays put. */
+  function fillPendingSlot(slot = dialog.querySelector('.ms-pending-slot')) {
+    if (!slot) return;
+    const n = pendingCount();
+    if (!n) {
+      slot.replaceChildren(el('span', 'ms-hint', 'Drag by the grip, or focus it and press ↑ ↓, to reorder · edit any name, type or due date, then press Save'));
+      return;
+    }
+    slot.replaceChildren(
+      el('b', 'ms-unsaved', plural(n, 'unsaved change')),
+      btn('Save all', 'ms-btn-gold', () => saveEdits(), 'check'),
+      btn('Discard', '', () => { E.pending.clear(); E.pendingNames.clear(); render(); }, 'undo'),
+    );
+  }
 
   function activeBar(bar) {
     const chosen = live().flatMap(m => m.deliverables.filter(d => !d.archived)).filter(d => E.picked.has(d.id));
 
     if (!chosen.length) {
+      const slot = el('span', 'ms-pending-slot');
       bar.append(
-        el('span', 'ms-hint', 'Drag by the grip, or focus it and press ↑ ↓, to reorder · click any name, type or date to edit'),
+        slot,
         el('span', 'ms-spacer'),
-        btn('Open all', 'ms-btn-link', () => { E.collapsed.clear(); render(); }, 'expand'),
-        btn('Close all', 'ms-btn-link', () => { live().forEach(m => E.collapsed.add(m.id)); render(); }, 'collapse'),
+        btn('Open all', '', () => { E.collapsed.clear(); render(); }, 'expand'),
+        btn('Close all', '', () => { live().forEach(m => E.collapsed.add(m.id)); render(); }, 'collapse'),
         el('span', 'ms-scope', 'Applies to ' + E.cl.used_by),
       );
+      fillPendingSlot(slot);
       return;
     }
 
@@ -279,6 +373,7 @@ export function openEditor({ urls, checklistId = null, onClose = null }) {
     }));
     const previousOrder = orderBody();
 
+    // Each change is picked, then applied with its own button - nothing happens on picking alone.
     const bulk = (change, message) => run(
       async () => { await api('PATCH', urls.deliverables, { ids, change }); await reload(); },
       message,
@@ -290,48 +385,66 @@ export function openEditor({ urls, checklistId = null, onClose = null }) {
     );
 
     const move = el('select', 'ms-select');
-    move.setAttribute('aria-label', 'Move to milestone');
+    move.setAttribute('aria-label', 'Milestone to move them to');
     move.append(new Option('Move to milestone…', ''), ...live().map(m => new Option(m.name, m.id)));
-    move.addEventListener('change', () => {
-      if (!move.value) return;
+    const moveGroup = el('div', 'ms-grp');
+    moveGroup.append(move, btn('Move', '', () => {
+      if (!move.value) return move.focus();
       E.collapsed.delete(Number(move.value));
       bulk({ milestone_id: Number(move.value) }, `Moved ${N} to ${move.selectedOptions[0].text}.`);
-    });
+    }, 'move'));
 
     const type = el('select', 'ms-select');
-    type.setAttribute('aria-label', 'Set type');
+    type.setAttribute('aria-label', 'Type to set');
     type.append(new Option('Set type…', ''), ...TYPES.map(([k, l]) => new Option(l, k)));
-    type.addEventListener('change', () => {
-      if (type.value) bulk(splitType(type.value), `Set ${N} to ${type.selectedOptions[0].text}.`);
-    });
+    const typeGroup = el('div', 'ms-grp');
+    typeGroup.append(type, btn('Set type', '', () => {
+      if (!type.value) return type.focus();
+      bulk(splitType(type.value), `Set ${N} to ${type.selectedOptions[0].text}.`);
+    }, 'check'));
 
-    const due = el('input', 'ms-select');
-    due.type = 'date';
-    due.title = 'Set one due date';
-    due.setAttribute('aria-label', 'Set one due date for all selected');
-    due.addEventListener('change', () => {
-      if (due.value) bulk({ due_date: due.value }, `Due date set to ${fmtDate(due.value)} for ${N}.`);
-    });
+    const due = dateInput('ms-select');
+    due.setAttribute('aria-label', 'Due date to set');
+    const dueGroup = el('div', 'ms-grp');
+    dueGroup.append(due, btn('Set due date', '', () => {
+      if (!due.value || !due.checkValidity()) {
+        toast('Enter a due date between 2000 and 2100.');
+        return due.focus();
+      }
+      bulk({ due_date: due.value }, `Due date set to ${fmtDate(due.value)} for ${N}.`);
+    }, 'calendar'));
 
+    // For when the whole schedule slips: every ticked due date moves by the same number of days.
     const days = el('input', 'ms-select ms-days');
     days.type = 'number';
-    days.placeholder = '± days';
-    days.setAttribute('aria-label', 'Days to move the due dates');
-    const shift = el('div', 'ms-grp');
-    shift.append(days, btn('Shift dates', '', () => {
+    days.min = '1';
+    days.max = '365';
+    days.placeholder = '7';
+    days.setAttribute('aria-label', 'How many days to move the due dates');
+    const direction = el('select', 'ms-select');
+    direction.setAttribute('aria-label', 'Later or earlier');
+    direction.append(new Option('days later', '1'), new Option('days earlier', '-1'));
+    const shiftGroup = el('div', 'ms-grp');
+    shiftGroup.title = 'Moves every ticked due date by the same number of days - for when the whole schedule slips.';
+    shiftGroup.append(days, direction, btn('Move due dates', '', () => {
       const n = parseInt(days.value, 10);
-      if (!n) return days.focus();
-      bulk({ shift_days: n }, `Moved ${N} ${plural(Math.abs(n), 'day')} ${n > 0 ? 'later' : 'earlier'}.`);
+      if (!n || n < 1 || n > 365) {
+        toast('Enter how many days, from 1 to 365.');
+        return days.focus();
+      }
+      const signed = n * Number(direction.value);
+      bulk({ shift_days: signed }, `Moved the due dates of ${N} ${plural(n, 'day')} ${signed > 0 ? 'later' : 'earlier'}.`);
     }, 'calendar'));
 
     bar.append(
-      el('b', '', chosen.length + ' selected'), move, type, due, shift, el('span', 'ms-spacer'),
+      el('b', '', chosen.length + ' selected'), moveGroup, typeGroup, dueGroup, shiftGroup, el('span', 'ms-spacer'),
       btn('Archive', '', () => {
         E.picked.clear();
+        ids.forEach(id => E.pending.delete(id));
         bulk({ archived: true }, `Archived ${N}. Teams no longer see ${chosen.length === 1 ? 'it' : 'them'}.`);
       }, 'archive'),
       btn('Remove', 'ms-btn-warn', () => removeDeliverables(chosen), 'trash'),
-      btn('Clear', 'ms-btn-link', () => { E.picked.clear(); render(); }, 'x'),
+      btn('Clear', '', () => { E.picked.clear(); render(); }, 'x'),
     );
   }
 
@@ -351,7 +464,9 @@ export function openEditor({ urls, checklistId = null, onClose = null }) {
 
     const add = el('button', 'ms-add-ms');
     add.type = 'button';
-    add.append(icon('plus'), 'Add milestone');
+    const tile = el('span', 'ms-ico');
+    tile.append(icon('plus'));
+    add.append(tile, 'Add milestone');
     add.addEventListener('click', () => {
       let created;
       run(
@@ -360,7 +475,7 @@ export function openEditor({ urls, checklistId = null, onClose = null }) {
           await reload();
           E.focusKey = 'name-' + created.id;
         },
-        'Added a milestone at the end. Name it, add deliverables, and drag it where it belongs.',
+        'Added a milestone at the end. Name it, press Save, add deliverables, and drag it where it belongs.',
         async () => { await api('DELETE', fill(urls.milestone, created.id)); await reload(); },
       );
     });
@@ -396,35 +511,43 @@ export function openEditor({ urls, checklistId = null, onClose = null }) {
       render();
     });
 
+    // The name is kept aside until Save; its Save and Discard appear beside it while it differs.
     const name = el('input', 'ms-ename');
     name.type = 'text';
-    name.value = m.name;
+    name.value = E.pendingNames.get(m.id) ?? m.name;
     name.maxLength = 255;
     name.dataset.key = 'name-' + m.id;
     name.setAttribute('aria-label', 'Milestone name');
-    name.addEventListener('change', async () => {
+    const nameActs = el('span', 'ms-grp');
+    const drawNameActs = () => {
+      const dirty = E.pendingNames.has(m.id);
+      name.classList.toggle('ms-dirty-field', dirty);
+      nameActs.replaceChildren(...(dirty ? [
+        btn('Save', 'ms-btn-gold', () => saveEdits([], [m.id]), 'check'),
+        btn('Discard', '', () => { E.pendingNames.delete(m.id); render(); }, 'undo'),
+      ] : []));
+      fillPendingSlot();
+    };
+    name.addEventListener('input', () => {
       const value = name.value.trim();
-      if (!value) { name.value = m.name; return; }
-      try {
-        await api('PATCH', fill(urls.milestone, m.id), { name: value });
-        m.name = value;
-        saved();
-      } catch (e) {
-        toast(e.message);
-        name.value = m.name;
-      }
+      if (value && value !== m.name) E.pendingNames.set(m.id, value); else E.pendingNames.delete(m.id);
+      drawNameActs();
     });
+    name.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && E.pendingNames.has(m.id)) saveEdits([], [m.id]);
+    });
+    drawNameActs();
 
     h.append(
-      hd, chev, el('span', 'ms-ord', String(idx + 1)), name,
+      hd, chev, el('span', 'ms-ord', String(idx + 1)), name, nameActs,
       el('span', 'ms-ecount', plural(items.length, 'deliverable')), el('span', 'ms-spacer'),
-      btn('Add deliverables', 'ms-btn-link', () => openAdd(m), 'plus'),
-      btn('Archive', 'ms-btn-link', () => run(
+      btn('Add deliverables', 'ms-btn-add', () => openAdd(m), 'plus'),
+      btn('Archive', '', () => run(
         async () => { await api('PATCH', fill(urls.milestone, m.id), { archived: true }); await reload(); },
         `Archived the ${m.name} milestone. Teams no longer see it or its deliverables.`,
         async () => { await api('PATCH', fill(urls.milestone, m.id), { archived: false }); await reload(); },
       ), 'archive'),
-      btn('Remove', 'ms-btn-link ms-btn-warn', () => removeMilestone(m), 'trash'),
+      btn('Remove', 'ms-btn-warn', () => removeMilestone(m), 'trash'),
     );
     g.append(h);
 
@@ -531,59 +654,69 @@ export function openEditor({ urls, checklistId = null, onClose = null }) {
       persistOrder(previous, null, false);
     });
 
+    // Edits are kept aside until Save. The row shows Save and Discard while it differs from what is saved.
+    const pending = E.pending.get(d.id) || {};
+    const current = key => (key in pending ? pending[key] : { title: d.title, kind: d.kind, role: d.role, due_date: d.due }[key]);
+
+    const acts = el('span', 'ms-acts');
+    const drawActs = () => {
+      const dirty = E.pending.has(d.id);
+      row.classList.toggle('ms-dirty', dirty);
+      acts.replaceChildren(...(dirty ? [
+        btn('Save', 'ms-btn-gold', () => saveEdits([d.id], []), 'check'),
+        btn('Discard', '', () => { E.pending.delete(d.id); render(); }, 'undo'),
+      ] : [
+        btn('Archive', '', () => {
+          E.picked.delete(d.id);
+          run(
+            async () => { await api('PATCH', fill(urls.deliverable, d.id), { archived: true }); await reload(); },
+            `Archived “${d.title}”. Teams no longer see it.`,
+            async () => { await api('PATCH', fill(urls.deliverable, d.id), { archived: false }); await reload(); },
+          );
+        }, 'archive'),
+        btn('Remove', 'ms-btn-warn', () => removeDeliverables([d]), 'trash'),
+      ]));
+      fillPendingSlot();
+    };
+
+    const stored = { title: d.title, kind: d.kind, role: d.role, due_date: d.due };
+    const edit = changes => {
+      const next = { ...(E.pending.get(d.id) || {}) };
+      Object.entries(changes).forEach(([key, value]) => {
+        if (value === stored[key]) delete next[key]; else next[key] = value;
+      });
+      if (Object.keys(next).length) E.pending.set(d.id, next); else E.pending.delete(d.id);
+      drawActs();
+    };
+
     const title = el('input');
     title.type = 'text';
-    title.value = d.title;
+    title.value = current('title');
     title.title = d.title;
     title.maxLength = 255;
     title.setAttribute('aria-label', 'Deliverable name');
-    title.addEventListener('change', () => {
-      const value = title.value.trim();
-      if (!value) { title.value = d.title; return; }
-      patch(d, { title: value }, () => { d.title = value; title.title = value; });
+    title.addEventListener('input', () => edit({ title: title.value.trim() || d.title }));
+    title.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && E.pending.has(d.id)) saveEdits([d.id], []);
     });
 
     const type = el('select');
     type.setAttribute('aria-label', 'Type');
     TYPES.forEach(([k, l]) => type.append(new Option(l, k)));
-    type.value = typeOf(d);
+    type.value = typeOf({ kind: current('kind'), role: current('role') });
     type.addEventListener('change', () => {
       const next = splitType(type.value);
-      patch(d, next, () => { d.kind = next.kind; d.role = next.role; });
+      edit({ kind: next.kind, role: next.role });
     });
 
-    const due = el('input');
-    due.type = 'date';
-    due.value = d.due || '';
+    const due = dateInput();
+    due.value = current('due_date') || '';
     due.setAttribute('aria-label', 'Due date');
-    due.addEventListener('change', () => patch(d, { due_date: due.value || null }, () => { d.due = due.value || null; }));
+    due.addEventListener('input', () => edit({ due_date: due.value || null }));
 
-    const acts = el('span', 'ms-acts');
-    acts.append(
-      iconBtn('archive', `Archive “${d.title}”`, 'ms-btn-link', () => {
-        E.picked.delete(d.id);
-        run(
-          async () => { await api('PATCH', fill(urls.deliverable, d.id), { archived: true }); await reload(); },
-          `Archived “${d.title}”. Teams no longer see it.`,
-          async () => { await api('PATCH', fill(urls.deliverable, d.id), { archived: false }); await reload(); },
-        );
-      }),
-      iconBtn('trash', `Remove “${d.title}”`, 'ms-btn-link ms-btn-warn', () => removeDeliverables([d])),
-    );
-
+    drawActs();
     row.append(pickBox(d.id, d.title), hd, title, type, due, acts);
     return row;
-  }
-
-  async function patch(d, change, apply) {
-    try {
-      await api('PATCH', fill(urls.deliverable, d.id), change);
-      apply();
-      saved();
-    } catch (e) {
-      toast(e.message);
-      render();
-    }
   }
 
   // ── Add, remove ───────────────────────────────────────────────────────
@@ -608,8 +741,7 @@ export function openEditor({ urls, checklistId = null, onClose = null }) {
     const typeLabelEl = el('label', '', 'Type');
     typeLabelEl.append(type);
 
-    const due = el('input');
-    due.type = 'date';
+    const due = dateInput();
     due.value = m.deliverables.map(x => x.due).filter(Boolean).sort().pop() || '';
     const dueLabel = el('label', '', 'Due date');
     dueLabel.append(due);
@@ -620,9 +752,13 @@ export function openEditor({ urls, checklistId = null, onClose = null }) {
     const acts = el('div', 'ms-acts');
     acts.append(
       btn('Cancel', '', () => box.close()),
-      btn('Add deliverables', 'ms-btn-gold', function addLines() {
+      btn('Add deliverables', 'ms-btn-gold', () => {
         const titles = lines.value.split('\n').map(s => s.trim()).filter(Boolean);
         if (!titles.length) return lines.focus();
+        if (due.value && !due.checkValidity()) {
+          toast('Enter a due date between 2000 and 2100.');
+          return due.focus();
+        }
         box.close();
         const target = Number(phase.value);
         const targetName = phase.selectedOptions[0].text;
@@ -663,6 +799,7 @@ export function openEditor({ urls, checklistId = null, onClose = null }) {
     if (!ok) return;
 
     const ids = list.map(d => d.id);
+    ids.forEach(id => E.pending.delete(id));
     E.picked.clear();
     run(
       async () => { await api('DELETE', urls.deliverables, { ids }); await reload(); },
@@ -679,6 +816,8 @@ export function openEditor({ urls, checklistId = null, onClose = null }) {
     );
     if (!ok) return;
 
+    E.pendingNames.delete(m.id);
+    m.deliverables.forEach(d => E.pending.delete(d.id));
     run(
       async () => { await api('DELETE', fill(urls.milestone, m.id)); await reload(); },
       `Removed the “${m.name}” milestone.`,
@@ -750,7 +889,7 @@ export function openEditor({ urls, checklistId = null, onClose = null }) {
       el('b', '', chosen.length + ' selected'), el('span', 'ms-spacer'),
       btn('Restore', '', () => restoreEntries(chosen), 'restore'),
       btn('Remove', 'ms-btn-warn', () => removeEntries(chosen), 'trash'),
-      btn('Clear', 'ms-btn-link', () => { E.picked.clear(); render(); }, 'x'),
+      btn('Clear', '', () => { E.picked.clear(); render(); }, 'x'),
     );
   }
 

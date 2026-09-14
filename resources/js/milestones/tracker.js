@@ -358,7 +358,8 @@ function start(root) {
       case 'signed_copy': return 'Approved, signed copy not uploaded';
       case 'adviser':
       case 'consultant': return 'With the ' + r.waiting_on;
-      default: return 'Scheduled';
+      case 'redefense': return r.revision > 1 ? `Re-defense needed (${ordinal(r.revision)} time)` : 'Re-defense needed';
+      default: return r.kind === 'defense' && r.revision ? 'Re-defense scheduled' : 'Scheduled';
     }
   }
 

@@ -151,6 +151,24 @@ class ChecklistEditorTest extends TestCase
         $this->assertSame([Deliverable::DOCUMENT, null], [$b->fresh()->kind, $b->fresh()->role]);
     }
 
+    /** A half-typed year like 0200 is still a date, so it is the range that refuses it. */
+    public function test_a_due_date_outside_2000_to_2100_is_refused(): void
+    {
+        $checklist = $this->emptyChecklist($this->capsa);
+        $form = $this->addDeliverable($checklist, ['title' => 'Signed form', 'due_date' => '2026-09-13']);
+
+        $this->patchJson(route('capsa.deliverables.update', $form), ['due_date' => '0200-09-13'])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['due_date' => 'from the year 2000']);
+        $this->patchJson(route('capsa.deliverables.update_many'), ['ids' => [$form->id], 'change' => ['due_date' => '2200-01-01']])
+            ->assertStatus(422);
+        $this->postJson(route('capsa.checklist_milestones.deliverables.store', $checklist->milestones()->first()), [
+            'titles' => ['Another'], 'kind' => Deliverable::FORM, 'due_date' => '0026-01-01',
+        ])->assertStatus(422);
+
+        $this->assertSame('2026-09-13', $form->fresh()->due_date->toDateString());
+    }
+
     public function test_archiving_hides_from_teams_until_restored(): void
     {
         [$team] = $this->teamInSection('CapsTrack');

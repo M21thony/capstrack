@@ -13,23 +13,16 @@ export function el(tag, cls, text) {
   return node;
 }
 
-/** A button with its words, and an icon in front of them when one is named. */
+/** A button with its words, and - when one is named - its icon on a tinted tile in front of them. */
 export function btn(label, cls = '', onClick = null, iconName = null) {
   const b = el('button', ('ms-btn ' + cls).trim());
   b.type = 'button';
-  if (iconName) b.append(icon(iconName));
+  if (iconName) {
+    const tile = el('span', 'ms-ico');
+    tile.append(icon(iconName));
+    b.append(tile);
+  }
   b.append(label);
-  if (onClick) b.addEventListener('click', onClick);
-  return b;
-}
-
-/** An icon on its own, for actions repeated on every row. Its name shows on hover and is read out. */
-export function iconBtn(iconName, label, cls = '', onClick = null) {
-  const b = el('button', ('ms-btn ms-btn-icon ' + cls).trim());
-  b.type = 'button';
-  b.title = label;
-  b.setAttribute('aria-label', label);
-  b.append(icon(iconName));
   if (onClick) b.addEventListener('click', onClick);
   return b;
 }
@@ -48,6 +41,9 @@ const SPRITE = `<svg xmlns="http://www.w3.org/2000/svg" style="position:absolute
 <symbol id="ms-i-collapse" viewBox="0 0 24 24"><path d="m17 11-5-5-5 5"/><path d="m17 18-5-5-5 5"/></symbol>
 <symbol id="ms-i-calendar" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></symbol>
 <symbol id="ms-i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+<symbol id="ms-i-check" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></symbol>
+<symbol id="ms-i-undo" viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></symbol>
+<symbol id="ms-i-move" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></symbol>
 <symbol id="ms-i-grip" viewBox="0 0 24 24"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></symbol>
 </svg>`;
 
@@ -202,8 +198,13 @@ export function redraw(rootEl, draw, state) {
   }
 }
 
-/** A confirmation box. Resolves true only if Remove was pressed. */
+/** A confirmation box for removing something. Resolves true only if Remove was pressed. */
 export function confirmRemove(title, body) {
+  return confirmBox(title, body, 'Remove', 'trash');
+}
+
+/** A confirmation box. Resolves true only if the red button was pressed. */
+export function confirmBox(title, body, okLabel, okIcon) {
   return new Promise(resolve => {
     const dialog = el('dialog', 'ms-dialog ms-small');
     dialog.setAttribute('role', 'alertdialog');
@@ -211,7 +212,7 @@ export function confirmRemove(title, body) {
 
     let answer = false;
     const cancel = btn('Cancel', '', () => dialog.close());
-    const ok = btn('Remove', 'ms-btn-danger', () => { answer = true; dialog.close(); }, 'trash');
+    const ok = btn(okLabel, 'ms-btn-danger', () => { answer = true; dialog.close(); }, okIcon);
 
     const acts = el('div', 'ms-acts');
     acts.append(cancel, ok);

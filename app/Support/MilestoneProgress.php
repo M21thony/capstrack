@@ -62,6 +62,9 @@ class MilestoneProgress
     /** The adviser approved the draft; the team still has to upload the signed CLF. */
     public const WAITING_ON_SIGNED_COPY = 'signed_copy';
 
+    /** The panel asked for a re-defense and the next attempt is not scheduled yet. */
+    public const WAITING_ON_REDEFENSE = 'redefense';
+
     public static function forTeam(Checklist $checklist, int $teamId): object
     {
         return self::forTeams($checklist, [$teamId])[$teamId];
@@ -93,7 +96,7 @@ class MilestoneProgress
         foreach ($teamIds as $teamId) {
             $theirs = $uploads->get($teamId, collect());
             $theirReviews = $reviews->whereIn('file_id', $theirs->pluck('file_id')->all());
-            $theirDefenses = $defenses->get($teamId, collect())->keyBy('defense_type');
+            $theirDefenses = $defenses->get($teamId, collect());
 
             $rows = $deliverables->map(fn (Deliverable $deliverable) => self::resolve(
                 $deliverable,
@@ -167,8 +170,10 @@ class MilestoneProgress
             // The latest upload for the line, which is what the CaPSA opens to check.
             'file_id' => $own->last()?->file_id,
             'file_path' => $own->last()?->file_path,
-            // How many times a reviewer sent it back.
-            'revision' => $myReviews->where('verdict', CapstoneDocumentReview::NEEDS_REVISION)->count(),
+            // How many times it was sent back: by a reviewer, or - for a defense - by the panel asking for a re-defense.
+            'revision' => $deliverable->kind === Deliverable::DEFENSE
+                ? ($defenses->get($deliverable->defense_type)?->redefenses ?? 0)
+                : $myReviews->where('verdict', CapstoneDocumentReview::NEEDS_REVISION)->count(),
             'changes_requested' => $changesRequested,
             'check' => $check,
             'note' => $changesRequested && $check?->status === DeliverableCheck::SENT_BACK ? $check->note : null,
@@ -244,12 +249,24 @@ class MilestoneProgress
         return [null, true, $changesRequested ? self::WAITING_ON_TEAM : $deliverable->role, $changesRequested];
     }
 
-    /** [closedAt, started, waitingOn, changesRequested] - scheduled but no outcome yet. */
+    /**
+     * [closedAt, started, waitingOn, changesRequested] for a defense. Only a
+     * pass closes it. A panel asking for a re-defense leaves it open, waiting
+     * on the team until the next attempt is on the calendar.
+     */
     private static function defenseState(Deliverable $deliverable, Collection $defenses): array
     {
         $row = $defenses->get($deliverable->defense_type);
 
-        return [$row?->passed_at, (bool) $row, null, false];
+        if (! $row) {
+            return [null, false, null, false];
+        }
+
+        if ($row->passed_at) {
+            return [$row->passed_at, true, null, false];
+        }
+
+        return [null, true, $row->awaiting_redefense ? self::WAITING_ON_REDEFENSE : null, false];
     }
 
     /**
@@ -338,10 +355,12 @@ class MilestoneProgress
     }
 
     /**
-     * Each team's defenses, keyed by stage. Passed with revision still counts
-     * as passed - the team sat it and got through.
+     * Each team's defenses, by stage: when one was passed, how many attempts
+     * the panel sent back for a re-defense, and whether the latest attempt is
+     * one of those with no next attempt booked. Passed with revision still
+     * counts as passed - the team sat it and got through.
      *
-     * @return Collection<int, Collection<int, object>>
+     * @return Collection<int, Collection<string, object>> team id -> stage -> summary
      */
     private static function defensesFor(Collection $teamIds, Collection $deliverables): Collection
     {
@@ -350,19 +369,22 @@ class MilestoneProgress
         }
 
         $passing = [DefenseOutcome::PASSED, DefenseOutcome::PASSED_WITH_REVISION];
-        $placeholders = implode(',', array_fill(0, count($passing), '?'));
+        $redefense = [DefenseOutcome::REDEFENSE, DefenseOutcome::REDEFENSE_NEW_TITLE];
 
         return DB::table('defense_schedule')
             ->whereIn('team_id', $teamIds->all())
-            ->select(
-                'team_id',
-                'defense_type',
-                DB::raw("MAX(CASE WHEN outcome IN ({$placeholders}) THEN outcome_recorded_at END) as passed_at"),
-            )
-            ->addBinding($passing, 'select')
-            ->groupBy('team_id', 'defense_type')
+            ->select('team_id', 'defense_type', 'attempt', 'outcome', 'outcome_recorded_at')
             ->get()
-            ->groupBy(fn ($row) => (int) $row->team_id);
+            ->groupBy(fn ($row) => (int) $row->team_id)
+            ->map(fn (Collection $rows) => $rows->groupBy('defense_type')->map(function (Collection $attempts) use ($passing, $redefense) {
+                $latest = $attempts->sortBy(fn ($a) => (int) $a->attempt)->last();
+
+                return (object) [
+                    'passed_at' => $attempts->whereIn('outcome', $passing)->max('outcome_recorded_at'),
+                    'redefenses' => $attempts->whereIn('outcome', $redefense)->count(),
+                    'awaiting_redefense' => in_array($latest->outcome, $redefense, true),
+                ];
+            }));
     }
 
     /** @return Collection<string, DeliverableCheck> keyed "deliverable|team" */
