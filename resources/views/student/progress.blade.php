@@ -16,6 +16,11 @@
 /* ── Our milestones ───────────────────────────────────────────────────
    Read-only: every deliverable is closed by somebody else. The team's own
    milestones, one dropdown open at a time; only the list scrolls. */
+.spm-done{display:flex;align-items:center;gap:14px;background:var(--green-bg);border:1px solid rgba(22,163,74,.3);border-radius:11px;padding:12px 16px;margin-bottom:12px}
+.spm-done svg{width:30px;height:30px;flex:none;fill:none;stroke:var(--green);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.spm-done div{flex:1;display:grid;gap:2px}
+.spm-done b{font-size:15px;color:var(--green)}
+.spm-done span{font-size:12.5px;color:var(--text2)}
 .spm-band{display:flex;align-items:center;gap:12px 26px;flex-wrap:wrap;background:var(--accent-light);border:1px solid #e3d08f;border-radius:11px;padding:10px 16px;margin-bottom:12px}
 .spm-now{display:grid;line-height:1.15}
 .spm-now small{font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--accent3);font-weight:700}
@@ -113,6 +118,18 @@
       'not_started' => '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/>',
   ];
 @endphp
+
+@if ($progress->total > 0 && $progress->completed === $progress->total)
+  {{-- Every line closed: say so, rather than leaving a finished team to read it off a percentage. --}}
+  <div class="spm-done" role="status">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="7.5 12.5 10.5 15.5 16.5 9"/></svg>
+    <div>
+      <b>{{ $team->team_name }} has completed every requirement on this checklist.</b>
+      <span>All {{ $progress->total }} are closed. Capstone 1 is done - your CaPSA will set up what comes next.</span>
+    </div>
+    <a class="spm-upload" href="{{ route('student.defense-scores') }}">See panel scores</a>
+  </div>
+@endif
 
 <div class="spm-band">
   <div class="spm-now">
