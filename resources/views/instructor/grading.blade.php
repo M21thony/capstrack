@@ -28,6 +28,10 @@
   .gl-team b{display:block;font-size:13.5px}
   .gl-team small{display:block;color:var(--text3);font-size:12px;max-width:44ch;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .gl-muted{color:var(--text3);font-size:12px}
+  .gl-outcome{font-size:12px;font-weight:600}
+  .gl-outcome.is-pass{color:var(--green)}
+  .gl-outcome.is-major{color:#c2410c}
+  .gl-outcome.is-fail{color:var(--red)}
   .gl-num{font-variant-numeric:tabular-nums}
   .gl-go{font:inherit;font-size:12px;font-weight:600;border-radius:6px;padding:6px 12px;border:1px solid var(--border2);background:var(--bg2);color:var(--text);text-decoration:none;white-space:nowrap}
   .gl-go.primary{background:var(--accent);border-color:var(--accent);color:#18191f}
@@ -103,7 +107,7 @@
                   <td>
                     {{ $row->defense_type }}
                     @if($row->attempt > 1)<span class="badge badge-amber" style="font-size:10px;margin-left:4px">Redefense</span>@endif
-                    @if($row->outcome)<div class="gl-muted">{{ $row->outcome }}</div>@endif
+                    @if($row->outcome)<div class="gl-outcome is-{{ $row->outcome_tone }}">{{ $row->outcome }}</div>@endif
                   </td>
                   <td>{{ $row->panel_role }}</td>
                   <td class="gl-num">

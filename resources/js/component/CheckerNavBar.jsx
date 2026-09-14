@@ -69,13 +69,15 @@ function CheckerNavbar({ ctx, status, verdict, saveState, driveSyncState, driveS
         <a className="an-link" href="/admin/gdrive/connect">Connect Google Drive</a>
       )}
       {versions.length > 0 && (
-        <button type="button" className={`rr-btn ghost${showChanges ? " on" : ""}`} onClick={onToggleChanges} aria-pressed={showChanges}>
+        <label className="an-switch">
+          <input type="checkbox" checked={showChanges} onChange={onToggleChanges} />
+          <span className="an-switch-track" aria-hidden="true" />
           Show changes
-        </button>
+        </label>
       )}
       {versions.length > 0 && (
         <button type="button" className={`rr-btn ghost${comparing ? " on" : ""}`} onClick={onCompare} aria-pressed={comparing}>
-          {comparing ? "Hide previous version" : "Compare with previous version"}
+          {comparing ? "Close side by side" : "Side by side"}
         </button>
       )}
       <button type="button" className="rr-btn ghost" onClick={onExport}>

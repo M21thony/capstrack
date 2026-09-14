@@ -65,7 +65,7 @@ class TestingRoundFixesTest extends TestCase
 
         $this->actingAs($student)->get(route('student.defense-scores'))
             ->assertOk()
-            ->assertSee('Redefense with revision')
+            ->assertSee('Redefense with major revision')
             ->assertSee('PanelChair')
             ->assertSee('Panel Member 2 remark')
             ->assertDontSee('Not out yet');

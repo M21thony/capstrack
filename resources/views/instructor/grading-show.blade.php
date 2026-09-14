@@ -110,6 +110,21 @@
   .gs-overview{display:grid;grid-template-columns:1fr auto;gap:4px 12px;font-size:12.5px;color:var(--text2);margin-bottom:6px}
   .gs-overview b{color:var(--text)}
 
+  /* A decision is coloured by how serious it is: pass green, redefense
+     orange, a new title red - never all green. */
+  .outcome-recorded.is-major{background:#fff7ed;border-color:#fed7aa}
+  .outcome-recorded.is-major .outcome-recorded-label{color:#c2410c}
+  .outcome-recorded.is-major .outcome-recorded-remarks{border-top-color:#fed7aa}
+  .outcome-recorded.is-fail{background:var(--red-bg,#fef2f2);border-color:#fecaca}
+  .outcome-recorded.is-fail .outcome-recorded-label{color:var(--red,#dc2626)}
+  .outcome-recorded.is-fail .outcome-recorded-remarks{border-top-color:#fecaca}
+  .outcome-option.is-pass input:checked+.outcome-option-body{border-color:var(--green);background:var(--green-bg);box-shadow:0 0 0 3px rgba(22,163,74,.1)}
+  .outcome-option.is-pass input:checked+.outcome-option-body .outcome-option-label{color:var(--green)}
+  .outcome-option.is-major input:checked+.outcome-option-body{border-color:#ea580c;background:#fff7ed;box-shadow:0 0 0 3px rgba(234,88,12,.1)}
+  .outcome-option.is-major input:checked+.outcome-option-body .outcome-option-label{color:#c2410c}
+  .outcome-option.is-fail input:checked+.outcome-option-body{border-color:var(--red);background:var(--red-bg);box-shadow:0 0 0 3px rgba(220,38,38,.1)}
+  .outcome-option.is-fail input:checked+.outcome-option-body .outcome-option-label{color:var(--red)}
+
   .gs-foot{display:flex;align-items:center;gap:10px;padding:9px 20px;background:var(--bg2);border-top:1px solid var(--border)}
   .gs-foot .hint{flex:1;font-size:12px;color:var(--text3)}
   .gs-foot kbd{font:inherit;font-size:10.5px;padding:0 5px;border:1px solid var(--border2);border-bottom-width:2px;border-radius:4px;background:var(--bg3)}
@@ -193,11 +208,11 @@
             <div class="gs-overview" id="gs-overview"></div>
 
             <h3 style="display:flex;align-items:center;gap:8px">Panel decision
-              @if ($defense->hasOutcome())<span class="badge badge-green">Recorded</span>@endif
+              @if ($defense->hasOutcome())<span class="badge {{ ['pass' => 'badge-green', 'major' => 'badge-amber', 'fail' => 'badge-red'][\App\Support\DefenseOutcome::tone($defense->outcome)] ?? 'badge-gray' }}">Recorded</span>@endif
             </h3>
 
             @if ($defense->hasOutcome())
-              <div class="outcome-recorded">
+              <div class="outcome-recorded is-{{ \App\Support\DefenseOutcome::tone($defense->outcome) }}">
                 <div class="outcome-recorded-label">{{ $defense->outcomeLabel() }}</div>
                 <div class="outcome-recorded-sub">{{ \App\Support\DefenseOutcome::description($defense->outcome, $defense->defense_type) }}</div>
                 @if ($defense->outcome_remarks)
@@ -216,7 +231,7 @@
               <p class="outcome-note">All {{ $panelSize }} panelists have scored. Record what the panel agreed &mdash; the team is told this, and it is what happens next.</p>
               <div class="outcome-options">
                 @foreach ($outcomeOptions as $option)
-                  <label class="outcome-option outcome-{{ str_replace('_', '-', $option) }}">
+                  <label class="outcome-option is-{{ \App\Support\DefenseOutcome::tone($option) }}">
                     <input type="radio" name="panel_outcome" value="{{ $option }}"/>
                     <div class="outcome-option-body">
                       <div class="outcome-option-label">{{ \App\Support\DefenseOutcome::label($option, $defense->defense_type) }}</div>

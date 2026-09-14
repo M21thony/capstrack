@@ -4,6 +4,7 @@ import CheckerNavbar from "./component/CheckerNavbar";
 import PDFChecker from "./component/pages/PDFChecker";
 import StudentPdfViewer from "./component/pages/StudentPdfViewer";
 import FinishReview from "./component/FinishReview";
+import { useVersionDiff } from "./component/reader/useVersionDiff";
 import { Toast } from "./component/reader/Reader";
 import "./component/reader/reader.css";
 import "./App.css";
@@ -43,6 +44,9 @@ function App() {
   const [showChanges, setShowChanges] = useState(true);
   const params = new URLSearchParams(window.location.search);
   const reviewId = ctx.reviewId || params.get("reviewId") || params.get("fileID");
+  // Measured once: this document and the earlier version both draw from it.
+  const diff = useVersionDiff(reviewId ? `/reviews/${reviewId}/pdf` : null, baseVersion);
+  const [focus, setFocus] = useState(null);
 
   const [comments, setComments] = useState([]);
   const [generalComments, setGeneralComments] = useState([]);
@@ -434,21 +438,40 @@ function App() {
           notify={showToast}
           base={baseVersion}
           showChanges={showChanges}
+          diff={diff}
+          onFocusChange={(c) => setFocus({ id: c.id, page: c.oldPage, rect: c.oldRect, at: Date.now() })}
         />
+        {compareVersion && (
+          <div className="an-pane-head">
+            <span className="an-dot now" aria-hidden="true" />
+            <b>This version</b>
+            {ctx.round && <span className="an-pane-sub">{ctx.round}</span>}
+            <span className="rr-spacer" />
+            {showChanges && <span className="an-key ins">New or reworded</span>}
+          </div>
+        )}
         {compareVersion && (
           <section className="an-compare" aria-label="Earlier version of this document">
             <div className="an-compare-bar">
-              <label htmlFor="an-compare-pick">Comparing with</label>
+              <span className="an-dot old" aria-hidden="true" />
+              <label htmlFor="an-compare-pick">Earlier version</label>
               <select id="an-compare-pick" value={compareVersion.id} onChange={(e) => setCompareId(Number(e.target.value))}>
                 {versions.map((v) => (
                   <option key={v.id} value={v.id}>{v.round}{v.uploaded ? ` · ${v.uploaded}` : ""}</option>
                 ))}
               </select>
-              <span className="an-compare-hint">Highlights are your remarks on that version</span>
               <span className="rr-spacer" />
-              <button type="button" className="rr-btn" onClick={() => setCompareId(null)}>Close</button>
+              {showChanges && <span className="an-key del">Removed</span>}
+              <button type="button" className="rr-btn sm" onClick={() => setCompareId(null)}>Close</button>
             </div>
-            <StudentPdfViewer key={compareVersion.id} pdfUrl={compareVersion.file} remarksUrl={compareVersion.remarks} reviewer="you" />
+            <StudentPdfViewer
+              key={compareVersion.id}
+              pdfUrl={compareVersion.file}
+              remarksUrl={compareVersion.remarks}
+              reviewer="you"
+              marks={showChanges && diff.status === "ready" ? diff.oldMarks : null}
+              focus={focus}
+            />
           </section>
         )}
       </div>
