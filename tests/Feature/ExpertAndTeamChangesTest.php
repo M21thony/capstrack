@@ -61,16 +61,21 @@ class ExpertAndTeamChangesTest extends TestCase
             ->assertStatus(422);
     }
 
-    public function test_a_degree_can_be_given_when_adding_an_expert(): void
+    public function test_a_degree_written_after_the_name_is_read_when_adding_an_expert(): void
     {
         $email = 'new.panelist@'.ltrim(CapstoneExpert::EMAIL_DOMAINS[0], '@');
 
         $this->actingAs($this->capsa(), 'expert')
-            ->postJson(route('capsa.experts.store'), ['email' => $email, 'degree' => 'PhD'])
+            ->postJson(route('capsa.experts.store'), ['email' => $email, 'name' => 'Rosa Villanueva, MIT, Ph.D.'])
             ->assertOk();
 
         $expert = CapstoneExpert::where('email', $email)->first();
+        $this->assertSame(['Rosa', 'Villanueva', 'MIT, Ph.D.'], [$expert->first_name, $expert->last_name, $expert->credentials]);
         $this->assertSame(['PhD', 'doctorate'], [$expert->degree_title, $expert->highest_degree]);
+
+        // Editing the credentials later changes the degree with them.
+        $expert->update(['credentials' => 'LPT']);
+        $this->assertNull($expert->fresh()->highest_degree);
     }
 
     public function test_panel_suggestions_show_the_degree_and_nothing_when_there_is_none(): void

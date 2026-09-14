@@ -916,12 +916,7 @@ const ROLE_NAME_TO_ID = {{ Illuminate\Support\Js::from($roleNameToId) }};
       </div>
     </div>
 
-    <div class="ae-field">
-      <label class="ae-label" for="addExpertDegree">Degree <span class="ae-opt">(optional)</span></label>
-      @include('partials.degree-select', ['id' => 'addExpertDegree', 'blank' => 'Not now', 'attrs' => 'class="ct-modal-input" style="margin-bottom:0"'])
-    </div>
-
-    <p class="ae-note">They are approved straight away &mdash; naming them here is the vetting, the same as putting them on the list. Their areas of expertise are theirs to fill in from their own profile.</p>
+    <p class="ae-note">They are approved straight away &mdash; naming them here is the vetting, the same as putting them on the list. Write a degree after the name, like <b>Juan Dela Cruz, MIT</b>, and it counts for Panel Chair. Their areas of expertise are theirs to fill in from their own profile.</p>
 
     <div id="addExpertResult" style="display:none;font-size:12px;margin-bottom:12px"></div>
 
@@ -1058,7 +1053,6 @@ function addExpert() {
       email: document.getElementById('addExpertEmail').value.trim(),
       name: document.getElementById('addExpertName').value.trim(),
       roles: roles,
-      degree: document.getElementById('addExpertDegree').value || null,
     }),
   })
     .then(function (r) { return r.json(); })

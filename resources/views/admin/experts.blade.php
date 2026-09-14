@@ -889,14 +889,10 @@
       </div>
       <div class="section-field">
         <label class="ct-modal-label" for="capsaName" style="margin-bottom:6px">Full name <span style="color:#64748b;font-weight:400;">(optional)</span></label>
-        <input type="text" id="capsaName" class="ct-modal-input" placeholder="Rosa Villanueva" autocomplete="off">
+        <input type="text" id="capsaName" class="ct-modal-input" placeholder="Rosa Villanueva, MIT" autocomplete="off">
         <p style="margin:6px 0 0;font-size:11.5px;color:#64748b;text-align:left;line-height:1.5;">
-          Leave this blank and their real name arrives by itself the first time they sign in.
+          Leave this blank and their real name arrives by itself the first time they sign in. A degree goes after a comma, like Rosa Villanueva, MIT.
         </p>
-      </div>
-      <div class="section-field">
-        <label class="ct-modal-label" for="capsaDegree" style="margin-bottom:6px">Degree <span style="color:#64748b;font-weight:400;">(optional)</span></label>
-        @include('partials.degree-select', ['id' => 'capsaDegree', 'blank' => 'Not now', 'attrs' => 'class="ct-modal-input"'])
       </div>
       <p id="capsaEmailError" style="display:none;color:#dc2626;font-size:12px;margin:-6px 0 12px;text-align:left;"></p>
     </div>
@@ -1144,7 +1140,6 @@ function addCapsa() {
   document.getElementById('capsaNewFields').style.display = '';
   document.getElementById('capsaEmail').value = '';
   document.getElementById('capsaName').value = '';
-  document.getElementById('capsaDegree').value = '';
   document.getElementById('capsaEmailError').style.display = 'none';
 
   capsaExpertName.textContent = '';
@@ -1267,7 +1262,6 @@ function addCapsaByEmail(sections, onDone) {
     body: JSON.stringify({
       email: document.getElementById('capsaEmail').value.trim(),
       name: document.getElementById('capsaName').value.trim(),
-      degree: document.getElementById('capsaDegree').value || null,
       sections,
     }),
   })
