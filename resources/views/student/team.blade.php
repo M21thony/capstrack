@@ -65,6 +65,7 @@
   .compose-plus{width:42px;height:42px;border-radius:12px;background:var(--bg2);border:1.5px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:500;color:var(--text3);flex-shrink:0;transition:all 0.2s}
   .compose-card:hover .compose-plus{border-color:var(--accent3);color:var(--accent3)}
   .compose-title{font-size:14px;font-weight:600;color:var(--text)}
+  .modal-tutorial.is-closed{background:var(--red-bg);border-color:rgba(220,38,38,.3);color:var(--red)}
   .compose-sub{font-size:12px;color:var(--text3);margin-top:2px;line-height:1.4}
 
   /* ── Recruitment Grid ── */
@@ -702,7 +703,24 @@
           </div>
         </div>
       </div>
+      @elseif(!$myTeam && !$creationAllowed && !$joiningAllowed)
+      <div class="card" style="padding:20px 22px">
+        <div style="display:flex;align-items:flex-start;gap:14px">
+          <div style="width:38px;height:38px;border-radius:11px;background:var(--red-bg);color:var(--red);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+            <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          </div>
+          <div>
+            <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:4px">Creating and joining teams are closed</div>
+            <div style="font-size:12.5px;color:var(--text3);line-height:1.55">Your CaPSA has turned them off for now. Speak to your CaPSA if you are not on a team.</div>
+          </div>
+        </div>
+      </div>
       @elseif(!$myTeam && !$myRecruitment)
+      @if (!$creationAllowed || !$joiningAllowed)
+        <div class="card" style="padding:12px 16px;border-color:rgba(220,38,38,.3);background:var(--red-bg);font-size:12.5px;color:var(--red)">
+          {{ !$creationAllowed ? 'Creating a team is closed right now - you can still post to find a team.' : 'Joining a team is closed right now - you can still post to build your own team.' }}
+        </div>
+      @endif
       <div class="card compose-card" onclick="openPostModal()">
         <div class="compose-card-inner">
           <div class="compose-plus">+</div>
@@ -899,7 +917,7 @@
                   @method('PATCH')
                   <input type="hidden" name="status" value="accepted">
                   <button class="btn-accept" type="button" style="cursor:pointer; border:none; outline:none;"
-                    onclick="showConfirm({title:'Join Team',message:'Accept invitation from <strong>{{ addslashes($invite->team->team_name ?? 'this team') }}</strong>? Your current post will be removed.',icon:'team',confirmText:'Accept',confirmClass:'success',onConfirm:function(){document.getElementById('accept-form-{{ $invite->id }}').submit();}})">
+                    onclick="if(!JOINING_ALLOWED){showToast(JOINING_CLOSED_MSG,'error');return;}showConfirm({title:'Join Team',message:'Accept invitation from <strong>{{ addslashes($invite->team->team_name ?? 'this team') }}</strong>? Your current post will be removed.',icon:'team',confirmText:'Accept',confirmClass:'success',onConfirm:function(){document.getElementById('accept-form-{{ $invite->id }}').submit();}})">
                     Accept
                   </button>
                 </form>
@@ -943,7 +961,7 @@
                       @method('PATCH')
                       <input type="hidden" name="status" value="accepted">
                       <button class="btn-accept" type="button" style="cursor:pointer; border:none; outline:none;"
-                        onclick="showConfirm({title:'Accept Request',message:'Let <strong>{{ addslashes(($request->sender->f_name ?? '') . ' ' . ($request->sender->l_name ?? '')) }}</strong> join your team? Their post will be removed.',icon:'team',confirmText:'Accept',confirmClass:'success',onConfirm:function(){document.getElementById('accept-form-{{ $request->id }}').submit();}})">
+                        onclick="if(!JOINING_ALLOWED){showToast(JOINING_CLOSED_MSG,'error');return;}showConfirm({title:'Accept Request',message:'Let <strong>{{ addslashes(($request->sender->f_name ?? '') . ' ' . ($request->sender->l_name ?? '')) }}</strong> join your team? Their post will be removed.',icon:'team',confirmText:'Accept',confirmClass:'success',onConfirm:function(){document.getElementById('accept-form-{{ $request->id }}').submit();}})">
                         Accept Request
                       </button>
                     </form>
@@ -2297,6 +2315,12 @@ function cancelPendingInvite(invitationId, name) {
 // Which Capstone is running, so the page can say why rather than opening a
 // list nobody can be invited from.
 const CAPSTONE_STAGE = {{ $myTeam?->capstoneStage() ?? auth()->user()->capstoneStage() }};
+// The CaPSA's Team Rules. Checked the moment somebody starts to create, join
+// or invite - never after they have filled in a form.
+const CREATION_ALLOWED = @json($creationAllowed);
+const JOINING_ALLOWED = @json($joiningAllowed);
+const CREATION_CLOSED_MSG = @json(\App\Models\Team::CREATION_CLOSED);
+const JOINING_CLOSED_MSG = @json(\App\Models\Team::JOINING_CLOSED);
 
 function openOpenSlotInviteModal() {
     // The button is hidden in Capstone 2, but hidden is not gone - the
@@ -2305,6 +2329,12 @@ function openOpenSlotInviteModal() {
     if (CAPSTONE_STAGE !== 1) {
         showToast('Capstone 2 has started, so teams keep the members they finished '
             + 'Capstone 1 with. Members cannot be added now.', 'error');
+
+        return;
+    }
+
+    if (!JOINING_ALLOWED) {
+        showToast(JOINING_CLOSED_MSG, 'error');
 
         return;
     }
@@ -2743,7 +2773,16 @@ function resetPostModal() {
 }
 
 function openPostModal() {
+    if (!CREATION_ALLOWED && !JOINING_ALLOWED) {
+        showToast('Creating and joining teams are both closed right now - your CaPSA has turned them off.', 'error');
+        return;
+    }
     resetPostModal();
+    // Open on the goal that is still allowed.
+    if (!CREATION_ALLOWED) {
+        document.getElementById('post-goal').value = 'individual';
+        updateModalUI();
+    }
     syncRecruitmentSelectLabels();
     document.getElementById('postModal').classList.add('active');
 }
@@ -2754,6 +2793,10 @@ function closePostModal() {
 }
 
 function sendInviteOrRequest(receiverId, teamId, type) {
+    if (!JOINING_ALLOWED) {
+        showToast(JOINING_CLOSED_MSG, 'error');
+        return;
+    }
     const isInvite = type === 'invite';
     showConfirm({
         title: isInvite ? 'Invite Student' : 'Send Join Request',
@@ -2821,7 +2864,16 @@ function viewPostDetails(cardEl, name, skills, lookingFor, teamName, projectTitl
         actionBtn.style.opacity = 1;
         actionBtn.style.cursor = 'pointer';
 
-        if (type === 'Leader') {
+        if (!JOINING_ALLOWED) {
+            // Said on the post itself, before a request or invite is attempted.
+            ownerMsg.style.display = 'block';
+            ownerMsg.textContent = JOINING_CLOSED_MSG;
+            actionBtn.textContent = 'Joining is closed';
+            actionBtn.disabled = true;
+            actionBtn.style.opacity = 0.5;
+            actionBtn.style.cursor = 'not-allowed';
+            actionBtn.onclick = null;
+        } else if (type === 'Leader') {
             // Viewer wants to send a join request to a build_a_team poster
             if (currentStudentTeamId && currentStudentTeamId === postOwnerTeamId) {
                 // Viewer is already in this same team
@@ -2922,8 +2974,22 @@ function updateModalUI() {
         ? '<strong>CapsTip:</strong> Your team can have up to {{ \App\Models\Team::maxMembers() }} members including you (the leader). Slots are filled automatically as members join.' 
         : '<strong>CapsTip:</strong> Highlight your best technical strengths. Teams search for specific skills when filling up their empty slots.';
     
-    document.getElementById('leader-fields').style.display = isLeader ? 'block' : 'none';
-    document.getElementById('individual-fields').style.display = isLeader ? 'none' : 'block';
+    // A closed goal says so at once, and hides its fields so nothing gets typed for nothing.
+    const closedMsg = isLeader ? (CREATION_ALLOWED ? null : CREATION_CLOSED_MSG) : (JOINING_ALLOWED ? null : JOINING_CLOSED_MSG);
+    const noteBox = document.getElementById('modal-note-box');
+    if (closedMsg) {
+        document.getElementById('modal-note-text').innerHTML = '<strong>Closed:</strong> ' + closedMsg;
+    }
+    noteBox.classList.toggle('is-closed', !!closedMsg);
+    const submitBtn = document.getElementById('form-submit-btn');
+    if (submitBtn) {
+        submitBtn.disabled = !!closedMsg;
+        submitBtn.style.opacity = closedMsg ? 0.5 : 1;
+        submitBtn.style.cursor = closedMsg ? 'not-allowed' : 'pointer';
+    }
+
+    document.getElementById('leader-fields').style.display = isLeader && !closedMsg ? 'block' : 'none';
+    document.getElementById('individual-fields').style.display = !isLeader && !closedMsg ? 'block' : 'none';
     document.getElementById('recruitment-goal-input').value = isLeader ? 'build_a_team' : 'find_a_team';
     
     activeTags = [];
@@ -3029,6 +3095,12 @@ function filterFeed() {
 }
 
 function publishPost(event) {
+    const closedGoal = document.getElementById('post-goal').value === 'leader' ? !CREATION_ALLOWED : !JOINING_ALLOWED;
+    if (closedGoal) {
+        event.preventDefault();
+        showToast(document.getElementById('post-goal').value === 'leader' ? CREATION_CLOSED_MSG : JOINING_CLOSED_MSG, 'error');
+        return;
+    }
     if (activeTags.length === 0) {
         event.preventDefault();
         showToast('Choose at least one role.', 'error');

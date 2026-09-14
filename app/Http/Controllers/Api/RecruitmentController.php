@@ -90,6 +90,10 @@ class RecruitmentController extends Controller
             return response()->json(['message' => Team::CREATION_CLOSED], 422);
         }
 
+        if ($validated['recruitment_goal'] === 'find_a_team' && ! Team::joiningAllowed()) {
+            return response()->json(['message' => Team::JOINING_CLOSED], 422);
+        }
+
         $student = $request->user();
         $studentId = $student->student_id;
 

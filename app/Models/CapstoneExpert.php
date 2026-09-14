@@ -25,6 +25,7 @@ use Illuminate\Support\Str;
     'program_slots',
     'program',
     'sections',
+        'degree_title',
     'school_year',
     'rejection_reason',
     'reject_attempts',
@@ -558,6 +559,42 @@ class CapstoneExpert extends Authenticatable
     public function degreeLabel(): ?string
     {
         return self::DEGREES[$this->highest_degree] ?? null;
+    }
+
+    /** The degrees offered, by level, as they are written after a name. */
+    public const DEGREE_TITLES = [
+        'bachelor' => ['BSIT', 'BSCS', 'BSIS', 'BLIS', 'BSEd', 'AB', 'BS'],
+        'master' => ['MIT', 'MSIT', 'MSCS', 'MIS', 'MLIS', 'MAEd', 'MAT', 'MBA', 'MA', 'MS'],
+        'doctorate' => ['PhD', 'DIT', 'EdD', 'DBA', 'DPA'],
+    ];
+
+    /** @return array<int, string> */
+    public static function degreeTitles(): array
+    {
+        return array_merge(...array_values(self::DEGREE_TITLES));
+    }
+
+    /**
+     * A degree title and the level it is: MIT is a master's. An unknown or
+     * blank title clears both.
+     *
+     * @return array{degree_title: ?string, highest_degree: ?string}
+     */
+    public static function degreeFromTitle(?string $title): array
+    {
+        foreach (self::DEGREE_TITLES as $level => $titles) {
+            if (in_array($title, $titles, true)) {
+                return ['degree_title' => $title, 'highest_degree' => $level];
+            }
+        }
+
+        return ['degree_title' => null, 'highest_degree' => null];
+    }
+
+    /** What a list shows after the name: MIT, PhD - or the level when only that is on record. */
+    public function degreeText(): ?string
+    {
+        return $this->degree_title ?: $this->degreeLabel();
     }
 
     /**

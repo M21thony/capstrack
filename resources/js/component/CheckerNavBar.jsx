@@ -15,7 +15,7 @@ const roleWord = (role) => (role ? role.replace(/_/g, " ") : null);
  * The annotator's top bar: what this document is, whether the remarks are
  * saved, and the one thing to do at the end - finish the review.
  */
-function CheckerNavbar({ ctx, status, verdict, saveState, driveSyncState, driveSyncError, onExport, onFinish }) {
+function CheckerNavbar({ ctx, status, verdict, saveState, driveSyncState, driveSyncError, onExport, onFinish, versions = [], comparing = false, onCompare }) {
   const leave = (e) => {
     if ((saveState === "saving" || driveSyncState === "syncing")
       && !window.confirm("Your remarks are still saving. Leave anyway?")) {
@@ -67,6 +67,11 @@ function CheckerNavbar({ ctx, status, verdict, saveState, driveSyncState, driveS
       </span>
       {driveSyncState === "error" && needsDriveConnect(driveSyncError) && (
         <a className="an-link" href="/admin/gdrive/connect">Connect Google Drive</a>
+      )}
+      {versions.length > 0 && (
+        <button type="button" className={`rr-btn ghost${comparing ? " on" : ""}`} onClick={onCompare} aria-pressed={comparing}>
+          {comparing ? "Hide previous version" : "Compare with previous version"}
+        </button>
       )}
       <button type="button" className="rr-btn ghost" onClick={onExport}>
         <Icon name="download" />Export PDF

@@ -36,6 +36,7 @@ class ProfileController extends Controller
             'expertise' => ['present', 'array'],
             'expertise.*' => ['string', 'max:100'],
             'highest_degree' => ['nullable', 'in:'.implode(',', array_keys(CapstoneExpert::DEGREES))],
+            'degree' => ['nullable', 'in:'.implode(',', CapstoneExpert::degreeTitles())],
         ]);
 
         $validator->after(function ($v) use ($request) {
@@ -96,7 +97,9 @@ class ProfileController extends Controller
 
         // Only when the panel sent it, so an older page that does not know
         // about degrees cannot wipe one out by saving.
-        $degree = $request->has('highest_degree') ? ['highest_degree' => $validated['highest_degree'] ?? null] : [];
+        $degree = $request->has('degree')
+            ? CapstoneExpert::degreeFromTitle($validated['degree'] ?? null)
+            : ($request->has('highest_degree') ? ['highest_degree' => $validated['highest_degree'] ?? null] : []);
 
         DB::transaction(function () use ($expert, $accepted, $raw, $expertise, $degree) {
             $expert->update([

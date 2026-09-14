@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 import CheckerNavbar from "./component/CheckerNavbar";
 import PDFChecker from "./component/pages/PDFChecker";
+import StudentPdfViewer from "./component/pages/StudentPdfViewer";
 import FinishReview from "./component/FinishReview";
 import { Toast } from "./component/reader/Reader";
 import "./component/reader/reader.css";
@@ -33,6 +34,10 @@ const readContext = () => {
 
 function App() {
   const [ctx] = useState(readContext);
+  // Earlier rounds of this requirement, and the one open beside the document.
+  const versions = ctx.versions || [];
+  const [compareId, setCompareId] = useState(null);
+  const compareVersion = versions.find((v) => v.id === compareId) || null;
   const params = new URLSearchParams(window.location.search);
   const reviewId = ctx.reviewId || params.get("reviewId") || params.get("fileID");
 
@@ -406,19 +411,40 @@ function App() {
         driveSyncError={driveSyncError}
         onExport={handleExport}
         onFinish={() => setFinishing(true)}
+        versions={versions}
+        comparing={Boolean(compareVersion)}
+        onCompare={() => setCompareId(compareVersion ? null : versions[0]?.id ?? null)}
       />
-      <PDFChecker
-        pdfUrl={reviewId ? `/reviews/${reviewId}/pdf` : null}
-        comments={comments}
-        setComments={setComments}
-        generalComments={generalComments}
-        onAddGeneral={addGeneral}
-        onDeleteGeneral={deleteGeneral}
-        onDeleteComment={deleteComment}
-        selectedId={selectedId}
-        setSelectedId={setSelectedId}
-        notify={showToast}
-      />
+      <div className={compareVersion ? "an-split" : "an-single"}>
+        <PDFChecker
+          pdfUrl={reviewId ? `/reviews/${reviewId}/pdf` : null}
+          comments={comments}
+          setComments={setComments}
+          generalComments={generalComments}
+          onAddGeneral={addGeneral}
+          onDeleteGeneral={deleteGeneral}
+          onDeleteComment={deleteComment}
+          selectedId={selectedId}
+          setSelectedId={setSelectedId}
+          notify={showToast}
+        />
+        {compareVersion && (
+          <section className="an-compare" aria-label="Earlier version of this document">
+            <div className="an-compare-bar">
+              <label htmlFor="an-compare-pick">Comparing with</label>
+              <select id="an-compare-pick" value={compareVersion.id} onChange={(e) => setCompareId(Number(e.target.value))}>
+                {versions.map((v) => (
+                  <option key={v.id} value={v.id}>{v.round}{v.uploaded ? ` · ${v.uploaded}` : ""}</option>
+                ))}
+              </select>
+              <span className="an-compare-hint">Highlights are your remarks on that version</span>
+              <span className="rr-spacer" />
+              <button type="button" className="rr-btn" onClick={() => setCompareId(null)}>Close</button>
+            </div>
+            <StudentPdfViewer key={compareVersion.id} pdfUrl={compareVersion.file} remarksUrl={compareVersion.remarks} reviewer="you" />
+          </section>
+        )}
+      </div>
       <FinishReview
         open={finishing}
         onClose={() => setFinishing(false)}

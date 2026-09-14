@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\CapstoneDocument;
 use App\Models\CapstoneDocumentReview;
 use App\Models\PdfRemark;
 use App\Services\GoogleDriveService;
@@ -38,6 +39,37 @@ class PdfAnnotationController extends Controller
         return Storage::disk('local')->response($document->file_path, null, [
             'Content-Type' => 'application/pdf',
         ]);
+    }
+
+    /**
+     * GET /reviews/{review}/versions/{document}/file - an earlier upload of
+     * the same requirement, so the reviewer can see what the team changed.
+     */
+    public function versionFile(CapstoneDocumentReview $review, CapstoneDocument $document)
+    {
+        $this->authorizeVersion($review, $document);
+
+        abort_unless($document->file_path && Storage::disk('local')->exists($document->file_path), 404);
+
+        return Storage::disk('local')->response($document->file_path, null, ['Content-Type' => 'application/pdf']);
+    }
+
+    /** GET /reviews/{review}/versions/{document}/remarks - what this reviewer asked for on that version. */
+    public function versionRemarks(CapstoneDocumentReview $review, CapstoneDocument $document)
+    {
+        $this->authorizeVersion($review, $document);
+
+        $earlier = CapstoneDocumentReview::where('file_id', $document->file_id)->where('expert_id', $review->expert_id)->first();
+
+        return $earlier ? $earlier->pdfRemarks()->where('is_general', false)->get() : collect();
+    }
+
+    /** Only the reviewer of this review, and only the team's earlier uploads of this requirement. */
+    private function authorizeVersion(CapstoneDocumentReview $review, CapstoneDocument $document): void
+    {
+        $this->authorizeReview($review);
+
+        abort_unless($review->document && $review->document->earlierVersions()->contains('file_id', $document->file_id), 404);
     }
 
     public function index(CapstoneDocumentReview $review)

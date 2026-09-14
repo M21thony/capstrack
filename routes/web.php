@@ -301,6 +301,9 @@ Route::middleware(['auth:expert', 'expert.approved', 'no.cache'])->prefix('revie
     Route::get('/{review}/status', [PdfAnnotationController::class, 'showStatus'])->name('status.show');
     Route::post('/{review}/status', [PdfAnnotationController::class, 'updateStatus'])->name('status.update');
     Route::put('/{review}/drive-file', [PdfAnnotationController::class, 'syncDrive'])->name('sync-drive');
+    // The team's earlier uploads of the same requirement, to compare against.
+    Route::get('/{review}/versions/{document}/file', [PdfAnnotationController::class, 'versionFile'])->name('versions.file');
+    Route::get('/{review}/versions/{document}/remarks', [PdfAnnotationController::class, 'versionRemarks'])->name('versions.remarks');
 });
 
 Route::get('/', function () {

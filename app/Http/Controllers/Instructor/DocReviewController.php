@@ -82,6 +82,14 @@ class DocReviewController extends Controller
                 'requirement' => $item?->title,
                 'due' => $item?->due_date?->format('M j'),
                 'backUrl' => route('instructor.docreview'),
+                // Earlier rounds of the same requirement, to open beside this one.
+                'versions' => $document ? $document->earlierVersions()->map(fn ($v) => [
+                    'id' => (int) $v->file_id,
+                    'round' => $v->roundLabel(),
+                    'uploaded' => $v->created_at?->format('M j, Y'),
+                    'file' => route('reviews.versions.file', [$review->review_id, $v->file_id]),
+                    'remarks' => route('reviews.versions.remarks', [$review->review_id, $v->file_id]),
+                ])->values() : [],
             ],
         ]);
     }

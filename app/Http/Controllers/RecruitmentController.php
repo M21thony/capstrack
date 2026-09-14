@@ -89,6 +89,15 @@ class RecruitmentController extends Controller
             return back()->withErrors(['error' => Team::CREATION_CLOSED]);
         }
 
+        // Looking for a team is the way in to joining one, so it closes with joining.
+        if ($validated['recruitment_goal'] === 'find_a_team' && ! Team::joiningAllowed()) {
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'message' => Team::JOINING_CLOSED], 422);
+            }
+
+            return back()->withErrors(['error' => Team::JOINING_CLOSED]);
+        }
+
         $recruitment = DB::transaction(function () use ($validated, $studentId, $roles): Recruitment {
             // If goal is build_a_team and team_name is provided, create team and link it
             if ($validated['recruitment_goal'] === 'build_a_team' && ! empty($validated['team_name'])) {
