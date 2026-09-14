@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Models\Checklist;
 use App\Models\Milestone;
 use App\Models\MilestoneItem;
 
@@ -93,6 +94,39 @@ class MilestoneTemplate
         }
 
         return $written;
+    }
+
+    /**
+     * Start a CaPSA's checklist from the department's, grouping its lines
+     * into milestones by phase in the order the paper gives them.
+     */
+    public static function createChecklist(int $capsaId, string $program, string $key = self::CAPSTONE_1): Checklist
+    {
+        $template = self::all()[$key];
+
+        $checklist = Checklist::create([
+            'capsa_id' => $capsaId,
+            'program' => $program,
+            'title' => $template['name'].' Checklist',
+        ]);
+
+        foreach (collect($template['items'])->groupBy('phase')->values() as $position => $lines) {
+            $milestone = $checklist->milestones()->create(['name' => $lines->first()['phase'], 'position' => $position]);
+
+            foreach ($lines->values() as $at => $line) {
+                $milestone->deliverables()->create([
+                    'template_key' => $line['template_key'],
+                    'title' => $line['title'],
+                    'kind' => $line['kind'],
+                    'role' => $line['role'] ?? null,
+                    'chapter' => $line['chapter'] ?? null,
+                    'defense_type' => $line['defense_type'] ?? null,
+                    'position' => $at,
+                ]);
+            }
+        }
+
+        return $checklist;
     }
 
     /**
