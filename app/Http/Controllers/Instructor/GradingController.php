@@ -54,6 +54,7 @@ class GradingController extends Controller
                 'defense_type' => $schedule->defense_type,
                 'attempt' => max(1, (int) $schedule->attempt),
                 'outcome' => $schedule->hasOutcome() ? $schedule->outcomeLabel() : null,
+                'outcome_tone' => \App\Support\DefenseOutcome::tone($schedule->outcome),
                 'panel_role' => $panel->panel_role,
                 'schedule_date' => $schedule->schedule_date,
                 'end_date' => $schedule->end_date,

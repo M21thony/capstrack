@@ -3,14 +3,16 @@ import { pdfjs } from "react-pdf";
 import { compareVersions, remarksNearChanges } from "./versionDiff";
 
 const normalise = (s) => s.toLowerCase().normalize("NFKD").replace(/[^\p{L}\p{N}]+/gu, "");
-// A line that is only a page number would count as changed whenever pages shift.
-const PAGE_NUMBER = /^(page\s*)?(\d+|[ivxlc]{1,6})(\s*of\s*\d+)?$/i;
+// A page number in the header or footer would count as changed whenever pages
+// shift. Only short numbers near the page edge: "2026" on a title page is text.
+const PAGE_NUMBER = /^(page\s*)?(\d{1,3}|[ivxlc]{1,6})(\s*of\s*\d{1,3})?$/i;
+const nearEdge = (top) => top < 0.12 || top > 0.88;
 
 /**
  * Every word of a PDF, with its page, line and where it sits as fractions of
- * the page. A PDF stores text in pieces that can split a word ("sys" + "tem")
- * differently from one save to the next, so pieces are joined back into words
- * by where they sit, not by how they were stored.
+ * the page. A PDF stores text in pieces that can split a word ("C" + "APSTRACK"
+ * in small caps) differently from one save to the next. PDF.js already puts a
+ * space wherever the text really has one, so pieces are joined unless it did.
  */
 export async function readWords(url) {
   const doc = await pdfjs.getDocument(url).promise;
@@ -23,7 +25,7 @@ export async function readWords(url) {
       const pageWords = [];
       let line = 0;
       let word = null;
-      let prev = null; // {top, end, h, eol}
+      let prev = null; // {base, h, eol}
 
       const endWord = () => {
         if (word) {
@@ -40,15 +42,11 @@ export async function readWords(url) {
         const top = tx[5] - h;
         const x = tx[4];
 
-        if (prev) {
-          const newLine = prev.eol || Math.abs(top - prev.top) > h / 2;
-          if (newLine) {
-            line++;
-            // A word hyphenated across the line break is still one word.
-            if (!(word && /\p{L}-$/u.test(word.raw))) endWord();
-          } else if (x - prev.end > h * 0.2) {
-            endWord();
-          }
+        // Lines are told apart by baseline, so a bigger first letter stays on its line.
+        if (prev && (prev.eol || Math.abs(tx[5] - prev.base) > Math.min(h, prev.h) / 2)) {
+          line++;
+          // A word hyphenated across the line break is still one word.
+          if (!(word && /\p{L}-$/u.test(word.raw))) endWord();
         }
 
         const len = item.str.length;
@@ -63,14 +61,16 @@ export async function readWords(url) {
             highlight_height: (h * 1.2) / vp.height,
           });
         }
-        prev = { top, end: x + item.width, h, eol: item.hasEOL };
+        prev = { base: tx[5], h, eol: item.hasEOL };
       });
       endWord();
 
-      // Drop lines that are only a page number.
+      // Drop header and footer lines that are only a page number.
       const byLine = {};
       pageWords.forEach((w) => (byLine[w.line] ||= []).push(w.raw));
-      pageWords.forEach((w) => { if (!PAGE_NUMBER.test(byLine[w.line].join(" "))) words.push(w); });
+      pageWords.forEach((w) => {
+        if (!(nearEdge(w.rects[0].top_position) && PAGE_NUMBER.test(byLine[w.line].join(" ")))) words.push(w);
+      });
       page.cleanup();
     }
   } finally {
@@ -100,7 +100,7 @@ export function useVersionDiff(currentUrl, base) {
         if (!oldWords.length || !newWords.length) { setState({ status: "notext" }); return; }
         // ponytail: runs on the main thread; move to a worker if long documents freeze the page.
         const diff = compareVersions(oldWords, newWords);
-        setState({ status: "ready", changes: diff.changes, marks: diff.marks, remarks: remarksNearChanges(remarks, oldWords, newWords, diff) });
+        setState({ status: "ready", changes: diff.changes, marks: diff.marks, oldMarks: diff.oldMarks, remarks: remarksNearChanges(remarks, oldWords, newWords, diff) });
       })
       .catch(() => { if (live) setState({ status: "error" }); });
     return () => { live = false; };

@@ -19,7 +19,7 @@ use Illuminate\Support\Facades\DB;
  * Two sample teams that sat their Pre-proposal Defense and did not pass it,
  * so the two redefense outcomes can be seen end to end:
  *
- *   Sample Redefense  - "Redefense with revision": a second attempt opens
+ *   Sample Redefense  - "Redefense with major revision": a second attempt opens
  *                       with the same panel, waiting for a date.
  *   Sample New Title  - "Redefense with a new title": a second attempt opens
  *                       and the team's pre-proposals are handed back.

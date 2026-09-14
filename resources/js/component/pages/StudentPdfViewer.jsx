@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import {
-  Highlights, PageStrip, ReaderTools, RemarksPanel, numberRemarks, usePageColumn,
+  Highlights, PageStrip, ReaderTools, RemarksPanel, numberRemarks, rectStyle, usePageColumn,
 } from "../reader/Reader";
 import "../reader/reader.css";
 
@@ -48,12 +48,21 @@ function Decision({ d }) {
  * copy with the remarks baked into the pixels, so it always matches the
  * remarks as they are now.
  */
-function StudentPdfViewer({ pdfUrl, remarksUrl, reviewer = "your reviewer", general = [], decision = null, others = [] }) {
+function StudentPdfViewer({
+  pdfUrl, remarksUrl, reviewer = "your reviewer", general = [], decision = null, others = [],
+  // Used only when it is the earlier version beside the annotator: what was
+  // removed from it, and the change to scroll to.
+  marks = null, focus = null,
+}) {
   const [numPages, setNumPages] = useState(null);
   const [error, setError] = useState(null);
   const [remarks, setRemarks] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
   const col = usePageColumn(numPages);
+
+  useEffect(() => {
+    if (focus?.rect) col.goToRect(focus.page, focus.rect);
+  }, [focus]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!remarksUrl) return;
@@ -135,6 +144,9 @@ function StudentPdfViewer({ pdfUrl, remarksUrl, reviewer = "your reviewer", gene
                     ? <Page pageNumber={n} width={col.pageWidth} renderTextLayer={false} renderAnnotationLayer={false} loading="" />
                     : <div style={{ height: Math.round((col.pageWidth * 11) / 8.5) }} />}
                   <div className="rr-overlay">
+                    {(marks?.[n] || []).map((m) => m.rects.map((r, idx) => (
+                      <div key={`d${m.id}-${idx}`} className={`rr-hl rr-diff old${m.inserted ? " ins" : ""}${focus?.id === m.id ? " on" : ""}`} style={rectStyle(r)} />
+                    )))}
                     <Highlights
                       remarks={remarks.filter((r) => r.page_number === n)}
                       numbers={numbers}

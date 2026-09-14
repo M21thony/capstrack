@@ -109,8 +109,14 @@ export function compareVersions(oldWords, newWords) {
     for (let j = b0; j < b1; j++) added[j] = edit ? edit.added[j - b0] : 1;
   });
 
+  // The same letters split into different words ("C APSTRACK" and "CAPSTRACK")
+  // is a difference in how the PDF was saved, not in what it says.
+  const joined = (words, s, e) => words.slice(s, e).map((w) => w.t).join("");
   const marks = {};
-  const changes = hunks(removed, added).map(([a0, a1, b0, b1], id) => {
+  const oldMarks = {};
+  const changes = hunks(removed, added)
+    .filter(([a0, a1, b0, b1]) => joined(oldWords, a0, a1) !== joined(newWords, b0, b1))
+    .map(([a0, a1, b0, b1], id) => {
     const byPage = {};
     for (let j = b0; j < b1; j++) (byPage[newWords[j].page] ||= []).push(...newWords[j].rects);
     Object.entries(byPage).forEach(([page, rects]) => (marks[page] ||= []).push({ id, rects: mergeRectsByLine(rects) }));
@@ -121,11 +127,23 @@ export function compareVersions(oldWords, newWords) {
     if (b0 === b1 && first) {
       (marks[anchor.page] ||= []).push({ id, removed: true, rects: [{ ...first, left_position: Math.max(0, first.left_position - 0.004), highlight_width: 0.003 }] });
     }
+    // The same passage on the earlier version: its removed words, or a thin
+    // mark where new words were put in.
+    const byOld = {};
+    for (let i = a0; i < a1; i++) (byOld[oldWords[i].page] ||= []).push(...oldWords[i].rects);
+    Object.entries(byOld).forEach(([page, rects]) => (oldMarks[page] ||= []).push({ id, rects: mergeRectsByLine(rects) }));
+    const oldAnchor = oldWords[Math.min(a0, oldWords.length - 1)];
+    const oldFirst = oldAnchor?.rects[0];
+    if (a0 === a1 && oldFirst) {
+      (oldMarks[oldAnchor.page] ||= []).push({ id, inserted: true, rects: [{ ...oldFirst, left_position: Math.max(0, oldFirst.left_position - 0.004), highlight_width: 0.003 }] });
+    }
     return {
       id,
       kind: a0 === a1 ? "added" : b0 === b1 ? "removed" : "reworded",
       page: anchor?.page ?? 1,
       rect: first ?? null,
+      oldPage: oldAnchor?.page ?? 1,
+      oldRect: oldFirst ?? null,
       // A few words either side, the way a code review shows a changed line.
       before: snippet(newWords, Math.max(0, b0 - 6), b0),
       oldText: snippet(oldWords, a0, a1),
@@ -136,7 +154,7 @@ export function compareVersions(oldWords, newWords) {
     };
   });
 
-  return { removed, added, changes, marks };
+  return { removed, added, changes, marks, oldMarks };
 }
 
 /**

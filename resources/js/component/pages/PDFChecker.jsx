@@ -6,7 +6,6 @@ import {
   kindOf, mergeRectsByLine, numberRemarks, rectStyle, usePageColumn,
 } from "../reader/Reader";
 import ChangesPanel from "../reader/ChangesPanel";
-import { useVersionDiff } from "../reader/useVersionDiff";
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   "pdfjs-dist/build/pdf.worker.min.mjs",
@@ -32,21 +31,28 @@ const block = (e) => e.preventDefault();
 function PDFChecker({
   pdfUrl, comments, setComments, generalComments, onAddGeneral, onDeleteGeneral,
   onDeleteComment, selectedId, setSelectedId, notify, base = null, showChanges = true,
+  diff = { status: "idle" }, onFocusChange,
 }) {
   const [numPages, setNumPages] = useState(null);
   const [error, setError] = useState(null);
   const [rendered, setRendered] = useState(() => new Set());
   const col = usePageColumn(numPages);
 
-  // Changes since an earlier version are only drawn here, never kept as remarks.
-  const diff = useVersionDiff(pdfUrl, base);
+  // Changes since an earlier version are only drawn, never kept as remarks.
+  // Opening one also moves the earlier version, when it is open beside this.
   const [tab, setTab] = useState("remarks");
   const [changeId, setChangeId] = useState(null);
   const marks = showChanges && diff.status === "ready" ? diff.marks : {};
-  const openChange = (c) => { setChangeId(c.id); if (c.rect) col.goToRect(c.page, c.rect); };
+  const openChange = (c) => {
+    setChangeId(c.id);
+    if (c.rect) col.goToRect(c.page, c.rect);
+    onFocusChange?.(c);
+  };
   const openOldRemark = (r) => {
     setChangeId(r.changeIds[0] ?? null);
     if (r.target) col.goToRect(r.target.page, r.target.rect);
+    const c = diff.changes?.find((x) => x.id === r.changeIds[0]);
+    if (c) onFocusChange?.(c);
   };
   const tabs = base && (
     <div className="rr-tabs" role="tablist" aria-label="Side panel">

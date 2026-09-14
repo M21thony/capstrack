@@ -72,7 +72,7 @@ class DefenseOutcome
             self::PASSED_WITH_REVISION => 'Passed with revision',
             // Outside the pre-proposal stage there is only one kind of
             // redefense, so the qualifier is noise there.
-            self::REDEFENSE => $defenseType === self::PRE_PROPOSAL ? 'Redefense with revision' : 'Redefense',
+            self::REDEFENSE => $defenseType === self::PRE_PROPOSAL ? 'Redefense with major revision' : 'Redefense',
             self::REDEFENSE_NEW_TITLE => 'Redefense with a new title',
             default => 'Not decided yet',
         };
@@ -93,6 +93,20 @@ class DefenseOutcome
     public static function requiresRedefense(?string $outcome): bool
     {
         return in_array($outcome, [self::REDEFENSE, self::REDEFENSE_NEW_TITLE], true);
+    }
+
+    /**
+     * How serious the outcome is, for its colour: a pass is green, a
+     * redefense orange, and starting over with a new title red.
+     */
+    public static function tone(?string $outcome): string
+    {
+        return match ($outcome) {
+            self::PASSED, self::PASSED_WITH_REVISION => 'pass',
+            self::REDEFENSE => 'major',
+            self::REDEFENSE_NEW_TITLE => 'fail',
+            default => 'none',
+        };
     }
 
     /** Whether the team got through this stage, revisions or not. */

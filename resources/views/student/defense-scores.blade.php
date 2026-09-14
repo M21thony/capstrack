@@ -18,6 +18,13 @@
 .ds-band b{font-size:20px;color:var(--text)}
 .ds-band small{display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--accent3);font-weight:700}
 .ds-band p{margin:0;font-size:12.5px;color:var(--text2);max-width:60ch}
+/* The decision's colour says how serious it is. */
+.ds-band.is-pass{background:var(--green-bg);border-color:rgba(22,163,74,.25)}
+.ds-band.is-pass .ds-decision b,.ds-band.is-pass .ds-decision small{color:var(--green)}
+.ds-band.is-major{background:#fff7ed;border-color:#fed7aa}
+.ds-band.is-major .ds-decision b,.ds-band.is-major .ds-decision small{color:#c2410c}
+.ds-band.is-fail{background:var(--red-bg);border-color:#fecaca}
+.ds-band.is-fail .ds-decision b,.ds-band.is-fail .ds-decision small{color:var(--red)}
 .ds-avg{margin-left:auto;text-align:right}
 .ds-avg b{font-variant-numeric:tabular-nums}
 .ds-grid{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:12px;align-items:start}
@@ -78,8 +85,8 @@
       $scoreOf = fn ($seat, $c) => $gradeOf->get($seat->expert_id)?->scores[(string) $c->criterion_id] ?? null;
     @endphp
     <section id="ds-{{ $d->defense_id }}" class="ds-panel" role="tabpanel" @unless ($loop->last) hidden @endunless>
-      <div class="ds-band">
-        <div>
+      <div class="ds-band is-{{ \App\Support\DefenseOutcome::tone($d->outcome) }}">
+        <div class="ds-decision">
           <small>Panel decision</small>
           <b>{{ $d->outcomeLabel() }}</b>
           <p>{{ $d->outcome_remarks ?: \App\Support\DefenseOutcome::description($d->outcome, $d->defense_type) }}</p>
