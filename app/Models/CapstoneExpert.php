@@ -591,6 +591,53 @@ class CapstoneExpert extends Authenticatable
         return ['degree_title' => null, 'highest_degree' => null];
     }
 
+    /**
+     * A name as it is written, split from the credentials after the comma:
+     * "Juan Dela Cruz, MIT" is Juan Dela Cruz, with MIT.
+     *
+     * @return array{0: string, 1: ?string}
+     */
+    public static function splitName(string $name): array
+    {
+        [$name, $credentials] = array_pad(explode(',', $name, 2), 2, '');
+        $credentials = trim($credentials);
+
+        return [trim($name), $credentials !== '' ? mb_substr($credentials, 0, 50) : null];
+    }
+
+    /**
+     * The highest degree named in someone's credentials: "MIT, LPT" is a
+     * master's, "MIT, Ph.D." a doctorate. None named clears the degree.
+     *
+     * @return array{degree_title: ?string, highest_degree: ?string}
+     */
+    public static function degreeFromCredentials(?string $credentials): array
+    {
+        $words = preg_split('/[\s,;\/]+/', str_replace('.', '', (string) $credentials), -1, PREG_SPLIT_NO_EMPTY);
+
+        foreach (array_reverse(self::DEGREE_TITLES, true) as $level => $titles) {
+            foreach ($titles as $title) {
+                foreach ($words as $word) {
+                    if (strcasecmp($word, $title) === 0) {
+                        return ['degree_title' => $title, 'highest_degree' => $level];
+                    }
+                }
+            }
+        }
+
+        return self::degreeFromTitle(null);
+    }
+
+    protected static function booted(): void
+    {
+        // The degree is read from what is written after the name.
+        static::saving(function (self $expert) {
+            if ($expert->isDirty('credentials')) {
+                $expert->fill(self::degreeFromCredentials($expert->credentials));
+            }
+        });
+    }
+
     /** What a list shows after the name: MIT, PhD - or the level when only that is on record. */
     public function degreeText(): ?string
     {

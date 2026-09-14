@@ -137,7 +137,6 @@ class AdminExpertsController extends Controller
             'roles.*' => ['string', 'in:'.implode(',', CapstoneExpert::STUDENT_FACING_ROLES)],
             'expertise' => ['nullable', 'array'],
             'expertise.*' => ['string', 'max:100'],
-            'degree' => ['nullable', 'in:'.implode(',', CapstoneExpert::degreeTitles())],
         ], [
             'email.required' => 'Type the email address of the person to add.',
             'email.email' => 'That is not an email address.',
@@ -184,13 +183,16 @@ class AdminExpertsController extends Controller
         $created = false;
 
         if (! $expert) {
-            // Blank stays blank until they sign in and Google says.
-            [$firstName, $lastName] = $this->nameFrom((string) $request->input('name'));
+            // Blank stays blank until they sign in and Google says. A degree
+            // written after a comma ("Juan Dela Cruz, MIT") is their credentials.
+            [$name, $credentials] = CapstoneExpert::splitName((string) $request->input('name'));
+            [$firstName, $lastName] = $this->nameFrom($name);
 
             $expert = CapstoneExpert::create([
                 'email' => $email,
                 'first_name' => $firstName,
                 'last_name' => $lastName,
+                'credentials' => $credentials,
                 // CaPSA naming them is the vetting, the same as including
                 // them on the list - there is nobody left to approve them.
                 'approved_status' => true,
@@ -227,10 +229,6 @@ class AdminExpertsController extends Controller
             // Scoped to the student-facing roles, so this can neither grant
             // nor revoke CaPSA - that stays Admin's own action.
             CapstoneExpert::syncRoles($expert->expert_id, $wanted, $roleIds->values());
-        }
-
-        if ($request->filled('degree')) {
-            $expert->update(CapstoneExpert::degreeFromTitle($request->input('degree')));
         }
 
         // Blank means "not saying", the same as an empty column on the list -
@@ -577,7 +575,6 @@ class AdminExpertsController extends Controller
             'name' => ['nullable', 'string', 'max:120'],
             'sections' => ['nullable', 'array'],
             'sections.*' => ['string'],
-            'degree' => ['nullable', 'in:'.implode(',', CapstoneExpert::degreeTitles())],
         ], [
             'email.required' => 'Type the email address of the person to make a CaPSA.',
             'email.email' => 'That is not an email address.',
@@ -638,12 +635,14 @@ class AdminExpertsController extends Controller
         if (! $expert) {
             // Blank stays blank rather than becoming something derived from
             // the address; the list says so in the row itself.
-            [$firstName, $lastName] = $this->nameFrom((string) $request->input('name'));
+            [$name, $credentials] = CapstoneExpert::splitName((string) $request->input('name'));
+            [$firstName, $lastName] = $this->nameFrom($name);
 
             $expert = CapstoneExpert::create([
                 'email' => $email,
                 'first_name' => $firstName,
                 'last_name' => $lastName,
+                'credentials' => $credentials,
                 // Admin naming them is the vetting, so there is nobody left
                 // to approve them afterwards.
                 'approved_status' => true,
@@ -662,10 +661,6 @@ class AdminExpertsController extends Controller
         // existing CaPSA already handles.
         if ($request->has('sections')) {
             $expert->sections = $request->input('sections', []);
-        }
-
-        if ($request->filled('degree')) {
-            $expert->fill(CapstoneExpert::degreeFromTitle($request->input('degree')));
         }
 
         $expert->save();
