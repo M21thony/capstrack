@@ -175,6 +175,8 @@
                 $row->waiting_on === 'team' => $ord(max(1, $row->revision)).' revision requested',
                 $row->waiting_on === 'signed_copy' => 'Approved — upload the signed copy',
                 in_array($row->waiting_on, ['adviser', 'consultant'], true) => 'With your '.$row->waiting_on,
+                $row->waiting_on === 'redefense' => 'Re-defense needed — the panel asked for another defense',
+                $item->kind === 'defense' && $row->revision > 0 => 'Re-defense scheduled',
                 default => 'Scheduled',
             };
             $closer = [
