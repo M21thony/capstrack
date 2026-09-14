@@ -60,6 +60,16 @@ class OneBookingPerExpertTest extends TestCase
         ]);
     }
 
+    /**
+     * Mondays that are always still ahead. The dates used to be written out,
+     * and once the first one's session had ended the app rightly treated it
+     * as done - so the test started failing on that date by itself.
+     */
+    private function monday(int $weeksLater = 0): string
+    {
+        return now()->next(\Illuminate\Support\Carbon::MONDAY)->addWeeks($weeksLater)->toDateString();
+    }
+
     private function book(ConsultationSchedule $slot, string $date)
     {
         return $this->actingAs($this->student, 'web')->postJson('/student/consultation/book', [
@@ -72,9 +82,9 @@ class OneBookingPerExpertTest extends TestCase
     {
         $adviser = CapstoneExpert::factory()->create(['first_name' => 'Grom', 'last_name' => 'Hellscream']);
 
-        $this->book($this->slotFor($adviser), '2026-09-14')->assertSuccessful();
+        $this->book($this->slotFor($adviser), $this->monday())->assertSuccessful();
 
-        $this->book($this->slotFor($adviser, '11:00'), '2026-09-21')
+        $this->book($this->slotFor($adviser, '11:00'), $this->monday(1))
             ->assertStatus(422)
             ->assertJson(fn ($j) => $j->where('message', fn ($m) => str_contains($m, 'Hellscream'))->etc());
 
@@ -87,8 +97,8 @@ class OneBookingPerExpertTest extends TestCase
         $adviser = CapstoneExpert::factory()->create(['first_name' => 'Grom', 'last_name' => 'Hellscream']);
         $consultant = CapstoneExpert::factory()->create(['first_name' => 'Mark', 'last_name' => 'Balilla']);
 
-        $this->book($this->slotFor($adviser), '2026-09-14')->assertSuccessful();
-        $this->book($this->slotFor($consultant), '2026-09-14')->assertSuccessful();
+        $this->book($this->slotFor($adviser), $this->monday())->assertSuccessful();
+        $this->book($this->slotFor($consultant), $this->monday())->assertSuccessful();
 
         $this->assertSame(2, ConsultationBooking::count());
     }
@@ -98,10 +108,10 @@ class OneBookingPerExpertTest extends TestCase
     {
         $adviser = CapstoneExpert::factory()->create(['first_name' => 'Grom', 'last_name' => 'Hellscream']);
 
-        $this->book($this->slotFor($adviser), '2026-09-14')->assertSuccessful();
+        $this->book($this->slotFor($adviser), $this->monday())->assertSuccessful();
         ConsultationBooking::query()->update(['booking_status' => 'cancelled']);
 
-        $this->book($this->slotFor($adviser, '11:00'), '2026-09-21')->assertSuccessful();
+        $this->book($this->slotFor($adviser, '11:00'), $this->monday(1))->assertSuccessful();
 
         $this->assertSame(1, ConsultationBooking::where('booking_status', 'scheduled')->count());
     }
