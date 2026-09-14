@@ -151,7 +151,7 @@ a.rr-chip:hover{border-color:#e3d08f;background:#faf7ed;color:#23242b}
 .rr-toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:3000;display:flex;align-items:center;gap:12px;background:#18191f;color:#fff;padding:9px 12px 9px 16px;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.25);font:13px/1.4 "DM Sans",system-ui,sans-serif;max-width:90vw}
 .rr-toast.error{background:#7f1d1d}
 .rr-toast .rr-btn{background:transparent;color:#c9a82c;border-color:rgba(255,255,255,.25)}
-.rr-dialog{border:none;border-radius:12px;padding:0;width:min(560px,94vw);box-shadow:0 20px 50px rgba(0,0,0,.35);font:14px/1.45 "DM Sans",system-ui,sans-serif;color:#1e2128}
+.rr-dialog{border:none;border-radius:12px;padding:0;margin:auto;inset:0;width:min(560px,94vw);box-shadow:0 20px 50px rgba(0,0,0,.35);font:14px/1.45 "DM Sans",system-ui,sans-serif;color:#1e2128}
 .rr-dialog::backdrop{background:rgba(24,25,31,.5)}
 .rr-dlg{padding:18px 20px;display:grid;gap:12px}
 .rr-dlg h2{margin:0;font-size:17px}
