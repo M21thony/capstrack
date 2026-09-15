@@ -49,12 +49,6 @@
   <div id="real-content" style="display:none">
   <div class="content">
 
-    <!-- Mode Banner -->
-    <div class="mode-banner block-banner" id="block-banner" style="display:none">
-      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
-      <span><strong>Block Mode:</strong> Click any date to mark it as unavailable. Click a blocked date to unblock it.</span>
-    </div>
-
     <div class="sched-layout">
 
       <!-- LEFT: Calendar -->
@@ -78,9 +72,7 @@
                 <button class="mode-btn view-btn" id="btn-view-week" onclick="setCalView('week')">Week</button>
                 {{-- Set a term's worth of hours in one go, instead of one
                      slot at a time through the form on the right. --}}
-                <button class="mode-btn" onclick="openAvail()">Set availability</button>
-                <button class="mode-btn block-mode" id="btn-block" onclick="toggleBlockMode()">Block a day</button>
-              </div>
+                <button class="mode-btn" onclick="openAvail()">Set availability</button>              </div>
             </div>
           </div>
 
@@ -111,17 +103,13 @@
               <div class="legend-item"><div class="legend-swatch sw-consult"></div>Consultation</div>
               <div class="legend-item"><div class="legend-swatch sw-booked"></div>Booked</div>
               <div class="legend-item"><div class="legend-swatch sw-defense"></div>Defense</div>
-              <div class="legend-item"><div class="legend-swatch sw-today"></div>Today</div>
-              <div class="legend-item"><div class="legend-swatch sw-blocked"></div>Blocked</div>
-            </div>
+              <div class="legend-item"><div class="legend-swatch sw-today"></div>Today</div>            </div>
           </div>
 
           <div class="legend-section">
             <div class="legend-section-title">How weekly slots work</div>
             <ul class="guide-list">
-              <li>A slot repeats on its weekday until you delete it.</li>
-              <li>Blocking a day hides that one date without touching the weekly slot.</li>
-              <li>A slot with a booking can't be moved &mdash; cancel the booking first.</li>
+              <li>A slot repeats on its weekday until you delete it.</li>              <li>A slot with a booking can't be moved &mdash; cancel the booking first.</li>
               <li>Editing a repeating slot asks whether to change one week or all of them.</li>
             </ul>
           </div>
@@ -367,7 +355,6 @@
   border-left:1px solid var(--border)}
 .wk-head div:first-child{border-left:none}
 .wk-head div.is-today{background:var(--accent-light);color:var(--accent3)}
-.wk-head div.is-blocked{color:var(--red)}
 .wk-head span{display:block;font-size:15px;font-weight:700;color:var(--text);
   font-variant-numeric:tabular-nums;line-height:1.25}
 .wk-head div.is-today span{color:var(--accent3)}
@@ -379,7 +366,6 @@
   background:repeating-linear-gradient(var(--bg2) 0 43px, var(--border) 43px 44px)}
 .wk-col:hover{background:repeating-linear-gradient(var(--bg3) 0 43px, var(--border) 43px 44px)}
 .wk-col.is-selected{background:repeating-linear-gradient(var(--accent-light) 0 43px, var(--border) 43px 44px)}
-.wk-col.is-blocked{background:repeating-linear-gradient(var(--bg4) 0 43px, var(--border) 43px 44px);cursor:not-allowed}
 .wk-slot{position:absolute;left:2px;right:2px;border-radius:5px;padding:3px 5px;overflow:hidden;
   font-size:10px;line-height:1.25;cursor:pointer;border-left:3px solid;background:var(--bg2)}
 .wk-slot b{display:block;font-weight:700;color:var(--text);white-space:nowrap;
@@ -452,22 +438,6 @@
   </div>
 </div>
 
-<!-- ─── BLOCK CONFIRM ─────────────────────────────────────────────────────── -->
-<div class="slot-modal-overlay" id="block-confirm-overlay" onclick="if(event.target===this)closeBlockConfirm()">
-  <div class="block-confirm">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-      <div class="block-confirm-title" id="bc-title" style="margin-bottom:0">Block this date?</div>
-      <button onclick="closeBlockConfirm()" style="background:none;border:none;cursor:pointer;color:var(--text3);padding:4px;display:flex;border-radius:4px;transition:color 0.15s" onmouseenter="this.style.color='var(--text)'" onmouseleave="this.style.color='var(--text3)'">
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </button>
-    </div>
-    <div class="block-confirm-sub" id="bc-sub">Students won't be able to book any slot on this day. Any existing open slots will be hidden to students.</div>
-    <div class="block-confirm-actions">
-      <button class="btn btn-danger-solid" id="bc-confirm-btn" onclick="confirmBlock()">Block Date</button>
-      <button class="btn btn-ghost" onclick="closeBlockConfirm()">Cancel</button>
-    </div>
-  </div>
-</div>
 
 <!-- ─── SET AVAILABILITY ──────────────────────────────────────────────────
      Adding slots one at a time is why setting up a term is a chore: nine
@@ -549,10 +519,6 @@ const CSRF        = document.querySelector('meta[name="csrf-token"]')?.content ?
 // ══════════════════════════════════════════════════════════════
 let viewYear, viewMonth;
 let selectedDate     = null;
-// currentMode is now just 'normal' or 'block' — View and Add are merged
-// into the always-visible panel, so there's no separate mode for them.
-let currentMode      = 'normal';
-let pendingBlockDate = null;
 let isSaving         = false;   // FIX: guard against double-clicks
 let editingSlotId    = null;    // schedule_id currently being edited, or null when adding a new slot
 let editingSlotKey   = null;    // the 'YYYY-MM-DD' key the slot being edited lives under
@@ -561,7 +527,6 @@ let editingSlotKey   = null;    // the 'YYYY-MM-DD' key the slot being edited li
 let slots      = {};
 // slotsByDay[dayName] = [ ...rawApiSlots ]  — source of truth for recurring slots
 let slotsByDay = {};
-let blockedDates = new Set();
 
 // ══════════════════════════════════════════════════════════════
 //  HELPERS
@@ -872,14 +837,6 @@ function seedDemoData() {
     }
   });
 
-  // Block a couple of days
-  [4, 10].forEach(offset => {
-    const d = new Date(y, m, today.getDate() + offset);
-    if (d.getDay() !== 0 && d.getDay() !== 6) {
-      blockedDates.add(`${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`);
-    }
-  });
-
   fanOutSlots();
 }
 
@@ -979,7 +936,6 @@ function renderCalendar() {
     const dateObj   = new Date(viewYear, viewMonth, d);
     const dayName   = DAY_NAMES[dateObj.getDay()];
     const isToday   = key === todayKey;
-    const isBlocked = blockedDates.has(key);
     const daySlots  = slots[key] || [];
     const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
     const isPast    = dateObj < todayDate;
@@ -988,7 +944,6 @@ function renderCalendar() {
     const el = document.createElement('div');
     el.className = 'cal-cell';
     if (isToday)   el.classList.add('today');
-    if (isBlocked) el.classList.add('is-blocked');
     if (daySlots.length > 0) el.classList.add('has-slot');
     if (isPast || isWeekend) el.classList.add('past-day');
     if (key === selectedDate) el.classList.add('is-selected');
@@ -1001,12 +956,7 @@ function renderCalendar() {
     dateEl.textContent = d;
     el.appendChild(dateEl);
 
-    if (isBlocked) {
-      const bl = document.createElement('div');
-      bl.className   = 'blocked-label';
-      bl.textContent = '✕ Unavailable';
-      el.appendChild(bl);
-    } else {
+    {
       daySlots.slice(0, 2).forEach(s => {
         const pill = document.createElement('div');
         const status = getSlotStatusLabel(s, key);
@@ -1148,25 +1098,21 @@ function renderWeek() {
   for (let i = 0; i < 7; i++) {
     const date = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
     const key  = formatKey(date.getFullYear(), date.getMonth(), date.getDate());
-    const isBlocked = blockedDates.has(key);
 
     const th = document.createElement('div');
-    th.className = (key === todayKey ? 'is-today' : '') + (isBlocked ? ' is-blocked' : '');
+    th.className = key === todayKey ? 'is-today' : '';
     th.innerHTML = DAYS[date.getDay()] + '<span>' + date.getDate() + '</span>';
     head.appendChild(th);
 
     const col = document.createElement('div');
     col.className = 'wk-col'
-      + (key === selectedDate ? ' is-selected' : '')
-      + (isBlocked ? ' is-blocked' : '');
+      + (key === selectedDate ? ' is-selected' : '');
     col.style.height = ((WK_LAST_HOUR - WK_FIRST_HOUR + 1) * WK_HOUR_PX) + 'px';
 
-    if (!isBlocked) {
-      col.addEventListener('click', () => {
-        selectDate(key, date.getDate());
-        renderWeek();
-      });
-    }
+    col.addEventListener('click', () => {
+      selectDate(key, date.getDate());
+      renderWeek();
+    });
 
     (slots[key] || []).forEach((slot, index) => {
       const from = timeToMinutes(slot.start || slot.start_time);
@@ -1214,29 +1160,10 @@ function renderWeek() {
 
 // ══════════════════════════════════════════════════════════════
 //  CELL CLICK
-//  View and Add are merged — clicking any (non-blocked) date shows
-//  its existing slots and the add form together in the side panel.
-//  If the date has slots, also show the slot detail modal.
-//  Block mode is the only separate mode.
+//  Clicking a date shows its existing slots and the add form together
+//  in the side panel.
 // ══════════════════════════════════════════════════════════════
 function handleCellClick(key, dayNum, isDisabled, dayName) {
-  if (currentMode === 'block') {
-    if (blockedDates.has(key)) {
-      blockedDates.delete(key);
-      redrawCalendar();
-      showToast('Date unblocked — students can now book this day.');
-    } else {
-      pendingBlockDate = { key, dayNum };
-      openBlockConfirm(key, dayNum);
-    }
-    return;
-  }
-
-  if (blockedDates.has(key)) {
-    showToast('⚠️ This date is blocked. Unblock it first (via Block Mode) to add slots.', 'error');
-    return;
-  }
-
   // Highlight selected cell
   document.querySelectorAll('.cal-cell.selected').forEach(el => el.classList.remove('selected'));
   const cell = document.querySelector(`.cal-cell[data-key="${key}"]`);
@@ -1247,26 +1174,6 @@ function handleCellClick(key, dayNum, isDisabled, dayName) {
   // slots with its own delete button - a leftover from before View and Add
   // were merged into that panel.
   selectDate(key, dayNum);
-}
-
-// ══════════════════════════════════════════════════════════════
-//  MODE
-//  FIX: only two states now — 'normal' (default) and 'block'. Toggling
-//  Block Mode on/off no longer hides/shows the Add panel, since that
-//  panel is always visible.
-// ══════════════════════════════════════════════════════════════
-function toggleBlockMode() {
-  if (currentMode === 'block') {
-    currentMode = 'normal';
-    document.body.classList.remove('block-mode');
-    document.getElementById('block-banner').style.display = 'none';
-    document.getElementById('btn-block').classList.remove('active');
-  } else {
-    currentMode = 'block';
-    document.body.classList.add('block-mode');
-    document.getElementById('block-banner').style.display = 'flex';
-    document.getElementById('btn-block').classList.add('active');
-  }
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -1977,32 +1884,6 @@ async function deleteSlot(key, index, scheduleId) {
   } catch (e) {
     showToast('Failed to delete slot: ' + e.message, 'error');
   }
-}
-
-// ══════════════════════════════════════════════════════════════
-//  BLOCK / UNBLOCK
-// ══════════════════════════════════════════════════════════════
-function openBlockConfirm(key, dayNum) {
-  const [y, m1, d] = key.split('-').map(Number);
-  document.getElementById('bc-title').textContent = `Block ${MONTHS[m1 - 1]} ${d}, ${y}?`;
-  document.getElementById('bc-sub').textContent   = `Students won't be able to book any slot on this day. Any existing open slots will be hidden to students.`;
-  document.getElementById('block-confirm-overlay').classList.add('open');
-}
-
-function closeBlockConfirm() {
-  document.getElementById('block-confirm-overlay').classList.remove('open');
-  pendingBlockDate = null;
-}
-
-// ══════════════════════════════════════════════════════════════
-//  SLOT DETAIL MODAL
-// ══════════════════════════════════════════════════════════════
-function confirmBlock() {
-  if (!pendingBlockDate) return;
-  blockedDates.add(pendingBlockDate.key);
-  redrawCalendar();
-  closeBlockConfirm();
-  showToast('Date blocked — students cannot book this day.');
 }
 
 // ══════════════════════════════════════════════════════════════
