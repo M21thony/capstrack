@@ -335,10 +335,10 @@
       <div class="card" style="margin-bottom:16px;border-color:rgba(220,38,38,0.25);background:var(--red-bg);">
         <div class="card-header"><span class="card-title">Your panel asked for a new title</span></div>
         <div style="font-size:13px;color:var(--text2);line-height:1.6">
-          Run the duplication check on your new pre-proposal and turn it in below, the same way as before. Your CaPSA approves it, then your adviser confirms it. Your adviser, consultant and grammarian stay with your team.
+          Run the duplication check on your new pre-proposal and turn it in below, the same way as before. Your CaPSA recommends it first, then your adviser approves it. Your adviser, consultant and grammarian stay with your team.
           @if ($awaitingAdviser)
             <div style="margin-top:8px;padding:8px 10px;border-radius:8px;background:var(--bg2);border:1px solid var(--border)">
-              Your CaPSA approved <b>{{ $awaitingAdviser->title }}</b>. Waiting for your adviser{{ $adviserName ? ', '.$adviserName.',' : '' }} to confirm it.
+              Your CaPSA recommended <b>{{ $awaitingAdviser->title }}</b>. Waiting for your adviser{{ $adviserName ? ', '.$adviserName.',' : '' }} to approve it.
             </div>
           @endif
           @if ($retiredProposals->isNotEmpty())
@@ -533,7 +533,7 @@
                   <div style="font-size:12px;font-weight:500;min-width:0;{{ $proposal->status === 'rejected' ? 'color:var(--text3);text-decoration:line-through' : 'color:var(--text)' }}">{{ $proposal->title }}</div>
                 </div>
                 @if ($proposal->submitted_at || $proposal->status !== 'pending')
-                  <span class="badge {{ $proposal->status === 'approved' ? 'badge-green' : ($proposal->status === 'rejected' ? 'badge-red' : 'badge-amber') }}">{{ ucfirst($proposal->status) }}</span>
+                  <span class="badge {{ $proposal->status === 'approved' ? 'badge-green' : ($proposal->status === 'rejected' ? 'badge-red' : 'badge-amber') }}">{{ $proposal->status === 'approved' ? 'Recommended' : ucfirst($proposal->status) }}</span>
                 @else
                   <span class="badge pp-badge-draft">Draft</span>
                 @endif
@@ -547,7 +547,7 @@
                       This is your team's title.
                     </div>
                   @elseif ($team?->selected_pre_proposal_id)
-                    <div class="pp-hint">Approved, but not the title your team chose.</div>
+                    <div class="pp-hint">Recommended, but not the title your team chose.</div>
                   @else
                     <div class="pp-hint">Locked in as a candidate.</div>
                   @endif
@@ -673,13 +673,13 @@
                         $applyOpen = $proposal->status === 'approved' && $isLeader && ! $setAside;
                         $applyLockShort = match (true) {
                             $proposal->status === 'rejected' => 'Pre-proposal rejected',
-                            $proposal->status !== 'approved' => 'Needs CaPSA approval',
+                            $proposal->status !== 'approved' => 'Needs CaPSA recommendation',
                             $setAside => 'Not your chosen title',
                             default => 'Team leader only',
                         };
                         $applyLockReason = match (true) {
-                            $proposal->status === 'rejected' => 'This pre-proposal was rejected, so you cannot apply to an expert with it. Revise it or use one that was approved.',
-                            $proposal->status !== 'approved' => 'Your CaPSA has to approve this pre-proposal before your team can apply to an expert with it. It is still awaiting review.',
+                            $proposal->status === 'rejected' => 'This pre-proposal was rejected, so you cannot apply to an expert with it. Revise it or use one that was recommended.',
+                            $proposal->status !== 'approved' => 'Your CaPSA has to recommend this pre-proposal before your team can apply to an expert with it. It is still awaiting review.',
                             $setAside => 'Your team chose a different title, so this one is no longer the one you apply with.',
                             default => 'Only your team leader can apply to an expert.',
                         };
@@ -988,7 +988,7 @@ function confirmSubmitCount(e) {
   document.getElementById('pp-sc-body').textContent = (short
     ? 'We suggest turning in at least ' + recommended + '. Your CaPSA decides on each '
       + 'title separately, so if one is turned down you still have others that could be '
-      + 'approved. You can go back and add more first.'
+      + 'recommended. You can go back and add more first.'
     : 'Your CaPSA will review all ' + count + '. You can take this back any time until '
       + 'they start reviewing.') + heldNote;
 
@@ -1646,14 +1646,14 @@ function openFreshReportModal() {
               <div style="font-size:10px;color:var(--primary,#5b5bd6);margin-top:1px">${escapeHtml(i.expertise || '')}</div>
               <div style="font-size:10px;color:var(--text3);margin-top:2px">${escapeHtml(i.reason || '')}</div>
             </div>
-            <span class="dup-apply-wrap" data-tip="Save this pre-proposal first, then a CaPSA has to approve it before your team can apply to an expert." tabindex="0" role="note">
+            <span class="dup-apply-wrap" data-tip="Save this pre-proposal first, then a CaPSA has to recommend it before your team can apply to an expert." tabindex="0" role="note">
               <button type="button" class="dup-apply-btn locked" disabled>
                 <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                Needs CaPSA approval
+                Needs CaPSA recommendation
               </button>
             </span>
           </div>`).join('')}
-        <div class="dup-apply-note">Save this pre-proposal and wait for CaPSA approval before you can apply to an expert.</div>
+        <div class="dup-apply-note">Save this pre-proposal and wait for your CaPSA's recommendation before you can apply to an expert.</div>
       </div>`
     : '';
 
