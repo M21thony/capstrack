@@ -41,7 +41,19 @@ class LeaveRequestController extends Controller
 
         $teamIds = $requests->pluck('team_id')->unique()->values();
 
+        // Teams asking to change an expert who already took them on.
+        $expertRequests = \App\Models\ExpertRemovalRequest::visibleTo(
+            $capsa,
+            \App\Models\ExpertRemovalRequest::with(['team', 'expert', 'assignment.expertRole.role', 'requester', 'decider'])->latest()->limit(300)->get()
+        );
+        [$expertPending, $expertDecided] = $expertRequests->partition(fn ($r) => $r->isPending());
+
         return [
+            'expertPending' => $expertPending->sortBy('created_at')->values(),
+            'expertDecided' => $expertDecided->sortByDesc(fn ($r) => $r->decided_at ?? $r->updated_at)->take(50)->values(),
+            'expertSectionOf' => $expertRequests->mapWithKeys(fn ($r) => [
+                $r->id => $this->sections->sectionFor($r->team) ?: SectionScope::UNASSIGNED,
+            ]),
             // Oldest first: whoever has waited longest is at the top.
             'pending' => $pending->sortBy('created_at')->values(),
             'decided' => $decided->sortByDesc(fn ($r) => $r->decided_at ?? $r->updated_at)->take(50)->values(),

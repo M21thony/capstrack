@@ -275,6 +275,10 @@ class ExpertController extends Controller
             // lost its upload, and a "View PDF" button leading to a 404 is
             // worse than no button. One stat call per page render buys that.
             'proposalPdfUrl' => $this->proposalPdfUrl($approvedProposal),
+            // Experts whose removal is waiting on the CaPSA.
+            'pendingRemovalIds' => $team
+                ? \App\Models\ExpertRemovalRequest::pending()->where('team_id', $team->team_id)->pluck('assignment_id')->map(fn ($id) => (int) $id)->all()
+                : [],
             'isLeader' => $isLeader,
             'teamConfirmed' => $team?->is_confirmed ?? false,
             'skillGroups' => $skillGroups,

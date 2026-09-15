@@ -480,9 +480,11 @@
               <span class="yx-role">{{ ucfirst($slotRole) }}</span>
               @if($a)
                 <span class="yx-name" title="{{ $a->expert?->name }}">{{ $a->expert?->name }}</span>
-                @if($isLeader)
-                  <button type="button" class="yx-x" title="Remove {{ $a->expert?->name ?? 'this expert' }}"
-                          onclick="openRemoveModal({{ $a->assignment_id }}, '{{ addslashes($a->expert?->name ?? '') }}')"><svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+                @if($isLeader && in_array((int) $a->assignment_id, $pendingRemovalIds, true))
+                  <span title="Waiting on your CaPSA" style="font-size:10.5px;font-weight:600;color:var(--amber);white-space:nowrap">Removal requested</span>
+                @elseif($isLeader)
+                  <button type="button" class="yx-x" title="Ask your CaPSA to remove {{ $a->expert?->name ?? 'this expert' }}"
+                          onclick="openRemoveModal({{ $a->assignment_id }}, '{{ addslashes($a->expert?->name ?? '') }}', true)"><svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
                 @endif
               @endif
             </span>
@@ -495,9 +497,11 @@
               <span class="yx-mark"><svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg></span>
               <span class="yx-role">Assigned</span>
               <span class="yx-name">{{ $a->expert?->name ?? 'Unknown' }}</span>
-              @if($isLeader)
-                <button type="button" class="yx-x" title="Remove {{ $a->expert?->name ?? 'this expert' }}"
-                        onclick="openRemoveModal({{ $a->assignment_id }}, '{{ addslashes($a->expert?->name ?? '') }}')"><svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+              @if($isLeader && in_array((int) $a->assignment_id, $pendingRemovalIds, true))
+                <span title="Waiting on your CaPSA" style="font-size:10.5px;font-weight:600;color:var(--amber);white-space:nowrap">Removal requested</span>
+              @elseif($isLeader)
+                <button type="button" class="yx-x" title="Ask your CaPSA to remove {{ $a->expert?->name ?? 'this expert' }}"
+                        onclick="openRemoveModal({{ $a->assignment_id }}, '{{ addslashes($a->expert?->name ?? '') }}', true)"><svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
               @endif
             </span>
           @endforeach
@@ -1017,8 +1021,8 @@
     <div class="confirm-icon" style="background: var(--red);">
       <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
     </div>
-    <h3>Remove Expert?</h3>
-    <div class="confirm-desc">Are you sure you want to remove this expert from your team?</div>
+    <h3 id="remove-title">Remove Expert?</h3>
+    <div class="confirm-desc" id="remove-desc">Are you sure you want to remove this expert from your team?</div>
     <div class="confirm-detail" id="remove-detail"></div>
 
     <div class="remove-field">
@@ -1438,10 +1442,20 @@ function openReqInfoModal(data) {
   openModal('req-info-modal');
 }
 
-function openRemoveModal(assignmentId, expertName) {
+// An expert who already took the team on is only removed with the CaPSA's
+// permission, so for them this sends a request instead of removing.
+var removeNeedsCapsa = false;
+
+function openRemoveModal(assignmentId, expertName, approved) {
   currentRemoveId = assignmentId;
-  document.getElementById('remove-detail').innerHTML =
-    '<strong>' + expertName + '</strong><br><span style="font-size:11px;color:var(--red);">This action cannot be undone.</span>';
+  removeNeedsCapsa = !!approved;
+  document.getElementById('remove-title').textContent = removeNeedsCapsa ? 'Ask your CaPSA to remove this expert?' : 'Remove Expert?';
+  document.getElementById('remove-desc').textContent = removeNeedsCapsa
+    ? 'This expert already took your team on, so your CaPSA decides. They stay your expert until your CaPSA approves.'
+    : 'Are you sure you want to remove this expert from your team?';
+  document.getElementById('remove-detail').innerHTML = '<strong>' + expertName + '</strong>'
+    + (removeNeedsCapsa ? '' : '<br><span style="font-size:11px;color:var(--red);">This action cannot be undone.</span>');
+  document.getElementById('btn-confirm-remove').textContent = removeNeedsCapsa ? 'Send to CaPSA' : 'Yes, Remove';
   document.getElementById('remove-confirm-input').value = '';
   document.getElementById('remove-confirm-input').classList.remove('error');
   document.getElementById('err-remove-confirm').classList.remove('show');
@@ -1461,7 +1475,8 @@ function validateRemoveInput() {
   var confirmInput = document.getElementById('remove-confirm-input').value.trim();
   var reason = document.getElementById('remove-reason').value.trim();
   var confirmOk = confirmInput.toLowerCase() === 'remove';
-  var reasonOk = reason.length > 0;
+  // The CaPSA decides on the reason, so it needs to be a real one.
+  var reasonOk = reason.length >= (removeNeedsCapsa ? {{ \App\Models\ExpertRemovalRequest::REASON_MIN }} : 1);
 
   document.getElementById('remove-confirm-input').classList.toggle('error', confirmInput.length > 0 && !confirmOk);
   document.getElementById('err-remove-confirm').classList.toggle('show', confirmInput.length > 0 && !confirmOk);
@@ -1479,7 +1494,8 @@ function confirmRemove() {
 
   var btn = document.getElementById('btn-confirm-remove');
   btn.disabled = true;
-  btn.textContent = 'Removing...';
+  btn.textContent = removeNeedsCapsa ? 'Sending...' : 'Removing...';
+  var idleLabel = removeNeedsCapsa ? 'Send to CaPSA' : 'Yes, Remove';
 
   fetch('/api/assignments/' + currentRemoveId, {
     method: 'DELETE',
@@ -1499,14 +1515,14 @@ function confirmRemove() {
     } else {
       showToast(data.message || 'Failed to remove', 'error');
       btn.disabled = false;
-      btn.textContent = 'Yes, Remove';
+      btn.textContent = idleLabel;
     }
   })
   .catch(function() {
     closeModal('remove-modal');
     showToast('Network error. Please try again.', 'error');
     btn.disabled = false;
-    btn.textContent = 'Yes, Remove';
+    btn.textContent = idleLabel;
   });
 }
 

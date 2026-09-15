@@ -109,7 +109,8 @@ class TeamManagementController extends Controller
                 'pre_proposals' => $rows->sum(fn ($r) => $r->pendingProposalCount),
                 'verification' => $rows->where('awaitingVerification', true)->count(),
                 'papers' => $rows->sum(fn ($r) => $r->papersToCheck),
-                'leave_requests' => \App\Models\MemberLeaveRequest::pendingCountFor($capsa),
+                'leave_requests' => \App\Models\MemberLeaveRequest::pendingCountFor($capsa)
+                    + \App\Models\ExpertRemovalRequest::pendingCountFor($capsa),
             ],
         ]);
     }
