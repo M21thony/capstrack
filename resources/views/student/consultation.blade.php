@@ -386,7 +386,7 @@
             </div>
 
             <div class="sched-slots">
-              <div class="col-head">Available Time Slots <span class="slots-len">(30 mins per session)</span></div>
+              <div class="col-head">Available Time Slots</div>
               <div class="slot-grid" id="slot-grid">
                 <div class="slot-empty">Choose a highlighted date to see its times.</div>
               </div>
@@ -685,6 +685,17 @@ function formatTime(t) {
   return h12 + ':' + String(m).padStart(2, '0') + ' ' + ampm;
 }
 
+// How long the expert set this slot to run, e.g. "45 mins · ". Read from
+// the slot's own times - sessions are not all the same length.
+function slotLength(slot) {
+  if (!slot.start_time || !slot.end_time) return '';
+  const toMin = t => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
+  const mins = toMin(slot.end_time) - toMin(slot.start_time);
+  if (mins <= 0) return '';
+  const text = mins % 60 === 0 ? (mins / 60) + (mins === 60 ? ' hr' : ' hrs') : mins + ' mins';
+  return text + ' · ';
+}
+
 function renderCalendar() {
   const grid = document.getElementById('calendar-grid');
   const monthLabel = document.getElementById('cal-month');
@@ -839,7 +850,7 @@ function selectDate(d, dayName, dateKey) {
     btn.className = 'slot-btn';
     btn.innerHTML =
       '<span class="slot-time">' + formatTime(slot.start_time) + '</span>' +
-      '<span class="slot-meta">' + ucfirst(slot.slot_type || 'consultation') + '</span>';
+      '<span class="slot-meta">' + slotLength(slot) + ucfirst(slot.slot_type || 'consultation') + '</span>';
     btn.onclick = () => pickSlot(btn, slot, dateKey);
     forceInteractive(btn);
     grid.appendChild(btn);
