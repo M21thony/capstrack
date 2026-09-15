@@ -20,10 +20,11 @@ function note(text) {
   body.replaceChildren(p);
 }
 
-async function drawPdf(file) {
+// `source` is anything with arrayBuffer(): a picked File, or a fetch Response.
+async function drawPdf(source, name) {
   note('Loading…');
   try {
-    const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
+    const pdf = await pdfjsLib.getDocument({ data: await source.arrayBuffer() }).promise;
     body.replaceChildren();
     const width = Math.max(320, body.clientWidth - 24);
     const ratio = window.devicePixelRatio || 1;
@@ -35,7 +36,7 @@ async function drawPdf(file) {
       canvas.height = viewport.height;
       canvas.style.width = width + 'px';
       canvas.setAttribute('role', 'img');
-      canvas.setAttribute('aria-label', `${file.name}, page ${n} of ${pdf.numPages}`);
+      canvas.setAttribute('aria-label', `${name}, page ${n} of ${pdf.numPages}`);
       body.append(canvas);
       await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
     }
@@ -52,13 +53,28 @@ window.previewSubmissionFile = function (file) {
   dialog.showModal();
 
   if (/\.pdf$/i.test(file.name)) {
-    drawPdf(file);
+    drawPdf(file, file.name);
   } else {
     objectUrl = URL.createObjectURL(file);
     const img = document.createElement('img');
     img.src = objectUrl;
     img.alt = file.name;
     body.replaceChildren(img);
+  }
+};
+
+// A PDF already on the server (e.g. the team's recommended pre-proposal).
+window.previewPdfUrl = async function (url, name) {
+  if (!dialog) return;
+  title.textContent = name;
+  dialog.showModal();
+  note('Loading…');
+  try {
+    const res = await fetch(url, { credentials: 'same-origin', headers: { Accept: 'application/pdf' } });
+    if (!res.ok) throw new Error(res.status);
+    await drawPdf(res, name);
+  } catch {
+    note('The PDF could not be loaded. Try again, or ask your team leader to check the file.');
   }
 };
 

@@ -211,7 +211,7 @@ class BugsFromTestingRoundTest extends TestCase
         // fields, which is neither a readable document nor a readable
         // summary.
         $this->assertStringContainsString('View Original PDF', $html);
-        $this->assertStringContainsString('id="original-pdf-modal"', $html);
+        $this->assertStringContainsString('id="previewDialog"', $html);
     }
 
     /** A button leading to a 404 is worse than no button. */
@@ -222,7 +222,7 @@ class BugsFromTestingRoundTest extends TestCase
         $html = $this->actingAs($student, 'web')->get(route('student.experts'))->assertOk()->getContent();
 
         $this->assertStringNotContainsString('View Original PDF', $html);
-        $this->assertStringNotContainsString('id="original-pdf-modal"', $html);
+        $this->assertStringNotContainsString('id="previewDialog"', $html);
     }
 
     public function test_a_team_can_open_its_own_document(): void

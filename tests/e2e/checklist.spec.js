@@ -31,7 +31,7 @@ test('experts: View Original PDF opens a readable panel of its own', async ({ pa
   await student(page, 'experts');
 
   test.skip(
-    await page.locator('#original-pdf-modal').count() === 0,
+    await page.locator('#previewDialog').count() === 0,
     'this team has no approved pre-proposal with an uploaded file'
   );
 
@@ -40,9 +40,11 @@ test('experts: View Original PDF opens a readable panel of its own', async ({ pa
   // can apply to anybody today depends on which experts set their programmes.
   await page.evaluate(() => window.openOriginalPdf());
 
-  const box = page.locator('#original-pdf-modal .modal-box');
+  const box = page.locator('#previewDialog');
   await expect(box).toBeVisible();
-  await page.waitForTimeout(900);
+  // Drawn as pages, not loaded into an iframe.
+  await expect(box.locator('canvas').first()).toBeVisible({ timeout: 15000 });
+  await expect(box.locator('iframe')).toHaveCount(0);
   await shot(page, testInfo, 'original-pdf-panel');
 
   const { width, height } = await box.evaluate((el) => {
@@ -54,8 +56,8 @@ test('experts: View Original PDF opens a readable panel of its own', async ({ pa
   expect(width, 'wide enough to read a page of A4').toBeGreaterThan(700);
   expect(height).toBeGreaterThan(500);
 
-  await page.locator('#original-pdf-modal .pp-x').click();
-  await expect(page.locator('#original-pdf-frame')).toHaveAttribute('src', 'about:blank');
+  await box.getByRole('button', { name: 'Close' }).click();
+  await expect(box).toBeHidden();
 });
 
 // ── student/duplication ───────────────────────────────────────────────────

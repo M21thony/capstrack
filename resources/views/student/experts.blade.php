@@ -6,8 +6,17 @@
 <title>Capstone Expert - CapsTrack</title>
 <meta name="csrf-token" content="{{ csrf_token() }}">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
-@vite('resources/student-ui/Styles/experts.css')
+@vite(['resources/student-ui/Styles/experts.css', 'resources/js/submission-preview.js'])
 <style>
+/* The recommended pre-proposal, drawn as pages - no iframe. Same look as the submission preview. */
+.preview-dialog{border:0;border-radius:12px;padding:0;margin:auto;inset:0;width:min(860px,calc(100vw - 32px));height:calc(100vh - 48px);box-shadow:0 24px 70px rgba(24,25,31,.3);background:var(--bg2,#fff)}
+.preview-dialog::backdrop{background:rgba(24,25,31,.55)}
+.preview-dialog[open]{display:flex;flex-direction:column}
+.preview-head{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--border)}
+.preview-head h2{margin:0;flex:1;min-width:0;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.preview-body{flex:1;min-height:0;overflow:auto;background:var(--bg3,#f2f3f5);padding:12px;display:grid;justify-items:center;align-content:start;gap:12px}
+.preview-body canvas{max-width:100%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.15)}
+.preview-note{color:var(--text3);font-size:13px;margin:40px 0}
 .role-chips { display: flex; flex-wrap: wrap; gap: 5px; margin: 0; justify-content: center; }
 .role-chip { font-size: 10px; font-weight: 600; padding: 3px 10px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.4px; }
 .expertise-tags { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; margin: 0; }
@@ -898,24 +907,15 @@
 @endif
 
 @if($proposalPdfUrl)
-{{-- The uploaded document, full size. The frame is loaded on open and
-     emptied on close: a PDF left in a hidden iframe keeps its plugin alive
-     and, on a slow connection, downloads again behind a panel nobody is
-     looking at. --}}
-<div class="modal-overlay" id="original-pdf-modal" onclick="if (event.target === this) closeOriginalPdf()">
-  <div class="modal-box pdf-box">
-    <div class="pdf-box-header">
-      <div style="min-width:0">
-        <div class="pp-eyebrow">Original PDF</div>
-        <h3 style="margin:0">{{ $approvedProposal->title }}</h3>
-      </div>
-      <button class="pp-x" onclick="closeOriginalPdf()" aria-label="Close">
-        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </button>
-    </div>
-    <iframe id="original-pdf-frame" src="about:blank" title="Recommended pre-proposal PDF"></iframe>
+{{-- The uploaded document, drawn page by page. A <dialog> sits above every
+     other panel on the page, so it opens over the preview that launched it. --}}
+<dialog class="preview-dialog" id="previewDialog" aria-labelledby="previewTitle">
+  <div class="preview-head">
+    <h2 id="previewTitle">Original PDF</h2>
+    <form method="dialog"><button class="btn btn-sm btn-soft" type="submit">Close</button></form>
   </div>
-</div>
+  <div class="preview-body" id="previewBody"></div>
+</dialog>
 @endif
 
 <!-- Apply Form Modal -->
@@ -1113,17 +1113,9 @@ function forceInteractive(el) {
 const originalPdfUrl = @json($proposalPdfUrl, JSON_UNESCAPED_SLASHES);
 
 function openOriginalPdf() {
-  const frame = document.getElementById('original-pdf-frame');
-  // #toolbar=0 hides the viewer's own download bar; the button that opened
-  // this is the way to get the file.
-  if (frame) frame.src = originalPdfUrl + '#toolbar=0';
-  openModal('original-pdf-modal');
-}
-
-function closeOriginalPdf() {
-  closeModal('original-pdf-modal');
-  const frame = document.getElementById('original-pdf-frame');
-  if (frame) frame.src = 'about:blank';
+  if (window.previewPdfUrl) {
+    window.previewPdfUrl(originalPdfUrl, @json($approvedProposal->title ?? 'Pre-proposal'));
+  }
 }
 @endif
 
