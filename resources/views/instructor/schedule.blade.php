@@ -384,19 +384,74 @@
 .slot-request .slot-acts{margin-left:auto;display:flex;gap:6px}
 .wk-empty{padding:26px 8px;text-align:center;font-size:12px;color:var(--text3);grid-column:1/-1}
 
-/* Setting a term's worth of availability in one go. */
-.av-rows{display:flex;flex-direction:column;gap:7px;margin-bottom:14px}
-.av-row{display:flex;align-items:center;gap:8px}
-.av-day{width:52px;flex-shrink:0;border:1px solid var(--border);background:var(--bg2);
-  color:var(--text3);border-radius:20px;padding:5px 0;font:700 10px/1.3 inherit;cursor:pointer;text-align:center}
-.av-day.is-on{background:var(--accent-light);border-color:var(--accent);color:var(--accent3)}
-.av-row input[type=time]{flex:1;min-width:0;padding:5px 8px;border:1px solid var(--border);
-  border-radius:7px;background:var(--bg2);color:var(--text);font:inherit;font-size:12px}
-.av-row.is-off input[type=time]{opacity:.35;pointer-events:none}
-.av-row em{font-style:normal;font-size:11px;color:var(--text3);flex-shrink:0}
+/* The summary under the availability dialog. */
 .av-count{background:var(--accent-light);border:1px solid var(--accent);border-radius:8px;
   padding:9px 11px;font-size:12px;color:var(--text2);line-height:1.5}
 .av-count b{color:var(--accent3)}
+
+/* Availability, laid out like Google Calendar's appointment schedule: settings
+   on the left, the week on the right, and every weekday saying either its
+   hours or "Unavailable". */
+.ga-modal{width:min(780px,calc(100vw - 32px));max-height:calc(100vh - 32px);display:flex;flex-direction:column;
+  background:var(--bg2);border:1px solid var(--border);border-radius:14px;box-shadow:0 24px 60px -20px rgba(0,0,0,.45);overflow:hidden}
+.ga-head{display:flex;align-items:flex-start;gap:12px;padding:18px 20px 14px;border-bottom:1px solid var(--border)}
+.ga-head>div{flex:1;min-width:0}
+.ga-title{margin:0;font-size:16px;font-weight:700;color:var(--text);letter-spacing:-.01em}
+.ga-sub{margin:3px 0 0;font-size:12.5px;color:var(--text3);line-height:1.45}
+.ga-grid{display:grid;grid-template-columns:260px 1fr;flex:1;min-height:0;overflow:auto}
+.ga-col{padding:16px 20px;min-width:0}
+.ga-side{background:var(--bg3);border-right:1px solid var(--border)}
+.ga-sec+.ga-sec{margin-top:22px}
+.ga-h{margin:0 0 8px;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text3)}
+.ga-hint{margin:-2px 0 8px;font-size:12px;color:var(--text3);line-height:1.45}
+.ga-seg{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}
+.ga-seg-2{grid-template-columns:1fr 1fr}
+.ga-seg label{position:relative;cursor:pointer}
+.ga-seg input{position:absolute;inset:0;opacity:0;margin:0;cursor:pointer}
+.ga-seg span{display:block;text-align:center;padding:7px 4px;border:1px solid var(--border);border-radius:8px;background:var(--bg2);
+  font-size:12.5px;font-weight:600;color:var(--text2);white-space:nowrap;transition:border-color .15s,background-color .15s,color .15s}
+.ga-seg label:hover span{border-color:var(--text3)}
+.ga-seg input:checked+span{border-color:var(--accent);background:var(--accent-light);color:var(--accent3)}
+.ga-seg input:focus-visible+span{outline:2px solid var(--accent);outline-offset:1px}
+.ga-dates{display:grid;grid-template-columns:auto 1fr;align-items:center;gap:6px 10px;margin-top:10px}
+.ga-dates[hidden]{display:none}
+.ga-lab{font-size:12px;font-weight:600;color:var(--text2)}
+.ga-lab-gap{display:block;margin-top:14px}
+.ga-check{display:flex;align-items:center;gap:8px;margin-top:14px;font-size:12px;font-weight:600;color:var(--text2);cursor:pointer}
+.ga-field{display:flex;align-items:center;gap:8px;margin-top:6px;font-size:12.5px;color:var(--text2)}
+.ga-modal input[type=date],.ga-modal input[type=time],.ga-num{height:32px;box-sizing:border-box;padding:0 8px;border:1px solid var(--border);
+  border-radius:8px;background:var(--bg2);color:var(--text);font:inherit;font-size:12.5px;min-width:0}
+.ga-modal input:focus-visible{outline:2px solid var(--accent);outline-offset:0;border-color:var(--accent)}
+.ga-num{width:72px}
+.ga-num:disabled{opacity:.45}
+.ga-days{display:flex;flex-direction:column}
+.ga-day{display:grid;grid-template-columns:48px 1fr 32px;align-items:start;gap:10px;padding:7px 0;border-top:1px solid var(--border)}
+.ga-day:first-child{border-top:0}
+.ga-day-name{height:32px;display:flex;align-items:center;font-size:13px;font-weight:600;color:var(--text3)}
+.ga-day.is-on .ga-day-name{color:var(--text)}
+.ga-ranges{display:flex;flex-direction:column;gap:6px;min-width:0}
+.ga-range{display:flex;align-items:center;gap:6px}
+.ga-range input[type=time]{width:122px}
+.ga-range span{color:var(--text3)}
+.ga-off{height:32px;display:flex;align-items:center;font-size:13px;color:var(--text3)}
+.ga-icon{width:32px;height:32px;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:8px;
+  background:none;color:var(--text3);cursor:pointer;transition:background-color .15s,color .15s}
+.ga-icon:hover{background:var(--bg3);color:var(--text)}
+.ga-icon:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.ga-icon svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
+.ga-foot{display:flex;align-items:center;gap:8px;padding:12px 20px;border-top:1px solid var(--border)}
+.ga-summary{flex:1;min-width:0;font-size:12.5px;color:var(--text2);line-height:1.4}
+.ga-foot #av-count{background:none;border:0;padding:0;font-size:12.5px}
+.ga-foot #av-count b{color:var(--text)}
+.ga-foot .btn{flex:none}
+.ga-foot .btn-ghost{background:var(--bg2);border:1px solid var(--border);color:var(--text2)}
+.ga-foot .btn-ghost:hover{border-color:var(--text3);color:var(--text)}
+.ga-error{font-size:12px;color:var(--red,#dc2626)}
+@media (max-width:680px){
+  .ga-grid{grid-template-columns:1fr}
+  .ga-side{border-right:0;border-bottom:1px solid var(--border)}
+  .ga-foot{flex-wrap:wrap}
+}
 
 /* Which edit did they mean? A weekly slot is a rule, and rewriting the rule
    when they meant one week is how a whole term's Mondays used to move at
@@ -447,38 +502,73 @@
      and it needs no new endpoint: a window is just several of the slots the
      add form already posts. -->
 <div class="slot-modal-overlay" id="avail-overlay" onclick="if(event.target===this)closeAvail()">
-  <div class="slot-modal" style="max-width:440px">
-    <div class="slot-modal-header">
-      <div style="flex:1;min-width:0">
-        <div class="slot-modal-title">Set your weekly availability</div>
-        <div class="slot-modal-sub">Repeats every week until you change it</div>
+  <div class="ga-modal" role="dialog" aria-modal="true" aria-labelledby="ga-title">
+    <header class="ga-head">
+      <div>
+        <h2 class="ga-title" id="ga-title">Consultation availability</h2>
+        <p class="ga-sub">Teams book open times inside your hours. Only booked consultations appear on your Google Calendar.</p>
       </div>
-      <button class="slot-modal-close" onclick="closeAvail()">
-        <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      <button type="button" class="ga-icon" onclick="closeAvail()" aria-label="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
+    </header>
+
+    <div class="ga-grid">
+      <div class="ga-col ga-side">
+        <section class="ga-sec">
+          <h3 class="ga-h">Appointment duration</h3>
+          <div class="ga-seg" role="radiogroup" aria-label="Appointment duration">
+            <label><input type="radio" name="ga-duration" value="15" onchange="gaChanged()"><span>15 min</span></label>
+            <label><input type="radio" name="ga-duration" value="30" onchange="gaChanged()"><span>30 min</span></label>
+            <label><input type="radio" name="ga-duration" value="45" onchange="gaChanged()"><span>45 min</span></label>
+            <label><input type="radio" name="ga-duration" value="60" onchange="gaChanged()"><span>1 hr</span></label>
+            <label><input type="radio" name="ga-duration" value="90" onchange="gaChanged()"><span>1&frac12; hr</span></label>
+            <label><input type="radio" name="ga-duration" value="120" onchange="gaChanged()"><span>2 hr</span></label>
+          </div>
+        </section>
+
+        <section class="ga-sec">
+          <h3 class="ga-h">Scheduling window</h3>
+          <div class="ga-seg ga-seg-2" role="radiogroup" aria-label="When teams can book">
+            <label><input type="radio" name="ga-range" value="now" onchange="gaChanged()"><span>Available now</span></label>
+            <label><input type="radio" name="ga-range" value="dates" onchange="gaChanged()"><span>Date range</span></label>
+          </div>
+          <div class="ga-dates" id="ga-dates" hidden>
+            <label class="ga-lab" for="ga-starts">From</label>
+            <input type="date" id="ga-starts" onchange="gaChanged()">
+            <label class="ga-lab" for="ga-ends">Until</label>
+            <input type="date" id="ga-ends" onchange="gaChanged()">
+          </div>
+
+          <label class="ga-check"><input type="checkbox" id="ga-max-on" onchange="gaChanged()"> Limit how far ahead</label>
+          <div class="ga-field">
+            <input type="number" id="ga-max" class="ga-num" min="1" max="365" aria-label="Days ahead" oninput="gaChanged()">
+            <span>days ahead at most</span>
+          </div>
+
+          <label class="ga-lab ga-lab-gap" for="ga-notice">Minimum notice</label>
+          <div class="ga-field">
+            <input type="number" id="ga-notice" class="ga-num" min="0" max="720" oninput="gaChanged()">
+            <span>hours before it starts</span>
+          </div>
+        </section>
+      </div>
+
+      <section class="ga-col">
+        <h3 class="ga-h">General availability</h3>
+        <p class="ga-hint">Your regular weekly hours. Add more than one set of hours to a day for a break.</p>
+        <div class="ga-days" id="ga-days"></div>
+      </section>
     </div>
-    <div class="slot-modal-body">
-      <div class="f-group">
-        <label class="f-label">Each consultation runs</label>
-        <div class="dur-row" id="av-durations">
-          <button type="button" class="dur-chip" data-mins="30" onclick="setAvailDuration(30)">30 min</button>
-          <button type="button" class="dur-chip is-on" data-mins="60" onclick="setAvailDuration(60)">1 hour</button>
-          <button type="button" class="dur-chip" data-mins="90" onclick="setAvailDuration(90)">1&frac12; hours</button>
-        </div>
-      </div>
 
-      <div class="f-group">
-        <label class="f-label">Hours you are free</label>
-        <div class="av-rows" id="av-rows"></div>
+    <footer class="ga-foot">
+      <div class="ga-summary">
+        <div id="av-count"></div>
+        <div class="ga-error" id="ga-error" role="alert" hidden></div>
       </div>
-
-      <div class="av-count" id="av-count"></div>
-
-      <div class="form-actions" style="margin-top:14px">
-        <button class="btn btn-primary" id="av-save" onclick="saveAvailability()">Save availability</button>
-        <button class="btn btn-ghost" onclick="closeAvail()" style="flex:none;padding:7px 12px">Cancel</button>
-      </div>
-    </div>
+      <button type="button" class="btn btn-ghost" onclick="closeAvail()">Cancel</button>
+      <button type="button" class="btn btn-primary" id="av-save" onclick="saveAvailability()">Save availability</button>
+    </footer>
   </div>
 </div>
 
@@ -628,7 +718,7 @@ async function apiFetch(url, options = {}) {
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.message ?? `HTTP ${res.status}`);
+    throw new Error(err.message ?? err.error ?? `HTTP ${res.status}`);
   }
   return res.json();
 }
@@ -2138,292 +2228,275 @@ function firstFreeStart(key) {
   return at + length > 21 * 60 ? '09:00' : minutesToTime(at);
 }
 
-// ── the weekly window ──
-const AV_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-let avDuration = 60;
-const avWindows = {};
+// ── availability: duration, weekly hours, scheduling window ──
+// Set the way Google Calendar's appointment schedules are. Saving sends the
+// whole thing once and the server makes the weekly slots match.
+const GA_DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const GA_ICON = {
+  add: '<svg viewBox="0 0 24 24" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>',
+  remove: '<svg viewBox="0 0 24 24" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>',
+};
+let ga = null; // { duration_minutes, hours: { Monday: [['09:00','12:00']] }, range, starts_on, ends_on, max_on, max_days_ahead, min_notice_hours }
 
-AV_DAYS.forEach((day) => {
-  // Off by default: an expert saying which days they are free is the point,
-  // and a form that has already answered for them gets saved unread.
-  avWindows[day] = { on: false, from: '09:00', until: '12:00' };
-});
-
-/**
- * Open the dialog on the availability that is actually set.
- *
- * It used to open blank every time, which is why removing anything needed a
- * "replace what I have" tick box and a separate clearing mode: the dialog
- * could only ever describe a new week, never the current one. Showing what
- * is set makes both unnecessary - Monday is lit because Monday is open, and
- * turning it off is how Monday closes.
- */
-function openAvail() {
-  loadAvailFromSlots();
-  drawAvailRows();
-  countAvailSlots();
-
+async function openAvail() {
+  document.getElementById('ga-error').hidden = true;
   document.getElementById('avail-overlay').classList.add('open');
+
+  let saved = null;
+  try {
+    saved = await apiFetch('/instructor/schedule/availability');
+  } catch (e) {
+    saved = null;
+  }
+
+  ga = gaFrom(saved);
+  gaDraw();
 }
 
-/**
- * Close it.
- *
- * The X, Cancel, a click on the backdrop and the end of a save all call
- * this. It was lost when this block was rewritten, so every one of them
- * called a function that no longer existed - which throws and leaves the
- * dialog sitting there.
- */
 function closeAvail() {
   document.getElementById('avail-overlay').classList.remove('open');
 }
 
-/** Read the week back out of the slots that exist. */
-function loadAvailFromSlots() {
-  AV_DAYS.forEach((day) => {
-    avWindows[day] = { on: false, from: '09:00', until: '12:00' };
-  });
+/** The settings as the dialog edits them; an expert who never saved starts from the weekly slots they already have. */
+function gaFrom(saved) {
+  const s = saved || {};
+  const hours = s.hours && !Array.isArray(s.hours) ? JSON.parse(JSON.stringify(s.hours)) : {};
+  const state = {
+    duration_minutes: s.duration_minutes || 60,
+    hours,
+    range: s.starts_on || s.ends_on ? 'dates' : 'now',
+    starts_on: s.starts_on || '',
+    ends_on: s.ends_on || '',
+    max_on: s.id ? s.max_days_ahead != null : true,
+    max_days_ahead: s.max_days_ahead || 60,
+    min_notice_hours: s.min_notice_hours ?? 24,
+  };
 
-  const weekly = Object.values(slotsByDay)
-    .flat()
-    .filter((s) => (s.recur ?? 'weekly') !== 'once');
+  if (!s.id) {
+    const weekly = Object.values(slotsByDay).flat().filter((x) => (x.recur ?? 'weekly') !== 'once');
+    const lengths = {};
 
-  const lengths = [];
+    GA_DAYS.forEach((day) => {
+      const mine = weekly
+        .filter((x) => x.available_date === day)
+        .map((x) => [timeToMinutes(x.start_time), timeToMinutes(x.end_time)])
+        .sort((a, b) => a[0] - b[0]);
 
-  AV_DAYS.forEach((day) => {
-    const mine = weekly.filter((s) => s.available_date === day);
-
-    if (!mine.length) return;
-
-    const starts = mine.map((s) => timeToMinutes(s.start_time));
-    const ends = mine.map((s) => timeToMinutes(s.end_time));
-
-    avWindows[day] = {
-      on: true,
-      from: minutesToTime(Math.min.apply(null, starts)),
-      until: minutesToTime(Math.max.apply(null, ends)),
-    };
-
-    mine.forEach((s) => lengths.push(timeToMinutes(s.end_time) - timeToMinutes(s.start_time)));
-  });
-
-  // The length most of the slots already use, so reopening the dialog and
-  // saving straight back out changes nothing.
-  if (lengths.length) {
-    const tally = {};
-    lengths.forEach((n) => { tally[n] = (tally[n] || 0) + 1; });
-
-    const commonest = Number(Object.keys(tally).sort((a, b) => tally[b] - tally[a])[0]);
-
-    if ([30, 60, 90].indexOf(commonest) !== -1) {
-      avDuration = commonest;
-    }
-  }
-
-  document.querySelectorAll('#av-durations .dur-chip').forEach((c) => {
-    c.classList.toggle('is-on', Number(c.dataset.mins) === avDuration);
-  });
-}
-
-function setAvailDuration(mins) {
-  avDuration = mins;
-  document.querySelectorAll('#av-durations .dur-chip').forEach((c) => {
-    c.classList.toggle('is-on', Number(c.dataset.mins) === mins);
-  });
-  countAvailSlots();
-}
-
-function toggleAvailDay(day) {
-  avWindows[day].on = !avWindows[day].on;
-  drawAvailRows();
-}
-
-function drawAvailRows() {
-  const host = document.getElementById('av-rows');
-  host.innerHTML = '';
-
-  AV_DAYS.forEach((day) => {
-    const w = avWindows[day];
-    const row = document.createElement('div');
-    row.className = 'av-row' + (w.on ? '' : ' is-off');
-
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'av-day' + (w.on ? ' is-on' : '');
-    btn.textContent = day.slice(0, 3);
-    btn.addEventListener('click', () => toggleAvailDay(day));
-    row.appendChild(btn);
-
-    const time = (value, key) => {
-      const input = document.createElement('input');
-      input.type = 'time';
-      input.value = value;
-      input.addEventListener('change', () => {
-        w[key] = input.value;
-        countAvailSlots();
+      const ranges = [];
+      mine.forEach(([from, until]) => {
+        lengths[until - from] = (lengths[until - from] || 0) + 1;
+        const last = ranges[ranges.length - 1];
+        if (last && from <= last[1]) last[1] = Math.max(last[1], until);
+        else ranges.push([from, until]);
       });
 
-      return input;
-    };
+      if (ranges.length) state.hours[day] = ranges.map(([a, b]) => [minutesToTime(a), minutesToTime(b)]);
+    });
 
-    row.appendChild(time(w.from, 'from'));
+    const commonest = Number(Object.keys(lengths).sort((a, b) => lengths[b] - lengths[a])[0]);
+    if ([15, 30, 45, 60, 90, 120].includes(commonest)) state.duration_minutes = commonest;
+  }
 
-    const to = document.createElement('em');
-    to.textContent = 'to';
-    row.appendChild(to);
+  return state;
+}
 
-    row.appendChild(time(w.until, 'until'));
+function gaDraw() {
+  document.querySelectorAll('input[name="ga-duration"]').forEach((r) => { r.checked = Number(r.value) === ga.duration_minutes; });
+  document.querySelectorAll('input[name="ga-range"]').forEach((r) => { r.checked = r.value === ga.range; });
+  document.getElementById('ga-starts').value = ga.starts_on;
+  document.getElementById('ga-ends').value = ga.ends_on;
+  document.getElementById('ga-max-on').checked = ga.max_on;
+  document.getElementById('ga-max').value = ga.max_days_ahead;
+  document.getElementById('ga-notice').value = ga.min_notice_hours;
+  gaDrawDays();
+  gaChanged();
+}
+
+function gaButton(label, icon, onClick) {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.className = 'ga-icon';
+  b.title = label;
+  b.setAttribute('aria-label', label);
+  b.innerHTML = icon;
+  b.addEventListener('click', onClick);
+  return b;
+}
+
+/** One row per weekday: its hours, or "Unavailable" - never a day that only changes colour. */
+function gaDrawDays() {
+  const host = document.getElementById('ga-days');
+  host.innerHTML = '';
+
+  GA_DAYS.forEach((day) => {
+    const ranges = ga.hours[day] || [];
+    const row = document.createElement('div');
+    row.className = 'ga-day' + (ranges.length ? ' is-on' : '');
+
+    const name = document.createElement('div');
+    name.className = 'ga-day-name';
+    name.textContent = day.slice(0, 3);
+    row.appendChild(name);
+
+    const list = document.createElement('div');
+    list.className = 'ga-ranges';
+
+    if (!ranges.length) {
+      const off = document.createElement('span');
+      off.className = 'ga-off';
+      off.textContent = 'Unavailable';
+      list.appendChild(off);
+    }
+
+    ranges.forEach((range, i) => {
+      const line = document.createElement('div');
+      line.className = 'ga-range';
+
+      [0, 1].forEach((part) => {
+        const input = document.createElement('input');
+        input.type = 'time';
+        input.value = range[part];
+        input.setAttribute('aria-label', day + (part ? ' until' : ' from'));
+        input.addEventListener('change', () => { range[part] = input.value; gaChanged(); });
+        line.appendChild(input);
+
+        if (!part) {
+          const dash = document.createElement('span');
+          dash.textContent = '–';
+          line.appendChild(dash);
+        }
+      });
+
+      line.appendChild(gaButton('Remove these hours on ' + day, GA_ICON.remove, () => {
+        ranges.splice(i, 1);
+        if (!ranges.length) delete ga.hours[day];
+        gaDrawDays();
+        gaChanged();
+      }));
+
+      list.appendChild(line);
+    });
+
+    row.appendChild(list);
+    row.appendChild(gaButton('Add hours on ' + day, GA_ICON.add, () => gaAddHours(day)));
     host.appendChild(row);
   });
-
-  countAvailSlots();
 }
 
-/** Every slice the chosen windows make. */
-function availSlots() {
-  const out = [];
+function gaAddHours(day) {
+  const ranges = (ga.hours[day] = ga.hours[day] || []);
+  const last = ranges[ranges.length - 1];
+  const from = last ? timeToMinutes(last[1]) + 60 : 9 * 60;
+  const until = Math.min(from + 180, 23 * 60 + 30);
 
-  AV_DAYS.forEach((day) => {
-    const w = avWindows[day];
+  if (until <= from) return;
 
-    if (!w.on) return;
-
-    const from = timeToMinutes(w.from);
-    const until = timeToMinutes(w.until);
-
-    for (let at = from; at + avDuration <= until; at += avDuration) {
-      out.push({ day: day, start: minutesToTime(at), end: minutesToTime(at + avDuration) });
-    }
-  });
-
-  return out;
+  ranges.push([minutesToTime(from), minutesToTime(until)]);
+  gaDrawDays();
+  gaChanged();
 }
 
-/** The weekly slots that exist now, in the same day/start/end shape. */
-function existingWeeklySlots() {
-  return Object.values(slotsByDay)
-    .flat()
-    .filter((s) => (s.recur ?? 'weekly') !== 'once')
-    .map((s) => ({
-      schedule_id: s.schedule_id,
-      day: s.available_date,
-      start: (s.start_time || '').slice(0, 5),
-      end: (s.end_time || '').slice(0, 5),
-      booked: (s.bookings || []).length > 0,
-    }));
-}
+/** Read the inputs back, then say what saving would give. */
+function gaChanged() {
+  ga.duration_minutes = Number(document.querySelector('input[name="ga-duration"]:checked')?.value) || 60;
+  ga.range = document.querySelector('input[name="ga-range"]:checked')?.value || 'now';
+  ga.starts_on = document.getElementById('ga-starts').value;
+  ga.ends_on = document.getElementById('ga-ends').value;
+  ga.max_on = document.getElementById('ga-max-on').checked;
+  ga.max_days_ahead = Number(document.getElementById('ga-max').value) || 0;
+  ga.min_notice_hours = Number(document.getElementById('ga-notice').value) || 0;
 
-const slotKey = (s) => s.day + ' ' + s.start + '-' + s.end;
+  document.getElementById('ga-dates').hidden = ga.range !== 'dates';
+  document.getElementById('ga-max').disabled = !ga.max_on;
 
-/** What saving would change: what goes, what arrives, what cannot go. */
-function availChanges() {
-  const wanted = availSlots();
-  const wantedKeys = new Set(wanted.map(slotKey));
-  const existing = existingWeeklySlots();
-  const existingKeys = new Set(existing.map(slotKey));
-
-  return {
-    adding: wanted.filter((s) => !existingKeys.has(slotKey(s))),
-    // A slot a team has booked is never removed - they are expecting to turn
-    // up to it - so it is reported instead.
-    removing: existing.filter((s) => !wantedKeys.has(slotKey(s)) && !s.booked),
-    keptBooked: existing.filter((s) => !wantedKeys.has(slotKey(s)) && s.booked),
-  };
-}
-
-function countAvailSlots() {
-  const made = availSlots();
-  const changes = availChanges();
-  const label = avDuration === 60 ? 'one-hour' : avDuration + '-minute';
+  const problem = gaProblem();
   const box = document.getElementById('av-count');
   const save = document.getElementById('av-save');
+  document.getElementById('ga-error').hidden = true;
 
-  const parts = [];
+  let count = 0;
+  Object.values(ga.hours).forEach((ranges) => ranges.forEach(([from, until]) => {
+    count += Math.max(0, Math.floor((timeToMinutes(until) - timeToMinutes(from)) / ga.duration_minutes));
+  }));
 
-  if (made.length) {
-    parts.push('<b>' + made.length + ' bookable slot' + (made.length === 1 ? '' : 's')
-      + ' a week</b>, in ' + label + ' pieces.');
-  } else {
-    parts.push('<b>No availability</b> - teams will have nothing of yours to book.');
+  const length = ga.duration_minutes >= 60 && ga.duration_minutes % 60 === 0
+    ? (ga.duration_minutes / 60) + (ga.duration_minutes === 60 ? ' hour' : ' hours')
+    : ga.duration_minutes + ' minutes';
+
+  const parts = [count
+    ? '<b>' + count + ' bookable time' + (count === 1 ? '' : 's') + ' a week</b>, ' + length + ' each.'
+    : '<b>No availability</b> - teams will have nothing of yours to book.'];
+
+  if (ga.range === 'dates' && (ga.starts_on || ga.ends_on)) {
+    parts.push('Only ' + (ga.starts_on ? 'from ' + ga.starts_on : '') + (ga.ends_on ? ' until ' + ga.ends_on : '') + '.');
   }
+  if (ga.max_on && ga.max_days_ahead) parts.push('Up to ' + ga.max_days_ahead + ' days ahead.');
+  parts.push(ga.min_notice_hours + ' hours\' notice.');
 
-  if (changes.adding.length) parts.push(changes.adding.length + ' new.');
-  if (changes.removing.length) parts.push(changes.removing.length + ' removed.');
-  if (changes.keptBooked.length) {
-    parts.push(changes.keptBooked.length + ' already booked, so '
-      + (changes.keptBooked.length === 1 ? 'it stays' : 'they stay') + '.');
+  box.innerHTML = problem ? '' : parts.join(' ');
+  box.hidden = !!problem;
+  if (problem) {
+    const err = document.getElementById('ga-error');
+    err.textContent = problem;
+    err.hidden = false;
   }
-
-  box.innerHTML = parts.join(' ');
-
-  // One button, one label. Turning every day off and saving is how you take
-  // your availability down - it does not need a second name for the same
-  // action, and the panel above already says what saving will do.
-  save.disabled = !changes.adding.length && !changes.removing.length;
-  save.textContent = 'Save availability';
+  save.disabled = !!problem;
 }
 
-/**
- * Make the week match what the dialog shows.
- *
- * Slots are compared by day and time, so saving the same thing twice does
- * nothing and reopening the dialog shows exactly what was saved. Anything a
- * team has booked survives regardless.
- */
-async function saveAvailability() {
-  const changes = availChanges();
+function gaProblem() {
+  for (const day of GA_DAYS) {
+    const ranges = (ga.hours[day] || []).map(([a, b]) => [timeToMinutes(a), timeToMinutes(b)]).sort((x, y) => x[0] - y[0]);
+    for (let i = 0; i < ranges.length; i++) {
+      if (ranges[i][1] <= ranges[i][0]) return 'On ' + day + ', each set of hours has to end after it starts.';
+      if (i && ranges[i][0] < ranges[i - 1][1]) return 'On ' + day + ', two sets of hours overlap.';
+    }
+  }
+  if (ga.range === 'dates' && ga.starts_on && ga.ends_on && ga.ends_on < ga.starts_on) return 'The end date has to be on or after the start date.';
+  if (ga.max_on && (ga.max_days_ahead < 1 || ga.max_days_ahead > 365)) return 'Days ahead has to be between 1 and 365.';
+  if (ga.min_notice_hours < 0 || ga.min_notice_hours > 720) return 'Notice has to be between 0 and 720 hours.';
+  return null;
+}
 
-  if (!changes.adding.length && !changes.removing.length) return;
+async function saveAvailability() {
+  gaChanged();
+  if (gaProblem()) return;
 
   const save = document.getElementById('av-save');
   save.disabled = true;
   save.textContent = 'Saving...';
 
-  let created = 0;
-  let removed = 0;
-  let failed = 0;
+  try {
+    const res = await apiFetch('/instructor/schedule/availability', {
+      method: 'PUT',
+      body: JSON.stringify({
+        duration_minutes: ga.duration_minutes,
+        hours: ga.hours,
+        starts_on: ga.range === 'dates' ? (ga.starts_on || null) : null,
+        ends_on: ga.range === 'dates' ? (ga.ends_on || null) : null,
+        max_days_ahead: ga.max_on ? ga.max_days_ahead : null,
+        min_notice_hours: ga.min_notice_hours,
+      }),
+    });
 
-  for (const slot of changes.removing) {
-    try {
-      await apiFetch('/instructor/schedule/slots/' + slot.schedule_id, { method: 'DELETE' });
-      removed++;
-    } catch (e) {
-      failed++;
-    }
+    closeAvail();
+
+    const said = [];
+    if (res.added) said.push(res.added + ' opened');
+    if (res.removed) said.push(res.removed + ' removed');
+    if (res.kept_booked) said.push(res.kept_booked + ' already booked, so kept');
+    showToast('Availability saved' + (said.length ? ': ' + said.join(', ') : '') + '.', 'success');
+
+    await loadSlots();
+    redrawCalendar();
+    renderUpcoming();
+  } catch (e) {
+    const err = document.getElementById('ga-error');
+    err.textContent = e.message;
+    err.hidden = false;
+  } finally {
+    save.textContent = 'Save availability';
+    save.disabled = !!gaProblem();
   }
-
-  for (const slot of changes.adding) {
-    try {
-      await apiFetch('/instructor/schedule/slots', {
-        method: 'POST',
-        body: JSON.stringify({
-          available_date: slot.day,
-          start_time: slot.start,
-          end_time: slot.end,
-          consultation_limit: 1,
-          slot_type: 'consult',
-          recur: 'weekly',
-          specific_date: null,
-        }),
-      });
-      created++;
-    } catch (e) {
-      failed++;
-    }
-  }
-
-  save.disabled = false;
-  save.textContent = 'Save availability';
-  closeAvail();
-
-  const said = [];
-  if (created) said.push(created + ' opened');
-  if (removed) said.push(removed + ' removed');
-  if (failed) said.push(failed + ' could not be changed');
-
-  showToast(said.join(', ') || 'Nothing changed', failed && !created && !removed ? 'error' : 'success');
-
-  setTimeout(() => window.location.reload(), 1200);
 }
 
 

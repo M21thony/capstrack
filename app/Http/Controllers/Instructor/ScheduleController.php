@@ -8,6 +8,7 @@ use App\Mail\NewConsultationSlotMail;
 use App\Models\Notification;
 use App\Models\StudentSchoolYear;
 use App\Models\CapstoneExpert;
+use App\Models\ConsultationAvailability;
 use App\Models\ConsultationBooking;
 use App\Models\ConsultationSchedule;
 use App\Models\TeamExpertAssignment;
@@ -134,6 +135,167 @@ class ScheduleController extends Controller
         return response()->json(['success' => true]);
     }
 
+    // GET /instructor/schedule/availability
+    public function showAvailability()
+    {
+        $expertId = (int) Auth::guard('expert')->id();
+
+        return response()->json(
+            ConsultationAvailability::where('expert_id', $expertId)->first()
+                ?? ConsultationAvailability::defaultsFor($expertId)
+        );
+    }
+
+    /**
+     * Save the expert's availability the way Google Calendar's appointment
+     * schedules work - an appointment duration, general weekly hours, and a
+     * scheduling window - and make the weekly slots match those hours.
+     *
+     * Slots are cut from the hours at the chosen duration. A slot no longer
+     * inside the hours is removed, unless a team has booked it ahead, and a
+     * missing one is added. One-time slots are left as they are.
+     */
+    // PUT /instructor/schedule/availability
+    public function updateAvailability(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'duration_minutes' => 'required|integer|in:'.implode(',', ConsultationAvailability::DURATIONS),
+            'hours' => 'present|array',
+            'hours.*' => 'array',
+            'hours.*.*' => 'array|size:2',
+            'hours.*.*.*' => 'date_format:H:i',
+            'starts_on' => 'nullable|date',
+            'ends_on' => 'nullable|date|after_or_equal:starts_on',
+            'max_days_ahead' => 'nullable|integer|min:1|max:365',
+            'min_notice_hours' => 'required|integer|min:0|max:720',
+        ], [
+            'ends_on.after_or_equal' => 'The end date has to be on or after the start date.',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['error' => $validator->errors()->first()], 422);
+        }
+
+        $duration = (int) $request->duration_minutes;
+        $toMin = fn (string $t) => (int) substr($t, 0, 2) * 60 + (int) substr($t, 3, 2);
+        $toTime = fn (int $m) => sprintf('%02d:%02d', intdiv($m, 60), $m % 60);
+
+        $hours = [];
+        $wanted = [];
+
+        foreach ($request->input('hours', []) as $day => $ranges) {
+            if (! in_array($day, ConsultationAvailability::DAYS, true)) {
+                return response()->json(['error' => "{$day} is not a day of the week."], 422);
+            }
+
+            usort($ranges, fn ($a, $b) => strcmp($a[0], $b[0]));
+            $lastEnd = -1;
+
+            foreach ($ranges as [$from, $until]) {
+                if ($toMin($until) <= $toMin($from)) {
+                    return response()->json(['error' => "On {$day}, each set of hours has to end after it starts."], 422);
+                }
+
+                if ($toMin($from) < $lastEnd) {
+                    return response()->json(['error' => "On {$day}, two sets of hours overlap."], 422);
+                }
+
+                $lastEnd = $toMin($until);
+                $hours[$day][] = [$from, $until];
+
+                for ($at = $toMin($from); $at + $duration <= $toMin($until); $at += $duration) {
+                    $wanted[$day.' '.$toTime($at).'-'.$toTime($at + $duration)] = [$day, $toTime($at), $toTime($at + $duration)];
+                }
+            }
+        }
+
+        $expert = Auth::guard('expert')->user();
+
+        $availability = ConsultationAvailability::updateOrCreate(
+            ['expert_id' => $expert->expert_id],
+            [
+                'duration_minutes' => $duration,
+                'hours' => $hours,
+                'starts_on' => $request->starts_on ?: null,
+                'ends_on' => $request->ends_on ?: null,
+                'max_days_ahead' => $request->max_days_ahead ?: null,
+                'min_notice_hours' => (int) $request->min_notice_hours,
+            ]
+        );
+
+        $hm = fn ($t) => substr((string) $t, 0, 5);
+        $existing = DB::table('consultation_schedule')
+            ->where('expert_id', $expert->expert_id)
+            ->where(fn ($q) => $q->where('recur', '!=', 'once')->orWhereNull('recur'))
+            ->get();
+
+        $added = $removed = $keptBooked = 0;
+        $existingKeys = [];
+
+        foreach ($existing as $slot) {
+            $key = $slot->available_date.' '.$hm($slot->start_time).'-'.$hm($slot->end_time);
+            $existingKeys[$key] = true;
+
+            if (isset($wanted[$key])) {
+                continue;
+            }
+
+            $booked = DB::table('consultation_booking')
+                ->where('schedule_id', $slot->schedule_id)
+                ->where('booking_status', 'scheduled')
+                ->whereDate('session_date', '>=', now()->toDateString())
+                ->exists();
+
+            if ($booked) {
+                $keptBooked++;
+
+                continue;
+            }
+
+            if ($slot->google_event_id && $expert->google_token) {
+                try {
+                    $this->calendar->cancelBookingEvent($expert->expert_id, $slot->google_event_id);
+                } catch (\Exception $e) {
+                    Log::warning('Google Calendar placeholder removal failed', ['error' => $e->getMessage()]);
+                }
+            }
+
+            DB::table('consultation_schedule')->where('schedule_id', $slot->schedule_id)->delete();
+            DB::table('consultation_schedule_exception')->where('schedule_id', $slot->schedule_id)->delete();
+            $removed++;
+        }
+
+        foreach ($wanted as $key => [$day, $start, $end]) {
+            if (isset($existingKeys[$key])) {
+                continue;
+            }
+
+            DB::table('consultation_schedule')->insert([
+                'expert_id' => $expert->expert_id,
+                'available_date' => $day,
+                'start_time' => $start,
+                'end_time' => $end,
+                'consultation_limit' => 1,
+                'slot_type' => 'consult',
+                'is_available' => true,
+                'google_event_id' => null,
+                'recur' => 'weekly',
+                'specific_date' => null,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+            $added++;
+        }
+
+        return response()->json([
+            'saved' => true,
+            'added' => $added,
+            'removed' => $removed,
+            'kept_booked' => $keptBooked,
+            'availability' => $availability->fresh(),
+        ]);
+    }
+
     /**
      * The dates this weekly slot has been taken out of.
      *
@@ -227,26 +389,9 @@ class ScheduleController extends Controller
             )
         );
 
+        // Open slots are not put on the expert's Google Calendar - only booked
+        // consultations are (see StudentConsultationController::book).
         $googleEventId = null;
-
-        if ($expert->google_token && ! $hasOverlap) {
-            try {
-                $googleEventId = $this->calendar->createBookingEvent(
-                    expertId: $expert->expert_id,
-                    date: $nextDate,
-                    startTime: $request->start_time,
-                    endTime: $request->end_time,
-                    slotType: $request->slot_type ? ucfirst($request->slot_type) : 'Consultation',
-                    teamName: 'Available Slot',
-                    studentEmail: $expert->email,
-                    expertEmail: $expert->email,
-                    topic: "Weekly {$request->slot_type} slot — {$request->available_date}s",
-                    recurrence: GoogleCalendarService::recurrenceRuleFor($request->recur ?? 'weekly'),
-                );
-            } catch (\Exception $e) {
-                \Log::warning('Google Calendar sync failed', ['error' => $e->getMessage()]);
-            }
-        }
 
         $id = DB::table('consultation_schedule')->insertGetId([
             'expert_id' => $expert->expert_id,
@@ -393,37 +538,17 @@ class ScheduleController extends Controller
             ->where('schedule_id', $id)
             ->update($updates);
 
-        // Update Google Calendar event if exists
+        // An open slot made before only bookings went to Google Calendar still
+        // has a placeholder event there. Editing the slot takes it down rather
+        // than redrawing it.
         if ($slot->google_event_id && $expert->google_token) {
             try {
-                // Delete old event and create new one with updated details
                 $this->calendar->cancelBookingEvent($expert->expert_id, $slot->google_event_id);
-
-                $day = $request->available_date ?? $slot->available_date;
-                $start = $request->start_time ?? $slot->start_time;
-                $end = $request->end_time ?? $slot->end_time;
-                $nextDate = $this->getNextDateForDay($day);
-
-                $newEventId = $this->calendar->createBookingEvent(
-                    expertId: $expert->expert_id,
-                    date: $nextDate,
-                    startTime: $start,
-                    endTime: $end,
-                    slotType: ucfirst($request->slot_type ?? $slot->slot_type ?? 'Consultation'),
-                    teamName: 'Available Slot',
-                    studentEmail: $expert->email,
-                    expertEmail: $expert->email,
-                    topic: "Weekly " . ($request->slot_type ?? $slot->slot_type ?? 'consultation') . " slot — {$day}s",
-                    recurrence: GoogleCalendarService::recurrenceRuleFor($slot->recur ?? 'weekly'),
-                );
-
-                DB::table('consultation_schedule')
-                    ->where('schedule_id', $id)
-                    ->update(['google_event_id' => $newEventId]);
-
             } catch (\Exception $e) {
-                \Log::warning('Google Calendar update failed', ['error' => $e->getMessage()]);
+                \Log::warning('Google Calendar placeholder removal failed', ['error' => $e->getMessage()]);
             }
+
+            DB::table('consultation_schedule')->where('schedule_id', $id)->update(['google_event_id' => null]);
         }
 
         return response()->json(['updated' => true]);
@@ -535,25 +660,12 @@ class ScheduleController extends Controller
             'updated_at' => now(),
         ]);
 
+        // Only the old placeholder series (if this slot predates bookings-only
+        // calendars) needs this date taken out; the moved one-off is an open
+        // slot and gets no event of its own.
         if ($slot->google_event_id && $expert->google_token) {
             try {
                 $this->calendar->excludeDateFromSeries($expert->expert_id, $slot->google_event_id, $date);
-
-                $eventId = $this->calendar->createBookingEvent(
-                    expertId: $expert->expert_id,
-                    date: $date,
-                    startTime: $start,
-                    endTime: $end,
-                    slotType: ucfirst($type ?? 'Consultation'),
-                    teamName: 'Available Slot',
-                    studentEmail: $expert->email,
-                    expertEmail: $expert->email,
-                    topic: 'Moved '.($type ?? 'consultation')." slot — {$date}",
-                );
-
-                DB::table('consultation_schedule')
-                    ->where('schedule_id', $newId)
-                    ->update(['google_event_id' => $eventId]);
             } catch (\Exception $e) {
                 // The slot has already moved in CapsTrack. A calendar that
                 // failed to follow is worth a line in the log, not a 500 that

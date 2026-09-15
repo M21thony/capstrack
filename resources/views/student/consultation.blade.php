@@ -654,6 +654,18 @@ const slotTypeColors = @json($slotTypeColors);
 // entries here mean that specific occurrence is full.
 let fullOccurrences = new Set(@json($fullOccurrences));
 
+// Each expert's scheduling window: { earliest: 'YYYY-MM-DD HH:MM', latest: 'YYYY-MM-DD' | null }.
+// An expert with no saved availability has none, and every slot stays offered.
+let bookingWindows = @json($bookingWindows ?? (object) []);
+
+function withinWindow(expertId, dateKey, startTime) {
+  const w = bookingWindows[expertId];
+  if (!w) return true;
+  // Both sides are 'YYYY-MM-DD HH:MM', so they compare correctly as text.
+  if (dateKey + ' ' + String(startTime || '00:00').slice(0, 5) < w.earliest) return false;
+  return !w.latest || dateKey <= w.latest;
+}
+
 function isOccurrenceFull(scheduleId, dateKey) {
   return fullOccurrences.has(scheduleId + '|' + dateKey);
 }
@@ -674,7 +686,8 @@ function matchesDate(s, dayName, dateKey) {
 }
 
 function getSlotsForDate(expertId, dayName, dateKey) {
-  return getSlotsForExpert(expertId).filter(s => matchesDate(s, dayName, dateKey) && s.is_available && !isOccurrenceFull(s.schedule_id, dateKey));
+  return getSlotsForExpert(expertId).filter(s => matchesDate(s, dayName, dateKey) && s.is_available
+    && !isOccurrenceFull(s.schedule_id, dateKey) && withinWindow(expertId, dateKey, s.start_time));
 }
 
 function formatTime(t) {
@@ -1046,6 +1059,7 @@ async function refreshConsultationData(showFeedback) {
     const data = await res.json();
 
     expertSlots = data.availableSlots;
+    if (data.bookingWindows) bookingWindows = data.bookingWindows;
     fullOccurrences = new Set(data.fullOccurrences || []);
     bookedExpertIds = (data.bookedExpertIds || []).map(Number);
     myBookedDates = data.myBookedDates;
