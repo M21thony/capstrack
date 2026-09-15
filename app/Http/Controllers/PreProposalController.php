@@ -96,6 +96,10 @@ class PreProposalController extends Controller
             'canReviseTitle' => (bool) $team && TitleRevision::canRevise($team),
             'needsNewTitle' => (bool) $team && TitleRevision::needsNewTitle($team),
             'retiredProposals' => $team ? $team->allPreProposals()->whereNotNull('retired_at')->get() : collect(),
+            'awaitingAdviser' => $team ? TitleRevision::awaitingAdviser($team) : null,
+            'adviserName' => $team
+                ? \App\Models\CapstoneExpert::find(app(\App\Services\RecipientResolver::class)->resolveTeamRoleExpert($team->team_id, 'adviser'))?->name
+                : null,
         ]);
     }
 
@@ -502,6 +506,19 @@ class PreProposalController extends Controller
         if (! $preProposal->approved_status) {
             return redirect()->route('student.duplication')
                 ->with('error', 'You can only choose a title the CAPSA has approved.');
+        }
+
+        // A new title after the defense goes to the team's adviser to confirm first.
+        if (TitleRevision::needsNewTitle($team)) {
+            if (TitleRevision::awaitingAdviser($team)) {
+                return redirect()->route('student.duplication')
+                    ->with('error', 'Your adviser is already confirming one of your titles.');
+            }
+
+            TitleRevision::askAdviser($preProposal);
+
+            return redirect()->route('student.duplication')
+                ->with('status', 'Sent to your adviser to confirm. It becomes your title once they approve.');
         }
 
         $team->update([

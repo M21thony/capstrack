@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Models\CapstonePreProposal;
 use App\Models\DefenseSchedule;
 use App\Models\Team;
 use Illuminate\Support\Facades\DB;
@@ -14,10 +15,30 @@ use Illuminate\Support\Facades\DB;
  *                                  the Signed Final Project Title Form is in.
  *   Redefense with a new title   - the old titles are set aside; the team
  *                                  turns in new ones and keeps its experts.
+ *                                  The CaPSA approves the new title, then the
+ *                                  adviser confirms it before it is the team's.
  */
 class TitleRevision
 {
     public const FINAL_TITLE_FORM = 'final_title_form';
+
+    public const PENDING = 'pending';
+
+    public const APPROVED = 'approved';
+
+    public const DECLINED = 'declined';
+
+    /** Put an approved new title in front of the team's adviser. */
+    public static function askAdviser(CapstonePreProposal $proposal): void
+    {
+        $proposal->update(['adviser_status' => self::PENDING, 'adviser_note' => null, 'adviser_decided_at' => null]);
+    }
+
+    /** The new title the team's adviser is still to confirm, if any. */
+    public static function awaitingAdviser(Team $team): ?CapstonePreProposal
+    {
+        return $team->preProposals()->where('adviser_status', self::PENDING)->first();
+    }
 
     /** The team's most recent Pre-proposal Defense that has a result. */
     public static function latestDecision(Team $team): ?DefenseSchedule

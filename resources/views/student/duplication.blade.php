@@ -335,12 +335,22 @@
       <div class="card" style="margin-bottom:16px;border-color:rgba(220,38,38,0.25);background:var(--red-bg);">
         <div class="card-header"><span class="card-title">Your panel asked for a new title</span></div>
         <div style="font-size:13px;color:var(--text2);line-height:1.6">
-          Run the duplication check on your new pre-proposal and turn it in below, the same way as before. Your adviser, consultant and grammarian stay with your team.
+          Run the duplication check on your new pre-proposal and turn it in below, the same way as before. Your CaPSA approves it, then your adviser confirms it. Your adviser, consultant and grammarian stay with your team.
+          @if ($awaitingAdviser)
+            <div style="margin-top:8px;padding:8px 10px;border-radius:8px;background:var(--bg2);border:1px solid var(--border)">
+              Your CaPSA approved <b>{{ $awaitingAdviser->title }}</b>. Waiting for your adviser{{ $adviserName ? ', '.$adviserName.',' : '' }} to confirm it.
+            </div>
+          @endif
           @if ($retiredProposals->isNotEmpty())
-            <div style="margin-top:8px;font-size:12px;color:var(--text3)">Set aside after your defense, kept as a record:</div>
+            <div style="margin-top:8px;font-size:12px;color:var(--text3)">Set aside, kept as a record:</div>
             <ul style="margin:4px 0 0 18px;padding:0;font-size:12.5px">
               @foreach ($retiredProposals as $old)
-                <li>{{ $old->title }}</li>
+                <li>
+                  {{ $old->title }}
+                  @if ($old->adviser_status === \App\Support\TitleRevision::DECLINED)
+                    <div style="color:var(--red)">Your adviser asked for another title: “{{ $old->adviser_note }}”</div>
+                  @endif
+                </li>
               @endforeach
             </ul>
           @endif

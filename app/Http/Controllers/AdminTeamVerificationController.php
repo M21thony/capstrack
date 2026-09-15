@@ -230,6 +230,17 @@ class AdminTeamVerificationController extends Controller
         if ($approved->count() === 1) {
             $winner = $approved->first();
 
+            // Sent back for a new title: the team already has its adviser, so
+            // the adviser confirms the new title before it becomes the team's.
+            if (\App\Support\TitleRevision::needsNewTitle($team)) {
+                if ($winner->adviser_status !== \App\Support\TitleRevision::PENDING) {
+                    \App\Support\TitleRevision::askAdviser($winner);
+                    $this->notifyTeam($team, 'title_awaiting_adviser', 'Title Approved by CaPSA', 'Your CaPSA approved <strong>'.e($winner->title).'</strong>. Your adviser confirms it next.');
+                }
+
+                return;
+            }
+
             if ($team->selected_pre_proposal_id !== $winner->id) {
                 $team->update([
                     'selected_pre_proposal_id' => $winner->id,
