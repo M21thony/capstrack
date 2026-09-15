@@ -10,6 +10,7 @@ use App\Services\OllamaSSHClient;
 use App\Services\SimilarityService;
 use App\Support\ProjectTags;
 use App\Support\StudentTeam;
+use App\Support\TitleRevision;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -89,7 +90,57 @@ class PreProposalController extends Controller
                     ->first()
                 : null,
             'reviewStarted' => (bool) $team && $this->reviewStarted($team),
+            // After the Pre-proposal Defense: a title passed with revision can
+            // be reworded until the final title form is in; a team sent back
+            // for a new title sees the titles that were set aside.
+            'canReviseTitle' => (bool) $team && TitleRevision::canRevise($team),
+            'needsNewTitle' => (bool) $team && TitleRevision::needsNewTitle($team),
+            'retiredProposals' => $team ? $team->allPreProposals()->whereNotNull('retired_at')->get() : collect(),
         ]);
+    }
+
+    /**
+     * PATCH /pre-proposal/title - the leader rewords a title the panel passed
+     * with revision. The pre-proposal keeps the title as it was approved; the
+     * team's title is what changes.
+     */
+    public function updateTitle(Request $request): RedirectResponse
+    {
+        $team = $this->currentTeam($request);
+
+        if (! $team) {
+            abort(403);
+        }
+
+        if ((int) $team->leader_id !== (int) $request->user()->student_id) {
+            return redirect()->route('student.duplication')->with('error', 'Only the team leader can revise the title.');
+        }
+
+        if ($reason = TitleRevision::whyNot($team)) {
+            return redirect()->route('student.duplication')->with('error', $reason);
+        }
+
+        $validated = $request->validate(['title' => $this->titleRule()]);
+
+        $team->update(['project_title' => trim($validated['title'])]);
+
+        return redirect()->route('student.duplication')
+            ->with('status', 'Title revised. It becomes final once you upload the Signed Final Project Title Form.');
+    }
+
+    /** 11-12 meaningful words, as every title in the college is written. */
+    private function titleRule(): array
+    {
+        return [
+            'required', 'string', 'max:150',
+            function ($attr, $value, $fail) {
+                $count = $this->countMeaningfulWords($value ?? '');
+
+                if ($count < 11 || $count > 12) {
+                    $fail("Title must contain 11–12 meaningful words (filler words like 'a', 'of', 'in' don't count). Current count: {$count}.");
+                }
+            },
+        ];
     }
 
     // AJAX: upload a PDF, run the same check DuplicationController::check()
@@ -327,7 +378,8 @@ class PreProposalController extends Controller
 
         $wanted = $normalise($title);
 
-        return $team->preProposals()
+        // Set-aside titles count too: a title the panel sent back is not a new one.
+        return $team->allPreProposals()
             ->get()
             ->first(fn ($existing) => (int) $existing->duplication_check_id === $checkId
                 || $normalise((string) $existing->title) === $wanted);
@@ -350,16 +402,7 @@ class PreProposalController extends Controller
         $slot = $this->nextAvailableSlot($team);
 
         $validated = $request->validate([
-            'title' => [
-                'required', 'string', 'max:150',
-                function ($attr, $value, $fail) {
-                    $count = $this->countMeaningfulWords($value ?? '');
-
-                    if ($count < 11 || $count > 12) {
-                        $fail("Title must contain 11–12 meaningful words (filler words like 'a', 'of', 'in' don't count). Current count: {$count}.");
-                    }
-                },
-            ],
+            'title' => $this->titleRule(),
             'sdg_goals' => ['required', 'string', 'max:150'],
             'research_agenda' => ['required', 'array', 'min:1'],
             'research_agenda.*' => ['string', 'max:150'],
@@ -661,7 +704,8 @@ class PreProposalController extends Controller
      */
     private function nextAvailableSlot(Team $team): int
     {
-        return (int) $team->preProposals()->max('slot') + 1;
+        // Over every title, set-aside ones included, so a new one never writes over an old slot.
+        return (int) $team->allPreProposals()->max('slot') + 1;
     }
 
     /** Whether this team has turned their pre-proposals in for checking. */

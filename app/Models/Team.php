@@ -458,7 +458,14 @@ class Team extends Model
         return $this->hasMany(DefenseSchedule::class, 'team_id', 'team_id');
     }
 
+    /** The titles in play. Ones set aside when the panel asked for a new title are left out. */
     public function preProposals()
+    {
+        return $this->allPreProposals()->whereNull('retired_at');
+    }
+
+    /** Every title the team has ever saved, the set-aside ones included. */
+    public function allPreProposals()
     {
         return $this->hasMany(CapstonePreProposal::class, 'team_id', 'team_id')->orderBy('slot');
     }

@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class CapstonePreProposal extends Model
 {
     protected $fillable = [
+        'retired_at',
         'team_id',
         'duplication_check_id',
         'slot',
@@ -31,6 +32,7 @@ class CapstonePreProposal extends Model
         'tags' => 'array',
         'approved_status' => 'boolean',
         'submitted_at' => 'datetime',
+        'retired_at' => 'datetime',
     ];
 
     public function team(): BelongsTo

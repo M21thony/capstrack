@@ -95,12 +95,13 @@ class DefenseOutcomeRecorder
     }
 
     /**
-     * Hand the team's pre-proposals back so they can put up a new title.
+     * Set the team's titles aside so they can put up a new one.
      *
-     * Unsubmitting rather than deleting: the titles that were turned in stay
-     * as a record of what was tried, and the team adds a fresh one alongside
-     * them. Their approvals are cleared, since what was approved is exactly
-     * what the panel has just sent back.
+     * Retired, not deleted and not turned back into drafts: they stay as a
+     * record of what was tried, exactly as they were decided, but no longer
+     * count as the team's titles - so the team turns in fresh ones through
+     * the usual duplication check, and cannot resubmit a title the panel has
+     * just sent back. The team keeps its adviser, consultant and grammarian.
      */
     private function reopenPreProposals(Team $team): bool
     {
@@ -110,10 +111,7 @@ class DefenseOutcomeRecorder
             return false;
         }
 
-        $proposals->update([
-            'submitted_at' => null,
-            'approved_status' => false,
-        ]);
+        $proposals->update(['retired_at' => now()]);
 
         $team->update([
             'selected_pre_proposal_id' => null,

@@ -203,7 +203,9 @@ class AdminTeamVerificationController extends Controller
 
         // Already finalized (admin clicked "Verify Team") - a late approval
         // shouldn't retroactively change a decision that's already locked in.
-        if ($team->is_confirmed) {
+        // Unless the team has no title: a verified team the panel sent back for
+        // a new one is choosing again, and its new title has to land.
+        if ($team->is_confirmed && $team->selected_pre_proposal_id) {
             return;
         }
 
