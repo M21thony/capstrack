@@ -372,6 +372,20 @@ function renderPreProposals(proposals, selectedId) {
         + '</div>'
       : (p.status === 'rejected' ? '<div style="font-size:11px;color:#991b1b;margin-top:6px">Rejected: ' + escapeHtml(p.rejection_reason || '') + '</div>' : '');
 
+    // A new title after a redefense: the CaPSA recommends, then the team's
+    // adviser approves or asks for another one.
+    var adv = p.adviser;
+    var adviserWho = adv && adv.name ? 'adviser ' + escapeHtml(adv.name) : 'the adviser';
+    var adviserHtml = !adv ? ''
+      : '<div style="font-size:11.5px;margin-top:8px;padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:#fff;color:'
+        + (adv.status === 'approved' ? 'var(--green)' : (adv.status === 'declined' ? '#991b1b' : 'var(--amber)')) + '">'
+        + (adv.status === 'approved'
+            ? 'Approved by ' + adviserWho + (adv.decided_at ? ' on ' + escapeHtml(adv.decided_at) : '')
+            : (adv.status === 'declined'
+                ? escapeHtml(adv.name || 'The adviser') + ' asked for another title' + (adv.decided_at ? ' on ' + escapeHtml(adv.decided_at) : '') + ': “' + escapeHtml(adv.note || '') + '”'
+                : 'Waiting for ' + adviserWho + ' to approve'))
+        + '</div>';
+
     var documentLinkHtml = p.document_url
       ? '<button type="button" onclick="openPdfPreview(\'' + p.document_url + '\')" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;color:var(--primary,#5b5bd6);background:none;border:none;padding:0;cursor:pointer;margin-top:6px">View Original PDF</button>'
       : '';
@@ -384,10 +398,11 @@ function renderPreProposals(proposals, selectedId) {
     }
 
     card.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px">'
-      + '<span style="font-size:13px;font-weight:600;color:var(--text)">Proposal ' + p.slot + (isSelected ? ' ⭐ Final Title' : '') + '</span>'
+      + '<span style="font-size:13px;font-weight:600;color:var(--text)">Proposal ' + p.slot + (isSelected ? ' ⭐ Final Title' : '') + (p.set_aside ? ' <span style="font-weight:500;color:var(--text3)">(set aside)</span>' : '') + '</span>'
       + '<span class="badge ' + badgeClass + '">' + ppStatusLabel(p.status) + '</span>'
       + '</div>'
       + '<div style="font-size:13px;font-weight:500;color:var(--text);margin-top:4px">' + escapeHtml(p.title) + '</div>'
+      + adviserHtml
       + documentLinkHtml
       + dupHtml + contentHtml + actionsHtml;
 

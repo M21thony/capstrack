@@ -132,7 +132,7 @@ class TeamManagementController extends Controller
             ->get()
             ->groupBy('team_id');
 
-        $candidates = Team::with(['leader', 'preProposals.duplicationCheck'])
+        $candidates = Team::with(['leader', 'preProposals.duplicationCheck', 'allPreProposals.duplicationCheck'])
             ->whereIn('team_id', $syRecords->keys())
             ->orderByDesc('created_at')
             ->get();

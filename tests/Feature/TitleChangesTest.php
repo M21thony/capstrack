@@ -178,5 +178,20 @@ class TitleChangesTest extends TestCase
         $this->assertNull($team->fresh()->project_title);
         $this->assertCount(0, $team->preProposals()->get());
         $this->assertSame('approved', TeamExpertAssignment::where('expert_id', $adviser->expert_id)->value('status'));
+
+        // The CaPSA's review window still shows the title, with the adviser's note.
+        $shown = collect(\App\Support\PreProposalPayload::forTeam($team->fresh()))->firstWhere('id', $new->id);
+        $this->assertTrue($shown['set_aside']);
+        $this->assertSame('declined', $shown['adviser']['status']);
+        $this->assertSame('Talk to your consultant about the scope first.', $shown['adviser']['note']);
+    }
+
+    public function test_the_capsas_review_window_shows_the_title_waiting_for_the_adviser(): void
+    {
+        [$team, , $new, $adviser] = $this->newTitleApprovedByCapsa();
+
+        $shown = collect(\App\Support\PreProposalPayload::forTeam($team))->firstWhere('id', $new->id);
+        $this->assertSame('pending', $shown['adviser']['status']);
+        $this->assertSame($adviser->name, $shown['adviser']['name']);
     }
 }

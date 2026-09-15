@@ -505,7 +505,7 @@ class PreProposalController extends Controller
 
         if (! $preProposal->approved_status) {
             return redirect()->route('student.duplication')
-                ->with('error', 'You can only choose a title the CAPSA has approved.');
+                ->with('error', 'You can only choose a title the CaPSA has recommended.');
         }
 
         // A new title after the defense goes to the team's adviser to confirm first.
