@@ -74,10 +74,10 @@ class ConsultationCancellationTest extends TestCase
         return DB::table('consultation_booking')->where('booking_id', $id)->first();
     }
 
-    private function decide(int $expertId, int $bookingId, string $decision)
+    private function decide(int $expertId, int $bookingId, string $decision, ?string $reason = 'This is the last session before your defense.')
     {
         return $this->actingAs(CapstoneExpert::find($expertId), 'expert')
-            ->patchJson("/instructor/schedule/bookings/{$bookingId}/cancellation", ['decision' => $decision]);
+            ->patchJson("/instructor/schedule/bookings/{$bookingId}/cancellation", ['decision' => $decision, 'reason' => $reason]);
     }
 
     public function test_cancelling_a_booking_requires_a_reason(): void
@@ -155,6 +155,10 @@ class ConsultationCancellationTest extends TestCase
         $this->actingAs($student, 'web')
             ->postJson(route('student.consultation.cancel', $bookingId), ['reason' => 'Something came up.'])
             ->assertOk();
+
+        // Declining without saying why is refused, and the booking is untouched.
+        $this->decide($expertId, $bookingId, 'decline', null)->assertStatus(422);
+        $this->assertNotNull($this->booking($bookingId)->cancellation_requested_at);
 
         $this->decide($expertId, $bookingId, 'decline')->assertOk();
 

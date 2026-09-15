@@ -80,7 +80,13 @@ class ScheduleController extends Controller
     // A team asked to call a consultation off; the expert approves or declines.
     public function updateCancellation(Request $request, int $bookingId)
     {
-        $validator = Validator::make($request->all(), ['decision' => 'required|in:approve,decline']);
+        $validator = Validator::make($request->all(), [
+            'decision' => 'required|in:approve,decline',
+            'reason' => 'required_if:decision,decline|nullable|string|min:10|max:500',
+        ], [
+            'reason.required_if' => 'Tell the team why the consultation cannot be cancelled.',
+            'reason.min' => 'Give the team a reason (at least 10 characters).',
+        ]);
 
         if ($validator->fails()) {
             return response()->json(['message' => $validator->errors()->first()], 422);
@@ -120,7 +126,7 @@ class ScheduleController extends Controller
                 'title' => $approve ? 'Cancellation approved' : 'Cancellation declined',
                 'message' => $approve
                     ? "Your consultation on {$when} is cancelled."
-                    : "Your expert kept your consultation on {$when}. It is still on.",
+                    : "Your expert kept your consultation on {$when}. It is still on. Why: “".e($request->input('reason')).'”',
                 'link' => route('student.consultation'),
             ]);
         }

@@ -434,6 +434,24 @@
 #scope-ask .cancel:hover{color:var(--text)}
 </style>
 
+<!-- ─── CANCELLATION DECISION ─────────────────────────────────────────────── -->
+<div class="slot-modal-overlay" id="cancel-decision-overlay" onclick="if(event.target===this)closeCancellationDecision()">
+  <div class="block-confirm" role="dialog" aria-modal="true" aria-labelledby="cd-title">
+    <div class="block-confirm-title" id="cd-title">Cancel this consultation?</div>
+    <div class="block-confirm-sub" id="cd-sub"></div>
+    <div id="cd-reason-wrap" hidden style="margin-bottom:14px">
+      <label for="cd-reason" style="display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:6px">Why can't they cancel?</label>
+      <textarea id="cd-reason" rows="3" maxlength="500" placeholder="e.g. This is the last session before your defense, so we need to meet."
+                style="width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font:inherit;font-size:13px;resize:vertical;background:var(--bg2);color:var(--text)"></textarea>
+      <div id="cd-error" style="font-size:11.5px;color:var(--red,#dc2626);margin-top:4px"></div>
+    </div>
+    <div class="block-confirm-actions">
+      <button class="btn btn-danger-solid" id="cd-yes" onclick="confirmCancellationDecision()">Yes</button>
+      <button class="btn btn-ghost" onclick="closeCancellationDecision()">No</button>
+    </div>
+  </div>
+</div>
+
 <!-- ─── BLOCK CONFIRM ─────────────────────────────────────────────────────── -->
 <div class="slot-modal-overlay" id="block-confirm-overlay" onclick="if(event.target===this)closeBlockConfirm()">
   <div class="block-confirm">
@@ -2541,19 +2559,57 @@ function showToast(msg, type = 'success') {
 const escHtml = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 // A team asked to cancel: approve frees the slot, keep leaves it booked.
-async function decideCancellation(bookingId, decision, key) {
+// Both ask first; keeping it also needs the reason the team will read.
+let pendingCancellation = null;
+
+function decideCancellation(bookingId, decision, key) {
+  pendingCancellation = { bookingId, decision, key };
+  const approve = decision === 'approve';
+  document.getElementById('cd-title').textContent = approve ? 'Approve this cancellation?' : 'Keep this booking?';
+  document.getElementById('cd-sub').textContent = approve
+    ? 'The consultation is cancelled and the slot opens for other teams.'
+    : 'The consultation stays on. Tell the team why it cannot be cancelled.';
+  document.getElementById('cd-reason-wrap').hidden = approve;
+  document.getElementById('cd-reason').value = '';
+  document.getElementById('cd-error').textContent = '';
+  document.getElementById('cd-yes').textContent = approve ? 'Yes, cancel it' : 'Yes, keep it';
+  document.getElementById('cancel-decision-overlay').classList.add('open');
+  if (!approve) document.getElementById('cd-reason').focus();
+}
+
+function closeCancellationDecision() {
+  document.getElementById('cancel-decision-overlay').classList.remove('open');
+  pendingCancellation = null;
+}
+
+async function confirmCancellationDecision() {
+  if (!pendingCancellation) return;
+  const { bookingId, decision, key } = pendingCancellation;
+  const reason = document.getElementById('cd-reason').value.trim();
+
+  if (decision === 'decline' && reason.length < 10) {
+    document.getElementById('cd-error').textContent = 'Give the team a reason (at least 10 characters).';
+    return;
+  }
+
+  const yes = document.getElementById('cd-yes');
+  yes.disabled = true;
   try {
     await apiFetch(`/instructor/schedule/bookings/${bookingId}/cancellation`, {
       method: 'PATCH',
-      body: JSON.stringify({ decision }),
+      body: JSON.stringify(decision === 'decline' ? { decision, reason } : { decision }),
     });
+    closeCancellationDecision();
     showToast(decision === 'approve' ? 'Cancellation approved. The slot is open again.' : 'Booking kept. The team has been told.', 'success');
     await loadSlots();
     redrawCalendar();
     renderUpcoming();
     renderSelectedDateSlots(key);
   } catch (e) {
+    document.getElementById('cd-error').textContent = e.message;
     showToast(e.message, 'error');
+  } finally {
+    yes.disabled = false;
   }
 }
 
