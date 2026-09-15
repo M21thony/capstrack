@@ -93,7 +93,17 @@ class AssignmentController extends Controller
             ]];
         })->toArray();
 
+        // New titles waiting for this expert to confirm as a team's adviser.
+        $resolver = app(\App\Services\RecipientResolver::class);
+        $titleConfirmations = \App\Models\CapstonePreProposal::where('adviser_status', \App\Support\TitleRevision::PENDING)
+            ->whereNull('retired_at')
+            ->with(['team', 'duplicationCheck'])
+            ->get()
+            ->filter(fn ($p) => $resolver->resolveTeamRoleExpert((int) $p->team_id, 'adviser') === (int) $expert->expert_id)
+            ->values();
+
         return view('instructor.assignments', [
+            'titleConfirmations' => $titleConfirmations,
             'pendingAssignments' => $pendingAssignments,
             'approvedAssignments' => $approvedAssignments,
             'rejectedAssignments' => $rejectedAssignments,

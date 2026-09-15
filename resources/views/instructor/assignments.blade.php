@@ -268,6 +268,43 @@
         </div>
       </div>
 
+      @if (session('status'))
+        <div class="card" style="margin-bottom:12px;padding:10px 14px;border-color:var(--green);background:var(--green-bg);color:var(--green);font-size:13px">{{ session('status') }}</div>
+      @endif
+
+      @foreach ($titleConfirmations as $tc)
+        {{-- A team the panel sent back for a new title: its adviser confirms the one the CaPSA approved. --}}
+        <div class="card" style="margin-bottom:12px;padding:14px 16px;border-color:rgba(180,83,9,.3);background:var(--amber-bg)">
+          <div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap">
+            <b style="font-size:14px">Confirm new title · {{ $tc->team?->team_name }}</b>
+            <span style="font-size:12px;color:var(--text3)">Your team was sent back for a new title. Their CaPSA approved this one.</span>
+          </div>
+          <div style="font-size:15px;font-weight:600;margin:8px 0 4px">{{ $tc->title }}</div>
+          <div style="font-size:12px;color:var(--text3);margin-bottom:10px">
+            Duplication check: {{ $tc->duplicationCheck?->verdict ?? 'no report' }}{{ $tc->duplicationCheck ? ' · top match '.$tc->duplicationCheck->top_score.'%' : '' }}
+            @php $setAside = $tc->team ? $tc->team->allPreProposals()->whereNotNull('retired_at')->pluck('title') : collect(); @endphp
+            @if ($setAside->isNotEmpty()) · Replaces: {{ $setAside->join('; ') }} @endif
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start">
+            @if ($tc->duplicationCheck?->document_path)
+              <a class="btn btn-ghost" href="{{ route('instructor.title-confirmations.document', $tc) }}" target="_blank" rel="noopener">Open pre-proposal</a>
+            @endif
+            <form method="POST" action="{{ route('instructor.title-confirmations.update', $tc) }}">
+              @csrf @method('PATCH')
+              <input type="hidden" name="decision" value="approve">
+              <button class="btn btn-primary" type="submit">Approve title</button>
+            </form>
+            <form method="POST" action="{{ route('instructor.title-confirmations.update', $tc) }}" style="display:flex;gap:6px;flex:1;min-width:280px">
+              @csrf @method('PATCH')
+              <input type="hidden" name="decision" value="decline">
+              <input class="input" name="note" placeholder="Ask for another title - what should change? (e.g. talk to your consultant about the scope)" minlength="10" required style="flex:1">
+              <button class="btn btn-ghost" type="submit">Decline</button>
+            </form>
+          </div>
+          @error('note')<div style="font-size:12px;color:var(--red);margin-top:6px">{{ $message }}</div>@enderror
+        </div>
+      @endforeach
+
       <div class="tab-bar">
         <button class="tab-btn active" onclick="switchTab('pending', this)">Pending ({{ $pendingAssignments->count() }})</button>
         <button class="tab-btn" onclick="switchTab('approved', this)">Approved ({{ $approvedAssignments->count() }})</button>

@@ -9,6 +9,9 @@ class CapstonePreProposal extends Model
 {
     protected $fillable = [
         'retired_at',
+        'adviser_status',
+        'adviser_note',
+        'adviser_decided_at',
         'team_id',
         'duplication_check_id',
         'slot',
@@ -33,6 +36,7 @@ class CapstonePreProposal extends Model
         'approved_status' => 'boolean',
         'submitted_at' => 'datetime',
         'retired_at' => 'datetime',
+        'adviser_decided_at' => 'datetime',
     ];
 
     public function team(): BelongsTo

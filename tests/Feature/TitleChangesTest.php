@@ -7,6 +7,8 @@ use App\Models\CapstoneExpert;
 use App\Models\CapstonePreProposal;
 use App\Models\DefenseSchedule;
 use App\Models\DuplicationCheck;
+use App\Models\Role;
+use App\Models\TeamExpertAssignment;
 use App\Models\Student;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
@@ -99,15 +101,33 @@ class TitleChangesTest extends TestCase
         $this->assertSame(self::TITLE, $team->fresh()->project_title);
     }
 
-    public function test_a_team_sent_back_for_a_new_title_gets_its_new_approved_title(): void
+    private function adviser(Team $team): CapstoneExpert
     {
-        [$team, $leader, $old] = $this->team();
+        $role = Role::firstOrCreate(['role_name' => 'adviser']);
+        $adviser = CapstoneExpert::factory()->create(['approved_status' => true]);
+        $adviser->roles()->attach($role->role_id);
+        TeamExpertAssignment::create([
+            'team_id' => $team->team_id,
+            'expert_id' => $adviser->expert_id,
+            'expert_role_id' => DB::table('expert_roles')->where('expert_id', $adviser->expert_id)->value('expert_role_id'),
+            'status' => 'approved',
+        ]);
+
+        return $adviser;
+    }
+
+    /** @return array{0: Team, 1: CapstonePreProposal, 2: CapstonePreProposal, 3: CapstoneExpert} */
+    private function newTitleApprovedByCapsa(): array
+    {
+        [$team, , $old] = $this->team();
+        $adviser = $this->adviser($team);
         $this->decided($team, DefenseOutcome::REDEFENSE_NEW_TITLE);
 
         // What the outcome does: set the titles aside and clear the team's title.
         $team->preProposals()->update(['retired_at' => now()]);
         $team->update(['selected_pre_proposal_id' => null, 'project_title' => null]);
 
+        // The new title comes in through its own duplication check, as every title does.
         $sy = StudentSchoolYear::where('team_id', $team->team_id)->first();
         $new = $this->proposal($team, $sy->s_y_id, 2, self::REVISED);
 
@@ -116,10 +136,47 @@ class TitleChangesTest extends TestCase
             ->patchJson(route('capsa.verify_teams.pre_proposals.update', $new), ['status' => 'approved'])
             ->assertOk();
 
+        return [$team->fresh(), $old, $new->fresh(), $adviser];
+    }
+
+    public function test_a_new_title_approved_by_the_capsa_is_the_teams_once_the_adviser_confirms_it(): void
+    {
+        [$team, $old, $new, $adviser] = $this->newTitleApprovedByCapsa();
+
+        // Approved by the CaPSA, but not the team's title until the adviser says so.
+        $this->assertNull($team->project_title);
+        $this->assertSame('pending', $new->adviser_status);
+        $this->assertNotNull($old->fresh()->retired_at);
+
+        $this->actingAs($adviser, 'expert')->get(route('instructor.assignments'))->assertOk()->assertSee(self::REVISED);
+
+        // Someone who is not the team's adviser cannot confirm it.
+        $this->actingAs(CapstoneExpert::factory()->create(['approved_status' => true]), 'expert')
+            ->patch(route('instructor.title-confirmations.update', $new), ['decision' => 'approve'])
+            ->assertNotFound();
+
+        $this->actingAs($adviser, 'expert')
+            ->patch(route('instructor.title-confirmations.update', $new), ['decision' => 'approve'])
+            ->assertRedirect(route('instructor.assignments'));
+
         $team->refresh();
-        // Already verified, and still its new title lands.
         $this->assertSame($new->id, $team->selected_pre_proposal_id);
         $this->assertSame(self::REVISED, $team->project_title);
-        $this->assertNotNull($old->fresh()->retired_at);
+    }
+
+    public function test_an_adviser_who_declines_sends_the_team_back_for_another_title_and_stays_their_adviser(): void
+    {
+        [$team, , $new, $adviser] = $this->newTitleApprovedByCapsa();
+
+        $this->actingAs($adviser, 'expert')
+            ->patch(route('instructor.title-confirmations.update', $new), ['decision' => 'decline', 'note' => 'Talk to your consultant about the scope first.'])
+            ->assertRedirect(route('instructor.assignments'));
+
+        $new->refresh();
+        $this->assertSame('declined', $new->adviser_status);
+        $this->assertNotNull($new->retired_at);
+        $this->assertNull($team->fresh()->project_title);
+        $this->assertCount(0, $team->preProposals()->get());
+        $this->assertSame('approved', TeamExpertAssignment::where('expert_id', $adviser->expert_id)->value('status'));
     }
 }
