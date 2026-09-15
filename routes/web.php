@@ -197,6 +197,8 @@ Route::middleware('expert.capsa')->group(function () {
     // A member leaving a team that passed Title Defense - the CaPSA decides.
     Route::get('/leave-requests', [App\Http\Controllers\Capsa\LeaveRequestController::class, 'index'])->name('leave_requests');
     Route::patch('/leave-requests/{leaveRequest}', [App\Http\Controllers\Capsa\LeaveRequestController::class, 'update'])->name('leave_requests.update');
+    // A team changing an expert who already took them on - the CaPSA decides.
+    Route::patch('/expert-removal-requests/{expertRemovalRequest}', [App\Http\Controllers\Capsa\ExpertRemovalRequestController::class, 'update'])->name('expert_removal_requests.update');
     Route::get('/verify-teams', fn () => redirect()->route('capsa.team_management', ['tab' => 'verification']))->name('verify_teams');
     Route::patch('/verify-teams/{team}', [AdminTeamVerificationController::class, 'verify'])->name('verify_teams.verify');
     Route::patch('/verify-teams/pre-proposals/{preProposal}', [AdminTeamVerificationController::class, 'updatePreProposal'])->name('verify_teams.pre_proposals.update');
