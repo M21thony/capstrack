@@ -6,6 +6,7 @@ use App\Mail\ConsultationBookedMail;
 use App\Mail\ConsultationCancelledMail;
 use App\Models\CapstoneExpert;
 use App\Models\ConsultationSchedule;
+use App\Models\ConsultationAvailability;
 use App\Models\ConsultationBooking;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
@@ -43,6 +44,7 @@ class StudentConsultationController extends Controller
             'teamId' => $data['teamId'],
             'student' => $student,
             'bookedExpertIds' => $data['bookedExpertIds'],
+            'bookingWindows' => $data['bookingWindows'],
         ]);
     }
 
@@ -59,6 +61,7 @@ class StudentConsultationController extends Controller
             'availableSlots' => $data['availableSlots'],
             'fullOccurrences' => $this->computeFullOccurrences($data['availableSlots']),
             'bookedExpertIds' => $data['bookedExpertIds'],
+            'bookingWindows' => $data['bookingWindows'],
             'myBookedDates' => $data['upcomingBookings']->merge($data['recentBookings'])
                 ->filter(fn ($b) => $b->session_date)
                 ->map(fn ($b) => [
@@ -223,7 +226,13 @@ class StudentConsultationController extends Controller
                 ->values()
             : collect();
 
-        return compact('experts', 'defaultExpertId', 'availableSlots', 'upcomingBookings', 'recentBookings', 'teamId', 'bookedExpertIds');
+        // Each expert's scheduling window, so the calendar only offers times a
+        // booking would be accepted for.
+        $bookingWindows = ConsultationAvailability::whereIn('expert_id', $experts->pluck('expert_id'))
+            ->get()
+            ->mapWithKeys(fn ($a) => [$a->expert_id => $a->windowForClient()]);
+
+        return compact('experts', 'defaultExpertId', 'availableSlots', 'upcomingBookings', 'recentBookings', 'teamId', 'bookedExpertIds', 'bookingWindows');
     }
 
     public function book(Request $request)
@@ -308,6 +317,14 @@ class StudentConsultationController extends Controller
             return response()->json(['success' => false, 'message' => 'You already booked this date.'], 422);
         }
 
+        // The expert's scheduling window: how far ahead, how much notice, and
+        // between which dates they take bookings.
+        $availability = ConsultationAvailability::where('expert_id', $slot->expert_id)->first();
+
+        if ($availability && ! $availability->allows($sessionDate, (string) $slot->start_time)) {
+            return response()->json(['success' => false, 'message' => 'That time is outside when this expert takes bookings. Pick another date.'], 422);
+        }
+
         // Recurring (weekly/biweekly) slots share a single schedule row
         // across every future occurrence of that weekday, so capacity has
         // to be checked per calendar date rather than per row — otherwise
@@ -322,30 +339,12 @@ class StudentConsultationController extends Controller
             return response()->json(['success' => false, 'message' => 'This slot is fully booked for that date.'], 422);
         }
 
-        // Recurring slots share a single schedule row (and a single
-        // placeholder Google event, pinned to whatever date it happened to
-        // be created on) across every future weekday occurrence. Relabeling
-        // that shared event on every booking would mis-date every occurrence
-        // after the first onto the placeholder's original date, so a
-        // recurring booking instead gets its own event on the actual date
-        // booked; a "once" slot only ever has this one occurrence, so its
-        // existing placeholder IS this session and just gets relabeled.
+        // Every booking gets its own event on the expert's Google Calendar, on
+        // the date booked. Open slots are never put there, so the expert's
+        // calendar shows booked consultations and nothing else.
         $googleEventId = null;
 
-        if ($slot->recur === 'once') {
-            if ($slot->google_event_id && $team) {
-                try {
-                    $this->calendar->updateBookingEvent(
-                        expertId: $slot->expert_id,
-                        googleEventId: $slot->google_event_id,
-                        teamName: $team->team_name
-                    );
-                    $googleEventId = $slot->google_event_id;
-                } catch (\Exception $e) {
-                    \Log::warning('Google Calendar update failed', ['error' => $e->getMessage()]);
-                }
-            }
-        } elseif ($team && $slot->expert && $slot->expert->google_token) {
+        if ($team && $slot->expert && $slot->expert->google_token) {
             try {
                 $googleEventId = $this->calendar->createBookingEvent(
                     expertId: $slot->expert_id,

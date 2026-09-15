@@ -451,6 +451,9 @@ Route::prefix('instructor/schedule')
     ->middleware(['expert.auth', 'no.cache', 'track.expert'])
     ->group(function () {
         Route::get('slots', [ScheduleController::class, 'getSlots']);
+        // Appointment duration, weekly hours and scheduling window - saving rebuilds the weekly slots.
+        Route::get('availability', [ScheduleController::class, 'showAvailability']);
+        Route::put('availability', [ScheduleController::class, 'updateAvailability']);
         Route::patch('bookings/{bookingId}/cancellation', [ScheduleController::class, 'updateCancellation'])->whereNumber('bookingId');
         Route::post('slots', [ScheduleController::class, 'addSlot']);
         Route::patch('slots/{id}', [ScheduleController::class, 'updateSlot']);
