@@ -186,10 +186,23 @@ class TitleChangesTest extends TestCase
         $this->assertSame('Talk to your consultant about the scope first.', $shown['adviser']['note']);
     }
 
-    public function test_a_capsa_who_is_also_the_adviser_recommends_and_approves_in_one_click(): void
+    public function test_when_the_teams_capsa_is_also_their_adviser_one_click_recommends_and_approves(): void
     {
-        [$team] = $this->team();
-        $capsa = $this->makeCapsa(CapstoneExpert::factory()->create(['approved_status' => true, 'is_admin' => true]));
+        $this->assertSame('approved', $this->recommendAsAdviser(['BSIT-3A']));
+    }
+
+    public function test_another_capsa_who_is_their_adviser_still_leaves_it_for_the_adviser_step(): void
+    {
+        // Their adviser, but not their CaPSA (no sections): the usual two steps.
+        $this->assertSame('pending', $this->recommendAsAdviser([]));
+    }
+
+    /** A CaPSA with these sections, who is the team's adviser, recommends its new title. Returns the adviser status. */
+    private function recommendAsAdviser(array $sections): string
+    {
+        [$team, $leader] = $this->team();
+        $leader->update(['course' => 'Bachelor of Science in Information Technology', 'year_section' => '3rd · A']);
+        $capsa = $this->makeCapsa(CapstoneExpert::factory()->create(['approved_status' => true, 'is_admin' => true, 'sections' => $sections]));
         $role = Role::firstOrCreate(['role_name' => 'adviser']);
         $capsa->roles()->attach($role->role_id);
         TeamExpertAssignment::create([
@@ -207,8 +220,10 @@ class TitleChangesTest extends TestCase
             ->patchJson(route('capsa.verify_teams.pre_proposals.update', $new), ['status' => 'approved'])
             ->assertOk();
 
-        $this->assertSame('approved', $new->fresh()->adviser_status);
-        $this->assertSame(self::REVISED, $team->fresh()->project_title);
+        $status = $new->fresh()->adviser_status;
+        $this->assertSame($status === 'approved' ? self::REVISED : null, $team->fresh()->project_title);
+
+        return $status;
     }
 
     public function test_the_capsas_review_window_shows_the_title_waiting_for_the_adviser(): void
