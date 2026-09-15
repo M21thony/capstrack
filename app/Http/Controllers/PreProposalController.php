@@ -509,7 +509,15 @@ class PreProposalController extends Controller
         }
 
         // A new title after the defense goes to the team's adviser to confirm first.
-        if (TitleRevision::needsNewTitle($team)) {
+        // Skipped when their CaPSA is also their adviser: that person already
+        // recommended this title, so the pick stands like any other.
+        $resolver = app(\App\Services\RecipientResolver::class);
+        $adviserId = $resolver->resolveTeamRoleExpert((int) $team->team_id, 'adviser');
+        $sameExpert = $adviserId && $adviserId === $resolver->resolveSubjectAdviserAdmin((int) $team->team_id);
+
+        if (TitleRevision::needsNewTitle($team) && $sameExpert) {
+            $preProposal->update(['adviser_status' => TitleRevision::APPROVED, 'adviser_decided_at' => now()]);
+        } elseif (TitleRevision::needsNewTitle($team)) {
             if (TitleRevision::awaitingAdviser($team)) {
                 return redirect()->route('student.duplication')
                     ->with('error', 'Your adviser is already confirming one of your titles.');

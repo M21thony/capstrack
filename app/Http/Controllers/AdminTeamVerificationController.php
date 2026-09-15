@@ -233,6 +233,17 @@ class AdminTeamVerificationController extends Controller
             // Sent back for a new title: the team already has its adviser, so
             // the adviser confirms the new title before it becomes the team's.
             if (\App\Support\TitleRevision::needsNewTitle($team)) {
+                // The CaPSA recommending it is also the team's adviser: one
+                // person, one click - recommended and approved together.
+                $adviserId = app(\App\Services\RecipientResolver::class)->resolveTeamRoleExpert((int) $team->team_id, 'adviser');
+                if ($adviserId && $adviserId === auth('expert')->id()) {
+                    $winner->update(['adviser_status' => \App\Support\TitleRevision::APPROVED, 'adviser_note' => null, 'adviser_decided_at' => now()]);
+                    $team->update(['selected_pre_proposal_id' => $winner->id, 'project_title' => $winner->title]);
+                    $this->notifyTeam($team, 'title_approved', 'New Title Approved', 'Your CaPSA, who is also your adviser, recommended and approved <strong>'.e($winner->title).'</strong> as your new title.');
+
+                    return;
+                }
+
                 if ($winner->adviser_status !== \App\Support\TitleRevision::PENDING) {
                     \App\Support\TitleRevision::askAdviser($winner);
                     $this->notifyTeam($team, 'title_awaiting_adviser', 'Title Recommended by CaPSA', 'Your CaPSA recommended <strong>'.e($winner->title).'</strong>. Your adviser approves it next.');

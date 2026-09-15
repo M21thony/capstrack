@@ -186,6 +186,31 @@ class TitleChangesTest extends TestCase
         $this->assertSame('Talk to your consultant about the scope first.', $shown['adviser']['note']);
     }
 
+    public function test_a_capsa_who_is_also_the_adviser_recommends_and_approves_in_one_click(): void
+    {
+        [$team] = $this->team();
+        $capsa = $this->makeCapsa(CapstoneExpert::factory()->create(['approved_status' => true, 'is_admin' => true]));
+        $role = Role::firstOrCreate(['role_name' => 'adviser']);
+        $capsa->roles()->attach($role->role_id);
+        TeamExpertAssignment::create([
+            'team_id' => $team->team_id, 'expert_id' => $capsa->expert_id, 'status' => 'approved',
+            'expert_role_id' => DB::table('expert_roles')->where('expert_id', $capsa->expert_id)->where('role_id', $role->role_id)->value('expert_role_id'),
+        ]);
+        $this->decided($team, DefenseOutcome::REDEFENSE_NEW_TITLE);
+        $team->preProposals()->update(['retired_at' => now()]);
+        $team->update(['selected_pre_proposal_id' => null, 'project_title' => null]);
+
+        $sy = StudentSchoolYear::where('team_id', $team->team_id)->first();
+        $new = $this->proposal($team, $sy->s_y_id, 2, self::REVISED);
+
+        $this->actingAs($capsa, 'expert')
+            ->patchJson(route('capsa.verify_teams.pre_proposals.update', $new), ['status' => 'approved'])
+            ->assertOk();
+
+        $this->assertSame('approved', $new->fresh()->adviser_status);
+        $this->assertSame(self::REVISED, $team->fresh()->project_title);
+    }
+
     public function test_the_capsas_review_window_shows_the_title_waiting_for_the_adviser(): void
     {
         [$team, , $new, $adviser] = $this->newTitleApprovedByCapsa();
