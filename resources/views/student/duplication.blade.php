@@ -330,6 +330,45 @@
       </div>
     @endif
 
+    @if ($needsNewTitle)
+      {{-- The panel asked for a new title: the old ones are a record now. --}}
+      <div class="card" style="margin-bottom:16px;border-color:rgba(220,38,38,0.25);background:var(--red-bg);">
+        <div class="card-header"><span class="card-title">Your panel asked for a new title</span></div>
+        <div style="font-size:13px;color:var(--text2);line-height:1.6">
+          Run the duplication check on your new pre-proposal and turn it in below, the same way as before. Your adviser, consultant and grammarian stay with your team.
+          @if ($retiredProposals->isNotEmpty())
+            <div style="margin-top:8px;font-size:12px;color:var(--text3)">Set aside after your defense, kept as a record:</div>
+            <ul style="margin:4px 0 0 18px;padding:0;font-size:12.5px">
+              @foreach ($retiredProposals as $old)
+                <li>{{ $old->title }}</li>
+              @endforeach
+            </ul>
+          @endif
+        </div>
+      </div>
+    @endif
+
+    @if ($canReviseTitle)
+      {{-- Passed with revision: the wording may change until the final title form is in. --}}
+      <div class="card" style="margin-bottom:16px;border-color:rgba(180,83,9,0.25);background:var(--amber-bg);">
+        <div class="card-header"><span class="card-title">Revise your title</span></div>
+        <div style="font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:10px">
+          Your panel passed your title with revision. You can reword it until you upload the Signed Final Project Title Form - after that it is final.
+        </div>
+        @if ($isLeader)
+          <form method="POST" action="{{ route('student.pre-proposal.title.update') }}" style="display:flex;gap:8px;flex-wrap:wrap">
+            @csrf
+            @method('PATCH')
+            <input class="input" name="title" value="{{ old('title', $team->project_title) }}" maxlength="150" required aria-label="Revised title" style="flex:1;min-width:260px">
+            <button class="btn btn-primary" type="submit">Save revised title</button>
+          </form>
+          @error('title')<div style="font-size:12px;color:var(--red);margin-top:6px">{{ $message }}</div>@enderror
+        @else
+          <div style="font-size:12.5px;color:var(--text3)">Current title: <b style="color:var(--text)">{{ $team->project_title }}</b>. Your team leader can revise it.</div>
+        @endif
+      </div>
+    @endif
+
     @if ($approvedProposals->count() >= 2 && ! $team?->selected_pre_proposal_id)
       <div class="card" style="margin-bottom:16px;border-color:rgba(180,83,9,0.25);background:var(--amber-bg);">
         <div class="card-header"><span class="card-title">Choose Your Final Title</span></div>
