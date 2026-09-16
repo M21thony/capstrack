@@ -473,16 +473,44 @@ document.addEventListener('keydown', e => {
   }
 });
 
-// The sheet measures the space it has, so draw once the page is shown and
-// again whenever the window changes size.
+// The sheet fills a page until the next row would overflow, so it can only be
+// drawn against a height that is real. Being visible is not enough: the moment
+// the skeleton hands over, the area is on screen with no height yet, and
+// measuring then puts a single criterion on every page.
+let sheetHeight = 0;
+let waited = 0;
+
 (function whenVisible() {
-  if ($('gs-sheet-area').offsetParent !== null || $('gs-remarks-area').offsetParent !== null) {
-    draw();
-    // Rows are measured to fill the page; measure again once the font has loaded.
-    document.fonts.ready.then(draw);
+  const area = $('gs-sheet-area');
+  const remarks = $('gs-remarks-area');
+  const ready = area.offsetParent !== null ? area.clientHeight > 0 : remarks.offsetParent !== null;
+
+  // Waiting for a height is worth a couple of seconds, never the whole page:
+  // if one never arrives, a badly paginated sheet still beats a blank one.
+  if (!ready && waited++ < 180) {
+    requestAnimationFrame(whenVisible);
+
     return;
   }
-  requestAnimationFrame(whenVisible);
+
+  sheetHeight = area.clientHeight;
+  draw();
+  // Rows are measured to fill the page; measure again once the font has loaded.
+  document.fonts.ready.then(draw);
+
+  // The height can still change under it - the font swapping, the sidebar
+  // collapsing, a zoom. The rows are flex-sized and clipped, so redrawing them
+  // cannot change this height back; only the page around them can.
+  if (window.ResizeObserver) {
+    new ResizeObserver(() => {
+      const h = area.clientHeight;
+
+      if (h > 0 && Math.abs(h - sheetHeight) > 4) {
+        sheetHeight = h;
+        draw();
+      }
+    }).observe(area);
+  }
 })();
 let resizeTimer;
 window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(draw, 120); });
