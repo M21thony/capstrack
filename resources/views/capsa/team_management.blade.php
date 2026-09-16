@@ -126,6 +126,7 @@
 </div>
 @include('capsa.partials.skeleton-toggle')
 @include('capsa.partials.team-review-modal')
+@include('partials.confirm-sheet')
 <div id="tm-toast" class="toast"></div>
 
 
