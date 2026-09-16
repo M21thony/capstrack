@@ -588,6 +588,17 @@ function postGrade(url, statusMsg, method) {
       dirty = false;
       saveStatus.textContent = statusMsg;
       if (data.data && data.data.status === 'submitted') {
+        // Their score was the last one in and they are the chair: the
+        // decision is theirs to record now, on this page. Reloading brings
+        // the options in - and with every criterion scored, the page opens
+        // straight on Remarks and decision.
+        if (data.data.can_record_outcome) {
+          saveStatus.textContent = 'Submitted - everyone has scored, record the decision below';
+          setTimeout(() => window.location.reload(), 700);
+
+          return;
+        }
+
         setTimeout(() => { window.location.href = '{{ route('instructor.grading') }}'; }, 900);
       }
     })

@@ -294,6 +294,68 @@ class GradingTest extends TestCase
         $this->assertNotNull($grade->submitted_at);
     }
 
+    // The chair is normally the last to score, so their own submission is what
+    // completes the panel. The page keeps them there to record the decision
+    // instead of sending them to the team list to reopen the same defense.
+    public function test_the_chair_is_told_when_their_own_submission_completes_the_panel(): void
+    {
+        $chair = $this->makeExpert();
+        $member = $this->makeExpert('kenn.aurillas@gmail.com');
+        $defense = $this->makeAssignedDefense($chair);
+        DefensePanel::create([
+            'defense_id' => $defense->defense_id,
+            'expert_id' => $member->expert_id,
+            'panel_role' => 'Panel Member 1',
+            'created_at' => now(),
+        ]);
+        $rubric = $this->makeRubric();
+
+        $scores = [];
+        foreach ($rubric->criteria as $c) {
+            $scores[$c->criterion_id] = (float) $c->max_points;
+        }
+
+        // The member goes first: one still to come, and it is not theirs to record.
+        $this->actingAs($member, 'expert')
+            ->patchJson("/instructor/grading/{$defense->defense_id}", ['scores' => $scores])
+            ->assertOk()
+            ->assertJsonPath('data.can_record_outcome', false);
+
+        $this->actingAs($chair, 'expert')
+            ->patchJson("/instructor/grading/{$defense->defense_id}", ['scores' => $scores])
+            ->assertOk()
+            ->assertJsonPath('data.can_record_outcome', true);
+    }
+
+    // The last one in, but not the chair: the decision is still not theirs.
+    public function test_a_member_completing_the_panel_is_not_offered_the_decision(): void
+    {
+        $chair = $this->makeExpert();
+        $member = $this->makeExpert('kenn.aurillas@gmail.com');
+        $defense = $this->makeAssignedDefense($chair);
+        DefensePanel::create([
+            'defense_id' => $defense->defense_id,
+            'expert_id' => $member->expert_id,
+            'panel_role' => 'Panel Member 1',
+            'created_at' => now(),
+        ]);
+        $rubric = $this->makeRubric();
+
+        $scores = [];
+        foreach ($rubric->criteria as $c) {
+            $scores[$c->criterion_id] = (float) $c->max_points;
+        }
+
+        $this->actingAs($chair, 'expert')
+            ->patchJson("/instructor/grading/{$defense->defense_id}", ['scores' => $scores])
+            ->assertOk();
+
+        $this->actingAs($member, 'expert')
+            ->patchJson("/instructor/grading/{$defense->defense_id}", ['scores' => $scores])
+            ->assertOk()
+            ->assertJsonPath('data.can_record_outcome', false);
+    }
+
     public function test_submit_rejects_score_not_in_criterion_levels(): void
     {
         $expert = $this->makeExpert();
