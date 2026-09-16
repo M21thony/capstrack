@@ -73,7 +73,7 @@
                 <button class="mode-btn view-btn is-on" id="btn-view-month" onclick="setCalView('month')">Month</button>
                 <button class="mode-btn view-btn" id="btn-view-week" onclick="setCalView('week')">Week</button>
                 <button class="mode-btn view-btn" id="btn-view-day" onclick="setCalView('day')">Day</button>
-                <button class="mode-btn" onclick="openSlotDialog(selectedDate, null, this)">+ Add slot</button>
+                <button class="mode-btn" onclick="openQuickAdd(selectedDate, null, this)">+ Add slot</button>
                 {{-- Set a term's worth of hours in one go, instead of one
                      slot at a time through the form on the right. --}}
                 <button class="mode-btn" onclick="openAvail()">Set availability</button>              </div>
@@ -608,6 +608,83 @@
 
 <!-- ─── ONE SLOT: ADD OR EDIT ─────────────────────────────────────────────── -->
 
+<style>
+/* Adding one slot: a small bubble where you clicked, the way Google Calendar
+   asks. Anything beyond a time and how often it repeats is behind More
+   options, which opens the full editor in the column. */
+.qa-pop{position:absolute;z-index:95;width:320px;max-width:calc(100vw - 24px)}
+.qa-pop[hidden]{display:none}
+.qa-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;
+  box-shadow:0 14px 38px -10px rgba(0,0,0,.45);overflow:hidden}
+.qa-head{display:flex;align-items:center;gap:10px;padding:12px 12px 0}
+.qa-title{flex:1;min-width:0;font-size:14px;font-weight:700;color:var(--text)}
+.qa-body{padding:10px 14px 14px}
+.qa-row{display:flex;align-items:flex-start;gap:11px;padding:7px 0}
+.qa-row>svg{width:16px;height:16px;flex-shrink:0;fill:none;stroke:var(--text3);stroke-width:2;margin-top:3px}
+.qa-row>div{flex:1;min-width:0}
+.qa-date{font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px}
+.qa-times{display:flex;align-items:center;gap:7px}
+.qa-times input{height:30px;box-sizing:border-box;padding:0 8px;border:1px solid var(--border);border-radius:8px;
+  background:var(--bg2);color:var(--text);font:inherit;font-size:12.5px;min-width:0;flex:1}
+.qa-times span{color:var(--text3);font-size:12px}
+.qa-seg{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+.qa-seg label{position:relative;cursor:pointer}
+.qa-seg input{position:absolute;inset:0;opacity:0;margin:0;cursor:pointer}
+.qa-seg span{display:block;text-align:center;padding:6px 4px;border:1px solid var(--border);border-radius:8px;
+  background:var(--bg2);font-size:12px;font-weight:600;color:var(--text2);white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis}
+.qa-seg input:checked+span{border-color:var(--accent);background:var(--accent-light);color:var(--accent3)}
+.qa-seg input:focus-visible+span{outline:2px solid var(--accent);outline-offset:1px}
+.qa-note{margin-top:8px;font-size:11.5px;line-height:1.45;color:var(--text3)}
+.qa-note.is-bad{color:var(--red,#dc2626)}
+.qa-foot{display:flex;align-items:center;gap:8px;padding:0 14px 14px}
+.qa-more{flex:1;text-align:left;background:none;border:0;padding:0;cursor:pointer;
+  font:600 12.5px 'DM Sans',sans-serif;color:var(--accent3)}
+.qa-more:hover{text-decoration:underline}
+.qa-foot .btn{flex:none}
+</style>
+
+<!-- ─── QUICK ADD: ONE SLOT ───────────────────────────────────────────────── -->
+<div class="qa-pop" id="quick-add" hidden>
+  <div class="qa-card" role="dialog" aria-labelledby="qa-title">
+    <div class="qa-head">
+      <div class="qa-title" id="qa-title">New consultation slot</div>
+      <button type="button" class="ga-icon" onclick="closeQuickAdd()" aria-label="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+
+    <div class="qa-body">
+      <div class="qa-row">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>
+        <div>
+          <div class="qa-date" id="qa-date"></div>
+          <div class="qa-times">
+            <input type="time" id="qa-start" aria-label="Starts" onchange="quickAddChanged()">
+            <span>–</span>
+            <input type="time" id="qa-end" aria-label="Ends" onchange="quickAddChanged()">
+          </div>
+        </div>
+      </div>
+
+      <div class="qa-row">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 2.1 21 6l-4 3.9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 21.9 3 18l4-3.9"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+        <div class="qa-seg" role="radiogroup" aria-label="How often">
+          <label><input type="radio" name="qa-recur" value="weekly" onchange="quickAddChanged()"><span id="qa-weekly">Every week</span></label>
+          <label><input type="radio" name="qa-recur" value="once" onchange="quickAddChanged()"><span>This date only</span></label>
+        </div>
+      </div>
+
+      <div class="qa-note" id="qa-note"></div>
+    </div>
+
+    <div class="qa-foot">
+      <button type="button" class="qa-more" onclick="quickAddMoreOptions()">More options</button>
+      <button type="button" class="btn btn-primary" id="qa-save" onclick="saveQuickAdd()">Save</button>
+    </div>
+  </div>
+</div>
+
 <!-- ─── EXPERT PROFILE SIDE PANEL ─────────────────────────────────────────── -->
 <div id="scope-ask" role="dialog" aria-modal="true" aria-labelledby="scope-ask-title">
   <div class="box">
@@ -1077,7 +1154,7 @@ function renderCalendar() {
     if (key === selectedDate) el.classList.add('is-selected');
 
     el.dataset.key = key;
-    el.onclick = () => handleCellClick(key, d, isPast || isWeekend, dayName);
+    el.onclick = (ev) => handleCellClick(key, d, isPast || isWeekend, dayName, ev.currentTarget);
 
     const dateEl = document.createElement('div');
     dateEl.className   = 'cal-date-num';
@@ -1261,7 +1338,7 @@ function renderWeek() {
       const minutes = WK_FIRST_HOUR * 60 + Math.max(0, Math.floor(offset / WK_HOUR_PX * 2)) * 30;
 
       selectedDate = key;
-      openSlotDialog(key, minutes, col);
+      openQuickAdd(key, minutes, { x: event.clientX, y: event.clientY });
     });
 
     (slots[key] || []).forEach((slot, index) => {
@@ -1315,8 +1392,14 @@ function renderWeek() {
 //  describe it in a panel down the side. Clicking a date here does the same,
 //  and the form only appears when a slot is actually being added or changed.
 // ══════════════════════════════════════════════════════════════
-function handleCellClick(key, dayNum, isDisabled, dayName) {
-  openDay(key);
+function handleCellClick(key, dayNum, isDisabled, dayName, cell) {
+  // Clicking a date offers to add a slot on it, where you clicked. It does not
+  // jump to the day view - Google Calendar does not either.
+  selectedDate = key;
+  redrawCalendar();
+  // The grid was just rebuilt, so the cell that was clicked is no longer in
+  // the page; the bubble anchors to whatever replaced it.
+  openQuickAdd(key, null, document.querySelector(`.cal-cell[data-key="${key}"]`) || cell);
 }
 
 /** Show one date as a column of hours. */
@@ -1466,6 +1549,136 @@ function toggleFromDialog() {
   const { key, index, scheduleId } = dialogSlot;
   closeSlotDialog();
   toggleSlot(scheduleId, key, index);
+}
+
+
+// ══════════════════════════════════════════════════════════════
+//  QUICK ADD
+//  One slot, asked for where you clicked. The full editor is a link away.
+// ══════════════════════════════════════════════════════════════
+let quickAddKey = null;
+
+function openQuickAdd(key, startMinutes, anchor) {
+  const now = weekAnchor || new Date();
+  quickAddKey = key || selectedDate || formatKey(now.getFullYear(), now.getMonth(), now.getDate());
+
+  const [y, m, d] = quickAddKey.split('-').map(Number);
+  const start = startMinutes != null ? minutesToTime(startMinutes) : firstFreeStart(quickAddKey);
+
+  document.getElementById('qa-date').textContent = dayLabel(quickAddKey);
+  document.getElementById('qa-start').value = start;
+  document.getElementById('qa-end').value = minutesToTime(timeToMinutes(start) + 60);
+  document.getElementById('qa-weekly').textContent = 'Every ' + DAY_NAMES[makeDate(y, m, d).getDay()];
+  document.querySelector('input[name="qa-recur"][value="weekly"]').checked = true;
+
+  const pop = document.getElementById('quick-add');
+  pop.hidden = false;
+  placeQuickAdd(pop, anchor);
+
+  // Added after this click finishes, or the click that opened it closes it.
+  setTimeout(() => document.addEventListener('mousedown', closeQuickAddOnOutside), 0);
+  document.addEventListener('keydown', closeQuickAddOnEscape);
+
+  quickAddChanged();
+}
+
+/** Beside what was clicked - a calendar cell, a column, or the point itself. */
+function placeQuickAdd(pop, anchor) {
+  const box = anchor?.getBoundingClientRect
+    ? anchor.getBoundingClientRect()
+    : (anchor && anchor.x != null ? { left: anchor.x, right: anchor.x, top: anchor.y, bottom: anchor.y } : null);
+
+  const w = pop.offsetWidth;
+  const h = pop.offsetHeight;
+  const gap = 8;
+
+  let left = box ? box.right + gap : (window.innerWidth - w) / 2;
+  let top = box ? box.top : 90;
+
+  if (left + w > window.innerWidth - 12) left = (box ? box.left : window.innerWidth) - w - gap;
+
+  left = Math.max(12, left);
+  top = Math.max(12, Math.min(top, window.innerHeight - h - 12));
+
+  pop.style.left = (left + window.scrollX) + 'px';
+  pop.style.top = (top + window.scrollY) + 'px';
+}
+
+function closeQuickAddOnOutside(event) {
+  const pop = document.getElementById('quick-add');
+  if (!pop.hidden && !pop.contains(event.target)) closeQuickAdd();
+}
+
+function closeQuickAddOnEscape(event) {
+  if (event.key === 'Escape') closeQuickAdd();
+}
+
+function closeQuickAdd() {
+  document.getElementById('quick-add').hidden = true;
+  document.removeEventListener('mousedown', closeQuickAddOnOutside);
+  document.removeEventListener('keydown', closeQuickAddOnEscape);
+  quickAddKey = null;
+}
+
+/** What the bubble is about to save, and whether it can. */
+function quickAddChanged() {
+  const start = document.getElementById('qa-start').value;
+  const end = document.getElementById('qa-end').value;
+  const note = document.getElementById('qa-note');
+  const save = document.getElementById('qa-save');
+
+  if (!start || !end || timeToMinutes(end) <= timeToMinutes(start)) {
+    note.textContent = 'The end time has to be after the start.';
+    note.classList.add('is-bad');
+    save.disabled = true;
+
+    return;
+  }
+
+  // The full form is what saveSlot() reads, so the bubble fills it in and the
+  // overlap check it already has does the rest.
+  writeQuickAddToForm();
+  selectedDate = quickAddKey;
+  checkTimeOverlap();
+
+  const clash = document.getElementById('time-overlap-warning').style.display !== 'none';
+  const mins = timeToMinutes(end) - timeToMinutes(start);
+  const length = mins % 60 === 0 ? (mins / 60) + (mins === 60 ? ' hour' : ' hours') : mins + ' minutes';
+
+  note.textContent = clash
+    ? document.getElementById('time-overlap-text').textContent
+    : length + ' · a consultation for 1 team';
+  note.classList.toggle('is-bad', clash);
+  save.disabled = clash;
+}
+
+function writeQuickAddToForm() {
+  const recur = document.querySelector('input[name="qa-recur"]:checked')?.value || 'weekly';
+
+  document.getElementById('f-start').value = document.getElementById('qa-start').value;
+  document.getElementById('f-end').value = document.getElementById('qa-end').value;
+  document.getElementById('f-recur').value = recur;
+  document.getElementById('f-type').value = 'consult';
+  document.getElementById('f-max').value = '1';
+}
+
+function saveQuickAdd() {
+  if (!quickAddKey) return;
+
+  cancelEdit();
+  writeQuickAddToForm();
+  selectedDate = quickAddKey;
+  closeQuickAdd();
+  saveSlot();
+}
+
+/** Everything else - type, teams, how it repeats - in the editor beside the calendar. */
+function quickAddMoreOptions() {
+  const key = quickAddKey;
+  const start = timeToMinutes(document.getElementById('qa-start').value);
+
+  closeQuickAdd();
+  openSlotDialog(key, start);
 }
 
 // Remove one week from a repeating slot. The slot stays; every other week
