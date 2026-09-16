@@ -123,7 +123,7 @@ class GradingController extends Controller
 
     private function persist(Request $request, DefenseSchedule $defense, string $status): JsonResponse
     {
-        $this->panelFor($defense);
+        $panel = $this->panelFor($defense);
 
         $rubric = $this->rubricFor($defense->defense_type);
 
@@ -216,6 +216,14 @@ class GradingController extends Controller
             'data' => [
                 'status' => $grade->status,
                 'total_score' => $grade->total_score !== null ? (float) $grade->total_score : null,
+                // The chair is usually the last to score, so their own
+                // submission is what completes the panel. Say so, and the
+                // page keeps them here to record the decision instead of
+                // sending them back to the team list to reopen this defense.
+                'can_record_outcome' => $status === 'submitted'
+                    && $panel->panel_role === 'Panel Chair'
+                    && ! $defense->hasOutcome()
+                    && $defense->allGradesIn(),
             ],
         ]);
     }
