@@ -18,7 +18,7 @@
     });
     if (!ok) return;
 --}}
-<div class="upload-scrim" id="cf-scrim" hidden onclick="cfDismiss(event)">
+<div class="upload-scrim" id="cf-scrim" style="z-index:600" hidden onclick="cfDismiss(event)">
   <div class="upload-sheet cf-sheet" onclick="event.stopPropagation()" role="alertdialog"
        aria-modal="true" aria-labelledby="cf-title">
     <div class="card" style="padding:16px;box-shadow:none;border:0">

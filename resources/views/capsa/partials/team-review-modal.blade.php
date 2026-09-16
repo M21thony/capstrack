@@ -250,10 +250,13 @@ function closeVerifyModal() {
 // ── Per-proposal recommend/reject (mirrors admin/approval.blade.php) ──────
 var ppActiveId = null;
 var ppDecided = false;
+var ppTitles = {};
 
 function renderPreProposals(proposals, selectedId) {
   var wrap = document.getElementById('vm-preproposals');
   wrap.innerHTML = '';
+
+  proposals.forEach(function (p) { ppTitles[p.id] = p.title; });
 
   if (!proposals.length) {
     wrap.innerHTML = '<span style="font-size:12px;color:var(--text3)">No pre-proposals submitted yet.</span>';
@@ -450,7 +453,16 @@ function ppStatusLabel(status) {
   return status.charAt(0).toUpperCase() + status.slice(1);
 }
 
-function ppApprove(id, url) {
+async function ppApprove(id, url) {
+  var ok = await confirmSheet({
+    title: 'Recommend this title?',
+    names: ppTitles[id] ? [ppTitles[id]] : [],
+    body: 'One recommended title becomes theirs. Recommend a second as well and the team picks between them.',
+    confirmLabel: 'Recommend',
+  });
+
+  if (!ok) return;
+
   fetch(url, {
     method: 'PATCH',
     headers: {
