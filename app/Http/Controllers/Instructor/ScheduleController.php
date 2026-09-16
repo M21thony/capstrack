@@ -4,21 +4,17 @@ namespace App\Http\Controllers\Instructor;
 
 use App\Http\Controllers\Controller;
 use App\Jobs\SyncConsultationCancellation;
-use App\Mail\NewConsultationSlotMail;
 use App\Models\Notification;
 use App\Models\StudentSchoolYear;
-use App\Models\CapstoneExpert;
 use App\Models\ConsultationAvailability;
 use App\Models\ConsultationBooking;
 use App\Models\ConsultationSchedule;
-use App\Models\TeamExpertAssignment;
 use App\Services\GoogleCalendarService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
 
 class ScheduleController extends Controller
@@ -159,7 +155,11 @@ class ScheduleController extends Controller
     public function updateAvailability(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'duration_minutes' => 'required|integer|in:'.implode(',', ConsultationAvailability::DURATIONS),
+            // Any length, not only the offered taps - Google Calendar lets a
+            // custom one be typed, and 20- and 40-minute consultations are real.
+            'duration_minutes' => 'required|integer|min:'.ConsultationAvailability::DURATION_MIN.'|max:'.ConsultationAvailability::DURATION_MAX,
+            'buffer_minutes' => 'nullable|integer|min:0|max:120',
+            'max_per_day' => 'nullable|integer|min:1|max:20',
             'hours' => 'present|array',
             'hours.*' => 'array',
             'hours.*.*' => 'array|size:2',
@@ -177,6 +177,10 @@ class ScheduleController extends Controller
         }
 
         $duration = (int) $request->duration_minutes;
+        // Time left free after each appointment, so the next one does not start
+        // the moment the last ends.
+        $buffer = (int) $request->buffer_minutes;
+        $step = $duration + $buffer;
         $toMin = fn (string $t) => (int) substr($t, 0, 2) * 60 + (int) substr($t, 3, 2);
         $toTime = fn (int $m) => sprintf('%02d:%02d', intdiv($m, 60), $m % 60);
 
@@ -203,7 +207,7 @@ class ScheduleController extends Controller
                 $lastEnd = $toMin($until);
                 $hours[$day][] = [$from, $until];
 
-                for ($at = $toMin($from); $at + $duration <= $toMin($until); $at += $duration) {
+                for ($at = $toMin($from); $at + $duration <= $toMin($until); $at += $step) {
                     $wanted[$day.' '.$toTime($at).'-'.$toTime($at + $duration)] = [$day, $toTime($at), $toTime($at + $duration)];
                 }
             }
@@ -215,6 +219,8 @@ class ScheduleController extends Controller
             ['expert_id' => $expert->expert_id],
             [
                 'duration_minutes' => $duration,
+                'buffer_minutes' => $buffer,
+                'max_per_day' => $request->max_per_day ?: null,
                 'hours' => $hours,
                 'starts_on' => $request->starts_on ?: null,
                 'ends_on' => $request->ends_on ?: null,
@@ -408,40 +414,11 @@ class ScheduleController extends Controller
             'updated_at' => now(),
         ]);
 
-        $this->notifyTeamsOfNewSlot(ConsultationSchedule::find($id), $expert);
-
         return response()->json([
             'schedule_id' => $id,
             'google_synced' => $googleEventId !== null,
             'is_available' => ! $hasOverlap,
         ]);
-    }
-
-    // Emails every student on every team this expert handles that a new
-    // consultation slot just opened up, showing how often it recurs (e.g.
-    // "Every Monday") rather than just its next date.
-    private function notifyTeamsOfNewSlot(ConsultationSchedule $slot, CapstoneExpert $expert): void
-    {
-        $teams = TeamExpertAssignment::where('expert_id', $expert->expert_id)
-            ->where('status', 'approved')
-            ->with('team.members')
-            ->get()
-            ->pluck('team')
-            ->filter();
-
-        foreach ($teams as $team) {
-            foreach ($team->members as $student) {
-                if (! $student->email) {
-                    continue;
-                }
-
-                try {
-                    Mail::to($student->email)->queue(new NewConsultationSlotMail($slot, $expert, $team));
-                } catch (\Exception $e) {
-                    Log::warning('New consultation slot email failed', ['error' => $e->getMessage()]);
-                }
-            }
-        }
     }
 
     // PATCH /instructor/schedule/slots/{id}
