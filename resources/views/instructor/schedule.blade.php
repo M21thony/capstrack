@@ -70,6 +70,8 @@
               <div class="mode-toggle">
                 <button class="mode-btn view-btn is-on" id="btn-view-month" onclick="setCalView('month')">Month</button>
                 <button class="mode-btn view-btn" id="btn-view-week" onclick="setCalView('week')">Week</button>
+                <button class="mode-btn view-btn" id="btn-view-day" onclick="setCalView('day')">Day</button>
+                <button class="mode-btn" onclick="openSlotDialog(selectedDate, null, this)">+ Add slot</button>
                 {{-- Set a term's worth of hours in one go, instead of one
                      slot at a time through the form on the right. --}}
                 <button class="mode-btn" onclick="openAvail()">Set availability</button>              </div>
@@ -118,142 +120,6 @@
 
       <!-- RIGHT: Side column -->
       <div class="side-col">
-
-        <!-- Selected Date: Slots + Add Form (always visible, merged View+Add) -->
-        <div class="form-card" id="add-slot-form">
-          <div class="form-card-title">
-            <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-            Selected Date
-          </div>
-
-          <div class="selected-date-chip" id="selected-date-chip" style="display:none">
-            <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-            <span id="selected-date-text">No date selected</span>
-            
-          </div>
-
-          <div id="no-date-hint" style="font-size:12px;color:var(--text3);margin-bottom:12px;padding:10px;background:var(--bg3);border-radius:8px;border:1px dashed var(--border);text-align:center;">
-            ← Click a date on the calendar to see its slots and add a new one
-          </div>
-
-          <!-- Existing slots for the selected date — lets you view/toggle/remove
-               them right here, in the same panel used to add new ones. -->
-          <!-- Every row below is a weekly rule, not an entry on this date.
-               Said once here so the modal that asks is not the first the
-               adviser hears of it. -->
-          <div class="recur-banner" id="recur-banner" style="display:none">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M17 2.1 21 6l-4 3.9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>
-              <path d="M7 21.9 3 18l4-3.9"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
-            </svg>
-            <span id="recur-banner-text"></span>
-          </div>
-
-          <div id="selected-date-slots" style="display:none;margin-bottom:12px;">
-            <div style="font-size:11px;color:var(--text3);margin-bottom:6px;font-weight:600;">Existing slots on this date</div>
-            <div id="selected-date-slots-list" style="display:flex;flex-direction:column;gap:6px;"></div>
-          </div>
-
-          <!-- The sample opens with what adding one MEANS, not with two time
-               fields. The form is one tap behind it. -->
-          <button type="button" class="add-slot-lead" id="add-slot-lead"
-                  onclick="openAddSlot()" style="display:none">
-            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg>
-            <span id="add-slot-lead-text">Add a weekly slot</span>
-          </button>
-
-          <div id="add-slot-fields" style="display:none">
-            {{-- Two decisions carry this form: when it starts and how long it
-                 runs. Type, teams and repeat have a sensible answer already,
-                 so they read as a sentence you skim past rather than three
-                 more fields at the same volume - and they are one tap away
-                 when a slot is not the usual kind. --}}
-            <div class="f-group">
-              <label class="f-label" for="f-start">Starts</label>
-              <input class="f-input" type="time" id="f-start" value="09:00"
-                     style="max-width:130px"
-                     onchange="onStartChanged()" oninput="onStartChanged()"/>
-            </div>
-
-            <div class="f-group">
-              <label class="f-label">Runs for</label>
-              <div class="dur-row">
-                {{-- Short labels so all four sit on one line; "2 hours" spelt
-                     out wrapped alone onto a second row. --}}
-                <button type="button" class="dur-chip" data-mins="30" onclick="setDuration(30)" title="30 minutes">30m</button>
-                <button type="button" class="dur-chip is-on" data-mins="60" onclick="setDuration(60)" title="1 hour">1h</button>
-                <button type="button" class="dur-chip" data-mins="90" onclick="setDuration(90)" title="1 hour 30 minutes">1&frac12;h</button>
-                <button type="button" class="dur-chip" data-mins="120" onclick="setDuration(120)" title="2 hours">2h</button>
-              </div>
-            </div>
-
-            <p class="slot-derived" id="slot-derived"></p>
-
-            <div id="time-overlap-warning" style="display:none">
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5">
-                <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-              </svg>
-              <span id="time-overlap-text">This time overlaps with an existing slot.</span>
-            </div>
-
-            <button type="button" class="slot-more-toggle" id="slot-more-toggle"
-                    aria-expanded="false" aria-controls="slot-more" onclick="toggleSlotMore()">
-              Change type, teams or repeat
-              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
-            </button>
-
-            <div id="slot-more" hidden>
-              <div class="f-group">
-                <label class="f-label" for="f-end">Ends</label>
-                <input class="f-input" type="time" id="f-end" value="10:00"
-                       style="max-width:130px"
-                       onchange="onEndChanged()" oninput="onEndChanged()"/>
-              </div>
-
-              <div class="f-group">
-                <label class="f-label" for="f-type">Slot Type</label>
-                <select class="f-input" id="f-type" onchange="updateSlotDerived()">
-                  <option value="consult">Consultation</option>
-                  <option value="defense">Defense</option>
-                </select>
-              </div>
-
-              <div class="f-group">
-                <label class="f-label" for="f-max">Max Teams per Slot</label>
-                <input class="f-input" type="number" id="f-max" value="1" min="1" max="5" onchange="updateSlotDerived()"/>
-              </div>
-
-              <div class="f-group" style="margin-bottom:0" id="f-recur-group">
-                <label class="f-label" for="f-recur">Recurrence</label>
-                <select class="f-input" id="f-recur" onchange="updateSlotDerived()">
-                  <option value="weekly" selected>Every week (same day)</option>
-                  <option value="once">One-time only</option>
-                  <option value="biweekly">Every 2 weeks</option>
-                </select>
-                <div id="f-recur-locked-note" style="display:none;font-size:11px;color:var(--text3);margin-top:4px">Switching to a single date? Pick the date above.</div>
-              </div>
-            </div>
-
-            <div id="edit-mode-banner" style="display:none;padding:8px 12px;margin-bottom:11px;background:var(--accent-glow,rgba(0,229,255,0.08));border:1px solid var(--accent,#00e5ff);border-radius:8px;color:var(--accent,#00e5ff);font-size:12px;font-weight:600">
-              Editing existing slot
-            </div>
-
-            <div class="form-actions">
-              <button class="btn btn-ghost" onclick="resetForm()" style="flex:none;padding:7px 14px">Cancel</button>
-              <button class="btn btn-primary" id="save-slot-btn" onclick="saveSlot()">
-                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-                Save Slot
-              </button>
-            </div>
-            <!-- Slots are pushed to the adviser's calendar on save. Saying so
-                 here is the difference between trusting the button and going
-                 to check. -->
-            <div class="gcal-note">
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-              Saved slots appear in your Google Calendar
-            </div>
-          </div>
-        </div>
 
         <!-- Upcoming Appointments -->
         <div class="upcoming-card">
@@ -524,6 +390,11 @@
             <label><input type="radio" name="ga-duration" value="60" onchange="gaChanged()"><span>1 hr</span></label>
             <label><input type="radio" name="ga-duration" value="90" onchange="gaChanged()"><span>1&frac12; hr</span></label>
             <label><input type="radio" name="ga-duration" value="120" onchange="gaChanged()"><span>2 hr</span></label>
+            <label class="ga-seg-wide"><input type="radio" name="ga-duration" value="custom" onchange="gaChanged()"><span>Custom length</span></label>
+          </div>
+          <div class="ga-field" id="ga-custom-wrap" hidden>
+            <input type="number" id="ga-custom" class="ga-num" min="5" max="480" aria-label="Custom appointment length in minutes" oninput="gaChanged()">
+            <span>minutes long</span>
           </div>
         </section>
 
@@ -552,6 +423,24 @@
             <span>hours before it starts</span>
           </div>
         </section>
+
+        <section class="ga-sec">
+          <h3 class="ga-h">Booked appointment settings</h3>
+
+          <label class="ga-check"><input type="checkbox" id="ga-buffer-on" onchange="gaChanged()"> Buffer time</label>
+          <p class="ga-hint">Time left free after each appointment.</p>
+          <div class="ga-field">
+            <input type="number" id="ga-buffer" class="ga-num" min="0" max="120" aria-label="Buffer minutes" oninput="gaChanged()">
+            <span>minutes between</span>
+          </div>
+
+          <label class="ga-check"><input type="checkbox" id="ga-cap-on" onchange="gaChanged()"> Maximum bookings per day</label>
+          <p class="ga-hint">How many consultations you accept in one day.</p>
+          <div class="ga-field">
+            <input type="number" id="ga-cap" class="ga-num" min="1" max="20" aria-label="Bookings per day" oninput="gaChanged()">
+            <span>a day at most</span>
+          </div>
+        </section>
       </div>
 
       <section class="ga-col">
@@ -568,6 +457,140 @@
       </div>
       <button type="button" class="btn btn-ghost" onclick="closeAvail()">Cancel</button>
       <button type="button" class="btn btn-primary" id="av-save" onclick="saveAvailability()">Save availability</button>
+    </footer>
+  </div>
+</div>
+
+<style>
+/* One slot, added or edited. A dialog rather than a panel down the side: the
+   day grid is where slots are read, so the form only appears when one is
+   actually being changed. */
+/* A card beside the slot, not a sheet over the page: the day stays readable
+   while its times are being changed. */
+.sd-pop{position:absolute;z-index:90}
+.sd-pop[hidden]{display:none}
+.sd-modal{width:340px;max-width:calc(100vw - 24px);max-height:min(560px,calc(100vh - 40px));display:flex;flex-direction:column;
+  background:var(--bg2);border:1px solid var(--border);border-radius:12px;box-shadow:0 14px 38px -10px rgba(0,0,0,.45);overflow:hidden}
+.sd-head{display:flex;align-items:flex-start;gap:12px;padding:14px 16px 11px;border-bottom:1px solid var(--border)}
+.sd-head>div{flex:1;min-width:0}
+.sd-title{margin:0;font-size:15px;font-weight:700;color:var(--text)}
+.sd-when{margin:2px 0 0;font-size:12.5px;color:var(--text3)}
+.sd-body{padding:14px 16px;overflow:auto;flex:1;min-height:0}
+.sd-body .f-group:last-of-type{margin-bottom:0}
+.sd-foot{display:flex;align-items:center;gap:6px;padding:10px 16px;border-top:1px solid var(--border);flex-wrap:wrap}
+.sd-foot .btn{flex:none}
+.sd-foot .btn-ghost{background:var(--bg2);border:1px solid var(--border);color:var(--text2)}
+.sd-foot .btn-ghost:hover{border-color:var(--text3);color:var(--text)}
+.sd-foot .sd-danger:hover{border-color:var(--red,#dc2626);color:var(--red,#dc2626)}
+.sd-spacer{flex:1}
+/* Who has the slot, and their request to call it off. */
+.sd-booking{margin-top:14px;padding:11px 12px;border:1px solid var(--border);border-radius:10px;background:var(--bg3);font-size:12.5px;color:var(--text2);line-height:1.5}
+.sd-booking b{color:var(--text)}
+.sd-booking .slot-acts{display:flex;gap:8px;margin-top:9px}
+</style>
+
+<!-- ─── ONE SLOT: ADD OR EDIT ─────────────────────────────────────────────── -->
+<div class="sd-pop" id="slot-dialog" hidden>
+  <div class="sd-modal" role="dialog" aria-labelledby="sd-title">
+    <header class="sd-head">
+      <div>
+        <h2 class="sd-title" id="sd-title">New consultation slot</h2>
+        <p class="sd-when" id="sd-when"></p>
+      </div>
+      <button type="button" class="ga-icon" onclick="closeSlotDialog()" aria-label="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </header>
+
+    <div class="sd-body">
+      <div class="recur-banner" id="recur-banner" style="display:none">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M17 2.1 21 6l-4 3.9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+          <path d="M7 21.9 3 18l4-3.9"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+        </svg>
+        <span id="recur-banner-text"></span>
+      </div>
+
+      <div id="edit-mode-banner" style="display:none;padding:8px 12px;margin-bottom:11px;background:var(--accent-light);border:1px solid var(--accent);border-radius:8px;color:var(--accent3);font-size:12px;font-weight:600">
+        Editing existing slot
+      </div>
+
+      <div id="add-slot-fields">
+        <div class="f-group">
+          <label class="f-label" for="f-start">Starts</label>
+          <input class="f-input" type="time" id="f-start" value="09:00"
+                 style="max-width:130px"
+                 onchange="onStartChanged()" oninput="onStartChanged()"/>
+        </div>
+
+        <div class="f-group">
+          <label class="f-label">Runs for</label>
+          <div class="dur-row">
+            <button type="button" class="dur-chip" data-mins="30" onclick="setDuration(30)" title="30 minutes">30m</button>
+            <button type="button" class="dur-chip is-on" data-mins="60" onclick="setDuration(60)" title="1 hour">1h</button>
+            <button type="button" class="dur-chip" data-mins="90" onclick="setDuration(90)" title="1 hour 30 minutes">1&frac12;h</button>
+            <button type="button" class="dur-chip" data-mins="120" onclick="setDuration(120)" title="2 hours">2h</button>
+          </div>
+        </div>
+
+        <p class="slot-derived" id="slot-derived"></p>
+
+        <div id="time-overlap-warning" style="display:none">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5">
+            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          <span id="time-overlap-text">This time overlaps with an existing slot.</span>
+        </div>
+
+        <button type="button" class="slot-more-toggle" id="slot-more-toggle"
+                aria-expanded="false" aria-controls="slot-more" onclick="toggleSlotMore()">
+          Change type, teams or repeat
+          <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+
+        <div id="slot-more" hidden>
+          <div class="f-group">
+            <label class="f-label" for="f-end">Ends</label>
+            <input class="f-input" type="time" id="f-end" value="10:00"
+                   style="max-width:130px"
+                   onchange="onEndChanged()" oninput="onEndChanged()"/>
+          </div>
+
+          <div class="f-group">
+            <label class="f-label" for="f-type">Slot Type</label>
+            <select class="f-input" id="f-type" onchange="updateSlotDerived()">
+              <option value="consult">Consultation</option>
+              <option value="defense">Defense</option>
+            </select>
+          </div>
+
+          <div class="f-group">
+            <label class="f-label" for="f-max">Max Teams per Slot</label>
+            <input class="f-input" type="number" id="f-max" value="1" min="1" max="5" onchange="updateSlotDerived()"/>
+          </div>
+
+          <div class="f-group" style="margin-bottom:0" id="f-recur-group">
+            <label class="f-label" for="f-recur">Recurrence</label>
+            <select class="f-input" id="f-recur" onchange="updateSlotDerived()">
+              <option value="weekly" selected>Every week (same day)</option>
+              <option value="once">One-time only</option>
+              <option value="biweekly">Every 2 weeks</option>
+            </select>
+            <div id="f-recur-locked-note" style="display:none;font-size:11px;color:var(--text3);margin-top:4px">Switching to a single date? Pick the date above.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sd-booking" id="sd-booking" hidden></div>
+    </div>
+
+    <footer class="sd-foot">
+      <button type="button" class="btn btn-ghost sd-danger" id="sd-delete" onclick="deleteFromDialog()" hidden>Delete</button>
+      <button type="button" class="btn btn-ghost" id="sd-skip" onclick="skipFromDialog()" hidden>Skip this week</button>
+      <button type="button" class="btn btn-ghost" id="sd-avail" onclick="toggleFromDialog()" hidden>Mark unavailable</button>
+      <span class="sd-spacer"></span>
+      <button type="button" class="btn btn-ghost" onclick="closeSlotDialog()">Cancel</button>
+      <button type="button" class="btn btn-primary" id="save-slot-btn" onclick="saveSlot()">Save slot</button>
     </footer>
   </div>
 </div>
@@ -949,8 +972,9 @@ async function initCalendar() {
 //  MONTH NAVIGATION
 // ══════════════════════════════════════════════════════════════
 function prevMonth() {
-  if (calView === 'week') {
-    weekAnchor.setDate(weekAnchor.getDate() - 7);
+  if (calView !== 'month') {
+    weekAnchor.setDate(weekAnchor.getDate() - (calView === 'day' ? 1 : 7));
+    if (calView === 'day') selectedDate = formatKey(weekAnchor.getFullYear(), weekAnchor.getMonth(), weekAnchor.getDate());
     renderWeek();
 
     return;
@@ -963,8 +987,9 @@ function prevMonth() {
 }
 
 function nextMonth() {
-  if (calView === 'week') {
-    weekAnchor.setDate(weekAnchor.getDate() + 7);
+  if (calView !== 'month') {
+    weekAnchor.setDate(weekAnchor.getDate() + (calView === 'day' ? 1 : 7));
+    if (calView === 'day') selectedDate = formatKey(weekAnchor.getFullYear(), weekAnchor.getMonth(), weekAnchor.getDate());
     renderWeek();
 
     return;
@@ -979,12 +1004,12 @@ function nextMonth() {
 // ══════════════════════════════════════════════════════════════
 //  CALENDAR RENDER
 // ══════════════════════════════════════════════════════════════
-/** Redraw whatever is on screen - month grid or week grid. */
+/** Redraw whatever is on screen - the month grid, or the day/week hours. */
 function redrawCalendar() {
-  if (calView === 'week') {
-    renderWeek();
-  } else {
+  if (calView === 'month') {
     renderCalendar();
+  } else {
+    renderWeek();
   }
 }
 
@@ -1137,40 +1162,57 @@ function setCalView(view) {
 
   document.getElementById('btn-view-month').classList.toggle('is-on', view === 'month');
   document.getElementById('btn-view-week').classList.toggle('is-on', view === 'week');
-  document.getElementById('cal-grid').hidden = view !== 'month';
-  document.getElementById('week-grid').hidden = view !== 'week';
+  document.getElementById('btn-view-day').classList.toggle('is-on', view === 'day');
+  document.getElementById('cal-grid').hidden = view === 'month' ? false : true;
+  document.getElementById('week-grid').hidden = view === 'month';
 
-  if (view === 'week') {
-    if (!weekAnchor) {
-      // Open on the week you were already looking at, or this one.
-      const [y, m, d] = (selectedDate || '').split('-').map(Number);
-      weekAnchor = selectedDate ? makeDate(y, m, d) : new Date();
-    }
-    renderWeek();
-  } else {
+  if (view === 'month') {
     renderCalendar();
+
+    return;
   }
+
+  if (!weekAnchor) {
+    // Open on the day or week you were already looking at, or today.
+    const [y, m, d] = (selectedDate || '').split('-').map(Number);
+    weekAnchor = selectedDate ? makeDate(y, m, d) : new Date();
+  }
+
+  renderWeek();
 }
 
 function renderWeek() {
   const head  = document.getElementById('wk-head');
   const body  = document.getElementById('wk-body');
-  const start = weekStart(weekAnchor);
+  // One column for a day, seven for a week - the same grid either way.
+  const daysShown = calView === 'day' ? 1 : 7;
+  const start = daysShown === 1
+    ? new Date(weekAnchor.getFullYear(), weekAnchor.getMonth(), weekAnchor.getDate())
+    : weekStart(weekAnchor);
   const today = new Date();
   const todayKey = formatKey(today.getFullYear(), today.getMonth(), today.getDate());
 
   head.innerHTML = '';
   body.innerHTML = '';
 
-  // The label above the grid follows the week, not the month it starts in.
-  const last = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 6);
+  // The label above the grid follows what is drawn, not the month it starts in.
+  const last = new Date(start.getFullYear(), start.getMonth(), start.getDate() + daysShown - 1);
   const sameMonth = start.getMonth() === last.getMonth();
-  document.getElementById('cal-month-display').textContent =
-    `${start.getDate()} ${MONTHS[start.getMonth()].substring(0, 3).toUpperCase()}`
-    + ` – ${last.getDate()} ${MONTHS[last.getMonth()].substring(0, 3).toUpperCase()}`;
-  document.getElementById('cal-month-label').textContent = sameMonth
-    ? `${MONTHS[start.getMonth()]} ${start.getFullYear()}`
-    : `${MONTHS[start.getMonth()]} – ${MONTHS[last.getMonth()]} ${last.getFullYear()}`;
+
+  document.getElementById('cal-month-display').textContent = daysShown === 1
+    ? `${start.getDate()} ${MONTHS[start.getMonth()].substring(0, 3).toUpperCase()}`
+    : `${start.getDate()} ${MONTHS[start.getMonth()].substring(0, 3).toUpperCase()}`
+      + ` – ${last.getDate()} ${MONTHS[last.getMonth()].substring(0, 3).toUpperCase()}`;
+  document.getElementById('cal-month-label').textContent = daysShown === 1
+    ? `${DAY_NAMES[start.getDay()]}, ${MONTHS[start.getMonth()]} ${start.getFullYear()}`
+    : (sameMonth
+      ? `${MONTHS[start.getMonth()]} ${start.getFullYear()}`
+      : `${MONTHS[start.getMonth()]} – ${MONTHS[last.getMonth()]} ${last.getFullYear()}`);
+
+  // A day gets the whole width rather than a seventh of it.
+  const columns = `52px repeat(${daysShown}, 1fr)`;
+  head.style.gridTemplateColumns = columns;
+  body.style.gridTemplateColumns = columns;
 
   head.appendChild(document.createElement('div'));
 
@@ -1185,7 +1227,7 @@ function renderWeek() {
 
   body.appendChild(hours);
 
-  for (let i = 0; i < 7; i++) {
+  for (let i = 0; i < daysShown; i++) {
     const date = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
     const key  = formatKey(date.getFullYear(), date.getMonth(), date.getDate());
 
@@ -1199,9 +1241,14 @@ function renderWeek() {
       + (key === selectedDate ? ' is-selected' : '');
     col.style.height = ((WK_LAST_HOUR - WK_FIRST_HOUR + 1) * WK_HOUR_PX) + 'px';
 
-    col.addEventListener('click', () => {
-      selectDate(key, date.getDate());
-      renderWeek();
+    // Clicking an empty stretch of the day adds a slot starting at the hour
+    // clicked, the way dragging out a time on Google Calendar does.
+    col.addEventListener('click', (event) => {
+      const offset = event.clientY - col.getBoundingClientRect().top;
+      const minutes = WK_FIRST_HOUR * 60 + Math.max(0, Math.floor(offset / WK_HOUR_PX * 2)) * 30;
+
+      selectedDate = key;
+      openSlotDialog(key, minutes, col);
     });
 
     (slots[key] || []).forEach((slot, index) => {
@@ -1233,12 +1280,13 @@ function renderWeek() {
       }
 
       el.addEventListener('click', (event) => {
-        // Otherwise the column underneath also takes the click and the
-        // panel jumps back to "add a slot" the moment you open one.
+        // Otherwise the column underneath also takes the click and opens the
+        // "new slot" card over the one being read.
         event.stopPropagation();
-        selectDate(key, date.getDate());
-        renderWeek();
-        editSlot(slot.schedule_id, key, index);
+        // Not redrawn here: the card is placed beside this very element, and
+        // redrawing would replace it mid-click.
+        selectedDate = key;
+        editSlot(slot.schedule_id, key, index, el);
       });
 
       col.appendChild(el);
@@ -1249,108 +1297,31 @@ function renderWeek() {
 }
 
 // ══════════════════════════════════════════════════════════════
-//  CELL CLICK
-//  Clicking a date shows its existing slots and the add form together
-//  in the side panel.
+//  A DATE OPENS AS A DAY
+//  Google Calendar shows the day itself when you pick a date; it does not
+//  describe it in a panel down the side. Clicking a date here does the same,
+//  and the form only appears when a slot is actually being added or changed.
 // ══════════════════════════════════════════════════════════════
 function handleCellClick(key, dayNum, isDisabled, dayName) {
-  // Highlight selected cell
-  document.querySelectorAll('.cal-cell.selected').forEach(el => el.classList.remove('selected'));
-  const cell = document.querySelector(`.cal-cell[data-key="${key}"]`);
-  if (cell) cell.classList.add('selected');
-
-  // The side panel lists this date's slots already, right beside the form
-  // for changing them. This used to also pop a modal listing the same
-  // slots with its own delete button - a leftover from before View and Add
-  // were merged into that panel.
-  selectDate(key, dayNum);
+  openDay(key);
 }
 
-// ══════════════════════════════════════════════════════════════
-//  DATE SELECTION
-// ══════════════════════════════════════════════════════════════
-function selectDate(key, dayNum) {
-  // Remove previous conflict highlight
-  document.querySelectorAll('.cal-cell.has-conflict').forEach(el => el.classList.remove('has-conflict'));
-
+/** Show one date as a column of hours. */
+function openDay(key) {
+  const [y, m, d] = key.split('-').map(Number);
   selectedDate = key;
-  // FIX: split into numbers and use numeric constructor — no UTC shift
-  const [y, m1, d] = key.split('-').map(Number);
-  const dateObj    = makeDate(y, m1, d);
-  const label      = `${DAYS[dateObj.getDay()]}, ${MONTHS[m1 - 1]} ${d}, ${y}`;
-  document.getElementById('selected-date-text').textContent   = label;
-  document.getElementById('selected-date-chip').style.display = 'flex';
-  document.getElementById('no-date-hint').style.display       = 'none';
-  document.getElementById('add-slot-fields').style.display    = 'block';
+  weekAnchor = makeDate(y, m, d);
+  setCalView('day');
+}
 
-  // Open on a time this date is actually free, so clicking a busy morning
-  // does not greet you with a warning about a clash the form just created.
-  if (!editingSlotId) {
-    const free = firstFreeStart(key);
-    document.getElementById('f-start').value = free;
-    document.getElementById('f-end').value = minutesToTime(timeToMinutes(free) + (currentDurationMinutes() || 60));
-  }
-
-  checkTimeOverlap();
-  updateSlotDerived();
-  renderSelectedDateSlots(key);
+function selectDate(key) {
+  selectedDate = key;
   redrawCalendar();
-
-  // Re-apply selected highlight after renderCalendar rebuilds the grid
-  const selectedCell = document.querySelector(`.cal-cell[data-key="${key}"]`);
-  if (selectedCell) selectedCell.classList.add('selected');
-
-  // Highlight cell if current time selection overlaps
-  const cell = document.querySelector(`.cal-cell[data-key="${key}"]`);
-  const warning = document.getElementById('time-overlap-warning');
-  if (cell && warning && warning.style.display !== 'none') {
-    cell.classList.add('has-conflict');
-  }
 }
 
 function clearSelectedDate() {
   selectedDate = null;
-  document.getElementById('selected-date-chip').style.display = 'none';
-  document.getElementById('no-date-hint').style.display       = 'block';
-  document.getElementById('add-slot-fields').style.display    = 'none';
-  document.getElementById('time-overlap-warning').style.display = 'none';
-  document.getElementById('selected-date-slots').style.display = 'none';
-  document.querySelectorAll('.cal-cell.has-conflict').forEach(el => el.classList.remove('has-conflict'));
   redrawCalendar();
-}
-
-// ══════════════════════════════════════════════════════════════
-//  EXISTING SLOTS FOR THE SELECTED DATE (shown inside the merged panel)
-//  FIX: lets the user see + toggle + remove existing slots on the date
-//  they've selected, right alongside the add-slot form — no separate
-//  modal needed anymore.
-// ══════════════════════════════════════════════════════════════
-// The commit button says which weeks it commits. "Save Slot" is true of a
-// one-off and of a rule covering the rest of the term.
-// The form starts closed. Opening it is a decision - "add a weekly slot on
-// Mondays" - rather than two time inputs sitting there waiting.
-function openAddSlot() {
-  const fields = document.getElementById('add-slot-fields');
-  const lead = document.getElementById('add-slot-lead');
-  if (fields) fields.style.display = 'block';
-  if (lead) lead.style.display = 'none';
-  const actions = document.querySelector('.form-actions');
-  if (actions) actions.style.display = 'flex';
-}
-
-// Shown whenever a date is selected and the form is not already open.
-function showAddSlotLead(key) {
-  const lead = document.getElementById('add-slot-lead');
-  const fields = document.getElementById('add-slot-fields');
-  if (!lead || !key) return;
-  const [y, m, d] = key.split('-').map(Number);
-  const day = DAY_NAMES[makeDate(y, m, d).getDay()];
-  document.getElementById('add-slot-lead-text').textContent =
-    'Add a weekly slot on ' + day + 's';
-  const open = fields && fields.style.display !== 'none';
-  lead.style.display = open ? 'none' : 'flex';
-  const actions = document.querySelector('.form-actions');
-  if (actions) actions.style.display = open ? 'flex' : 'none';
 }
 
 function labelSaveButton(key) {
@@ -1363,151 +1334,156 @@ function labelSaveButton(key) {
   btn.innerHTML = tick + (recur === 'once' ? 'Save this date' : 'Save every ' + day);
 }
 
-function renderSelectedDateSlots(key) {
-  const wrap = document.getElementById('selected-date-slots');
-  const list = document.getElementById('selected-date-slots-list');
-  if (!wrap || !list) return;
+// ══════════════════════════════════════════════════════════════
+//  THE SLOT DIALOG
+// ══════════════════════════════════════════════════════════════
+// What the dialog is currently about, so its own buttons know what to act on.
+let dialogSlot = null;
 
+function dayLabel(key) {
+  const [y, m, d] = key.split('-').map(Number);
+  return `${DAY_NAMES[makeDate(y, m, d).getDay()]}, ${MONTHS[m - 1]} ${d}, ${y}`;
+}
+
+/**
+ * Add a slot. Called by the + button and by clicking empty space in the day
+ * or week grid, where the time clicked is where the slot starts.
+ */
+function openSlotDialog(key, startMinutes, anchor) {
+  // Nothing picked yet: the slot lands on the day being looked at, or today.
+  const now = weekAnchor || new Date();
+  const day = key || selectedDate || formatKey(now.getFullYear(), now.getMonth(), now.getDate());
+  if (!day) return;
+
+  selectedDate = day;
+  cancelEdit();
+  dialogSlot = null;
+
+  const start = startMinutes != null ? minutesToTime(startMinutes) : firstFreeStart(day);
+  document.getElementById('f-start').value = start;
+  document.getElementById('f-end').value = minutesToTime(timeToMinutes(start) + (currentDurationMinutes() || 60));
+  document.getElementById('f-recur').value = 'weekly';
+  document.getElementById('f-type').value = 'consult';
+  document.getElementById('f-max').value = '1';
+  markDurationChip(currentDurationMinutes() || 60);
+
+  document.getElementById('sd-title').textContent = 'New consultation slot';
+  document.getElementById('sd-booking').hidden = true;
+  ['sd-delete', 'sd-skip', 'sd-avail'].forEach((id) => { document.getElementById(id).hidden = true; });
+
+  showSlotDialog(day, anchor);
+  checkTimeOverlap();
+  updateSlotDerived();
+}
+
+/** Everything the dialog shows about a slot that already exists. */
+function showEditDialog(s, key, index, anchor) {
+  dialogSlot = { slot: s, key, index, scheduleId: s.schedule_id };
+
+  const repeats = (s.recur || 'weekly') !== 'once';
+  document.getElementById('sd-title').textContent = s.hasBooking ? 'Booked slot' : 'Edit slot';
+
+  // A booked slot is not the adviser's to move; the booking is cancelled first.
+  document.getElementById('sd-delete').hidden = !!s.hasBooking || !s.schedule_id;
+  document.getElementById('sd-skip').hidden = !repeats || !!s.hasBooking || !s.schedule_id;
+  const avail = document.getElementById('sd-avail');
+  avail.hidden = !!s.hasBooking || !s.schedule_id;
+  avail.textContent = s.is_available ? 'Mark unavailable' : 'Mark available';
+
+  const booking = document.getElementById('sd-booking');
+  const asked = !!(s.booking && s.booking.cancel_requested);
+
+  if (s.hasBooking) {
+    booking.hidden = false;
+    booking.innerHTML = '<b>' + escHtml(s.teamName || 'Booked') + '</b>'
+      + (s.topic ? '<br>' + escHtml(s.topic) : '')
+      + (asked
+        ? '<br><b>Cancellation requested</b>'
+          + (s.booking.cancel_reason ? ' · “' + escHtml(s.booking.cancel_reason) + '”' : '')
+          + '<span class="slot-acts">'
+          + '<button type="button" class="slot-act" onclick="closeSlotDialog();decideCancellation(' + s.booking.booking_id + ", 'approve', '" + key + '\')">Approve</button>'
+          + '<button type="button" class="slot-act" onclick="closeSlotDialog();decideCancellation(' + s.booking.booking_id + ", 'decline', '" + key + '\')">Keep booking</button>'
+          + '</span>'
+        : '');
+  } else {
+    booking.hidden = true;
+  }
+
+  showSlotDialog(key, anchor);
+}
+
+function showSlotDialog(key, anchor) {
+  const pop = document.getElementById('slot-dialog');
+
+  document.getElementById('sd-when').textContent = dayLabel(key);
   labelSaveButton(key);
-  showAddSlotLead(key);
+  pop.hidden = false;
+  placeSlotPopover(pop, anchor);
 
-  const daySlots = slots[key] || [];
-  list.innerHTML = '';
+  // Registered after this click finishes, or the click that opened it would
+  // immediately close it again.
+  setTimeout(() => document.addEventListener('mousedown', closeSlotPopoverOnOutside), 0);
+  document.addEventListener('keydown', closeSlotPopoverOnEscape);
+}
 
-  // The banner belongs to the date, not to any one row: if anything here
-  // repeats, everything the adviser does on this panel needs the warning.
-  const banner = document.getElementById('recur-banner');
-  const repeating = daySlots.filter(s => (s.recur || 'weekly') !== 'once');
-  if (banner) {
-    if (repeating.length) {
-      const [by, bm, bd] = key.split('-').map(Number);
-      const day = repeating[0].available_date || DAY_NAMES[makeDate(by, bm, bd).getDay()];
-      document.getElementById('recur-banner-text').innerHTML =
-        'These are <b>weekly slots</b>. Editing one changes <b>every ' + day +
-        '</b> — not just ' + bd + ' ' + MONTHS[bm - 1] + '.';
-      banner.style.display = 'flex';
-    } else {
-      banner.style.display = 'none';
-    }
+/** Beside whatever was clicked, flipped to the other side when it would run off. */
+function placeSlotPopover(pop, anchor) {
+  const box = anchor?.getBoundingClientRect?.();
+  const w = pop.offsetWidth;
+  const h = pop.offsetHeight;
+  const gap = 10;
+
+  let left = box ? box.right + gap : (window.innerWidth - w) / 2;
+  let top = box ? box.top : 90;
+
+  if (left + w > window.innerWidth - 12) {
+    left = box ? box.left - w - gap : window.innerWidth - w - 12;
   }
 
-  if (daySlots.length === 0) {
-    wrap.style.display = 'none';
-    return;
-  }
+  left = Math.max(12, left);
+  top = Math.max(12, Math.min(top, window.innerHeight - h - 12));
 
-  wrap.style.display = 'block';
-  daySlots.forEach((s, i) => {
-    const startStr = hr12(s.start || s.start_time);
-    const endStr   = hr12(s.end   || s.end_time);
-    const status   = getSlotStatusLabel(s, key);
+  pop.style.left = (left + window.scrollX) + 'px';
+  pop.style.top = (top + window.scrollY) + 'px';
+}
 
-    // A team's name already says the slot is taken, so "Booked" beside it is
-    // the same fact twice. Max only means anything while nobody has it.
-    const who = s.teamName
-      ? ' · ' + s.teamName
-      : (status === 'booked' ? ' · Booked' : ' · Max ' + (s.maxBookings || s.consultation_limit || 1));
-    // The tag beside it already names the type, so this carries only who
-    // has it and what for.
-    const statusText = (status === 'ongoing' ? '🔴 Ongoing' : who.replace(/^ · /, ''))
-      + (s.topic ? ' · “' + s.topic + '”' : '');
-    const row = document.createElement('div');
-    // Two lines, not one: the times and who has them, then what the slot IS.
-    // A slot stores a weekday, so most of these rows repeat every week and
-    // the row never said so - which is how a term's Mondays got edited at
-    // once by someone who thought they were editing this one.
-    row.className = 'date-slot';
-    if (s.schedule_id) {
-      row.style.cursor = 'pointer';
-      row.title = 'Edit this slot';
-      row.onclick = () => editSlot(s.schedule_id, key, i);
-    }
+function closeSlotPopoverOnOutside(event) {
+  const pop = document.getElementById('slot-dialog');
+  if (!pop.hidden && !pop.contains(event.target)) closeSlotDialog();
+}
 
-    const repeats = (s.recur || 'weekly') !== 'once';
-    // slotsByDay is keyed by weekday, so available_date is always set here;
-    // the date is only a fallback for a row built some other way.
-    const [ky, km, kd] = key.split('-').map(Number);
-    const dayWord = s.available_date || DAY_NAMES[makeDate(ky, km, kd).getDay()];
-    // The sample says what the slot is, not only when it repeats: unchanged,
-    // or booked for this one date with the rule left alone.
-    const stateWord = s.hasBooking
-      ? ''
-      : (s.is_available ? ' · unchanged' : ' · unavailable');
-    const recurLine = repeats
-      ? 'Every ' + dayWord
-      : 'This date only';
+function closeSlotPopoverOnEscape(event) {
+  if (event.key === 'Escape') closeSlotDialog();
+}
 
-    // Skipping one week is not deleting the slot, so it is its own control.
-    // Availability in words. The crossed circle it replaces was the one
-    // control on the card nobody could name without hovering it.
-    // Not offered when a team has the slot. The server refuses it anyway, but
-    // a control that always fails is worse than no control - it reads as
-    // something the adviser did wrong.
-    const availLink = (s.schedule_id && !s.hasBooking) ? `
-      <button onclick="event.stopPropagation();toggleSlot(${s.schedule_id}, '${key}', ${i})"
-              class="slot-act">${s.is_available ? 'mark unavailable' : 'mark available'}</button>` : '';
+function closeSlotDialog() {
+  document.getElementById('slot-dialog').hidden = true;
+  document.getElementById('time-overlap-warning').style.display = 'none';
+  document.removeEventListener('mousedown', closeSlotPopoverOnOutside);
+  document.removeEventListener('keydown', closeSlotPopoverOnEscape);
+  dialogSlot = null;
+  cancelEdit();
+}
 
-    const skipBtn = (repeats && s.schedule_id && !s.hasBooking) ? `
-      <button onclick="event.stopPropagation();skipThisWeek(${s.schedule_id}, '${key}')"
-              class="slot-act"
-              title="Remove only this week">skip this week</button>` : '';
+function deleteFromDialog() {
+  if (!dialogSlot) return;
+  const { key, index, scheduleId } = dialogSlot;
+  closeSlotDialog();
+  deleteSlot(key, index, scheduleId);
+}
 
-    const ended = status === 'ended';
-    const asked = !ended && !!(s.booking && s.booking.cancel_requested);
-    const tagClass = s.hasBooking ? (ended ? 'is-ended' : asked ? 'is-request' : 'is-booked') : ('type-' + (s.type || 'consult'));
-    const tagText = s.hasBooking ? (ended ? 'Ended' : asked ? 'Cancel requested' : 'Booked') : (TYPE_LABELS[s.type] || 'Consultation');
+function skipFromDialog() {
+  if (!dialogSlot) return;
+  const { key, scheduleId } = dialogSlot;
+  closeSlotDialog();
+  skipThisWeek(scheduleId, key);
+}
 
-    // Who has the slot and what for, in its own block rather than trailing
-    // off the end of the time as truncated text.
-    const initials = (s.teamName || '')
-      .split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase();
-    const bookingBlock = s.hasBooking ? `
-      <span class="slot-booking">
-        <span class="who-dot">${initials || '—'}</span>
-        <span><b>${s.teamName || 'Booked'}</b>${s.topic ? '<br>' + s.topic : ''}</span>
-      </span>` : '';
-
-    // The team asked to cancel; nothing changes until the expert says so.
-    const requestBlock = asked ? `
-      <span class="slot-request">
-        <span><b>Cancellation requested</b>${s.booking.cancel_reason ? ' · “' + escHtml(s.booking.cancel_reason) + '”' : ''}</span>
-        <span class="slot-acts">
-          <button type="button" class="slot-act" onclick="event.stopPropagation();decideCancellation(${s.booking.booking_id}, 'approve', '${key}')">Approve</button>
-          <button type="button" class="slot-act" onclick="event.stopPropagation();decideCancellation(${s.booking.booking_id}, 'decline', '${key}')">Keep booking</button>
-        </span>
-      </span>` : '';
-
-    row.innerHTML = `
-      <span class="date-slot-top">
-        <span class="slot-times">
-          <span>${startStr}</span><span class="slot-arrow">→</span><span>${endStr}</span>
-          <span class="slot-tag ${tagClass}">${tagText}</span>
-        </span>
-        <span class="date-slot-actions">
-          ${s.hasBooking ? `
-            <span class="slot-held" title="A team has booked this slot - cancel the booking to change it">
-              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2">
-                <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-              </svg>
-            </span>` : `
-          <button onclick="event.stopPropagation();deleteSlot('${key}', ${i}${s.schedule_id ? ',' + s.schedule_id : ''})"
-                  class="slot-del"
-                  title="${repeats ? 'Delete every week' : 'Delete slot'}">
-            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
-          </button>`}
-        </span>
-      </span>
-      ${bookingBlock}${requestBlock}
-      <span class="date-slot-meta">
-        <svg class="recur-mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M17 2.1 21 6l-4 3.9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>
-          <path d="M7 21.9 3 18l4-3.9"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
-        </svg>
-        <span>${recurLine}${stateWord}</span>
-        <span class="slot-acts">${skipBtn}${availLink}</span>
-      </span>`;
-    list.appendChild(row);
-  });
+function toggleFromDialog() {
+  if (!dialogSlot) return;
+  const { key, index, scheduleId } = dialogSlot;
+  closeSlotDialog();
+  toggleSlot(scheduleId, key, index);
 }
 
 // Remove one week from a repeating slot. The slot stays; every other week
@@ -1701,7 +1677,7 @@ async function saveSlot() {
       redrawCalendar();
       renderSlotStats();
       renderUpcoming();
-      renderSelectedDateSlots(selectedDate);
+      redrawCalendar();
       showToast('Slot updated.');
       cancelEdit();
 
@@ -1769,7 +1745,7 @@ async function saveSlot() {
     })();
     document.getElementById('f-start').value = end;
     document.getElementById('f-end').value   = addMinutesToTime(end, duration > 0 ? duration : 60);
-    renderSelectedDateSlots(selectedDate);
+    redrawCalendar();
     checkTimeOverlap();
 
   } catch (e) {
@@ -1798,7 +1774,7 @@ async function saveSlot() {
 // moving a slot to a different weekday/date is a bigger UX question
 // than "fix the time/capacity/type") — recur is disabled with a note
 // instead of silently doing nothing.
-function editSlot(scheduleId, key, index) {
+function editSlot(scheduleId, key, index, anchor) {
   const s = slots[key] && slots[key][index];
   if (!s) return;
 
@@ -1837,13 +1813,10 @@ function editSlot(scheduleId, key, index) {
   const btn = document.getElementById('save-slot-btn');
   if (btn) labelSaveButton(selectedDate);
 
-  document.getElementById('add-slot-fields').style.display = 'block';
   checkTimeOverlap();
-
-  document.getElementById('add-slot-form')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-
   markDurationChip(timeToMinutes(document.getElementById('f-end').value) - timeToMinutes(document.getElementById('f-start').value));
   updateSlotDerived();
+  showEditDialog(s, key, index, anchor);
 }
 
 function cancelEdit() {
@@ -1866,8 +1839,7 @@ function cancelEdit() {
 }
 
 function resetForm() {
-  cancelEdit();
-  clearSelectedDate();
+  closeSlotDialog();
   document.getElementById('f-start').value = '09:00';
   document.getElementById('f-end').value   = '10:00';
   document.getElementById('f-type').value  = 'consult';
@@ -1908,7 +1880,7 @@ async function toggleSlot(scheduleId, key, index) {
     redrawCalendar();
 
     // FIX: refresh the panel in place — no modal to worry about anymore.
-    if (selectedDate === key) renderSelectedDateSlots(key);
+    if (selectedDate === key) redrawCalendar();
 
     showToast(data.is_available ? 'Slot marked as available.' : 'Slot marked as unavailable.');
   } catch (e) {
@@ -1968,7 +1940,7 @@ async function deleteSlot(key, index, scheduleId) {
     // FIX: refresh in place instead of closing anything — the panel
     // stays open so several slots can be removed back-to-back without
     // reselecting the date.
-    if (selectedDate === key) renderSelectedDateSlots(key);
+    if (selectedDate === key) redrawCalendar();
 
     showToast('Slot removed.');
   } catch (e) {
@@ -2232,11 +2204,12 @@ function firstFreeStart(key) {
 // Set the way Google Calendar's appointment schedules are. Saving sends the
 // whole thing once and the server makes the weekly slots match.
 const GA_DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const GA_PRESETS = [15, 30, 45, 60, 90, 120];
 const GA_ICON = {
   add: '<svg viewBox="0 0 24 24" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>',
   remove: '<svg viewBox="0 0 24 24" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>',
 };
-let ga = null; // { duration_minutes, hours: { Monday: [['09:00','12:00']] }, range, starts_on, ends_on, max_on, max_days_ahead, min_notice_hours }
+let ga = null;
 
 async function openAvail() {
   document.getElementById('ga-error').hidden = true;
@@ -2263,6 +2236,10 @@ function gaFrom(saved) {
   const hours = s.hours && !Array.isArray(s.hours) ? JSON.parse(JSON.stringify(s.hours)) : {};
   const state = {
     duration_minutes: s.duration_minutes || 60,
+    buffer_minutes: s.buffer_minutes || 0,
+    buffer_on: !!s.buffer_minutes,
+    max_per_day: s.max_per_day || 4,
+    cap_on: s.max_per_day != null,
     hours,
     range: s.starts_on || s.ends_on ? 'dates' : 'now',
     starts_on: s.starts_on || '',
@@ -2294,20 +2271,26 @@ function gaFrom(saved) {
     });
 
     const commonest = Number(Object.keys(lengths).sort((a, b) => lengths[b] - lengths[a])[0]);
-    if ([15, 30, 45, 60, 90, 120].includes(commonest)) state.duration_minutes = commonest;
+    if (commonest >= 5 && commonest <= 480) state.duration_minutes = commonest;
   }
 
   return state;
 }
 
 function gaDraw() {
-  document.querySelectorAll('input[name="ga-duration"]').forEach((r) => { r.checked = Number(r.value) === ga.duration_minutes; });
+  const preset = GA_PRESETS.includes(ga.duration_minutes) ? String(ga.duration_minutes) : 'custom';
+  document.querySelectorAll('input[name="ga-duration"]').forEach((r) => { r.checked = r.value === preset; });
+  document.getElementById('ga-custom').value = ga.duration_minutes;
   document.querySelectorAll('input[name="ga-range"]').forEach((r) => { r.checked = r.value === ga.range; });
   document.getElementById('ga-starts').value = ga.starts_on;
   document.getElementById('ga-ends').value = ga.ends_on;
   document.getElementById('ga-max-on').checked = ga.max_on;
   document.getElementById('ga-max').value = ga.max_days_ahead;
   document.getElementById('ga-notice').value = ga.min_notice_hours;
+  document.getElementById('ga-buffer-on').checked = ga.buffer_on;
+  document.getElementById('ga-buffer').value = ga.buffer_minutes;
+  document.getElementById('ga-cap-on').checked = ga.cap_on;
+  document.getElementById('ga-cap').value = ga.max_per_day;
   gaDrawDays();
   gaChanged();
 }
@@ -2396,27 +2379,48 @@ function gaAddHours(day) {
   gaChanged();
 }
 
+/** How long one appointment runs, including a typed custom length. */
+function gaDuration() {
+  const picked = document.querySelector('input[name="ga-duration"]:checked')?.value;
+
+  if (picked === 'custom') return Number(document.getElementById('ga-custom').value) || 0;
+
+  return Number(picked) || 60;
+}
+
 /** Read the inputs back, then say what saving would give. */
 function gaChanged() {
-  ga.duration_minutes = Number(document.querySelector('input[name="ga-duration"]:checked')?.value) || 60;
+  ga.duration_minutes = gaDuration();
   ga.range = document.querySelector('input[name="ga-range"]:checked')?.value || 'now';
   ga.starts_on = document.getElementById('ga-starts').value;
   ga.ends_on = document.getElementById('ga-ends').value;
   ga.max_on = document.getElementById('ga-max-on').checked;
   ga.max_days_ahead = Number(document.getElementById('ga-max').value) || 0;
   ga.min_notice_hours = Number(document.getElementById('ga-notice').value) || 0;
+  ga.buffer_on = document.getElementById('ga-buffer-on').checked;
+  ga.buffer_minutes = ga.buffer_on ? (Number(document.getElementById('ga-buffer').value) || 0) : 0;
+  ga.cap_on = document.getElementById('ga-cap-on').checked;
+  ga.max_per_day = Number(document.getElementById('ga-cap').value) || 0;
 
+  document.getElementById('ga-custom-wrap').hidden =
+    document.querySelector('input[name="ga-duration"]:checked')?.value !== 'custom';
   document.getElementById('ga-dates').hidden = ga.range !== 'dates';
   document.getElementById('ga-max').disabled = !ga.max_on;
+  document.getElementById('ga-buffer').disabled = !ga.buffer_on;
+  document.getElementById('ga-cap').disabled = !ga.cap_on;
 
   const problem = gaProblem();
   const box = document.getElementById('av-count');
   const save = document.getElementById('av-save');
   document.getElementById('ga-error').hidden = true;
 
+  // A slot starts every duration + buffer minutes, and the last one still has
+  // to end inside the hours.
+  const step = ga.duration_minutes + ga.buffer_minutes;
   let count = 0;
   Object.values(ga.hours).forEach((ranges) => ranges.forEach(([from, until]) => {
-    count += Math.max(0, Math.floor((timeToMinutes(until) - timeToMinutes(from)) / ga.duration_minutes));
+    const span = timeToMinutes(until) - timeToMinutes(from);
+    if (span >= ga.duration_minutes && step > 0) count += Math.floor((span - ga.duration_minutes) / step) + 1;
   }));
 
   const length = ga.duration_minutes >= 60 && ga.duration_minutes % 60 === 0
@@ -2427,6 +2431,8 @@ function gaChanged() {
     ? '<b>' + count + ' bookable time' + (count === 1 ? '' : 's') + ' a week</b>, ' + length + ' each.'
     : '<b>No availability</b> - teams will have nothing of yours to book.'];
 
+  if (ga.buffer_on && ga.buffer_minutes) parts.push(ga.buffer_minutes + ' minutes between.');
+  if (ga.cap_on && ga.max_per_day) parts.push('At most ' + ga.max_per_day + ' a day.');
   if (ga.range === 'dates' && (ga.starts_on || ga.ends_on)) {
     parts.push('Only ' + (ga.starts_on ? 'from ' + ga.starts_on : '') + (ga.ends_on ? ' until ' + ga.ends_on : '') + '.');
   }
@@ -2444,6 +2450,7 @@ function gaChanged() {
 }
 
 function gaProblem() {
+  if (ga.duration_minutes < 5 || ga.duration_minutes > 480) return 'An appointment has to run between 5 and 480 minutes.';
   for (const day of GA_DAYS) {
     const ranges = (ga.hours[day] || []).map(([a, b]) => [timeToMinutes(a), timeToMinutes(b)]).sort((x, y) => x[0] - y[0]);
     for (let i = 0; i < ranges.length; i++) {
@@ -2454,6 +2461,8 @@ function gaProblem() {
   if (ga.range === 'dates' && ga.starts_on && ga.ends_on && ga.ends_on < ga.starts_on) return 'The end date has to be on or after the start date.';
   if (ga.max_on && (ga.max_days_ahead < 1 || ga.max_days_ahead > 365)) return 'Days ahead has to be between 1 and 365.';
   if (ga.min_notice_hours < 0 || ga.min_notice_hours > 720) return 'Notice has to be between 0 and 720 hours.';
+  if (ga.buffer_on && (ga.buffer_minutes < 0 || ga.buffer_minutes > 120)) return 'Buffer time has to be between 0 and 120 minutes.';
+  if (ga.cap_on && (ga.max_per_day < 1 || ga.max_per_day > 20)) return 'Bookings a day has to be between 1 and 20.';
   return null;
 }
 
@@ -2470,6 +2479,8 @@ async function saveAvailability() {
       method: 'PUT',
       body: JSON.stringify({
         duration_minutes: ga.duration_minutes,
+        buffer_minutes: ga.buffer_on ? ga.buffer_minutes : 0,
+        max_per_day: ga.cap_on ? ga.max_per_day : null,
         hours: ga.hours,
         starts_on: ga.range === 'dates' ? (ga.starts_on || null) : null,
         ends_on: ga.range === 'dates' ? (ga.ends_on || null) : null,
@@ -2498,7 +2509,6 @@ async function saveAvailability() {
     save.disabled = !!gaProblem();
   }
 }
-
 
 function showToast(msg, type = 'success') {
   const toast = document.getElementById('sched-toast');
@@ -2558,7 +2568,7 @@ async function confirmCancellationDecision() {
     await loadSlots();
     redrawCalendar();
     renderUpcoming();
-    renderSelectedDateSlots(key);
+    redrawCalendar();
   } catch (e) {
     document.getElementById('cd-error').textContent = e.message;
     showToast(e.message, 'error');
@@ -2574,7 +2584,7 @@ initCalendar();
 // user needing to refresh the page.
 setInterval(() => {
   redrawCalendar();
-  if (selectedDate) renderSelectedDateSlots(selectedDate);
+  if (selectedDate) redrawCalendar();
   renderUpcoming();
 }, 60000);
 

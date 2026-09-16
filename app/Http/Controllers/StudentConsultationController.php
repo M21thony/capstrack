@@ -325,6 +325,21 @@ class StudentConsultationController extends Controller
             return response()->json(['success' => false, 'message' => 'That time is outside when this expert takes bookings. Pick another date.'], 422);
         }
 
+        // How many consultations this expert accepts in a single day.
+        if ($availability && $availability->max_per_day) {
+            $thatDay = ConsultationBooking::whereDate('session_date', $sessionDate)
+                ->where('booking_status', 'scheduled')
+                ->whereHas('schedule', fn ($q) => $q->where('expert_id', $slot->expert_id))
+                ->count();
+
+            if ($thatDay >= $availability->max_per_day) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Your expert is fully booked on that day. Pick another date.',
+                ], 422);
+            }
+        }
+
         // Recurring (weekly/biweekly) slots share a single schedule row
         // across every future occurrence of that weekday, so capacity has
         // to be checked per calendar date rather than per row — otherwise
@@ -403,18 +418,21 @@ class StudentConsultationController extends Controller
         ]);
     }
 
-    // Emails every student on the booking team plus the assigned expert that
-    // a consultation was booked, not just the one student who clicked book.
+    /**
+     * One email that a consultation was booked - to the expert, copied to the
+     * team.
+     *
+     * It used to send a separate copy to every member and the expert, so a
+     * four-person team meant five emails saying the same thing.
+     */
     private function notifyTeamOfBooking(ConsultationBooking $booking, $expert, Team $team): void
     {
-        $recipients = $team->members->pluck('email')->filter()->push($expert->email)->unique();
+        $members = $team->members->pluck('email')->filter()->reject(fn ($e) => $e === $expert->email)->unique()->values();
 
-        foreach ($recipients as $email) {
-            try {
-                Mail::to($email)->queue(new ConsultationBookedMail($booking, $expert, $team));
-            } catch (\Exception $e) {
-                \Log::warning('Consultation booked email failed', ['error' => $e->getMessage()]);
-            }
+        try {
+            Mail::to($expert->email)->cc($members->all())->queue(new ConsultationBookedMail($booking, $expert, $team));
+        } catch (\Exception $e) {
+            \Log::warning('Consultation booked email failed', ['error' => $e->getMessage()]);
         }
     }
 

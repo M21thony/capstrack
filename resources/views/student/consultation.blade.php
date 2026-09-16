@@ -70,15 +70,27 @@
 .slots-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px;gap:8px}
 .slots-title{font-size:13.5px;font-weight:600;color:var(--text)}
 .slots-hint{font-size:11px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.slot-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px}
-.slot-btn{display:flex;flex-direction:column;gap:1px;align-items:center;padding:9px 6px;border:1.5px solid var(--border);
-          border-radius:9px;background:var(--bg2);cursor:pointer;font-family:inherit;transition:border-color .15s,background .15s}
-.slot-btn:hover{border-color:var(--accent);background:var(--accent-light)}
-.slot-btn.picked{border-color:var(--accent);background:var(--accent-light)}
-.slot-time{font-size:12.5px;font-weight:600;color:var(--text)}
-.slot-meta{font-size:10px;color:var(--text3)}
+.slot-grid{display:block}
 .slot-empty{grid-column:1/-1;font-size:11.5px;color:var(--text3);padding:18px 12px;text-align:center;
             border:1px dashed var(--border);border-radius:10px}
+
+/* The day as an hour axis, matching the expert's own schedule. */
+.sd-grid{display:grid;grid-template-columns:46px 1fr;border:1px solid var(--border);border-radius:10px;
+         background:var(--bg2);overflow:hidden}
+.sd-hours{position:relative}
+.sd-hours i{display:block;height:44px;font-style:normal;font-size:10px;color:var(--text3);
+            text-align:right;padding-right:6px;transform:translateY(-5px)}
+.sd-col{position:relative;border-left:1px solid var(--border);
+        background:repeating-linear-gradient(transparent 0 43px, var(--border) 43px 44px)}
+.sd-slot{position:absolute;left:4px;right:4px;border-radius:6px;padding:3px 7px;overflow:hidden;text-align:left;
+         border:1px solid var(--accent);border-left:3px solid var(--accent);background:var(--accent-light);
+         font-family:inherit;cursor:pointer;transition:box-shadow .15s}
+.sd-slot b{display:block;font-size:11.5px;font-weight:700;color:var(--text);white-space:nowrap;
+           overflow:hidden;text-overflow:ellipsis}
+.sd-slot span{display:block;font-size:10px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sd-slot:hover{box-shadow:0 0 0 2px var(--accent)}
+.sd-slot.picked{background:var(--accent);border-color:var(--accent)}
+.sd-slot.picked b,.sd-slot.picked span{color:#18191f}
 
 .book-actions{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;
               padding-top:14px;border-top:1px solid var(--border)}
@@ -89,12 +101,6 @@
 
 .page-title-wrap{display:flex;flex-direction:column;min-width:0}
 .page-subtitle{font-size:11.5px;color:var(--text3);margin-top:1px}
-.slots-len{font-weight:400;color:var(--text3);font-size:11px}
-
-/* A booked time is shown, not hidden: a team needs to see the slot exists
-   and is taken, or an expert's day looks emptier than it is. */
-.slot-btn.taken{opacity:.55;cursor:not-allowed;background:var(--bg3)}
-.slot-btn.taken:hover{border-color:var(--border);background:var(--bg3)}
 
 /* Booking rows read date-first, the way the mock does - the date is what a
    team scans for. */
@@ -118,8 +124,6 @@
 .sched-cal .calendar-header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:4px 0 10px}
 .sched-cal .calendar-header{max-width:300px}
 .sched-cal .calendar-header h3{font-size:13.5px;font-weight:600;color:var(--text);text-align:center;flex:1}
-.slot-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
-.slot-btn{align-items:center;padding:11px 6px}
 .book-actions{justify-content:flex-end;border-top:none;padding-top:4px}
 .book-note{justify-content:center;margin-top:10px;padding-top:12px;border-top:1px solid var(--border)}
 .sched-cols{gap:26px}
@@ -857,22 +861,72 @@ function selectDate(d, dayName, dateKey) {
   const grid = document.getElementById('slot-grid');
   grid.innerHTML = '';
 
+  renderDayGrid(daySlots, dateKey);
+}
+
+// The day's times drawn against an hour axis, the same shape the expert's own
+// schedule uses. A row of identical pills said when a slot started and
+// nothing about where it sat in the day.
+const SD_FIRST_HOUR = 7;
+const SD_LAST_HOUR = 19;
+const SD_HOUR_PX = 44;
+
+function slotMinutes(t) {
+  const [h, m] = String(t || '0:0').split(':').map(Number);
+  return h * 60 + m;
+}
+
+function renderDayGrid(daySlots, dateKey) {
+  const grid = document.getElementById('slot-grid');
+  grid.innerHTML = '';
+
+  if (!daySlots.length) {
+    grid.innerHTML = '<div class="slot-empty">No open times on this date.</div>';
+    return;
+  }
+
+  const body = document.createElement('div');
+  body.className = 'sd-grid';
+
+  const hours = document.createElement('div');
+  hours.className = 'sd-hours';
+  for (let h = SD_FIRST_HOUR; h <= SD_LAST_HOUR; h++) {
+    const label = document.createElement('i');
+    label.textContent = h === 12 ? '12pm' : (h > 12 ? (h - 12) + 'pm' : h + 'am');
+    hours.appendChild(label);
+  }
+  body.appendChild(hours);
+
+  const col = document.createElement('div');
+  col.className = 'sd-col';
+  col.style.height = ((SD_LAST_HOUR - SD_FIRST_HOUR + 1) * SD_HOUR_PX) + 'px';
+
   daySlots.forEach(slot => {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'slot-btn';
-    btn.innerHTML =
-      '<span class="slot-time">' + formatTime(slot.start_time) + '</span>' +
-      '<span class="slot-meta">' + slotLength(slot) + ucfirst(slot.slot_type || 'consultation') + '</span>';
-    btn.onclick = () => pickSlot(btn, slot, dateKey);
-    forceInteractive(btn);
-    grid.appendChild(btn);
+    const from = slotMinutes(slot.start_time);
+    const to = slotMinutes(slot.end_time);
+    const top = ((from - SD_FIRST_HOUR * 60) / 60) * SD_HOUR_PX;
+    const height = Math.max(((to - from) / 60) * SD_HOUR_PX, 18);
+
+    const block = document.createElement('button');
+    block.type = 'button';
+    block.className = 'sd-slot';
+    block.style.top = Math.max(top, 0) + 'px';
+    block.style.height = height + 'px';
+    block.innerHTML = '<b>' + formatTime(slot.start_time) + ' – ' + formatTime(slot.end_time) + '</b>'
+      + (height > 34 ? '<span>' + slotLength(slot) + ucfirst(slot.slot_type || 'consultation') + '</span>' : '');
+    block.title = formatTime(slot.start_time) + ' – ' + formatTime(slot.end_time);
+    block.onclick = () => pickSlot(block, slot, dateKey);
+    forceInteractive(block);
+    col.appendChild(block);
   });
+
+  body.appendChild(col);
+  grid.appendChild(body);
 }
 
 /** Choosing a time arms the Confirm button; it does not book on its own. */
 function pickSlot(btn, slot, dateKey) {
-  document.querySelectorAll('#slot-grid .slot-btn').forEach(b => b.classList.remove('picked'));
+  document.querySelectorAll('#slot-grid .sd-slot').forEach(b => b.classList.remove('picked'));
   btn.classList.add('picked');
 
   selectedSlot = { scheduleId: slot.schedule_id, dateKey: dateKey };
