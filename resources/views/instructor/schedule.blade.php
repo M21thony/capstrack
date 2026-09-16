@@ -123,119 +123,27 @@
       <!-- RIGHT: Side column -->
       <div class="side-col">
 
-        <!-- Nothing being changed yet. The panel says what it is for rather
-             than sitting there as an empty form. -->
-        <div class="form-card sd-idle" id="slot-editor-idle">
-          <div class="form-card-title">
-            <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-            Add or edit a slot
-          </div>
-          <p class="sd-idle-text">Click a time on the calendar to add a slot there, or click a slot you already have to change it.</p>
-        </div>
-
-        <div class="sd-card" id="slot-dialog" hidden>
-          <div class="sd-modal" role="group" aria-labelledby="sd-title">
-            <header class="sd-head">
-              <div>
-                <h2 class="sd-title" id="sd-title">New consultation slot</h2>
-                <p class="sd-when" id="sd-when"></p>
-              </div>
-              <button type="button" class="ga-icon" onclick="closeSlotDialog()" aria-label="Close">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-              </button>
-            </header>
-
-            <div class="sd-body">
-              <div class="recur-banner" id="recur-banner" style="display:none">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M17 2.1 21 6l-4 3.9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>
-                  <path d="M7 21.9 3 18l4-3.9"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
-                </svg>
-                <span id="recur-banner-text"></span>
-              </div>
-
-              <div id="edit-mode-banner" style="display:none;padding:8px 12px;margin-bottom:11px;background:var(--accent-light);border:1px solid var(--accent);border-radius:8px;color:var(--accent3);font-size:12px;font-weight:600">
-                Editing existing slot
-              </div>
-
-              <div id="add-slot-fields">
-                <div class="f-group">
-                  <label class="f-label" for="f-start">Starts</label>
-                  <input class="f-input" type="time" id="f-start" value="09:00"
-                         style="max-width:130px"
-                         onchange="onStartChanged()" oninput="onStartChanged()"/>
-                </div>
-
-                <div class="f-group">
-                  <label class="f-label">Runs for</label>
-                  <div class="dur-row">
-                    <button type="button" class="dur-chip" data-mins="30" onclick="setDuration(30)" title="30 minutes">30m</button>
-                    <button type="button" class="dur-chip is-on" data-mins="60" onclick="setDuration(60)" title="1 hour">1h</button>
-                    <button type="button" class="dur-chip" data-mins="90" onclick="setDuration(90)" title="1 hour 30 minutes">1&frac12;h</button>
-                    <button type="button" class="dur-chip" data-mins="120" onclick="setDuration(120)" title="2 hours">2h</button>
-                  </div>
-                </div>
-
-                <p class="slot-derived" id="slot-derived"></p>
-
-                <div id="time-overlap-warning" style="display:none">
-                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5">
-                    <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-                  </svg>
-                  <span id="time-overlap-text">This time overlaps with an existing slot.</span>
-                </div>
-
-                <button type="button" class="slot-more-toggle" id="slot-more-toggle"
-                        aria-expanded="false" aria-controls="slot-more" onclick="toggleSlotMore()">
-                  Change type, teams or repeat
-                  <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
-                </button>
-
-                <div id="slot-more" hidden>
-                  <div class="f-group">
-                    <label class="f-label" for="f-end">Ends</label>
-                    <input class="f-input" type="time" id="f-end" value="10:00"
-                           style="max-width:130px"
-                           onchange="onEndChanged()" oninput="onEndChanged()"/>
-                  </div>
-
-                  <div class="f-group">
-                    <label class="f-label" for="f-type">Slot Type</label>
-                    <select class="f-input" id="f-type" onchange="updateSlotDerived()">
-                      <option value="consult">Consultation</option>
-                      <option value="defense">Defense</option>
-                    </select>
-                  </div>
-
-                  <div class="f-group">
-                    <label class="f-label" for="f-max">Max Teams per Slot</label>
-                    <input class="f-input" type="number" id="f-max" value="1" min="1" max="5" onchange="updateSlotDerived()"/>
-                  </div>
-
-                  <div class="f-group" style="margin-bottom:0" id="f-recur-group">
-                    <label class="f-label" for="f-recur">Recurrence</label>
-                    <select class="f-input" id="f-recur" onchange="updateSlotDerived()">
-                      <option value="weekly" selected>Every week (same day)</option>
-                      <option value="once">One-time only</option>
-                      <option value="biweekly">Every 2 weeks</option>
-                    </select>
-                    <div id="f-recur-locked-note" style="display:none;font-size:11px;color:var(--text3);margin-top:4px">Switching to a single date? Pick the date above.</div>
-                  </div>
-                </div>
-              </div>
-
-              <div class="sd-booking" id="sd-booking" hidden></div>
-            </div>
-
-            <footer class="sd-foot">
-              <button type="button" class="btn btn-ghost sd-danger" id="sd-delete" onclick="deleteFromDialog()" hidden>Delete</button>
-              <button type="button" class="btn btn-ghost" id="sd-skip" onclick="skipFromDialog()" hidden>Skip this week</button>
-              <button type="button" class="btn btn-ghost" id="sd-avail" onclick="toggleFromDialog()" hidden>Mark unavailable</button>
-              <span class="sd-spacer"></span>
-              <button type="button" class="btn btn-ghost" onclick="closeSlotDialog()">Cancel</button>
-              <button type="button" class="btn btn-primary" id="save-slot-btn" onclick="saveSlot()">Save slot</button>
-            </footer>
-          </div>
+        <!-- What saveSlot() reads. The bubble on the calendar is the only
+             thing that shows any of it. -->
+        <div id="slot-fields" hidden>
+          <input type="time" id="f-start" value="09:00" onchange="onStartChanged()">
+          <input type="time" id="f-end" value="10:00" onchange="onEndChanged()">
+          <select id="f-type"><option value="consult" selected>Consultation</option><option value="defense">Defense</option></select>
+          <input type="number" id="f-max" value="1">
+          <select id="f-recur">
+            <option value="once" selected>One-time only</option>
+            <option value="weekly">Every week (same day)</option>
+            <option value="biweekly">Every 2 weeks</option>
+          </select>
+          <div id="f-recur-locked-note"></div>
+          <div id="edit-mode-banner"></div>
+          <div id="recur-banner"><span id="recur-banner-text"></span></div>
+          <div id="time-overlap-warning" style="display:none"><span id="time-overlap-text"></span></div>
+          <div id="slot-derived"></div>
+          <div id="slot-more" hidden></div>
+          <button type="button" id="slot-more-toggle"></button>
+          <button type="button" id="save-slot-btn"></button>
+          <div class="dur-row"><button type="button" class="dur-chip is-on" data-mins="60"></button></div>
         </div>
 
         <!-- Upcoming Appointments -->
@@ -582,44 +490,21 @@
 /* One slot, added or edited. A dialog rather than a panel down the side: the
    day grid is where slots are read, so the form only appears when one is
    actually being changed. */
-/* The editor lives in the column beside the calendar, not over it: the day
-   stays fully visible while its times are being changed. */
-.sd-card{margin-bottom:14px}
-.sd-card[hidden],.sd-idle[hidden]{display:none}
-.sd-idle-text{margin:0;font-size:12px;color:var(--text3);line-height:1.5}
-.sd-modal{display:flex;flex-direction:column;background:var(--bg2);border:1px solid var(--border);border-radius:12px;overflow:hidden}
-.sd-head{display:flex;align-items:flex-start;gap:12px;padding:14px 16px 11px;border-bottom:1px solid var(--border)}
-.sd-head>div{flex:1;min-width:0}
-.sd-title{margin:0;font-size:15px;font-weight:700;color:var(--text)}
-.sd-when{margin:2px 0 0;font-size:12.5px;color:var(--text3)}
-.sd-body{padding:14px 16px}
-.sd-body .f-group:last-of-type{margin-bottom:0}
-.sd-foot{display:flex;align-items:center;gap:6px;padding:10px 16px;border-top:1px solid var(--border);flex-wrap:wrap}
-.sd-foot .btn{flex:none}
-.sd-foot .btn-ghost{background:var(--bg2);border:1px solid var(--border);color:var(--text2)}
-.sd-foot .btn-ghost:hover{border-color:var(--text3);color:var(--text)}
-.sd-foot .sd-danger:hover{border-color:var(--red,#dc2626);color:var(--red,#dc2626)}
-.sd-spacer{flex:1}
-/* Who has the slot, and their request to call it off. */
-.sd-booking{margin-top:14px;padding:11px 12px;border:1px solid var(--border);border-radius:10px;background:var(--bg3);font-size:12.5px;color:var(--text2);line-height:1.5}
-.sd-booking b{color:var(--text)}
-.sd-booking .slot-acts{display:flex;gap:8px;margin-top:9px}
 </style>
 
 <!-- ─── ONE SLOT: ADD OR EDIT ─────────────────────────────────────────────── -->
 
 <style>
-/* Adding one slot: a small bubble where you clicked, the way Google Calendar
-   asks. Anything beyond a time and how often it repeats is behind More
-   options, which opens the full editor in the column. */
-.qa-pop{position:absolute;z-index:95;width:320px;max-width:calc(100vw - 24px)}
+/* One consultation on one date, asked for where you clicked. The weekly hours
+   are Set availability's job, so nothing here repeats. */
+.qa-pop{position:absolute;z-index:95;width:300px;max-width:calc(100vw - 24px)}
 .qa-pop[hidden]{display:none}
 .qa-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;
   box-shadow:0 14px 38px -10px rgba(0,0,0,.45);overflow:hidden}
 .qa-head{display:flex;align-items:center;gap:10px;padding:12px 12px 0}
 .qa-title{flex:1;min-width:0;font-size:14px;font-weight:700;color:var(--text)}
-.qa-body{padding:10px 14px 14px}
-.qa-row{display:flex;align-items:flex-start;gap:11px;padding:7px 0}
+.qa-body{padding:8px 14px 12px}
+.qa-row{display:flex;align-items:flex-start;gap:11px;padding:6px 0}
 .qa-row>svg{width:16px;height:16px;flex-shrink:0;fill:none;stroke:var(--text3);stroke-width:2;margin-top:3px}
 .qa-row>div{flex:1;min-width:0}
 .qa-date{font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px}
@@ -627,28 +512,25 @@
 .qa-times input{height:30px;box-sizing:border-box;padding:0 8px;border:1px solid var(--border);border-radius:8px;
   background:var(--bg2);color:var(--text);font:inherit;font-size:12.5px;min-width:0;flex:1}
 .qa-times span{color:var(--text3);font-size:12px}
-.qa-seg{display:grid;grid-template-columns:1fr 1fr;gap:5px}
-.qa-seg label{position:relative;cursor:pointer}
-.qa-seg input{position:absolute;inset:0;opacity:0;margin:0;cursor:pointer}
-.qa-seg span{display:block;text-align:center;padding:6px 4px;border:1px solid var(--border);border-radius:8px;
-  background:var(--bg2);font-size:12px;font-weight:600;color:var(--text2);white-space:nowrap;
-  overflow:hidden;text-overflow:ellipsis}
-.qa-seg input:checked+span{border-color:var(--accent);background:var(--accent-light);color:var(--accent3)}
-.qa-seg input:focus-visible+span{outline:2px solid var(--accent);outline-offset:1px}
-.qa-note{margin-top:8px;font-size:11.5px;line-height:1.45;color:var(--text3)}
+.qa-note{margin-top:6px;font-size:11.5px;line-height:1.45;color:var(--text3)}
 .qa-note.is-bad{color:var(--red,#dc2626)}
-.qa-foot{display:flex;align-items:center;gap:8px;padding:0 14px 14px}
-.qa-more{flex:1;text-align:left;background:none;border:0;padding:0;cursor:pointer;
-  font:600 12.5px 'DM Sans',sans-serif;color:var(--accent3)}
-.qa-more:hover{text-decoration:underline}
+.qa-booked{margin-top:8px;padding:9px 11px;border:1px solid var(--border);border-radius:9px;background:var(--bg3);
+  font-size:12px;line-height:1.5;color:var(--text2)}
+.qa-booked b{color:var(--text)}
+.qa-foot{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:0 14px 13px}
+.qa-spacer{flex:1}
+.qa-act{background:none;border:1px solid var(--border);border-radius:8px;padding:5px 10px;cursor:pointer;
+  font:600 11.5px 'DM Sans',sans-serif;color:var(--text2)}
+.qa-act:hover{border-color:var(--text3);color:var(--text)}
+.qa-act.is-danger:hover{border-color:var(--red,#dc2626);color:var(--red,#dc2626)}
 .qa-foot .btn{flex:none}
 </style>
 
-<!-- ─── QUICK ADD: ONE SLOT ───────────────────────────────────────────────── -->
+<!-- ─── ONE CONSULTATION ──────────────────────────────────────────────────── -->
 <div class="qa-pop" id="quick-add" hidden>
   <div class="qa-card" role="dialog" aria-labelledby="qa-title">
     <div class="qa-head">
-      <div class="qa-title" id="qa-title">New consultation slot</div>
+      <div class="qa-title" id="qa-title">New consultation</div>
       <button type="button" class="ga-icon" onclick="closeQuickAdd()" aria-label="Close">
         <svg viewBox="0 0 24 24" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
@@ -667,19 +549,15 @@
         </div>
       </div>
 
-      <div class="qa-row">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 2.1 21 6l-4 3.9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 21.9 3 18l4-3.9"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
-        <div class="qa-seg" role="radiogroup" aria-label="How often">
-          <label><input type="radio" name="qa-recur" value="weekly" onchange="quickAddChanged()"><span id="qa-weekly">Every week</span></label>
-          <label><input type="radio" name="qa-recur" value="once" onchange="quickAddChanged()"><span>This date only</span></label>
-        </div>
-      </div>
-
       <div class="qa-note" id="qa-note"></div>
+      <div class="qa-booked" id="qa-booked" hidden></div>
     </div>
 
     <div class="qa-foot">
-      <button type="button" class="qa-more" onclick="quickAddMoreOptions()">More options</button>
+      <button type="button" class="qa-act is-danger" id="qa-delete" onclick="quickDelete()" hidden>Delete</button>
+      <button type="button" class="qa-act" id="qa-skip" onclick="quickSkip()" hidden>Skip this week</button>
+      <button type="button" class="qa-act" id="qa-avail" onclick="quickToggle()" hidden>Mark unavailable</button>
+      <span class="qa-spacer"></span>
       <button type="button" class="btn btn-primary" id="qa-save" onclick="saveQuickAdd()">Save</button>
     </div>
   </div>
@@ -1376,7 +1254,7 @@ function renderWeek() {
         // Not redrawn here: the card is placed beside this very element, and
         // redrawing would replace it mid-click.
         selectedDate = key;
-        editSlot(slot.schedule_id, key, index, el);
+        openQuickEdit(slot, key, index, el);
       });
 
       col.appendChild(el);
@@ -1430,148 +1308,91 @@ function labelSaveButton(key) {
   btn.innerHTML = tick + (recur === 'once' ? 'Save this date' : 'Save every ' + day);
 }
 
-// ══════════════════════════════════════════════════════════════
-//  THE SLOT DIALOG
-// ══════════════════════════════════════════════════════════════
-// What the dialog is currently about, so its own buttons know what to act on.
-let dialogSlot = null;
 
-function dayLabel(key) {
-  const [y, m, d] = key.split('-').map(Number);
-  return `${DAY_NAMES[makeDate(y, m, d).getDay()]}, ${MONTHS[m - 1]} ${d}, ${y}`;
-}
+// ══════════════════════════════════════════════════════════════
+//  ONE CONSULTATION
+//  Adding or changing a single date. The weekly hours belong to Set
+//  availability, so nothing here repeats and there is no second form.
+// ══════════════════════════════════════════════════════════════
+let quickAddKey = null;
+let quickSlot = null; // the slot being changed, or null when adding
 
-/**
- * Add a slot. Called by the + button and by clicking empty space in the day
- * or week grid, where the time clicked is where the slot starts.
- */
-function openSlotDialog(key, startMinutes, anchor) {
-  // Nothing picked yet: the slot lands on the day being looked at, or today.
+function openQuickAdd(key, startMinutes, anchor) {
   const now = weekAnchor || new Date();
-  const day = key || selectedDate || formatKey(now.getFullYear(), now.getMonth(), now.getDate());
-  if (!day) return;
 
-  selectedDate = day;
+  quickAddKey = key || selectedDate || formatKey(now.getFullYear(), now.getMonth(), now.getDate());
+  quickSlot = null;
   cancelEdit();
-  dialogSlot = null;
 
-  const start = startMinutes != null ? minutesToTime(startMinutes) : firstFreeStart(day);
-  document.getElementById('f-start').value = start;
-  document.getElementById('f-end').value = minutesToTime(timeToMinutes(start) + (currentDurationMinutes() || 60));
-  document.getElementById('f-recur').value = 'weekly';
-  document.getElementById('f-type').value = 'consult';
-  document.getElementById('f-max').value = '1';
-  markDurationChip(currentDurationMinutes() || 60);
+  const start = startMinutes != null ? minutesToTime(startMinutes) : firstFreeStart(quickAddKey);
 
-  document.getElementById('sd-title').textContent = 'New consultation slot';
-  document.getElementById('sd-booking').hidden = true;
-  ['sd-delete', 'sd-skip', 'sd-avail'].forEach((id) => { document.getElementById(id).hidden = true; });
+  document.getElementById('qa-title').textContent = 'New consultation';
+  document.getElementById('qa-start').value = start;
+  document.getElementById('qa-end').value = minutesToTime(timeToMinutes(start) + 60);
+  document.getElementById('qa-booked').hidden = true;
+  ['qa-delete', 'qa-skip', 'qa-avail'].forEach((id) => { document.getElementById(id).hidden = true; });
+  document.getElementById('qa-save').hidden = false;
 
-  showSlotDialog(day, anchor);
-  checkTimeOverlap();
-  updateSlotDerived();
+  showQuickAdd(anchor);
 }
 
-/** Everything the dialog shows about a slot that already exists. */
-function showEditDialog(s, key, index, anchor) {
-  dialogSlot = { slot: s, key, index, scheduleId: s.schedule_id };
+/** A slot that already exists: its time, and what can be done to it. */
+function openQuickEdit(s, key, index, anchor) {
+  quickAddKey = key;
+  quickSlot = { slot: s, key, index, scheduleId: s.schedule_id };
+
+  editingSlotId = s.schedule_id;
+  editingSlotKey = key;
+  selectedDate = key;
 
   const repeats = (s.recur || 'weekly') !== 'once';
-  document.getElementById('sd-title').textContent = s.hasBooking ? 'Booked slot' : 'Edit slot';
 
-  // A booked slot is not the adviser's to move; the booking is cancelled first.
-  document.getElementById('sd-delete').hidden = !!s.hasBooking || !s.schedule_id;
-  document.getElementById('sd-skip').hidden = !repeats || !!s.hasBooking || !s.schedule_id;
-  const avail = document.getElementById('sd-avail');
+  document.getElementById('qa-title').textContent = s.hasBooking ? 'Booked consultation' : 'Consultation';
+  document.getElementById('qa-start').value = (s.start_time || s.start || '').slice(0, 5);
+  document.getElementById('qa-end').value = (s.end_time || s.end || '').slice(0, 5);
+
+  // A slot a team has booked is not the adviser's to move; the booking is
+  // cancelled first.
+  ['qa-start', 'qa-end'].forEach((id) => { document.getElementById(id).disabled = !!s.hasBooking; });
+  document.getElementById('qa-save').hidden = !!s.hasBooking;
+  document.getElementById('qa-delete').hidden = !!s.hasBooking || !s.schedule_id;
+  document.getElementById('qa-skip').hidden = !repeats || !!s.hasBooking || !s.schedule_id;
+
+  const avail = document.getElementById('qa-avail');
   avail.hidden = !!s.hasBooking || !s.schedule_id;
   avail.textContent = s.is_available ? 'Mark unavailable' : 'Mark available';
 
-  const booking = document.getElementById('sd-booking');
+  const booked = document.getElementById('qa-booked');
   const asked = !!(s.booking && s.booking.cancel_requested);
+  booked.hidden = !s.hasBooking;
 
   if (s.hasBooking) {
-    booking.hidden = false;
-    booking.innerHTML = '<b>' + escHtml(s.teamName || 'Booked') + '</b>'
+    booked.innerHTML = '<b>' + escHtml(s.teamName || 'Booked') + '</b>'
       + (s.topic ? '<br>' + escHtml(s.topic) : '')
       + (asked
         ? '<br><b>Cancellation requested</b>'
           + (s.booking.cancel_reason ? ' · “' + escHtml(s.booking.cancel_reason) + '”' : '')
-          + '<span class="slot-acts">'
-          + '<button type="button" class="slot-act" onclick="closeSlotDialog();decideCancellation(' + s.booking.booking_id + ", 'approve', '" + key + '\')">Approve</button>'
-          + '<button type="button" class="slot-act" onclick="closeSlotDialog();decideCancellation(' + s.booking.booking_id + ", 'decline', '" + key + '\')">Keep booking</button>'
-          + '</span>'
+          + '<div class="qa-foot" style="padding:8px 0 0">'
+          + '<button type="button" class="qa-act" onclick="closeQuickAdd();decideCancellation(' + s.booking.booking_id + ", 'approve', '" + key + '\')">Approve</button>'
+          + '<button type="button" class="qa-act" onclick="closeQuickAdd();decideCancellation(' + s.booking.booking_id + ", 'decline', '" + key + '\')">Keep booking</button>'
+          + '</div>'
         : '');
-  } else {
-    booking.hidden = true;
   }
 
-  showSlotDialog(key, anchor);
+  showQuickAdd(anchor);
 }
 
-/** Show the editor in the side column. Nothing moves over the calendar. */
-function showSlotDialog(key) {
-  const panel = document.getElementById('slot-dialog');
+/** "Monday, September 7, 2026" - the date the bubble is about. */
+function dayLabel(key) {
+  const [y, m, d] = key.split('-').map(Number);
 
-  document.getElementById('sd-when').textContent = dayLabel(key);
-  labelSaveButton(key);
-  panel.hidden = false;
-  document.getElementById('slot-editor-idle').hidden = true;
-
-  // On a narrow screen the column sits under the calendar, so bring it into
-  // view rather than leaving the click looking like it did nothing.
-  panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  return `${DAY_NAMES[makeDate(y, m, d).getDay()]}, ${MONTHS[m - 1]} ${d}, ${y}`;
 }
 
-function closeSlotDialog() {
-  document.getElementById('slot-dialog').hidden = true;
-  document.getElementById('slot-editor-idle').hidden = false;
-  document.getElementById('time-overlap-warning').style.display = 'none';
-  dialogSlot = null;
-  cancelEdit();
-}
-
-function deleteFromDialog() {
-  if (!dialogSlot) return;
-  const { key, index, scheduleId } = dialogSlot;
-  closeSlotDialog();
-  deleteSlot(key, index, scheduleId);
-}
-
-function skipFromDialog() {
-  if (!dialogSlot) return;
-  const { key, scheduleId } = dialogSlot;
-  closeSlotDialog();
-  skipThisWeek(scheduleId, key);
-}
-
-function toggleFromDialog() {
-  if (!dialogSlot) return;
-  const { key, index, scheduleId } = dialogSlot;
-  closeSlotDialog();
-  toggleSlot(scheduleId, key, index);
-}
-
-
-// ══════════════════════════════════════════════════════════════
-//  QUICK ADD
-//  One slot, asked for where you clicked. The full editor is a link away.
-// ══════════════════════════════════════════════════════════════
-let quickAddKey = null;
-
-function openQuickAdd(key, startMinutes, anchor) {
-  const now = weekAnchor || new Date();
-  quickAddKey = key || selectedDate || formatKey(now.getFullYear(), now.getMonth(), now.getDate());
-
-  const [y, m, d] = quickAddKey.split('-').map(Number);
-  const start = startMinutes != null ? minutesToTime(startMinutes) : firstFreeStart(quickAddKey);
+function showQuickAdd(anchor) {
+  const pop = document.getElementById('quick-add');
 
   document.getElementById('qa-date').textContent = dayLabel(quickAddKey);
-  document.getElementById('qa-start').value = start;
-  document.getElementById('qa-end').value = minutesToTime(timeToMinutes(start) + 60);
-  document.getElementById('qa-weekly').textContent = 'Every ' + DAY_NAMES[makeDate(y, m, d).getDay()];
-  document.querySelector('input[name="qa-recur"][value="weekly"]').checked = true;
-
-  const pop = document.getElementById('quick-add');
   pop.hidden = false;
   placeQuickAdd(pop, anchor);
 
@@ -1618,9 +1439,11 @@ function closeQuickAdd() {
   document.removeEventListener('mousedown', closeQuickAddOnOutside);
   document.removeEventListener('keydown', closeQuickAddOnEscape);
   quickAddKey = null;
+  quickSlot = null;
+  cancelEdit();
 }
 
-/** What the bubble is about to save, and whether it can. */
+/** What it is about to save, and whether it can. */
 function quickAddChanged() {
   const start = document.getElementById('qa-start').value;
   const end = document.getElementById('qa-end').value;
@@ -1635,8 +1458,6 @@ function quickAddChanged() {
     return;
   }
 
-  // The full form is what saveSlot() reads, so the bubble fills it in and the
-  // overlap check it already has does the rest.
   writeQuickAddToForm();
   selectedDate = quickAddKey;
   checkTimeOverlap();
@@ -1647,38 +1468,60 @@ function quickAddChanged() {
 
   note.textContent = clash
     ? document.getElementById('time-overlap-text').textContent
-    : length + ' · a consultation for 1 team';
+    : (quickSlot && (quickSlot.slot.recur || 'weekly') !== 'once'
+      ? length + ' · part of your weekly hours'
+      : length + ' · this date only');
   note.classList.toggle('is-bad', clash);
   save.disabled = clash;
 }
 
+/** The hidden fields saveSlot() reads. */
 function writeQuickAddToForm() {
-  const recur = document.querySelector('input[name="qa-recur"]:checked')?.value || 'weekly';
-
   document.getElementById('f-start').value = document.getElementById('qa-start').value;
   document.getElementById('f-end').value = document.getElementById('qa-end').value;
-  document.getElementById('f-recur').value = recur;
   document.getElementById('f-type').value = 'consult';
   document.getElementById('f-max').value = '1';
+  // One date. Repeating hours are set in Set availability.
+  document.getElementById('f-recur').value = quickSlot ? (quickSlot.slot.recur || 'weekly') : 'once';
 }
 
 function saveQuickAdd() {
   if (!quickAddKey) return;
 
-  cancelEdit();
   writeQuickAddToForm();
   selectedDate = quickAddKey;
-  closeQuickAdd();
+  closeQuickAddKeepingEdit();
   saveSlot();
 }
 
-/** Everything else - type, teams, how it repeats - in the editor beside the calendar. */
-function quickAddMoreOptions() {
-  const key = quickAddKey;
-  const start = timeToMinutes(document.getElementById('qa-start').value);
+/** Close without clearing what is being edited - saveSlot still needs it. */
+function closeQuickAddKeepingEdit() {
+  document.getElementById('quick-add').hidden = true;
+  document.removeEventListener('mousedown', closeQuickAddOnOutside);
+  document.removeEventListener('keydown', closeQuickAddOnEscape);
+  quickAddKey = null;
+  quickSlot = null;
+}
 
+function quickDelete() {
+  if (!quickSlot) return;
+  const { key, index, scheduleId } = quickSlot;
   closeQuickAdd();
-  openSlotDialog(key, start);
+  deleteSlot(key, index, scheduleId);
+}
+
+function quickSkip() {
+  if (!quickSlot) return;
+  const { key, scheduleId } = quickSlot;
+  closeQuickAdd();
+  skipThisWeek(scheduleId, key);
+}
+
+function quickToggle() {
+  if (!quickSlot) return;
+  const { key, index, scheduleId } = quickSlot;
+  closeQuickAdd();
+  toggleSlot(scheduleId, key, index);
 }
 
 // Remove one week from a repeating slot. The slot stays; every other week
@@ -2009,9 +1852,8 @@ function editSlot(scheduleId, key, index, anchor) {
   if (btn) labelSaveButton(selectedDate);
 
   checkTimeOverlap();
-  markDurationChip(timeToMinutes(document.getElementById('f-end').value) - timeToMinutes(document.getElementById('f-start').value));
   updateSlotDerived();
-  showEditDialog(s, key, index, anchor);
+  openQuickEdit(s, key, index, anchor);
 }
 
 function cancelEdit() {
@@ -2034,7 +1876,7 @@ function cancelEdit() {
 }
 
 function resetForm() {
-  closeSlotDialog();
+  closeQuickAdd();
   document.getElementById('f-start').value = '09:00';
   document.getElementById('f-end').value   = '10:00';
   document.getElementById('f-type').value  = 'consult';
