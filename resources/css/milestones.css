@@ -1,0 +1,276 @@
+/*
+ * The milestone tracker, the check window and the Edit milestones window.
+ * Everything is prefixed ms- so none of it collides with the admin and
+ * expert stylesheets it sits inside. Colours come from those pages' own
+ * tokens: gold only for selection and the one action; green, amber and red
+ * only for closed, waiting and overdue, always with a word beside them.
+ */
+
+.ms-app, .ms-dialog { font-family: 'DM Sans', system-ui, sans-serif; color: var(--text, #1e2128); }
+.ms-app *, .ms-dialog * { box-sizing: border-box; }
+.ms-app button, .ms-app input, .ms-app select, .ms-app textarea,
+.ms-dialog button, .ms-dialog input, .ms-dialog select, .ms-dialog textarea { font: inherit; color: inherit; }
+.ms-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.ms-spacer { flex: 1; }
+.ms-hint { font-size: 12.5px; color: var(--text3); }
+.ms-i { width: 16px; height: 16px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.ms-chevi { transition: transform .15s; }
+[aria-expanded="true"] .ms-chevi { transform: rotate(90deg); }
+.ms-app :focus-visible, .ms-dialog :focus-visible { outline: 2px solid var(--accent3, #8a6e10); outline-offset: 2px; }
+.ms-app input[type=checkbox], .ms-dialog input[type=checkbox] { accent-color: var(--accent3, #8a6e10); width: 16px; height: 16px; margin: 0; cursor: pointer; }
+
+/* Buttons */
+.ms-btn { display: inline-flex; align-items: center; justify-content: center; gap: 5px; border: 1px solid var(--border2); background: var(--bg2); border-radius: 6px; padding: 4px 11px; font-size: 12.5px; font-weight: 600; cursor: pointer; color: var(--text2); min-height: 30px; white-space: nowrap; }
+/* An action's icon sits on its own tinted tile, so the buttons read at a glance. */
+.ms-btn:has(.ms-ico) { padding-left: 4px; }
+.ms-ico { width: 22px; height: 22px; border-radius: 6px; display: grid; place-items: center; flex: none; background: var(--bg4); color: var(--text2); }
+.ms-ico .ms-i { width: 13px; height: 13px; stroke-width: 2.4; }
+.ms-btn-gold .ms-ico { background: rgba(24,25,31,.14); color: var(--navy-dark, #18191f); }
+.ms-btn-warn .ms-ico { background: var(--red-bg); color: var(--red); }
+.ms-btn-add { color: var(--accent3); border-color: #e3d08f; }
+.ms-btn-add:hover { background: var(--accent-light); color: var(--accent3); }
+.ms-btn-add .ms-ico { background: #f5ecd0; color: var(--accent3); }
+.ms-btn-danger .ms-ico { background: rgba(255,255,255,.2); color: #fff; }
+.ms-bulk.ms-on .ms-ico { background: rgba(255,255,255,.16); color: #fff; }
+.ms-bulk.ms-on .ms-btn-warn .ms-ico { background: rgba(255,120,120,.22); color: #ffb4b4; }
+.ms-bulk.ms-on .ms-btn-gold { background: var(--accent); border-color: var(--accent); color: var(--navy-dark, #18191f); }
+.ms-unsaved { color: var(--amber); font-size: 12.5px; }
+.ms-pending-slot { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+/* A row or name with edits not saved yet. */
+.ms-erow.ms-dirty { background: var(--amber-bg); }
+
+/* A row's More menu. It sits in the top layer, above the window, placed under its button. */
+.ms-more { display: inline-flex; }
+.ms-menu { position: fixed; inset: auto; margin: 0; padding: 4px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg2, #fff); color: var(--text, #1e2128); box-shadow: 0 10px 28px rgba(0,0,0,.18); min-width: 150px; font-family: 'DM Sans', system-ui, sans-serif; }
+.ms-menu:popover-open { display: grid; gap: 2px; }
+.ms-menu .ms-menu-item { justify-content: flex-start; width: 100%; min-height: 34px; border-color: transparent; background: none; color: var(--text2); }
+.ms-menu .ms-menu-item:hover, .ms-menu .ms-menu-item:focus-visible { background: var(--bg3); color: var(--text); }
+.ms-menu .ms-menu-warn, .ms-menu .ms-menu-warn:hover, .ms-menu .ms-menu-warn:focus-visible { color: var(--red); }
+.ms-menu .ms-menu-warn:hover, .ms-menu .ms-menu-warn:focus-visible { background: var(--red-bg); }
+.ms-menu .ms-menu-warn .ms-ico { background: var(--red-bg); color: var(--red); }
+.ms-btn-more[aria-expanded="true"] { background: var(--bg3); border-color: var(--border2); }
+.ms-dirty-field { border-color: var(--amber) !important; background: var(--bg2) !important; }
+.ms-btn:hover { background: var(--bg3); color: var(--text); }
+.ms-btn-gold { background: var(--accent); border-color: var(--accent); color: var(--navy-dark, #18191f); }
+.ms-btn-gold:hover { background: var(--accent2); color: var(--navy-dark, #18191f); }
+.ms-btn-warn { color: var(--red); border-color: #efbcbc; }
+.ms-btn-warn:hover { background: var(--red-bg); color: var(--red); }
+.ms-btn-danger { background: var(--red); border-color: var(--red); color: #fff; }
+.ms-btn-danger:hover { background: #b91c1c; color: #fff; }
+.ms-btn-link { border-color: transparent; background: none; }
+.ms-x { background: none; border: 1px solid rgba(255,255,255,.2); color: #fff; border-radius: 8px; width: 32px; height: 32px; cursor: pointer; font-size: 17px; line-height: 1; flex: none; }
+
+/* Pills and chips */
+.ms-pill { display: inline-flex; align-items: center; font-size: 11.5px; font-weight: 600; padding: 1px 8px; border-radius: 999px; white-space: nowrap; }
+.ms-pill-red { background: var(--red-bg); color: var(--red); }
+.ms-pill-amb { background: var(--amber-bg); color: var(--amber); }
+.ms-pill-grn { background: var(--green-bg); color: var(--green); }
+.ms-chip { border: 1px solid var(--border); background: var(--bg2); border-radius: 999px; padding: 3px 11px; font-size: 12.5px; font-weight: 600; color: var(--text2); cursor: pointer; min-height: 30px; }
+.ms-chip[aria-pressed="true"] { border-color: var(--accent); background: #f5ecd0; color: var(--accent3); }
+.ms-search { border: 1px solid var(--border2); border-radius: 8px; padding: 4px 10px; min-height: 31px; width: 175px; background: var(--bg2); }
+.ms-search:focus { outline: none; border-color: var(--accent); }
+.ms-empty { padding: 22px; color: var(--text3); font-size: 13px; line-height: 1.6; }
+.ms-empty p { margin: 0 0 10px; }
+
+/* Choice buttons: the section (tracker) and the checklist (editor) */
+.ms-choices { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.ms-lab { font-size: 11px; color: var(--text3); font-weight: 700; text-transform: uppercase; letter-spacing: .06em; margin-right: 4px; }
+.ms-choice { position: relative; border: 1px solid var(--border2); background: var(--bg2); border-radius: 9px; padding: 3px 12px; min-height: 41px; cursor: pointer; text-align: left; display: grid; line-height: 1.22; }
+.ms-choice:hover { border-color: var(--accent); }
+.ms-choice b { font-size: 13.5px; }
+.ms-choice small { font-size: 11px; color: var(--text3); }
+.ms-choice[aria-selected="true"] { background: var(--navy-dark, #18191f); border-color: var(--navy-dark, #18191f); color: #fff; box-shadow: inset 0 -3px 0 var(--accent); }
+.ms-choice[aria-selected="true"] small { color: rgba(255,255,255,.65); }
+.ms-badge { position: absolute; top: -7px; right: -7px; min-width: 19px; height: 19px; border-radius: 999px; background: var(--accent); color: var(--navy-dark, #18191f); font-size: 10.5px; font-weight: 700; display: grid; place-items: center; padding: 0 5px; border: 2px solid var(--bg); }
+
+/* ── Tracker ─────────────────────────────────────────────────────────── */
+.ms-app { height: var(--ms-h, 70vh); display: grid; grid-template-rows: auto auto minmax(0, 1fr); gap: 10px; font-size: 13.5px; line-height: 1.5; }
+.ms-top { display: flex; align-items: center; gap: 8px 12px; flex-wrap: wrap; }
+.ms-h { font-size: 19.5px; margin: 0; letter-spacing: -.01em; font-weight: 600; }
+.ms-band { display: flex; align-items: center; gap: 12px 26px; flex-wrap: wrap; background: var(--accent-light); border: 1px solid #e3d08f; border-radius: 11px; padding: 8px 16px; }
+.ms-now { display: grid; line-height: 1.15; }
+.ms-now small { font-size: 10.5px; text-transform: uppercase; letter-spacing: .08em; color: var(--accent3); font-weight: 700; }
+.ms-now b { font-size: 23px; letter-spacing: -.01em; }
+.ms-now span { font-size: 12.5px; color: var(--text2); }
+.ms-stats { display: flex; gap: 24px; margin-left: auto; flex-wrap: wrap; }
+.ms-stat b { display: block; font-size: 17.5px; line-height: 1.2; font-variant-numeric: tabular-nums; }
+.ms-stat span { font-size: 11.5px; color: var(--text3); }
+.ms-stat-red b { color: var(--red); }
+.ms-stat-gold b { color: var(--accent3); }
+
+.ms-panel { background: var(--bg2); border: 1px solid var(--border); border-radius: 11px; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+.ms-panel-head { display: flex; align-items: center; gap: 7px; padding: 7px 13px; border-bottom: 1px solid var(--border); flex-wrap: wrap; min-height: 47px; }
+.ms-panel-foot { padding: 5px 13px; border-top: 1px solid var(--border); font-size: 12px; color: var(--text3); }
+/* The only thing that scrolls. */
+.ms-scroll { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; }
+
+.ms-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.ms-table thead th { position: sticky; top: 0; z-index: 3; font-size: 10.5px; text-transform: uppercase; letter-spacing: .04em; color: var(--text3); text-align: left; padding: 6px 8px; background: var(--bg3); border-bottom: 1px solid var(--border); line-height: 1.25; font-weight: 600; }
+.ms-table th.ms-w-team { width: 190px; }
+.ms-table th.ms-w-total { width: 92px; }
+.ms-table th.ms-w-st { width: 106px; }
+.ms-table td { padding: 0 8px; height: 41px; border-bottom: 1px solid var(--border); font-size: 12.5px; vertical-align: middle; overflow: hidden; white-space: nowrap; }
+.ms-table td.ms-none { color: var(--text3); padding: 14px; }
+.ms-team-row { cursor: pointer; }
+.ms-team-row:hover td { background: var(--bg3); }
+/* An opened team's row sticks under the column names while its list scrolls. */
+.ms-team-row.ms-open td { background: var(--accent-light); position: sticky; top: var(--ms-thead, 32px); z-index: 2; box-shadow: inset 0 -1px 0 #e3d08f; }
+.ms-team-row.ms-open td:first-child { box-shadow: inset 3px 0 0 var(--accent), inset 0 -1px 0 #e3d08f; }
+.ms-expander { border: none; background: none; cursor: pointer; display: flex; gap: 5px; align-items: center; text-align: left; padding: 0; font-weight: 700; font-size: 13.5px; min-height: 31px; max-width: 100%; min-width: 0; }
+.ms-expander span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ms-cell { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; padding: 2px 6px; border-radius: 6px; font-size: 11.5px; font-weight: 600; border: 1px solid var(--border); background: var(--bg3); color: var(--text3); white-space: nowrap; cursor: pointer; font-variant-numeric: tabular-nums; }
+.ms-cell-full { background: var(--green-bg); border-color: #aee0c0; color: var(--green); }
+.ms-cell-part { background: var(--bg2); color: var(--text2); }
+.ms-cell-late { background: var(--red-bg); border-color: #f1b5b5; color: var(--red); }
+.ms-cell-wait { background: var(--amber-bg); border-color: #e7c99d; color: var(--amber); }
+.ms-prog { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--text2); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.ms-track { height: 6px; border-radius: 999px; background: var(--bg4); overflow: hidden; display: flex; width: 48px; flex: none; }
+.ms-track i { display: block; height: 100%; }
+.ms-track-done { background: var(--green); }
+.ms-track-wait { background: var(--amber); opacity: .55; }
+
+.ms-detail-row td { background: var(--bg3); padding: 0; height: auto; white-space: normal; }
+.ms-inner { padding: 5px 13px 8px 37px; }
+.ms-inner-head { font-size: 12px; color: var(--text3); padding: 3px 0 5px; }
+.ms-inner-head b { color: var(--text2); font-weight: 600; }
+.ms-mgroup { border-top: 1px solid var(--border); }
+.ms-mrow { width: 100%; display: grid; grid-template-columns: 18px minmax(160px, 1fr) 110px 120px 150px; gap: 10px; align-items: center; border: 0; background: none; text-align: left; padding: 6px 0; cursor: pointer; font-size: 12.5px; color: var(--text2); }
+.ms-mrow b { font-size: 13px; color: var(--text); }
+.ms-mrow:hover b { text-decoration: underline; text-decoration-color: var(--accent); text-underline-offset: 3px; }
+.ms-item { display: grid; grid-template-columns: 16px minmax(200px, 1.3fr) 190px minmax(0, 1fr) auto; gap: 10px; align-items: center; font-size: 12.5px; padding: 4px 0 4px 28px; border-top: 1px solid var(--border); min-height: 36px; }
+.ms-item .ms-i { width: 15px; height: 15px; }
+.ms-item-title { font-weight: 600; }
+.ms-note { display: block; font-weight: 400; color: var(--amber); font-size: 12px; }
+.ms-who { font-size: 12px; color: var(--text3); }
+.ms-st-done { color: var(--green); }
+.ms-st-handed { color: var(--amber); }
+.ms-st-overdue { color: var(--red); }
+.ms-st-open { color: var(--text3); }
+
+/* ── Windows ─────────────────────────────────────────────────────────── */
+/* margin:auto is what centres a modal dialog; the page stylesheets reset every margin to 0. */
+.ms-dialog { margin: auto; inset: 0; border: 0; border-radius: 14px; padding: 0; box-shadow: 0 24px 60px rgba(0,0,0,.3); background: var(--bg2, #fff); font-size: 13.5px; line-height: 1.5; }
+.ms-dialog::backdrop { background: rgba(24,25,31,.55); }
+.ms-small { width: min(500px, calc(100vw - 32px)); }
+.ms-sd { padding: 16px; display: grid; gap: 10px; }
+.ms-sd h2 { margin: 0; font-size: 16px; line-height: 1.3; }
+.ms-sd p { margin: 0; color: var(--text2); }
+.ms-sd label { display: grid; gap: 4px; font-size: 12.5px; font-weight: 600; }
+.ms-sd textarea, .ms-sd select, .ms-sd input { border: 1px solid var(--border2); border-radius: 8px; padding: 6px 10px; font-weight: 400; min-height: 35px; font-size: 13px; background: var(--bg2); }
+.ms-sd textarea { min-height: 140px; resize: vertical; }
+.ms-two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.ms-acts { display: flex; justify-content: flex-end; gap: 6px; align-items: center; }
+.ms-sd .ms-acts .ms-btn { min-height: 37px; padding: 5px 15px; font-size: 13.5px; }
+
+/* Checking a signed paper */
+.ms-check { width: min(1040px, calc(100vw - 32px)); height: min(720px, calc(100vh - 32px)); }
+.ms-check[open] { display: grid; grid-template-rows: auto minmax(0, 1fr); }
+.ms-ck-head { display: flex; align-items: center; gap: 12px; padding: 10px 16px; background: var(--navy-dark, #18191f); color: #fff; border-bottom: 2px solid var(--accent); }
+.ms-ck-head b { font-size: 15px; }
+.ms-ck-head small { opacity: .65; font-size: 12.5px; }
+.ms-ck-head .ms-x { margin-left: auto; }
+.ms-ck-body { display: grid; grid-template-columns: minmax(0, 1fr) 320px; min-height: 0; }
+.ms-scan { background: #e5e6ea; display: grid; grid-template-rows: minmax(0, 1fr) auto; padding: 12px; gap: 8px; min-height: 0; }
+.ms-scan img { width: 100%; height: 100%; border: 0; object-fit: contain; background: #fff; border-radius: 4px; }
+.ms-scan-pages { min-height: 0; overflow: auto; display: grid; gap: 10px; align-content: start; }
+.ms-scan-pages canvas { width: 100%; height: auto; display: block; background: #fff; border-radius: 4px; box-shadow: 0 1px 3px rgba(24, 25, 31, .15); }
+.ms-scan-note { display: grid; place-items: center; height: 100%; min-height: 200px; color: var(--text3); font-size: 13px; text-align: center; }
+.ms-scan-open { font-size: 12.5px; color: var(--accent3); font-weight: 600; justify-self: start; }
+.ms-ck-side { padding: 18px; display: flex; flex-direction: column; gap: 10px; border-left: 1px solid var(--border); min-height: 0; overflow: auto; }
+.ms-ck-side h3 { margin: 0; font-size: 17px; line-height: 1.3; }
+.ms-from { font-size: 13px; color: var(--text2); }
+.ms-q { margin: 4px 0 0; font-weight: 700; font-size: 15px; }
+.ms-ck-side ul { margin: 0; padding-left: 18px; color: var(--text2); font-size: 13px; display: grid; gap: 3px; }
+.ms-picks { margin-top: auto; display: grid; gap: 8px; }
+.ms-picks .ms-btn { min-height: 38px; font-size: 13.5px; }
+.ms-label { font-weight: 600; font-size: 12.5px; }
+.ms-picks textarea { border: 1px solid var(--border2); border-radius: 8px; padding: 8px 10px; min-height: 80px; resize: none; width: 100%; }
+
+/* Edit milestones */
+.ms-editor { width: calc(100vw - 48px); max-width: 1280px; height: calc(100vh - 48px); max-height: none; background: var(--bg, #f2f3f5); }
+.ms-editor[open] { display: grid; grid-template-rows: auto minmax(0, 1fr); }
+.ms-ed-head { display: flex; align-items: center; gap: 8px 14px; padding: 6px 14px; background: var(--navy-dark, #18191f); color: #fff; border-bottom: 2px solid var(--accent); flex-wrap: wrap; }
+.ms-ed-head h2 { margin: 0; font-size: 16px; }
+.ms-ed-head .ms-choice { background: rgba(255,255,255,.06); border-color: rgba(255,255,255,.2); color: #fff; min-height: 36px; }
+.ms-ed-head .ms-choice small { color: rgba(255,255,255,.6); }
+.ms-ed-head .ms-choice[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--navy-dark, #18191f); }
+.ms-ed-head .ms-choice[aria-pressed="true"] small { color: rgba(24,25,31,.72); }
+.ms-saved { font-size: 12.5px; color: #86efac; font-weight: 600; margin-left: auto; }
+.ms-ed-body { display: grid; grid-template-rows: auto minmax(0, 1fr); min-height: 0; }
+.ms-bulk { display: flex; align-items: center; gap: 6px; padding: 5px 15px; border-bottom: 1px solid var(--border); min-height: 47px; flex-wrap: wrap; background: var(--bg2); }
+.ms-scope { font-size: 12.5px; color: var(--accent3); font-weight: 600; }
+.ms-bulk.ms-on { background: #2a2c35; color: #fff; }
+.ms-bulk.ms-on .ms-btn { background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.22); color: #fff; }
+.ms-bulk.ms-on .ms-btn:hover { background: rgba(255,255,255,.16); }
+.ms-bulk.ms-on .ms-btn-warn { color: #ffb4b4; border-color: rgba(255,140,140,.4); }
+.ms-bulk.ms-on .ms-chip { background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.22); color: #fff; }
+.ms-bulk.ms-on .ms-chip[aria-pressed="true"] { background: var(--accent); color: var(--navy-dark, #18191f); border-color: var(--accent); }
+/* Two classes deep so it beats ".ms-dialog select { color: inherit }" - inside the dark
+   bulk bar, inheriting would paint white text on these white fields. */
+.ms-dialog .ms-select, .ms-app .ms-select { border: 1px solid var(--border2); border-radius: 6px; padding: 3px 6px; min-height: 30px; background: var(--bg2); color: var(--text); font-size: 12.5px; }
+.ms-dialog .ms-select::placeholder { color: var(--text3); }
+.ms-days { width: 58px; }
+.ms-grp { display: flex; gap: 4px; align-items: center; }
+.ms-divider { width: 1px; align-self: stretch; background: var(--border); margin: 4px; }
+.ms-bulk.ms-on .ms-divider { background: rgba(255,255,255,.2); }
+
+.ms-ed-list { padding: 0 14px 14px; display: grid; align-content: start; gap: 6px; }
+.ms-labels, .ms-erow { display: grid; grid-template-columns: 18px 26px minmax(200px, 1fr) 190px 140px 196px; gap: 8px; align-items: center; }
+.ms-labels { position: sticky; top: 0; z-index: 2; padding: 8px 12px 4px 42px; background: var(--bg, #f2f3f5); font-size: 10.5px; text-transform: uppercase; letter-spacing: .04em; color: var(--text3); font-weight: 600; }
+.ms-egroup { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; }
+/* Same right padding and gap as .ms-erow, so a milestone's Archive and Remove line up with its rows'. */
+.ms-ehead { display: flex; align-items: center; gap: 6px; padding: 4px 12px 4px 4px; background: var(--bg3); border-radius: 10px; }
+.ms-egroup.ms-open > .ms-ehead { border-bottom: 1px solid var(--border); border-radius: 10px 10px 0 0; }
+.ms-chev { border: 0; background: none; width: 24px; height: 28px; cursor: pointer; border-radius: 6px; display: grid; place-items: center; color: var(--text2); padding: 0; flex: none; }
+.ms-chev:hover { background: var(--bg4); }
+.ms-ord { width: 22px; height: 22px; border-radius: 999px; background: var(--navy-dark, #18191f); color: #fff; font-size: 11px; font-weight: 700; display: grid; place-items: center; flex: none; }
+.ms-ename { font-weight: 700; font-size: 14px; border: 1px solid transparent; border-radius: 6px; padding: 3px 8px; background: transparent; width: 270px; min-width: 0; }
+.ms-ecount { font-size: 12px; color: var(--text3); white-space: nowrap; }
+.ms-ehead .ms-btn { min-height: 30px; padding-right: 9px; font-size: 12px; }
+.ms-erow { padding: 2px 12px 2px 42px; border-top: 1px solid var(--border); }
+.ms-ebody > .ms-erow:first-child { border-top: 0; }
+.ms-erow.ms-picked { background: var(--accent-light); }
+.ms-erow input[type=text], .ms-erow select, .ms-erow input[type=date] { border: 1px solid transparent; border-radius: 6px; padding: 3px 7px; min-height: 31px; width: 100%; font-size: 12.5px; background: transparent; min-width: 0; }
+.ms-erow input[type=text] { font-weight: 600; }
+.ms-erow input:hover, .ms-erow select:hover, .ms-ename:hover { border-color: var(--border); }
+.ms-erow input:focus, .ms-erow select:focus, .ms-ename:focus { outline: none; border-color: var(--accent); background: var(--bg2); }
+.ms-erow .ms-acts { gap: 6px; }
+.ms-erow .ms-acts .ms-btn { min-height: 30px; font-size: 12px; }
+.ms-drop-hint { margin: 8px 12px 8px 42px; padding: 12px; border: 1px dashed var(--border2); border-radius: 8px; color: var(--text3); font-size: 12.5px; text-align: center; }
+.ms-add-ms { display: flex; align-items: center; justify-content: center; gap: 6px; border: 2px dashed var(--border2); background: transparent; border-radius: 10px; min-height: 40px; font-weight: 700; color: var(--text2); cursor: pointer; font-size: 13px; }
+.ms-add-ms:hover { border-color: var(--accent); color: var(--accent3); background: var(--accent-light); }
+.ms-handle { border: 0; background: none; color: var(--text3); cursor: grab; width: 24px; height: 28px; border-radius: 6px; display: grid; place-items: center; padding: 0; flex: none; }
+.ms-handle:hover { background: var(--bg4); color: var(--text); }
+.ms-handle .ms-i { fill: currentColor; stroke: none; }
+.ms-dragging { opacity: .4; }
+.ms-drop-before { box-shadow: 0 -3px 0 var(--accent) !important; }
+.ms-drop-after { box-shadow: 0 3px 0 var(--accent) !important; }
+.ms-drop-in { background: #f5ecd0 !important; outline: 2px dashed var(--accent); outline-offset: -3px; }
+.ms-alist { margin: 12px 14px; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: var(--bg2); }
+.ms-arow { display: grid; grid-template-columns: 18px minmax(180px, 1fr) minmax(0, 1.4fr) 170px; gap: 10px; align-items: center; padding: 0 14px; min-height: 42px; border-bottom: 1px solid var(--border); }
+.ms-arow.ms-picked { background: var(--accent-light); }
+.ms-arow-title { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ms-arow .ms-hint { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ms-create { margin: 20px auto; max-width: 720px; background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 20px; display: grid; gap: 12px; }
+.ms-create h3 { margin: 0; font-size: 17px; }
+.ms-create p { margin: 0; }
+.ms-create-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding-top: 10px; border-top: 1px solid var(--border); }
+.ms-create-row b { width: 52px; }
+
+/* The toast sits in the top layer, so it shows above an open window. */
+.ms-toast { position: fixed; inset: auto auto 22px 50%; transform: translateX(-50%); margin: 0; border: 0; background: var(--navy-dark, #18191f); color: #fff; padding: 10px 16px; border-radius: 12px; font-size: 13.5px; gap: 12px; align-items: center; box-shadow: 0 10px 30px rgba(0,0,0,.3); font-family: 'DM Sans', system-ui, sans-serif; }
+.ms-toast:popover-open { display: flex; }
+.ms-toast button { background: none; border: 1px solid rgba(255,255,255,.25); color: var(--accent, #c9a82c); border-radius: 6px; padding: 3px 10px; cursor: pointer; font-weight: 600; font: inherit; }
+
+@media (max-width: 1300px) {
+  .ms-labels, .ms-erow { grid-template-columns: 18px 26px minmax(160px, 1fr) 160px 136px 190px; }
+  .ms-ename { width: 200px; }
+  .ms-item { grid-template-columns: 16px minmax(160px, 1.3fr) 160px minmax(0, 1fr) auto; }
+}
+@media (max-width: 900px) {
+  .ms-ck-body { grid-template-columns: 1fr; }
+  .ms-app { height: auto; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ms-chevi { transition: none; }
+}

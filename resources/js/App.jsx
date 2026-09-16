@@ -1,7 +1,12 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 import CheckerNavbar from "./component/CheckerNavbar";
 import PDFChecker from "./component/pages/PDFChecker";
+import StudentPdfViewer from "./component/pages/StudentPdfViewer";
+import FinishReview from "./component/FinishReview";
+import { useVersionDiff } from "./component/reader/useVersionDiff";
+import { Toast } from "./component/reader/Reader";
+import "./component/reader/reader.css";
 import "./App.css";
 
 // Maps highlight color names to pdf-lib rgb for export
@@ -17,140 +22,185 @@ const HIGHLIGHT_COLOR_MAP = {
 // comment cards, so they never sit on top of the document's own content.
 const SIDEBAR_WIDTH = 180;
 
+const csrf = () => document.querySelector('meta[name="csrf-token"]')?.content;
+
+// What the page knows about the document: its team, requirement and round.
+const readContext = () => {
+  try {
+    return JSON.parse(document.getElementById("pdf-annotator-root")?.dataset.context || "{}");
+  } catch {
+    return {};
+  }
+};
+
 function App() {
-  // Single tool: a remark is a comment merged with its highlight
-  const [commentMode, setCommentMode] = useState(false);
-  const [selectedHighlightColor, setSelectedHighlightColor] = useState("yellow");
+  const [ctx] = useState(readContext);
+  // Earlier rounds of this requirement, and the one open beside the document.
+  const versions = ctx.versions || [];
+  const [compareId, setCompareId] = useState(null);
+  const compareVersion = versions.find((v) => v.id === compareId) || null;
+  // Changes are measured against the version open beside it, else the latest earlier one.
+  const baseVersion = compareVersion || versions[0] || null;
+  const [showChanges, setShowChanges] = useState(true);
+  const params = new URLSearchParams(window.location.search);
+  const reviewId = ctx.reviewId || params.get("reviewId") || params.get("fileID");
+  // Measured once: this document and the earlier version both draw from it.
+  const diff = useVersionDiff(reviewId ? `/reviews/${reviewId}/pdf` : null, baseVersion);
+  const [focus, setFocus] = useState(null);
+
   const [comments, setComments] = useState([]);
-  // The currently selected/open remark, shared by the page markers and the sidebar
-  const [openCommentId, setOpenCommentId] = useState(null);
+  const [generalComments, setGeneralComments] = useState([]);
+  const [loaded, setLoaded] = useState(false);
+  const [selectedId, setSelectedId] = useState(null);
   // Review workflow status: "To Review" -> "Reviewing" -> "Reviewed"
   const [reviewStatus, setReviewStatus] = useState("To Review");
-  // What the reviewer decided: "approved", "needs_revision", or null when
-  // they have not turned it in yet.
+  // "approved", "needs_revision", or null when not turned in yet.
   const [reviewVerdict, setReviewVerdict] = useState(null);
-  // Transient "Saved" flash state for the save button.
-  const [saveState, setSaveState] = useState("idle");
-  // Background Google Drive upload state: "idle" | "syncing" | "synced" | "error".
-  // Tracked separately from saveState because it finishes later — the DB
-  // save is quick, but rendering the annotated PDF and uploading it to
-  // Drive takes real time and shouldn't block the Save/Turn In button.
+  const [saveState, setSaveState] = useState("saved");
+  // Background Google Drive upload: "idle" | "syncing" | "synced" | "error".
   const [driveSyncState, setDriveSyncState] = useState("idle");
   const [driveSyncError, setDriveSyncError] = useState(null);
-  // Coalesces overlapping sync requests: if Save then Turn In are clicked in
-  // quick succession, the second one no longer starts a second full render+
-  // upload on top of the first (which was doubling main-thread work and
-  // making everything else feel sluggish) — it just marks that another sync
-  // is needed once the current one finishes.
   const driveSyncRef = useRef({ inFlight: false, pending: false });
-  // Success/failure toast shown in place of browser alert()s. Auto-dismisses
-  // after a few seconds; a new toast replaces whatever's currently showing.
   const [toast, setToast] = useState(null);
   const toastTimerRef = useRef(null);
+  const [finishing, setFinishing] = useState(false);
+  const [busy, setBusy] = useState(false);
 
-  const showToast = (type, message) => {
-    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
-    setToast({ type, message });
-    toastTimerRef.current = setTimeout(() => setToast(null), 4000);
-  };
+  const commentsRef = useRef(comments);
+  commentsRef.current = comments;
+  const statusRef = useRef(reviewStatus);
+  statusRef.current = reviewStatus;
 
-  // Load the current review status on mount so the UI reflects saved state.
+  const showToast = useCallback((message, opts = {}) => {
+    clearTimeout(toastTimerRef.current);
+    setToast({ message, ...opts });
+    toastTimerRef.current = setTimeout(() => setToast(null), opts.undo ? 7000 : 4500);
+  }, []);
+
+  const request = (url, options = {}) => fetch(url, {
+    ...options,
+    headers: { Accept: "application/json", "X-CSRF-TOKEN": csrf(), ...(options.headers || {}) },
+  });
+
+  // Load the saved remarks and where the review stands.
   useEffect(() => {
-    const reviewId = getReviewId();
-    if (!reviewId) return;
-
-    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
-    fetch(`/reviews/${reviewId}/status`, {
-      headers: { Accept: "application/json", "X-CSRF-TOKEN": csrfToken },
-    })
+    if (!reviewId) { setLoaded(true); return; }
+    const status = request(`/reviews/${reviewId}/status`)
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (data?.review_status) setReviewStatus(data.review_status);
         if (data?.verdict) setReviewVerdict(data.verdict);
-      })
-      .catch(() => {});
-  }, []);
+      });
+    const remarks = request(`/reviews/${reviewId}/remarks`)
+      .then((r) => r.json())
+      .then((data) => setComments(data.map((r) => ({
+        id: r.id,
+        page_number: Number(r.page_number),
+        y_position: Number(r.top_position),
+        x_position: Number(r.left_position),
+        text: r.comment,
+        author: "Reviewer",
+        timestamp: r.created_at,
+        selectedText: r.selected_text,
+        section: r.section,
+        color: r.color,
+        highlightRects: Number(r.highlight_width) > 0
+          ? [{
+              top_position: Number(r.top_position),
+              left_position: Number(r.left_position),
+              highlight_width: Number(r.highlight_width),
+              highlight_height: Number(r.highlight_height),
+            }]
+          : [],
+      }))));
+    const general = request(`/reviews/${reviewId}/general-remarks`)
+      .then((r) => r.json())
+      .then((data) => setGeneralComments(data.map((r) => ({ id: r.id, text: r.comment, section: r.section }))));
+    Promise.allSettled([status, remarks, general]).then((results) => {
+      if (results.some((r) => r.status === "rejected")) showToast("Some of this review did not load. Reload the page.", { type: "error" });
+      setLoaded(true);
+    });
+  }, [reviewId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Updates the review workflow status on the server.
   const updateReviewStatus = async (status, verdict = null) => {
-    const reviewId = getReviewId();
-    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
-
-    const response = await fetch(`/reviews/${reviewId}/status`, {
+    const response = await request(`/reviews/${reviewId}/status`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-CSRF-TOKEN": csrfToken,
-        Accept: "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ review_status: status, verdict }),
     });
-
-    if (!response.ok) {
-      throw new Error(`Status update failed: ${response.status}`);
-    }
-
+    if (!response.ok) throw new Error(`Status update failed: ${response.status}`);
     return response.json();
   };
 
-  const getActiveTool = () => (commentMode ? "comment" : null);
-
-  // Reads the review id from the URL, e.g. ?reviewId=123 or ?fileID=123
-  const getReviewId = () => {
-    const params = new URLSearchParams(window.location.search);
-    return params.get("reviewId") ?? params.get("fileID");
-  };
-
-  // Shared save call used by both "Save" and "Turn In" — the Laravel
-  // endpoint replaces all remarks for this review in one request.
-  const saveRemarks = async () => {
-    const reviewId = getReviewId();
-    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
-
-    const response = await fetch(`/reviews/${reviewId}/remarks`, {
+  // The endpoint replaces every page remark for this review in one request.
+  const saveRemarks = async (list) => {
+    const response = await request(`/reviews/${reviewId}/remarks`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-CSRF-TOKEN": csrfToken,
-        Accept: "application/json",
-      },
-      body: JSON.stringify({ comments }),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ comments: list }),
     });
-
-    if (!response.ok) {
-      throw new Error(`Save failed: ${response.status}`);
-    }
-
+    if (!response.ok) throw new Error(`Save failed: ${response.status}`);
     return response.json();
   };
 
-  // Turning in is the moment the reviewer decides, so it carries the verdict.
-  // Finishing without one used to leave the decision in a typed remark, where
-  // nothing could find it — the checklist's "Signed CLF Approving Chapter 1"
-  // lines are exactly this decision and could not be tracked.
-  const handleTurnIn = async (verdict) => {
+  // Remarks save themselves shortly after every change, so there is no Save
+  // button to forget. The first change also marks the review as under way.
+  const skipFirstSave = useRef(true);
+  useEffect(() => {
+    if (!loaded || !reviewId) return undefined;
+    if (skipFirstSave.current) { skipFirstSave.current = false; return undefined; }
+    setSaveState("saving");
+    const timer = setTimeout(() => {
+      saveRemarks(commentsRef.current)
+        .then(async () => {
+          if (statusRef.current === "To Review") {
+            await updateReviewStatus("Reviewing");
+            setReviewStatus("Reviewing");
+          }
+          setSaveState("saved");
+        })
+        .catch(() => setSaveState("error"));
+    }, 900);
+    return () => clearTimeout(timer);
+  }, [comments, loaded]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const deleteComment = (id) => {
+    const list = commentsRef.current;
+    const at = list.findIndex((c) => c.id === id);
+    if (at < 0) return;
+    const removed = list[at];
+    setComments(list.filter((c) => c.id !== id));
+    if (selectedId === id) setSelectedId(null);
+    showToast("Remark deleted.", {
+      undo: () => setComments((prev) => { const next = [...prev]; next.splice(at, 0, removed); return next; }),
+    });
+  };
+
+  const addGeneral = async (text, section) => {
     try {
-      await persistAndFlash("Reviewed", verdict);
-      setReviewVerdict(verdict);
-      showToast(
-        "success",
-        verdict === "approved"
-          ? "Turned in — approved."
-          : "Turned in — marked as needing revision.",
-      );
-    } catch (error) {
-      console.error("Turn in error:", error);
-      showToast("error", "Error turning in. Please try again.");
+      const response = await request(`/reviews/${reviewId}/general-remarks`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ comment: text, section: section || null }),
+      });
+      if (!response.ok) throw new Error();
+      const saved = await response.json();
+      setGeneralComments((prev) => [{ id: saved.id, text: saved.comment, section: saved.section }, ...prev]);
+    } catch {
+      showToast("That general remark was not saved. Try again.", { type: "error" });
     }
   };
 
-  // Handle save action — saves remarks and marks the review as being Reviewed.
-  const handleSave = async () => {
+  const deleteGeneral = async (id) => {
+    const removed = generalComments.find((g) => g.id === id);
+    setGeneralComments((prev) => prev.filter((g) => g.id !== id));
     try {
-      await persistAndFlash("Reviewing");
-    } catch (error) {
-      console.error("Save error:", error);
-      showToast("error", "Error saving annotations. Please try again.");
+      const response = await request(`/reviews/${reviewId}/general-remarks/${id}`, { method: "DELETE" });
+      if (!response.ok) throw new Error();
+      showToast("General remark deleted.", { undo: () => removed && addGeneral(removed.text, removed.section) });
+    } catch {
+      if (removed) setGeneralComments((prev) => [removed, ...prev]);
+      showToast("That general remark could not be deleted.", { type: "error" });
     }
   };
 
@@ -158,32 +208,19 @@ function App() {
   // Each page that has comments is widened with a blank sidebar strip so
   // comment cards are drawn in guaranteed empty space, never on top of the
   // document's own text.
-  const renderAnnotatedPdf = async (fileID) => {
-    const pdfUrl = fileID ? `/reviews/${fileID}/pdf` : "/test.pdf";
+  const renderAnnotatedPdf = async () => {
+    const response = await fetch(`/reviews/${reviewId}/pdf`);
+    if (!response.ok) throw new Error(`Failed to load PDF: ${response.status} ${response.statusText}`);
 
-    const response = await fetch(pdfUrl);
-    if (!response.ok) {
-      throw new Error(`Failed to load PDF: ${response.status} ${response.statusText}`);
-    }
-
-    const existingPdfBytes = await response.arrayBuffer();
-    const pdfDoc = await PDFDocument.load(existingPdfBytes, {
-      ignoreEncryption: true,
-      updateMetadata: false,
-    });
+    const pdfDoc = await PDFDocument.load(await response.arrayBuffer(), { ignoreEncryption: true, updateMetadata: false });
     const pages = pdfDoc.getPages();
-
     const helveticaFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const helveticaBoldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
-    // Group comments by page so each page's boxes stack independently,
-    // instead of using a global index that pushes later pages' boxes
-    // off-screen based on how many comments earlier pages had.
     const commentsByPage = {};
-    comments.forEach((comment) => {
+    commentsRef.current.forEach((comment) => {
       const pageIndex = Number(comment.page_number) - 1;
-      if (!commentsByPage[pageIndex]) commentsByPage[pageIndex] = [];
-      commentsByPage[pageIndex].push(comment);
+      (commentsByPage[pageIndex] ||= []).push(comment);
     });
 
     Object.entries(commentsByPage).forEach(([pageIndexStr, pageComments]) => {
@@ -191,30 +228,16 @@ function App() {
       if (pageIndex < 0 || pageIndex >= pages.length) return;
 
       const page = pages[pageIndex];
-      // Capture the ORIGINAL dimensions before resizing — highlight rects
-      // are stored as fractions of the original page size.
       const { width, height } = page.getSize();
-
-      // Draw all highlights first, using the original content coordinates.
-      // Each highlight also gets a small numbered badge matching the same
-      // number shown on its comment card in the sidebar, so it's clear
-      // which piece of text a given comment is pointing to.
-      // Also records each highlight's vertical position so its comment
-      // card can later be placed at (roughly) the same height in the
-      // sidebar, instead of a plain top-down stack.
       const anchorYByIndex = [];
-      pageComments.forEach((comment, cIdx) => {
-        const highlightColor =
-          HIGHLIGHT_COLOR_MAP[comment.color] || HIGHLIGHT_COLOR_MAP.yellow;
 
+      pageComments.forEach((comment, cIdx) => {
+        const highlightColor = HIGHLIGHT_COLOR_MAP[comment.color] || HIGHLIGHT_COLOR_MAP.yellow;
         (comment.highlightRects || []).forEach((rect) => {
           try {
             page.drawRectangle({
               x: (rect.left_position || 0) * width,
-              y:
-                height -
-                ((rect.top_position || 0) * height) -
-                ((rect.highlight_height || 0.05) * height),
+              y: height - (rect.top_position || 0) * height - (rect.highlight_height || 0.05) * height,
               width: Math.max((rect.highlight_width || 0.1) * width, 10),
               height: Math.max((rect.highlight_height || 0.05) * height, 5),
               color: highlightColor,
@@ -229,23 +252,11 @@ function App() {
         if (firstRect) {
           try {
             const badgeX = (firstRect.left_position || 0) * width;
-            const badgeY =
-              height - (firstRect.top_position || 0) * height;
-
-            page.drawCircle({
-              x: badgeX,
-              y: badgeY,
-              size: 7,
-              color: rgb(0.231, 0.51, 0.965),
-            });
+            const badgeY = height - (firstRect.top_position || 0) * height;
+            page.drawCircle({ x: badgeX, y: badgeY, size: 7, color: rgb(0.231, 0.51, 0.965) });
             page.drawText(String(cIdx + 1), {
-              x: badgeX - (cIdx + 1 >= 10 ? 5 : 2.5),
-              y: badgeY - 3,
-              size: 7,
-              font: helveticaBoldFont,
-              color: rgb(1, 1, 1),
+              x: badgeX - (cIdx + 1 >= 10 ? 5 : 2.5), y: badgeY - 3, size: 7, font: helveticaBoldFont, color: rgb(1, 1, 1),
             });
-
             anchorYByIndex[cIdx] = badgeY;
           } catch (e) {
             console.warn("Error drawing badge:", e);
@@ -253,134 +264,59 @@ function App() {
         }
       });
 
-      // Widen the page to add a blank sidebar strip. This does NOT move or
-      // rescale the existing content — it only extends the page boundary to
-      // the right, so the new space is guaranteed empty.
       page.setSize(width + SIDEBAR_WIDTH, height);
-
-      // Optional thin divider line between the document and the sidebar.
-      page.drawLine({
-        start: { x: width, y: 0 },
-        end: { x: width, y: height },
-        thickness: 1,
-        color: rgb(0.85, 0.85, 0.85),
-      });
+      page.drawLine({ start: { x: width, y: 0 }, end: { x: width, y: height }, thickness: 1, color: rgb(0.85, 0.85, 0.85) });
 
       const commentBoxWidth = SIDEBAR_WIDTH - 20;
       const commentBoxHeight = 60;
       const margin = 10;
       const gap = 10;
-
-      // Position each card at (roughly) the same height as its own
-      // highlight, instead of a simple top-down stack. This means two
-      // comments on nearby paragraphs get two cards that are also near
-      // each other in the sidebar, and cards further apart in the document
-      // stay visually far apart in the sidebar too — proximity in the
-      // margin always reflects proximity in the text. A short connector
-      // line is also drawn from each highlight to its card, so there's
-      // never ambiguity even when several highlights sit close together.
-      const anchored = pageComments
-        .map((comment, idx) => ({
-          comment,
-          idx,
-          anchorY: anchorYByIndex[idx] ?? height - margin - idx * (commentBoxHeight + gap),
-        }))
-        .sort((a, b) => b.anchorY - a.anchorY); // top of page first
-
       let cursorMaxTop = height;
 
-      anchored.forEach(({ comment, idx, anchorY }) => {
-        try {
-          const boxX = width + margin; // inside the new sidebar, never over content
-          const desiredTop = anchorY + commentBoxHeight / 2;
-          const boxTop = Math.min(desiredTop, cursorMaxTop);
-          const boxY = boxTop - commentBoxHeight;
-          cursorMaxTop = boxY - gap;
+      pageComments
+        .map((comment, idx) => ({ comment, idx, anchorY: anchorYByIndex[idx] ?? height - margin - idx * (commentBoxHeight + gap) }))
+        .sort((a, b) => b.anchorY - a.anchorY)
+        .forEach(({ comment, idx, anchorY }) => {
+          try {
+            const boxX = width + margin;
+            const boxTop = Math.min(anchorY + commentBoxHeight / 2, cursorMaxTop);
+            const boxY = boxTop - commentBoxHeight;
+            cursorMaxTop = boxY - gap;
+            if (boxY < 0) return;
 
-          // If there are too many comments to fit vertically on this page,
-          // stop drawing further ones rather than letting them run off the
-          // bottom edge or wrap into the document area.
-          if (boxY < 0) return;
-
-          // Short connector line from the highlight to this card.
-          const connectorColor =
-            HIGHLIGHT_COLOR_MAP[comment.color] || HIGHLIGHT_COLOR_MAP.yellow;
-          page.drawLine({
-            start: { x: width, y: anchorY },
-            end: { x: boxX, y: boxTop - 8 },
-            thickness: 1,
-            color: connectorColor,
-            opacity: 0.9,
-          });
-
-          // Draw comment background
-          page.drawRectangle({
-            x: boxX,
-            y: boxY,
-            width: commentBoxWidth,
-            height: commentBoxHeight,
-            color: rgb(1, 1, 1),
-            opacity: 1,
-            borderWidth: 1,
-            borderColor: rgb(0.231, 0.51, 0.965),
-          });
-
-          // Draw comment number badge
-          page.drawCircle({
-            x: boxX + 12,
-            y: boxY + commentBoxHeight - 12,
-            size: 8,
-            color: rgb(0.231, 0.51, 0.965),
-          });
-
-          page.drawText((idx + 1).toString(), {
-            x: boxX + 9,
-            y: boxY + commentBoxHeight - 15,
-            size: 7,
-            font: helveticaBoldFont,
-            color: rgb(1, 1, 1),
-          });
-
-          // Draw comment text (wrapped to fit the sidebar width)
-          const displayText = comment.text || "";
-          const maxCharsPerLine = 22;
-          const words = displayText.split(" ");
-          let line = "";
-          let lineY = boxY + commentBoxHeight - 15;
-          const lines = [];
-          words.forEach((word) => {
-            const testLine = line ? `${line} ${word}` : word;
-            if (testLine.length > maxCharsPerLine) {
-              lines.push(line);
-              line = word;
-            } else {
-              line = testLine;
-            }
-          });
-          if (line) lines.push(line);
-
-          lines.slice(0, 3).forEach((textLine, lineIdx) => {
-            page.drawText(textLine, {
-              x: boxX + 25,
-              y: lineY - lineIdx * 10,
-              size: 7,
-              font: helveticaFont,
-              color: rgb(0.2, 0.2, 0.2),
+            page.drawLine({
+              start: { x: width, y: anchorY }, end: { x: boxX, y: boxTop - 8 }, thickness: 1,
+              color: HIGHLIGHT_COLOR_MAP[comment.color] || HIGHLIGHT_COLOR_MAP.yellow, opacity: 0.9,
             });
-          });
+            page.drawRectangle({
+              x: boxX, y: boxY, width: commentBoxWidth, height: commentBoxHeight,
+              color: rgb(1, 1, 1), opacity: 1, borderWidth: 1, borderColor: rgb(0.231, 0.51, 0.965),
+            });
+            page.drawCircle({ x: boxX + 12, y: boxY + commentBoxHeight - 12, size: 8, color: rgb(0.231, 0.51, 0.965) });
+            page.drawText((idx + 1).toString(), {
+              x: boxX + 9, y: boxY + commentBoxHeight - 15, size: 7, font: helveticaBoldFont, color: rgb(1, 1, 1),
+            });
 
-          // Draw author
-          page.drawText(`- ${comment.author || "Reviewer"}`, {
-            x: boxX + 5,
-            y: boxY + 5,
-            size: 6,
-            font: helveticaFont,
-            color: rgb(0.5, 0.5, 0.5),
-          });
-        } catch (e) {
-          console.warn("Error drawing comment:", e);
-        }
-      });
+            const words = (comment.text || "").split(" ");
+            const lines = [];
+            let line = "";
+            words.forEach((word) => {
+              const test = line ? `${line} ${word}` : word;
+              if (test.length > 22) { lines.push(line); line = word; } else { line = test; }
+            });
+            if (line) lines.push(line);
+            lines.slice(0, 3).forEach((textLine, lineIdx) => {
+              page.drawText(textLine, {
+                x: boxX + 25, y: boxY + commentBoxHeight - 15 - lineIdx * 10, size: 7, font: helveticaFont, color: rgb(0.2, 0.2, 0.2),
+              });
+            });
+            page.drawText(`- ${comment.author || "Reviewer"}`, {
+              x: boxX + 5, y: boxY + 5, size: 6, font: helveticaFont, color: rgb(0.5, 0.5, 0.5),
+            });
+          } catch (e) {
+            console.warn("Error drawing comment:", e);
+          }
+        });
     });
 
     return pdfDoc.save();
@@ -388,54 +324,31 @@ function App() {
 
   // Uploads the annotated PDF bytes to the review's Google Drive file.
   const syncDrive = async (pdfBytes) => {
-    const reviewId = getReviewId();
-    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
-
-    const response = await fetch(`/reviews/${reviewId}/drive-file`, {
+    const response = await request(`/reviews/${reviewId}/drive-file`, {
       method: "PUT",
-      headers: {
-        "Content-Type": "application/pdf",
-        "X-CSRF-TOKEN": csrfToken,
-        Accept: "application/json",
-      },
+      headers: { "Content-Type": "application/pdf" },
       body: pdfBytes,
     });
-
     if (!response.ok) {
-      // The backend sends a real reason ("Google Drive is not connected for
-      // this account.", "Google Drive session expired...", etc.) — surface
-      // it instead of just the HTTP status, or this fails silently with no
-      // way to tell why.
       const body = await response.json().catch(() => null);
       throw new Error(body?.message || `Drive sync failed: ${response.status}`);
     }
-
     return response.json();
   };
 
-  // Renders the annotated PDF and uploads it to Drive in the background.
-  // Safe to call repeatedly in quick succession (Save then Turn In): if a
-  // sync is already running, this just flags that another one is needed
-  // once it's done, instead of running two heavy renders concurrently.
+  // Safe to call repeatedly: a sync already running just flags that another
+  // is needed once it finishes, instead of running two heavy renders at once.
   const syncAnnotatedPdfToDrive = async () => {
-    if (driveSyncRef.current.inFlight) {
-      driveSyncRef.current.pending = true;
-      return;
-    }
-
+    if (driveSyncRef.current.inFlight) { driveSyncRef.current.pending = true; return; }
     driveSyncRef.current.inFlight = true;
     setDriveSyncState("syncing");
     setDriveSyncError(null);
-
     try {
-      const pdfBytes = await renderAnnotatedPdf(getReviewId());
-      await syncDrive(pdfBytes);
+      await syncDrive(await renderAnnotatedPdf());
       setDriveSyncState("synced");
-      console.log("Annotations synced to Google Drive.");
     } catch (e) {
       setDriveSyncState("error");
       setDriveSyncError(e.message);
-      console.warn("Could not sync annotations to Google Drive:", e);
     } finally {
       driveSyncRef.current.inFlight = false;
       if (driveSyncRef.current.pending) {
@@ -445,110 +358,134 @@ function App() {
     }
   };
 
-  // Warn before leaving the page while a Drive sync is still in flight —
-  // navigating away (including the "← Back" link) aborts any pending fetch,
-  // so without this the upload can silently never happen.
+  // Leaving while remarks save or the Drive upload runs would drop them.
   useEffect(() => {
-    const handleBeforeUnload = (e) => {
-      if (driveSyncState !== "syncing") return;
+    const onBeforeUnload = (e) => {
+      if (saveState !== "saving" && driveSyncState !== "syncing") return;
       e.preventDefault();
       e.returnValue = "";
     };
-    window.addEventListener("beforeunload", handleBeforeUnload);
-    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, [driveSyncState]);
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, [saveState, driveSyncState]);
 
-  // Saves remarks + status and flashes a "Saved" state on the save button.
-  // The annotated-PDF render (client-side pdf-lib) and the Google Drive
-  // upload are the slow part of this flow — a real network call to Google's
-  // API plus redrawing every annotation onto the PDF — so they're kicked off
-  // in the background afterward instead of blocking the button on them.
-  const persistAndFlash = async (status, verdict = null) => {
-    await Promise.all([saveRemarks(), updateReviewStatus(status, verdict)]);
-    setReviewStatus(status);
-
-    setSaveState("saved");
-    if (window.__saveTimer) clearTimeout(window.__saveTimer);
-    window.__saveTimer = setTimeout(() => setSaveState("idle"), 2000);
-
-    syncAnnotatedPdfToDrive();
+  // Turning in is the moment the reviewer decides, so it carries the verdict.
+  const handleTurnIn = async (verdict) => {
+    setBusy(true);
+    try {
+      await saveRemarks(commentsRef.current);
+      await updateReviewStatus("Reviewed", verdict);
+      setReviewStatus("Reviewed");
+      setReviewVerdict(verdict);
+      setSaveState("saved");
+      setFinishing(false);
+      showToast(verdict === "approved" ? "Turned in — approved." : "Turned in — sent back for revision.");
+      syncAnnotatedPdfToDrive();
+    } catch (error) {
+      console.error("Turn in error:", error);
+      showToast("Could not turn this in. Please try again.", { type: "error" });
+    } finally {
+      setBusy(false);
+    }
   };
 
-  // Handle export action - downloads the annotated PDF locally.
   const handleExport = async () => {
     try {
-      const fileID = getReviewId();
-      const pdfBytes = await renderAnnotatedPdf(fileID);
-
-      const blob = new Blob([pdfBytes], { type: "application/pdf" });
+      const blob = new Blob([await renderAnnotatedPdf()], { type: "application/pdf" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `annotated-pdf-${Date.now()}.pdf`;
+      a.download = `${(ctx.fileName || "annotated").replace(/[^\w.-]+/g, "_")}-remarks.pdf`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-
-      showToast("success", "PDF exported successfully!");
+      showToast("PDF with your remarks downloaded.");
     } catch (error) {
       console.error("Export error:", error);
-      showToast("error", `Error exporting PDF: ${error.message}`);
+      showToast(`Could not export the PDF: ${error.message}`, { type: "error" });
     }
   };
 
   return (
-    <div className="App">
+    <div className="an-app">
       <CheckerNavbar
-        commentMode={commentMode}
-        setCommentMode={setCommentMode}
-        selectedHighlightColor={selectedHighlightColor}
-        setSelectedHighlightColor={setSelectedHighlightColor}
+        ctx={ctx}
         status={reviewStatus}
         verdict={reviewVerdict}
         saveState={saveState}
         driveSyncState={driveSyncState}
         driveSyncError={driveSyncError}
-        onTurnIn={handleTurnIn}
-        onSave={handleSave}
         onExport={handleExport}
+        onFinish={() => setFinishing(true)}
+        versions={versions}
+        comparing={Boolean(compareVersion)}
+        onCompare={() => setCompareId(compareVersion ? null : versions[0]?.id ?? null)}
+        showChanges={showChanges}
+        onToggleChanges={() => setShowChanges((on) => !on)}
       />
-
-      <PDFChecker
-        commentMode={commentMode}
-        setCommentMode={setCommentMode}
-        activeTool={getActiveTool()}
-        comments={comments}
-        setComments={setComments}
-        selectedHighlightColor={selectedHighlightColor}
-        openCommentId={openCommentId}
-        setOpenCommentId={setOpenCommentId}
+      <div className={compareVersion ? "an-split" : "an-single"}>
+        <PDFChecker
+          pdfUrl={reviewId ? `/reviews/${reviewId}/pdf` : null}
+          comments={comments}
+          setComments={setComments}
+          generalComments={generalComments}
+          onAddGeneral={addGeneral}
+          onDeleteGeneral={deleteGeneral}
+          onDeleteComment={deleteComment}
+          selectedId={selectedId}
+          setSelectedId={setSelectedId}
+          notify={showToast}
+          base={baseVersion}
+          showChanges={showChanges}
+          diff={diff}
+          onFocusChange={(c) => setFocus({ id: c.id, page: c.oldPage, rect: c.oldRect, at: Date.now() })}
+        />
+        {compareVersion && (
+          <div className="an-pane-head">
+            <span className="an-dot now" aria-hidden="true" />
+            <b>This version</b>
+            {ctx.round && <span className="an-pane-sub">{ctx.round}</span>}
+            <span className="rr-spacer" />
+            {showChanges && <span className="an-key ins">New or reworded</span>}
+          </div>
+        )}
+        {compareVersion && (
+          <section className="an-compare" aria-label="Earlier version of this document">
+            <div className="an-compare-bar">
+              <span className="an-dot old" aria-hidden="true" />
+              <label htmlFor="an-compare-pick">Earlier version</label>
+              <select id="an-compare-pick" value={compareVersion.id} onChange={(e) => setCompareId(Number(e.target.value))}>
+                {versions.map((v) => (
+                  <option key={v.id} value={v.id}>{v.round}{v.uploaded ? ` · ${v.uploaded}` : ""}</option>
+                ))}
+              </select>
+              <span className="rr-spacer" />
+              {showChanges && <span className="an-key del">Removed</span>}
+              <button type="button" className="rr-btn sm" onClick={() => setCompareId(null)}>Close</button>
+            </div>
+            <StudentPdfViewer
+              key={compareVersion.id}
+              pdfUrl={compareVersion.file}
+              remarksUrl={compareVersion.remarks}
+              reviewer="you"
+              marks={showChanges && diff.status === "ready" ? diff.oldMarks : null}
+              focus={focus}
+            />
+          </section>
+        )}
+      </div>
+      <FinishReview
+        open={finishing}
+        onClose={() => setFinishing(false)}
+        onConfirm={handleTurnIn}
+        remarks={comments}
+        general={generalComments}
+        verdict={reviewVerdict}
+        busy={busy}
+        ctx={ctx}
       />
-
-      {toast && (
-        <div
-          style={{
-            position: "fixed",
-            bottom: "24px",
-            right: "300px",
-            zIndex: 2000,
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-            padding: "12px 20px",
-            borderRadius: "10px",
-            fontSize: "14px",
-            fontWeight: "600",
-            boxShadow: "0 4px 16px rgba(0, 0, 0, 0.15)",
-            ...(toast.type === "success"
-              ? { backgroundColor: "#dcfce7", color: "#166534", border: "1px solid #86efac" }
-              : { backgroundColor: "#fef2f2", color: "#991b1b", border: "1px solid #fecaca" }),
-          }}
-        >
-          <span>{toast.type === "success" ? "✓" : "✕"}</span>
-          <span>{toast.message}</span>
-        </div>
-      )}
+      <Toast toast={toast} onClose={() => setToast(null)} />
     </div>
   );
 }

@@ -65,6 +65,11 @@ class AdminProfileController extends Controller
             'sections' => ! empty($sections) ? json_encode($sections) : null,
         ];
 
+        // The degree is read from the credentials written after their name.
+        if ($data['credentials'] !== $admin->credentials) {
+            $data += CapstoneExpert::degreeFromCredentials($data['credentials']);
+        }
+
         if ($request->filled('school_year')) {
             $data['school_year'] = $request->input('school_year');
         }

@@ -7,83 +7,66 @@ use App\Models\Milestone;
 use App\Models\Student;
 use App\Models\StudentMilestone;
 use App\Models\Team;
+use App\Models\TeamExpertAssignment;
 use App\Support\MilestoneProgress;
+use App\Support\SectionScope;
 use App\Support\StudentTeam;
 use Illuminate\Http\Request;
 
 class ProgressController extends Controller
 {
     /**
-     * The team's checklist, as the CaPSA actually keeps it.
+     * The team's own milestones, as its section's CaPSA keeps them.
      *
-     * This used to read announcements: it found every announcement whose
-     * title began "Milestone Reminder:", stripped that prefix, and looked the
-     * milestone up by matching the title string. So what a team saw was
-     * whichever announcements happened to have been posted, not the
-     * deliverables anybody was tracking - and a renamed milestone dropped off
-     * the page entirely.
-     *
-     * It is read-only on purpose. Every line here is closed by somebody else:
-     * the CaPSA sights a signed form, an upload closes a draft, the adviser's
-     * verdict closes a CLF, the panel closes a defense. A team marking its own
-     * deliverable done would be asserting something it is not the one to say.
+     * Read-only on purpose: every deliverable is closed by somebody else - the
+     * CaPSA checks a signed paper, an upload closes a draft, the panel closes
+     * a defense. What a team can do is upload, and that goes through Document
+     * Submission with the deliverable already picked.
      */
-    public function index()
+    public function index(SectionScope $sections)
     {
         /** @var Student $student */
         $student = auth()->user();
 
         $teamId = StudentTeam::idFor($student->student_id);
+        $team = $teamId ? Team::find($teamId) : null;
+        $progress = $team?->checklistProgress();
 
-        $isLeader = false;
-        if ($teamId) {
-            $team = Team::find($teamId);
-            $isLeader = $team && $team->leader_id === $student->student_id;
+        $groups = collect();
+
+        if ($progress) {
+            $groups = $progress->items
+                ->groupBy(fn ($row) => $row->milestone->id)
+                ->map(fn ($rows) => (object) [
+                    'name' => $rows->first()->milestone->name,
+                    'rows' => $rows->values(),
+                    'closed' => $rows->whereIn('state', MilestoneProgress::COMPLETE_STATES)->count(),
+                    'overdue' => $rows->where('state', MilestoneProgress::OVERDUE)->count(),
+                    'dues' => $rows->pluck('due_on')->filter()->sort()->values(),
+                ])
+                ->values();
         }
 
-        $boards = collect();
-        $completed = 0;
-        $pending = 0;
-        $todo = 0;
-        $overdue = 0;
-
-        if ($teamId) {
-            $boards = Milestone::where('team_id', $teamId)
-                ->with('items')
-                ->orderBy('due_date')
-                ->orderBy('id')
-                ->get()
-                // A checklist with no lines on it yet says nothing a team can
-                // act on - it reads "0 of 0 complete", which looks like a
-                // fault rather than a checklist still being written. A CaPSA
-                // building one by hand should not be pushing an empty card at
-                // their students in the meantime; it appears once it has
-                // something on it.
-                ->filter(fn (Milestone $milestone) => $milestone->items->isNotEmpty())
-                ->values()
-                ->map(fn (Milestone $milestone) => (object) [
-                    'model' => $milestone,
-                    'progress' => $milestone->progress(),
-                ]);
-
-            foreach ($boards as $board) {
-                $completed += $board->progress->completed;
-                $pending += $board->progress->handed_in;
-                $overdue += $board->progress->overdue;
-                $todo += $board->progress->items
-                    ->where('state', MilestoneProgress::NOT_STARTED)
-                    ->count();
-            }
-        }
+        $engaged = $team
+            ? TeamExpertAssignment::where('team_id', $team->team_id)->where('status', 'approved')->with(['expert', 'expertRole.role', 'role'])->get()
+            : collect();
+        $expert = fn (string $role) => $engaged->first(fn ($a) => $a->engaged_role_name === $role)?->expert?->name;
 
         return view('student.progress', [
-            'boards' => $boards,
-            'completed' => $completed,
-            'pending' => $pending,
-            'todo' => $todo,
-            'overdue' => $overdue,
             'teamId' => $teamId,
-            'isLeader' => $isLeader,
+            'team' => $team,
+            'section' => $team ? $sections->sectionFor($team) : '',
+            'adviser' => $expert('adviser'),
+            'consultant' => $expert('consultant'),
+            'progress' => $progress,
+            'groups' => $groups,
+            // The milestone the team is on: the first one not finished. It starts open.
+            'current' => $groups->first(fn ($group) => $group->closed < $group->rows->count()),
+            'next' => $progress?->items
+                ->reject(fn ($row) => in_array($row->state, MilestoneProgress::COMPLETE_STATES, true))
+                ->filter(fn ($row) => $row->due_on)
+                ->sortBy(fn ($row) => $row->due_on)
+                ->first(),
         ]);
     }
 

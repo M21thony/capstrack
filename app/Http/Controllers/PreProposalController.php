@@ -8,12 +8,15 @@ use App\Models\StudentSchoolYear;
 use App\Models\Team;
 use App\Services\OllamaSSHClient;
 use App\Services\SimilarityService;
+use App\Support\ProjectTags;
 use App\Support\StudentTeam;
+use App\Support\TitleRevision;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class PreProposalController extends Controller
@@ -71,12 +74,77 @@ class PreProposalController extends Controller
                     'student_s_y_id',
                     StudentSchoolYear::where('team_id', $team->team_id)->pluck('s_y_id')
                 )
-                    ->whereNotIn('id', $proposals->pluck('duplication_check_id')->filter())
+                    // Any pre-proposal, not just this team's. A check is
+                    // recorded against the student, so leaving a team and
+                    // making a new one carries the old scan across - while
+                    // the pre-proposal it fed stays with the team they left.
+                    // Excluding only this team's put that spent scan back on
+                    // the page, where clearing it was refused and the reason
+                    // named a document that is not there to remove.
+                    ->whereNotExists(function ($q) {
+                        $q->selectRaw(1)
+                            ->from('capstone_pre_proposals')
+                            ->whereColumn('capstone_pre_proposals.duplication_check_id', 'duplication_checks.id');
+                    })
                     ->latest('id')
                     ->first()
                 : null,
             'reviewStarted' => (bool) $team && $this->reviewStarted($team),
+            // After the Pre-proposal Defense: a title passed with revision can
+            // be reworded until the final title form is in; a team sent back
+            // for a new title sees the titles that were set aside.
+            'canReviseTitle' => (bool) $team && TitleRevision::canRevise($team),
+            'needsNewTitle' => (bool) $team && TitleRevision::needsNewTitle($team),
+            'retiredProposals' => $team ? $team->allPreProposals()->whereNotNull('retired_at')->get() : collect(),
+            'awaitingAdviser' => $team ? TitleRevision::awaitingAdviser($team) : null,
+            'adviserName' => $team
+                ? \App\Models\CapstoneExpert::find(app(\App\Services\RecipientResolver::class)->resolveTeamRoleExpert($team->team_id, 'adviser'))?->name
+                : null,
         ]);
+    }
+
+    /**
+     * PATCH /pre-proposal/title - the leader rewords a title the panel passed
+     * with revision. The pre-proposal keeps the title as it was approved; the
+     * team's title is what changes.
+     */
+    public function updateTitle(Request $request): RedirectResponse
+    {
+        $team = $this->currentTeam($request);
+
+        if (! $team) {
+            abort(403);
+        }
+
+        if ((int) $team->leader_id !== (int) $request->user()->student_id) {
+            return redirect()->route('student.duplication')->with('error', 'Only the team leader can revise the title.');
+        }
+
+        if ($reason = TitleRevision::whyNot($team)) {
+            return redirect()->route('student.duplication')->with('error', $reason);
+        }
+
+        $validated = $request->validate(['title' => $this->titleRule()]);
+
+        $team->update(['project_title' => trim($validated['title'])]);
+
+        return redirect()->route('student.duplication')
+            ->with('status', 'Title revised. It becomes final once you upload the Signed Final Project Title Form.');
+    }
+
+    /** 11-12 meaningful words, as every title in the college is written. */
+    private function titleRule(): array
+    {
+        return [
+            'required', 'string', 'max:150',
+            function ($attr, $value, $fail) {
+                $count = $this->countMeaningfulWords($value ?? '');
+
+                if ($count < 11 || $count > 12) {
+                    $fail("Title must contain 11–12 meaningful words (filler words like 'a', 'of', 'in' don't count). Current count: {$count}.");
+                }
+            },
+        ];
     }
 
     // AJAX: upload a PDF, run the same check DuplicationController::check()
@@ -123,7 +191,11 @@ class PreProposalController extends Controller
             $matches = $this->service->findSimilarDocuments($concepts, 10);
             $instructors = $this->service->suggestInstructors($concepts);
 
-            $topScore = $matches[0]['score'] ?? 0;
+            // Only a judged match may set the verdict. An unassessed one
+            // carries a demoted embedding number, which is an ordering
+            // device, not a similarity.
+            $topScore = collect($matches)
+                ->first(fn ($m) => $m['assessed'] ?? true)['score'] ?? 0;
             $verdict = $topScore >= 65 ? 'High Similarity'
                     : ($topScore >= 55 ? 'Moderate Similarity' : 'Passed');
 
@@ -131,6 +203,10 @@ class PreProposalController extends Controller
                 'archived_id' => $m['document']->archived_id,
                 'title' => $m['document']->title,
                 'abstract' => $m['document']->abstract,
+                // Who wrote it. A team told their topic is close to something
+                // already done asks whose work it was first, and the report
+                // named a year and a programme and stopped there.
+                'authors' => $m['document']->authors,
                 'academic_year' => $m['document']->academic_year,
                 'program' => $m['document']->program,
                 'score' => $m['score'],
@@ -139,6 +215,7 @@ class PreProposalController extends Controller
                 'differences' => $m['differences'] ?? '',
                 'suggestion' => $m['suggestion'] ?? '',
                 'is_relevant' => $m['is_relevant'] ?? true,
+                'assessed' => $m['assessed'] ?? true,
                 'matched_on' => $m['matched_on'] ?? [],
             ], $matches);
 
@@ -266,6 +343,13 @@ class PreProposalController extends Controller
             ], 403);
         }
 
+        // Any pre-proposal, including another team's. The column carries
+        // ON DELETE CASCADE, so removing the check takes the pre-proposal
+        // with it wherever foreign keys are enforced - and leaves a dangling
+        // reference on MyISAM, where they are not. Neither is something a
+        // student clearing their own workspace should be able to do to a
+        // team they have left. The scan simply is not offered to them any
+        // more (see edit()), so this is now only reachable directly.
         if (CapstonePreProposal::where('duplication_check_id', $check->id)->exists()) {
             return response()->json([
                 'success' => false,
@@ -280,6 +364,29 @@ class PreProposalController extends Controller
         $check->delete();
 
         return response()->json(['success' => true, 'message' => 'Result cleared.']);
+    }
+
+    /**
+     * A proposal this team has already turned in that this one repeats.
+     *
+     * Two ways of being the same: the same document - one duplication check
+     * cannot stand as evidence for two different titles - or the same title
+     * written out again, allowing for capitals, spacing and punctuation,
+     * since retyping it rarely comes out character-for-character.
+     */
+    private function clashingProposal(Team $team, string $title, int $checkId): ?CapstonePreProposal
+    {
+        $normalise = fn (string $t) => preg_replace('/[^a-z0-9 ]/', '', mb_strtolower(
+            trim(preg_replace('/\s+/', ' ', $t))
+        ));
+
+        $wanted = $normalise($title);
+
+        // Set-aside titles count too: a title the panel sent back is not a new one.
+        return $team->allPreProposals()
+            ->get()
+            ->first(fn ($existing) => (int) $existing->duplication_check_id === $checkId
+                || $normalise((string) $existing->title) === $wanted);
     }
 
     public function store(Request $request): RedirectResponse
@@ -299,16 +406,7 @@ class PreProposalController extends Controller
         $slot = $this->nextAvailableSlot($team);
 
         $validated = $request->validate([
-            'title' => [
-                'required', 'string', 'max:150',
-                function ($attr, $value, $fail) {
-                    $count = $this->countMeaningfulWords($value ?? '');
-
-                    if ($count < 11 || $count > 12) {
-                        $fail("Title must contain 11–12 meaningful words (filler words like 'a', 'of', 'in' don't count). Current count: {$count}.");
-                    }
-                },
-            ],
+            'title' => $this->titleRule(),
             'sdg_goals' => ['required', 'string', 'max:150'],
             'research_agenda' => ['required', 'array', 'min:1'],
             'research_agenda.*' => ['string', 'max:150'],
@@ -317,7 +415,14 @@ class PreProposalController extends Controller
             'scope' => ['required', 'string'],
             'limitations' => ['required', 'string'],
             'sdm' => ['required', 'string', 'max:100'],
+            'tags' => ['required', 'array', 'min:'.ProjectTags::MIN, 'max:'.ProjectTags::MAX],
+            'tags.*' => ['string', 'distinct', Rule::in(ProjectTags::OPTIONS)],
             'duplication_check_id' => ['required', 'integer'],
+        ], [
+            'tags.required' => 'Pick at least one tag for what kind of project this is.',
+            'tags.min' => 'Pick at least one tag for what kind of project this is.',
+            'tags.max' => 'Pick at most '.ProjectTags::MAX.' tags.',
+            'tags.*.in' => 'Pick tags from the list.',
         ]);
 
         $check = DuplicationCheck::whereHas(
@@ -328,6 +433,20 @@ class PreProposalController extends Controller
         if (! $check) {
             return redirect()->route('student.duplication')
                 ->with('error', 'Run the duplication check for this proposal first.');
+        }
+
+        // The point of turning in more than one title is to offer the CaPSA
+        // a choice. The same title twice, or the same scanned document twice,
+        // is not a choice - and it went in silently, so a team could fill
+        // every slot with one proposal and think they had done the work.
+        if ($clash = $this->clashingProposal($team, $validated['title'], $check->id)) {
+            return redirect()->route('student.duplication')->with(
+                'error',
+                $clash->duplication_check_id === $check->id
+                    ? 'That is the same document you already turned in as Pre-Proposal '
+                        .$clash->slot.'. Each one needs its own title and its own duplication check.'
+                    : 'You already turned that title in as Pre-Proposal '.$clash->slot.'.'
+            );
         }
 
         $duplicationStatus = $check->verdict === 'Passed' ? 'free' : 'contains_duplication';
@@ -344,6 +463,7 @@ class PreProposalController extends Controller
                 'scope' => $validated['scope'],
                 'limitations' => $validated['limitations'],
                 'sdm' => $validated['sdm'],
+                'tags' => array_values($validated['tags']),
                 'duplication_status' => $duplicationStatus,
                 'approved_status' => false,
                 'rejection_reason' => null,
@@ -385,7 +505,28 @@ class PreProposalController extends Controller
 
         if (! $preProposal->approved_status) {
             return redirect()->route('student.duplication')
-                ->with('error', 'You can only choose a title the CAPSA has approved.');
+                ->with('error', 'You can only choose a title the CaPSA has recommended.');
+        }
+
+        // A new title after the defense goes to the team's adviser to confirm first.
+        // Skipped when their CaPSA is also their adviser: that person already
+        // recommended this title, so the pick stands like any other.
+        $resolver = app(\App\Services\RecipientResolver::class);
+        $adviserId = $resolver->resolveTeamRoleExpert((int) $team->team_id, 'adviser');
+        $sameExpert = $adviserId && $adviserId === $resolver->resolveSubjectAdviserAdmin((int) $team->team_id);
+
+        if (TitleRevision::needsNewTitle($team) && $sameExpert) {
+            $preProposal->update(['adviser_status' => TitleRevision::APPROVED, 'adviser_decided_at' => now()]);
+        } elseif (TitleRevision::needsNewTitle($team)) {
+            if (TitleRevision::awaitingAdviser($team)) {
+                return redirect()->route('student.duplication')
+                    ->with('error', 'Your adviser is already confirming one of your titles.');
+            }
+
+            TitleRevision::askAdviser($preProposal);
+
+            return redirect()->route('student.duplication')
+                ->with('status', 'Sent to your adviser to confirm. It becomes your title once they approve.');
         }
 
         $team->update([
@@ -439,23 +580,51 @@ class PreProposalController extends Controller
                 ->with('error', 'Your pre-proposals are already turned in.');
         }
 
-        $count = $team->preProposals()->count();
+        // Which of the drafts to turn in. A team that scanned five titles
+        // and wants their CaPSA to see three used to have to delete the
+        // other two - the only way to leave a title out was to lose it and
+        // its report. Left out, every draft goes, which is what the page
+        // sends when nobody has unticked anything.
+        // 'choose' says the page sent a selection at all - without it,
+        // unticking every box would look exactly like an older page that
+        // sends no ids, and turn in all of them.
+        $validated = $request->validate([
+            'choose' => ['sometimes', 'boolean'],
+            'ids' => ['sometimes', 'array'],
+            'ids.*' => ['integer'],
+        ]);
+
+        $chosen = ($validated['choose'] ?? false) ? ($validated['ids'] ?? []) : null;
+
+        $drafts = $team->preProposals()->whereNull('submitted_at');
+
+        if ($chosen !== null) {
+            $drafts->whereIn('id', $chosen);
+        }
+
+        $count = (clone $drafts)->count();
 
         // One is enough to be worth reading. The page says four is wiser and
         // asks before letting fewer through; it does not refuse them.
         if ($count < 1) {
             return redirect()->route('student.duplication')
-                ->with('error', 'Save a pre-proposal title before submitting.');
+                ->with('error', $chosen === null
+                    ? 'Save a pre-proposal title before submitting.'
+                    : 'Choose at least one pre-proposal to submit.');
         }
 
         // Only the pre-proposals are touched. Turning in used to also set
         // team_status to 'complete', which is what let one column mean both
         // "not recruiting" and "under review"; team_status is recruitment
         // only now, and Team::hasSubmittedPreProposals() answers the rest.
-        $team->preProposals()->whereNull('submitted_at')->update(['submitted_at' => now()]);
+        $drafts->update(['submitted_at' => now()]);
+
+        $held = $team->preProposals()->whereNull('submitted_at')->count();
 
         return redirect()->route('student.duplication')
-            ->with('status', 'Submitted for checking. Your CaPSA can now review your '.$count.' titles.');
+            ->with('status', 'Submitted for checking. Your CaPSA can now review your '
+                .$count.' '.($count === 1 ? 'title' : 'titles').'.'
+                .($held > 0 ? ' '.$held.' kept as '.($held === 1 ? 'a draft' : 'drafts').'.' : ''));
     }
 
     /**
@@ -560,7 +729,8 @@ class PreProposalController extends Controller
      */
     private function nextAvailableSlot(Team $team): int
     {
-        return (int) $team->preProposals()->max('slot') + 1;
+        // Over every title, set-aside ones included, so a new one never writes over an old slot.
+        return (int) $team->allPreProposals()->max('slot') + 1;
     }
 
     /** Whether this team has turned their pre-proposals in for checking. */

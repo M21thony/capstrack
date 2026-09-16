@@ -53,6 +53,20 @@ return [
         'model' => env('OLLAMA_MODEL', 'qwen2.5:7B'),
         'embed_model' => env('OLLAMA_EMBED_MODEL', 'nomic-embed-text'),
 
+        // The model that judges one archived capstone against a pre-proposal,
+        // when that should not be the model above.
+        //
+        // Empty, so it is the model above. The base model was tried here,
+        // because the fine-tune recites one stock verdict on some cases - but
+        // on the one case where the prompt itself states the expected answer
+        // (CapsTrack against "Capstone Project and Thesis Class Information
+        // Management System", which it says is 40-50) the fine-tune answers
+        // 40 and the base answers 30. Neither reasons its way there; the
+        // fine-tune simply recognises the worked example. Until the training
+        // data has a middle for it to learn, the fine-tune is the better of
+        // the two and the setting stays here to A/B a retrained one.
+        'judge_model' => env('OLLAMA_JUDGE_MODEL'),
+
         // How long Ollama holds a model in memory after answering. Its own
         // default is five minutes, and a duplication check takes longer than
         // that to work through a team's titles - so the model was being
@@ -61,11 +75,18 @@ return [
         // else needs the memory.
         'keep_alive' => env('OLLAMA_KEEP_ALIVE', '30m'),
 
-        // How many of a check's candidates get an AI-written verdict. The
-        // rest keep the embedding line they were already showing. Each
+        // How many of a check's candidates get an AI-written verdict. Each
         // verdict is a model call, so this is the main lever on how long a
-        // check takes on a weak connection.
-        'judge_limit' => env('OLLAMA_JUDGE_LIMIT', 4),
+        // check takes.
+        //
+        // Ten, because that is how many the retriever returns and anything
+        // less leaves some of them unread. Measured against the labelled
+        // examples in the fine-tuning set: the genuine match is inside the
+        // top four 92% of the time and inside the top ten 98%, so a limit of
+        // four left about one check in twelve with the real duplicate never
+        // looked at. Whatever is not judged is shown as "Not assessed"
+        // rather than given a number.
+        'judge_limit' => env('OLLAMA_JUDGE_LIMIT', 10),
 
         // ...and how close a candidate has to be to be worth explaining.
         // The top match is always explained whatever it scored.

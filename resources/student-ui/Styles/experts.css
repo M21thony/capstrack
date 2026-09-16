@@ -641,7 +641,8 @@ select.input{cursor:pointer}
 .lname{display:flex;align-items:center;gap:9px;font-weight:600;min-width:0}
 .lname .expert-avatar-wrap.sm{width:26px;height:26px;border-radius:50%;padding:0;border:none;margin:0;flex-shrink:0}
 .lname>span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.ltags{display:flex;gap:4px;flex-wrap:nowrap;overflow:hidden}
+/* Two rows at most, then a +N chip (fitTags), so a long list never pushes the table wider. */
+.ltags{display:flex;gap:4px;flex-wrap:wrap;align-content:flex-start;max-width:320px;max-height:44px;overflow:hidden}
 .lact{text-align:right;white-space:nowrap}
 .lact .btn{width:auto;margin-top:0}
 

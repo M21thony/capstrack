@@ -70,15 +70,20 @@
 .slots-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px;gap:8px}
 .slots-title{font-size:13.5px;font-weight:600;color:var(--text)}
 .slots-hint{font-size:11px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.slot-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px}
-.slot-btn{display:flex;flex-direction:column;gap:1px;align-items:center;padding:9px 6px;border:1.5px solid var(--border);
-          border-radius:9px;background:var(--bg2);cursor:pointer;font-family:inherit;transition:border-color .15s,background .15s}
-.slot-btn:hover{border-color:var(--accent);background:var(--accent-light)}
-.slot-btn.picked{border-color:var(--accent);background:var(--accent-light)}
-.slot-time{font-size:12.5px;font-weight:600;color:var(--text)}
-.slot-meta{font-size:10px;color:var(--text3)}
+.slot-grid{display:block}
 .slot-empty{grid-column:1/-1;font-size:11.5px;color:var(--text3);padding:18px 12px;text-align:center;
             border:1px dashed var(--border);border-radius:10px}
+
+/* The times on offer, as a list. What a team is choosing between is the times
+   themselves, so that is all this shows. */
+.sd-list{display:flex;flex-direction:column;gap:8px;max-height:320px;overflow-y:auto;padding-right:2px}
+.sd-slot{display:flex;flex-direction:column;gap:2px;align-items:flex-start;text-align:left;width:100%;
+         padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;background:var(--bg2);
+         font-family:inherit;cursor:pointer;transition:border-color .15s,background-color .15s}
+.sd-slot:hover{border-color:var(--accent);background:var(--accent-light)}
+.sd-slot.picked{border-color:var(--accent);background:var(--accent-light)}
+.sd-slot b{font-size:13px;font-weight:600;color:var(--text)}
+.sd-slot span{font-size:11px;color:var(--text3)}
 
 .book-actions{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;
               padding-top:14px;border-top:1px solid var(--border)}
@@ -89,12 +94,6 @@
 
 .page-title-wrap{display:flex;flex-direction:column;min-width:0}
 .page-subtitle{font-size:11.5px;color:var(--text3);margin-top:1px}
-.slots-len{font-weight:400;color:var(--text3);font-size:11px}
-
-/* A booked time is shown, not hidden: a team needs to see the slot exists
-   and is taken, or an expert's day looks emptier than it is. */
-.slot-btn.taken{opacity:.55;cursor:not-allowed;background:var(--bg3)}
-.slot-btn.taken:hover{border-color:var(--border);background:var(--bg3)}
 
 /* Booking rows read date-first, the way the mock does - the date is what a
    team scans for. */
@@ -118,8 +117,6 @@
 .sched-cal .calendar-header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:4px 0 10px}
 .sched-cal .calendar-header{max-width:300px}
 .sched-cal .calendar-header h3{font-size:13.5px;font-weight:600;color:var(--text);text-align:center;flex:1}
-.slot-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
-.slot-btn{align-items:center;padding:11px 6px}
 .book-actions{justify-content:flex-end;border-top:none;padding-top:4px}
 .book-note{justify-content:center;margin-top:10px;padding-top:12px;border-top:1px solid var(--border)}
 .sched-cols{gap:26px}
@@ -272,9 +269,12 @@
             }
         }
 
+        // Adviser, consultant, grammarian - the order the department names
+        // them in, and the order a team engages them. The cards are drawn in
+        // the order of this array, and it had the consultant first.
         $roleCards = [
-            'consultant' => ['title' => 'Consultant Consultation', 'blurb' => 'Capstone project review'],
             'adviser' => ['title' => 'Adviser Consultation', 'blurb' => 'Academic guidance and concerns'],
+            'consultant' => ['title' => 'Consultant Consultation', 'blurb' => 'Capstone project review'],
             'grammarian' => ['title' => 'Grammarian Consultation', 'blurb' => 'Grammar & language review'],
         ];
       @endphp
@@ -383,7 +383,7 @@
             </div>
 
             <div class="sched-slots">
-              <div class="col-head">Available Time Slots <span class="slots-len">(30 mins per session)</span></div>
+              <div class="col-head">Available Time Slots</div>
               <div class="slot-grid" id="slot-grid">
                 <div class="slot-empty">Choose a highlighted date to see its times.</div>
               </div>
@@ -492,11 +492,14 @@
                   </div>
                 </div>
                 <span class="appt-status-badge appt-status-badge-upcoming">
-                  {{ $booking->session_date && $booking->session_date->isToday() ? 'Today' : 'Scheduled' }}
+                  {{ $booking->cancellation_requested_at ? 'Cancel requested' : ($booking->session_date && $booking->session_date->isToday() ? 'Today' : 'Scheduled') }}
                 </span>
                 <svg class="appt-chev" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
               </div>
-              <button type="button" class="appt-cancel-btn" data-cancel-booking-id="{{ $booking->booking_id }}">Cancel Booking</button>
+              @unless ($booking->cancellation_requested_at)
+              <button type="button" class="appt-cancel-btn" data-cancel-booking-id="{{ $booking->booking_id }}"
+                      data-session-date="{{ $booking->session_date?->format('Y-m-d') }}">Cancel Booking</button>
+              @endunless
             </div>
           @empty
             <div class="session-list-empty">No upcoming consultations.</div>
@@ -532,7 +535,7 @@
                     {{ $booking->schedule->expert->first_name ?? 'Expert' }} {{ $booking->schedule->expert->last_name ?? '' }}
                   </div>
                 </div>
-                <span class="appt-status-badge">Completed</span>
+                <span class="appt-status-badge">Ended</span>
                 <svg class="appt-chev" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
               </div>
             </div>
@@ -567,7 +570,7 @@
   </div>
 </div>
 
-<div id="cancelBookingModal" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:100000;display:none;align-items:center;justify-content:center;box-sizing:border-box;">
+<div id="cancelBookingModal" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:1000;display:none;align-items:center;justify-content:center;box-sizing:border-box;">
   <div id="cancelBookingModalBox" style="background:var(--bg2);width:450px;max-width:90vw;border-radius:20px;padding:30px;box-shadow:0 20px 40px rgba(0,0,0,0.2);box-sizing:border-box;">
     <div style="margin-bottom:20px;">
       <h2 style="font-size:18px;font-weight:600;margin:0;">Cancel Booking</h2>
@@ -635,7 +638,10 @@ let myBookedDates = @json($upcomingBookings->merge($recentBookings)->filter(fn (
 // One active booking per team at a time — mirrors the server-side check in
 // StudentConsultationController::book(), so clicking a date short-circuits
 // with a clear toast instead of opening the modal and failing on submit.
-let teamHasActiveBooking = @json($teamHasActiveBooking);
+// The experts this team already has a session waiting with. One live
+// booking per expert, not one per team - a team due to see their adviser on
+// Thursday can still book their consultant for Friday.
+let bookedExpertIds = @json($bookedExpertIds).map(Number);
 const slotTypeColors = @json($slotTypeColors);
 
 // Weekly/biweekly slots share a single schedule row across every future
@@ -644,6 +650,18 @@ const slotTypeColors = @json($slotTypeColors);
 // one Monday would hide every other Monday too. "schedule_id|YYYY-MM-DD"
 // entries here mean that specific occurrence is full.
 let fullOccurrences = new Set(@json($fullOccurrences));
+
+// Each expert's scheduling window: { earliest: 'YYYY-MM-DD HH:MM', latest: 'YYYY-MM-DD' | null }.
+// An expert with no saved availability has none, and every slot stays offered.
+let bookingWindows = @json($bookingWindows ?? (object) []);
+
+function withinWindow(expertId, dateKey, startTime) {
+  const w = bookingWindows[expertId];
+  if (!w) return true;
+  // Both sides are 'YYYY-MM-DD HH:MM', so they compare correctly as text.
+  if (dateKey + ' ' + String(startTime || '00:00').slice(0, 5) < w.earliest) return false;
+  return !w.latest || dateKey <= w.latest;
+}
 
 function isOccurrenceFull(scheduleId, dateKey) {
   return fullOccurrences.has(scheduleId + '|' + dateKey);
@@ -665,7 +683,8 @@ function matchesDate(s, dayName, dateKey) {
 }
 
 function getSlotsForDate(expertId, dayName, dateKey) {
-  return getSlotsForExpert(expertId).filter(s => matchesDate(s, dayName, dateKey) && s.is_available && !isOccurrenceFull(s.schedule_id, dateKey));
+  return getSlotsForExpert(expertId).filter(s => matchesDate(s, dayName, dateKey) && s.is_available
+    && !isOccurrenceFull(s.schedule_id, dateKey) && withinWindow(expertId, dateKey, s.start_time));
 }
 
 function formatTime(t) {
@@ -674,6 +693,17 @@ function formatTime(t) {
   const ampm = h < 12 ? 'AM' : 'PM';
   const h12 = h % 12 || 12;
   return h12 + ':' + String(m).padStart(2, '0') + ' ' + ampm;
+}
+
+// How long the expert set this slot to run, e.g. "45 mins · ". Read from
+// the slot's own times - sessions are not all the same length.
+function slotLength(slot) {
+  if (!slot.start_time || !slot.end_time) return '';
+  const toMin = t => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
+  const mins = toMin(slot.end_time) - toMin(slot.start_time);
+  if (mins <= 0) return '';
+  const text = mins % 60 === 0 ? (mins / 60) + (mins === 60 ? ' hr' : ' hrs') : mins + ' mins';
+  return text + ' · ';
 }
 
 function renderCalendar() {
@@ -794,12 +824,10 @@ let selectedSlot = null;
 let selectedDateKey = null;
 
 function selectDate(d, dayName, dateKey) {
-  if (teamHasActiveBooking) {
-    showToast('Your team already has an active consultation booking. You can book another once that session is finished.', 'error');
-    return;
-  }
-
   const expertId = document.getElementById('expertSelect').value;
+
+  // A date always opens, the booked one included - whether this team may
+  // book is asked when they confirm, not by refusing to show the day.
   if (!expertId) {
     showToast('Choose who you want to consult first.', 'error');
     return;
@@ -826,22 +854,42 @@ function selectDate(d, dayName, dateKey) {
   const grid = document.getElementById('slot-grid');
   grid.innerHTML = '';
 
-  daySlots.forEach(slot => {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'slot-btn';
-    btn.innerHTML =
-      '<span class="slot-time">' + formatTime(slot.start_time) + '</span>' +
-      '<span class="slot-meta">' + ucfirst(slot.slot_type || 'consultation') + '</span>';
-    btn.onclick = () => pickSlot(btn, slot, dateKey);
-    forceInteractive(btn);
-    grid.appendChild(btn);
-  });
+  renderDayGrid(daySlots, dateKey);
+}
+
+// The times on offer, earliest first. A timeline spent most of its height on
+// hours with nothing in them.
+function renderDayGrid(daySlots, dateKey) {
+  const grid = document.getElementById('slot-grid');
+  grid.innerHTML = '';
+
+  if (!daySlots.length) {
+    grid.innerHTML = '<div class="slot-empty">No open times on this date.</div>';
+    return;
+  }
+
+  const list = document.createElement('div');
+  list.className = 'sd-list';
+
+  [...daySlots]
+    .sort((a, b) => String(a.start_time).localeCompare(String(b.start_time)))
+    .forEach(slot => {
+      const row = document.createElement('button');
+      row.type = 'button';
+      row.className = 'sd-slot';
+      row.innerHTML = '<b>' + formatTime(slot.start_time) + ' – ' + formatTime(slot.end_time) + '</b>'
+        + '<span>' + slotLength(slot) + ucfirst(slot.slot_type || 'consultation') + '</span>';
+      row.onclick = () => pickSlot(row, slot, dateKey);
+      forceInteractive(row);
+      list.appendChild(row);
+    });
+
+  grid.appendChild(list);
 }
 
 /** Choosing a time arms the Confirm button; it does not book on its own. */
 function pickSlot(btn, slot, dateKey) {
-  document.querySelectorAll('#slot-grid .slot-btn').forEach(b => b.classList.remove('picked'));
+  document.querySelectorAll('#slot-grid .sd-slot').forEach(b => b.classList.remove('picked'));
   btn.classList.add('picked');
 
   selectedSlot = { scheduleId: slot.schedule_id, dateKey: dateKey };
@@ -856,6 +904,21 @@ function updateConfirmButton() {
 function confirmBooking() {
   if (!selectedSlot) {
     showToast('Pick a time first.', 'error');
+    return;
+  }
+
+  const expertId = document.getElementById('expertSelect').value;
+  const who = document.querySelector('#expertSelect option:checked')?.textContent?.trim() || 'this expert';
+
+  // The date the team already has with this expert: say that, not the
+  // general "one session at a time" rule.
+  if (myBookedDates.some(b => b.date === selectedSlot.dateKey && String(b.expert_id) === String(expertId))) {
+    showToast('You already booked this date with ' + who + '. See it under Upcoming.', 'error');
+    return;
+  }
+
+  if (bookedExpertIds.includes(Number(expertId))) {
+    showToast('Your team already has a session booked with ' + who + '. You can book them again once that one is done.', 'error');
     return;
   }
 
@@ -924,10 +987,11 @@ function bookingCardHtml(booking, isUpcoming) {
   const dateKey = booking.session_date;
   const dateLabel = dateKey ? formatDateLabel(dateKey) : (booking.available_date || '—');
   const statusBadge = isUpcoming
-    ? '<span class="appt-status-badge appt-status-badge-upcoming">' + (dateKey === todayKeyString() ? 'Today' : 'Scheduled') + '</span>'
-    : '<span class="appt-status-badge">Completed</span>';
-  const cancelBtn = isUpcoming
-    ? '<button type="button" class="appt-cancel-btn" data-cancel-booking-id="' + booking.booking_id + '">Cancel Booking</button>'
+    ? '<span class="appt-status-badge appt-status-badge-upcoming">' + (booking.cancel_requested ? 'Cancel requested' : (dateKey === todayKeyString() ? 'Today' : 'Scheduled')) + '</span>'
+    : '<span class="appt-status-badge">Ended</span>';
+  const cancelBtn = isUpcoming && !booking.cancel_requested
+    ? '<button type="button" class="appt-cancel-btn" data-cancel-booking-id="' + booking.booking_id
+        + '" data-session-date="' + (booking.session_date || '') + '">Cancel Booking</button>'
     : '';
 
   // Same shape the page renders on the server, or a refresh would quietly
@@ -1012,8 +1076,9 @@ async function refreshConsultationData(showFeedback) {
     const data = await res.json();
 
     expertSlots = data.availableSlots;
+    if (data.bookingWindows) bookingWindows = data.bookingWindows;
     fullOccurrences = new Set(data.fullOccurrences || []);
-    teamHasActiveBooking = data.teamHasActiveBooking;
+    bookedExpertIds = (data.bookedExpertIds || []).map(Number);
     myBookedDates = data.myBookedDates;
 
     renderCalendar();
@@ -1061,8 +1126,13 @@ async function bookSlot(scheduleId) {
       closeSlotModal();
 
       fullOccurrences = new Set(data.fullOccurrences || []);
-      teamHasActiveBooking = true;
       const bookedExpertId = document.getElementById('expertSelect').value;
+
+      // Only this expert is now spoken for; the others stay bookable.
+      if (! bookedExpertIds.includes(Number(bookedExpertId))) {
+        bookedExpertIds.push(Number(bookedExpertId));
+      }
+
       if (dateKey && ! myBookedDates.some(b => b.date === dateKey && String(b.expert_id) === String(bookedExpertId))) {
         myBookedDates.push({ date: dateKey, expert_id: bookedExpertId });
       }
@@ -1092,6 +1162,43 @@ function forceInteractive(el) {
   el.readOnly = false;
   el.style.setProperty('pointer-events', 'auto', 'important');
   el.style.setProperty('user-select', 'auto', 'important');
+}
+
+const CANCEL_CUTOFF_DAYS = {{ \App\Http\Controllers\StudentConsultationController::CANCEL_CUTOFF_DAYS }};
+
+/**
+ * Whole days between today and the session, counted the way the server
+ * counts them.
+ */
+function daysUntil(sessionDate) {
+  if (!sessionDate) return null;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const when = new Date(sessionDate + 'T00:00:00');
+  if (isNaN(when)) return null;
+
+  return Math.round((when - today) / 86400000);
+}
+
+/**
+ * Why this booking cannot be called off, or null when it can.
+ *
+ * Asked before the dialog opens. The server refuses a late cancellation
+ * either way, but it used to be the only thing that knew - so the student
+ * wrote out a reason, sent it, and was told then that they could not cancel
+ * at all. The date is on the button; there is no reason to make them type
+ * first to find out.
+ */
+function cancelBlockedReason(sessionDate) {
+  const days = daysUntil(sessionDate);
+
+  if (days === null || days >= CANCEL_CUTOFF_DAYS) return null;
+
+  return 'This consultation is in ' + (days <= 0 ? 'less than a day' : days + ' day' + (days === 1 ? '' : 's'))
+    + '. It can only be cancelled more than ' + CANCEL_CUTOFF_DAYS
+    + ' days ahead - message your expert instead.';
 }
 
 function openCancelModal(bookingId) {
@@ -1130,6 +1237,14 @@ function closeCancelModal() {
 document.addEventListener('click', function (event) {
   const cancelBtn = event.target.closest('.appt-cancel-btn');
   if (cancelBtn) {
+    const blocked = cancelBlockedReason(cancelBtn.dataset.sessionDate);
+
+    if (blocked) {
+      showToast(blocked, 'error');
+
+      return;
+    }
+
     openCancelModal(cancelBtn.dataset.cancelBookingId);
     return;
   }
@@ -1173,18 +1288,9 @@ async function submitCancelBooking() {
 
     const data = await res.json();
     if (data.success) {
-      const card = document.querySelector('.session-list-item[data-booking-id="' + cancelBookingId + '"]');
-      if (card) { card.remove(); }
-
-      const list = document.getElementById('upcoming-bookings-list');
-      if (list && !list.querySelector('.session-list-item')) {
-        list.innerHTML = '<div class="session-list-empty">No upcoming consultations.</div>';
-      }
-      const count = document.querySelector('#upcoming-bookings-list')?.closest('.sessions-card')?.querySelector('.sessions-card-count');
-      if (count) { count.textContent = String(Math.max(0, Number(count.textContent || '0') - 1)); }
-
       closeCancelModal();
-      showToast('Booking cancelled. The expert has been notified.', 'success');
+      showToast('Cancellation requested. Your expert will approve or decline it.', 'success');
+      refreshConsultationData(false);
     } else {
       showToast(data.message || 'Failed to cancel booking.', 'error');
     }

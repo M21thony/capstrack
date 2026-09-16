@@ -21,6 +21,36 @@ class ScheduleSlotOverlapTest extends TestCase
         ]);
     }
 
+    /**
+     * Saving availability a second time used to insert the same slots again.
+     * The overlap check below flagged every copy unavailable, and an
+     * unavailable slot reads as a booked one on the schedule page - so four
+     * repeated saves showed up as four appointments with no team on them.
+     */
+    public function test_saving_the_same_slot_twice_does_not_make_a_second_one(): void
+    {
+        $expert = $this->makeExpert();
+
+        $post = fn () => $this->actingAs($expert, 'expert')->postJson('/instructor/schedule/slots', [
+            'available_date' => 'Tuesday',
+            'start_time' => '09:00',
+            'end_time' => '10:30',
+            'consultation_limit' => 1,
+            'recur' => 'weekly',
+        ]);
+
+        $first = $post();
+        $first->assertOk()->assertJson(['is_available' => true]);
+
+        $post()->assertOk()->assertJson([
+            'schedule_id' => $first->json('schedule_id'),
+            'is_available' => true,
+            'already_existed' => true,
+        ]);
+
+        $this->assertSame(1, DB::table('consultation_schedule')->count());
+    }
+
     public function test_a_once_slot_is_not_blocked_by_an_unrelated_once_slot_on_a_different_date(): void
     {
         $expert = $this->makeExpert();

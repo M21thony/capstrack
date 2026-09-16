@@ -32,6 +32,8 @@ class ExpertController extends Controller
 
         $assignments = collect();
         $isLeader = false;
+        /** @var array<string, \App\Models\TeamExpertAssignment> */
+        $rolesSpokenFor = [];
         $roleAssignments = [
             'adviser' => null,
             'consultant' => null,
@@ -42,7 +44,20 @@ class ExpertController extends Controller
             $isLeader = $team->leader_id === $student->student_id;
             $assignments = TeamExpertAssignment::where('team_id', $team->team_id)
                 ->with(['expert.roles', 'expert.expertise', 'expertRole.role', 'preProposal'])
-                ->get();
+                ->get()
+                // One card per expert-and-role: the most recent attempt.
+                // Re-applying after a decline makes a second row rather than
+                // replacing the first - the index that stopped that was
+                // dropped so a team could try again - and the declined one
+                // then sat beside the approved one, telling the team they
+                // had been both refused and accepted by the same person.
+                //
+                // Keyed on the role as well as the expert, because applying
+                // to somebody as consultant after being declined as adviser
+                // is a different application, not a repeat of the same one.
+                ->sortByDesc(fn ($a) => [$a->created_at, $a->assignment_id])
+                ->unique(fn ($a) => $a->expert_id.'-'.$a->expert_role_id)
+                ->values();
 
             // Keyed by the role the team actually engaged each expert as,
             // which is what expert_role_id records. This used to read
@@ -52,6 +67,23 @@ class ExpertController extends Controller
                 $roleName = $a->engaged_role_name;
                 if ($roleName && array_key_exists($roleName, $roleAssignments)) {
                     $roleAssignments[$roleName] = $a;
+                }
+            }
+
+            // A role the team has already asked somebody for is not on offer
+            // anywhere else until that is settled, so the apply dialog can
+            // stop showing it. An expert who is both an adviser and a
+            // consultant still appears - as a consultant, which is the part
+            // of them the team can still use.
+            //
+            // Approved before pending, so a role that is both reads as the
+            // settled thing it is.
+            foreach (['approved', 'pending'] as $status) {
+                foreach ($assignments->where('status', $status) as $a) {
+                    $roleName = $a->engaged_role_name;
+                    if ($roleName && ! isset($rolesSpokenFor[$roleName])) {
+                        $rolesSpokenFor[$roleName] = $a;
+                    }
                 }
             }
         }
@@ -228,6 +260,10 @@ class ExpertController extends Controller
         return view('student.experts', [
             'experts' => $experts,
             'assignments' => $assignments,
+            // Roles this team has an application out for, or has settled,
+            // keyed by role name - so the apply dialog offers only what is
+            // still open.
+            'rolesSpokenFor' => $rolesSpokenFor,
             'team' => $team,
             // The pre-proposal the CaPSA settled on. When a team has one,
             // applying does not need a PDF - that document already went
@@ -239,6 +275,10 @@ class ExpertController extends Controller
             // lost its upload, and a "View PDF" button leading to a 404 is
             // worse than no button. One stat call per page render buys that.
             'proposalPdfUrl' => $this->proposalPdfUrl($approvedProposal),
+            // Experts whose removal is waiting on the CaPSA.
+            'pendingRemovalIds' => $team
+                ? \App\Models\ExpertRemovalRequest::pending()->where('team_id', $team->team_id)->pluck('assignment_id')->map(fn ($id) => (int) $id)->all()
+                : [],
             'isLeader' => $isLeader,
             'teamConfirmed' => $team?->is_confirmed ?? false,
             'skillGroups' => $skillGroups,

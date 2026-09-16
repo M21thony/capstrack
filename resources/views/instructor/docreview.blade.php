@@ -71,18 +71,45 @@
       </div>
     </div>
 
+    {{-- Waiting, overdue, done. "Over 5 days" is the one that matters: a
+         status column says a document is unreviewed, it does not say for how
+         long, and length is what a team complains about. --}}
+    @php
+      $pendingReviews = $reviews->where('review_status', '!=', 'Reviewed');
+      $overdueReviews = $pendingReviews->filter(
+        fn ($r) => \Illuminate\Support\Carbon::parse($r->submitted_at)->diffInDays(now()) >= 5
+      );
+    @endphp
+    <div class="grid-3" style="margin-bottom:14px">
+      <x-dashboard.stat-chip
+        value="{{ $pendingReviews->count() }}" label="Waiting on you"
+        sub="{{ $pendingReviews->isEmpty() ? 'Nothing outstanding' : 'Oldest first below' }}"
+        color="var(--accent3)" />
+      <x-dashboard.stat-chip
+        value="{{ $overdueReviews->count() }}" label="Over 5 days"
+        sub="{{ $overdueReviews->isEmpty() ? 'None running late' : 'These are late' }}"
+        color="{{ $overdueReviews->isEmpty() ? 'var(--text3)' : 'var(--red)' }}" />
+      <x-dashboard.stat-chip
+        value="{{ $reviews->where('review_status', 'Reviewed')->count() }}" label="Reviewed"
+        sub="All time" color="var(--green)" />
+    </div>
+
     <div class="row" style="margin-bottom:14px;gap:8px">
-      <input class="input" placeholder="Search documents or teams..." style="max-width:280px"/>
-      <select class="input" style="width:160px">
-        <option>All Teams</option>
+      <input class="input" id="dr-search" placeholder="Search documents or teams..." style="max-width:280px"/>
+      <select class="input" id="dr-team" style="width:160px">
+        <option value="">All Teams</option>
         @foreach ($teams as $team)
-          <option>{{ $team->team_name }}</option>
+          <option value="{{ $team->team_name }}">{{ $team->team_name }}</option>
         @endforeach
       </select>
-      <select class="input" style="width:150px"><option>All Status</option><option>Pending</option><option>Reviewed</option></select>
+      <select class="input" id="dr-status" style="width:150px">
+        <option value="">All Status</option>
+        <option value="pending">Pending</option>
+        <option value="reviewed">Reviewed</option>
+      </select>
       <span style="flex:1"></span>
-      <span style="font-size:12px;color:var(--text3)">
-        {{ $reviews->count() }} documents &middot; {{ $reviews->where('review_status', 'To Review')->count() }} pending
+      <span style="font-size:12px;color:var(--text3)" id="dr-count">
+        {{ $reviews->count() }} documents &middot; {{ $reviews->where('review_status', '!=', 'Reviewed')->count() }} pending
       </span>
     </div>
     <div class="card" style="padding:0;overflow:hidden">
@@ -99,7 +126,16 @@
         </thead>
         <tbody>
           @forelse ($reviews as $review)
-            <tr>
+            @php
+              $waitingDays = (int) \Illuminate\Support\Carbon::parse($review->submitted_at)->diffInDays(now());
+              $rowState = $review->review_status === 'Reviewed'
+                ? 'is-done'
+                : ($waitingDays >= 5 ? 'is-late' : 'is-waiting');
+            @endphp
+            <tr class="dr-row {{ $rowState }}"
+              data-search="{{ Str::lower($review->file_name.' '.($review->team_name ?? '').' '.$review->role) }}"
+              data-team="{{ $review->team_name ?? '' }}"
+              data-status="{{ $review->review_status === 'Reviewed' ? 'reviewed' : 'pending' }}">
               <td style="padding-left:20px">
                 <div style="display:flex;align-items:center;gap:10px">
                   <div class="doc-icon" @if($review->review_status === 'Reviewed') style="background:rgba(22,163,74,0.08);border:1px solid rgba(22,163,74,0.2)" @endif>
@@ -112,15 +148,17 @@
                 </div>
               </td>
               <td><span class="badge badge-gold">{{ $review->team_name ?? '—' }}</span></td>
-              <td style="font-size:12px">{{ \Illuminate\Support\Carbon::parse($review->submitted_at)->format('M j, Y') }}</td>
+              <td style="font-size:12px;font-variant-numeric:tabular-nums">{{ \Illuminate\Support\Carbon::parse($review->submitted_at)->format('M j, Y') }}</td>
               <td style="font-variant-numeric:tabular-nums;font-size:12px">v{{ $review->version ?? '1.0' }}</td>
               <td>
                 @if ($review->review_status === 'Reviewed')
                   <span class="badge badge-green">Reviewed</span>
                 @elseif ($review->review_status === 'Reviewing')
-                  <span class="badge badge-gold">In Review</span>
+                  <span class="badge badge-gold">In Review{{ $waitingDays >= 1 ? ' · '.$waitingDays.'d' : '' }}</span>
+                @elseif ($waitingDays >= 5)
+                  <span class="badge badge-red">{{ $waitingDays }} days waiting</span>
                 @else
-                  <span class="badge badge-red">To Review</span>
+                  <span class="badge badge-gold">{{ $waitingDays < 1 ? 'Waiting' : $waitingDays.' days waiting' }}</span>
                 @endif
               </td>
               <td>
@@ -163,17 +201,96 @@
               <td colspan="6" style="text-align:center;padding:24px;color:var(--text3)">No documents assigned for review yet.</td>
             </tr>
           @endforelse
+          <tr id="dr-no-match" style="display:none">
+            <td colspan="6" style="text-align:center;padding:24px;color:var(--text3)">No documents match these filters.</td>
+          </tr>
         </tbody>
       </table>
     </div>
   </div>
   </div>
 </div>
+<div class="modal-overlay" id="dr-confirm" onclick="if (event.target === this) closeDisconnectConfirm()">
+  <div class="modal-box" style="width:380px">
+    <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:6px">Disconnect Google Drive?</div>
+    <p style="margin:0 0 16px;font-size:13px;line-height:1.55;color:var(--text2)">
+      Annotated PDFs will stop syncing until you reconnect. The files already in
+      Drive stay where they are.
+    </p>
+    <p id="dr-confirm-error" hidden style="margin:0 0 16px;font-size:12px;color:var(--red)">
+      Could not disconnect Google Drive. Please try again.
+    </p>
+    <div style="display:flex;justify-content:flex-end;gap:8px">
+      <button type="button" class="btn btn-ghost" style="font-size:12px" onclick="closeDisconnectConfirm()">Cancel</button>
+      <button type="button" class="btn btn-primary" style="font-size:12px" id="dr-confirm-ok" onclick="doDisconnectDrive()">Disconnect</button>
+    </div>
+  </div>
+</div>
 @include('instructor.partials.expert-profile')
 @include('instructor.partials.skeleton-toggle')
 <script>
+/* The three controls above the table were markup only - typing in the box
+   or picking a team did nothing at all. They filter the rows now, and the
+   count on the right says what is being shown rather than what exists. */
+(function () {
+  var search = document.getElementById('dr-search');
+  var team   = document.getElementById('dr-team');
+  var status = document.getElementById('dr-status');
+  var count  = document.getElementById('dr-count');
+  var noMatch = document.getElementById('dr-no-match');
+  var rows = Array.prototype.slice.call(document.querySelectorAll('tr.dr-row'));
+
+  if (!rows.length) return;
+
+  function filterRows() {
+    var q = search ? search.value.toLowerCase().trim() : '';
+    var wantTeam = team ? team.value : '';
+    var wantStatus = status ? status.value : '';
+    var shown = 0;
+    var pending = 0;
+
+    rows.forEach(function (row) {
+      // Read off the row rather than out of the cells - counting columns to
+      // find the status breaks the moment one moves.
+      var matches = (!q || (row.dataset.search || '').indexOf(q) !== -1)
+        && (!wantTeam || row.dataset.team === wantTeam)
+        && (!wantStatus || row.dataset.status === wantStatus);
+
+      row.style.display = matches ? '' : 'none';
+
+      if (matches) {
+        shown++;
+        if (row.dataset.status === 'pending') pending++;
+      }
+    });
+
+    if (noMatch) noMatch.style.display = shown ? 'none' : '';
+    if (count) {
+      count.textContent = shown + (shown === 1 ? ' document' : ' documents')
+        + ' · ' + pending + ' pending';
+    }
+  }
+
+  if (search) search.addEventListener('input', filterRows);
+  if (team) team.addEventListener('change', filterRows);
+  if (status) status.addEventListener('change', filterRows);
+})();
+
+/* Asked in the page's own voice rather than the browser's. A second
+   window.confirm() in the same minute offers "don't ask me again" on some
+   browsers, which turns the next irreversible action into a silent yes. */
 function disconnectDrive(){
-  if (!confirm('Disconnect Google Drive? Annotated PDFs will stop syncing until you reconnect.')) return;
+  document.getElementById('dr-confirm').classList.add('show');
+}
+
+function closeDisconnectConfirm(){
+  document.getElementById('dr-confirm').classList.remove('show');
+}
+
+function doDisconnectDrive(){
+  const btn = document.getElementById('dr-confirm-ok');
+  btn.disabled = true;
+  btn.textContent = 'Disconnecting...';
 
   fetch("{{ route('gdrive.connection.destroy') }}", {
     method: 'DELETE',
@@ -181,7 +298,11 @@ function disconnectDrive(){
   })
     .then((r) => r.json())
     .then(() => window.location.reload())
-    .catch(() => alert('Could not disconnect Google Drive. Please try again.'));
+    .catch(() => {
+      btn.disabled = false;
+      btn.textContent = 'Disconnect';
+      document.getElementById('dr-confirm-error').hidden = false;
+    });
 }
 
 

@@ -16,8 +16,14 @@ use App\Http\Controllers\AdminFinancialController;
 use App\Http\Controllers\AdminPanelAssignmentController;
 use App\Http\Controllers\AdminProfileController;
 use App\Http\Controllers\AdminTeamVerificationController;
-use App\Http\Controllers\Capsa\MilestoneController;
+use App\Http\Controllers\Capsa\ChecklistController;
+use App\Http\Controllers\Capsa\ChecklistMilestoneController;
+use App\Http\Controllers\Capsa\DeliverableCheckController;
+use App\Http\Controllers\Capsa\DeliverableController;
+use App\Http\Controllers\Capsa\RemovalController;
+use App\Http\Controllers\Capsa\SectionProgressController;
 use App\Http\Controllers\Capsa\TeamManagementController;
+use App\Http\Controllers\Capsa\TeamRulesController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Capsa\ExpertRosterController;
 use App\Http\Controllers\Capsa\StudentRosterController;
@@ -90,6 +96,8 @@ $pagesBothRolesOpen = function () {
     Route::get('/experts', [AdminExpertsController::class, 'index'])->name('experts');
     Route::post('/experts', [AdminExpertsController::class, 'store'])->name('experts.store');
     Route::put('/experts/{expert}', [AdminExpertsController::class, 'update'])->name('experts.update');
+    // What the Panel Chair rule reads: Master's degree or higher.
+    Route::put('/experts/{expert}/degree', [AdminExpertsController::class, 'updateDegree'])->name('experts.degree.update');
     Route::delete('/experts/{expert}', [AdminExpertsController::class, 'destroy'])->name('experts.destroy');
     // Not bound to the model: route-model binding cannot find a deactivated
     // account, which is the only kind this is ever called on.
@@ -175,31 +183,50 @@ Route::middleware('expert.capsa')->group(function () {
     // smaller problem than an endpoint they still can.
     Route::put('/experts/{expert}/roles', [AdminExpertsController::class, 'updateRoles'])->name('experts.update-roles');
     Route::get('/panel_assignment', [AdminPanelAssignmentController::class, 'index'])->name('panel_assignment');
+    // Dates for the teams that can defend - its actions are the panel_assignment scheduling endpoints.
+    Route::get('/defense-scheduling', [App\Http\Controllers\Capsa\DefenseSchedulingController::class, 'index'])->name('defense_scheduling');
     // Team Management is the single page for everything about the teams
     // in a CaPSA's sections. Team Verification's actions keep their old
     // route names so nothing that links to them breaks, but its page
     // redirects here - it was only ever half of this.
     Route::get('/team-management', [TeamManagementController::class, 'index'])->name('team_management');
+    // The rules every team is formed under: its size, and whether students
+    // may create or join one. One resource, replaced whole on save.
+    Route::get('/team-rules', [TeamRulesController::class, 'show'])->name('team_rules');
+    Route::put('/team-rules', [TeamRulesController::class, 'update'])->name('team_rules.update');
+    // A member leaving a team that passed Title Defense - the CaPSA decides.
+    Route::get('/leave-requests', [App\Http\Controllers\Capsa\LeaveRequestController::class, 'index'])->name('leave_requests');
+    Route::patch('/leave-requests/{leaveRequest}', [App\Http\Controllers\Capsa\LeaveRequestController::class, 'update'])->name('leave_requests.update');
+    // A team changing an expert who already took them on - the CaPSA decides.
+    Route::patch('/expert-removal-requests/{expertRemovalRequest}', [App\Http\Controllers\Capsa\ExpertRemovalRequestController::class, 'update'])->name('expert_removal_requests.update');
     Route::get('/verify-teams', fn () => redirect()->route('capsa.team_management', ['tab' => 'verification']))->name('verify_teams');
     Route::patch('/verify-teams/{team}', [AdminTeamVerificationController::class, 'verify'])->name('verify_teams.verify');
     Route::patch('/verify-teams/pre-proposals/{preProposal}', [AdminTeamVerificationController::class, 'updatePreProposal'])->name('verify_teams.pre_proposals.update');
     Route::get('/verify-teams/pre-proposals/{preProposal}/document', [AdminTeamVerificationController::class, 'viewPreProposalDocument'])->name('verify_teams.pre_proposals.document');
-    // Milestones are created and edited deliberately here, rather than
-    // falling out of posting an announcement - which is how the one
-    // milestone in the database ended up with no team and no way to be
-    // changed or removed.
-    Route::post('/milestones', [MilestoneController::class, 'store'])->name('milestones.store');
-    Route::post('/milestones/deliverable-due', [MilestoneController::class, 'setDeliverableDue'])->name('milestones.deliverable_due');
-    Route::put('/milestones/{milestone}', [MilestoneController::class, 'update'])->name('milestones.update');
-    Route::delete('/milestones/{milestone}', [MilestoneController::class, 'destroy'])->name('milestones.destroy');
-    Route::post('/milestones/{milestone}/template', [MilestoneController::class, 'applyTemplate'])->name('milestones.template');
-    Route::post('/milestones/{milestone}/items', [MilestoneController::class, 'storeItem'])->name('milestones.items.store');
-    Route::post('/milestones/{milestone}/items/reorder', [MilestoneController::class, 'reorderItems'])->name('milestones.items.reorder');
-    Route::put('/milestone-items/{item}', [MilestoneController::class, 'updateItem'])->name('milestones.items.update');
-    Route::delete('/milestone-items/{item}', [MilestoneController::class, 'destroyItem'])->name('milestones.items.destroy');
-    // Its own path: PUT /milestone-items/{item} already edits the item, and
-    // two routes cannot share a name without route() picking one of them.
-    Route::put('/milestone-items/{item}/done', [MilestoneController::class, 'toggleItem'])->name('milestones.items.done');
+    // A CaPSA's checklists, edited in the Edit milestones window on the
+    // Milestones tab. One per program serves every section of that program.
+    Route::get('/checklists', [ChecklistController::class, 'index'])->name('checklists.index');
+    Route::post('/checklists', [ChecklistController::class, 'store'])->name('checklists.store');
+    Route::get('/checklists/{checklist}', [ChecklistController::class, 'show'])->name('checklists.show');
+    // Any drag or arrow-key move sends the whole order at once.
+    Route::put('/checklists/{checklist}/order', [ChecklistController::class, 'updateOrder'])->name('checklists.order.update');
+    Route::post('/checklists/{checklist}/milestones', [ChecklistMilestoneController::class, 'store'])->name('checklists.milestones.store');
+    Route::patch('/checklist-milestones/{milestone}', [ChecklistMilestoneController::class, 'update'])->name('checklist_milestones.update');
+    Route::delete('/checklist-milestones/{milestone}', [ChecklistMilestoneController::class, 'destroy'])->name('checklist_milestones.destroy');
+    Route::post('/checklist-milestones/{milestone}/deliverables', [DeliverableController::class, 'store'])->name('checklist_milestones.deliverables.store');
+    // The bulk bar changes or removes several at once.
+    Route::patch('/deliverables', [DeliverableController::class, 'updateMany'])->name('deliverables.update_many');
+    Route::delete('/deliverables', [DeliverableController::class, 'destroyMany'])->name('deliverables.destroy_many');
+    Route::patch('/deliverables/{deliverable}', [DeliverableController::class, 'update'])->name('deliverables.update');
+    // Undo for a remove.
+    Route::put('/removals', [RemovalController::class, 'update'])->name('removals.update');
+    // The CaPSA's check of one team's signed paper.
+    Route::put('/deliverables/{deliverable}/checks/{team}', [DeliverableCheckController::class, 'update'])->name('deliverables.checks.update');
+    Route::delete('/deliverables/{deliverable}/checks/{team}', [DeliverableCheckController::class, 'destroy'])->name('deliverables.checks.destroy');
+    // One section of the tracker, loaded when its tab is picked.
+    Route::get('/sections/{section}/progress', [SectionProgressController::class, 'show'])->name('sections.progress');
+    // The file a team uploaded for a line, opened by the CaPSA to check it.
+    Route::get('/documents/{document}/file', [App\Http\Controllers\Capsa\DocumentFileController::class, 'show'])->name('documents.file');
     Route::get('/rubric_management', [GradingRubricController::class, 'index'])->name('rubric_management');
     Route::get('/financial', [AdminFinancialController::class, 'index'])->name('financial');
     Route::post('/financial/expense-post', [AdminFinancialController::class, 'storeExpensePost'])->name('financial.expense-post.store');
@@ -243,6 +270,9 @@ Route::middleware('expert.capsa')->group(function () {
 Route::middleware(['expert.auth', 'expert.approved', 'no.cache', 'track.expert'])->prefix('instructor')->name('instructor.')->group(function () {
     Route::get('/dashboard', [InstructorDashboardController::class, 'index'])->name('dashboard');
     Route::get('/teams', [InstructorTeamController::class, 'index'])->name('teams');
+    // An adviser confirming a team's new title after "Redefense with a new title".
+    Route::patch('/title-confirmations/{preProposal}', [\App\Http\Controllers\Instructor\TitleConfirmationController::class, 'update'])->name('title-confirmations.update');
+    Route::get('/title-confirmations/{preProposal}/document', [\App\Http\Controllers\Instructor\TitleConfirmationController::class, 'document'])->name('title-confirmations.document');
     Route::get('/progress', [InstructorProgressController::class, 'index'])->name('progress');
     Route::get('/profile', [InstructorProfileController::class, 'index'])->name('profile');
     Route::put('/profile', [InstructorProfileController::class, 'update'])->name('profile.update');
@@ -276,6 +306,9 @@ Route::middleware(['auth:expert', 'expert.approved', 'no.cache'])->prefix('revie
     Route::get('/{review}/status', [PdfAnnotationController::class, 'showStatus'])->name('status.show');
     Route::post('/{review}/status', [PdfAnnotationController::class, 'updateStatus'])->name('status.update');
     Route::put('/{review}/drive-file', [PdfAnnotationController::class, 'syncDrive'])->name('sync-drive');
+    // The team's earlier uploads of the same requirement, to compare against.
+    Route::get('/{review}/versions/{document}/file', [PdfAnnotationController::class, 'versionFile'])->name('versions.file');
+    Route::get('/{review}/versions/{document}/remarks', [PdfAnnotationController::class, 'versionRemarks'])->name('versions.remarks');
 });
 
 Route::get('/', function () {
@@ -298,8 +331,11 @@ Route::get('/login/rejected', [AuthController::class, 'rejected'])->name('login.
 // How a faculty member who is not on any uploaded list gets an account. The
 // login page has always told them to "request account access"; for a while
 // these two lines were commented out and there was nowhere to do it.
-Route::get('/request-account', [ExpertController::class, 'showRequestForm'])->name('account.request');
-Route::post('/request-account', [ExpertController::class, 'storeRequest'])->name('account.request.store');
+// Applying for an account is gone. Faculty arrive one of two ways - on the
+// list a CaPSA uploads, or added one at a time by address - so an account is
+// only ever made by somebody who already knows who this person is. Asking a
+// stranger to fill in a form and then queueing it for approval was a third
+// way in that duplicated both and needed policing.
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 Route::prefix('expert')->group(function () {
@@ -331,6 +367,9 @@ Route::middleware(['auth', 'no.cache', 'track.expert'])->group(function () {
     Route::post('/team/leave-requests', [TeamController::class, 'requestLeave'])->name('team.leave-request');
     Route::patch('/team/leave-requests/{approval}', [TeamController::class, 'updateLeave'])->name('team.leave.update');
     Route::get('/team/leave/popups', [TeamController::class, 'leavePopups'])->name('team.leave.popups');
+    // After Title Defense, leaving or removing a member is asked of the CaPSA.
+    Route::post('/team/capsa-leave-requests', [App\Http\Controllers\LeaveRequestController::class, 'store'])->name('team.capsa-leave-requests.store');
+    Route::patch('/team/capsa-leave-requests/{leaveRequest}', [App\Http\Controllers\LeaveRequestController::class, 'update'])->name('team.capsa-leave-requests.update');
     Route::post('/recruitment', [RecruitmentController::class, 'store'])->name('recruitment.store');
     Route::put('/recruitment/{recruitment}', [RecruitmentController::class, 'update'])->name('recruitment.update');
     Route::delete('/recruitment/{recruitment}', [RecruitmentController::class, 'destroy'])->name('recruitment.destroy');
@@ -358,6 +397,8 @@ Route::middleware(['auth', 'no.cache', 'track.expert'])->group(function () {
     Route::delete('/pre-proposal/duplication-checks/{check}', [PreProposalController::class, 'destroyCheck'])->name('student.pre-proposal.check.destroy');
     Route::post('/pre-proposal', [PreProposalController::class, 'store'])->name('student.pre-proposal.store');
     Route::patch('/pre-proposal', [PreProposalController::class, 'updateStatus'])->name('student.pre-proposal.submit');
+    // Rewording a title the panel passed with revision.
+    Route::patch('/pre-proposal/title', [PreProposalController::class, 'updateTitle'])->name('student.pre-proposal.title.update');
     Route::post('/pre-proposal/{preProposal}/choose', [PreProposalController::class, 'choose'])->name('student.pre-proposal.choose');
     Route::delete('/pre-proposal/{preProposal}', [PreProposalController::class, 'destroy'])->name('student.pre-proposal.destroy');
     Route::get('/pre-proposal/{preProposal}/document', [PreProposalController::class, 'document'])->name('student.pre-proposal.document');
@@ -387,6 +428,7 @@ Route::middleware(['auth', 'no.cache', 'track.expert'])->group(function () {
             Route::post('/consultation/book', [StudentConsultationController::class, 'book'])->name('student.consultation.book');
             Route::post('/consultation/cancel/{bookingId}', [StudentConsultationController::class, 'cancel'])->name('student.consultation.cancel');
             Route::get('/progress', [StudentProgressController::class, 'index'])->name('student.progress');
+            Route::get('/defense-scores', [\App\Http\Controllers\Student\DefenseScoresController::class, 'index'])->name('student.defense-scores');
             Route::patch('/progress/milestones', [StudentProgressController::class, 'markDone'])->name('student.progress.milestones.mark-done');
             Route::put('/progress/milestones/picture', [StudentProgressController::class, 'updatePicture'])->name('student.progress.milestones.update-picture');
             Route::get('/financial', [StudentFinancialController::class, 'index'])->name('student.financial');
@@ -409,10 +451,22 @@ Route::prefix('instructor/schedule')
     ->middleware(['expert.auth', 'no.cache', 'track.expert'])
     ->group(function () {
         Route::get('slots', [ScheduleController::class, 'getSlots']);
+        // Appointment duration, weekly hours and scheduling window - saving rebuilds the weekly slots.
+        Route::get('availability', [ScheduleController::class, 'showAvailability']);
+        Route::put('availability', [ScheduleController::class, 'updateAvailability']);
+        Route::patch('bookings/{bookingId}/cancellation', [ScheduleController::class, 'updateCancellation'])->whereNumber('bookingId');
         Route::post('slots', [ScheduleController::class, 'addSlot']);
         Route::patch('slots/{id}', [ScheduleController::class, 'updateSlot']);
         Route::delete('slots/{id}', [ScheduleController::class, 'deleteSlot']);
         Route::put('slots/{id}/availability', [ScheduleController::class, 'setAvailability']);
+
+        // One week of a repeating slot, addressed by its date. A slot stores a
+        // weekday, so 'Monday 10:00' is a rule; a single Monday is a resource
+        // under it, and is replaced or removed like any other.
+        Route::put('slots/{id}/occurrences/{date}', [ScheduleController::class, 'replaceOccurrence'])
+            ->where('date', '[0-9]{4}-[0-9]{2}-[0-9]{2}');
+        Route::delete('slots/{id}/occurrences/{date}', [ScheduleController::class, 'removeOccurrence'])
+            ->where('date', '[0-9]{4}-[0-9]{2}-[0-9]{2}');
     });
 
 Route::post('/session/keep-alive', function () {
@@ -478,19 +532,35 @@ if (app()->environment('local')) {
     // accounts with different pages, and a browser test cannot sign in
     // through Google any more than a student one can.
     Route::get('/__dev-login-expert/{role}/{page?}', function (string $role, ?string $page = null) {
-        $expert = $role === 'admin'
-            ? App\Models\CapstoneExpert::where('is_admin', true)->first()
-            : App\Models\CapstoneExpert::whereHas(
+        // admin and capsa reach their own portals; any other role name means
+        // a working expert - somebody holding it who is neither, which is
+        // whose instructor/* pages are under test.
+        // A numeric role is an expert id, for when the page under test only
+        // has data on one particular account.
+        $expert = ctype_digit($role) ? App\Models\CapstoneExpert::find($role) : match ($role) {
+            'admin' => App\Models\CapstoneExpert::where('is_admin', true)->first(),
+            'capsa' => App\Models\CapstoneExpert::whereHas(
                 'roles',
                 fn ($q) => $q->where('role_name', App\Models\CapstoneExpert::CAPSA_ROLE)
-            )->first();
+            )->first(),
+            default => App\Models\CapstoneExpert::where('is_admin', false)
+                ->whereHas('roles', fn ($q) => $q->whereRaw('LOWER(role_name) = ?', [strtolower($role)]))
+                ->whereDoesntHave('roles', fn ($q) => $q->where('role_name', App\Models\CapstoneExpert::CAPSA_ROLE))
+                ->first(),
+        };
 
         abort_unless($expert, 404, 'No '.$role.' account to sign in as.');
 
         Auth::guard('expert')->login($expert);
 
-        $route = ($role === 'admin' ? 'admin.' : 'capsa.').($page ?: 'dashboard');
+        $prefix = ctype_digit($role) ? 'instructor.' : match ($role) {
+            'admin' => 'admin.',
+            'capsa' => 'capsa.',
+            default => 'instructor.',
+        };
 
-        return redirect()->route(Route::has($route) ? $route : ($role === 'admin' ? 'admin.dashboard' : 'capsa.dashboard'));
+        $route = $prefix.($page ?: 'dashboard');
+
+        return redirect()->route(Route::has($route) ? $route : $prefix.'dashboard');
     })->name('dev.login.expert');
 }

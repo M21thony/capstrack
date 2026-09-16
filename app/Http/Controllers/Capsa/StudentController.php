@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Capsa;
 use App\Http\Controllers\Controller;
 use App\Models\Student;
 use App\Models\StudentRoster;
+use App\Models\StudentSchoolYear;
+use App\Models\Term;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -116,6 +118,7 @@ class StudentController extends Controller
 
         $email = Str::lower(trim($data['email']));
         $yearSection = self::yearSection((string) $data['year'], $data['section']);
+        $schoolYear = Term::currentSchoolYear();
 
         if (! $this->targetAllowed($data['course'], $yearSection)) {
             return response()->json([
@@ -148,8 +151,25 @@ class StudentController extends Controller
         // Taking back a student who was removed from a section, rather than
         // making a second account for the same person. Their team, their
         // submissions and everything else hanging off student_id stay.
+        // The invitation. Being on this list is what lets a student sign
+        // in - the upload writes it for a whole class, and adding one by
+        // hand has to write it too, or the student a CaPSA just added is
+        // turned away at the door.
+        StudentRoster::updateOrCreate(
+            ['email' => $email],
+            [
+                'name' => trim($data['f_name'].' '.$data['l_name']),
+                'student_number' => $data['student_number'] ?? null,
+                'section' => $yearSection,
+                'program' => $data['course'],
+                // The school year, from wherever the Admin set it.
+                'school_year' => $schoolYear,
+            ]
+        );
+
         if ($existing) {
             $existing->update($fields);
+            StudentSchoolYear::recordFor($existing->student_id, $schoolYear);
 
             return response()->json([
                 'success' => true,
@@ -162,6 +182,8 @@ class StudentController extends Controller
         // The account is a placeholder until they sign in with this address -
         // which is why nothing here asks for a password.
         $student = Student::create(['email' => $email] + $fields);
+
+        StudentSchoolYear::recordFor($student->student_id, $schoolYear);
 
         return response()->json(['success' => true, 'student' => $student], 201);
     }

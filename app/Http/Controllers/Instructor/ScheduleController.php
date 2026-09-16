@@ -3,18 +3,18 @@
 namespace App\Http\Controllers\Instructor;
 
 use App\Http\Controllers\Controller;
-use App\Mail\NewConsultationSlotMail;
-use App\Models\CapstoneExpert;
+use App\Jobs\SyncConsultationCancellation;
+use App\Models\Notification;
+use App\Models\StudentSchoolYear;
+use App\Models\ConsultationAvailability;
 use App\Models\ConsultationBooking;
 use App\Models\ConsultationSchedule;
-use App\Models\TeamExpertAssignment;
 use App\Services\GoogleCalendarService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
 
 class ScheduleController extends Controller
@@ -26,14 +26,10 @@ class ScheduleController extends Controller
     {
         ConsultationBooking::markPastAsDone();
 
-        Log::info('getSlots reached');
-
+        // Debug logging used to sit here dumping the whole expert model,
+        // which writes their Google access and refresh tokens into
+        // laravel.log in plain text on every page load of the schedule.
         $expert = Auth::guard('expert')->user();
-
-        Log::info([
-            'auth_id' => Auth::guard('expert')->id(),
-            'expert' => $expert,
-        ]);
 
         // Scoped to booking_status in ('scheduled', 'done') in the join's ON
         // clause (not a WHERE) so schedule rows with no booking, or only a
@@ -58,6 +54,8 @@ class ScheduleController extends Controller
                 'consultation_booking.booking_id',
                 'consultation_booking.session_date',
                 'consultation_booking.booking_status',
+                'consultation_booking.cancellation_requested_at',
+                'consultation_booking.cancellation_reason',
                 'consultation_booking.created_at as booked_at',
                 'students.f_name as student_fname',
                 'students.l_name as student_lname',
@@ -65,7 +63,257 @@ class ScheduleController extends Controller
             )
             ->get();
 
-        return response()->json($slots);
+        // The dates a weekly slot does NOT happen on. Without these the page
+        // would draw an occurrence the adviser has already moved or skipped,
+        // and it would sit there beside the one-off that replaced it.
+        $exceptions = DB::table('consultation_schedule_exception')
+            ->whereIn('schedule_id', $slots->pluck('schedule_id')->unique()->all())
+            ->get(['schedule_id', 'exception_date']);
+
+        return response()->json(['slots' => $slots, 'exceptions' => $exceptions]);
+    }
+
+    // PATCH /instructor/schedule/bookings/{bookingId}/cancellation
+    // A team asked to call a consultation off; the expert approves or declines.
+    public function updateCancellation(Request $request, int $bookingId)
+    {
+        $validator = Validator::make($request->all(), [
+            'decision' => 'required|in:approve,decline',
+            'reason' => 'required_if:decision,decline|nullable|string|min:10|max:500',
+        ], [
+            'reason.required_if' => 'Tell the team why the consultation cannot be cancelled.',
+            'reason.min' => 'Give the team a reason (at least 10 characters).',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['message' => $validator->errors()->first()], 422);
+        }
+
+        $booking = ConsultationBooking::where('booking_id', $bookingId)
+            ->where('booking_status', 'scheduled')
+            ->whereNotNull('cancellation_requested_at')
+            ->whereHas('schedule', fn ($q) => $q->where('expert_id', Auth::guard('expert')->id()))
+            ->firstOrFail();
+
+        $approve = $request->input('decision') === 'approve';
+
+        if ($approve) {
+            $booking->update(['booking_status' => 'cancelled', 'cancellation_requested_at' => null]);
+            ConsultationSchedule::where('schedule_id', $booking->schedule_id)->update(['is_available' => true]);
+
+            // Mail and Google Calendar wait on other servers, so they run after the answer.
+            SyncConsultationCancellation::dispatch(
+                $booking->booking_id,
+                (string) $booking->cancellation_reason,
+                (string) $booking->cancellation_requested_by,
+            );
+        } else {
+            $booking->update(['cancellation_requested_at' => null, 'cancellation_requested_by' => null, 'cancellation_reason' => null]);
+        }
+
+        $when = $booking->session_date ? Carbon::parse($booking->session_date)->format('M j') : 'the booked date';
+        $studentIds = $booking->team
+            ? StudentSchoolYear::where('team_id', $booking->team->team_id)->pluck('student_id')
+            : collect([$booking->student_id]);
+
+        foreach ($studentIds as $studentId) {
+            Notification::create([
+                'student_id' => $studentId,
+                'type' => 'consultation_cancellation',
+                'title' => $approve ? 'Cancellation approved' : 'Cancellation declined',
+                'message' => $approve
+                    ? "Your consultation on {$when} is cancelled."
+                    : "Your expert kept your consultation on {$when}. It is still on. Why: “".e($request->input('reason')).'”',
+                'link' => route('student.consultation'),
+            ]);
+        }
+
+        return response()->json(['success' => true]);
+    }
+
+    // GET /instructor/schedule/availability
+    public function showAvailability()
+    {
+        $expertId = (int) Auth::guard('expert')->id();
+
+        return response()->json(
+            ConsultationAvailability::where('expert_id', $expertId)->first()
+                ?? ConsultationAvailability::defaultsFor($expertId)
+        );
+    }
+
+    /**
+     * Save the expert's availability the way Google Calendar's appointment
+     * schedules work - an appointment duration, general weekly hours, and a
+     * scheduling window - and make the weekly slots match those hours.
+     *
+     * Slots are cut from the hours at the chosen duration. A slot no longer
+     * inside the hours is removed, unless a team has booked it ahead, and a
+     * missing one is added. One-time slots are left as they are.
+     */
+    // PUT /instructor/schedule/availability
+    public function updateAvailability(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            // Any length, not only the offered taps - Google Calendar lets a
+            // custom one be typed, and 20- and 40-minute consultations are real.
+            'duration_minutes' => 'required|integer|min:'.ConsultationAvailability::DURATION_MIN.'|max:'.ConsultationAvailability::DURATION_MAX,
+            'buffer_minutes' => 'nullable|integer|min:0|max:120',
+            'max_per_day' => 'nullable|integer|min:1|max:20',
+            'hours' => 'present|array',
+            'hours.*' => 'array',
+            'hours.*.*' => 'array|size:2',
+            'hours.*.*.*' => 'date_format:H:i',
+            'starts_on' => 'nullable|date',
+            'ends_on' => 'nullable|date|after_or_equal:starts_on',
+            'max_days_ahead' => 'nullable|integer|min:1|max:365',
+            'min_notice_hours' => 'required|integer|min:0|max:720',
+        ], [
+            'ends_on.after_or_equal' => 'The end date has to be on or after the start date.',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['error' => $validator->errors()->first()], 422);
+        }
+
+        $duration = (int) $request->duration_minutes;
+        // Time left free after each appointment, so the next one does not start
+        // the moment the last ends.
+        $buffer = (int) $request->buffer_minutes;
+        $step = $duration + $buffer;
+        $toMin = fn (string $t) => (int) substr($t, 0, 2) * 60 + (int) substr($t, 3, 2);
+        $toTime = fn (int $m) => sprintf('%02d:%02d', intdiv($m, 60), $m % 60);
+
+        $hours = [];
+        $wanted = [];
+
+        foreach ($request->input('hours', []) as $day => $ranges) {
+            if (! in_array($day, ConsultationAvailability::DAYS, true)) {
+                return response()->json(['error' => "{$day} is not a day of the week."], 422);
+            }
+
+            usort($ranges, fn ($a, $b) => strcmp($a[0], $b[0]));
+            $lastEnd = -1;
+
+            foreach ($ranges as [$from, $until]) {
+                if ($toMin($until) <= $toMin($from)) {
+                    return response()->json(['error' => "On {$day}, each set of hours has to end after it starts."], 422);
+                }
+
+                if ($toMin($from) < $lastEnd) {
+                    return response()->json(['error' => "On {$day}, two sets of hours overlap."], 422);
+                }
+
+                $lastEnd = $toMin($until);
+                $hours[$day][] = [$from, $until];
+
+                for ($at = $toMin($from); $at + $duration <= $toMin($until); $at += $step) {
+                    $wanted[$day.' '.$toTime($at).'-'.$toTime($at + $duration)] = [$day, $toTime($at), $toTime($at + $duration)];
+                }
+            }
+        }
+
+        $expert = Auth::guard('expert')->user();
+
+        $availability = ConsultationAvailability::updateOrCreate(
+            ['expert_id' => $expert->expert_id],
+            [
+                'duration_minutes' => $duration,
+                'buffer_minutes' => $buffer,
+                'max_per_day' => $request->max_per_day ?: null,
+                'hours' => $hours,
+                'starts_on' => $request->starts_on ?: null,
+                'ends_on' => $request->ends_on ?: null,
+                'max_days_ahead' => $request->max_days_ahead ?: null,
+                'min_notice_hours' => (int) $request->min_notice_hours,
+            ]
+        );
+
+        $hm = fn ($t) => substr((string) $t, 0, 5);
+        $existing = DB::table('consultation_schedule')
+            ->where('expert_id', $expert->expert_id)
+            ->where(fn ($q) => $q->where('recur', '!=', 'once')->orWhereNull('recur'))
+            ->get();
+
+        $added = $removed = $keptBooked = 0;
+        $existingKeys = [];
+
+        foreach ($existing as $slot) {
+            $key = $slot->available_date.' '.$hm($slot->start_time).'-'.$hm($slot->end_time);
+            $existingKeys[$key] = true;
+
+            if (isset($wanted[$key])) {
+                continue;
+            }
+
+            $booked = DB::table('consultation_booking')
+                ->where('schedule_id', $slot->schedule_id)
+                ->where('booking_status', 'scheduled')
+                ->whereDate('session_date', '>=', now()->toDateString())
+                ->exists();
+
+            if ($booked) {
+                $keptBooked++;
+
+                continue;
+            }
+
+            if ($slot->google_event_id && $expert->google_token) {
+                try {
+                    $this->calendar->cancelBookingEvent($expert->expert_id, $slot->google_event_id);
+                } catch (\Exception $e) {
+                    Log::warning('Google Calendar placeholder removal failed', ['error' => $e->getMessage()]);
+                }
+            }
+
+            DB::table('consultation_schedule')->where('schedule_id', $slot->schedule_id)->delete();
+            DB::table('consultation_schedule_exception')->where('schedule_id', $slot->schedule_id)->delete();
+            $removed++;
+        }
+
+        foreach ($wanted as $key => [$day, $start, $end]) {
+            if (isset($existingKeys[$key])) {
+                continue;
+            }
+
+            DB::table('consultation_schedule')->insert([
+                'expert_id' => $expert->expert_id,
+                'available_date' => $day,
+                'start_time' => $start,
+                'end_time' => $end,
+                'consultation_limit' => 1,
+                'slot_type' => 'consult',
+                'is_available' => true,
+                'google_event_id' => null,
+                'recur' => 'weekly',
+                'specific_date' => null,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+            $added++;
+        }
+
+        return response()->json([
+            'saved' => true,
+            'added' => $added,
+            'removed' => $removed,
+            'kept_booked' => $keptBooked,
+            'availability' => $availability->fresh(),
+        ]);
+    }
+
+    /**
+     * The dates this weekly slot has been taken out of.
+     *
+     * @return array<int, string>
+     */
+    private function exceptionDates(int $scheduleId): array
+    {
+        return DB::table('consultation_schedule_exception')
+            ->where('schedule_id', $scheduleId)
+            ->pluck('exception_date')
+            ->map(fn ($d) => substr((string) $d, 0, 10))
+            ->all();
     }
 
     // POST /instructor/schedule/slots
@@ -97,6 +345,34 @@ class ScheduleController extends Controller
         $newRecur = $request->recur ?? 'weekly';
         $newDate  = $newRecur === 'once' ? $request->specific_date : null;
 
+        // A slot identical to one that already exists is nobody's intention.
+        // It used to be inserted anyway, then flagged unavailable by the
+        // overlap check below - and an unavailable slot reads as a booked
+        // one, so a repeated save left phantom appointments behind. Hand
+        // back the slot that is already there instead.
+        // Times are compared trimmed to H:i on both sides - the column holds
+        // '09:00:00' and the request sends '09:00', and only MySQL treats
+        // those as equal.
+        $hm = fn ($t) => substr((string) $t, 0, 5);
+
+        $duplicate = DB::table('consultation_schedule')
+            ->where('expert_id', $expert->expert_id)
+            ->where('available_date', $request->available_date)
+            ->get()
+            ->first(fn ($row) => $hm($row->start_time) === $hm($request->start_time)
+                && $hm($row->end_time) === $hm($request->end_time)
+                && ($row->recur ?? 'weekly') === $newRecur
+                && ($row->specific_date ?? null) === $newDate);
+
+        if ($duplicate) {
+            return response()->json([
+                'schedule_id' => $duplicate->schedule_id,
+                'google_synced' => $duplicate->google_event_id !== null,
+                'is_available' => (bool) $duplicate->is_available,
+                'already_existed' => true,
+            ]);
+        }
+
         // available_date is only a weekday name, not a real date, so a plain
         // weekday+time match here would flag a new one-time slot as
         // "overlapping" against any unrelated once/biweekly slot that merely
@@ -119,26 +395,9 @@ class ScheduleController extends Controller
             )
         );
 
+        // Open slots are not put on the expert's Google Calendar - only booked
+        // consultations are (see StudentConsultationController::book).
         $googleEventId = null;
-
-        if ($expert->google_token && ! $hasOverlap) {
-            try {
-                $googleEventId = $this->calendar->createBookingEvent(
-                    expertId: $expert->expert_id,
-                    date: $nextDate,
-                    startTime: $request->start_time,
-                    endTime: $request->end_time,
-                    slotType: $request->slot_type ? ucfirst($request->slot_type) : 'Consultation',
-                    teamName: 'Available Slot',
-                    studentEmail: $expert->email,
-                    expertEmail: $expert->email,
-                    topic: "Weekly {$request->slot_type} slot — {$request->available_date}s",
-                    recurrence: GoogleCalendarService::recurrenceRuleFor($request->recur ?? 'weekly'),
-                );
-            } catch (\Exception $e) {
-                \Log::warning('Google Calendar sync failed', ['error' => $e->getMessage()]);
-            }
-        }
 
         $id = DB::table('consultation_schedule')->insertGetId([
             'expert_id' => $expert->expert_id,
@@ -155,40 +414,11 @@ class ScheduleController extends Controller
             'updated_at' => now(),
         ]);
 
-        $this->notifyTeamsOfNewSlot(ConsultationSchedule::find($id), $expert);
-
         return response()->json([
             'schedule_id' => $id,
             'google_synced' => $googleEventId !== null,
             'is_available' => ! $hasOverlap,
         ]);
-    }
-
-    // Emails every student on every team this expert handles that a new
-    // consultation slot just opened up, showing how often it recurs (e.g.
-    // "Every Monday") rather than just its next date.
-    private function notifyTeamsOfNewSlot(ConsultationSchedule $slot, CapstoneExpert $expert): void
-    {
-        $teams = TeamExpertAssignment::where('expert_id', $expert->expert_id)
-            ->where('status', 'approved')
-            ->with('team.members')
-            ->get()
-            ->pluck('team')
-            ->filter();
-
-        foreach ($teams as $team) {
-            foreach ($team->members as $student) {
-                if (! $student->email) {
-                    continue;
-                }
-
-                try {
-                    Mail::to($student->email)->queue(new NewConsultationSlotMail($slot, $expert, $team));
-                } catch (\Exception $e) {
-                    Log::warning('New consultation slot email failed', ['error' => $e->getMessage()]);
-                }
-            }
-        }
     }
 
     // PATCH /instructor/schedule/slots/{id}
@@ -225,6 +455,7 @@ class ScheduleController extends Controller
         if (! $slot) {
             return response()->json(['error' => 'Slot not found.'], 404);
         }
+
 
         // What the slot will look like once this edit lands - the new value
         // where one was sent, the current one where it was not.
@@ -284,40 +515,211 @@ class ScheduleController extends Controller
             ->where('schedule_id', $id)
             ->update($updates);
 
-        // Update Google Calendar event if exists
+        // An open slot made before only bookings went to Google Calendar still
+        // has a placeholder event there. Editing the slot takes it down rather
+        // than redrawing it.
         if ($slot->google_event_id && $expert->google_token) {
             try {
-                // Delete old event and create new one with updated details
                 $this->calendar->cancelBookingEvent($expert->expert_id, $slot->google_event_id);
-
-                $day = $request->available_date ?? $slot->available_date;
-                $start = $request->start_time ?? $slot->start_time;
-                $end = $request->end_time ?? $slot->end_time;
-                $nextDate = $this->getNextDateForDay($day);
-
-                $newEventId = $this->calendar->createBookingEvent(
-                    expertId: $expert->expert_id,
-                    date: $nextDate,
-                    startTime: $start,
-                    endTime: $end,
-                    slotType: ucfirst($request->slot_type ?? $slot->slot_type ?? 'Consultation'),
-                    teamName: 'Available Slot',
-                    studentEmail: $expert->email,
-                    expertEmail: $expert->email,
-                    topic: "Weekly " . ($request->slot_type ?? $slot->slot_type ?? 'consultation') . " slot — {$day}s",
-                    recurrence: GoogleCalendarService::recurrenceRuleFor($slot->recur ?? 'weekly'),
-                );
-
-                DB::table('consultation_schedule')
-                    ->where('schedule_id', $id)
-                    ->update(['google_event_id' => $newEventId]);
-
             } catch (\Exception $e) {
-                \Log::warning('Google Calendar update failed', ['error' => $e->getMessage()]);
+                \Log::warning('Google Calendar placeholder removal failed', ['error' => $e->getMessage()]);
             }
+
+            DB::table('consultation_schedule')->where('schedule_id', $id)->update(['google_event_id' => null]);
         }
 
         return response()->json(['updated' => true]);
+    }
+
+    /**
+     * Change one week of a repeating slot, and only that week.
+     *
+     * The slot itself is never touched. The date is taken out of it, and a
+     * one-off slot carrying the new time takes its place - so next Monday and
+     * every Monday after it stay exactly as they were, which is what made
+     * editing a single week impossible before.
+     */
+    // PUT /instructor/schedule/slots/{id}/occurrences/{date}
+    public function replaceOccurrence(Request $request, int $id, string $date)
+    {
+        $validator = Validator::make($request->all(), [
+            'start_time' => 'sometimes|date_format:H:i',
+            'end_time' => 'sometimes|date_format:H:i|after:start_time',
+            'slot_type' => 'sometimes|nullable|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['error' => $validator->errors()->first()], 422);
+        }
+
+        $expert = Auth::guard('expert')->user();
+
+        $slot = DB::table('consultation_schedule')
+            ->where('schedule_id', $id)
+            ->where('expert_id', $expert->expert_id)
+            ->first();
+
+        if (! $slot) {
+            return response()->json(['error' => 'Slot not found.'], 404);
+        }
+
+        if (($slot->recur ?? 'weekly') === 'once') {
+            return response()->json([
+                'error' => 'This slot already happens on one date only - edit it directly.',
+            ], 422);
+        }
+
+        if (Carbon::parse($date)->format('l') !== $slot->available_date) {
+            return response()->json([
+                'error' => "That date is not a {$slot->available_date}.",
+            ], 422);
+        }
+
+        // A week somebody has booked cannot be moved out from under them.
+        $booked = DB::table('consultation_booking')
+            ->where('schedule_id', $slot->schedule_id)
+            ->whereDate('session_date', $date)
+            ->where('booking_status', 'scheduled')
+            ->exists();
+
+        if ($booked) {
+            return response()->json([
+                'error' => 'A team has booked this date. Cancel the booking first.',
+            ], 422);
+        }
+
+        $start = $request->start_time ?? substr((string) $slot->start_time, 0, 5);
+        $end = $request->end_time ?? substr((string) $slot->end_time, 0, 5);
+        $type = $request->slot_type ?? $slot->slot_type;
+
+        // The rule being replaced is excluded from this date, so it must not
+        // count as a collision here - nor must any other rule already excluded
+        // from it. Every remaining slot on that weekday still does.
+        $excluded = DB::table('consultation_schedule_exception')
+            ->whereDate('exception_date', $date)
+            ->pluck('schedule_id')
+            ->push($slot->schedule_id)
+            ->all();
+
+        $clashes = DB::table('consultation_schedule')
+            ->where('expert_id', $expert->expert_id)
+            ->whereNotIn('schedule_id', $excluded)
+            ->where('available_date', $slot->available_date)
+            ->where('start_time', '<', $end)
+            ->where('end_time', '>', $start)
+            ->get(['recur', 'specific_date'])
+            ->contains(fn ($existing) => $this->occurrencesCanCollide(
+                'once', $date, $existing->recur ?? 'weekly', $existing->specific_date
+            ));
+
+        if ($clashes) {
+            return response()->json(['error' => 'That overlaps another slot on this date.'], 422);
+        }
+
+        // updateOrInsert, not insert: pressing this twice on the same date is
+        // an ordinary thing to do and must not fail on the unique key.
+        DB::table('consultation_schedule_exception')->updateOrInsert(
+            ['schedule_id' => $slot->schedule_id, 'exception_date' => $date],
+            ['updated_at' => now(), 'created_at' => now()]
+        );
+
+        $newId = DB::table('consultation_schedule')->insertGetId([
+            'expert_id' => $expert->expert_id,
+            'available_date' => $slot->available_date,
+            'specific_date' => $date,
+            'recur' => 'once',
+            'start_time' => $start,
+            'end_time' => $end,
+            'consultation_limit' => $slot->consultation_limit,
+            'slot_type' => $type,
+            'is_available' => 1,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        // Only the old placeholder series (if this slot predates bookings-only
+        // calendars) needs this date taken out; the moved one-off is an open
+        // slot and gets no event of its own.
+        if ($slot->google_event_id && $expert->google_token) {
+            try {
+                $this->calendar->excludeDateFromSeries($expert->expert_id, $slot->google_event_id, $date);
+            } catch (\Exception $e) {
+                // The slot has already moved in CapsTrack. A calendar that
+                // failed to follow is worth a line in the log, not a 500 that
+                // makes the adviser think the move did not happen.
+                Log::warning('Calendar did not follow a moved occurrence', [
+                    'schedule_id' => $slot->schedule_id,
+                    'date' => $date,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        return response()->json([
+            'updated' => true,
+            'scope' => 'occurrence',
+            'schedule_id' => $newId,
+            'moved_from' => $slot->schedule_id,
+            'date' => $date,
+        ]);
+    }
+
+    // DELETE /instructor/schedule/slots/{id}/occurrences/{date}
+    //
+    // Removing one week is not removing the slot. Before this, the only way
+    // to clear a single date was to delete the rule, which took every other
+    // week with it.
+    public function removeOccurrence(int $id, string $date)
+    {
+        $expert = Auth::guard('expert')->user();
+
+        $slot = DB::table('consultation_schedule')
+            ->where('schedule_id', $id)
+            ->where('expert_id', $expert->expert_id)
+            ->first();
+
+        if (! $slot) {
+            return response()->json(['error' => 'Slot not found.'], 404);
+        }
+
+        if (($slot->recur ?? 'weekly') === 'once') {
+            return response()->json(['error' => 'This slot is a single date already.'], 422);
+        }
+
+        if (Carbon::parse($date)->format('l') !== $slot->available_date) {
+            return response()->json(['error' => "That date is not a {$slot->available_date}."], 422);
+        }
+
+        $booked = DB::table('consultation_booking')
+            ->where('schedule_id', $id)
+            ->whereDate('session_date', $date)
+            ->where('booking_status', 'scheduled')
+            ->exists();
+
+        if ($booked) {
+            return response()->json([
+                'error' => 'A team has booked this date. Cancel the booking first.',
+            ], 422);
+        }
+
+        // updateOrInsert, not insert: removing the same week twice is an
+        // ordinary thing to do and must not fail on the unique key.
+        DB::table('consultation_schedule_exception')->updateOrInsert(
+            ['schedule_id' => $id, 'exception_date' => $date],
+            ['updated_at' => now(), 'created_at' => now()]
+        );
+
+        if ($slot->google_event_id && $expert->google_token) {
+            try {
+                $this->calendar->excludeDateFromSeries($expert->expert_id, $slot->google_event_id, $date);
+            } catch (\Exception $e) {
+                Log::warning('Calendar did not follow a skipped week', [
+                    'schedule_id' => $id, 'date' => $date, 'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        return response()->json(['removed' => true, 'date' => $date]);
     }
 
     // DELETE /instructor/schedule/slots/{id}
@@ -334,6 +736,22 @@ class ScheduleController extends Controller
             return response()->json(['error' => 'Slot not found.'], 404);
         }
 
+        // Deleting the rule deletes every week of it, so a single booking
+        // anywhere ahead is enough to stop it. The team is expecting that
+        // session; removing the slot would take it away without telling them,
+        // where cancelling the booking emails them.
+        $booked = DB::table('consultation_booking')
+            ->where('schedule_id', $id)
+            ->where('booking_status', 'scheduled')
+            ->whereDate('session_date', '>=', now()->toDateString())
+            ->exists();
+
+        if ($booked) {
+            return response()->json([
+                'error' => 'A team has booked this slot. Cancel the booking first.',
+            ], 422);
+        }
+
         // Delete from Google Calendar
         if ($slot->google_event_id && $expert->google_token) {
             try {
@@ -346,6 +764,11 @@ class ScheduleController extends Controller
         DB::table('consultation_schedule')
             ->where('schedule_id', $id)
             ->delete();
+
+        // No foreign keys on MyISAM, so nothing cascades. Left behind, these
+        // rows would attach themselves to whichever slot inherits this id -
+        // TRUNCATE resets the counter, so that is a real possibility.
+        DB::table('consultation_schedule_exception')->where('schedule_id', $id)->delete();
 
         return response()->json(['deleted' => true]);
     }
@@ -370,6 +793,25 @@ class ScheduleController extends Controller
         $newStatus = $request->has('is_available')
             ? $request->boolean('is_available')
             : ! $slot->is_available;
+
+        // is_available belongs to the rule, not to a date, so switching it off
+        // hides every occurrence - including one a team is expecting to turn up
+        // to. A slot somebody has booked cannot be withdrawn from underneath
+        // them; the booking is cancelled first, which is a conversation rather
+        // than a toggle. Past bookings do not count: those already happened.
+        if (! $newStatus) {
+            $booked = DB::table('consultation_booking')
+                ->where('schedule_id', $id)
+                ->where('booking_status', 'scheduled')
+                ->whereDate('session_date', '>=', now()->toDateString())
+                ->exists();
+
+            if ($booked) {
+                return response()->json([
+                    'error' => 'A team has booked this slot. Cancel the booking first.',
+                ], 422);
+            }
+        }
 
         DB::table('consultation_schedule')
             ->where('schedule_id', $id)

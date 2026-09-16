@@ -1,0 +1,982 @@
+[
+ {
+  "archived_id": 1,
+  "title": "DEVELOPMENT OF WEB-BASED SANGGUNIANG KABATAAN MANAGEMENT SYSTEM FOR BARANGAY SAGUMAY, NABUA, CAMARINES SUR",
+  "authors": "Ma. Danica T. Esquivel, Delmar Estañol, Jared Alron D. Olavere"
+ },
+ {
+  "archived_id": 2,
+  "title": "WEB-BASED MANAGEMENT SYSTEM FOR CSPC’S PRODUCTION AND AUXILIARY SERVICES WITH INVETORY AND SALES TRACKING",
+  "authors": "Jancee Kenn E. Abonita, Kathleen Tess I. Hugo, Julian Paul M. Padua"
+ },
+ {
+  "archived_id": 3,
+  "title": "REAL-TIME SCHEDULING SYSTEM FOR CLINICAL DUTY AND RETURN DEMONSTRATION FOR COLLEGE OF HEALTH SCIENCES",
+  "authors": "Jamaica B. Ajero, Marjon D.L. Catorce, Maria Charrey, Andrea S. Zaballa"
+ },
+ {
+  "archived_id": 4,
+  "title": "ECOPRINT: PLASTIC BOTTLE RECYCLING SYSTEM USING REAL-TIME OBJECT DETECTION WITH INCENTIVIZED PRINTING SERVICES AT CSPC ICTU",
+  "authors": "Kenneth Leonard M. Buquid, Eman S. Escuro, Cindy T. Oscoro"
+ },
+ {
+  "archived_id": 5,
+  "title": "WEB-BASED MANAGEMENT SYSTEM WITH SMS NOTIFICATION FOR BULA MUNICIPAL WATERWORKS",
+  "authors": "Jahara P. Cervas, Jerl D. Illanza, Cyril Mae L. Pandes"
+ },
+ {
+  "archived_id": 6,
+  "title": "WEB-BASED FINANCIAL MANAGEMENT AND CLEARANCE SYSTEM FOR STUDENT ORGANIZATION",
+  "authors": "APRIL B. ABONITA, MICHAELA M. CEZAR, MARK BRYAN S. LUCAS"
+ },
+ {
+  "archived_id": 7,
+  "title": "CHURCH MONITORING SYSTEM FOR INTENTIONAL DISCIPLESHIP IN BICOL WITH BIOMETRICS ATTENDANCE INTEGRATION",
+  "authors": "Abegail S. Belza, Donna Mae P. Cuarteros, Sybil E. Dasmariñas"
+ },
+ {
+  "archived_id": 8,
+  "title": "K-NECT: A Youth Governance System for Iriga City",
+  "authors": "Dominic B. Bayos, Jon Mare Edric P. Lontayao, Christian Nico B. Luzano"
+ },
+ {
+  "archived_id": 9,
+  "title": "BREWED BLISS: A WEB-BASED SYSTEM DESIGNED TO ENHANCE CUSTOMER CONVENIENCE IN COFFEE SHOP",
+  "authors": "Maria Rica B. Amaro, Duke Zairus A. Arnante, Jetro V. Colobong"
+ },
+ {
+  "archived_id": 10,
+  "title": "INTEGRATED CAMPUS REPAIR, ICT, AND VEHICLE REQUEST SYSTEM FOR CAMARINES SUR POLYTECHNIC COLLEGES",
+  "authors": "Mia B. Landagan, Joycel C. Llagas, Carl Lawrence S. Maranion"
+ },
+ {
+  "archived_id": 11,
+  "title": "CPAG: CULTURAL AND PERFORMING ARTS GROUP MANAGEMENT SYSTEM WITH INCENTIVE MONITORING FOR CAMARINES SUR POLYTECHNIC COLLEGES (CSPC)",
+  "authors": "Jason F. Balingasa, Jeorge N. Fabillar, Leslie C. Llaban, Renier John L. Vargas"
+ },
+ {
+  "archived_id": 12,
+  "title": "MULTI - BRANCH SALES AND INVENTORY MANAGEMENT SYSTEM FOR JEANLEX HARDWARE",
+  "authors": "Samuel B. Badong, Mary Wynne B. Badong, Ma. Daniela S. Facistol"
+ },
+ {
+  "archived_id": 13,
+  "title": "OptiCCS: AN INTEGRATED SYSTEM FOR MONITORING AND MANAGING COMPUTER AND LABORATORY EQUIPMENT FOR THE COLLEGE OF COMPUTER STUDIES",
+  "authors": "Jan Andrew R Barte, Novie Heralyn B. Placides, Reymelene E. Valera"
+ },
+ {
+  "archived_id": 14,
+  "title": "WEB BASED HEALTH MANAGEMENT SYSTEM WITH DATA ANALYTICS AND RFID FOR CAMARINES SUR POLYTECHNIC COLLEGES CLINIC",
+  "authors": "Ma.Diah G. Cambronero, Ike Renson S. Landong, Ian Jay Kyle D. Tipanero"
+ },
+ {
+  "archived_id": 15,
+  "title": "KAWÁYANHUB: THE ONLINE MARKETPLACE FOR BAMBOO CRAFTS IN PAWILI, BULA",
+  "authors": "Julius Caesar A. Naag IV, Stephen Andrew C. Noblesala, Vladimir P. Tortoles"
+ },
+ {
+  "archived_id": 16,
+  "title": "DEVELOPMENT OF MULTI-BRANCH DENTAL PRACTICE MANAGEMENT SYSTEM WITH POINT-OF-SALE AND BUSINESS ANALYTICS FOR DR. WENNIE A. SAMPER DENTAL CLINIC",
+  "authors": "Janine R. Comploma, Alexander Edrian O. Sabroso, Ma. Crizel H. Tucay"
+ },
+ {
+  "archived_id": 17,
+  "title": "CHRONOLOCK: A MOBILE APPLICATION FOR INTERNET-ENABLE D ACCESS CONTROL OF THE CCS ERP LABORATORY SMART DOOR LOCK SYSTEM SPENSYS: WEB-BASED SOLUTIONS FOR ENROLLMENT AND ACADEMIC RECORDS WITH AI CHATBOT FOR NABUA NATIONAL HIGH SCHOOL",
+  "authors": "Mark Vincent M. Cleofe, Mae Anne L. Bergantin, Jhen Siasnin L. Mediado, Jelyn L. Valenzuela"
+ },
+ {
+  "archived_id": 18,
+  "title": "SCHOOL MANAGEMENT SYSTEM FOR LOURDES PROVINCIAL HIGH SCHOOL",
+  "authors": "Joshua Philip I. De Lima II, Joe Harris D. Hosana, Ian Clark N. Beltran"
+ },
+ {
+  "archived_id": 19,
+  "title": "ELEVATEGS: A PROGRESSIVE WEB APPLICATION LEARNING MANAGEMENT SYSTEM FOR GRADUATE SCHOOL OF USANT",
+  "authors": "Kristhan B. Aguilar, Lenard Anthony A. Gaa, Lyle Mathew S. Ramales"
+ },
+ {
+  "archived_id": 20,
+  "title": "LEVERAGING DATA ANALYTICS FOR INTELLIGENT LIBRARY MANAGEMENT OF CAMARINES SUR POLYTECHNIC COLLEGES",
+  "authors": "John Patrick A. Acbang, Dince A. Deliva, Ma. Angelica T. Nazaria"
+ },
+ {
+  "archived_id": 21,
+  "title": "SBESqr: WEB-BASED STUDENT INFORMATION MANAGEMENT SYSTEM WITH EMBEDDED QR CODE AND ID GENERATION FOR STA. BARBARA ELEMENTARY SCHOOL",
+  "authors": "Joebert S. Barrio, Carl Edwin V. Conde, John Renz B. Gavina"
+ },
+ {
+  "archived_id": 22,
+  "title": "PLJOBS: PILI LOCAL JOB MARKET A WEB-BASED PLATFORM FOR CONNECTING LOCAL JOB SEEKERS AND EMPLOYERS",
+  "authors": "Rodel C. Sapalaran Jr."
+ },
+ {
+  "archived_id": 23,
+  "title": "DATA-DRIVEN SALES FORECASTING AND PRODUCT PROFIT ANALYSIS SYSTEM FOR JM ZORILLA NOODLE FACTORY",
+  "authors": "John Lloyd P. Blanquera, Rosalie S. Nacario, Charles Christian O. Serrano"
+ },
+ {
+  "archived_id": 24,
+  "title": "IBARYO: GOVERNANCE AUTOMATED AND KPI MONITORING SYSTEM FOR PALOYON ORIENTAL, NABUA, CAMARINES SUR",
+  "authors": "Roland Joseph P. Cordez, Rayven Fran M. Toralde, Judah Paulo L. Viñas"
+ },
+ {
+  "archived_id": 25,
+  "title": "PARKMATE: RFID-BASED PARKING MANAGEMENT SYSTEM FOR CSPC",
+  "authors": "Michael Jay C. Bagacina, Jhana A. Bueno, Jobert C. Niebres, Jeremi E. Saltarin"
+ },
+ {
+  "archived_id": 26,
+  "title": "ANITALA: A COMMUNITY-DRIVE N PLANT MAPPING AND GEO-TAGGING WEB APPLICATION FOR HARVEST SELLING AND SHARING",
+  "authors": "Djahaira Diana B. Aspa, Ruthiemay T. Esquilador"
+ },
+ {
+  "archived_id": 27,
+  "title": "ESCHOLAR: A COMPREHENSIVE WEB-BASED SCHOLARSHIP APPLICATION PORTAL CONNECTING GOVERNMENT AND STUDENTS",
+  "authors": "Chris Harold S. Brazil, Aemann T. Nueva, Mark Dale Andrie S. Perillo"
+ },
+ {
+  "archived_id": 28,
+  "title": "DESIGNING A POS SYSTEM FOR ENHANCED PRODUCT AND TRANSACTION MANAGEMENT AT DMD FOOD HOUSE IN IRIGA CITY",
+  "authors": "Angelyn P. Aleman, Francine Louise N. Libreja, Andrea Nicole Rancapollo"
+ },
+ {
+  "archived_id": 29,
+  "title": "iBARANGAY: A DIGITAL PLATFORM FOR COMMUNITY DEVELOPMENT AND PUBLIC SERVICE MANAGEMENT",
+  "authors": "Von Aries P. Bables, Alexander S. Melitante, Christopher T. Pornillos"
+ },
+ {
+  "archived_id": 30,
+  "title": "WEB-BASED RESORT AND APARTMENT MANAGEMENT SYSTEM FOR BALANG MARISTELA CORPORATION",
+  "authors": "Grazela Khrystal S. Froyalde, Loida B. Gastilo, Jorhi Rainwater S. Rabino"
+ },
+ {
+  "archived_id": 31,
+  "title": "TRACKCSPC: A SMART CAMPUS VEHICLE TRACKING AND RESERVATION PLATFORM",
+  "authors": "Raxine D. Beriña, Debie S. Layron, Ronan Gabriel Paat"
+ },
+ {
+  "archived_id": 32,
+  "title": "EDUCONNECT: A SMART WEB-BASED ACADEMIC MANAGEMENT SYSTEM FOR STA. JUSTINA NATIONAL HIGH SCHOOL",
+  "authors": "Gwyneth L. Buenconsejo, Christian Jay C. Gonzaga, Blessing C. Nachor"
+ },
+ {
+  "archived_id": 33,
+  "title": "A CONVERSATIONAL AI FRAMEWORK FOR AUTOMATING SCHOOL REGISTRAR FUNCTIONS",
+  "authors": "Glenn P. Lavilla, Keith Marianne L. Olaso, Lee Andrew B. Maniscan"
+ },
+ {
+  "archived_id": 34,
+  "title": "DEVELOPMENT OF WEB-BASED ENROLLMENT SYSTEM WITH FACE RECOGNITION FOR RINCONADA NATIONAL TECHNICAL VOCATIONAL SCHOOL",
+  "authors": "Christian Carl E. Alcantara, Angeline C. Escuro"
+ },
+ {
+  "archived_id": 35,
+  "title": "SMART MATERNAL CARE MANAGEMENT SYSTEM FOR LETTY’S BIRTHING HOME BUHI, CAMARINES SUR",
+  "authors": "Rudy M. Boringot Jr., Jerald B. Ricabuerta, Justine B. Velasquez"
+ },
+ {
+  "archived_id": 36,
+  "title": "CAMARINES SUR POLYTECHNIC COLLEGES WEB AND MOBILE-BASED LOST AND FOUND MANAGEMENT SYSTEM WITH IMAGE RECOGNITION",
+  "authors": "Sean Matthew C. Capistrano, Christine Joy H. Frondozo, Loren D. Roxas"
+ },
+ {
+  "archived_id": 37,
+  "title": "WAMS: WEB-BASED APARTMENT MANAGEMENT SYSTEM FOR EFFICIENT TENANT AND FACILITY ADMINISTRATION",
+  "authors": "John Lhester B. Arco, Mark D. Decierra, LanderJade S. Gultiano"
+ },
+ {
+  "archived_id": 38,
+  "title": "WAVES: A WEB-BASED WATER LEVEL MONITORING AND EARLY WARNING SYSTEM FOR FLOOD PREPAREDNESS",
+  "authors": "Dina O. Laresma, Czaerina Nicole Dulfo, John Kenneth S. Pera"
+ },
+ {
+  "archived_id": 39,
+  "title": "UtiliCSPC: AN AUTOMATED VENUE RESERVATION AND RESOURCE MANAGEMENT SYSTEM FOR INSTITUTIONAL USE",
+  "authors": "Shella May G. Miday, Erlan Notorio, Abigail C. Villaueva"
+ },
+ {
+  "archived_id": 40,
+  "title": "OLIN: OFFLINE LEARNING INTERFACE – AN OFFLINE-FIRST MOBILE LMS WITH SMART SYNCHRONIZATION AND WEB INTEGRATION FOR CSPC",
+  "authors": "Vincent Anthony H. Moreno, Rommel E. Barbonio, Shann Arlly P. Lagdaan"
+ },
+ {
+  "archived_id": 41,
+  "title": "A WEB-BASED BARANGAY INCIDENT REPORTING SYSTEM WITH INTEGRATED REPORT SUBMISSION TO PNP NABUA",
+  "authors": "Alexcirus A. Abagat, Jeremiah L. Belza, Mark Ronel L. Obrero"
+ },
+ {
+  "archived_id": 42,
+  "title": "LICOMSIA: CROSS- PLATFORM STUDENT INFORMATION AND ADMISSION SYSTEM FOR LIBON COMMUNITY COLLEGE",
+  "authors": "Ricardo F. Osea Jr., Sophia B. Estorninos, Hazel Anne C. Sanorjo"
+ },
+ {
+  "archived_id": 43,
+  "title": "USANT ARSAFE: AUGMENTED REALITY SMART ASSISTANCE FOR FIRE, EARTHQUAKE AND FLOOD EMERGENCIES",
+  "authors": "Florian L. Monte, Norman Errol E. Pili, Maegil M. Tomagan"
+ },
+ {
+  "archived_id": 44,
+  "title": "SPHERE: CSPC SPACE FACILITY AND EQUIPMENT RENTAL AND EVENT MANAGEMENT SYSTEM",
+  "authors": "Liza Mae B. Cleofe, Katrina G. Luzadas, Jomel G. Tienes"
+ },
+ {
+  "archived_id": 45,
+  "title": "PETKHO PORTAL: SMART VETERINARY CARE AND MONITORING SYSTEM FOR KHO VETERINARY CLINIC RINCONADA",
+  "authors": "Jey Kyle E. Peregrino, Mary Pons Rica E. Relatores, Anne Psylocke S. Urbina"
+ },
+ {
+  "archived_id": 46,
+  "title": "ARGENT: A WEB-BASED FINANCIAL MANAGEMENT SYSTEM FOR PHILIPPINE GOOD NEWS INTERNATIONAL",
+  "authors": "Christine Joy S. Casia, Edison B. Tominio, Missy S. Velitario"
+ },
+ {
+  "archived_id": 47,
+  "title": "KARAMAY: DIGITALIZING HUMAN RIGHTS EDUCATION AND ENHANCING INSTITUTIONAL EFFECTIVENESS THROUGH A COMPREHENSIVE DIGITAL PLATFORM FOR THE CENTER OF HUMAN RIGHTS EDUCATION AT CAMARINES SUR POLYTECHNIC COLLEGES",
+  "authors": "Maybelle A. Agonos, James M. Balane, Feann Faith J. Digay"
+ },
+ {
+  "archived_id": 48,
+  "title": "GIS- INTEGRATED MANAGEMENT SYSTEM FOR EVANGELICAL CEMETERY IN SANTIAGO, IRIGA CITY",
+  "authors": "John Rick L. Babila, Maria Lourdes S. Arcilla, John Mark David S. Pajenago"
+ },
+ {
+  "archived_id": 49,
+  "title": "SAFEPASS: RFID-BASED ENTRY AND MONITORING SYSTEM FOR ZEFERINO ARROYO HIGH SCHOOL",
+  "authors": "Kristine Joy B. Brazil, Alexa Sophia B. Jacob, Joy Ann Barbie Toldanes"
+ },
+ {
+  "archived_id": 50,
+  "title": "AUGMENTED REALITY MOBILE APPLICATION FOR DIGITAL PRESERVATION AND 3D VISUALIZATION FOR THE CSPC CENTER FOR RINCONADA CULTURE AND THE ARTS",
+  "authors": "Rondale Rae B. Bufete, Justin Larry R. Dimaiwat, John Lawrence N. Oliveros"
+ },
+ {
+  "archived_id": 51,
+  "title": "CBSTrac: A Web-Based Alumni Tracking System for Central Bicol State University of Agriculture",
+  "authors": "Dominic Martin A. Escuro, Michael Angelo S. Manzano, Fiona Ll. Rombano"
+ },
+ {
+  "archived_id": 52,
+  "title": "E-GUIDANCE: AN ONLINE APPOINTMENT AND INFORMATION SYSTEM FOR THE CENTER FOR GUIDANCE SERVICES",
+  "authors": "Richie B. Bagacina, Princess Hyancinth I. Belza, John Errol N. Borela"
+ },
+ {
+  "archived_id": 53,
+  "title": "PERFECT SMILE PORTAL: A MULTI-BRANCH WEB-BASED DENTAL CLINIC MANAGEMENT SYSTEM",
+  "authors": "Brandon R. Caritos, Marc Aron B. Gamban, John Bert O. Manaog"
+ },
+ {
+  "archived_id": 54,
+  "title": "APPOINTMENT SCHEDULING SYSTEM WITH SMS NOTIFICATION FOR MUNICIPAL AGRICULTURE OFFICE OF BATO",
+  "authors": "WAYNE BENEDICT V. IRAOLA, JOHN CARLO C. DIGAY, GENEIL B. BONDOC, BERNARD BRENNAN N. REGASPI"
+ },
+ {
+  "archived_id": 55,
+  "title": "BARANGAY HEALTH CENTER INFORMATION RECORDS MANAGEMENT SYSTEM",
+  "authors": "JUDY ANN L. FORECE, JOANA G. OBERO, ROANNE G. SUMAYOD, ANGELIKA M. QUIDES, MA. JESSABEL B. SILAVA"
+ },
+ {
+  "archived_id": 56,
+  "title": "BIOMETRIC ATTENDANCE MONITORING WITH PAYROLL SYSTEM IN STO. DOMINGO INSTITUTE",
+  "authors": "Jhemar C. Beato, Jon Kenneth P.Sain, Carmela B. Mata, John Rey S. Ramos, Jimmy A. Tomabdo Jr."
+ },
+ {
+  "archived_id": 57,
+  "title": "CAPSTONE PROJECT AND THESIS CLASS INFORMATIONMAN AGEMENT SYSTEM",
+  "authors": "ARLENE R. PEÑA, GLENN L. BERMILLO JR, KEITH ANDREW L. RELLES, PHILIP ANDREW L. ROMANO"
+ },
+ {
+  "archived_id": 58,
+  "title": "CEBU CALL CENTER ACADEMY INC., (IRIGA BRANCH) INTEGRATED SYSTEM: ADMINISTRATION MANAGEMENT",
+  "authors": "JOHN VINCENT SC. CAMILA, ROSE ANN O. JOVEN, MILDRED E. PERAJA, DON JAY S. RALUTA"
+ },
+ {
+  "archived_id": 59,
+  "title": "CEBU CALL CENTER ACADEMY INC., (IRIGA BRANCH) INTEGRATED SYSTEM: AUTOMATION OF ENROLMENT AND CLASS MANAGEMENT",
+  "authors": "AIVAN DAVE R. BASMAYOR, RENE JAY F. BONILLA, JOHN KENNETH A. LUMANGLAS, JOSHUA P. MARPURI"
+ },
+ {
+  "archived_id": 60,
+  "title": "DRA. EULALIA ELGAR CLINIC MANAGEMENT SYSTEM",
+  "authors": "JONNABEL M. AWA, KHRYZ KYE B. BADIOLA, MA. LOURDES D. IBARRETA, ROCHEL F. TABERMEJO"
+ },
+ {
+  "archived_id": 61,
+  "title": "F. SANCHEZ LANDAGAN DENTAL CLINIC APPOINTMENT AND RECORDS MANAGEMENT SYSTEM WITH QUICK RESPONSE TECHNOLOGY",
+  "authors": "ASHLEY MAURRICE T. AZUL, CHRISTIAN LAYONES, LEI ANN MAE L. LLABAN, NICOLE S. NEONAL, RIA MAE B. SALCEDO"
+ },
+ {
+  "archived_id": 62,
+  "title": "MEDICAL APPOINTMENT AND RECORD MANAGEMENT SYSTEM FOR NABUA RURAL HEALTH UNIT II",
+  "authors": "ERJHON A. BALDOZA, CRIZEL B. DOMAGSANG, MA. HANNA N. HERNANDEZ, JOSHUA T. NILO"
+ },
+ {
+  "archived_id": 63,
+  "title": "PANDEMIC CONTACT TRACING INFROMATION SYSTEM USING QR CODE WITH SMS ALERT NOTIFICATION",
+  "authors": "Marvin M. Atanante, Shamelyn O. Catangui, Daniel S. Mariscotes, Godwin V. Presnillo, Ejay B. Sumayao"
+ },
+ {
+  "archived_id": 64,
+  "title": "PROFILING AND RECORD MANAGEMENT OF BCIEERD – AN ENHANCED WEB PORTAL",
+  "authors": "Jim Justine D. Abanes, Samuel Nathan D. Nico B. Caguiron, Joshua R. Obaña"
+ },
+ {
+  "archived_id": 65,
+  "title": "RFID-BASED INTEGRATED COMPUTER LABORATORY EQUIPMENT MANAGEMENT SYSTEM",
+  "authors": "John Ervin T. Bernales, Audrey C. Bonita, Jeo D. Guanzon, Patrick Jay M. Guanzon, Kevin Rusel L. Solera"
+ },
+ {
+  "archived_id": 66,
+  "title": "SALES MANAGEMENT SYSTEM FOR ZUÑIGA’S GRAVEL AND SAND TRADING",
+  "authors": "NEIL C. BABILA, VINA MAE B. OCCIANO, PAOLO O. LLAGAS, JEORGIE P. SALCEDO, SHEILA MAY P. ZUÑIGA"
+ },
+ {
+  "archived_id": 67,
+  "title": "TRANSACTION MANAGEMENT SYSTEM WITH QR CODE IN BARANGAY SAN FRANCISCO BULA CAMARINES SUR",
+  "authors": "JUAN D. BISENIO, JOHN FRANCIS L. IRENO, EMIL JON B. PENA, JONIE A. VERANO"
+ },
+ {
+  "archived_id": 68,
+  "title": "WEB-BASED EVENT SCHEDULING SYSTEM FOR CAMARINES SUR POLYTECHNIC COLLEGES",
+  "authors": "MOHAMAD SALEM BELMONTE, VIRNA M. BUENA, AIREZ D. BUSTAMANTE, PETER ROEN A. LLESOL, CHRISTIAN E. QUELONIO"
+ },
+ {
+  "archived_id": 69,
+  "title": "WEB-BASED RECORD MANAGEMENT SYSTEM FOR PRIVATE LENDING TRANSACTIONS",
+  "authors": "Hernanie V. Morales, Mhark Teddy Ll. Oliva, Jericho C. Peñones, Kervin Karl M. Trinidad"
+ },
+ {
+  "archived_id": 70,
+  "title": "WEB-BASED STUDENT INFORMATIN SYSTEM FOR PEREPTUAL HELP NATIONAL HIGH SCHOOL, IRIGA CITY",
+  "authors": "ARLENE E. ALBANIA, NICOLE A. BUENA, LYKA M. PORTUGAL, AUDREY LALAINE P. LOQUIAS, JONAS B. RIVERA"
+ },
+ {
+  "archived_id": 71,
+  "title": "WEB-BASED RICE FARMERS MANAGEMENT SYSTEM OF BARANGAY SAN ISIDRO BUHI CAMARINES SUR",
+  "authors": "MA. ERIKA N. BATAC, IAN FITZSKIRT R. DEMADARA, NIÑO R. JUAN, HAROLD KYLE H. NAGALES, ROSABELLE S. SAN MIGUEL"
+ },
+ {
+  "archived_id": 72,
+  "title": "BATO FARMLAND GEOLOCATION AND MAPPING SYSTEM",
+  "authors": "Junel R. Joven, Julius M. Zaballa, Fernando P. Pasadilla"
+ },
+ {
+  "archived_id": 73,
+  "title": "WEB-BASED REGISTRAR OFFICE TRANSACTION APPOINTMENT SYSTEM FOR CAMARINES SUR POLYTECHNIC COLLEGES: THE IMPLEMENTATION OF POST-DESIGN STAGES",
+  "authors": "Ivan Jefferson O. Calleja, Zarina Kate D. Lagatic, Kaye Angela L. Sabenorio"
+ },
+ {
+  "archived_id": 74,
+  "title": "BoarDal: Web-Based Audal Boarding House Management System with SMS Notification via iTexMo",
+  "authors": "Maria Angelica B. Arcilla, Jamil F. Sapnay, Kristine Rose L. Yapan"
+ },
+ {
+  "archived_id": 75,
+  "title": "RESEARCH PROJECT INFORMATION MANAGEMENT AND TRACKING SYSTEM",
+  "authors": "China T. Bea, Louie B. Molina, Jessemri A. Tabayag"
+ },
+ {
+  "archived_id": 76,
+  "title": "Development of Digital Marketplace",
+  "authors": "JAKE B. AGNAS, JOEBE V. CASTAÑEDA, ELSIE B. DANCALAN"
+ },
+ {
+  "archived_id": 77,
+  "title": "METaSys 4.0: INTEGRATING ADVANCE DATABASE AND USER INTERFACE FOR ENHANCE PERFORMANCE",
+  "authors": "Cristine S. Haber, Edilyn M. Jornala, Kaye E. Romero"
+ },
+ {
+  "archived_id": 78,
+  "title": "MEDICARE: A WEB-BASED MEDICAL INVENTORY MANAGEMENT SYSTEM WITH DATA ANALYTICS",
+  "authors": "Arjay B. Bascon, Ma. Angela Janelle D.P., Jeremy L. Siguenza"
+ },
+ {
+  "archived_id": 79,
+  "title": "CSPC Student Event Calendar System Version 3.0",
+  "authors": "Cylene A. Busadre, Charlyn Joyce T. Sedutan, Ronnie G. Yaguel jr."
+ },
+ {
+  "archived_id": 80,
+  "title": "NICK’S 2BIG: AN ANDROID BASED WATER REFILLING STATION MANAGEMENT APPLICATION",
+  "authors": "Kian Kerby Adrisola, Jorel I. Agustin, Ma. Trisha Mae Babia"
+ },
+ {
+  "archived_id": 81,
+  "title": "WEB PORTAL FOR TANDAAY HIGH SCOOL WITH DOCUMENT TRACKING AND REQUEST SYSTEM USING QUICK RESPONSE TECHNOLOGY",
+  "authors": "Zildjian Xavier F. Llagas, John Patrick O. Oarmata, Krizia Ann Marie B. Parañal"
+ },
+ {
+  "archived_id": 82,
+  "title": "WEB-BASED IRIGA CITY PUBLIC LIBRARY MANAGEMENT WITH QR TECHNOLOGY",
+  "authors": "Darren P. Camila, Alliyah Nicole A. Daban, Maria Erika C. Odiada"
+ },
+ {
+  "archived_id": 83,
+  "title": "WEB-BASED STUDENT-FACULTY PORTAL FOR MASOLI HIGH SCHOOL",
+  "authors": "Joshua A. Layderos, Demet B. Espiritu, Christina F. Gonowon"
+ },
+ {
+  "archived_id": 84,
+  "title": "ENHANCED SECURITY: IMPLEMENTING A PASSCODE- PROTECTED DOOR LOCK SYSTEM FOR CCS SERVER ROOM",
+  "authors": "ERYK KYLE JAMES P. FLORES, MICKO S. MENCERO, LIMUEL B. SOLIMAN"
+ },
+ {
+  "archived_id": 85,
+  "title": "LOCKMAC: A WEB-BASED MANAGEMENT SYSTEM FOR MACLABORATORY INTEGRATING RFID",
+  "authors": "JOHN FRANCIS C. CARPO, MARYLIE L. REFEREZA"
+ },
+ {
+  "archived_id": 86,
+  "title": "A Novel Approach of Integrating Face Unlock Technologies for a Web-Integrated Smart Door Lock Management System in CSPC-CCS Open Laboratory",
+  "authors": "JOHN PAUL O. BARDENAS, MA. TERESA R. PAPA, MARIMAR H. RIVERA"
+ },
+ {
+  "archived_id": 87,
+  "title": "AUTO LOCK: MULTI-FACTOR ACCESS MANAGEMENT SYSTEM FOR NAS LABORATORY",
+  "authors": "AMYRIE O. ALARCIO, DENNARD P. BALINO, JESRIE CENA"
+ },
+ {
+  "archived_id": 88,
+  "title": "BIOLOCK: A WEB-BASED MANAGEMENT SYSTEM FOR ACCESS CONTROL AND ATTENDANCE LOGGING IN I.T. LABORATORY 2",
+  "authors": "Marianne O. Monroy, Joan G. Esquivel, Lerma V. Neverio"
+ },
+ {
+  "archived_id": 89,
+  "title": "BJMP (Bureau of Jail Management and Penology) Record Management System with Electronic Head Counting",
+  "authors": "Angelito M. Arsenal Jr., Mary Grace R. Dilla, Lawrence G. Ramos"
+ },
+ {
+  "archived_id": 90,
+  "title": "ELOCK: A MULTI-FACTOR AUTHENTICATION UTILIZING FINGERPRINT RECOGNITION AND PIN CODE IDENTIFICATION",
+  "authors": "JOSEPH E. LANZUELA, MAREALIE C. ESPEDILLON, VINZ CHRISTIAN T. MARGATE"
+ },
+ {
+  "archived_id": 91,
+  "title": "LOCKMAC: Smart Door Lock Integrating RFID for Mac Laboratory",
+  "authors": "JOHN MARTINE L. GAMILO, SEAN HOWARD N. LIM, APRIL JOY B. SORETA"
+ },
+ {
+  "archived_id": 92,
+  "title": "CHRONOLOCK: AN INTEGRATION OF WEB-BASED MANAGEMENT SYSTEM FOR THE SMART DOOR LOCK SYSTEM OF CCS ERP LABORATORY",
+  "authors": "RALPH H. LORZANO, JOMARC I. NACARIO, FERMIN JR. III H. TURIAÑO"
+ },
+ {
+  "archived_id": 93,
+  "title": "CHRONOLOCK: RFID-ENABLED CLOUD SMART DOOR LOCK SYSTEM WITH REAL-TIME OCCUPANCY MONITORING",
+  "authors": "ARLAN B. IMPERIAL JR, ANDREY B. BABOL"
+ },
+ {
+  "archived_id": 94,
+  "title": "LOCKUP: WEB-BASED MANAGEMENT SYSTEM FOR SMART DOOR LOCK IN MAC LABORATORY",
+  "authors": "CHINO LAWRENCE A. NOBLE, HAROLD JAY B. UBANTE, NIKKI COLEEN B. SASALUYA"
+ },
+ {
+  "archived_id": 95,
+  "title": "LOCKUP: A MOBILE BASED MANAGEMENT SYSTEM FOR SMART DOOR LOCK ENHANCING SECURITY IN MAC LABORATORY",
+  "authors": "JOHN DEXTER P. ANI, JESSICA P. MATAYA, FREDERICK B. SALAZAR, JOSHUA M. SECUNDO"
+ },
+ {
+  "archived_id": 96,
+  "title": "AUTO LOCK NAS LABORATORY MULTI-FACTOR ACCESS DEVICE WITH FINGERPRINT AND RFID TECHNOLOGY",
+  "authors": "Edlan Rey N. Bongala, Kisha Jamila P. Braga, Rochelle N. Dela Cruz, Dominique Julienne V. Martirez"
+ },
+ {
+  "archived_id": 97,
+  "title": "PI-LOCK: REFINING DOOR LOCK WITH TIME-BASED AUTHENTICATION USING RASPBERRY PI WITH RFID IN MAC LABORATORY",
+  "authors": "Alfred Joseph T. Baltazar, Jovita Z. Neverio, Larry C. Sain"
+ },
+ {
+  "archived_id": 98,
+  "title": "BIOLOCK: Fingerprint and PIN Lock Access Control and Attendance Logging in IT Laboratory 2",
+  "authors": "Noel Andrew Mendoza, Kyla Mae O. Baldago, Sheena T. Martinez, Angel F. Obia"
+ },
+ {
+  "archived_id": 99,
+  "title": "BIOENTRY: A WEB-BASED DOOR LOCK MANAGEMENT SYSTEM FOR CCS OPEN LABORATORY",
+  "authors": "ROMEL H. PERALTA, JANE T. SOLERA, ANGELEE S. STO. DOMINGO"
+ },
+ {
+  "archived_id": 100,
+  "title": "Mobile Application Based Library Book Reservation In CSPC Library",
+  "authors": "David Karl Yuan M. Cuerdo, Cyrene M. Navarro, Andrei Joshua M. Sael"
+ },
+ {
+  "archived_id": 101,
+  "title": "Queen Hannah Birthing Home Information Management System with SMS Notification",
+  "authors": "Janette M. Advincula, Rick Anthony R. Agullo, Fitzkirk John Paris P. Angeles, Jovin A. Ylagan"
+ },
+ {
+  "archived_id": 102,
+  "title": "A COMPREHENSIVE IMPLEMENTATION OF A SMART DOOR LOCK SYS- TEM WITH ACCESS LOG AND REALTIME NOTIFICATIONS AT NAS LABO- RATORY",
+  "authors": "Christine Joy L. Dichoso, Mark Anthony A. Llorin, Ma.Henna Fe B. Sernande"
+ },
+ {
+  "archived_id": 103,
+  "title": "TECH-SCAN: Implementing PIN Authentication in RFID-Based Smart Door Lock System for Employee Access in IT Laboratory 1 Using ALOHA-Based Algorithm",
+  "authors": "JONALYN G. ALVARO, KRISTIAN P. BAS, MARK GLANDESTINE L. MANISCAN"
+ },
+ {
+  "archived_id": 104,
+  "title": "CCS Faculty Lounge Smart Door Lock with Web Based Access Log and Class Sched- ule Viewing System",
+  "authors": "KENNETH P. TOGORES, PETER KENJIE COLARINA, REYMOND CANONCE"
+ },
+ {
+  "archived_id": 105,
+  "title": "FRT: SMART DOOR LOCK FOR NAS LAB USING FACIAL RECOGNITION",
+  "authors": "HADJIE T. ALAYAN, ISABEL B. CLEOFE, BERNADETTE S. PEÑÑFLOR"
+ },
+ {
+  "archived_id": 106,
+  "title": "GRIMLOCK: A Multi-Method Door Lock System for Network Administration Systems (NAS) Laboratory",
+  "authors": "LEA JEAN S. CAVITE, EDLYN JOAN MARIE E. EXAMINADA, JOHN FRANCIS B. LOMEDA"
+ },
+ {
+  "archived_id": 107,
+  "title": "Petcare: Rayna Animal Care Clinic Information System with SMS Notification and Appointment Scheduler",
+  "authors": "Jan Art T. Brazal, Princess Camille O. Febres, Karl Mikel B. Pecson"
+ },
+ {
+  "archived_id": 108,
+  "title": "Secured Entry: RFID With Arduino Powered Smart Door Lock and Management System for CCS Open Laboratory",
+  "authors": "ALTHEA IRISH M. SANGREO, MARISOL R. BROQUEZA, MIKE L. REMPILLO JR."
+ },
+ {
+  "archived_id": 109,
+  "title": "SIMPLISAFE: DOOR LOCK MULTI-FACTOR AUTHENTICATION, RFID, PIN WITH FINGERPRINT AT THE CSPC OPEN LABORATORY",
+  "authors": "ABEGAIL C. ALMASCO, SHEILA MARIE P. PABON, JOHN PATRICK T. LACHAMA"
+ },
+ {
+  "archived_id": 110,
+  "title": "SECURITECH: A WEB-BASED SYSTEM FOR ACCESS CONTROL VIA SMART DOOR LOCK OF LIS LABORATORY",
+  "authors": "JOHN PHILLIP F. NAVELINO, JESUS C. PASTORAL, CRUS DAVID B. SANDRINO"
+ },
+ {
+  "archived_id": 111,
+  "title": "SECURITECH: MODERNIZING DOOR LOCK SYSTEM WITH RFID AND SENSOR IN LIS LABORATORY",
+  "authors": "MONICA G. BONDOY, ED JIM C. BUQUID, RALPH DEXTER RHEY A. PIDOC"
+ },
+ {
+  "archived_id": 112,
+  "title": "A SENTIMENT ANALYSIS ON CSPC STUDENTS EXPERIENCES DURING COVID-19 PANDEMIC",
+  "authors": "Romel M. Tayer, Jenyrose T. Gastilo, Princess Kaye D. Purisimas, Sarah Jane D. Agarin"
+ },
+ {
+  "archived_id": 113,
+  "title": "Automated Temperature and Humidity Control for Hydroponic Garden using Fuzzy Logic",
+  "authors": "Kayla Marie C. Abonita, Sheeva Mae Corporal, Joey C. Orante, Hazel V. Reyes, Jay I. Tadeo"
+ },
+ {
+  "archived_id": 114,
+  "title": "College of Computer Studies Career Recommendation using Decision Tree Aglorithm",
+  "authors": "Isaac, Johnmir, Badiola, Jhon Rey, Dinero, Ronald, Monge, Mary Dine, Salona, April"
+ },
+ {
+  "archived_id": 115,
+  "title": "Data Analysis of Nabua COVID-19 Cases using Machine Learning SigPNG: An Implementation of Suzuki’s Algorithm for Vectorizing Webcam Scanned Signatures",
+  "authors": "Jane Irish B. Elevado, Reneveb S. Gabrillo, Darryl Joshua S. Juanillas, Jonalyn L. Orbino, Juluis Cezar L. Landong, Florencio S. Bagayawa, Benson P. Bandoy, Cedric Lawrence S. Pandes, Mark Jumar B. Perez, Christian Gilbert M. Salas"
+ },
+ {
+  "archived_id": 116,
+  "title": "Sweet Potato Disease Detection Using Convolutional Neural Network",
+  "authors": "Suzette B. Hermoso, Amy Z. Balares, Rosally C. Borbe, Christine B. Ballecer, Froilan B. Navida"
+ },
+ {
+  "archived_id": 117,
+  "title": "Recognition Of Road Sign using Convolutional Neural Network",
+  "authors": "Samantha Amor P. Deres, Caroline T. Munar, Dave M. Prades, Zyndrek John Paul D. Saunar, Brianna Carlota L. Tabuena"
+ },
+ {
+  "archived_id": 118,
+  "title": "BAYAD: Coins and Bills Identifier for Visually Impaired Individual using Convolutional Neural Network CONSUMER BUYING BEHAVIOUR OF MOTORCYCLE PARTS AND ACCESSORIES USING DATA MINING",
+  "authors": "Princess Charine Rose Q. Portugal, Dave S. Lorzano, John Clifford C. Satorre, John Mark R. Seletaria"
+ },
+ {
+  "archived_id": 119,
+  "title": "Constraint Satisfaction Problem (CSP) Algorithm in Class Scheduling",
+  "authors": "Julie A. Sandrino, John Leonard P. Donio, John Mark P. Peñales, Karl Kennedy J. Mata"
+ },
+ {
+  "archived_id": 120,
+  "title": "Optimizing CSPC Event Scheduling using a Genetic Algorithm",
+  "authors": "Shaira F. Bautista, Kelsey Eunice T. Besa, Jireh Arjie C. Polvoreza"
+ },
+ {
+  "archived_id": 121,
+  "title": "Mobile Augmented Reality For Learning Computer Hardware Using Simultaneous Localization and Mapping",
+  "authors": "Jazmine Claire B. Bernardino, Angelica Lagsic, Lyndsy D. Villanueva"
+ },
+ {
+  "archived_id": 122,
+  "title": "Disease Detection Among the Napa and Cannonball Cabbage Using CNN",
+  "authors": "Kyle L. Magistrado, Nerielyn T. Pablo, Sherah May P. Serrano"
+ },
+ {
+  "archived_id": 123,
+  "title": "Hate Speech and Offensive Language Detection in Facebook using Naive Bayes Algorithm",
+  "authors": "Benitez, John Carlo A., Quiapo, Karl Angelo C., Urbana, Jessa Mae C."
+ },
+ {
+  "archived_id": 124,
+  "title": "Cacao Detection Disease using VGG16 Architecture",
+  "authors": "Lean Mae Beloro, Johannes Murillo, Jerald Toledo, Edwin Parreño"
+ },
+ {
+  "archived_id": 125,
+  "title": "Camarines Sur Polytechnic College Library Cosine Similarity in Automated Thesis and Review of Related Literature Using Data Mining",
+  "authors": "Elaila Mae C. Baran, Ella Mae T. Bergado, Judith A. Taduran"
+ },
+ {
+  "archived_id": 126,
+  "title": "Course Recommendation for CSPC Incoming Freshmen using Collaborative Filtering Algorithm",
+  "authors": "Myra SB. San Felipe, Joselito S. Batan, Jonel L. Britania, Jamaica T. Rabino, Shania Mae D. Elpedes"
+ },
+ {
+  "archived_id": 127,
+  "title": "Crime Rate Prediction and Analysis in Iriga City Using K-Means Algorithm",
+  "authors": "Jodan B. Parel, Kyla Glen Alcantara, Jason S. Ordinario, Nicole Alcantara"
+ },
+ {
+  "archived_id": 128,
+  "title": "EXPLORING BUHI CORPUS USING NATURAL LANGUAGE PROCESSING (NLP)",
+  "authors": "Jeed Leo Gaveria Cortan, Khayzel L. Ricafort, Jinky Villagracia"
+ },
+ {
+  "archived_id": 129,
+  "title": "Geo Spatial Visualization of Flood Hazard Map of Nabua Grocery List Recommendation using Machine Learning Algorithm",
+  "authors": "John Daryll T. Evangelista, Gerad Niño S. Navida, Shela Mae L. Macasaya, Karla C. Sacueza, Kianna Faye S. Abillonar, Leonard T. Naldo, Mary Cris B. Babasa, Roger C. Ibao Jr, Mark Lawrence C. Del ayre"
+ },
+ {
+  "archived_id": 130,
+  "title": "IMAGE CLASSIFICATION OF BANANA LEAF DISEASES IN THE PHILIPPINES USING CONVOLUTIONAL NEURAL NETWORK (CNN) ALGORITHM",
+  "authors": "Maryfrance Abinal, Kenje Delfino, Justine Desiree Buquid, John-Nhel Tanay"
+ },
+ {
+  "archived_id": 131,
+  "title": "IP ROUTING TO FIND OPEN SHORTEST PATH USING DIJKSTRA'S ALGORITHM",
+  "authors": "Twirly Joy L. Paballa, Rommel Jay A. Fedelino, Giselle I. Infante"
+ },
+ {
+  "archived_id": 132,
+  "title": "Keystroke Injection Detection System using Naive Bayes Algorithm and Pattern Recognition",
+  "authors": "Jan Paul M. Bondad, Diana G. Arnante, Rodolf Ryamn C. Nacario"
+ },
+ {
+  "archived_id": 133,
+  "title": "RASPBERRY PI WASTE SEGREGATOR USING CONVOLUTIONAL NEURAL NETWORK ALGORITHM",
+  "authors": "Bonza, Mary-el F., Dante, Jazie T., Sergio, Anerol Leuna Alva S."
+ },
+ {
+  "archived_id": 134,
+  "title": "Sentiment Analysis of Covid-19 Tweets Using Machine Learning",
+  "authors": "John Lloyd G. Lavarias, Jeuness E. Buena, Jessebel A. Bueno, Shane P. Laya"
+ },
+ {
+  "archived_id": 135,
+  "title": "Shortest Path Finding using Dijkstra Algorithm on 2D Campus Map",
+  "authors": "Hazel A. Atian, Hensi L. Bolalin, Lalyn P. Bonador, Jilian Mae R. Ornido"
+ },
+ {
+  "archived_id": 136,
+  "title": "Tournament Scheduling Using Genetic Algorithm",
+  "authors": "Patricia Ivone Espalmado, Ma. Ellah Sanchez, James Emman Coralde, Ma. Fe Renegado"
+ },
+ {
+  "archived_id": 137,
+  "title": "Vehicle Plate Number Recognition Using Digital Image Processing and Optical Character Recognition",
+  "authors": "Paul Nigel Resurrecion, Alexander Eufracio, Swetzel Zuñiga, Rodel Secillano, Angel Katherine Verceluz"
+ },
+ {
+  "archived_id": 138,
+  "title": "Developing a Signature Forgery Detection Prototype using Convolutional Neural Networks",
+  "authors": "Jhan Lenard Troa Aguilar, Loren J. Llorin, Justine D. Labios"
+ },
+ {
+  "archived_id": 139,
+  "title": "Room Finder Map in Nabua National High School using Dijkstra's Short Path Algorithm",
+  "authors": "Laika Ciron, Angela Mae F. Edioma, Kimberly Ann S. Mangampo"
+ },
+ {
+  "archived_id": 140,
+  "title": "DOLLY: A VOICE-ACTIVATED AND GESTURE-RECOGN IZING SMART TRASHCAN UTILIZING THE YOLO ALGORITHM FOR AUTONOMOUS NAVIGATION",
+  "authors": "John Mark C. Ruam, Gerald M. Carique, Arnold Rie J. Sejera"
+ },
+ {
+  "archived_id": 141,
+  "title": "Quail Eggs Quality Detector using Convolutional Neural Network",
+  "authors": "Archie L. Inocentes, Derick Emmanuel J. Marpuri, Mariana Jane L. Ramos"
+ },
+ {
+  "archived_id": 142,
+  "title": "OASIS: Image Processing and File Formatting using IS-NET and KENH for Yearbook Layout in Publisher",
+  "authors": "Ken B. Horlador"
+ },
+ {
+  "archived_id": 143,
+  "title": "TOLL-BASED PARKING LOT DETECTION USING YOLOV9 AND IMAGE THRESHOLDING",
+  "authors": "Selwyn Kent B. Oñedo, John Mark A. Pajenago, Arjun Rashid L. Dimanarig"
+ },
+ {
+  "archived_id": 144,
+  "title": "IMPLEMENTATION OF IMAGE RECOGNITION FOR AUTOMATED CAMPUS PARKING",
+  "authors": "Cecil D. Dagon, Jason L. Serillano, Jade B. Sinfuego"
+ },
+ {
+  "archived_id": 145,
+  "title": "Enhancing Disaster Response Planning in Nabua, Camarines Sur through Map Visualization and Dijkstra’s Algorithm",
+  "authors": "Jushua Jay P. Delos Santos, Rose Ann M. Agravante, Princes J. Aquiler, John Hananel P. Deleon"
+ },
+ {
+  "archived_id": 146,
+  "title": "Exploring Conversational Agent For Citizen's Charter of CSPC using Pre-trained Transformer Model",
+  "authors": "Andrea Krystel T. Estadilla, Nestor B. Sayson Jr., Jeland O Albonial"
+ },
+ {
+  "archived_id": 147,
+  "title": "REAL-TIME LOCAL WEATHER STATION USING GRADIENT BOOSTING",
+  "authors": "Johnlery E. Mirandilla, Jomar P. Damot, Vincent James O. Salvino"
+ },
+ {
+  "archived_id": 148,
+  "title": "CONVERSATIONAL CHATBOT FOR PERSONALIZED RECOMMENDATIO N OF BICYCLE PARTS ON SHOPEE",
+  "authors": "Mark B. Tagum, Rodney S.R. Carlo, James D. Ballerda"
+ },
+ {
+  "archived_id": 149,
+  "title": "A CUSTOMIZED PROTOTYPE OF TRANSACTION APPOINMENT SYSTEM FOR THE REGISTRAR OFFICE",
+  "authors": "EUGENE D. CASTROVERDE, ROBERT A. ISAAC, RAFAEL A. ABANO, MARK ANTHONY L. AZURES"
+ },
+ {
+  "archived_id": 150,
+  "title": "ANALYSIS AND REDESIGN OF UVOTE SYSTEM IN CAMARINES SUR POLYTECHNIC COLLEGES DEVELOPMENT AND EVALUATION OF INTEGRATED ENROLMENT AND BILLING INFORMATION SYSTEM",
+  "authors": "POLICARPO III E. BANTE, JOHN ROVIC M. CORBILLA, HUE D. GANALON, MARY CRIZ G. ORBON, ABIGAIL B. RIBAYA, MEL CHRISTIAN M. MASCULINO, MARK ANTHONY B. BOLO, JUVEREN A. BARELA, TERESA B. BENITEZ, MARK ANDY P. FORNOLES"
+ },
+ {
+  "archived_id": 151,
+  "title": "STRATEGIC PLAN FOR CSPC LEONS UTILIZATION",
+  "authors": "CATHERINE S. DECIERRA, ROSE ALMA F. LUCQUIAO, SOPHIA B. MONGE, MERYJOY B. PLOTADO, ALLAN A. PODAWAN"
+ },
+ {
+  "archived_id": 152,
+  "title": "TOWARDS A PROPOSED UPGRADED DESIGN OF THE MULTI-EVENT TABULATION SYSTEM (METAsys)",
+  "authors": "RAYMON V. BARDINAS, NORMAN A. CASTILLA JR., PETER PAUL O. MENDOZA, JENICCAH P. RULL"
+ },
+ {
+  "archived_id": 153,
+  "title": "ANALYSIS AND DESIGN FOR ONLINE APPOINTMENT MANAGEMENT IN CAMARINES SUR POLYTECHNIC COLLEGES ADMISSION OFFICE",
+  "authors": "RENELA ROSE A. GAROL, MARY JOY E. TUYAY, PABLO R. TALAGTAG JR"
+ },
+ {
+  "archived_id": 154,
+  "title": "ANALYSIS AND DESIGN OF ENROLLMENT SYSTEM OF TABURNAL LEARNING CENTER, BATO",
+  "authors": "MARL LOUWELLE ARGARIN, SHIELA MAE PANGILINAN ALANIS, RICA THERESA VILLAMER ADANTE"
+ },
+ {
+  "archived_id": 155,
+  "title": "ANALYSIS AND DEVELOPMENT OF ICT REPAIR MANAGEMENT SYSTEM FOR CAMARINES SUR POLYTECHNIC COLLEGES",
+  "authors": "ROLAND B. POCON III, LHORENZ DALE C. PONTILLAS, JESSA MAY B. LANUZO"
+ },
+ {
+  "archived_id": 156,
+  "title": "COMPARATIVE STUDY ON INFORMATION MANAGEMENT SYSTEM UTILIZED BY THE DEPARTMENT OF JUSTICE PAROLE AND PROBATION ADMINISTRATION IN IRIGA CITY",
+  "authors": "CYRIL U. GONOWON, JO FRANCIS V. TEÑOSO, MARK BRYAN D. MAPOY"
+ },
+ {
+  "archived_id": 157,
+  "title": "UNCOVERING THE KNOWLEDGE MANAGEMENT PRACTICES OF THE ACADEMIC CLUSTER AND RESEARCH OFFICE IN CAMARINES SUR POLYTECHNIC COLLEGES",
+  "authors": "DANICA D. BERZA, GILIAN B. BERMIDO, RONEL G. TEÑOSO"
+ },
+ {
+  "archived_id": 158,
+  "title": "INFORMATION SYSTEM STRATEGIC PLAN FOR BELEN LYING-IN CLINIC MANAGEMENT SYSTEM NABUA, CAMARINES SUR",
+  "authors": "HERMOGENES A. HALLARE, JEAN PAULINE S. MABINI, JOHN ARNEL R. REPARIP"
+ },
+ {
+  "archived_id": 159,
+  "title": "A TALE OF THREE LEARNING MANAGEMENT SYSTEM: A COMPARATIVE STUDY OF LEONS, SIAS, AND GOOGLE CLASSROOM",
+  "authors": "CHRISTIAN S. BALANG, FERDINAND P. CAMACHO, MARIA LINETH A. CARIAGA"
+ },
+ {
+  "archived_id": 160,
+  "title": "IMPLEMENTING THE LEAN UX APPROACH IN THE DESIGN OF ENROLLMENT SYSTEM FOR NABUA NATIONAL HIGH SCHOOL (SENIOR HIGH SCHOOL)",
+  "authors": "AVEGAIL C. LUZON, JEANIE MAE F. ISAAC, EZEL DALE H. OBERO"
+ },
+ {
+  "archived_id": 161,
+  "title": "LEAN UX IMPLEMENTATION IN THE ANALYSIS AND DESIGN OF INFORMATION SYSTEM FOR CIVIL REGISTRAR OFFICE IN NABUA",
+  "authors": "ZYRA B. FLORIANO, ANGELOU C. TORALLO"
+ },
+ {
+  "archived_id": 162,
+  "title": "BUILDING A PROPOSED PROTOTYPE USING DESIGN-THINKING: TOWARDS ENHANCING THE REGISTRATION PROCESS OF 4PS",
+  "authors": "ANNE-GELINE H. ACBANG, JOAN A. SILAVA"
+ },
+ {
+  "archived_id": 163,
+  "title": "Utilizing an Enterprise Resource Plan (ERP) Software for the Optimization of Business Process for Beloro Funeral Services",
+  "authors": "MARC DARWIN P. BELLEN, JOEBETH R. CUADRO, JONEL C. ESPIRITU"
+ },
+ {
+  "archived_id": 164,
+  "title": "Integration of Robotic Process Automation (RPA) 1.0 in the Academic Operational Tasks of the College of Computer Studies (CCS): A Module Focusing on Adviser’s Reportorial Requirements",
+  "authors": "IVY ESPAÑOLA, MICHAEL LAURAYA, TREISHCIA MEI I. NACARIO"
+ },
+ {
+  "archived_id": 165,
+  "title": "A USER-CENTERED APPROACH FOR DESIGNING AN ENROLMENT SYSTEM IN LA PURISIMA NATIONAL HIGH SCHOOL",
+  "authors": "GABRIEL PHILIP O. GENERAL, IVY JOY C. TALAGTAG, JESSECA Q. VALENCIA"
+ },
+ {
+  "archived_id": 166,
+  "title": "EVALUATION OF CSPC WEB-BASED TRAVEL AND TOURS SYSTEM OF THE COLLEGE OF TOURISM, HOSPITALITY, AND BUSINESS MANAGEMENT",
+  "authors": "BEVERLY O. BEATO, AILA MARIE B. DAZA, MICAH ANGELA A. ESCOLANO"
+ },
+ {
+  "archived_id": 167,
+  "title": "Impact Assessment of Records Management System in CSPC: A Delone and Mclean Analysis",
+  "authors": "JOSHUA B. DE LOS REYES, JERICO R. LLENO, JOHN ANTHONY L. VILLANUEVA"
+ },
+ {
+  "archived_id": 168,
+  "title": "IMPLEMENTATION OF DESIGN THINKING APPROACH IN ANALYSIS AND DESIGN OF APPOINTMENT TRANSACTION SYSTEM FOR MOTHER THERESA COLEGIO DE IRIGA",
+  "authors": "KARLENE J. OBRERO, JOSEPH P. SALCEDO, ZYNIALEN D. SAUNAR"
+ },
+ {
+  "archived_id": 169,
+  "title": "eLABA: A MOBILE BASED DESIGN FOR LAUNDRY SHOP",
+  "authors": "CLARIZA PLETADO ALARCON, EARL JAMES FOLLOSCO TRINIDAD, JESEBELLE DE LEON FUNDADOR"
+ },
+ {
+  "archived_id": 170,
+  "title": "A Comprehensive Analysis and Design of SK Management System for Barangay Sagumay",
+  "authors": "NIÑO R. DACLESON, AMELYN T. LUZON, MICHELLE R. RIBOR"
+ },
+ {
+  "archived_id": 171,
+  "title": "EVALUATION OF AGONOS DENTAL CLINIC: IMPLEMENTING DELONE AND MCLEAN APPROACH",
+  "authors": "JESICA ELCANO, KRISTINE P. MEDIADO, MARICEL S. ZAGADA"
+ },
+ {
+  "archived_id": 172,
+  "title": "Implementation of Delone and McLean Model in the Impact Assessment of CSPC Library Kiosks",
+  "authors": "MICHAEL JOSHUA A. ALDAVE, APPRILLE MARGRETE BANTE, KENT A. REFORSADO"
+ },
+ {
+  "archived_id": 173,
+  "title": "Robotic Process Automation (RPA) 1.0 in the Academic Operations of the College of Computer Studies (CCS): A Module on Student Retention and Sustained Academic Performance Assessment",
+  "authors": "NICOLE JEANIE LL. ABONITA, MARY KRISTINE MAE R. LARESMA, NOEL RICHARD E. TUBIG"
+ },
+ {
+  "archived_id": 174,
+  "title": "Design of a Web-based Platform for Management and Analysis of Disaster and Emergency Report in Nabua, Camarines Sur",
+  "authors": "MARK RAYVEN A. ADANTE, RHEDELYN A. SALAZAR, JINKY A. VELASCO"
+ },
+ {
+  "archived_id": 175,
+  "title": "E-Tubig: A Web-Based Design of a Water Service Management System for Tubig Nabua Inc.",
+  "authors": "SARAH C. RICAFRENTE, MELODY B. TOLDANES, ROSELLE A. VALIENTE"
+ },
+ {
+  "archived_id": 176,
+  "title": "IMPLEMENTATION OF ODOO ERP SOLUTIONS FOR M.I.T COMPUTER SERVICES’ MULTIPLE BRANCHES",
+  "authors": "LANIE M. BUTIAL"
+ },
+ {
+  "archived_id": 177,
+  "title": "INTEGRATION OF ROBOTIC PROCESS AUTOMATION (RPA) 1.0 IN THE ACADEMIC OPERATIONS OF THE COLLEGE OF COMPUTER STUDIES (CCS): A MODULE FOCUSING ON SUBJECT LOAD NOTICE GENERATION",
+  "authors": "KIM HAROLD M. EDROSO, LANCE JASON T. LLAGAS, RALPH GABRIEL R. SAÑO"
+ },
+ {
+  "archived_id": 178,
+  "title": "CSPC LIBRARY PROCESS AUTOMATION IN INFOLIB AND KOHA USING RPA",
+  "authors": "JHOSUA O. BENOSA, MARK REGIE E. GARBILES, JONNELLE KYLE P. PRESADO"
+ },
+ {
+  "archived_id": 179,
+  "title": "DIGITAL TRANSFORMATION OF XPERT MOTORCYCLE SHOPS IN BICOL THROUGH IMPLEMENTATION OF ODOO",
+  "authors": "NATHANIEL M. AVILES, CHRISTIAN F. SILAVA, ANGELI MAE S. MARASIGAN"
+ },
+ {
+  "archived_id": 180,
+  "title": "ASSESSMENT OF THE LIBRARY ONLINE PUBLIC ACCESS CATALOG AT CAMARINES SUR POLYTECHNIC COLLEGES",
+  "authors": "JOHN HARVY B. AURELLANO, RICHARD S. ELCANO"
+ },
+ {
+  "archived_id": 181,
+  "title": "A User-Centered Design of Registrar’s Transaction Management System for Mother Theresa Colegio de Iriga",
+  "authors": "RYAN G. OLLERES, PATRICK M. PAPA, GELAMER KIT P. REGALA"
+ },
+ {
+  "archived_id": 182,
+  "title": "Odoo Enterprise Resource Planning Implementation for An Entrepreneur Managing Multiple Businesses",
+  "authors": "ADRIAN S. ALIVIADO, JOHN LLOYD M. BOTEÑO, KLYNTZ YTRX T. ELEVADO"
+ },
+ {
+  "archived_id": 183,
+  "title": "Designing Alert Hub: A User-Centered Web Interface for Barangay Disaster Response",
+  "authors": "JOHN LESTER P. DELA CRUZ, JOSHUA R. BUSTAMANTE, CRISZABETH ANGELA B. AMOTO"
+ },
+ {
+  "archived_id": 184,
+  "title": "Designing an Online Platform for Streamlining Boarding House Selection Near CSPC Campus",
+  "authors": "CARL JOSHUA P. BELORO, MARK ALLEN B. OLINO, JOREY L. TUBIERAS"
+ },
+ {
+  "archived_id": 185,
+  "title": "Integration of Robotic Process Automation (RPA) in the Class Plotting and Course-Instructor Alignment of the College of Computer Studies",
+  "authors": "MELIZA C. LAVAPIE, JADE A. BANARIA, KYLE ERROL LL. TALE"
+ },
+ {
+  "archived_id": 186,
+  "title": "MOVE SMART IRIGA: Building the Smart Front-End of Iriga’s Intelligent Terminal System",
+  "authors": "JOHN PATRICK MAMANO ALFELOR, CECILIO ORDAS DELA RAMA IV, AILA MARIE AMBROSIO ESPERANZA"
+ },
+ {
+  "archived_id": 187,
+  "title": "A User-Centered Design for Zantua-Nonato Dental Care (ZNDC) Clinic Management System",
+  "authors": "HAROLD B. FERRER, MECHAELLA T. LITA, RICKO D. ZORILLA"
+ },
+ {
+  "archived_id": 188,
+  "title": "Implementation of Smart Barangay Census System in Bacolod, Bato Camarines Sur: A Feasibility Study",
+  "authors": "JUNHECA CASTRO, LADYLINE I. BENEGAS, JOHN JOWARD S. LORIA"
+ },
+ {
+  "archived_id": 189,
+  "title": "Integration of Robotic Process Automation (RPA) 1.0 for Student Prospectus Generation in the College of Computer Studies",
+  "authors": "EZRA FAE M. ALFORTE, HAZEL M. NOJARA, CHRISTINE JOY M. RELATORES"
+ },
+ {
+  "archived_id": 190,
+  "title": "Integration of Robotic Process Automation (RPA) 1.0 in the Academic Operational Tasks of the College of Computer Studies (CCS): A Module Automating the Procedure for Generation of Workload Schedule of Faculty",
+  "authors": "NIÑO JAYBEE R. BERMAS, RUBY MAE O. PENOLIO, ADRIAN G. SABALLERO"
+ },
+ {
+  "archived_id": 191,
+  "title": "A Design Thinking Approach in Analysis and Design of Child Healthcare Monitoring System for Bula Health Center (RHU1)",
+  "authors": "CLYDE ISAAC C. INANDAN, RICA MAE B. LAYONES, JOHN LOUIE L. RIVERA"
+ },
+ {
+  "archived_id": 192,
+  "title": "DIGITAL TRANSFORMATION OF KKBN BUSINESS PROCESS USING ODOO: A CAPSTONE PROJECT",
+  "authors": "JOHN EDWARD HONTALBA, SHARRYCEL MAGNO, GERALD BUERGO"
+ },
+ {
+  "archived_id": 193,
+  "title": "RESIDENT AND VISITOR MANAGEMENT SYSTEM: A FRONT-END AND DATABASE DESIGN",
+  "authors": "JOSHUA RYAN R. TATARO, MARLO ANTHONY T. NUEVA, DANICA M. CADAG"
+ },
+ {
+  "archived_id": 194,
+  "title": "ENHANCING BUSINESS EFFICIENCY OF NGO AND SONS TRADING WITH ODOO ERP INTEGRATION",
+  "authors": "GEORGE S. CAÑAVERAL, KARYLLE J. OBRERO, JULIUS S. SECOPITO"
+ },
+ {
+  "archived_id": 195,
+  "title": "COVID 19 PANDEMIC: EFFECT ON THE ACADEMIC PERFORMANCE OF LIBRARY AND INFORMATION SCIENCE STUDENTS OF",
+  "authors": "Bucad, Erika Mae C., Bulalit, Eunice R., Acbang, Jessa H., Tuyay, Anareza C."
+ },
+ {
+  "archived_id": 196,
+  "title": "EFFECTIVENESS OF SERVICES IN CSPC LIBRARY AND SATISFACTION OF FACULTY AND STUDENTS IN UTILIZING THE LIBRARY SERVICES OF CAMARINES SUR POLYTECHNIC COLLEGES, NABUA, CAMARINES SUR SY 2019-2020",
+  "authors": "Carla V. Galan, Janiña D. Villarico, Ma. Jessa G. Florin"
+ }
+]

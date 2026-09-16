@@ -1,4 +1,4 @@
-{{-- The team review modal: pre-proposal approve/reject with the original
+{{-- The team review modal: pre-proposal recommend/reject with the original
      PDF and duplication report, plus the Verify action.
 
      Extracted from capsa/verify_teams.blade.php so Team Management can open
@@ -50,8 +50,8 @@
          way. --}}
     <div id="vm-verify-note" style="display:none;font-size:12px;color:#92400e;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px 12px;margin-bottom:12px">
       Finish reviewing every title first. This team has a final title once you have
-      decided on all of them &mdash; approve or reject each one &mdash; and if you
-      approve more than one, once the team has picked between them.
+      decided on all of them &mdash; recommend or reject each one &mdash; and if
+      you recommend more than one, once the team has picked between them.
     </div>
 
     <form id="vm-form" method="POST" style="border-top:1px solid var(--border);padding-top:16px">
@@ -195,7 +195,10 @@ function openVerifyModal(data) {
   }
 
   document.getElementById('vm-leader').textContent = data.leader;
-  document.getElementById('vm-member-count').textContent = '(' + data.member_count + ' / 5)';
+  // The CaPSA's number, rendered in rather than written out - this said 5
+  // whatever they had set.
+  document.getElementById('vm-member-count').textContent =
+    '(' + data.member_count + ' / {{ \App\Models\Team::maxMembers() }})';
 
   var membersEl = document.getElementById('vm-members');
   membersEl.innerHTML = '';
@@ -244,7 +247,7 @@ function closeVerifyModal() {
   }
 }
 
-// ── Per-proposal approve/reject (mirrors admin/approval.blade.php) ────────
+// ── Per-proposal recommend/reject (mirrors admin/approval.blade.php) ──────
 var ppActiveId = null;
 var ppDecided = false;
 
@@ -257,8 +260,8 @@ function renderPreProposals(proposals, selectedId) {
     return;
   }
 
-  // A team with two approved titles has chosen one of them, and that is the
-  // title being verified. Showing both side by side, each marked Approved,
+  // A team with two recommended titles has chosen one of them, and that is
+  // the title being verified. Showing both side by side, each marked,
   // is what made it unclear which one the verification is actually about.
   var approvedCount = proposals.filter(function (p) { return p.status === 'approved'; }).length;
   var collapseOthers = !!selectedId && approvedCount >= 2;
@@ -309,8 +312,11 @@ function renderPreProposals(proposals, selectedId) {
           return '<div style="border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-top:6px;background:#fff">'
             + '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">'
             + '<span style="font-size:11.5px;font-weight:600;color:var(--text)">' + escapeHtml(m.title || '') + '</span>'
-            + '<span class="badge badge-' + mTone + '" style="font-variant-numeric:tabular-nums;font-weight:700;flex-shrink:0">' + m.score + '%</span>'
+            + (m.assessed === false
+                ? '<span class="badge" style="background:var(--bg3);color:var(--text3);flex-shrink:0">Not assessed</span>'
+                : '<span class="badge badge-' + mTone + '" style="font-variant-numeric:tabular-nums;font-weight:700;flex-shrink:0">' + m.score + '%</span>')
             + '</div>'
+            + (m.authors ? '<div style="font-size:10.5px;color:var(--text2);margin-top:3px">By ' + escapeHtml(m.authors) + '</div>' : '')
             + (meta ? '<div style="font-size:10.5px;color:var(--text3);margin-top:2px">' + escapeHtml(meta) + '</div>' : '')
             + (m.reason ? '<div style="font-size:11px;color:var(--text3);margin-top:3px">' + escapeHtml(m.reason) + '</div>' : '')
             + (notes
@@ -356,14 +362,29 @@ function renderPreProposals(proposals, selectedId) {
       + '<div><strong style="color:var(--text)">Scope:</strong> ' + escapeHtml(p.scope || '—') + '</div>'
       + '<div><strong style="color:var(--text)">Limitations:</strong> ' + escapeHtml(p.limitations || '—') + '</div>'
       + '<div><strong style="color:var(--text)">SDM:</strong> ' + escapeHtml(p.sdm || '—') + '</div>'
+      + '<div><strong style="color:var(--text)">Tags:</strong> ' + escapeHtml(joinStringList(p.tags) || 'None - saved before tags were required') + '</div>'
       + '</div>';
 
     var actionsHtml = p.status === 'pending'
       ? '<div style="display:flex;gap:8px;margin-top:10px" id="pp-actions-' + p.id + '">'
-        + '<button type="button" class="btn btn-primary" style="font-size:11px;padding:5px 12px" onclick="ppApprove(' + p.id + ', \'' + p.update_url + '\')">Approve</button>'
+        + '<button type="button" class="btn btn-primary" style="font-size:11px;padding:5px 12px" onclick="ppApprove(' + p.id + ', \'' + p.update_url + '\')">Recommend</button>'
         + '<button type="button" class="btn" style="font-size:11px;padding:5px 12px;background:transparent;border:1px solid var(--border);color:var(--text2)" onclick="openPpRejectModal(' + p.id + ', \'' + p.update_url + '\')">Reject</button>'
         + '</div>'
       : (p.status === 'rejected' ? '<div style="font-size:11px;color:#991b1b;margin-top:6px">Rejected: ' + escapeHtml(p.rejection_reason || '') + '</div>' : '');
+
+    // A new title after a redefense: the CaPSA recommends, then the team's
+    // adviser approves or asks for another one.
+    var adv = p.adviser;
+    var adviserWho = adv && adv.name ? 'adviser ' + escapeHtml(adv.name) : 'the adviser';
+    var adviserHtml = !adv ? ''
+      : '<div style="font-size:11.5px;margin-top:8px;padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:#fff;color:'
+        + (adv.status === 'approved' ? 'var(--green)' : (adv.status === 'declined' ? '#991b1b' : 'var(--amber)')) + '">'
+        + (adv.status === 'approved'
+            ? 'Approved by ' + adviserWho + (adv.decided_at ? ' on ' + escapeHtml(adv.decided_at) : '')
+            : (adv.status === 'declined'
+                ? escapeHtml(adv.name || 'The adviser') + ' asked for another title' + (adv.decided_at ? ' on ' + escapeHtml(adv.decided_at) : '') + ': “' + escapeHtml(adv.note || '') + '”'
+                : 'Waiting for ' + adviserWho + ' to approve'))
+        + '</div>';
 
     var documentLinkHtml = p.document_url
       ? '<button type="button" onclick="openPdfPreview(\'' + p.document_url + '\')" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;color:var(--primary,#5b5bd6);background:none;border:none;padding:0;cursor:pointer;margin-top:6px">View Original PDF</button>'
@@ -377,10 +398,11 @@ function renderPreProposals(proposals, selectedId) {
     }
 
     card.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px">'
-      + '<span style="font-size:13px;font-weight:600;color:var(--text)">Proposal ' + p.slot + (isSelected ? ' ⭐ Final Title' : '') + '</span>'
-      + '<span class="badge ' + badgeClass + '">' + p.status.charAt(0).toUpperCase() + p.status.slice(1) + '</span>'
+      + '<span style="font-size:13px;font-weight:600;color:var(--text)">Proposal ' + p.slot + (isSelected ? ' ⭐ Final Title' : '') + (p.set_aside ? ' <span style="font-weight:500;color:var(--text3)">(set aside)</span>' : '') + '</span>'
+      + '<span class="badge ' + badgeClass + '">' + ppStatusLabel(p.status) + '</span>'
       + '</div>'
       + '<div style="font-size:13px;font-weight:500;color:var(--text);margin-top:4px">' + escapeHtml(p.title) + '</div>'
+      + adviserHtml
       + documentLinkHtml
       + dupHtml + contentHtml + actionsHtml;
 
@@ -413,6 +435,19 @@ function joinStringList(list) {
     .map(function (item) { return typeof item === 'string' ? item : ''; })
     .filter(function (s) { return s.length > 0; })
     .join(', ');
+}
+
+/**
+ * What a decision is called on screen.
+ *
+ * The CaPSA is not approving the title - the expert the team takes it to
+ * decides that. They are saying it is worth taking, which is a
+ * recommendation. The stored status stays 'approved'; only the word changes.
+ */
+function ppStatusLabel(status) {
+  if (status === 'approved') return 'Recommended';
+
+  return status.charAt(0).toUpperCase() + status.slice(1);
 }
 
 function ppApprove(id, url) {

@@ -100,8 +100,8 @@ class DuplicationReportApplyLockTest extends TestCase
 
         $response->assertStatus(200);
         // The lock has to name who unblocks it, not just that it is locked.
-        $response->assertSee('Needs CaPSA approval');
-        $response->assertSee('Your CaPSA has to approve this pre-proposal');
+        $response->assertSee('Needs CaPSA recommendation');
+        $response->assertSee('Your CaPSA has to recommend this pre-proposal');
         $response->assertDontSee('student/experts?apply='.$expert->expert_id, false);
     }
 
@@ -118,6 +118,6 @@ class DuplicationReportApplyLockTest extends TestCase
         // Matched on the saved-proposal wording specifically: the fresh-check
         // report carries its own always-locked message in page scripts, so a
         // looser needle would match that instead and never fail.
-        $response->assertDontSee('Your CaPSA has to approve this pre-proposal');
+        $response->assertDontSee('Your CaPSA has to recommend this pre-proposal');
     }
 }

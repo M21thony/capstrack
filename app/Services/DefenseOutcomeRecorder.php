@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\CapstoneExpert;
+use App\Models\DefensePanel;
 use App\Models\DefenseSchedule;
 use App\Models\Notification;
 use App\Models\StudentSchoolYear;
@@ -50,6 +51,11 @@ class DefenseOutcomeRecorder
 
         $this->notifyTeam($defense, $outcome);
 
+        // Capstone 1 is over for this team: its members are locked from here.
+        if ($defense->defense_type === DefenseOutcome::TITLE_DEFENSE && DefenseOutcome::isPass($outcome) && $defense->team) {
+            (new TeamLock)->lock($defense->team);
+        }
+
         return [
             'schedule' => $defense->fresh(),
             'redefense' => $redefense,
@@ -60,8 +66,9 @@ class DefenseOutcomeRecorder
     /**
      * The next try at the same stage.
      *
-     * Scheduling and the panel are left blank on purpose - both are the
-     * CAPSA's to set from Panel Assignment, the same as any first attempt.
+     * The same panel hears it - a team's panel stays theirs to the end of
+     * Capstone 2. Only the date is left blank: it comes from Generate
+     * schedule on Defense Scheduling, like any other defense.
      */
     private function openNextAttempt(DefenseSchedule $defense): DefenseSchedule
     {
@@ -69,20 +76,32 @@ class DefenseOutcomeRecorder
             ->where('defense_type', $defense->defense_type)
             ->max('attempt') + 1;
 
-        return DefenseSchedule::create([
+        $redefense = DefenseSchedule::create([
             'team_id' => $defense->team_id,
             'defense_type' => $defense->defense_type,
             'attempt' => $next,
         ]);
+
+        foreach ($defense->panels()->get() as $panel) {
+            DefensePanel::create([
+                'defense_id' => $redefense->defense_id,
+                'expert_id' => $panel->expert_id,
+                'panel_role' => $panel->panel_role,
+                'created_at' => now(),
+            ]);
+        }
+
+        return $redefense;
     }
 
     /**
-     * Hand the team's pre-proposals back so they can put up a new title.
+     * Set the team's titles aside so they can put up a new one.
      *
-     * Unsubmitting rather than deleting: the titles that were turned in stay
-     * as a record of what was tried, and the team adds a fresh one alongside
-     * them. Their approvals are cleared, since what was approved is exactly
-     * what the panel has just sent back.
+     * Retired, not deleted and not turned back into drafts: they stay as a
+     * record of what was tried, exactly as they were decided, but no longer
+     * count as the team's titles - so the team turns in fresh ones through
+     * the usual duplication check, and cannot resubmit a title the panel has
+     * just sent back. The team keeps its adviser, consultant and grammarian.
      */
     private function reopenPreProposals(Team $team): bool
     {
@@ -92,10 +111,7 @@ class DefenseOutcomeRecorder
             return false;
         }
 
-        $proposals->update([
-            'submitted_at' => null,
-            'approved_status' => false,
-        ]);
+        $proposals->update(['retired_at' => now()]);
 
         $team->update([
             'selected_pre_proposal_id' => null,
@@ -123,7 +139,7 @@ class DefenseOutcomeRecorder
                 'title' => $defense->defense_type.' result',
                 'message' => 'Your panel decided: <strong>'.e($label).'</strong>. '
                     .e(DefenseOutcome::description($outcome, $defense->defense_type)),
-                'link' => route('student.dashboard'),
+                'link' => route('student.defense-scores'),
             ]);
         }
     }

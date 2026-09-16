@@ -61,6 +61,17 @@ class GoogleAuthTest extends TestCase
             'p_picture' => 'https://lh3.googleusercontent.com/a/old-photo=s96-c',
         ]);
 
+        // Being listed is what admits them - an account on its own is not a
+        // way in any more. This test is about what the callback does with
+        // Google's answer, so put them on the list like its sibling above.
+        StudentRoster::create([
+            'email' => 'returning.student@my.cspc.edu.ph',
+            'name' => 'Returning Student',
+            'section' => '4th '.json_decode('"·"').' B',
+            'program' => 'BSIT',
+            'school_year' => '2026-2027',
+        ]);
+
         $state = 'repeat-login-state';
         $this->withSession(['oauth_state' => $state]);
 
@@ -311,6 +322,7 @@ class GoogleAuthTest extends TestCase
         Http::fake([
             'oauth2.googleapis.com/token' => Http::response([
                 'access_token' => 'fake-access-token',
+                'refresh_token' => 'fake-refresh-token',
                 'token_type' => 'Bearer',
                 'expires_in' => 3600,
             ]),
@@ -345,6 +357,7 @@ class GoogleAuthTest extends TestCase
         Http::fake([
             'oauth2.googleapis.com/token' => Http::response([
                 'access_token' => 'fake-access-token',
+                'refresh_token' => 'fake-refresh-token',
                 'token_type' => 'Bearer',
                 'expires_in' => 3600,
             ]),

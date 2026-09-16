@@ -75,7 +75,7 @@ class JoinRequestNotificationTest extends TestCase
             'f_name' => 'Student2',
             'l_name' => 'Member',
             'course' => 'Bachelor of Science in Computer Science',
-            'year_section' => '4th · A',
+            'year_section' => '3rd · A',
             'student_number' => '2026-3002',
             'p_picture' => 'avatar-02',
         ]);

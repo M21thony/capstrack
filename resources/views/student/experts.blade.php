@@ -6,8 +6,17 @@
 <title>Capstone Expert - CapsTrack</title>
 <meta name="csrf-token" content="{{ csrf_token() }}">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
-@vite('resources/student-ui/Styles/experts.css')
+@vite(['resources/student-ui/Styles/experts.css', 'resources/js/submission-preview.js'])
 <style>
+/* The recommended pre-proposal, drawn as pages - no iframe. Same look as the submission preview. */
+.preview-dialog{border:0;border-radius:12px;padding:0;margin:auto;inset:0;width:min(860px,calc(100vw - 32px));height:calc(100vh - 48px);box-shadow:0 24px 70px rgba(24,25,31,.3);background:var(--bg2,#fff)}
+.preview-dialog::backdrop{background:rgba(24,25,31,.55)}
+.preview-dialog[open]{display:flex;flex-direction:column}
+.preview-head{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--border)}
+.preview-head h2{margin:0;flex:1;min-width:0;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.preview-body{flex:1;min-height:0;overflow:auto;background:var(--bg3,#f2f3f5);padding:12px;display:grid;justify-items:center;align-content:start;gap:12px}
+.preview-body canvas{max-width:100%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.15)}
+.preview-note{color:var(--text3);font-size:13px;margin:40px 0}
 .role-chips { display: flex; flex-wrap: wrap; gap: 5px; margin: 0; justify-content: center; }
 .role-chip { font-size: 10px; font-weight: 600; padding: 3px 10px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.4px; }
 .expertise-tags { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; margin: 0; }
@@ -184,9 +193,21 @@
 .role-choice-note { font-size: 11px; color: var(--text3); margin-top: 8px; line-height: 1.5; }
 .modal-box .form-group .field-error { font-size: 11px; color: var(--red); margin-top: 4px; display: none; }
 .modal-box .form-group .field-error.show { display: block; }
-.modal-actions { display: flex; gap: 10px; margin-top: 20px; }
-.modal-actions .btn { flex: 1; justify-content: center; padding: 10px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: 0.15s; border: none; font-family: 'DM Sans', sans-serif; display: inline-flex; align-items: center; gap: 6px; }
+/* Content-width and at the end, the same as the expert side's dialogs.
+   flex:1 stretched every button across its panel, so a one-word Close came
+   out as a bar the full width of the modal. The narrow breakpoint below
+   still stacks them full-width, which is right on a phone. */
+.modal-actions { display: flex; gap: 10px; margin-top: 20px; justify-content: flex-end; }
+.modal-actions .btn { justify-content: center; padding: 9px 18px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: 0.15s; border: none; font-family: 'DM Sans', sans-serif; display: inline-flex; align-items: center; gap: 6px; }
 .modal-actions .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* On a phone there is no room for two buttons side by side once they are
+   sized to their words, so they stack and fill - matching what the expert
+   side's dialogs already do at this width. */
+@media (max-width: 480px) {
+  .modal-actions { flex-direction: column; }
+  .modal-actions .btn { width: 100%; }
+}
 
 /* Confirmation modal */
 .confirm-box { width: 380px; text-align: center; }
@@ -459,9 +480,11 @@
               <span class="yx-role">{{ ucfirst($slotRole) }}</span>
               @if($a)
                 <span class="yx-name" title="{{ $a->expert?->name }}">{{ $a->expert?->name }}</span>
-                @if($isLeader)
-                  <button type="button" class="yx-x" title="Remove {{ $a->expert?->name ?? 'this expert' }}"
-                          onclick="openRemoveModal({{ $a->assignment_id }}, '{{ addslashes($a->expert?->name ?? '') }}')"><svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+                @if($isLeader && in_array((int) $a->assignment_id, $pendingRemovalIds, true))
+                  <span title="Waiting on your CaPSA" style="font-size:10.5px;font-weight:600;color:var(--amber);white-space:nowrap">Removal requested</span>
+                @elseif($isLeader)
+                  <button type="button" class="yx-x" title="Ask your CaPSA to remove {{ $a->expert?->name ?? 'this expert' }}"
+                          onclick="openRemoveModal({{ $a->assignment_id }}, '{{ addslashes($a->expert?->name ?? '') }}', true)"><svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
                 @endif
               @endif
             </span>
@@ -474,9 +497,11 @@
               <span class="yx-mark"><svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg></span>
               <span class="yx-role">Assigned</span>
               <span class="yx-name">{{ $a->expert?->name ?? 'Unknown' }}</span>
-              @if($isLeader)
-                <button type="button" class="yx-x" title="Remove {{ $a->expert?->name ?? 'this expert' }}"
-                        onclick="openRemoveModal({{ $a->assignment_id }}, '{{ addslashes($a->expert?->name ?? '') }}')"><svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+              @if($isLeader && in_array((int) $a->assignment_id, $pendingRemovalIds, true))
+                <span title="Waiting on your CaPSA" style="font-size:10.5px;font-weight:600;color:var(--amber);white-space:nowrap">Removal requested</span>
+              @elseif($isLeader)
+                <button type="button" class="yx-x" title="Ask your CaPSA to remove {{ $a->expert?->name ?? 'this expert' }}"
+                        onclick="openRemoveModal({{ $a->assignment_id }}, '{{ addslashes($a->expert?->name ?? '') }}', true)"><svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
               @endif
             </span>
           @endforeach
@@ -796,7 +821,7 @@
         <div class="steps">
           <div class="step"><span class="n">1</span><div><b>Choose a role</b><span>Pick the slot your team still needs to fill.</span></div></div>
           <div class="step"><span class="n">2</span><div><b>Browse experts</b><span>Only the people who can hold that role are listed.</span></div></div>
-          <div class="step"><span class="n">3</span><div><b>Submit request</b><span>Your approved pre-proposal goes with it.</span></div></div>
+          <div class="step"><span class="n">3</span><div><b>Submit request</b><span>Your recommended pre-proposal goes with it.</span></div></div>
           <div class="step"><span class="n">4</span><div><b>Wait for approval</b><span>The expert reviews and decides.</span></div></div>
         </div>
       </details>
@@ -845,7 +870,7 @@
   <div class="modal-box pp-box">
     <div class="pp-head">
       <div style="min-width:0">
-        <div class="pp-eyebrow">Approved pre-proposal</div>
+        <div class="pp-eyebrow">Recommended pre-proposal</div>
         <h3 style="margin:0">{{ $approvedProposal->title }}</h3>
       </div>
       <button class="pp-x" onclick="closeModal('proposal-preview-modal')" aria-label="Close">
@@ -886,24 +911,15 @@
 @endif
 
 @if($proposalPdfUrl)
-{{-- The uploaded document, full size. The frame is loaded on open and
-     emptied on close: a PDF left in a hidden iframe keeps its plugin alive
-     and, on a slow connection, downloads again behind a panel nobody is
-     looking at. --}}
-<div class="modal-overlay" id="original-pdf-modal" onclick="if (event.target === this) closeOriginalPdf()">
-  <div class="modal-box pdf-box">
-    <div class="pdf-box-header">
-      <div style="min-width:0">
-        <div class="pp-eyebrow">Original PDF</div>
-        <h3 style="margin:0">{{ $approvedProposal->title }}</h3>
-      </div>
-      <button class="pp-x" onclick="closeOriginalPdf()" aria-label="Close">
-        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </button>
-    </div>
-    <iframe id="original-pdf-frame" src="about:blank" title="Approved pre-proposal PDF"></iframe>
+{{-- The uploaded document, drawn page by page. A <dialog> sits above every
+     other panel on the page, so it opens over the preview that launched it. --}}
+<dialog class="preview-dialog" id="previewDialog" aria-labelledby="previewTitle">
+  <div class="preview-head">
+    <h2 id="previewTitle">Original PDF</h2>
+    <form method="dialog"><button class="btn btn-sm btn-soft" type="submit">Close</button></form>
   </div>
-</div>
+  <div class="preview-body" id="previewBody"></div>
+</dialog>
 @endif
 
 <!-- Apply Form Modal -->
@@ -925,7 +941,7 @@
          its place. Teams still waiting on a decision attach a PDF as before. --}}
     @if($approvedProposal)
     <div class="form-group">
-      <label>Approved Pre-Proposal</label>
+      <label>Recommended Pre-Proposal</label>
       <div style="display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border:1px solid var(--green);background:var(--green-bg);border-radius:10px">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="var(--green)" stroke-width="2.4" style="flex-shrink:0;margin-top:1px"><polyline points="20 6 9 17 4 12"/></svg>
         <div style="min-width:0;flex:1">
@@ -943,13 +959,13 @@
     </div>
     @else
     <div class="form-group">
-      <label>Approved Pre-Proposal <span class="req">*</span></label>
+      <label>Recommended Pre-Proposal <span class="req">*</span></label>
       <div class="file-input-wrap">
         <svg class="file-icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="12" y2="12"/><line x1="15" y1="15" x2="12" y2="12"/></svg>
         <span class="file-label" id="file-label">Choose PDF file...</span>
         <input type="file" id="proposal-file" accept=".pdf,application/pdf" onchange="handleFileSelect(this)" />
       </div>
-      <div class="field-error" id="err-file">Please upload your approved pre-proposal (PDF).</div>
+      <div class="field-error" id="err-file">Please upload your recommended pre-proposal (PDF).</div>
     </div>
     @endif
 
@@ -1005,8 +1021,8 @@
     <div class="confirm-icon" style="background: var(--red);">
       <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
     </div>
-    <h3>Remove Expert?</h3>
-    <div class="confirm-desc">Are you sure you want to remove this expert from your team?</div>
+    <h3 id="remove-title">Remove Expert?</h3>
+    <div class="confirm-desc" id="remove-desc">Are you sure you want to remove this expert from your team?</div>
     <div class="confirm-detail" id="remove-detail"></div>
 
     <div class="remove-field">
@@ -1101,17 +1117,9 @@ function forceInteractive(el) {
 const originalPdfUrl = @json($proposalPdfUrl, JSON_UNESCAPED_SLASHES);
 
 function openOriginalPdf() {
-  const frame = document.getElementById('original-pdf-frame');
-  // #toolbar=0 hides the viewer's own download bar; the button that opened
-  // this is the way to get the file.
-  if (frame) frame.src = originalPdfUrl + '#toolbar=0';
-  openModal('original-pdf-modal');
-}
-
-function closeOriginalPdf() {
-  closeModal('original-pdf-modal');
-  const frame = document.getElementById('original-pdf-frame');
-  if (frame) frame.src = 'about:blank';
+  if (window.previewPdfUrl) {
+    window.previewPdfUrl(originalPdfUrl, @json($approvedProposal->title ?? 'Pre-proposal'));
+  }
 }
 @endif
 
@@ -1340,7 +1348,7 @@ function reviewApply() {
   // '+' here, not PHP's '.': this is JavaScript by the time the browser
   // sees it, and the directive below has already rendered a quoted string.
   currentFileName = APPLY_HAS_APPROVED_PROPOSAL
-    ? @json($approvedProposal?->title ?? '') + ' (approved pre-proposal)'
+    ? @json($approvedProposal?->title ?? '') + ' (recommended pre-proposal)'
     : fileInput.files[0].name;
   currentMessage = message;
 
@@ -1423,7 +1431,7 @@ function openReqInfoModal(data) {
     // Named, not linked: the team already has this on their Duplication
     // Checker page, and there is no student-facing route to the file.
     proposalEl.innerHTML =
-      '<div style="color:var(--green);font-weight:600;font-size:12px">&#10003; CaPSA-approved pre-proposal</div>'
+      '<div style="color:var(--green);font-weight:600;font-size:12px">&#10003; CaPSA-recommended pre-proposal</div>'
       + '<div style="font-size:12px;color:var(--text2);margin-top:2px">' + escapeHtmlText(data.pre_proposal_title) + '</div>';
   } else if (data.proposal) {
     proposalEl.innerHTML = '<a href="' + data.proposal + '" target="_blank" style="color:var(--accent);">View Proposal <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" fill="none" stroke-width="2" style="display:inline;vertical-align:middle;"><path d="M7 17l9.2-9.2M17 17V7H7"/></svg></a>';
@@ -1434,10 +1442,20 @@ function openReqInfoModal(data) {
   openModal('req-info-modal');
 }
 
-function openRemoveModal(assignmentId, expertName) {
+// An expert who already took the team on is only removed with the CaPSA's
+// permission, so for them this sends a request instead of removing.
+var removeNeedsCapsa = false;
+
+function openRemoveModal(assignmentId, expertName, approved) {
   currentRemoveId = assignmentId;
-  document.getElementById('remove-detail').innerHTML =
-    '<strong>' + expertName + '</strong><br><span style="font-size:11px;color:var(--red);">This action cannot be undone.</span>';
+  removeNeedsCapsa = !!approved;
+  document.getElementById('remove-title').textContent = removeNeedsCapsa ? 'Ask your CaPSA to remove this expert?' : 'Remove Expert?';
+  document.getElementById('remove-desc').textContent = removeNeedsCapsa
+    ? 'This expert already took your team on, so your CaPSA decides. They stay your expert until your CaPSA approves.'
+    : 'Are you sure you want to remove this expert from your team?';
+  document.getElementById('remove-detail').innerHTML = '<strong>' + expertName + '</strong>'
+    + (removeNeedsCapsa ? '' : '<br><span style="font-size:11px;color:var(--red);">This action cannot be undone.</span>');
+  document.getElementById('btn-confirm-remove').textContent = removeNeedsCapsa ? 'Send to CaPSA' : 'Yes, Remove';
   document.getElementById('remove-confirm-input').value = '';
   document.getElementById('remove-confirm-input').classList.remove('error');
   document.getElementById('err-remove-confirm').classList.remove('show');
@@ -1457,7 +1475,8 @@ function validateRemoveInput() {
   var confirmInput = document.getElementById('remove-confirm-input').value.trim();
   var reason = document.getElementById('remove-reason').value.trim();
   var confirmOk = confirmInput.toLowerCase() === 'remove';
-  var reasonOk = reason.length > 0;
+  // The CaPSA decides on the reason, so it needs to be a real one.
+  var reasonOk = reason.length >= (removeNeedsCapsa ? {{ \App\Models\ExpertRemovalRequest::REASON_MIN }} : 1);
 
   document.getElementById('remove-confirm-input').classList.toggle('error', confirmInput.length > 0 && !confirmOk);
   document.getElementById('err-remove-confirm').classList.toggle('show', confirmInput.length > 0 && !confirmOk);
@@ -1475,7 +1494,8 @@ function confirmRemove() {
 
   var btn = document.getElementById('btn-confirm-remove');
   btn.disabled = true;
-  btn.textContent = 'Removing...';
+  btn.textContent = removeNeedsCapsa ? 'Sending...' : 'Removing...';
+  var idleLabel = removeNeedsCapsa ? 'Send to CaPSA' : 'Yes, Remove';
 
   fetch('/api/assignments/' + currentRemoveId, {
     method: 'DELETE',
@@ -1495,14 +1515,14 @@ function confirmRemove() {
     } else {
       showToast(data.message || 'Failed to remove', 'error');
       btn.disabled = false;
-      btn.textContent = 'Yes, Remove';
+      btn.textContent = idleLabel;
     }
   })
   .catch(function() {
     closeModal('remove-modal');
     showToast('Network error. Please try again.', 'error');
     btn.disabled = false;
-    btn.textContent = 'Yes, Remove';
+    btn.textContent = idleLabel;
   });
 }
 
@@ -1648,7 +1668,7 @@ function fitTags(box) {
 }
 
 function fitAllTags() {
-  Array.prototype.forEach.call(document.querySelectorAll('.rail .tags'), fitTags);
+  Array.prototype.forEach.call(document.querySelectorAll('.rail .tags, .listwrap .ltags'), fitTags);
 }
 
 document.addEventListener('click', function (ev) {

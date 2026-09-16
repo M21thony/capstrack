@@ -232,9 +232,12 @@ class DefenseOutcomeTest extends TestCase
         $team->refresh();
         $proposal->refresh();
 
-        // Handed back, not deleted: what was tried stays on the record.
-        $this->assertNull($proposal->submitted_at);
-        $this->assertFalse((bool) $proposal->approved_status);
+        // Set aside, not deleted and not turned back into a draft: what was
+        // tried stays on the record exactly as it was decided.
+        $this->assertNotNull($proposal->retired_at);
+        $this->assertTrue((bool) $proposal->approved_status);
+        $this->assertCount(0, $team->preProposals()->get());
+        $this->assertCount(1, $team->allPreProposals()->get());
         $this->assertNull($team->selected_pre_proposal_id);
         $this->assertNull($team->project_title);
         $this->assertFalse($team->hasSubmittedPreProposals());

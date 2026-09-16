@@ -951,10 +951,19 @@ if (folderListContainer) {
       });
   });
 
-  folderListContainer.addEventListener('click', function (e) {
+  folderListContainer.addEventListener('click', async function (e) {
     var btn = e.target.closest('.folder-delete-btn');
     if (!btn) return;
-    if (!confirm('Delete this folder? Students will no longer be able to pick it.')) return;
+
+    const agreed = await confirmSheet({
+      title: 'Delete this folder?',
+      body: 'Students will no longer be able to pick it when they submit.',
+      confirmLabel: 'Delete folder',
+      danger: true,
+    });
+
+    if (!agreed) return;
+
     fetch("{{ url('/admin/gdrive/submission-folders') }}/" + btn.dataset.id, {
       method: 'DELETE',
       headers: { 'X-CSRF-TOKEN': FOLDER_CSRF },
@@ -976,6 +985,7 @@ if (folderListContainer) {
 }
 </script>
 
+@include('partials.confirm-sheet')
 @include('partials.escape-closes-modals')
 </body>
 </html>

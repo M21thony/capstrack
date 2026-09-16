@@ -6,8 +6,9 @@ use App\Models\CapstoneExpert;
 use App\Models\CapstonePreProposal;
 use App\Models\DuplicationCheck;
 use App\Models\ExpertRole;
-use App\Models\Milestone;
-use App\Models\MilestoneItem;
+use App\Models\Checklist;
+use App\Models\Deliverable;
+use App\Models\DeliverableCheck;
 use App\Models\Role;
 use App\Models\Student;
 use App\Models\StudentSchoolYear;
@@ -139,30 +140,30 @@ class CapsaTeamManagementTest extends TestCase
 
     public function test_it_shows_milestone_progress_for_a_team(): void
     {
-        $this->makeCapsaWithSections();
+        $capsa = $this->makeCapsaWithSections();
         [$team] = $this->makeTeamInSection('Team Progress');
 
-        // Progress is counted from a milestone's items now, not from
-        // milestones.status - that column was written once as 'todo' and never
-        // moved, so it reported no progress for every team however far along
-        // they were.
-        $milestone = Milestone::create([
-            'team_id' => $team->team_id,
-            'title' => 'Capstone 1',
-            'due_date' => now()->subWeek()->toDateString(),
-            'status' => 'todo',
-        ]);
+        // Worked out from the CaPSA's checks and the dates on her checklist,
+        // never stored.
+        $milestone = Checklist::create(['capsa_id' => $capsa->expert_id, 'program' => 'BSIT', 'title' => 'Capstone 1 Checklist'])
+            ->milestones()->create(['name' => 'Getting started', 'position' => 0]);
 
         foreach (['done', 'done', 'open', 'open'] as $i => $state) {
-            $milestone->items()->create([
+            $deliverable = $milestone->deliverables()->create([
                 'title' => "Deliverable {$i}",
-                'kind' => MilestoneItem::FORM,
+                'kind' => Deliverable::FORM,
                 'position' => $i,
-                // The two open ones are past the milestone's due date, so they
-                // are overdue - worked out, not stored.
-                'due_date' => $i === 3 ? now()->addWeek()->toDateString() : null,
-                'completed_at' => $state === 'done' ? now()->subDays(10) : null,
+                // Of the two open ones, one is past its due date - overdue -
+                // and one is not due yet.
+                'due_date' => $i === 3 ? now()->addWeek()->toDateString() : now()->subWeek()->toDateString(),
             ]);
+
+            if ($state === 'done') {
+                DeliverableCheck::create([
+                    'deliverable_id' => $deliverable->id, 'team_id' => $team->team_id,
+                    'status' => DeliverableCheck::COMPLETE, 'checked_at' => now()->subDays(10),
+                ]);
+            }
         }
 
         $response = $this->get(route('capsa.team_management'));

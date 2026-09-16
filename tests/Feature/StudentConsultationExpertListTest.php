@@ -52,10 +52,11 @@ class StudentConsultationExpertListTest extends TestCase
         $consultantRoleId = $this->makeRole('consultant');
 
         $adviserId = $this->makeExpert('adviser@gmail.com', 'Ada', 'Adviser');
-        DB::table('expert_roles')->insert(['expert_id' => $adviserId, 'role_id' => $adviserRoleId]);
+        $adviserLink = DB::table('expert_roles')->insertGetId(['expert_id' => $adviserId, 'role_id' => $adviserRoleId]);
         DB::table('capstone_expert_application')->insert([
             'team_id' => $team,
             'expert_id' => $adviserId,
+            'expert_role_id' => $adviserLink,
             'status' => 'approved',
             'created_at' => now(),
             'updated_at' => now(),
@@ -63,10 +64,11 @@ class StudentConsultationExpertListTest extends TestCase
 
         // Assigned but still pending — should not appear yet.
         $consultantId = $this->makeExpert('consultant@gmail.com', 'Cara', 'Consultant');
-        DB::table('expert_roles')->insert(['expert_id' => $consultantId, 'role_id' => $consultantRoleId]);
+        $consultantLink = DB::table('expert_roles')->insertGetId(['expert_id' => $consultantId, 'role_id' => $consultantRoleId]);
         DB::table('capstone_expert_application')->insert([
             'team_id' => $team,
             'expert_id' => $consultantId,
+            'expert_role_id' => $consultantLink,
             'status' => 'pending',
             'created_at' => now(),
             'updated_at' => now(),
@@ -118,7 +120,7 @@ class StudentConsultationExpertListTest extends TestCase
         $response->assertDontSee('Ian Stranger');
     }
 
-    public function test_an_expert_with_two_roles_appears_once_with_a_combined_label(): void
+    public function test_an_expert_holding_two_roles_is_shown_as_the_one_engaged(): void
     {
         $team = DB::table('team')->insertGetId([
             'team_name' => 'Team Beta',
@@ -137,12 +139,16 @@ class StudentConsultationExpertListTest extends TestCase
         $adviserRoleId = $this->makeRole('adviser');
         $consultantRoleId = $this->makeRole('consultant');
 
+        // Holds both roles in the system, the way real faculty do.
         $bothId = $this->makeExpert('both@gmail.com', 'Grom', 'Hellscream');
-        DB::table('expert_roles')->insert(['expert_id' => $bothId, 'role_id' => $adviserRoleId]);
+        $asAdviser = DB::table('expert_roles')->insertGetId(['expert_id' => $bothId, 'role_id' => $adviserRoleId]);
         DB::table('expert_roles')->insert(['expert_id' => $bothId, 'role_id' => $consultantRoleId]);
+
+        // But this team engaged them as adviser, and only as adviser.
         DB::table('capstone_expert_application')->insert([
             'team_id' => $team,
             'expert_id' => $bothId,
+            'expert_role_id' => $asAdviser,
             'status' => 'approved',
             'created_at' => now(),
             'updated_at' => now(),
@@ -153,12 +159,16 @@ class StudentConsultationExpertListTest extends TestCase
         $response->assertOk();
 
         $experts = $response->viewData('experts');
-        $this->assertCount(1, $experts, 'An expert holding two roles must appear once, not once per role.');
+        $this->assertCount(1, $experts, 'An expert must appear once, not once per role.');
         $this->assertSame($bothId, $experts->first()->expert_id);
-        $this->assertSame('Adviser, Consultant', $experts->first()->role_name);
+
+        // This used to read "Adviser, Consultant" - every role the person
+        // held anywhere, not the one this team asked them for. A team that
+        // engaged an adviser has an adviser.
+        $this->assertSame('Adviser', $experts->first()->role_name);
         $this->assertSame($bothId, $response->viewData('defaultExpertId'), 'Still defaults to them since one of their roles is adviser.');
 
-        $response->assertSee('Grom Hellscream (Adviser, Consultant)');
+        $response->assertSee('Grom Hellscream (Adviser)');
     }
 
     public function test_shows_no_experts_when_student_has_no_team(): void
@@ -170,5 +180,44 @@ class StudentConsultationExpertListTest extends TestCase
         $response->assertOk();
         $this->assertCount(0, $response->viewData('experts'));
         $this->assertNull($response->viewData('defaultExpertId'));
+    }
+
+    /**
+     * Engaged for both jobs by the same team: one row, both labels.
+     *
+     * This was impossible while capstone_expert_application carried a unique
+     * (team_id, expert_id) - a leftover from when it also had role_id. That
+     * constraint stopped a team re-applying after being turned down, so it is
+     * gone, and engaging one person for two jobs is reachable again. The
+     * grouping is what keeps them one entry rather than two.
+     */
+    public function test_an_expert_engaged_for_two_roles_shows_both(): void
+    {
+        $team = DB::table('team')->insertGetId(['team_name' => 'Team Gamma', 'team_status' => 'Active']);
+
+        $student = Student::factory()->withCompleteProfile()->create(['email' => 'consult4@my.cspc.edu.ph']);
+        DB::table('student_s_y')->insert([
+            'student_id' => $student->student_id, 'team_id' => $team,
+            'program' => 'BSCS', 'student_status' => 'Active',
+        ]);
+
+        $expertId = $this->makeExpert('both2@gmail.com', 'Mark', 'Balilla');
+        $links = [
+            DB::table('expert_roles')->insertGetId(['expert_id' => $expertId, 'role_id' => $this->makeRole('adviser')]),
+            DB::table('expert_roles')->insertGetId(['expert_id' => $expertId, 'role_id' => $this->makeRole('consultant')]),
+        ];
+
+        foreach ($links as $link) {
+            DB::table('capstone_expert_application')->insert([
+                'team_id' => $team, 'expert_id' => $expertId, 'expert_role_id' => $link,
+                'status' => 'approved', 'created_at' => now(), 'updated_at' => now(),
+            ]);
+        }
+
+        $experts = $this->actingAs($student, 'web')
+            ->get(route('student.consultation'))->assertOk()->viewData('experts');
+
+        $this->assertCount(1, $experts, 'one person, one entry');
+        $this->assertSame('Adviser, Consultant', $experts->first()->role_name);
     }
 }

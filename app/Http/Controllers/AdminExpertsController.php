@@ -9,6 +9,7 @@ use App\Models\StudentSchoolYear;
 use App\Models\TeamExpertAssignment;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
@@ -54,7 +55,10 @@ class AdminExpertsController extends Controller
                 $q->where('status', 'approved');
             }])
             ->orderBy('created_at', 'desc')
-            ->get();
+            ->get()
+            // Your own account is always the first row.
+            ->sortBy(fn ($e) => $e->expert_id === $viewer?->expert_id ? 0 : 1)
+            ->values();
 
         // Section picker for the "Make CaPSA" modal - grouped by program
         // (the part of the label before the dash, e.g. "BSIT-3A" -> "BSIT")
@@ -67,9 +71,22 @@ class AdminExpertsController extends Controller
         // as the route names, which is how a bulk rename of route('admin.x')
         // to route('capsa.x') silently pointed both branches at the CaPSA
         // page and took Add CaPSA away from Admin.
+        // Which sections another CaPSA already covers, so the picker can
+        // leave them out - a section handled twice means two people
+        // approving the same teams.
+        $sectionOwners = CapstoneExpert::whereHas(
+            'roles',
+            fn ($q) => $q->where('role_name', CapstoneExpert::CAPSA_ROLE)
+        )->get()->flatMap(
+            fn ($capsa) => collect($capsa->sections ?? [])->mapWithKeys(
+                fn ($section) => [$section => $capsa->expert_id]
+            )
+        )->all();
+
         return view($isCapsaOnly ? 'capsa.experts' : 'admin.experts', [
             'experts' => $experts,
             'groupedSections' => $groupedSections,
+            'sectionOwners' => $sectionOwners,
         ]);
     }
 
@@ -113,17 +130,19 @@ class AdminExpertsController extends Controller
         // api/* answers with a redirect - HTML where JSON was expected.
         $validator = Validator::make($request->all(), [
             'email' => ['required', 'email', 'max:190'],
-            'name' => ['required', 'string', 'max:120'],
-            'roles' => ['required', 'array', 'min:1'],
+            // The address is the whole of what is needed. A name typed here
+            // is a guess at how somebody spells their own - Google gives the
+            // real one the first time they sign in, which is how Add CaPSA
+            // has always worked. Roles are the CaPSA's to set and can be set
+            // now or from the row afterwards.
+            'name' => ['nullable', 'string', 'max:120'],
+            'roles' => ['nullable', 'array'],
             'roles.*' => ['string', 'in:'.implode(',', CapstoneExpert::STUDENT_FACING_ROLES)],
             'expertise' => ['nullable', 'array'],
             'expertise.*' => ['string', 'max:100'],
         ], [
             'email.required' => 'Type the email address of the person to add.',
             'email.email' => 'That is not an email address.',
-            'name.required' => 'Type their full name.',
-            'roles.required' => 'Choose at least one role.',
-            'roles.min' => 'Choose at least one role.',
         ]);
 
         if ($validator->fails()) {
@@ -167,12 +186,16 @@ class AdminExpertsController extends Controller
         $created = false;
 
         if (! $expert) {
-            [$firstName, $lastName] = $this->nameFrom($request->input('name'));
+            // Blank stays blank until they sign in and Google says. A degree
+            // written after a comma ("Juan Dela Cruz, MIT") is their credentials.
+            [$name, $credentials] = CapstoneExpert::splitName((string) $request->input('name'));
+            [$firstName, $lastName] = $this->nameFrom($name);
 
             $expert = CapstoneExpert::create([
                 'email' => $email,
                 'first_name' => $firstName,
                 'last_name' => $lastName,
+                'credentials' => $credentials,
                 // CaPSA naming them is the vetting, the same as including
                 // them on the list - there is nobody left to approve them.
                 'approved_status' => true,
@@ -186,21 +209,30 @@ class AdminExpertsController extends Controller
             ->whereIn('role_name', CapstoneExpert::STUDENT_FACING_ROLES)
             ->pluck('role_id', 'role_name');
 
-        $wanted = collect($request->input('roles'))
+        $asked = collect($request->input('roles', []))->filter();
+
+        $wanted = $asked
             ->filter(fn ($r) => $roleIds->has($r))
             ->map(fn ($r) => $roleIds[$r])
             ->all();
 
-        if ($wanted === []) {
+        // Named roles that this system has never heard of is a broken
+        // install, not an empty form.
+        if ($asked->isNotEmpty() && $wanted === []) {
             return response()->json([
                 'success' => false,
                 'message' => 'Those roles are not set up on this system.',
             ], 500);
         }
 
-        // Scoped to the student-facing roles, so this can neither grant nor
-        // revoke CaPSA - that stays Admin's own action.
-        CapstoneExpert::syncRoles($expert->expert_id, $wanted, $roleIds->values());
+        // No roles asked for is a perfectly good state: the person exists and
+        // the CaPSA decides what they are later. Syncing an empty list would
+        // strip the roles an existing expert already has.
+        if ($wanted !== []) {
+            // Scoped to the student-facing roles, so this can neither grant
+            // nor revoke CaPSA - that stays Admin's own action.
+            CapstoneExpert::syncRoles($expert->expert_id, $wanted, $roleIds->values());
+        }
 
         // Blank means "not saying", the same as an empty column on the list -
         // an expert fills their own areas in from their profile.
@@ -218,13 +250,17 @@ class AdminExpertsController extends Controller
             }
         }
 
+        // Their own name once they have signed in; until then the address is
+        // the only thing anybody can recognise them by.
+        $label = trim($expert->name) !== '' ? $expert->name : $email;
+
         return response()->json([
             'success' => true,
             'created' => $created,
             'expert_id' => $expert->expert_id,
             'message' => $created
-                ? "{$expert->name} was added. They can sign in with {$email}."
-                : "{$expert->name} already had an account - their roles were updated.",
+                ? $label.' was added. They can sign in with '.$email.'.'
+                : $label.' already had an account'.($wanted !== [] ? ' - their roles were updated.' : '.'),
         ]);
     }
 
@@ -235,6 +271,12 @@ class AdminExpertsController extends Controller
      */
     public function update(Request $request, CapstoneExpert $expert): JsonResponse
     {
+        // Editing the address is as effective a lock-out as deactivating:
+        // change it and the Admin's Google account matches nobody.
+        if ($refusal = $this->refuseIfAdmin($expert)) {
+            return $refusal;
+        }
+
         $validated = $request->validate([
             'first_name' => ['required', 'string', 'max:100'],
             'last_name' => ['required', 'string', 'max:100'],
@@ -255,10 +297,87 @@ class AdminExpertsController extends Controller
     }
 
     /**
+     * PUT /experts/{expert}/degree - the one fact the Panel Chair rule reads.
+     *
+     * Its own resource because it is set from the expert's detail window,
+     * which edits nothing else.
+     */
+    public function updateDegree(Request $request, CapstoneExpert $expert): JsonResponse
+    {
+        if ($refusal = $this->refuseIfAdmin($expert)) {
+            return $refusal;
+        }
+
+        $validated = $request->validate([
+            // The degree as written after a name (MIT, PhD); it sets the level too.
+            'degree' => ['nullable', 'in:'.implode(',', CapstoneExpert::degreeTitles())],
+            'highest_degree' => ['nullable', 'in:'.implode(',', array_keys(CapstoneExpert::DEGREES))],
+        ]);
+
+        $expert->update($request->has('degree')
+            ? CapstoneExpert::degreeFromTitle($validated['degree'] ?? null)
+            : ['highest_degree' => $validated['highest_degree'] ?? null, 'degree_title' => null]);
+
+        return response()->json([
+            'success' => true,
+            'message' => $expert->name.': '.($expert->degreeText() ?? 'no degree').' saved.'
+                .($expert->canChairPanel() ? ' They can be Panel Chair.' : ' They cannot be Panel Chair.'),
+            'highest_degree' => $expert->highest_degree,
+            'degree' => $expert->degree_title,
+            'can_chair' => $expert->canChairPanel(),
+        ]);
+    }
+
+    /**
+     * The Admin's account is not editable from here, by anyone.
+     *
+     * They run the system. There is no second Admin and nobody above them,
+     * so an Admin who is deactivated - or whose address is edited into one
+     * Google will never return - is the whole system locked out with no way
+     * back in short of the database. Every route that changes an expert
+     * comes through here first.
+     *
+     * A CaPSA is told nothing that identifies the account. The directory
+     * already hides the Admin from them, and a refusal that says "that is
+     * the administrator" hands back exactly what the hiding was for. The
+     * Admin acting on themselves gets the real reason, because they know
+     * who they are and a blank refusal would read as a bug.
+     */
+    private function refuseIfAdmin(CapstoneExpert $expert): ?JsonResponse
+    {
+        if (! $expert->is_admin) {
+            return null;
+        }
+
+        $viewer = Auth::guard('expert')->user();
+        $itIsThem = $viewer && (int) $viewer->expert_id === (int) $expert->expert_id;
+
+        return response()->json([
+            'success' => false,
+            'message' => $itIsThem
+                ? 'You cannot change your own administrator account here - there would be nobody left to undo it.'
+                : 'That account cannot be changed here.',
+        ], 422);
+    }
+
+    /**
      * Delete an expert and notify all affected team members.
      */
     public function destroy(Request $request, CapstoneExpert $expert): JsonResponse
     {
+        if ($refusal = $this->refuseIfAdmin($expert)) {
+            return $refusal;
+        }
+
+        // Switching yourself off signs you out for good, with nobody on your
+        // side of the screen left to switch you back on.
+        if ((int) $expert->expert_id === (int) Auth::guard('expert')->id()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You cannot deactivate your own account. Ask another CaPSA or the admin if it needs to be switched off.',
+            ], 422);
+        }
+
         $reason = trim($request->input('reason', ''));
         $expertName = $expert->name;
         $notifiedTeams = 0;
@@ -385,6 +504,10 @@ class AdminExpertsController extends Controller
      */
     public function updateSections(Request $request, CapstoneExpert $expert): JsonResponse
     {
+        if ($refusal = $this->refuseIfAdmin($expert)) {
+            return $refusal;
+        }
+
         // Checked by hand rather than through $request->validate(): the only
         // caller is a fetch(), and a failed validate() on a route outside
         // api/* answers with a redirect - which reaches the browser as a page
@@ -515,12 +638,14 @@ class AdminExpertsController extends Controller
         if (! $expert) {
             // Blank stays blank rather than becoming something derived from
             // the address; the list says so in the row itself.
-            [$firstName, $lastName] = $this->nameFrom((string) $request->input('name'));
+            [$name, $credentials] = CapstoneExpert::splitName((string) $request->input('name'));
+            [$firstName, $lastName] = $this->nameFrom($name);
 
             $expert = CapstoneExpert::create([
                 'email' => $email,
                 'first_name' => $firstName,
                 'last_name' => $lastName,
+                'credentials' => $credentials,
                 // Admin naming them is the vetting, so there is nobody left
                 // to approve them afterwards.
                 'approved_status' => true,
@@ -589,6 +714,10 @@ class AdminExpertsController extends Controller
     }
     public function toggleCapsa(Request $request, CapstoneExpert $expert): JsonResponse
     {
+        if ($refusal = $this->refuseIfAdmin($expert)) {
+            return $refusal;
+        }
+
         $validated = $request->validate([
             'sections' => ['nullable', 'array'],
             'sections.*' => ['string'],

@@ -76,10 +76,10 @@ class PreProposalControllerTest extends TestCase
         });
     }
 
-    private function payload(int $checkId): array
+    private function payload(int $checkId, ?string $title = null): array
     {
         return [
-            'title' => self::TITLE,
+            'title' => $title ?? self::TITLE,
             'sdg_goals' => 'SDG 4 – Quality Education',
             'research_agenda' => ['Applications and Systems Development'],
             'problem_statement' => 'A problem.',
@@ -87,6 +87,7 @@ class PreProposalControllerTest extends TestCase
             'scope' => 'A scope.',
             'limitations' => 'A limitation.',
             'sdm' => 'Agile Development Methodology',
+            'tags' => ['Web-based', 'Management System'],
             'duplication_check_id' => $checkId,
         ];
     }
@@ -121,13 +122,32 @@ class PreProposalControllerTest extends TestCase
         $this->assertDatabaseMissing('capstone_pre_proposals', ['team_id' => $team->team_id]);
     }
 
+    /**
+     * Each saved proposal is a different one.
+     *
+     * These used to send self::TITLE every time, so a team saving four
+     * proposals saved the same title four times - which the endpoint now
+     * refuses, because turning in one title four times is not the choice the
+     * CaPSA is being offered. The first word varies instead, which keeps the
+     * 11-12 meaningful words the title rule wants.
+     */
     private function checkAndStore(string $fileName): void
     {
         $checkId = $this->post(route('student.pre-proposal.check'), [
             'document' => UploadedFile::fake()->create($fileName, 10, 'application/pdf'),
         ])->json('duplication_check_id');
 
-        $this->post(route('student.pre-proposal.store'), $this->payload($checkId));
+        $this->post(route('student.pre-proposal.store'), $this->payload($checkId, $this->distinctTitle()));
+    }
+
+    private int $titlesSaved = 0;
+
+    private function distinctTitle(): string
+    {
+        $opener = ['Smart', 'Adaptive', 'Predictive', 'Integrated', 'Distributed', 'Autonomous', 'Networked'];
+        $word = $opener[$this->titlesSaved++ % count($opener)];
+
+        return $word.' '.mb_substr(self::TITLE, mb_strlen('Smart '));
     }
 
     /**
@@ -251,6 +271,56 @@ class PreProposalControllerTest extends TestCase
             ->assertSessionMissing('error');
 
         $this->assertSame(1, $team->preProposals()->whereNotNull('submitted_at')->count());
+    }
+
+    /**
+     * A team can leave a title out without losing it.
+     *
+     * Turning in used to stamp every draft, so the only way to keep one back
+     * was to delete it - and deleting took its duplication report with it.
+     */
+    public function test_only_the_chosen_titles_are_turned_in(): void
+    {
+        [$student, $team] = $this->makeLeaderWithTeam();
+        $this->mockSimilarityPipeline();
+        $this->actingAs($student, 'web');
+
+        $this->checkAndStore('p1.pdf');
+        $this->checkAndStore('p2.pdf');
+        $this->checkAndStore('p3.pdf');
+
+        $ids = $team->preProposals()->orderBy('id')->pluck('id');
+
+        $this->patch(route('student.pre-proposal.submit'), [
+            'status' => 'submitted',
+            'choose' => 1,
+            'ids' => [$ids[0], $ids[2]],
+        ])->assertSessionMissing('error');
+
+        $this->assertSame(2, $team->preProposals()->whereNotNull('submitted_at')->count());
+
+        // The one left out is still there, still a draft.
+        $held = CapstonePreProposal::find($ids[1]);
+        $this->assertNotNull($held);
+        $this->assertNull($held->submitted_at);
+    }
+
+    /** Ticking nothing is not the same as sending no selection at all. */
+    public function test_choosing_no_titles_is_refused_rather_than_submitting_all(): void
+    {
+        [$student, $team] = $this->makeLeaderWithTeam();
+        $this->mockSimilarityPipeline();
+        $this->actingAs($student, 'web');
+
+        $this->checkAndStore('p1.pdf');
+        $this->checkAndStore('p2.pdf');
+
+        $this->patch(route('student.pre-proposal.submit'), [
+            'status' => 'submitted',
+            'choose' => 1,
+        ])->assertSessionHas('error');
+
+        $this->assertSame(0, $team->preProposals()->whereNotNull('submitted_at')->count());
     }
 
     public function test_submitting_nothing_is_refused(): void
@@ -532,6 +602,65 @@ class PreProposalControllerTest extends TestCase
 
         $response->assertSessionHas('error');
         $this->assertDatabaseHas('capstone_pre_proposals', ['id' => $proposal->id]);
+    }
+
+    /**
+     * Leaving a team and making a new one does not carry the old scan over.
+     *
+     * A duplication check is recorded against the student's enrolment row,
+     * not the team, so it followed them. The pre-proposal it fed stayed with
+     * the team they left - so the new team's page showed a scan that could
+     * not be cleared, and the refusal told them to remove a pre-proposal that
+     * was not on their page and could not be.
+     */
+    public function test_a_spent_scan_is_not_offered_to_the_next_team(): void
+    {
+        [$student, $old] = $this->makeLeaderWithTeam();
+        $this->mockSimilarityPipeline();
+        $this->actingAs($student, 'web');
+
+        $this->checkAndStore('p1.pdf');
+
+        $proposal = $old->preProposals()->firstOrFail();
+        $check = DuplicationCheck::findOrFail($proposal->duplication_check_id);
+
+        // They leave, and start again somewhere else.
+        $new = Team::create([
+            'team_name' => 'Second Team', 'team_status' => 'Active',
+            'leader_id' => $student->student_id, 'is_confirmed' => false, 'member_count' => 5,
+        ]);
+        StudentSchoolYear::where('student_id', $student->student_id)
+            ->update(['team_id' => $new->team_id]);
+
+        // The scan is simply not there any more. Before, it was - with a
+        // Clear button that refused and named a document they could not see.
+        $this->get(route('student.duplication'))->assertOk()->assertViewHas('lastCheck', null);
+
+        // Reached directly it is still refused, and that refusal is doing
+        // real work: duplication_check_id cascades, so deleting the check
+        // would take the old team's pre-proposal with it.
+        $this->deleteJson(route('student.pre-proposal.check.destroy', $check->id))
+            ->assertStatus(422);
+
+        $this->assertNotNull($proposal->fresh(), 'the team they left keeps its pre-proposal');
+        $this->assertNotNull(DuplicationCheck::find($check->id));
+    }
+
+    /** The advice still stands when the pre-proposal really is theirs. */
+    public function test_a_scan_backing_this_teams_own_pre_proposal_still_cannot_be_cleared(): void
+    {
+        [$student, $team] = $this->makeLeaderWithTeam();
+        $this->mockSimilarityPipeline();
+        $this->actingAs($student, 'web');
+
+        $this->checkAndStore('p1.pdf');
+        $check = DuplicationCheck::findOrFail($team->preProposals()->value('duplication_check_id'));
+
+        $this->deleteJson(route('student.pre-proposal.check.destroy', $check->id))
+            ->assertStatus(422)
+            ->assertJson(fn ($j) => $j->where('message', fn ($m) => str_contains($m, 'Remove the pre-proposal'))->etc());
+
+        $this->assertNotNull(DuplicationCheck::find($check->id));
     }
 
     public function test_a_non_member_cannot_remove_another_teams_proposal(): void

@@ -4,118 +4,70 @@ namespace Tests\Feature;
 
 use App\Models\CapstoneDocumentReview;
 use App\Models\CapstoneExpert;
-use App\Models\Milestone;
-use App\Models\MilestoneItem;
+use App\Models\Checklist;
+use App\Models\DeliverableCheck;
 use App\Models\Student;
-use App\Models\StudentSchoolYear;
 use App\Models\Team;
-use App\Support\MilestoneTemplate;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\DB;
+use Tests\Concerns\BuildsChecklists;
 use Tests\TestCase;
 
-/**
- * What a team sees of its own checklist.
- *
- * The page used to read announcements - it found every announcement whose
- * title began "Milestone Reminder:" and matched milestones by that title
- * string - so a team saw whichever announcements had been posted rather than
- * the deliverables anyone was tracking.
- */
+/** What a team sees of its own milestones. */
 class StudentChecklistTest extends TestCase
 {
+    use BuildsChecklists;
     use RefreshDatabase;
 
     private Student $student;
 
     private Team $team;
 
+    private CapstoneExpert $capsa;
+
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->student = Student::factory()->withCompleteProfile()->create([
-            'email' => 'member@my.cspc.edu.ph',
-        ]);
-
-        $this->team = Team::create([
-            'team_name' => 'Checklist Team',
-            'team_status' => 'Active',
-            'leader_id' => $this->student->student_id,
-            'is_confirmed' => true,
-            'member_count' => 5,
-        ]);
-
-        StudentSchoolYear::create([
-            'student_id' => $this->student->student_id,
-            'team_id' => $this->team->team_id,
-        ]);
-
+        [$this->team, $this->student] = $this->teamInSection('Checklist Team');
+        $this->capsa = $this->capsaFor();
         $this->actingAs($this->student, 'web');
     }
 
-    private function milestoneWithChecklist(): Milestone
+    private function checklist(): Checklist
     {
-        $milestone = Milestone::create([
-            'team_id' => $this->team->team_id,
-            'title' => 'Capstone 1',
-            'due_date' => now()->addWeeks(3)->toDateString(),
-            'status' => 'todo',
-        ]);
-
-        MilestoneTemplate::applyTo($milestone, MilestoneTemplate::CAPSTONE_1);
-
-        return $milestone;
+        return $this->departmentChecklist($this->capsa);
     }
 
-    public function test_a_team_sees_its_checklist(): void
+    public function test_a_team_sees_its_own_milestones(): void
     {
-        $this->milestoneWithChecklist();
-
-        $response = $this->get('/student/progress');
-
-        $response->assertOk();
-        $response->assertSee('Capstone 1');
-        $response->assertSee('0 of 19 complete');
-        $response->assertSee('Signed Project Team Assignment Form');
-        $response->assertSee('Chapter 1 Draft');
-    }
-
-    /** The CaPSA ticking a form is what the team sees change. */
-    public function test_a_form_the_capsa_ticked_shows_as_done(): void
-    {
-        $milestone = $this->milestoneWithChecklist();
-        $milestone->items()
-            ->where('template_key', 'team_assignment_form')
-            ->update(['completed_at' => now()->subDays(3)]);
+        $this->checklist();
 
         $this->get('/student/progress')
             ->assertOk()
-            ->assertSee('1 of 19 complete');
+            ->assertSee('Checklist Team')
+            ->assertSee('0 of 19 closed')
+            ->assertSee('Getting started')
+            ->assertSee('Signed Project Team Assignment Form')
+            ->assertSee('Chapter 1 Draft');
     }
 
-    /**
-     * The question a team actually has is who is holding a thing up, so an
-     * approval waiting on the adviser says so rather than just "pending".
-     */
-    public function test_an_approval_names_who_is_holding_it(): void
+    /** The CaPSA checking a signed form is what the team sees change. */
+    public function test_a_form_the_capsa_checked_shows_as_closed(): void
     {
-        $milestone = $this->milestoneWithChecklist();
-        $expert = CapstoneExpert::factory()->create(['approved_status' => true]);
+        $form = $this->line($this->checklist(), 'team_assignment_form');
+        DeliverableCheck::create(['deliverable_id' => $form->id, 'team_id' => $this->team->team_id, 'status' => DeliverableCheck::COMPLETE, 'checked_at' => now()->subDays(3)]);
 
-        $fileId = DB::table('capstone_documents')->insertGetId([
-            'student_id' => $this->student->student_id,
-            'file_name' => 'ch1.pdf',
-            'file_path' => 'docs/ch1.pdf',
-            'chapter' => '1',
-            'document_status' => 'pending',
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        $this->get('/student/progress')->assertOk()->assertSee('1 of 19 closed');
+    }
+
+    /** The question a team has is who is holding a thing up. */
+    public function test_a_clf_names_who_is_holding_it(): void
+    {
+        $checklist = $this->checklist();
 
         CapstoneDocumentReview::create([
-            'file_id' => $fileId,
-            'expert_id' => $expert->expert_id,
+            'file_id' => $this->upload($this->student, $this->line($checklist, 'chapter_1_draft')),
+            'expert_id' => CapstoneExpert::factory()->create(['approved_status' => true])->expert_id,
             'role' => 'adviser',
             'review_status' => CapstoneDocumentReview::REVIEWED,
         ]);
@@ -124,7 +76,33 @@ class StudentChecklistTest extends TestCase
             ->assertOk()
             ->assertSee('With your adviser')
             // and the draft itself closed on the upload
-            ->assertSee('1 of 19 complete');
+            ->assertSee('1 of 19 closed');
+    }
+
+    public function test_a_paper_sent_back_shows_the_capsas_note(): void
+    {
+        $form = $this->line($this->checklist(), 'team_assignment_form');
+        $this->upload($this->student, $form, now()->subDays(2)->toDateTimeString());
+        DeliverableCheck::create([
+            'deliverable_id' => $form->id, 'team_id' => $this->team->team_id, 'status' => DeliverableCheck::SENT_BACK,
+            'note' => 'Two members have not signed.', 'checked_at' => now()->subDay(),
+        ]);
+
+        $this->get('/student/progress')
+            ->assertOk()
+            ->assertSee('Sent back by your CaPSA')
+            ->assertSee('Two members have not signed.')
+            ->assertSee('Upload again');
+    }
+
+    public function test_archived_deliverables_are_not_shown(): void
+    {
+        $this->line($this->checklist(), 'td_rsc')->update(['archived_at' => now()]);
+
+        $this->get('/student/progress')
+            ->assertOk()
+            ->assertDontSee('Signed (Noted) TD RSC')
+            ->assertSee('0 of 18 closed');
     }
 
     public function test_a_team_with_no_checklist_is_told_so(): void
@@ -134,51 +112,14 @@ class StudentChecklistTest extends TestCase
             ->assertSee('Your CaPSA has not set up a checklist for your team yet.');
     }
 
-    /**
-     * Nothing on the checklist is the team's to close - the CaPSA sights a
-     * form, an upload closes a draft, the adviser approves a CLF - so there is
-     * nothing here to press.
-     */
-    public function test_the_checklist_is_read_only(): void
+    /** Nothing on the tracker is the team's to close, so there is nothing here to mark done. */
+    public function test_the_tracker_is_read_only(): void
     {
-        $this->milestoneWithChecklist();
+        $this->checklist();
 
-        $response = $this->get('/student/progress');
-
-        $response->assertOk();
-        $response->assertDontSee('Mark as Done');
-        $response->assertDontSee('openUploadModal');
-    }
-
-    /**
-     * A checklist a CaPSA has started but not written any lines onto reads
-     * "0 of 0 complete", which looks like a fault rather than a checklist in
-     * progress. It has nothing a team can act on, so it waits until it does.
-     */
-    public function test_a_checklist_with_no_lines_stays_off_the_tracker(): void
-    {
-        Milestone::create([
-            'team_id' => $this->team->team_id,
-            'title' => 'Capstone 2',
-            'status' => 'todo',
-            'due_date' => '2026-12-31',
-        ]);
-
-        $response = $this->get('/student/progress');
-
-        $response->assertOk();
-        $response->assertDontSee('Capstone 2');
-        $response->assertDontSee('0 of 0');
-    }
-
-    /** A checklist that does have lines is exactly what the tracker is for. */
-    public function test_a_checklist_with_lines_shows_on_the_tracker(): void
-    {
-        $this->milestoneWithChecklist();
-
-        $response = $this->get('/student/progress');
-
-        $response->assertOk();
-        $response->assertDontSee('0 of 0');
+        $this->get('/student/progress')
+            ->assertOk()
+            ->assertDontSee('Mark as Done')
+            ->assertDontSee('openUploadModal');
     }
 }

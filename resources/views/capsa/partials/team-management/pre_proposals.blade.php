@@ -7,8 +7,9 @@
 @endphp
 
 <p class="tm-note">
-  Approving a title is what sets a team's project title. Approve one and it is theirs;
-  approve two and the team chooses between them on their Duplication Checker page.
+  Recommending a title is what sets a team's project title. Recommend one and it is
+  theirs; recommend two and the team chooses between them on their Duplication
+  Checker page.
 </p>
 
 <div class="card" style="padding:0;overflow:hidden">
@@ -33,7 +34,10 @@
             </div>
           </td>
           <td><span class="badge {{ $row->section === \App\Support\SectionScope::UNASSIGNED ? 'badge-gray' : 'badge-gold' }}" style="font-size:10px">{{ $row->section }}</span></td>
-          <td style="font-size:12px;color:var(--text2)">{{ $row->proposals->count() }} of 3</td>
+          {{-- The number of titles a team is asked for lives on the controller that
+     enforces it. Spelled out here as 3, this went on reading "4 of 3" from
+     the day that number became four. --}}
+<td style="font-size:12px;color:var(--text2)">{{ $row->proposals->count() }} of {{ \App\Http\Controllers\PreProposalController::RECOMMENDED_PROPOSALS }}</td>
           <td>
             @if ($row->pendingProposalCount > 0)
               <span class="tm-pill tm-pill-amber">{{ $row->pendingProposalCount }} to review</span>

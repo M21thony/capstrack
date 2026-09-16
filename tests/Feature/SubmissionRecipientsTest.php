@@ -130,22 +130,31 @@ class SubmissionRecipientsTest extends TestCase
     }
 
     /**
-     * One expert, one role per team - the database says so.
+     * One expert can now hold two roles for one team, and each resolves.
      *
-     * capstone_expert_application carries a unique index on (team_id,
-     * expert_id), and the apply form states the same rule in words. Which
-     * makes the bug above worse than it looked: the schema forbids what the
-     * submission page was displaying.
+     * The database used to forbid it: capstone_expert_application carried a
+     * unique (team_id, expert_id), left over from when the table also had
+     * role_id. That constraint had nothing to do with roles by then - it
+     * meant one row per expert per team ever, which stopped a team applying
+     * again after being turned down. It is gone.
+     *
+     * So the rule the resolver enforces is its own, not the schema's: each
+     * role is filled by whoever was engaged FOR that role, and somebody
+     * engaged for both fills both.
      */
-    public function test_the_same_expert_cannot_hold_two_roles_on_one_team(): void
+    public function test_one_expert_engaged_for_two_roles_fills_both(): void
     {
         $team = $this->teamInSection();
         $mark = $this->expertHolding('Mark Balilla', ['adviser', 'consultant']);
 
         $this->engage($team, $mark, 'adviser');
-
-        $this->expectException(\Illuminate\Database\QueryException::class);
         $this->engage($team, $mark, 'consultant');
+
+        $names = $this->resolver()->getAssignedNames($team->team_id);
+
+        $this->assertSame('Mark Balilla', $names['adviser']['name']);
+        $this->assertSame('Mark Balilla', $names['consultant']['name']);
+        $this->assertNull($names['grammarian']['name']);
     }
 
     /** An application still waiting on a decision is not an assignment. */
