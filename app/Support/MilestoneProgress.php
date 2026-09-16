@@ -3,233 +3,400 @@
 namespace App\Support;
 
 use App\Models\CapstoneDocumentReview;
-use App\Models\Milestone;
-use App\Models\MilestoneItem;
+use App\Models\Checklist;
+use App\Models\ChecklistMilestone;
+use App\Models\Deliverable;
+use App\Models\DeliverableCheck;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
- * How far along a team is on a milestone.
+ * How far along teams are on a checklist.
  *
- * Everything here is worked out at read time. Three of the five item kinds
- * are answered by records that already hold the answer - the uploaded
- * document, the reviewer's verdict, the panel's outcome - so copying their
- * state onto the item would only create something to keep in step and
- * something to go stale. That is exactly what went wrong with the old
- * milestones.status, which was written once as 'todo' and never moved again.
+ * Everything here is worked out at read time from the records that already
+ * hold the answer - the upload, the reviewer's verdict, the panel's outcome,
+ * the CaPSA's check - so nothing is copied onto the checklist to go stale.
  *
- * Late and overdue follow the same rule: both are derived from the dates, so
- * moving a deadline un-flags whatever it should with nothing to go back and
- * correct.
+ * What closes a deliverable depends on its kind:
  *
- * Resolving is done in bulk - a handful of queries for the whole milestone,
- * not one per item.
+ *   document  the team uploads it
+ *   defense   the panel records a pass
+ *   form, approval, custom
+ *             the CaPSA checks it complete. A signed CLF is paper like a
+ *             form: there is no e-signing, so the adviser's approval in
+ *             Document Review is only a hint that the signed copy can follow.
+ *
+ * An upload belongs to a line when it names it (deliverable_id). Drafts from
+ * before a file could name its line are matched by chapter.
+ *
+ * Late is judged on when the team first handed a thing in, and a line the team
+ * is revising is never overdue: they did hand it in.
+ *
+ * Resolving is done in bulk - a handful of queries for every team at once.
  */
 class MilestoneProgress
 {
     /** Nothing handed in, and the due date has not passed. */
     public const NOT_STARTED = 'not_started';
 
-    /** Handed in or under way, but not accepted yet. */
+    /** Handed in or under way, but not closed yet. waiting_on says by whom. */
     public const HANDED_IN = 'handed_in';
 
     public const DONE = 'done';
 
-    /** Done, but after the due date. Still counts as complete. */
+    /** Done, but handed in after the due date. Still counts as complete. */
     public const DONE_LATE = 'done_late';
 
-    /** Due date passed with nothing handed in. The only state worth chasing. */
+    /** Due date passed with nothing handed in. */
     public const OVERDUE = 'overdue';
 
     public const COMPLETE_STATES = [self::DONE, self::DONE_LATE];
 
-    public static function for(Milestone $milestone): object
+    /** The team owes something: a revision the reviewer asked for, or a paper the CaPSA sent back. */
+    public const WAITING_ON_TEAM = 'team';
+
+    /** A signed paper is uploaded and waits for the CaPSA's check. */
+    public const WAITING_ON_CAPSA = 'capsa';
+
+    /** The adviser approved the draft; the team still has to upload the signed CLF. */
+    public const WAITING_ON_SIGNED_COPY = 'signed_copy';
+
+    /** The panel asked for a re-defense and the next attempt is not scheduled yet. */
+    public const WAITING_ON_REDEFENSE = 'redefense';
+
+    public static function forTeam(Checklist $checklist, int $teamId): object
     {
-        $items = $milestone->items()->orderBy('position')->orderBy('id')->get();
-        $teamId = $milestone->team_id;
+        return self::forTeams($checklist, [$teamId])[$teamId];
+    }
 
-        $documents = self::documentsFor($teamId, $items);
-        $approvals = self::approvalsFor($teamId, $items);
-        $defenses = self::defensesFor($teamId, $items);
+    /** @return array<int, object> keyed by team id */
+    public static function forTeams(Checklist $checklist, iterable $teamIds): array
+    {
+        $teamIds = collect($teamIds)->map(fn ($id) => (int) $id)->unique()->values();
 
-        $resolved = $items->map(fn (MilestoneItem $item) => self::resolve(
-            $item,
-            $milestone,
-            $documents,
-            $approvals,
-            $defenses,
-        ));
+        if ($teamIds->isEmpty()) {
+            return [];
+        }
 
-        $total = $resolved->count();
-        $completed = $resolved->whereIn('state', self::COMPLETE_STATES)->count();
+        $deliverables = $checklist->milestones()->active()
+            ->with(['deliverables' => fn ($query) => $query->whereNull('archived_at')])
+            ->get()
+            ->flatMap(fn (ChecklistMilestone $milestone) => $milestone->deliverables
+                ->each(fn (Deliverable $deliverable) => $deliverable->setRelation('milestone', $milestone)))
+            ->values();
+
+        $uploads = self::uploadsFor($teamIds, $deliverables);
+        $reviews = self::reviewsFor($uploads);
+        $defenses = self::defensesFor($teamIds, $deliverables);
+        $checks = self::checksFor($teamIds, $deliverables);
+
+        $out = [];
+
+        foreach ($teamIds as $teamId) {
+            $theirs = $uploads->get($teamId, collect());
+            $theirReviews = $reviews->whereIn('file_id', $theirs->pluck('file_id')->all());
+            $theirDefenses = $defenses->get($teamId, collect());
+
+            $rows = $deliverables->map(fn (Deliverable $deliverable) => self::resolve(
+                $deliverable,
+                $deliverables,
+                $theirs,
+                $theirReviews,
+                $theirDefenses,
+                $checks->get($deliverable->id.'|'.$teamId),
+            ));
+
+            $out[$teamId] = self::summarise($rows);
+        }
+
+        return $out;
+    }
+
+    private static function summarise(Collection $rows): object
+    {
+        $total = $rows->count();
+        $completed = $rows->whereIn('state', self::COMPLETE_STATES)->count();
 
         return (object) [
-            'items' => $resolved,
+            'items' => $rows,
             'total' => $total,
             'completed' => $completed,
-            'handed_in' => $resolved->where('state', self::HANDED_IN)->count(),
-            'late' => $resolved->where('state', self::DONE_LATE)->count(),
-            'overdue' => $resolved->where('state', self::OVERDUE)->count(),
-            // A milestone with no items is not finished, it is unconfigured.
-            // Callers guard on total > 0 and show nothing at all rather than
-            // a percentage - 100% here would make an empty milestone read as
-            // a completed one.
+            'handed_in' => $rows->where('state', self::HANDED_IN)->count(),
+            'late' => $rows->where('state', self::DONE_LATE)->count(),
+            'overdue' => $rows->where('state', self::OVERDUE)->count(),
+            // An empty checklist is unconfigured, not finished.
             'percent' => $total === 0 ? 0 : (int) round($completed / $total * 100),
         ];
     }
 
     private static function resolve(
-        MilestoneItem $item,
-        Milestone $milestone,
-        Collection $documents,
-        Collection $approvals,
+        Deliverable $deliverable,
+        Collection $all,
+        Collection $uploads,
+        Collection $reviews,
         Collection $defenses,
+        ?DeliverableCheck $check,
     ): object {
-        $due = $item->due_date ?? $milestone->due_date;
+        $due = $deliverable->due_date;
+        $own = self::uploadsForDeliverable($deliverable, $uploads);
 
-        [$closedAt, $started] = match ($item->kind) {
-            MilestoneItem::DOCUMENT => [$documents->get(self::chapterKey($item->chapter)), false],
-            MilestoneItem::APPROVAL => self::approvalState($item, $approvals),
-            MilestoneItem::DEFENSE => self::defenseState($item, $defenses),
-            default => [$item->completed_at, false],
-        };
+        // A CLF approves a chapter draft, so the draft's reviews are what say
+        // whether the adviser has signed off - and how many rounds it took.
+        $reviewed = $deliverable->kind === Deliverable::APPROVAL
+            ? self::draftsFor($deliverable, $all, $uploads)->merge($own)
+            : $own;
 
-        if ($closedAt) {
-            $late = $due && Carbon::parse($closedAt)->startOfDay()->gt(Carbon::parse($due)->startOfDay());
+        $myReviews = $reviews->whereIn('file_id', $reviewed->pluck('file_id')->all());
 
-            return (object) [
-                'item' => $item,
-                'state' => $late ? self::DONE_LATE : self::DONE,
-                'closed_at' => Carbon::parse($closedAt),
-                'due_on' => $due,
-                'days_late' => $late
-                    ? (int) Carbon::parse($due)->startOfDay()->diffInDays(Carbon::parse($closedAt)->startOfDay())
-                    : 0,
-                'waiting_on' => null,
-            ];
+        if ($deliverable->kind === Deliverable::APPROVAL) {
+            $myReviews = $myReviews->where('role', $deliverable->role);
         }
 
-        return (object) [
-            'item' => $item,
+        $approvedAt = $myReviews->where('verdict', CapstoneDocumentReview::APPROVED)->max('verdict_at');
+        $submittedAt = $reviewed->min('created_at');
+
+        [$closedAt, $started, $waitingOn, $changesRequested] = match ($deliverable->kind) {
+            Deliverable::DOCUMENT => [$own->min('created_at'), false, null, false],
+            Deliverable::DEFENSE => self::defenseState($deliverable, $defenses),
+            default => self::checkedState($deliverable, $own, $reviewed, $myReviews, $approvedAt, $check),
+        };
+
+        $common = [
+            'item' => $deliverable,
+            'milestone' => $deliverable->milestone,
+            'due_on' => $due,
+            'submitted_at' => $submittedAt ? Carbon::parse($submittedAt) : null,
+            // The latest upload for the line, which is what the CaPSA opens to check.
+            'file_id' => $own->last()?->file_id,
+            'file_path' => $own->last()?->file_path,
+            // How many times it was sent back: by a reviewer, or - for a defense - by the panel asking for a re-defense.
+            'revision' => $deliverable->kind === Deliverable::DEFENSE
+                ? ($defenses->get($deliverable->defense_type)?->redefenses ?? 0)
+                : $myReviews->where('verdict', CapstoneDocumentReview::NEEDS_REVISION)->count(),
+            'changes_requested' => $changesRequested,
+            'check' => $check,
+            'note' => $changesRequested && $check?->status === DeliverableCheck::SENT_BACK ? $check->note : null,
+            'approved_at' => $approvedAt ? Carbon::parse($approvedAt) : null,
+        ];
+
+        if ($closedAt) {
+            $basis = Carbon::parse($submittedAt ?? $closedAt)->startOfDay();
+            $late = $due && $basis->gt(Carbon::parse($due)->startOfDay());
+
+            return (object) ($common + [
+                'state' => $late ? self::DONE_LATE : self::DONE,
+                'closed_at' => Carbon::parse($closedAt),
+                'days_late' => $late ? (int) Carbon::parse($due)->startOfDay()->diffInDays($basis) : 0,
+                'waiting_on' => null,
+            ]);
+        }
+
+        return (object) ($common + [
             'state' => $started
                 ? self::HANDED_IN
                 : ($due && Carbon::parse($due)->endOfDay()->isPast() ? self::OVERDUE : self::NOT_STARTED),
             'closed_at' => null,
-            'due_on' => $due,
             'days_late' => 0,
-            // On an approval this names who is being waited on, which is the
-            // question a team actually asks.
-            'waiting_on' => $started && $item->kind === MilestoneItem::APPROVAL ? $item->role : null,
-        ];
-    }
-
-    /** [closedAt, hasStarted] - a review exists but has not approved yet. */
-    private static function approvalState(MilestoneItem $item, Collection $approvals): array
-    {
-        $row = $approvals->get(self::approvalKey($item->role, $item->chapter));
-
-        if (! $row) {
-            return [null, false];
-        }
-
-        // A verdict of needs_revision is not a close: the team still owes a
-        // revision, so the line stays open with the adviser named.
-        return [$row->approved_at, true];
-    }
-
-    /** [closedAt, hasStarted] - scheduled but no outcome recorded yet. */
-    private static function defenseState(MilestoneItem $item, Collection $defenses): array
-    {
-        $row = $defenses->get($item->defense_type);
-
-        if (! $row) {
-            return [null, false];
-        }
-
-        return [$row->passed_at, true];
-    }
-
-    private static function chapterKey(?string $chapter): string
-    {
-        return mb_strtolower(trim((string) $chapter));
-    }
-
-    private static function approvalKey(?string $role, ?string $chapter): string
-    {
-        return mb_strtolower(trim((string) $role)).'|'.self::chapterKey($chapter);
+            'waiting_on' => $started ? $waitingOn : null,
+        ]);
     }
 
     /**
-     * The team's uploaded drafts, keyed by chapter. Any member's upload counts
-     * - the deliverable belongs to the team, not to whoever pressed the button.
+     * [closedAt, started, waitingOn, changesRequested] for a line the CaPSA's
+     * check closes: a signed form, a signed CLF, or a task of her own.
      */
-    private static function documentsFor(?int $teamId, Collection $items): Collection
+    private static function checkedState(
+        Deliverable $deliverable,
+        Collection $own,
+        Collection $reviewed,
+        Collection $reviews,
+        mixed $approvedAt,
+        ?DeliverableCheck $check,
+    ): array {
+        if ($check?->status === DeliverableCheck::COMPLETE) {
+            return [$check->checked_at, true, null, false];
+        }
+
+        // Sent back, and nothing uploaded since: the team owes a new copy. An
+        // upload after the send-back puts it back in the CaPSA's queue.
+        $latestUpload = $own->max('created_at');
+
+        if ($check?->status === DeliverableCheck::SENT_BACK
+            && (! $latestUpload || Carbon::parse($latestUpload)->lte($check->checked_at))) {
+            return [null, true, self::WAITING_ON_TEAM, true];
+        }
+
+        if ($own->isNotEmpty()) {
+            return [null, true, self::WAITING_ON_CAPSA, false];
+        }
+
+        if ($deliverable->kind !== Deliverable::APPROVAL || $reviews->isEmpty()) {
+            return [null, false, null, false];
+        }
+
+        if ($approvedAt) {
+            return [null, true, self::WAITING_ON_SIGNED_COPY, false];
+        }
+
+        // The draft is with the reviewer, or came back asking for changes and
+        // nothing has been uploaded since.
+        $latest = $reviews->whereNotNull('verdict_at')->sortBy('verdict_at')->last();
+        $changesRequested = $latest
+            && $latest->verdict === CapstoneDocumentReview::NEEDS_REVISION
+            && ! $reviewed->contains(fn ($upload) => $upload->created_at > $latest->verdict_at);
+
+        return [null, true, $changesRequested ? self::WAITING_ON_TEAM : $deliverable->role, $changesRequested];
+    }
+
+    /**
+     * [closedAt, started, waitingOn, changesRequested] for a defense. Only a
+     * pass closes it. A panel asking for a re-defense leaves it open, waiting
+     * on the team until the next attempt is on the calendar.
+     */
+    private static function defenseState(Deliverable $deliverable, Collection $defenses): array
     {
-        if (! $teamId || $items->where('kind', MilestoneItem::DOCUMENT)->isEmpty()) {
+        $row = $defenses->get($deliverable->defense_type);
+
+        if (! $row) {
+            return [null, false, null, false];
+        }
+
+        if ($row->passed_at) {
+            return [$row->passed_at, true, null, false];
+        }
+
+        return [null, true, $row->awaiting_redefense ? self::WAITING_ON_REDEFENSE : null, false];
+    }
+
+    /**
+     * What the team sent for this line. An upload naming nothing predates
+     * uploads naming their line, and can only have been a chapter draft.
+     */
+    private static function uploadsForDeliverable(Deliverable $deliverable, Collection $uploads): Collection
+    {
+        if ($deliverable->kind === Deliverable::DEFENSE) {
+            return collect();
+        }
+
+        return $uploads->filter(fn ($upload) => $upload->deliverable_id !== null
+            ? (int) $upload->deliverable_id === $deliverable->id
+            : $deliverable->kind === Deliverable::DOCUMENT && self::sameChapter($upload->chapter, $deliverable->chapter)
+        )->values();
+    }
+
+    /** The drafts of the chapter a CLF approves. */
+    private static function draftsFor(Deliverable $clf, Collection $all, Collection $uploads): Collection
+    {
+        $draftIds = $all
+            ->filter(fn (Deliverable $d) => $d->kind === Deliverable::DOCUMENT && self::sameChapter($d->chapter, $clf->chapter))
+            ->pluck('id')
+            ->all();
+
+        return $uploads->filter(fn ($upload) => $upload->deliverable_id !== null
+            ? in_array((int) $upload->deliverable_id, $draftIds, true)
+            : self::sameChapter($upload->chapter, $clf->chapter)
+        )->values();
+    }
+
+    private static function sameChapter(?string $a, ?string $b): bool
+    {
+        if ($a === null || $b === null) {
+            return false;
+        }
+
+        $key = self::chapterKey($a);
+
+        return $key !== '' && $key === self::chapterKey($b);
+    }
+
+    /** A checklist line says "1"; an upload's detected chapter says "Chapter 1". */
+    private static function chapterKey(string $chapter): string
+    {
+        return preg_replace('/^chapter\s*/', '', mb_strtolower(trim($chapter)));
+    }
+
+    /**
+     * Every upload by each team, oldest first, grouped by team. Any member's
+     * upload counts - the deliverable belongs to the team.
+     *
+     * @return Collection<int, Collection<int, object>>
+     */
+    private static function uploadsFor(Collection $teamIds, Collection $deliverables): Collection
+    {
+        if ($deliverables->where('kind', '!=', Deliverable::DEFENSE)->isEmpty()) {
             return collect();
         }
 
         return DB::table('capstone_documents as d')
             ->join('student_s_y as sy', 'sy.student_id', '=', 'd.student_id')
-            ->where('sy.team_id', $teamId)
-            ->whereNotNull('d.chapter')
-            ->select('d.chapter', DB::raw('MIN(d.created_at) as uploaded_at'))
-            ->groupBy('d.chapter')
+            ->whereIn('sy.team_id', $teamIds->all())
+            ->select('sy.team_id', 'd.file_id', 'd.deliverable_id', 'd.chapter', 'd.file_path', 'd.created_at')
+            ->distinct()
+            ->orderBy('d.created_at')
+            ->orderBy('d.file_id')
             ->get()
-            ->keyBy(fn ($row) => self::chapterKey($row->chapter))
-            ->map(fn ($row) => $row->uploaded_at);
+            ->groupBy(fn ($upload) => (int) $upload->team_id);
     }
 
-    /**
-     * Approvals on this team's documents, keyed by role and chapter. Only a
-     * verdict of approved closes anything - see CapstoneDocumentReview, where
-     * 'Reviewed' means the reviewer finished looking, not that they agreed.
-     */
-    private static function approvalsFor(?int $teamId, Collection $items): Collection
+    /** Reviews of those uploads. Only a verdict of approved counts as approval. */
+    private static function reviewsFor(Collection $uploadsByTeam): Collection
     {
-        if (! $teamId || $items->where('kind', MilestoneItem::APPROVAL)->isEmpty()) {
+        $fileIds = $uploadsByTeam->flatten(1)->pluck('file_id')->unique()->all();
+
+        if ($fileIds === []) {
             return collect();
         }
 
-        return DB::table('capstone_document_review as r')
-            ->join('capstone_documents as d', 'd.file_id', '=', 'r.file_id')
-            ->join('student_s_y as sy', 'sy.student_id', '=', 'd.student_id')
-            ->where('sy.team_id', $teamId)
-            ->whereNotNull('r.role')
-            ->select(
-                'r.role',
-                'd.chapter',
-                DB::raw('MAX(CASE WHEN r.verdict = \''.CapstoneDocumentReview::APPROVED.'\' THEN r.verdict_at END) as approved_at'),
-            )
-            ->groupBy('r.role', 'd.chapter')
-            ->get()
-            ->keyBy(fn ($row) => self::approvalKey($row->role, $row->chapter));
+        return DB::table('capstone_document_review')
+            ->whereIn('file_id', $fileIds)
+            ->select('review_id', 'file_id', 'role', 'verdict', 'verdict_at')
+            ->get();
     }
 
     /**
-     * The team's defenses, keyed by stage. Passed with revision still counts
-     * as passed - the team sat it and got through, which is what the
-     * checklist line means.
+     * Each team's defenses, by stage: when one was passed, how many attempts
+     * the panel sent back for a re-defense, and whether the latest attempt is
+     * one of those with no next attempt booked. Passed with revision still
+     * counts as passed - the team sat it and got through.
+     *
+     * @return Collection<int, Collection<string, object>> team id -> stage -> summary
      */
-    private static function defensesFor(?int $teamId, Collection $items): Collection
+    private static function defensesFor(Collection $teamIds, Collection $deliverables): Collection
     {
-        if (! $teamId || $items->where('kind', MilestoneItem::DEFENSE)->isEmpty()) {
+        if ($deliverables->where('kind', Deliverable::DEFENSE)->isEmpty()) {
             return collect();
         }
 
         $passing = [DefenseOutcome::PASSED, DefenseOutcome::PASSED_WITH_REVISION];
-        $placeholders = implode(',', array_fill(0, count($passing), '?'));
+        $redefense = [DefenseOutcome::REDEFENSE, DefenseOutcome::REDEFENSE_NEW_TITLE];
 
         return DB::table('defense_schedule')
-            ->where('team_id', $teamId)
-            ->select(
-                'defense_type',
-                DB::raw("MAX(CASE WHEN outcome IN ({$placeholders}) THEN outcome_recorded_at END) as passed_at"),
-            )
-            ->addBinding($passing, 'select')
-            ->groupBy('defense_type')
+            ->whereIn('team_id', $teamIds->all())
+            ->select('team_id', 'defense_type', 'attempt', 'outcome', 'outcome_recorded_at')
             ->get()
-            ->keyBy('defense_type');
+            ->groupBy(fn ($row) => (int) $row->team_id)
+            ->map(fn (Collection $rows) => $rows->groupBy('defense_type')->map(function (Collection $attempts) use ($passing, $redefense) {
+                $latest = $attempts->sortBy(fn ($a) => (int) $a->attempt)->last();
+
+                return (object) [
+                    'passed_at' => $attempts->whereIn('outcome', $passing)->max('outcome_recorded_at'),
+                    'redefenses' => $attempts->whereIn('outcome', $redefense)->count(),
+                    'awaiting_redefense' => in_array($latest->outcome, $redefense, true),
+                ];
+            }));
+    }
+
+    /** @return Collection<string, DeliverableCheck> keyed "deliverable|team" */
+    private static function checksFor(Collection $teamIds, Collection $deliverables): Collection
+    {
+        if ($deliverables->isEmpty()) {
+            return collect();
+        }
+
+        return DeliverableCheck::whereIn('deliverable_id', $deliverables->pluck('id')->all())
+            ->whereIn('team_id', $teamIds->all())
+            ->get()
+            ->keyBy(fn (DeliverableCheck $check) => $check->deliverable_id.'|'.$check->team_id);
     }
 }

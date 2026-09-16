@@ -889,9 +889,9 @@
       </div>
       <div class="section-field">
         <label class="ct-modal-label" for="capsaName" style="margin-bottom:6px">Full name <span style="color:#64748b;font-weight:400;">(optional)</span></label>
-        <input type="text" id="capsaName" class="ct-modal-input" placeholder="Rosa Villanueva" autocomplete="off">
+        <input type="text" id="capsaName" class="ct-modal-input" placeholder="Rosa Villanueva, MIT" autocomplete="off">
         <p style="margin:6px 0 0;font-size:11.5px;color:#64748b;text-align:left;line-height:1.5;">
-          Leave this blank and their real name arrives by itself the first time they sign in.
+          Leave this blank and their real name arrives by itself the first time they sign in. A degree goes after a comma, like Rosa Villanueva, MIT.
         </p>
       </div>
       <p id="capsaEmailError" style="display:none;color:#dc2626;font-size:12px;margin:-6px 0 12px;text-align:left;"></p>
@@ -906,6 +906,7 @@
         <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
         <input id="sectionSearch" placeholder="Search sections…" oninput="filterSections(this.value)" autocomplete="off">
       </div>
+      <div id="sectionsTakenNote" style="display:none;font-size:11.5px;color:var(--text3);margin-bottom:6px"></div>
       <div class="section-bulk-row">
         <button type="button" onclick="selectAllSections()">Select all</button>
         <span>·</span>
@@ -929,7 +930,11 @@
           </div>
           <div class="section-group-body">
             @foreach ($sections as $section)
-              <label class="section-opt" data-name="{{ strtolower($section) }}"><input type="checkbox" onchange="onSectionChange(this)"><span>{{ $section }}</span></label>
+              {{-- Who already covers it, so the picker can leave it out for
+                   everyone else. Two CaPSAs on one section means two people
+                   approving the same teams. --}}
+              <label class="section-opt" data-name="{{ strtolower($section) }}"
+                     data-owner="{{ $sectionOwners[$section] ?? '' }}"><input type="checkbox" onchange="onSectionChange(this)"><span>{{ $section }}</span></label>
             @endforeach
           </div>
         </div>
@@ -1094,6 +1099,7 @@ function editCapsaSections(expertId, expertName, current) {
   capsaExpertName.textContent = expertName;
   capsaSectionsError.style.display = 'none';
   resetSectionPicker();
+  hideTakenSections(expertId);
   checkSections(current || []);
   capsaConfirmBtn.textContent = 'Save Sections';
   document.getElementById('capsaModalLead').textContent = 'Manage sections for';
@@ -1145,6 +1151,7 @@ function addCapsa() {
 
   capsaSectionsError.style.display = 'none';
   resetSectionPicker();
+  hideTakenSections(null);
   capsaModal.style.display = 'flex';
 }
 
@@ -1171,6 +1178,7 @@ function toggleCapsa(expertId, isCurrentlyCapsa, expertName) {
   capsaExpertName.textContent = expertName;
   capsaSectionsError.style.display = 'none';
   resetSectionPicker();
+  hideTakenSections(expertId);
   capsaModal.style.display = 'flex';
 }
 
@@ -1305,6 +1313,45 @@ function saveCapsaSections(expertId, sections, onDone) {
 // Grouped by program, collapsed by default, with a per-group "select
 // all" - a CaPSA covering an entire program is one click, not checking
 // every section in it one at a time.
+/**
+ * Leave out sections another CaPSA already covers.
+ *
+ * Two CaPSAs on one section means two people approving the same teams, so
+ * a section that is taken is simply not on offer. The one exception is the
+ * CaPSA being edited: their own sections have to stay tickable, or opening
+ * Manage Sections would show them as covering nothing.
+ */
+function hideTakenSections(forExpertId) {
+  const mine = String(forExpertId ?? '');
+  let hidden = 0;
+
+  document.querySelectorAll('#sectionList .section-opt').forEach(opt => {
+    const owner = opt.dataset.owner || '';
+    const taken = owner !== '' && owner !== mine;
+
+    opt.dataset.taken = taken ? '1' : '';
+    if (taken) { opt.style.display = 'none'; hidden++; }
+  });
+
+  // A group whose every section is spoken for is noise, not a choice.
+  document.querySelectorAll('#sectionList .section-group').forEach(group => {
+    const opts = group.querySelectorAll('.section-opt');
+    const left = [...opts].filter(o => o.dataset.taken !== '1').length;
+
+    group.style.display = left ? '' : 'none';
+    const count = group.querySelector('.group-count');
+    if (count) count.textContent = '0/' + left;
+  });
+
+  const note = document.getElementById('sectionsTakenNote');
+  if (note) {
+    note.textContent = hidden
+      ? hidden + ' section' + (hidden === 1 ? ' is' : 's are') + ' already handled by another CaPSA and not shown.'
+      : '';
+    note.style.display = hidden ? 'block' : 'none';
+  }
+}
+
 function resetSectionPicker() {
   document.getElementById('sectionSearch').value = '';
   document.querySelectorAll('#sectionList .section-group').forEach(g => {

@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <meta name="csrf-token" content="{{ csrf_token() }}">
 <title>CapsTRACK – Expert Portal</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="{{ asset('css/schedule.css') }}" />
 @include('partials.skeleton-head', ['skReveal' => 'block'])
 </head>
@@ -18,7 +18,7 @@
     <button class="hamburger-btn" onclick="toggleSidebar()" aria-label="Toggle sidebar">
       <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
     </button>
-    <div class="page-title">Schedule Management</div>
+    <div class="page-title">Consultations</div>
     <div class="topbar-actions">
       @include('instructor.partials.notification-dropdown')
     </div>
@@ -33,6 +33,8 @@
         </div>
       </div>
       <div class="side-col">
+
+
         <div class="form-card">
           <div class="sk" style="width:130px;height:16px;border-radius:4px;margin-bottom:14px"></div>
           <div class="sk" style="height:60px;border-radius:8px"></div>
@@ -49,12 +51,6 @@
   <div id="real-content" style="display:none">
   <div class="content">
 
-    <!-- Mode Banner -->
-    <div class="mode-banner block-banner" id="block-banner" style="display:none">
-      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
-      <span><strong>Block Mode:</strong> Click any date to mark it as unavailable. Click a blocked date to unblock it.</span>
-    </div>
-
     <div class="sched-layout">
 
       <!-- LEFT: Calendar -->
@@ -62,8 +58,8 @@
         <div class="cal-card">
           <div class="cal-header">
             <div class="cal-title-group">
-              <div class="cal-title">Availability Calendar</div>
-              <div class="cal-month-label" id="cal-month-label">Loading…</div>
+              <div class="cal-title">Availability</div>
+              <div class="cal-month-label" id="cal-month-label">Occurrences of your weekly slots</div>
             </div>
             <div class="cal-controls">
               <button class="cal-nav-btn" onclick="prevMonth()">
@@ -74,8 +70,12 @@
                 <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
               </button>
               <div class="mode-toggle">
-                <button class="mode-btn block-mode" id="btn-block" onclick="toggleBlockMode()">🚫 Block Mode</button>
-              </div>
+                <button class="mode-btn view-btn is-on" id="btn-view-month" onclick="setCalView('month')">Month</button>
+                <button class="mode-btn view-btn" id="btn-view-week" onclick="setCalView('week')">Week</button>
+                <button class="mode-btn view-btn" id="btn-view-day" onclick="setCalView('day')">Day</button>
+                {{-- Set a term's worth of hours in one go, instead of one
+                     slot at a time through the form on the right. --}}
+                <button class="mode-btn" onclick="openAvail()">Set availability</button>              </div>
             </div>
           </div>
 
@@ -83,50 +83,38 @@
           <div class="cal-grid" id="cal-grid">
             <!-- Rendered by JS -->
           </div>
+
+          {{-- The same slots against a time axis. A month answers "which
+               day"; only a week answers "am I free Thursday afternoon",
+               which is the question this page actually gets asked. It reads
+               the same slots[] the month grid does, so nothing here has its
+               own idea of what is booked. --}}
+          <div class="wk" id="week-grid" hidden>
+            <div class="wk-head" id="wk-head"></div>
+            <div class="wk-body" id="wk-body"></div>
+          </div>
         </div>
 
         <!-- Legend + Guide -->
-        <div class="legend-section">
-          <div class="legend-section-title">
-            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-            Legend, Guide &amp; Tips
+        <!-- Two sibling cards, not one card wrapping two more. The nesting
+             made the guidance look like a subsection of the legend, and the
+             legend like a heading for it. They are separate things. -->
+        <div class="legend-row">
+          <div class="legend-section">
+            <div class="legend-section-title">Legend</div>
+            <div class="legend-grid">
+              <div class="legend-item"><div class="legend-swatch sw-consult"></div>Consultation</div>
+              <div class="legend-item"><div class="legend-swatch sw-booked"></div>Booked</div>
+              <div class="legend-item"><div class="legend-swatch sw-defense"></div>Defense</div>
+              <div class="legend-item"><div class="legend-swatch sw-today"></div>Today</div>            </div>
           </div>
 
-          <div class="legend-grid">
-            <div class="legend-item"><div class="legend-swatch sw-consult"></div>Consultation</div>
-            <div class="legend-item"><div class="legend-swatch sw-docreview"></div>Doc Review</div>
-            <div class="legend-item"><div class="legend-swatch sw-defense"></div>Defense</div>
-            <div class="legend-item"><div class="legend-swatch sw-booked"></div>Booked</div>
-            <div class="legend-item"><div class="legend-swatch sw-blocked"></div>Blocked Day</div>
-            <div class="legend-item"><div class="legend-swatch sw-today"></div>Today</div>
-          </div>
-
-          <div class="guide-tips-grid">
-            <div class="guide-box">
-              <div class="guide-box-title">
-                <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                How to Use
-              </div>
-              <div class="guide-list">
-                <div class="guide-step"><div class="guide-step-num">1</div>Click any date on the calendar. Its existing slots (if any) will appear right here, along with a form to add a new one.</div>
-                <div class="guide-step"><div class="guide-step-num">2</div>Fill in the time, slot type, and max bookings, then choose <strong style="color:var(--accent)">One-time</strong> or <strong style="color:var(--accent)">Recurring</strong> and click Save.</div>
-                <div class="guide-step"><div class="guide-step-num">3</div>The date stays selected afterward so you can keep adding more slots to it without reclicking the calendar.</div>
-                <div class="guide-step"><div class="guide-step-num">4</div>Toggle a slot's availability or delete it directly from the list next to the form — no need to open anything else.</div>
-                <div class="guide-step"><div class="guide-step-num">5</div>Use <strong style="color:var(--red)">Block Mode</strong> to mark days you're unavailable – students won't be able to book them.</div>
-              </div>
-            </div>
-            <div class="guide-box">
-              <div class="guide-box-title">
-                <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                Tips for Experts
-              </div>
-              <div class="guide-list">
-                <div class="tip-item"><div class="tip-icon">💡</div><span>Set recurring slots for days you're regularly available – saves you time every week.</span></div>
-                <div class="tip-item"><div class="tip-icon">⚠️</div><span>Block entire days in advance for holidays, meetings, or personal leave.</span></div>
-                <div class="tip-item"><div class="tip-icon">📋</div><span>Keep max bookings at 1–2 per slot for focused, quality consultations.</span></div>
-                <div class="tip-item"><div class="tip-icon">🔵</div><span>A cyan dot on a date means it has recurring slots. These apply every week automatically.</span></div>
-              </div>
-            </div>
+          <div class="legend-section">
+            <div class="legend-section-title">How weekly slots work</div>
+            <ul class="guide-list">
+              <li>A slot repeats on its weekday until you delete it.</li>              <li>A slot with a booking can't be moved &mdash; cancel the booking first.</li>
+              <li>Editing a repeating slot asks whether to change one week or all of them.</li>
+            </ul>
           </div>
         </div>
       </div>
@@ -134,87 +122,27 @@
       <!-- RIGHT: Side column -->
       <div class="side-col">
 
-        <!-- Selected Date: Slots + Add Form (always visible, merged View+Add) -->
-        <div class="form-card" id="add-slot-form">
-          <div class="form-card-title">
-            <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-            Selected Date
-          </div>
-
-          <div class="selected-date-chip" id="selected-date-chip" style="display:none">
-            <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-            <span id="selected-date-text">No date selected</span>
-            <button class="clear-date" onclick="clearSelectedDate()">
-              <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-            </button>
-          </div>
-
-          <div id="no-date-hint" style="font-size:12px;color:var(--text3);margin-bottom:12px;padding:10px;background:var(--bg3);border-radius:8px;border:1px dashed var(--border);text-align:center;">
-            ← Click a date on the calendar to see its slots and add a new one
-          </div>
-
-          <!-- Existing slots for the selected date — lets you view/toggle/remove
-               them right here, in the same panel used to add new ones. -->
-          <div id="selected-date-slots" style="display:none;margin-bottom:12px;">
-            <div style="font-size:11px;color:var(--text3);margin-bottom:6px;font-weight:600;">Existing slots on this date</div>
-            <div id="selected-date-slots-list" style="display:flex;flex-direction:column;gap:6px;"></div>
-          </div>
-
-          <div id="add-slot-fields" style="display:none">
-            <div class="time-row" style="margin-bottom:11px">
-              <div class="f-group" style="margin-bottom:0">
-                <label class="f-label">Start Time</label>
-                <input class="f-input" type="time" id="f-start" value="09:00" onchange="checkTimeOverlap()" oninput="checkTimeOverlap()"/>
-              </div>
-              <div class="f-group" style="margin-bottom:0">
-                <label class="f-label">End Time</label>
-                <input class="f-input" type="time" id="f-end" value="10:00" onchange="checkTimeOverlap()" oninput="checkTimeOverlap()"/>
-              </div>
-            </div>
-
-            <div id="time-overlap-warning" style="display:none;padding:8px 12px;margin-bottom:12px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:8px;color:#dc2626;font-size:12px;font-weight:600;align-items:center;gap:8px">
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" style="flex-shrink:0">
-                <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-              </svg>
-              <span id="time-overlap-text">This time overlaps with an existing slot.</span>
-            </div>
-
-            <div class="f-group">
-              <label class="f-label">Slot Type</label>
-              <select class="f-input" id="f-type">
-                <option value="consult">Consultation</option>
-                <option value="docreview">Document Review</option>
-                <option value="defense">Defense</option>
-              </select>
-            </div>
-
-            <div class="f-group">
-              <label class="f-label">Max Teams per Slot</label>
-              <input class="f-input" type="number" id="f-max" value="1" min="1" max="5"/>
-            </div>
-
-            <div class="f-group" style="margin-bottom:0" id="f-recur-group">
-              <label class="f-label">Recurrence</label>
-              <select class="f-input" id="f-recur">
-                <option value="once">One-time only</option>
-                <option value="weekly">Every week (same day)</option>
-                <option value="biweekly">Every 2 weeks</option>
-              </select>
-              <div id="f-recur-locked-note" style="display:none;font-size:11px;color:var(--text3);margin-top:4px">Switching to a single date? Pick the date above.</div>
-            </div>
-
-            <div id="edit-mode-banner" style="display:none;padding:8px 12px;margin-bottom:11px;background:var(--accent-glow,rgba(0,229,255,0.08));border:1px solid var(--accent,#00e5ff);border-radius:8px;color:var(--accent,#00e5ff);font-size:12px;font-weight:600">
-              Editing existing slot
-            </div>
-
-            <div class="form-actions">
-              <button class="btn btn-primary content" id="save-slot-btn" onclick="saveSlot()">
-                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-                Save Slot
-              </button>
-              <button class="btn btn-ghost content" onclick="resetForm()" style="flex:none;padding:7px 12px">Clear</button>
-            </div>
-          </div>
+        <!-- What saveSlot() reads. The bubble on the calendar is the only
+             thing that shows any of it. -->
+        <div id="slot-fields" hidden>
+          <input type="time" id="f-start" value="09:00" onchange="onStartChanged()">
+          <input type="time" id="f-end" value="10:00" onchange="onEndChanged()">
+          <select id="f-type"><option value="consult" selected>Consultation</option><option value="defense">Defense</option></select>
+          <input type="number" id="f-max" value="1">
+          <select id="f-recur">
+            <option value="once" selected>One-time only</option>
+            <option value="weekly">Every week (same day)</option>
+            <option value="biweekly">Every 2 weeks</option>
+          </select>
+          <div id="f-recur-locked-note"></div>
+          <div id="edit-mode-banner"></div>
+          <div id="recur-banner"><span id="recur-banner-text"></span></div>
+          <div id="time-overlap-warning" style="display:none"><span id="time-overlap-text"></span></div>
+          <div id="slot-derived"></div>
+          <div id="slot-more" hidden></div>
+          <button type="button" id="slot-more-toggle"></button>
+          <button type="button" id="save-slot-btn"></button>
+          <div class="dur-row"><button type="button" class="dur-chip is-on" data-mins="60"></button></div>
         </div>
 
         <!-- Upcoming Appointments -->
@@ -222,7 +150,7 @@
           <div class="upcoming-header">
             <div class="upcoming-title">
               <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-              Upcoming Appointments
+              Next sessions
             </div>
             <div class="upcoming-count" id="apt-count">0</div>
           </div>
@@ -235,7 +163,7 @@
         <div class="form-card" style="padding:16px">
           <div class="form-card-title" style="margin-bottom:12px">
             <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-            This Month's Slots
+            This month&rsquo;s slots
           </div>
           <div style="display:flex;flex-direction:column;gap:8px" id="slot-stats">
             <!-- Rendered by JS -->
@@ -247,6 +175,11 @@
   </div>
   </div>
 </div>
+{{-- The sidebar draws a clickable name that calls openExpertProfile(),
+     which is declared in this partial. Without it the trigger was on the
+     page and the function was not, so clicking your own name here did
+     nothing at all. --}}
+@include('instructor.partials.expert-profile')
 @include('instructor.partials.skeleton-toggle')
 
 {{-- The expert profile panel is included once for every instructor page by
@@ -265,44 +198,407 @@
   pointer-events:none;">
   <span id="toast-msg"></span>
 </div>
-<style>#sched-toast.show{opacity:1;transform:translateY(0);pointer-events:auto}</style>
+<style>
+#sched-toast.show{opacity:1;transform:translateY(0);pointer-events:auto}
 
-<!-- ─── BLOCK CONFIRM ─────────────────────────────────────────────────────── -->
-<div class="slot-modal-overlay" id="block-confirm-overlay" onclick="if(event.target===this)closeBlockConfirm()">
-  <div class="block-confirm">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-      <div class="block-confirm-title" id="bc-title" style="margin-bottom:0">Block this date?</div>
-      <button onclick="closeBlockConfirm()" style="background:none;border:none;cursor:pointer;color:var(--text3);padding:4px;display:flex;border-radius:4px;transition:color 0.15s" onmouseenter="this.style.color='var(--text)'" onmouseleave="this.style.color='var(--text3)'">
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </button>
+/* The defaults, as a sentence rather than three more fields at the same
+   volume as the two decisions that matter. */
+.slot-derived{font-size:11.5px;color:var(--text3);line-height:1.5;
+  margin:-4px 0 12px;padding-left:1px}
+.slot-derived b{color:var(--text2);font-weight:600}
+
+.slot-more-toggle{display:flex;align-items:center;gap:5px;background:none;border:none;
+  padding:0 0 12px;font:600 11.5px 'DM Sans',sans-serif;color:var(--accent3);cursor:pointer}
+.slot-more-toggle svg{transition:transform .15s}
+.slot-more-toggle.is-open svg{transform:rotate(90deg)}
+.slot-more-toggle:hover{color:var(--accent2)}
+
+/* Small and inline. It was a red block in the middle of the form, louder
+   than anything it sat between. */
+#time-overlap-warning{display:flex;align-items:flex-start;gap:7px;
+  background:var(--red-bg);border-radius:7px;padding:7px 9px;margin-bottom:12px;
+  font-size:11.5px;line-height:1.4;color:var(--red)}
+#time-overlap-warning svg{flex-shrink:0;margin-top:1px}
+
+/* Duration as a tap rather than a typed end time. */
+.dur-row{display:flex;gap:5px;flex-wrap:wrap}
+.dur-chip{border:1px solid var(--border);background:var(--bg2);color:var(--text2);
+  border-radius:20px;padding:5px 11px;font:600 11px/1.3 inherit;cursor:pointer;transition:.15s}
+.dur-chip:hover{border-color:var(--accent)}
+.dur-chip.is-on{background:var(--accent-light);border-color:var(--accent);color:var(--accent3)}
+
+/* The week view. Hours are rows, days are columns, and a slot is drawn at
+   its real position and length - so an empty afternoon looks empty. */
+
+/* [hidden] is display:none from the browser's own stylesheet, which any
+   class setting a display loses to - .cal-grid{display:grid} kept the month
+   on screen underneath the week. */
+[hidden]{display:none!important}
+.view-btn.is-on{background:var(--accent-light);border-color:var(--accent);color:var(--accent3)}
+/* One scroll container, so the header and the body are the same width and
+   their columns cannot drift apart when a scrollbar appears. */
+.wk{border:1px solid var(--border);border-radius:12px;background:var(--bg2);
+  max-height:560px;overflow-y:auto}
+.wk-head{display:grid;grid-template-columns:52px repeat(7,1fr);background:var(--bg3);
+  border-bottom:1px solid var(--border);position:sticky;top:0;z-index:2}
+.wk-head div{padding:7px 4px;text-align:center;font-size:11px;font-weight:600;color:var(--text2);
+  border-left:1px solid var(--border)}
+.wk-head div:first-child{border-left:none}
+.wk-head div.is-today{background:var(--accent-light);color:var(--accent3)}
+.wk-head span{display:block;font-size:15px;font-weight:700;color:var(--text);
+  font-variant-numeric:tabular-nums;line-height:1.25}
+.wk-head div.is-today span{color:var(--accent3)}
+.wk-body{display:grid;grid-template-columns:52px repeat(7,1fr)}
+.wk-hours{position:relative}
+.wk-hours i{display:block;height:44px;font-style:normal;font-size:10px;color:var(--text3);
+  text-align:right;padding:1px 6px 0 0;font-family:inherit;font-variant-numeric:tabular-nums}
+.wk-col{position:relative;border-left:1px solid var(--border);cursor:pointer;
+  background:repeating-linear-gradient(var(--bg2) 0 43px, var(--border) 43px 44px)}
+.wk-col:hover{background:repeating-linear-gradient(var(--bg3) 0 43px, var(--border) 43px 44px)}
+.wk-col.is-selected{background:repeating-linear-gradient(var(--accent-light) 0 43px, var(--border) 43px 44px)}
+.wk-slot{position:absolute;left:2px;right:2px;border-radius:5px;padding:3px 5px;overflow:hidden;
+  font-size:10px;line-height:1.25;cursor:pointer;border-left:3px solid;background:var(--bg2)}
+.wk-slot b{display:block;font-weight:700;color:var(--text);white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis}
+.wk-slot span{color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+.wk-slot.is-booked{background:var(--navy-dark,#1e2028);border-left-color:var(--accent)}
+.wk-slot.is-booked b{color:#fff}
+.wk-slot.is-booked span{color:rgba(255,255,255,.6)}
+.wk-slot.is-open{background:var(--accent-light);border-left-color:var(--accent)}
+/* A session whose time has passed: still shown, plainly finished. */
+.cal-slot-pill.is-ended,.slot-tag.is-ended{background:var(--bg4,#eceef2);color:var(--text3);border-color:var(--border)}
+/* A team asked to cancel: the expert approves or keeps the booking. */
+.slot-tag.is-request{background:var(--amber-bg,#fdf6e9);color:var(--amber,#b45309);border-color:#f0d9a8}
+.slot-request{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin-top:6px;padding:7px 9px;border-radius:8px;background:var(--amber-bg,#fdf6e9);border:1px solid #f0d9a8;font-size:12px;color:var(--text2)}
+.slot-request b{color:var(--amber,#b45309)}
+.slot-request .slot-acts{margin-left:auto;display:flex;gap:6px}
+.wk-empty{padding:26px 8px;text-align:center;font-size:12px;color:var(--text3);grid-column:1/-1}
+
+/* The summary under the availability dialog. */
+.av-count{background:var(--accent-light);border:1px solid var(--accent);border-radius:8px;
+  padding:9px 11px;font-size:12px;color:var(--text2);line-height:1.5}
+.av-count b{color:var(--accent3)}
+
+/* Availability, laid out like Google Calendar's appointment schedule: settings
+   on the left, the week on the right, and every weekday saying either its
+   hours or "Unavailable". */
+.ga-modal{width:min(780px,calc(100vw - 32px));max-height:calc(100vh - 32px);display:flex;flex-direction:column;
+  background:var(--bg2);border:1px solid var(--border);border-radius:14px;box-shadow:0 24px 60px -20px rgba(0,0,0,.45);overflow:hidden}
+.ga-head{display:flex;align-items:flex-start;gap:12px;padding:18px 20px 14px;border-bottom:1px solid var(--border)}
+.ga-head>div{flex:1;min-width:0}
+.ga-title{margin:0;font-size:16px;font-weight:700;color:var(--text);letter-spacing:-.01em}
+.ga-sub{margin:3px 0 0;font-size:12.5px;color:var(--text3);line-height:1.45}
+.ga-grid{display:grid;grid-template-columns:260px 1fr;flex:1;min-height:0;overflow:auto}
+.ga-col{padding:16px 20px;min-width:0}
+.ga-side{background:var(--bg3);border-right:1px solid var(--border)}
+.ga-sec+.ga-sec{margin-top:22px}
+.ga-h{margin:0 0 8px;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text3)}
+.ga-hint{margin:-2px 0 8px;font-size:12px;color:var(--text3);line-height:1.45}
+.ga-seg{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}
+.ga-seg-2{grid-template-columns:1fr 1fr}
+.ga-seg label{position:relative;cursor:pointer}
+.ga-seg input{position:absolute;inset:0;opacity:0;margin:0;cursor:pointer}
+.ga-seg span{display:block;text-align:center;padding:7px 4px;border:1px solid var(--border);border-radius:8px;background:var(--bg2);
+  font-size:12.5px;font-weight:600;color:var(--text2);white-space:nowrap;transition:border-color .15s,background-color .15s,color .15s}
+.ga-seg label:hover span{border-color:var(--text3)}
+.ga-seg input:checked+span{border-color:var(--accent);background:var(--accent-light);color:var(--accent3)}
+.ga-seg input:focus-visible+span{outline:2px solid var(--accent);outline-offset:1px}
+.ga-dates{display:grid;grid-template-columns:auto 1fr;align-items:center;gap:6px 10px;margin-top:10px}
+.ga-dates[hidden]{display:none}
+.ga-lab{font-size:12px;font-weight:600;color:var(--text2)}
+.ga-lab-gap{display:block;margin-top:14px}
+.ga-check{display:flex;align-items:center;gap:8px;margin-top:14px;font-size:12px;font-weight:600;color:var(--text2);cursor:pointer}
+.ga-field{display:flex;align-items:center;gap:8px;margin-top:6px;font-size:12.5px;color:var(--text2)}
+.ga-modal input[type=date],.ga-modal input[type=time],.ga-num{height:32px;box-sizing:border-box;padding:0 8px;border:1px solid var(--border);
+  border-radius:8px;background:var(--bg2);color:var(--text);font:inherit;font-size:12.5px;min-width:0}
+.ga-modal input:focus-visible{outline:2px solid var(--accent);outline-offset:0;border-color:var(--accent)}
+.ga-num{width:72px}
+.ga-num:disabled{opacity:.45}
+.ga-days{display:flex;flex-direction:column}
+.ga-day{display:grid;grid-template-columns:48px 1fr 32px;align-items:start;gap:10px;padding:7px 0;border-top:1px solid var(--border)}
+.ga-day:first-child{border-top:0}
+.ga-day-name{height:32px;display:flex;align-items:center;font-size:13px;font-weight:600;color:var(--text3)}
+.ga-day.is-on .ga-day-name{color:var(--text)}
+.ga-ranges{display:flex;flex-direction:column;gap:6px;min-width:0}
+.ga-range{display:flex;align-items:center;gap:6px}
+.ga-range input[type=time]{width:122px}
+.ga-range span{color:var(--text3)}
+.ga-off{height:32px;display:flex;align-items:center;font-size:13px;color:var(--text3)}
+.ga-icon{width:32px;height:32px;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:8px;
+  background:none;color:var(--text3);cursor:pointer;transition:background-color .15s,color .15s}
+.ga-icon:hover{background:var(--bg3);color:var(--text)}
+.ga-icon:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.ga-icon svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
+.ga-foot{display:flex;align-items:center;gap:8px;padding:12px 20px;border-top:1px solid var(--border)}
+.ga-summary{flex:1;min-width:0;font-size:12.5px;color:var(--text2);line-height:1.4}
+.ga-foot #av-count{background:none;border:0;padding:0;font-size:12.5px}
+.ga-foot #av-count b{color:var(--text)}
+.ga-foot .btn{flex:none}
+.ga-foot .btn-ghost{background:var(--bg2);border:1px solid var(--border);color:var(--text2)}
+.ga-foot .btn-ghost:hover{border-color:var(--text3);color:var(--text)}
+.ga-error{font-size:12px;color:var(--red,#dc2626)}
+@media (max-width:680px){
+  .ga-grid{grid-template-columns:1fr}
+  .ga-side{border-right:0;border-bottom:1px solid var(--border)}
+  .ga-foot{flex-wrap:wrap}
+}
+
+/* Which edit did they mean? A weekly slot is a rule, and rewriting the rule
+   when they meant one week is how a whole term's Mondays used to move at
+   once. Asked as a modal rather than a browser confirm, so the two outcomes
+   can be spelled out instead of compressed into OK and Cancel. */
+#scope-ask{position:fixed;inset:0;z-index:120;display:none;align-items:center;
+  justify-content:center;background:rgba(15,17,23,.45);padding:20px}
+#scope-ask.show{display:flex}
+#scope-ask .box{background:var(--bg2);border:1px solid var(--border);border-radius:14px;
+  max-width:400px;width:100%;padding:20px;box-shadow:0 18px 44px -18px rgba(0,0,0,.45)}
+#scope-ask h3{margin:0 0 6px;font:600 15px 'DM Sans',sans-serif;color:var(--text)}
+#scope-ask p{margin:0 0 15px;font-size:12.5px;line-height:1.5;color:var(--text3)}
+#scope-ask .opt{display:block;width:100%;text-align:left;background:var(--bg3);
+  border:1px solid var(--border);border-radius:9px;padding:10px 12px;margin-bottom:8px;
+  cursor:pointer;font:inherit;color:var(--text)}
+#scope-ask .opt:hover{border-color:var(--accent);background:var(--accent-light)}
+#scope-ask .opt b{display:block;font:600 13px 'DM Sans',sans-serif}
+#scope-ask .opt span{display:block;font-size:11.5px;color:var(--text3);margin-top:2px}
+#scope-ask .cancel{width:100%;background:none;border:none;padding:6px;cursor:pointer;
+  font:500 12.5px 'DM Sans',sans-serif;color:var(--text3)}
+#scope-ask .cancel:hover{color:var(--text)}
+</style>
+
+<!-- ─── CANCELLATION DECISION ─────────────────────────────────────────────── -->
+<div class="slot-modal-overlay" id="cancel-decision-overlay" onclick="if(event.target===this)closeCancellationDecision()">
+  <div class="block-confirm" role="dialog" aria-modal="true" aria-labelledby="cd-title">
+    <div class="block-confirm-title" id="cd-title">Cancel this consultation?</div>
+    <div class="block-confirm-sub" id="cd-sub"></div>
+    <div id="cd-reason-wrap" hidden style="margin-bottom:14px">
+      <label for="cd-reason" style="display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:6px">Why can't they cancel?</label>
+      <textarea id="cd-reason" rows="3" maxlength="500" placeholder="e.g. This is the last session before your defense, so we need to meet."
+                style="width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font:inherit;font-size:13px;resize:vertical;background:var(--bg2);color:var(--text)"></textarea>
+      <div id="cd-error" style="font-size:11.5px;color:var(--red,#dc2626);margin-top:4px"></div>
     </div>
-    <div class="block-confirm-sub" id="bc-sub">Students won't be able to book any slot on this day. Any existing open slots will be hidden to students.</div>
     <div class="block-confirm-actions">
-      <button class="btn btn-danger-solid btn content" id="bc-confirm-btn" onclick="confirmBlock()">Block Date</button>
-      <button class="btn btn-ghost content" onclick="closeBlockConfirm()">Cancel</button>
+      <button class="btn btn-danger-solid" id="cd-yes" onclick="confirmCancellationDecision()">Yes</button>
+      <button class="btn btn-ghost" onclick="closeCancellationDecision()">No</button>
     </div>
   </div>
 </div>
 
-<!-- ─── SLOT DETAIL MODAL ─────────────────────────────────────────────────── -->
-<div class="slot-modal-overlay" id="slot-modal-overlay" onclick="if(event.target===this)closeSlotModal()">
-  <div class="slot-modal">
-    <div class="slot-modal-header">
-      <div style="flex:1;min-width:0">
-        <div class="slot-modal-title" id="slot-modal-title">Slots</div>
-        <div class="slot-modal-sub" id="slot-modal-sub"></div>
+
+<!-- ─── SET AVAILABILITY ──────────────────────────────────────────────────
+     Adding slots one at a time is why setting up a term is a chore: nine
+     consultations a week is nine trips through the form. Google Calendar's
+     answer is that you never make a slot - you say which hours you are free
+     and how long a consultation runs, and the slots follow. Same idea here,
+     and it needs no new endpoint: a window is just several of the slots the
+     add form already posts. -->
+<div class="slot-modal-overlay" id="avail-overlay" onclick="if(event.target===this)closeAvail()">
+  <div class="ga-modal" role="dialog" aria-modal="true" aria-labelledby="ga-title">
+    <header class="ga-head">
+      <div>
+        <h2 class="ga-title" id="ga-title">Consultation availability</h2>
+        <p class="ga-sub">Teams book open times inside your hours. Only booked consultations appear on your Google Calendar.</p>
       </div>
-      <button class="slot-modal-close" onclick="closeSlotModal()">
-        <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      <button type="button" class="ga-icon" onclick="closeAvail()" aria-label="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </header>
+
+    <div class="ga-grid">
+      <div class="ga-col ga-side">
+        <section class="ga-sec">
+          <h3 class="ga-h">Appointment duration</h3>
+          <div class="ga-seg" role="radiogroup" aria-label="Appointment duration">
+            <label><input type="radio" name="ga-duration" value="15" onchange="gaChanged()"><span>15 min</span></label>
+            <label><input type="radio" name="ga-duration" value="30" onchange="gaChanged()"><span>30 min</span></label>
+            <label><input type="radio" name="ga-duration" value="45" onchange="gaChanged()"><span>45 min</span></label>
+            <label><input type="radio" name="ga-duration" value="60" onchange="gaChanged()"><span>1 hr</span></label>
+            <label><input type="radio" name="ga-duration" value="90" onchange="gaChanged()"><span>1&frac12; hr</span></label>
+            <label><input type="radio" name="ga-duration" value="120" onchange="gaChanged()"><span>2 hr</span></label>
+            <label class="ga-seg-wide"><input type="radio" name="ga-duration" value="custom" onchange="gaChanged()"><span>Custom length</span></label>
+          </div>
+          <div class="ga-field" id="ga-custom-wrap" hidden>
+            <input type="number" id="ga-custom" class="ga-num" min="5" max="480" aria-label="Custom appointment length in minutes" oninput="gaChanged()">
+            <span>minutes long</span>
+          </div>
+        </section>
+
+        <section class="ga-sec">
+          <h3 class="ga-h">Scheduling window</h3>
+          <div class="ga-seg ga-seg-2" role="radiogroup" aria-label="When teams can book">
+            <label><input type="radio" name="ga-range" value="now" onchange="gaChanged()"><span>Available now</span></label>
+            <label><input type="radio" name="ga-range" value="dates" onchange="gaChanged()"><span>Date range</span></label>
+          </div>
+          <div class="ga-dates" id="ga-dates" hidden>
+            <label class="ga-lab" for="ga-starts">From</label>
+            <input type="date" id="ga-starts" onchange="gaChanged()">
+            <label class="ga-lab" for="ga-ends">Until</label>
+            <input type="date" id="ga-ends" onchange="gaChanged()">
+          </div>
+
+          <label class="ga-check"><input type="checkbox" id="ga-max-on" onchange="gaChanged()"> Limit how far ahead</label>
+          <div class="ga-field">
+            <input type="number" id="ga-max" class="ga-num" min="1" max="365" aria-label="Days ahead" oninput="gaChanged()">
+            <span>days ahead at most</span>
+          </div>
+
+          <label class="ga-lab ga-lab-gap" for="ga-notice">Minimum notice</label>
+          <div class="ga-field">
+            <input type="number" id="ga-notice" class="ga-num" min="0" max="720" oninput="gaChanged()">
+            <span>hours before it starts</span>
+          </div>
+        </section>
+
+        <section class="ga-sec">
+          <h3 class="ga-h">Booked appointment settings</h3>
+
+          <label class="ga-check"><input type="checkbox" id="ga-buffer-on" onchange="gaChanged()"> Buffer time</label>
+          <p class="ga-hint">Time left free after each appointment.</p>
+          <div class="ga-field">
+            <input type="number" id="ga-buffer" class="ga-num" min="0" max="120" aria-label="Buffer minutes" oninput="gaChanged()">
+            <span>minutes between</span>
+          </div>
+
+          <label class="ga-check"><input type="checkbox" id="ga-cap-on" onchange="gaChanged()"> Maximum bookings per day</label>
+          <p class="ga-hint">How many consultations you accept in one day.</p>
+          <div class="ga-field">
+            <input type="number" id="ga-cap" class="ga-num" min="1" max="20" aria-label="Bookings per day" oninput="gaChanged()">
+            <span>a day at most</span>
+          </div>
+        </section>
+      </div>
+
+      <section class="ga-col">
+        <h3 class="ga-h">General availability</h3>
+        <p class="ga-hint">Your regular weekly hours. Add more than one set of hours to a day for a break.</p>
+        <div class="ga-days" id="ga-days"></div>
+      </section>
+    </div>
+
+    <footer class="ga-foot">
+      <div class="ga-summary">
+        <div id="av-count"></div>
+        <div class="ga-error" id="ga-error" role="alert" hidden></div>
+      </div>
+      <button type="button" class="btn btn-ghost" onclick="closeAvail()">Cancel</button>
+      <button type="button" class="btn btn-primary" id="av-save" onclick="saveAvailability()">Save availability</button>
+    </footer>
+  </div>
+</div>
+
+<style>
+/* One slot, added or edited. A dialog rather than a panel down the side: the
+   day grid is where slots are read, so the form only appears when one is
+   actually being changed. */
+</style>
+
+<!-- ─── ONE SLOT: ADD OR EDIT ─────────────────────────────────────────────── -->
+
+<style>
+/* One date: what is on it, and adding to it. The weekly hours are Set
+   availability's job, so nothing here repeats. */
+.qa-pop{position:absolute;z-index:95;width:320px;max-width:calc(100vw - 24px)}
+.qa-pop[hidden]{display:none}
+.qa-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;
+  box-shadow:0 14px 38px -10px rgba(0,0,0,.45);overflow:hidden}
+.qa-head{display:flex;align-items:center;gap:10px;padding:12px 12px 0}
+.qa-title{flex:1;min-width:0;font-size:14px;font-weight:700;color:var(--text)}
+.qa-body{padding:8px 14px 12px}
+.qa-row{display:flex;align-items:flex-start;gap:11px;padding:6px 0}
+.qa-row>svg{width:16px;height:16px;flex-shrink:0;fill:none;stroke:var(--text3);stroke-width:2;margin-top:3px}
+.qa-row>div{flex:1;min-width:0}
+.qa-date{font-size:12.5px;font-weight:600;color:var(--text);margin-bottom:6px}
+.qa-times{display:flex;align-items:center;gap:7px}
+.qa-times input{height:30px;box-sizing:border-box;padding:0 8px;border:1px solid var(--border);border-radius:8px;
+  background:var(--bg2);color:var(--text);font:inherit;font-size:12.5px;min-width:0;flex:1}
+.qa-times span{color:var(--text3);font-size:12px}
+.qa-note{margin-top:6px;font-size:11.5px;line-height:1.45;color:var(--text3)}
+.qa-note.is-bad{color:var(--red,#dc2626)}
+.qa-booked{margin-top:8px;padding:9px 11px;border:1px solid var(--border);border-radius:9px;background:var(--bg3);
+  font-size:12px;line-height:1.5;color:var(--text2)}
+.qa-booked b{color:var(--text)}
+/* Everything on the date, however many. */
+.qa-list{display:flex;flex-direction:column;gap:6px;max-height:260px;overflow-y:auto;margin-top:2px}
+.qa-item{display:flex;flex-direction:column;gap:2px;align-items:flex-start;text-align:left;width:100%;
+  padding:8px 10px;border:1px solid var(--border);border-left:3px solid var(--border);border-radius:9px;
+  background:var(--bg2);font-family:inherit;cursor:pointer;transition:border-color .15s,background-color .15s}
+.qa-item:hover{border-color:var(--accent);background:var(--accent-light)}
+.qa-item b{font-size:12.5px;font-weight:700;color:var(--text)}
+.qa-item span{font-size:11px;color:var(--text3)}
+.qa-item.is-booked{border-left-color:var(--accent)}
+.qa-item.is-booked span{color:var(--accent3);font-weight:600}
+.qa-item.is-off{opacity:.6}
+.qa-foot{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:0 14px 13px}
+.qa-spacer{flex:1}
+.qa-act{background:none;border:1px solid var(--border);border-radius:8px;padding:5px 10px;cursor:pointer;
+  font:600 11.5px 'DM Sans',sans-serif;color:var(--text2)}
+.qa-act:hover{border-color:var(--text3);color:var(--text)}
+.qa-act.is-danger:hover{border-color:var(--red,#dc2626);color:var(--red,#dc2626)}
+.qa-foot .btn{flex:none}
+</style>
+
+<!-- ─── ONE DATE: WHAT IS ON IT, AND ADDING TO IT ─────────────────────────── -->
+<div class="qa-pop" id="quick-add" hidden>
+  <div class="qa-card" role="dialog" aria-labelledby="qa-title">
+    <div class="qa-head">
+      <div class="qa-title" id="qa-title">New consultation</div>
+      <button type="button" class="ga-icon" onclick="closeQuickAdd()" aria-label="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
     </div>
-    <div class="slot-modal-body" id="slot-modal-body">
-      <!-- rendered by JS -->
+
+    <div class="qa-body">
+      <div id="qa-day" hidden>
+        <div class="qa-date" id="qa-list-date"></div>
+        <div class="qa-list" id="qa-list"></div>
+      </div>
+
+      <div id="qa-form">
+        <div class="qa-row">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>
+          <div>
+            <div class="qa-date" id="qa-date"></div>
+            <div class="qa-times">
+              <input type="time" id="qa-start" aria-label="Starts" onchange="quickAddChanged()">
+              <span>–</span>
+              <input type="time" id="qa-end" aria-label="Ends" onchange="quickAddChanged()">
+            </div>
+          </div>
+        </div>
+
+        <div class="qa-note" id="qa-note"></div>
+        <div class="qa-booked" id="qa-booked" hidden></div>
+      </div>
+    </div>
+
+    <div class="qa-foot">
+      <button type="button" class="qa-act" id="qa-add" onclick="addOnThisDate()" hidden>+ Add consultation</button>
+      <button type="button" class="qa-act" id="qa-back" onclick="backToDay()" hidden>Back</button>
+      <button type="button" class="qa-act is-danger" id="qa-delete" onclick="quickDelete()" hidden>Delete</button>
+      <button type="button" class="qa-act" id="qa-skip" onclick="quickSkip()" hidden>Skip this week</button>
+      <button type="button" class="qa-act" id="qa-avail" onclick="quickToggle()" hidden>Mark unavailable</button>
+      <span class="qa-spacer"></span>
+      <button type="button" class="btn btn-primary" id="qa-save" onclick="saveQuickAdd()">Save</button>
     </div>
   </div>
 </div>
 
 <!-- ─── EXPERT PROFILE SIDE PANEL ─────────────────────────────────────────── -->
+<div id="scope-ask" role="dialog" aria-modal="true" aria-labelledby="scope-ask-title">
+  <div class="box">
+    <h3 id="scope-ask-title">Change which weeks?</h3>
+    <p id="scope-ask-note">This slot repeats every week.</p>
+    <button type="button" class="opt" data-scope="occurrence">
+      <b id="scope-ask-one">Just this date</b>
+      <span>Every other week keeps the time it has now.</span>
+    </button>
+    <button type="button" class="opt" data-scope="series">
+      <b id="scope-ask-all">Every week</b>
+      <span>Changes this date and every one after it.</span>
+    </button>
+    <button type="button" class="cancel" data-scope="">Cancel</button>
+  </div>
+</div>
+
 <script>
 // ══════════════════════════════════════════════════════════════
 //  CONSTANTS
@@ -310,6 +606,9 @@
 const DAYS        = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 const DAY_NAMES   = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 const MONTHS      = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+// Consultation is the only type a slot is created as. The others stay in the
+// lookups so a row saved before that still draws with a name and a colour
+// rather than as 'undefined' in grey.
 const TYPE_LABELS = { consult:'Consultation', docreview:'Doc Review', defense:'Defense' };
 const TYPE_CLASS  = { consult:'type-consult', docreview:'type-docreview', defense:'type-defense' };
 const TYPE_COLORS = { consult:'var(--blue)', docreview:'var(--purple)', defense:'var(--amber)' };
@@ -320,10 +619,6 @@ const CSRF        = document.querySelector('meta[name="csrf-token"]')?.content ?
 // ══════════════════════════════════════════════════════════════
 let viewYear, viewMonth;
 let selectedDate     = null;
-// currentMode is now just 'normal' or 'block' — View and Add are merged
-// into the always-visible panel, so there's no separate mode for them.
-let currentMode      = 'normal';
-let pendingBlockDate = null;
 let isSaving         = false;   // FIX: guard against double-clicks
 let editingSlotId    = null;    // schedule_id currently being edited, or null when adding a new slot
 let editingSlotKey   = null;    // the 'YYYY-MM-DD' key the slot being edited lives under
@@ -332,7 +627,6 @@ let editingSlotKey   = null;    // the 'YYYY-MM-DD' key the slot being edited li
 let slots      = {};
 // slotsByDay[dayName] = [ ...rawApiSlots ]  — source of truth for recurring slots
 let slotsByDay = {};
-let blockedDates = new Set();
 
 // ══════════════════════════════════════════════════════════════
 //  HELPERS
@@ -413,6 +707,8 @@ function isSlotDone(s, key) {
 // priority over plain 'booked', which takes priority over 'open'.
 function getSlotStatusLabel(s, key) {
   if ((s.booked || !s.is_available) && isSlotOngoing(s, key)) return 'ongoing';
+  // A team's session whose end time has passed.
+  if ((s.teamName || s.hasBooking) && isSlotDone(s, key)) return 'ended';
   if (s.booked || !s.is_available) return 'booked';
   return 'open';
 }
@@ -432,17 +728,63 @@ async function apiFetch(url, options = {}) {
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.message ?? `HTTP ${res.status}`);
+    throw new Error(err.message ?? err.error ?? `HTTP ${res.status}`);
   }
   return res.json();
 }
 
 // ══════════════════════════════════════════════════════════════
+// Dates a repeating slot has been taken out of, keyed by schedule_id. A slot
+// stores a weekday, so without these the calendar would still draw the week
+// the adviser moved, next to the one-off that replaced it.
+let skippedDates = {};
+
+function isSkipped(scheduleId, dateKey) {
+  return (skippedDates[scheduleId] || []).indexOf(dateKey) !== -1;
+}
+
+// Which weeks an edit should touch. Resolves to 'occurrence', 'series', or
+// '' when the adviser backs out.
+function askEditScope(dayName) {
+  return new Promise(resolve => {
+    const box = document.getElementById('scope-ask');
+    document.getElementById('scope-ask-note').textContent =
+      'This slot repeats every ' + dayName + '.';
+    document.getElementById('scope-ask-all').textContent = 'Every ' + dayName;
+    box.classList.add('show');
+
+    function done(scope) {
+      box.classList.remove('show');
+      box.removeEventListener('click', onClick);
+      document.removeEventListener('keydown', onKey);
+      resolve(scope);
+    }
+    function onClick(e) {
+      const btn = e.target.closest('[data-scope]');
+      if (btn) { done(btn.dataset.scope); return; }
+      if (e.target === box) { done(''); }
+    }
+    function onKey(e) { if (e.key === 'Escape') { done(''); } }
+
+    box.addEventListener('click', onClick);
+    document.addEventListener('keydown', onKey);
+  });
+}
+
 //  LOAD SLOTS FROM DB
 // ══════════════════════════════════════════════════════════════
 async function loadSlots() {
   try {
-    const data = await apiFetch('/instructor/schedule/slots');
+    const payload = await apiFetch('/instructor/schedule/slots');
+
+    // The endpoint used to return a bare array. It now also reports the dates
+    // each repeating slot has been taken out of, so both shapes are read.
+    const data = Array.isArray(payload) ? payload : (payload.slots || []);
+    skippedDates = {};
+    ((Array.isArray(payload) ? [] : payload.exceptions) || []).forEach(x => {
+      const key = String(x.exception_date).slice(0, 10);
+      (skippedDates[x.schedule_id] = skippedDates[x.schedule_id] || []).push(key);
+    });
 
     // The API returns one row per (schedule, booking) pair — a recurring
     // slot booked on several different weeks comes back as several rows
@@ -457,6 +799,9 @@ async function loadSlots() {
       }
       if (s.booking_id && s.session_date) {
         bySchedule[s.schedule_id].bookings.push({
+          booking_id: s.booking_id,
+          cancel_requested: !!s.cancellation_requested_at,
+          cancel_reason: s.cancellation_reason || '',
           session_date: s.session_date,
           team_name: s.team_name,
           student_fname: s.student_fname,
@@ -498,6 +843,9 @@ function fanOutSlots() {
     if (!slotsByDay[dayName]) continue;
 
     const matchingSlots = slotsByDay[dayName].filter(s => {
+      // A week this slot was moved out of, or skipped, is not one of its
+      // occurrences any more - whatever replaced it stands on its own.
+      if (isSkipped(s.schedule_id, key)) return false;
       // One-time slots: only show on their specific date
       if (s.recur === 'once' || (!s.recur && s.specific_date)) {
         return s.specific_date === key;
@@ -528,6 +876,8 @@ function fanOutSlots() {
           : '';
 
         return {
+          hasBooking:         !!dateBooking,
+          booking:            dateBooking || null,
           schedule_id:        s.schedule_id,
           google_event_id:    s.google_event_id ?? null,
           id:                 s.schedule_id,
@@ -562,11 +912,9 @@ function seedDemoData() {
   const offsets = [1, 2, 3, 5, 7, 8];
   const sampleSlots = [
     { start_time:'09:00', end_time:'10:00', slot_type:'consult',   consultation_limit:2, recur:'weekly',   is_available:false, teamName:'Team Nexus',  topic:'Chapter 3 Discussion' },
-    { start_time:'14:00', end_time:'15:00', slot_type:'docreview', consultation_limit:1, recur:'once',     is_available:false, teamName:'Team Alpha',  topic:'Document Formatting Check' },
     { start_time:'10:00', end_time:'11:00', slot_type:'consult',   consultation_limit:1, recur:'weekly',   is_available:true,  teamName:'',            topic:'' },
     { start_time:'15:00', end_time:'16:00', slot_type:'defense',   consultation_limit:3, recur:'biweekly', is_available:false, teamName:'Team Sigma',  topic:'Final Defense Rehearsal' },
     { start_time:'13:00', end_time:'14:00', slot_type:'consult',   consultation_limit:2, recur:'once',     is_available:true,  teamName:'',            topic:'' },
-    { start_time:'09:30', end_time:'10:30', slot_type:'docreview', consultation_limit:1, recur:'weekly',   is_available:false, teamName:'Team Orion',  topic:'Abstract & Introduction Review' },
   ];
 
   offsets.forEach((offset, i) => {
@@ -589,14 +937,6 @@ function seedDemoData() {
     }
   });
 
-  // Block a couple of days
-  [4, 10].forEach(offset => {
-    const d = new Date(y, m, today.getDate() + offset);
-    if (d.getDay() !== 0 && d.getDay() !== 6) {
-      blockedDates.add(`${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`);
-    }
-  });
-
   fanOutSlots();
 }
 
@@ -610,7 +950,7 @@ async function initCalendar() {
 
   await loadSlots();
 
-  renderCalendar();
+  redrawCalendar();
   renderUpcoming();
   renderSlotStats();
 }
@@ -619,29 +959,56 @@ async function initCalendar() {
 //  MONTH NAVIGATION
 // ══════════════════════════════════════════════════════════════
 function prevMonth() {
+  if (calView !== 'month') {
+    weekAnchor.setDate(weekAnchor.getDate() - (calView === 'day' ? 1 : 7));
+    if (calView === 'day') selectedDate = formatKey(weekAnchor.getFullYear(), weekAnchor.getMonth(), weekAnchor.getDate());
+    renderWeek();
+
+    return;
+  }
+
   viewMonth--;
   if (viewMonth < 0) { viewMonth = 11; viewYear--; }
   fanOutSlots();   // re-fan for new month — no duplicate risk
-  renderCalendar();
+  redrawCalendar();
 }
 
 function nextMonth() {
+  if (calView !== 'month') {
+    weekAnchor.setDate(weekAnchor.getDate() + (calView === 'day' ? 1 : 7));
+    if (calView === 'day') selectedDate = formatKey(weekAnchor.getFullYear(), weekAnchor.getMonth(), weekAnchor.getDate());
+    renderWeek();
+
+    return;
+  }
+
   viewMonth++;
   if (viewMonth > 11) { viewMonth = 0; viewYear++; }
   fanOutSlots();
-  renderCalendar();
+  redrawCalendar();
 }
 
 // ══════════════════════════════════════════════════════════════
 //  CALENDAR RENDER
 // ══════════════════════════════════════════════════════════════
+/** Redraw whatever is on screen - the month grid, or the day/week hours. */
+function redrawCalendar() {
+  if (calView === 'month') {
+    renderCalendar();
+  } else {
+    renderWeek();
+  }
+}
+
 function renderCalendar() {
   const grid    = document.getElementById('cal-grid');
   const today   = new Date();
   const todayKey = formatKey(today.getFullYear(), today.getMonth(), today.getDate());
 
   document.getElementById('cal-month-display').textContent = `${MONTHS[viewMonth].substring(0, 3).toUpperCase()} ${viewYear}`;
-  document.getElementById('cal-month-label').textContent   = `${MONTHS[viewMonth]} ${viewYear}`;
+  // Says what the grid is showing. The month is already in the control to
+  // its right, so repeating it there spent the line on a duplicate.
+  document.getElementById('cal-month-label').textContent   = 'Occurrences of your weekly slots';
 
   grid.innerHTML = '';
 
@@ -671,7 +1038,6 @@ function renderCalendar() {
     const dateObj   = new Date(viewYear, viewMonth, d);
     const dayName   = DAY_NAMES[dateObj.getDay()];
     const isToday   = key === todayKey;
-    const isBlocked = blockedDates.has(key);
     const daySlots  = slots[key] || [];
     const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
     const isPast    = dateObj < todayDate;
@@ -680,36 +1046,35 @@ function renderCalendar() {
     const el = document.createElement('div');
     el.className = 'cal-cell';
     if (isToday)   el.classList.add('today');
-    if (isBlocked) el.classList.add('is-blocked');
     if (daySlots.length > 0) el.classList.add('has-slot');
     if (isPast || isWeekend) el.classList.add('past-day');
     if (key === selectedDate) el.classList.add('is-selected');
 
     el.dataset.key = key;
-    el.onclick = () => handleCellClick(key, d, isPast || isWeekend, dayName);
+    el.onclick = (ev) => handleCellClick(key, d, isPast || isWeekend, dayName, ev.currentTarget);
 
     const dateEl = document.createElement('div');
     dateEl.className   = 'cal-date-num';
     dateEl.textContent = d;
     el.appendChild(dateEl);
 
-    if (isBlocked) {
-      const bl = document.createElement('div');
-      bl.className   = 'blocked-label';
-      bl.textContent = '✕ Unavailable';
-      el.appendChild(bl);
-    } else {
+    {
       daySlots.slice(0, 2).forEach(s => {
         const pill = document.createElement('div');
         const status = getSlotStatusLabel(s, key);
         let cls = TYPE_CLASS[s.type] || 'type-consult';
         if (status === 'booked' || status === 'ongoing') cls = 'is-booked';
+        if (status === 'ended') cls = 'is-ended';
         pill.className = `cal-slot-pill ${cls}`;
         if (status === 'ongoing') {
           pill.textContent = `🔴 Ongoing · ${TYPE_LABELS[s.type] || 'Consultation'}`;
           pill.style.fontWeight = '700';
+        } else if (status === 'ended') {
+          pill.textContent = 'Ended ' + hr12(s.start || s.start_time).replace(' ', '');
         } else {
-          pill.textContent = `${hr12(s.start || s.start_time).replace(' AM','a').replace(' PM','p')} ${TYPE_LABELS[s.type] || 'Consultation'}${s.teamName ? ' · ' + s.teamName : ''}`;
+          // "9:00a" saved four pixels and cost the reader a word. The space
+          // goes, the meridiem stays.
+          pill.textContent = hr12(s.start || s.start_time).replace(' ', '');
         }
         pill.title = `${hr12(s.start || s.start_time)}–${hr12(s.end || s.end_time)} · Max ${s.maxBookings || s.consultation_limit}${s.teamName ? ' · Team: ' + s.teamName : ''}${status === 'ongoing' ? ' · Ongoing now' : ''}`;
         el.appendChild(pill);
@@ -759,164 +1124,512 @@ function renderCalendar() {
 }
 
 // ══════════════════════════════════════════════════════════════
-//  CELL CLICK
-//  View and Add are merged — clicking any (non-blocked) date shows
-//  its existing slots and the add form together in the side panel.
-//  If the date has slots, also show the slot detail modal.
-//  Block mode is the only separate mode.
+//  WEEK VIEW
+//  The same slots against a time axis. renderCalendar() is left
+//  alone; this is a second way of drawing slots[], so there is no
+//  second idea of what is booked.
 // ══════════════════════════════════════════════════════════════
-function handleCellClick(key, dayNum, isDisabled, dayName) {
-  if (currentMode === 'block') {
-    if (blockedDates.has(key)) {
-      blockedDates.delete(key);
-      renderCalendar();
-      showToast('Date unblocked — students can now book this day.');
-    } else {
-      pendingBlockDate = { key, dayNum };
-      openBlockConfirm(key, dayNum);
-    }
+const WK_FIRST_HOUR = 7;    // 7am
+const WK_LAST_HOUR  = 19;   // 7pm
+const WK_HOUR_PX    = 44;
+
+let calView    = 'month';
+let weekAnchor = null;      // any date inside the week being shown
+
+/** The Sunday of the week containing this date. */
+function weekStart(date) {
+  const start = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  start.setDate(start.getDate() - start.getDay());
+
+  return start;
+}
+
+function setCalView(view) {
+  calView = view;
+
+  document.getElementById('btn-view-month').classList.toggle('is-on', view === 'month');
+  document.getElementById('btn-view-week').classList.toggle('is-on', view === 'week');
+  document.getElementById('btn-view-day').classList.toggle('is-on', view === 'day');
+  document.getElementById('cal-grid').hidden = view === 'month' ? false : true;
+  document.getElementById('week-grid').hidden = view === 'month';
+
+  if (view === 'month') {
+    renderCalendar();
+
     return;
   }
 
-  if (blockedDates.has(key)) {
-    showToast('⚠️ This date is blocked. Unblock it first (via Block Mode) to add slots.', 'error');
-    return;
+  if (!weekAnchor) {
+    // Open on the day or week you were already looking at, or today.
+    const [y, m, d] = (selectedDate || '').split('-').map(Number);
+    weekAnchor = selectedDate ? makeDate(y, m, d) : new Date();
   }
 
-  // Highlight selected cell
-  document.querySelectorAll('.cal-cell.selected').forEach(el => el.classList.remove('selected'));
-  const cell = document.querySelector(`.cal-cell[data-key="${key}"]`);
-  if (cell) cell.classList.add('selected');
+  renderWeek();
+}
 
-  // Show slot modal if date has slots
-  const daySlots = slots[key] || [];
-  if (daySlots.length > 0) {
-    openSlotModal(key, dayNum, dayName);
+function renderWeek() {
+  const head  = document.getElementById('wk-head');
+  const body  = document.getElementById('wk-body');
+  // One column for a day, seven for a week - the same grid either way.
+  const daysShown = calView === 'day' ? 1 : 7;
+  const start = daysShown === 1
+    ? new Date(weekAnchor.getFullYear(), weekAnchor.getMonth(), weekAnchor.getDate())
+    : weekStart(weekAnchor);
+  const today = new Date();
+  const todayKey = formatKey(today.getFullYear(), today.getMonth(), today.getDate());
+
+  head.innerHTML = '';
+  body.innerHTML = '';
+
+  // The label above the grid follows what is drawn, not the month it starts in.
+  const last = new Date(start.getFullYear(), start.getMonth(), start.getDate() + daysShown - 1);
+  const sameMonth = start.getMonth() === last.getMonth();
+
+  document.getElementById('cal-month-display').textContent = daysShown === 1
+    ? `${start.getDate()} ${MONTHS[start.getMonth()].substring(0, 3).toUpperCase()}`
+    : `${start.getDate()} ${MONTHS[start.getMonth()].substring(0, 3).toUpperCase()}`
+      + ` – ${last.getDate()} ${MONTHS[last.getMonth()].substring(0, 3).toUpperCase()}`;
+  document.getElementById('cal-month-label').textContent = daysShown === 1
+    ? `${DAY_NAMES[start.getDay()]}, ${MONTHS[start.getMonth()]} ${start.getFullYear()}`
+    : (sameMonth
+      ? `${MONTHS[start.getMonth()]} ${start.getFullYear()}`
+      : `${MONTHS[start.getMonth()]} – ${MONTHS[last.getMonth()]} ${last.getFullYear()}`);
+
+  // A day gets the whole width rather than a seventh of it.
+  const columns = `52px repeat(${daysShown}, 1fr)`;
+  head.style.gridTemplateColumns = columns;
+  body.style.gridTemplateColumns = columns;
+
+  head.appendChild(document.createElement('div'));
+
+  const hours = document.createElement('div');
+  hours.className = 'wk-hours';
+
+  for (let h = WK_FIRST_HOUR; h <= WK_LAST_HOUR; h++) {
+    const label = document.createElement('i');
+    label.textContent = h === 12 ? '12pm' : (h > 12 ? (h - 12) + 'pm' : h + 'am');
+    hours.appendChild(label);
   }
 
-  selectDate(key, dayNum);
+  body.appendChild(hours);
+
+  for (let i = 0; i < daysShown; i++) {
+    const date = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
+    const key  = formatKey(date.getFullYear(), date.getMonth(), date.getDate());
+
+    const th = document.createElement('div');
+    th.className = key === todayKey ? 'is-today' : '';
+    th.innerHTML = DAYS[date.getDay()] + '<span>' + date.getDate() + '</span>';
+    head.appendChild(th);
+
+    const col = document.createElement('div');
+    col.className = 'wk-col'
+      + (key === selectedDate ? ' is-selected' : '');
+    col.style.height = ((WK_LAST_HOUR - WK_FIRST_HOUR + 1) * WK_HOUR_PX) + 'px';
+
+    // Clicking an empty stretch of the day adds a slot starting at the hour
+    // clicked, the way dragging out a time on Google Calendar does.
+    col.addEventListener('click', (event) => {
+      const offset = event.clientY - col.getBoundingClientRect().top;
+      const minutes = WK_FIRST_HOUR * 60 + Math.max(0, Math.floor(offset / WK_HOUR_PX * 2)) * 30;
+
+      selectedDate = key;
+      openQuickAdd(key, minutes, { x: event.clientX, y: event.clientY });
+    });
+
+    (slots[key] || []).forEach((slot, index) => {
+      const from = timeToMinutes(slot.start || slot.start_time);
+      const to   = timeToMinutes(slot.end || slot.end_time);
+      const top  = ((from - WK_FIRST_HOUR * 60) / 60) * WK_HOUR_PX;
+
+      // A slot outside the drawn hours would otherwise land on top of the
+      // 7am row; clamp it into view rather than lose it.
+      const height = Math.max(((to - from) / 60) * WK_HOUR_PX, 17);
+
+      const el = document.createElement('div');
+      el.className = 'wk-slot ' + (slot.booked ? 'is-booked' : 'is-open');
+      el.style.top = Math.max(top, 0) + 'px';
+      el.style.height = height + 'px';
+      el.style.borderLeftColor = TYPE_COLORS[slot.type] || 'var(--accent)';
+      el.title = hr12(slot.start || slot.start_time) + '–' + hr12(slot.end || slot.end_time)
+        + ' · ' + (TYPE_LABELS[slot.type] || 'Consultation')
+        + (slot.teamName ? ' · ' + slot.teamName : '');
+
+      const name = document.createElement('b');
+      name.textContent = slot.booked ? (slot.teamName || 'Booked') : 'Open';
+      el.appendChild(name);
+
+      if (height > 30) {
+        const when = document.createElement('span');
+        when.textContent = hr12(slot.start || slot.start_time).replace(':00', '');
+        el.appendChild(when);
+      }
+
+      el.addEventListener('click', (event) => {
+        // Otherwise the column underneath also takes the click and opens the
+        // "new slot" card over the one being read.
+        event.stopPropagation();
+        // Not redrawn here: the card is placed beside this very element, and
+        // redrawing would replace it mid-click.
+        selectedDate = key;
+        openQuickEdit(slot, key, index, el);
+      });
+
+      col.appendChild(el);
+    });
+
+    body.appendChild(col);
+  }
 }
 
 // ══════════════════════════════════════════════════════════════
-//  MODE
-//  FIX: only two states now — 'normal' (default) and 'block'. Toggling
-//  Block Mode on/off no longer hides/shows the Add panel, since that
-//  panel is always visible.
+//  A DATE OPENS AS A DAY
+//  Google Calendar shows the day itself when you pick a date; it does not
+//  describe it in a panel down the side. Clicking a date here does the same,
+//  and the form only appears when a slot is actually being added or changed.
 // ══════════════════════════════════════════════════════════════
-function toggleBlockMode() {
-  if (currentMode === 'block') {
-    currentMode = 'normal';
-    document.body.classList.remove('block-mode');
-    document.getElementById('block-banner').style.display = 'none';
-    document.getElementById('btn-block').classList.remove('active');
-  } else {
-    currentMode = 'block';
-    document.body.classList.add('block-mode');
-    document.getElementById('block-banner').style.display = 'flex';
-    document.getElementById('btn-block').classList.add('active');
-  }
-}
-
-// ══════════════════════════════════════════════════════════════
-//  DATE SELECTION
-// ══════════════════════════════════════════════════════════════
-function selectDate(key, dayNum) {
-  // Remove previous conflict highlight
-  document.querySelectorAll('.cal-cell.has-conflict').forEach(el => el.classList.remove('has-conflict'));
-
+function handleCellClick(key, dayNum, isDisabled, dayName, cell) {
+  // Clicking a date offers to add a slot on it, where you clicked. It does not
+  // jump to the day view - Google Calendar does not either.
   selectedDate = key;
-  // FIX: split into numbers and use numeric constructor — no UTC shift
-  const [y, m1, d] = key.split('-').map(Number);
-  const dateObj    = makeDate(y, m1, d);
-  const label      = `${DAYS[dateObj.getDay()]}, ${MONTHS[m1 - 1]} ${d}, ${y}`;
-  document.getElementById('selected-date-text').textContent   = label;
-  document.getElementById('selected-date-chip').style.display = 'flex';
-  document.getElementById('no-date-hint').style.display       = 'none';
-  document.getElementById('add-slot-fields').style.display    = 'block';
-  checkTimeOverlap();
-  renderSelectedDateSlots(key);
-  renderCalendar();
+  redrawCalendar();
+  // The grid was just rebuilt, so the cell that was clicked is no longer in
+  // the page; the bubble anchors to whatever replaced it.
+  openQuickDay(key, document.querySelector(`.cal-cell[data-key="${key}"]`) || cell);
+}
 
-  // Re-apply selected highlight after renderCalendar rebuilds the grid
-  const selectedCell = document.querySelector(`.cal-cell[data-key="${key}"]`);
-  if (selectedCell) selectedCell.classList.add('selected');
+/** Show one date as a column of hours. */
+function openDay(key) {
+  const [y, m, d] = key.split('-').map(Number);
+  selectedDate = key;
+  weekAnchor = makeDate(y, m, d);
+  setCalView('day');
+}
 
-  // Highlight cell if current time selection overlaps
-  const cell = document.querySelector(`.cal-cell[data-key="${key}"]`);
-  const warning = document.getElementById('time-overlap-warning');
-  if (cell && warning && warning.style.display !== 'none') {
-    cell.classList.add('has-conflict');
-  }
+function selectDate(key) {
+  selectedDate = key;
+  redrawCalendar();
 }
 
 function clearSelectedDate() {
   selectedDate = null;
-  document.getElementById('selected-date-chip').style.display = 'none';
-  document.getElementById('no-date-hint').style.display       = 'block';
-  document.getElementById('add-slot-fields').style.display    = 'none';
-  document.getElementById('time-overlap-warning').style.display = 'none';
-  document.getElementById('selected-date-slots').style.display = 'none';
-  document.querySelectorAll('.cal-cell.has-conflict').forEach(el => el.classList.remove('has-conflict'));
-  renderCalendar();
+  redrawCalendar();
 }
 
-// ══════════════════════════════════════════════════════════════
-//  EXISTING SLOTS FOR THE SELECTED DATE (shown inside the merged panel)
-//  FIX: lets the user see + toggle + remove existing slots on the date
-//  they've selected, right alongside the add-slot form — no separate
-//  modal needed anymore.
-// ══════════════════════════════════════════════════════════════
-function renderSelectedDateSlots(key) {
-  const wrap = document.getElementById('selected-date-slots');
-  const list = document.getElementById('selected-date-slots-list');
-  if (!wrap || !list) return;
+function labelSaveButton(key) {
+  const btn = document.getElementById('save-slot-btn');
+  if (!btn || !key) return;
+  const [y, m, d] = key.split('-').map(Number);
+  const day = DAY_NAMES[makeDate(y, m, d).getDay()];
+  const recur = (document.getElementById('f-recur') || {}).value || 'weekly';
+  const tick = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> ';
+  btn.innerHTML = tick + (recur === 'once' ? 'Save this date' : 'Save every ' + day);
+}
 
+
+
+// ══════════════════════════════════════════════════════════════
+//  ONE DATE
+//  Clicking a date shows what is on it - who booked which time - and offers
+//  to add another. The weekly hours belong to Set availability, so nothing
+//  here repeats and there is no second form.
+// ══════════════════════════════════════════════════════════════
+let quickAddKey = null;
+let quickSlot = null; // the slot being changed, or null when adding
+let quickAnchor = null;
+
+/** What the bubble is showing: the date's consultations, or one being edited. */
+function bubbleMode(mode) {
+  document.getElementById('qa-day').hidden = mode !== 'list';
+  document.getElementById('qa-form').hidden = mode === 'list';
+  document.getElementById('qa-add').hidden = mode !== 'list';
+  document.getElementById('qa-save').hidden = mode === 'list';
+}
+
+/** Everything on this date. Falls through to adding when it is empty. */
+function openQuickDay(key, anchor) {
   const daySlots = slots[key] || [];
-  list.innerHTML = '';
 
-  if (daySlots.length === 0) {
-    wrap.style.display = 'none';
+  if (!daySlots.length) {
+    openQuickAdd(key, null, anchor);
+
     return;
   }
 
-  wrap.style.display = 'block';
+  quickAddKey = key;
+  quickSlot = null;
+  quickAnchor = anchor;
+  cancelEdit();
+
+  const booked = daySlots.filter((s) => s.hasBooking).length;
+  document.getElementById('qa-title').textContent = booked
+    ? booked + ' booked of ' + daySlots.length
+    : daySlots.length + (daySlots.length === 1 ? ' open time' : ' open times');
+  document.getElementById('qa-list-date').textContent = dayLabel(key);
+
+  const list = document.getElementById('qa-list');
+  list.innerHTML = '';
+
   daySlots.forEach((s, i) => {
-    const startStr = hr12(s.start || s.start_time);
-    const endStr   = hr12(s.end   || s.end_time);
-    const status   = getSlotStatusLabel(s, key);
-    const statusText = status === 'ongoing' ? ' · 🔴 Ongoing' : (status === 'booked' ? ' · Booked' : '');
-    const row = document.createElement('div');
-    row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 8px;background:var(--bg3);border-radius:6px;font-size:11px;color:var(--text2)';
-
-    const toggleBtn = s.schedule_id ? `
-      <button onclick="toggleSlot(${s.schedule_id}, '${key}', ${i})"
-              style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:13px;line-height:1;padding:2px 4px;flex-shrink:0"
-              title="${s.is_available ? 'Mark unavailable' : 'Mark available'}">
-        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
-        </svg>
-      </button>` : '';
-
-    const editBtn = s.schedule_id ? `
-      <button onclick="editSlot(${s.schedule_id}, '${key}', ${i})"
-              style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:13px;line-height:1;padding:2px 4px;flex-shrink:0"
-              title="Edit slot">
-        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-        </svg>
-      </button>` : '';
-
-    row.innerHTML = `
-      <span>${startStr}–${endStr} · ${TYPE_LABELS[s.type] || 'Consultation'}${statusText}</span>
-      <span style="display:flex;align-items:center;gap:2px;flex-shrink:0">
-        ${editBtn}
-        ${toggleBtn}
-        <button onclick="deleteSlot('${key}', ${i}${s.schedule_id ? ',' + s.schedule_id : ''})"
-                style="background:none;border:none;color:var(--red,#f87171);cursor:pointer;font-size:14px;line-height:1;padding:2px 4px"
-                title="Delete slot">✕</button>
-      </span>`;
+    const asked = !!(s.booking && s.booking.cancel_requested);
+    const row = document.createElement('button');
+    row.type = 'button';
+    row.className = 'qa-item' + (s.hasBooking ? ' is-booked' : '') + (s.is_available === false && !s.hasBooking ? ' is-off' : '');
+    row.innerHTML = '<b>' + hr12(s.start || s.start_time) + ' – ' + hr12(s.end || s.end_time) + '</b>'
+      + '<span>' + escHtml(s.hasBooking
+        ? (s.teamName || 'Booked') + (asked ? ' · cancellation requested' : '')
+        : (s.is_available === false ? 'Unavailable' : 'Open')) + '</span>';
+    row.onclick = () => openQuickEdit(s, key, i, quickAnchor);
     list.appendChild(row);
   });
+
+  ['qa-delete', 'qa-skip', 'qa-avail', 'qa-back'].forEach((id) => { document.getElementById(id).hidden = true; });
+  bubbleMode('list');
+  showBubble(anchor);
+}
+
+/** The + on the date's own list. */
+function addOnThisDate() {
+  openQuickAdd(quickAddKey, null, quickAnchor);
+}
+
+/** Back to everything on the date, from one of its consultations. */
+function backToDay() {
+  openQuickDay(quickAddKey, quickAnchor);
+}
+
+function openQuickAdd(key, startMinutes, anchor) {
+  const now = weekAnchor || new Date();
+
+  quickAddKey = key || selectedDate || formatKey(now.getFullYear(), now.getMonth(), now.getDate());
+  quickSlot = null;
+  quickAnchor = anchor || quickAnchor;
+  cancelEdit();
+
+  const start = startMinutes != null ? minutesToTime(startMinutes) : firstFreeStart(quickAddKey);
+
+  document.getElementById('qa-title').textContent = 'New consultation';
+  document.getElementById('qa-start').value = start;
+  document.getElementById('qa-end').value = minutesToTime(timeToMinutes(start) + 60);
+  document.getElementById('qa-start').disabled = false;
+  document.getElementById('qa-end').disabled = false;
+  document.getElementById('qa-booked').hidden = true;
+  ['qa-delete', 'qa-skip', 'qa-avail'].forEach((id) => { document.getElementById(id).hidden = true; });
+  document.getElementById('qa-back').hidden = !(slots[quickAddKey] || []).length;
+
+  bubbleMode('form');
+  showBubble(anchor || quickAnchor);
+  quickAddChanged();
+}
+
+/** A consultation that already exists: its time, and what can be done to it. */
+function openQuickEdit(s, key, index, anchor) {
+  quickAddKey = key;
+  quickSlot = { slot: s, key, index, scheduleId: s.schedule_id };
+  quickAnchor = anchor || quickAnchor;
+
+  editingSlotId = s.schedule_id;
+  editingSlotKey = key;
+  selectedDate = key;
+
+  const repeats = (s.recur || 'weekly') !== 'once';
+
+  document.getElementById('qa-title').textContent = s.hasBooking ? 'Booked consultation' : 'Consultation';
+  document.getElementById('qa-start').value = (s.start_time || s.start || '').slice(0, 5);
+  document.getElementById('qa-end').value = (s.end_time || s.end || '').slice(0, 5);
+
+  // A slot a team has booked is not the adviser's to move; the booking is
+  // cancelled first.
+  ['qa-start', 'qa-end'].forEach((id) => { document.getElementById(id).disabled = !!s.hasBooking; });
+  document.getElementById('qa-save').hidden = !!s.hasBooking;
+  document.getElementById('qa-delete').hidden = !!s.hasBooking || !s.schedule_id;
+  document.getElementById('qa-skip').hidden = !repeats || !!s.hasBooking || !s.schedule_id;
+  document.getElementById('qa-back').hidden = (slots[key] || []).length < 2;
+
+  const avail = document.getElementById('qa-avail');
+  avail.hidden = !!s.hasBooking || !s.schedule_id;
+  avail.textContent = s.is_available ? 'Mark unavailable' : 'Mark available';
+
+  const booked = document.getElementById('qa-booked');
+  const asked = !!(s.booking && s.booking.cancel_requested);
+  booked.hidden = !s.hasBooking;
+
+  if (s.hasBooking) {
+    booked.innerHTML = '<b>' + escHtml(s.teamName || 'Booked') + '</b>'
+      + (s.topic ? '<br>' + escHtml(s.topic) : '')
+      + (asked
+        ? '<br><b>Cancellation requested</b>'
+          + (s.booking.cancel_reason ? ' · “' + escHtml(s.booking.cancel_reason) + '”' : '')
+          + '<div class="qa-foot" style="padding:8px 0 0">'
+          + '<button type="button" class="qa-act" onclick="closeQuickAdd();decideCancellation(' + s.booking.booking_id + ", 'approve', '" + key + '\')">Approve</button>'
+          + '<button type="button" class="qa-act" onclick="closeQuickAdd();decideCancellation(' + s.booking.booking_id + ", 'decline', '" + key + '\')">Keep booking</button>'
+          + '</div>'
+        : '');
+  }
+
+  bubbleMode('form');
+  showBubble(quickAnchor);
+  quickAddChanged();
+}
+
+function showBubble(anchor) {
+  const pop = document.getElementById('quick-add');
+
+  document.getElementById('qa-date').textContent = dayLabel(quickAddKey);
+  pop.hidden = false;
+  placeQuickAdd(pop, anchor);
+
+  // Added after this click finishes, or the click that opened it closes it.
+  setTimeout(() => document.addEventListener('mousedown', closeQuickAddOnOutside), 0);
+  document.addEventListener('keydown', closeQuickAddOnEscape);
+}
+
+/** "Monday, September 7, 2026" - the date the bubble is about. */
+function dayLabel(key) {
+  const [y, m, d] = key.split('-').map(Number);
+
+  return `${DAY_NAMES[makeDate(y, m, d).getDay()]}, ${MONTHS[m - 1]} ${d}, ${y}`;
+}
+
+/** Beside what was clicked - a calendar cell, a column, or the point itself. */
+function placeQuickAdd(pop, anchor) {
+  const box = anchor?.getBoundingClientRect
+    ? anchor.getBoundingClientRect()
+    : (anchor && anchor.x != null ? { left: anchor.x, right: anchor.x, top: anchor.y, bottom: anchor.y } : null);
+
+  const w = pop.offsetWidth;
+  const h = pop.offsetHeight;
+  const gap = 8;
+
+  let left = box ? box.right + gap : (window.innerWidth - w) / 2;
+  let top = box ? box.top : 90;
+
+  if (left + w > window.innerWidth - 12) left = (box ? box.left : window.innerWidth) - w - gap;
+
+  left = Math.max(12, left);
+  top = Math.max(12, Math.min(top, window.innerHeight - h - 12));
+
+  pop.style.left = (left + window.scrollX) + 'px';
+  pop.style.top = (top + window.scrollY) + 'px';
+}
+
+function closeQuickAddOnOutside(event) {
+  const pop = document.getElementById('quick-add');
+  if (!pop.hidden && !pop.contains(event.target)) closeQuickAdd();
+}
+
+function closeQuickAddOnEscape(event) {
+  if (event.key === 'Escape') closeQuickAdd();
+}
+
+function closeQuickAdd() {
+  document.getElementById('quick-add').hidden = true;
+  document.removeEventListener('mousedown', closeQuickAddOnOutside);
+  document.removeEventListener('keydown', closeQuickAddOnEscape);
+  quickAddKey = null;
+  quickSlot = null;
+  quickAnchor = null;
+  cancelEdit();
+}
+
+/** What it is about to save, and whether it can. */
+function quickAddChanged() {
+  const start = document.getElementById('qa-start').value;
+  const end = document.getElementById('qa-end').value;
+  const note = document.getElementById('qa-note');
+  const save = document.getElementById('qa-save');
+
+  if (!start || !end || timeToMinutes(end) <= timeToMinutes(start)) {
+    note.textContent = 'The end time has to be after the start.';
+    note.classList.add('is-bad');
+    save.disabled = true;
+
+    return;
+  }
+
+  writeQuickAddToForm();
+  selectedDate = quickAddKey;
+  checkTimeOverlap();
+
+  const clash = document.getElementById('time-overlap-warning').style.display !== 'none';
+  const mins = timeToMinutes(end) - timeToMinutes(start);
+  const length = mins % 60 === 0 ? (mins / 60) + (mins === 60 ? ' hour' : ' hours') : mins + ' minutes';
+
+  note.textContent = clash
+    ? document.getElementById('time-overlap-text').textContent
+    : (quickSlot && (quickSlot.slot.recur || 'weekly') !== 'once'
+      ? length + ' · part of your weekly hours'
+      : length + ' · this date only');
+  note.classList.toggle('is-bad', clash);
+  save.disabled = clash;
+}
+
+/** The hidden fields saveSlot() reads. */
+function writeQuickAddToForm() {
+  document.getElementById('f-start').value = document.getElementById('qa-start').value;
+  document.getElementById('f-end').value = document.getElementById('qa-end').value;
+  document.getElementById('f-type').value = 'consult';
+  document.getElementById('f-max').value = '1';
+  // One date. Repeating hours are set in Set availability.
+  document.getElementById('f-recur').value = quickSlot ? (quickSlot.slot.recur || 'weekly') : 'once';
+}
+
+function saveQuickAdd() {
+  if (!quickAddKey) return;
+
+  writeQuickAddToForm();
+  selectedDate = quickAddKey;
+  closeQuickAddKeepingEdit();
+  saveSlot();
+}
+
+/** Close without clearing what is being edited - saveSlot still needs it. */
+function closeQuickAddKeepingEdit() {
+  document.getElementById('quick-add').hidden = true;
+  document.removeEventListener('mousedown', closeQuickAddOnOutside);
+  document.removeEventListener('keydown', closeQuickAddOnEscape);
+  quickAddKey = null;
+  quickSlot = null;
+  quickAnchor = null;
+}
+
+function quickDelete() {
+  if (!quickSlot) return;
+  const { key, index, scheduleId } = quickSlot;
+  closeQuickAdd();
+  deleteSlot(key, index, scheduleId);
+}
+
+function quickSkip() {
+  if (!quickSlot) return;
+  const { key, scheduleId } = quickSlot;
+  closeQuickAdd();
+  skipThisWeek(scheduleId, key);
+}
+
+function quickToggle() {
+  if (!quickSlot) return;
+  const { key, index, scheduleId } = quickSlot;
+  closeQuickAdd();
+  toggleSlot(scheduleId, key, index);
+}
+
+// Remove one week from a repeating slot. The slot stays; every other week
+// keeps the time it has. This is the only way to clear a single date -
+// deleting the slot takes the whole term with it.
+async function skipThisWeek(scheduleId, dateKey) {
+  const dayWord = DAY_NAMES[makeDate(...dateKey.split('-').map(Number)).getDay()];
+
+  try {
+    await apiFetch(`/instructor/schedule/slots/${scheduleId}/occurrences/${dateKey}`, {
+      method: 'DELETE',
+    });
+    await loadSlots();
+    showToast('Skipped this ' + dayWord + '. Every other ' + dayWord + ' is unchanged.');
+  } catch (e) {
+    showToast('Could not skip this week: ' + e.message, 'error');
+  }
 }
 
 function checkTimeOverlap() {
@@ -940,7 +1653,11 @@ function checkTimeOverlap() {
     return;
   }
 
-  const daySlots = slots[selectedDate] || [];
+  // A slot being edited is not a conflict with itself. saveSlot() already
+  // knew that; this warning did not, so opening any existing slot said it
+  // overlapped a 9-10 consultation - which was the slot in the form.
+  const daySlots = (slots[selectedDate] || [])
+    .filter(s => !editingSlotId || s.schedule_id !== editingSlotId);
   const startMin = timeToMinutes(start);
   const endMin = timeToMinutes(end);
   const overlapping = daySlots.filter(s => {
@@ -1024,7 +1741,42 @@ async function saveSlot() {
 
   if (editingSlotId) {
     const scheduleId = editingSlotId;
+
+    // A repeating slot is a rule covering every one of those weekdays, so
+    // saving it blindly rewrites the whole term. Ask which was meant.
+    const editing = (slotsByDay[dayName] || []).find(s => s.schedule_id === scheduleId);
+    const repeats = editing && (editing.recur || 'weekly') !== 'once';
+    let scope = 'series';
+
+    if (repeats) {
+      scope = await askEditScope(dayName);
+      if (!scope) {
+        isSaving = false;
+        if (btn) {
+          btn.disabled = false;
+          labelSaveButton(selectedDate);
+        }
+        return;
+      }
+    }
+
     try {
+      // One week is its own resource under the slot, addressed by its date.
+      // Replacing it leaves the weekly rule, and every other week, alone.
+      if (scope === 'occurrence') {
+        await apiFetch(`/instructor/schedule/slots/${scheduleId}/occurrences/${selectedDate}`, {
+          method: 'PUT',
+          body: JSON.stringify({ start_time: start, end_time: end, slot_type: type }),
+        });
+
+        // The rule did not change and a new slot now holds this date, so
+        // there is no local record to mutate - read the day back instead.
+        await loadSlots();
+        showToast('This ' + dayName + ' updated. Every other ' + dayName + ' is unchanged.');
+        cancelEdit();
+        return;
+      }
+
       const data = await apiFetch(`/instructor/schedule/slots/${scheduleId}`, {
         method: 'PATCH',
         body: JSON.stringify({
@@ -1051,10 +1803,10 @@ async function saveSlot() {
       }
 
       fanOutSlots();
-      renderCalendar();
+      redrawCalendar();
       renderSlotStats();
       renderUpcoming();
-      renderSelectedDateSlots(selectedDate);
+      redrawCalendar();
       showToast('Slot updated.');
       cancelEdit();
 
@@ -1064,7 +1816,7 @@ async function saveSlot() {
       isSaving = false;
       if (btn) {
         btn.disabled = false;
-        btn.innerHTML = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Save Slot';
+        labelSaveButton(selectedDate);
       }
     }
     return;
@@ -1103,7 +1855,7 @@ async function saveSlot() {
 
     // FIX: single re-fan covers the whole month correctly
     fanOutSlots();
-    renderCalendar();
+    redrawCalendar();
     renderSlotStats();
     renderUpcoming();
 
@@ -1122,13 +1874,13 @@ async function saveSlot() {
     })();
     document.getElementById('f-start').value = end;
     document.getElementById('f-end').value   = addMinutesToTime(end, duration > 0 ? duration : 60);
-    renderSelectedDateSlots(selectedDate);
+    redrawCalendar();
     checkTimeOverlap();
 
   } catch (e) {
     // API failed — fall back to local-only, same pattern
     await loadSlots();
-    renderCalendar();
+    redrawCalendar();
     renderSlotStats();
     renderUpcoming();
     showToast(`Slot saved locally (server error: ${e.message})`, 'error');
@@ -1139,7 +1891,7 @@ async function saveSlot() {
     isSaving = false;
     if (btn) {
       btn.disabled = false;
-      btn.innerHTML = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Save Slot';
+      labelSaveButton(selectedDate);
     }
   }
 }
@@ -1151,7 +1903,7 @@ async function saveSlot() {
 // moving a slot to a different weekday/date is a bigger UX question
 // than "fix the time/capacity/type") — recur is disabled with a note
 // instead of silently doing nothing.
-function editSlot(scheduleId, key, index) {
+function editSlot(scheduleId, key, index, anchor) {
   const s = slots[key] && slots[key][index];
   if (!s) return;
 
@@ -1172,16 +1924,27 @@ function editSlot(scheduleId, key, index) {
   if (recurSelect) recurSelect.disabled = false;
   if (recurNote) recurNote.style.display = 'block';
 
+  // Say what is being edited. "Editing existing slot" is true of a one-off
+  // and of a rule covering every Monday for the rest of the term, and the
+  // difference is the whole risk of this screen.
   const banner = document.getElementById('edit-mode-banner');
-  if (banner) banner.style.display = 'block';
+  if (banner) {
+    const repeats = (s.recur || 'weekly') !== 'once';
+    const dayWord = s.available_date || DAY_NAMES[makeDate(...key.split('-').map(Number)).getDay()];
+    banner.textContent = repeats
+      ? 'Editing a slot that repeats every ' + dayWord + '. You will be asked whether to change this ' + dayWord + ' or all of them.'
+      : 'Editing a slot that happens on this date only.';
+    banner.style.fontWeight = '500';
+    banner.style.lineHeight = '1.45';
+    banner.style.display = 'block';
+  }
 
   const btn = document.getElementById('save-slot-btn');
-  if (btn) btn.innerHTML = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Update Slot';
+  if (btn) labelSaveButton(selectedDate);
 
-  document.getElementById('add-slot-fields').style.display = 'block';
   checkTimeOverlap();
-
-  document.getElementById('add-slot-form')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  updateSlotDerived();
+  openQuickEdit(s, key, index, anchor);
 }
 
 function cancelEdit() {
@@ -1194,20 +1957,28 @@ function cancelEdit() {
   if (recurNote) recurNote.style.display = 'none';
 
   const banner = document.getElementById('edit-mode-banner');
-  if (banner) banner.style.display = 'none';
+  if (banner) {
+    banner.textContent = 'Editing existing slot';
+    banner.style.display = 'none';
+  }
 
   const btn = document.getElementById('save-slot-btn');
-  if (btn) btn.innerHTML = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Save Slot';
+  if (btn) labelSaveButton(selectedDate);
 }
 
 function resetForm() {
-  cancelEdit();
-  clearSelectedDate();
+  closeQuickAdd();
   document.getElementById('f-start').value = '09:00';
   document.getElementById('f-end').value   = '10:00';
   document.getElementById('f-type').value  = 'consult';
   document.getElementById('f-max').value   = '1';
   document.getElementById('f-recur').value = 'once';
+  markDurationChip(60);
+
+  const more = document.getElementById('slot-more');
+  if (more && !more.hidden) toggleSlotMore();
+
+  updateSlotDerived();
 }
 
 // ── Toggle availability ────────────────────────────────────────
@@ -1234,10 +2005,10 @@ async function toggleSlot(scheduleId, key, index) {
       }
     }
 
-    renderCalendar();
+    redrawCalendar();
 
     // FIX: refresh the panel in place — no modal to worry about anymore.
-    if (selectedDate === key) renderSelectedDateSlots(key);
+    if (selectedDate === key) redrawCalendar();
 
     showToast(data.is_available ? 'Slot marked as available.' : 'Slot marked as unavailable.');
   } catch (e) {
@@ -1251,7 +2022,7 @@ async function refreshGcalSlot(scheduleId) {
     const data = await apiFetch(`/instructor/schedule/slots/${scheduleId}/refresh-gcal`, { method: 'PATCH' });
 
     showToast('Google Calendar event refreshed with correct timezone ✓');
-    renderCalendar();
+    redrawCalendar();
   } catch (e) {
     showToast('Failed to refresh: ' + e.message, 'error');
   }
@@ -1290,134 +2061,19 @@ async function deleteSlot(key, index, scheduleId) {
       }
     }
 
-    renderCalendar();
+    redrawCalendar();
     renderSlotStats();
     renderUpcoming();
 
     // FIX: refresh in place instead of closing anything — the panel
     // stays open so several slots can be removed back-to-back without
     // reselecting the date.
-    if (selectedDate === key) renderSelectedDateSlots(key);
+    if (selectedDate === key) redrawCalendar();
 
     showToast('Slot removed.');
   } catch (e) {
     showToast('Failed to delete slot: ' + e.message, 'error');
   }
-}
-
-// ══════════════════════════════════════════════════════════════
-//  BLOCK / UNBLOCK
-// ══════════════════════════════════════════════════════════════
-function openBlockConfirm(key, dayNum) {
-  const [y, m1, d] = key.split('-').map(Number);
-  document.getElementById('bc-title').textContent = `Block ${MONTHS[m1 - 1]} ${d}, ${y}?`;
-  document.getElementById('bc-sub').textContent   = `Students won't be able to book any slot on this day. Any existing open slots will be hidden to students.`;
-  document.getElementById('block-confirm-overlay').classList.add('open');
-}
-
-function closeBlockConfirm() {
-  document.getElementById('block-confirm-overlay').classList.remove('open');
-  pendingBlockDate = null;
-}
-
-// ══════════════════════════════════════════════════════════════
-//  SLOT DETAIL MODAL
-// ══════════════════════════════════════════════════════════════
-function openSlotModal(key, dayNum, dayName) {
-  const [y, m1, d] = key.split('-').map(Number);
-  const dateObj = makeDate(y, m1, d);
-  const label = `${DAYS[dateObj.getDay()]}, ${MONTHS[m1 - 1]} ${d}, ${y}`;
-
-  document.getElementById('slot-modal-title').textContent = label;
-  document.getElementById('slot-modal-sub').textContent   = `${slots[key]?.length || 0} slot(s) scheduled`;
-  renderSlotModal(key);
-
-  document.getElementById('slot-modal-overlay').classList.add('open');
-}
-
-function closeSlotModal() {
-  document.getElementById('slot-modal-overlay').classList.remove('open');
-}
-
-function renderSlotModal(key) {
-  const body = document.getElementById('slot-modal-body');
-  const daySlots = slots[key] || [];
-
-  if (daySlots.length === 0) {
-    body.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text3);font-size:13px">No slots scheduled for this date.</div>';
-    return;
-  }
-
-  body.innerHTML = '';
-  daySlots.forEach((s, i) => {
-    const startStr = hr12(s.start || s.start_time);
-    const endStr   = hr12(s.end   || s.end_time);
-    const type     = TYPE_LABELS[s.type] || 'Consultation';
-    const typeColor= TYPE_COLORS[s.type] || 'var(--blue)';
-    const done     = isSlotDone(s, key);
-    const status   = done
-      ? '<span style="color:#9ca3af;font-weight:600;font-size:11px">Done</span>'
-      : (s.booked || !s.is_available)
-        ? '<span style="color:var(--red);font-weight:600;font-size:11px">Booked</span>'
-        : '<span style="color:var(--green);font-weight:600;font-size:11px">Open</span>';
-    const row = document.createElement('div');
-    row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;background:var(--bg3);border-radius:8px;margin-bottom:8px;border-left:3px solid ' + typeColor;
-
-    const info = document.createElement('div');
-    info.style.flex = '1';
-    info.innerHTML = `
-      <div style="font-weight:600;font-size:13px;color:var(--text)">${startStr} – ${endStr}</div>
-      <div style="font-size:11px;color:var(--text3);margin-top:2px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-        <span style="font-weight:600;color:${typeColor}">${type}</span>
-        ${status}
-        <span>· Max ${s.maxBookings || s.consultation_limit || 1}</span>
-        ${s.teamName ? `<span>· ${s.teamName}</span>` : ''}
-        ${s.topic ? `<span>· "${s.topic}"</span>` : ''}
-      </div>`;
-
-    const actions = document.createElement('div');
-    actions.style.display = 'flex';
-    actions.style.gap = '4px';
-
-    if (s.schedule_id) {
-      const toggleBtn = document.createElement('button');
-      toggleBtn.title = s.is_available ? 'Mark unavailable' : 'Mark available';
-      toggleBtn.style.cssText = 'background:none;border:none;cursor:pointer;color:var(--text3);padding:4px;border-radius:4px;transition:background 0.15s';
-      toggleBtn.innerHTML = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>`;
-      toggleBtn.onmouseenter = () => toggleBtn.style.background = 'rgba(0,0,0,0.06)';
-      toggleBtn.onmouseleave = () => toggleBtn.style.background = 'none';
-      toggleBtn.onclick = () => {
-        toggleSlot(s.schedule_id, key, i);
-        setTimeout(() => renderSlotModal(key), 600);
-      };
-
-      const delBtn = document.createElement('button');
-      delBtn.title = 'Delete slot';
-      delBtn.style.cssText = 'background:none;border:none;cursor:pointer;color:var(--red,#f87171);padding:4px;border-radius:4px;transition:background 0.15s';
-      delBtn.innerHTML = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>`;
-      delBtn.onmouseenter = () => delBtn.style.background = 'rgba(239,68,68,0.08)';
-      delBtn.onmouseleave = () => delBtn.style.background = 'none';
-      delBtn.onclick = () => {
-        deleteSlot(key, i, s.schedule_id);
-        setTimeout(() => renderSlotModal(key), 400);
-      };
-
-      actions.appendChild(toggleBtn);
-      actions.appendChild(delBtn);
-    }
-
-    row.appendChild(info);
-    row.appendChild(actions);
-    body.appendChild(row);
-  });
-}
-
-function confirmBlock() {
-  if (!pendingBlockDate) return;
-  blockedDates.add(pendingBlockDate.key);
-  renderCalendar();
-  closeBlockConfirm();
-  showToast('Date blocked — students cannot book this day.');
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -1437,7 +2093,12 @@ function renderUpcoming() {
     .filter(([k]) => k >= todayKey)
     .sort(([a], [b]) => a.localeCompare(b))
     .forEach(([k, daySlots]) => {
-      daySlots.filter(s => s.booked || !s.is_available).forEach(s => {
+      // Only slots somebody has actually booked. This used to ask for
+      // `booked || !is_available`, but `booked` is itself true whenever a
+      // slot is unavailable - so every slot the expert had blocked, and
+      // every duplicate the server had flagged, was listed as an
+      // appointment with a dash where the team name goes.
+      daySlots.filter(s => s.hasBooking).forEach(s => {
         // For today specifically, a slot whose end time has already
         // passed is done, not upcoming (the backend marks its booking
         // 'done' the same way — this just keeps the list in sync without
@@ -1452,7 +2113,7 @@ function renderUpcoming() {
 
         const [y, m1, d] = k.split('-').map(Number);
         upcoming.push({
-          team:  s.teamName || '—',
+          team:  s.teamName || 'Booked',
           date:  `${MONTHS[m1 - 1]} ${d}`,
           time:  `${hr12(s.start || s.start_time)}–${hr12(s.end || s.end_time)}`,
           type:  s.type || 'consult',
@@ -1500,7 +2161,13 @@ function renderSlotStats() {
   const container = document.getElementById('slot-stats');
   container.innerHTML = '';
 
-  let counts = { consult: 0, docreview: 0, defense: 0 };
+  // A type nobody can pick any more should not hold a permanent zero row in
+  // the panel. It reappears on its own if a slot saved earlier still has it.
+  let counts = { consult: 0, defense: 0 };
+  Object.values(slots).forEach(daySlots => daySlots.forEach(s => {
+    const t = s.type || s.slot_type;
+    if (t === 'docreview') counts.docreview = counts.docreview || 0;
+  }));
   Object.values(slots).forEach(daySlots => {
     daySlots.forEach(s => {
       const t = s.type || s.slot_type || 'consult';
@@ -1536,6 +2203,441 @@ function renderSlotStats() {
 //  TOAST
 // ══════════════════════════════════════════════════════════════
 let toastTimer;
+// ══════════════════════════════════════════════════════════════
+//  DURATION AND AVAILABILITY
+// ══════════════════════════════════════════════════════════════
+
+/** Minutes since midnight -> "HH:MM", clamped to the end of the day. */
+function minutesToTime(mins) {
+  const capped = Math.min(mins, 23 * 60 + 59);
+
+  return String(Math.floor(capped / 60)).padStart(2, '0') + ':' + String(capped % 60).padStart(2, '0');
+}
+
+/** The end time is arithmetic on the start time; nobody thinks in end times. */
+function setDuration(mins) {
+  const start = document.getElementById('f-start').value;
+
+  if (start) {
+    document.getElementById('f-end').value = minutesToTime(timeToMinutes(start) + mins);
+  }
+
+  markDurationChip(mins);
+  checkTimeOverlap();
+  updateSlotDerived();
+}
+
+function markDurationChip(mins) {
+  document.querySelectorAll('#add-slot-fields .dur-chip').forEach((c) => {
+    c.classList.toggle('is-on', Number(c.dataset.mins) === mins);
+  });
+}
+
+/** Moving the start carries the length with it, rather than the end. */
+function onStartChanged() {
+  const start = document.getElementById('f-start').value;
+  const end = document.getElementById('f-end');
+
+  if (start && end.value) {
+    const length = currentDurationMinutes();
+
+    if (length > 0) {
+      end.value = minutesToTime(timeToMinutes(start) + length);
+    }
+  }
+
+  checkTimeOverlap();
+  updateSlotDerived();
+}
+
+/** Typing an odd end time is still allowed; the chips just stop claiming one. */
+function onEndChanged() {
+  const start = document.getElementById('f-start').value;
+  const end = document.getElementById('f-end').value;
+
+  markDurationChip(start && end ? timeToMinutes(end) - timeToMinutes(start) : -1);
+  checkTimeOverlap();
+  updateSlotDerived();
+}
+
+function currentDurationMinutes() {
+  const lit = document.querySelector('#add-slot-fields .dur-chip.is-on');
+
+  if (lit) return Number(lit.dataset.mins);
+
+  const start = document.getElementById('f-start').value;
+  const end = document.getElementById('f-end').value;
+
+  return start && end ? timeToMinutes(end) - timeToMinutes(start) : 0;
+}
+
+function toggleSlotMore() {
+  const more = document.getElementById('slot-more');
+  const toggle = document.getElementById('slot-more-toggle');
+  const opening = more.hidden;
+
+  more.hidden = !opening;
+  toggle.classList.toggle('is-open', opening);
+  toggle.setAttribute('aria-expanded', String(opening));
+}
+
+/**
+ * The settings that are not worth a field each, said as a sentence.
+ *
+ * Type, teams and repeat almost always keep their defaults, so three more
+ * labelled controls at the same weight as the time buried the two decisions
+ * that matter. This is what they currently say; the toggle above opens them.
+ */
+function updateSlotDerived() {
+  const out = document.getElementById('slot-derived');
+
+  if (!out) return;
+
+  const end = document.getElementById('f-end').value;
+  const type = document.getElementById('f-type');
+  const max = parseInt(document.getElementById('f-max').value, 10) || 1;
+  const recur = document.getElementById('f-recur').value;
+
+  const typeLabel = (type.options[type.selectedIndex]?.text || 'Consultation').toLowerCase();
+  const repeats = { once: 'once', weekly: 'every week', biweekly: 'every 2 weeks' }[recur] || 'every week';
+
+  out.innerHTML = (end ? 'Ends <b>' + hr12(end).toLowerCase() + '</b> · ' : '')
+    + 'a ' + typeLabel + ' for <b>' + max + ' team' + (max === 1 ? '' : 's') + '</b>, <b>' + repeats + '</b>';
+}
+
+/**
+ * The first time this date is free, so the form does not open on a clash.
+ *
+ * It used to default to 09:00 whatever was already booked, which meant
+ * clicking a busy morning greeted you with an overlap warning about a slot
+ * the form had just put you on top of.
+ */
+function firstFreeStart(key) {
+  const taken = (slots[key] || [])
+    .map((s) => [timeToMinutes(s.start_time || s.start), timeToMinutes(s.end_time || s.end)])
+    .sort((a, b) => a[0] - b[0]);
+
+  const length = currentDurationMinutes() || 60;
+  let at = 9 * 60;
+
+  for (const [from, until] of taken) {
+    if (at + length > from && until > at) at = until;
+  }
+
+  // Past the end of a working day is no better than the clash; leave it.
+  return at + length > 21 * 60 ? '09:00' : minutesToTime(at);
+}
+
+// ── availability: duration, weekly hours, scheduling window ──
+// Set the way Google Calendar's appointment schedules are. Saving sends the
+// whole thing once and the server makes the weekly slots match.
+const GA_DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const GA_PRESETS = [15, 30, 45, 60, 90, 120];
+const GA_ICON = {
+  add: '<svg viewBox="0 0 24 24" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>',
+  remove: '<svg viewBox="0 0 24 24" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>',
+};
+let ga = null;
+
+async function openAvail() {
+  document.getElementById('ga-error').hidden = true;
+  document.getElementById('avail-overlay').classList.add('open');
+
+  let saved = null;
+  try {
+    saved = await apiFetch('/instructor/schedule/availability');
+  } catch (e) {
+    saved = null;
+  }
+
+  ga = gaFrom(saved);
+  gaDraw();
+}
+
+function closeAvail() {
+  document.getElementById('avail-overlay').classList.remove('open');
+}
+
+/** The settings as the dialog edits them; an expert who never saved starts from the weekly slots they already have. */
+function gaFrom(saved) {
+  const s = saved || {};
+  const hours = s.hours && !Array.isArray(s.hours) ? JSON.parse(JSON.stringify(s.hours)) : {};
+  const state = {
+    duration_minutes: s.duration_minutes || 60,
+    buffer_minutes: s.buffer_minutes || 0,
+    buffer_on: !!s.buffer_minutes,
+    max_per_day: s.max_per_day || 4,
+    cap_on: s.max_per_day != null,
+    hours,
+    range: s.starts_on || s.ends_on ? 'dates' : 'now',
+    starts_on: s.starts_on || '',
+    ends_on: s.ends_on || '',
+    max_on: s.id ? s.max_days_ahead != null : true,
+    max_days_ahead: s.max_days_ahead || 60,
+    min_notice_hours: s.min_notice_hours ?? 24,
+  };
+
+  if (!s.id) {
+    const weekly = Object.values(slotsByDay).flat().filter((x) => (x.recur ?? 'weekly') !== 'once');
+    const lengths = {};
+
+    GA_DAYS.forEach((day) => {
+      const mine = weekly
+        .filter((x) => x.available_date === day)
+        .map((x) => [timeToMinutes(x.start_time), timeToMinutes(x.end_time)])
+        .sort((a, b) => a[0] - b[0]);
+
+      const ranges = [];
+      mine.forEach(([from, until]) => {
+        lengths[until - from] = (lengths[until - from] || 0) + 1;
+        const last = ranges[ranges.length - 1];
+        if (last && from <= last[1]) last[1] = Math.max(last[1], until);
+        else ranges.push([from, until]);
+      });
+
+      if (ranges.length) state.hours[day] = ranges.map(([a, b]) => [minutesToTime(a), minutesToTime(b)]);
+    });
+
+    const commonest = Number(Object.keys(lengths).sort((a, b) => lengths[b] - lengths[a])[0]);
+    if (commonest >= 5 && commonest <= 480) state.duration_minutes = commonest;
+  }
+
+  return state;
+}
+
+function gaDraw() {
+  const preset = GA_PRESETS.includes(ga.duration_minutes) ? String(ga.duration_minutes) : 'custom';
+  document.querySelectorAll('input[name="ga-duration"]').forEach((r) => { r.checked = r.value === preset; });
+  document.getElementById('ga-custom').value = ga.duration_minutes;
+  document.querySelectorAll('input[name="ga-range"]').forEach((r) => { r.checked = r.value === ga.range; });
+  document.getElementById('ga-starts').value = ga.starts_on;
+  document.getElementById('ga-ends').value = ga.ends_on;
+  document.getElementById('ga-max-on').checked = ga.max_on;
+  document.getElementById('ga-max').value = ga.max_days_ahead;
+  document.getElementById('ga-notice').value = ga.min_notice_hours;
+  document.getElementById('ga-buffer-on').checked = ga.buffer_on;
+  document.getElementById('ga-buffer').value = ga.buffer_minutes;
+  document.getElementById('ga-cap-on').checked = ga.cap_on;
+  document.getElementById('ga-cap').value = ga.max_per_day;
+  gaDrawDays();
+  gaChanged();
+}
+
+function gaButton(label, icon, onClick) {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.className = 'ga-icon';
+  b.title = label;
+  b.setAttribute('aria-label', label);
+  b.innerHTML = icon;
+  b.addEventListener('click', onClick);
+  return b;
+}
+
+/** One row per weekday: its hours, or "Unavailable" - never a day that only changes colour. */
+function gaDrawDays() {
+  const host = document.getElementById('ga-days');
+  host.innerHTML = '';
+
+  GA_DAYS.forEach((day) => {
+    const ranges = ga.hours[day] || [];
+    const row = document.createElement('div');
+    row.className = 'ga-day' + (ranges.length ? ' is-on' : '');
+
+    const name = document.createElement('div');
+    name.className = 'ga-day-name';
+    name.textContent = day.slice(0, 3);
+    row.appendChild(name);
+
+    const list = document.createElement('div');
+    list.className = 'ga-ranges';
+
+    if (!ranges.length) {
+      const off = document.createElement('span');
+      off.className = 'ga-off';
+      off.textContent = 'Unavailable';
+      list.appendChild(off);
+    }
+
+    ranges.forEach((range, i) => {
+      const line = document.createElement('div');
+      line.className = 'ga-range';
+
+      [0, 1].forEach((part) => {
+        const input = document.createElement('input');
+        input.type = 'time';
+        input.value = range[part];
+        input.setAttribute('aria-label', day + (part ? ' until' : ' from'));
+        input.addEventListener('change', () => { range[part] = input.value; gaChanged(); });
+        line.appendChild(input);
+
+        if (!part) {
+          const dash = document.createElement('span');
+          dash.textContent = '–';
+          line.appendChild(dash);
+        }
+      });
+
+      line.appendChild(gaButton('Remove these hours on ' + day, GA_ICON.remove, () => {
+        ranges.splice(i, 1);
+        if (!ranges.length) delete ga.hours[day];
+        gaDrawDays();
+        gaChanged();
+      }));
+
+      list.appendChild(line);
+    });
+
+    row.appendChild(list);
+    row.appendChild(gaButton('Add hours on ' + day, GA_ICON.add, () => gaAddHours(day)));
+    host.appendChild(row);
+  });
+}
+
+function gaAddHours(day) {
+  const ranges = (ga.hours[day] = ga.hours[day] || []);
+  const last = ranges[ranges.length - 1];
+  const from = last ? timeToMinutes(last[1]) + 60 : 9 * 60;
+  const until = Math.min(from + 180, 23 * 60 + 30);
+
+  if (until <= from) return;
+
+  ranges.push([minutesToTime(from), minutesToTime(until)]);
+  gaDrawDays();
+  gaChanged();
+}
+
+/** How long one appointment runs, including a typed custom length. */
+function gaDuration() {
+  const picked = document.querySelector('input[name="ga-duration"]:checked')?.value;
+
+  if (picked === 'custom') return Number(document.getElementById('ga-custom').value) || 0;
+
+  return Number(picked) || 60;
+}
+
+/** Read the inputs back, then say what saving would give. */
+function gaChanged() {
+  ga.duration_minutes = gaDuration();
+  ga.range = document.querySelector('input[name="ga-range"]:checked')?.value || 'now';
+  ga.starts_on = document.getElementById('ga-starts').value;
+  ga.ends_on = document.getElementById('ga-ends').value;
+  ga.max_on = document.getElementById('ga-max-on').checked;
+  ga.max_days_ahead = Number(document.getElementById('ga-max').value) || 0;
+  ga.min_notice_hours = Number(document.getElementById('ga-notice').value) || 0;
+  ga.buffer_on = document.getElementById('ga-buffer-on').checked;
+  ga.buffer_minutes = ga.buffer_on ? (Number(document.getElementById('ga-buffer').value) || 0) : 0;
+  ga.cap_on = document.getElementById('ga-cap-on').checked;
+  ga.max_per_day = Number(document.getElementById('ga-cap').value) || 0;
+
+  document.getElementById('ga-custom-wrap').hidden =
+    document.querySelector('input[name="ga-duration"]:checked')?.value !== 'custom';
+  document.getElementById('ga-dates').hidden = ga.range !== 'dates';
+  document.getElementById('ga-max').disabled = !ga.max_on;
+  document.getElementById('ga-buffer').disabled = !ga.buffer_on;
+  document.getElementById('ga-cap').disabled = !ga.cap_on;
+
+  const problem = gaProblem();
+  const box = document.getElementById('av-count');
+  const save = document.getElementById('av-save');
+  document.getElementById('ga-error').hidden = true;
+
+  // A slot starts every duration + buffer minutes, and the last one still has
+  // to end inside the hours.
+  const step = ga.duration_minutes + ga.buffer_minutes;
+  let count = 0;
+  Object.values(ga.hours).forEach((ranges) => ranges.forEach(([from, until]) => {
+    const span = timeToMinutes(until) - timeToMinutes(from);
+    if (span >= ga.duration_minutes && step > 0) count += Math.floor((span - ga.duration_minutes) / step) + 1;
+  }));
+
+  const length = ga.duration_minutes >= 60 && ga.duration_minutes % 60 === 0
+    ? (ga.duration_minutes / 60) + (ga.duration_minutes === 60 ? ' hour' : ' hours')
+    : ga.duration_minutes + ' minutes';
+
+  const parts = [count
+    ? '<b>' + count + ' bookable time' + (count === 1 ? '' : 's') + ' a week</b>, ' + length + ' each.'
+    : '<b>No availability</b> - teams will have nothing of yours to book.'];
+
+  if (ga.buffer_on && ga.buffer_minutes) parts.push(ga.buffer_minutes + ' minutes between.');
+  if (ga.cap_on && ga.max_per_day) parts.push('At most ' + ga.max_per_day + ' a day.');
+  if (ga.range === 'dates' && (ga.starts_on || ga.ends_on)) {
+    parts.push('Only ' + (ga.starts_on ? 'from ' + ga.starts_on : '') + (ga.ends_on ? ' until ' + ga.ends_on : '') + '.');
+  }
+  if (ga.max_on && ga.max_days_ahead) parts.push('Up to ' + ga.max_days_ahead + ' days ahead.');
+  parts.push(ga.min_notice_hours + ' hours\' notice.');
+
+  box.innerHTML = problem ? '' : parts.join(' ');
+  box.hidden = !!problem;
+  if (problem) {
+    const err = document.getElementById('ga-error');
+    err.textContent = problem;
+    err.hidden = false;
+  }
+  save.disabled = !!problem;
+}
+
+function gaProblem() {
+  if (ga.duration_minutes < 5 || ga.duration_minutes > 480) return 'An appointment has to run between 5 and 480 minutes.';
+  for (const day of GA_DAYS) {
+    const ranges = (ga.hours[day] || []).map(([a, b]) => [timeToMinutes(a), timeToMinutes(b)]).sort((x, y) => x[0] - y[0]);
+    for (let i = 0; i < ranges.length; i++) {
+      if (ranges[i][1] <= ranges[i][0]) return 'On ' + day + ', each set of hours has to end after it starts.';
+      if (i && ranges[i][0] < ranges[i - 1][1]) return 'On ' + day + ', two sets of hours overlap.';
+    }
+  }
+  if (ga.range === 'dates' && ga.starts_on && ga.ends_on && ga.ends_on < ga.starts_on) return 'The end date has to be on or after the start date.';
+  if (ga.max_on && (ga.max_days_ahead < 1 || ga.max_days_ahead > 365)) return 'Days ahead has to be between 1 and 365.';
+  if (ga.min_notice_hours < 0 || ga.min_notice_hours > 720) return 'Notice has to be between 0 and 720 hours.';
+  if (ga.buffer_on && (ga.buffer_minutes < 0 || ga.buffer_minutes > 120)) return 'Buffer time has to be between 0 and 120 minutes.';
+  if (ga.cap_on && (ga.max_per_day < 1 || ga.max_per_day > 20)) return 'Bookings a day has to be between 1 and 20.';
+  return null;
+}
+
+async function saveAvailability() {
+  gaChanged();
+  if (gaProblem()) return;
+
+  const save = document.getElementById('av-save');
+  save.disabled = true;
+  save.textContent = 'Saving...';
+
+  try {
+    const res = await apiFetch('/instructor/schedule/availability', {
+      method: 'PUT',
+      body: JSON.stringify({
+        duration_minutes: ga.duration_minutes,
+        buffer_minutes: ga.buffer_on ? ga.buffer_minutes : 0,
+        max_per_day: ga.cap_on ? ga.max_per_day : null,
+        hours: ga.hours,
+        starts_on: ga.range === 'dates' ? (ga.starts_on || null) : null,
+        ends_on: ga.range === 'dates' ? (ga.ends_on || null) : null,
+        max_days_ahead: ga.max_on ? ga.max_days_ahead : null,
+        min_notice_hours: ga.min_notice_hours,
+      }),
+    });
+
+    closeAvail();
+
+    const said = [];
+    if (res.added) said.push(res.added + ' opened');
+    if (res.removed) said.push(res.removed + ' removed');
+    if (res.kept_booked) said.push(res.kept_booked + ' already booked, so kept');
+    showToast('Availability saved' + (said.length ? ': ' + said.join(', ') : '') + '.', 'success');
+
+    await loadSlots();
+    redrawCalendar();
+    renderUpcoming();
+  } catch (e) {
+    const err = document.getElementById('ga-error');
+    err.textContent = e.message;
+    err.hidden = false;
+  } finally {
+    save.textContent = 'Save availability';
+    save.disabled = !!gaProblem();
+  }
+}
+
 function showToast(msg, type = 'success') {
   const toast = document.getElementById('sched-toast');
   document.getElementById('toast-msg').textContent = msg;
@@ -1546,14 +2648,71 @@ function showToast(msg, type = 'success') {
 }
 
 // ── KICK OFF ────────────────────────────────────────────────────
+const escHtml = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+// A team asked to cancel: approve frees the slot, keep leaves it booked.
+// Both ask first; keeping it also needs the reason the team will read.
+let pendingCancellation = null;
+
+function decideCancellation(bookingId, decision, key) {
+  pendingCancellation = { bookingId, decision, key };
+  const approve = decision === 'approve';
+  document.getElementById('cd-title').textContent = approve ? 'Approve this cancellation?' : 'Keep this booking?';
+  document.getElementById('cd-sub').textContent = approve
+    ? 'The consultation is cancelled and the slot opens for other teams.'
+    : 'The consultation stays on. Tell the team why it cannot be cancelled.';
+  document.getElementById('cd-reason-wrap').hidden = approve;
+  document.getElementById('cd-reason').value = '';
+  document.getElementById('cd-error').textContent = '';
+  document.getElementById('cd-yes').textContent = approve ? 'Yes, cancel it' : 'Yes, keep it';
+  document.getElementById('cancel-decision-overlay').classList.add('open');
+  if (!approve) document.getElementById('cd-reason').focus();
+}
+
+function closeCancellationDecision() {
+  document.getElementById('cancel-decision-overlay').classList.remove('open');
+  pendingCancellation = null;
+}
+
+async function confirmCancellationDecision() {
+  if (!pendingCancellation) return;
+  const { bookingId, decision, key } = pendingCancellation;
+  const reason = document.getElementById('cd-reason').value.trim();
+
+  if (decision === 'decline' && reason.length < 10) {
+    document.getElementById('cd-error').textContent = 'Give the team a reason (at least 10 characters).';
+    return;
+  }
+
+  const yes = document.getElementById('cd-yes');
+  yes.disabled = true;
+  try {
+    await apiFetch(`/instructor/schedule/bookings/${bookingId}/cancellation`, {
+      method: 'PATCH',
+      body: JSON.stringify(decision === 'decline' ? { decision, reason } : { decision }),
+    });
+    closeCancellationDecision();
+    showToast(decision === 'approve' ? 'Cancellation approved. The slot is open again.' : 'Booking kept. The team has been told.', 'success');
+    await loadSlots();
+    redrawCalendar();
+    renderUpcoming();
+    redrawCalendar();
+  } catch (e) {
+    document.getElementById('cd-error').textContent = e.message;
+    showToast(e.message, 'error');
+  } finally {
+    yes.disabled = false;
+  }
+}
+
 initCalendar();
 
 // Re-render time-dependent UI (the 'Ongoing' status) once a minute, so a
 // slot flips from 'Booked' to 'Ongoing' — and back to past — without the
 // user needing to refresh the page.
 setInterval(() => {
-  renderCalendar();
-  if (selectedDate) renderSelectedDateSlots(selectedDate);
+  redrawCalendar();
+  if (selectedDate) redrawCalendar();
   renderUpcoming();
 }, 60000);
 

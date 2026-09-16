@@ -197,6 +197,31 @@ class Student extends Authenticatable
     /** Capstone is a 3rd and 4th year subject; no other year uses this system. */
     public const CAPSTONE_YEARS = [3, 4];
 
+    /**
+     * Their year as a number, read off year_section.
+     *
+     * Stored as "4th · B" - a label meant for reading, which is why nothing
+     * could compare it.
+     */
+    public function yearNumber(): ?int
+    {
+        return preg_match('/\d+/', (string) $this->year_section, $m) ? (int) $m[0] : null;
+    }
+
+    /**
+     * Which Capstone this student is in.
+     *
+     * 3rd year is Capstone 1, 4th is Capstone 2. The year is the signal
+     * because of how the list works: a CaPSA uploads a section when it
+     * starts capstone, and uploads it again as 4th year when it moves up -
+     * so the year on the roster changes exactly when the stage does, with
+     * nobody having to remember to declare it anywhere.
+     */
+    public function capstoneStage(): int
+    {
+        return ($this->yearNumber() ?? 3) >= 4 ? 2 : 1;
+    }
+
     public static function computeSectionLabel(?string $course, ?string $yearSection): ?string
     {
         if (! $course || ! $yearSection) {

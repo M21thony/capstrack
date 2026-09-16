@@ -44,11 +44,11 @@ Route::middleware(['web', 'expert.auth'])
                 Route::get('/windows', [AdminPanelAssignmentController::class, 'indexWindows'])->name('windows.index');
                 Route::put('/windows/{defenseType}', [AdminPanelAssignmentController::class, 'updateWindow'])->name('windows.update');
                 Route::put('/schedule/{defense}', [AdminPanelAssignmentController::class, 'updateSchedule'])->name('schedule.update');
+                // Generate a stage's schedule at once: suggest every ready team a slot, then save the reviewed set.
+                Route::post('/schedule-drafts', [AdminPanelAssignmentController::class, 'draftSchedule'])->name('schedule-drafts.store');
+                Route::put('/schedules', [AdminPanelAssignmentController::class, 'applySchedule'])->name('schedules.update');
                 Route::post('/', [AdminPanelAssignmentController::class, 'storeMultiple'])->name('store.bulk');
-                Route::get('/suggest-multi', [AdminPanelAssignmentController::class, 'suggestExpertsMultiple'])->name('suggest-multi');
-                Route::get('/suggest-teams', [AdminPanelAssignmentController::class, 'suggestTeamsForPanel'])->name('suggest-teams');
                 Route::post('/{team}', [AdminPanelAssignmentController::class, 'store'])->name('store');
-                Route::get('/{team}/suggest', [AdminPanelAssignmentController::class, 'suggestExperts'])->name('suggest');
             });
 
             // Grading Rubrics
@@ -60,6 +60,10 @@ Route::middleware(['web', 'expert.auth'])
                 Route::put('/{gradingRubric}', [AdminGradingRubricController::class, 'update'])->name('update');
                 Route::delete('/{gradingRubric}', [AdminGradingRubricController::class, 'destroy'])->name('destroy');
                 Route::put('/{gradingRubric}/restore', [AdminGradingRubricController::class, 'restore'])->name('restore');
+
+                // Out of the archive: the archive is the resource, deleting from it restores.
+                Route::delete('/{gradingRubric}/archive', [AdminGradingRubricController::class, 'restore'])->name('restore');
+
                 Route::post('/{gradingRubric}/criteria', [AdminGradingRubricController::class, 'storeCriterion'])->name('criteria.store');
                 Route::put('/{gradingRubric}/criteria/{rubricCriterion}', [AdminGradingRubricController::class, 'updateCriterion'])->name('criteria.update');
                 Route::delete('/{gradingRubric}/criteria/{rubricCriterion}', [AdminGradingRubricController::class, 'destroyCriterion'])->name('criteria.destroy');
@@ -73,6 +77,8 @@ Route::middleware(['web', 'expert.auth'])
                 Route::get('/stats', [AdminFinancialController::class, 'stats'])->name('stats');
                 Route::get('/teams', [AdminFinancialController::class, 'teams'])->name('teams');
                 Route::get('/records', [AdminFinancialController::class, 'records'])->name('records');
+                // Verify several at once.
+                Route::patch('/records', [AdminFinancialController::class, 'updateMany'])->name('update-many');
                 Route::get('/records/{financialRecord}', [AdminFinancialController::class, 'record'])->name('record');
                 Route::patch('/records/{financialRecord}', [AdminFinancialController::class, 'update'])->name('update');
                 Route::get('/expense-posts', [AdminFinancialController::class, 'expensePosts'])->name('expense-posts');

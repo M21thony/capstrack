@@ -65,6 +65,7 @@
   .compose-plus{width:42px;height:42px;border-radius:12px;background:var(--bg2);border:1.5px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:500;color:var(--text3);flex-shrink:0;transition:all 0.2s}
   .compose-card:hover .compose-plus{border-color:var(--accent3);color:var(--accent3)}
   .compose-title{font-size:14px;font-weight:600;color:var(--text)}
+  .modal-tutorial.is-closed{background:var(--red-bg);border-color:rgba(220,38,38,.3);color:var(--red)}
   .compose-sub{font-size:12px;color:var(--text3);margin-top:2px;line-height:1.4}
 
   /* ── Recruitment Grid ── */
@@ -340,9 +341,22 @@
       <div class="team-dashboard-grid" style="display: grid; grid-template-columns: 1.1fr 1fr; gap: 12px;">
         <!-- Team Members -->
         <div style="background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 16px;">
-          <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 14px;">TEAM MEMBERS <span style="color: var(--accent3); font-weight: 600;">· Max 5</span></div>
+          <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 14px;">TEAM MEMBERS <span style="color: var(--accent3); font-weight: 600;">· Max {{ \App\Models\Team::maxMembers() }}</span></div>
+          @if($teamLocked)
+          <div role="status" style="display:flex;gap:10px;align-items:flex-start;margin:-4px 0 14px;padding:10px 12px;border-radius:10px;background:var(--bg2);border:1px solid var(--border);">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="var(--accent3)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none;margin-top:1px;" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            <div style="font-size:11.5px;line-height:1.5;color:var(--text2);">
+              <strong style="color:var(--text);">Members locked{{ $teamLockedAt ? ' since '.$teamLockedAt->format('M j, Y') : '' }}.</strong>
+              Your team passed Title Defense, so no one can join, and a member leaves only with your CaPSA's approval.
+            </div>
+          </div>
+          @endif
           @php
-            $memberSlots = 5;
+            // The number of seats drawn, which is the number the CaPSA set.
+            // Spelled out as 5, this page went on showing five rows however
+            // many a team was allowed - so setting three changed the labels
+            // and left two slots nobody could ever fill.
+            $memberSlots = \App\Models\Team::maxMembers();
             // Invitations already sent and unanswered. They hold a slot, so
             // the leader can see the team is fuller than the member count.
             $pendingInvites = collect($outgoingInvitations ?? []);
@@ -383,7 +397,11 @@
                     <div style="font-size: 11px; color: var(--text3);">{{ $memberRole }}</div>
                   </div>
                   <div style="background: {{ $isTeamLeader ? '#fef3c7' : 'var(--bg2)' }}; color: {{ $isTeamLeader ? '#92400e' : 'var(--text3)' }}; padding: 3px 8px; border-radius: 6px; font-size: 10px; font-weight: 700;">{{ $isTeamLeader ? 'LEADER' : 'MEMBER' }}</div>
-                  @if($isLeader && !$isThisUser && !$myTeam->is_confirmed)
+                  @if($teamLocked && $leaveRequests->contains('student_id', $member->student_id))
+                    <span title="A request about this member is waiting on your CaPSA" style="font-size:9px;font-weight:700;color:var(--amber);background:var(--amber-bg);padding:2px 6px;border-radius:4px;white-space:nowrap;">WITH CAPSA</span>
+                  @elseif($teamLocked && $isLeader && !$isThisUser)
+                    <button type="button" onclick="openCapsaLeaveModal('remove', {{ $member->student_id }}, '{{ addslashes(trim($member->f_name . ' ' . $member->l_name)) }}')" style="background:none;border:none;color:#ef4444;cursor:pointer;padding:4px;font-size:14px;line-height:1;" title="Ask your CaPSA to remove this member" aria-label="Ask your CaPSA to remove {{ trim($member->f_name . ' ' . $member->l_name) }}">✕</button>
+                  @elseif($isLeader && !$isThisUser && !$myTeam->is_confirmed)
                     <button type="button" onclick="openRemoveMemberModal({{ $member->student_id }}, '{{ addslashes($member->f_name . ' ' . $member->l_name) }}', '{{ addslashes($member->email ?? '') }}', '{{ addslashes(($member->course ?? '') . ($member->year_section ? ' · ' . $member->year_section : '')) }}', '{{ addslashes($member->avatarUrl()) }}')" style="background:none;border:none;color:#ef4444;cursor:pointer;padding:4px;font-size:14px;line-height:1;" title="Remove member">✕</button>
                   @endif
                 </div>
@@ -416,6 +434,27 @@
                      be able to replace them; hiding this left them with no way
                      to. InvitationController::store() never enforced it either,
                      so this was a button hidden over a door that was open. --}}
+                {{-- The roster closes at Capstone 2 - the first semester of 4th
+                     year - because somebody joining then was not there for the
+                     title, the proposal or any of the work being graded. The
+                     endpoint refuses it too; this only saves them the click. --}}
+                {{-- Capstone 2: every remaining seat comes down this branch,
+                     not just the first, or the ones after it fall through to
+                     the Open Slot button below and the team looks half
+                     locked. The notice is printed once; the rest render
+                     nothing, because those seats cannot be filled. --}}
+                @elseif($myTeam->capstoneStage() !== 1)
+                @if($i === $slotCount)
+                <div style="display:flex;align-items:center;gap:10px;border:1px dashed var(--border2);border-radius:10px;padding:8px 12px;background:var(--bg3)">
+                  <div style="width:36px;height:36px;border-radius:50%;background:var(--bg2);border:1.5px dashed var(--border2);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--text3)">
+                    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                  </div>
+                  <div style="flex:1">
+                    <div style="font-size:12.5px;font-weight:600;color:var(--text3)">{{ $teamLocked ? 'Members are locked.' : 'Members Addition no longer available.' }}</div>
+                    <div style="font-size:11px;color:var(--text3);line-height:1.45">{{ $teamLocked ? 'Your team passed Title Defense, so no one can be added.' : 'Capstone 2 has started, so a team keeps the members it finished Capstone 1 with.' }}</div>
+                  </div>
+                </div>
+                @endif
                 @elseif($isLeader)
                 <button type="button" onclick="openOpenSlotInviteModal()" style="display: flex; align-items: center; gap: 10px; border: 1px dashed var(--border2); border-radius: 10px; padding: 6px 12px; opacity: 0.75; background: transparent; cursor: pointer; width: 100%; text-align: left; transition: all 0.2s;" onmouseover="this.style.opacity='1'; this.style.borderColor='var(--blue)'; this.style.background='var(--blue-bg)'" onmouseout="this.style.opacity='0.75'; this.style.borderColor='var(--border2)'; this.style.background='transparent'">
                   <div style="width: 36px; height: 36px; border-radius: 50%; background: var(--bg2); border: 1.5px dashed var(--border2); display: flex; align-items: center; justify-content: center; font-size: 13px; color: var(--text3); flex-shrink: 0;">+</div>
@@ -480,7 +519,7 @@
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 6px;">
               <div class="stat-chip" style="display: flex; justify-content: space-between; align-items: center; gap: 4px; padding: 5px 8px; background: var(--bg2); border-radius: 8px;">
                 <span style="font-size: 9px; color: var(--text3);">Members</span>
-                <span style="font-size: 9px; font-weight: 700; color: var(--text);">{{ \App\Models\StudentSchoolYear::where('team_id', $myTeam->team_id)->count() }} / 5</span>
+                <span style="font-size: 9px; font-weight: 700; color: var(--text);">{{ \App\Models\StudentSchoolYear::where('team_id', $myTeam->team_id)->count() }} / {{ \App\Models\Team::maxMembers() }}</span>
               </div>
               <div class="stat-chip" style="display: flex; justify-content: space-between; align-items: center; gap: 4px; padding: 5px 8px; background: var(--bg2); border-radius: 8px;">
                 <span style="font-size: 9px; color: var(--text3);">Your Role</span>
@@ -544,6 +583,39 @@
       </div>
       @endif
 
+      @if($leaveRequests->isNotEmpty())
+      <div style="margin-top: 16px; background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 16px;">
+        <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3);">WAITING ON YOUR CAPSA</div>
+        <div style="font-size: 11px; color: var(--text3); margin: 3px 0 12px;">Your team's members are locked, so these need your CaPSA's decision.</div>
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          @foreach($leaveRequests as $rr)
+            @php
+              $rrMember = trim(($rr->student->f_name ?? '').' '.($rr->student->l_name ?? '')) ?: 'A member';
+              $rrBy = trim(($rr->requester->f_name ?? '').' '.($rr->requester->l_name ?? '')) ?: 'The leader';
+              $rrMine = (int) $rr->requested_by === (int) auth()->user()->student_id;
+            @endphp
+            <div style="display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px;">
+              <div style="flex: 1; min-width: 0;">
+                <div style="font-size: 13px; font-weight: 600; color: var(--text);">
+                  {{ $rr->type === 'leave' ? $rrMember.' asked to leave' : $rrBy.' asked to remove '.$rrMember }}
+                </div>
+                <div style="font-size: 12px; color: var(--text2); margin-top: 3px; line-height: 1.5; overflow-wrap: anywhere;">“{{ $rr->reason }}”</div>
+                <div style="font-size: 10.5px; color: var(--text3); margin-top: 4px;">Sent {{ $rr->created_at->diffForHumans() }}</div>
+              </div>
+              @if($rrMine)
+              <form method="POST" action="{{ route('team.capsa-leave-requests.update', $rr->id) }}" style="flex-shrink: 0;">
+                @csrf
+                @method('PATCH')
+                <input type="hidden" name="status" value="withdrawn">
+                <button type="submit" style="padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg2); color: var(--text2); font-size: 11px; font-weight: 700; cursor: pointer;">Withdraw</button>
+              </form>
+              @endif
+            </div>
+          @endforeach
+        </div>
+      </div>
+      @endif
+
       <div class="team-actions" style="margin-top: 18px; display: flex; justify-content: flex-end; gap: 8px; padding-top: 10px; border-top: 1px solid var(--border);">
         @if($isLeader && $myTeam->hasSubmittedPreProposals() && !$myTeam->is_confirmed)
           <span class="pending-badge-standalone" style="display:inline-flex;align-items:center;gap:6px;background:linear-gradient(135deg,#d97706,#b45309);color:#fff;padding:6px 14px 6px 10px;border-radius:20px;font-size:11px;font-weight:600;box-shadow:0 2px 8px rgba(217,119,6,0.35);border:none;letter-spacing:0.2px;">
@@ -568,6 +640,9 @@
             @method('DELETE')
             <button type="button" onclick="confirmLeaveTeam()" style="padding: 5px 10px; border-radius: 6px; border: 1px solid var(--red); background: var(--red-bg); color: var(--red); font-size: 10px; font-weight: 700; cursor: pointer;">Leave Team</button>
           </form>
+        @elseif($teamLocked)
+          @php $myLeaveRequest = $leaveRequests->firstWhere('student_id', auth()->user()->student_id); @endphp
+          <button type="button" @if(!$myLeaveRequest) onclick="openCapsaLeaveModal('leave')" @endif title="{{ $myLeaveRequest ? 'Your request is waiting on your CaPSA' : 'Ask your CaPSA to let you leave' }}" style="padding: 5px 10px; border-radius: 6px; border: 1px solid var(--red); background: var(--red-bg); color: var(--red); font-size: 10px; font-weight: 700; {{ $myLeaveRequest ? 'opacity:0.6;cursor:not-allowed;' : 'cursor:pointer;' }}">{{ $myLeaveRequest ? 'Leave Request with CaPSA' : 'Ask CaPSA to Leave' }}</button>
         @else
           @php
             $leavePending = $hasPendingLeaveApproval;
@@ -610,7 +685,42 @@
   <div class="team-container">
     <!-- LEFT COLUMN -->
     <div style="display: flex; flex-direction: column; gap: 20px;">
-      @if(!$myTeam && !$myRecruitment)
+      {{-- Capstone 2 with no team: say so. The compose card and the feed
+           below both go quiet at this point, and an empty page with nothing
+           on it reads as broken rather than closed. --}}
+      @if(!$myTeam && auth()->user()->capstoneStage() !== 1)
+      <div class="card" style="padding:20px 22px">
+        <div style="display:flex;align-items:flex-start;gap:14px">
+          <div style="width:38px;height:38px;border-radius:11px;background:var(--bg3);color:var(--text3);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+            <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          </div>
+          <div>
+            <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:4px">Team forming is closed</div>
+            <div style="font-size:12.5px;color:var(--text3);line-height:1.55">
+              Capstone 2 has started, so teams keep the members they finished Capstone 1 with.
+              New teams and recruitment posts are closed. Speak to your CaPSA if you are not on a team.
+            </div>
+          </div>
+        </div>
+      </div>
+      @elseif(!$myTeam && !$creationAllowed && !$joiningAllowed)
+      <div class="card" style="padding:20px 22px">
+        <div style="display:flex;align-items:flex-start;gap:14px">
+          <div style="width:38px;height:38px;border-radius:11px;background:var(--red-bg);color:var(--red);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+            <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          </div>
+          <div>
+            <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:4px">Creating and joining teams are closed</div>
+            <div style="font-size:12.5px;color:var(--text3);line-height:1.55">Your CaPSA has turned them off for now. Speak to your CaPSA if you are not on a team.</div>
+          </div>
+        </div>
+      </div>
+      @elseif(!$myTeam && !$myRecruitment)
+      @if (!$creationAllowed || !$joiningAllowed)
+        <div class="card" style="padding:12px 16px;border-color:rgba(220,38,38,.3);background:var(--red-bg);font-size:12.5px;color:var(--red)">
+          {{ !$creationAllowed ? 'Creating a team is closed right now - you can still post to find a team.' : 'Joining a team is closed right now - you can still post to build your own team.' }}
+        </div>
+      @endif
       <div class="card compose-card" onclick="openPostModal()">
         <div class="compose-card-inner">
           <div class="compose-plus">+</div>
@@ -807,7 +917,7 @@
                   @method('PATCH')
                   <input type="hidden" name="status" value="accepted">
                   <button class="btn-accept" type="button" style="cursor:pointer; border:none; outline:none;"
-                    onclick="showConfirm({title:'Join Team',message:'Accept invitation from <strong>{{ addslashes($invite->team->team_name ?? 'this team') }}</strong>? Your current post will be removed.',icon:'team',confirmText:'Accept',confirmClass:'success',onConfirm:function(){document.getElementById('accept-form-{{ $invite->id }}').submit();}})">
+                    onclick="if(!JOINING_ALLOWED){showToast(JOINING_CLOSED_MSG,'error');return;}showConfirm({title:'Join Team',message:'Accept invitation from <strong>{{ addslashes($invite->team->team_name ?? 'this team') }}</strong>? Your current post will be removed.',icon:'team',confirmText:'Accept',confirmClass:'success',onConfirm:function(){document.getElementById('accept-form-{{ $invite->id }}').submit();}})">
                     Accept
                   </button>
                 </form>
@@ -851,7 +961,7 @@
                       @method('PATCH')
                       <input type="hidden" name="status" value="accepted">
                       <button class="btn-accept" type="button" style="cursor:pointer; border:none; outline:none;"
-                        onclick="showConfirm({title:'Accept Request',message:'Let <strong>{{ addslashes(($request->sender->f_name ?? '') . ' ' . ($request->sender->l_name ?? '')) }}</strong> join your team? Their post will be removed.',icon:'team',confirmText:'Accept',confirmClass:'success',onConfirm:function(){document.getElementById('accept-form-{{ $request->id }}').submit();}})">
+                        onclick="if(!JOINING_ALLOWED){showToast(JOINING_CLOSED_MSG,'error');return;}showConfirm({title:'Accept Request',message:'Let <strong>{{ addslashes(($request->sender->f_name ?? '') . ' ' . ($request->sender->l_name ?? '')) }}</strong> join your team? Their post will be removed.',icon:'team',confirmText:'Accept',confirmClass:'success',onConfirm:function(){document.getElementById('accept-form-{{ $request->id }}').submit();}})">
                         Accept Request
                       </button>
                     </form>
@@ -998,7 +1108,7 @@
         <option value="individual">Find a Team (Join Others)</option>
       </select>
       <div class="modal-tutorial" id="modal-note-box">
-        <p id="modal-note-text"><strong>CapsTip:</strong> Your team can have up to 5 members including you (the leader). Slots are filled automatically as members join.</p>
+        <p id="modal-note-text"><strong>CapsTip:</strong> Your team can have up to {{ \App\Models\Team::maxMembers() }} members including you (the leader). Slots are filled automatically as members join.</p>
       </div>
       <div id="leader-fields">
         <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 8px;">Team Name</label>
@@ -1032,7 +1142,10 @@
           <input type="hidden" name="looking_for" id="looking-for-input" value="">
           <input type="hidden" name="introduction" id="introduction-input" value="">
           <input type="hidden" name="team_name" id="team-name-hidden" value="">
-          <input type="hidden" name="member_count" id="member-count-input" value="5">
+          {{-- Posted when a team is created. It is the CaPSA's number, not a
+               fixed 5 - the column is only a record, since the cap itself is
+               read from the setting. --}}
+          <input type="hidden" name="member_count" id="member-count-input" value="{{ \App\Models\Team::maxMembers() }}">
           <input type="hidden" name="tags" id="tags-hidden-input" value="">
           <button type="submit" class="btn-primary" style="width: 100%; background: var(--blue-bg); color: var(--blue); border: 1.5px solid rgba(29,78,216,0.25); box-shadow: none;" id="form-submit-btn">Publish Post</button>
         </form>
@@ -1116,6 +1229,38 @@
 </div>
 @endif
 
+@if($myTeam && $teamLocked)
+{{-- Leave request: leaving, or removing a member, after Title Defense --}}
+<div class="modal-overlay" id="capsaLeaveModal" onclick="if(event.target==this) closeCapsaLeaveModal()">
+  <div class="card modal-card modal-card--team" role="dialog" aria-modal="true" aria-labelledby="rrm-title" style="width: 460px; padding: 30px; position: relative;">
+    <button type="button" onclick="closeCapsaLeaveModal()" class="pm-close-btn" aria-label="Close" style="position: absolute; top: 20px; right: 20px;">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+    <div style="width:48px;height:48px;border-radius:50%;background:var(--bg2);color:var(--accent3);display:flex;align-items:center;justify-content:center;margin-bottom:14px;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+    </div>
+    <div class="section-title" id="rrm-title">Ask your CaPSA</div>
+    <p id="rrm-lede" style="margin-top:8px;font-size:13px;color:var(--text2);line-height:1.6;"></p>
+    <form method="POST" action="{{ route('team.capsa-leave-requests.store') }}" id="capsa-leave-form" style="margin-top:14px;">
+      @csrf
+      <input type="hidden" name="type" id="rrm-type">
+      <input type="hidden" name="student_id" id="rrm-student">
+      <label for="rrm-reason" style="display:block;font-size:12px;font-weight:600;color:var(--text);margin-bottom:6px;">Reason for your CaPSA</label>
+      <textarea id="rrm-reason" name="reason" rows="4" minlength="{{ \App\Models\MemberLeaveRequest::REASON_MIN }}" maxlength="1000" required placeholder="What happened, and why it cannot be worked out within the team" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--bg2);color:var(--text);font:inherit;font-size:13px;line-height:1.5;resize:vertical;"></textarea>
+      <div style="display:flex;justify-content:space-between;gap:10px;font-size:11px;color:var(--text3);margin-top:4px;">
+        <span>At least {{ \App\Models\MemberLeaveRequest::REASON_MIN }} characters. Your team sees this too.</span>
+        <span id="rrm-count">0 / 1000</span>
+      </div>
+      <ul id="rrm-effects" style="margin:12px 0 0;padding-left:18px;font-size:12px;color:var(--text2);line-height:1.7;"></ul>
+      <div style="display:flex;gap:10px;margin-top:18px;">
+        <button type="submit" class="btn-primary" id="rrm-submit" style="flex:1;" disabled>Send to CaPSA</button>
+        <button type="button" class="google-btn" style="flex:1;border:none;" onclick="closeCapsaLeaveModal()">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+@endif
+
 @if($myTeam && $isLeader)
 {{-- Edit Team Modal --}}
 <div class="modal-overlay" id="editTeamModal" onclick="if(event.target==this) closeEditTeamModal()">
@@ -1172,11 +1317,11 @@
       <div style="padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text3);font-size:12px;margin-bottom:16px;box-sizing:border-box;">
         Fixed at 5 members (including the leader). Slots fill automatically as members join.
       </div>
-      <input type="hidden" name="member_count" value="5">
+      <input type="hidden" name="member_count" value="{{ \App\Models\Team::maxMembers() }}">
       <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 8px;">Team Status</label>
       @if($isTeamFull)
       <div style="background:#fef3c7;border:1px solid #fde68a;border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:12px;color:#92400e;">
-        <strong>Team is now full!</strong> Your team has reached {{ $teamMembers->count() }}/5 members. You can now update the status to <strong>Complete</strong> or <strong>Closed</strong>.
+        <strong>Team is now full!</strong> Your team has reached {{ $teamMembers->count() }}/{{ \App\Models\Team::maxMembers() }} members. You can now update the status to <strong>Complete</strong> or <strong>Closed</strong>.
       </div>
       @endif
       <select name="team_status" id="teamStatusSelect" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;margin-bottom:8px;box-sizing:border-box;@if($myTeam->is_confirmed) cursor:not-allowed;opacity:0.6;@endif" @if($myTeam->is_confirmed) disabled @endif>
@@ -1234,7 +1379,11 @@
       </div>
     </div>
 
-    <div style="flex: 1; overflow-y: auto; padding: 18px 26px 26px; min-height: 0;">
+    {{-- Not a scroller. This scrolled AND the list inside it scrolled, so
+         the dialog had two bars down its right edge and the search box slid
+         away under the header. It lays the search and the list out; the list
+         is the only thing that moves. --}}
+    <div style="flex: 1; display: flex; flex-direction: column; min-height: 0; overflow: hidden; padding: 18px 26px 26px;">
       <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px;">
         <div style="position: relative; flex: 1;">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text3); pointer-events: none;"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
@@ -1242,7 +1391,7 @@
         </div>
       </div>
 
-      <div id="open-slot-classmates-list" style="display: flex; flex-direction: column; gap: 8px; max-height: 400px; overflow-y: auto; padding-right: 4px;">
+      <div id="open-slot-classmates-list" style="display: flex; flex-direction: column; gap: 8px; flex: 1; min-height: 0; overflow-y: auto; padding-right: 4px;">
         {{-- Classmates will be loaded dynamically --}}
         <div id="open-slot-loading" style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 20px; color: var(--text3); font-size: 13px;">
           <div class="sk" style="width: 32px; height: 32px; border-radius: 50%; border: 2px solid var(--border); border-top-color: var(--blue); animation: spin 1s linear infinite; margin-bottom: 12px;"></div>
@@ -1709,6 +1858,8 @@ function confirmLeaveTeam() {
             openTransferModal();
         }
     });
+    @elseif($isLeader && $teamLocked)
+    showToast('Your team passed Title Defense, so it cannot be ended by leaving. Talk to your CaPSA.', 'error');
     @elseif($isLeader)
     showConfirm({
         title: 'Leave & Terminate Team',
@@ -1771,6 +1922,54 @@ function submitRemoveMember() {
     form.action = '{{ url("/team/members") }}/' + removeMemberId;
     form.submit();
 }
+
+@if($teamLocked)
+var LEAVE_REASON_MIN = {{ \App\Models\MemberLeaveRequest::REASON_MIN }};
+
+function openCapsaLeaveModal(type, studentId, name) {
+    var leave = type === 'leave';
+    document.getElementById('rrm-type').value = type;
+    document.getElementById('rrm-student').value = leave ? '' : studentId;
+    document.getElementById('rrm-title').textContent = leave ? 'Ask your CaPSA to leave' : 'Ask your CaPSA to remove ' + name;
+    document.getElementById('rrm-lede').textContent = leave
+        ? 'Your team passed Title Defense, so its members are locked. Your CaPSA reads your reason and decides whether you can leave.'
+        : 'Your team passed Title Defense, so you cannot remove members yourself. Your CaPSA reads your reason and decides.';
+
+    var effects = leave
+        ? ['Your team leader is told you asked.', 'You stay on the team unless your CaPSA approves.', 'You can withdraw the request while it is waiting.']
+        : [name + ' is told you asked, and sees your reason.', name + ' stays on the team unless your CaPSA approves.', 'No one can be added to replace them.'];
+    var list = document.getElementById('rrm-effects');
+    list.innerHTML = '';
+    effects.forEach(function (text) {
+        var li = document.createElement('li');
+        li.textContent = text;
+        list.appendChild(li);
+    });
+
+    var reason = document.getElementById('rrm-reason');
+    reason.value = '';
+    updateCapsaLeaveReason();
+    document.getElementById('capsaLeaveModal').classList.add('active');
+    reason.focus();
+}
+
+function closeCapsaLeaveModal() {
+    document.getElementById('capsaLeaveModal').classList.remove('active');
+}
+
+function updateCapsaLeaveReason() {
+    var n = document.getElementById('rrm-reason').value.trim().length;
+    document.getElementById('rrm-count').textContent = n + ' / 1000';
+    document.getElementById('rrm-submit').disabled = n < LEAVE_REASON_MIN;
+}
+
+document.getElementById('rrm-reason').addEventListener('input', updateCapsaLeaveReason);
+document.getElementById('capsa-leave-form').addEventListener('submit', function () {
+    var btn = document.getElementById('rrm-submit');
+    btn.disabled = true;
+    btn.textContent = 'Sending…';
+});
+@endif
 
 function openTransferModal() {
     document.getElementById('transferModal').classList.add('active');
@@ -2113,7 +2312,33 @@ function cancelPendingInvite(invitationId, name) {
     });
 }
 
+// Which Capstone is running, so the page can say why rather than opening a
+// list nobody can be invited from.
+const CAPSTONE_STAGE = {{ $myTeam?->capstoneStage() ?? auth()->user()->capstoneStage() }};
+// The CaPSA's Team Rules. Checked the moment somebody starts to create, join
+// or invite - never after they have filled in a form.
+const CREATION_ALLOWED = @json($creationAllowed);
+const JOINING_ALLOWED = @json($joiningAllowed);
+const CREATION_CLOSED_MSG = @json(\App\Models\Team::CREATION_CLOSED);
+const JOINING_CLOSED_MSG = @json(\App\Models\Team::JOINING_CLOSED);
+
 function openOpenSlotInviteModal() {
+    // The button is hidden in Capstone 2, but hidden is not gone - the
+    // modal was still reachable and opened on an empty list of classmates,
+    // which reads as a broken page rather than a closed one.
+    if (CAPSTONE_STAGE !== 1) {
+        showToast('Capstone 2 has started, so teams keep the members they finished '
+            + 'Capstone 1 with. Members cannot be added now.', 'error');
+
+        return;
+    }
+
+    if (!JOINING_ALLOWED) {
+        showToast(JOINING_CLOSED_MSG, 'error');
+
+        return;
+    }
+
     var modal = document.getElementById('openSlotInviteModal');
     if (modal) {
         modal.classList.add('active');
@@ -2157,6 +2382,11 @@ function loadOpenSlotClassmates() {
     })
     .then(function(data) {
         if (loadingEl) loadingEl.style.display = 'none';
+
+        if (typeof data.available_slots === 'number') {
+            OPEN_SLOT_SEATS_FREE = data.available_slots;
+            refreshOpenSlotSendButton();
+        }
 
         if (data.error) {
             showToast(data.error, 'error');
@@ -2277,6 +2507,14 @@ function selectOpenSlotClassmate(el) {
     refreshOpenSlotSendButton();
 }
 
+// Seats left after the members already on the team and the invitations
+// already waiting to be answered. The server refuses anything over this;
+// the point of having it here is that the leader can see it before picking
+// five people for two seats. Rendered with the page, then re-read from the
+// classmate list every time the dialog opens, so it does not go stale after
+// invitations are sent without a reload.
+var OPEN_SLOT_SEATS_FREE = {{ $myTeam->seatsFree() }};
+
 /** How many are picked, and whether Send Invite is worth pressing. */
 function refreshOpenSlotSendButton() {
     var picked = document.querySelectorAll('.open-slot-classmate-option.selected');
@@ -2284,15 +2522,30 @@ function refreshOpenSlotSendButton() {
     var label = document.getElementById('osl-count');
     if (!btn) return;
 
-    btn.disabled = picked.length === 0;
-    btn.style.opacity = picked.length ? '1' : '.5';
-    btn.style.cursor = picked.length ? 'pointer' : 'not-allowed';
+    var tooMany = picked.length > OPEN_SLOT_SEATS_FREE;
+
+    btn.disabled = picked.length === 0 || tooMany;
+    btn.style.opacity = btn.disabled ? '.5' : '1';
+    btn.style.cursor = btn.disabled ? 'not-allowed' : 'pointer';
     btn.textContent = picked.length > 1 ? 'Send ' + picked.length + ' Invites' : 'Send Invite';
 
     if (label) {
-        label.textContent = picked.length
-            ? picked.length + (picked.length === 1 ? ' classmate picked' : ' classmates picked')
-            : 'Pick who to invite.';
+        if (tooMany) {
+            label.style.color = 'var(--red)';
+            label.textContent = OPEN_SLOT_SEATS_FREE === 0
+                ? 'No seats left on your team.'
+                : 'Only ' + OPEN_SLOT_SEATS_FREE + ' seat' + (OPEN_SLOT_SEATS_FREE === 1 ? '' : 's')
+                  + ' left - you have picked ' + picked.length + '.';
+        } else {
+            label.style.color = 'var(--text3)';
+            label.textContent = picked.length
+                ? picked.length + (picked.length === 1 ? ' classmate picked' : ' classmates picked')
+                  + ' · ' + OPEN_SLOT_SEATS_FREE + ' seat' + (OPEN_SLOT_SEATS_FREE === 1 ? '' : 's') + ' free'
+                : (OPEN_SLOT_SEATS_FREE
+                    ? 'Pick who to invite - ' + OPEN_SLOT_SEATS_FREE + ' seat'
+                      + (OPEN_SLOT_SEATS_FREE === 1 ? '' : 's') + ' free.'
+                    : 'No seats left on your team.');
+        }
     }
 }
 
@@ -2315,7 +2568,11 @@ function sendOpenSlotInvites() {
     var csrf = document.querySelector('meta[name="csrf-token"]');
     var token = csrf ? csrf.getAttribute('content') : '{{ csrf_token() }}';
 
-    Promise.all(picked.map(function (el) {
+    // One after another, not Promise.all. Sent together, every request asks
+    // "is there a seat?" before any of them has taken one, so three
+    // invitations for two seats all passed. In order, the second sees the
+    // first waiting.
+    var sendOne = function (el) {
         return fetch('{{ route('invitations.store') }}', {
             method: 'POST',
             headers: {
@@ -2332,7 +2589,13 @@ function sendOpenSlotInvites() {
             .then(function (r) { return r.json(); })
             .then(function (d) { return { ok: !!(d && d.success), name: el.getAttribute('data-name'), message: d && d.message }; })
             .catch(function () { return { ok: false, name: el.getAttribute('data-name') }; });
-    })).then(function (results) {
+    };
+
+    picked.reduce(function (chain, el) {
+        return chain.then(function (results) {
+            return sendOne(el).then(function (result) { return results.concat(result); });
+        });
+    }, Promise.resolve([])).then(function (results) {
         var sent = results.filter(function (r) { return r.ok; });
         var failed = results.filter(function (r) { return !r.ok; });
 
@@ -2510,7 +2773,16 @@ function resetPostModal() {
 }
 
 function openPostModal() {
+    if (!CREATION_ALLOWED && !JOINING_ALLOWED) {
+        showToast('Creating and joining teams are both closed right now - your CaPSA has turned them off.', 'error');
+        return;
+    }
     resetPostModal();
+    // Open on the goal that is still allowed.
+    if (!CREATION_ALLOWED) {
+        document.getElementById('post-goal').value = 'individual';
+        updateModalUI();
+    }
     syncRecruitmentSelectLabels();
     document.getElementById('postModal').classList.add('active');
 }
@@ -2521,6 +2793,10 @@ function closePostModal() {
 }
 
 function sendInviteOrRequest(receiverId, teamId, type) {
+    if (!JOINING_ALLOWED) {
+        showToast(JOINING_CLOSED_MSG, 'error');
+        return;
+    }
     const isInvite = type === 'invite';
     showConfirm({
         title: isInvite ? 'Invite Student' : 'Send Join Request',
@@ -2588,7 +2864,16 @@ function viewPostDetails(cardEl, name, skills, lookingFor, teamName, projectTitl
         actionBtn.style.opacity = 1;
         actionBtn.style.cursor = 'pointer';
 
-        if (type === 'Leader') {
+        if (!JOINING_ALLOWED) {
+            // Said on the post itself, before a request or invite is attempted.
+            ownerMsg.style.display = 'block';
+            ownerMsg.textContent = JOINING_CLOSED_MSG;
+            actionBtn.textContent = 'Joining is closed';
+            actionBtn.disabled = true;
+            actionBtn.style.opacity = 0.5;
+            actionBtn.style.cursor = 'not-allowed';
+            actionBtn.onclick = null;
+        } else if (type === 'Leader') {
             // Viewer wants to send a join request to a build_a_team poster
             if (currentStudentTeamId && currentStudentTeamId === postOwnerTeamId) {
                 // Viewer is already in this same team
@@ -2686,11 +2971,25 @@ function updateModalUI() {
     const isLeader = (goal === 'leader');
     document.getElementById('modal-title').textContent = isLeader ? 'Build a Team' : 'Find a Team';
     document.getElementById('modal-note-text').innerHTML = isLeader 
-        ? '<strong>CapsTip:</strong> Your team can have up to 5 members including you (the leader). Slots are filled automatically as members join.' 
+        ? '<strong>CapsTip:</strong> Your team can have up to {{ \App\Models\Team::maxMembers() }} members including you (the leader). Slots are filled automatically as members join.' 
         : '<strong>CapsTip:</strong> Highlight your best technical strengths. Teams search for specific skills when filling up their empty slots.';
     
-    document.getElementById('leader-fields').style.display = isLeader ? 'block' : 'none';
-    document.getElementById('individual-fields').style.display = isLeader ? 'none' : 'block';
+    // A closed goal says so at once, and hides its fields so nothing gets typed for nothing.
+    const closedMsg = isLeader ? (CREATION_ALLOWED ? null : CREATION_CLOSED_MSG) : (JOINING_ALLOWED ? null : JOINING_CLOSED_MSG);
+    const noteBox = document.getElementById('modal-note-box');
+    if (closedMsg) {
+        document.getElementById('modal-note-text').innerHTML = '<strong>Closed:</strong> ' + closedMsg;
+    }
+    noteBox.classList.toggle('is-closed', !!closedMsg);
+    const submitBtn = document.getElementById('form-submit-btn');
+    if (submitBtn) {
+        submitBtn.disabled = !!closedMsg;
+        submitBtn.style.opacity = closedMsg ? 0.5 : 1;
+        submitBtn.style.cursor = closedMsg ? 'not-allowed' : 'pointer';
+    }
+
+    document.getElementById('leader-fields').style.display = isLeader && !closedMsg ? 'block' : 'none';
+    document.getElementById('individual-fields').style.display = !isLeader && !closedMsg ? 'block' : 'none';
     document.getElementById('recruitment-goal-input').value = isLeader ? 'build_a_team' : 'find_a_team';
     
     activeTags = [];
@@ -2796,6 +3095,12 @@ function filterFeed() {
 }
 
 function publishPost(event) {
+    const closedGoal = document.getElementById('post-goal').value === 'leader' ? !CREATION_ALLOWED : !JOINING_ALLOWED;
+    if (closedGoal) {
+        event.preventDefault();
+        showToast(document.getElementById('post-goal').value === 'leader' ? CREATION_CLOSED_MSG : JOINING_CLOSED_MSG, 'error');
+        return;
+    }
     if (activeTags.length === 0) {
         event.preventDefault();
         showToast('Choose at least one role.', 'error');
@@ -2832,13 +3137,13 @@ function publishPost(event) {
             return;
         }
     }
-    document.getElementById('member-count-input').value = 5;
+    document.getElementById('member-count-input').value = {{ \App\Models\Team::maxMembers() }};
     document.getElementById('tags-hidden-input').value = JSON.stringify(activeTags);
 
     if (isEditing) {
         event.preventDefault();
         document.getElementById('recruitment-goal-input').value = goal === 'leader' ? 'build_a_team' : 'find_a_team';
-        document.getElementById('member-count-input').value = 5;
+        document.getElementById('member-count-input').value = {{ \App\Models\Team::maxMembers() }};
         if (goal === 'leader') {
             document.getElementById('team-name-hidden').value = document.getElementById('team-name').value;
             document.getElementById('looking-for-input').value = document.getElementById('leader-looking-for').value;
@@ -2891,12 +3196,15 @@ document.addEventListener('DOMContentLoaded', function() {
     // partials/skeleton-head already decided this in <head>, before the first
     // paint: the content is on screen and no skeleton was ever shown. Without
     // this, every save replayed the 600ms fade over content already there.
+    // Skipping the fade must not skip the rest of this handler. This used
+    // to `return`, which leaves the whole DOMContentLoaded callback - so on
+    // every visit after the first, the leadership-transfer popup and the
+    // expert-removed modal below simply never opened. The member being
+    // handed the team was asked exactly once, on a page they had never
+    // opened before, and never again.
     if (document.documentElement.classList.contains('sk-seen')) {
       sk.remove();
-
-      return;
-    }
-
+    } else {
         requestAnimationFrame(function () {
             setTimeout(function () {
                 sk.style.transition = 'opacity 0.3s ease';
@@ -2912,6 +3220,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 } catch (e) {}
             }, 600);
         });
+    }
     }
 
     @if(isset($pendingLeadershipTransfer) && $pendingLeadershipTransfer)

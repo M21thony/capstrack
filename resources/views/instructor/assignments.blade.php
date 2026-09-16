@@ -17,11 +17,15 @@
 .stat-card-n { font-size: 28px; font-weight: 700; color: var(--text); }
 .stat-card-l { font-size: 12px; color: var(--text3); margin-top: 2px; }
 .stat-card-sub { font-size: 11px; color: var(--text3); margin-top: 4px; }
-.req-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 12px 16px; margin-bottom: 8px; transition: 0.15s; display: flex; align-items: center; gap: 12px; }
+/* A queue is scanned, not read. The project title moved into the panel on
+   the right, which leaves one line: who applied, as what, when. Twice as
+   many applications fit on screen, which is the whole point of a queue. */
+.req-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 7px 11px; margin-bottom: 5px; transition: 0.15s; display: flex; align-items: center; gap: 10px; cursor: pointer; }
 .req-card:hover { border-color: var(--accent); }
+.req-card.is-selected { border-color: var(--accent); background: var(--accent-light); box-shadow: inset 3px 0 0 var(--accent); }
 .req-card-left { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
-.req-team-icon { width: 34px; height: 34px; border-radius: 8px; background: var(--accent); color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px; flex-shrink: 0; }
-.req-info { flex: 1; min-width: 0; line-height: 1.3; }
+.req-team-icon { width: 24px; height: 24px; border-radius: 6px; font-size: 10px !important; background: var(--accent); color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px; flex-shrink: 0; }
+.req-info { flex: 1; min-width: 0; line-height: 1.3; display: flex; align-items: baseline; gap: 8px; }
 .req-team-name { font-size: 13px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .req-project { font-size: 11px; color: var(--text3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .req-leader { font-size: 10px; color: var(--text3); margin-top: 1px; }
@@ -30,6 +34,25 @@
 .req-actions { display: flex; gap: 6px; flex-shrink: 0; }
 .req-actions .btn { font-size: 11px; padding: 5px 10px; border-radius: 6px; }
 .req-actions .btn svg { width: 12px; height: 12px; flex-shrink: 0; }
+
+/* Reading an application should not hide the queue it came from. The list
+   stays put on the left; the one you clicked opens beside it. */
+.asg-split { display: grid; grid-template-columns: 1fr 320px; gap: 14px; align-items: start; }
+.asg-panel { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 14px 15px; position: sticky; top: 14px; }
+.asg-panel h4 { margin: 0 0 9px; font-size: 10px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; color: var(--text3); }
+.asg-kv { display: flex; justify-content: space-between; gap: 10px; padding: 5px 0; border-bottom: 1px solid var(--border); font-size: 12px; }
+.asg-kv:last-of-type { border-bottom: none; }
+.asg-kv span:first-child { color: var(--text3); flex-shrink: 0; }
+.asg-kv span:last-child { color: var(--text); font-weight: 500; text-align: right; }
+.asg-body { font-size: 12px; line-height: 1.55; color: var(--text2); margin: 0; }
+.asg-empty { color: var(--text3); font-size: 12px; text-align: center; padding: 26px 8px; }
+.asg-acts { display: flex; gap: 7px; margin-top: 13px; }
+.asg-acts .btn { flex: 1; justify-content: center; font-size: 12px; }
+.asg-slots { font-size: 10.5px; color: var(--text3); text-align: center; margin-top: 8px; }
+@media (max-width: 900px) {
+  .asg-split { grid-template-columns: 1fr; }
+  .asg-panel { position: static; }
+}
 .status-dot-sm { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
 .btn { display: inline-flex; align-items: center; gap: 6px; border: none; font-family: 'DM Sans', sans-serif; font-weight: 600; cursor: pointer; transition: all 0.15s; border-radius: 8px; }
 .btn:disabled { opacity: 0.45; cursor: not-allowed; }
@@ -145,8 +168,14 @@
 .modal-box textarea { width: 100%; padding: 14px 16px; border-radius: 12px; border: 1.5px solid var(--border); background: var(--bg2); color: var(--text); font-size: 15px; font-family: 'DM Sans', sans-serif; outline: none; resize: vertical; min-height: 100px; box-sizing: border-box; transition: border-color 0.2s, box-shadow 0.2s; line-height: 1.5; }
 .modal-box textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
 .modal-box textarea::placeholder { color: var(--text3); font-size: 14px; }
-.modal-actions { display: flex; gap: 10px; margin-top: 18px; }
-.modal-actions .btn { flex: 1; justify-content: center; padding: 10px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: 0.15s; border: none; font-family: 'DM Sans', sans-serif; display: inline-flex; align-items: center; gap: 6px; }
+/* Dialog buttons size to their words and sit at the end, which is what
+   expert.css already says (.modal-actions{justify-content:flex-end}) and
+   what every dialog convention expects. flex:1 here overrode that and made
+   a one-word Close into a 422px bar across the whole panel - the wider the
+   modal, the more absurd the button. Full width is right on a phone, and
+   the narrow breakpoint below still does that. */
+.modal-actions { display: flex; gap: 10px; margin-top: 18px; justify-content: flex-end; }
+.modal-actions .btn { justify-content: center; padding: 9px 18px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: 0.15s; border: none; font-family: 'DM Sans', sans-serif; display: inline-flex; align-items: center; gap: 6px; }
 .modal-actions .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
 /* Confirmation modal */
@@ -239,41 +268,63 @@
         </div>
       </div>
 
+      @if (session('status'))
+        <div class="card" style="margin-bottom:12px;padding:10px 14px;border-color:var(--green);background:var(--green-bg);color:var(--green);font-size:13px">{{ session('status') }}</div>
+      @endif
+
+      @foreach ($titleConfirmations as $tc)
+        {{-- A team the panel sent back for a new title: its adviser confirms the one the CaPSA approved. --}}
+        <div class="card" style="margin-bottom:12px;padding:14px 16px;border-color:rgba(180,83,9,.3);background:var(--amber-bg)">
+          <div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap">
+            <b style="font-size:14px">Confirm new title · {{ $tc->team?->team_name }}</b>
+            <span style="font-size:12px;color:var(--text3)">Your team was sent back for a new title. Their CaPSA approved this one.</span>
+          </div>
+          <div style="font-size:15px;font-weight:600;margin:8px 0 4px">{{ $tc->title }}</div>
+          <div style="font-size:12px;color:var(--text3);margin-bottom:10px">
+            Duplication check: {{ $tc->duplicationCheck?->verdict ?? 'no report' }}{{ $tc->duplicationCheck ? ' · top match '.$tc->duplicationCheck->top_score.'%' : '' }}
+            @php $setAside = $tc->team ? $tc->team->allPreProposals()->whereNotNull('retired_at')->pluck('title') : collect(); @endphp
+            @if ($setAside->isNotEmpty()) · Replaces: {{ $setAside->join('; ') }} @endif
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start">
+            @if ($tc->duplicationCheck?->document_path)
+              <a class="btn btn-ghost" href="{{ route('instructor.title-confirmations.document', $tc) }}" target="_blank" rel="noopener">Open pre-proposal</a>
+            @endif
+            <form method="POST" action="{{ route('instructor.title-confirmations.update', $tc) }}">
+              @csrf @method('PATCH')
+              <input type="hidden" name="decision" value="approve">
+              <button class="btn btn-primary" type="submit">Approve title</button>
+            </form>
+            <form method="POST" action="{{ route('instructor.title-confirmations.update', $tc) }}" style="display:flex;gap:6px;flex:1;min-width:280px">
+              @csrf @method('PATCH')
+              <input type="hidden" name="decision" value="decline">
+              <input class="input" name="note" placeholder="Ask for another title - what should change? (e.g. talk to your consultant about the scope)" minlength="10" required style="flex:1">
+              <button class="btn btn-ghost" type="submit">Decline</button>
+            </form>
+          </div>
+          @error('note')<div style="font-size:12px;color:var(--red);margin-top:6px">{{ $message }}</div>@enderror
+        </div>
+      @endforeach
+
       <div class="tab-bar">
         <button class="tab-btn active" onclick="switchTab('pending', this)">Pending ({{ $pendingAssignments->count() }})</button>
         <button class="tab-btn" onclick="switchTab('approved', this)">Approved ({{ $approvedAssignments->count() }})</button>
         <button class="tab-btn" onclick="switchTab('rejected', this)">Rejected ({{ $rejectedAssignments->count() }})</button>
       </div>
 
+      <div class="asg-split">
+      <div>
       <div id="tab-pending" class="tab-content active">
         @forelse($pendingAssignments as $assignment)
-          <div class="req-card">
+          <div class="req-card" data-asg="{{ $assignment->assignment_id }}" onclick="selectAssignment({{ $assignment->assignment_id }})">
             <div class="req-card-left">
               <div class="req-team-icon">{{ substr($assignment->team?->team_name ?? 'T', 0, 2) }}</div>
               <div class="req-info">
                 <div class="req-team-name">{{ $assignment->team?->team_name ?? 'Unknown Team' }}</div>
-                <div class="req-project">{{ $assignment->team?->project_title ?? 'No project title' }}</div>
-                @if($assignment->team && $assignment->team->leader)
-                  <div class="req-leader">{{ $assignment->team->leader->displayFirstName() ?? $assignment->team->leader->f_name ?? '' }}</div>
-                @endif
+                <div class="req-leader">{{ $assignment->created_at ? $assignment->created_at->diffForHumans() : '' }}</div>
               </div>
             </div>
             <div class="req-card-right">
               <span class="req-role-badge">{{ ucfirst($assignment->engaged_role_name ?? '') }}</span>
-              <div class="req-actions">
-                <button class="btn btn-ghost" onclick="openTeamModal({{ $assignment->assignment_id }})" title="View Details">
-                  <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-                  View Details
-                </button>
-                <button class="btn btn-success" onclick="openApproveModal({{ $assignment->assignment_id }})" title="Approve">
-                  <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-                  Approve
-                </button>
-                <button class="btn btn-danger" onclick="openRejectModal({{ $assignment->assignment_id }})" title="Reject">
-                  <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                  Reject
-                </button>
-              </div>
             </div>
           </div>
         @empty
@@ -286,28 +337,17 @@
 
       <div id="tab-approved" class="tab-content">
         @forelse($approvedAssignments as $assignment)
-          <div class="req-card">
+          <div class="req-card" data-asg="{{ $assignment->assignment_id }}" onclick="selectAssignment({{ $assignment->assignment_id }})">
             <div class="req-card-left">
               <div class="req-team-icon" style="background: var(--green);">{{ substr($assignment->team?->team_name ?? 'T', 0, 2) }}</div>
               <div class="req-info">
                 <div class="req-team-name">{{ $assignment->team?->team_name ?? 'Unknown Team' }}</div>
-                <div class="req-project">{{ $assignment->team?->project_title ?? 'No project title' }}</div>
                 <div class="req-leader">Assigned {{ $assignment->created_at ? $assignment->created_at->diffForHumans() : '' }}</div>
               </div>
             </div>
             <div class="req-card-right">
               <span class="req-role-badge">{{ ucfirst($assignment->engaged_role_name ?? '') }}</span>
-              <span class="status-dot-sm" style="background:var(--green);" title="Approved"></span>
-              <div class="req-actions">
-                <button class="btn btn-ghost" onclick="openTeamModal({{ $assignment->assignment_id }})" title="View Details">
-                  <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-                  View Details
-                </button>
-                <button class="btn btn-danger" onclick="openInstructorRemoveModal({{ $assignment->assignment_id }})" title="Remove">
-                  <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                  Remove
-                </button>
-              </div>
+              <span class="status-dot-sm" style="background:var(--green);"></span>
             </div>
           </div>
         @empty
@@ -320,28 +360,17 @@
 
       <div id="tab-rejected" class="tab-content">
         @forelse($rejectedAssignments as $assignment)
-          <div class="req-card">
+          <div class="req-card" data-asg="{{ $assignment->assignment_id }}" onclick="selectAssignment({{ $assignment->assignment_id }})">
             <div class="req-card-left">
               <div class="req-team-icon" style="background: var(--red);">{{ substr($assignment->team?->team_name ?? 'T', 0, 2) }}</div>
               <div class="req-info">
                 <div class="req-team-name">{{ $assignment->team?->team_name ?? 'Unknown Team' }}</div>
-                <div class="req-project">{{ $assignment->team?->project_title ?? 'No project title' }}</div>
-                <div class="req-leader">Rejected {{ $assignment->updated_at ? $assignment->updated_at->diffForHumans() : '' }}</div>
+                <div class="req-leader">Declined {{ $assignment->updated_at ? $assignment->updated_at->diffForHumans() : '' }}</div>
               </div>
             </div>
             <div class="req-card-right">
               <span class="req-role-badge">{{ ucfirst($assignment->engaged_role_name ?? '') }}</span>
-              <span class="status-dot-sm" style="background:var(--red);" title="Rejected"></span>
-              <div class="req-actions">
-                <button class="btn btn-ghost" onclick="openTeamModal({{ $assignment->assignment_id }})" title="View Details">
-                  <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-                  View Details
-                </button>
-                <button class="btn btn-danger" onclick="openInstructorRemoveModal({{ $assignment->assignment_id }})" title="Remove">
-                  <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                  Remove
-                </button>
-              </div>
+              <span class="status-dot-sm" style="background:var(--red);"></span>
             </div>
           </div>
         @empty
@@ -351,6 +380,45 @@
           </div>
         @endforelse
       </div>
+      </div>{{-- /list column --}}
+
+      {{-- The application itself, beside the queue rather than on top of it.
+           Its buttons open the same confirm dialogs the rows used to, so
+           approving and declining are unchanged - only the reading is. --}}
+      <div class="asg-panel" id="asg-panel">
+        <div id="asg-empty" class="asg-empty">
+          Pick a team on the left to read their application.
+        </div>
+
+        <div id="asg-detail" style="display:none">
+          <h4 id="asg-team"></h4>
+          <div class="asg-kv"><span>Applying as</span><span id="asg-role"></span></div>
+          <div class="asg-kv"><span>Leader</span><span id="asg-leader"></span></div>
+          <div class="asg-kv"><span>Members</span><span id="asg-members"></span></div>
+          <div class="asg-kv"><span>Applied</span><span id="asg-date"></span></div>
+          <div class="asg-kv" id="asg-status-row"><span>Status</span><span id="asg-status"></span></div>
+
+          <h4 style="margin-top:14px">Title</h4>
+          <p class="asg-body" id="asg-title"></p>
+
+          <div id="asg-proposal-wrap" style="margin-top:10px"></div>
+
+          <h4 style="margin-top:14px">Their message</h4>
+          <p class="asg-body" id="asg-message"></p>
+
+          <div id="asg-reason-wrap" style="display:none">
+            <h4 style="margin-top:14px">Why this was declined</h4>
+            <p class="asg-body" id="asg-reason" style="color:var(--red)"></p>
+          </div>
+
+          <div class="asg-acts" id="asg-acts"></div>
+          <div class="asg-slots">{{ $currentSlots }} of {{ $maxSlots }} slots used</div>
+          <div style="text-align:center;margin-top:6px">
+            <button class="btn btn-ghost" id="asg-more" style="font-size:11px">Full details</button>
+          </div>
+        </div>
+      </div>
+      </div>{{-- /asg-split --}}
     </div>
   </div>
 </div>
@@ -389,11 +457,11 @@
       <div class="info-label">Message</div>
       <div class="info-value" id="tm-message"></div>
     </div>
-    {{-- When the team applied with the pre-proposal their CaPSA approved,
+    {{-- When the team applied with the pre-proposal their CaPSA recommended,
          name it. An expert should be able to see the title got through
          rather than take the team's word for a PDF they attached. --}}
     <div class="info-row" id="tm-approved-row" style="display:none;">
-      <div class="info-label">Approved title</div>
+      <div class="info-label">Recommended title</div>
       <div class="info-value" id="tm-approved"></div>
     </div>
     <div class="info-row">
@@ -449,21 +517,25 @@
 <!-- Reject Modal -->
 <div class="modal-overlay" id="reject-modal">
   <div class="modal-box">
-    <h3>Reject Team Request</h3>
+    <h3>Decline Team Request</h3>
     <div class="modal-sub" id="reject-modal-sub"></div>
 
     <div class="modal-divider"></div>
 
     <label style="font-size: 13px; font-weight: 600; color: var(--text2); display: block; margin-bottom: 8px;">
-      Reason for Rejection <span style="color: var(--text3); font-weight: 400;">(optional)</span>
+      Reason for Declining <span style="color: var(--red)">*</span>
     </label>
-    <textarea id="reject-reason" placeholder="The team will be notified of your reason..."></textarea>
+    <textarea id="reject-reason" maxlength="500" oninput="validateReject()"
+              placeholder="Most teams can apply again. Say what to fix, or that they should look elsewhere."></textarea>
+    <div id="reject-hint" style="font-size:12px;color:var(--text3);margin-top:6px">
+      The team reads this and can apply again.
+    </div>
 
     <div class="modal-actions">
       <button class="btn btn-soft" onclick="closeModal('reject-modal')">Cancel</button>
       <button class="btn btn-danger" id="btn-confirm-reject" onclick="confirmReject()">
         <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-        Reject Request
+        Decline
       </button>
     </div>
   </div>
@@ -519,9 +591,109 @@ function switchTab(tab, btn) {
   btn.classList.add('active');
   document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
   document.getElementById('tab-' + tab).classList.add('active');
+  selectFirstVisible();
 }
 
 const assignmentData = {{ Js::from($assignmentData) }};
+
+// ── the panel beside the queue ───────────────────────────────────────────
+// Selecting a row fills this instead of opening a modal over the list. The
+// Approve and Decline buttons still call the same confirm dialogs, so the
+// decision itself is unchanged - what changes is that reading an
+// application no longer hides the queue it came from.
+function selectAssignment(id) {
+  const d = assignmentData[id];
+  if (!d) return;
+
+  document.querySelectorAll('.req-card').forEach((c) => {
+    c.classList.toggle('is-selected', Number(c.dataset.asg) === Number(id));
+  });
+
+  document.getElementById('asg-empty').style.display = 'none';
+  document.getElementById('asg-detail').style.display = 'block';
+
+  document.getElementById('asg-team').textContent = d.team;
+  document.getElementById('asg-role').textContent = d.role;
+  document.getElementById('asg-leader').textContent = d.leader || '—';
+  document.getElementById('asg-members').textContent =
+    d.members.length ? d.members.length + ' listed' : 'None listed';
+  document.getElementById('asg-date').textContent = d.date;
+
+  const statusColors = { approved: 'var(--green)', pending: 'var(--amber)', rejected: 'var(--red)' };
+  const status = document.getElementById('asg-status');
+  status.textContent = d.status.charAt(0).toUpperCase() + d.status.slice(1);
+  status.style.color = statusColors[d.status] || 'var(--text3)';
+
+  // The CaPSA-recommended title is the one that matters; the team's own field
+  // is the fallback for an application made before they had one.
+  const title = document.getElementById('asg-title');
+  title.textContent = d.approved_title || d.project || 'No title yet';
+  title.style.color = d.approved_title ? 'var(--text)' : 'var(--text3)';
+
+  document.getElementById('asg-message').textContent = d.message || 'They did not write one.';
+
+  // Built with DOM APIs, not string concatenation - a file path inside an
+  // onclick string is how the Approve button broke once already.
+  const proposal = document.getElementById('asg-proposal-wrap');
+  proposal.innerHTML = '';
+  if (d.proposal) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'btn btn-ghost';
+    btn.style.cssText = 'width:100%;font-size:11px';
+    btn.textContent = 'View their proposal';
+    btn.addEventListener('click', () => openPdfPreview(d.proposal));
+    proposal.appendChild(btn);
+  }
+
+  const reasonWrap = document.getElementById('asg-reason-wrap');
+  if (d.rejection_reason) {
+    reasonWrap.style.display = 'block';
+    document.getElementById('asg-reason').textContent = d.rejection_reason;
+  } else {
+    reasonWrap.style.display = 'none';
+  }
+
+  // Which buttons belong here depends on where the application already got
+  // to: a pending one is decided, a settled one is only undone.
+  const acts = document.getElementById('asg-acts');
+  acts.innerHTML = '';
+
+  const add = (label, cls, fn) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'btn ' + cls;
+    b.textContent = label;
+    b.addEventListener('click', fn);
+    acts.appendChild(b);
+  };
+
+  if (d.status === 'pending') {
+    add('Approve', 'btn-success', () => openApproveModal(id));
+    add('Decline', 'btn-danger', () => openRejectModal(id));
+  } else if (d.status === 'approved') {
+    add('Remove', 'btn-danger', () => openInstructorRemoveModal(id));
+  } else {
+    add('Remove from list', 'btn-danger', () => openInstructorRemoveModal(id));
+  }
+
+  document.getElementById('asg-more').onclick = () => openTeamModal(id);
+}
+
+// Open on the first row of whichever tab is showing, so the panel is never
+// an empty box next to a full list.
+function selectFirstVisible() {
+  const first = document.querySelector('.tab-content.active .req-card');
+
+  if (first) {
+    selectAssignment(Number(first.dataset.asg));
+  } else {
+    document.getElementById('asg-empty').style.display = 'block';
+    document.getElementById('asg-detail').style.display = 'none';
+  }
+}
+
+document.addEventListener('DOMContentLoaded', selectFirstVisible);
 
 function openTeamModal(id) {
   const d = assignmentData[id];
@@ -541,7 +713,7 @@ function openTeamModal(id) {
   const approvedRow = document.getElementById('tm-approved-row');
   if (d.approved_title) {
     document.getElementById('tm-approved').innerHTML =
-      '<span style="color:var(--green);font-weight:600">✓ CaPSA-approved</span> &middot; ' + d.approved_title;
+      '<span style="color:var(--green);font-weight:600">✓ CaPSA-recommended</span> &middot; ' + d.approved_title;
     approvedRow.style.display = 'flex';
   } else {
     approvedRow.style.display = 'none';
@@ -609,9 +781,9 @@ function openRejectModal(id) {
   currentRejectId = id;
   document.getElementById('reject-modal-sub').textContent = d.team + ' — ' + d.role;
   document.getElementById('reject-reason').value = '';
-  document.getElementById('btn-confirm-reject').disabled = false;
+  validateReject();
   document.getElementById('btn-confirm-reject').innerHTML =
-    '<svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Reject Request';
+    '<svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Decline';
   openModal('reject-modal');
 }
 
@@ -650,12 +822,27 @@ function confirmApprove() {
   });
 }
 
+// A decline lands on the team as something they have to act on, and most of
+// the time what an expert means is "tighten this and come back". That is
+// unsayable without a sentence, so the button stays off until there is one.
+function validateReject() {
+  const reason = document.getElementById('reject-reason').value.trim();
+  const btn = document.getElementById('btn-confirm-reject');
+  const hint = document.getElementById('reject-hint');
+
+  btn.disabled = reason.length < 20;
+  hint.textContent = reason.length === 0
+    ? 'The team reads this and can apply again.'
+    : (reason.length < 20 ? 'A line or two, so they know what to change.' : 'The team reads this and can apply again.');
+}
+
 function confirmReject() {
   if (!currentRejectId) return;
   const reason = document.getElementById('reject-reason').value.trim();
+  if (reason.length < 20) return;
   const btn = document.getElementById('btn-confirm-reject');
   btn.disabled = true;
-  btn.innerHTML = 'Rejecting...';
+  btn.innerHTML = 'Declining...';
 
   fetch('{{ url("instructor/assignments") }}/' + currentRejectId, {
     method: 'PATCH',
@@ -664,7 +851,7 @@ function confirmReject() {
       'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
       'Accept': 'application/json',
     },
-    body: JSON.stringify({ status: 'rejected', reason: reason || null }),
+    body: JSON.stringify({ status: 'rejected', reason: reason }),
   })
   .then(r => r.json())
   .then(data => {
@@ -673,16 +860,16 @@ function confirmReject() {
       showToast(data.message, 'success');
       setTimeout(() => location.reload(), 1000);
     } else {
-      showToast(data.message || 'Failed to reject', 'error');
+      showToast(data.message || 'Failed to decline', 'error');
       btn.disabled = false;
-      btn.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Reject Request';
+      btn.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Decline';
     }
   })
   .catch(() => {
     closeModal('reject-modal');
     showToast('Network error. Please try again.', 'error');
     btn.disabled = false;
-    btn.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Reject Request';
+    btn.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Decline';
   });
 }
 

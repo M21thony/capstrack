@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Recruitment;
+use App\Models\Setting;
 use App\Models\Student;
 use App\Models\StudentRole;
 use App\Models\StudentSchoolYear;
@@ -42,9 +43,13 @@ class MemberChoosesTheirRoleTest extends TestCase
 
     private function student(string $first, string $email): Student
     {
+        // 3rd year. These students join a team, and a team only takes members
+        // during Capstone 1 - as 4th years they were joining in Capstone 2,
+        // which the accept path now refuses. It used to check nothing, so the
+        // fixture got away with a scene the course does not allow.
         return Student::create([
             'email' => $email, 'f_name' => $first, 'l_name' => 'Dela Cruz',
-            'course' => 'BSIT', 'year_section' => '4th · A',
+            'course' => 'BSIT', 'year_section' => '3rd · A',
         ]);
     }
 
@@ -176,7 +181,7 @@ class MemberChoosesTheirRoleTest extends TestCase
     {
         [$leader, $team] = $this->team();
         $this->advertise($team, [self::TESTER]);
-        $team->update(['member_count' => 3]);
+        Setting::set('max_team_members', '3');
         [$joiner, $invite] = $this->inviteeOf($team, $leader);
 
         $this->actingAs($joiner, 'web')
@@ -418,7 +423,7 @@ class MemberChoosesTheirRoleTest extends TestCase
     public function test_a_team_of_three_seats_one_each(): void
     {
         [$leader, $team] = $this->team();
-        $team->update(['member_count' => 3]);
+        Setting::set('max_team_members', '3');
 
         $tester = StudentRole::where('s_role_name', self::TESTER)->value('s_role_id');
 
@@ -442,6 +447,39 @@ class MemberChoosesTheirRoleTest extends TestCase
         $this->actingAs($joiner, 'web')
             ->put(route('team.role.update'), ['role_id' => $this->roleId(self::DESIGNER)]);
         $this->assertSame(self::DESIGNER, $this->roleOf($joiner));
+    }
+
+    /**
+     * Raising the limit opens the seats on teams that already exist.
+     *
+     * The seat count used to be read off the team's own member_count
+     * column, a copy written when the team was made. A CaPSA moving the
+     * limit from three to five left every existing team still seating one
+     * designer and one tester, and a joining member was told a role was
+     * full when it was not.
+     */
+    public function test_raising_the_limit_opens_the_seats_on_a_team_that_already_exists(): void
+    {
+        Setting::set('max_team_members', '3');
+
+        [, $team] = $this->team();
+        $tester = $this->roleId(self::TESTER);
+
+        $held = $this->student('Ana', 'ana@my.cspc.edu.ph');
+        StudentSchoolYear::create([
+            'student_id' => $held->student_id,
+            'team_id' => $team->team_id,
+            's_role_id' => $tester,
+        ]);
+
+        // One seat on a team of three, and it is taken.
+        $this->assertFalse(StudentRole::hasSeat($team->team_id, $tester));
+
+        Setting::set('max_team_members', '5');
+
+        // Two seats on a team of five, so the second is free - without the
+        // team itself being touched.
+        $this->assertTrue(StudentRole::hasSeat($team->team_id, $tester));
     }
 
     // ----------------------------------------------------------------

@@ -69,21 +69,28 @@ class AddExpertByEmailTest extends TestCase
     }
 
     /**
-     * A name is required, because a guessed one is wrong on every screen.
+     * A blank name stays blank - it is never guessed from the address.
      *
-     * It used to be read off the address when blank, which gives
-     * "Markanthonybalilla21" for an address with nothing to split on.
+     * That guess is what this originally guarded against: reading the name
+     * off the address gives "Markanthonybalilla21" for one with nothing to
+     * split on, and it is wrong on every screen thereafter. The answer is
+     * not to demand a name at the door, though - it is to leave it empty
+     * until they sign in and Google says what it is.
      */
-    public function test_an_expert_cannot_be_added_without_a_name(): void
+    public function test_a_blank_name_is_left_blank_rather_than_guessed(): void
     {
         $this->actingAs($this->capsa(), 'expert');
 
         $this->postJson(route('capsa.experts.store'), [
-            'email' => 'noname@cspc.edu.ph',
+            'email' => 'markanthonybalilla21@cspc.edu.ph',
             'roles' => ['consultant'],
-        ])->assertStatus(422)->assertJson(['success' => false]);
+        ])->assertOk();
 
-        $this->assertNull(CapstoneExpert::where('email', 'noname@cspc.edu.ph')->first());
+        $expert = CapstoneExpert::where('email', 'markanthonybalilla21@cspc.edu.ph')->first();
+
+        $this->assertNotNull($expert);
+        $this->assertSame('', $expert->first_name.$expert->last_name);
+        $this->assertStringNotContainsStringIgnoringCase('markanthony', $expert->name);
     }
 
     /** A full name splits on the last space, so two given names survive. */
@@ -118,22 +125,27 @@ class AddExpertByEmailTest extends TestCase
     }
 
     /**
-     * A role is required here, unlike the bulk upload.
+     * A role is no longer required here.
      *
-     * Adding one person is a deliberate act, and one with no role in it
-     * leaves an account that can sign in and do nothing.
+     * It used to be, on the reasoning that an account with no role can sign
+     * in and do nothing. But the role is the CaPSA's to decide - the module
+     * says so - and making them decide it at the moment they type an address
+     * is what the requirement was trying to avoid. The account exists; the
+     * role follows from the row.
      */
-    public function test_an_expert_cannot_be_added_without_a_role(): void
+    public function test_an_expert_can_be_added_before_their_role_is_decided(): void
     {
         $this->actingAs($this->capsa(), 'expert');
 
         $this->postJson(route('capsa.experts.store'), [
-            'name' => 'Test Person',
             'email' => 'norole@cspc.edu.ph',
             'roles' => [],
-        ])->assertStatus(422)->assertJson(['success' => false]);
+        ])->assertOk()->assertJson(['success' => true]);
 
-        $this->assertNull(CapstoneExpert::where('email', 'norole@cspc.edu.ph')->first());
+        $expert = CapstoneExpert::where('email', 'norole@cspc.edu.ph')->first();
+
+        $this->assertNotNull($expert);
+        $this->assertSame([], $this->rolesOf('norole@cspc.edu.ph'));
     }
 
     /** An address nobody could sign in with is refused, and nothing is made. */

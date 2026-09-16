@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\CapstoneExpert;
+use App\Models\GoogleDriveToken;
 use App\Models\Student;
 use App\Models\StudentRoster;
 use Illuminate\Http\JsonResponse;
@@ -72,30 +73,43 @@ class AuthController extends Controller
             ], 500);
         }
 
-        $query = http_build_query([
-            'client_id' => $clientId,
+        return response()->json([
+            'success' => true,
+            'auth_url' => $this->googleAuthUrl($state),
+            'state' => $state,
+        ]);
+    }
+
+    /**
+     * Where sign-in sends people.
+     *
+     * access_type=offline (without forcing prompt=consent) still gets a
+     * refresh_token on first-ever authorization, and again anytime Google
+     * has no valid grant on file (e.g. after a revoke) — it's only omitted
+     * on routine repeat logins, where handleGoogleCallback just keeps
+     * reusing the previously stored one. Forcing prompt=consent
+     * unconditionally used to make every single login show the full
+     * permissions screen again, which is exactly the "asked to continue and
+     * continue" friction this avoids.
+     *
+     * $forceConsent is the way back for an account we hold no refresh token
+     * for at all — see the retry in handleGoogleCallback.
+     */
+    private function googleAuthUrl(string $state, bool $forceConsent = false): string
+    {
+        $query = http_build_query(array_filter([
+            'client_id' => config('services.google.client_id'),
             'redirect_uri' => config('services.google.redirect_uri'),
             'response_type' => 'code',
             // Added Drive scope (drive.file = access only to files the app creates/opens,
             // safer than full 'drive' scope) alongside the existing calendar/profile scopes.
             'scope' => 'openid email profile https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/drive.file',
             'state' => $state,
-            // access_type=offline (without forcing prompt=consent) still gets
-            // a refresh_token on first-ever authorization, and again anytime
-            // Google has no valid grant on file (e.g. after a revoke) — it's
-            // only omitted on routine repeat logins, where handleGoogleCallback
-            // just keeps reusing the previously stored one. Forcing
-            // prompt=consent unconditionally used to make every single login
-            // show the full permissions screen again, which is exactly the
-            // "asked to continue and continue" friction this avoids.
             'access_type' => 'offline',
-        ]);
+            'prompt' => $forceConsent ? 'consent' : null,
+        ]));
 
-        return response()->json([
-            'success' => true,
-            'auth_url' => 'https://accounts.google.com/o/oauth2/v2/auth?'.$query,
-            'state' => $state,
-        ]);
+        return 'https://accounts.google.com/o/oauth2/v2/auth?'.$query;
     }
 
     /**
@@ -181,7 +195,33 @@ class AuthController extends Controller
                     // this time rather than overwriting a working connection with
                     // null (see the same fix in GoogleDriveService::storeToken).
                     $existingToken = json_decode($expert->google_token ?? '', true);
-                    $refreshToken = $response->json('refresh_token') ?? ($existingToken['refresh_token'] ?? null);
+                    $refreshToken = $response->json('refresh_token')
+                        ?? ($existingToken['refresh_token'] ?? null)
+                        // The Drive connection is the same grant stored a
+                        // second time, and the dedicated connect flow forces
+                        // consent - so it can be holding one when the expert
+                        // row is not.
+                        ?? GoogleDriveToken::where('user_id', $expert->expert_id)->value('refresh_token');
+
+                    // Google issues a refresh token on an account's FIRST
+                    // consent and never again, so asking politely a second
+                    // time returns nothing. An expert whose row was removed
+                    // and remade comes back with none - the grant is on the
+                    // Google account, not on our row, so Google sees nothing
+                    // new to consent to - and without one the Drive and
+                    // Calendar sync stops the moment the hour-long access
+                    // token expires, with nothing able to renew it.
+                    //
+                    // The consent screen is the only thing that makes Google
+                    // send another, so ask for it, once, and only for an
+                    // account we hold nothing for.
+                    if (! $refreshToken && ! $request->session()->pull('google_forced_consent', false)) {
+                        $state = Str::random(40);
+                        $request->session()->put('oauth_state', $state);
+                        $request->session()->put('google_forced_consent', true);
+
+                        return redirect()->away($this->googleAuthUrl($state, forceConsent: true));
+                    }
 
                     // Whoever added them typed a name from what they knew,
                     // which is a guess until the person themselves turns up.
@@ -217,7 +257,11 @@ class AuthController extends Controller
                     try {
                         app(\App\Services\GoogleDriveService::class)->storeToken($expert->expert_id, [
                             'access_token' => $accessToken,
-                            'refresh_token' => $response->json('refresh_token'),
+                            // The one resolved above, not the raw response -
+                            // a repeat login sends none, and passing that
+                            // through left the two stores disagreeing about
+                            // whether this account could refresh at all.
+                            'refresh_token' => $refreshToken,
                             'expires_in' => $response->json('expires_in', 3600),
                             'token_type' => $response->json('token_type'),
                         ]);
@@ -477,10 +521,30 @@ class AuthController extends Controller
      */
     private function studentSigningIn(string $email, string $firstName, string $lastName, ?string $picture = null): ?Student
     {
-        $roster = StudentRoster::where('email', $email)->first();
+        // The class list is the whole of the answer. A student is on it
+        // because a CaPSA put them there, and taking them off it is how
+        // access is withdrawn - it is the only removal the system has.
+        //
+        // This used to also admit anyone who already had a students row,
+        // which made an account permanent once created: removing somebody
+        // from their section deletes their roster row, and they signed
+        // straight back in on the account instead. Nothing revoked
+        // anything. Their account is still kept on removal - work and
+        // history hang off it - it just stops being a way in.
+        //
+        // Matched without regard to case, because Google hands back the
+        // address as the person typed it and a capital letter was enough
+        // to miss the list.
+        $roster = StudentRoster::whereRaw('LOWER(email) = ?', [Str::lower($email)])->first();
 
-        if (! $roster && ! Student::whereRaw('LOWER(email) = ?', [$email])->exists()) {
+        if (! $roster) {
             return null;
+        }
+
+        $existing = Student::whereRaw('LOWER(email) = ?', [Str::lower($email)])->first();
+
+        if ($existing) {
+            return $existing;
         }
 
         return Student::firstOrCreate(
@@ -515,23 +579,19 @@ class AuthController extends Controller
      */
     private function refuseUnlistedExpert(Request $request)
     {
-        // Two ways in, and the one they can act on themselves comes first.
-        // Being told to go and ask somebody is a dead end at nine at night.
-        $message = 'There is no account for this address yet. Request one below, or ask '
-            .'a CaPSA to add you to the expert list.';
+        // There is nothing they can do themselves any more - applying for an
+        // account is gone, because a CaPSA adds faculty either on the
+        // uploaded list or one at a time. So the message names the person to
+        // ask rather than sending them to a form that would only queue up
+        // behind the same decision.
+        $message = 'There is no account for this address. Ask your CaPSA to add you '
+            .'to the expert list, then sign in again.';
 
         if ($request->expectsJson()) {
-            return response()->json([
-                'success' => false,
-                'message' => $message,
-                'request_url' => route('account.request'),
-            ], 403);
+            return response()->json(['success' => false, 'message' => $message], 403);
         }
 
-        // The address is carried over so they are not made to type it twice,
-        // and so the form can tell them where a previous request got to.
-        return redirect()->route('account.request', ['email' => $request->input('email')])
-            ->withErrors(['message' => $message]);
+        return redirect('/login')->withErrors(['message' => $message]);
     }
 
     /**

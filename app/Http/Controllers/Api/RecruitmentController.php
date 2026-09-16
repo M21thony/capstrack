@@ -31,7 +31,7 @@ class RecruitmentController extends Controller
                     return false;
                 }
 
-                return StudentSchoolYear::where('team_id', $team->team_id)->count() >= ($team->member_count ?? $recruit->member_count ?? 5);
+                return StudentSchoolYear::where('team_id', $team->team_id)->count() >= $team->memberLimit();
             })
             ->pluck('student_id')
             ->toArray();
@@ -61,6 +61,15 @@ class RecruitmentController extends Controller
 
     public function store(Request $request): JsonResponse
     {
+        // Capstone 2: teams are settled, so there is nothing to recruit for
+        // or form. Refused here as well as hidden on the page, and with a
+        // reason - an empty list with no explanation reads as a broken page.
+        if ($request->user()->capstoneStage() !== 1) {
+            return response()->json([
+                'message' => 'Capstone 2 has started. Teams keep the members they '
+                    .'finished Capstone 1 with, so new teams and recruitment posts are closed.',
+            ], 422);
+        }
         $validated = $request->validate([
             'recruitment_goal' => ['required', 'string', 'in:build_a_team,find_a_team'],
             'looking_for' => ['nullable', 'string', 'max:500'],
@@ -75,6 +84,15 @@ class RecruitmentController extends Controller
             ],
             'tags' => ['nullable', 'string'],
         ]);
+
+        if ($validated['recruitment_goal'] === 'build_a_team' && ! empty($validated['team_name'])
+            && ! Team::creationAllowed()) {
+            return response()->json(['message' => Team::CREATION_CLOSED], 422);
+        }
+
+        if ($validated['recruitment_goal'] === 'find_a_team' && ! Team::joiningAllowed()) {
+            return response()->json(['message' => Team::JOINING_CLOSED], 422);
+        }
 
         $student = $request->user();
         $studentId = $student->student_id;
@@ -115,7 +133,7 @@ class RecruitmentController extends Controller
                 'roles' => $roles,
                 'looking_for' => $validated['looking_for'] ?? null,
                 'introduction' => $validated['introduction'] ?? null,
-                'member_count' => 5,
+                'member_count' => \App\Models\Team::maxMembers(),
             ]);
         });
 
@@ -163,7 +181,7 @@ class RecruitmentController extends Controller
             'roles' => $validated['roles'],
             'looking_for' => $validated['looking_for'] ?? null,
             'introduction' => $validated['introduction'] ?? null,
-            'member_count' => 5,
+            'member_count' => \App\Models\Team::maxMembers(),
         ]);
 
         $this->logActivity(

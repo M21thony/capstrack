@@ -44,17 +44,16 @@ test('the original PDF opens in a panel wide enough to read', async ({ page }) =
   // experts have set their programmes, so the panel is opened directly: the
   // width is the thing under test, not the path to it.
   test.skip(
-    await page.locator('#original-pdf-modal').count() === 0,
+    await page.locator('#previewDialog').count() === 0,
     'this team has no approved pre-proposal with a file'
   );
 
   await page.evaluate(() => window.openOriginalPdf());
 
-  const box = page.locator('#original-pdf-modal .modal-box');
+  const box = page.locator('#previewDialog');
   await expect(box).toBeVisible();
 
-  // The bug: .pdf-box lost to .modal-box's 420px, and a PDF page is the one
-  // thing here with a fixed aspect ratio - too narrow is unreadable rather
+  // A PDF page has a fixed aspect ratio - too narrow is unreadable rather
   // than merely cramped.
   const width = await box.evaluate((el) => el.getBoundingClientRect().width);
   expect(width).toBeGreaterThan(700);
@@ -62,10 +61,11 @@ test('the original PDF opens in a panel wide enough to read', async ({ page }) =
   const height = await box.evaluate((el) => el.getBoundingClientRect().height);
   expect(height).toBeGreaterThan(500);
 
-  // The frame is filled on open and emptied on close.
-  await expect(page.locator('#original-pdf-frame')).toHaveAttribute('src', /pre-proposal/);
-  await page.locator('#original-pdf-modal .pp-x').click();
-  await expect(page.locator('#original-pdf-frame')).toHaveAttribute('src', 'about:blank');
+  // Drawn as pages, never an iframe, and closed with its own button.
+  await expect(box.locator('canvas').first()).toBeVisible({ timeout: 15000 });
+  await expect(box.locator('iframe')).toHaveCount(0);
+  await box.getByRole('button', { name: 'Close' }).click();
+  await expect(box).toBeHidden();
 });
 
 test('the expert strip pages forward and back', async ({ page }) => {

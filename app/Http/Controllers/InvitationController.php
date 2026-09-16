@@ -27,8 +27,42 @@ class InvitationController extends Controller
         $student = $request->user();
         $studentId = $student->student_id;
 
+        // The rule lives on the team because there are two of these
+        // controllers and it was written into the other one, which this page
+        // does not post to - so a team of two could be sent three invitations
+        // for two seats and every one went through.
+        //
+        // Only for invitations. A request is somebody asking to be let in and
+        // the leader decides on it; refusing here would answer for a leader
+        // who has not seen them.
+        if ($validated['type'] === 'invite') {
+            $team = Team::find($validated['team_id'] ?? StudentTeam::idFor($studentId));
+
+            if ($team && $reason = $team->inviteBlockReason(1, Student::find($validated['receiver_id']))) {
+                if ($request->expectsJson()) {
+                    return response()->json(['success' => false, 'message' => $reason], 422);
+                }
+
+                return back()->with('error', $reason);
+            }
+        }
+
         // If the sender already belongs to a team, they cannot send join requests
         if ($validated['type'] === 'request') {
+            // Asking to join is joining. With it closed on Team Rules the
+            // request is refused now, rather than sent to a leader who could
+            // only accept it into a rule that forbids it.
+            $closed = ! Team::joiningAllowed() ? Team::JOINING_CLOSED
+                : ($student->capstoneStage() !== 1 ? Team::MEMBERS_SETTLED : null);
+
+            if ($closed) {
+                if ($request->expectsJson()) {
+                    return response()->json(['success' => false, 'message' => $closed], 422);
+                }
+
+                return back()->with('error', $closed);
+            }
+
             if (StudentTeam::has($studentId)) {
                 if ($request->expectsJson()) {
                     return response()->json([
@@ -173,6 +207,23 @@ class InvitationController extends Controller
         $student = $request->user();
         $studentId = $student->student_id;
 
+        // The moment somebody actually joins is the moment to ask whether they
+        // may. This path - the one the page uses - asked nothing: an invitation
+        // sent while a seat was free could be accepted after it went, after
+        // Capstone 2 began, or after the CaPSA closed joining. Two invitations
+        // for the last seat both got in.
+        $joining = Team::find($invitation->team_id);
+
+        $joiner = $invitation->type === 'invite' ? $student : Student::find($invitation->sender_id);
+
+        if ($joining && $reason = $joining->joinBlockReason($joiner)) {
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'message' => $reason], 422);
+            }
+
+            return back()->with('error', $reason);
+        }
+
         $memberRoleId = $this->roleFromTeamPost($invitation->team_id);
 
         if ($invitation->type === 'invite') {
@@ -214,7 +265,9 @@ class InvitationController extends Controller
         // Auto-close team if it has reached full capacity
         if ($team && $team->team_status === 'Active') {
             $currentCount = StudentSchoolYear::where('team_id', $team->team_id)->count();
-            if ($currentCount >= $team->member_count) {
+            // The CaPSA's limit, not member_count - that column is a flat 5
+            // written at creation, so a team of three never closed at three.
+            if ($currentCount >= $team->memberLimit()) {
                 $team->update(['team_status' => 'Full']);
                 $this->logActivity(
                     $team->leader_id,

@@ -253,9 +253,69 @@ PROMPT;
     // signal the student can verify with their own eyes, instead of trusting
     // another AI-generated similarities/differences sentence (which kept
     // being wrong - see enrichWithReasons()'s history).
+    /**
+     * Words that are true of nearly every capstone, so lighting one up says
+     * nothing about why two studies are alike.
+     *
+     * Separate from stopWordsList() on purpose. That list also feeds the
+     * embedding, and every stored embedding was generated with it - changing
+     * it would make old vectors and new queries disagree. These are dropped
+     * from the highlighting only, where "system" lighting up in an abstract
+     * about barangay records was the whole of the explanation.
+     */
+    private function genericCapstoneWords(): array
+    {
+        return [
+            'system', 'systems', 'software', 'website', 'site', 'program',
+            'information', 'data', 'database', 'record', 'records',
+            'management', 'managing', 'monitoring', 'monitor', 'tracking',
+            'automated', 'automation', 'computerized', 'integrated', 'smart',
+            'development', 'developing', 'design', 'designing', 'implementation',
+            'implementing', 'study', 'research', 'project', 'capstone', 'thesis',
+            'proposed', 'proposal', 'analysis', 'process', 'processing',
+            'solution', 'tool', 'module', 'features', 'feature', 'user', 'users',
+            'management_system',
+            // The delivery and the paperwork, not the subject. Every capstone
+            // is web-based, centralized and built with a methodology.
+            'web-based', 'webbased', 'centralized', 'centralised',
+            'agile', 'agile development methodology', 'scrum', 'prototyping',
+            'methodology', 'sdm',
+            // Plurals of the above, and the two words every study in a
+            // computer-studies archive contains.
+            'projects', 'studies', 'computer', 'computing', 'technologies',
+            'technology', 'proposals', 'solutions', 'tools', 'modules',
+        ];
+    }
+
+    /**
+     * Institution and place names, which say where a study was done and
+     * nothing about what it did.
+     *
+     * The judge prompt already tells the model to ignore these. The
+     * highlighting did not, so two unrelated studies were reported as
+     * sharing "college of computer studies" - true of most of the archive,
+     * and the reason a chip row could be entirely school letterhead.
+     */
+    private function isInstitutional(string $term): bool
+    {
+        $noise = array_merge($this->locationNames(), [
+            'college', 'colleges', 'department', 'university', 'school',
+            'cict', 'ccs', 'bsit', 'bscs', 'bsis', 'blis', 'institute',
+            'campus', 'academy', 'cspc',
+        ]);
+
+        foreach (preg_split('/[\s\-]+/', $term) as $word) {
+            if (in_array($word, $noise, true)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public function extractHighlightWords(array $concepts): array
     {
-        $stopWords = $this->stopWordsList();
+        $stopWords = array_merge($this->stopWordsList(), $this->genericCapstoneWords());
 
         $blob = trim(($concepts['title'] ?? '').' '.($concepts['main_topic'] ?? ''));
         $blob = preg_replace('/[\/\\\,\.\(\)\[\]\{\}:;!?"\'\-_]/', ' ', $blob);
@@ -282,6 +342,33 @@ PROMPT;
         // Longest first so a multi-word phrase gets highlighted as one unit
         // before its own individual words would otherwise match separately.
         usort($all, fn ($a, $b) => mb_strlen($b) <=> mb_strlen($a));
+
+        // A word that is only a piece of a phrase already on the list is
+        // dropped. "smart facility maintenance" is worth saying; the bare
+        // "maintenance", "facility" and "smart" left over from it are not,
+        // and an archived abstract is far likelier to contain the fragment
+        // than the phrase - so the fragments were the only thing a reader
+        // ever saw. "Both studies talk about: problem" explains nothing.
+        $all = array_filter($all, fn ($t) => ! $this->isInstitutional($t));
+
+        $phrases = array_filter($all, fn ($t) => str_contains($t, ' '));
+
+        $all = array_filter($all, function ($term) use ($phrases) {
+            if (str_contains($term, ' ')) {
+                return true;
+            }
+
+            foreach ($phrases as $phrase) {
+                // Split on hyphens too - the title pass breaks "AR-Assisted"
+                // into "assisted", which is a fragment of the phrase just as
+                // much as a space-separated word is.
+                if (in_array($term, preg_split('/[\s\-]+/', $phrase), true)) {
+                    return false;
+                }
+            }
+
+            return true;
+        });
 
         return array_values($all);
     }
@@ -394,8 +481,17 @@ PROMPT;
             $verdict = $verdicts[$position] ?? null;
             $hasVerdict = $verdict !== null;
 
+            // Whether a model actually looked at this one. Everything below
+            // still computes a number for ordering, but a number nobody
+            // judged is not a similarity score and must not be shown as one:
+            // it used to reach the student as "27%", which reads as a
+            // verdict when it is arithmetic on a retrieval rank.
+            $item['assessed'] = $hasVerdict;
+
             $item['reason'] = $verdict['reason']
-                ?? 'Semantically similar based on vector embedding analysis.';
+                ?? ($hasVerdict
+                    ? 'Semantically similar based on vector embedding analysis.'
+                    : 'Not assessed - this one was outside the set the checker examined.');
             $item['similarities'] = $verdict['similarities'] ?? '';
             $item['differences'] = $verdict['differences'] ?? '';
             $item['suggestion'] = $verdict['suggestion'] ?? '';
@@ -462,12 +558,19 @@ PROMPT;
     // the pre-proposal side gets its problem statement, proposed solution,
     // and scope (previously just topic/domain/keywords) - comparing actual
     // proposal content against title-and-abstract, not summaries of both.
+    /** The model that judges, which is not always the one that reads. */
+    private function judgeModel(): string
+    {
+        return config('services.ollama.judge_model')
+            ?: config('services.ollama.model', 'qwen2.5:7b');
+    }
+
     private function judgeOneCandidate(array $concepts, ArchivedDocument $doc, int $embeddingScore): ?array
     {
         $prompt = $this->buildJudgePrompt($concepts, $doc, $embeddingScore);
 
         try {
-            return $this->readVerdict($this->ollama->generate($prompt, 700));
+            return $this->readVerdict($this->ollama->generate($prompt, 700, $this->judgeModel()));
         } catch (\Exception $e) {
             Log::warning('judgeOneCandidate failed', ['archived_id' => $doc->archived_id, 'error' => $e->getMessage()]);
 
@@ -520,7 +623,7 @@ PROMPT;
         $verdicts = [];
 
         try {
-            $answers = $this->ollama->generateMany(array_values($worthJudging), 700);
+            $answers = $this->ollama->generateMany(array_values($worthJudging), 700, $this->judgeModel());
 
             foreach ($answers as $i => $raw) {
                 $verdicts[$positions[$i]] = $this->readVerdict($raw);
@@ -533,8 +636,16 @@ PROMPT;
 
         // Anything the batch did not answer for is asked individually, so a
         // partial batch degrades to slower rather than to nothing.
+        // A null here is a verdict the batch could not be read out of, which
+        // is not the same as one that was never asked for - and the caller
+        // cannot tell the difference, so it showed both as "Not assessed".
+        //
+        // Worth re-asking, because the two paths are not the same request.
+        // The batch runs one PowerShell job per candidate, all writing to a
+        // single stdout captured over SSH, so answers can arrive interleaved
+        // or clipped. Asking once more, on its own, is a clean call.
         foreach ($positions as $position) {
-            if (! array_key_exists($position, $verdicts)) {
+            if (($verdicts[$position] ?? null) === null) {
                 $verdicts[$position] = $this->judgeOneCandidate(
                     $concepts,
                     $topCandidates[$position]['document'],
@@ -544,6 +655,27 @@ PROMPT;
         }
 
         return $verdicts;
+    }
+
+    /**
+     * Patch the two ways this model writes JSON that will not parse.
+     *
+     * It dropped the comma between two fields once on a real scan - and did
+     * it on the closest study in the whole check, so the strongest match in
+     * the report was the one that came back blank. The content was complete
+     * and correct either side of the missing character.
+     *
+     * Both repairs are punctuation between fields, never the fields
+     * themselves: nothing here can invent a score or change a verdict.
+     */
+    private function repairJson(string $json): string
+    {
+        // Quote, whitespace, next key - with no comma between them. \s already
+        // matches a newline, so the pattern does not need one spelled out.
+        $json = preg_replace('/"\s+"([a-z_]+)"\s*:/i', '", "$1":', $json);
+
+        // A trailing comma before the closing brace.
+        return preg_replace('/,\s*\}/', '}', $json);
     }
 
     /**
@@ -712,6 +844,12 @@ PROMPT;
         $cleaned = trim(preg_replace('/```json|```/i', '', $raw));
 
         $r = json_decode($this->firstJsonObject($cleaned) ?? $cleaned, true);
+        $object = $this->firstJsonObject($cleaned) ?? $cleaned;
+        $r = json_decode($object, true);
+
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            $r = json_decode($this->repairJson($object), true);
+        }
 
         if (json_last_error() !== JSON_ERROR_NONE || ! is_array($r)) {
             return null;

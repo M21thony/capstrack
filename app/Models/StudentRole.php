@@ -49,9 +49,6 @@ class StudentRole extends Model
      */
     public const SHARED_ROLE_NAME = 'Software Engineer/Programmer';
 
-    /** A team of five when nobody has said otherwise. */
-    public const DEFAULT_TEAM_SIZE = 5;
-
     /**
      * The number of people who may hold a role, or null when there is no
      * limit.
@@ -83,16 +80,23 @@ class StudentRole extends Model
             return null;
         }
 
-        $size = max(3, min(5, $teamSize ?: self::DEFAULT_TEAM_SIZE));
+        $size = max(Team::MIN_MEMBERS, min(Team::MAX_MEMBERS, $teamSize ?: self::teamSize()));
 
         return (int) ceil(($size - 1) / 2);
     }
 
-    /** The size the CaPSA set for this team, or the default. */
-    public static function teamSize(int $teamId): int
+    /**
+     * The team size the CaPSA set.
+     *
+     * This used to read the team's own member_count column, which is a
+     * stale copy - a CaPSA raising the limit from three to five left every
+     * existing team still seating one designer and one tester. There is one
+     * limit and the CaPSA sets it, so it is asked of the same place the
+     * invite and join checks ask.
+     */
+    public static function teamSize(): int
     {
-        return (int) (Team::where('team_id', $teamId)->value('member_count')
-            ?: self::DEFAULT_TEAM_SIZE);
+        return Team::maxMembers();
     }
 
     /**
@@ -116,7 +120,7 @@ class StudentRole extends Model
      */
     public static function seatingFor(int $teamId): array
     {
-        $size = self::teamSize($teamId);
+        $size = self::teamSize();
 
         $holders = StudentSchoolYear::where('team_id', $teamId)
             ->whereNotNull('s_role_id')
@@ -153,7 +157,7 @@ class StudentRole extends Model
 
         return StudentSchoolYear::where('team_id', $teamId)
             ->where('s_role_id', $roleId)
-            ->count() < self::seatsFor($role->s_role_name, self::teamSize($teamId));
+            ->count() < self::seatsFor($role->s_role_name, self::teamSize());
     }
 
     public function studentSchoolYears(): HasMany

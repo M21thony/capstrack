@@ -200,6 +200,17 @@ class TeamController extends Controller
                 ->get()
             : collect();
 
+        // After Title Defense: the members are locked, and anything about one
+        // of them leaving is waiting on the CaPSA.
+        $teamLocked = $myTeam?->isTeamLocked() ?? false;
+        $leaveRequests = $teamLocked
+            ? \App\Models\MemberLeaveRequest::with(['student', 'requester'])
+                ->pending()
+                ->where('team_id', $myTeam->team_id)
+                ->oldest()
+                ->get()
+            : collect();
+
         $teamLeaderName = null;
 
         if ($myTeam && $myTeam->leader_id) {
@@ -233,6 +244,9 @@ class TeamController extends Controller
 
         return view('student.team', [
             'myTeam' => $myTeam,
+            // The CaPSA's Team Rules, so a closed door is said before anyone fills in a form.
+            'creationAllowed' => Team::creationAllowed(),
+            'joiningAllowed' => Team::joiningAllowed(),
             // What a recruitment post may advertise for. Project Head is left
             // out: that seat belongs to whoever leads the team.
             'memberRoleNames' => StudentRole::memberRoles()->pluck('s_role_name')->all(),
@@ -256,6 +270,9 @@ class TeamController extends Controller
             'hasPendingRequest' => $hasPendingRequest,
             'hasPendingLeaveApproval' => $hasPendingLeaveApproval,
             'pendingLeaveApprovals' => $pendingLeaveApprovals,
+            'teamLocked' => $teamLocked,
+            'teamLockedAt' => $teamLocked ? $myTeam->teamLockedAt() : null,
+            'leaveRequests' => $leaveRequests,
             'leaderIds' => $leaderIds,
             'userRole' => $userRole,
             'expertRemovedNotifications' => $expertRemovedNotifications,
@@ -369,6 +386,19 @@ class TeamController extends Controller
 
     public function store(Request $request): JsonResponse|RedirectResponse
     {
+        // Before validation, so a closed rule is the answer a student gets -
+        // not a complaint about the team name they typed into it.
+        $closed = $request->user()->capstoneStage() !== 1 ? Team::NO_NEW_TEAMS
+            : (Team::creationAllowed() ? null : Team::CREATION_CLOSED);
+
+        if ($closed) {
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'message' => $closed], 422);
+            }
+
+            return redirect()->route('student.team')->with('error', $closed);
+        }
+
         $validated = $request->validate([
             'team_name' => ['required', 'string', 'max:100', function ($attribute, $value, $fail) {
                 if (Team::nameExists($value)) {
@@ -566,6 +596,10 @@ class TeamController extends Controller
         $team = Team::find($teamId);
         $isLeader = $team && (int) $team->leader_id === (int) $studentId;
 
+        if ($team?->isTeamLocked()) {
+            return redirect()->route('student.team')->with('error', Team::TEAM_LOCKED);
+        }
+
         if ($isLeader) {
             $memberCount = StudentSchoolYear::where('team_id', $team->team_id)->count();
 
@@ -626,6 +660,10 @@ class TeamController extends Controller
 
         $team = Team::find($teamId);
         $isLeader = $team && (int) $team->leader_id === (int) $studentId;
+
+        if ($team?->isTeamLocked()) {
+            return redirect()->route('student.team')->with('error', Team::TEAM_LOCKED);
+        }
 
         if ($isLeader) {
             $memberCount = StudentSchoolYear::where('team_id', $team->team_id)->count();
@@ -743,6 +781,14 @@ class TeamController extends Controller
                 ->with('error', 'Only the team leader can approve this leave request.');
         }
 
+        // Asked before the team passed Title Defense. The leader no longer
+        // decides it - the CaPSA does, through a leave request.
+        if ($team->isTeamLocked()) {
+            $approval->update(['status' => LeaveApproval::STATUS_CANCELLED]);
+
+            return redirect()->route('student.team')->with('error', Team::TEAM_LOCKED);
+        }
+
         $approval->refresh();
 
         if (! $approval->isPending()) {
@@ -805,6 +851,14 @@ class TeamController extends Controller
             return redirect()
                 ->route('student.team')
                 ->with('error', 'Only the team leader can decline this leave request.');
+        }
+
+        // Declining a third time removes the member, which a locked team
+        // cannot do on the leader's say-so.
+        if ($team->isTeamLocked()) {
+            $approval->update(['status' => LeaveApproval::STATUS_CANCELLED]);
+
+            return redirect()->route('student.team')->with('error', Team::TEAM_LOCKED);
         }
 
         $approval->refresh();
@@ -922,6 +976,13 @@ class TeamController extends Controller
                 continue;
             }
 
+            // The timer must not do what the leader no longer can.
+            if ($team->isTeamLocked()) {
+                $approval->update(['status' => LeaveApproval::STATUS_CANCELLED]);
+
+                continue;
+            }
+
             if (StudentSchoolYear::where('student_id', $approval->student_id)->where('team_id', $team->team_id)->exists()) {
                 $this->performMemberLeave($approval->student_id, $team);
             }
@@ -1004,6 +1065,10 @@ class TeamController extends Controller
         if ((int) $myTeam->leader_id !== (int) $authId) {
             return redirect()->route('student.team')
                 ->with('error', 'Only the team leader can remove members.');
+        }
+
+        if ($myTeam->isTeamLocked()) {
+            return redirect()->route('student.team')->with('error', Team::TEAM_LOCKED);
         }
 
         if ($student->student_id === $authId) {
@@ -1372,13 +1437,20 @@ class TeamController extends Controller
         $currentSchoolYear = $studentSy->school_year;
 
         $currentCount = StudentSchoolYear::where('team_id', $myTeam->team_id)->count();
-        $maxMembers = $myTeam->member_count ?? 5;
+        $maxMembers = $myTeam->memberLimit();
 
         if ($currentCount >= $maxMembers) {
             return response()->json(['classmates' => [], 'error' => 'Team is already full.']);
         }
 
-        $availableSlots = $maxMembers - $currentCount;
+        // Seats left, counting invitations already out - those hold a seat
+        // until they are answered.
+        $pendingCount = TeamInvitation::where('team_id', $myTeam->team_id)
+            ->where('type', 'invite')
+            ->where('status', 'pending')
+            ->count();
+
+        $availableSlots = max(0, $maxMembers - $currentCount - $pendingCount);
 
         // Anyone already sitting on an unanswered invitation from this team.
         // They stay in the list, marked, rather than being invited twice.
@@ -1437,7 +1509,17 @@ class TeamController extends Controller
                 'has_team' => $classmate->team_id !== null,
                 'is_pending_invite' => in_array($classmate->student_id, $pendingInviteReceiverIds, true),
             ];
-        });
+        })
+            // Somebody already on a team is not somebody you can invite, so
+            // they are not on the list. They used to be shown greyed out with
+            // "Has team", which fills the list with names that are only there
+            // to be scrolled past.
+            //
+            // Anyone holding an unanswered invitation from THIS team stays,
+            // marked, so a leader can see they have already asked them rather
+            // than wondering where they went.
+            ->reject(fn ($c) => $c['has_team'])
+            ->values();
 
         return response()->json([
             'classmates' => $classmates,

@@ -59,7 +59,6 @@ class RoutesFollowRestConventionsTest extends TestCase
         // Not yet renamed. Each wants a noun - /selection, /suggestions,
         // /consultation - and each is somebody else's screen to retest.
         'pre-proposal/{preProposal}/choose',
-        'api/admin/panel_assignment/{team}/suggest',
         'student/consultation/refresh',
     ];
 

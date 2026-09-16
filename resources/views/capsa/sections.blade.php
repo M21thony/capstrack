@@ -263,10 +263,11 @@
         <table class="table">
           <thead>
             <tr>
+              {{-- The unique key first: a student number is the one thing on
+                   the row that names exactly one person. Two students share a
+                   surname often enough that a name column cannot. --}}
+              <th style="padding-left:20px">Student no.</th>
               <th>Student</th>
-              <th>Student no.</th>
-              <th>Program</th>
-              <th>Year</th>
               <th>Section</th>
               <th>Team</th>
               <th>Status</th>
@@ -291,6 +292,7 @@
                   data-letter="{{ strtoupper($section) }}"
                   data-team="{{ $sy && $sy->team ? '1' : '0' }}"
                   data-search="{{ Str::lower($student->f_name.' '.$student->l_name.' '.$student->email.' '.$student->student_number) }}">
+                <td class="std-mono" style="padding-left:20px">{{ $student->student_number ?: '—' }}</td>
                 <td>
                   {{-- The address under the name rather than nowhere: two
                        students share a surname often enough that it is what
@@ -300,12 +302,11 @@
                     <span class="std-mail">{{ $student->email }}</span>
                   </span>
                 </td>
-                <td class="std-mono">{{ $student->student_number ?: '—' }}</td>
-                <td class="std-mono">{{ $student->programAbbr ?? '—' }}</td>
-                {{-- Program, Year and Section are three things a CaPSA reads
-                     down a column, not one string to pick through. --}}
-                <td class="std-mono">{{ $year !== '' ? $year : '—' }}</td>
-                <td class="std-mono">{{ $section !== '' ? $section : '—' }}</td>
+                {{-- One column, the way a section is written everywhere else
+                     in the app - BSIT-4A. Split across three it read as three
+                     unrelated facts, and no other screen names a section that
+                     way, so the same student looked different here. --}}
+                <td class="std-mono">{{ \App\Models\Student::computeSectionLabel($student->course, $student->year_section) ?? '—' }}</td>
                 <td>
                   @if ($sy && $sy->team)
                     {{ $sy->team->team_name ?? 'Team #' . $sy->team->team_id }}
@@ -365,7 +366,7 @@
               </tr>
             @empty
               <tr>
-                <td colspan="8" style="text-align:center;padding:40px 0;color:var(--text3);font-size:13px">
+                <td colspan="6" style="text-align:center;padding:40px 0;color:var(--text3);font-size:13px">
                   @if (empty($adminSections))
                     No sections assigned yet. <a href="{{ route('capsa.profile') }}" style="color:var(--accent)">Set your sections</a> to view students.
                   @else
@@ -1139,18 +1140,25 @@ function saveEditStudent() {
           const name = document.getElementById('edit-student-first').value.trim();
           const where = d.section ? ' to ' + d.section : '';
 
-          if (confirm('Transfer ' + (name || 'this student') + where + '?
+          // Asked in the app's own voice. This page already carries the
+          // confirm sheet for removals; a transfer is the more final of the
+          // two and was still going through the browser's own box.
+          confirmSheet({
+            title: 'Transfer ' + (name || 'this student') + where + '?',
+            body: 'They will belong to the CaPSA who handles that section, and you '
+              + 'will not be able to edit them afterwards.',
+            confirmLabel: 'Transfer',
+            danger: true,
+          }).then(function (agreed) {
+            if (agreed) {
+              send(true);
 
-'
-              + 'They will belong to the CaPSA who handles that section, and you will '
-              + 'not be able to edit them afterwards.')) {
-            send(true);
+              return;
+            }
 
-            return;
-          }
-
-          btn.disabled = false;
-          btn.textContent = 'Save changes';
+            btn.disabled = false;
+            btn.textContent = 'Save changes';
+          });
 
           return;
         }

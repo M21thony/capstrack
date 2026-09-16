@@ -2,7 +2,7 @@
 :root{
   --bg:#f2f3f5;--bg2:#ffffff;--bg3:#f7f8fa;--bg4:#eceef2;
   --border:#e0e2e8;--border2:#c8cad4;
-  --text:#1e2128;--text2:#4a5060;--text3:#8a909e;
+  --text:#1e2128;--text2:#4a5060;--text3:#656b7a;
   --navy-dark:#18191f;--navy-mid:#1e2028;--navy-light:#272a36;--navy-hover:#2e3240;--navy-active:#343848;
   --navy-border:rgba(201,168,44,0.15);--navy-text:rgba(255,255,255,0.88);--navy-text2:rgba(255,255,255,0.44);--navy-text3:rgba(255,255,255,0.24);
   --accent:#c9a82c;--accent2:#b5941f;--accent3:#8a6e10;--accent-glow:rgba(201,168,44,0.1);--accent-light:#faf7ed;
@@ -78,7 +78,22 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
 .notif-btn{width:36px;height:36px;border-radius:9px;background:rgba(255,255,255,0.06);border:1px solid rgba(201,168,44,0.2);display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative}
 .notif-btn svg{width:16px;height:16px;stroke:rgba(255,255,200,0.7);fill:none;stroke-width:2}
 .notif-dot{position:absolute;top:5px;right:5px;width:6px;height:6px;border-radius:50%;background:var(--red);border:1.5px solid var(--navy-mid)}
-.content{flex:1;overflow-y:auto;padding:26px}
+/* min-height:0 is what makes the scrolling work. A flex item defaults to
+   min-height:auto, which means this box refuses to shrink below its own
+   content - so instead of becoming as tall as .main and scrolling, it grew
+   past it, and .main's overflow:hidden cut the rest off with no way to
+   reach it. */
+.content{flex:1;min-height:0;overflow-y:auto;padding:26px}
+
+/* The skeleton wrapper sits between .main and .content, and the reveal
+   script sets its display inline - usually block. That broke the scroll
+   chain: .content's flex:1 and overflow-y:auto mean nothing inside a plain
+   block parent, so it grew to its full height, overflowed .main, and
+   .main's overflow:hidden cut the rest off with no way to reach it.
+
+   Making the wrapper itself the scroller works whichever display the
+   script sets, because it IS a flex item of .main. */
+#real-content{flex:1;min-height:0;overflow-y:auto}
 .content::-webkit-scrollbar{width:4px}
 .content::-webkit-scrollbar-thumb{background:var(--border)}
 
@@ -506,7 +521,7 @@ textarea.input{resize:vertical;min-height:80px}
 .section-divider-line{flex:1;height:1px;background:var(--border)}
 
 /* ── RESOURCES: TOAST ── */
-.toast{position:fixed;bottom:24px;right:24px;background:var(--navy-dark);color:var(--navy-text);font-size:13px;font-weight:500;padding:12px 18px;border-radius:10px;border-left:3px solid var(--accent);box-shadow:0 8px 24px rgba(0,0,0,0.2);z-index:999;transform:translateY(8px);opacity:0;transition:all .25s;pointer-events:none}
+.toast{position:fixed;bottom:24px;right:24px;background:var(--navy-dark);color:var(--navy-text);font-size:13px;font-weight:500;padding:12px 18px;border-radius:10px;border-left:3px solid var(--accent);box-shadow:0 8px 24px rgba(0,0,0,0.2);z-index:1100;transform:translateY(8px);opacity:0;transition:all .25s;pointer-events:none}
 .toast.show{transform:translateY(0);opacity:1}
 
 /* ── RESOURCES: CONFIRM MODAL ── */
@@ -846,6 +861,15 @@ select.f-input{cursor:pointer}
 .block-confirm-sub{font-size:13px;color:var(--text3);line-height:1.5;margin-bottom:18px}
 .block-confirm-actions{display:flex;gap:8px;justify-content:flex-end}
 .block-confirm .btn-ghost{background:transparent;color:var(--text2);border:1.5px solid var(--border);font-family:'DM Sans',sans-serif}
+
+/* Every dialog on this page, not just that one. A modal is rendered at the
+   end of the body, outside the .content box, so it never inherits the
+   light-background button colours - .btn-ghost falls back to its
+   dark-topbar styling and renders near-white text on a white panel. Naming
+   the modals fixes them all rather than one at a time. */
+.slot-modal .btn-ghost{background:transparent;color:var(--text2);border:1.5px solid var(--border);font-family:'DM Sans',sans-serif}
+.slot-modal .btn-ghost:hover{background:var(--bg3);color:var(--text)}
+.slot-modal .btn-primary{background:var(--accent);color:#18191f;font-weight:700;border:none}
 .block-confirm .btn-ghost:hover{background:var(--bg3);color:var(--text);border-color:var(--text3)}
 .btn-danger-solid{background:var(--red);color:#fff;border:none;font-weight:700}
 .btn-danger-solid:hover{background:#b91c1c}
@@ -886,3 +910,262 @@ select.f-input{cursor:pointer}
 @keyframes sk-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 .sk-overlay { background: var(--bg); min-height: calc(100vh - 60px); padding: 20px; }
 .sk { background: linear-gradient(90deg, var(--bg4) 25%, var(--bg2) 50%, var(--bg4) 75%); background-size: 200% 100%; animation: sk-shimmer 1.5s ease-in-out infinite; border-radius: 8px; }
+
+/* ── .content ON A CONTROL ──
+   .content is the page's scrolling layout box: flex:1, overflow-y:auto,
+   padding:26px. A handful of buttons wear it as well, to pick up the
+   light-background ".content .btn-*" colours - and took the page's padding
+   with them. That is what made a 12px-font button 48px tall.
+
+   The class keeps doing its colour job on those buttons; the layout half of
+   it stops at the control. */
+button.content,
+a.btn.content,
+.btn.content{padding:7px 16px;overflow:visible}
+
+/* ══════════════════════════════════════════════════════════════════════
+   SCHEDULE REDESIGN
+   Same tokens as everything above - this changes the treatment, not the
+   palette. The grid was a hairline table (gap:1px over a border-coloured
+   background) with a solid navy strip for the weekday names, which reads as
+   a spreadsheet: every cell equally loud, and the days carrying slots no
+   louder than the empty ones. Separated cells let the ones with something
+   in them come forward on their own.
+   Appended, so these win over the originals at equal specificity.
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* ── the grid becomes cells, not a table ── */
+.cal-grid{gap:6px;background:transparent;border:0;border-radius:0;overflow:visible}
+.cal-day-label{background:transparent;color:var(--text3);font-weight:600;
+  font-size:10.5px;letter-spacing:1px;padding:4px 0 8px}
+.cal-cell{min-height:96px;border:1px solid var(--border);border-radius:12px;
+  padding:7px 8px;gap:4px}
+.cal-cell:not(.other-month):not(.past-day):hover{border-color:var(--border2)}
+.cal-cell.other-month{background:var(--bg3);border-color:transparent}
+.cal-cell.has-slot{background:#fff;border-color:var(--border2)}
+.cal-cell.today{background:rgba(201,168,44,0.05);border-color:var(--accent)}
+.cal-cell.selected{background:#fff!important;
+  border-color:var(--navy-dark)!important;box-shadow:0 0 0 1px var(--navy-dark)!important}
+.cal-cell.selected .cal-date-num{background:var(--navy-dark);color:#fff;border-radius:50%}
+.cal-cell.is-blocked{background:var(--bg4)!important;border-color:var(--border)}
+.cal-date-num{font-size:12px}
+
+/* ── a slot reads as a time with a colour, not a bordered label ── */
+.cal-slot-pill{display:flex;align-items:center;gap:5px;font-size:10px;font-weight:500;
+  padding:1px 2px;border-radius:0;border-left:0!important;background:transparent!important;
+  color:var(--text2)!important;font-variant-numeric:tabular-nums}
+.cal-slot-pill::before{content:'';width:7px;height:7px;border-radius:2px;flex:none;
+  background:currentColor}
+.cal-slot-pill.type-consult::before{background:var(--blue)}
+.cal-slot-pill.type-docreview::before{background:var(--purple)}
+.cal-slot-pill.type-defense::before{background:var(--amber)}
+.cal-slot-pill.is-booked{text-decoration:none;color:var(--text3)!important}
+.cal-slot-pill.is-booked::before{background:var(--green)}
+.cal-more{font-size:10px;font-weight:500;color:var(--text3)}
+
+/* ── panels: lifted a little, and lifted equally ── */
+.cal-card,.form-card,.upcoming-card,.legend-section{
+  border-radius:16px;box-shadow:0 1px 2px rgba(24,25,31,.05),0 8px 24px -14px rgba(24,25,31,.18)}
+.cal-card{padding:16px 18px}
+
+/* A black strip on a white card said "this panel is important" three times
+   over on one screen, which is the same as saying it nowhere. */
+.upcoming-header{background:transparent;border-bottom:1px solid var(--border);
+  padding:14px 16px 12px}
+.upcoming-header,.upcoming-header *{color:var(--text)!important}
+.upcoming-title{font-weight:600;font-size:13.5px}
+.upcoming-count{background:var(--bg4)!important;color:var(--text2)!important;
+  font-weight:600}
+
+/* ── legend and tips: notes, not banners ── */
+.guide-box{background:var(--bg3);border:1px solid var(--border);border-radius:12px}
+.guide-box,.guide-box *{color:var(--text2)!important}
+.guide-box-title{color:var(--text)!important;font-weight:600}
+.guide-box-title svg{color:var(--accent3)!important}
+
+/* ── times line up in a column, so a wrong hour is visible ── */
+.apt-row,.apt-row-top,#selected-date-slots-list,.cal-date-num,.cal-slot-pill{
+  font-variant-numeric:tabular-nums}
+
+/* ── panel headings ───────────────────────────────────────────────────
+   Small uppercase grey lettering is a label, and every panel on the page
+   wore one, so nothing on the right column read as a heading. A heading is
+   the panel's name at the panel's own weight, with the icon carrying the
+   quieter colour. */
+.form-card-title{font-size:13.5px;font-weight:600;color:var(--text);
+  text-transform:none;letter-spacing:0;margin-bottom:12px;gap:8px}
+.form-card-title svg{color:var(--text3);width:16px;height:16px}
+
+/* The selected date is a statement of where you are, not a warning. It was
+   gold on gold, the same treatment the page gives today and the accent. */
+.selected-date-chip{background:var(--bg3);border:1px solid var(--border);
+  border-radius:8px;padding:9px 11px;color:var(--text)}
+.selected-date-chip svg{color:var(--text3)}
+
+/* ── form controls ── */
+.f-label{font-size:11.5px;font-weight:600;color:var(--text2)}
+.f-input{border-width:1px;border-radius:7px;background:#fff;font-size:13px}
+.f-input:focus{border-color:var(--accent);outline:none;
+  box-shadow:0 0 0 3px var(--accent-glow)}
+
+/* One action carries the page. Making it navy rather than gold leaves the
+   gold to mean "today" and "selected", which is all it should mean. */
+.btn{border-radius:7px;font-weight:600}
+.btn-primary{background:var(--navy-dark);border-color:var(--navy-dark);color:#fff}
+.btn-primary:hover{background:var(--navy-light);border-color:var(--navy-light)}
+
+/* ── appointments read as a list, not as eight more cards ── */
+.apt-row{background:transparent;border:0;border-top:1px solid var(--border);
+  border-radius:0;padding:10px 2px}
+.apt-row:first-child{border-top:0}
+.apt-team{font-weight:600;color:var(--text)}
+
+/* ── legend sits on one line when it fits ── */
+.legend-grid{display:flex;flex-wrap:wrap;gap:10px 22px;margin-bottom:14px}
+.legend-item{font-size:12.5px}
+
+/* ── the slots on the selected date, as cards ── */
+.date-slot{display:flex;flex-direction:column;gap:4px;padding:9px 10px;
+  background:#fff;border:1px solid var(--border);border-radius:8px;
+  font-size:11.5px;color:var(--text2);font-variant-numeric:tabular-nums}
+.date-slot-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.date-slot-meta{display:flex;align-items:center;gap:9px;font-size:10.5px;
+  color:var(--text3)}
+.slot-tag{font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;
+  white-space:nowrap;letter-spacing:.2px}
+.slot-tag.type-consult{background:var(--blue-bg);color:var(--blue)}
+.slot-tag.type-docreview{background:var(--purple-bg);color:var(--purple)}
+.slot-tag.type-defense{background:var(--amber-bg);color:var(--amber)}
+.slot-tag.is-booked{background:var(--green-bg);color:var(--green)}
+
+/* ── legend row: two cards side by side ──────────────────────────────
+   It was one card wrapping two dark boxes, so the guidance read as a
+   subsection of the legend and the whole block was heavier than the
+   calendar it explains. */
+.legend-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}
+.legend-row .legend-section{margin-top:0;padding:15px 17px}
+.legend-section-title{font-size:11px;font-weight:600;color:var(--text3);
+  text-transform:uppercase;letter-spacing:1px;margin-bottom:11px;
+  display:block;gap:0}
+.legend-section-title svg{display:none}
+.guide-list{margin:0;padding-left:17px;display:flex;flex-direction:column;
+  gap:6px;color:var(--text2);font-size:12.5px;line-height:1.5}
+.guide-list li::marker{color:var(--text3)}
+@media (max-width:900px){.legend-row{grid-template-columns:1fr}}
+
+/* ── fit the screen ───────────────────────────────────────────────────
+   Turning 1px grid lines into 6px gaps added 30px of height across six
+   rows and pushed the legend below the fold. The room comes back off the
+   chrome, not off the calendar. */
+.content{padding:20px 22px}
+.cal-card{padding:14px 16px}
+.cal-cell{min-height:70px;padding:6px 7px;gap:3px}
+.cal-day-label{padding:2px 0 6px}
+.legend-row{margin-top:14px}
+.legend-row .legend-section{padding:13px 15px}
+.cal-slot-pill{font-size:10px;gap:5px}
+
+/* The count badge repeated what the chips underneath already showed, and
+   sat where the date number wants to be. */
+.cell-slot-count{display:none}
+.gcal-note{display:flex;align-items:center;gap:8px;margin-top:11px;
+  padding-top:11px;border-top:1px solid var(--border);
+  font-size:11.5px;color:var(--text3)}
+.gcal-note svg{color:var(--green);flex:none}
+
+/* ── the banner the sample leads with ─────────────────────────────────
+   A slot stores a weekday, so every row in this panel is a rule covering
+   the rest of the term. Saying it once, at the top, is the difference
+   between an adviser editing a Monday and editing every Monday. */
+.recur-banner{display:flex;gap:9px;align-items:flex-start;padding:10px 12px;
+  margin:0 0 12px;border-radius:8px;background:var(--accent-glow);
+  border:1px solid var(--accent);font-size:12px;line-height:1.45;color:var(--text)}
+.recur-banner svg{width:15px;height:15px;flex:none;margin-top:2px;color:var(--accent3)}
+.recur-banner b{font-weight:700}
+
+/* The primary action lost to `.content .btn-primary` above - two classes
+   beat one - so it stayed gold. Gold means "today" and "selected" on this
+   page; the action that commits a change should not also be gold. */
+.content .btn-primary{background:var(--navy-dark);color:#fff;border:none}
+.content .btn-primary:hover{background:var(--navy-light)}
+
+/* ── slot cards ── */
+.date-slot .slot-times{display:flex;align-items:center;gap:6px;white-space:nowrap;
+  font-size:12px;font-weight:500;color:var(--text)}
+.date-slot .slot-arrow{color:var(--text3);font-size:11px}
+.slot-booking{display:flex;align-items:center;gap:8px;padding:7px 9px;
+  background:var(--green-bg);border-radius:6px;font-size:11px;color:var(--text2);
+  line-height:1.4}
+.slot-booking .who-dot{width:22px;height:22px;border-radius:50%;flex:none;
+  background:var(--green);color:#fff;display:flex;align-items:center;
+  justify-content:center;font-size:9px;font-weight:700}
+.slot-booking b{color:var(--text);font-weight:600}
+.date-slot-actions{display:flex;align-items:center;gap:1px;flex-shrink:0}
+.date-slot-actions button{padding:2px 3px}
+
+/* "+ Add a weekly slot on Mondays" - the sample says what adding one means
+   before you add it, not after. */
+.add-slot-lead{width:100%;display:flex;align-items:center;justify-content:center;
+  gap:7px;border:1px dashed var(--border2);border-radius:8px;padding:9px;
+  margin-bottom:12px;background:none;cursor:pointer;font:600 12.5px 'DM Sans',sans-serif;
+  color:var(--text2)}
+.add-slot-lead:hover{border-color:var(--accent);background:var(--accent-light);color:var(--text)}
+.date-slot[title]:hover{border-color:var(--border2);background:var(--bg3)}
+.date-slot-meta button{white-space:nowrap}
+.date-slot-meta button:hover{color:var(--text)}
+
+/* ── the slot card, matched to the sample ─────────────────────────────
+   Two underlined links sat in the meta row shouting over the thing they
+   describe. The sample's card states what the slot IS; what you can do to
+   it waits until you are on it. */
+.date-slot{padding:11px 12px;gap:6px}
+.date-slot .slot-times{font-family:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+  font-size:12.5px;font-weight:500;letter-spacing:-.2px}
+.date-slot .slot-arrow{font-size:12px;margin:0 1px}
+.date-slot-meta{gap:6px;align-items:center}
+.recur-mark{width:12px;height:12px;flex:none;color:var(--text3)}
+
+.slot-acts{display:flex;gap:9px;margin-left:auto;opacity:0;transition:opacity .12s}
+.date-slot:hover .slot-acts,.date-slot:focus-within .slot-acts{opacity:1}
+.slot-act{background:none;border:0;padding:0;cursor:pointer;font-size:10.5px;
+  color:var(--text3);text-decoration:underline;white-space:nowrap}
+.slot-act:hover{color:var(--text)}
+
+/* Grey, and the same weight as the other marks on the card. A red cross is
+   the loudest thing in the panel, on the one action nobody arrives wanting. */
+.slot-del{background:none;border:0;cursor:pointer;color:var(--text3);
+  padding:2px 3px;line-height:1;display:flex}
+.slot-del:hover{color:var(--red)}
+
+/* ── the card's own room ──────────────────────────────────────────────
+   "Every Monday · unchanged" was breaking over three lines in a 300px
+   column. The hover actions were the cause: opacity:0 still occupies
+   width, so they squeezed the line they sit beside every time. Taken out
+   of flow, the meta row has the card to itself. */
+.date-slot{position:relative;padding:12px 13px;gap:7px}
+.date-slot-meta{gap:6px;white-space:nowrap;min-width:0;color:var(--text3)}
+.date-slot-meta > span{overflow:hidden;text-overflow:ellipsis}
+.slot-acts{position:absolute;right:11px;bottom:10px;margin:0;
+  background:var(--bg2);padding-left:8px}
+.date-slot:hover .slot-acts,.date-slot:focus-within .slot-acts{opacity:1}
+.date-slot-top{gap:8px}
+
+/* ── the column the sample actually uses ──────────────────────────────
+   300px could not hold a time range, a type tag and a delete on one line,
+   so the delete was pushed past the card edge. The sample's column is
+   336px and everything sits inside it. */
+.sched-layout{grid-template-columns:1fr 336px}
+.date-slot{overflow:hidden}
+.date-slot-top{gap:8px;min-width:0}
+.date-slot .slot-times{min-width:0;flex:1}
+.date-slot-actions{flex:none}
+.date-slot .slot-tag{flex:none}
+
+/* One phrase, one line: mark, weekday, state - with the gaps of a sentence
+   rather than of a toolbar. */
+.date-slot-meta{gap:5px;line-height:1.4}
+.recur-mark{margin-right:1px}
+
+/* A booked slot cannot be deleted or hidden, so it says so rather than
+   offering controls that refuse. */
+.slot-held{display:flex;color:var(--green);padding:2px 3px;cursor:help}

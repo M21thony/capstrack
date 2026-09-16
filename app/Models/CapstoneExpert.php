@@ -17,6 +17,7 @@ use Illuminate\Support\Str;
     'middle_name',
     'suffix',
     'credentials',
+    'highest_degree',
     'profile_picture',
     'is_admin',
     'approved_status',
@@ -24,6 +25,7 @@ use Illuminate\Support\Str;
     'program_slots',
     'program',
     'sections',
+        'degree_title',
     'school_year',
     'rejection_reason',
     'reject_attempts',
@@ -545,5 +547,111 @@ class CapstoneExpert extends Authenticatable
         $startYear = (int) ($prefix.str_pad((string) $lastTwo, 2, '0', STR_PAD_LEFT));
 
         return $startYear.'-'.($startYear + 1);
+    }
+
+    /** Highest degree an expert holds. A Panel Chair needs a Master's or higher. */
+    public const DEGREES = [
+        'bachelor' => "Bachelor's",
+        'master' => "Master's",
+        'doctorate' => 'Doctorate',
+    ];
+
+    public function degreeLabel(): ?string
+    {
+        return self::DEGREES[$this->highest_degree] ?? null;
+    }
+
+    /** The degrees offered, by level, as they are written after a name. */
+    public const DEGREE_TITLES = [
+        'bachelor' => ['BSIT', 'BSCS', 'BSIS', 'BLIS', 'BSEd', 'AB', 'BS'],
+        'master' => ['MIT', 'MSIT', 'MSCS', 'MIS', 'MLIS', 'MAEd', 'MAT', 'MBA', 'MA', 'MS'],
+        'doctorate' => ['PhD', 'DIT', 'EdD', 'DBA', 'DPA'],
+    ];
+
+    /** @return array<int, string> */
+    public static function degreeTitles(): array
+    {
+        return array_merge(...array_values(self::DEGREE_TITLES));
+    }
+
+    /**
+     * A degree title and the level it is: MIT is a master's. An unknown or
+     * blank title clears both.
+     *
+     * @return array{degree_title: ?string, highest_degree: ?string}
+     */
+    public static function degreeFromTitle(?string $title): array
+    {
+        foreach (self::DEGREE_TITLES as $level => $titles) {
+            if (in_array($title, $titles, true)) {
+                return ['degree_title' => $title, 'highest_degree' => $level];
+            }
+        }
+
+        return ['degree_title' => null, 'highest_degree' => null];
+    }
+
+    /**
+     * A name as it is written, split from the credentials after the comma:
+     * "Juan Dela Cruz, MIT" is Juan Dela Cruz, with MIT.
+     *
+     * @return array{0: string, 1: ?string}
+     */
+    public static function splitName(string $name): array
+    {
+        [$name, $credentials] = array_pad(explode(',', $name, 2), 2, '');
+        $credentials = trim($credentials);
+
+        return [trim($name), $credentials !== '' ? mb_substr($credentials, 0, 50) : null];
+    }
+
+    /**
+     * The highest degree named in someone's credentials: "MIT, LPT" is a
+     * master's, "MIT, Ph.D." a doctorate. None named clears the degree.
+     *
+     * @return array{degree_title: ?string, highest_degree: ?string}
+     */
+    public static function degreeFromCredentials(?string $credentials): array
+    {
+        $words = preg_split('/[\s,;\/]+/', str_replace('.', '', (string) $credentials), -1, PREG_SPLIT_NO_EMPTY);
+
+        foreach (array_reverse(self::DEGREE_TITLES, true) as $level => $titles) {
+            foreach ($titles as $title) {
+                foreach ($words as $word) {
+                    if (strcasecmp($word, $title) === 0) {
+                        return ['degree_title' => $title, 'highest_degree' => $level];
+                    }
+                }
+            }
+        }
+
+        return self::degreeFromTitle(null);
+    }
+
+    protected static function booted(): void
+    {
+        // The degree is read from what is written after the name.
+        static::saving(function (self $expert) {
+            if ($expert->isDirty('credentials')) {
+                $expert->fill(self::degreeFromCredentials($expert->credentials));
+            }
+        });
+    }
+
+    /** What a list shows after the name: MIT, PhD - or the level when only that is on record. */
+    public function degreeText(): ?string
+    {
+        return $this->degree_title ?: $this->degreeLabel();
+    }
+
+    /**
+     * Whether this expert may chair a defense panel.
+     *
+     * The department's rule: a Master's degree or higher. No degree on
+     * record is not proof of one, so it does not qualify either.
+     */
+    public function canChairPanel(): bool
+    {
+        return in_array($this->highest_degree, ['master', 'doctorate'], true);
     }
 }

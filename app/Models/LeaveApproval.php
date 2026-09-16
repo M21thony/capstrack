@@ -14,6 +14,9 @@ class LeaveApproval extends Model
 
     const STATUS_DECLINED = 'declined';
 
+    /** Closed unanswered because the team passed Title Defense - see TeamLock. */
+    const STATUS_CANCELLED = 'cancelled';
+
     const MAX_ATTEMPTS = 3;
 
     const EXPIRY_HOURS = 3;

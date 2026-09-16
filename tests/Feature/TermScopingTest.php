@@ -145,6 +145,7 @@ class TermScopingTest extends TestCase
     public function test_a_team_created_this_term_records_the_term(): void
     {
         $student = $this->makeStudent('leader@my.cspc.edu.ph');
+        $student->update(['year_section' => '3rd · A']); // teams are formed in Capstone 1
 
         $this->actingAs($student, 'web')->post(route('team.store'), [
             'team_name' => 'Brand New Team',

@@ -6,7 +6,7 @@
 <title>Document Submission - CapsTrack</title>
 <meta name="csrf-token" content="{{ csrf_token() }}">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
-@vite('resources/student-ui/Styles/submission.css')
+@vite(['resources/student-ui/Styles/submission.css', 'resources/js/submission-preview.js'])
 <x-dashboard.styles />
 <style>
   @keyframes sk-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
@@ -124,6 +124,26 @@
           $assignedRecipients = collect($roleLabels)->filter(fn ($label, $roleKey) => ! is_null(($recipients[$roleKey]['expert_id'] ?? null)));
       @endphp
 
+      @if ($checklistItems->isNotEmpty())
+      <div class="form-section">
+        <div class="section-label">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+          What is this for?
+        </div>
+        <select class="input" id="checklistItem" aria-label="Checklist requirement this file is for">
+          <option value="">Not a checklist requirement (feedback only)</option>
+          @foreach ($checklistItems->groupBy('phase') as $phase => $group)
+            <optgroup label="{{ $phase }}">
+              @foreach ($group as $ci)
+                <option value="{{ $ci->id }}" @selected($ci->id === $selectedItemId) data-kind="{{ $ci->kind }}" data-role="{{ $ci->role }}">{{ $ci->title }}{{ $ci->note ? ' — '.$ci->note : '' }}</option>
+              @endforeach
+            </optgroup>
+          @endforeach
+        </select>
+        <p class="recipient-hint" id="checklistHint">Pick the requirement and your Progress Tracker updates on its own.</p>
+      </div>
+      @endif
+
       <div class="form-section">
         <div class="section-label">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
@@ -141,7 +161,6 @@
                     name="recipients[]"
                     value="{{ $roleKey }}"
                     data-role="{{ $roleKey }}"
-                    {{ $isAssigned ? 'checked' : '' }}
                     {{ ! $isAssigned ? 'disabled' : '' }}
                 >
                 <span class="recipient-icon">
@@ -157,7 +176,7 @@
         @if ($assignedRecipients->isEmpty())
           <p class="recipient-hint">No adviser, consultant, grammarian, or subject adviser is assigned to your team yet — once one is, you'll be able to select them here.</p>
         @else
-          <p class="recipient-hint">Uncheck anyone you don't want this particular submission sent to.</p>
+          <p class="recipient-hint">Tick who this submission goes to.</p>
         @endif
 
         @if ($assignedRecipients->has('subject_adviser'))
@@ -177,17 +196,49 @@
           Attach File
         </div>
         <div class="drop-zone" id="dropZone">
-            <input type="file" id="fileInput" accept=".pdf" style="display:none" />
+            <input type="file" id="fileInput" accept=".pdf,.jpg,.jpeg,.png" multiple style="display:none" />
             <div class="drop-icon">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
               </svg>
             </div>
             <div class="drop-info">
-                <p id="dropText">Click or drag PDF file to upload</p>
-                <span id="dropSub">PDF up to 25MB</span>
+                <p id="dropText">Click or drag files to upload</p>
+                <span id="dropSub">PDF up to 25MB each - several at once is fine</span>
             </div>
         </div>
+        {{-- One row per file, each with the checklist line it goes to. --}}
+        <style>
+          .file-list{display:grid;gap:6px;margin-top:10px}
+          .file-list:empty{display:none}
+          .file-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr) auto;gap:10px;align-items:center;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg2)}
+          .file-row-name{font-size:13px;font-weight:600;color:var(--text);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+          .file-row-name small{display:block;font-weight:400;color:var(--text3);font-size:11.5px}
+          .file-row select{min-width:0;font-size:12.5px}
+          .file-row-remove{font:inherit;font-size:12px;font-weight:600;border:1px solid var(--border);background:var(--bg2);color:var(--text2);border-radius:6px;padding:5px 10px;cursor:pointer}
+          .file-row-remove:hover{border-color:var(--red);color:var(--red)}
+          .file-row-acts{display:flex;gap:6px}
+          .file-row-preview{font:inherit;font-size:12px;font-weight:600;border:1px solid var(--border);background:var(--bg2);color:var(--text);border-radius:6px;padding:5px 10px;cursor:pointer}
+          .file-row-preview:hover{border-color:var(--accent)}
+          @media (max-width:700px){.file-row{grid-template-columns:1fr auto}.file-row select{grid-column:1 / -1}}
+          /* The preview window: the file as it will be sent, before sending it. */
+          .preview-dialog{border:0;border-radius:12px;padding:0;margin:auto;inset:0;width:min(860px,calc(100vw - 32px));height:calc(100vh - 48px);box-shadow:0 24px 70px rgba(24,25,31,.3);background:var(--bg2,#fff)}
+          .preview-dialog::backdrop{background:rgba(24,25,31,.55)}
+          .preview-dialog[open]{display:flex;flex-direction:column}
+          .preview-head{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--border)}
+          .preview-head h2{margin:0;flex:1;min-width:0;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+          .preview-body{flex:1;min-height:0;overflow:auto;background:var(--bg3,#f2f3f5);padding:12px;display:grid;justify-items:center;align-content:start;gap:12px}
+          .preview-body canvas,.preview-body img{max-width:100%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.15)}
+          .preview-note{color:var(--text3);font-size:13px;margin:40px 0}
+        </style>
+        <div class="file-list" id="fileList" aria-label="Files to submit"></div>
+        <dialog class="preview-dialog" id="previewDialog" aria-labelledby="previewTitle">
+          <div class="preview-head">
+            <h2 id="previewTitle">Preview</h2>
+            <form method="dialog"><button class="file-row-remove" type="submit">Close</button></form>
+          </div>
+          <div class="preview-body" id="previewBody"></div>
+        </dialog>
       </div>
 
       <div class="form-section">
@@ -301,8 +352,6 @@ function showToast(message, type) {
   showToast._t = setTimeout(() => toast.classList.remove('show'), 4000);
 }
 
-let selectedFile = null;
-
 const NEXT_VERSION_URL = "{{ route('student.submission.next-version') }}";
 
 const dropZone = document.getElementById('dropZone');
@@ -319,28 +368,159 @@ dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-ove
 dropZone.addEventListener('drop', (e) => {
   e.preventDefault();
   dropZone.classList.remove('drag-over');
-  if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+  if (e.dataTransfer.files.length) addFiles(e.dataTransfer.files);
 });
 fileInput.addEventListener('change', (e) => {
-  if (e.target.files.length) handleFile(e.target.files[0]);
+  if (e.target.files.length) addFiles(e.target.files);
+  fileInput.value = '';
 });
 
-function handleFile(file) {
-  const ext = file.name.split('.').pop().toLowerCase();
-  if (ext !== 'pdf') {
-    showToast('Only PDF files are accepted.', 'error');
-    return;
+// -- Checklist requirement --
+// A signed paper - a form, or a CLF your adviser or consultant signed by
+// hand - goes to the CaPSA to check, so it needs no reviewer and a phone
+// photo will do.
+const checklistSelect = document.getElementById('checklistItem');
+const checklistHint = document.getElementById('checklistHint');
+
+// Several files can go at once, each to its own checklist line.
+let files = []; // [{ file, itemId }]
+const fileList = document.getElementById('fileList');
+
+function optionFor(id) {
+  return checklistSelect && id ? checklistSelect.querySelector('option[value="' + id + '"]') : null;
+}
+function paperItem(id) {
+  const option = optionFor(id);
+  return !!option && ['form', 'approval', 'custom'].includes(option.dataset.kind);
+}
+// Signed papers only: no reviewer needed. With files queued, every one must be.
+function isPaper() {
+  return files.length ? files.every(f => paperItem(f.itemId)) : paperItem(checklistSelect && checklistSelect.value);
+}
+
+// "09 Signed CLF Approving Chapter 1 (CaPA-Adviser).pdf" -> that checklist
+// line. Letters and digits only, so "-" for "/" and a leading number match.
+const nameKey = s => (s || '').toLowerCase().replace(/\.[^.]+$/, '').replace(/^\s*\d+[\s._-]*/, '').replace(/[^a-z0-9]/g, '');
+
+function matchItem(fileName) {
+  if (!checklistSelect) return '';
+  const key = nameKey(fileName);
+  let best = '';
+  let strength = 0;
+  checklistSelect.querySelectorAll('option').forEach(option => {
+    const title = option.value ? nameKey(option.textContent.split(' — ')[0]) : '';
+    if (!title) return;
+    if (key === title) {
+      best = option.value;
+      strength = 2;
+    } else if (strength < 1 && Math.min(key.length, title.length) >= 8 && (key.includes(title) || title.includes(key))) {
+      best = option.value;
+      strength = 1;
+    }
+  });
+  return best;
+}
+
+function applyChecklistItem() {
+  if (!checklistSelect) return;
+  const boxes = document.querySelectorAll('#recipientGroup input[type="checkbox"]:not(:disabled)');
+
+  if (isPaper()) {
+    boxes.forEach(cb => { cb.checked = false; });
+    checklistHint.textContent = 'Upload a scan or a clear phone photo of the signed paper. It goes to your CaPSA to check — no reviewer needed.';
+  } else {
+    checklistHint.textContent = 'Pick the requirement and your Progress Tracker updates on its own.';
   }
-  if (file.size > 25 * 1024 * 1024) {
-    showToast('File too large. Max 25MB.', 'error');
-    return;
+
+  if (!files.length) dropSub.textContent = isPaper() ? 'PDF, JPG or PNG up to 25MB each' : 'PDF up to 25MB each - several at once is fine';
+}
+
+if (checklistSelect) {
+  checklistSelect.addEventListener('change', () => {
+    // Files that matched no line take the one picked here.
+    files.forEach(f => { if (!f.itemId) f.itemId = checklistSelect.value; });
+    renderFiles();
+    applyChecklistItem();
+  });
+  applyChecklistItem();
+}
+
+function addFiles(list) {
+  for (const file of list) {
+    const ext = file.name.split('.').pop().toLowerCase();
+    if (!['pdf', 'jpg', 'jpeg', 'png'].includes(ext)) {
+      showToast(file.name + ': only PDF, JPG or PNG files are accepted.', 'error');
+      continue;
+    }
+    if (file.size > 25 * 1024 * 1024) {
+      showToast(file.name + ' is too large. Max 25MB.', 'error');
+      continue;
+    }
+    files.push({ file: file, itemId: matchItem(file.name) || (checklistSelect ? checklistSelect.value : '') });
   }
-  selectedFile = file;
-  dropZone.classList.add('has-file');
-  dropText.textContent = file.name;
-  dropSub.textContent = (file.size / (1024 * 1024)).toFixed(2) + ' MB — click to change';
-  fileNameLabel.textContent = file.name;
-  updateVersionLabel(file.name);
+  renderFiles();
+  applyChecklistItem();
+}
+
+function renderFiles() {
+  dropZone.classList.toggle('has-file', files.length > 0);
+  dropText.textContent = files.length ? files.length + (files.length === 1 ? ' file' : ' files') + ' ready' : 'Click or drag files to upload';
+  if (files.length) dropSub.textContent = 'Click or drop to add more';
+  fileList.innerHTML = '';
+
+  files.forEach((entry, i) => {
+    const row = document.createElement('div');
+    row.className = 'file-row';
+
+    const name = document.createElement('div');
+    name.className = 'file-row-name';
+    name.title = entry.file.name;
+    name.textContent = entry.file.name;
+    const size = document.createElement('small');
+    size.textContent = (entry.file.size / (1024 * 1024)).toFixed(2) + ' MB';
+    name.appendChild(size);
+    row.appendChild(name);
+
+    if (checklistSelect) {
+      const select = checklistSelect.cloneNode(true);
+      select.removeAttribute('id');
+      select.value = entry.itemId;
+      select.setAttribute('aria-label', 'Requirement for ' + entry.file.name);
+      select.addEventListener('change', () => { entry.itemId = select.value; applyChecklistItem(); });
+      row.appendChild(select);
+    } else {
+      row.appendChild(document.createElement('span'));
+    }
+
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.className = 'file-row-remove';
+    remove.textContent = 'Remove';
+    remove.addEventListener('click', () => { files.splice(i, 1); renderFiles(); applyChecklistItem(); });
+
+    // Drawn from the file itself - pages on canvases, no iframe or viewer menus.
+    const preview = document.createElement('button');
+    preview.type = 'button';
+    preview.className = 'file-row-preview';
+    preview.textContent = 'Preview';
+    preview.addEventListener('click', () => window.previewSubmissionFile && window.previewSubmissionFile(entry.file));
+
+    const acts = document.createElement('div');
+    acts.className = 'file-row-acts';
+    acts.append(preview, remove);
+    row.appendChild(acts);
+
+    fileList.appendChild(row);
+  });
+
+  if (files.length === 1) {
+    fileNameLabel.textContent = files[0].file.name;
+    updateVersionLabel(files[0].file.name);
+  } else {
+    fileNameLabel.textContent = files.length ? files.length + ' files' : 'No file selected yet';
+    versionLabel.textContent = files.length ? 'Each file is versioned on its own' : 'Version 1';
+    if (chapterLabel) chapterLabel.textContent = '—';
+  }
 }
 
 // Version only carries forward for a resubmission of the *same* document.
@@ -399,64 +579,82 @@ if (folderWrap && folderSelect) {
   }
 }
 
-document.getElementById('submitBtn').addEventListener('click', function () {
+// Each file is its own submission, sent one after another, so every file is
+// stored, versioned and ticked on the checklist line it was given.
+document.getElementById('submitBtn').addEventListener('click', async function () {
   const checked = Array.from(document.querySelectorAll('#recipientGroup input[type="checkbox"]:checked')).map(cb => cb.value);
-  if (checked.length === 0) {
-    showToast('Please select at least one recipient before submitting.', 'error');
+
+  if (!files.length) {
+    showToast('Please attach a file before submitting.', 'error');
     return;
   }
-
-  if (!selectedFile) {
-    showToast('Please attach a PDF file before submitting.', 'error');
+  if (checked.length === 0 && !isPaper()) {
+    showToast('Please select at least one recipient for the documents being reviewed.', 'error');
     return;
   }
-
+  const notPdf = files.find(f => !paperItem(f.itemId) && !f.file.name.toLowerCase().endsWith('.pdf'));
+  if (notPdf) {
+    showToast(notPdf.file.name + ': a document sent for review must be a PDF. Only signed papers can be photos.', 'error');
+    return;
+  }
   if (folderWrap && folderWrap.style.display !== 'none' && !folderSelect.value) {
     showToast('Please select which folder to submit to for your Subject Adviser.', 'error');
     return;
   }
 
-  const fd = new FormData();
-  fd.append('file', selectedFile);
-  checked.forEach(role => fd.append('recipients[]', role));
-  if (folderWrap && folderWrap.style.display !== 'none' && folderSelect.value) {
-    fd.append('subject_adviser_folder_id', folderSelect.value);
-  }
-
   const btn = this;
   const originalText = btn.innerHTML;
   btn.disabled = true;
-  btn.innerHTML = 'Submitting…';
 
-  fetch(SUBMIT_URL, {
-    method: 'POST',
-    headers: { 'X-CSRF-TOKEN': CSRF_TOKEN },
-    body: fd,
-  })
-    .then(r => r.json())
-    .then(data => {
-      btn.disabled = false;
-      btn.innerHTML = originalText;
+  const total = files.length;
+  let sent = 0;
+  const driveProblems = [];
+  let failure = null;
 
+  for (const entry of files) {
+    btn.innerHTML = 'Submitting ' + (sent + 1) + ' of ' + total + '…';
+
+    const fd = new FormData();
+    fd.append('file', entry.file);
+    // A signed paper goes to the CaPSA, not to a reviewer.
+    if (!paperItem(entry.itemId)) checked.forEach(role => fd.append('recipients[]', role));
+    if (entry.itemId) fd.append('deliverable_id', entry.itemId);
+    if (!paperItem(entry.itemId) && folderWrap && folderWrap.style.display !== 'none' && folderSelect.value) {
+      fd.append('subject_adviser_folder_id', folderSelect.value);
+    }
+
+    try {
+      const data = await fetch(SUBMIT_URL, { method: 'POST', headers: { 'X-CSRF-TOKEN': CSRF_TOKEN, 'Accept': 'application/json' }, body: fd }).then(r => r.json());
       if (!data.success) {
-        showToast(data.message || 'Submission failed.', 'error');
-        return;
+        failure = entry.file.name + ': ' + (data.message || 'Submission failed.');
+        break;
       }
+      (data.recipients || [])
+        .filter(r => ['not_connected', 'failed', 'unresolved'].includes(r.status))
+        .forEach(r => driveProblems.push(entry.file.name + ' - ' + r.role + ' (' + r.status + ')'));
+      sent++;
+    } catch (e) {
+      failure = entry.file.name + ': submission failed. Please try again.';
+      break;
+    }
+  }
 
-      const failedRecipients = (data.recipients || []).filter(r => r.status === 'not_connected' || r.status === 'failed' || r.status === 'unresolved');
-      let msg = 'Document submitted successfully.';
-      if (failedRecipients.length) {
-        msg += ' Some recipients could not receive a Drive copy: ' +
-          failedRecipients.map(r => `${r.role} (${r.status})`).join(', ');
-      }
-      showToast(msg, failedRecipients.length ? 'error' : 'success');
-      setTimeout(() => window.location.reload(), 1800);
-    })
-    .catch(() => {
-      btn.disabled = false;
-      btn.innerHTML = originalText;
-      showToast('Submission failed. Please try again.', 'error');
-    });
+  btn.disabled = false;
+  btn.innerHTML = originalText;
+
+  if (failure) {
+    // What went through is off the list, so trying again never sends it twice.
+    files = files.slice(sent);
+    renderFiles();
+    applyChecklistItem();
+    showToast((sent ? sent + ' of ' + total + ' sent. Stopped at ' : '') + failure, 'error');
+    return;
+  }
+
+  let msg = total === 1 ? 'Document submitted successfully.' : 'All ' + total + ' files submitted.';
+  if (driveProblems.length) msg += ' Some recipients could not receive a Drive copy: ' + driveProblems.join(', ');
+  showToast(msg, driveProblems.length ? 'error' : 'success');
+  setTimeout(() => window.location.reload(), 1800);
 });
 
 // -- Mobile Sidebar --

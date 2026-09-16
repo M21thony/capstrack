@@ -58,25 +58,15 @@ class SyncConsultationCancellation implements ShouldQueue
             Log::warning('Consultation cancelled email failed', ['error' => $e->getMessage()]);
         }
 
-        if (! $expert->google_token) {
+        if (! $expert->google_token || ! $booking->google_event_id) {
             return;
         }
 
         try {
-            if ($slot->recur === 'once') {
-                if ($slot->google_event_id) {
-                    $calendar->updateBookingEvent(
-                        expertId: $slot->expert_id,
-                        googleEventId: $slot->google_event_id,
-                        teamName: 'Available Slot'
-                    );
-                }
-            } elseif ($booking->google_event_id) {
-                // A recurring occurrence had an event of its own - there is no
-                // shared placeholder for this one date to fall back to - so it
-                // is removed rather than relabelled.
-                $calendar->cancelBookingEvent($slot->expert_id, $booking->google_event_id);
-            }
+            // Every booking has an event of its own on the expert's calendar,
+            // and open slots have none, so a cancelled booking's event is simply
+            // removed - nothing is put back in its place.
+            $calendar->cancelBookingEvent($slot->expert_id, $booking->google_event_id);
         } catch (\Throwable $e) {
             Log::warning('Google Calendar sync failed on cancel', ['error' => $e->getMessage()]);
         }

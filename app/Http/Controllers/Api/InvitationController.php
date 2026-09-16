@@ -43,7 +43,32 @@ class InvitationController extends Controller
         $student = $request->user();
         $studentId = $student->student_id;
 
+        $teamId = $validated['team_id'] ?? StudentTeam::idFor($studentId);
+
+        // Capstone 2 teams are closed. Somebody joining in 4th year was not
+        // there for the title, the proposal or any of the work being graded,
+        // which is what the department's rule is about. Checked here as well
+        // as in the page, because the page can only hide a button.
+        // Only when inviting. A request is somebody asking to be let in, and
+        // the leader decides on it - refusing at this end would tell the
+        // asker the team is full before the leader has even seen them.
+        if ($validated['type'] === 'invite') {
+            $team = Team::find($teamId);
+
+            if ($team && $reason = $team->inviteBlockReason(1, Student::find($validated['receiver_id']))) {
+                return response()->json(['message' => $reason], 422);
+            }
+        }
+
         if ($validated['type'] === 'request') {
+            if (! Team::joiningAllowed()) {
+                return response()->json(['message' => Team::JOINING_CLOSED], 422);
+            }
+
+            if ($student->capstoneStage() !== 1) {
+                return response()->json(['message' => Team::MEMBERS_SETTLED], 422);
+            }
+
             if (StudentTeam::has($studentId)) {
                 return response()->json([
                     'message' => 'You are already in a team. Leave your team first before joining another.',
@@ -163,6 +188,16 @@ class InvitationController extends Controller
         $student = $request->user();
         $studentId = $student->student_id;
 
+        // Asked of the model, so this and the web accept path cannot drift
+        // apart again: joining closed, Capstone 2 begun, or the last seat gone.
+        $joining = Team::find($invitation->team_id);
+
+        $joiner = $invitation->type === 'invite' ? $student : Student::find($invitation->sender_id);
+
+        if ($joining && $reason = $joining->joinBlockReason($joiner)) {
+            return response()->json(['message' => $reason], 422);
+        }
+
         $memberRoleId = $this->roleFromTeamPost($invitation->team_id);
 
         if ($invitation->type === 'invite') {
@@ -197,7 +232,7 @@ class InvitationController extends Controller
 
         if ($team && $team->team_status === 'Active') {
             $currentCount = StudentSchoolYear::where('team_id', $team->team_id)->count();
-            if ($currentCount >= $team->member_count) {
+            if ($currentCount >= $team->memberLimit()) {
                 $team->update(['team_status' => 'Full']);
                 $this->logActivity(
                     $team->leader_id,

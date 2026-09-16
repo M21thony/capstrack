@@ -9,9 +9,9 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
 /**
- * Emails every student on the team plus the assigned expert for each
- * consultation booking scheduled for today. Meant to run once daily
- * (see routes/console.php) so it lands as a same-day reminder.
+ * One reminder email per consultation booked for today - to the expert, with
+ * the team copied in. Meant to run once daily (see routes/console.php) so it
+ * lands as a same-day reminder.
  */
 class SendConsultationReminders extends Command
 {
@@ -38,15 +38,15 @@ class SendConsultationReminders extends Command
                 continue;
             }
 
-            $recipients = $team->members->pluck('email')->filter()->push($expert->email)->unique();
+            // One email per session - to the expert, copied to the team. It used
+            // to send a separate copy to every member, which read as spam.
+            $members = $team->members->pluck('email')->filter()->reject(fn ($e) => $e === $expert->email)->unique()->values();
 
-            foreach ($recipients as $email) {
-                try {
-                    Mail::to($email)->queue(new ConsultationReminderMail($booking, $expert, $team));
-                    $sent++;
-                } catch (\Exception $e) {
-                    Log::warning('Consultation reminder email failed', ['error' => $e->getMessage()]);
-                }
+            try {
+                Mail::to($expert->email)->cc($members->all())->queue(new ConsultationReminderMail($booking, $expert, $team));
+                $sent++;
+            } catch (\Exception $e) {
+                Log::warning('Consultation reminder email failed', ['error' => $e->getMessage()]);
             }
         }
 

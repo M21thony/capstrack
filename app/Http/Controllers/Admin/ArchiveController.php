@@ -25,6 +25,7 @@ class ArchiveController extends Controller
         $data = $request->validate([
             'title' => 'required|string|max:255',
             'abstract' => 'nullable|string',
+            'authors' => 'nullable|string|max:500',
             'academic_year' => 'nullable|string|max:20',
             'program' => 'nullable|string|max:50',
             'file_name' => 'nullable|string|max:255',
@@ -48,6 +49,7 @@ class ArchiveController extends Controller
         $data = $request->validate([
             'title' => 'required|string|max:255',
             'abstract' => 'nullable|string',
+            'authors' => 'nullable|string|max:500',
             'academic_year' => 'nullable|string|max:20',
             'program' => 'nullable|string|max:50',
             'file_name' => 'nullable|string|max:255',

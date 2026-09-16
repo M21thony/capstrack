@@ -4,10 +4,14 @@ namespace App\Http\Controllers;
 
 use App\Models\CapstoneDocument;
 use App\Models\CapstoneDocumentReview;
+use App\Models\Deliverable;
 use App\Models\GoogleDriveToken;
+use App\Models\Team;
 use App\Services\GoogleDriveService;
 use App\Services\RecipientResolver;
+use App\Support\MilestoneProgress;
 use App\Support\StudentTeam;
+use App\Support\TeamChecklist;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -26,9 +30,10 @@ class SubmissionController extends Controller
             'title' => 'nullable|string|max:50',
             'chapter' => 'nullable|string|max:50',
             'file' => 'required|file|max:25600', // 25 MB
-            'recipients' => 'required|array|min:1',
+            'recipients' => 'nullable|array',
             'recipients.*' => 'in:adviser,consultant,grammarian,subject_adviser',
             'subject_adviser_folder_id' => 'nullable|string',
+            'deliverable_id' => 'nullable|integer',
         ]);
 
         $studentId = Auth::id(); // adjust guard if students use a named guard
@@ -50,6 +55,43 @@ class SubmissionController extends Controller
 
         $file = $request->file('file');
         $originalExt = strtolower($file->getClientOriginalExtension());
+
+        // The checklist line this file is for, if any. None means it was sent
+        // for feedback only and moves nothing on the checklist.
+        $item = null;
+
+        if ($request->filled('deliverable_id')) {
+            $checklist = ($teamModel = Team::find($studentYear->team_id)) ? app(TeamChecklist::class)->for($teamModel) : null;
+            $item = Deliverable::active()->with('milestone')->find($request->integer('deliverable_id'));
+
+            if (! $item || ! $checklist || (int) $item->milestone->checklist_id !== $checklist->id) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'That requirement is not on your team\'s checklist.',
+                ], 422);
+            }
+        }
+
+        // A signed paper - a form, or a CLF signed by hand - is checked by the
+        // CaPSA, not reviewed, so it needs no recipient and a phone photo of
+        // it is as good as a scan. Anything else goes to a reviewer's
+        // annotator, which reads documents.
+        $isPaper = $item && in_array($item->kind, Deliverable::CHECKED_BY_CAPSA, true);
+        $allowed = $isPaper ? ['pdf', 'jpg', 'jpeg', 'png'] : ['pdf', 'doc', 'docx', 'ppt', 'pptx'];
+
+        if ($item && ! in_array($originalExt, $allowed, true)) {
+            return response()->json([
+                'success' => false,
+                'message' => $isPaper ? 'Upload the signed paper as a PDF, JPG or PNG.' : 'Upload this requirement as a PDF.',
+            ], 422);
+        }
+
+        if (! $isPaper && empty($request->input('recipients'))) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Pick at least one person to send this to.',
+            ], 422);
+        }
         $storedPath = $file->store('submissions', 'local'); // adjust disk as needed
 
         // No title/chapter form fields anymore - students just attach a file
@@ -70,11 +112,17 @@ class SubmissionController extends Controller
         // Counted across the whole team, not the one account uploading. A
         // chapter is the team's, so two members each sending "Chapter 1" were
         // both told they were on Version 1 of it.
+        // A file sent for a checklist line is a revision of that line whatever
+        // it is called, so the line is the grouping key when there is one.
         $lastVersion = CapstoneDocument::whereIn('student_id', StudentTeam::memberIdsFor($studentId))
             ->when(
-                $chapter,
-                fn ($query) => $query->where('chapter', $chapter),
-                fn ($query) => $query->where('file_name', $title)
+                $item,
+                fn ($query) => $query->where('deliverable_id', $item->id),
+                fn ($query) => $query->when(
+                    $chapter,
+                    fn ($query) => $query->where('chapter', $chapter),
+                    fn ($query) => $query->where('file_name', $title)
+                )
             )
             ->max('file_version') ?? 0;
 
@@ -82,6 +130,7 @@ class SubmissionController extends Controller
             'student_id' => $studentId,
             'file_name' => $title,
             'chapter' => $chapter,
+            'deliverable_id' => $item?->id,
             'file_path' => $storedPath,
             'file_version' => $lastVersion + 1,
             'document_status' => 'Pending',
@@ -89,7 +138,7 @@ class SubmissionController extends Controller
 
         $results = [];
 
-        foreach ($request->input('recipients') as $role) {
+        foreach ($request->input('recipients', []) as $role) {
             if ($role === 'subject_adviser' && ! $studentYear->program) {
                 $results[] = [
                     'role' => $role,
@@ -211,7 +260,7 @@ class SubmissionController extends Controller
         ]);
     }
 
-    public function create()
+    public function create(Request $request)
     {
         $studentId = Auth::id();
 
@@ -219,6 +268,37 @@ class SubmissionController extends Controller
             ->where('student_id', $studentId)
             ->orderByDesc('school_year')
             ->first();
+
+        // The team's checklist lines still open, for "What is this for?".
+        // Opened from a line on the Progress Tracker (?item=), that line
+        // arrives already picked.
+        $checklistItems = collect();
+
+        $progress = $studentYear && $studentYear->team_id
+            ? Team::find($studentYear->team_id)?->checklistProgress()
+            : null;
+
+        if ($progress) {
+            $checklistItems = $progress->items
+                ->reject(fn ($row) => $row->item->kind === Deliverable::DEFENSE
+                    || in_array($row->state, MilestoneProgress::COMPLETE_STATES, true))
+                ->map(fn ($row) => (object) [
+                    'id' => $row->item->id,
+                    'title' => $row->item->title,
+                    'phase' => $row->milestone->name,
+                    'kind' => $row->item->kind,
+                    'role' => $row->item->role,
+                    'note' => match (true) {
+                        (bool) $row->note => 'sent back: '.$row->note,
+                        $row->changes_requested => self::ordinal($row->revision).' revision requested',
+                        $row->waiting_on === MilestoneProgress::WAITING_ON_SIGNED_COPY => 'approved, upload the signed copy',
+                        default => null,
+                    },
+                ])
+                ->values();
+        }
+
+        $selectedItemId = (int) $request->query('item');
 
         $recipients = [
             'adviser' => ['expert_id' => null, 'name' => null],
@@ -240,7 +320,14 @@ class SubmissionController extends Controller
         // before-a-file-is-chosen placeholder.
         $nextVersion = 1;
 
-        return view('student.submission', compact('recipients', 'nextVersion'));
+        return view('student.submission', compact('recipients', 'nextVersion', 'checklistItems', 'selectedItemId'));
+    }
+
+    private static function ordinal(int $n): string
+    {
+        $suffix = in_array($n % 100, [11, 12, 13], true) ? 'th' : ([1 => 'st', 2 => 'nd', 3 => 'rd'][$n % 10] ?? 'th');
+
+        return $n.$suffix;
     }
 
     private function deliverToDrive(

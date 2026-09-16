@@ -9,6 +9,7 @@ use App\Models\FinancialRecord;
 use App\Models\Student;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
+use App\Support\DefenseBoard;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -119,11 +120,53 @@ class AdminFinancialController extends Controller
      */
     public function update(Request $request, FinancialRecord $financialRecord): JsonResponse
     {
+        if (! $this->covers($financialRecord)) {
+            return response()->json(['success' => false, 'message' => 'That receipt is not from your sections.'], 403);
+        }
+
         return $request->validate([
             'status' => ['required', 'in:approved,rejected'],
         ])['status'] === 'approved'
             ? $this->approve($request, $financialRecord)
             : $this->reject($request, $financialRecord);
+    }
+
+    /**
+     * PATCH /financial/records - verify several waiting receipts at once.
+     * Only receipts still waiting, from the CaPSA's own sections, change.
+     */
+    public function updateMany(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'ids' => ['required', 'array', 'min:1'],
+            'ids.*' => ['integer'],
+            'status' => ['required', 'in:approved'],
+        ]);
+
+        $by = auth('expert')->user()->name;
+        $records = FinancialRecord::whereIn('id', $validated['ids'])
+            ->where('f_record_status', 'pending')
+            ->with('student')
+            ->get()
+            ->filter(fn (FinancialRecord $r) => $this->covers($r));
+
+        foreach ($records as $record) {
+            $record->update(['f_record_status' => 'verified', 'verified_at' => now(), 'verified_by' => $by]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Verified '.$records->count().' '.($records->count() === 1 ? 'receipt' : 'receipts').'.',
+            'data' => ['verified' => $records->pluck('id')->values()],
+        ]);
+    }
+
+    /** Whether the receipt's student is on a team in this CaPSA's sections. */
+    private function covers(FinancialRecord $record): bool
+    {
+        $team = $record->student?->team;
+
+        return ! $team || app(DefenseBoard::class)->covers(auth('expert')->user(), $team);
     }
 
     public function approve(Request $request, FinancialRecord $financialRecord): JsonResponse
@@ -205,28 +248,43 @@ class AdminFinancialController extends Controller
         ]);
     }
 
+    /**
+     * POST /financial/expense-posts - a defense fee. Only Title, Pre Oral and
+     * Final Oral Defense have one; Pre-proposal Defense has no fee. One fee
+     * per defense per program.
+     */
     public function storeExpensePost(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'title' => ['required', 'string', 'max:255'],
+            'title' => ['nullable', 'string', 'max:255'],
             'course' => ['required', 'string', 'in:BSIT,BSCS,BLIS,BSIS'],
-            'year_level' => ['required', 'string', 'in:3rd,4th'],
-            'defense_type' => ['nullable', 'string', 'in:'.implode(',', self::DEFENSE_TYPES)],
+            'year_level' => ['nullable', 'string', 'in:3rd,4th'],
+            'defense_type' => ['required', 'string', 'in:'.implode(',', DefenseBoard::PAID_STAGES)],
             'amount' => ['required', 'numeric', 'min:0'],
             'description' => ['nullable', 'string', 'max:1000'],
+        ], [
+            'defense_type.in' => 'Pre-proposal Defense has no fee. Pick Title, Pre Oral or Final Oral Defense.',
         ]);
+
+        if (ExpensePost::where('defense_type', $validated['defense_type'])->where('course', $validated['course'])->exists()) {
+            return response()->json([
+                'success' => false,
+                'message' => $validated['defense_type'].' already has a fee for '.$validated['course'].'.',
+            ], 422);
+        }
 
         /** @var CapstoneExpert $admin */
         $admin = auth('expert')->user();
 
         $post = ExpensePost::create([
             'admin_id' => $admin->expert_id,
-            'title' => $validated['title'],
+            'title' => $validated['title'] ?? $validated['defense_type'].' Fee',
             'course' => $validated['course'],
-            'year_level' => $validated['year_level'],
-            'defense_type' => $validated['defense_type'] ?? null,
+            // Title Defense closes Capstone 1 (3rd year); Pre Oral and Final Oral are Capstone 2.
+            'year_level' => $validated['year_level'] ?? ($validated['defense_type'] === 'Title Defense' ? '3rd' : '4th'),
+            'defense_type' => $validated['defense_type'],
             'amount' => $validated['amount'],
-            'description' => $validated['description'],
+            'description' => $validated['description'] ?? null,
         ]);
 
         return response()->json([

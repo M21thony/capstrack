@@ -2,12 +2,356 @@
 
 namespace App\Models;
 
+use App\Support\DefenseOutcome;
+use App\Support\MilestoneProgress;
+use App\Support\TeamChecklist;
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Collection;
 
 class Team extends Model
 {
     protected $table = 'team';
+
+    /** This team's Title Defense attempts, fetched once per instance. */
+    private ?Collection $titleDefenseAttempts = null;
+
+    private function titleDefenseAttempts(): Collection
+    {
+        return $this->titleDefenseAttempts ??= DefenseSchedule::where('team_id', $this->team_id)
+            ->where('defense_type', DefenseOutcome::TITLE_DEFENSE)
+            ->get();
+    }
+
+    /**
+     * Whether this team's members are locked: it has passed Title Defense.
+     *
+     * Read from the recorded outcome rather than stored as a flag. A Panel
+     * Chair records an outcome once and it cannot be changed, so the pass is
+     * the fact itself - there is no second copy to fall out of step with it.
+     */
+    public function isTeamLocked(): bool
+    {
+        return $this->titleDefenseAttempts()->contains(fn ($s) => DefenseOutcome::isPass($s->outcome));
+    }
+
+    /** When the members were locked - the day the pass was recorded. */
+    public function teamLockedAt(): ?CarbonInterface
+    {
+        return $this->titleDefenseAttempts()
+            ->filter(fn ($s) => DefenseOutcome::isPass($s->outcome))
+            ->map(fn ($s) => $s->outcome_recorded_at ?? $s->schedule_date)
+            ->filter()
+            ->sort()
+            ->first();
+    }
+
+    /**
+     * Which Capstone this team is in.
+     *
+     * Passing Title Defense is what ends Capstone 1, so that decides it
+     * first. A team scheduled for Title Defense that has not passed is still
+     * in Capstone 1 - defending, or retaking it after missing the window -
+     * whatever year its members' list now says, because their title is not
+     * settled and neither are they.
+     *
+     * Only a team that has never been scheduled falls back to its members'
+     * year: the section list is uploaded again as 4th year when it moves up.
+     * Any member in 4th year settles the whole team, which closes the roster
+     * rather than reopening it.
+     */
+    public function capstoneStage(): int
+    {
+        if ($this->isTeamLocked()) {
+            return 2;
+        }
+
+        if ($this->titleDefenseAttempts()->isNotEmpty()) {
+            return 1;
+        }
+
+        $years = $this->members->map(fn ($m) => $m->yearNumber())->filter();
+
+        if ($years->isEmpty()) {
+            return ($this->leader?->yearNumber() ?? 3) >= 4 ? 2 : 1;
+        }
+
+        return $years->max() >= 4 ? 2 : 1;
+    }
+
+    /** The experts a team must have before it can be given a defense panel. */
+    public const REQUIRED_EXPERT_ROLES = ['adviser', 'consultant', 'grammarian'];
+
+    /**
+     * Which of those roles the team has not filled yet.
+     *
+     * Getting started on the checklist is securing all three. Until then
+     * nobody has read the work, so there is nothing for a panel to defend.
+     *
+     * @return array<int, string>
+     */
+    public function missingExpertRoles(): array
+    {
+        $filled = TeamExpertAssignment::where('team_id', $this->team_id)
+            ->where('status', 'approved')
+            ->with('expertRole.role')
+            ->get()
+            ->map(fn (TeamExpertAssignment $a) => $a->engaged_role_name)
+            ->filter()
+            ->unique()
+            ->all();
+
+        return array_values(array_diff(self::REQUIRED_EXPERT_ROLES, $filled));
+    }
+
+    /**
+     * Whether this team may still take members.
+     *
+     * Only during Capstone 1. Somebody joining in Capstone 2 was not there
+     * for the title, the proposal, or any of the work being graded - which is
+     * what the department's rule is about.
+     */
+    public function mayAddMembers(): bool
+    {
+        return $this->capstoneStage() === 1;
+    }
+
+    /** Said wherever a student is turned away by the CaPSA's Team Rules. */
+    public const CREATION_CLOSED = 'Creating a team is closed right now - your CaPSA has turned it off.';
+
+    public const JOINING_CLOSED = 'Joining a team is closed right now - your CaPSA has turned it off.';
+
+    /** Members join in Capstone 1 (3rd year) only - said to a team and to a joiner alike. */
+    public const MEMBERS_SETTLED = 'Capstone 2 has started, so a team keeps the members it '
+        .'finished Capstone 1 with. Members cannot be added now.';
+
+    /** Said to anyone trying to add a member to a team that passed Title Defense. */
+    public const LOCKED_NO_JOINING = 'This team passed Title Defense, so its members are locked. No one can be added.';
+
+    /** Said at every door a member could leave, or be removed, by. */
+    public const TEAM_LOCKED = 'Your team passed Title Defense, so its members are locked. '
+        .'A member can only leave with your CaPSA\'s approval - send the request from the Team page.';
+
+    public const NO_NEW_TEAMS ='Capstone 2 has started. Teams keep the members they '
+        .'finished Capstone 1 with, so new teams and recruitment posts are closed.';
+
+    /**
+     * Whether students may start a team, as set on the CaPSA's Team Rules.
+     *
+     * Open unless switched off. An unset rule is what every existing team was
+     * formed under, and a fresh install must not start with teams closed.
+     */
+    public static function creationAllowed(): bool
+    {
+        return Setting::get('allow_team_creation', '1') !== '0';
+    }
+
+    /** Whether students may join a team - by request, by invitation, or by accepting one. */
+    public static function joiningAllowed(): bool
+    {
+        return Setting::get('allow_team_joining', '1') !== '0';
+    }
+
+    /**
+     * Why somebody cannot join this team at the moment they would, or null.
+     *
+     * Asked when an invitation is accepted, not when it was sent. One sent
+     * while a seat was free can be accepted after the last seat went, after
+     * Capstone 2 began, or after the CaPSA closed joining - and the accept
+     * path the page uses checked none of the three, so two invitations for
+     * one seat could both be accepted.
+     *
+     * Pending invitations are not counted here. They are the other people
+     * racing for the seat, and one of them has to lose.
+     */
+    public function joinBlockReason(?Student $joiner = null): ?string
+    {
+        if (! static::joiningAllowed()) {
+            return self::JOINING_CLOSED;
+        }
+
+        if ($this->isTeamLocked()) {
+            return self::LOCKED_NO_JOINING;
+        }
+
+        // A 4th year joining a 3rd-year team is still a member added in Capstone 2.
+        if (! $this->mayAddMembers() || $joiner?->capstoneStage() === 2) {
+            return self::MEMBERS_SETTLED;
+        }
+
+        $limit = $this->memberLimit();
+
+        if (StudentSchoolYear::where('team_id', $this->team_id)->count() >= $limit) {
+            return 'This team already has the maximum of '.$limit.' members.';
+        }
+
+        return null;
+    }
+
+    /**
+     * Why this team cannot take another invitation, or null if it can.
+     *
+     * On the model because there are two invitation controllers - a web one
+     * and an api one - and the rules were written into only one of them. The
+     * page posts to the other, so a team of two could be sent three
+     * invitations for two seats and every one of them went through.
+     *
+     * @param  int  $adding  How many invitations are about to be sent at once.
+     */
+    public function inviteBlockReason(int $adding = 1, ?Student $invitee = null): ?string
+    {
+        if (! static::joiningAllowed()) {
+            return self::JOINING_CLOSED;
+        }
+
+        if ($this->isTeamLocked()) {
+            return self::LOCKED_NO_JOINING;
+        }
+
+        if (! $this->mayAddMembers() || $invitee?->capstoneStage() === 2) {
+            return self::MEMBERS_SETTLED;
+        }
+
+        $limit = $this->memberLimit();
+        $members = StudentSchoolYear::where('team_id', $this->team_id)->count();
+        $pending = $this->pendingInvitationCount();
+        $free = $this->seatsFree();
+
+        if ($free >= $adding) {
+            return null;
+        }
+
+        if ($free <= 0) {
+            return $pending > 0
+                ? 'Your team is full once the '.$pending.' invitation'.($pending === 1 ? '' : 's')
+                    .' already out '.($pending === 1 ? 'is' : 'are').' answered - '.$members.' of '.$limit.' seats taken.'
+                : 'Your team already has the maximum of '.$limit.' members.';
+        }
+
+        return 'Only '.$free.' seat'.($free === 1 ? '' : 's').' left, and you picked '.$adding.'.'
+            .($pending > 0 ? ' '.$pending.' invitation'.($pending === 1 ? ' is' : 's are').' still waiting to be answered.' : '');
+    }
+
+    /**
+     * Seats a leader may still fill.
+     *
+     * Invitations already out hold a seat. Three sent for one seat is the
+     * same overflow arriving a day later, when the leader has forgotten and
+     * the people involved have not.
+     */
+    public function seatsFree(): int
+    {
+        $taken = StudentSchoolYear::where('team_id', $this->team_id)->count()
+            + $this->pendingInvitationCount();
+
+        return max(0, $this->memberLimit() - $taken);
+    }
+
+    public function pendingInvitationCount(): int
+    {
+        return TeamInvitation::where('team_id', $this->team_id)
+            ->where('status', 'pending')
+            ->count();
+    }
+
+    /** The smallest and largest team a CaPSA may allow. */
+    public const MIN_MEMBERS = 3;
+
+    public const MAX_MEMBERS = 5;
+
+    /**
+     * How many members a team may have, as the CaPSA has set it.
+     *
+     * The number was written out as 5 in seven places - the invitation
+     * check, two recruitment paths, the team page - so changing it meant
+     * finding them all, and they had already drifted. This is the one
+     * answer; a team may still carry its own member_count to override it.
+     */
+    public static function maxMembers(): int
+    {
+        $set = (int) Setting::get('max_team_members', self::MAX_MEMBERS);
+
+        return max(self::MIN_MEMBERS, min(self::MAX_MEMBERS, $set ?: self::MAX_MEMBERS));
+    }
+
+    /**
+     * This team's limit, which is the CaPSA's number.
+     *
+     * Not team.member_count. That column is written as a flat 5 whenever a
+     * team or a recruitment post is made and never deliberately varied, so
+     * reading it as a per-team override meant every team carried an
+     * "override" of 5 and the CaPSA's setting changed nothing. It is kept on
+     * the table because other code stores a headcount in it.
+     */
+    public function memberLimit(): int
+    {
+        return static::maxMembers();
+    }
+
+    /**
+     * How far along this team is, counted from milestone items.
+     *
+     * Lives here because two pages ask the same question - Progress
+     * Monitoring did, and Team Overview does now that the two are one page.
+     * Counting from the items rather than milestones.status matters: that
+     * column never moves off 'todo', so anything reading it reports every
+     * team at zero however much work they have done.
+     */
+    /**
+     * What on the checklist still stands between this team and a defense:
+     * every line listed above that defense's own line that is not done. The
+     * Pre-Proposal therefore waits on Getting started, and the Title Defense
+     * on everything through the signed Hearing Notice - but never on what
+     * comes after it, like the revised manuscript.
+     *
+     * A team whose checklist has no line for that defense, or no checklist at
+     * all, is not held up: nobody has asked for this gate on it.
+     *
+     * @return array<int, string> titles, in checklist order
+     */
+    public function checklistBlockersFor(string $defenseType): array
+    {
+        $progress = $this->checklistProgress();
+
+        if (! $progress) {
+            return [];
+        }
+
+        $rows = $progress->items->values();
+        $at = $rows->search(fn ($row) => $row->item->kind === Deliverable::DEFENSE
+            && $row->item->defense_type === $defenseType);
+
+        if ($at === false) {
+            return [];
+        }
+
+        return $rows->take($at)
+            ->reject(fn ($row) => in_array($row->state, MilestoneProgress::COMPLETE_STATES, true))
+            ->map(fn ($row) => $row->item->title)
+            ->values()
+            ->all();
+    }
+
+    public function progressSummary(): object
+    {
+        $progress = $this->checklistProgress();
+
+        return (object) [
+            'total' => $progress->total ?? 0,
+            'completed' => $progress->completed ?? 0,
+            'overdue' => $progress->overdue ?? 0,
+            'percent' => $progress->percent ?? 0,
+        ];
+    }
+
+    /** This team's progress on its section CaPSA's checklist, or null when it has none. */
+    public function checklistProgress(): ?object
+    {
+        $checklist = app(TeamChecklist::class)->for($this);
+
+        return $checklist ? MilestoneProgress::forTeam($checklist, $this->team_id) : null;
+    }
 
     protected $primaryKey = 'team_id';
 
@@ -114,7 +458,14 @@ class Team extends Model
         return $this->hasMany(DefenseSchedule::class, 'team_id', 'team_id');
     }
 
+    /** The titles in play. Ones set aside when the panel asked for a new title are left out. */
     public function preProposals()
+    {
+        return $this->allPreProposals()->whereNull('retired_at');
+    }
+
+    /** Every title the team has ever saved, the set-aside ones included. */
+    public function allPreProposals()
     {
         return $this->hasMany(CapstonePreProposal::class, 'team_id', 'team_id')->orderBy('slot');
     }

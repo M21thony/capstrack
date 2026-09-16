@@ -525,6 +525,9 @@
                 'name' => $expert->name,
                 'email' => $expert->email,
                 'credentials' => $expert->credentials,
+                'expert_id' => $expert->expert_id,
+                'highest_degree' => $expert->highest_degree,
+                'degree_title' => $expert->degree_title,
                 'program' => $expert->program,
                 'is_capsa' => (bool) $expert->is_capsa,
                 'sections' => $expert->sections ?? [],
@@ -647,7 +650,8 @@
                               onclick="reactivateExpert({{ $expert->expert_id }}, {{ Illuminate\Support\Js::from($expert->name) }})">
                         <svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> Reactivate
                       </button>
-                    @else
+                    @elseif ((int) $expert->expert_id !== (int) auth('expert')->id())
+                    {{-- Never on your own row: nobody would be left to switch you back on. --}}
                     <button type="button" class="rowmenu-item danger"
                             onclick="removeOneExpert({{ $expert->expert_id }}, {{ Illuminate\Support\Js::from($expert->name) }})">
                       <svg viewBox="0 0 24 24"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg> Deactivate
@@ -732,6 +736,13 @@
       <div>
         <div class="expert-detail-field-label">Credentials</div>
         <div class="expert-detail-field-value" id="detailCredentials">—</div>
+      </div>
+      <div>
+        <label class="expert-detail-field-label" for="detailDegree">Degree</label>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:4px">
+          @include('partials.degree-select', ['id' => 'detailDegree', 'attrs' => 'class="input" style="max-width:200px" onchange="saveExpertDegree(this)"'])
+          <span id="detailDegreeNote" style="font-size:11.5px;font-weight:600"></span>
+        </div>
       </div>
       <div>
         <div class="expert-detail-field-label">Program</div>
@@ -887,15 +898,17 @@ const ROLE_NAME_TO_ID = {{ Illuminate\Support\Js::from($roleNameToId) }};
     </div>
 
     <div class="ae-field">
-      <label class="ae-label" for="addExpertName">Full name <span class="ae-req">(required)</span></label>
-      <input type="text" id="addExpertName" class="ct-modal-input" placeholder="Mark Anthony Balilla" autocomplete="off" style="margin-bottom:0">
+      <label class="ae-label" for="addExpertName">Full name <span class="ae-opt">(optional)</span></label>
+      <input type="text" id="addExpertName" class="ct-modal-input" placeholder="Fills in when they first sign in" autocomplete="off" style="margin-bottom:0">
     </div>
 
-    {{-- Required here, unlike the bulk upload: adding one person is a
-         deliberate act, and one with no role in it leaves an account that can
-         sign in and do nothing. --}}
+    {{-- Neither name nor role is asked for. The address is the whole of
+         what is needed to make the account; Google gives the real spelling
+         of their name the first time they sign in, and the role is the
+         CaPSA's to set, now or from the row afterwards. Add CaPSA has always
+         worked this way. --}}
     <div class="ae-field">
-      <label class="ae-label">Role <span class="ae-req">(required)</span></label>
+      <label class="ae-label">Role <span class="ae-opt">(optional)</span></label>
       <div class="ae-roles">
         <label class="ae-role"><input type="checkbox" value="adviser">Adviser</label>
         <label class="ae-role"><input type="checkbox" value="consultant">Consultant</label>
@@ -903,7 +916,7 @@ const ROLE_NAME_TO_ID = {{ Illuminate\Support\Js::from($roleNameToId) }};
       </div>
     </div>
 
-    <p class="ae-note">They are approved straight away &mdash; naming them here is the vetting, the same as putting them on the list. Their areas of expertise are theirs to fill in from their own profile.</p>
+    <p class="ae-note">They are approved straight away &mdash; naming them here is the vetting, the same as putting them on the list. Write a degree after the name, like <b>Juan Dela Cruz, MIT</b>, and it counts for Panel Chair. Their areas of expertise are theirs to fill in from their own profile.</p>
 
     <div id="addExpertResult" style="display:none;font-size:12px;margin-bottom:12px"></div>
 
@@ -1024,8 +1037,6 @@ function addExpert() {
   // Said beside the fields rather than in a toast that has gone by the time
   // they look back at what they typed.
   if (!document.getElementById('addExpertEmail').value.trim()) return fail('Type an email address.');
-  if (!document.getElementById('addExpertName').value.trim()) return fail('Type their full name.');
-  if (!roles.length) return fail('Choose at least one role.');
 
   box.style.display = 'none';
   btn.disabled = true;
@@ -1334,11 +1345,49 @@ function showToast(message, type = 'info', title = null) {
 // ── EXPERT DETAILS DETAILS ────────────────────────────────────
 const expertDetailModal = document.getElementById('expertDetailModal');
 
+// Highest degree, which decides who can chair a panel. Saved the moment it
+// is picked; kept here too, so reopening the same expert shows the new value
+// without reloading the page.
+let currentDetailExpertId = null;
+const degreeSaved = {};
+
+function updateDegreeNote(level) {
+  const canChair = level === 'master' || level === 'doctorate';
+  const note = document.getElementById('detailDegreeNote');
+  note.textContent = canChair ? 'Can be Panel Chair' : "Cannot be Panel Chair - needs a Master's or higher";
+  note.style.color = canChair ? 'var(--green)' : 'var(--text3)';
+}
+
+function saveExpertDegree(select) {
+  if (!currentDetailExpertId) return;
+  const id = currentDetailExpertId;
+  const value = select.value;
+  select.disabled = true;
+
+  fetch('{{ url('capsa/experts') }}/' + id + '/degree', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' },
+    // The title (MIT, PhD); the server works out the level from it.
+    body: JSON.stringify({ degree: value || null }),
+  })
+    .then(r => r.json().then(d => ({ ok: r.ok && d.success, d })))
+    .then(({ ok, d }) => {
+      showToast(d.message || (ok ? 'Degree saved' : 'Could not save the degree'), ok ? 'success' : 'error');
+      if (ok) { degreeSaved[id] = { title: value, level: d.highest_degree || '' }; updateDegreeNote(d.highest_degree || ''); }
+    })
+    .catch(() => showToast('Network error. Nothing was saved.', 'error'))
+    .finally(() => { select.disabled = false; });
+}
+
 function openExpertDetail(data) {
   document.getElementById('detailAvatar').src = data.avatar;
   document.getElementById('detailName').textContent = data.name;
   document.getElementById('detailEmail').textContent = data.email;
   document.getElementById('detailCredentials').textContent = data.credentials || 'None on file';
+  currentDetailExpertId = data.expert_id;
+  const savedDegree = degreeSaved[data.expert_id];
+  document.getElementById('detailDegree').value = savedDegree ? savedDegree.title : (data.degree_title || '');
+  updateDegreeNote(savedDegree ? savedDegree.level : (data.highest_degree || ''));
   document.getElementById('detailProgram').textContent = data.program || 'Not set';
   document.getElementById('detailExpertise').textContent = data.expertise.length ? data.expertise.join(', ') : 'None specified';
   document.getElementById('detailCapacity').textContent = data.capacity.length ? data.capacity.join(' · ') : 'Not set';

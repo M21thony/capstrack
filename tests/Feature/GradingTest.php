@@ -69,9 +69,11 @@ class GradingTest extends TestCase
     {
         $team = Team::create(['team_name' => 'Test Team', 'project_title' => 'A Great Capstone']);
 
+        // A date: only a scheduled defense is on the grading list.
         $schedule = DefenseSchedule::create([
             'team_id' => $team->team_id,
             'defense_type' => $defenseType,
+            'schedule_date' => now()->addDay()->setTime(8, 0),
         ]);
 
         DefensePanel::create([
@@ -93,7 +95,48 @@ class GradingTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('Test Team');
-        $response->assertSee('Not Started');
+        $response->assertSee('Not started');
+    }
+
+    /** An archived rubric is out of use - even one whose active flag was left on. */
+    public function test_an_archived_rubric_is_never_used_for_grading(): void
+    {
+        $expert = $this->makeExpert();
+        $defense = $this->makeAssignedDefense($expert);
+        $rubric = $this->makeRubric();
+        $rubric->update(['is_archived' => true, 'is_active' => true]);
+
+        $this->actingAs($expert, 'expert')
+            ->get('/instructor/grading/'.$defense->defense_id)
+            ->assertRedirect(route('instructor.grading'));
+
+        $this->actingAs($expert, 'expert')
+            ->patchJson('/instructor/grading/'.$defense->defense_id, ['scores' => []])
+            ->assertStatus(422);
+
+        // With a current rubric beside it, the current one is what panels see.
+        $current = $this->makeRubric();
+        $current->update(['rubric_name' => 'Current Rubric']);
+
+        $this->actingAs($expert, 'expert')
+            ->get('/instructor/grading/'.$defense->defense_id)
+            ->assertOk()
+            ->assertSee('Current Rubric');
+    }
+
+    public function test_editing_an_archived_rubric_does_not_put_it_back_into_use(): void
+    {
+        $admin = $this->makeCapsa(CapstoneExpert::factory()->create(['approved_status' => true, 'is_admin' => true]));
+        $rubric = $this->makeRubric();
+        $rubric->update(['is_archived' => true, 'is_active' => false]);
+
+        $this->actingAs($admin, 'expert')
+            ->putJson('/api/admin/grading-rubrics/'.$rubric->rubric_id, [
+                'rubric_name' => 'Renamed', 'rubric_type' => 'pre_proposal', 'total_points' => 100,
+            ])
+            ->assertOk();
+
+        $this->assertFalse($rubric->fresh()->is_active);
     }
 
     public function test_grading_index_is_empty_when_expert_has_no_panel_assignment(): void

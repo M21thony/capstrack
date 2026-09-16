@@ -442,11 +442,14 @@ class StudentListUploadTest extends TestCase
     }
 
     /**
-     * Anything else is refused by row. A year nothing can match is worse than
-     * none: it looks imported, then quietly excludes the student from every
-     * lookup that filters on it.
+     * A stray School Year column is ignored rather than obeyed.
+     *
+     * The Admin declares the school year for the whole system, so a column
+     * of them on an old file is one more thing that can disagree with it.
+     * It used to be read, and a mistyped year skipped the student - losing
+     * a real person over a column that should not have been there.
      */
-    public function test_a_school_year_that_makes_no_sense_is_refused(): void
+    public function test_a_school_year_column_is_ignored_and_the_students_still_arrive(): void
     {
         $this->actingAs($this->capsa(), 'expert');
 
@@ -458,10 +461,14 @@ class StudentListUploadTest extends TestCase
         ]);
 
         $response->assertOk();
-        $response->assertJson(['skipped' => 2, 'created' => 0, 'inserted' => 0]);
-        $this->assertStringContainsString('2026-2027', $response->json('errors.0'));
+        $response->assertJson(['skipped' => 0]);
 
-        $this->assertSame(0, Student::where('email', 'junk@my.cspc.edu.ph')->count());
+        $this->assertSame(1, Student::where('email', 'junk@my.cspc.edu.ph')->count());
+        $this->assertSame(
+            \App\Models\Term::currentSchoolYear(),
+            \App\Models\StudentRoster::where('email', 'junk@my.cspc.edu.ph')->value('school_year'),
+            'the term that is running, not the one typed in the file'
+        );
     }
 
     /** With no School Year column it falls back to the term that is running. */
@@ -623,8 +630,11 @@ class StudentListUploadTest extends TestCase
             ->getActiveSheet()
             ->toArray();
 
+        // No School Year: the Admin sets it for the whole system, so a
+        // column asking a CaPSA to type it on every row is a way to
+        // disagree with that and nothing else.
         $this->assertSame(
-            ['Email', 'Last Name', 'First Name', 'Middle Name', 'Student No.', 'Course/Program', 'Year', 'Section', 'School Year'],
+            ['Email', 'Last Name', 'First Name', 'Middle Name', 'Student No.', 'Course/Program', 'Year', 'Section'],
             $sheet[0]
         );
     }

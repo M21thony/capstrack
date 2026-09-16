@@ -212,7 +212,8 @@ class OllamaSSHClient
         Cache::put(self::WARM_KEY, true, now()->addMinutes(max(1, (int) ($minutes * 0.7))));
     }
 
-    public function generate(string $prompt, int $maxTokens = 512): string
+    /** @param  ?string  $model  Which model to ask; the configured one by default. */
+    public function generate(string $prompt, int $maxTokens = 512, ?string $model = null): string
     {
         // The custom "capstrack-duplication" model's own Modelfile bakes in
         // `temperature 1.5` (confirmed via `ollama show --modelfile`) - a
@@ -224,7 +225,7 @@ class OllamaSSHClient
         // deterministic value (not just temperature) reproducibly gives byte-
         // identical output for the same prompt.
         $payload = [
-            'model' => config('services.ollama.model', 'qwen2.5:7b'),
+            'model' => $model ?: config('services.ollama.model', 'qwen2.5:7b'),
             'prompt' => $prompt,
             'stream' => false,
             // Without this Ollama drops the model five minutes after the last
@@ -274,7 +275,8 @@ class OllamaSSHClient
      * @param  string[]  $prompts
      * @return array<int, string>
      */
-    public function generateMany(array $prompts, int $maxTokens = 512): array
+    /** @param  ?string  $model  Which model to ask; the configured one by default. */
+    public function generateMany(array $prompts, int $maxTokens = 512, ?string $model = null): array
     {
         if ($prompts === []) {
             return [];
@@ -284,7 +286,7 @@ class OllamaSSHClient
 
         foreach (array_values($prompts) as $prompt) {
             $payloads[] = [
-                'model' => config('services.ollama.model', 'qwen2.5:7b'),
+                'model' => $model ?: config('services.ollama.model', 'qwen2.5:7b'),
                 'prompt' => $prompt,
                 'stream' => false,
                 'keep_alive' => config('services.ollama.keep_alive', '30m'),

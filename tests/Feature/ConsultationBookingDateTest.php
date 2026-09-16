@@ -163,7 +163,15 @@ class ConsultationBookingDateTest extends TestCase
         $this->assertSame($secondTuesday, \Illuminate\Support\Carbon::parse($booking->session_date)->toDateString());
     }
 
-    public function test_team_cannot_book_a_new_slot_while_it_has_an_active_booking(): void
+    /**
+     * A team may hold one live booking per expert, not one in total.
+     *
+     * This used to assert the opposite - that any second booking was refused
+     * whoever it was with. That meant a team waiting to see their adviser on
+     * Thursday could not book their consultant for Friday, which are
+     * different people about different things.
+     */
+    public function test_a_second_booking_is_refused_only_with_the_same_expert(): void
     {
         $student = Student::factory()->withCompleteProfile()->create(['email' => 'booker4@my.cspc.edu.ph']);
         $team = DB::table('team')->insertGetId(['team_name' => 'Team OneAtATime', 'team_status' => 'Active']);
@@ -188,8 +196,8 @@ class ConsultationBookingDateTest extends TestCase
             'updated_at' => now(),
         ]);
 
-        // A second, entirely different slot/expert - the restriction is
-        // team-wide, not scoped to one schedule_id.
+        // A second, entirely different expert - bookable, because the limit
+        // follows the person, not the team.
         $otherExpertId = DB::table('capstone_experts')->insertGetId([
             'email' => 'other-expert@gmail.com',
             'first_name' => 'Other',
@@ -225,21 +233,28 @@ class ConsultationBookingDateTest extends TestCase
         $first->assertOk();
         $first->assertJson(['success' => true]);
 
-        $blocked = $this->actingAs($student, 'web')->postJson(route('student.consultation.book'), [
+        // The other expert goes through.
+        $other = $this->actingAs($student, 'web')->postJson(route('student.consultation.book'), [
             'schedule_id' => $otherScheduleId,
             'session_date' => \Illuminate\Support\Carbon::parse('next Friday')->toDateString(),
         ]);
-        $blocked->assertStatus(422);
-        $blocked->assertJson([
-            'success' => false,
-            'message' => 'Your team already has an active consultation booking. You can book another once that session is finished.',
-        ]);
+        $other->assertOk();
+        $other->assertJson(['success' => true]);
 
-        // Cancelling the active booking frees the team up immediately.
+        // The same expert again does not, while that session is still ahead.
+        $sameAgain = $this->actingAs($student, 'web')->postJson(route('student.consultation.book'), [
+            'schedule_id' => $scheduleId,
+            'session_date' => \Illuminate\Support\Carbon::parse('next Thursday')->addWeek()->toDateString(),
+        ]);
+        $sameAgain->assertStatus(422);
+        $sameAgain->assertJson(['success' => false]);
+
+        // Cancelling that one frees the expert immediately.
         DB::table('consultation_booking')->where('schedule_id', $scheduleId)->update(['booking_status' => 'cancelled']);
 
         $afterCancel = $this->actingAs($student, 'web')->postJson(route('student.consultation.book'), [
-            'schedule_id' => $otherScheduleId,
+            'schedule_id' => $scheduleId,
+            'session_date' => \Illuminate\Support\Carbon::parse('next Thursday')->addWeek()->toDateString(),
         ]);
         $afterCancel->assertOk();
         $afterCancel->assertJson(['success' => true]);
@@ -306,7 +321,9 @@ class ConsultationBookingDateTest extends TestCase
             'recentBookings' => collect(),
             'teamId' => $team,
             'student' => $student,
-            'teamHasActiveBooking' => false,
+            // One live booking per expert now, so the page is handed the
+            // experts already spoken for rather than a single yes/no.
+            'bookedExpertIds' => collect(),
         ])->render();
 
         // The literal formatted date can only come from the server-rendered

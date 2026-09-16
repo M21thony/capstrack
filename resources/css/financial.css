@@ -1,0 +1,149 @@
+/*
+ * Financial Records, for the CaPSA and for students.
+ *
+ * Every class is fx- prefixed so the app's own .btn, .card, .avatar and
+ * table styles cannot leak in. Colours are CapsTrack's tokens.
+ */
+.fx{
+  --fx-bg:var(--bg,#f2f3f5); --fx-surface:#fff; --fx-sunk:var(--bg3,#f7f8fa); --fx-line:var(--border,#e0e2e8); --fx-line2:var(--border2,#c8cad4);
+  --fx-ink:var(--text,#1e2128); --fx-ink2:var(--text2,#4a5060); --fx-muted:#656b7a;
+  --fx-primary:#1e2028; --fx-brand:var(--accent,#c9a82c);
+  --fx-ok:var(--green,#16a34a); --fx-ok-bg:var(--green-bg,rgba(22,163,74,.07)); --fx-wait:var(--amber,#b45309); --fx-wait-bg:var(--amber-bg,rgba(180,83,9,.07));
+  --fx-bad:var(--red,#dc2626); --fx-bad-bg:var(--red-bg,rgba(220,38,38,.07));
+  --fx-sel:var(--accent-light,#faf7ed); --fx-r:6px;
+  flex:1; min-height:0; display:flex; flex-direction:column; overflow:hidden;
+  background:var(--fx-bg); color:var(--fx-ink); font:14px/1.45 'DM Sans',sans-serif;
+}
+.fx button,.fx input,.fx select,.fx textarea,.fx-dialog button,.fx-dialog input,.fx-dialog select{font:inherit;color:inherit}
+.fx button,.fx .fx-file,.fx-dialog button{cursor:pointer}
+.fx [hidden],.fx-dialog [hidden]{display:none!important}
+.fx :focus-visible,.fx-dialog :focus-visible{outline:2px solid var(--fx-primary);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){.fx *{transition:none!important}}
+.fx-num{font-variant-numeric:tabular-nums;font-size:13px}
+.fx-muted{color:var(--fx-muted)}
+.fx-grow{flex:1}
+
+.fx-page-head{display:flex;align-items:flex-end;gap:24px;padding:14px 20px 0;background:var(--fx-surface);border-bottom:1px solid var(--fx-line);flex-wrap:wrap}
+.fx-page-head h1{margin:0 0 10px;font-size:20px;font-weight:700;letter-spacing:-.01em}
+.fx-page-head .fx-who{margin:0 0 12px;font-size:13px;color:var(--fx-muted)}
+.fx-tabs{display:flex;gap:2px;align-self:stretch;align-items:flex-end}
+.fx-tabs button{border:0;background:none;padding:8px 12px 10px;border-bottom:2px solid transparent;color:var(--fx-muted);font-weight:500;white-space:nowrap}
+.fx-tabs button:hover{color:var(--fx-ink)}
+.fx-tabs button[aria-selected="true"]{color:var(--fx-ink);font-weight:600;border-bottom-color:var(--fx-brand)}
+.fx-count{margin-left:6px;font-size:11px;padding:1px 6px;border-radius:999px;background:var(--fx-sunk);color:var(--fx-ink2)}
+.fx-count.fx-hot{background:var(--fx-wait-bg);color:var(--fx-wait)}
+.fx-actions{margin:0 0 8px auto;display:flex;gap:8px}
+
+.fx-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:36px;padding:0 14px;border-radius:var(--fx-r);border:1px solid var(--fx-line2);background:var(--fx-surface);font-weight:600;font-size:13px;white-space:nowrap;transition:background .15s,border-color .15s}
+.fx-btn:hover{background:var(--fx-sunk)}
+.fx-btn svg{width:15px;height:15px;flex:none}
+.fx-btn-primary{background:var(--fx-brand);border-color:var(--fx-brand);color:#1e2028}
+.fx-btn-primary:hover{background:var(--accent2,#b5941f);border-color:var(--accent2,#b5941f)}
+.fx-btn-ok{background:var(--fx-ok);border-color:var(--fx-ok);color:#fff}
+.fx-btn-ok:hover{background:#15803d}
+.fx-btn-bad{color:var(--fx-bad);border-color:rgba(220,38,38,.35)}
+.fx-btn-bad:hover{background:var(--fx-bad-bg)}
+.fx-btn:disabled{opacity:.45;cursor:not-allowed}
+.fx-field{min-height:36px;border:1px solid var(--fx-line2);border-radius:var(--fx-r);background:var(--fx-surface);padding:0 10px}
+.fx kbd{font-size:11px;border:1px solid var(--fx-line2);border-bottom-width:2px;border-radius:4px;padding:0 5px;background:var(--fx-surface);color:var(--fx-ink2)}
+
+.fx-status{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:500;white-space:nowrap}
+.fx-status i{width:8px;height:8px;border-radius:50%;flex:none}
+.fx-s-pending i{background:var(--fx-wait)} .fx-s-verified i{background:var(--fx-ok)} .fx-s-sent_back i{background:var(--fx-bad)} .fx-s-none i{background:var(--fx-line2)}
+.fx-s-sent_back{color:var(--fx-bad)}
+
+.fx-bar{display:flex;height:8px;border-radius:999px;overflow:hidden;background:var(--fx-sunk);min-width:120px}
+.fx-bar span{display:block;height:100%}
+.fx-bar .fx-v{background:var(--fx-ok)} .fx-bar .fx-w{background:var(--fx-brand)} .fx-bar .fx-b{background:var(--fx-bad)}
+
+/* CaPSA */
+.fx-summary{display:flex;align-items:center;gap:20px;padding:10px 20px;background:var(--fx-surface);border-bottom:1px solid var(--fx-line);flex-wrap:wrap}
+.fx-summary .fx-bar{flex:1;max-width:360px}
+.fx-legend{display:flex;gap:16px;font-size:13px;color:var(--fx-ink2);flex-wrap:wrap}
+.fx-legend b{font-weight:600;color:var(--fx-ink)}
+.fx-split{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 420px}
+.fx-list{min-height:0;display:flex;flex-direction:column;border-right:1px solid var(--fx-line);background:var(--fx-surface)}
+.fx-toolbar{display:flex;align-items:center;gap:8px;padding:8px 20px;border-bottom:1px solid var(--fx-line);flex-wrap:wrap}
+.fx-chips{display:flex;gap:4px;flex-wrap:wrap}
+.fx-chips button{border:1px solid var(--fx-line2);background:var(--fx-surface);border-radius:999px;padding:4px 12px;font-size:12.5px;font-weight:500;color:var(--fx-ink2)}
+.fx-chips button[aria-pressed="true"]{background:var(--fx-primary);border-color:var(--fx-primary);color:#fff}
+.fx-chips .fx-n{font-size:11px;margin-left:5px;opacity:.75}
+.fx-bulk{display:flex;align-items:center;gap:8px;padding:6px 20px;background:var(--fx-primary);color:#fff;font-size:13px}
+.fx-bulk .fx-btn{min-height:30px}
+.fx-bulk .fx-btn:not(.fx-btn-ok){background:transparent;color:#fff;border-color:#343848}
+.fx-bulk .fx-btn:not(.fx-btn-ok):hover{background:#2e3240}
+.fx-scroll{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain}
+.fx table{width:100%;border-collapse:collapse;table-layout:fixed}
+.fx thead th{position:sticky;top:0;z-index:2;background:var(--fx-surface);text-align:left;font-size:11.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--fx-muted);padding:8px 10px;border-bottom:1px solid var(--fx-line2)}
+.fx tbody td{padding:0 10px;height:44px;border-bottom:1px solid var(--fx-line);vertical-align:middle;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fx th:first-child,.fx td:first-child{padding-left:20px}
+.fx tbody tr.fx-row{cursor:pointer;transition:background .12s}
+.fx tbody tr.fx-row:hover td{background:var(--fx-sunk)}
+.fx tbody tr.fx-row[aria-selected="true"] td{background:var(--fx-sel)}
+.fx tbody tr.fx-row[aria-selected="true"] td:first-child{box-shadow:inset 3px 0 0 var(--fx-brand)}
+.fx tr.fx-group td{height:34px;background:var(--fx-sunk);font-size:12.5px;color:var(--fx-ink2);position:sticky;top:33px;z-index:1}
+.fx tr.fx-group .fx-bar{display:inline-flex;width:90px;vertical-align:middle;margin:0 8px}
+.fx input[type=checkbox]{width:16px;height:16px;accent-color:var(--fx-primary);vertical-align:middle}
+.fx-leader{font-size:11px;color:var(--fx-muted);margin-left:6px}
+.fx-empty{padding:48px 20px;text-align:center;color:var(--fx-muted)}
+.fx-inspector{min-height:0;display:flex;flex-direction:column;background:var(--fx-surface);overflow-y:auto}
+.fx-insp-head{padding:12px 20px;border-bottom:1px solid var(--fx-line)}
+.fx-insp-head h2{margin:0;font-size:16px}
+/* The picture is pinned inside its box and scaled to fit, so it never spills over the details below. */
+.fx-insp-img{flex:1 0 240px;position:relative;overflow:hidden;background:#eceef2;border:0;padding:0;cursor:zoom-in;width:100%}
+.fx-insp-img img{position:absolute;inset:12px;width:calc(100% - 24px);height:calc(100% - 24px);object-fit:contain;display:block}
+.fx-insp-none{flex:1;display:grid;place-items:center;text-align:center;color:var(--fx-muted);padding:24px}
+.fx-meta{display:grid;grid-template-columns:96px 1fr;gap:6px 12px;margin:0;padding:12px 20px;border-top:1px solid var(--fx-line);font-size:13px}
+.fx-meta dt{color:var(--fx-muted)} .fx-meta dd{margin:0}
+.fx-decide{padding:12px 20px;border-top:1px solid var(--fx-line);display:grid;gap:8px}
+.fx-decide .fx-pair{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.fx-decide .fx-btn{min-height:42px}
+.fx textarea.fx-field{min-height:64px;padding:8px 10px;resize:vertical;width:100%}
+.fx-quick{display:flex;gap:6px;flex-wrap:wrap}
+.fx-quick button{border:1px solid var(--fx-line2);background:var(--fx-sunk);border-radius:999px;padding:2px 10px;font-size:12px;color:var(--fx-ink2)}
+.fx-keys{font-size:12px;color:var(--fx-muted);text-align:center}
+.fx-lbl{display:block;font-size:13px;font-weight:600;margin-bottom:4px}
+
+/* Student */
+.fx-student{flex:1;min-height:0;display:flex;flex-direction:column;background:var(--fx-surface)}
+.fx-mine{display:flex;align-items:center;gap:16px;padding:14px 20px;border-bottom:1px solid var(--fx-line);flex-wrap:wrap}
+.fx-mine-thumb{flex:none;width:48px;height:60px;border-radius:4px;border:1px solid var(--fx-line2);overflow:hidden;padding:0;background:var(--fx-sunk);cursor:zoom-in}
+.fx-mine-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.fx-mine-text{flex:1;min-width:220px;display:grid;gap:2px}
+.fx-mine-text strong{font-size:15px}
+.fx-reason{color:var(--fx-bad);font-size:13px}
+.fx-file{position:relative;overflow:hidden}
+.fx-file input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.fx-mine.fx-drag{background:var(--fx-sel);box-shadow:inset 0 0 0 2px var(--fx-brand)}
+.fx-team-head{display:flex;align-items:center;gap:12px;padding:10px 20px;border-bottom:1px solid var(--fx-line);flex-wrap:wrap}
+.fx-team-head h2{margin:0;font-size:14px}
+
+/* Dialogs and the toast live in the top layer, so they carry their own tokens. */
+.fx-dialog,.fx-toast{--fx-surface:#fff;--fx-sunk:var(--bg3,#f7f8fa);--fx-line:var(--border,#e0e2e8);--fx-line2:var(--border2,#c8cad4);--fx-ink:var(--text,#1e2128);--fx-muted:#656b7a;--fx-brand:var(--accent,#c9a82c);--fx-r:6px;font:14px/1.45 'DM Sans',sans-serif;color:var(--fx-ink)}
+.fx-dialog{border:0;border-radius:8px;padding:0;margin:auto;inset:0;background:#fff;box-shadow:0 20px 50px rgba(24,25,31,.3);width:min(440px,calc(100vw - 32px))}
+.fx-dialog::backdrop{background:rgba(24,25,31,.6)}
+/* Shrink-wrapped to the picture, so margin:auto centres it. width:auto with inset:0 stretched the window across the screen and left the receipt pinned to the left. */
+.fx-dialog.fx-image{width:fit-content;height:fit-content;background:#18191f}
+.fx-dialog.fx-image img{display:block;max-width:calc(100vw - 32px);max-height:calc(100vh - 32px)}
+.fx-dlg-head{display:flex;align-items:center;padding:12px 16px;border-bottom:1px solid var(--fx-line)}
+.fx-dlg-head h2{margin:0;font-size:16px;flex:1}
+.fx-dlg-body{padding:14px 16px;display:grid;gap:12px}
+.fx-dlg-foot{display:flex;justify-content:flex-end;gap:8px;padding:10px 16px;border-top:1px solid var(--fx-line)}
+.fx-dialog .fx-lbl{display:block;font-size:13px;font-weight:600;margin-bottom:4px}
+.fx-dialog .fx-muted{color:var(--fx-muted)}
+.fx-dialog .fx-field{min-height:36px;border:1px solid var(--fx-line2);border-radius:var(--fx-r);background:#fff;padding:0 10px;width:100%}
+.fx-dialog .fx-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:36px;padding:0 14px;border-radius:var(--fx-r);border:1px solid var(--fx-line2);background:#fff;font-weight:600;font-size:13px}
+.fx-dialog .fx-btn:hover{background:var(--fx-sunk)}
+.fx-dialog .fx-btn-primary{background:var(--fx-brand);border-color:var(--fx-brand);color:#1e2028}
+.fx-icon-btn{width:32px;height:32px;display:grid;place-items:center;border:0;background:none;border-radius:var(--fx-r);color:var(--fx-muted)}
+.fx-icon-btn:hover{background:var(--fx-sunk);color:var(--fx-ink)}
+.fx-icon-btn svg{width:16px;height:16px}
+.fx-two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.fx-toast{position:fixed;inset:auto 20px 20px auto;margin:0;border:0;background:#1e2028;color:#fff;border-radius:var(--fx-r);padding:10px 14px;font-size:13px;box-shadow:0 8px 24px rgba(24,25,31,.25);max-width:420px}
+
+@media (max-width:1180px){
+  .fx{overflow:auto}
+  .fx-split{grid-template-columns:1fr;grid-template-rows:minmax(320px,1fr) auto}
+  .fx-list{border-right:0;border-bottom:1px solid var(--fx-line)}
+}
+@media (max-width:600px){ .fx-col-up,.fx-col-team{display:none} .fx-mine .fx-btn{width:100%} .fx-two{grid-template-columns:1fr} }

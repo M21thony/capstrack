@@ -221,6 +221,19 @@
 }
 .pp-field textarea { min-height: 70px; resize: vertical; }
 .pp-hint { font-size: 11px; color: var(--text3); margin-top: 4px; }
+.pp-tags { border: none; padding: 0; margin: 0 0 16px; min-width: 0; }
+.pp-tags legend { display: flex; align-items: center; gap: 8px; padding: 0; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); letter-spacing: 0.4px; margin-bottom: 4px; }
+.pp-required { font-size: 9.5px; font-weight: 700; letter-spacing: .3px; color: var(--red); background: var(--red-bg, rgba(220,38,38,.07)); padding: 1px 6px; border-radius: 999px; }
+.pp-pills { display: flex; flex-wrap: wrap; gap: 6px; }
+.pp-pill { position: relative; cursor: pointer; }
+.pp-pill input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.pp-pill span { display: inline-flex; align-items: center; min-height: 32px; padding: 5px 12px; border: 1px solid var(--border); border-radius: 999px; background: var(--bg2); font-size: 12px; color: var(--text2); transition: background .15s, border-color .15s, color .15s; }
+.pp-pill:hover span { border-color: var(--text3); color: var(--text); }
+.pp-pill input:checked + span { background: var(--accent, #c9a82c); border-color: var(--accent, #c9a82c); color: #18191f; font-weight: 600; }
+.pp-pill input:checked + span::before { content: "✓"; margin-right: 5px; font-size: 11px; }
+.pp-pill input:focus-visible + span { outline: 2px solid var(--accent3, #8a6e10); outline-offset: 2px; }
+.pp-pill input:disabled + span { opacity: .45; cursor: not-allowed; }
+@media (prefers-reduced-motion: reduce) { .pp-pill span { transition: none; } }
 
 /* Turn-in bar at the foot of the Your Pre-Proposals card. */
 .pp-submit-bar { flex-shrink: 0; border-top: 1px solid var(--border); padding: 12px 0 4px; margin-top: 10px; }
@@ -317,20 +330,73 @@
       </div>
     @endif
 
+    @if ($needsNewTitle)
+      {{-- The panel asked for a new title: the old ones are a record now. --}}
+      <div class="card" style="margin-bottom:16px;border-color:rgba(220,38,38,0.25);background:var(--red-bg);">
+        <div class="card-header"><span class="card-title">Your panel asked for a new title</span></div>
+        <div style="font-size:13px;color:var(--text2);line-height:1.6">
+          Run the duplication check on your new pre-proposal and turn it in below, the same way as before. Your CaPSA recommends it first, then your adviser approves it. Your adviser, consultant and grammarian stay with your team.
+          @if ($awaitingAdviser)
+            <div style="margin-top:8px;padding:8px 10px;border-radius:8px;background:var(--bg2);border:1px solid var(--border)">
+              Your CaPSA recommended <b>{{ $awaitingAdviser->title }}</b>. Waiting for your adviser{{ $adviserName ? ', '.$adviserName.',' : '' }} to approve it.
+            </div>
+          @endif
+          @if ($retiredProposals->isNotEmpty())
+            <div style="margin-top:8px;font-size:12px;color:var(--text3)">Set aside, kept as a record:</div>
+            <ul style="margin:4px 0 0 18px;padding:0;font-size:12.5px">
+              @foreach ($retiredProposals as $old)
+                <li>
+                  {{ $old->title }}
+                  @if ($old->adviser_status === \App\Support\TitleRevision::DECLINED)
+                    <div style="color:var(--red)">Your adviser asked for another title: “{{ $old->adviser_note }}”</div>
+                  @endif
+                </li>
+              @endforeach
+            </ul>
+          @endif
+        </div>
+      </div>
+    @endif
+
+    @if ($canReviseTitle)
+      {{-- Passed with revision: the wording may change until the final title form is in. --}}
+      <div class="card" style="margin-bottom:16px;border-color:rgba(180,83,9,0.25);background:var(--amber-bg);">
+        <div class="card-header"><span class="card-title">Revise your title</span></div>
+        <div style="font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:10px">
+          Your panel passed your title with revision. You can reword it until you upload the Signed Final Project Title Form - after that it is final.
+        </div>
+        @if ($isLeader)
+          <form method="POST" action="{{ route('student.pre-proposal.title.update') }}" style="display:flex;gap:8px;flex-wrap:wrap">
+            @csrf
+            @method('PATCH')
+            <input class="input" name="title" value="{{ old('title', $team->project_title) }}" maxlength="150" required aria-label="Revised title" style="flex:1;min-width:260px">
+            <button class="btn btn-primary" type="submit">Save revised title</button>
+          </form>
+          @error('title')<div style="font-size:12px;color:var(--red);margin-top:6px">{{ $message }}</div>@enderror
+        @else
+          <div style="font-size:12.5px;color:var(--text3)">Current title: <b style="color:var(--text)">{{ $team->project_title }}</b>. Your team leader can revise it.</div>
+        @endif
+      </div>
+    @endif
+
     @if ($approvedProposals->count() >= 2 && ! $team?->selected_pre_proposal_id)
       <div class="card" style="margin-bottom:16px;border-color:rgba(180,83,9,0.25);background:var(--amber-bg);">
         <div class="card-header"><span class="card-title">Choose Your Final Title</span></div>
         <div style="font-size:12px;color:var(--amber);margin-bottom:12px">
-          More than one of your titles was approved —
+          More than one of your titles was recommended &mdash;
           @if ($isLeader) pick the one your team will proceed with. @else your team leader needs to pick which one to proceed with. @endif
         </div>
         @foreach ($approvedProposals as $approved)
           <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-top:1px solid var(--border)">
             <span style="font-size:13px;font-weight:500;color:var(--text)">{{ $approved->title }}</span>
             @if ($isLeader)
-              <form method="POST" action="{{ route('student.pre-proposal.choose', $approved->id) }}">
+              {{-- Asked first. This is the title the team carries through the
+                   rest of the year, and the other one is dropped by it. --}}
+              <form method="POST" action="{{ route('student.pre-proposal.choose', $approved->id) }}"
+                    id="choose-form-{{ $approved->id }}">
                 @csrf
-                <button type="submit" class="btn btn-primary" style="font-size:12px;padding:6px 14px;">Choose This One</button>
+                <button type="button" class="btn btn-primary" style="font-size:12px;padding:6px 14px;"
+                        onclick="confirmChooseTitle({{ $approved->id }}, {{ Js::from($approved->title) }})">Choose This One</button>
               </form>
             @endif
           </div>
@@ -447,9 +513,27 @@
               @endphp
               <div class="pp-row @if($rowChosen) is-chosen @elseif($rowSetAside) is-set-aside @endif"
                    style="padding:10px 0;border-top:1px solid var(--border)">
-                <div style="font-size:12px;font-weight:500;margin-bottom:4px;{{ $proposal->status === 'rejected' ? 'color:var(--text3);text-decoration:line-through' : 'color:var(--text)' }}">{{ $proposal->title }}</div>
+                @php
+                  // A draft the leader could still choose to turn in. Nothing
+                  // to tick once the set is in, and nothing for a member to
+                  // tick at all.
+                  $pickable = $isLeader && ! $turnedIn && ! $proposal->submitted_at;
+                @endphp
+                <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:4px">
+                  @if ($pickable)
+                    {{-- Attached to the submit form further down the page by
+                         its id, so unticking one is all it takes to leave a
+                         title out. Before this the only way was to delete it,
+                         which threw away its duplication report with it. --}}
+                    <input type="checkbox" class="pp-pick" name="ids[]" value="{{ $proposal->id }}"
+                           form="pp-submit-form" checked onchange="refreshSubmitCount()"
+                           aria-label="Submit {{ $proposal->title }}"
+                           style="margin-top:2px;width:15px;height:15px;flex-shrink:0;accent-color:var(--accent,#5b5bd6);cursor:pointer">
+                  @endif
+                  <div style="font-size:12px;font-weight:500;min-width:0;{{ $proposal->status === 'rejected' ? 'color:var(--text3);text-decoration:line-through' : 'color:var(--text)' }}">{{ $proposal->title }}</div>
+                </div>
                 @if ($proposal->submitted_at || $proposal->status !== 'pending')
-                  <span class="badge {{ $proposal->status === 'approved' ? 'badge-green' : ($proposal->status === 'rejected' ? 'badge-red' : 'badge-amber') }}">{{ ucfirst($proposal->status) }}</span>
+                  <span class="badge {{ $proposal->status === 'approved' ? 'badge-green' : ($proposal->status === 'rejected' ? 'badge-red' : 'badge-amber') }}">{{ $proposal->status === 'approved' ? 'Recommended' : ucfirst($proposal->status) }}</span>
                 @else
                   <span class="badge pp-badge-draft">Draft</span>
                 @endif
@@ -463,7 +547,7 @@
                       This is your team's title.
                     </div>
                   @elseif ($team?->selected_pre_proposal_id)
-                    <div class="pp-hint">Approved, but not the title your team chose.</div>
+                    <div class="pp-hint">Recommended, but not the title your team chose.</div>
                   @else
                     <div class="pp-hint">Locked in as a candidate.</div>
                   @endif
@@ -520,7 +604,7 @@
                       </div>
                     @else
                       <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text3);margin-bottom:6px;letter-spacing:0.4px">Matched Capstone Projects</div>
-                      @foreach ($check->matches as $m)
+                      @foreach ($check->matchesWithAuthors() as $m)
                         @php
                           $mScore = $m['score'] ?? 0;
                           $mTone = $mScore >= 65 ? 'red' : ($mScore >= 55 ? 'amber' : 'green');
@@ -529,13 +613,29 @@
                         <div class="match-item">
                           <div class="match-item-row">
                             <div style="flex:1;min-width:0;margin-right:10px">
-                              <div style="font-size:12px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ $m['title'] ?? '' }}</div>
-                              @if (! empty($m['reason']))
-                                <div style="font-size:10px;color:var(--text3);margin-top:2px;line-height:1.4">{{ $m['reason'] }}</div>
+                              {{-- The title in full. It used to be cut to one
+                                   line with an ellipsis, which is the one part
+                                   of a matched study nobody can do without. --}}
+                              <div style="font-size:12px;font-weight:500;color:var(--text);line-height:1.4">{{ $m['title'] ?? '' }}</div>
+                              @if (! empty($m['authors']))
+                                <div style="font-size:10px;color:var(--text2);margin-top:3px">By {{ $m['authors'] }}</div>
+                              @else
+                                <div style="font-size:10px;color:var(--text3);margin-top:3px">Authors not recorded yet</div>
                               @endif
                               <div style="font-size:10px;color:var(--text3);margin-top:2px">{{ $m['academic_year'] ?? 'N/A' }} · {{ $m['program'] ?? '' }}</div>
+                              @if (! empty($m['reason']))
+                                <div style="font-size:10px;color:var(--text3);margin-top:4px;line-height:1.4">{{ $m['reason'] }}</div>
+                              @endif
                             </div>
-                            <span class="match-score-pill" style="background:var(--{{ $mTone }}-bg);color:var(--{{ $mTone }})">{{ $mScore }}%</span>
+                            @if (($m['assessed'] ?? true))
+                              <span class="match-score-pill" style="background:var(--{{ $mTone }}-bg);color:var(--{{ $mTone }})">{{ $mScore }}%</span>
+                            @else
+                              {{-- No model looked at this one. The number it
+                                   carries is a demoted retrieval rank, which
+                                   is not a similarity and was reaching the
+                                   student as though it were. --}}
+                              <span class="match-score-pill" style="background:var(--bg3);color:var(--text3)">Not assessed</span>
+                            @endif
                           </div>
                           @if ($hasBreakdown)
                             <button type="button" class="match-abstract-toggle" onclick="toggleBreakdown(this)">Show similarities, differences &amp; suggestion ▾</button>
@@ -573,13 +673,13 @@
                         $applyOpen = $proposal->status === 'approved' && $isLeader && ! $setAside;
                         $applyLockShort = match (true) {
                             $proposal->status === 'rejected' => 'Pre-proposal rejected',
-                            $proposal->status !== 'approved' => 'Needs CaPSA approval',
+                            $proposal->status !== 'approved' => 'Needs CaPSA recommendation',
                             $setAside => 'Not your chosen title',
                             default => 'Team leader only',
                         };
                         $applyLockReason = match (true) {
-                            $proposal->status === 'rejected' => 'This pre-proposal was rejected, so you cannot apply to an expert with it. Revise it or use one that was approved.',
-                            $proposal->status !== 'approved' => 'Your CaPSA has to approve this pre-proposal before your team can apply to an expert with it. It is still awaiting review.',
+                            $proposal->status === 'rejected' => 'This pre-proposal was rejected, so you cannot apply to an expert with it. Revise it or use one that was recommended.',
+                            $proposal->status !== 'approved' => 'Your CaPSA has to recommend this pre-proposal before your team can apply to an expert with it. It is still awaiting review.',
                             $setAside => 'Your team chose a different title, so this one is no longer the one you apply with.',
                             default => 'Only your team leader can apply to an expert.',
                         };
@@ -666,20 +766,23 @@
               {{-- Turning in fewer than the suggested number is a decision, not
                    an error, so it is asked about once rather than forbidden. --}}
               <form method="POST" action="{{ route('student.pre-proposal.submit') }}"
+                    id="pp-submit-form"
                     onsubmit="return confirmSubmitCount(event)"
-                    data-count="{{ $proposals->count() }}"
                     data-recommended="{{ $recommendedProposals }}">
                 @method('PATCH')
                 <input type="hidden" name="status" value="submitted">
+                {{-- Says a selection was sent, so unticking everything is
+                     told apart from sending nothing. --}}
+                <input type="hidden" name="choose" value="1">
                 @csrf
-                <button type="submit" class="btn btn-primary pp-btn-submit">
+                <button type="submit" class="btn btn-primary pp-btn-submit" id="pp-submit-btn">
                   <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4 20-7z"/></svg>
                   Submit for Checking
                 </button>
               </form>
-              <div class="pp-submit-note">
+              <div class="pp-submit-note" id="pp-submit-note">
                 Hands
-                {{ $proposals->count() === 1 ? 'your title' : 'all '.$proposals->count().' titles' }}
+                {{ $draftCount === 1 ? 'your title' : 'all '.$draftCount.' titles' }}
                 to your CaPSA to review.
               </div>
             @else
@@ -742,6 +845,20 @@
           </div>
           <div class="pp-field"><label>Software Development Methodology</label><input type="text" name="sdm" id="sdm" value="Agile Development Methodology"></div>
 
+          <fieldset class="pp-field pp-tags" id="pp-tags">
+            <legend>Project Tags <span class="pp-required">Required</span></legend>
+            <div class="pp-hint" style="margin:0 0 8px">What kind of project is this? Pick {{ \App\Support\ProjectTags::MIN }} to {{ \App\Support\ProjectTags::MAX }}.</div>
+            <div class="pp-pills">
+              @foreach (\App\Support\ProjectTags::OPTIONS as $tag)
+                <label class="pp-pill">
+                  <input type="checkbox" name="tags[]" value="{{ $tag }}" onchange="updateTagPills()">
+                  <span>{{ $tag }}</span>
+                </label>
+              @endforeach
+            </div>
+            <div class="pp-hint" id="pp-tag-count" aria-live="polite">0 of {{ \App\Support\ProjectTags::MAX }} picked</div>
+          </fieldset>
+
           <button type="submit" class="btn btn-primary">Save This Pre-Proposal</button>
         </form>
       </div>
@@ -758,7 +875,11 @@
   <div class="card pp-modal-box" style="max-width:430px;padding:22px 24px 20px">
     <div style="display:flex;align-items:flex-start;gap:13px">
       <span id="pp-sc-icon" style="width:38px;height:38px;border-radius:11px;flex-shrink:0;display:grid;place-items:center;background:var(--amber-bg);color:var(--amber)">
-        <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
+        {{-- Swapped for a tick when the team has turned in the number they
+             were asked for. It used to be a hazard triangle either way, so
+             doing the right thing was met with a warning sign. --}}
+        <svg id="pp-sc-glyph-warn" viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
+        <svg id="pp-sc-glyph-ok" viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" hidden><path d="M20 6 9 17l-5-5"/></svg>
       </span>
       <div style="min-width:0">
         <h3 id="pp-sc-title" style="margin:0 0 5px;font-size:16px;font-weight:700;color:var(--text)"></h3>
@@ -799,6 +920,28 @@
   </div>
 </div>
 
+<div class="pp-modal-overlay" id="pp-choose-confirm" onclick="if (event.target === this) closeChooseConfirm()">
+  <div class="card pp-modal-box" style="max-width:420px;padding:22px 24px 20px">
+    <div style="display:flex;align-items:flex-start;gap:13px">
+      <span style="width:38px;height:38px;border-radius:11px;flex-shrink:0;display:grid;place-items:center;background:var(--amber-bg);color:var(--amber)">
+        <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+      </span>
+      <div style="min-width:0">
+        <h3 style="margin:0 0 5px;font-size:16px;font-weight:700;color:var(--text)">Are you sure you want to take on this title?</h3>
+        <p style="margin:0;font-size:13px;line-height:1.55;color:var(--text2)">
+          <span id="pp-cc-title" style="font-weight:600;color:var(--text)"></span>
+          is the title your team carries from here. The other recommended title is
+          set aside.
+        </p>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:9px;margin-top:20px">
+      <button type="button" class="btn btn-soft" onclick="closeChooseConfirm()">Cancel</button>
+      <button type="button" class="btn btn-primary" id="pp-cc-ok">Confirm</button>
+    </div>
+  </div>
+</div>
+
 <div id="pp-toast"></div>
 
 <div class="pp-modal-overlay" id="report-modal-overlay" onclick="if (event.target === this) closeReportModal()">
@@ -825,23 +968,37 @@ function confirmSubmitCount(e) {
   e.preventDefault();
   ppSubmitForm = form;
 
-  const count = Number(form.dataset.count || 0);
+  // What is ticked, not what is saved - the two are the same until somebody
+  // leaves a title out.
+  const count = pickedProposals().length;
+  const total = document.querySelectorAll('.pp-pick').length;
   const recommended = Number(form.dataset.recommended || 4);
+
+  if (count === 0) return false;
+
   const short = count < recommended;
   const titles = count === 1 ? 'one pre-proposal' : count + ' pre-proposals';
+  const holding = total - count;
+  const heldNote = holding > 0
+    ? ' The ' + (holding === 1 ? 'other one stays a draft' : 'other ' + holding + ' stay drafts')
+      + ', report and all.'
+    : '';
 
   document.getElementById('pp-sc-title').textContent = 'Submit ' + titles + '?';
-  document.getElementById('pp-sc-body').textContent = short
+  document.getElementById('pp-sc-body').textContent = (short
     ? 'We suggest turning in at least ' + recommended + '. Your CaPSA decides on each '
       + 'title separately, so if one is turned down you still have others that could be '
-      + 'approved. You can go back and add more first.'
+      + 'recommended. You can go back and add more first.'
     : 'Your CaPSA will review all ' + count + '. You can take this back any time until '
-      + 'they start reviewing.';
+      + 'they start reviewing.') + heldNote;
 
-  // Amber when it is worth a second thought, gold when it is not.
+  // Amber and a warning triangle when it is worth a second thought; gold
+  // and a tick when it is not.
   const icon = document.getElementById('pp-sc-icon');
   icon.style.background = short ? 'var(--amber-bg)' : 'var(--accent-light)';
   icon.style.color = short ? 'var(--amber)' : 'var(--accent3)';
+  document.getElementById('pp-sc-glyph-warn').hidden = ! short;
+  document.getElementById('pp-sc-glyph-ok').hidden = short;
 
   document.getElementById('pp-submit-confirm').classList.add('show');
   document.body.style.overflow = 'hidden';
@@ -849,6 +1006,44 @@ function confirmSubmitCount(e) {
 
   return false;
 }
+
+/** Ticked boxes, or an empty list. */
+function pickedProposals() {
+  return Array.prototype.slice.call(document.querySelectorAll('.pp-pick:checked'));
+}
+
+/**
+ * Keep the button and the line under it honest about what is being sent.
+ *
+ * Untick a title and it stays saved, with its report - it simply is not part
+ * of this submission.
+ */
+function refreshSubmitCount() {
+  const picked = pickedProposals().length;
+  const total = document.querySelectorAll('.pp-pick').length;
+  const btn = document.getElementById('pp-submit-btn');
+  const note = document.getElementById('pp-submit-note');
+
+  if (!btn) return;
+
+  btn.disabled = picked === 0;
+  btn.style.opacity = picked === 0 ? '.5' : '';
+  btn.style.cursor = picked === 0 ? 'not-allowed' : '';
+
+  if (!note) return;
+
+  if (picked === 0) {
+    note.textContent = 'Tick at least one title to submit.';
+  } else if (picked === total) {
+    note.textContent = 'Hands ' + (total === 1 ? 'your title' : 'all ' + total + ' titles')
+      + ' to your CaPSA to review.';
+  } else {
+    note.textContent = 'Hands ' + picked + ' of ' + total + ' to your CaPSA. The '
+      + (total - picked === 1 ? 'other stays a draft' : 'others stay drafts') + ', report and all.';
+  }
+}
+
+document.addEventListener('DOMContentLoaded', refreshSubmitCount);
 
 function closeSubmitConfirm() {
   document.getElementById('pp-submit-confirm').classList.remove('show');
@@ -973,7 +1168,29 @@ function ppFormIsComplete(form) {
     return false;
   }
 
+  if (!form.querySelectorAll('input[name="tags[]"]:checked').length) {
+    showToast('Pick at least one tag for what kind of project this is.', 'error');
+    const firstTag = form.querySelector('input[name="tags[]"]');
+    if (firstTag) { firstTag.focus(); }
+
+    return false;
+  }
+
   return true;
+}
+
+// Tag pills: at most MAX picked. Once the limit is reached the rest are
+// disabled rather than silently ignored, so it is clear why a click did nothing.
+const TAG_MAX = {{ \App\Support\ProjectTags::MAX }};
+
+function updateTagPills() {
+  const boxes = Array.from(document.querySelectorAll('#pp-tags input[name="tags[]"]'));
+  const picked = boxes.filter(b => b.checked).length;
+  boxes.forEach(b => { b.disabled = !b.checked && picked >= TAG_MAX; });
+  const count = document.getElementById('pp-tag-count');
+  if (count) {
+    count.textContent = picked + ' of ' + TAG_MAX + ' picked' + (picked >= TAG_MAX ? ' - that is the most you can pick' : '');
+  }
 }
 
 function updateWordCount() {
@@ -1298,6 +1515,9 @@ function renderResult(data, fileName) {
     document.getElementById('scope').value = data.concepts.scope || '';
     document.getElementById('limitations').value = data.concepts.limitations || '';
     if (data.concepts.sdm) document.getElementById('sdm').value = data.concepts.sdm;
+    // A new document is a new project: its tags are chosen fresh.
+    document.querySelectorAll('#pp-tags input[name="tags[]"]').forEach(b => { b.checked = false; });
+    updateTagPills();
     updateWordCount();
     selectSdgOption(data.concepts.sdg_goals);
 
@@ -1344,17 +1564,21 @@ function highlightAbstract(text, words) {
 }
 
 function renderMatchItem(m, highlightWords) {
+  const assessed = m.assessed !== false;
   const tone = m.score >= 65 ? 'red' : m.score >= 55 ? 'amber' : 'green';
   const hasBreakdown = m.similarities || m.differences || m.suggestion;
   return `
     <div class="match-item">
       <div class="match-item-row">
         <div style="flex:1;min-width:0;margin-right:10px">
-          <div style="font-size:12px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(m.title)}</div>
-          ${m.reason ? `<div style="font-size:10px;color:var(--text3);margin-top:2px;line-height:1.4">${escapeHtml(m.reason)}</div>` : ''}
+          <div style="font-size:12px;font-weight:500;color:var(--text);line-height:1.4">${escapeHtml(m.title)}</div>
+          ${m.authors ? `<div style="font-size:10px;color:var(--text2);margin-top:3px">By ${escapeHtml(m.authors)}</div>` : `<div style="font-size:10px;color:var(--text3);margin-top:3px">Authors not recorded yet</div>`}
           <div style="font-size:10px;color:var(--text3);margin-top:2px">${m.academic_year || 'N/A'} · ${escapeHtml(m.program || '')}</div>
+          ${m.reason ? `<div style="font-size:10px;color:var(--text3);margin-top:4px;line-height:1.4">${escapeHtml(m.reason)}</div>` : ''}
         </div>
-        <span class="match-score-pill" style="background:var(--${tone}-bg);color:var(--${tone})">${m.score}%</span>
+        ${assessed
+          ? `<span class="match-score-pill" style="background:var(--${tone}-bg);color:var(--${tone})">${m.score}%</span>`
+          : '<span class="match-score-pill" style="background:var(--bg3);color:var(--text3)">Not assessed</span>'}
       </div>
       ${hasBreakdown ? `
         <button type="button" class="match-abstract-toggle" onclick="toggleBreakdown(this)">Show similarities, differences &amp; suggestion ▾</button>
@@ -1422,14 +1646,14 @@ function openFreshReportModal() {
               <div style="font-size:10px;color:var(--primary,#5b5bd6);margin-top:1px">${escapeHtml(i.expertise || '')}</div>
               <div style="font-size:10px;color:var(--text3);margin-top:2px">${escapeHtml(i.reason || '')}</div>
             </div>
-            <span class="dup-apply-wrap" data-tip="Save this pre-proposal first, then a CaPSA has to approve it before your team can apply to an expert." tabindex="0" role="note">
+            <span class="dup-apply-wrap" data-tip="Save this pre-proposal first, then a CaPSA has to recommend it before your team can apply to an expert." tabindex="0" role="note">
               <button type="button" class="dup-apply-btn locked" disabled>
                 <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                Needs CaPSA approval
+                Needs CaPSA recommendation
               </button>
             </span>
           </div>`).join('')}
-        <div class="dup-apply-note">Save this pre-proposal and wait for CaPSA approval before you can apply to an expert.</div>
+        <div class="dup-apply-note">Save this pre-proposal and wait for your CaPSA's recommendation before you can apply to an expert.</div>
       </div>`
     : '';
 
@@ -1456,6 +1680,24 @@ function openRemoveConfirm(proposalId) {
   pendingRemoveId = proposalId;
   document.getElementById('pp-confirm-message').textContent = 'Remove this proposal? This cannot be undone.';
   document.getElementById('pp-confirm-modal').classList.add('show');
+}
+
+/**
+ * Ask before a title is settled on.
+ *
+ * Choosing is not reversible from this page - the other recommended title is
+ * set aside by it - and the button sat one click away from doing that.
+ */
+function confirmChooseTitle(id, title) {
+  document.getElementById('pp-cc-title').textContent = title;
+  document.getElementById('pp-cc-ok').onclick = function () {
+    document.getElementById('choose-form-' + id).submit();
+  };
+  document.getElementById('pp-choose-confirm').classList.add('show');
+}
+
+function closeChooseConfirm() {
+  document.getElementById('pp-choose-confirm').classList.remove('show');
 }
 
 function closePpConfirmModal() {

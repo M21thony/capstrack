@@ -77,6 +77,26 @@ class DuplicationCheck extends Model
             ->all();
     }
 
+    /**
+     * The stored matches, with each study's authors read from the archive.
+     *
+     * matches is a copy taken when the check ran, so a check run before the
+     * authors were recorded would say "not recorded" for ever.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function matchesWithAuthors(): array
+    {
+        $matches = array_values(array_filter((array) $this->matches, 'is_array'));
+        $authors = ArchivedDocument::whereIn('archived_id', array_filter(array_column($matches, 'archived_id')))
+            ->pluck('authors', 'archived_id');
+
+        return array_map(
+            fn (array $m) => ['authors' => $authors[$m['archived_id'] ?? 0] ?? ($m['authors'] ?? null)] + $m,
+            $matches
+        );
+    }
+
     public function studentSchoolYear(): BelongsTo
     {
         return $this->belongsTo(StudentSchoolYear::class, 'student_s_y_id', 's_y_id');

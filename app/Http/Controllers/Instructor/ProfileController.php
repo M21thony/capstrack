@@ -35,6 +35,8 @@ class ProfileController extends Controller
             'program_slots.*' => ['integer', 'min:0', 'max:20'],
             'expertise' => ['present', 'array'],
             'expertise.*' => ['string', 'max:100'],
+            'highest_degree' => ['nullable', 'in:'.implode(',', array_keys(CapstoneExpert::DEGREES))],
+            'degree' => ['nullable', 'in:'.implode(',', CapstoneExpert::degreeTitles())],
         ]);
 
         $validator->after(function ($v) use ($request) {
@@ -93,11 +95,17 @@ class ProfileController extends Controller
             ->unique()
             ->values();
 
-        DB::transaction(function () use ($expert, $accepted, $raw, $expertise) {
+        // Only when the panel sent it, so an older page that does not know
+        // about degrees cannot wipe one out by saving.
+        $degree = $request->has('degree')
+            ? CapstoneExpert::degreeFromTitle($validated['degree'] ?? null)
+            : ($request->has('highest_degree') ? ['highest_degree' => $validated['highest_degree'] ?? null] : []);
+
+        DB::transaction(function () use ($expert, $accepted, $raw, $expertise, $degree) {
             $expert->update([
                 'program_slots' => $raw,
                 'max_teams' => array_sum($accepted),
-            ]);
+            ] + $degree);
 
             // Replace rather than merge - the panel sends the full list it
             // is showing, so anything missing from it was removed there.

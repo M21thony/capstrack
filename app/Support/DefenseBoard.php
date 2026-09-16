@@ -1,0 +1,367 @@
+<?php
+
+namespace App\Support;
+
+use App\Models\CapstoneExpert;
+use App\Models\DefenseSchedule;
+use App\Models\DefenseWindow;
+use App\Models\ExpensePost;
+use App\Models\FinancialRecord;
+use App\Models\GradingRubric;
+use App\Models\Role;
+use App\Models\StudentSchoolYear;
+use App\Models\Team;
+use App\Models\TeamExpertAssignment;
+use Illuminate\Support\Collection;
+
+/**
+ * Where every team in a CaPSA's sections stands for one defense stage.
+ *
+ * Panel Assignment, Defense Scheduling and Generate schedule all ask the same
+ * question - can this team be scheduled, and if not, why not - so the answer
+ * is worked out here once. Asked in three places, it once drifted: saving a
+ * window scheduled teams that the review screen would have refused.
+ *
+ * The order of the reasons is the order a team clears them in: its three
+ * experts, the stage before this one, the checklist requirements, a panel,
+ * and - for every stage but the pre-proposal - each member's fee.
+ */
+class DefenseBoard
+{
+    public const STAGES = DefenseProgress::STAGES;
+
+    /** Pre-proposal Defense has no fee; the other three do. */
+    public const PAID_STAGES = ['Title Defense', 'Pre Oral Defense', 'Final Oral Defense'];
+
+    public const TIME_SLOTS = ['08:00', '10:00', '12:00', '14:00'];
+
+    public const VENUES = ['Mac Lab', 'Open Lab'];
+
+    // Team tags are picked from a fixed list, but an expert's expertise is
+    // free text, so each tag also matches the other ways people write it.
+    private const TAG_SYNONYMS = [
+        'artificial intelligence' => ['ai'],
+        'ai' => ['artificial intelligence'],
+        'machine learning' => ['ml', 'ai'],
+        'web development' => ['web dev', 'web'],
+        'mobile app' => ['mobile development', 'mobile', 'android', 'ios'],
+        'data analytics' => ['data analysis', 'data science'],
+        'cybersecurity' => ['security', 'infosec'],
+        'database systems' => ['databases', 'database'],
+        'ui/ux design' => ['ui/ux', 'ui', 'ux', 'user experience', 'user interface'],
+        'network systems' => ['networking', 'networks'],
+    ];
+
+    public function __construct(private SectionScope $scope, private DefenseProgress $progress) {}
+
+    /**
+     * The stage a page shows: the one asked for, else the earliest stage any
+     * of this CaPSA's teams is still working through - where the work is.
+     */
+    public function openingStage(CapstoneExpert $capsa, ?string $asked): string
+    {
+        if (in_array($asked, self::STAGES, true)) {
+            return $asked;
+        }
+
+        $earliest = $this->teamsFor($capsa)['teams']
+            ->map(fn (Team $team) => array_search($this->progress->currentStage($team, $team->defenseSchedules), self::STAGES, true))
+            ->reject(fn ($i) => $i === false)
+            ->min();
+
+        return self::STAGES[$earliest ?? 0];
+    }
+
+    /**
+     * The confirmed teams this CaPSA is responsible for, each with its section.
+     * A CaPSA with no sections on record (the admin account) sees every team.
+     *
+     * @return array{teams: Collection<int, Team>, sections: array<int, string>}
+     */
+    public function teamsFor(CapstoneExpert $capsa): array
+    {
+        $teams = Team::where('is_confirmed', true)
+            ->with(['defenseSchedules.panels', 'defenseSchedules.grades'])
+            ->orderBy('team_name')
+            ->get();
+
+        $records = StudentSchoolYear::whereIn('team_id', $teams->pluck('team_id'))->with('student')->get()->groupBy('team_id');
+        $capsaSections = $capsa->sections ?? [];
+        $kept = collect();
+        $sections = [];
+
+        foreach ($teams as $team) {
+            $section = $this->scope->sectionFor($team, $records->get($team->team_id, collect()));
+
+            if ($capsaSections !== [] && ! $this->scope->covers($capsaSections, $section)) {
+                continue;
+            }
+
+            $team->setRelation('schoolYears', $records->get($team->team_id, collect()));
+            $sections[$team->team_id] = $section !== '' ? $section : SectionScope::UNASSIGNED;
+            $kept->push($team);
+        }
+
+        return ['teams' => $kept, 'sections' => $sections];
+    }
+
+    /** Whether this CaPSA may act on a team. */
+    public function covers(CapstoneExpert $capsa, Team $team): bool
+    {
+        $capsaSections = $capsa->sections ?? [];
+
+        return $capsaSections === [] || $this->scope->covers($capsaSections, $this->scope->sectionFor($team));
+    }
+
+    /**
+     * Every team's row for this stage, as the pages draw it.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function rows(CapstoneExpert $capsa, string $stage): array
+    {
+        ['teams' => $teams, 'sections' => $sections] = $this->teamsFor($capsa);
+
+        $experts = $this->teamExperts($teams->pluck('team_id'));
+        $paid = in_array($stage, self::PAID_STAGES, true) ? self::paidTeamIds($teams, $stage) : $teams->pluck('team_id');
+        $panelists = $this->panelists();
+
+        return $teams->map(function (Team $team) use ($stage, $sections, $experts, $paid, $panelists) {
+            $schedule = $team->defenseSchedules->where('defense_type', $stage)->sortByDesc('attempt')->first();
+            $roles = $experts->get($team->team_id, collect());
+            $panel = $schedule ? $this->panelOf($schedule) : null;
+            $tags = array_values(array_filter(array_map(fn ($t) => trim((string) $t), $team->tags ?: [])));
+
+            return [
+                'id' => (int) $team->team_id,
+                'name' => $team->team_name,
+                'title' => $team->project_title,
+                'section' => $sections[$team->team_id],
+                'members' => $team->schoolYears->count(),
+                'adviser' => $roles->get('adviser'),
+                'consultant' => $roles->get('consultant'),
+                'grammarian' => $roles->get('grammarian')['name'] ?? null,
+                'tags' => $tags,
+                'suggested' => $panelists->filter(fn ($e) => $this->matchedTags($tags, $e['tags']) !== [])->pluck('id')->values(),
+                'panel' => $panel && $panel['chair'] ? $panel : null,
+                'defense_id' => $schedule?->defense_id,
+                'attempt' => (int) ($schedule->attempt ?? 1),
+                'schedule' => $schedule?->schedule_date ? [
+                    'date' => $schedule->schedule_date->toDateString(),
+                    'time' => $schedule->schedule_date->format('H:i'),
+                    'venue' => $schedule->venue,
+                ] : null,
+                'outcome' => $schedule?->outcome ? $schedule->outcomeLabel() : null,
+                'passed' => $schedule ? DefenseOutcome::isPass($schedule->outcome) : false,
+                'graded' => $schedule ? $schedule->submittedGrades()->count() : 0,
+                'panel_size' => $schedule ? $schedule->panelSize() : 0,
+                'paid' => $paid->contains($team->team_id),
+                'blockers' => $this->blockers($team, $stage, $roles, $schedule, $paid),
+            ];
+        })->values()->all();
+    }
+
+    /**
+     * What stands between this team and a date, in the order it is cleared.
+     *
+     * @return array<int, array{key: string, text: string}>
+     */
+    private function blockers(Team $team, string $stage, Collection $roles, ?DefenseSchedule $schedule, Collection $paid): array
+    {
+        $missing = array_values(array_diff(Team::REQUIRED_EXPERT_ROLES, $roles->keys()->all()));
+        $at = array_search($stage, self::STAGES, true);
+        $previous = $at > 0 ? self::STAGES[$at - 1] : null;
+        $out = [];
+
+        if ($missing !== []) {
+            $out[] = ['key' => 'experts', 'text' => 'Needs '.self::listRoles($missing)];
+        }
+
+        if ($previous && ! $this->progress->hasPassed($team, $previous, $team->defenseSchedules)) {
+            $out[] = ['key' => 'prev', 'text' => 'Has not passed the '.$previous.' yet'];
+        }
+
+        // Named, so the CaPSA knows which checklist line is holding the team up.
+        if ($open = $team->checklistBlockersFor($stage)) {
+            $out[] = ['key' => 'req', 'text' => 'Requirements not done: '.$open[0].(count($open) > 1 ? ' (and '.(count($open) - 1).' more)' : '')];
+        }
+
+        if (! $schedule || ! $schedule->panels->contains('panel_role', 'Panel Chair')) {
+            $out[] = ['key' => 'panel', 'text' => 'No panel assigned yet'];
+        }
+
+        if (in_array($stage, self::PAID_STAGES, true) && ! $paid->contains($team->team_id)) {
+            $out[] = ['key' => 'fees', 'text' => 'Fees not verified'];
+        }
+
+        return $out;
+    }
+
+    /**
+     * The approved adviser, consultant and grammarian of each team.
+     *
+     * @return Collection<int, Collection<string, array{id: int, name: string}>>
+     */
+    private function teamExperts(Collection $teamIds): Collection
+    {
+        return TeamExpertAssignment::whereIn('team_id', $teamIds)
+            ->where('status', 'approved')
+            ->with(['expert', 'expertRole.role'])
+            ->get()
+            ->groupBy('team_id')
+            ->map(fn ($rows) => $rows
+                ->filter(fn ($a) => $a->expert && in_array($a->engaged_role_name, Team::REQUIRED_EXPERT_ROLES, true))
+                ->mapWithKeys(fn ($a) => [$a->engaged_role_name => ['id' => (int) $a->expert_id, 'name' => $a->expert->name]]));
+    }
+
+    /**
+     * Everyone who can sit on a panel: approved advisers and consultants.
+     * Grammarians check the writing and never sit on a panel.
+     *
+     * @return Collection<int, array{id: int, name: string, degree: string, chair: bool, tags: array<int, string>}>
+     */
+    public function panelists(): Collection
+    {
+        $roleIds = Role::whereIn('role_name', ['adviser', 'consultant'])->pluck('role_id');
+
+        return CapstoneExpert::where('approved_status', true)
+            ->whereHas('roles', fn ($q) => $q->whereIn('roles.role_id', $roleIds))
+            ->with('expertise')
+            ->orderBy('last_name')->orderBy('first_name')
+            ->get()
+            ->map(fn (CapstoneExpert $e) => [
+                'id' => (int) $e->expert_id,
+                // The name alone: the degree is shown beside it, and credentials would repeat it.
+                'name' => trim(implode(' ', array_filter([$e->first_name, $e->middle_name ? mb_substr($e->middle_name, 0, 1).'.' : null, $e->last_name, $e->suffix]))) ?: $e->name,
+                'degree' => $e->degreeText(),
+                'chair' => $e->canChairPanel(),
+                'tags' => $e->expertise->pluck('expertise_field')->filter()->values()->all(),
+            ]);
+    }
+
+    /** @return array{chair: ?int, m1: ?int, m2: ?int} */
+    public function panelOf(DefenseSchedule $schedule): array
+    {
+        $by = $schedule->panels->keyBy('panel_role');
+
+        return [
+            'chair' => isset($by['Panel Chair']) ? (int) $by['Panel Chair']->expert_id : null,
+            'm1' => isset($by['Panel Member 1']) ? (int) $by['Panel Member 1']->expert_id : null,
+            'm2' => isset($by['Panel Member 2']) ? (int) $by['Panel Member 2']->expert_id : null,
+        ];
+    }
+
+    /**
+     * Defenses on the calendar for teams outside this CaPSA's sections. They
+     * are not hers to change, but their rooms and panelists are still taken.
+     *
+     * @param  array<int, int>  $ownTeamIds
+     * @return array<int, array<string, mixed>>
+     */
+    public function otherBookings(array $ownTeamIds): array
+    {
+        $schedules = DefenseSchedule::whereNotNull('schedule_date')
+            ->whereNotIn('team_id', $ownTeamIds)
+            ->with(['panels', 'team'])
+            ->get();
+
+        $records = StudentSchoolYear::whereIn('team_id', $schedules->pluck('team_id')->unique())->with('student')->get()->groupBy('team_id');
+
+        return $schedules->map(fn (DefenseSchedule $s) => [
+            'section' => $s->team ? ($this->scope->sectionFor($s->team, $records->get($s->team_id, collect())) ?: SectionScope::UNASSIGNED) : SectionScope::UNASSIGNED,
+            'stage' => $s->defense_type,
+            'date' => $s->schedule_date->toDateString(),
+            'time' => $s->schedule_date->format('H:i'),
+            'venue' => $s->venue,
+            'panel' => $s->panels->pluck('expert_id')->map(fn ($id) => (int) $id)->values(),
+        ])->values()->all();
+    }
+
+    /** @return array<string, array{start: ?string, end: ?string}> */
+    public function windows(): array
+    {
+        $windows = DefenseWindow::whereIn('defense_type', self::STAGES)->get()->keyBy('defense_type');
+
+        return collect(self::STAGES)->mapWithKeys(fn ($stage) => [$stage => [
+            'start' => $windows->get($stage)?->start_date?->toDateString(),
+            'end' => $windows->get($stage)?->end_date?->toDateString(),
+        ]])->all();
+    }
+
+    /** Whether panelists will find a rubric to grade this stage with. */
+    public static function hasRubric(string $stage): bool
+    {
+        return GradingRubric::whereRaw('LOWER(rubric_type) = ?', [mb_strtolower($stage)])
+            ->where('is_active', true)
+            ->where('is_archived', false)
+            ->exists();
+    }
+
+    /**
+     * Teams whose every member has a verified receipt for this stage's fee.
+     * One payment covers the stage, redefenses included.
+     */
+    public static function paidTeamIds(Collection $teams, string $stage): Collection
+    {
+        $postIds = ExpensePost::where('defense_type', $stage)->pluck('id');
+
+        $memberIds = StudentSchoolYear::whereIn('team_id', $teams->pluck('team_id'))
+            ->get(['team_id', 'student_id'])
+            ->groupBy('team_id')
+            ->map(fn ($rows) => $rows->pluck('student_id')->filter()->values());
+
+        $verified = FinancialRecord::whereIn('expense_post_id', $postIds)
+            ->where('f_record_status', 'verified')
+            ->whereIn('student_id', $memberIds->flatten()->unique())
+            ->distinct()
+            ->pluck('student_id');
+
+        return $memberIds->filter(fn ($ids) => $ids->isNotEmpty() && $ids->diff($verified)->isEmpty())->keys();
+    }
+
+    /** ['consultant', 'grammarian'] reads as "a consultant and a grammarian". */
+    public static function listRoles(array $roles): string
+    {
+        $named = array_map(fn ($r) => (in_array($r[0], ['a', 'e', 'i', 'o', 'u'], true) ? 'an ' : 'a ').$r, array_values($roles));
+
+        return count($named) > 1 ? implode(', ', array_slice($named, 0, -1)).' and '.end($named) : ($named[0] ?? '');
+    }
+
+    /**
+     * Names of every expert these rows and bookings mention. A panelist who
+     * is no longer an approved adviser or consultant still sits on the panels
+     * they were given, and those still have to read as a name.
+     *
+     * @return array<int, string> expert_id => name
+     */
+    public static function names(array $rows, array $other = []): array
+    {
+        $ids = collect($rows)->flatMap(fn ($r) => $r['panel'] ? array_values($r['panel']) : [])
+            ->merge(collect($other)->flatMap(fn ($o) => $o['panel']))
+            ->filter()->unique()->values();
+
+        return CapstoneExpert::whereIn('expert_id', $ids)->get()->mapWithKeys(fn ($e) => [(int) $e->expert_id => $e->name])->all();
+    }
+
+    /** @return array<int, string> the team tags an expert's expertise covers */
+    public function matchedTags(array $tags, array $expertiseFields): array
+    {
+        $fields = array_filter(array_map(fn ($f) => mb_strtolower(trim((string) $f)), $expertiseFields));
+        $matched = [];
+
+        foreach ($tags as $tag) {
+            $candidates = array_merge([mb_strtolower($tag)], self::TAG_SYNONYMS[mb_strtolower($tag)] ?? []);
+
+            foreach ($fields as $field) {
+                foreach ($candidates as $candidate) {
+                    if (str_contains($field, $candidate) || str_contains($candidate, $field)) {
+                        $matched[] = $tag;
+                        continue 3;
+                    }
+                }
+            }
+        }
+
+        return array_values(array_unique($matched));
+    }
+}

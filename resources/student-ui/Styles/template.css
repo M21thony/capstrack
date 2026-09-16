@@ -277,7 +277,7 @@ select.input{cursor:pointer}
 .empty-res p{font-size:13px;color:var(--text3)}
 
 /* TOAST */
-.toast{position:fixed;bottom:22px;right:22px;background:var(--navy-dark);color:var(--navy-text);font-size:13px;font-weight:500;padding:11px 18px;border-radius:10px;border-left:3px solid var(--accent);box-shadow:0 8px 24px rgba(0,0,0,.22);z-index:999;transform:translateY(6px);opacity:0;transition:all .22s;pointer-events:none}
+.toast{position:fixed;bottom:22px;right:22px;background:var(--navy-dark);color:var(--navy-text);font-size:13px;font-weight:500;padding:11px 18px;border-radius:10px;border-left:3px solid var(--accent);box-shadow:0 8px 24px rgba(0,0,0,.22);z-index:1100;transform:translateY(6px);opacity:0;transition:all .22s;pointer-events:none}
 .toast.show{transform:translateY(0);opacity:1}
 
 /* SPIN */

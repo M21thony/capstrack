@@ -93,7 +93,17 @@ class AssignmentController extends Controller
             ]];
         })->toArray();
 
+        // New titles waiting for this expert to confirm as a team's adviser.
+        $resolver = app(\App\Services\RecipientResolver::class);
+        $titleConfirmations = \App\Models\CapstonePreProposal::where('adviser_status', \App\Support\TitleRevision::PENDING)
+            ->whereNull('retired_at')
+            ->with(['team', 'duplicationCheck'])
+            ->get()
+            ->filter(fn ($p) => $resolver->resolveTeamRoleExpert((int) $p->team_id, 'adviser') === (int) $expert->expert_id)
+            ->values();
+
         return view('instructor.assignments', [
+            'titleConfirmations' => $titleConfirmations,
             'pendingAssignments' => $pendingAssignments,
             'approvedAssignments' => $approvedAssignments,
             'rejectedAssignments' => $rejectedAssignments,
@@ -208,7 +218,15 @@ class AssignmentController extends Controller
     public function reject(Request $request, $id): JsonResponse
     {
         $validated = $request->validate([
-            'reason' => ['nullable', 'string', 'max:500'],
+            // Required. A decline reaches the team as a decision they have to
+            // do something about, and most of the time what an expert means
+            // is "tighten this and come back" rather than "no" - which is
+            // unsayable without a sentence. Twenty characters is roughly the
+            // shortest useful one; it stops "no" and "full" going out alone.
+            'reason' => ['required', 'string', 'min:20', 'max:500'],
+        ], [
+            'reason.required' => 'Tell the team why. They can apply again, and this is what they have to go on.',
+            'reason.min' => 'A line or two, so the team knows what to change.',
         ]);
 
         $expert = Auth::guard('expert')->user();
@@ -235,7 +253,7 @@ class AssignmentController extends Controller
             DB::transaction(function () use ($assignment, $validated) {
                 $assignment->update([
                     'status' => 'rejected',
-                    'rejection_reason' => $validated['reason'] ?? null,
+                    'rejection_reason' => $validated['reason'],
                 ]);
 
                 $team = $assignment->team;

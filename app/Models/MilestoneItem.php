@@ -7,14 +7,15 @@ use Illuminate\Database\Eloquent\Model;
 /**
  * One deliverable inside a milestone.
  *
- * The kind decides what closes it. Only FORM and CUSTOM are ticked by a
- * person and write completed_at here; the other three are answered by the
- * document, review or defense they point at, so nothing has to be kept in
- * step. See App\Support\MilestoneProgress, which resolves them in bulk.
+ * The kind decides what closes it. FORM and CUSTOM are checked by the CaPSA,
+ * who writes completed_at here, and so is an APPROVAL marked needs_check once
+ * it is approved. Everything else is answered by the document, review or
+ * defense it points at, so nothing has to be kept in step. See
+ * App\Support\MilestoneProgress, which resolves them in bulk.
  */
 class MilestoneItem extends Model
 {
-    /** A signed paper the CaPSA sights. Ticked by hand. */
+    /** A signed paper; the team uploads a scan or photo and the CaPSA checks it. */
     public const FORM = 'form';
 
     /** A draft the team uploads. Closed by the upload existing. */
@@ -41,6 +42,7 @@ class MilestoneItem extends Model
         'short_label',
         'phase',
         'kind',
+        'needs_check',
         'position',
         'due_date',
         'completed_at',
@@ -53,6 +55,7 @@ class MilestoneItem extends Model
         'due_date' => 'date',
         'completed_at' => 'datetime',
         'position' => 'integer',
+        'needs_check' => 'boolean',
     ];
 
     public function milestone()
@@ -75,5 +78,11 @@ class MilestoneItem extends Model
     public function isTickedByHand(): bool
     {
         return in_array($this->kind, self::TICKED_BY_HAND, true);
+    }
+
+    /** Whether the CaPSA's check is what closes this line. */
+    public function isCheckedByCapsa(): bool
+    {
+        return $this->isTickedByHand() || ($this->kind === self::APPROVAL && $this->needs_check);
     }
 }

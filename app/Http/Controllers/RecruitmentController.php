@@ -35,6 +35,15 @@ class RecruitmentController extends Controller
         $student = $request->user();
         $studentId = $student ? $student->student_id : 8;
 
+        // Capstone 2: teams are settled, so there is nothing to recruit for.
+        if ($student && $student->capstoneStage() !== 1) {
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'message' => Team::NO_NEW_TEAMS], 422);
+            }
+
+            return back()->withErrors(['error' => Team::NO_NEW_TEAMS]);
+        }
+
         // Prevent posting if the student already belongs to a team
         if (StudentTeam::has($studentId)) {
             if ($request->expectsJson()) {
@@ -67,6 +76,26 @@ class RecruitmentController extends Controller
             }
 
             return back()->withErrors(['roles' => $message]);
+        }
+
+        // A build-a-team post with a name creates the team as it posts - team
+        // creation by a second door - so it closes with the first.
+        if ($validated['recruitment_goal'] === 'build_a_team' && ! empty($validated['team_name'])
+            && ! Team::creationAllowed()) {
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'message' => Team::CREATION_CLOSED], 422);
+            }
+
+            return back()->withErrors(['error' => Team::CREATION_CLOSED]);
+        }
+
+        // Looking for a team is the way in to joining one, so it closes with joining.
+        if ($validated['recruitment_goal'] === 'find_a_team' && ! Team::joiningAllowed()) {
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'message' => Team::JOINING_CLOSED], 422);
+            }
+
+            return back()->withErrors(['error' => Team::JOINING_CLOSED]);
         }
 
         $recruitment = DB::transaction(function () use ($validated, $studentId, $roles): Recruitment {

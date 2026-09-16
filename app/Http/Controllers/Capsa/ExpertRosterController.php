@@ -223,7 +223,13 @@ class ExpertRosterController extends Controller
         $updated = 0;
 
         foreach ($read['people'] as $email => $person) {
-            $nameParts = preg_split('/\s+/', $person['name'], 2);
+            // "Juan Dela Cruz, MIT": what follows the comma is their credentials,
+            // and the degree in it. No comma leaves what they already have alone.
+            [$fullName, $credentials] = CapstoneExpert::splitName($person['name']);
+            $nameParts = preg_split('/\s+/', $fullName, 2);
+            $degree = $credentials !== null
+                ? ['credentials' => $credentials] + CapstoneExpert::degreeFromCredentials($credentials)
+                : [];
 
             $existing = DB::table('capstone_experts')->where('email', $email)->first(['expert_id']);
 
@@ -232,7 +238,7 @@ class ExpertRosterController extends Controller
                     'first_name' => $nameParts[0],
                     'last_name' => $nameParts[1] ?? $nameParts[0],
                     'approved_status' => true,
-                ]);
+                ] + $degree);
 
                 $expertId = (int) $existing->expert_id;
                 $updated++;
@@ -244,7 +250,7 @@ class ExpertRosterController extends Controller
                     'approved_status' => true,
                     'reject_attempts' => 0,
                     'created_at' => now(),
-                ]);
+                ] + $degree);
 
                 $inserted++;
             }
@@ -335,7 +341,7 @@ class ExpertRosterController extends Controller
         $unchanged = 0;
 
         foreach ($read['people'] as $email => $person) {
-            $account = DB::table('capstone_experts')->where('email', $email)->first(['expert_id', 'first_name', 'last_name', 'approved_status']);
+            $account = DB::table('capstone_experts')->where('email', $email)->first(['expert_id', 'first_name', 'last_name', 'credentials', 'approved_status']);
 
             if (! $account) {
                 $action = 'create';
@@ -388,10 +394,15 @@ class ExpertRosterController extends Controller
     {
         $changes = [];
 
-        $nameParts = preg_split('/\s+/', $person['name'], 2);
+        [$fullName, $credentials] = CapstoneExpert::splitName($person['name']);
+        $nameParts = preg_split('/\s+/', $fullName, 2);
 
         if ($account->first_name !== $nameParts[0] || $account->last_name !== ($nameParts[1] ?? $nameParts[0])) {
             $changes[] = 'name';
+        }
+
+        if ($credentials !== null && $account->credentials !== $credentials) {
+            $changes[] = 'degree';
         }
 
         if (! $account->approved_status) {
@@ -447,7 +458,8 @@ class ExpertRosterController extends Controller
 
         $sheet->fromArray([self::TEMPLATE_HEADINGS], null, 'A1');
         $sheet->fromArray([
-            ['Juan Dela Cruz', 'juan.delacruz@gmail.com', 'Adviser', 'Research Methodology, Data Analytics', 'BSIT, BSIS', 2],
+            // A degree goes after the name, after a comma - it decides who can chair a panel.
+            ['Juan Dela Cruz, MIT', 'juan.delacruz@gmail.com', 'Adviser', 'Research Methodology, Data Analytics', 'BSIT, BSIS', 2],
             // The last two are optional: leave them blank and the expert
             // sets their own programmes and capacity.
             ['Maria Santos', 'maria.santos@gmail.com', 'Consultant, Grammarian', '', '', ''],

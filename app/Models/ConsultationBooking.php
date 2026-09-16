@@ -24,6 +24,8 @@ class ConsultationBooking extends Model
         'session_date',
         'booking_status',
         'cancellation_reason',
+        'cancellation_requested_at',
+        'cancellation_requested_by',
         'google_event_id',
     ];
 
@@ -31,6 +33,7 @@ class ConsultationBooking extends Model
     {
         return [
             'booking_status' => 'string',
+            'cancellation_requested_at' => 'datetime',
             'session_date' => 'date',
         ];
     }

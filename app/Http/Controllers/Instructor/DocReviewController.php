@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Instructor;
 
 use App\Http\Controllers\Controller;
 use App\Services\GoogleDriveService;
+use App\Support\StudentTeam;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -61,10 +62,35 @@ class DocReviewController extends Controller
     {
         abort_if($review->expert_id !== Auth::guard('expert')->id(), 403);
 
-        $review->load('document');
+        $review->load('document.deliverable');
+
+        $document = $review->document;
+        $item = $document?->deliverable;
 
         return view('instructor.docreview-annotate', [
             'review' => $review,
+            // What the annotator's top bar says about the document in front
+            // of the reviewer: whose it is, which requirement, which round.
+            'context' => [
+                'reviewId' => $review->review_id,
+                'title' => $item?->title ?? $document?->file_name,
+                'fileName' => $document?->file_name,
+                'team' => $document ? StudentTeam::for($document->student_id)?->team_name : null,
+                'role' => $review->role,
+                'round' => $document?->roundLabel(),
+                'nextRound' => $document?->nextRoundLabel(),
+                'requirement' => $item?->title,
+                'due' => $item?->due_date?->format('M j'),
+                'backUrl' => route('instructor.docreview'),
+                // Earlier rounds of the same requirement, to open beside this one.
+                'versions' => $document ? $document->earlierVersions()->map(fn ($v) => [
+                    'id' => (int) $v->file_id,
+                    'round' => $v->roundLabel(),
+                    'uploaded' => $v->created_at?->format('M j, Y'),
+                    'file' => route('reviews.versions.file', [$review->review_id, $v->file_id]),
+                    'remarks' => route('reviews.versions.remarks', [$review->review_id, $v->file_id]),
+                ])->values() : [],
+            ],
         ]);
     }
 }
