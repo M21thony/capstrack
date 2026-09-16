@@ -73,7 +73,6 @@
                 <button class="mode-btn view-btn is-on" id="btn-view-month" onclick="setCalView('month')">Month</button>
                 <button class="mode-btn view-btn" id="btn-view-week" onclick="setCalView('week')">Week</button>
                 <button class="mode-btn view-btn" id="btn-view-day" onclick="setCalView('day')">Day</button>
-                <button class="mode-btn" onclick="openQuickAdd(selectedDate, null, this)">+ Add slot</button>
                 {{-- Set a term's worth of hours in one go, instead of one
                      slot at a time through the form on the right. --}}
                 <button class="mode-btn" onclick="openAvail()">Set availability</button>              </div>
@@ -495,9 +494,9 @@
 <!-- ─── ONE SLOT: ADD OR EDIT ─────────────────────────────────────────────── -->
 
 <style>
-/* One consultation on one date, asked for where you clicked. The weekly hours
-   are Set availability's job, so nothing here repeats. */
-.qa-pop{position:absolute;z-index:95;width:300px;max-width:calc(100vw - 24px)}
+/* One date: what is on it, and adding to it. The weekly hours are Set
+   availability's job, so nothing here repeats. */
+.qa-pop{position:absolute;z-index:95;width:320px;max-width:calc(100vw - 24px)}
 .qa-pop[hidden]{display:none}
 .qa-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;
   box-shadow:0 14px 38px -10px rgba(0,0,0,.45);overflow:hidden}
@@ -507,7 +506,7 @@
 .qa-row{display:flex;align-items:flex-start;gap:11px;padding:6px 0}
 .qa-row>svg{width:16px;height:16px;flex-shrink:0;fill:none;stroke:var(--text3);stroke-width:2;margin-top:3px}
 .qa-row>div{flex:1;min-width:0}
-.qa-date{font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px}
+.qa-date{font-size:12.5px;font-weight:600;color:var(--text);margin-bottom:6px}
 .qa-times{display:flex;align-items:center;gap:7px}
 .qa-times input{height:30px;box-sizing:border-box;padding:0 8px;border:1px solid var(--border);border-radius:8px;
   background:var(--bg2);color:var(--text);font:inherit;font-size:12.5px;min-width:0;flex:1}
@@ -517,6 +516,17 @@
 .qa-booked{margin-top:8px;padding:9px 11px;border:1px solid var(--border);border-radius:9px;background:var(--bg3);
   font-size:12px;line-height:1.5;color:var(--text2)}
 .qa-booked b{color:var(--text)}
+/* Everything on the date, however many. */
+.qa-list{display:flex;flex-direction:column;gap:6px;max-height:260px;overflow-y:auto;margin-top:2px}
+.qa-item{display:flex;flex-direction:column;gap:2px;align-items:flex-start;text-align:left;width:100%;
+  padding:8px 10px;border:1px solid var(--border);border-left:3px solid var(--border);border-radius:9px;
+  background:var(--bg2);font-family:inherit;cursor:pointer;transition:border-color .15s,background-color .15s}
+.qa-item:hover{border-color:var(--accent);background:var(--accent-light)}
+.qa-item b{font-size:12.5px;font-weight:700;color:var(--text)}
+.qa-item span{font-size:11px;color:var(--text3)}
+.qa-item.is-booked{border-left-color:var(--accent)}
+.qa-item.is-booked span{color:var(--accent3);font-weight:600}
+.qa-item.is-off{opacity:.6}
 .qa-foot{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:0 14px 13px}
 .qa-spacer{flex:1}
 .qa-act{background:none;border:1px solid var(--border);border-radius:8px;padding:5px 10px;cursor:pointer;
@@ -526,7 +536,7 @@
 .qa-foot .btn{flex:none}
 </style>
 
-<!-- ─── ONE CONSULTATION ──────────────────────────────────────────────────── -->
+<!-- ─── ONE DATE: WHAT IS ON IT, AND ADDING TO IT ─────────────────────────── -->
 <div class="qa-pop" id="quick-add" hidden>
   <div class="qa-card" role="dialog" aria-labelledby="qa-title">
     <div class="qa-head">
@@ -537,23 +547,32 @@
     </div>
 
     <div class="qa-body">
-      <div class="qa-row">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>
-        <div>
-          <div class="qa-date" id="qa-date"></div>
-          <div class="qa-times">
-            <input type="time" id="qa-start" aria-label="Starts" onchange="quickAddChanged()">
-            <span>–</span>
-            <input type="time" id="qa-end" aria-label="Ends" onchange="quickAddChanged()">
-          </div>
-        </div>
+      <div id="qa-day" hidden>
+        <div class="qa-date" id="qa-list-date"></div>
+        <div class="qa-list" id="qa-list"></div>
       </div>
 
-      <div class="qa-note" id="qa-note"></div>
-      <div class="qa-booked" id="qa-booked" hidden></div>
+      <div id="qa-form">
+        <div class="qa-row">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>
+          <div>
+            <div class="qa-date" id="qa-date"></div>
+            <div class="qa-times">
+              <input type="time" id="qa-start" aria-label="Starts" onchange="quickAddChanged()">
+              <span>–</span>
+              <input type="time" id="qa-end" aria-label="Ends" onchange="quickAddChanged()">
+            </div>
+          </div>
+        </div>
+
+        <div class="qa-note" id="qa-note"></div>
+        <div class="qa-booked" id="qa-booked" hidden></div>
+      </div>
     </div>
 
     <div class="qa-foot">
+      <button type="button" class="qa-act" id="qa-add" onclick="addOnThisDate()" hidden>+ Add consultation</button>
+      <button type="button" class="qa-act" id="qa-back" onclick="backToDay()" hidden>Back</button>
       <button type="button" class="qa-act is-danger" id="qa-delete" onclick="quickDelete()" hidden>Delete</button>
       <button type="button" class="qa-act" id="qa-skip" onclick="quickSkip()" hidden>Skip this week</button>
       <button type="button" class="qa-act" id="qa-avail" onclick="quickToggle()" hidden>Mark unavailable</button>
@@ -1277,7 +1296,7 @@ function handleCellClick(key, dayNum, isDisabled, dayName, cell) {
   redrawCalendar();
   // The grid was just rebuilt, so the cell that was clicked is no longer in
   // the page; the bubble anchors to whatever replaced it.
-  openQuickAdd(key, null, document.querySelector(`.cal-cell[data-key="${key}"]`) || cell);
+  openQuickDay(key, document.querySelector(`.cal-cell[data-key="${key}"]`) || cell);
 }
 
 /** Show one date as a column of hours. */
@@ -1309,19 +1328,83 @@ function labelSaveButton(key) {
 }
 
 
+
 // ══════════════════════════════════════════════════════════════
-//  ONE CONSULTATION
-//  Adding or changing a single date. The weekly hours belong to Set
-//  availability, so nothing here repeats and there is no second form.
+//  ONE DATE
+//  Clicking a date shows what is on it - who booked which time - and offers
+//  to add another. The weekly hours belong to Set availability, so nothing
+//  here repeats and there is no second form.
 // ══════════════════════════════════════════════════════════════
 let quickAddKey = null;
 let quickSlot = null; // the slot being changed, or null when adding
+let quickAnchor = null;
+
+/** What the bubble is showing: the date's consultations, or one being edited. */
+function bubbleMode(mode) {
+  document.getElementById('qa-day').hidden = mode !== 'list';
+  document.getElementById('qa-form').hidden = mode === 'list';
+  document.getElementById('qa-add').hidden = mode !== 'list';
+  document.getElementById('qa-save').hidden = mode === 'list';
+}
+
+/** Everything on this date. Falls through to adding when it is empty. */
+function openQuickDay(key, anchor) {
+  const daySlots = slots[key] || [];
+
+  if (!daySlots.length) {
+    openQuickAdd(key, null, anchor);
+
+    return;
+  }
+
+  quickAddKey = key;
+  quickSlot = null;
+  quickAnchor = anchor;
+  cancelEdit();
+
+  const booked = daySlots.filter((s) => s.hasBooking).length;
+  document.getElementById('qa-title').textContent = booked
+    ? booked + ' booked of ' + daySlots.length
+    : daySlots.length + (daySlots.length === 1 ? ' open time' : ' open times');
+  document.getElementById('qa-list-date').textContent = dayLabel(key);
+
+  const list = document.getElementById('qa-list');
+  list.innerHTML = '';
+
+  daySlots.forEach((s, i) => {
+    const asked = !!(s.booking && s.booking.cancel_requested);
+    const row = document.createElement('button');
+    row.type = 'button';
+    row.className = 'qa-item' + (s.hasBooking ? ' is-booked' : '') + (s.is_available === false && !s.hasBooking ? ' is-off' : '');
+    row.innerHTML = '<b>' + hr12(s.start || s.start_time) + ' – ' + hr12(s.end || s.end_time) + '</b>'
+      + '<span>' + escHtml(s.hasBooking
+        ? (s.teamName || 'Booked') + (asked ? ' · cancellation requested' : '')
+        : (s.is_available === false ? 'Unavailable' : 'Open')) + '</span>';
+    row.onclick = () => openQuickEdit(s, key, i, quickAnchor);
+    list.appendChild(row);
+  });
+
+  ['qa-delete', 'qa-skip', 'qa-avail', 'qa-back'].forEach((id) => { document.getElementById(id).hidden = true; });
+  bubbleMode('list');
+  showBubble(anchor);
+}
+
+/** The + on the date's own list. */
+function addOnThisDate() {
+  openQuickAdd(quickAddKey, null, quickAnchor);
+}
+
+/** Back to everything on the date, from one of its consultations. */
+function backToDay() {
+  openQuickDay(quickAddKey, quickAnchor);
+}
 
 function openQuickAdd(key, startMinutes, anchor) {
   const now = weekAnchor || new Date();
 
   quickAddKey = key || selectedDate || formatKey(now.getFullYear(), now.getMonth(), now.getDate());
   quickSlot = null;
+  quickAnchor = anchor || quickAnchor;
   cancelEdit();
 
   const start = startMinutes != null ? minutesToTime(startMinutes) : firstFreeStart(quickAddKey);
@@ -1329,17 +1412,22 @@ function openQuickAdd(key, startMinutes, anchor) {
   document.getElementById('qa-title').textContent = 'New consultation';
   document.getElementById('qa-start').value = start;
   document.getElementById('qa-end').value = minutesToTime(timeToMinutes(start) + 60);
+  document.getElementById('qa-start').disabled = false;
+  document.getElementById('qa-end').disabled = false;
   document.getElementById('qa-booked').hidden = true;
   ['qa-delete', 'qa-skip', 'qa-avail'].forEach((id) => { document.getElementById(id).hidden = true; });
-  document.getElementById('qa-save').hidden = false;
+  document.getElementById('qa-back').hidden = !(slots[quickAddKey] || []).length;
 
-  showQuickAdd(anchor);
+  bubbleMode('form');
+  showBubble(anchor || quickAnchor);
+  quickAddChanged();
 }
 
-/** A slot that already exists: its time, and what can be done to it. */
+/** A consultation that already exists: its time, and what can be done to it. */
 function openQuickEdit(s, key, index, anchor) {
   quickAddKey = key;
   quickSlot = { slot: s, key, index, scheduleId: s.schedule_id };
+  quickAnchor = anchor || quickAnchor;
 
   editingSlotId = s.schedule_id;
   editingSlotKey = key;
@@ -1357,6 +1445,7 @@ function openQuickEdit(s, key, index, anchor) {
   document.getElementById('qa-save').hidden = !!s.hasBooking;
   document.getElementById('qa-delete').hidden = !!s.hasBooking || !s.schedule_id;
   document.getElementById('qa-skip').hidden = !repeats || !!s.hasBooking || !s.schedule_id;
+  document.getElementById('qa-back').hidden = (slots[key] || []).length < 2;
 
   const avail = document.getElementById('qa-avail');
   avail.hidden = !!s.hasBooking || !s.schedule_id;
@@ -1379,17 +1468,12 @@ function openQuickEdit(s, key, index, anchor) {
         : '');
   }
 
-  showQuickAdd(anchor);
+  bubbleMode('form');
+  showBubble(quickAnchor);
+  quickAddChanged();
 }
 
-/** "Monday, September 7, 2026" - the date the bubble is about. */
-function dayLabel(key) {
-  const [y, m, d] = key.split('-').map(Number);
-
-  return `${DAY_NAMES[makeDate(y, m, d).getDay()]}, ${MONTHS[m - 1]} ${d}, ${y}`;
-}
-
-function showQuickAdd(anchor) {
+function showBubble(anchor) {
   const pop = document.getElementById('quick-add');
 
   document.getElementById('qa-date').textContent = dayLabel(quickAddKey);
@@ -1399,8 +1483,13 @@ function showQuickAdd(anchor) {
   // Added after this click finishes, or the click that opened it closes it.
   setTimeout(() => document.addEventListener('mousedown', closeQuickAddOnOutside), 0);
   document.addEventListener('keydown', closeQuickAddOnEscape);
+}
 
-  quickAddChanged();
+/** "Monday, September 7, 2026" - the date the bubble is about. */
+function dayLabel(key) {
+  const [y, m, d] = key.split('-').map(Number);
+
+  return `${DAY_NAMES[makeDate(y, m, d).getDay()]}, ${MONTHS[m - 1]} ${d}, ${y}`;
 }
 
 /** Beside what was clicked - a calendar cell, a column, or the point itself. */
@@ -1440,6 +1529,7 @@ function closeQuickAdd() {
   document.removeEventListener('keydown', closeQuickAddOnEscape);
   quickAddKey = null;
   quickSlot = null;
+  quickAnchor = null;
   cancelEdit();
 }
 
@@ -1501,6 +1591,7 @@ function closeQuickAddKeepingEdit() {
   document.removeEventListener('keydown', closeQuickAddOnEscape);
   quickAddKey = null;
   quickSlot = null;
+  quickAnchor = null;
 }
 
 function quickDelete() {
