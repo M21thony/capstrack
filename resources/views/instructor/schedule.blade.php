@@ -33,6 +33,8 @@
         </div>
       </div>
       <div class="side-col">
+
+
         <div class="form-card">
           <div class="sk" style="width:130px;height:16px;border-radius:4px;margin-bottom:14px"></div>
           <div class="sk" style="height:60px;border-radius:8px"></div>
@@ -120,6 +122,121 @@
 
       <!-- RIGHT: Side column -->
       <div class="side-col">
+
+        <!-- Nothing being changed yet. The panel says what it is for rather
+             than sitting there as an empty form. -->
+        <div class="form-card sd-idle" id="slot-editor-idle">
+          <div class="form-card-title">
+            <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            Add or edit a slot
+          </div>
+          <p class="sd-idle-text">Click a time on the calendar to add a slot there, or click a slot you already have to change it.</p>
+        </div>
+
+        <div class="sd-card" id="slot-dialog" hidden>
+          <div class="sd-modal" role="group" aria-labelledby="sd-title">
+            <header class="sd-head">
+              <div>
+                <h2 class="sd-title" id="sd-title">New consultation slot</h2>
+                <p class="sd-when" id="sd-when"></p>
+              </div>
+              <button type="button" class="ga-icon" onclick="closeSlotDialog()" aria-label="Close">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </header>
+
+            <div class="sd-body">
+              <div class="recur-banner" id="recur-banner" style="display:none">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M17 2.1 21 6l-4 3.9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+                  <path d="M7 21.9 3 18l4-3.9"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+                </svg>
+                <span id="recur-banner-text"></span>
+              </div>
+
+              <div id="edit-mode-banner" style="display:none;padding:8px 12px;margin-bottom:11px;background:var(--accent-light);border:1px solid var(--accent);border-radius:8px;color:var(--accent3);font-size:12px;font-weight:600">
+                Editing existing slot
+              </div>
+
+              <div id="add-slot-fields">
+                <div class="f-group">
+                  <label class="f-label" for="f-start">Starts</label>
+                  <input class="f-input" type="time" id="f-start" value="09:00"
+                         style="max-width:130px"
+                         onchange="onStartChanged()" oninput="onStartChanged()"/>
+                </div>
+
+                <div class="f-group">
+                  <label class="f-label">Runs for</label>
+                  <div class="dur-row">
+                    <button type="button" class="dur-chip" data-mins="30" onclick="setDuration(30)" title="30 minutes">30m</button>
+                    <button type="button" class="dur-chip is-on" data-mins="60" onclick="setDuration(60)" title="1 hour">1h</button>
+                    <button type="button" class="dur-chip" data-mins="90" onclick="setDuration(90)" title="1 hour 30 minutes">1&frac12;h</button>
+                    <button type="button" class="dur-chip" data-mins="120" onclick="setDuration(120)" title="2 hours">2h</button>
+                  </div>
+                </div>
+
+                <p class="slot-derived" id="slot-derived"></p>
+
+                <div id="time-overlap-warning" style="display:none">
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                  </svg>
+                  <span id="time-overlap-text">This time overlaps with an existing slot.</span>
+                </div>
+
+                <button type="button" class="slot-more-toggle" id="slot-more-toggle"
+                        aria-expanded="false" aria-controls="slot-more" onclick="toggleSlotMore()">
+                  Change type, teams or repeat
+                  <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+                </button>
+
+                <div id="slot-more" hidden>
+                  <div class="f-group">
+                    <label class="f-label" for="f-end">Ends</label>
+                    <input class="f-input" type="time" id="f-end" value="10:00"
+                           style="max-width:130px"
+                           onchange="onEndChanged()" oninput="onEndChanged()"/>
+                  </div>
+
+                  <div class="f-group">
+                    <label class="f-label" for="f-type">Slot Type</label>
+                    <select class="f-input" id="f-type" onchange="updateSlotDerived()">
+                      <option value="consult">Consultation</option>
+                      <option value="defense">Defense</option>
+                    </select>
+                  </div>
+
+                  <div class="f-group">
+                    <label class="f-label" for="f-max">Max Teams per Slot</label>
+                    <input class="f-input" type="number" id="f-max" value="1" min="1" max="5" onchange="updateSlotDerived()"/>
+                  </div>
+
+                  <div class="f-group" style="margin-bottom:0" id="f-recur-group">
+                    <label class="f-label" for="f-recur">Recurrence</label>
+                    <select class="f-input" id="f-recur" onchange="updateSlotDerived()">
+                      <option value="weekly" selected>Every week (same day)</option>
+                      <option value="once">One-time only</option>
+                      <option value="biweekly">Every 2 weeks</option>
+                    </select>
+                    <div id="f-recur-locked-note" style="display:none;font-size:11px;color:var(--text3);margin-top:4px">Switching to a single date? Pick the date above.</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="sd-booking" id="sd-booking" hidden></div>
+            </div>
+
+            <footer class="sd-foot">
+              <button type="button" class="btn btn-ghost sd-danger" id="sd-delete" onclick="deleteFromDialog()" hidden>Delete</button>
+              <button type="button" class="btn btn-ghost" id="sd-skip" onclick="skipFromDialog()" hidden>Skip this week</button>
+              <button type="button" class="btn btn-ghost" id="sd-avail" onclick="toggleFromDialog()" hidden>Mark unavailable</button>
+              <span class="sd-spacer"></span>
+              <button type="button" class="btn btn-ghost" onclick="closeSlotDialog()">Cancel</button>
+              <button type="button" class="btn btn-primary" id="save-slot-btn" onclick="saveSlot()">Save slot</button>
+            </footer>
+          </div>
+        </div>
 
         <!-- Upcoming Appointments -->
         <div class="upcoming-card">
@@ -465,17 +582,17 @@
 /* One slot, added or edited. A dialog rather than a panel down the side: the
    day grid is where slots are read, so the form only appears when one is
    actually being changed. */
-/* A card beside the slot, not a sheet over the page: the day stays readable
-   while its times are being changed. */
-.sd-pop{position:absolute;z-index:90}
-.sd-pop[hidden]{display:none}
-.sd-modal{width:340px;max-width:calc(100vw - 24px);max-height:min(560px,calc(100vh - 40px));display:flex;flex-direction:column;
-  background:var(--bg2);border:1px solid var(--border);border-radius:12px;box-shadow:0 14px 38px -10px rgba(0,0,0,.45);overflow:hidden}
+/* The editor lives in the column beside the calendar, not over it: the day
+   stays fully visible while its times are being changed. */
+.sd-card{margin-bottom:14px}
+.sd-card[hidden],.sd-idle[hidden]{display:none}
+.sd-idle-text{margin:0;font-size:12px;color:var(--text3);line-height:1.5}
+.sd-modal{display:flex;flex-direction:column;background:var(--bg2);border:1px solid var(--border);border-radius:12px;overflow:hidden}
 .sd-head{display:flex;align-items:flex-start;gap:12px;padding:14px 16px 11px;border-bottom:1px solid var(--border)}
 .sd-head>div{flex:1;min-width:0}
 .sd-title{margin:0;font-size:15px;font-weight:700;color:var(--text)}
 .sd-when{margin:2px 0 0;font-size:12.5px;color:var(--text3)}
-.sd-body{padding:14px 16px;overflow:auto;flex:1;min-height:0}
+.sd-body{padding:14px 16px}
 .sd-body .f-group:last-of-type{margin-bottom:0}
 .sd-foot{display:flex;align-items:center;gap:6px;padding:10px 16px;border-top:1px solid var(--border);flex-wrap:wrap}
 .sd-foot .btn{flex:none}
@@ -490,110 +607,6 @@
 </style>
 
 <!-- ─── ONE SLOT: ADD OR EDIT ─────────────────────────────────────────────── -->
-<div class="sd-pop" id="slot-dialog" hidden>
-  <div class="sd-modal" role="dialog" aria-labelledby="sd-title">
-    <header class="sd-head">
-      <div>
-        <h2 class="sd-title" id="sd-title">New consultation slot</h2>
-        <p class="sd-when" id="sd-when"></p>
-      </div>
-      <button type="button" class="ga-icon" onclick="closeSlotDialog()" aria-label="Close">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </button>
-    </header>
-
-    <div class="sd-body">
-      <div class="recur-banner" id="recur-banner" style="display:none">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M17 2.1 21 6l-4 3.9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>
-          <path d="M7 21.9 3 18l4-3.9"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
-        </svg>
-        <span id="recur-banner-text"></span>
-      </div>
-
-      <div id="edit-mode-banner" style="display:none;padding:8px 12px;margin-bottom:11px;background:var(--accent-light);border:1px solid var(--accent);border-radius:8px;color:var(--accent3);font-size:12px;font-weight:600">
-        Editing existing slot
-      </div>
-
-      <div id="add-slot-fields">
-        <div class="f-group">
-          <label class="f-label" for="f-start">Starts</label>
-          <input class="f-input" type="time" id="f-start" value="09:00"
-                 style="max-width:130px"
-                 onchange="onStartChanged()" oninput="onStartChanged()"/>
-        </div>
-
-        <div class="f-group">
-          <label class="f-label">Runs for</label>
-          <div class="dur-row">
-            <button type="button" class="dur-chip" data-mins="30" onclick="setDuration(30)" title="30 minutes">30m</button>
-            <button type="button" class="dur-chip is-on" data-mins="60" onclick="setDuration(60)" title="1 hour">1h</button>
-            <button type="button" class="dur-chip" data-mins="90" onclick="setDuration(90)" title="1 hour 30 minutes">1&frac12;h</button>
-            <button type="button" class="dur-chip" data-mins="120" onclick="setDuration(120)" title="2 hours">2h</button>
-          </div>
-        </div>
-
-        <p class="slot-derived" id="slot-derived"></p>
-
-        <div id="time-overlap-warning" style="display:none">
-          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5">
-            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-          </svg>
-          <span id="time-overlap-text">This time overlaps with an existing slot.</span>
-        </div>
-
-        <button type="button" class="slot-more-toggle" id="slot-more-toggle"
-                aria-expanded="false" aria-controls="slot-more" onclick="toggleSlotMore()">
-          Change type, teams or repeat
-          <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
-        </button>
-
-        <div id="slot-more" hidden>
-          <div class="f-group">
-            <label class="f-label" for="f-end">Ends</label>
-            <input class="f-input" type="time" id="f-end" value="10:00"
-                   style="max-width:130px"
-                   onchange="onEndChanged()" oninput="onEndChanged()"/>
-          </div>
-
-          <div class="f-group">
-            <label class="f-label" for="f-type">Slot Type</label>
-            <select class="f-input" id="f-type" onchange="updateSlotDerived()">
-              <option value="consult">Consultation</option>
-              <option value="defense">Defense</option>
-            </select>
-          </div>
-
-          <div class="f-group">
-            <label class="f-label" for="f-max">Max Teams per Slot</label>
-            <input class="f-input" type="number" id="f-max" value="1" min="1" max="5" onchange="updateSlotDerived()"/>
-          </div>
-
-          <div class="f-group" style="margin-bottom:0" id="f-recur-group">
-            <label class="f-label" for="f-recur">Recurrence</label>
-            <select class="f-input" id="f-recur" onchange="updateSlotDerived()">
-              <option value="weekly" selected>Every week (same day)</option>
-              <option value="once">One-time only</option>
-              <option value="biweekly">Every 2 weeks</option>
-            </select>
-            <div id="f-recur-locked-note" style="display:none;font-size:11px;color:var(--text3);margin-top:4px">Switching to a single date? Pick the date above.</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="sd-booking" id="sd-booking" hidden></div>
-    </div>
-
-    <footer class="sd-foot">
-      <button type="button" class="btn btn-ghost sd-danger" id="sd-delete" onclick="deleteFromDialog()" hidden>Delete</button>
-      <button type="button" class="btn btn-ghost" id="sd-skip" onclick="skipFromDialog()" hidden>Skip this week</button>
-      <button type="button" class="btn btn-ghost" id="sd-avail" onclick="toggleFromDialog()" hidden>Mark unavailable</button>
-      <span class="sd-spacer"></span>
-      <button type="button" class="btn btn-ghost" onclick="closeSlotDialog()">Cancel</button>
-      <button type="button" class="btn btn-primary" id="save-slot-btn" onclick="saveSlot()">Save slot</button>
-    </footer>
-  </div>
-</div>
 
 <!-- ─── EXPERT PROFILE SIDE PANEL ─────────────────────────────────────────── -->
 <div id="scope-ask" role="dialog" aria-modal="true" aria-labelledby="scope-ask-title">
@@ -1412,55 +1425,24 @@ function showEditDialog(s, key, index, anchor) {
   showSlotDialog(key, anchor);
 }
 
-function showSlotDialog(key, anchor) {
-  const pop = document.getElementById('slot-dialog');
+/** Show the editor in the side column. Nothing moves over the calendar. */
+function showSlotDialog(key) {
+  const panel = document.getElementById('slot-dialog');
 
   document.getElementById('sd-when').textContent = dayLabel(key);
   labelSaveButton(key);
-  pop.hidden = false;
-  placeSlotPopover(pop, anchor);
+  panel.hidden = false;
+  document.getElementById('slot-editor-idle').hidden = true;
 
-  // Registered after this click finishes, or the click that opened it would
-  // immediately close it again.
-  setTimeout(() => document.addEventListener('mousedown', closeSlotPopoverOnOutside), 0);
-  document.addEventListener('keydown', closeSlotPopoverOnEscape);
-}
-
-/** Beside whatever was clicked, flipped to the other side when it would run off. */
-function placeSlotPopover(pop, anchor) {
-  const box = anchor?.getBoundingClientRect?.();
-  const w = pop.offsetWidth;
-  const h = pop.offsetHeight;
-  const gap = 10;
-
-  let left = box ? box.right + gap : (window.innerWidth - w) / 2;
-  let top = box ? box.top : 90;
-
-  if (left + w > window.innerWidth - 12) {
-    left = box ? box.left - w - gap : window.innerWidth - w - 12;
-  }
-
-  left = Math.max(12, left);
-  top = Math.max(12, Math.min(top, window.innerHeight - h - 12));
-
-  pop.style.left = (left + window.scrollX) + 'px';
-  pop.style.top = (top + window.scrollY) + 'px';
-}
-
-function closeSlotPopoverOnOutside(event) {
-  const pop = document.getElementById('slot-dialog');
-  if (!pop.hidden && !pop.contains(event.target)) closeSlotDialog();
-}
-
-function closeSlotPopoverOnEscape(event) {
-  if (event.key === 'Escape') closeSlotDialog();
+  // On a narrow screen the column sits under the calendar, so bring it into
+  // view rather than leaving the click looking like it did nothing.
+  panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 function closeSlotDialog() {
   document.getElementById('slot-dialog').hidden = true;
+  document.getElementById('slot-editor-idle').hidden = false;
   document.getElementById('time-overlap-warning').style.display = 'none';
-  document.removeEventListener('mousedown', closeSlotPopoverOnOutside);
-  document.removeEventListener('keydown', closeSlotPopoverOnEscape);
   dialogSlot = null;
   cancelEdit();
 }
