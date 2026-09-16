@@ -74,14 +74,16 @@
 .slot-empty{grid-column:1/-1;font-size:11.5px;color:var(--text3);padding:18px 12px;text-align:center;
             border:1px dashed var(--border);border-radius:10px}
 
-/* The day as an hour axis, matching the expert's own schedule. */
-.sd-grid{display:grid;grid-template-columns:46px 1fr;border:1px solid var(--border);border-radius:10px;
-         background:var(--bg2);overflow:hidden}
+/* The day as an hour axis, matching the expert's own schedule. Only the hours
+   the expert actually opened are drawn, and the whole thing is capped so it
+   never makes the page scroll. */
+.sd-grid{--h:34px;display:grid;grid-template-columns:44px 1fr;border:1px solid var(--border);border-radius:10px;
+         background:var(--bg2);overflow:auto;max-height:340px}
 .sd-hours{position:relative}
-.sd-hours i{display:block;height:44px;font-style:normal;font-size:10px;color:var(--text3);
+.sd-hours i{display:block;height:var(--h);font-style:normal;font-size:10px;color:var(--text3);
             text-align:right;padding-right:6px;transform:translateY(-5px)}
 .sd-col{position:relative;border-left:1px solid var(--border);
-        background:repeating-linear-gradient(transparent 0 43px, var(--border) 43px 44px)}
+        background:repeating-linear-gradient(transparent 0 calc(var(--h) - 1px), var(--border) calc(var(--h) - 1px) var(--h))}
 .sd-slot{position:absolute;left:4px;right:4px;border-radius:6px;padding:3px 7px;overflow:hidden;text-align:left;
          border:1px solid var(--accent);border-left:3px solid var(--accent);background:var(--accent-light);
          font-family:inherit;cursor:pointer;transition:box-shadow .15s}
@@ -867,9 +869,7 @@ function selectDate(d, dayName, dateKey) {
 // The day's times drawn against an hour axis, the same shape the expert's own
 // schedule uses. A row of identical pills said when a slot started and
 // nothing about where it sat in the day.
-const SD_FIRST_HOUR = 7;
-const SD_LAST_HOUR = 19;
-const SD_HOUR_PX = 44;
+const SD_HOUR_PX = 34;
 
 function slotMinutes(t) {
   const [h, m] = String(t || '0:0').split(':').map(Number);
@@ -885,26 +885,31 @@ function renderDayGrid(daySlots, dateKey) {
     return;
   }
 
+  // Only the hours this date actually offers, with an hour either side to
+  // sit in - a fixed 7am-7pm axis was mostly empty and ran off the page.
+  const first = Math.max(0, Math.floor(Math.min(...daySlots.map(s => slotMinutes(s.start_time))) / 60) - 1);
+  const last = Math.min(23, Math.ceil(Math.max(...daySlots.map(s => slotMinutes(s.end_time))) / 60));
+
   const body = document.createElement('div');
   body.className = 'sd-grid';
 
   const hours = document.createElement('div');
   hours.className = 'sd-hours';
-  for (let h = SD_FIRST_HOUR; h <= SD_LAST_HOUR; h++) {
+  for (let h = first; h <= last; h++) {
     const label = document.createElement('i');
-    label.textContent = h === 12 ? '12pm' : (h > 12 ? (h - 12) + 'pm' : h + 'am');
+    label.textContent = h === 12 ? '12pm' : (h > 12 ? (h - 12) + 'pm' : (h || 12) + 'am');
     hours.appendChild(label);
   }
   body.appendChild(hours);
 
   const col = document.createElement('div');
   col.className = 'sd-col';
-  col.style.height = ((SD_LAST_HOUR - SD_FIRST_HOUR + 1) * SD_HOUR_PX) + 'px';
+  col.style.height = ((last - first + 1) * SD_HOUR_PX) + 'px';
 
   daySlots.forEach(slot => {
     const from = slotMinutes(slot.start_time);
     const to = slotMinutes(slot.end_time);
-    const top = ((from - SD_FIRST_HOUR * 60) / 60) * SD_HOUR_PX;
+    const top = ((from - first * 60) / 60) * SD_HOUR_PX;
     const height = Math.max(((to - from) / 60) * SD_HOUR_PX, 18);
 
     const block = document.createElement('button');
