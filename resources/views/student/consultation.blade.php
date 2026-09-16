@@ -74,25 +74,16 @@
 .slot-empty{grid-column:1/-1;font-size:11.5px;color:var(--text3);padding:18px 12px;text-align:center;
             border:1px dashed var(--border);border-radius:10px}
 
-/* The day as an hour axis, matching the expert's own schedule. Only the hours
-   the expert actually opened are drawn, and the whole thing is capped so it
-   never makes the page scroll. */
-.sd-grid{--h:34px;display:grid;grid-template-columns:44px 1fr;border:1px solid var(--border);border-radius:10px;
-         background:var(--bg2);overflow:auto;max-height:340px}
-.sd-hours{position:relative}
-.sd-hours i{display:block;height:var(--h);font-style:normal;font-size:10px;color:var(--text3);
-            text-align:right;padding-right:6px;transform:translateY(-5px)}
-.sd-col{position:relative;border-left:1px solid var(--border);
-        background:repeating-linear-gradient(transparent 0 calc(var(--h) - 1px), var(--border) calc(var(--h) - 1px) var(--h))}
-.sd-slot{position:absolute;left:4px;right:4px;border-radius:6px;padding:3px 7px;overflow:hidden;text-align:left;
-         border:1px solid var(--accent);border-left:3px solid var(--accent);background:var(--accent-light);
-         font-family:inherit;cursor:pointer;transition:box-shadow .15s}
-.sd-slot b{display:block;font-size:11.5px;font-weight:700;color:var(--text);white-space:nowrap;
-           overflow:hidden;text-overflow:ellipsis}
-.sd-slot span{display:block;font-size:10px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.sd-slot:hover{box-shadow:0 0 0 2px var(--accent)}
-.sd-slot.picked{background:var(--accent);border-color:var(--accent)}
-.sd-slot.picked b,.sd-slot.picked span{color:#18191f}
+/* The times on offer, as a list. What a team is choosing between is the times
+   themselves, so that is all this shows. */
+.sd-list{display:flex;flex-direction:column;gap:8px;max-height:320px;overflow-y:auto;padding-right:2px}
+.sd-slot{display:flex;flex-direction:column;gap:2px;align-items:flex-start;text-align:left;width:100%;
+         padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;background:var(--bg2);
+         font-family:inherit;cursor:pointer;transition:border-color .15s,background-color .15s}
+.sd-slot:hover{border-color:var(--accent);background:var(--accent-light)}
+.sd-slot.picked{border-color:var(--accent);background:var(--accent-light)}
+.sd-slot b{font-size:13px;font-weight:600;color:var(--text)}
+.sd-slot span{font-size:11px;color:var(--text3)}
 
 .book-actions{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;
               padding-top:14px;border-top:1px solid var(--border)}
@@ -866,16 +857,8 @@ function selectDate(d, dayName, dateKey) {
   renderDayGrid(daySlots, dateKey);
 }
 
-// The day's times drawn against an hour axis, the same shape the expert's own
-// schedule uses. A row of identical pills said when a slot started and
-// nothing about where it sat in the day.
-const SD_HOUR_PX = 34;
-
-function slotMinutes(t) {
-  const [h, m] = String(t || '0:0').split(':').map(Number);
-  return h * 60 + m;
-}
-
+// The times on offer, earliest first. A timeline spent most of its height on
+// hours with nothing in them.
 function renderDayGrid(daySlots, dateKey) {
   const grid = document.getElementById('slot-grid');
   grid.innerHTML = '';
@@ -885,48 +868,23 @@ function renderDayGrid(daySlots, dateKey) {
     return;
   }
 
-  // Only the hours this date actually offers, with an hour either side to
-  // sit in - a fixed 7am-7pm axis was mostly empty and ran off the page.
-  const first = Math.max(0, Math.floor(Math.min(...daySlots.map(s => slotMinutes(s.start_time))) / 60) - 1);
-  const last = Math.min(23, Math.ceil(Math.max(...daySlots.map(s => slotMinutes(s.end_time))) / 60));
+  const list = document.createElement('div');
+  list.className = 'sd-list';
 
-  const body = document.createElement('div');
-  body.className = 'sd-grid';
+  [...daySlots]
+    .sort((a, b) => String(a.start_time).localeCompare(String(b.start_time)))
+    .forEach(slot => {
+      const row = document.createElement('button');
+      row.type = 'button';
+      row.className = 'sd-slot';
+      row.innerHTML = '<b>' + formatTime(slot.start_time) + ' – ' + formatTime(slot.end_time) + '</b>'
+        + '<span>' + slotLength(slot) + ucfirst(slot.slot_type || 'consultation') + '</span>';
+      row.onclick = () => pickSlot(row, slot, dateKey);
+      forceInteractive(row);
+      list.appendChild(row);
+    });
 
-  const hours = document.createElement('div');
-  hours.className = 'sd-hours';
-  for (let h = first; h <= last; h++) {
-    const label = document.createElement('i');
-    label.textContent = h === 12 ? '12pm' : (h > 12 ? (h - 12) + 'pm' : (h || 12) + 'am');
-    hours.appendChild(label);
-  }
-  body.appendChild(hours);
-
-  const col = document.createElement('div');
-  col.className = 'sd-col';
-  col.style.height = ((last - first + 1) * SD_HOUR_PX) + 'px';
-
-  daySlots.forEach(slot => {
-    const from = slotMinutes(slot.start_time);
-    const to = slotMinutes(slot.end_time);
-    const top = ((from - first * 60) / 60) * SD_HOUR_PX;
-    const height = Math.max(((to - from) / 60) * SD_HOUR_PX, 18);
-
-    const block = document.createElement('button');
-    block.type = 'button';
-    block.className = 'sd-slot';
-    block.style.top = Math.max(top, 0) + 'px';
-    block.style.height = height + 'px';
-    block.innerHTML = '<b>' + formatTime(slot.start_time) + ' – ' + formatTime(slot.end_time) + '</b>'
-      + (height > 34 ? '<span>' + slotLength(slot) + ucfirst(slot.slot_type || 'consultation') + '</span>' : '');
-    block.title = formatTime(slot.start_time) + ' – ' + formatTime(slot.end_time);
-    block.onclick = () => pickSlot(block, slot, dateKey);
-    forceInteractive(block);
-    col.appendChild(block);
-  });
-
-  body.appendChild(col);
-  grid.appendChild(body);
+  grid.appendChild(list);
 }
 
 /** Choosing a time arms the Confirm button; it does not book on its own. */
