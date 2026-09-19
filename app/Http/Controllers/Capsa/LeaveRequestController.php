@@ -4,16 +4,16 @@ namespace App\Http\Controllers\Capsa;
 
 use App\Http\Controllers\Controller;
 use App\Models\CapstoneExpert;
-use App\Models\Notification;
 use App\Models\MemberLeaveRequest;
+use App\Models\Notification;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
 use App\Services\TeamLock;
 use App\Support\SectionScope;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
-use Illuminate\Http\RedirectResponse;
 
 /**
  * Where a CaPSA decides whether a member may leave a team that passed Title
@@ -41,19 +41,9 @@ class LeaveRequestController extends Controller
 
         $teamIds = $requests->pluck('team_id')->unique()->values();
 
-        // Teams asking to change an expert who already took them on.
-        $expertRequests = \App\Models\ExpertRemovalRequest::visibleTo(
-            $capsa,
-            \App\Models\ExpertRemovalRequest::with(['team', 'expert', 'assignment.expertRole.role', 'requester', 'decider'])->latest()->limit(300)->get()
-        );
-        [$expertPending, $expertDecided] = $expertRequests->partition(fn ($r) => $r->isPending());
-
+        // A team asking to drop an expert who already took them on is not
+        // here: that request goes to the expert, who is the one to decide.
         return [
-            'expertPending' => $expertPending->sortBy('created_at')->values(),
-            'expertDecided' => $expertDecided->sortByDesc(fn ($r) => $r->decided_at ?? $r->updated_at)->take(50)->values(),
-            'expertSectionOf' => $expertRequests->mapWithKeys(fn ($r) => [
-                $r->id => $this->sections->sectionFor($r->team) ?: SectionScope::UNASSIGNED,
-            ]),
             // Oldest first: whoever has waited longest is at the top.
             'pending' => $pending->sortBy('created_at')->values(),
             'decided' => $decided->sortByDesc(fn ($r) => $r->decided_at ?? $r->updated_at)->take(50)->values(),

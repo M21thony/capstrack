@@ -3,8 +3,12 @@
 namespace App\Http\Controllers\Instructor;
 
 use App\Http\Controllers\Controller;
+use App\Models\CapstonePreProposal;
+use App\Models\ExpertRemovalRequest;
 use App\Models\Notification;
 use App\Models\TeamExpertAssignment;
+use App\Services\RecipientResolver;
+use App\Support\TitleRevision;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -94,15 +98,26 @@ class AssignmentController extends Controller
         })->toArray();
 
         // New titles waiting for this expert to confirm as a team's adviser.
-        $resolver = app(\App\Services\RecipientResolver::class);
-        $titleConfirmations = \App\Models\CapstonePreProposal::where('adviser_status', \App\Support\TitleRevision::PENDING)
+        $resolver = app(RecipientResolver::class);
+        $titleConfirmations = CapstonePreProposal::where('adviser_status', TitleRevision::PENDING)
             ->whereNull('retired_at')
             ->with(['team', 'duplicationCheck'])
             ->get()
             ->filter(fn ($p) => $resolver->resolveTeamRoleExpert((int) $p->team_id, 'adviser') === (int) $expert->expert_id)
             ->values();
 
+        // Teams asking this expert to let them go. Oldest first: whoever has
+        // waited longest is at the top.
+        $removalRequests = ExpertRemovalRequest::pending()
+            ->where('expert_id', $expert->expert_id)
+            ->with(['team', 'requester', 'assignment'])
+            ->oldest()
+            ->get()
+            ->filter(fn (ExpertRemovalRequest $r) => $r->team !== null)
+            ->values();
+
         return view('instructor.assignments', [
+            'removalRequests' => $removalRequests,
             'titleConfirmations' => $titleConfirmations,
             'pendingAssignments' => $pendingAssignments,
             'approvedAssignments' => $approvedAssignments,
@@ -352,6 +367,17 @@ class AssignmentController extends Controller
         if ($assignment->proposal_file) {
             Storage::disk('public')->delete($assignment->proposal_file);
         }
+
+        // If the team had asked to be let go, this answers it. Left pending,
+        // the team's page would keep saying "Removal requested" about an
+        // expert who is already gone.
+        ExpertRemovalRequest::pending()
+            ->where('assignment_id', $assignment->assignment_id)
+            ->update([
+                'status' => ExpertRemovalRequest::APPROVED,
+                'decided_by' => $expert->expert_id,
+                'decided_at' => now(),
+            ]);
 
         $assignment->delete();
 

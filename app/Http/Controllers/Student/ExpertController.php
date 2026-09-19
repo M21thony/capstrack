@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Student;
 use App\Http\Controllers\Controller;
 use App\Models\CapstoneExpert;
 use App\Models\CapstonePreProposal;
+use App\Models\ExpertRemovalRequest;
 use App\Models\Student;
 use App\Models\StudentSchoolYear;
 use App\Models\TeamExpertAssignment;
@@ -32,7 +33,7 @@ class ExpertController extends Controller
 
         $assignments = collect();
         $isLeader = false;
-        /** @var array<string, \App\Models\TeamExpertAssignment> */
+        /** @var array<string, TeamExpertAssignment> */
         $rolesSpokenFor = [];
         $roleAssignments = [
             'adviser' => null,
@@ -275,9 +276,9 @@ class ExpertController extends Controller
             // lost its upload, and a "View PDF" button leading to a 404 is
             // worse than no button. One stat call per page render buys that.
             'proposalPdfUrl' => $this->proposalPdfUrl($approvedProposal),
-            // Experts whose removal is waiting on the CaPSA.
+            // Experts the team has asked to let them go, still deciding.
             'pendingRemovalIds' => $team
-                ? \App\Models\ExpertRemovalRequest::pending()->where('team_id', $team->team_id)->pluck('assignment_id')->map(fn ($id) => (int) $id)->all()
+                ? ExpertRemovalRequest::pending()->where('team_id', $team->team_id)->pluck('assignment_id')->map(fn ($id) => (int) $id)->all()
                 : [],
             'isLeader' => $isLeader,
             'teamConfirmed' => $team?->is_confirmed ?? false,
