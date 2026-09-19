@@ -39,6 +39,7 @@ class Student extends Authenticatable
     {
         return [
             'last_seen_at' => 'datetime',
+            'tutorial_completed_at' => 'datetime',
         ];
     }
 
@@ -47,6 +48,19 @@ class Student extends Authenticatable
         return filled($this->f_name)
             && filled($this->l_name)
             && filled($this->student_number);
+    }
+
+    /**
+     * A new account that has not yet been walked through the portal.
+     *
+     * Does not wait for a complete profile. The profile.complete gate is off,
+     * so a new sign-in lands straight on the dashboard with only the name
+     * Google gave it; waiting for a student number would mean most new
+     * accounts never saw the tour at all.
+     */
+    public function needsPortalTour(): bool
+    {
+        return $this->tutorial_completed_at === null;
     }
 
     public function hasValidAvatarPreset(): bool

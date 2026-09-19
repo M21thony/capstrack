@@ -83,6 +83,60 @@ class BugsFromTestingRoundTest extends TestCase
     }
 
     /**
+     * The same mistake as setAvatar(), on a wider blast radius. CREATION_ALLOWED,
+     * JOINING_ALLOWED and their two message constants were declared inside the
+     * leader-only conditional that gates most of this page's script, but
+     * updateModalUI() - called by every visitor's DOMContentLoaded handler,
+     * leader or not, team or none - reads them on load to decide whether the
+     * recruitment modal opens or explains itself as closed. For anyone but the
+     * leader that threw "CREATION_ALLOWED is not defined", which aborted the
+     * handler before it reached the skeleton-loader fade-out further down - so
+     * the page never got past its loading skeleton for a plain member, or for
+     * a student with no team at all.
+     */
+    public function test_a_student_with_no_team_gets_the_recruitment_rule_constants(): void
+    {
+        $html = $this->actingAs($this->student(), 'web')
+            ->get(route('student.team'))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString('const CREATION_ALLOWED', $html);
+        $this->assertStringContainsString('const JOINING_ALLOWED', $html);
+        $this->assertStringContainsString('const CREATION_CLOSED_MSG', $html);
+        $this->assertStringContainsString('const JOINING_CLOSED_MSG', $html);
+    }
+
+    /** A plain member - in a team, but not leading it - needs them too. */
+    public function test_a_non_leader_member_gets_the_recruitment_rule_constants(): void
+    {
+        $leader = $this->student('leader@my.cspc.edu.ph');
+        $team = Team::create(['team_name' => 'Codebreakers', 'leader_id' => $leader->student_id]);
+        StudentSchoolYear::create(['student_id' => $leader->student_id, 'team_id' => $team->team_id]);
+
+        $member = $this->student('member@my.cspc.edu.ph');
+        StudentSchoolYear::create(['student_id' => $member->student_id, 'team_id' => $team->team_id]);
+
+        $html = $this->actingAs($member, 'web')->get(route('student.team'))->assertOk()->getContent();
+
+        $this->assertStringContainsString('const CREATION_ALLOWED', $html);
+        $this->assertStringContainsString('const JOINING_ALLOWED', $html);
+    }
+
+    /** And the leader, who always had them, is not served them twice. */
+    public function test_a_team_leader_gets_the_recruitment_rule_constants_exactly_once(): void
+    {
+        $student = $this->student('leader@my.cspc.edu.ph');
+        $team = Team::create(['team_name' => 'Codebreakers', 'leader_id' => $student->student_id]);
+        StudentSchoolYear::create(['student_id' => $student->student_id, 'team_id' => $team->team_id]);
+
+        $html = $this->actingAs($student, 'web')->get(route('student.team'))->assertOk()->getContent();
+
+        $this->assertSame(1, substr_count($html, 'const CREATION_ALLOWED'));
+        $this->assertSame(1, substr_count($html, 'const JOINING_ALLOWED'));
+    }
+
+    /**
      * The leader is shown as the leader on their own team.
      *
      * The roster decided this by asking whether a member's role was the

@@ -719,6 +719,14 @@ select.input{cursor:pointer}
 }
 .yx-x:hover{background:rgba(255,255,255,.32)}
 
+/* Sits where .yx-x was, on the same green. Amber text on that green all but
+   vanished, so it takes the chip's white on a translucent pill, like .yx-x. */
+.yx-pending{
+  flex-shrink:0;margin-left:2px;padding:3px 8px;border-radius:999px;
+  background:rgba(255,255,255,.2);color:#fff;
+  font-size:10.5px;font-weight:700;letter-spacing:.01em;white-space:nowrap;
+}
+
 /* Label over count, one block at the left. Pushed to the far edge with
    margin-left:auto the count was the first thing to wrap, and a strip two
    rows tall with a number stranded on the second is worse than no count. */

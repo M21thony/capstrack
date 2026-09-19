@@ -11,11 +11,11 @@
             <div class="page-tutorial-content">
                 <div class="page-tutorial-title">{{ $tutorial['title'] }}</div>
                 <p class="page-tutorial-summary">{{ $tutorial['summary'] }}</p>
-                <ul class="page-tutorial-steps">
+                <ol class="page-tutorial-steps">
                     @foreach ($tutorial['steps'] as $step)
                         <li>{{ $step }}</li>
                     @endforeach
-                </ul>
+                </ol>
             </div>
             <button type="button" class="page-tutorial-dismiss" data-dismiss-tutorial="{{ $page }}" aria-label="Dismiss tutorial">Got it</button>
         </div>

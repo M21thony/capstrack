@@ -6,4 +6,21 @@
 @theme {
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
+
+    /* Sign-in page. 'Geist Pixel' is self-hosted by the login view's own
+       @font-face; 'DM Sans' comes from the Google Fonts link in its head. */
+    --font-display: 'Geist Pixel', ui-sans-serif, system-ui, sans-serif;
+    --font-body: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
+
+    /* Department theme: black + yellow. */
+    --color-navy: #0a0a0a;
+    --color-navy-deep: #000000;
+    --color-gold: #f5b700;
+    --color-gold-bright: #ffd23f;
+    --color-gold-dim: #c99400;
+    --color-cream: #faf9f6;
+    --color-sand: #f3f0e8;
+    --color-ink: #141414;
+    --color-ink-soft: #5c5c58;
+    --color-line: #e6e3da;
 }

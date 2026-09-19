@@ -481,9 +481,9 @@
               @if($a)
                 <span class="yx-name" title="{{ $a->expert?->name }}">{{ $a->expert?->name }}</span>
                 @if($isLeader && in_array((int) $a->assignment_id, $pendingRemovalIds, true))
-                  <span title="Waiting on your CaPSA" style="font-size:10.5px;font-weight:600;color:var(--amber);white-space:nowrap">Removal requested</span>
+                  <span class="yx-pending" title="Waiting on {{ $a->expert?->name ?? 'your expert' }} to decide">Removal requested</span>
                 @elseif($isLeader)
-                  <button type="button" class="yx-x" title="Ask your CaPSA to remove {{ $a->expert?->name ?? 'this expert' }}"
+                  <button type="button" class="yx-x" title="Ask {{ $a->expert?->name ?? 'this expert' }} to let your team go"
                           onclick="openRemoveModal({{ $a->assignment_id }}, '{{ addslashes($a->expert?->name ?? '') }}', true)"><svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
                 @endif
               @endif
@@ -498,9 +498,9 @@
               <span class="yx-role">Assigned</span>
               <span class="yx-name">{{ $a->expert?->name ?? 'Unknown' }}</span>
               @if($isLeader && in_array((int) $a->assignment_id, $pendingRemovalIds, true))
-                <span title="Waiting on your CaPSA" style="font-size:10.5px;font-weight:600;color:var(--amber);white-space:nowrap">Removal requested</span>
+                <span class="yx-pending" title="Waiting on {{ $a->expert?->name ?? 'your expert' }} to decide">Removal requested</span>
               @elseif($isLeader)
-                <button type="button" class="yx-x" title="Ask your CaPSA to remove {{ $a->expert?->name ?? 'this expert' }}"
+                <button type="button" class="yx-x" title="Ask {{ $a->expert?->name ?? 'this expert' }} to let your team go"
                         onclick="openRemoveModal({{ $a->assignment_id }}, '{{ addslashes($a->expert?->name ?? '') }}', true)"><svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
               @endif
             </span>
@@ -1442,20 +1442,20 @@ function openReqInfoModal(data) {
   openModal('req-info-modal');
 }
 
-// An expert who already took the team on is only removed with the CaPSA's
-// permission, so for them this sends a request instead of removing.
-var removeNeedsCapsa = false;
+// A team cannot drop an expert who already took them on. For them this
+// sends a request to that expert instead of removing, and they decide.
+var removeNeedsExpert = false;
 
 function openRemoveModal(assignmentId, expertName, approved) {
   currentRemoveId = assignmentId;
-  removeNeedsCapsa = !!approved;
-  document.getElementById('remove-title').textContent = removeNeedsCapsa ? 'Ask your CaPSA to remove this expert?' : 'Remove Expert?';
-  document.getElementById('remove-desc').textContent = removeNeedsCapsa
-    ? 'This expert already took your team on, so your CaPSA decides. They stay your expert until your CaPSA approves.'
+  removeNeedsExpert = !!approved;
+  document.getElementById('remove-title').textContent = removeNeedsExpert ? 'Ask ' + expertName + ' to let your team go?' : 'Remove Expert?';
+  document.getElementById('remove-desc').textContent = removeNeedsExpert
+    ? expertName + ' already took your team on, so you cannot remove them yourself. They decide, and stay your expert until they agree.'
     : 'Are you sure you want to remove this expert from your team?';
   document.getElementById('remove-detail').innerHTML = '<strong>' + expertName + '</strong>'
-    + (removeNeedsCapsa ? '' : '<br><span style="font-size:11px;color:var(--red);">This action cannot be undone.</span>');
-  document.getElementById('btn-confirm-remove').textContent = removeNeedsCapsa ? 'Send to CaPSA' : 'Yes, Remove';
+    + (removeNeedsExpert ? '' : '<br><span style="font-size:11px;color:var(--red);">This action cannot be undone.</span>');
+  document.getElementById('btn-confirm-remove').textContent = removeNeedsExpert ? 'Send request' : 'Yes, Remove';
   document.getElementById('remove-confirm-input').value = '';
   document.getElementById('remove-confirm-input').classList.remove('error');
   document.getElementById('err-remove-confirm').classList.remove('show');
@@ -1475,8 +1475,8 @@ function validateRemoveInput() {
   var confirmInput = document.getElementById('remove-confirm-input').value.trim();
   var reason = document.getElementById('remove-reason').value.trim();
   var confirmOk = confirmInput.toLowerCase() === 'remove';
-  // The CaPSA decides on the reason, so it needs to be a real one.
-  var reasonOk = reason.length >= (removeNeedsCapsa ? {{ \App\Models\ExpertRemovalRequest::REASON_MIN }} : 1);
+  // The expert decides on the reason, so it needs to be a real one.
+  var reasonOk = reason.length >= (removeNeedsExpert ? {{ \App\Models\ExpertRemovalRequest::REASON_MIN }} : 1);
 
   document.getElementById('remove-confirm-input').classList.toggle('error', confirmInput.length > 0 && !confirmOk);
   document.getElementById('err-remove-confirm').classList.toggle('show', confirmInput.length > 0 && !confirmOk);
@@ -1494,8 +1494,8 @@ function confirmRemove() {
 
   var btn = document.getElementById('btn-confirm-remove');
   btn.disabled = true;
-  btn.textContent = removeNeedsCapsa ? 'Sending...' : 'Removing...';
-  var idleLabel = removeNeedsCapsa ? 'Send to CaPSA' : 'Yes, Remove';
+  btn.textContent = removeNeedsExpert ? 'Sending...' : 'Removing...';
+  var idleLabel = removeNeedsExpert ? 'Send request' : 'Yes, Remove';
 
   fetch('/api/assignments/' + currentRemoveId, {
     method: 'DELETE',

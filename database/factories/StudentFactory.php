@@ -28,4 +28,12 @@ class StudentFactory extends Factory
             'year_section' => '4th · A',
         ]);
     }
+
+    /** Already went through the welcome tour, as every account from before it has. */
+    public function withTourCompleted(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'tutorial_completed_at' => now()->subWeek(),
+        ]);
+    }
 }
