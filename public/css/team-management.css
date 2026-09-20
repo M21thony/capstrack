@@ -100,7 +100,7 @@
 .crumb .sep{display:inline-flex;color:var(--mut)}
 .crumb [aria-current]{font-weight:600;color:var(--ink)}
 /* going back one step is a real button named after where it goes; the trail beside it says where you are */
-.crumb .bk{gap:6px;min-height:36px;padding:0 12px 0 9px;margin-right:6px;border:1px solid var(--line2);border-radius:8px;
+.crumb .bk{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 12px 0 9px;margin-right:6px;border:1px solid var(--line2);border-radius:8px;
   background:var(--card);color:var(--ink);font-weight:600}
 .crumb .bk:hover{border-color:var(--accent);color:var(--accent3);text-decoration:none}
 @media (max-width:640px){
