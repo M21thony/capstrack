@@ -69,6 +69,25 @@ export function hunks(removed, added) {
   return out;
 }
 
+// Myers returns the shortest edit script, not the most readable one: a rewritten
+// paragraph comes back shredded into dozens of changes around the handful of
+// words that happened to survive in place. A matching run shorter than the
+// changes on either side of it was a coincidence, so fold it back in and let the
+// passage read as one change. Google's own diff library calls this semantic
+// cleanup. GAP is a ceiling, so two real rewrites a line or more apart stay apart.
+const GAP = 8;
+const spanOf = (h) => Math.max(h[1] - h[0], h[3] - h[2]);
+const absorb = (list) => {
+  const out = [];
+  for (const h of list) {
+    const p = out[out.length - 1];
+    const gap = p ? Math.max(h[0] - p[1], h[2] - p[3]) : Infinity;
+    if (p && gap <= Math.min(GAP, Math.max(spanOf(p), spanOf(h)))) { p[1] = h[1]; p[3] = h[3]; }
+    else out.push([...h]);
+  }
+  return out;
+};
+
 const linesOf = (words) => {
   const lines = [];
   words.forEach((w, i) => {
@@ -114,9 +133,9 @@ export function compareVersions(oldWords, newWords) {
   const joined = (words, s, e) => words.slice(s, e).map((w) => w.t).join("");
   const marks = {};
   const oldMarks = {};
-  const changes = hunks(removed, added)
-    .filter(([a0, a1, b0, b1]) => joined(oldWords, a0, a1) !== joined(newWords, b0, b1))
-    .map(([a0, a1, b0, b1], id) => {
+  const changes = absorb(
+    hunks(removed, added).filter(([a0, a1, b0, b1]) => joined(oldWords, a0, a1) !== joined(newWords, b0, b1)),
+  ).map(([a0, a1, b0, b1], id) => {
     const byPage = {};
     for (let j = b0; j < b1; j++) (byPage[newWords[j].page] ||= []).push(...newWords[j].rects);
     Object.entries(byPage).forEach(([page, rects]) => (marks[page] ||= []).push({ id, rects: mergeRectsByLine(rects) }));
