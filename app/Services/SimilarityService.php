@@ -598,6 +598,13 @@ PROMPT;
         $queryText = $this->removeStopWords($rawQueryText);
 
         // ── Phase 1: Generate embedding for the uploaded document ─────
+        // A missing OLLAMA_EMBED_MODEL is a setup mistake, not a server
+        // hiccup, and the catch below would quietly turn it into a drop
+        // back to keyword search that nobody would notice.
+        if (! config('services.ollama.embed_model')) {
+            throw new \RuntimeException('OLLAMA_EMBED_MODEL is not set in .env; the duplication checker cannot embed without it.');
+        }
+
         try {
             $queryEmbedding = $this->ollama->embed($queryText);
         } catch (\Exception $e) {

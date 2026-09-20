@@ -51,7 +51,7 @@ return [
 
     'ollama' => [
         'model' => env('OLLAMA_MODEL', 'qwen2.5:7B'),
-        'embed_model' => env('OLLAMA_EMBED_MODEL', 'nomic-embed-text'),
+        'embed_model' => env('OLLAMA_EMBED_MODEL'),
 
         // The model that judges one archived capstone against a pre-proposal,
         // when that should not be the model above.
