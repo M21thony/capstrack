@@ -226,6 +226,7 @@
 .ms-ord { width: 22px; height: 22px; border-radius: 999px; background: var(--navy-dark, #18191f); color: #fff; font-size: 11px; font-weight: 700; display: grid; place-items: center; flex: none; }
 .ms-ename { font-weight: 700; font-size: 14px; border: 1px solid transparent; border-radius: 6px; padding: 3px 8px; background: transparent; width: 270px; min-width: 0; }
 .ms-ecount { font-size: 12px; color: var(--text3); white-space: nowrap; }
+.ms-gate { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text3); cursor: pointer; }
 .ms-ehead .ms-btn { min-height: 30px; padding-right: 9px; font-size: 12px; }
 .ms-erow { padding: 2px 12px 2px 42px; border-top: 1px solid var(--border); }
 .ms-ebody > .ms-erow:first-child { border-top: 0; }

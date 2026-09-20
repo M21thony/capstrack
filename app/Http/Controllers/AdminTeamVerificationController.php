@@ -90,12 +90,15 @@ class AdminTeamVerificationController extends Controller
     {
         return $request->validate([
             'status' => ['required', 'in:approved,rejected'],
+            // Recommending may come with a suggestion for the team. Rejecting
+            // asks for its reason separately, and requires one.
+            'note' => ['nullable', 'string', 'max:1000'],
         ])['status'] === 'approved'
-            ? $this->approvePreProposal($preProposal)
+            ? $this->approvePreProposal($preProposal, $request)
             : $this->rejectPreProposal($request, $preProposal);
     }
 
-    public function approvePreProposal(CapstonePreProposal $preProposal): JsonResponse
+    public function approvePreProposal(CapstonePreProposal $preProposal, ?Request $request = null): JsonResponse
     {
         if ($preProposal->approved_status) {
             return response()->json(['success' => false, 'message' => 'Already processed.'], 422);
@@ -108,7 +111,15 @@ class AdminTeamVerificationController extends Controller
             ], 422);
         }
 
-        $preProposal->update(['approved_status' => true, 'rejection_reason' => null]);
+        // Optional, and only ever what she typed this time: recommending
+        // again without a suggestion clears the one before it.
+        $note = trim((string) $request?->input('note'));
+
+        $preProposal->update([
+            'approved_status' => true,
+            'rejection_reason' => null,
+            'capsa_note' => $note === '' ? null : $note,
+        ]);
 
         $this->resolveTitleIfSettled($preProposal->team);
 

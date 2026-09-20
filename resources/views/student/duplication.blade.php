@@ -551,6 +551,9 @@
                   @else
                     <div class="pp-hint">Locked in as a candidate.</div>
                   @endif
+                  @if ($proposal->capsa_note)
+                    <div class="pp-hint">Suggestion from your CaPSA: {{ $proposal->capsa_note }}</div>
+                  @endif
                 @elseif ($proposal->submitted_at)
                   <div class="pp-hint">Awaiting adviser review.</div>
                 @else
@@ -579,15 +582,7 @@
                     // student-verifiable signal in place of an AI-written
                     // similarities sentence.
                     $highlightWords = app(\App\Services\SimilarityService::class)->extractHighlightWords($check->concepts ?? []);
-                    $highlightAbstract = function (?string $text) use ($highlightWords): string {
-                        $escaped = e($text ?? '');
-                        if (empty($highlightWords)) {
-                            return $escaped;
-                        }
-                        $pattern = '/\b('.implode('|', array_map(fn ($w) => preg_quote($w, '/'), $highlightWords)).')\b/i';
-
-                        return preg_replace($pattern, '<mark>$1</mark>', $escaped);
-                    };
+                    $highlightAbstract = fn (?string $text) => \App\Services\SimilarityService::highlight($text, $highlightWords);
                   @endphp
                   <div id="report-data-{{ $proposal->id }}" style="display:none">
                     <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:8px;background:var(--{{ $verdictTone }}-bg);margin-bottom:16px">

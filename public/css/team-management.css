@@ -1,0 +1,476 @@
+/*
+ * CaPSA Team Management: the list and the four pages below it.
+ *
+ * Lifted from the agreed mockup (capstrack-ui.html, V34) and scoped to
+ * .tmx, because the mockup names things the admin stylesheet already uses
+ * - .card, .btn, .pill, .stat - and means something different by them.
+ * The mockup's own colour names are mapped onto the admin palette here, so
+ * these pages follow the rest of the app if it is ever retinted.
+ *
+ * A plain stylesheet, not a Vite entry: admin.css is served the same way,
+ * so an edit here is live on reload.
+ */
+.tmx{
+  --ink:var(--text);--ink2:var(--text2);--mut:var(--text3);--mut2:var(--border2);
+  --line:var(--border);--line2:var(--border2);--page:var(--bg);--card:var(--bg2);
+  --tint:var(--bg3);--tint2:var(--bg4);--accent-bg:var(--accent-light);--on-accent:#18191f;
+  --blue:#1d4ed8;--blue-bg:rgba(29,78,216,0.07);
+  --violet:#7c3aed;--violet-bg:rgba(124,58,237,0.07);
+}
+.tmx svg{flex:none}
+
+/* page head */
+.tmx .phead{display:flex;align-items:center;gap:14px;margin-bottom:16px}
+.tmx .phead .tile{width:46px;height:46px;border-radius:12px;background:var(--accent);color:var(--on-accent);flex:none;
+  display:flex;align-items:center;justify-content:center;box-shadow:0 6px 16px rgba(201,168,44,.3)}
+.tmx .phead h1{margin:0;font-size:24px;font-weight:800;letter-spacing:-.5px}
+.tmx .phead p{margin:2px 0 0;font-size:13px;color:var(--mut)}
+/* stat cards */
+/* a hidden row must stay hidden: [hidden] beats tr{display:table-row}, but say it anyway */
+.tmx tr[hidden]{display:none}
+/* the head's links to the three cross-team tools, each with its own count */
+.tmx .phead .nb{font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px;background:var(--tint2);color:var(--ink2)}
+.tmx .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));gap:12px;margin-bottom:16px}
+.tmx .stat{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 16px;
+  display:flex;align-items:center;justify-content:space-between;gap:12px}
+.tmx .stat .lab{font-size:12px;font-weight:500;color:var(--mut)}
+.tmx .stat .num{font-size:26px;font-weight:800;color:var(--ink);line-height:1.15;margin-top:2px;
+  font-variant-numeric:tabular-nums}
+.tmx .stat .tile{width:42px;height:42px;border-radius:11px;flex:none;display:flex;align-items:center;justify-content:center}
+/* toolbar */
+.tmx .tools{display:flex;gap:11px;flex-wrap:wrap;align-items:center;margin-bottom:16px}
+.tmx .fs{display:flex;align-items:center;gap:9px;background:var(--card);border:1px solid var(--line);
+  border-radius:10px;padding:9px 13px;flex:1;min-width:210px;color:var(--mut)}
+.tmx .fs input{border:0;outline:0;background:none;font-size:13px;color:var(--ink);width:100%}
+.tmx .sel{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 13px;
+  font-size:13px;color:var(--ink2);cursor:pointer}
+/* table */
+.tmx .tcard{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.tmx .tscroll{overflow-x:auto}
+.tmx table{width:100%;border-collapse:collapse;min-width:920px}
+.tmx th{text-align:left;font-size:10.5px;font-weight:700;color:var(--mut);letter-spacing:.7px;text-transform:uppercase;
+  padding:13px 16px;background:var(--tint);border-bottom:1px solid var(--line);white-space:nowrap}
+.tmx td{padding:14px 16px;border-bottom:1px solid var(--line);font-size:13px;color:var(--ink2);vertical-align:middle}
+.tmx tbody tr{cursor:pointer}
+.tmx tbody tr:hover td{background:var(--tint)}
+.tmx tbody tr:last-child td{border-bottom:0}
+.tmx td input[type=checkbox],
+.tmx th input[type=checkbox]{width:16px;height:16px;accent-color:var(--accent);cursor:pointer;margin:0}
+.tmx .tname{font-size:13.5px;font-weight:600;color:var(--ink)}
+.tmx .tsub{font-size:11.5px;color:var(--mut);margin-top:1px}
+.tmx .av{border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:12px;font-weight:700;color:#fff;flex:none;width:38px;height:38px}
+.tmx .chips{display:flex}
+.tmx .chips span{width:27px;height:27px;border-radius:50%;border:2px solid var(--card);margin-left:-7px;
+  display:flex;align-items:center;justify-content:center;font-size:9.5px;font-weight:700;color:#fff}
+.tmx .chips span:first-child{margin-left:0}
+.tmx .chips .more{background:var(--tint);color:var(--mut);border-color:var(--card)}
+.tmx .bar{width:88px;height:7px;border-radius:999px;background:var(--line);overflow:hidden}
+.tmx .bar i{display:block;height:100%;border-radius:999px;background:var(--accent)}
+.tmx .bar.od i{background:var(--red)}
+.tmx .barn{font-size:12px;color:var(--ink2);font-weight:600;font-variant-numeric:tabular-nums}
+.tmx .od-note{font-size:11px;color:var(--red);font-weight:500;margin-top:4px}
+.tmx .pill{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:999px;
+  font-size:11px;font-weight:600;white-space:nowrap}
+.tmx .p-blue{background:var(--blue-bg);color:var(--blue)}
+.tmx .p-amber{background:var(--amber-bg);color:var(--amber)}
+.tmx .p-green{background:var(--green-bg);color:var(--green)}
+.tmx .p-violet{background:var(--violet-bg);color:var(--violet)}
+.tmx .p-gold{background:var(--accent-bg);color:var(--accent3)}
+.tmx .p-gray{background:var(--tint);color:var(--mut)}
+.tmx .p-red{background:var(--red-bg);color:var(--red)}
+.tmx .vd{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:8px;border:1px solid var(--line);
+  background:var(--card);color:var(--accent3);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap}
+.tmx .vd:hover{background:var(--accent-bg);border-color:var(--accent)}
+.tmx .tfoot{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 18px;
+  border-top:1px solid var(--line);background:var(--card)}
+.tmx .tfoot .c{font-size:12.5px;color:var(--mut)}
+.tmx .pag{display:flex;gap:6px}
+.tmx .pag button{min-width:32px;height:32px;padding:0 9px;border-radius:8px;border:1px solid var(--line);
+  background:var(--card);color:var(--ink2);font-size:12.5px;font-weight:500;cursor:pointer}
+.tmx .pag button:hover{background:var(--tint)}
+.tmx .pag button[aria-current="true"]{background:var(--accent);border-color:var(--accent);color:var(--on-accent);font-weight:600}
+/* ── breadcrumb ── */
+.tmx .crumb{display:flex;align-items:center;flex-wrap:wrap;gap:10px;font-size:13px;color:var(--mut);
+  margin-bottom:20px;padding-bottom:14px;border-bottom:1px solid var(--line)}
+.tmx .crumb button{background:none;border:0;padding:0;font:inherit;font-weight:600;color:var(--ink2);cursor:pointer;
+  display:inline-flex;align-items:center}
+.tmx .crumb button:hover{color:var(--accent3);text-decoration:underline}
+.tmx .crumb .hm,
+.tmx .crumb .sep{display:inline-flex;color:var(--mut)}
+.tmx .crumb [aria-current]{font-weight:600;color:var(--ink)}
+/* going back one step is a real button named after where it goes; the trail beside it says where you are */
+.tmx .crumb .bk{gap:6px;min-height:36px;padding:0 12px 0 9px;margin-right:6px;border:1px solid var(--line2);border-radius:8px;
+  background:var(--card);color:var(--ink);font-weight:600}
+.tmx .crumb .bk:hover{border-color:var(--accent);color:var(--accent3);text-decoration:none}
+@media (max-width:640px){
+.tmx .crumb.has-bk > :not(.bk){display:none}
+}
+/* ── team page ── */
+.tmx .th{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.tmx .th .tile{width:44px;height:44px;border-radius:10px;background:var(--accent);color:#fff;flex:none;
+  display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(201,168,44,.28)}
+.tmx .th .grow{flex:1;min-width:220px}
+.tmx .th h1{margin:0;font-size:21px;font-weight:800;letter-spacing:-.4px;line-height:1.2}
+.tmx .th p{margin:2px 0 0;font-size:13px;color:var(--mut)}
+.tmx .chip-o{display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:9px;border:1px solid var(--line);
+  background:var(--card);color:var(--ink);font-size:13px;font-weight:600}
+.tmx .tcols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;align-items:start}
+.tmx .tcol{display:flex;flex-direction:column;gap:12px}
+@media (max-width:1000px){
+.tmx .tcols{grid-template-columns:minmax(0,1fr)}
+}
+.tmx .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:0 16px 12px;scroll-margin-top:12px}
+.tmx .card-h{display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid var(--line)}
+.tmx .card-h .hi{display:flex;color:var(--accent2)}
+.tmx .card-h h2{margin:0;font-size:14.5px;font-weight:700;flex:1}
+/* team details rows */
+/* Papers the team sent her as Subject Adviser, on the team page. */
+.tmx .pps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.tmx .pps li{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:10px}
+.tmx .pps .fn{flex:1;min-width:0;font-size:13px;font-weight:600;color:var(--ink);word-break:break-word}
+.tmx .pps .fn small{display:block;font-size:11px;font-weight:500;color:var(--mut);margin-top:2px}
+.tmx .pps .btn{flex:none}
+.tmx .pps li.none{display:block;border-style:dashed;font-size:12.5px;font-weight:500;color:var(--mut)}
+.tmx .ir{display:flex;align-items:center;gap:12px;padding:9px 2px;border-bottom:1px solid var(--line)}
+.tmx .ir:last-child{border-bottom:0}
+.tmx .ir .di{display:flex;color:var(--ink2)}
+.tmx .ir .k{flex:1;font-size:13px;color:var(--mut)}
+.tmx .ir .v{font-size:13.5px;font-weight:600;color:var(--ink);text-align:right}
+.tmx .ir .v.none{font-weight:500;color:var(--mut)}
+.tmx .sched{display:flex;align-items:center;gap:12px;margin-top:12px;padding:10px 12px;border-radius:9px;
+  background:var(--tint);border:1px solid var(--line)}
+.tmx .sched .tile{width:30px;height:30px;border-radius:8px;flex:none;background:var(--accent-bg);color:var(--accent2);
+  display:flex;align-items:center;justify-content:center}
+.tmx .sched .k{font-size:12px;color:var(--ink2)}
+.tmx .sched .v{font-size:13px;font-weight:600;color:var(--ink)}
+.tmx .sched .v.none{font-weight:500;color:var(--mut)}
+/* a labelled block inside Team Details: Members, Experts */
+.tmx .blk{padding:12px 0;border-bottom:1px solid var(--line)}
+.tmx .blk-h{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--mut);margin-bottom:10px}
+.tmx .blk-h .di{display:flex;color:var(--ink2)}
+/* members: side by side, one tile each, wraps on a phone */
+.tmx .mrow{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:8px}
+.tmx .mrow li{display:flex;flex-direction:column;align-items:center;text-align:center;gap:4px;padding:12px 6px 10px;
+  border:1px solid var(--line);border-radius:10px;min-width:0}
+.tmx .mrow .av{width:40px;height:40px;font-size:12.5px;margin-bottom:2px}
+.tmx .mrow b{font-size:12.5px;font-weight:600;color:var(--ink);line-height:1.25}
+.tmx .mrow small{font-size:11px;color:var(--mut)}
+.tmx .mrow li.lead{border-color:var(--accent)}
+.tmx .mrow li.lead small{font-weight:700;color:var(--accent3)}
+/* experts: a profile each, empty seats say so */
+.tmx .xp{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.tmx .xp li{display:flex;align-items:flex-start;gap:12px;padding:12px;border:1px solid var(--line);border-radius:10px}
+.tmx .xp .av{width:42px;height:42px;font-size:13px}
+.tmx .xp .who{flex:1;min-width:0}
+.tmx .xp .top{display:flex;align-items:center;flex-wrap:wrap;gap:4px 8px}
+.tmx .xp .nm{font-size:13.5px;font-weight:700;color:var(--ink)}
+.tmx .xp .rl{font-size:10.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--ink2);
+  padding:2px 7px;border-radius:99px;background:var(--tint);border:1px solid var(--line)}
+.tmx .xp .deg{font-size:12px;color:var(--ink2);margin-top:2px}
+.tmx .xp .tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+.tmx .xp .tags span{font-size:11px;font-weight:500;padding:2px 8px;border-radius:99px;background:var(--accent-bg);color:var(--accent3)}
+.tmx .xp .em{display:inline-flex;align-items:center;gap:5px;margin-top:8px;font-size:12px;color:var(--ink2);word-break:break-all}
+.tmx .xp li.none{border-style:dashed;align-items:center}
+.tmx .xp .ghost{background:var(--tint);border:1px dashed var(--line2);color:var(--mut)}
+.tmx .xp li.none .deg{color:var(--mut)}
+/* the way into the pre-proposals, from the team's header */
+.tmx .th .btn{padding:8px 14px}
+.tmx .th .nb{font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px;background:rgba(255,255,255,.85);color:var(--accent3)}
+/* pre-proposals: pick a title, read the file the team uploaded beside what the archive check found */
+.tmx .vfb{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:12px 16px;margin-bottom:12px}
+.tmx .vfb .ic{width:36px;height:36px;border-radius:9px;flex:none;display:flex;align-items:center;justify-content:center;
+  background:var(--accent-bg);color:var(--accent3)}
+.tmx .vfb.ok .ic{background:var(--green-bg);color:var(--green)}
+.tmx .vfb .tx{flex:1;min-width:220px;font-size:12.5px;line-height:1.5;color:var(--ink2)}
+.tmx .vfb .tx b{display:block;font-size:13.5px;color:var(--ink)}
+.tmx .vfb .btn[disabled]{opacity:.5;cursor:not-allowed;box-shadow:none}
+/* every title the team submitted, one line each - any number of them, the page just gets longer */
+.tmx .ppc{padding:0}
+.tmx .ppc-h{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--line)}
+.tmx .ppc-h .fs{flex:1;min-width:min(220px,100%);padding:7px 11px}
+.tmx .flt{display:flex;flex-wrap:wrap;gap:6px}
+.tmx .flt button,.tmx .flt a{display:inline-flex;align-items:center;gap:5px;padding:6px 10px;border:1px solid var(--line);border-radius:99px;
+  background:var(--card);font:600 12px/1 Inter,system-ui,sans-serif;color:var(--ink2);cursor:pointer}
+.tmx .flt button:hover,.tmx .flt a:hover{border-color:var(--line2);color:var(--ink)}
+.tmx .flt button[aria-pressed="true"],.tmx .flt a[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:#fff}
+.tmx .flt b{font-variant-numeric:tabular-nums}
+.tmx .ppr{list-style:none;margin:0;padding:0}
+.tmx .ppr > li{border-bottom:1px solid var(--line)}
+.tmx .ppr > li:last-child{border-bottom:0}
+.tmx .ppr .rw{width:100%;display:grid;grid-template-columns:32px minmax(0,1fr) auto;align-items:center;gap:6px 12px;
+  padding:12px 16px;border:0;background:none;text-align:left;font:inherit;color:inherit;cursor:pointer;transition:background .15s}
+.tmx .ppr .rw:hover{background:var(--tint)}
+.tmx .ppr .no{font-size:12px;font-weight:700;color:var(--mut);font-variant-numeric:tabular-nums}
+.tmx .ppr .tt{font-size:13.5px;font-weight:600;line-height:1.35;color:var(--ink);overflow-wrap:anywhere}
+.tmx .ppr .ps{display:flex;flex-wrap:wrap;gap:4px 16px;justify-content:flex-end}
+.tmx .ppr .pill,
+.tmx .rep .pill{background:none;padding:0;border-radius:0;font-size:12px}
+@media (max-width:640px){
+.tmx .ppr .rw{grid-template-columns:28px minmax(0,1fr)}
+.tmx .ppr .ps{grid-column:2;justify-content:flex-start}
+}
+.tmx .ppr .empty{padding:20px 16px;font-size:12.5px;color:var(--mut);text-align:center}
+/* the open title: the same things the project's review shows, in the same order */
+.tmx .ppd{display:flex;flex-direction:column;gap:16px;padding:16px 18px;margin-bottom:12px}
+.tmx .tpg h1{overflow-wrap:anywhere;text-wrap:balance}
+.tmx .tpg .ps{display:flex;flex-wrap:wrap;gap:4px 16px;margin-top:6px}
+.tmx .tpg .pill{background:none;padding:0;border-radius:0;font-size:12px}
+.tmx .ppd .acts{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.tmx .ppd .acts .sp{flex:1}
+.tmx .ppd .acts .btn{padding:8px 14px}
+.tmx .ppd .msg{margin:0;font-size:12.5px;line-height:1.55;color:var(--ink2);overflow-wrap:anywhere}
+.tmx .ppd .msg.why{color:var(--red)}
+.tmx .ppd .msg b{font-weight:600}
+.tmx .ppd h4{margin:0 0 8px;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--mut)}
+.tmx .ans{display:grid;grid-template-columns:max-content minmax(0,1fr);gap:5px 14px;margin:0;font-size:12.5px;line-height:1.5}
+.tmx .ans dt{color:var(--mut)}
+.tmx .ans dd{margin:0;color:var(--ink);overflow-wrap:anywhere}
+@media (max-width:520px){
+.tmx .ans{grid-template-columns:1fr}
+.tmx .ans dd{margin-bottom:4px}
+}
+/* the original PDF opens full-size over the page, sized to the window, so it never runs past the screen */
+.tmx dialog.pdfd{max-width:1000px;height:90vh;overflow:hidden}
+.tmx dialog.pdfd[open]{display:flex;flex-direction:column}
+.tmx .pdfd .x{width:34px;height:34px;display:flex;align-items:center;justify-content:center;border:1px solid var(--line);
+  border-radius:8px;background:var(--card);color:var(--ink2);cursor:pointer}
+.tmx .pdfd .x:hover{background:var(--tint)}
+.tmx .doc-h{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 16px;border-bottom:1px solid var(--line)}
+.tmx .doc-h .di{display:flex;color:var(--accent2)}
+.tmx .doc-h .fn{flex:1;min-width:0;font-size:13px;font-weight:600;color:var(--ink);overflow-wrap:anywhere}
+.tmx .doc-h .fn small{display:block;font-size:11.5px;font-weight:500;color:var(--mut)}
+.tmx .doc-h a{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:8px;border:1px solid var(--line);
+  font-size:12.5px;font-weight:600;color:var(--accent3);text-decoration:none}
+.tmx .doc-h a:hover{background:var(--tint)}
+/* the similarity report: the closest score, then every matched capstone in full */
+.tmx .rep .top{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.tmx .rep .top b{font-size:24px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums;color:var(--ink)}
+.tmx .rep .top .k{font-size:12.5px;color:var(--mut)}
+.tmx .rep .none{margin:4px 0 0;font-size:12.5px;color:var(--green)}
+.tmx .ab{margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
+.tmx .ab .k{font-size:11.5px;color:var(--mut);margin-bottom:4px}
+.tmx .ab p{margin:0;font-size:12.5px;line-height:1.6;color:var(--ink2)}
+.tmx .ab mark{background:rgba(201,168,44,.3);color:inherit;border-radius:3px;padding:0 2px}
+@media (prefers-reduced-motion:reduce){
+.tmx .ppr .rw{transition:none}
+}
+/* the ranked list of similar studies on a title page, and one study's own page */
+.tmx .tly{display:flex;flex-wrap:wrap;gap:4px 16px;margin-top:8px}
+.tmx .tly .pill{background:none;padding:0;border-radius:0;font-size:12px}
+.tmx .mtl{margin:0 -18px -16px;border-top:1px solid var(--line)}
+.tmx .mtl .tx{display:flex;flex-direction:column;gap:2px;min-width:0}
+.tmx .mm{font-size:12px;color:var(--mut);line-height:1.4;overflow-wrap:anywhere}
+.tmx .ppd .ans dd.sg{color:var(--accent3);font-weight:500}
+.tmx .ppd .ab{margin-top:0;padding-top:0;border-top:0}
+.tmx .mnav{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tmx .mnav .btn{display:flex;flex-direction:column;align-items:flex-start;gap:3px;padding:10px 14px;text-align:left;
+  font-weight:600;line-height:1.35;overflow-wrap:anywhere;min-width:0}
+.tmx .mnav .nx{align-items:flex-end;text-align:right}
+.tmx .mnav .k{font-size:11.5px;font-weight:500;color:var(--mut)}
+@media (max-width:640px){
+.tmx .mnav{grid-template-columns:1fr}
+.tmx .mnav .nx{align-items:flex-start;text-align:left}
+}
+.tmx .rj-l{display:block;font-size:12.5px;color:var(--ink2);margin-bottom:8px}
+.tmx .rj{width:100%;min-height:90px;padding:10px 12px;border-radius:8px;border:1px solid var(--line2);background:var(--card);
+  color:var(--ink);font:inherit;font-size:13px;resize:vertical;box-sizing:border-box}
+.tmx .rj-e{font-size:12px;color:var(--red);margin-top:6px}
+.tmx .btn-r{background:var(--red);color:#fff}
+.tmx .btn-r:hover{filter:brightness(.92)}
+/* team header: section, score and status sit beside the name */
+.tmx .chip-o small{font-size:11.5px;font-weight:500;color:var(--mut)}
+.tmx .th > .pill{font-size:12px;padding:6px 12px}
+.tmx .tcols{grid-template-columns:minmax(0,5fr) minmax(0,7fr)}
+@media (max-width:1100px){
+.tmx .tcols{grid-template-columns:minmax(0,1fr)}
+}
+.tmx .xp li{padding:10px}
+.tmx .xp .tags,
+.tmx .xp .em{margin-top:6px}
+.tmx .card-h .cnt{font-size:12.5px;font-weight:600;color:var(--ink2);font-variant-numeric:tabular-nums}
+.tmx .blk-h .n{margin-left:auto;font-weight:600;color:var(--ink2);font-variant-numeric:tabular-nums}
+/* list: switch between the team list and every team's milestone progress */
+.tmx .seg{display:inline-flex;margin-left:auto;padding:3px;border-radius:10px;background:var(--tint2);border:1px solid var(--line)}
+.tmx .seg button,.tmx .seg a{display:inline-flex;align-items:center;gap:6px;border:0;background:none;padding:7px 14px;border-radius:8px;
+  font-size:13px;font-weight:600;color:var(--ink2);cursor:pointer;transition:background .15s,color .15s}
+.tmx .seg button:hover,.tmx .seg a:hover{color:var(--ink)}
+.tmx .seg button[aria-pressed="true"],.tmx .seg a[aria-pressed="true"]{background:var(--card);color:var(--ink);box-shadow:0 1px 3px rgba(15,23,42,.12)}
+/* progress grid: teams down the side, milestones across, every cell says its state in words */
+.tmx .pg{min-width:900px}
+.tmx .pg th{text-align:center;vertical-align:bottom}
+.tmx .pg th:first-child,
+.tmx .pg th:last-child{text-align:left}
+.tmx .pg th small{display:flex;align-items:center;justify-content:center;gap:4px;font-size:10.5px;font-weight:600;
+  letter-spacing:0;text-transform:none;color:var(--mut);margin-top:2px}
+.tmx .pg td{padding:7px 5px}
+.tmx .pg td:first-child{padding-left:16px}
+.tmx .pg td:last-child{padding-right:16px}
+.tmx .pg tbody tr{cursor:default}
+.tmx .pg tbody tr:hover td{background:none}
+.tmx .cell{width:100%;display:flex;flex-direction:column;align-items:center;gap:1px;padding:7px 4px;border-radius:9px;
+  border:1px solid transparent;background:var(--tint);font:inherit;cursor:pointer;transition:border-color .15s}
+.tmx .cell:hover{border-color:var(--accent)}
+.tmx .cell .cn{display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums}
+.tmx .cell .cw{font-size:10.5px;font-weight:600;color:var(--mut)}
+.tmx .cell svg{color:var(--mut)}
+.tmx .c-d{background:var(--green-bg)}
+.tmx .c-d svg,
+.tmx .c-d .cw{color:var(--green)}
+.tmx .c-p{background:var(--accent-bg)}
+.tmx .c-p svg,
+.tmx .c-p .cw{color:var(--accent3)}
+.tmx .c-o{background:var(--red-bg)}
+.tmx .c-o svg,
+.tmx .c-o .cw{color:var(--red)}
+.tmx .c-n{background:var(--tint)}
+.tmx .c-k{background:repeating-linear-gradient(135deg,var(--tint) 0 6px,var(--card) 6px 12px);border-color:var(--line)}
+.tmx .c-k .cn{color:var(--mut)}
+.tmx .legend{display:flex;flex-wrap:wrap;gap:6px 18px;padding:11px 18px;border-top:1px solid var(--line);font-size:12px;color:var(--ink2)}
+.tmx .legend span{display:inline-flex;align-items:center;gap:6px}
+.tmx .legend i{width:14px;height:14px;border-radius:4px;border:1px solid var(--line)}
+/* team page: the six milestones as one strip, the picked one's items below it */
+.tmx .msc{container-type:inline-size}
+.tmx .trk{list-style:none;margin:12px 0 0;padding:0;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px}
+@container (max-width:560px){
+.tmx .trk{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+.tmx .trk button,.tmx .trk a{width:100%;height:100%;display:flex;flex-direction:column;gap:3px;padding:0 0 8px;overflow:hidden;
+  border:1px solid var(--line);border-radius:9px;background:var(--card);font:inherit;text-align:left;cursor:pointer;
+  transition:border-color .15s}
+.tmx .trk button:hover,.tmx .trk a:hover{border-color:var(--accent)}
+.tmx .trk button[aria-pressed="true"],.tmx .trk a[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent);background:var(--accent-bg)}
+.tmx .trk .b4{display:block;height:4px;background:var(--line);margin-bottom:5px}
+.tmx .trk .b4 i{display:block;height:100%;background:var(--accent)}
+.tmx .trk .t-d .b4 i{background:var(--green)}
+.tmx .trk .t-o .b4 i{background:var(--red)}
+.tmx .trk .tn{padding:0 9px;font-size:12px;font-weight:700;color:var(--ink);line-height:1.25}
+.tmx .trk .tc{padding:0 9px;display:flex;align-items:center;gap:4px;font-size:11.5px;font-weight:600;color:var(--mut);
+  font-variant-numeric:tabular-nums}
+.tmx .trk .t-d .tc{color:var(--green)}
+.tmx .trk .t-o .tc{color:var(--red)}
+.tmx .trk .t-p .tc{color:var(--accent3)}
+.tmx .msh{display:flex;align-items:center;flex-wrap:wrap;gap:4px 12px;margin:14px 0 2px}
+.tmx .msh h3{margin:0;font-size:14px;font-weight:700}
+.tmx .msh span{display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--mut)}
+.tmx .lockmsg{display:flex;align-items:center;gap:10px;margin:8px 0 4px;padding:10px 12px;border-radius:9px;
+  background:var(--tint);border:1px dashed var(--line2);font-size:12.5px;color:var(--ink2)}
+.tmx .its2{list-style:none;margin:0;padding:0}
+.tmx .it{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:8px 14px;padding:10px 0;border-bottom:1px solid var(--line)}
+.tmx .it:last-child{border-bottom:0}
+.tmx .it .nm{font-size:13px;font-weight:600;color:var(--ink);line-height:1.35}
+.tmx .it .nm small{display:block;font-size:11.5px;font-weight:500;color:var(--mut)}
+.tmx .it.o .nm small{color:var(--red)}
+.tmx .it .pill{justify-self:end}
+.tmx .it.lk .nm,
+.tmx .it.lk .stp{opacity:.55}
+/* an item's own cycle, step by step */
+.tmx .stp{grid-column:1/-1;grid-row:2;list-style:none;margin:0;padding:0;display:flex}
+.tmx .stp li{flex:1;position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;
+  font-size:10.5px;font-weight:600;color:var(--mut);text-align:center;line-height:1.2}
+.tmx .stp li::before{content:"";position:absolute;top:8px;right:50%;width:100%;height:2px;background:var(--line2)}
+.tmx .stp li:first-child::before{display:none}
+.tmx .stp li.y::before,
+.tmx .stp li.c::before{background:var(--green)}
+.tmx .stp .sd{position:relative;z-index:1;width:18px;height:18px;border-radius:50%;background:var(--card);
+  border:2px solid var(--line2);display:flex;align-items:center;justify-content:center}
+.tmx .stp li.y{color:var(--ink2)}
+.tmx .stp li.y .sd{background:var(--green);border-color:var(--green);color:#fff}
+.tmx .stp li.c{color:var(--accent3)}
+.tmx .stp li.c .sd{border-color:var(--accent);background:var(--accent);box-shadow:inset 0 0 0 3px var(--card)}
+.tmx .stp li.x{color:var(--red)}
+.tmx .stp li.x .sd{border-color:var(--red)}
+@container (min-width:600px){
+.tmx .it{grid-template-columns:minmax(0,1fr) 250px 96px}
+.tmx .stp{grid-column:auto;grid-row:auto}
+}
+/* team settings: a small menu under its button, not a page or a tab */
+.tmx .setw{position:relative;margin-left:auto}
+.tmx .menu{position:absolute;right:0;top:calc(100% + 8px);z-index:20;width:min(340px,calc(100vw - 32px));
+  background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:0 16px 40px rgba(15,23,42,.18)}
+.tmx .menu h3{margin:0;padding:14px 16px 4px;font-size:13px;font-weight:700}
+.tmx .opt{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 16px;cursor:pointer}
+.tmx .opt + .opt{border-top:1px solid var(--line)}
+.tmx .opt b{display:block;font-size:13px;font-weight:600;color:var(--ink)}
+.tmx .opt small{display:block;font-size:12px;color:var(--mut);margin-top:2px}
+.tmx #tsize{width:64px;padding:8px 6px;border:1px solid var(--line2);border-radius:8px;background:var(--card);color:var(--ink);
+  font:inherit;font-size:14px;font-weight:700;text-align:center;font-variant-numeric:tabular-nums}
+.tmx #tsize{appearance:textfield;-moz-appearance:textfield}
+.tmx #tsize::-webkit-inner-spin-button,
+.tmx #tsize::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+.tmx #tsize[aria-invalid="true"]{border-color:var(--red)}
+.tmx .menu .opt-w{margin:0 16px 4px;font-size:12px;line-height:1.45;color:var(--red)}
+.tmx .menu .opt-w.soft{color:var(--amber)}
+.tmx .tg{appearance:none;flex:none;width:38px;height:22px;margin:0;border-radius:99px;background:var(--line2);position:relative;
+  cursor:pointer;transition:background .15s}
+.tmx .tg::before{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;
+  box-shadow:0 1px 2px rgba(15,23,42,.25);transition:transform .15s}
+.tmx .tg:checked{background:var(--accent)}
+.tmx .tg:checked::before{transform:translateX(16px)}
+.tmx .menu .mact{display:flex;justify-content:flex-end;gap:8px;padding:12px 16px;border-top:1px solid var(--line)}
+.tmx .menu .btn{padding:8px 14px}
+.tmx .menu .btn:disabled{opacity:.5;cursor:not-allowed}
+@media (prefers-reduced-motion:reduce){
+.tmx .seg button,.tmx .seg a,
+.tmx .cell,
+.tmx .trk button,.tmx .trk a,
+.tmx .tg,
+.tmx .tg::before{transition:none}
+}
+.tmx .ph{display:flex;align-items:center;justify-content:space-between;gap:10px;
+  padding:16px 20px;border-bottom:1px solid var(--line);flex:none}
+.tmx .ph h2{margin:0;font-size:15px;font-weight:700}
+.tmx .x{background:none;border:0;color:var(--mut);cursor:pointer;padding:5px;border-radius:8px;line-height:0}
+.tmx .x:hover{background:var(--tint);color:var(--ink)}
+.tmx .rows{display:flex;flex-direction:column}
+.tmx .r{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}
+.tmx .r:last-child{border-bottom:0}
+.tmx .r .k{font-size:12.5px;color:var(--mut);font-weight:500;flex:none}
+.tmx .r .v{font-size:13px;color:var(--ink);font-weight:600;text-align:right;min-width:0}
+.tmx .link{background:none;border:0;padding:0;color:var(--accent3);font-size:12px;font-weight:600;cursor:pointer}
+.tmx .link:hover{text-decoration:underline}
+.tmx .chev{background:none;border:0;padding:0;color:var(--mut2);cursor:pointer;line-height:0}
+.tmx .chev:hover{color:var(--accent3)}
+.tmx .pc{border:1px solid var(--line);border-radius:12px;padding:15px 16px;background:var(--card)}
+.tmx .pc-h{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+.tmx .pc-h h3{margin:0;font-size:12.5px;font-weight:700;color:var(--ink)}
+.tmx .mi{display:flex;align-items:center;gap:10px;padding:8px 0}
+.tmx .mi .tick{width:20px;height:20px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center}
+.tmx .mi .tick.done{background:var(--green);color:#fff}
+.tmx .mi .tick.todo{background:var(--tint);color:var(--mut2);border:1px dashed var(--line2)}
+.tmx .mi .n{font-size:12.5px;font-weight:500;color:var(--ink2);flex:1}
+.tmx .mi .c{font-size:11.5px;color:var(--mut);font-weight:600;font-variant-numeric:tabular-nums}
+.tmx .mem{display:flex;align-items:center;gap:10px;padding:7px 0}
+.tmx .mem .av{width:32px;height:32px;font-size:10.5px}
+.tmx .mem .n{font-size:12.5px;font-weight:600;color:var(--ink);line-height:1.25}
+.tmx .mem .r2{font-size:11px;color:var(--mut)}
+.tmx .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:11px 16px;border-radius:10px;
+  font-size:13px;font-weight:600;border:1px solid transparent;cursor:pointer}
+.tmx .btn-p{background:var(--accent);color:var(--on-accent);font-weight:700;box-shadow:0 4px 12px rgba(201,168,44,.28)}
+.tmx .btn-p:hover{background:var(--accent2)}
+.tmx .btn-o{background:var(--card);color:var(--ink2);border-color:var(--line)}
+.tmx .btn-o:hover{background:var(--tint)}
+.tmx .none{font-size:12.5px;color:var(--mut)}
+/* modal */
+.tmx dialog{border:1px solid var(--line);border-radius:16px;background:var(--card);color:var(--ink);padding:0;
+  width:calc(100% - 32px);max-width:440px;box-shadow:0 28px 80px rgba(15,23,42,.3)}
+.tmx dialog::backdrop{background:rgba(15,23,42,.45)}
+.tmx .mh{padding:20px 22px 12px}
+.tmx .mh h4{margin:0;font-size:16px;font-weight:700}
+.tmx .mh .s{font-size:13px;color:var(--mut);margin-top:3px}
+.tmx .mb{padding:0 22px;max-height:52vh;overflow-y:auto}
+.tmx .mf{display:flex;gap:9px;justify-content:flex-end;padding:18px 22px 20px}
+
+/* The mockup drove every level with buttons and JS. Here each level is a
+   real URL, so the same things are links - and links have to be told they
+   are not underlined blue text. */
+.tmx a{color:inherit;text-decoration:none}
+.tmx .crumb a{font-weight:600;color:var(--ink2)}
+.tmx .crumb a:hover{color:var(--accent3);text-decoration:underline}
+.tmx .crumb .bk:hover{text-decoration:none}
+.tmx .cell,.tmx .trk a,.tmx .ppr .rw,.tmx .seg a,.tmx .flt a{text-decoration:none}
+.tmx .btn[disabled],.tmx .btn.is-off{opacity:.5;cursor:not-allowed;box-shadow:none;pointer-events:none}
+/* The page sits inside the admin shell, which already scrolls. */
+.tmx{padding:24px;font-size:14px;line-height:1.5}
+@media (max-width:680px){.tmx{padding:16px}}
+.tmx *{box-sizing:border-box}

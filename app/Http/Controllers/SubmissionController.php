@@ -70,6 +70,19 @@ class SubmissionController extends Controller
                     'message' => 'That requirement is not on your team\'s checklist.',
                 ], 422);
             }
+
+            // The same gate the CaPSA's grid and the team's own checklist
+            // read, asked here so nothing can be handed in past a milestone
+            // that shows as locked on screen.
+            $gate = MilestoneProgress::forTeam($checklist, (int) $teamModel->team_id)
+                ->milestones->firstWhere('milestone.id', $item->milestone->id);
+
+            if ($gate?->locked) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $item->milestone->name.' opens once '.($gate->requires ?? 'the milestone before it').' is complete.',
+                ], 422);
+            }
         }
 
         // A signed paper - a form, or a CLF signed by hand - is checked by the
@@ -279,22 +292,27 @@ class SubmissionController extends Controller
             : null;
 
         if ($progress) {
-            $checklistItems = $progress->items
-                ->reject(fn ($row) => $row->item->kind === Deliverable::DEFENSE
-                    || in_array($row->state, MilestoneProgress::COMPLETE_STATES, true))
-                ->map(fn ($row) => (object) [
-                    'id' => $row->item->id,
-                    'title' => $row->item->title,
-                    'phase' => $row->milestone->name,
-                    'kind' => $row->item->kind,
-                    'role' => $row->item->role,
-                    'note' => match (true) {
-                        (bool) $row->note => 'sent back: '.$row->note,
-                        $row->changes_requested => self::ordinal($row->revision).' revision requested',
-                        $row->waiting_on === MilestoneProgress::WAITING_ON_SIGNED_COPY => 'approved, upload the signed copy',
-                        default => null,
-                    },
-                ])
+            // Walked milestone by milestone, because the lock is a property of
+            // the milestone, not of its lines - each line has to carry it down.
+            $checklistItems = $progress->milestones
+                ->flatMap(fn ($ms) => $ms->items
+                    ->reject(fn ($row) => $row->item->kind === Deliverable::DEFENSE
+                        || in_array($row->state, MilestoneProgress::COMPLETE_STATES, true))
+                    ->map(fn ($row) => (object) [
+                        'id' => $row->item->id,
+                        'title' => $row->item->title,
+                        'phase' => $ms->milestone->name,
+                        'kind' => $row->item->kind,
+                        'role' => $row->item->role,
+                        'locked' => $ms->locked,
+                        'note' => match (true) {
+                            $ms->locked => 'opens once '.($ms->requires ?? 'the milestone before it').' is complete',
+                            (bool) $row->note => 'sent back: '.$row->note,
+                            $row->changes_requested => self::ordinal($row->revision).' revision requested',
+                            $row->waiting_on === MilestoneProgress::WAITING_ON_SIGNED_COPY => 'approved, upload the signed copy',
+                            default => null,
+                        },
+                    ]))
                 ->values();
         }
 
@@ -320,7 +338,8 @@ class SubmissionController extends Controller
         // before-a-file-is-chosen placeholder.
         $nextVersion = 1;
 
-        return view('student.submission', compact('recipients', 'nextVersion', 'checklistItems', 'selectedItemId'));
+        // A fragment, not a page: the drawer drops it straight into the panel.
+        return view('student.partials.submission-form', compact('recipients', 'nextVersion', 'checklistItems', 'selectedItemId'));
     }
 
     private static function ordinal(int $n): string

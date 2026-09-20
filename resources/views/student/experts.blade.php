@@ -6,7 +6,7 @@
 <title>Capstone Expert - CapsTrack</title>
 <meta name="csrf-token" content="{{ csrf_token() }}">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
-@vite(['resources/student-ui/Styles/experts.css', 'resources/js/submission-preview.js'])
+@vite(['resources/student-ui/Styles/experts.css'])
 <style>
 /* The recommended pre-proposal, drawn as pages - no iframe. Same look as the submission preview. */
 .preview-dialog{border:0;border-radius:12px;padding:0;margin:auto;inset:0;width:min(860px,calc(100vw - 32px));height:calc(100vh - 48px);box-shadow:0 24px 70px rgba(24,25,31,.3);background:var(--bg2,#fff)}
@@ -910,17 +910,6 @@
 </div>
 @endif
 
-@if($proposalPdfUrl)
-{{-- The uploaded document, drawn page by page. A <dialog> sits above every
-     other panel on the page, so it opens over the preview that launched it. --}}
-<dialog class="preview-dialog" id="previewDialog" aria-labelledby="previewTitle">
-  <div class="preview-head">
-    <h2 id="previewTitle">Original PDF</h2>
-    <form method="dialog"><button class="btn btn-sm btn-soft" type="submit">Close</button></form>
-  </div>
-  <div class="preview-body" id="previewBody"></div>
-</dialog>
-@endif
 
 <!-- Apply Form Modal -->
 <div class="modal-overlay" id="apply-modal">

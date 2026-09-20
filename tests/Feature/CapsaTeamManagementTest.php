@@ -202,10 +202,10 @@ class CapsaTeamManagementTest extends TestCase
         $response = $this->get(route('capsa.team_management'));
 
         $response->assertOk();
-        // The filled role carries the expert's name as its tooltip; the two
-        // unfilled ones do not.
-        $response->assertSee('tm-role tm-role-on', false);
-        $response->assertSee($expert->name);
+        // The filled seat names the role the team engaged them AS, not every
+        // role they hold; the two empty seats say which role is still open.
+        $response->assertSee('Consultant: '.$expert->name);
+        $response->assertSee('No adviser yet');
     }
 
     // Two approved titles is the state that otherwise looks like an
@@ -219,83 +219,64 @@ class CapsaTeamManagementTest extends TestCase
         $this->addProposal($team, $sy, 1, approved: true);
         $this->addProposal($team, $sy, 2, approved: true);
 
-        $response = $this->get(route('capsa.team_management', ['tab' => 'verification']));
+        $response = $this->get(route('capsa.team_management'));
 
         $response->assertOk();
-        $response->assertSee('Team choosing');
-        $response->assertSee('they pick which one stands before you can verify');
+        $response->assertSee('Team Choosing');
+        $response->assertSee('2 recommended - the team is choosing');
     }
 
     /**
-     * The Recommend confirmation (the shared confirm-sheet) and the Reject
-     * dialog belong on TOP of the review modal - they sat under it
-     * (z-index 600 vs the modal's 1000), so clicking Recommend opened its
-     * "are you sure" invisibly behind the panel and the button read as
-     * broken. The reject dialog also has to name the title: a team submits
-     * three, and a dialog that could be about any of them invites
-     * rejecting the wrong one.
+     * Recommending or rejecting is a decision about ONE title, so both live
+     * on that title's own page rather than in a modal stacked over a list.
+     * The reject dialog names the title: a team submits three, and a dialog
+     * that could be about any of them invites rejecting the wrong one.
      */
-    public function test_the_recommend_and_reject_dialogs_stack_above_the_review_modal(): void
+    public function test_the_title_page_carries_the_recommend_and_reject_dialogs(): void
     {
         $this->makeCapsaWithSections();
         [$team, , $sy] = $this->makeTeamInSection('Team Dialogs');
 
-        $this->addProposal($team, $sy, 1);
+        $proposal = $this->addProposal($team, $sy, 1);
 
-        $html = $this->get(route('capsa.team_management', ['tab' => 'pre_proposals']))
+        $html = $this->get(route('capsa.team_management.title', [$team->team_id, $proposal->id]))
             ->assertOk()->getContent();
 
-        // The recommend confirmation and the reject dialog are on the page.
-        $this->assertStringContainsString('id="cf-scrim"', $html);
+        $this->assertStringContainsString('id="rec-dlg"', $html);
+        $this->assertStringContainsString('id="rej-dlg"', $html);
         $this->assertStringContainsString('Reject this title', $html);
-        $this->assertStringContainsString('id="pp-reject-title"', $html);
+        $this->assertStringContainsString('Rejecting: '.$proposal->title, $html);
 
-        // Both are the SAME sheet shell - the reject dialog is not a centred
-        // modal box beside the recommend sheet. Same container classes, same
-        // header, same footer.
-        $this->assertStringContainsString('upload-scrim', $html);
-        $this->assertStringContainsString('upload-sheet cf-sheet', $html);
-        $this->assertStringContainsString('card-header sheet-head', $html);
-        $this->assertStringContainsString('cf-actions', $html);
-
-        // Both stack above the review modal's own 1000 - and above the PDF
-        // preview's 1400, since either can be opened while a document shows.
-        // The !important is what beats the confirm-sheet's inline 600.
-        $this->assertMatchesRegularExpression('/#cf-scrim\{z-index:1500 !important\}/', $html);
-        $this->assertMatchesRegularExpression('/#pp-reject-modal\{z-index:1450\}/', $html);
+        // Native dialogs on the page the decision is about - no scrim to
+        // stack, and nothing left of the old review modal.
+        $this->assertStringNotContainsString('cf-scrim', $html);
     }
 
     /**
      * Seven equal tabs with red count badges read as a wall of errors and
-     * gave no sense of what belonged to what. The toolbar groups them into
-     * three clusters with neutral counts, and a summary line says where the
-     * CaPSA's decisions wait without opening a tab.
+     * gave no sense of what belonged to what. The strip is gone: the teams
+     * are the page, and the head says where her decisions wait.
      */
-    public function test_the_toolbar_groups_the_tabs_with_neutral_counts(): void
+    public function test_the_head_says_where_her_decisions_wait(): void
     {
         $this->makeCapsaWithSections();
         [$team, , $sy] = $this->makeTeamInSection('Team Toolbar');
 
         $this->addProposal($team, $sy, 1);
 
-        $html = $this->get(route('capsa.team_management', ['tab' => 'teams']))
+        $html = $this->get(route('capsa.team_management'))
             ->assertOk()->getContent();
 
-        // Grouped into clusters, not seven flat tabs. (Decoded, because the
-        // group label carries an ampersand that Blade escapes into the HTML.)
-        $this->assertStringContainsString('tm-toolbar', $html);
-        $this->assertStringContainsString('Review queue', $html);
-        $this->assertStringContainsString('Requests & setup', html_entity_decode($html));
-
-        // Neutral count pills - the old red .tab-count badges are gone.
-        $this->assertStringContainsString('tm-count', $html);
-        $this->assertStringNotContainsString('tab-count', $html);
-
         // The summary names the waiting work.
+        $this->assertStringContainsString('Waiting on you', $html);
         $this->assertStringContainsString('1 title to review', $html);
+
+        // The old strip and its red badges are gone with it.
+        $this->assertStringNotContainsString('tm-toolbar', $html);
+        $this->assertStringNotContainsString('tab-count', $html);
     }
 
-    public function test_the_pre_proposals_tab_counts_titles_awaiting_review(): void
+    public function test_the_team_page_counts_titles_awaiting_review(): void
     {
         $this->makeCapsaWithSections();
         [$team, , $sy] = $this->makeTeamInSection('Team Titles');
@@ -304,10 +285,10 @@ class CapsaTeamManagementTest extends TestCase
         $this->addProposal($team, $sy, 2);
         $this->addProposal($team, $sy, 3, approved: true);
 
-        $response = $this->get(route('capsa.team_management', ['tab' => 'pre_proposals']));
+        $response = $this->get(route('capsa.team_management.show', $team->team_id));
 
         $response->assertOk();
-        $response->assertSee('2 to review');
+        $response->assertSee('2 waiting');
     }
 
     /**
@@ -315,7 +296,7 @@ class CapsaTeamManagementTest extends TestCase
      * hat. What she reviews as somebody's adviser is a different job and
      * stays in My Expert Duties -> Document Review.
      */
-    public function test_the_papers_tab_shows_only_papers_sent_to_her_as_subject_adviser(): void
+    public function test_the_team_page_shows_only_papers_sent_to_her_as_subject_adviser(): void
     {
         $capsa = $this->makeCapsaWithSections();
         [$team, $leader] = $this->makeTeamInSection('Team Papers');
@@ -323,7 +304,7 @@ class CapsaTeamManagementTest extends TestCase
         $formatCheck = $this->makeDocumentReview($capsa, $leader, 'Chapter 1 Format.pdf', 'subject_adviser');
         $adviserWork = $this->makeDocumentReview($capsa, $leader, 'Chapter 2 Content.pdf', 'adviser');
 
-        $response = $this->get(route('capsa.team_management', ['tab' => 'papers']));
+        $response = $this->get(route('capsa.team_management.show', $team->team_id));
 
         $response->assertOk();
         $response->assertSee('Chapter 1 Format.pdf');
@@ -369,13 +350,13 @@ class CapsaTeamManagementTest extends TestCase
         $this->makeCapsaWithSections();
 
         $this->get(route('capsa.verify_teams'))
-            ->assertRedirect(route('capsa.team_management', ['tab' => 'verification']));
+            ->assertRedirect(route('capsa.team_management'));
     }
 
     // The CaPSA decides whether a title is too close to something already
     // done, so she needs the report the team saw - the matched abstracts and
     // what the check made of them - not a title and a percentage.
-    public function test_the_review_modal_carries_the_whole_duplication_report(): void
+    public function test_the_title_and_similar_pages_carry_the_whole_duplication_report(): void
     {
         $this->makeCapsaWithSections();
         [$team, , $sy] = $this->makeTeamInSection('Team Checked');
@@ -405,7 +386,7 @@ class CapsaTeamManagementTest extends TestCase
             'instructors_suggested' => [],
         ]);
 
-        CapstonePreProposal::create([
+        $proposal = CapstonePreProposal::create([
             'team_id' => $team->team_id,
             'duplication_check_id' => $check->id,
             'slot' => 1,
@@ -418,17 +399,22 @@ class CapsaTeamManagementTest extends TestCase
             'submitted_at' => now(),
         ]);
 
-        $response = $this->get(route('capsa.team_management', ['tab' => 'pre_proposals']));
+        // The title page ranks every match - all of them, not the first three.
+        $report = $this->get(route('capsa.team_management.title', [$team->team_id, $proposal->id]));
 
-        $response->assertOk();
+        $report->assertOk();
+        $report->assertSee('An Earlier Solar Monitoring Capstone', false);
+        $report->assertSee('A Sixth Match', false);
+        $report->assertSee('2023-2024', false);
 
-        // The abstract and the check's notes, not just the title and score.
-        $response->assertSee('This study built a solar monitoring platform', false);
-        $response->assertSee('Both monitor solar output remotely.', false);
-        $response->assertSee('Narrow the scope to the mobile side.', false);
-        $response->assertSee('2023-2024', false);
+        // And each match has a page with the abstract and the check's notes,
+        // not just a title and a percentage.
+        $match = $this->get(route('capsa.team_management.similar', [$team->team_id, $proposal->id, 1]));
 
-        // Every match, not the first three.
-        $response->assertSee('A Sixth Match', false);
+        $match->assertOk();
+        $match->assertSee('This study built a solar monitoring platform', false);
+        $match->assertSee('Both monitor solar output remotely.', false);
+        $match->assertSee('The earlier one had no mobile client.', false);
+        $match->assertSee('Narrow the scope to the mobile side.', false);
     }
 }

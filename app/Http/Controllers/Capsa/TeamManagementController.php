@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Capsa;
 use App\Http\Controllers\AdminProfileController;
 use App\Http\Controllers\Controller;
 use App\Models\CapstoneExpert;
+use App\Models\CapstonePreProposal;
 use App\Models\DefenseSchedule;
 use App\Models\MemberLeaveRequest;
 use App\Models\StudentSchoolYear;
@@ -17,6 +18,7 @@ use App\Support\MilestoneProgress;
 use App\Support\PreProposalPayload;
 use App\Support\SectionScope;
 use App\Support\TeamChecklist;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -39,6 +41,14 @@ class TeamManagementController extends Controller
 {
     public const TABS = ['teams', 'pre_proposals', 'verification', 'papers', 'milestones', 'leave_requests', 'rules'];
 
+    /**
+     * The tabs that became pages of their own.
+     *
+     * Their old URLs still arrive from bookmarks and from the notification
+     * mails, so they land on the list rather than on nothing.
+     */
+    private const FOLDED_TABS = ['teams', 'pre_proposals', 'verification', 'papers'];
+
     /** Shown where a value is genuinely absent rather than empty. */
     private const DASH = '—';
 
@@ -48,7 +58,7 @@ class TeamManagementController extends Controller
         private TeamChecklist $checklists,
     ) {}
 
-    public function index(Request $request): View
+    public function index(Request $request): View|RedirectResponse
     {
         /** @var CapstoneExpert $capsa */
         $capsa = auth('expert')->user();
@@ -57,27 +67,12 @@ class TeamManagementController extends Controller
         $tab = in_array($request->query('tab'), self::TABS, true) ? $request->query('tab') : 'teams';
         $selectedSection = $request->query('section');
 
-        // One pass over every team in her sections, then each tab is a view
-        // onto that same set rather than its own query - which is what keeps
-        // the counts in the tab strip honest.
-        $scoped = $this->scopedTeams($capsaSections, $selectedSection);
-        $teams = $scoped['teams'];
-        $teamIds = $teams->pluck('team_id');
+        if (in_array($request->query('tab'), self::FOLDED_TABS, true)) {
+            return redirect()->route('capsa.team_management', array_filter(['section' => $selectedSection]));
+        }
 
-        $milestones = $this->milestoneProgress($teams, $scoped['teamSections']);
-        $defenseSchedules = DefenseSchedule::whereIn('team_id', $teamIds)->get()->groupBy('team_id');
-        $engagedRoles = $this->engagedRoles($teamIds);
-        $papers = $this->paperChecks($capsa->expert_id, $teamIds);
-
-        $rows = $teams->map(fn (Team $team) => $this->summarise(
-            $team,
-            $scoped['teamSections'][$team->team_id] ?? SectionScope::UNASSIGNED,
-            $scoped['teamMembers'][$team->team_id] ?? collect(),
-            $milestones[$team->team_id] ?? null,
-            $engagedRoles[$team->team_id] ?? collect(),
-            $papers[$team->team_id] ?? collect(),
-            $defenseSchedules[$team->team_id] ?? collect(),
-        ));
+        $rows = $this->buildRows($capsa, $selectedSection);
+        $teamIds = $rows->map(fn ($row) => $row->team->team_id);
 
         // The Milestones tab is its own tracker: one section at a time, with
         // its own section tabs, so it ignores the page's section filter.
@@ -89,7 +84,7 @@ class TeamManagementController extends Controller
             'tab' => $tab,
             'rows' => $rows,
             // Each team's score at every defense, once its whole panel has graded.
-            'defenseScores' => $tab === 'teams' ? DefenseScores::forTeams($teamIds) : collect(),
+            'defenseScores' => DefenseScores::forTeams($teamIds),
             'tracker' => $tracker,
             // The two tabs that were pages of their own bring their own data,
             // built only when they are the one open.
@@ -114,6 +109,210 @@ class TeamManagementController extends Controller
                 'leave_requests' => MemberLeaveRequest::pendingCountFor($capsa),
             ],
         ]);
+    }
+
+    /**
+     * One team, everything about it.
+     *
+     * The milestone shown is the CaPSA's pick, or the first one that is not
+     * finished - the one she is most likely to have come here for.
+     */
+    public function show(Request $request, Team $team): View
+    {
+        $row = $this->teamRow($team);
+        $milestones = $row->milestones?->milestones ?? collect();
+
+        $selected = $request->integer('milestone');
+
+        if (! $milestones->has($selected)) {
+            $selected = $milestones->search(fn ($m) => $m->completed < $m->total);
+            $selected = $selected === false ? 0 : $selected;
+        }
+
+        return view('capsa.team-management.show', [
+            'row' => $row,
+            'trail' => $this->trail($row),
+            'defenseScores' => DefenseScores::forTeams(collect([$team->team_id])),
+            'experts' => $this->expertCards($row),
+            'milestones' => $milestones,
+            'selectedIndex' => $selected,
+            'selected' => $milestones->get($selected),
+            'defenseSchedules' => DefenseSchedule::where('team_id', $team->team_id)
+                ->orderBy('defense_date')->get(),
+        ]);
+    }
+
+    /** Every title this team turned in, one line each. */
+    public function preProposals(Team $team): View
+    {
+        $row = $this->teamRow($team);
+
+        return view('capsa.team-management.pre-proposals', [
+            'row' => $row,
+            'trail' => $this->trail($row, [['Pre-proposals', null]]),
+            'titles' => PreProposalPayload::forTeam($row->team),
+        ]);
+    }
+
+    /** One title: the decision, the form answers, and the similarity report. */
+    public function title(Team $team, CapstonePreProposal $preProposal): View
+    {
+        $row = $this->teamRow($team);
+        [$titles, $index] = $this->locateTitle($row, $preProposal);
+
+        return view('capsa.team-management.title', [
+            'row' => $row,
+            'trail' => $this->trail($row, [
+                ['Pre-proposals', route('capsa.team_management.pre_proposals', $team->team_id)],
+                ['Title #'.($index + 1), null],
+            ]),
+            'titles' => $titles,
+            'title' => $titles[$index],
+            'index' => $index,
+            'matches' => $this->matchesFor($titles[$index]),
+        ]);
+    }
+
+    /** One archive study the check matched, with Previous and Next. */
+    public function similar(Team $team, CapstonePreProposal $preProposal, int $rank): View
+    {
+        $row = $this->teamRow($team);
+        [$titles, $index] = $this->locateTitle($row, $preProposal);
+        $matches = $this->matchesFor($titles[$index]);
+
+        // Ranks are what the page shows, so they count from 1.
+        if ($rank < 1 || $rank > count($matches)) {
+            abort(404);
+        }
+
+        return view('capsa.team-management.similar', [
+            'row' => $row,
+            'trail' => $this->trail($row, [
+                ['Pre-proposals', route('capsa.team_management.pre_proposals', $team->team_id)],
+                ['Title #'.($index + 1), route('capsa.team_management.title', [$team->team_id, $preProposal->id])],
+                ['Similar study #'.$rank, null],
+            ]),
+            'title' => $titles[$index],
+            'preProposal' => $preProposal,
+            'matches' => $matches,
+            'rank' => $rank,
+            'match' => $matches[$rank - 1],
+        ]);
+    }
+
+    /**
+     * The row for a team the CaPSA actually oversees.
+     *
+     * Authorisation is the same question as "is this team on her list?", so
+     * it is answered by her list rather than by a second set of rules that
+     * could drift from it. A team outside her sections simply is not there.
+     */
+    private function teamRow(Team $team): object
+    {
+        /** @var CapstoneExpert $capsa */
+        $capsa = auth('expert')->user();
+
+        return $this->buildRows($capsa, null)
+            ->first(fn ($row) => (int) $row->team->team_id === (int) $team->team_id)
+            ?? abort(404);
+    }
+
+    /**
+     * The title's place in the team's list.
+     *
+     * Found in the list the Pre-proposals page shows, so a title belonging to
+     * another team - or a draft that was never turned in - is not found here
+     * and gives the same "not found" as a team she does not oversee.
+     *
+     * @return array{0: array<int, array>, 1: int}
+     */
+    private function locateTitle(object $row, CapstonePreProposal $preProposal): array
+    {
+        $titles = PreProposalPayload::forTeam($row->team);
+        $index = collect($titles)->search(fn ($t) => (int) $t['id'] === (int) $preProposal->id);
+
+        if ($index === false) {
+            abort(404);
+        }
+
+        return [$titles, $index];
+    }
+
+    /** The ranked archive matches for a title, capped at the ten shown. */
+    private function matchesFor(array $title): array
+    {
+        return collect($title['duplication']['matches'] ?? [])->take(10)->values()->all();
+    }
+
+    /**
+     * The breadcrumb trail, as [label, url] pairs ending on the current page.
+     *
+     * @param  array<int, array{0: string, 1: ?string}>  $below
+     * @return array<int, array{0: string, 1: ?string}>
+     */
+    private function trail(object $row, array $below = []): array
+    {
+        $teamUrl = $below === [] ? null : route('capsa.team_management.show', $row->team->team_id);
+
+        return array_merge([
+            ['Team Management', route('capsa.team_management')],
+            [$row->team->team_name, $teamUrl],
+        ], $below);
+    }
+
+    /**
+     * The three roles a team engages, always all three and always in order,
+     * so an empty one is visibly empty rather than missing.
+     *
+     * @return array<int, object>
+     */
+    private function expertCards(object $row): array
+    {
+        return collect(['adviser', 'consultant', 'grammarian'])
+            ->map(function (string $role) use ($row) {
+                $expert = $row->engagedRoles->get($role);
+
+                return (object) [
+                    'role' => $role,
+                    'expert' => $expert,
+                    'degree' => $expert?->degreeLabel(),
+                    'expertise' => $expert
+                        ? $expert->expertise->pluck('expertise_field')->filter()->values()
+                        : collect(),
+                ];
+            })
+            ->all();
+    }
+
+    /**
+     * Every team the CaPSA oversees, each summarised into one row.
+     *
+     * One pass, a handful of queries, and every page below the list reads the
+     * same rows - which is what lets a team page answer "is this team mine?"
+     * without a second set of rules about who may see what.
+     *
+     * @return Collection<int, object>
+     */
+    private function buildRows(CapstoneExpert $capsa, ?string $selectedSection): Collection
+    {
+        $scoped = $this->scopedTeams($capsa->sections ?? [], $selectedSection);
+        $teams = $scoped['teams'];
+        $teamIds = $teams->pluck('team_id');
+
+        $milestones = $this->milestoneProgress($teams, $scoped['teamSections']);
+        $defenseSchedules = DefenseSchedule::whereIn('team_id', $teamIds)->get()->groupBy('team_id');
+        $engagedRoles = $this->engagedRoles($teamIds);
+        $papers = $this->paperChecks($capsa->expert_id, $teamIds);
+
+        return $teams->map(fn (Team $team) => $this->summarise(
+            $team,
+            $scoped['teamSections'][$team->team_id] ?? SectionScope::UNASSIGNED,
+            $scoped['teamMembers'][$team->team_id] ?? collect(),
+            $milestones[$team->team_id] ?? null,
+            $engagedRoles[$team->team_id] ?? collect(),
+            $papers[$team->team_id] ?? collect(),
+            $defenseSchedules[$team->team_id] ?? collect(),
+        ));
     }
 
     /**
@@ -146,8 +345,12 @@ class TeamManagementController extends Controller
      * Each team's progress on its section's checklist, worked out a section at
      * a time so the whole page costs a handful of queries.
      *
+     * The whole resolution is kept, not just the totals: the list shows the
+     * bar, the progress grid shows every milestone, and the team page shows
+     * every item - all off this one pass.
+     *
      * @param  array<int, string>  $teamSections
-     * @return array<int, object{total: int, completed: int, overdue: int, percent: int}>
+     * @return array<int, object>
      */
     private function milestoneProgress(Collection $teams, array $teamSections): array
     {
@@ -161,12 +364,7 @@ class TeamManagementController extends Controller
             }
 
             foreach (MilestoneProgress::forTeams($checklist, $group->pluck('team_id')) as $teamId => $progress) {
-                $out[$teamId] = (object) [
-                    'total' => $progress->total,
-                    'completed' => $progress->completed,
-                    'overdue' => $progress->overdue,
-                    'percent' => $progress->percent,
-                ];
+                $out[$teamId] = $progress;
             }
         }
 
@@ -180,7 +378,11 @@ class TeamManagementController extends Controller
      * adviser and a consultant is counted as whichever the team engaged them
      * as - not both, and not a guess.
      *
-     * @return array<int, Collection<string, string>>
+     * The expert themself, not just their name: the team page shows their
+     * degree, their fields and their email, and that is one eager-load here
+     * rather than a second lookup a level down.
+     *
+     * @return array<int, Collection<string, CapstoneExpert>>
      */
     private function engagedRoles(Collection $teamIds): array
     {
@@ -190,7 +392,7 @@ class TeamManagementController extends Controller
 
         return TeamExpertAssignment::whereIn('team_id', $teamIds)
             ->where('status', 'approved')
-            ->with(['expert', 'expertRole.role', 'role'])
+            ->with(['expert.expertise', 'expertRole.role', 'role'])
             ->get()
             ->groupBy('team_id')
             ->map(function ($assignments) {
@@ -199,8 +401,8 @@ class TeamManagementController extends Controller
                 foreach ($assignments as $assignment) {
                     $role = $assignment->engaged_role_name;
 
-                    if ($role) {
-                        $filled->put($role, $assignment->expert?->name ?? 'Unknown');
+                    if ($role && $assignment->expert) {
+                        $filled->put($role, $assignment->expert);
                     }
                 }
 
@@ -308,10 +510,6 @@ class TeamManagementController extends Controller
             'gradient' => $gradient,
             'tags' => $tags,
             'leaderName' => $leaderName,
-            // Built here, not in Blade: every tab opens the same review modal,
-            // and an @include cannot hand variables back to the view that
-            // included it, so a shared partial could not carry this.
-            'reviewPayload' => $this->reviewPayload($team, $section, $members, $initials, $gradient, $tags, $leaderName),
             'milestones' => $milestones,
             'engagedRoles' => $engagedRoles,
             'papers' => $papers,
@@ -327,39 +525,4 @@ class TeamManagementController extends Controller
         ];
     }
 
-    /**
-     * The payload openVerifyModal() expects - see
-     * resources/views/capsa/partials/team-review-modal.blade.php, which is
-     * the same modal Team Verification has always used.
-     */
-    private function reviewPayload(
-        Team $team,
-        string $section,
-        Collection $members,
-        string $initials,
-        string $gradient,
-        array $tags,
-        string $leaderName,
-    ): array {
-        $payload = [
-            'team_id' => $team->team_id,
-            'team_name' => $team->team_name,
-            'initials' => $initials,
-            'gradient' => $gradient,
-            'project_title' => $team->project_title ?: self::DASH,
-            'tags' => $tags,
-            'section' => $section,
-            'leader' => $leaderName,
-            'members' => $members->map(fn ($m) => trim(($m->f_name ?? '').' '.($m->l_name ?? '')))->filter()->values(),
-            'member_count' => $members->count(),
-            'pre_proposals' => PreProposalPayload::forTeam($team),
-            'selected_pre_proposal_id' => $team->selected_pre_proposal_id,
-        ];
-
-        // The modal shows a Verify button only when there is somewhere to
-        // post it; a verified team is read-only.
-        return $team->is_confirmed
-            ? $payload + ['verified' => true]
-            : $payload + ['verify_url' => route('capsa.verify_teams.verify', $team->team_id)];
-    }
 }

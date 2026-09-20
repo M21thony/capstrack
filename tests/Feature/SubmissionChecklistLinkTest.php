@@ -161,10 +161,11 @@ class SubmissionChecklistLinkTest extends TestCase
     {
         $draft = $this->addDeliverable($this->checklist, ['title' => 'Chapter 1 Draft', 'kind' => Deliverable::DOCUMENT]);
 
-        $this->actingAs($this->student)
+        $response = $this->actingAs($this->student)
             ->get(route('student.submission', ['item' => $draft->id]))
             ->assertOk()
-            ->assertSee('Chapter 1 Draft')
-            ->assertSee('value="'.$draft->id.'" selected', false);
+            ->assertSee('Chapter 1 Draft');
+
+        $this->assertMatchesRegularExpression('/value="'.$draft->id.'"\s+selected/', $response->getContent());
     }
 }

@@ -37,6 +37,7 @@ class ChecklistMilestoneController extends Controller
         $data = $request->validate([
             'name' => ['sometimes', 'required', 'string', 'max:255'],
             'archived' => ['sometimes', 'boolean'],
+            'requires_previous' => ['sometimes', 'boolean'],
         ]);
 
         if (isset($data['name'])) {
@@ -45,6 +46,10 @@ class ChecklistMilestoneController extends Controller
 
         if (array_key_exists('archived', $data)) {
             $milestone->archived_at = $data['archived'] ? now() : null;
+        }
+
+        if (array_key_exists('requires_previous', $data)) {
+            $milestone->requires_previous = $data['requires_previous'];
         }
 
         $milestone->save();
@@ -63,6 +68,11 @@ class ChecklistMilestoneController extends Controller
 
     private function present(ChecklistMilestone $milestone): array
     {
-        return ['id' => $milestone->id, 'name' => $milestone->name, 'archived' => (bool) $milestone->archived_at];
+        return [
+            'id' => $milestone->id,
+            'name' => $milestone->name,
+            'archived' => (bool) $milestone->archived_at,
+            'requires_previous' => (bool) $milestone->requires_previous,
+        ];
     }
 }

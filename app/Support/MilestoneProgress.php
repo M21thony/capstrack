@@ -120,6 +120,7 @@ class MilestoneProgress
 
         return (object) [
             'items' => $rows,
+            'milestones' => self::byMilestone($rows),
             'total' => $total,
             'completed' => $completed,
             'handed_in' => $rows->where('state', self::HANDED_IN)->count(),
@@ -128,6 +129,169 @@ class MilestoneProgress
             // An empty checklist is unconfigured, not finished.
             'percent' => $total === 0 ? 0 : (int) round($completed / $total * 100),
         ];
+    }
+
+    /**
+     * The same items grouped into their milestones, in checklist order, each
+     * with the gate worked out.
+     *
+     * A gated milestone is locked until every item of the one before it is
+     * complete. Nothing stores that: it is read off the states here, so the
+     * grid, the team page and the student's upload all read one answer.
+     *
+     * The lock carries itself down the checklist - a locked milestone is by
+     * definition not complete, so the next gated one stays shut too.
+     *
+     * @return Collection<int, object>
+     */
+    private static function byMilestone(Collection $rows): Collection
+    {
+        $previousComplete = true;
+        $previousName = null;
+
+        return $rows
+            ->groupBy(fn ($row) => $row->milestone->id)
+            ->map(function (Collection $items) use (&$previousComplete, &$previousName) {
+                $milestone = $items->first()->milestone;
+                $total = $items->count();
+                $completed = $items->whereIn('state', self::COMPLETE_STATES)->count();
+                $locked = (bool) $milestone->requires_previous && ! $previousComplete;
+
+                $summary = (object) [
+                    'milestone' => $milestone,
+                    'items' => $items->values(),
+                    'total' => $total,
+                    'completed' => $completed,
+                    'overdue' => $items->where('state', self::OVERDUE)->count(),
+                    'percent' => $total === 0 ? 0 : (int) round($completed / $total * 100),
+                    'locked' => $locked,
+                    // A milestone has no date of its own; the last thing due
+                    // inside it is the date the CaPSA means by "due".
+                    'due_on' => $items->pluck('due_on')->filter()->max(),
+                    // Named only when it matters: what this one is waiting for.
+                    'requires' => $milestone->requires_previous ? $previousName : null,
+                ];
+
+                $previousComplete = $total > 0 && $completed === $total;
+                $previousName = $milestone->name;
+
+                return $summary;
+            })
+            ->values();
+    }
+
+    /**
+     * One milestone's state as a word, a colour and an icon.
+     *
+     * The team page's strip and the list page's progress grid both say this,
+     * so they say it from here rather than each working it out again.
+     *
+     * @param  object  $summary  a row of byMilestone()
+     * @return array{0: string, 1: string, 2: string}
+     */
+    public static function milestoneState(object $summary): array
+    {
+        if ($summary->locked) {
+            return ['Locked', 'p-gray', 'lock'];
+        }
+
+        $states = $summary->items->pluck('state');
+
+        return match (true) {
+            $summary->total > 0 && $summary->completed === $summary->total => ['Completed', 'p-green', 'check'],
+            $states->contains(self::OVERDUE) => ['Overdue', 'p-red', 'bang'],
+            $summary->completed > 0 || $states->contains(self::HANDED_IN) => ['In progress', 'p-gold', 'clock'],
+            default => ['Not started', 'p-gray', 'dot'],
+        };
+    }
+
+    /**
+     * The one-line note beside an item: what it is waiting for, or when it
+     * was due. Said the same way on the team page and in the student's list.
+     */
+    public static function itemNote(object $item, bool $locked = false, ?string $requires = null): string
+    {
+        $due = $item->due_on ? Carbon::parse($item->due_on)->format('M j, Y') : null;
+
+        if ($locked) {
+            return $requires ? 'Waits for '.$requires : 'Waits for the milestone before it';
+        }
+
+        return match ($item->state) {
+            self::HANDED_IN => match (true) {
+                $item->waiting_on === self::WAITING_ON_TEAM => 'Waiting on the revised version',
+                $item->waiting_on === self::WAITING_ON_SIGNED_COPY => 'Waiting on the signed copy',
+                $item->waiting_on === self::WAITING_ON_CAPSA => 'Waiting on your check',
+                $item->waiting_on === self::WAITING_ON_REDEFENSE => 'Waiting on the next defense date',
+                $item->item->kind === Deliverable::DEFENSE => 'Scheduled',
+                $item->waiting_on !== null => 'Waiting on the '.$item->waiting_on,
+                default => 'Waiting on your check',
+            },
+            self::OVERDUE => $due ? 'Was due '.$due : 'Overdue',
+            self::DONE_LATE => $due ? 'Handed in after '.$due : 'Handed in late',
+            self::NOT_STARTED => $due ? 'Due '.$due : '',
+            default => '',
+        };
+    }
+
+    /**
+     * Where an item is in its own lifecycle, as a list of named steps.
+     *
+     * Derived from the state and who it waits on, both of which are already
+     * worked out above. Nothing new is stored for this.
+     *
+     * Each step is ['label' => string, 'state' => 'done'|'current'|'missed'|'todo'].
+     *
+     * @return array<int, array{label: string, state: string}>
+     */
+    public static function steps(string $kind, string $state, ?string $waitingOn): array
+    {
+        $labels = match ($kind) {
+            Deliverable::DOCUMENT => ['Handed in', 'Reviewed', 'Revised', 'Approved'],
+            Deliverable::APPROVAL => ['Handed in', 'Signed', 'Checked'],
+            Deliverable::DEFENSE => ['Scheduled', 'Defended', 'Passed'],
+            default => ['Handed in', 'Checked'],
+        };
+
+        // Done is done, however it got there, and a late hand-in is still a
+        // finished one - the lateness is said in words beside the track.
+        if (in_array($state, self::COMPLETE_STATES, true)) {
+            return array_map(fn ($label) => ['label' => $label, 'state' => 'done'], $labels);
+        }
+
+        // Nothing handed in: the first step is either still ahead or missed.
+        if ($state !== self::HANDED_IN) {
+            $first = $state === self::OVERDUE ? 'missed' : 'todo';
+
+            return array_map(
+                fn ($label, $i) => ['label' => $label, 'state' => $i === 0 ? $first : 'todo'],
+                $labels,
+                array_keys($labels),
+            );
+        }
+
+        $at = match (true) {
+            // The team owes a new version, so the reviewer has already read it.
+            $waitingOn === self::WAITING_ON_TEAM => 2,
+            $waitingOn === self::WAITING_ON_SIGNED_COPY => 1,
+            $waitingOn === self::WAITING_ON_CAPSA => count($labels) - 1,
+            $waitingOn === self::WAITING_ON_REDEFENSE => 1,
+            // A defense on the calendar has been scheduled and no more.
+            $kind === Deliverable::DEFENSE => 1,
+            // Handed in and with a reviewer: adviser, consultant, grammarian.
+            $waitingOn !== null => 1,
+            default => 1,
+        };
+
+        return array_map(
+            fn ($label, $i) => ['label' => $label, 'state' => match (true) {
+                $i < $at => 'done',
+                $i === $at => 'current',
+                default => 'todo',
+            }],
+            $labels,
+            array_keys($labels),
+        );
     }
 
     private static function resolve(

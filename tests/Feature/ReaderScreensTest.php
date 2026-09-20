@@ -93,7 +93,7 @@ class ReaderScreensTest extends TestCase
             ->assertSee('Chapter2_final')
             ->assertSee('Needs revision')
             ->assertSee('Submit 2nd revision')
-            ->assertSee(route('student.submission', ['item' => $this->item->id]))
+            ->assertSee("openSubmissionDrawer('{$this->item->id}')", false)
             ->assertSee('Add three local studies.')
             ->assertSee('Consultant · still reviewing');
     }

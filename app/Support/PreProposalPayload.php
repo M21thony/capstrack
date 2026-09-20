@@ -39,6 +39,8 @@ class PreProposalPayload
                 'title' => $p->title,
                 'status' => $p->status,
                 'rejection_reason' => $p->rejection_reason,
+                // The suggestion she may leave when recommending a title.
+                'capsa_note' => $p->capsa_note,
                 'adviser' => $p->adviser_status ? [
                     'status' => $p->adviser_status,
                     'name' => $adviser(),
