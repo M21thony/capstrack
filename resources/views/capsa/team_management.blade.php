@@ -49,7 +49,7 @@
            and have a way back, instead of opening with no title on them. --}}
       @include('capsa.partials.team-management._crumb', ['trail' => [
         ['Team Management', route('capsa.team_management')],
-        [['milestones' => 'Milestones', 'leave_requests' => 'Leave Requests', 'rules' => 'Team Settings'][$tab], null],
+        [$tab === 'milestones' ? 'Milestones' : 'Leave Requests', null],
       ]])
       @include('capsa.partials.team-management.' . $tab, $tabData)
 
@@ -121,9 +121,10 @@
           <h1>Team Management</h1>
           <p>{!! $waiting !== '' ? '<b>Waiting on you:</b> '.$waiting : 'Every team in your sections, and everything about them, on one page.' !!}</p>
         </div>
-        {{-- The three cross-team tools. Not facts about one team, so they stay
-             pages of their own rather than folding into this one. --}}
-        <div class="setw" style="display:flex;gap:9px;flex-wrap:wrap">
+        {{-- Milestones and Leave Requests are lists of their own, so they are
+             pages. The three team rules are three small answers, so they open
+             in a menu under their button rather than sending her away. --}}
+        <div class="pacts">
           <a class="btn btn-o" href="{{ route('capsa.team_management', ['tab' => 'milestones']) }}">
             <x-tm-icon n="clip" s="16" />Milestones
             @if (($counts['milestones'] ?? 0) > 0)<span class="nb">{{ $counts['milestones'] }} to check</span>@endif
@@ -132,9 +133,32 @@
             <x-tm-icon n="mail" s="16" />Leave Requests
             @if (($counts['leave_requests'] ?? 0) > 0)<span class="nb">{{ $counts['leave_requests'] }}</span>@endif
           </a>
-          <a class="btn btn-o" href="{{ route('capsa.team_management', ['tab' => 'rules']) }}">
-            <x-tm-icon n="gear" s="16" />Team Settings
-          </a>
+
+          <div class="setw">
+            <button class="btn btn-o" type="button" id="setBtn" aria-expanded="false" aria-controls="setMenu">
+              <x-tm-icon n="gear" s="16" />Team Settings
+            </button>
+            <div class="menu" id="setMenu" hidden>
+              <h3>Team Settings</h3>
+              <label class="opt" for="tsize">
+                <span><b>Max members per team</b><small>Any number from {{ \App\Models\Team::MIN_MEMBERS }} to {{ \App\Models\Team::MAX_MEMBERS }}</small></span>
+                <input type="number" id="tsize" min="{{ \App\Models\Team::MIN_MEMBERS }}" max="{{ \App\Models\Team::MAX_MEMBERS }}" step="1" inputmode="numeric">
+              </label>
+              <p class="opt-w" id="tsw" hidden></p>
+              <label class="opt" for="acreate">
+                <span><b>Allow students to create teams</b><small>Students can start a new team</small></span>
+                <input type="checkbox" class="tg" role="switch" id="acreate">
+              </label>
+              <label class="opt" for="ajoin">
+                <span><b>Allow students to join teams</b><small>Students can ask to join an existing team</small></span>
+                <input type="checkbox" class="tg" role="switch" id="ajoin">
+              </label>
+              <div class="mact">
+                <button class="btn btn-o" type="button" id="setX">Cancel</button>
+                <button class="btn btn-p" type="button" id="setOk">Save</button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -410,6 +434,79 @@
       document.getElementById('tm-teams').hidden = b.dataset.v !== 'teams';
       document.getElementById('tm-progress').hidden = b.dataset.v !== 'progress';
     });
+
+    /* Team Settings: opens under its button. Cancel, Escape or clicking away
+       drops the changes, so nothing is saved by accident. */
+    const RULES = @json(['max' => $rules['maxMembers'], 'create' => $rules['allowCreation'], 'join' => $rules['allowJoining']]),
+          SIZES = @json((object) $rules['teamSizes']),
+          MIN = {{ \App\Models\Team::MIN_MEMBERS }}, MAX = {{ \App\Models\Team::MAX_MEMBERS }};
+    const setBtn = document.getElementById('setBtn'), setMenu = document.getElementById('setMenu'),
+          tsize = document.getElementById('tsize'), tsw = document.getElementById('tsw'),
+          acreate = document.getElementById('acreate'), ajoin = document.getElementById('ajoin'),
+          setOk = document.getElementById('setOk');
+
+    const toast = (msg, ok) => {
+      const el = document.getElementById('tm-toast');
+      el.textContent = msg;
+      el.style.borderLeftColor = ok ? 'var(--green)' : 'var(--red)';
+      el.classList.add('show');
+      clearTimeout(toast.t);
+      toast.t = setTimeout(() => el.classList.remove('show'), 3200);
+    };
+
+    const checkSize = () => {
+      const v = Number(tsize.value), ok = Number.isInteger(v) && v >= MIN && v <= MAX;
+      /* How many teams a lower limit would reach, said before she commits. */
+      const over = ok ? Object.keys(SIZES).reduce((n, k) => n + (Number(k) > v ? SIZES[k] : 0), 0) : 0;
+      tsize.setAttribute('aria-invalid', !ok);
+      tsw.className = 'opt-w' + (ok ? ' soft' : '');
+      tsw.textContent = !ok
+        ? 'Type a number from ' + MIN + ' to ' + MAX + '.'
+        : over + ' team' + (over > 1 ? 's' : '') + ' already ' + (over > 1 ? 'have' : 'has')
+          + ' more than ' + v + '. They keep their members but cannot add anyone.';
+      tsw.hidden = ok && !over;
+      setOk.disabled = !ok;
+    };
+
+    const setOpen = on => {
+      if (on) { tsize.value = RULES.max; acreate.checked = RULES.create; ajoin.checked = RULES.join; checkSize(); }
+      setMenu.hidden = !on;
+      setBtn.setAttribute('aria-expanded', on);
+      if (on) tsize.focus();
+    };
+
+    setBtn.onclick = () => setOpen(setMenu.hidden);
+    tsize.oninput = checkSize;
+    document.getElementById('setX').onclick = () => { setOpen(false); setBtn.focus(); };
+    document.addEventListener('click', e => { if (!setMenu.hidden && !e.target.closest('.setw')) setOpen(false); });
+    setMenu.addEventListener('keydown', e => { if (e.key === 'Escape') { setOpen(false); setBtn.focus(); } });
+
+    setOk.onclick = () => {
+      setOk.disabled = true;
+      fetch(@json(route('capsa.team_rules.update'), JSON_UNESCAPED_SLASHES), {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+        },
+        body: JSON.stringify({
+          max_members: Number(tsize.value),
+          allow_creation: acreate.checked,
+          allow_joining: ajoin.checked,
+        }),
+      })
+        .then(r => r.json().then(data => ({ ok: r.ok, data })))
+        .then(({ ok, data }) => {
+          if (!ok || !data.success) { toast(data.message || 'Could not save the team settings.', false); return; }
+          RULES.max = data.max_members; RULES.create = data.allow_creation; RULES.join = data.allow_joining;
+          setOpen(false);
+          setBtn.focus();
+          toast(data.message, true);
+        })
+        .catch(() => toast('Network error. Nothing was saved.', false))
+        .finally(() => { setOk.disabled = false; });
+    };
   })();
 </script>
 @endif

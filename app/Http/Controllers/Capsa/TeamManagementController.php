@@ -47,7 +47,7 @@ class TeamManagementController extends Controller
      * Their old URLs still arrive from bookmarks and from the notification
      * mails, so they land on the list rather than on nothing.
      */
-    private const FOLDED_TABS = ['teams', 'pre_proposals', 'verification', 'papers'];
+    private const FOLDED_TABS = ['teams', 'pre_proposals', 'verification', 'papers', 'rules'];
 
     /** Shown where a value is genuinely absent rather than empty. */
     private const DASH = '—';
@@ -86,13 +86,15 @@ class TeamManagementController extends Controller
             // Each team's score at every defense, once its whole panel has graded.
             'defenseScores' => DefenseScores::forTeams($teamIds),
             'tracker' => $tracker,
-            // The two tabs that were pages of their own bring their own data,
-            // built only when they are the one open.
+            // The tab that is still a page of its own brings its own data,
+            // built only when it is the one open.
             'tabData' => match ($tab) {
-                'rules' => TeamRulesController::pageData(),
                 'leave_requests' => app(LeaveRequestController::class)->pageData($capsa),
                 default => [],
             },
+            // Team Settings is a small menu under its own button on the list,
+            // not a page, so the list always carries what it shows.
+            'rules' => TeamRulesController::pageData(),
             'selectedSection' => $selectedSection,
             'allSections' => $capsaSections,
             'sectionOptions' => collect(AdminProfileController::getAllAvailableSections())

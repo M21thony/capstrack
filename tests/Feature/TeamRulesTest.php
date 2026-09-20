@@ -126,18 +126,31 @@ class TeamRulesTest extends TestCase
         $this->assertTrue(Team::creationAllowed());
     }
 
-    public function test_the_page_opens_for_a_capsa(): void
+    /**
+     * The three rules are three small answers, so they open in a menu under
+     * the Team Settings button on the list, not on a page of their own.
+     */
+    public function test_the_settings_are_a_menu_on_the_list(): void
     {
         $this->actingAs($this->capsa(), 'expert')
-            ->get(route('capsa.team_management', ['tab' => 'rules']))
+            ->get(route('capsa.team_management'))
             ->assertOk()
-            ->assertSee('Maximum members per team')
+            ->assertSee('id="setMenu"', false)
+            ->assertSee('Max members per team')
             ->assertSee('Allow students to create teams')
             ->assertSee('Allow students to join teams');
     }
 
-    /** The page can say who a lower limit reaches before the CaPSA saves it. */
-    public function test_the_page_knows_how_many_teams_have_each_size(): void
+    /** Its old address is still bookmarked, so it lands on the list. */
+    public function test_the_old_rules_address_goes_to_the_list(): void
+    {
+        $this->actingAs($this->capsa(), 'expert')
+            ->get(route('capsa.team_management', ['tab' => 'rules']))
+            ->assertRedirect(route('capsa.team_management'));
+    }
+
+    /** The menu can say who a lower limit reaches before the CaPSA saves it. */
+    public function test_the_menu_knows_how_many_teams_have_each_size(): void
     {
         $leader = $this->student('sized@my.cspc.edu.ph');
         $this->teamLedBy($leader, [
@@ -145,9 +158,9 @@ class TeamRulesTest extends TestCase
         ]);
 
         $this->actingAs($this->capsa(), 'expert')
-            ->get(route('capsa.team_management', ['tab' => 'rules']))
+            ->get(route('capsa.team_management'))
             ->assertOk()
-            ->assertViewHas('tabData', fn ($data) => ($data['teamSizes'][4] ?? 0) === 1);
+            ->assertViewHas('rules', fn ($data) => ($data['teamSizes'][4] ?? 0) === 1);
     }
 
     // ── creation ──────────────────────────────────────────────────────────
