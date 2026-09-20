@@ -3,6 +3,14 @@
   $seenNotifIds = session('student_seen_notification_ids', []);
   $unseenNotifCount = count(array_diff($allUnreadIds, $seenNotifIds));
 @endphp
+{{-- Nothing on screen: just where capstrack-push.js reads the keys from. It is
+     a bare element rather than a wrapper round the bell because the bell and
+     its panel are already positioned by the page, and wrapping them would move
+     the panel. --}}
+<span id="notif-wrap" hidden
+      data-vapid="{{ config('services.webpush.public_key') }}"
+      data-subscribe="{{ route('push.subscribe') }}"
+      data-csrf="{{ csrf_token() }}"></span>
 <button class="notif-btn" id="notif-btn" type="button" aria-label="Notifications">
   <svg viewBox="0 0 24 24" style="pointer-events:none"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
   @if ($unseenNotifCount > 0)
@@ -20,6 +28,12 @@
       </button>
     @endif
   </div>
+  {{-- Hidden on load. capstrack-push.js shows it only when the browser has
+       never been asked, so nobody gets a permission box they did not click. --}}
+  <div class="notif-ask" id="notif-ask" style="display:none">
+    <div class="notif-ask-text">Get these on your desktop, even when CapsTrack is closed.</div>
+    <button type="button" class="notif-ask-btn" id="notif-ask-btn">Turn on</button>
+  </div>
   <div class="notif-list">
     @forelse($unreadNotifications ?? [] as $notif)
       @php
@@ -31,6 +45,9 @@
           'invitation_declined', 'request_declined' => ['bg' => 'rgba(245,158,11,0.12)', 'fg' => '#f59e0b', 'svg' => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>'],
           'leadership_transferred' => ['bg' => 'rgba(251,191,36,0.15)', 'fg' => '#fbbf24', 'svg' => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>'],
           'announcement' => ['bg' => 'rgba(249,115,22,0.12)', 'fg' => '#f97316', 'svg' => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>'],
+          'review_finished' => ['bg' => 'rgba(22,163,74,0.12)', 'fg' => '#16a34a', 'svg' => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><polyline points="9 15 11 17 15 13"/></svg>'],
+          'milestone_due' => ['bg' => 'rgba(245,158,11,0.12)', 'fg' => '#f59e0b', 'svg' => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>'],
+          'consultation_reminder' => ['bg' => 'rgba(59,130,246,0.12)', 'fg' => '#3b82f6', 'svg' => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><polyline points="12 13 12 16 14 17"/></svg>'],
           default => ['bg' => 'rgba(100,116,139,0.12)', 'fg' => '#64748b', 'svg' => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>'],
         };
       @endphp
@@ -140,6 +157,11 @@
 .notif-item:hover::before{opacity:1}
 
 .notif-empty{padding:40px 18px;text-align:center;font-size:13px;color:var(--text3);display:flex;flex-direction:column;align-items:center}
+
+.notif-ask{display:flex;align-items:center;gap:10px;padding:10px 16px;background:rgba(37,99,235,0.06);border-bottom:1px solid var(--border)}
+.notif-ask-text{flex:1;font-size:11.5px;color:var(--text2);line-height:1.4}
+.notif-ask-btn{padding:6px 12px;border:none;border-radius:6px;background:#2563eb;color:#fff;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0}
+.notif-ask-btn:hover{background:#1d4ed8}
 </style>
 
 <script>
@@ -262,6 +284,30 @@ document.addEventListener('click', function(e) {
         '<svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:.3;margin-bottom:8px"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>' +
         '<div>No new notifications</div></div>';
     }
+  });
+});
+</script>
+
+<script src="/js/capstrack-push.js" defer></script>
+<script>
+// Deferred scripts finish before this fires, so CapsTrackPush is there by now.
+document.addEventListener('DOMContentLoaded', function () {
+  var ask = document.getElementById('notif-ask');
+  var askBtn = document.getElementById('notif-ask-btn');
+  if (!ask || !askBtn || !window.CapsTrackPush || !CapsTrackPush.supported) return;
+
+  // 'default' means this browser has never been asked. Already granted or
+  // already refused - leave the strip hidden either way.
+  if (CapsTrackPush.state() === 'default') ask.style.display = 'flex';
+
+  askBtn.addEventListener('click', function (e) {
+    e.stopPropagation();
+    askBtn.disabled = true;
+    askBtn.textContent = 'Wait...';
+    CapsTrackPush.enable().then(function (permission) {
+      ask.style.display = 'none';
+      if (permission === 'denied') alert('Your browser blocked notifications. You can turn them back on in its site settings.');
+    });
   });
 });
 </script>

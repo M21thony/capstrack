@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasNotificationPrefs;
 use Database\Factories\StudentFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -25,7 +26,12 @@ use Illuminate\Support\Str;
 class Student extends Authenticatable
 {
     /** @use HasFactory<StudentFactory> */
-    use HasFactory, Notifiable;
+    use HasFactory, HasNotificationPrefs, Notifiable;
+
+    public function notificationAudience(): string
+    {
+        return 'student';
+    }
 
     protected $primaryKey = 'student_id';
 

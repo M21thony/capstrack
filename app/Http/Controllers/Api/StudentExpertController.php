@@ -12,6 +12,7 @@ use App\Models\ExpertRemovalRequest;
 use App\Models\Student;
 use App\Models\StudentSchoolYear;
 use App\Models\TeamExpertAssignment;
+use App\Services\Notifier;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -286,6 +287,19 @@ class StudentExpertController extends Controller
                 'pre_proposal_id' => $approvedProposal?->id,
                 'message' => $validated['message'],
             ]);
+
+            // Before this, an expert found out a team had applied only by
+            // opening the Assignments page and noticing. No email was ever
+            // sent for an application, so nothing here replaces one.
+            $role = $assignment->engaged_role_name;
+            Notifier::toExpert(
+                (int) $assignment->expert_id,
+                'expert_application',
+                'New application',
+                '<strong>'.e($team->team_name).'</strong> applied to you'.($role ? ' as their '.e($role) : '').'.',
+                route('instructor.assignments'),
+                ['team_id' => $team->team_id],
+            );
 
             return response()->json([
                 'success' => true,

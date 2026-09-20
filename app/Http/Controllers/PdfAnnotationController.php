@@ -6,6 +6,8 @@ use App\Models\CapstoneDocument;
 use App\Models\CapstoneDocumentReview;
 use App\Models\PdfRemark;
 use App\Services\GoogleDriveService;
+use App\Services\Notifier;
+use App\Support\StudentTeam;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -234,6 +236,24 @@ class PdfAnnotationController extends Controller
             'reviewed_at' => $finishing ? now() : null,
             'verdict_at' => $finishing ? now() : null,
         ]);
+
+        // The team had no way of knowing a review had come back other than
+        // opening Submission and checking. Only on finishing - reopening a
+        // review is the reviewer's own housekeeping.
+        if ($finishing) {
+            $document = $review->document;
+            $team = StudentTeam::for($document?->student_id);
+
+            Notifier::toStudents(
+                $team?->members ?? [],
+                'review_finished',
+                'Review finished',
+                'Your '.e(str_replace('_', ' ', $review->role)).' finished reviewing <strong>'
+                    .e($document?->file_name ?? 'your document').'</strong> - '.e($review->verdict).'.',
+                route('student.submission'),
+                ['review_id' => $review->review_id],
+            );
+        }
 
         return response()->json([
             'success' => true,

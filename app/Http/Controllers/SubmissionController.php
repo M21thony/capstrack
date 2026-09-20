@@ -8,6 +8,7 @@ use App\Models\Deliverable;
 use App\Models\GoogleDriveToken;
 use App\Models\Team;
 use App\Services\GoogleDriveService;
+use App\Services\Notifier;
 use App\Services\RecipientResolver;
 use App\Support\MilestoneProgress;
 use App\Support\StudentTeam;
@@ -182,6 +183,19 @@ class SubmissionController extends Controller
                 'version' => (string) $document->file_version,
                 'drive_status' => 'pending',
             ]);
+
+            // No email has ever gone out for a submission - the expert found
+            // out by opening Document Review. This is the first time they are
+            // actually told.
+            Notifier::toExpert(
+                (int) $expertId,
+                'document_submitted',
+                'Document to review',
+                '<strong>'.e($team->team_name ?? 'A team').'</strong> sent you <strong>'
+                    .e($document->file_name).'</strong> as their '.e(str_replace('_', ' ', $role)).'.',
+                route('instructor.docreview'),
+                ['team_id' => $studentYear->team_id, 'review_id' => $review->review_id],
+            );
 
             $explicitFolderId = $role === 'subject_adviser' ? $request->input('subject_adviser_folder_id') : null;
             $this->deliverToDrive($review, $expertId, $studentYear->team_id, $team->team_name ?? 'Unknown Team', $file, $originalExt, $explicitFolderId);

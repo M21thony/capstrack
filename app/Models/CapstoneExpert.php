@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasNotificationPrefs;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -35,7 +36,12 @@ use Illuminate\Support\Str;
 ])]
 class CapstoneExpert extends Authenticatable
 {
-    use HasFactory, Notifiable;
+    use HasFactory, HasNotificationPrefs, Notifiable;
+
+    public function notificationAudience(): string
+    {
+        return 'expert';
+    }
 
     // The programs an expert can accept teams from. Must stay in step with
     // the keys of Student::PROGRAM_COURSES (a const can't call array_keys(),

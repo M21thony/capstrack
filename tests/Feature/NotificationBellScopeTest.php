@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\ActivityLog;
 use App\Models\CapstoneExpert;
 use App\Models\ExpertRole;
+use App\Models\Notification;
 use App\Models\Role;
 use App\Models\Student;
 use App\Models\StudentSchoolYear;
@@ -59,6 +60,16 @@ class NotificationBellScopeTest extends TestCase
         ]);
     }
 
+    private function notifyExpert(CapstoneExpert $expert, string $title): Notification
+    {
+        return Notification::create([
+            'expert_id' => $expert->expert_id,
+            'type' => 'expert_application',
+            'title' => $title,
+            'created_at' => now(),
+        ]);
+    }
+
     public function test_a_capsa_only_sees_activity_from_their_own_sections(): void
     {
         $capsa = $this->capsa(['BSIT-3A']);
@@ -76,22 +87,28 @@ class NotificationBellScopeTest extends TestCase
         $response->assertDontSee('Outside submitted chapter one');
     }
 
-    /** The admin has no sections and runs the whole system, so theirs is not scoped. */
-    public function test_the_admin_bell_is_not_scoped(): void
+    /**
+     * The admin and CaPSA bell is the expert bell now, so it carries what is
+     * addressed to that person rather than the whole school's activity log.
+     * Recent Activity did not disappear - it has a page of its own, which the
+     * bell's footer links to.
+     */
+    public function test_the_admin_bell_carries_their_own_notifications_not_the_activity_log(): void
     {
         $admin = $this->capsa([], true);
+        $other = $this->capsa([], true);
 
-        $one = $this->studentIn('BSIT', '3 · A', 'Alpha');
-        $two = $this->studentIn('BSIS', '4 · B', 'Beta');
+        $this->notifyExpert($admin, 'Addressed to the admin');
+        $this->notifyExpert($other, 'Addressed to somebody else');
 
-        $this->logFor($one, 'Alpha submitted chapter one');
-        $this->logFor($two, 'Beta submitted chapter one');
+        $this->logFor($this->studentIn('BSIT', '3 · A', 'Alpha'), 'Alpha submitted chapter one');
 
-        $response = $this->actingAs($admin, 'expert')->get('/admin/experts');
+        $response = $this->actingAs($admin, 'expert')->getJson('/instructor/notifications');
 
         $response->assertStatus(200);
-        $response->assertSee('Alpha submitted chapter one');
-        $response->assertSee('Beta submitted chapter one');
+        $response->assertSee('Addressed to the admin');
+        $response->assertDontSee('Addressed to somebody else');
+        $response->assertDontSee('Alpha submitted chapter one');
     }
 
     /**
@@ -147,7 +164,12 @@ class NotificationBellScopeTest extends TestCase
             'status' => 'pending',
         ]);
 
-        $response = $this->actingAs($mine, 'expert')->get('/instructor/dashboard');
+        // An application is an ordinary notification now, so this is what the
+        // apply endpoint writes. That it writes one is ExpertApplicationNotice.
+        $this->notifyExpert($mine, $myTeam->team_name.' applied to you');
+        $this->notifyExpert($other, $otherTeam->team_name.' applied to you');
+
+        $response = $this->actingAs($mine, 'expert')->getJson('/instructor/notifications');
 
         $response->assertStatus(200);
         $response->assertSee('Applied To Me');
