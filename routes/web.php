@@ -413,6 +413,11 @@ Route::middleware(['auth', 'no.cache', 'track.expert'])->group(function () {
 
     Route::post('/pre-proposal/duplication-checks', [PreProposalController::class, 'runCheck'])->name('student.pre-proposal.check');
     Route::delete('/pre-proposal/duplication-checks/{check}', [PreProposalController::class, 'destroyCheck'])->name('student.pre-proposal.check.destroy');
+    // A check's result read as pages rather than a modal: the whole report for
+    // one title, and one archived capstone it turned up. Keyed off the check
+    // because that one row covers both a scan just run and a saved title's.
+    Route::get('/pre-proposal/duplication-checks/{check}', [PreProposalController::class, 'report'])->name('student.duplication.report');
+    Route::get('/pre-proposal/duplication-checks/{check}/matches/{rank}', [PreProposalController::class, 'similar'])->name('student.duplication.similar');
     Route::post('/pre-proposal', [PreProposalController::class, 'store'])->name('student.pre-proposal.store');
     Route::patch('/pre-proposal', [PreProposalController::class, 'updateStatus'])->name('student.pre-proposal.submit');
     // Rewording a title the panel passed with revision.

@@ -56,7 +56,7 @@ class DuplicationReportApplyLockTest extends TestCase
     }
 
     /** A saved pre-proposal with a duplication check that suggests $expert. */
-    private function makeProposalWithReport(Team $team, CapstoneExpert $expert, string $status, $sy): void
+    private function makeProposalWithReport(Team $team, CapstoneExpert $expert, string $status, $sy): DuplicationCheck
     {
         $check = DuplicationCheck::create([
             'student_s_y_id' => $sy->s_y_id,
@@ -88,15 +88,18 @@ class DuplicationReportApplyLockTest extends TestCase
             'sdm' => 'Agile',
             'approved_status' => $status === 'approved',
         ]);
+
+        return $check;
     }
 
     public function test_apply_is_locked_while_the_pre_proposal_is_pending(): void
     {
         [$student, $team, $sy] = $this->makeLeaderWithTeam();
         $expert = $this->makeSuggestedExpert();
-        $this->makeProposalWithReport($team, $expert, 'pending', $sy);
+        $check = $this->makeProposalWithReport($team, $expert, 'pending', $sy);
 
-        $response = $this->actingAs($student, 'web')->get('/student/duplication');
+        $response = $this->actingAs($student, 'web')
+            ->get(route('student.duplication.report', $check->id));
 
         $response->assertStatus(200);
         // The lock has to name who unblocks it, not just that it is locked.
@@ -109,15 +112,13 @@ class DuplicationReportApplyLockTest extends TestCase
     {
         [$student, $team, $sy] = $this->makeLeaderWithTeam();
         $expert = $this->makeSuggestedExpert();
-        $this->makeProposalWithReport($team, $expert, 'approved', $sy);
+        $check = $this->makeProposalWithReport($team, $expert, 'approved', $sy);
 
-        $response = $this->actingAs($student, 'web')->get('/student/duplication');
+        $response = $this->actingAs($student, 'web')
+            ->get(route('student.duplication.report', $check->id));
 
         $response->assertStatus(200);
         $response->assertSee('apply='.$expert->expert_id, false);
-        // Matched on the saved-proposal wording specifically: the fresh-check
-        // report carries its own always-locked message in page scripts, so a
-        // looser needle would match that instead and never fail.
         $response->assertDontSee('Your CaPSA has to recommend this pre-proposal');
     }
 }

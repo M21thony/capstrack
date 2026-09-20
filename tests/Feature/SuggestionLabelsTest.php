@@ -62,18 +62,23 @@ class SuggestionLabelsTest extends TestCase
     }
 
     /** Every place that draws a suggestion says "Recommended". */
-    public function test_all_three_renderers_carry_the_label(): void
+    public function test_every_renderer_carries_the_label(): void
     {
-        $source = file_get_contents(resource_path('views/student/duplication.blade.php'));
+        // There were three of these, all drawing the same card: the live list
+        // after a check, the saved title's list, and a third copy inside the
+        // report pop-up. The pop-up is a page now, so the saved title's list
+        // moved there and the third copy went with the pop-up. Counted by the
+        // markup they emit, not the class name, which is also a CSS rule.
+        $drawn = 0;
 
-        // Two JavaScript templates and one Blade loop, each drawing a
-        // different card on the same page. Counted by the markup they emit,
-        // not the class name, which also appears once as a CSS rule.
-        $this->assertSame(
-            3,
-            substr_count($source, 'class="sx-role">Recommended '),
-            'a renderer without the label is one the student sees bare'
-        );
+        foreach (['duplication.blade.php', 'duplication/report.blade.php'] as $view) {
+            $drawn += substr_count(
+                file_get_contents(resource_path('views/student/'.$view)),
+                'class="sx-role">Recommended '
+            );
+        }
+
+        $this->assertSame(2, $drawn, 'a renderer without the label is one the student sees bare');
     }
 
     /** A stored label is left exactly as it is. */
