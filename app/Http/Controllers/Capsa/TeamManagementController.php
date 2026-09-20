@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\CapstoneExpert;
 use App\Models\CapstonePreProposal;
 use App\Models\DefenseSchedule;
+use App\Models\ExpertRemovalRequest;
 use App\Models\MemberLeaveRequest;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
@@ -108,7 +109,8 @@ class TeamManagementController extends Controller
                 'pre_proposals' => $rows->sum(fn ($r) => $r->pendingProposalCount),
                 'verification' => $rows->where('awaitingVerification', true)->count(),
                 'papers' => $rows->sum(fn ($r) => $r->papersToCheck),
-                'leave_requests' => MemberLeaveRequest::pendingCountFor($capsa),
+                'leave_requests' => MemberLeaveRequest::pendingCountFor($capsa)
+                    + ExpertRemovalRequest::pendingCountFor($capsa),
             ],
         ]);
     }

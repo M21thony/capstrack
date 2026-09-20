@@ -346,24 +346,22 @@ class StudentExpertController extends Controller
             ], 403);
         }
 
-        // A team cannot drop an expert who already took them on. It asks,
-        // and the expert decides; they stay the team's expert until they
-        // agree. An application the expert has not answered yet is still
-        // the team's to withdraw, below.
+        // An expert who already took the team on is only changed with the
+        // CaPSA's permission. The request goes to them; the expert stays
+        // until they approve it. An application still waiting on the expert
+        // is the team's to withdraw, below.
         if ($assignment->status === 'approved') {
-            $expertName = $assignment->expert?->name ?? 'your expert';
-
             if (mb_strlen(trim($request->reason)) < ExpertRemovalRequest::REASON_MIN) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Give '.$expertName.' a reason they can decide on - at least '.ExpertRemovalRequest::REASON_MIN.' characters.',
+                    'message' => 'Give your CaPSA a reason they can decide on - at least '.ExpertRemovalRequest::REASON_MIN.' characters.',
                 ], 422);
             }
 
             if (ExpertRemovalRequest::pending()->where('assignment_id', $assignment->assignment_id)->exists()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'A request to remove '.$expertName.' is already waiting on them.',
+                    'message' => 'A request to remove this expert is already waiting on your CaPSA.',
                 ], 422);
             }
 
@@ -379,14 +377,14 @@ class StudentExpertController extends Controller
             ActivityLog::create([
                 'student_id' => $student->student_id,
                 'type' => 'expert_removal_requested',
-                'description' => 'Asked expert '.($assignment->expert?->name ?? '#'.$assignment->expert_id)." to let the team go — Reason: {$request->reason}",
+                'description' => 'Asked the CaPSA to remove expert '.($assignment->expert?->name ?? '#'.$assignment->expert_id)." — Reason: {$request->reason}",
                 'metadata' => ['assignment_id' => $assignment->assignment_id, 'expert_id' => $assignment->expert_id],
                 'created_at' => now(),
             ]);
 
             return response()->json([
                 'success' => true,
-                'message' => 'Sent to '.$expertName.'. They stay your expert until they agree.',
+                'message' => 'Sent to your CaPSA. The expert stays with your team until they approve.',
             ]);
         }
 
