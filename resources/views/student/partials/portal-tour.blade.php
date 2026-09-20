@@ -312,14 +312,24 @@
     return step.target.some(function (selector) { return selector.indexOf('data-tour-target') !== -1 || selector === '#profile-trigger'; });
   }
 
+  // The browser remembers it too, so that if the server refuses to record
+  // the tour the student still stops seeing it for this visit, instead of
+  // being shown it again on every page with nothing to say why.
+  function markedDone() {
+    try { return sessionStorage.getItem('gt-done') === '1'; } catch (e) { return false; }
+  }
+
   function save() {
     if (saved || tour.getAttribute('data-auto-open') !== '1') return;
     saved = true;
+    try { sessionStorage.setItem('gt-done', '1'); } catch (e) {}
     // keepalive: "Your first step" navigates away straight after this.
     fetch(tour.getAttribute('data-save-url'), {
       method: 'PUT',
       keepalive: true,
       headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' }
+    }).then(function (r) {
+      if (!r.ok) console.warn('The tour could not be recorded as finished:', r.status);
     }).catch(function () {});
   }
 
@@ -399,7 +409,7 @@
     open();
   };
 
-  if (tour.getAttribute('data-auto-open') === '1') open();
+  if (tour.getAttribute('data-auto-open') === '1' && !markedDone()) open();
 })();
 </script>
 @endif

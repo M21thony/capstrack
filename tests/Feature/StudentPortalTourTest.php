@@ -133,6 +133,23 @@ class StudentPortalTourTest extends TestCase
     }
 
     /** The welcome and the send-off point at nothing; everything between does. */
+    /**
+     * The tour used to reopen on every single page whenever the server would
+     * not record it as finished, with nothing shown to say anything failed.
+     * It now also remembers in the browser, and only a bad answer is noticed.
+     */
+    public function test_a_refused_save_still_stops_the_tour_for_this_visit(): void
+    {
+        $student = Student::factory()->withCompleteProfile()->create();
+
+        $html = $this->actingAs($student, 'web')->get(route('student.dashboard'))
+            ->assertOk()->getContent();
+
+        $this->assertStringContainsString("sessionStorage.setItem('gt-done', '1')", $html);
+        $this->assertStringContainsString("&& !markedDone()", $html);
+        $this->assertStringContainsString('if (!r.ok)', $html);
+    }
+
     public function test_it_opens_and_closes_on_a_card_and_points_at_things_in_between(): void
     {
         $steps = config('student-tour.steps');
