@@ -78,7 +78,9 @@
         </div>
         <div class="notif-item-body">
           <div class="notif-item-title">{{ $n->title }}</div>
-          <div class="notif-item-msg">{{ $n->message }}</div>
+          {{-- Messages are written as HTML and escape their own values at
+               the source, the same way the student bell renders them. --}}
+          <div class="notif-item-msg">{!! $n->message !!}</div>
           <div class="notif-item-time">{{ $n->created_at?->diffForHumans() }}</div>
         </div>
       </a>

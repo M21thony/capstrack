@@ -55,7 +55,9 @@ class SendWebPush implements ShouldQueue
 
         $payload = json_encode([
             'title' => $notification->title,
-            'body' => $notification->message ?? '',
+            // A desktop popup is plain text, so the <strong> the bell renders
+            // would show up on screen as literal tags.
+            'body' => html_entity_decode(strip_tags($notification->message ?? ''), ENT_QUOTES),
             'url' => $notification->link ?? '/',
             // Same tag means a second notification about the same thing
             // replaces the first on screen rather than stacking up.
