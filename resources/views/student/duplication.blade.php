@@ -55,105 +55,11 @@
 
 .upload-zone.has-file { border-color: var(--primary, #5b5bd6); background: var(--bg3); }
 
-/* A real progress ring (conic-gradient), matching the pattern already used
-   for the bigger .sim-ring elsewhere in the app - just sized for this
-   compact sidebar slot instead of inventing a new visual language. */
-.score-ring-sm {
-  --pct: 0;
-  --ring-color: var(--border);
-  width: 72px; height: 72px;
-  border-radius: 50%;
-  background: conic-gradient(var(--ring-color) calc(var(--pct) * 1%), var(--border) 0);
-  display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0;
-  transition: background 0.5s ease;
-  position: relative;
-}
-.score-ring-sm::before {
-  content: '';
-  position: absolute;
-  inset: 6px;
-  border-radius: 50%;
-  background: var(--bg2);
-}
-.score-ring-sm > div { position: relative; z-index: 1; }
-
 .pp-chosen{display:inline-flex;align-items:center;gap:5px;font-weight:700;color:var(--green,#16a34a)}
 .pp-row.is-chosen{border-left:3px solid var(--green,#16a34a);padding-left:9px}
 /* Still readable, just plainly not the one being worked on. */
 .pp-row.is-set-aside{opacity:.62}
-.sx-role{font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;
-    color:var(--accent3,#8a6e10);margin-bottom:2px}
-  .instructor-item {
-  display: flex; gap: 10px; align-items: flex-start;
-  padding: 8px 0;
-  border-bottom: 1px solid var(--border);
-}
-.instructor-item:last-child { border-bottom: none; }
-
-/* Apply button on a suggested instructor. Locked until the pre-proposal
-   this report belongs to has been approved. */
-.dup-apply-btn { display:inline-flex; align-items:center; gap:5px; margin-left:auto; flex-shrink:0; padding:5px 11px; border-radius:6px; border:1.5px solid var(--accent,#c9a82c); background:var(--accent,#c9a82c); color:#18191f; font-family:inherit; font-size:11px; font-weight:700; text-decoration:none; cursor:pointer; transition:opacity .13s; }
-.dup-apply-btn:hover { opacity:0.86; }
-.dup-apply-btn.locked { background:transparent; border-color:var(--border); color:var(--text3); cursor:not-allowed; }
-.dup-apply-btn.locked:hover { opacity:1; }
-.dup-apply-note { font-size:10px; color:var(--text3); margin-top:8px; }
-
-/* Tooltip explaining WHY Apply is locked. It sits on a wrapper because a
-   disabled button emits no hover events of its own. */
-.dup-apply-wrap { position:relative; margin-left:auto; flex-shrink:0; display:inline-flex; outline:none; }
-.dup-apply-wrap .dup-apply-btn { margin-left:0; }
-.dup-apply-wrap::after {
-  content: attr(data-tip);
-  position:absolute; bottom:calc(100% + 8px); right:0; z-index:40;
-  width:max-content; max-width:230px; padding:7px 10px; border-radius:6px;
-  background:var(--text, #1e2128); color:#fff; font-size:11px; font-weight:500;
-  line-height:1.45; text-align:left; white-space:normal;
-  box-shadow:0 6px 18px -4px rgba(0,0,0,0.35);
-  opacity:0; visibility:hidden; transform:translateY(3px);
-  transition:opacity .13s ease, transform .13s ease, visibility .13s;
-  pointer-events:none;
-}
-.dup-apply-wrap::before {
-  content:''; position:absolute; bottom:calc(100% + 3px); right:14px; z-index:41;
-  border:5px solid transparent; border-top-color:var(--text, #1e2128);
-  opacity:0; visibility:hidden; transition:opacity .13s ease, visibility .13s;
-  pointer-events:none;
-}
-.dup-apply-wrap:hover::after, .dup-apply-wrap:focus-visible::after,
-.dup-apply-wrap:hover::before, .dup-apply-wrap:focus-visible::before {
-  opacity:1; visibility:visible; transform:translateY(0);
-}
-@media (prefers-reduced-motion: reduce) {
-  .dup-apply-wrap::after, .dup-apply-wrap::before { transition:none; }
-}
-
-.avatar {
-  width: 28px; height: 28px; border-radius: 50%;
-  background: var(--primary-light, #e8e8fc);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 11px; font-weight: 600;
-  color: var(--primary, #5b5bd6); flex-shrink: 0;
-}
-
-/* A bordered card per match, with the score as a pill badge - not a
-   left-border color stripe, which reads as a generic dashboard cliche
-   rather than an actual design decision. */
-.match-item {
-  display: flex; flex-direction: column;
-  padding: 13px 14px;
-  margin-bottom: 10px;
-  border: 1px solid var(--border);
-  border-radius: 11px;
-}
-.match-item:last-child { margin-bottom: 0; }
-.match-item-row { display: flex; justify-content: space-between; align-items: flex-start; }
-.match-score-pill {
-  display: inline-flex; align-items: center;
-  font-variant-numeric:tabular-nums; font-size: 12px; font-weight: 700;
-  padding: 3px 10px; border-radius: 100px; flex-shrink: 0;
-}
-
+/* The one small text button left on this page: Remove, on a saved title. */
 .match-abstract-toggle {
   align-self: flex-start;
   margin-top: 6px;
@@ -167,51 +73,6 @@
   color: var(--primary, #5b5bd6);
 }
 .match-abstract-toggle:hover { text-decoration: underline; }
-
-.match-abstract {
-  display: none;
-  margin-top: 6px;
-  padding: 8px 10px;
-  background: var(--bg3);
-  border-radius: 8px;
-  font-size: 11px;
-  line-height: 1.55;
-  color: var(--text2);
-  white-space: pre-line;
-}
-.match-abstract.open { display: block; }
-/* Literal word overlap with the student's own pre-proposal, highlighted
-   right inside the archived abstract - a mechanical, verifiable signal
-   alongside the AI's own similarities/differences/suggestion sentences
-   below, not a replacement for them. */
-.match-abstract mark {
-  background: rgba(201,168,44,0.28);
-  color: var(--text);
-  font-weight: 600;
-  border-radius: 3px;
-  padding: 0 2px;
-}
-
-.match-breakdown {
-  display: none;
-  margin-top: 10px;
-  padding-top: 10px;
-  border-top: 1px solid var(--border);
-  font-size: 12px;
-  line-height: 1.55;
-  color: var(--text3);
-}
-.match-breakdown.open { display: flex; flex-direction: column; gap: 9px; }
-.match-breakdown strong { color: var(--text2); }
-/* The suggestion is the one actionable line - it earns visual weight the
-   plain similarities/differences lines don't need. */
-.match-suggestion {
-  padding: 8px 10px;
-  background: var(--primary-bg, rgba(91,91,214,0.08));
-  border-radius: 7px;
-  color: var(--text2);
-}
-.match-suggestion strong { color: var(--primary, #5b5bd6); }
 
 .pp-field { margin-bottom: 14px; }
 .pp-field label { display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 6px; letter-spacing: 0.4px; }
@@ -297,6 +158,7 @@
 #pp-toast.success { border-left-color: var(--green); }
 #pp-toast.error { border-left-color: var(--red); }
 </style>
+@include('student.partials.duplication-ui')
 <x-dashboard.styles />
 </head>
 <body>
@@ -404,20 +266,27 @@
       </div>
     @endif
 
-    <!-- At-a-glance result summary - bigger and more prominent than a
-         status line buried in the upload card, since this is the one
-         number a student actually came here to see. Same element ids
-         renderResult() already updates - only the layout moved. -->
-    <div class="card" style="display:flex;align-items:center;gap:18px;margin-bottom:16px;padding:18px 22px">
-      <div class="score-ring-sm" id="score-ring" style="width:84px;height:84px;flex-shrink:0">
-        <div style="font-variant-numeric:tabular-nums;font-size:19px;font-weight:700;color:var(--text)" id="sim-pct">--</div>
+    <!-- The one number a team came here to see, and the single line the
+         checker is allowed to say about it: 65% and above is highly similar.
+         Below that it says nothing at all, because recommending or rejecting
+         a title is the CaPSA's call, not a number's. -->
+    <div class="card verdict">
+      <div class="bigscore" id="sim-pct" style="color:var(--text2)">--</div>
+      <div class="doc">
+        <div class="t" id="doc-title">No document checked</div>
+        <div class="m" id="doc-meta">Upload a pre-proposal PDF to begin</div>
       </div>
-      <div style="flex:1;min-width:0">
-        <span class="badge badge-green" id="result-badge" style="display:inline-block">No Check Yet</span>
-        <div style="font-size:13.5px;font-weight:600;color:var(--text);margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" id="doc-title">No document checked</div>
-        <div style="font-size:11px;color:var(--text3);margin-top:2px" id="doc-meta">Upload a pre-proposal PDF to begin</div>
+      <div style="min-width:220px;flex:1">
+        <span class="stateline s-red" id="result-badge" hidden>
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          Highly similar
+        </span>
+        <div class="scalebar" style="margin-top:9px" role="img" aria-label="Anything from 65 percent upwards is marked highly similar">
+          <i style="width:65%;background:var(--green)"></i><i style="width:35%;background:var(--red)"></i>
+        </div>
+        <div class="scalekeys"><span><i class="key-dot" style="background:var(--red)"></i>65% and above is marked <b>highly similar</b>. Your CaPSA decides whether the title goes forward.</span></div>
       </div>
-      <button type="button" class="btn" id="full-report-btn" style="display:none;flex-shrink:0" onclick="openFreshReportModal()">Full Report</button>
+      <a class="btn" id="full-report-btn" style="display:none;flex-shrink:0" href="#">Full Report</a>
       {{-- The result survives a reload now, which is the point - and means
            there has to be a way to be rid of it. A panel that cannot be
            dismissed is its own kind of stuck. --}}
@@ -481,7 +350,7 @@
           <span class="card-title" style="display:inline-flex;align-items:center;gap:7px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Matched Capstone Projects</span>
           <span style="font-size:11px;color:var(--text3)" id="match-count"></span>
         </div>
-        <div class="matches-scroll" id="matches-list">
+        <div class="matches-scroll dup-rows" id="matches-list">
           <div style="font-size:12px;color:var(--text3);text-align:center;padding:40px 0">No matches yet</div>
         </div>
       </div>
@@ -561,9 +430,16 @@
                 @endif
 
                 @if ($check)
-                  <button type="button" class="match-abstract-toggle" style="margin-top:8px" onclick='openReportModal({{ $proposal->id }}, @json($proposal->title))'>
-                    View Duplication Report →
-                  </button>
+                  @php $rowFlagged = $check->top_score >= 65; @endphp
+                  <div class="pp-hint" style="color:{{ $rowFlagged ? 'var(--red)' : 'var(--text2)' }}">
+                    {{ $check->top_score }}% highest match{{ $rowFlagged ? ' · highly similar' : '' }}
+                  </div>
+                  <div style="margin-top:6px">
+                    <a class="golink" href="{{ route('student.duplication.report', $check->id) }}">
+                      Similarity Report
+                      <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+                    </a>
+                  </div>
                 @endif
 
                 @if ($proposal->status !== 'approved' && ! $turnedIn)
@@ -574,152 +450,6 @@
                   </form>
                 @endif
 
-                @if ($check)
-                  @php
-                    $verdictTone = $check->verdict === 'High Similarity' ? 'red' : ($check->verdict === 'Moderate Similarity' ? 'amber' : 'green');
-                    // Words from THIS pre-proposal worth highlighting wherever
-                    // they turn up in a matched abstract below - a literal,
-                    // student-verifiable signal in place of an AI-written
-                    // similarities sentence.
-                    $highlightWords = app(\App\Services\SimilarityService::class)->extractHighlightWords($check->concepts ?? []);
-                    $highlightAbstract = fn (?string $text) => \App\Services\SimilarityService::highlight($text, $highlightWords);
-                  @endphp
-                  <div id="report-data-{{ $proposal->id }}" style="display:none">
-                    <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:8px;background:var(--{{ $verdictTone }}-bg);margin-bottom:16px">
-                      <span style="font-variant-numeric:tabular-nums;font-size:22px;font-weight:700;color:var(--{{ $verdictTone }})">{{ $check->top_score }}%</span>
-                      <div>
-                        <span class="badge badge-{{ $verdictTone }}">{{ $check->verdict }}</span>
-                        <div style="font-size:11px;color:var(--text3);margin-top:3px">Highest similarity found across archived capstones</div>
-                      </div>
-                    </div>
-
-                    @if (empty($check->matches))
-                      <div style="text-align:center;padding:16px 0">
-                        <div style="font-size:13px;font-weight:600;color:var(--green)">No Similar Capstones Found</div>
-                      </div>
-                    @else
-                      <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text3);margin-bottom:6px;letter-spacing:0.4px">Matched Capstone Projects</div>
-                      @foreach ($check->matchesWithAuthors() as $m)
-                        @php
-                          $mScore = $m['score'] ?? 0;
-                          $mTone = $mScore >= 65 ? 'red' : ($mScore >= 55 ? 'amber' : 'green');
-                          $hasBreakdown = ! empty($m['similarities']) || ! empty($m['differences']) || ! empty($m['suggestion']);
-                        @endphp
-                        <div class="match-item">
-                          <div class="match-item-row">
-                            <div style="flex:1;min-width:0;margin-right:10px">
-                              {{-- The title in full. It used to be cut to one
-                                   line with an ellipsis, which is the one part
-                                   of a matched study nobody can do without. --}}
-                              <div style="font-size:12px;font-weight:500;color:var(--text);line-height:1.4">{{ $m['title'] ?? '' }}</div>
-                              @if (! empty($m['authors']))
-                                <div style="font-size:10px;color:var(--text2);margin-top:3px">By {{ $m['authors'] }}</div>
-                              @else
-                                <div style="font-size:10px;color:var(--text3);margin-top:3px">Authors not recorded yet</div>
-                              @endif
-                              <div style="font-size:10px;color:var(--text3);margin-top:2px">{{ $m['academic_year'] ?? 'N/A' }} · {{ $m['program'] ?? '' }}</div>
-                              @if (! empty($m['reason']))
-                                <div style="font-size:10px;color:var(--text3);margin-top:4px;line-height:1.4">{{ $m['reason'] }}</div>
-                              @endif
-                            </div>
-                            @if (($m['assessed'] ?? true))
-                              <span class="match-score-pill" style="background:var(--{{ $mTone }}-bg);color:var(--{{ $mTone }})">{{ $mScore }}%</span>
-                            @else
-                              {{-- No model looked at this one. The number it
-                                   carries is a demoted retrieval rank, which
-                                   is not a similarity and was reaching the
-                                   student as though it were. --}}
-                              <span class="match-score-pill" style="background:var(--bg3);color:var(--text3)">Not assessed</span>
-                            @endif
-                          </div>
-                          @if ($hasBreakdown)
-                            <button type="button" class="match-abstract-toggle" onclick="toggleBreakdown(this)">Show similarities, differences &amp; suggestion ▾</button>
-                            <div class="match-breakdown">
-                              @if (! empty($m['similarities']))<div><strong>Similarities:</strong> {{ $m['similarities'] }}</div>@endif
-                              @if (! empty($m['differences']))<div><strong>Differences:</strong> {{ $m['differences'] }}</div>@endif
-                              @if (! empty($m['suggestion']))<div class="match-suggestion"><strong>Suggestion:</strong> {{ $m['suggestion'] }}</div>@endif
-                            </div>
-                          @endif
-                          @if (! empty($m['abstract']))
-                            <button type="button" class="match-abstract-toggle" onclick="toggleAbstract(this)">Show abstract to compare similarities ▾</button>
-                            <div class="match-abstract">{!! $highlightAbstract($m['abstract']) !!}</div>
-                          @endif
-                        </div>
-                      @endforeach
-                    @endif
-
-                    @if (count($check->instructors_suggested ?? []))
-                      @php
-                        // Applying is only open once this pre-proposal is the
-                        // approved one - the expert is being asked to take on
-                        // a topic that has cleared review, not a draft.
-                        // Pre-proposal approval is CaPSA's, which is what the
-                        // locked button's tooltip needs to say: "approved" on
-                        // its own doesn't tell the student who to chase.
-                        // A team with two approved pre-proposals picks one
-                        // to be their title. Applying belongs to that one
-                        // alone - an expert asked to advise the title the
-                        // team set aside is being asked about work nobody is
-                        // doing.
-                        $chosenId = $team?->selected_pre_proposal_id;
-                        $isChosen = $chosenId && (int) $chosenId === (int) $proposal->id;
-                        $setAside = $chosenId && ! $isChosen;
-
-                        $applyOpen = $proposal->status === 'approved' && $isLeader && ! $setAside;
-                        $applyLockShort = match (true) {
-                            $proposal->status === 'rejected' => 'Pre-proposal rejected',
-                            $proposal->status !== 'approved' => 'Needs CaPSA recommendation',
-                            $setAside => 'Not your chosen title',
-                            default => 'Team leader only',
-                        };
-                        $applyLockReason = match (true) {
-                            $proposal->status === 'rejected' => 'This pre-proposal was rejected, so you cannot apply to an expert with it. Revise it or use one that was recommended.',
-                            $proposal->status !== 'approved' => 'Your CaPSA has to recommend this pre-proposal before your team can apply to an expert with it. It is still awaiting review.',
-                            $setAside => 'Your team chose a different title, so this one is no longer the one you apply with.',
-                            default => 'Only your team leader can apply to an expert.',
-                        };
-                      @endphp
-                      <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
-                        <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text3);margin-bottom:6px;letter-spacing:0.4px">Suggested Experts</div>
-                        @foreach ($check->suggestionsForDisplay() as $i)
-                          <div class="instructor-item">
-                            <div class="avatar">{{ strtoupper(substr($i['name'] ?? '?', 0, 1)) }}</div>
-                            <div style="min-width:0">
-                              @if (! empty($i['role_label']))
-                                {{-- Said where it is drawn, so scans that
-                                     already ran read the same way. --}}
-                                <div class="sx-role">Recommended {{ $i['role_label'] }}</div>
-                              @endif
-                              <div style="font-size:12px;font-weight:500;color:var(--text)">{{ $i['name'] ?? '' }}</div>
-                              <div style="font-size:10px;color:var(--primary,#5b5bd6);margin-top:1px">{{ $i['expertise'] ?? '' }}</div>
-                              <div style="font-size:10px;color:var(--text3);margin-top:2px">{{ $i['reason'] ?? '' }}</div>
-                            </div>
-                            @if (! empty($i['id']))
-                              @if ($applyOpen)
-                                <a class="dup-apply-btn" href="{{ route('student.experts', ['apply' => $i['id']]) }}">
-                                  <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><polyline points="17 11 19 13 23 9"/></svg>
-                                  Apply
-                                </a>
-                              @else
-                                {{-- The wrapper carries the tooltip: a disabled
-                                     button fires no hover events of its own. --}}
-                                <span class="dup-apply-wrap" data-tip="{{ $applyLockReason }}" tabindex="0" role="note" aria-label="{{ $applyLockReason }}">
-                                  <button type="button" class="dup-apply-btn locked" disabled>
-                                    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                                    {{ $applyLockShort }}
-                                  </button>
-                                </span>
-                              @endif
-                            @endif
-                          </div>
-                        @endforeach
-                        @unless ($applyOpen)
-                          <div class="dup-apply-note">{{ $applyLockReason }}</div>
-                        @endunless
-                      </div>
-                    @endif
-                  </div>
-                @endif
               </div>
             @endforeach
           @endif
@@ -939,14 +669,6 @@
 
 <div id="pp-toast"></div>
 
-<div class="pp-modal-overlay" id="report-modal-overlay" onclick="if (event.target === this) closeReportModal()">
-  <div class="card pp-modal-box">
-    <button type="button" class="pp-modal-close" onclick="closeReportModal()" aria-label="Close">&times;</button>
-    <div class="card-header"><span class="card-title" id="report-modal-title">Duplication Report</span></div>
-    <div id="report-modal-body"></div>
-  </div>
-</div>
-
 <script>
 // Handing your titles in is the one act that puts your team in front of your
 // CaPSA, so it always asks - not only when there are fewer than we suggest.
@@ -1057,10 +779,8 @@ document.addEventListener('keydown', function (e) {
   if (e.key === 'Escape' && box && box.classList.contains('show')) closeSubmitConfirm();
 });
 
-// Kept so "Full Report" can rebuild the report modal for a check that was
-// just run - it isn't tied to a saved proposal id yet (that only exists
-// after the student saves it), so it can't reuse openReportModal()'s
-// hidden-div copy the way a saved proposal's "View Duplication Report" does.
+// The check just run, kept so "Full Report" knows which one to open and
+// clearScanResult() knows which row to throw away.
 let lastCheckData = null;
 
 const STEPS = [
@@ -1392,8 +1112,6 @@ function cancelCheck() {
       'verdict' => $lastCheck->verdict,
       'matches' => $lastCheck->matches,
       'instructors' => $lastCheck->suggestionsForDisplay(),
-      'highlight_words' => app(\App\Services\SimilarityService::class)
-          ->extractHighlightWords($lastCheck->concepts ?? []),
   ];
   $lastCheckName = basename($lastCheck->document_path ?? 'your document');
 @endphp
@@ -1448,6 +1166,12 @@ function reallyClearScanResult() {
     .catch(() => showToast('Network error while clearing.', 'error'));
 }
 
+// Both new pages are keyed off the check, so the page only has to be told
+// the shape of the two addresses.
+const DUP_REPORT_URL = @json(route('student.duplication.report', ['check' => '__C__']));
+const DUP_MATCH_URL = @json(route('student.duplication.similar', ['check' => '__C__', 'rank' => '__R__']));
+const ARCHIVE_TOTAL = {{ $archiveTotal }};
+
 function renderResult(data, fileName) {
   lastCheckData = data;
 
@@ -1461,17 +1185,21 @@ function renderResult(data, fileName) {
   const clearBtn = document.getElementById('clear-result-btn');
   if (clearBtn) clearBtn.style.display = 'inline-flex';
 
-  const badge = document.getElementById('result-badge');
-  badge.textContent = data.verdict;
-  badge.className = 'badge ' + (data.verdict === 'High Similarity' ? 'badge-red' : (data.verdict === 'Moderate Similarity' ? 'badge-amber' : 'badge-green'));
+  // One line, or none. The old three-band badge told a team their title was
+  // "Moderate Similarity", which reads as a verdict the checker is not
+  // entitled to give.
+  document.getElementById('result-badge').hidden = !isFlagged(data.top_score);
 
-  const ring = document.getElementById('score-ring');
-  ring.style.setProperty('--ring-color', data.top_score >= 65 ? 'var(--red,#e5484d)' : (data.top_score >= 55 ? 'var(--amber,#f5a623)' : 'var(--green,#30a46c)'));
-  ring.style.setProperty('--pct', Math.max(0, Math.min(100, data.top_score)));
+  const simPct = document.getElementById('sim-pct');
+  simPct.innerHTML = Number(data.top_score) + '<span style="font-size:22px">%</span>';
+  simPct.style.color = isFlagged(data.top_score) ? 'var(--red)' : 'var(--text2)';
 
-  document.getElementById('sim-pct').textContent = data.top_score + '%';
   document.getElementById('doc-title').textContent = data.concepts.title || fileName;
-  document.getElementById('doc-meta').textContent = 'Checked just now' + (data.top_score < 55 ? ' · No strong duplicates found' : '');
+  const flagged = (data.matches || []).filter(m => m.assessed !== false && isFlagged(m.score)).length;
+  document.getElementById('doc-meta').textContent =
+    'Checked against ' + ARCHIVE_TOTAL.toLocaleString() + ' archived capstones · the '
+    + (data.matches ? data.matches.length : 0) + ' closest came back'
+    + (flagged ? ', ' + flagged + ' of them highly similar' : '');
 
   document.getElementById('match-count').textContent = data.matches?.length ? data.matches.length + ' match' + (data.matches.length > 1 ? 'es' : '') + ' found' : '';
 
@@ -1484,7 +1212,7 @@ function renderResult(data, fileName) {
         <div style="font-size:11px;color:var(--text3);max-width:280px;margin:0 auto">This pre-proposal appears to be original based on our archived database.</div>
       </div>`;
   } else {
-    matchList.innerHTML = data.matches.map(m => renderMatchItem(m, data.highlight_words || [])).join('');
+    matchList.innerHTML = data.matches.map((m, i) => renderMatchItem(m, i, data.duplication_check_id)).join('');
   }
 
   const instrList = document.getElementById('instructor-list');
@@ -1532,7 +1260,10 @@ function renderResult(data, fileName) {
   if (ppNext) ppNext.style.display = '';
   if (ppLocked) ppLocked.style.display = '';
   const fullReport = document.getElementById('full-report-btn');
-  if (fullReport) fullReport.style.display = '';
+  if (fullReport) {
+    fullReport.href = DUP_REPORT_URL.replace('__C__', data.duplication_check_id);
+    fullReport.style.display = '';
+  }
 }
 
 function openPpFormModal() {
@@ -1547,124 +1278,31 @@ function closePpFormModal() {
   if (ppOverlay) ppOverlay.classList.remove('show');
 }
 
-// Wraps any of the pre-proposal's own significant words wherever they occur
-// in a matched abstract - escape first, then mark, so nothing in the
-// (already-known-plain-text) word list can break out of the HTML it's
-// injected into.
-function highlightAbstract(text, words) {
-  const escaped = escapeHtml(text || '');
-  if (!words || !words.length) return escaped;
-  const pattern = new RegExp('\\b(' + words.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|') + ')\\b', 'gi');
-  return escaped.replace(pattern, '<mark>$1</mark>');
+// 65% and above is highly similar. Below that the checker says nothing, and
+// a match nothing scored carries a retrieval rank rather than a similarity,
+// so it shows no number at all.
+function isFlagged(score) {
+  return score !== null && score !== undefined && score >= 65;
 }
 
-function renderMatchItem(m, highlightWords) {
-  const assessed = m.assessed !== false;
-  const tone = m.score >= 65 ? 'red' : m.score >= 55 ? 'amber' : 'green';
-  const hasBreakdown = m.similarities || m.differences || m.suggestion;
+function renderMatchItem(m, i, checkId) {
+  const s = m.assessed === false ? null : (m.score === undefined ? null : m.score);
+  const flagged = isFlagged(s);
+  const why = m.similarities || m.reason || '';
+
   return `
-    <div class="match-item">
-      <div class="match-item-row">
-        <div style="flex:1;min-width:0;margin-right:10px">
-          <div style="font-size:12px;font-weight:500;color:var(--text);line-height:1.4">${escapeHtml(m.title)}</div>
-          ${m.authors ? `<div style="font-size:10px;color:var(--text2);margin-top:3px">By ${escapeHtml(m.authors)}</div>` : `<div style="font-size:10px;color:var(--text3);margin-top:3px">Authors not recorded yet</div>`}
-          <div style="font-size:10px;color:var(--text3);margin-top:2px">${m.academic_year || 'N/A'} · ${escapeHtml(m.program || '')}</div>
-          ${m.reason ? `<div style="font-size:10px;color:var(--text3);margin-top:4px;line-height:1.4">${escapeHtml(m.reason)}</div>` : ''}
-        </div>
-        ${assessed
-          ? `<span class="match-score-pill" style="background:var(--${tone}-bg);color:var(--${tone})">${m.score}%</span>`
-          : '<span class="match-score-pill" style="background:var(--bg3);color:var(--text3)">Not assessed</span>'}
-      </div>
-      ${hasBreakdown ? `
-        <button type="button" class="match-abstract-toggle" onclick="toggleBreakdown(this)">Show similarities, differences &amp; suggestion ▾</button>
-        <div class="match-breakdown">
-          ${[
-            m.similarities ? `<div><strong>Similarities:</strong> ${escapeHtml(m.similarities)}</div>` : '',
-            m.differences ? `<div><strong>Differences:</strong> ${escapeHtml(m.differences)}</div>` : '',
-          ].filter(Boolean).join('')}
-          ${m.suggestion ? `<div class="match-suggestion"><strong>Suggestion:</strong> ${escapeHtml(m.suggestion)}</div>` : ''}
-        </div>
-      ` : ''}
-      ${m.abstract ? `
-        <button type="button" class="match-abstract-toggle" onclick="toggleAbstract(this)">Show abstract to compare similarities ▾</button>
-        <div class="match-abstract">${highlightAbstract(m.abstract, highlightWords)}</div>
-      ` : ''}
-    </div>`;
-}
-
-function toggleBreakdown(btn) {
-  const box = btn.nextElementSibling;
-  const isOpen = box.classList.toggle('open');
-  btn.textContent = isOpen ? 'Hide similarities, differences & suggestion ▴' : 'Show similarities, differences & suggestion ▾';
-}
-
-function openReportModal(proposalId, title) {
-  const data = document.getElementById('report-data-' + proposalId);
-  if (!data) return;
-  document.getElementById('report-modal-title').textContent = title || 'Duplication Report';
-  document.getElementById('report-modal-body').innerHTML = data.innerHTML;
-  document.getElementById('report-modal-overlay').classList.add('show');
-}
-
-function closeReportModal() {
-  document.getElementById('report-modal-overlay').classList.remove('show');
-}
-
-// "Full Report" opens this same modal for a check that was just run (no
-// saved proposal id to key off yet), built straight from the AJAX response
-// instead of a server-rendered hidden div.
-function openFreshReportModal() {
-  if (!lastCheckData) return;
-  const data = lastCheckData;
-  const tone = data.top_score >= 65 ? 'red' : (data.top_score >= 55 ? 'amber' : 'green');
-
-  const matchesHtml = (!data.matches || data.matches.length === 0)
-    ? `<div style="text-align:center;padding:16px 0">
-        <div style="font-size:13px;font-weight:600;color:var(--green)">No Similar Capstones Found</div>
-      </div>`
-    : `<div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text3);margin-bottom:6px;letter-spacing:0.4px">Matched Capstone Projects</div>`
-      + data.matches.map(m => renderMatchItem(m, data.highlight_words || [])).join('');
-
-  // This report is for a check that was just run, so its pre-proposal has
-  // not been saved - let alone approved - and every Apply is locked. The
-  // saved-proposal report renders its own buttons server-side, where the
-  // approval status is actually known.
-  const instructorsHtml = (data.instructors && data.instructors.length)
-    ? `<div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
-        <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text3);margin-bottom:6px;letter-spacing:0.4px">Suggested Experts</div>
-        ${data.instructors.map(i => `
-          <div class="instructor-item">
-            <div class="avatar">${escapeHtml((i.name || '?').charAt(0))}</div>
-            <div style="min-width:0">
-              ${i.role_label ? `<div class="sx-role">Recommended ${escapeHtml(i.role_label)}</div>` : ''}
-              <div style="font-size:12px;font-weight:500;color:var(--text)">${escapeHtml(i.name)}</div>
-              <div style="font-size:10px;color:var(--primary,#5b5bd6);margin-top:1px">${escapeHtml(i.expertise || '')}</div>
-              <div style="font-size:10px;color:var(--text3);margin-top:2px">${escapeHtml(i.reason || '')}</div>
-            </div>
-            <span class="dup-apply-wrap" data-tip="Save this pre-proposal first, then a CaPSA has to recommend it before your team can apply to an expert." tabindex="0" role="note">
-              <button type="button" class="dup-apply-btn locked" disabled>
-                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                Needs CaPSA recommendation
-              </button>
-            </span>
-          </div>`).join('')}
-        <div class="dup-apply-note">Save this pre-proposal and wait for your CaPSA's recommendation before you can apply to an expert.</div>
-      </div>`
-    : '';
-
-  document.getElementById('report-modal-title').textContent = data.concepts.title || 'Duplication Report';
-  document.getElementById('report-modal-body').innerHTML = `
-    <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:8px;background:var(--${tone}-bg);margin-bottom:16px">
-      <span style="font-variant-numeric:tabular-nums;font-size:22px;font-weight:700;color:var(--${tone})">${data.top_score}%</span>
+    <a class="mrow" href="${DUP_MATCH_URL.replace('__C__', checkId).replace('__R__', i + 1)}">
       <div>
-        <span class="badge badge-${tone}">${escapeHtml(data.verdict)}</span>
-        <div style="font-size:11px;color:var(--text3);margin-top:3px">Highest similarity found across archived capstones</div>
+        <div class="pc" style="color:${s === null ? 'var(--text3)' : (flagged ? 'var(--red)' : 'var(--text2)')}">${s === null ? '—' : s + '%'}</div>
+        <span class="bar"><i style="width:${s || 0}%;background:${flagged ? 'var(--red)' : 'var(--green)'}"></i></span>
+        <div class="rk">#${i + 1}</div>
       </div>
-    </div>
-    ${matchesHtml}
-    ${instructorsHtml}
-  `;
-  document.getElementById('report-modal-overlay').classList.add('show');
+      <div>
+        <div class="t">${escapeHtml(m.title)}</div>
+        <div class="mt">${m.academic_year || 'N/A'} · ${escapeHtml(m.program || '')}</div>
+        ${why ? `<div class="wy">${escapeHtml(why)}</div>` : ''}
+      </div>
+    </a>`;
 }
 
 let pendingRemoveId = null;
@@ -1717,17 +1355,10 @@ document.getElementById('pp-confirm-yes-btn').addEventListener('click', function
 
 document.addEventListener('keydown', function (e) {
   if (e.key === 'Escape') {
-    closeReportModal();
     closePpFormModal();
     closePpConfirmModal();
   }
 });
-
-function toggleAbstract(btn) {
-  const box = btn.nextElementSibling;
-  const isOpen = box.classList.toggle('open');
-  btn.textContent = isOpen ? 'Hide abstract ▴' : 'Show abstract to compare similarities ▾';
-}
 
 function escapeHtml(str) {
   const div = document.createElement('div');

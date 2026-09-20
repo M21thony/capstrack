@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ArchivedDocument;
 use App\Models\CapstonePreProposal;
 use App\Models\DuplicationCheck;
 use App\Models\StudentSchoolYear;
@@ -61,6 +62,7 @@ class PreProposalController extends Controller
                 && $proposals->count() >= 1
                 && ! $this->isTurnedIn($team),
             'recommendedProposals' => self::RECOMMENDED_PROPOSALS,
+            'archiveTotal' => ArchivedDocument::count(),
             // The most recent check this team ran that has not been turned
             // into a saved pre-proposal yet.
             //
@@ -364,6 +366,142 @@ class PreProposalController extends Controller
         $check->delete();
 
         return response()->json(['success' => true, 'message' => 'Result cleared.']);
+    }
+
+    /**
+     * A check the signed-in student is allowed to read.
+     *
+     * The same test destroyCheck() makes - their team's check - widened to
+     * their own row as well, so a student who has since left a team can
+     * still open a scan they ran themselves.
+     */
+    private function ownCheck(Request $request, DuplicationCheck $check): void
+    {
+        $team = $this->currentTeam($request);
+
+        $mine = ($team && StudentSchoolYear::where('team_id', $team->team_id)
+                ->where('s_y_id', $check->student_s_y_id)
+                ->exists())
+            || StudentSchoolYear::where('student_id', $request->user()->student_id)
+                ->where('s_y_id', $check->student_s_y_id)
+                ->exists();
+
+        abort_unless($mine, 403);
+    }
+
+    /** SDG goals and tags are saved as lists; the page reads them as a line. */
+    private function asText(mixed $value): ?string
+    {
+        return is_array($value) ? implode(', ', $value) : $value;
+    }
+
+    /**
+     * GET /pre-proposal/duplication-checks/{check} - one title's report.
+     *
+     * It used to be a modal built from a hidden copy of itself further down
+     * the same page, which meant the report could not be reloaded, linked,
+     * printed or sent to an adviser, and disappeared the moment the page was
+     * closed. It has its own address now.
+     */
+    public function report(Request $request, DuplicationCheck $check): View
+    {
+        $this->ownCheck($request, $check);
+
+        $team = $this->currentTeam($request);
+        $proposal = CapstonePreProposal::where('duplication_check_id', $check->id)->first();
+        $concepts = $check->concepts ?? [];
+
+        // What the team wrote. The saved pre-proposal is the record once one
+        // exists; before that the only copy is what was read out of the PDF.
+        $fields = [
+            'SDG' => $this->asText($proposal?->sdg_goals ?? ($concepts['sdg_goals'] ?? null)),
+            'Problem statement' => $proposal?->problem_statement ?? ($concepts['problem_statement'] ?? null),
+            'Proposed solution' => $proposal?->proposed_solution ?? ($concepts['proposed_solution'] ?? null),
+            'Scope' => $proposal?->scope ?? ($concepts['scope'] ?? null),
+            'Limitations' => $proposal?->limitations ?? ($concepts['limitations'] ?? null),
+            'Development method' => $proposal?->sdm ?? ($concepts['sdm'] ?? null),
+            'Tags' => $this->asText($proposal?->tags),
+        ];
+
+        // Applying belongs to the one title that cleared review and was then
+        // chosen. Worked out here because it used to be worked out inside the
+        // hidden block this page replaced.
+        $chosenId = $team?->selected_pre_proposal_id;
+        $isChosen = $proposal && $chosenId && (int) $chosenId === (int) $proposal->id;
+        $setAside = $proposal && $chosenId && ! $isChosen;
+        $isLeader = (bool) $team && (int) $team->leader_id === (int) $request->user()->student_id;
+
+        return view('student.duplication.report', [
+            'check' => $check,
+            'proposal' => $proposal,
+            'title' => $proposal?->title ?? ($concepts['title'] ?? 'Your pre-proposal'),
+            'fields' => array_filter($fields, fn ($v) => filled($v)),
+            'matches' => $check->matchesWithAuthors(),
+            'archiveTotal' => ArchivedDocument::count(),
+            'applyOpen' => $proposal?->status === 'approved' && $isLeader && ! $setAside,
+            'applyLockShort' => match (true) {
+                ! $proposal => 'Not saved yet',
+                $proposal->status === 'rejected' => 'Pre-proposal rejected',
+                $proposal->status !== 'approved' => 'Needs CaPSA recommendation',
+                $setAside => 'Not your chosen title',
+                default => 'Team leader only',
+            },
+            'applyLockReason' => match (true) {
+                ! $proposal => "Save this pre-proposal and wait for your CaPSA's recommendation before you can apply to an expert.",
+                $proposal->status === 'rejected' => 'This pre-proposal was rejected, so you cannot apply to an expert with it. Revise it or use one that was recommended.',
+                $proposal->status !== 'approved' => 'Your CaPSA has to recommend this pre-proposal before your team can apply to an expert with it. It is still awaiting review.',
+                $setAside => 'Your team chose a different title, so this one is no longer the one you apply with.',
+                default => 'Only your team leader can apply to an expert.',
+            },
+        ]);
+    }
+
+    /**
+     * GET /pre-proposal/duplication-checks/{check}/matches/{rank}
+     *
+     * One archived capstone the check turned up, read beside the team's own
+     * words. Ranks count from 1 because that is what the list shows.
+     */
+    public function similar(Request $request, DuplicationCheck $check, int $rank): View
+    {
+        $this->ownCheck($request, $check);
+
+        $matches = $check->matchesWithAuthors();
+
+        if ($rank < 1 || $rank > count($matches)) {
+            abort(404);
+        }
+
+        $match = $matches[$rank - 1];
+        $concepts = $check->concepts ?? [];
+        $proposal = CapstonePreProposal::where('duplication_check_id', $check->id)->first();
+
+        // Only words that are in both documents are marked. The check's
+        // keyword list is everything the team wrote about; marking one in
+        // their problem statement that never appears in the abstract would
+        // claim the two share it when they do not.
+        $abstract = (string) ($match['abstract'] ?? '');
+        $shared = array_values(array_filter(
+            $this->service->extractHighlightWords($concepts),
+            fn ($w) => stripos($abstract, $w) !== false
+        ));
+
+        return view('student.duplication.similar', [
+            'check' => $check,
+            'proposal' => $proposal,
+            'match' => $match,
+            'rank' => $rank,
+            'total' => count($matches),
+            'prevScore' => $rank > 1 ? ($matches[$rank - 2]['score'] ?? null) : null,
+            'nextScore' => $rank < count($matches) ? ($matches[$rank]['score'] ?? null) : null,
+            'mineTitle' => $proposal?->title ?? ($concepts['title'] ?? 'Your pre-proposal'),
+            'mineFields' => array_filter([
+                'Problem' => $proposal?->problem_statement ?? ($concepts['problem_statement'] ?? null),
+                'Proposed solution' => $proposal?->proposed_solution ?? ($concepts['proposed_solution'] ?? null),
+                'Scope' => $proposal?->scope ?? ($concepts['scope'] ?? null),
+            ], fn ($v) => filled($v)),
+            'words' => $shared,
+        ]);
     }
 
     /**

@@ -744,9 +744,11 @@ class PreProposalControllerTest extends TestCase
 
     // Regression: consolidating the standalone duplication checker into the
     // pre-proposal page dropped the original per-match breakdown (title,
-    // score, AI reason, abstract) down to a bare summary count. The full
-    // breakdown must survive the merge, not just a verdict badge.
-    public function test_edit_page_shows_full_match_breakdown_not_just_a_summary(): void
+    // score, AI reason, abstract) down to a bare summary count. The breakdown
+    // is a page of its own now rather than a flap on this one, so what has to
+    // survive is the whole trail: the score on the list, the breakdown one
+    // click in, the abstract one click further.
+    public function test_the_full_match_breakdown_is_one_click_from_the_saved_title(): void
     {
         [$student, $team] = $this->makeLeaderWithTeam();
         $sy = StudentSchoolYear::where('student_id', $student->student_id)->first();
@@ -782,10 +784,19 @@ class PreProposalControllerTest extends TestCase
         $response = $this->get(route('student.duplication'));
 
         $response->assertOk();
-        $response->assertSee('Flood Monitoring System for Rural Barangays');
-        $response->assertSee('Both target flood detection using IoT sensors.');
-        $response->assertSee('2023-2024');
-        $response->assertSee('Ana Reyes, MIT');
+        $response->assertSee('68% highest match');
+        $response->assertSee(route('student.duplication.report', $check->id), false);
+
+        $report = $this->get(route('student.duplication.report', $check->id));
+        $report->assertOk();
+        $report->assertSee('Flood Monitoring System for Rural Barangays');
+        $report->assertSee('Both target flood detection using IoT sensors.');
+        $report->assertSee('2023-2024');
+        $report->assertSee('Ana Reyes, MIT');
+
+        $match = $this->get(route('student.duplication.similar', [$check->id, 1]));
+        $match->assertOk();
+        $match->assertSee('An IoT-based early warning study.', false);
     }
 
     // The locked Submit button has to say what unlocks it, not just sit there
