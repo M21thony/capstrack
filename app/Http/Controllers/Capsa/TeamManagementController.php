@@ -138,7 +138,7 @@ class TeamManagementController extends Controller
             'selectedIndex' => $selected,
             'selected' => $milestones->get($selected),
             'defenseSchedules' => DefenseSchedule::where('team_id', $team->team_id)
-                ->orderBy('defense_date')->get(),
+                ->orderBy('schedule_date')->get(),
         ]);
     }
 
