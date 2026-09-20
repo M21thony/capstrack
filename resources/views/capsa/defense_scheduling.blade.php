@@ -26,9 +26,11 @@
 
   {{-- Drawn by resources/js/defenses/defense-scheduling.js from the JSON below. --}}
   <div class="dx" id="dx-sched" style="grid-template-rows:auto auto 1fr"
+       data-stage="{{ $state['stage'] }}"
        data-state="{{ json_encode($state, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) }}"
        data-urls="{{ json_encode([
            'self' => route('capsa.defense_scheduling'),
+           'board' => route('api.admin.panel_assignment.board'),
            'window' => route('api.admin.panel_assignment.windows.update', '__STAGE__'),
            'drafts' => route('api.admin.panel_assignment.schedule-drafts.store'),
            'schedules' => route('api.admin.panel_assignment.schedules.update'),
@@ -49,17 +51,18 @@
     </header>
 
     <div class="dx-sched-top">
-      @include('capsa.partials.defense-stage-tabs')
+      @include('capsa.partials.defense-stage-tabs', ['sched' => true])
       <div class="dx-filters" style="padding:0;border:0">
         <button class="dx-btn" id="open-window"><svg><use href="#dx-i-cal"/></svg>Defense window: <span id="window-label"></span></button>
         <span class="dx-scope">Your sections: <b id="my-sections"></b></span>
         <span class="dx-grow"></span>
         <button class="dx-btn dx-btn-gold" id="open-generate"><svg><use href="#dx-i-spark"/></svg>Generate schedule</button>
       </div>
-      @unless ($state['has_rubric'])
-        {{-- Only a warning: scheduling goes ahead, but nobody can grade this stage until a rubric exists. --}}
-        <div class="dx-info dx-gold" role="status"><svg><use href="#dx-i-info"/></svg><span>No active grading rubric for {{ $state['stage'] }} yet. Panelists can't grade these defenses until one is set up in <a href="{{ route('capsa.rubric_management') }}">Grading Rubrics</a>.</span></div>
-      @endunless
+      {{-- Only a warning: scheduling goes ahead, but nobody can grade this
+           stage until a rubric exists. Redrawn when the stage changes. The
+           text prints only when this stage actually has none - a page with
+           a rubric must not carry the warning at all, hidden or not. --}}
+      <div class="dx-info dx-gold" id="rubric-warn" role="status" data-rubric-url="{{ route('capsa.rubric_management') }}" @if ($state['has_rubric']) hidden @endif><svg><use href="#dx-i-info"/></svg><span id="rubric-warn-text">@unless ($state['has_rubric']) No active grading rubric for {{ $state['stage'] }} yet. Panelists can't grade these defenses until one is set up in <a href="{{ route('capsa.rubric_management') }}">Grading Rubrics</a>. @endunless</span></div>
     </div>
 
     <div class="dx-sched-main">
@@ -91,7 +94,15 @@
         <div><label class="dx-lbl" for="w-start">First day</label><input class="dx-field" type="date" id="w-start" style="width:100%"></div>
         <div><label class="dx-lbl" for="w-end">Last day</label><input class="dx-field" type="date" id="w-end" style="width:100%"></div>
       </div>
-      <div class="dx-muted">Defenses run 8 AM to 4 PM in 2-hour blocks, in Mac Lab and Open Lab. Saving only stores the dates; nobody is scheduled until you use Generate schedule.</div>
+      <div>
+        <label class="dx-lbl">Length of each defense</label>
+        <div class="dx-seg" id="w-length" role="group" aria-label="Length of each defense">
+          <button type="button" class="dx-seg-btn" data-minutes="60">1 hour</button>
+          <button type="button" class="dx-seg-btn" data-minutes="90">1½ hours</button>
+          <button type="button" class="dx-seg-btn" data-minutes="120">2 hours</button>
+        </div>
+      </div>
+      <div class="dx-muted">Weekdays, 8 AM – 5 PM, lunch 12–1 kept free. Saving only stores the dates; nobody is scheduled until you use Generate schedule.</div>
     </div>
     <div class="dx-dlg-foot"><span class="dx-grow"></span><button class="dx-btn" data-close>Cancel</button><button class="dx-btn dx-btn-gold" id="w-save">Save window</button></div>
   </div>
@@ -102,6 +113,33 @@
     <div class="dx-dlg-head"><div class="dx-grow"><h2 id="d-generate-t">Generate schedule</h2><p id="g-sub"></p></div><button class="dx-icon-btn" data-close aria-label="Close"><svg><use href="#dx-i-x"/></svg></button></div>
     <div class="dx-dlg-body" id="g-body"></div>
     <div class="dx-dlg-foot"><span class="dx-muted dx-grow" id="g-summary"></span><button class="dx-btn" data-close>Cancel</button><button class="dx-btn dx-btn-gold" id="g-save">Save schedule</button></div>
+  </div>
+</dialog>
+
+{{-- Schedule one team, for the stage chosen here. The stage is segmented
+     buttons rather than a dropdown, and the slot is a grid of the window's
+     days and blocks with taken ones greyed out - so a team is given a date
+     without leaving the page or hunting through a select. --}}
+<dialog id="d-schedule" class="dx-dialog dx-wide" aria-labelledby="d-schedule-t">
+  <div class="dx-dlg">
+    <div class="dx-dlg-head"><div class="dx-grow"><h2 id="d-schedule-t">Schedule a team</h2><p id="sc-sub"></p></div><button class="dx-icon-btn" data-close aria-label="Close"><svg><use href="#dx-i-x"/></svg></button></div>
+    <div class="dx-dlg-body dx-stack">
+      <div>
+        <label class="dx-lbl">Defense type</label>
+        <div class="dx-seg" id="sc-stages" role="group" aria-label="Defense type"></div>
+      </div>
+      <div id="sc-window-note" class="dx-info dx-gold" hidden><svg><use href="#dx-i-info"/></svg><span id="sc-window-note-text"></span></div>
+      <div>
+        <label class="dx-lbl">Venue</label>
+        <div class="dx-seg dx-wrap" id="sc-venues" role="group" aria-label="Venue"></div>
+      </div>
+      <div>
+        <label class="dx-lbl">Pick a slot</label>
+        <div class="dx-days" id="sc-days"></div>
+      </div>
+      <div id="sc-conflict" class="dx-info dx-red" hidden><svg><use href="#dx-i-info"/></svg><span id="sc-conflict-text"></span></div>
+    </div>
+    <div class="dx-dlg-foot"><span class="dx-muted dx-grow" id="sc-summary"></span><button class="dx-btn" data-close>Cancel</button><button class="dx-btn dx-btn-gold" id="sc-save" disabled>Save schedule</button></div>
   </div>
 </dialog>
 

@@ -46,7 +46,7 @@
     </svg>
 
     <header class="dx-head">
-      <div><h1>Panel Assignment</h1><p>Give each team its defense panel. Dates are set on the Defense Scheduling page.</p></div>
+      <div><h1>Panel Assignment</h1><p>Give each team the panel that sits every one of its defenses. Dates are set on the Defense Scheduling page.</p></div>
     </header>
 
     <section class="dx-rules" aria-label="Rules">
@@ -60,12 +60,10 @@
 
     <div class="dx-main">
       <section class="dx-board" aria-label="Teams">
-        @include('capsa.partials.defense-stage-tabs')
         <div class="dx-filters">
           <label class="dx-field dx-search"><svg><use href="#dx-i-search"/></svg><input id="f-search" type="search" placeholder="Search team or capstone title" aria-label="Search team or capstone title"></label>
           <select class="dx-field" id="f-section" aria-label="Section"><option value="">All sections</option></select>
-          <select class="dx-field" id="f-status" aria-label="Status"><option value="">All statuses</option><option value="notready">Missing experts</option><option value="unassigned">Unassigned</option><option value="assigned">Assigned</option><option value="scheduled">Scheduled</option><option value="passed">Passed</option></select>
-          <select class="dx-field" id="f-paid" aria-label="Fees"><option value="">All fees</option><option value="paid">Fees verified</option><option value="unpaid">Fees not verified</option></select>
+          <select class="dx-field" id="f-status" aria-label="Status"><option value="">All statuses</option><option value="notready">Missing experts</option><option value="unassigned">Unassigned</option><option value="assigned">Assigned</option></select>
           <span class="dx-grow"></span>
           <button class="dx-btn dx-btn-gold" id="open-assign"><svg><use href="#dx-i-plus"/></svg>Assign Panel</button>
         </div>
@@ -92,7 +90,7 @@
   <div class="dx-dlg">
     <div class="dx-dlg-head"><div class="dx-grow"><h2 id="d-assign-t">Assign panel</h2><p id="a-sub"></p></div><button class="dx-icon-btn" data-close aria-label="Close"><svg><use href="#dx-i-x"/></svg></button></div>
     <div class="dx-dlg-body">
-      <div class="dx-info dx-gold" id="a-prop" hidden><svg><use href="#dx-i-info"/></svg><span>A Pre-proposal Defense panel is the team's panel until the end of Capstone 2: it is copied to Title, Pre Oral and Final Oral Defense, and a redefense keeps it. Changing one of those later only changes that stage.</span></div>
+      <div class="dx-info dx-gold" id="a-prop"><svg><use href="#dx-i-info"/></svg><span>This is the team's panel for every defense &mdash; Pre-proposal, Title, Pre Oral and Final Oral, and any redefense. Saving it here sets all of them.</span></div>
       <div class="dx-assign">
         <div>
           <div class="dx-col-title"><span>Teams (<span id="a-team-count">0</span>)</span></div>

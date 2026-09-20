@@ -399,4 +399,64 @@ class StudentExpertController extends Controller
             'message' => 'Expert assignment removed successfully.',
         ]);
     }
+
+    /**
+     * The team taking back a change request the CaPSA has not decided on yet.
+     *
+     * DELETE /api/expert-removal-requests/{expertRemovalRequest}
+     *
+     * Once the CaPSA has approved or declined, there is nothing left to take
+     * back - an approval has already removed the expert.
+     */
+    public function destroyRemovalRequest(Request $request, ExpertRemovalRequest $expertRemovalRequest): JsonResponse
+    {
+        /** @var Student $student */
+        $student = Auth::user();
+
+        $team = StudentSchoolYear::where('student_id', $student->student_id)
+            ->whereNotNull('team_id')
+            ->first()?->team;
+
+        if (! $team || $expertRemovalRequest->team_id !== $team->team_id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Request not found.',
+            ], 404);
+        }
+
+        if ($team->leader_id !== $student->student_id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Only the team leader can take back a change request.',
+            ], 403);
+        }
+
+        if (! $expertRemovalRequest->isPending()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Your CaPSA has already '.$expertRemovalRequest->status.' this request, so there is nothing to take back.',
+            ], 409);
+        }
+
+        $expertRemovalRequest->update(['status' => ExpertRemovalRequest::WITHDRAWN]);
+
+        $expertName = $expertRemovalRequest->expert?->name ?? ('expert #'.$expertRemovalRequest->expert_id);
+
+        ActivityLog::create([
+            'student_id' => $student->student_id,
+            'type' => 'expert_removal_withdrawn',
+            'description' => 'Took back the request to remove expert '.$expertName.' - the CaPSA had not decided on it yet.',
+            'metadata' => [
+                'expert_removal_request_id' => $expertRemovalRequest->id,
+                'assignment_id' => $expertRemovalRequest->assignment_id,
+                'expert_id' => $expertRemovalRequest->expert_id,
+            ],
+            'created_at' => now(),
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Request withdrawn. '.($expertRemovalRequest->expert?->name ?? 'Your expert').' stays with your team.',
+        ]);
+    }
 }

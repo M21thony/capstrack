@@ -4,11 +4,11 @@ namespace Tests\Feature;
 
 use App\Models\CapstoneExpert;
 use App\Models\CapstonePreProposal;
-use App\Models\DuplicationCheck;
-use App\Models\ExpertRole;
 use App\Models\Checklist;
 use App\Models\Deliverable;
 use App\Models\DeliverableCheck;
+use App\Models\DuplicationCheck;
+use App\Models\ExpertRole;
 use App\Models\Role;
 use App\Models\Student;
 use App\Models\StudentSchoolYear;
@@ -224,6 +224,75 @@ class CapsaTeamManagementTest extends TestCase
         $response->assertOk();
         $response->assertSee('Team choosing');
         $response->assertSee('they pick which one stands before you can verify');
+    }
+
+    /**
+     * The Recommend confirmation (the shared confirm-sheet) and the Reject
+     * dialog belong on TOP of the review modal - they sat under it
+     * (z-index 600 vs the modal's 1000), so clicking Recommend opened its
+     * "are you sure" invisibly behind the panel and the button read as
+     * broken. The reject dialog also has to name the title: a team submits
+     * three, and a dialog that could be about any of them invites
+     * rejecting the wrong one.
+     */
+    public function test_the_recommend_and_reject_dialogs_stack_above_the_review_modal(): void
+    {
+        $this->makeCapsaWithSections();
+        [$team, , $sy] = $this->makeTeamInSection('Team Dialogs');
+
+        $this->addProposal($team, $sy, 1);
+
+        $html = $this->get(route('capsa.team_management', ['tab' => 'pre_proposals']))
+            ->assertOk()->getContent();
+
+        // The recommend confirmation and the reject dialog are on the page.
+        $this->assertStringContainsString('id="cf-scrim"', $html);
+        $this->assertStringContainsString('Reject this title', $html);
+        $this->assertStringContainsString('id="pp-reject-title"', $html);
+
+        // Both are the SAME sheet shell - the reject dialog is not a centred
+        // modal box beside the recommend sheet. Same container classes, same
+        // header, same footer.
+        $this->assertStringContainsString('upload-scrim', $html);
+        $this->assertStringContainsString('upload-sheet cf-sheet', $html);
+        $this->assertStringContainsString('card-header sheet-head', $html);
+        $this->assertStringContainsString('cf-actions', $html);
+
+        // Both stack above the review modal's own 1000 - and above the PDF
+        // preview's 1400, since either can be opened while a document shows.
+        // The !important is what beats the confirm-sheet's inline 600.
+        $this->assertMatchesRegularExpression('/#cf-scrim\{z-index:1500 !important\}/', $html);
+        $this->assertMatchesRegularExpression('/#pp-reject-modal\{z-index:1450\}/', $html);
+    }
+
+    /**
+     * Seven equal tabs with red count badges read as a wall of errors and
+     * gave no sense of what belonged to what. The toolbar groups them into
+     * three clusters with neutral counts, and a summary line says where the
+     * CaPSA's decisions wait without opening a tab.
+     */
+    public function test_the_toolbar_groups_the_tabs_with_neutral_counts(): void
+    {
+        $this->makeCapsaWithSections();
+        [$team, , $sy] = $this->makeTeamInSection('Team Toolbar');
+
+        $this->addProposal($team, $sy, 1);
+
+        $html = $this->get(route('capsa.team_management', ['tab' => 'teams']))
+            ->assertOk()->getContent();
+
+        // Grouped into clusters, not seven flat tabs. (Decoded, because the
+        // group label carries an ampersand that Blade escapes into the HTML.)
+        $this->assertStringContainsString('tm-toolbar', $html);
+        $this->assertStringContainsString('Review queue', $html);
+        $this->assertStringContainsString('Requests & setup', html_entity_decode($html));
+
+        // Neutral count pills - the old red .tab-count badges are gone.
+        $this->assertStringContainsString('tm-count', $html);
+        $this->assertStringNotContainsString('tab-count', $html);
+
+        // The summary names the waiting work.
+        $this->assertStringContainsString('1 title to review', $html);
     }
 
     public function test_the_pre_proposals_tab_counts_titles_awaiting_review(): void

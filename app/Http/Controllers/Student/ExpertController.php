@@ -5,9 +5,11 @@ namespace App\Http\Controllers\Student;
 use App\Http\Controllers\Controller;
 use App\Models\CapstoneExpert;
 use App\Models\CapstonePreProposal;
+use App\Models\ExpertRemovalRequest;
 use App\Models\Student;
 use App\Models\StudentSchoolYear;
 use App\Models\TeamExpertAssignment;
+use App\Support\SectionScope;
 use App\Support\SkillCatalog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -32,7 +34,7 @@ class ExpertController extends Controller
 
         $assignments = collect();
         $isLeader = false;
-        /** @var array<string, \App\Models\TeamExpertAssignment> */
+        /** @var array<string, TeamExpertAssignment> */
         $rolesSpokenFor = [];
         $roleAssignments = [
             'adviser' => null,
@@ -275,10 +277,16 @@ class ExpertController extends Controller
             // lost its upload, and a "View PDF" button leading to a 404 is
             // worse than no button. One stat call per page render buys that.
             'proposalPdfUrl' => $this->proposalPdfUrl($approvedProposal),
-            // Experts whose removal is waiting on the CaPSA.
+            // Experts whose removal is waiting on the CaPSA, keyed by
+            // assignment id -> request id, so the "Change requested" badge can
+            // also offer taking the request back before the CaPSA decides.
             'pendingRemovalIds' => $team
-                ? \App\Models\ExpertRemovalRequest::pending()->where('team_id', $team->team_id)->pluck('assignment_id')->map(fn ($id) => (int) $id)->all()
+                ? ExpertRemovalRequest::pending()->where('team_id', $team->team_id)->pluck('id', 'assignment_id')->map(fn ($requestId, $assignmentId) => ['request' => (int) $requestId, 'assignment' => (int) $assignmentId])->all()
                 : [],
+            // The team's section, shown in the change-request dialog so the
+            // team can see whose CaPSA the request waits on. Resolved the
+            // same way the CaPSA side scopes it, so the two cannot disagree.
+            'teamSection' => $team ? app(SectionScope::class)->sectionFor($team) : '',
             'isLeader' => $isLeader,
             'teamConfirmed' => $team?->is_confirmed ?? false,
             'skillGroups' => $skillGroups,

@@ -77,7 +77,7 @@ class DefenseScheduleNotificationTest extends TestCase
         [$schedule, $member] = $this->unscheduledDefense();
         $this->setDate($schedule, '2027-03-15')->assertOk();
 
-        $this->setDate($schedule, '2027-03-17', '14:00')->assertOk();
+        $this->setDate($schedule, '2027-03-17', '13:00')->assertOk();
 
         Mail::assertQueued(DefenseScheduledMail::class, fn ($m) => $m->hasTo($member->email) && $m->rescheduled);
         $this->assertTrue(Announcement::where('title', 'like', 'Rescheduled:%')->exists());

@@ -169,7 +169,7 @@ class StudentController extends Controller
 
         if ($existing) {
             $existing->update($fields);
-            StudentSchoolYear::recordFor($existing->student_id, $schoolYear);
+            StudentSchoolYear::recordFor($existing->student_id, $schoolYear, Student::mapCourseToProgram((string) ($data['course'] ?? '')));
 
             return response()->json([
                 'success' => true,
@@ -183,7 +183,7 @@ class StudentController extends Controller
         // which is why nothing here asks for a password.
         $student = Student::create(['email' => $email] + $fields);
 
-        StudentSchoolYear::recordFor($student->student_id, $schoolYear);
+        StudentSchoolYear::recordFor($student->student_id, $schoolYear, Student::mapCourseToProgram((string) ($data['course'] ?? '')));
 
         return response()->json(['success' => true, 'student' => $student], 201);
     }

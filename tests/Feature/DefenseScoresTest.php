@@ -38,10 +38,10 @@ class DefenseScoresTest extends TestCase
     }
 
     /** @param  array<int, float|null>  $scores  one per panelist; null = not submitted */
-    private function defense(Team $team, array $scores, string $type = 'Title Defense'): DefenseSchedule
+    private function defense(Team $team, array $scores, string $type = 'Title Defense', int $attempt = 1): DefenseSchedule
     {
         $rubric = GradingRubric::create(['rubric_name' => 'R', 'rubric_type' => $type, 'total_points' => 100, 'is_active' => true]);
-        $schedule = DefenseSchedule::create(['team_id' => $team->team_id, 'defense_type' => $type, 'attempt' => 1]);
+        $schedule = DefenseSchedule::create(['team_id' => $team->team_id, 'defense_type' => $type, 'attempt' => $attempt]);
 
         foreach (array_values($scores) as $i => $score) {
             $panelist = CapstoneExpert::factory()->create(['approved_status' => true]);
@@ -83,6 +83,24 @@ class DefenseScoresTest extends TestCase
         $this->assertNull($score->average);
         $this->assertSame(2, $score->graded);
         $this->assertSame(3, $score->panel_size);
+    }
+
+    /**
+     * A failed attempt is an auto-fail in this flow - its score says nothing
+     * the redefense does not - so only the latest attempt of a stage is
+     * listed, and the older rows do not repeat the column.
+     */
+    public function test_only_the_latest_attempt_of_a_stage_is_listed(): void
+    {
+        $team = $this->team();
+        $this->defense($team, [60, 60, 60], 'Title Defense');
+        $this->defense($team, [80, 80, 80], 'Title Defense', 2);
+
+        $rows = DefenseScores::forTeams([$team->team_id])->get($team->team_id);
+
+        $this->assertCount(1, $rows);
+        $this->assertSame(2, $rows->first()->attempt);
+        $this->assertSame(80.0, $rows->first()->average);
     }
 
     public function test_every_stage_is_listed_in_order(): void

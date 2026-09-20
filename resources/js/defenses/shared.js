@@ -13,7 +13,22 @@ export const initials = name => String(name || '')
 export const fmtDay = iso => new Date(iso + 'T00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 export const fmtShort = iso => new Date(iso + 'T00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
-export const SLOT_LABEL = { '08:00': '8:00 – 10:00 AM', '10:00': '10:00 AM – 12:00 PM', '12:00': '12:00 – 2:00 PM', '14:00': '2:00 – 4:00 PM' };
+/** 'HH:MM' plus some minutes, as 'HH:MM'. */
+export const addMinutes = (time, m) => {
+  const [h, mm] = time.split(':').map(Number);
+  const t = h * 60 + mm + m;
+  return `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`;
+};
+
+const clock = time => {
+  const [h, m] = time.split(':').map(Number);
+  return `${((h + 11) % 12) + 1}:${String(m).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`;
+};
+
+/** '08:00', '09:30' as '8:00 AM – 9:30 AM'. */
+export const slotLabel = (start, end) => end ? `${clock(start)} – ${clock(end)}` : clock(start);
+
+export const isWeekend = iso => [0, 6].includes(new Date(iso + 'T00:00').getDay());
 
 const CSRF = document.querySelector('meta[name="csrf-token"]')?.content ?? '';
 
@@ -67,18 +82,23 @@ export function showFlash() {
 }
 
 /**
- * Why this panel can't take this block, or null when it is free - the same
- * rules the server's schedule maker uses. $who names the other booking.
+ * Why this panel can't sit in $venue from $time to $end on $date, or null when
+ * it can - the same rules as the server's clash(). $who names the other booking.
+ *
+ * - A panelist is never in two defenses whose times overlap.
+ * - A panelist who already sits a defense that day stays in that room, so the
+ *   whole panel has to use it.
+ * - A room holds one defense at a time.
  */
-export function clashWith(held, panel, date, time, venue, nameOf) {
-  const mine = panel.slice().sort().join();
+export function clashWith(held, panel, date, time, end, venue, nameOf) {
   for (const h of held) {
     if (h.date !== date) continue;
-    const theirs = h.panel.slice().sort().join();
-    if (h.time === time && theirs === mine) return { text: `This panel is already with ${h.who} at this time.`, other: !!h.other };
-    if (h.time === time && h.venue === venue) return { text: `${venue} is taken at this time by ${h.who}.`, other: !!h.other };
+    const overlaps = h.time < end && time < (h.end || addMinutes(h.time, 120));
     const shared = h.panel.find(x => panel.includes(x));
-    if (theirs !== mine && shared) return { text: `${nameOf(shared)} sits on ${h.who}'s panel that day.`, other: !!h.other };
+
+    if (shared && overlaps) return { text: `${nameOf(shared)} is already on ${h.who}'s panel at this time.`, other: !!h.other };
+    if (shared && h.venue !== venue) return { text: `${nameOf(shared)} is in ${h.venue} that day for ${h.who}, so this panel has to use ${h.venue} too.`, other: !!h.other, room: h.venue };
+    if (overlaps && h.venue === venue) return { text: `${venue} is taken at this time by ${h.who}.`, other: !!h.other };
   }
   return null;
 }

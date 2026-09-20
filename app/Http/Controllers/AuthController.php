@@ -6,6 +6,7 @@ use App\Models\CapstoneExpert;
 use App\Models\GoogleDriveToken;
 use App\Models\Student;
 use App\Models\StudentRoster;
+use App\Services\GoogleDriveService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -23,6 +24,62 @@ class AuthController extends Controller
             'removedExpert' => request()->has('removed_expert'),
             'removedExpertName' => request('name', ''),
             'removedExpertReason' => request('reason', ''),
+        ]);
+    }
+
+    /**
+     * Show the Meet the Team page — the five students who built CapsTrack.
+     *
+     * Facebook/email are placeholders until each member hands over the links
+     * they want published; the icons simply don't render while empty.
+     */
+    public function team()
+    {
+        // Photos live in public/images/team - drop a file there with the name
+        // listed per member and it takes over from the gold initials circle.
+        return view('auth.team', [
+            'team' => [
+                [
+                    'name' => 'Jolina Rabusa',
+                    'initials' => 'JR',
+                    'role' => 'Project Lead',
+                    'image' => 'images/team/jolina-rabusa.jpg',
+                    'facebook' => 'https://www.facebook.com/jolina.rabusa.3',
+                    'email' => 'jorabusa@cspc.edu.ph',
+                ],
+                [
+                    'name' => 'John Kenneth Aurillas',
+                    'initials' => 'JA',
+                    'role' => 'Backend Developer',
+                    'image' => 'images/team/john-kenneth-aurillas.jpg',
+                    'facebook' => 'https://www.facebook.com/Tsskenn',
+                    'email' => 'joaurillas@cspc.edu.ph',
+                ],
+                [
+                    'name' => 'Mark Anthony Bailla',
+                    'initials' => 'MB',
+                    'role' => 'Full-Stack Developer',
+                    'image' => 'images/team/mark-anthony-balilla.jpg',
+                    'facebook' => 'https://www.facebook.com/mark.anthony.balilla.2024',
+                    'email' => 'mabailla@cspc.edu.ph',
+                ],
+                [
+                    'name' => 'Ian Cyrus',
+                    'initials' => 'IC',
+                    'role' => 'UI/UX Designer',
+                    'image' => 'images/team/ian-cyrus.jpeg',
+                    'facebook' => 'https://www.facebook.com/iancyrus.tumambing',
+                    'email' => 'iatumambing@my.cspc.edu.ph',
+                ],
+                [
+                    'name' => 'Alexa Nicole',
+                    'initials' => 'AN',
+                    'role' => 'QA & Documentation',
+                    'image' => 'images/team/alexa-nicole.jpg',
+                    'facebook' => '',
+                    'email' => 'nillorin@my.cspc.edu.ph',
+                ],
+            ],
         ]);
     }
 
@@ -255,7 +312,7 @@ class AuthController extends Controller
                     // experts never need the separate "Connect Google Drive"
                     // step at all. Never let a hiccup here block login.
                     try {
-                        app(\App\Services\GoogleDriveService::class)->storeToken($expert->expert_id, [
+                        app(GoogleDriveService::class)->storeToken($expert->expert_id, [
                             'access_token' => $accessToken,
                             // The one resolved above, not the raw response -
                             // a repeat login sends none, and passing that

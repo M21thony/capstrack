@@ -16,10 +16,14 @@ class DefenseWindow extends Model
         'defense_type',
         'start_date',
         'end_date',
+        'duration_minutes',
     ];
+
+    protected $attributes = ['duration_minutes' => 120];
 
     protected $casts = [
         'start_date' => 'date',
         'end_date' => 'date',
+        'duration_minutes' => 'integer',
     ];
 }

@@ -12,6 +12,12 @@
   @keyframes sk-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
   .sk-overlay { position: absolute; inset: 0; background: var(--bg); z-index: 10; }
   .sk { background: linear-gradient(90deg, var(--bg4) 25%, var(--bg2) 50%, var(--bg4) 75%); background-size: 200% 100%; animation: sk-shimmer 1.5s ease-in-out infinite; border-radius: 8px; }
+  /* Flash messages from the manuscript form - the page redirects back, so the
+     only place a refusal can be read is here. */
+  #archive-toast { position: fixed; bottom: 30px; right: 30px; background: var(--navy-dark); color: #fff; padding: 14px 22px; border-radius: 12px; font-size: 13px; font-weight: 500; z-index: 2000; box-shadow: 0 8px 30px rgba(0,0,0,0.3); opacity: 0; transform: translateY(12px); pointer-events: none; transition: opacity 0.25s ease, transform 0.25s ease; border-left: 4px solid transparent; display: flex; align-items: center; gap: 10px; max-width: 380px; }
+  #archive-toast.show { opacity: 1; transform: translateY(0); }
+  #archive-toast.success { border-left-color: var(--green); }
+  #archive-toast.error { border-left-color: var(--red); }
 </style>
 @include('partials.skeleton-head', ['skReveal' => 'opacity'])
 </head>
@@ -53,6 +59,75 @@
     </div>
 
     <div id="real-content" style="opacity:0">
+{{-- The finished team's manuscript. Shown only once the journey is over, so
+     it never competes with the archive itself for a team still working. --}}
+@php $sub = $submission; @endphp
+@if ($sub['team'] && ($sub['isFinished'] || $sub['existing']))
+<div style="background:#fff;border:1.5px solid var(--accent);border-radius:12px;padding:16px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,0.04)">
+  <div class="row" style="justify-content:space-between;align-items:flex-start;gap:12px">
+    <div>
+      <div style="font-size:13px;font-weight:700;color:var(--text)">Submit your Capstone Manuscript</div>
+      <div style="font-size:12px;color:var(--text3);margin-top:2px">
+        Your team has completed its capstone journey. Hand in the final manuscript and it goes into the archive once it has been reviewed.
+      </div>
+    </div>
+    @if ($sub['existing'])
+      <span style="font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;white-space:nowrap;
+        {{ $sub['existing']->submission_status === \App\Models\ArchivedDocument::PENDING ? 'background:var(--accent-glow);color:var(--text)' : 'background:rgba(34,153,84,0.12);color:var(--green)' }}">
+        {{ $sub['existing']->submission_status === \App\Models\ArchivedDocument::PENDING ? 'Pending review' : 'In the archive' }}
+      </span>
+    @endif
+  </div>
+
+  @if ($sub['existing'])
+    <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);font-size:12px;color:var(--text2);line-height:1.6">
+      <div><strong style="color:var(--text)">{{ $sub['existing']->title }}</strong></div>
+      <div>
+        Handed in {{ $sub['existing']->submitted_at?->format('M j, Y') }}
+        @if ($sub['existing']->file_name)
+          &middot; {{ $sub['existing']->file_name }}
+        @endif
+      </div>
+      @if ($sub['existing']->submission_status === \App\Models\ArchivedDocument::PENDING)
+        <div style="color:var(--text3);margin-top:4px">Your CaPSA or the admin has to approve it before it appears in the archive. Only one manuscript per team.</div>
+      @endif
+    </div>
+  @elseif (! $sub['isLeader'])
+    {{-- Only the leader hands it in, so the rest of the team is told who to
+         ask rather than shown a form that would refuse them. --}}
+    <div style="margin-top:10px;font-size:12px;color:var(--text3)">
+      Your team leader submits the manuscript for the team.
+    </div>
+  @else
+    <form method="POST" action="{{ route('student.archive.manuscript.submit') }}" enctype="multipart/form-data"
+      style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      @csrf
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div>
+          <label class="label" style="font-size:12px;color:var(--text2);display:block;margin-bottom:4px">Capstone Title</label>
+          <input class="input" name="title" value="{{ old('title', $sub['defaultTitle']) }}" maxlength="255" required />
+        </div>
+        <div>
+          <label class="label" style="font-size:12px;color:var(--text2);display:block;margin-bottom:4px">Manuscript (PDF)</label>
+          <input class="input" type="file" name="file" accept="application/pdf,.pdf" required style="padding:8px 10px" />
+          <div style="font-size:11px;color:var(--text3);margin-top:4px">PDF, up to 20MB.</div>
+        </div>
+        <div style="font-size:11px;color:var(--text3)">
+          Recorded as {{ $sub['authors'] }} &middot; {{ $sub['program'] ?: 'CCS' }} &middot; {{ $sub['year'] }}
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div style="flex:1;display:flex;flex-direction:column">
+          <label class="label" style="font-size:12px;color:var(--text2);display:block;margin-bottom:4px">Abstract</label>
+          <textarea class="input" name="abstract" required style="flex:1;min-height:150px">{{ old('abstract') }}</textarea>
+        </div>
+        <button class="btn btn-primary" type="submit" style="justify-content:center;padding:10px">Submit Manuscript</button>
+      </div>
+    </form>
+  @endif
+</div>
+@endif
+
 <div class="row" style="margin-bottom:16px;gap:8px;flex-wrap:wrap">
   <input class="input" id="archive-search" placeholder="Search by title or keyword..." style="flex:1;min-width:200px;max-width:380px" oninput="filterArchive()" />
   <select class="input" id="archive-year" style="width:120px" onchange="filterArchive()">
@@ -141,8 +216,59 @@ document.querySelectorAll('.nav-item').forEach(function(el) {
         if (window.innerWidth <= 768) closeSidebar();
     });
 });
+
+// ── Search / year / tag ───────────────────────────────────────────────────
+// The three controls called this and it was never written, so every keystroke
+// in the search box threw and nothing was ever filtered.
+function filterArchive() {
+  var q = (document.getElementById('archive-search').value || '').toLowerCase();
+  var year = document.getElementById('archive-year').value;
+  var tag = document.getElementById('archive-tag').value;
+  var cards = document.querySelectorAll('#archive-grid .archive-card');
+  var shown = 0;
+
+  cards.forEach(function (card) {
+    var title = (card.dataset.title || '').toLowerCase();
+    var tags = card.dataset.tags || '';
+    var match = (! q || title.indexOf(q) !== -1)
+      && (! year || card.dataset.year === year)
+      && (! tag || tags.indexOf(tag) !== -1);
+
+    card.style.display = match ? '' : 'none';
+    if (match) shown++;
+  });
+
+  var count = document.getElementById('archive-count');
+  if (count) count.textContent = 'Showing ' + shown + ' studies';
+
+  var empty = document.getElementById('archive-empty');
+  if (empty) empty.style.display = shown === 0 ? 'block' : 'none';
+}
+
+// ── Flash messages ────────────────────────────────────────────────────────
+function showToast(message, type) {
+  var toast = document.getElementById('archive-toast');
+  if (! toast) return;
+
+  toast.textContent = (type === 'error' ? '✕ ' : '✓ ') + message;
+  toast.classList.remove('success', 'error');
+  toast.classList.add('show', type);
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(function () { toast.classList.remove('show'); }, 4000);
+}
+
+@if (session('success'))
+  document.addEventListener('DOMContentLoaded', function () { showToast(@json(session('success')), 'success'); });
+@endif
+@if (session('error'))
+  document.addEventListener('DOMContentLoaded', function () { showToast(@json(session('error')), 'error'); });
+@endif
+@if ($errors->any())
+  document.addEventListener('DOMContentLoaded', function () { showToast(@json($errors->first()), 'error'); });
+@endif
 </script>
 
 @include('partials.escape-closes-modals')
+<div id="archive-toast"></div>
 </body>
 </html>

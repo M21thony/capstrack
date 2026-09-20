@@ -8,6 +8,7 @@ use App\Models\DefensePanel;
 use App\Models\DefenseSchedule;
 use App\Models\GradingRubric;
 use App\Models\PanelGrade;
+use App\Models\Team;
 use App\Services\DefenseOutcomeRecorder;
 use App\Support\DefenseOutcome;
 use Illuminate\Http\JsonResponse;
@@ -28,6 +29,7 @@ class GradingController extends Controller
         /** @var CapstoneExpert $expert */
         $expert = auth()->guard('expert')->user();
 
+        // Get all panel assignments for this expert, with their schedules and teams
         $assignments = DefensePanel::where('expert_id', $expert->expert_id)
             ->with(['schedule.team'])
             ->get()
@@ -36,38 +38,148 @@ class GradingController extends Controller
             ->filter(fn ($panel) => $panel->schedule?->schedule_date !== null)
             ->sortBy(fn ($panel) => $panel->schedule->team?->team_name ?? '');
 
-        $defenseIds = $assignments->pluck('schedule.defense_id')->unique()->values();
+        // Group by team - for each team, find the "current" defense to grade
+        // This is the latest attempt for the stage the team is currently at
+        $teamsToGrade = $assignments->groupBy(fn ($panel) => $panel->schedule->team_id)->map(function ($panels) use ($expert) {
+            // Get all schedules for this team that this expert is on
+            $schedules = $panels->map(fn ($p) => $p->schedule)->filter()->unique('defense_id');
+
+            // Find the current defense: the one with no outcome yet (in progress or scheduled)
+            // If multiple, pick the one with the highest attempt for the current stage
+            $current = $schedules->filter(fn ($s) => ! $s->hasOutcome())
+                ->sortByDesc(fn ($s) => $s->attempt)
+                ->first();
+
+            // If all have outcomes, pick the latest one they haven't graded yet, or the latest
+            if (! $current) {
+                $current = $schedules->filter(function ($s) use ($expert) {
+                    $grade = PanelGrade::where('defense_id', $s->defense_id)
+                        ->where('expert_id', $expert->expert_id)
+                        ->first();
+
+                    return ! $grade || $grade->status !== 'submitted';
+                })->sortByDesc(fn ($s) => $s->attempt)->first();
+            }
+
+            // If still none (all submitted and have outcomes), show the latest completed defense
+            // so the expert can see their submitted grade and the outcome
+            if (! $current) {
+                $current = $schedules->sortByDesc(fn ($s) => $s->attempt)->first();
+            }
+
+            $grade = PanelGrade::where('defense_id', $current->defense_id)
+                ->where('expert_id', $expert->expert_id)
+                ->first();
+
+            $panel = $panels->firstWhere('schedule.defense_id', $current->defense_id);
+
+            // Count total attempts for this team at this defense type
+            $attemptCount = $schedules->where('defense_type', $current->defense_type)->count();
+
+            return (object) [
+                'defense_id' => $current->defense_id,
+                'team_id' => $current->team?->team_id ?? 0,
+                'team_name' => $current->team?->team_name ?? 'Unknown Team',
+                'project_title' => $current->team?->project_title,
+                'defense_type' => $current->defense_type,
+                'attempt' => max(1, (int) $current->attempt),
+                'total_attempts' => $attemptCount,
+                'outcome' => $current->hasOutcome() ? $current->outcomeLabel() : null,
+                'outcome_tone' => DefenseOutcome::tone($current->outcome),
+                'panel_role' => $panel->panel_role,
+                'schedule_date' => $current->schedule_date,
+                'end_date' => $current->end_date,
+                'venue' => $current->venue,
+                'status' => $grade?->status ?? 'not_started',
+                'total_score' => $grade?->total_score,
+            ];
+        })->values();
+
+        $defenseIds = $teamsToGrade->pluck('defense_id')->unique()->values();
 
         $myGrades = PanelGrade::where('expert_id', $expert->expert_id)
             ->whereIn('defense_id', $defenseIds)
             ->get()
             ->keyBy('defense_id');
 
-        $rows = $assignments->map(function (DefensePanel $panel) use ($myGrades) {
-            $schedule = $panel->schedule;
-            $grade = $myGrades->get($schedule->defense_id);
+        $rows = $teamsToGrade->map(function ($row) use ($myGrades) {
+            $grade = $myGrades->get($row->defense_id);
 
-            return (object) [
-                'defense_id' => $schedule->defense_id,
-                'team_name' => $schedule->team?->team_name ?? 'Unknown Team',
-                'project_title' => $schedule->team?->project_title,
-                'defense_type' => $schedule->defense_type,
-                'attempt' => max(1, (int) $schedule->attempt),
-                'outcome' => $schedule->hasOutcome() ? $schedule->outcomeLabel() : null,
-                'outcome_tone' => \App\Support\DefenseOutcome::tone($schedule->outcome),
-                'panel_role' => $panel->panel_role,
-                'schedule_date' => $schedule->schedule_date,
-                'end_date' => $schedule->end_date,
-                'venue' => $schedule->venue,
-                'status' => $grade?->status ?? 'not_started',
-                'total_score' => $grade?->total_score,
-            ];
+            return (object) array_merge((array) $row, [
+                'status' => $grade?->status ?? $row->status,
+                'total_score' => $grade?->total_score ?? $row->total_score,
+            ]);
         })
             // Still to grade first, then by date.
             ->sortBy(fn ($r) => ($r->status === 'submitted' ? '1' : '0').$r->schedule_date->format('YmdHi'))
             ->values();
 
         return view('instructor.grading', ['rows' => $rows]);
+    }
+
+    public function teamDefenses(Request $request): JsonResponse
+    {
+        $teamName = $request->query('team');
+
+        if (! $teamName) {
+            return response()->json(['success' => false, 'message' => 'Team name required'], 400);
+        }
+
+        /** @var CapstoneExpert $expert */
+        $expert = auth()->guard('expert')->user();
+
+        if (! $expert) {
+            return response()->json(['success' => false, 'message' => 'Unauthenticated'], 401);
+        }
+
+        // Find the team - case insensitive and trim
+        $team = Team::whereRaw('TRIM(LOWER(team_name)) = ?', [strtolower(trim($teamName))])->first();
+
+        if (! $team) {
+            \Log::warning('Team not found for team-defenses', ['teamName' => $teamName, 'expert' => $expert->expert_id]);
+
+            return response()->json(['success' => false, 'message' => 'Team not found'], 404);
+        }
+
+        // Check if expert is assigned to this team's panels
+        $panelExists = DefensePanel::where('expert_id', $expert->expert_id)
+            ->whereHas('schedule', fn ($q) => $q->where('team_id', $team->team_id))
+            ->exists();
+
+        if (! $panelExists) {
+            \Log::warning('Expert not on panel for team', ['teamId' => $team->team_id, 'expert' => $expert->expert_id]);
+
+            return response()->json(['success' => false, 'message' => 'Not authorized'], 403);
+        }
+
+        // Get all defense schedules for this team that this expert is on
+        $defenses = DefenseSchedule::where('team_id', $team->team_id)
+            ->whereHas('panels', fn ($q) => $q->where('expert_id', $expert->expert_id))
+            ->with(['panels' => fn ($q) => $q->where('expert_id', $expert->expert_id), 'grades' => fn ($q) => $q->where('expert_id', $expert->expert_id)])
+            ->orderBy('defense_type')
+            ->orderBy('attempt')
+            ->get();
+
+        $defenseData = $defenses->map(function ($defense) use ($expert) {
+            $panel = $defense->panels->firstWhere('expert_id', $expert->expert_id);
+            $grade = $defense->grades->firstWhere('expert_id', $expert->expert_id);
+
+            return [
+                'defense_id' => $defense->defense_id,
+                'defense_type' => $defense->defense_type,
+                'attempt' => max(1, (int) $defense->attempt),
+                'schedule_date' => $defense->schedule_date?->toIso8601String(),
+                'venue' => $defense->venue,
+                'status' => $grade?->status ?? 'not_started',
+                'total_score' => $grade?->total_score,
+                'panel_average' => $defense->panelAverage(),
+                'outcome' => $defense->hasOutcome() ? $defense->outcomeLabel() : null,
+                'panel_role' => $panel->panel_role ?? 'Panel Member',
+                'url' => route('instructor.grading.show', $defense->defense_id),
+            ];
+        })->values();
+
+        return response()->json(['success' => true, 'defenses' => $defenseData]);
     }
 
     public function show(DefenseSchedule $defense): View|RedirectResponse

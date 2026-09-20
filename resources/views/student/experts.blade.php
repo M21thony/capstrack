@@ -480,11 +480,13 @@
               <span class="yx-role">{{ ucfirst($slotRole) }}</span>
               @if($a)
                 <span class="yx-name" title="{{ $a->expert?->name }}">{{ $a->expert?->name }}</span>
-                @if($isLeader && in_array((int) $a->assignment_id, $pendingRemovalIds, true))
-                  <span title="Waiting on your CaPSA" style="font-size:10.5px;font-weight:600;color:var(--amber);white-space:nowrap">Removal requested</span>
+                @php $pendingRemoval = collect($pendingRemovalIds)->firstWhere('assignment', (int) $a->assignment_id); @endphp
+                @if($isLeader && $pendingRemoval)
+                  <button type="button" class="yx-cancel" title="Waiting on your section's CaPSA - click to take the request back"
+                          onclick="openWithdrawRemovalModal({{ $pendingRemoval['request'] }}, '{{ addslashes($a->expert?->name ?? 'this expert') }}')">Cancel request<svg viewBox="0 0 24 24" width="11" height="11" stroke="currentColor" fill="none" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
                 @elseif($isLeader)
-                  <button type="button" class="yx-x" title="Ask your CaPSA to remove {{ $a->expert?->name ?? 'this expert' }}"
-                          onclick="openRemoveModal({{ $a->assignment_id }}, '{{ addslashes($a->expert?->name ?? '') }}', true)"><svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+                  <button type="button" class="yx-x" title="Ask your section's CaPSA to change {{ $a->expert?->name ?? 'this expert' }}"
+                          onclick="openChangeExpertModal({{ $a->assignment_id }}, '{{ addslashes($a->expert?->name ?? '') }}', '{{ addslashes(ucfirst($a->engaged_role_name ?? 'expert')) }}')"><svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg></button>
                 @endif
               @endif
             </span>
@@ -497,11 +499,13 @@
               <span class="yx-mark"><svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg></span>
               <span class="yx-role">Assigned</span>
               <span class="yx-name">{{ $a->expert?->name ?? 'Unknown' }}</span>
-              @if($isLeader && in_array((int) $a->assignment_id, $pendingRemovalIds, true))
-                <span title="Waiting on your CaPSA" style="font-size:10.5px;font-weight:600;color:var(--amber);white-space:nowrap">Removal requested</span>
+              @php $pendingRemoval = collect($pendingRemovalIds)->firstWhere('assignment', (int) $a->assignment_id); @endphp
+              @if($isLeader && $pendingRemoval)
+                <button type="button" class="yx-cancel" title="Waiting on your section's CaPSA - click to take the request back"
+                        onclick="openWithdrawRemovalModal({{ $pendingRemoval['request'] }}, '{{ addslashes($a->expert?->name ?? 'this expert') }}')">Cancel request<svg viewBox="0 0 24 24" width="11" height="11" stroke="currentColor" fill="none" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
               @elseif($isLeader)
-                <button type="button" class="yx-x" title="Ask your CaPSA to remove {{ $a->expert?->name ?? 'this expert' }}"
-                        onclick="openRemoveModal({{ $a->assignment_id }}, '{{ addslashes($a->expert?->name ?? '') }}', true)"><svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+                <button type="button" class="yx-x" title="Ask your section's CaPSA to change {{ $a->expert?->name ?? 'this expert' }}"
+                        onclick="openChangeExpertModal({{ $a->assignment_id }}, '{{ addslashes($a->expert?->name ?? '') }}', '{{ addslashes(ucfirst($a->engaged_role_name ?? 'expert')) }}')"><svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg></button>
               @endif
             </span>
           @endforeach
@@ -1047,6 +1051,53 @@
   </div>
 </div>
 
+<!-- Change Expert Modal — an approved expert can only be changed with the
+     team's section CaPSA's approval, so this asks rather than removes. The
+     delete modal above stays for withdrawing an application the expert has
+     not answered yet; the two read differently on purpose. -->
+<div class="modal-overlay" id="change-expert-modal">
+  <div class="modal-box confirm-box remove-box">
+    <div class="confirm-icon" style="background: var(--amber);">
+      <svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+    </div>
+    <h3>Request an Expert Change</h3>
+    <div class="confirm-desc">Your section's CaPSA decides on this. The expert stays with your team until they decide &mdash; once approved, you can apply to someone else for the same role.</div>
+    <div class="confirm-detail" id="change-expert-detail"></div>
+
+    <div class="remove-field">
+      <label>Reason for your CaPSA <span class="req">*</span></label>
+      <textarea id="change-expert-reason" class="modal-input" rows="3" placeholder="Explain to your CaPSA why this expert has to change..." maxlength="500" oninput="validateChangeExpertInput()"></textarea>
+      <div style="display:flex;justify-content:space-between;margin-top:4px;">
+        <div class="field-error" id="err-change-expert-reason">Give your CaPSA a reason they can decide on &mdash; at least {{ \App\Models\ExpertRemovalRequest::REASON_MIN }} characters.</div>
+        <span style="font-size:11px;color:var(--text3);"><span id="change-expert-reason-count">0</span>/500</span>
+      </div>
+    </div>
+
+    <div class="modal-actions" style="margin-top: 18px;">
+      <button class="btn btn-soft" onclick="closeChangeExpertModal()">Cancel</button>
+      <button class="btn btn-solid" id="btn-confirm-change-expert" onclick="confirmChangeExpert()" disabled>Send to CaPSA</button>
+    </div>
+  </div>
+</div>
+
+<!-- Withdraw Expert Change Request Modal — the team taking back a request
+     that is still waiting on the CaPSA. Once the CaPSA has decided, there is
+     nothing to take back, so the server refuses and the page says so. -->
+<div class="modal-overlay" id="withdraw-removal-modal">
+  <div class="modal-box confirm-box remove-box">
+    <div class="confirm-icon" style="background: var(--amber);">
+      <svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+    </div>
+    <h3>Take Back Change Request?</h3>
+    <div class="confirm-desc">Your request to change <strong id="withdraw-removal-name">this expert</strong> is still waiting on your section's CaPSA. Taking it back keeps them as your expert.</div>
+
+    <div class="modal-actions" style="margin-top: 18px;">
+      <button class="btn btn-soft" onclick="closeWithdrawRemovalModal()">Keep the request</button>
+      <button class="btn btn-solid" id="btn-confirm-withdraw-removal" onclick="confirmWithdrawRemoval()">Take it back</button>
+    </div>
+  </div>
+</div>
+
 <!-- Request Expert Info Modal -->
 <div class="modal-overlay" id="req-info-modal">
   <div class="modal-box review-box">
@@ -1313,6 +1364,12 @@ document.addEventListener('DOMContentLoaded', function() {
       document.getElementById('remove-reason-count').textContent = this.value.length;
     });
   }
+  var changeReason = document.getElementById('change-expert-reason');
+  if (changeReason) {
+    changeReason.addEventListener('input', function() {
+      document.getElementById('change-expert-reason-count').textContent = this.value.length;
+    });
+  }
 });
 
 function reviewApply() {
@@ -1442,20 +1499,136 @@ function openReqInfoModal(data) {
   openModal('req-info-modal');
 }
 
-// An expert who already took the team on is only removed with the CaPSA's
-// permission, so for them this sends a request instead of removing.
-var removeNeedsCapsa = false;
+// ── Change Expert ──────────────────────────────────────────────────────
+// An expert who already took the team on can only be changed with the
+// section CaPSA's approval, so this dialog sends them a request. It never
+// removes anything - the server turns this exact call into a request when
+// the assignment is approved, and the CaPSA decides on it from there.
+var changeExpertSection = @json($teamSection !== '' ? 'Decided by the CaPSA for your section: '.$teamSection : '');
 
-function openRemoveModal(assignmentId, expertName, approved) {
+function openChangeExpertModal(assignmentId, expertName, role) {
   currentRemoveId = assignmentId;
-  removeNeedsCapsa = !!approved;
-  document.getElementById('remove-title').textContent = removeNeedsCapsa ? 'Ask your CaPSA to remove this expert?' : 'Remove Expert?';
-  document.getElementById('remove-desc').textContent = removeNeedsCapsa
-    ? 'This expert already took your team on, so your CaPSA decides. They stay your expert until your CaPSA approves.'
-    : 'Are you sure you want to remove this expert from your team?';
-  document.getElementById('remove-detail').innerHTML = '<strong>' + expertName + '</strong>'
-    + (removeNeedsCapsa ? '' : '<br><span style="font-size:11px;color:var(--red);">This action cannot be undone.</span>');
-  document.getElementById('btn-confirm-remove').textContent = removeNeedsCapsa ? 'Send to CaPSA' : 'Yes, Remove';
+  document.getElementById('change-expert-detail').innerHTML = '<strong>' + escapeHtmlText(expertName) + '</strong>'
+    + (role ? '<br><span style="font-size:11px;color:var(--text3);">Your team\u2019s ' + escapeHtmlText(role) + '</span>' : '')
+    + (changeExpertSection ? '<br><span style="font-size:11px;color:var(--text2);display:inline-block;margin-top:6px;">' + escapeHtmlText(changeExpertSection) + '</span>' : '');
+  document.getElementById('change-expert-reason').value = '';
+  document.getElementById('change-expert-reason').classList.remove('error');
+  document.getElementById('err-change-expert-reason').classList.remove('show');
+  document.getElementById('change-expert-reason-count').textContent = '0';
+  document.getElementById('btn-confirm-change-expert').disabled = true;
+  openModal('change-expert-modal');
+}
+
+function closeChangeExpertModal() {
+  closeModal('change-expert-modal');
+}
+
+function validateChangeExpertInput() {
+  var reason = document.getElementById('change-expert-reason').value.trim();
+  // The CaPSA decides on the reason, so it needs to be a real one.
+  var ok = reason.length >= {{ \App\Models\ExpertRemovalRequest::REASON_MIN }};
+
+  document.getElementById('change-expert-reason').classList.toggle('error', reason.length > 0 && !ok);
+  document.getElementById('err-change-expert-reason').classList.toggle('show', reason.length > 0 && !ok);
+  document.getElementById('btn-confirm-change-expert').disabled = !ok;
+}
+
+function confirmChangeExpert() {
+  if (!currentRemoveId) return;
+
+  var reason = document.getElementById('change-expert-reason').value.trim();
+  if (!reason) return;
+
+  var btn = document.getElementById('btn-confirm-change-expert');
+  btn.disabled = true;
+  btn.textContent = 'Sending...';
+
+  fetch('/api/assignments/' + currentRemoveId, {
+    method: 'DELETE',
+    headers: {
+      'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    },
+    body: JSON.stringify({ reason: reason }),
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    closeModal('change-expert-modal');
+    if (data.success) {
+      showToast(data.message, 'success');
+      setTimeout(function() { location.reload(); }, 1200);
+    } else {
+      showToast(data.message || 'Failed to send the request', 'error');
+      btn.disabled = false;
+      btn.textContent = 'Send to CaPSA';
+    }
+  })
+  .catch(function() {
+    closeModal('change-expert-modal');
+    showToast('Network error. Please try again.', 'error');
+    btn.disabled = false;
+    btn.textContent = 'Send to CaPSA';
+  });
+}
+
+// Take Back a Change Request - undo while the CaPSA has not decided.
+var withdrawRemovalId = null;
+
+function openWithdrawRemovalModal(requestId, expertName) {
+  withdrawRemovalId = requestId;
+  document.getElementById('withdraw-removal-name').textContent = expertName;
+  var btn = document.getElementById('btn-confirm-withdraw-removal');
+  btn.disabled = false;
+  btn.textContent = 'Take it back';
+  openModal('withdraw-removal-modal');
+}
+
+function closeWithdrawRemovalModal() {
+  closeModal('withdraw-removal-modal');
+}
+
+function confirmWithdrawRemoval() {
+  if (!withdrawRemovalId) return;
+
+  var btn = document.getElementById('btn-confirm-withdraw-removal');
+  btn.disabled = true;
+  btn.textContent = 'Taking back...';
+
+  fetch('/api/expert-removal-requests/' + withdrawRemovalId, {
+    method: 'DELETE',
+    headers: {
+      'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+      'Accept': 'application/json',
+    },
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    closeModal('withdraw-removal-modal');
+    if (data.success) {
+      showToast(data.message, 'success');
+      setTimeout(function() { location.reload(); }, 1200);
+    } else {
+      showToast(data.message || 'Could not take the request back', 'error');
+      btn.disabled = false;
+      btn.textContent = 'Take it back';
+    }
+  })
+  .catch(function() {
+    closeModal('withdraw-removal-modal');
+    showToast('Network error. Please try again.', 'error');
+    btn.disabled = false;
+    btn.textContent = 'Take it back';
+  });
+}
+
+// ── Remove Expert (withdraw an unanswered application) ─────────────────
+// The delete modal is only reached for applications the expert has not
+// answered yet - those are the team's to withdraw directly.
+function openRemoveModal(assignmentId, expertName) {
+  currentRemoveId = assignmentId;
+  document.getElementById('remove-detail').innerHTML = '<strong>' + escapeHtmlText(expertName) + '</strong>'
+    + '<br><span style="font-size:11px;color:var(--red);">This action cannot be undone.</span>';
   document.getElementById('remove-confirm-input').value = '';
   document.getElementById('remove-confirm-input').classList.remove('error');
   document.getElementById('err-remove-confirm').classList.remove('show');
@@ -1475,15 +1648,13 @@ function validateRemoveInput() {
   var confirmInput = document.getElementById('remove-confirm-input').value.trim();
   var reason = document.getElementById('remove-reason').value.trim();
   var confirmOk = confirmInput.toLowerCase() === 'remove';
-  // The CaPSA decides on the reason, so it needs to be a real one.
-  var reasonOk = reason.length >= (removeNeedsCapsa ? {{ \App\Models\ExpertRemovalRequest::REASON_MIN }} : 1);
 
   document.getElementById('remove-confirm-input').classList.toggle('error', confirmInput.length > 0 && !confirmOk);
   document.getElementById('err-remove-confirm').classList.toggle('show', confirmInput.length > 0 && !confirmOk);
-  document.getElementById('remove-reason').classList.toggle('error', reason.length > 0 && !reasonOk);
-  document.getElementById('err-remove-reason').classList.toggle('show', reason.length > 0 && !reasonOk);
 
-  document.getElementById('btn-confirm-remove').disabled = !(confirmOk && reasonOk);
+  // Any non-empty reason will do here - the CaPSA minimum is the change
+  // dialog's business, not this one's.
+  document.getElementById('btn-confirm-remove').disabled = !(confirmOk && reason);
 }
 
 function confirmRemove() {
@@ -1494,8 +1665,8 @@ function confirmRemove() {
 
   var btn = document.getElementById('btn-confirm-remove');
   btn.disabled = true;
-  btn.textContent = removeNeedsCapsa ? 'Sending...' : 'Removing...';
-  var idleLabel = removeNeedsCapsa ? 'Send to CaPSA' : 'Yes, Remove';
+  btn.textContent = 'Removing...';
+  var idleLabel = 'Yes, Remove';
 
   fetch('/api/assignments/' + currentRemoveId, {
     method: 'DELETE',

@@ -7,6 +7,7 @@ use App\Models\Announcement;
 use App\Models\CapstoneExpert;
 use App\Models\DefensePanel;
 use App\Models\DefenseSchedule;
+use App\Models\GradingRubric;
 use App\Models\PanelGrade;
 use App\Models\Student;
 use App\Models\StudentSchoolYear;
@@ -325,6 +326,79 @@ class StudentDashboardTest extends TestCase
         $response->assertDontSee('Beta Team Announcement');
     }
 
+    /**
+     * The bug this guards: a team-targeted announcement used to be visible to
+     * anyone the fall-through section checks happened to allow, so a classmate
+     * in the same section who had nothing to do with the team - or any student
+     * at all, when the posting admin covered no sections - read a team's own
+     * defense schedule.
+     */
+    public function test_team_announcement_stays_private_to_that_team_even_in_the_same_section(): void
+    {
+        $team = Team::create([
+            'team_name' => 'Bulbasaur',
+            'team_status' => 'Active',
+        ]);
+
+        $member = Student::factory()->withCompleteProfile()->create([
+            'email' => 'member@my.cspc.edu.ph',
+            'course' => 'Bachelor of Science in Information Technology',
+            'year_section' => '4th · A',
+        ]);
+
+        $classmate = Student::factory()->withCompleteProfile()->create([
+            'email' => 'classmate@my.cspc.edu.ph',
+            'course' => 'Bachelor of Science in Information Technology',
+            'year_section' => '4th · A',
+        ]);
+
+        $theirTeam = Team::create([
+            'team_name' => 'Charmander',
+            'team_status' => 'Active',
+        ]);
+
+        StudentSchoolYear::create([
+            'student_id' => $member->student_id,
+            'team_id' => $team->team_id,
+            'program' => 'BSIT',
+            'student_status' => 'Active',
+        ]);
+
+        StudentSchoolYear::create([
+            'student_id' => $classmate->student_id,
+            'team_id' => $theirTeam->team_id,
+            'program' => 'BSIT',
+            'student_status' => 'Active',
+        ]);
+
+        // No sections on the admin: that is the case the old fall-through
+        // waved through for everybody.
+        $admin = CapstoneExpert::factory()->create([
+            'is_admin' => true,
+            'approved_status' => true,
+            'sections' => null,
+        ]);
+
+        Announcement::create([
+            'admin_id' => $admin->expert_id,
+            'title' => 'Bulbasaur Pre-Proposal Defense',
+            'body' => 'Bulbasaur has been scheduled for pre-proposal defense.',
+            'is_active' => true,
+            'target_audience' => ['all'],
+            'team_id' => $team->team_id,
+        ]);
+
+        $this->actingAs($member, 'web')
+            ->get(route('student.dashboard'))
+            ->assertOk()
+            ->assertSee('Bulbasaur Pre-Proposal Defense');
+
+        $this->actingAs($classmate, 'web')
+            ->get(route('student.dashboard'))
+            ->assertOk()
+            ->assertDontSee('Bulbasaur Pre-Proposal Defense');
+    }
+
     public function test_dashboard_shows_defense_results_only_for_submitted_grades(): void
     {
         $student = Student::factory()->withCompleteProfile()->create([
@@ -517,7 +591,7 @@ class StudentDashboardTest extends TestCase
 
     private function makeRubricId(): int
     {
-        return \App\Models\GradingRubric::create([
+        return GradingRubric::create([
             'rubric_name' => 'Test Rubric',
             'rubric_type' => 'Pre-Proposal Defense',
             'total_points' => 100,

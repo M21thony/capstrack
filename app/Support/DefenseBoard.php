@@ -33,9 +33,38 @@ class DefenseBoard
     /** Pre-proposal Defense has no fee; the other three do. */
     public const PAID_STAGES = ['Title Defense', 'Pre Oral Defense', 'Final Oral Defense'];
 
-    public const TIME_SLOTS = ['08:00', '10:00', '12:00', '14:00'];
+    public const VENUES = ['NAS Lab', 'Mac Lab', 'ERP Lab', 'Open Lab', 'CS Lab', 'IT Lab 1', 'IT Lab 2', 'Conference Room'];
 
-    public const VENUES = ['Mac Lab', 'Open Lab'];
+    /** A stage with no window yet is timed as two-hour defenses. */
+    public const DEFAULT_MINUTES = 120;
+
+    public const DURATIONS = [60, 90, 120];
+
+    /**
+     * Start times for defenses of this length: back to back from 8:00 until
+     * lunch at 12:00, then again from 1:00 until 5:00. Nothing runs into
+     * lunch or past five.
+     *
+     * @return array<int, string>
+     */
+    public static function slots(int $minutes): array
+    {
+        $out = [];
+
+        foreach ([[8 * 60, 12 * 60], [13 * 60, 17 * 60]] as [$from, $until]) {
+            for ($t = $from; $t + $minutes <= $until; $t += $minutes) {
+                $out[] = sprintf('%02d:%02d', intdiv($t, 60), $t % 60);
+            }
+        }
+
+        return $out;
+    }
+
+    /** How long this stage's defenses run, from its window. */
+    public static function minutesFor(string $stage): int
+    {
+        return DefenseWindow::where('defense_type', $stage)->value('duration_minutes') ?? self::DEFAULT_MINUTES;
+    }
 
     // Team tags are picked from a fixed list, but an expert's expertise is
     // free text, so each tag also matches the other ways people write it.
@@ -149,6 +178,7 @@ class DefenseBoard
                 'schedule' => $schedule?->schedule_date ? [
                     'date' => $schedule->schedule_date->toDateString(),
                     'time' => $schedule->schedule_date->format('H:i'),
+                    'end' => self::endOf($schedule)->format('H:i'),
                     'venue' => $schedule->venue,
                 ] : null,
                 'outcome' => $schedule?->outcome ? $schedule->outcomeLabel() : null,
@@ -188,6 +218,16 @@ class DefenseBoard
 
         if (! $schedule || ! $schedule->panels->contains('panel_role', 'Panel Chair')) {
             $out[] = ['key' => 'panel', 'text' => 'No panel assigned yet'];
+        } else {
+            // Assigning a panel refuses the team's own adviser or consultant,
+            // but one approved after the panel was set would still be on it.
+            foreach (['adviser', 'consultant'] as $role) {
+                $own = $roles->get($role);
+
+                if ($own && $schedule->panels->contains('expert_id', $own['id'])) {
+                    $out[] = ['key' => 'own-panelist', 'text' => $own['name'].' is this team\'s '.$role.' and sits on its panel. Change the panel'];
+                }
+            }
         }
 
         if (in_array($stage, self::PAID_STAGES, true) && ! $paid->contains($team->team_id)) {
@@ -272,8 +312,12 @@ class DefenseBoard
             'stage' => $s->defense_type,
             'date' => $s->schedule_date->toDateString(),
             'time' => $s->schedule_date->format('H:i'),
+            'end' => self::endOf($s)->format('H:i'),
             'venue' => $s->venue,
             'panel' => $s->panels->pluck('expert_id')->map(fn ($id) => (int) $id)->values(),
+            // The chair identifies a panel, so a page can tell the same panel
+            // in two rooms from two different panels sharing a panelist.
+            'chair' => $this->panelOf($s)['chair'],
         ])->values()->all();
     }
 
@@ -282,10 +326,22 @@ class DefenseBoard
     {
         $windows = DefenseWindow::whereIn('defense_type', self::STAGES)->get()->keyBy('defense_type');
 
-        return collect(self::STAGES)->mapWithKeys(fn ($stage) => [$stage => [
-            'start' => $windows->get($stage)?->start_date?->toDateString(),
-            'end' => $windows->get($stage)?->end_date?->toDateString(),
-        ]])->all();
+        return collect(self::STAGES)->mapWithKeys(function ($stage) use ($windows) {
+            $minutes = $windows->get($stage)?->duration_minutes ?? self::DEFAULT_MINUTES;
+
+            return [$stage => [
+                'start' => $windows->get($stage)?->start_date?->toDateString(),
+                'end' => $windows->get($stage)?->end_date?->toDateString(),
+                'minutes' => $minutes,
+                'slots' => self::slots($minutes),
+            ]];
+        })->all();
+    }
+
+    /** When a defense ends; rows with no end, or one not after the start, count as two hours. */
+    public static function endOf(DefenseSchedule $s): \Carbon\Carbon
+    {
+        return $s->end_date?->gt($s->schedule_date) ? $s->end_date : $s->schedule_date->copy()->addMinutes(self::DEFAULT_MINUTES);
     }
 
     /** Whether panelists will find a rubric to grade this stage with. */
@@ -356,6 +412,7 @@ class DefenseBoard
                 foreach ($candidates as $candidate) {
                     if (str_contains($field, $candidate) || str_contains($candidate, $field)) {
                         $matched[] = $tag;
+
                         continue 3;
                     }
                 }

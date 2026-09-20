@@ -39,8 +39,11 @@ Route::middleware(['web', 'expert.auth'])
             // bootstrap/app.php's shouldRenderJsonWhen(), which only renders
             // JSON for api/* routes regardless of the request's Accept header.
             Route::prefix('panel_assignment')->name('api.admin.panel_assignment.')->group(function () {
-                // Registered before /{team} so "windows" isn't swallowed by
-                // the team route-model-binding parameter.
+                // Registered before /{team} so "windows" and "board" aren't
+                // swallowed by the team route-model-binding parameter.
+                // board: one stage's rows as JSON, so the page switches stage
+                // in place instead of reloading.
+                Route::get('/board', [AdminPanelAssignmentController::class, 'board'])->name('board');
                 Route::get('/windows', [AdminPanelAssignmentController::class, 'indexWindows'])->name('windows.index');
                 Route::put('/windows/{defenseType}', [AdminPanelAssignmentController::class, 'updateWindow'])->name('windows.update');
                 Route::put('/schedule/{defense}', [AdminPanelAssignmentController::class, 'updateSchedule'])->name('schedule.update');
@@ -93,6 +96,8 @@ Route::middleware(['web', 'expert.auth'])
 
             Route::post('/archive', [ArchiveController::class, 'store'])->name('api.admin.archive.store');
             Route::put('/archive/{archive}', [ArchiveController::class, 'update'])->name('api.admin.archive.update');
+            // Publish or decline a manuscript a team handed in itself.
+            Route::patch('/archive/{archive}/submission', [ArchiveController::class, 'decideSubmission'])->name('api.admin.archive.submission.update');
             Route::delete('/archive/{archive}', [ArchiveController::class, 'destroy'])->name('api.admin.archive.destroy');
         });
     });
@@ -125,6 +130,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/experts/{expert}', [StudentExpertController::class, 'show'])->name('api.student.experts.show');
     Route::post('/assignments', [StudentExpertController::class, 'store'])->name('api.student.assignments.store');
     Route::delete('/assignments/{assignment}', [StudentExpertController::class, 'destroy'])->name('api.student.assignments.destroy');
+    // Taking back a change request still waiting on the CaPSA.
+    Route::delete('/expert-removal-requests/{expertRemovalRequest}', [StudentExpertController::class, 'destroyRemovalRequest'])->name('api.student.expert-removals.destroy');
 
     // Student Financial
     Route::prefix('student/financial')->name('api.student.financial.')->group(function () {

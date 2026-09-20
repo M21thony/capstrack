@@ -39,7 +39,7 @@ class DefenseSchedulingController extends Controller
                 'other' => $other,
                 'windows' => $this->board->windows(),
                 'has_rubric' => DefenseBoard::hasRubric($stage),
-                'slots' => DefenseBoard::TIME_SLOTS,
+                'slots' => DefenseBoard::slots(DefenseBoard::minutesFor($stage)),
                 'venues' => DefenseBoard::VENUES,
             ],
         ]);

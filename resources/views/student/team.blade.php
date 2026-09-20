@@ -2081,6 +2081,20 @@ function submitDecline() {
     if (form) form.submit();
 }
 
+// Which Capstone is running, so the page can say why rather than opening a
+// list nobody can be invited from.
+const CAPSTONE_STAGE = {{ $myTeam?->capstoneStage() ?? auth()->user()->capstoneStage() }};
+// The CaPSA's Team Rules. Checked the moment somebody starts to create, join
+// or invite - never after they have filled in a form.
+// Declared for everyone on the page, not only for the leader: a member who is
+// not the leader and a student with no team both reach updateModalUI() and
+// openPostModal(), and consts that only the leader's block declared were a
+// ReferenceError that killed the rest of the page's scripts for them.
+const CREATION_ALLOWED = @json($creationAllowed);
+const JOINING_ALLOWED = @json($joiningAllowed);
+const CREATION_CLOSED_MSG = @json(\App\Models\Team::CREATION_CLOSED);
+const JOINING_CLOSED_MSG = @json(\App\Models\Team::JOINING_CLOSED);
+
 @if($myTeam && $isLeader)
 const stopWords = new Set(['a','an','the','and','or','but','in','on','at','to','for',
     'of','by','with','from','is','are','was','were','be','been','being','have','has',
@@ -2311,16 +2325,6 @@ function cancelPendingInvite(invitationId, name) {
         }
     });
 }
-
-// Which Capstone is running, so the page can say why rather than opening a
-// list nobody can be invited from.
-const CAPSTONE_STAGE = {{ $myTeam?->capstoneStage() ?? auth()->user()->capstoneStage() }};
-// The CaPSA's Team Rules. Checked the moment somebody starts to create, join
-// or invite - never after they have filled in a form.
-const CREATION_ALLOWED = @json($creationAllowed);
-const JOINING_ALLOWED = @json($joiningAllowed);
-const CREATION_CLOSED_MSG = @json(\App\Models\Team::CREATION_CLOSED);
-const JOINING_CLOSED_MSG = @json(\App\Models\Team::JOINING_CLOSED);
 
 function openOpenSlotInviteModal() {
     // The button is hidden in Capstone 2, but hidden is not gone - the

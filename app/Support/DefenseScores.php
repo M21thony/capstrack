@@ -51,6 +51,13 @@ class DefenseScores
                 'graded' => $s->submittedGrades()->count(),
                 'panel_size' => $s->panelSize(),
             ])
+            // One line per stage: the latest attempt only. A failed attempt is
+            // an auto-fail in this flow - its score says nothing the redefense
+            // does not - so the older rows only repeated the column. The
+            // current attempt's "x/y graded" is what shows the panel still
+            // owes grades before anybody decides on it.
+            ->groupBy(fn ($r) => $r->team_id.'|'.$r->defense_type)
+            ->map(fn ($attempts) => $attempts->sortByDesc('attempt')->first())
             ->sortBy(fn ($r) => sprintf('%02d-%02d', $order[$r->defense_type] ?? 99, $r->attempt))
             ->groupBy('team_id');
     }

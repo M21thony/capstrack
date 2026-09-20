@@ -70,14 +70,35 @@
   </div>
 </div>
 
-<div class="modal-overlay" id="pp-reject-modal" onclick="if(event.target===this)closePpRejectModal()">
-  <div class="modal-box" style="max-width:420px">
-    <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:12px">Reject this proposal</div>
-    <textarea id="pp-reject-reason" placeholder="Reason (required)" style="width:100%;min-height:80px;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;box-sizing:border-box;font-family:inherit"></textarea>
-    <div id="pp-reject-error" style="display:none;font-size:11px;color:#991b1b;margin-top:4px">A reason is required.</div>
-    <div style="display:flex;gap:8px;margin-top:14px">
-      <button type="button" class="btn" style="flex:1;background:transparent;border:1px solid var(--border);color:var(--text2)" onclick="closePpRejectModal()">Cancel</button>
-      <button type="button" class="btn" style="flex:1;background:#dc3545;color:#fff;border:none" onclick="confirmPpReject()">Reject</button>
+{{-- The reject dialog is the SAME sheet as the Recommend confirmation (the
+     shared confirm-sheet partial, .upload-scrim / .upload-sheet .cf-sheet):
+     both decisions on a title should look like the same act in the same
+     place. It used to be a centred .modal-overlay box, so Recommend and
+     Reject presented themselves as two different kinds of thing. --}}
+<div class="upload-scrim" id="pp-reject-modal" style="z-index:1450" hidden onclick="if(event.target===this)closePpRejectModal()">
+  <div class="upload-sheet cf-sheet" onclick="event.stopPropagation()" role="alertdialog" aria-modal="true" aria-labelledby="pp-reject-heading">
+    <div class="card" style="padding:16px;box-shadow:none;border:0">
+      <div class="card-header sheet-head">
+        <span class="card-title" id="pp-reject-heading">Reject this title</span>
+        <span class="sheet-head-right">
+          <button class="sheet-x" type="button" onclick="closePpRejectModal()" aria-label="Close">
+            <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </span>
+      </div>
+
+      {{-- Names the title being rejected - a team submits three, and a sheet
+           that could be about any of them invites rejecting the wrong one. --}}
+      <div id="pp-reject-title" class="cf-names" style="margin:0 0 12px"></div>
+      <p class="section-hint" style="margin:0 0 12px">Your reason is sent to the team with the rejection.</p>
+
+      <textarea id="pp-reject-reason" placeholder="Tell the team why this title is being rejected (required)" style="width:100%;min-height:90px;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;box-sizing:border-box;font-family:inherit;resize:vertical"></textarea>
+      <div id="pp-reject-error" style="display:none;font-size:11px;color:#991b1b;margin-top:6px">Give the team a reason they can act on.</div>
+
+      <div class="cf-actions" style="margin-top:16px">
+        <button type="button" class="btn" onclick="closePpRejectModal()">Cancel</button>
+        <button type="button" class="btn btn-danger-solid" onclick="confirmPpReject()">Reject</button>
+      </div>
     </div>
   </div>
 </div>
@@ -122,9 +143,21 @@
 .ppdup-abstract::-webkit-scrollbar{display:none}
   .ppdup-abstract mark{background:rgba(201,168,44,.35);color:inherit;padding:0 1px;border-radius:2px}
 
-.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1000;opacity:0;pointer-events:none;transition:opacity 0.2s}
-.modal-overlay.open{opacity:1;pointer-events:auto}
-.modal-box{background:#fff;border:1px solid var(--border);border-radius:16px;padding:28px;max-width:560px;width:90%}
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1000;opacity:0;pointer-events:none;transition:opacity 0.2s}
+  .modal-overlay.open{opacity:1;pointer-events:auto}
+  .modal-box{background:#fff;border:1px solid var(--border);border-radius:16px;padding:28px;max-width:560px;width:90%}
+  /* The Recommend confirmation (the shared confirm-sheet partial, painted
+     inline at z-index 600) and the Reject dialog used to sit UNDER this
+     modal's own 1000: clicking Recommend opened its "are you sure"
+     invisibly behind the panel, so the button read as broken. Both belong
+     on top of it - the reject box above the PDF preview too, since either
+     can be opened while a document is showing. !important because the
+     confirm-sheet paints its 600 inline. */
+  #cf-scrim{z-index:1500 !important}
+  #pp-reject-modal{z-index:1450}
+  /* Both sheets are anchored the same way the confirm-sheet is, rather than
+     centred like the panels they used to be. */
+  #pp-reject-modal.upload-scrim{align-items:flex-start;justify-content:center;padding:40px 20px;overflow-y:auto}
 .vm-member-row{display:flex;align-items:center;gap:10px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 12px}
 .vm-member-row .vm-member-avatar{width:26px;height:26px;border-radius:6px;background:linear-gradient(135deg,#c9a82c,#8a6e10);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff;flex-shrink:0}
 .vm-member-row .vm-member-name{font-size:13px;color:var(--text)}
@@ -516,10 +549,12 @@ function openPpRejectModal(id, url) {
   ppActiveId = { id: id, url: url };
   document.getElementById('pp-reject-reason').value = '';
   document.getElementById('pp-reject-error').style.display = 'none';
-  document.getElementById('pp-reject-modal').classList.add('open');
+  document.getElementById('pp-reject-title').textContent = ppTitles[id] ? 'Rejecting: ' + ppTitles[id] : '';
+  // The sheet shell hides itself with [hidden], the same as confirm-sheet.
+  document.getElementById('pp-reject-modal').hidden = false;
 }
 function closePpRejectModal() {
-  document.getElementById('pp-reject-modal').classList.remove('open');
+  document.getElementById('pp-reject-modal').hidden = true;
 }
 
 // The document, over the panel it was opened from.

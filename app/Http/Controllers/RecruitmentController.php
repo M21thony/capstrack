@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Recruitment;
 use App\Models\StudentRole;
+use App\Models\StudentSchoolYear;
 use App\Models\Team;
 use App\Models\Term;
 use App\Support\StudentTeam;
@@ -107,14 +108,18 @@ class RecruitmentController extends Controller
                     'leader_id' => $studentId,
                 ]);
 
-                DB::table('student_s_y')
-                    ->updateOrInsert(
-                        // Keyed on the term too: this table is one row per student PER
-                        // TERM, so keying on the student alone would overwrite last
-                        // semester's record instead of starting this one.
-                        ['student_id' => $studentId, 'term_id' => Term::activeId()],
-                        ['team_id' => $team->team_id, 's_role_id' => StudentRole::leaderRoleId()]
-                    );
+                // Through the model, not a raw upsert: the creating hook
+                // stamps the row with its term, school year and program -
+                // the raw write left program null, and a team whose
+                // enrolment rows name no program counts for none of them on
+                // the expert's capacity bars.
+                StudentSchoolYear::updateOrCreate(
+                    // Keyed on the term too: this table is one row per student PER
+                    // TERM, so keying on the student alone would overwrite last
+                    // semester's record instead of starting this one.
+                    ['student_id' => $studentId, 'term_id' => Term::activeId()],
+                    ['team_id' => $team->team_id, 's_role_id' => StudentRole::leaderRoleId()]
+                );
             }
 
             return Recruitment::create([

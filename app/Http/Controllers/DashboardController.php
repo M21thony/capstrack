@@ -374,17 +374,19 @@ class DashboardController extends Controller
                     return false;
                 }
 
-                // Team members always see announcements that mention their team
-                // regardless of section restrictions
-                if ($announcement->team) {
-                    $teamMemberIds = StudentSchoolYear::where('team_id', $announcement->team->team_id)
+                // A team-targeted announcement is that team's business - it
+                // names their defense or their milestone. Members see it
+                // whatever their section; nobody else does. This used to fall
+                // through to the section checks for non-members, which handed
+                // one team's defense schedule to every student in the same
+                // section.
+                if ($announcement->team_id) {
+                    $teamMemberIds = StudentSchoolYear::where('team_id', $announcement->team_id)
                         ->whereNotNull('student_id')
                         ->pluck('student_id')
                         ->toArray();
 
-                    if (in_array($student->student_id, $teamMemberIds, true)) {
-                        return true;
-                    }
+                    return in_array($student->student_id, $teamMemberIds, true);
                 }
 
                 // Case-insensitive section matching
