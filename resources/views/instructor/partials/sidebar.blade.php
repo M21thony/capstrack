@@ -30,6 +30,10 @@
       session()->put('instructor_seen_assignment_ids', array_unique(array_merge($seenAssignmentIds, $pendingAssignmentIds)));
     }
 
+    // A team asking this expert to let them go is waiting on an answer, not
+    // just to be seen, so it stays on the badge until it is decided.
+    $unseenAssignmentCount += $expert ? App\Models\ExpertRemovalRequest::pending()->where('expert_id', $expert->expert_id)->count() : 0;
+
     $pendingDocReviewIds = [];
     if ($expert && Schema::hasTable('capstone_document_review')) {
       $pendingDocReviewIds = DB::table('capstone_document_review')->where('expert_id', $expert->expert_id)->where('review_status', 'pending')->pluck('review_id')->toArray();

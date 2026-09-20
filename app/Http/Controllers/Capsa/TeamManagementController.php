@@ -6,6 +6,7 @@ use App\Http\Controllers\AdminProfileController;
 use App\Http\Controllers\Controller;
 use App\Models\CapstoneExpert;
 use App\Models\DefenseSchedule;
+use App\Models\MemberLeaveRequest;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
 use App\Models\TeamExpertAssignment;
@@ -13,6 +14,7 @@ use App\Support\ChecklistTracker;
 use App\Support\DefenseProgress;
 use App\Support\DefenseScores;
 use App\Support\MilestoneProgress;
+use App\Support\PreProposalPayload;
 use App\Support\SectionScope;
 use App\Support\TeamChecklist;
 use Illuminate\Http\Request;
@@ -109,8 +111,7 @@ class TeamManagementController extends Controller
                 'pre_proposals' => $rows->sum(fn ($r) => $r->pendingProposalCount),
                 'verification' => $rows->where('awaitingVerification', true)->count(),
                 'papers' => $rows->sum(fn ($r) => $r->papersToCheck),
-                'leave_requests' => \App\Models\MemberLeaveRequest::pendingCountFor($capsa)
-                    + \App\Models\ExpertRemovalRequest::pendingCountFor($capsa),
+                'leave_requests' => MemberLeaveRequest::pendingCountFor($capsa),
             ],
         ]);
     }
@@ -351,7 +352,7 @@ class TeamManagementController extends Controller
             'leader' => $leaderName,
             'members' => $members->map(fn ($m) => trim(($m->f_name ?? '').' '.($m->l_name ?? '')))->filter()->values(),
             'member_count' => $members->count(),
-            'pre_proposals' => \App\Support\PreProposalPayload::forTeam($team),
+            'pre_proposals' => PreProposalPayload::forTeam($team),
             'selected_pre_proposal_id' => $team->selected_pre_proposal_id,
         ];
 

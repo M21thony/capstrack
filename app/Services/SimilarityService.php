@@ -843,6 +843,7 @@ PROMPT;
     {
         $cleaned = trim(preg_replace('/```json|```/i', '', $raw));
 
+        $r = json_decode($this->firstJsonObject($cleaned) ?? $cleaned, true);
         $object = $this->firstJsonObject($cleaned) ?? $cleaned;
         $r = json_decode($object, true);
 

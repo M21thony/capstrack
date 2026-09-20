@@ -277,11 +277,9 @@ class ExpertController extends Controller
             // lost its upload, and a "View PDF" button leading to a 404 is
             // worse than no button. One stat call per page render buys that.
             'proposalPdfUrl' => $this->proposalPdfUrl($approvedProposal),
-            // Experts whose removal is waiting on the CaPSA, keyed by
-            // assignment id -> request id, so the "Change requested" badge can
-            // also offer taking the request back before the CaPSA decides.
+            // Experts the team has asked to let them go, still deciding.
             'pendingRemovalIds' => $team
-                ? ExpertRemovalRequest::pending()->where('team_id', $team->team_id)->pluck('id', 'assignment_id')->map(fn ($requestId, $assignmentId) => ['request' => (int) $requestId, 'assignment' => (int) $assignmentId])->all()
+                ? ExpertRemovalRequest::pending()->where('team_id', $team->team_id)->pluck('assignment_id')->map(fn ($id) => (int) $id)->all()
                 : [],
             // The team's section, shown in the change-request dialog so the
             // team can see whose CaPSA the request waits on. Resolved the

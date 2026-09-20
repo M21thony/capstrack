@@ -2086,10 +2086,15 @@ function submitDecline() {
 const CAPSTONE_STAGE = {{ $myTeam?->capstoneStage() ?? auth()->user()->capstoneStage() }};
 // The CaPSA's Team Rules. Checked the moment somebody starts to create, join
 // or invite - never after they have filled in a form.
-// Declared for everyone on the page, not only for the leader: a member who is
-// not the leader and a student with no team both reach updateModalUI() and
-// openPostModal(), and consts that only the leader's block declared were a
-// ReferenceError that killed the rest of the page's scripts for them.
+//
+// Unconditional even though most of what follows is leader-only: updateModalUI()
+// and the DOMContentLoaded handler below read these for every visitor, leader
+// or not, team or none. They used to live inside the leader-only block below,
+// gated on team leadership, so a plain member's browser threw "CREATION_ALLOWED
+// is not defined" the moment the page tried to open the recruitment modal on
+// load - which aborted that same handler before it ever reached the skeleton
+// fade-out code further down, leaving the loading skeleton on screen forever
+// for anyone who was not their team's leader.
 const CREATION_ALLOWED = @json($creationAllowed);
 const JOINING_ALLOWED = @json($joiningAllowed);
 const CREATION_CLOSED_MSG = @json(\App\Models\Team::CREATION_CLOSED);
