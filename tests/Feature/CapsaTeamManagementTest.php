@@ -292,6 +292,30 @@ class CapsaTeamManagementTest extends TestCase
     }
 
     /**
+     * The page ordered and printed the schedule by a column that does not
+     * exist, so opening a team that had ever been given a defense date blew
+     * up. The date lives in schedule_date.
+     */
+    public function test_the_team_page_prints_the_defense_date(): void
+    {
+        $this->makeCapsaWithSections();
+        [$team] = $this->makeTeamInSection('Team Scheduled');
+
+        \App\Models\DefenseSchedule::create([
+            'team_id' => $team->team_id,
+            'defense_type' => 'Title Defense',
+            'attempt' => 1,
+            'schedule_date' => '2026-03-11 08:00:00',
+            'end_date' => '2026-03-11 10:00:00',
+            'venue' => 'Mac Lab',
+        ]);
+
+        $this->get(route('capsa.team_management.show', $team->team_id))
+            ->assertOk()
+            ->assertSee('Mar 11, 2026');
+    }
+
+    /**
      * Papers reach this tab only under the subject_adviser role - her CaPSA
      * hat. What she reviews as somebody's adviser is a different job and
      * stays in My Expert Duties -> Document Review.

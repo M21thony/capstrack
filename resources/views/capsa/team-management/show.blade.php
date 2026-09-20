@@ -225,7 +225,7 @@
         <div>
           <div class="k">Defense Schedule</div>
           @forelse ($defenseSchedules as $sched)
-            <div class="v">{{ $sched->defense_type }} &middot; {{ \Illuminate\Support\Carbon::parse($sched->defense_date)->format('M j, Y') }}</div>
+            <div class="v">{{ $sched->defense_type }} &middot; {{ $sched->schedule_date?->format('M j, Y') ?? 'date not set' }}</div>
           @empty
             <div class="v none">Not scheduled yet</div>
           @endforelse
