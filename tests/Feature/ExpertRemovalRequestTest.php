@@ -68,6 +68,30 @@ class ExpertRemovalRequestTest extends TestCase
         $this->askToRemove($leader, $assignment, 'no')->assertStatus(422);
     }
 
+    /** The dialog says whose CaPSA decides, and a waiting request says so on the expert. */
+    public function test_the_experts_page_names_the_sections_capsa_and_flags_a_waiting_change(): void
+    {
+        [$leader, , $assignment] = $this->teamWithAdviser();
+
+        // Before asking: the change dialog carries the section CaPSA line.
+        $this->actingAs($leader, 'web')
+            ->get(route('student.experts'))
+            ->assertOk()
+            ->assertSee('change-expert-modal', false)
+            ->assertSee('Request an Expert Change')
+            ->assertSee('Decided by the CaPSA for your section: BSIT-3A');
+
+        // After asking: the badge replaces the button.
+        $this->askToRemove($leader, $assignment)->assertOk();
+
+        $this->actingAs($leader, 'web')
+            ->get(route('student.experts'))
+            ->assertOk()
+            ->assertSee('Cancel request')
+            // The change button is gone; only the cancel action marks the expert.
+            ->assertDontSee('Ask your section');
+    }
+
     public function test_the_capsa_approving_removes_the_expert(): void
     {
         [$leader, $team, $assignment, $capsa] = $this->teamWithAdviser();
@@ -129,5 +153,76 @@ class ExpertRemovalRequestTest extends TestCase
 
         $this->assertDatabaseMissing('capstone_expert_application', ['assignment_id' => $assignment->assignment_id]);
         $this->assertSame(0, ExpertRemovalRequest::count());
+    }
+
+    /** Undo: the team takes back a request its CaPSA has not decided on yet. */
+    public function test_the_team_can_take_back_a_change_request_the_capsa_has_not_decided(): void
+    {
+        [$leader, , $assignment] = $this->teamWithAdviser();
+        $this->askToRemove($leader, $assignment)->assertOk();
+        $removal = ExpertRemovalRequest::first();
+
+        $this->actingAs($leader, 'web')
+            ->deleteJson(route('api.student.expert-removals.destroy', $removal))
+            ->assertOk()
+            ->assertJson(['success' => true]);
+
+        // Back to where it started: the expert stays, and the team can apply
+        // the change again rather than being locked out of it.
+        $this->assertSame(ExpertRemovalRequest::WITHDRAWN, $removal->fresh()->status);
+        $this->assertDatabaseHas('capstone_expert_application', [
+            'assignment_id' => $assignment->assignment_id,
+            'status' => 'approved',
+        ]);
+
+        $this->actingAs($leader, 'web')
+            ->get(route('student.experts'))
+            ->assertOk()
+            ->assertDontSee('Cancel request')
+            ->assertSee('Ask your section');
+
+        // A withdrawn request is not the CaPSA's to decide any more.
+        $this->assertSame(0, ExpertRemovalRequest::pending()->count());
+    }
+
+    public function test_taking_a_request_back_is_the_leaders_and_only_while_it_waits(): void
+    {
+        [$leader, $team, $assignment, $capsa] = $this->teamWithAdviser();
+        $this->askToRemove($leader, $assignment)->assertOk();
+        $removal = ExpertRemovalRequest::first();
+
+        // A member who is not the leader cannot take it back.
+        $member = Student::factory()->withCompleteProfile()->create([
+            'course' => 'Bachelor of Science in Information Technology',
+            'year_section' => '3rd · A',
+        ]);
+        StudentSchoolYear::create(['student_id' => $member->student_id, 'team_id' => $team->team_id]);
+
+        $this->actingAs($member, 'web')
+            ->deleteJson(route('api.student.expert-removals.destroy', $removal))
+            ->assertForbidden();
+        $this->assertSame(ExpertRemovalRequest::PENDING, $removal->fresh()->status);
+
+        // Another team's request is not theirs to see at all.
+        $outsider = Student::factory()->withCompleteProfile()->create([
+            'course' => 'Bachelor of Science in Information Technology',
+            'year_section' => '3rd · B',
+        ]);
+        $otherTeam = Team::create(['team_name' => 'Charmander', 'team_status' => 'Active', 'is_confirmed' => true, 'leader_id' => $outsider->student_id]);
+        StudentSchoolYear::create(['student_id' => $outsider->student_id, 'team_id' => $otherTeam->team_id]);
+
+        $this->actingAs($outsider, 'web')
+            ->deleteJson(route('api.student.expert-removals.destroy', $removal))
+            ->assertNotFound();
+        $this->assertSame(ExpertRemovalRequest::PENDING, $removal->fresh()->status);
+
+        // Once the CaPSA has decided there is nothing left to take back.
+        $this->actingAs($capsa, 'expert')
+            ->patchJson(route('capsa.expert_removal_requests.update', $removal), ['status' => 'approved'])
+            ->assertOk();
+
+        $this->actingAs($leader, 'web')
+            ->deleteJson(route('api.student.expert-removals.destroy', $removal))
+            ->assertStatus(409);
     }
 }

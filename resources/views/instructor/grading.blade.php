@@ -4,6 +4,7 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>CapsTRACK — Expert Portal</title>
+<meta name="csrf-token" content="{{ csrf_token() }}"/>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="{{ asset('css/expert.css') }}" />
 @include('partials.skeleton-head', ['skReveal' => 'block'])
@@ -21,7 +22,6 @@
   .gl th{position:sticky;top:0;background:var(--bg3);font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);text-align:left;padding:8px 14px;border-bottom:1px solid var(--border);white-space:nowrap}
   .gl td{padding:10px 14px;border-bottom:1px solid var(--border);font-size:13px;vertical-align:middle}
   .gl tr:last-child td{border-bottom:0}
-  .gl tbody tr{cursor:pointer}
   .gl tbody tr:hover td{background:var(--bg3)}
   .gl-team{display:flex;align-items:center;gap:10px;min-width:0}
   .gl-av{flex:none;width:32px;height:32px;border-radius:50%;background:var(--navy-dark,#1e2028);color:#fff;font-size:11px;font-weight:700;display:grid;place-items:center}
@@ -94,10 +94,16 @@
         <div class="gl-scroll">
           <table>
             <thead><tr><th>Team</th><th>Defense</th><th>Your seat</th><th>When</th><th>Your grade</th><th></th></tr></thead>
-            <tbody>
+            <tbody id="grading-tbody">
               @foreach($rows as $row)
-                @php $url = route('instructor.grading.show', $row->defense_id); $done = $row->status === 'submitted'; @endphp
-                <tr data-state="{{ $done ? 'done' : 'todo' }}" onclick="location.href='{{ $url }}'">
+                @php
+                  $url = route('instructor.grading.show', $row->defense_id);
+                  $done = $row->status === 'submitted';
+                  $isRedefense = ($row->attempt ?? 1) > 1;
+                  $attempt = $row->attempt ?? 1;
+                  $ordinal = $attempt === 2 ? '2nd' : ($attempt === 3 ? '3rd' : $attempt.'th');
+                @endphp
+                <tr data-state="{{ $done ? 'done' : 'todo' }}">
                   <td>
                     <div class="gl-team">
                       <span class="gl-av" aria-hidden="true">{{ strtoupper(substr($row->team_name, 0, 2)) }}</span>
@@ -106,8 +112,13 @@
                   </td>
                   <td>
                     {{ $row->defense_type }}
-                    @if($row->attempt > 1)<span class="badge badge-amber" style="font-size:10px;margin-left:4px">Redefense</span>@endif
-                    @if($row->outcome)<div class="gl-outcome is-{{ $row->outcome_tone }}">{{ $row->outcome }}</div>@endif
+                    <div style="margin-top:2px">
+                      @if($isRedefense)
+                        <span class="badge badge-amber" style="font-size:10px">Redefense · {{ $ordinal }} attempt</span>
+                      @else
+                        <span class="badge badge-gray" style="font-size:10px">Defense</span>
+                      @endif
+                    </div>
                   </td>
                   <td>{{ $row->panel_role }}</td>
                   <td class="gl-num">

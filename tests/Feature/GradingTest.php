@@ -86,6 +86,22 @@ class GradingTest extends TestCase
         return $schedule;
     }
 
+    public function test_expanding_a_team_lists_its_defenses(): void
+    {
+        // The list of a team's attempts sits at /grading/team-defenses, which
+        // reads as a defense id to the route right below it. Registered the
+        // other way round, every expand returns a 404 instead of the rows.
+        $expert = $this->makeExpert();
+        $defense = $this->makeAssignedDefense($expert);
+
+        $response = $this->actingAs($expert, 'expert')
+            ->getJson('/instructor/grading/team-defenses?team=Test Team');
+
+        $response->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('defenses.0.defense_id', $defense->defense_id);
+    }
+
     public function test_grading_index_lists_teams_expert_is_assigned_as_panel(): void
     {
         $expert = $this->makeExpert();

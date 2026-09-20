@@ -176,9 +176,10 @@
      that way (see CapstoneExpert::parsedCapacity()), one "ALL" row when
      they're not. */
   .capacity-stack{display:flex;flex-direction:column;gap:5px}
-  .capacity-row{display:grid;grid-template-columns:38px 1fr 34px;align-items:center;gap:8px}
+  .capacity-row{display:grid;grid-template-columns:38px 60px auto;align-items:center;gap:8px}
+  .capacity-row .pbar{width:60px}
   .capacity-prog{font-size:10px;font-weight:700;color:var(--text3);letter-spacing:0.3px}
-  .capacity-count{font-variant-numeric:tabular-nums;font-size:11px;color:var(--text3);text-align:right}
+  .capacity-count{font-variant-numeric:tabular-nums;font-size:11px;color:var(--text3)}
 
 
   /* Personal info modal - opens on clicking an expert's name/avatar, and
@@ -561,6 +562,14 @@
               $computedStatus = $isOff ? 'off' : ($isFull ? 'full' : ($isOnline ? 'active' : 'offline'));
               $capacityRows = $expert->parsedCapacity();
 
+              // Filled counts per program, for the split-cap rows in the
+              // Accepts cell. One grouped query, and only when the cap is
+              // actually split - a single "ALL" cap draws its bar from the
+              // overall count instead.
+              $programCounts = count($capacityRows) > 1
+                  ? $expert->approvedTeamCountsByProgram()
+                  : [];
+
               // One mapping, on the model, so the pills here and the ones on
               // the expert's own profile panel cannot drift apart.
               $roleLabel = fn (string $roleName) => \App\Models\Role::labelFor($roleName);
@@ -669,16 +678,23 @@
                   <span style="font-size:11px;color:var(--text3)">{{ $teamCount }}/{{ $maxTeams }} · {{ $slotsLeft }} left</span>
                 </div>
               @else
+                {{-- One row per program, in the same shape as the single-cap
+                     row above: bar plus n/max. A stack of bare "max" numbers
+                     with the program floating far left of them read as two
+                     unrelated columns, and said nothing about how full each
+                     program already was. --}}
                 <div class="capacity-stack">
                   @foreach ($capacityRows as [$program, $max])
+                    @php $filled = $programCounts[$program] ?? 0; @endphp
                     <div class="capacity-row">
                       <span class="capacity-prog">{{ $program }}</span>
-                      <span></span>
-                      <span class="capacity-count">max {{ $max }}</span>
+                      <div class="pbar">
+                        <div class="pbar-fill pf-green" style="width:{{ $max > 0 ? round(($filled / $max) * 100) : 0 }}%"></div>
+                      </div>
+                      <span class="capacity-count">{{ $filled }}/{{ $max }}</span>
                     </div>
                   @endforeach
                 </div>
-                <div style="font-size:10px;color:var(--text3);margin-top:4px">{{ $teamCount }} total assigned</div>
               @endif
             </td>
 

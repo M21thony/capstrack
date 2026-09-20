@@ -1,6 +1,8 @@
 /*
- * Panel Assignment: the CaPSA's teams for one stage, their experts and panel,
- * and the window that assigns a panel to one or many teams at once.
+ * Panel Assignment: the CaPSA's teams, their experts and the panel that sits
+ * every one of their defenses, and the window that assigns it to one or many
+ * teams at once. A team has one panel, so there is no stage to choose here -
+ * whether it is scheduled, and when, is Defense Scheduling's page.
  * Drawn from the JSON the page carries; a save reloads with the new state.
  */
 import { $, esc, initials, api, toast, reloadWith, showFlash, wireDialogs } from './shared.js';
@@ -8,12 +10,11 @@ import { $, esc, initials, api, toast, reloadWith, showFlash, wireDialogs } from
 const root = document.getElementById('dx-panel');
 const S = JSON.parse(root.dataset.state);
 const URLS = JSON.parse(root.dataset.urls);
-const STAGE = S.stage;
+// The panel is the same at all four stages, so there is no stage to choose.
 const TEAMS = S.teams;
 const EXPERTS = S.experts;
 const E = id => EXPERTS.find(e => e.id === id);
 const T = id => TEAMS.find(t => t.id === id);
-const hasFee = () => STAGE !== 'Pre-proposal Defense';
 
 const A = { teams: new Set(), chair: null, m1: null, m2: null };
 const SEATS = [['chair', 'Panel Chair', "Master's degree or higher"], ['m1', 'Member 1', 'Any degree'], ['m2', 'Member 2', 'Any degree']];
@@ -23,25 +24,13 @@ const expertsBlocker = t => t.blockers.find(b => b.key === 'experts');
 const canTakePanel = t => !expertsBlocker(t);
 function statusOf(t) {
   if (!canTakePanel(t)) return 'notready';
-  if (t.passed) return 'passed';
-  if (!t.panel) return 'unassigned';
-  return t.schedule ? 'scheduled' : 'assigned';
+  return t.panel ? 'assigned' : 'unassigned';
 }
 const STATUS = {
   notready: ['Missing experts', 'dx-pill-notready'],
   unassigned: ['Unassigned', 'dx-pill-unassigned'],
   assigned: ['Assigned', 'dx-pill-assigned'],
-  scheduled: ['Scheduled', 'dx-pill-scheduled'],
-  passed: ['Passed', 'dx-pill-scheduled'],
 };
-
-// What the defense schedule maker will say about this team. Read-only here.
-function scheduleNote(t) {
-  if (t.schedule || t.passed || !canTakePanel(t)) return '';
-  const b = t.blockers.filter(x => x.key !== 'panel').map(x => x.text);
-  if (b.length) return `<span class="dx-sched-note dx-no">Can't be scheduled: ${esc(b.join(', ').toLowerCase())}</span>`;
-  return t.panel ? '<span class="dx-sched-note dx-ok">Ready for scheduling</span>' : '<span class="dx-sched-note dx-wait">Scheduling waits for a panel</span>';
-}
 
 // One line per expert, labelled, so three names share a single column.
 function expertLine(short, person, role) {
@@ -51,9 +40,9 @@ function expertLine(short, person, role) {
 
 /* ---------------- The table ---------------- */
 function renderRows() {
-  const q = $('#f-search').value.toLowerCase(), sec = $('#f-section').value, st = $('#f-status').value, fee = $('#f-paid').value;
+  const q = $('#f-search').value.toLowerCase(), sec = $('#f-section').value, st = $('#f-status').value;
   const shown = TEAMS.filter(t => (!q || `${t.name} ${t.title || ''}`.toLowerCase().includes(q)) && (!sec || t.section === sec)
-    && (!st || statusOf(t) === st) && (!fee || !hasFee() || (fee === 'paid') === t.paid));
+    && (!st || statusOf(t) === st));
 
   $('#rows').innerHTML = shown.map(t => {
     const s = statusOf(t);
@@ -69,14 +58,13 @@ function renderRows() {
     const more = t.panel
       ? `<button class="dx-icon-btn" data-menu="${t.id}" aria-label="More actions for ${esc(t.name)}" aria-haspopup="menu"><svg><use href="#dx-i-more"/></svg></button>`
       : '<span class="dx-icon-btn" aria-hidden="true"></span>';
-    const label = s === 'passed' ? (t.outcome || 'Passed') : STATUS[s][0];
     return `<tr class="${A.teams.has(t.id) ? 'dx-is-picked' : ''}">
       <td><input type="checkbox" data-pick="${t.id}" ${s === 'notready' ? `disabled title="${esc(need)} first"` : ''} ${A.teams.has(t.id) ? 'checked' : ''} aria-label="Select ${esc(t.name)}"></td>
       <td><div class="dx-team"><span class="dx-tbadge">${esc(initials(t.name))}</span><span><span class="dx-strong">${esc(t.name)}</span><span class="dx-muted" style="display:block">${esc(t.section)} · ${t.members} ${t.members === 1 ? 'member' : 'members'}</span></span></div></td>
       <td class="dx-title-cell"><span class="dx-clamp" title="${esc(t.title || '')}">${esc(t.title || '—')}</span></td>
       <td><div class="dx-experts">${expertLine('Adv', t.adviser, 'adviser')}${expertLine('Con', t.consultant, 'consultant')}${expertLine('Gra', t.grammarian, 'grammarian')}</div></td>
       <td>${panel}</td>
-      <td><span class="dx-pill ${STATUS[s][1]}">${esc(label)}</span>${scheduleNote(t)}</td>
+      <td><span class="dx-pill ${STATUS[s][1]}">${STATUS[s][0]}</span></td>
       <td><div class="dx-acts">${main}${more}</div></td>
     </tr>`;
   }).join('') || '<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--dx-ink3)">No team matches these filters.</td></tr>';
@@ -84,7 +72,6 @@ function renderRows() {
   $('#showing').textContent = `Showing ${shown.length} of ${TEAMS.length} ${TEAMS.length === 1 ? 'team' : 'teams'}`;
   const ready = TEAMS.filter(canTakePanel);
   $('#pick-all').checked = ready.length > 0 && ready.every(t => A.teams.has(t.id));
-  $('#f-paid').disabled = !hasFee();
   renderSelection();
 }
 
@@ -101,8 +88,7 @@ const ownExperts = () => new Set([...A.teams].flatMap(id => [T(id).adviser?.id, 
 const suggested = e => [...A.teams].some(id => T(id).suggested.includes(e.id));
 
 function drawAssign() {
-  $('#a-sub').textContent = `${STAGE} · the defense date is set on the Defense Scheduling page.`;
-  $('#a-prop').hidden = STAGE !== 'Pre-proposal Defense';
+  $('#a-sub').textContent = 'The defense dates are set on the Defense Scheduling page.';
 
   const tq = $('#a-team-search').value.toLowerCase();
   $('#a-teams').innerHTML = TEAMS.filter(t => !tq || `${t.name} ${t.title || ''}`.toLowerCase().includes(tq)).map(t => {
@@ -151,8 +137,10 @@ async function saveAssign() {
   btn.disabled = true;
   try {
     const res = await api('POST', URLS.bulk, {
-      team_ids: [...A.teams], defense_type: STAGE,
-      chair_expert_id: A.chair, member1_expert_id: A.m1, member2_expert_id: A.m2,
+      team_ids: [...A.teams],
+      chair_expert_id: A.chair,
+      member1_expert_id: A.m1,
+      member2_expert_id: A.m2,
     });
     const done = res.data.assigned.length, skipped = res.data.skipped;
     reloadWith(`Panel saved for ${done} ${done === 1 ? 'team' : 'teams'}.`
@@ -179,7 +167,7 @@ function openMenu(btn, id) {
 function removePanel() {
   $('#row-menu').hidePopover();
   const t = T(menuFor);
-  $('#d-remove-text').textContent = `Team ${t.name}'s ${STAGE} panel will be removed. A defense already scheduled for it is cancelled too.`;
+  $('#d-remove-text').textContent = `Team ${t.name}'s panel will be removed from every defense. Any defense already scheduled for it is cancelled too.`;
   $('#d-remove-yes').disabled = false;
   $('#d-remove').showModal();
 }
@@ -188,7 +176,7 @@ async function confirmRemove() {
   const t = T(menuFor);
   $('#d-remove-yes').disabled = true;
   try {
-    await api('POST', URLS.store.replace('__ID__', t.id), { defense_type: STAGE, chair_expert_id: null });
+    await api('POST', URLS.store.replace('__ID__', t.id), { chair_expert_id: null });
     reloadWith(`Removed Team ${t.name}'s panel.`);
   } catch (e) {
     toast(e.message);
@@ -197,7 +185,7 @@ async function confirmRemove() {
 }
 
 /* ---------------- Events ---------------- */
-['#f-search', '#f-section', '#f-status', '#f-paid'].forEach(s => $(s).addEventListener('input', renderRows));
+['#f-search', '#f-section', '#f-status'].forEach(s => $(s).addEventListener('input', renderRows));
 $('#rows').addEventListener('change', e => {
   const id = +e.target.dataset.pick;
   if (!id) return;

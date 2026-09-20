@@ -67,6 +67,49 @@
       </div>
     </div>
 
+    {{-- Manuscripts teams handed in themselves. They wait here until somebody
+         decides: publishing puts it in the archive, declining removes it and
+         frees the team to hand in a corrected copy. --}}
+    @if ($pending->isNotEmpty())
+    <div style="background:#fff;border:1.5px solid var(--accent);border-radius:12px;padding:16px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,0.04)">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <span style="font-size:13px;font-weight:600;color:var(--text)">Capstone Manuscripts Waiting for Review</span>
+        <span style="font-size:11px;font-weight:600;background:var(--accent-glow);color:var(--text);padding:3px 10px;border-radius:20px">{{ $pending->count() }}</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div id="decision-error" hidden style="font-size:12px;color:var(--red)"></div>
+        @foreach ($pending as $submission)
+        <div style="border:1px solid var(--border);border-radius:10px;padding:12px" id="pending-{{ $submission->archived_id }}">
+          <div style="font-size:13px;font-weight:600;color:var(--text)">{{ $submission->title }}</div>
+          <div style="font-size:11.5px;color:var(--text3);margin-top:3px">
+            {{ $submission->authors ?: 'No proponents recorded' }}
+            &middot; {{ $submission->program ?: 'N/A' }} &middot; {{ $submission->academic_year }}
+            @if ($submission->team)
+              &middot; {{ $submission->team->team_name }}
+            @endif
+          </div>
+          <div style="font-size:11.5px;color:var(--text3);margin-top:3px">
+            Handed in by {{ $submission->submitter?->f_name }} {{ $submission->submitter?->l_name }}
+            on {{ $submission->submitted_at?->format('M j, Y') }}
+            @if ($submission->file_name)
+              &middot; {{ $submission->file_name }}
+            @endif
+          </div>
+          @if ($submission->abstract)
+          <div style="font-size:12px;color:var(--text2);margin-top:6px">{{ Str::limit($submission->abstract, 220) }}</div>
+          @endif
+          <div style="display:flex;gap:8px;margin-top:10px">
+            <button class="btn btn-sm btn-primary" style="padding:5px 14px"
+              onclick="decideSubmission({{ $submission->archived_id }}, 'published')">Publish to Archive</button>
+            <button class="btn btn-sm btn-danger" style="padding:5px 14px"
+              onclick="decideSubmission({{ $submission->archived_id }}, 'declined')">Decline</button>
+          </div>
+        </div>
+        @endforeach
+      </div>
+    </div>
+    @endif
+
     <div id="add-archive-modal" style="display:none;background:#fff;border:1.5px solid var(--accent);border-radius:12px;padding:20px;margin-bottom:16px;box-shadow:0 4px 16px rgba(201,150,12,0.12)">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
         <span style="font-size:13px;font-weight:600;color:var(--text)">Add Archived Capstone</span>
@@ -240,6 +283,55 @@ async function deleteArchive(id) {
     method: 'DELETE',
     headers: { 'X-CSRF-TOKEN': CSRF_TOKEN, 'Accept': 'application/json' },
   }).then(() => location.reload());
+}
+
+/* Publish a team's manuscript into the archive, or decline it. */
+async function decideSubmission(id, decision) {
+  const publishing = decision === 'published';
+  const err = document.getElementById('decision-error');
+
+  if (err) err.hidden = true;
+
+  const agreed = await confirmSheet({
+    title: publishing ? 'Publish this manuscript?' : 'Decline this manuscript?',
+    body: publishing
+      ? 'It goes into the archive, and similarity checks start comparing new '
+        + 'titles against it.'
+      : 'It is removed and the team is free to hand in a corrected copy.',
+    confirmLabel: publishing ? 'Publish' : 'Decline',
+    danger: ! publishing,
+  });
+
+  if (!agreed) return;
+
+  function failed(message) {
+    if (!err) return;
+    err.textContent = message;
+    err.hidden = false;
+  }
+
+  fetch('/api/admin/archive/' + id + '/submission', {
+    method: 'PATCH',
+    headers: {
+      'X-CSRF-TOKEN': CSRF_TOKEN,
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ decision: decision }),
+  })
+    .then(function (r) { return r.json().then(function (body) { return { ok: r.ok, body: body }; }); })
+    .then(function (res) {
+      if (!res.ok) {
+        failed((res.body && res.body.message) || 'Could not save that decision.');
+
+        return;
+      }
+
+      location.reload();
+    })
+    .catch(function () {
+      failed('Could not reach the server. Please try again.');
+    });
 }
 
 

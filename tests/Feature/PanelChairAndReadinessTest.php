@@ -3,14 +3,10 @@
 namespace Tests\Feature;
 
 use App\Models\CapstoneExpert;
-use App\Models\CapstonePreProposal;
 use App\Models\DefensePanel;
-use App\Models\DuplicationCheck;
 use App\Models\ExpertExpertise;
 use App\Models\ExpertRole;
 use App\Models\Role;
-use App\Models\Student;
-use App\Models\StudentSchoolYear;
 use App\Models\Team;
 use App\Models\TeamExpertAssignment;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -147,7 +143,10 @@ class PanelChairAndReadinessTest extends TestCase
             $this->assign($this->team('Team '.$degree), $chair)->assertOk();
         }
 
-        $this->assertSame(2, DefensePanel::where('panel_role', 'Panel Chair')->count());
+        // A panel is one panel for all four stages: two teams assigned means
+        // the chair seat exists for each of their four defense schedules.
+        $this->assertSame(8, DefensePanel::where('panel_role', 'Panel Chair')->count());
+        $this->assertSame(2, DefensePanel::where('panel_role', 'Panel Chair')->distinct('expert_id')->count('expert_id'));
     }
 
     /** Only the chair needs the degree - members do not. */

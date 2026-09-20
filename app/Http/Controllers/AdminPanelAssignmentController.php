@@ -11,7 +11,6 @@ use App\Models\TeamExpertAssignment;
 use App\Services\DefenseScheduleNotifier;
 use App\Services\GoogleCalendarService;
 use App\Support\DefenseBoard;
-use App\Support\DefenseOutcome;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
 use Illuminate\Http\JsonResponse;
@@ -33,17 +32,17 @@ class AdminPanelAssignmentController extends Controller
 
     private const VENUES = DefenseBoard::VENUES;
 
-    // Defense day runs 8am-5pm in fixed 2-hour blocks; a 4-6pm block would
-    // run past the cutoff, so the last hour is never used.
-    private const TIME_SLOTS = DefenseBoard::TIME_SLOTS;
-
-    private const SESSION_HOURS = 2;
-
     public function __construct(private GoogleCalendarService $calendar, private DefenseBoard $board) {}
 
     public function index(Request $request): View
     {
         $capsa = $this->capsa();
+
+        // The page opens where the work is: the earliest stage any of this
+        // CaPSA's teams is still working through, unless one is asked for.
+        // A panel belongs to the team rather than to one defense (assigning
+        // writes all four stages), but the stage still decides which teams,
+        // schedules and panels this board lists.
         $stage = $this->board->openingStage($capsa, $request->query('defense_type'));
 
         $rows = $this->board->rows($capsa, $stage);
@@ -51,12 +50,42 @@ class AdminPanelAssignmentController extends Controller
         return view('capsa.panel_assignment', [
             'state' => [
                 'stage' => $stage,
-                'stages' => self::DEFENSE_TYPES,
+                'stages' => DefenseBoard::STAGES,
                 'teams' => $rows,
                 'experts' => $this->board->panelists()->values(),
                 'names' => DefenseBoard::names($rows),
             ],
         ]);
+    }
+
+    /**
+     * GET /panel_assignment/board - one stage's board as JSON.
+     *
+     * The stage used to be a page of its own, so scheduling a team for a
+     * different defense type meant navigating away and back. This lets the
+     * page (and the per-team schedule dialog) redraw any stage in place.
+     */
+    public function board(Request $request): JsonResponse
+    {
+        /** @var CapstoneExpert $capsa */
+        $capsa = $this->capsa();
+        $stage = $this->board->openingStage($capsa, $request->query('defense_type'));
+        $rows = $this->board->rows($capsa, $stage);
+        $other = $this->board->otherBookings(array_column($rows, 'id'));
+
+        return response()->json(['success' => true, 'data' => [
+            'stage' => $stage,
+            'stages' => DefenseBoard::STAGES,
+            'teams' => $rows,
+            'experts' => $this->board->panelists()->values(),
+            'names' => DefenseBoard::names($rows, $other),
+            'sections' => $capsa->sections ?? [],
+            'other' => $other,
+            'windows' => $this->board->windows(),
+            'has_rubric' => DefenseBoard::hasRubric($stage),
+            'slots' => DefenseBoard::slots(DefenseBoard::minutesFor($stage)),
+            'venues' => DefenseBoard::VENUES,
+        ]]);
     }
 
     public function store(Request $request, Team $team): JsonResponse
@@ -73,10 +102,34 @@ class AdminPanelAssignmentController extends Controller
             return response()->json(['success' => false, 'message' => $result['message']], 422);
         }
 
+        // Return the first stage's schedule (Pre-proposal) as the primary, with all stages in propagated
+        $allStages = [];
+        $propagatedFormatted = [];
+
+        if ($result['schedule']) {
+            $allStages[] = $this->formatSchedule($result['schedule']);
+        }
+
+        if (! empty($result['propagated'])) {
+            foreach ($result['propagated'] as $item) {
+                if ($item instanceof DefenseSchedule) {
+                    $formatted = $this->formatSchedule($item);
+                    $allStages[] = $formatted;
+                    $propagatedFormatted[] = $formatted;
+                } else {
+                    // It's a stage name (string) from removePanelFromTeam
+                    $formatted = $this->formatEmptySchedule($item);
+                    $allStages[] = $formatted;
+                    $propagatedFormatted[] = $formatted;
+                }
+            }
+        }
+
         return response()->json([
             'success' => true,
-            'data' => $result['schedule'] ? $this->formatSchedule($result['schedule']) : $this->formatEmptySchedule($validated['defense_type']),
-            'propagated' => $result['propagated'] ?? [],
+            'data' => $result['schedule'] ? $this->formatSchedule($result['schedule']) : $this->formatEmptySchedule('Pre-proposal Defense'),
+            'propagated' => $propagatedFormatted,
+            'all_stages' => $allStages,
         ]);
     }
 
@@ -97,8 +150,30 @@ class AdminPanelAssignmentController extends Controller
                 : ['success' => false, 'message' => 'Not in your sections.'];
 
             if ($result['success']) {
-                $formatted = $result['schedule'] ? $this->formatSchedule($result['schedule']) : $this->formatEmptySchedule($validated['defense_type']);
-                $formatted['propagated'] = $result['propagated'] ?? [];
+                $allStages = [];
+                $propagatedFormatted = [];
+
+                if ($result['schedule']) {
+                    $allStages[] = $this->formatSchedule($result['schedule']);
+                }
+
+                if (! empty($result['propagated'])) {
+                    foreach ($result['propagated'] as $item) {
+                        if ($item instanceof DefenseSchedule) {
+                            $formatted = $this->formatSchedule($item);
+                            $allStages[] = $formatted;
+                            $propagatedFormatted[] = $formatted;
+                        } else {
+                            $formatted = $this->formatEmptySchedule($item);
+                            $allStages[] = $formatted;
+                            $propagatedFormatted[] = $formatted;
+                        }
+                    }
+                }
+
+                $formatted = $result['schedule'] ? $this->formatSchedule($result['schedule']) : $this->formatEmptySchedule('Pre-proposal Defense');
+                $formatted['propagated'] = $propagatedFormatted;
+                $formatted['all_stages'] = $allStages;
                 $assigned[] = array_merge(['team_id' => $team->team_id], $formatted);
             } else {
                 $skipped[] = ['team_id' => $team->team_id, 'team_name' => $team->team_name, 'reason' => $result['message']];
@@ -111,52 +186,27 @@ class AdminPanelAssignmentController extends Controller
     private function validatePanel(Request $request, array $extra = []): array
     {
         return $request->validate(array_merge($extra, [
-            'defense_type' => ['required', 'string', 'in:'.implode(',', self::DEFENSE_TYPES)],
-            // Clearing the Chair and saving removes the team's panel for the stage.
+            // defense_type is accepted but ignored - panel is assigned to all stages
+            'defense_type' => ['nullable', 'string', 'in:'.implode(',', self::DEFENSE_TYPES)],
+            // Clearing the Chair and saving removes the team's panel for all stages.
             'chair_expert_id' => ['nullable', 'integer', 'exists:capstone_experts,expert_id'],
             'member1_expert_id' => ['nullable', 'integer', 'exists:capstone_experts,expert_id', 'different:chair_expert_id'],
             'member2_expert_id' => ['nullable', 'integer', 'exists:capstone_experts,expert_id', 'different:chair_expert_id', 'different:member1_expert_id'],
         ]));
     }
 
-    // The Pre-proposal panel is the team's panel for the rest of the capstone,
-    // so assigning, changing or removing it there does the same to the other
-    // three stages. A change made at a later stage stays with that stage.
+    // A team has one panel, and it sits every defense they face. Assigning,
+    // changing or removing it is the same act for all four stages.
     private function assignPanelToTeam(Team $team, array $validated): array
     {
         $result = empty($validated['chair_expert_id'])
-            ? $this->removePanelFromTeam($team, $validated['defense_type'])
-            : $this->writePanelForStage($team, $validated);
-
-        if ($result['success'] && $validated['defense_type'] === DefenseOutcome::PRE_PROPOSAL) {
-            $result['propagated'] = $this->propagatePanelToOtherStages($team, $validated);
-        }
+            ? $this->removePanelFromTeam($team)
+            : $this->writePanelToAllStages($team, $validated);
 
         return $result;
     }
 
-    private function propagatePanelToOtherStages(Team $team, array $validated): array
-    {
-        $propagated = [];
-
-        foreach (self::DEFENSE_TYPES as $stage) {
-            if ($stage === DefenseOutcome::PRE_PROPOSAL) {
-                continue;
-            }
-
-            $stageResult = empty($validated['chair_expert_id'])
-                ? $this->removePanelFromTeam($team, $stage)
-                : $this->writePanelForStage($team, array_merge($validated, ['defense_type' => $stage]));
-
-            if ($stageResult['success']) {
-                $propagated[] = $stageResult['schedule'] ? $this->formatSchedule($stageResult['schedule']) : $this->formatEmptySchedule($stage);
-            }
-        }
-
-        return $propagated;
-    }
-
-    private function writePanelForStage(Team $team, array $validated): array
+    private function writePanelToAllStages(Team $team, array $validated): array
     {
         if ($missing = $team->missingExpertRoles()) {
             return ['success' => false, 'message' => $team->team_name.' still needs '.$this->listRoles($missing).' before a panel can be assigned.'];
@@ -183,55 +233,69 @@ class AdminPanelAssignmentController extends Controller
             return ['success' => false, 'message' => "This team's adviser or consultant can't also sit on their defense panel."];
         }
 
-        $existing = DefenseSchedule::where('team_id', $team->team_id)
-            ->where('defense_type', $validated['defense_type'])
-            ->latestAttempt()
-            ->with('panels')
-            ->first();
+        $schedules = [];
 
-        $unchanged = $existing && $existing->panels->pluck('expert_id')->sort()->values()->all() === collect($expertIds)->sort()->values()->all();
+        foreach (self::DEFENSE_TYPES as $stage) {
+            $existing = DefenseSchedule::where('team_id', $team->team_id)
+                ->where('defense_type', $stage)
+                ->latestAttempt()
+                ->with('panels')
+                ->first();
 
-        // A new panel clears a date set for the old one, so Generate schedule places it again.
-        $schedule = DefenseSchedule::updateOrCreate(
-            ['team_id' => $team->team_id, 'defense_type' => $validated['defense_type'], 'attempt' => $existing->attempt ?? 1],
-            $unchanged ? [] : ['schedule_date' => null, 'end_date' => null, 'venue' => null]
-        );
+            $unchanged = $existing && $existing->panels->pluck('expert_id')->sort()->values()->all() === collect($expertIds)->sort()->values()->all();
 
-        $schedule->panels()->delete();
+            // A new panel clears a date set for the old one, so Generate schedule places it again.
+            $schedule = DefenseSchedule::updateOrCreate(
+                ['team_id' => $team->team_id, 'defense_type' => $stage, 'attempt' => $existing->attempt ?? 1],
+                $unchanged ? [] : ['schedule_date' => null, 'end_date' => null, 'venue' => null]
+            );
 
-        foreach (['Panel Chair' => $validated['chair_expert_id'], 'Panel Member 1' => $validated['member1_expert_id'] ?? null, 'Panel Member 2' => $validated['member2_expert_id'] ?? null] as $role => $expertId) {
-            if ($expertId !== null) {
-                DefensePanel::create(['defense_id' => $schedule->defense_id, 'expert_id' => $expertId, 'panel_role' => $role, 'created_at' => now()]);
+            $schedule->panels()->delete();
+
+            foreach (['Panel Chair' => $validated['chair_expert_id'], 'Panel Member 1' => $validated['member1_expert_id'] ?? null, 'Panel Member 2' => $validated['member2_expert_id'] ?? null] as $role => $expertId) {
+                if ($expertId !== null) {
+                    DefensePanel::create(['defense_id' => $schedule->defense_id, 'expert_id' => $expertId, 'panel_role' => $role, 'created_at' => now()]);
+                }
             }
+
+            $schedules[] = $schedule->load('panels.expert');
         }
 
-        return ['success' => true, 'schedule' => $schedule->load('panels.expert')];
+        return ['success' => true, 'schedule' => $schedules[0], 'propagated' => array_slice($schedules, 1)];
     }
 
-    private function removePanelFromTeam(Team $team, string $defenseType): array
+    private function removePanelFromTeam(Team $team): array
     {
-        $schedule = DefenseSchedule::where('team_id', $team->team_id)
-            ->where('defense_type', $defenseType)
-            ->latestAttempt()
-            ->with('panels')
-            ->first();
+        $propagated = [];
 
-        if (! $schedule) {
-            return ['success' => false, 'message' => 'A Panel Chair is required to assign a new panel.'];
-        }
+        foreach (self::DEFENSE_TYPES as $stage) {
+            $schedule = DefenseSchedule::where('team_id', $team->team_id)
+                ->where('defense_type', $stage)
+                ->latestAttempt()
+                ->with('panels')
+                ->first();
 
-        foreach ($schedule->panels->filter(fn ($p) => $p->google_event_id) as $panel) {
-            try {
-                $this->calendar->cancelBookingEvent($panel->expert_id, $panel->google_event_id);
-            } catch (\Exception $e) {
-                Log::warning('Defense panel Google Calendar cancel failed', ['defense_id' => $schedule->defense_id, 'expert_id' => $panel->expert_id, 'error' => $e->getMessage()]);
+            if (! $schedule) {
+                $propagated[] = $stage;
+
+                continue;
             }
+
+            foreach ($schedule->panels->filter(fn ($p) => $p->google_event_id) as $panel) {
+                try {
+                    $this->calendar->cancelBookingEvent($panel->expert_id, $panel->google_event_id);
+                } catch (\Exception $e) {
+                    Log::warning('Defense panel Google Calendar cancel failed', ['defense_id' => $schedule->defense_id, 'expert_id' => $panel->expert_id, 'error' => $e->getMessage()]);
+                }
+            }
+
+            $schedule->panels()->delete();
+            $schedule->delete();
+
+            $propagated[] = $stage;
         }
 
-        $schedule->panels()->delete();
-        $schedule->delete();
-
-        return ['success' => true, 'schedule' => null];
+        return ['success' => true, 'schedule' => null, 'propagated' => $propagated];
     }
 
     private function formatEmptySchedule(string $defenseType): array
@@ -248,9 +312,11 @@ class AdminPanelAssignmentController extends Controller
      */
     public function updateSchedule(Request $request, DefenseSchedule $defense): JsonResponse
     {
+        $minutes = DefenseBoard::minutesFor($defense->defense_type);
+
         $validated = $request->validate([
             'schedule_date' => ['required', 'date'],
-            'start_time' => ['required', 'string', 'in:'.implode(',', self::TIME_SLOTS)],
+            'start_time' => ['required', 'string', 'in:'.implode(',', DefenseBoard::slots($minutes))],
             'venue' => ['required', 'string', 'in:'.implode(',', self::VENUES)],
             'confirm' => ['nullable', 'boolean'],
         ]);
@@ -263,7 +329,13 @@ class AdminPanelAssignmentController extends Controller
         }
 
         $slotStart = Carbon::parse($validated['schedule_date'])->setTimeFromTimeString($validated['start_time']);
-        $conflicts = $this->conflictsForManualOverride($defense, $slotStart, $validated['venue'], $capsa);
+        $slotEnd = $slotStart->copy()->addMinutes($minutes);
+
+        if ($why = $this->unusableTime($slotStart)) {
+            return response()->json(['success' => false, 'message' => $why], 422);
+        }
+
+        $conflicts = $this->conflictsForManualOverride($defense, $slotStart, $slotEnd, $validated['venue'], $capsa);
 
         if ($conflicts) {
             $other = collect($conflicts)->contains('other', true);
@@ -283,7 +355,7 @@ class AdminPanelAssignmentController extends Controller
 
         $defense->update([
             'schedule_date' => $slotStart,
-            'end_date' => $slotStart->copy()->addHours(self::SESSION_HOURS),
+            'end_date' => $slotEnd,
             'venue' => $validated['venue'],
         ]);
 
@@ -294,20 +366,19 @@ class AdminPanelAssignmentController extends Controller
     }
 
     /**
-     * A room is taken only in that exact block; a panelist is taken in that
-     * block, and anywhere else that day on a different panel. Checked across
-     * every stage and every section.
+     * What makes a booking clash with this one, checked across every stage
+     * and every section.
      *
      * @return array<int, array{text: string, other: bool}>
      */
-    private function conflictsForManualOverride(DefenseSchedule $defense, Carbon $slotStart, string $venue, CapstoneExpert $capsa): array
+    private function conflictsForManualOverride(DefenseSchedule $defense, Carbon $slotStart, Carbon $slotEnd, string $venue, CapstoneExpert $capsa): array
     {
-        $expertIds = $defense->panels->pluck('expert_id')->all();
-        $sorted = collect($expertIds)->sort()->values()->all();
+        $ids = $defense->panels->pluck('expert_id')->map(fn ($id) => (int) $id)->all();
         $conflicts = [];
 
         $sameDay = DefenseSchedule::whereDate('schedule_date', $slotStart->toDateString())
             ->where('defense_id', '!=', $defense->defense_id)
+            ->whereNotNull('venue')
             ->with(['panels.expert', 'team'])
             ->get();
 
@@ -316,23 +387,62 @@ class AdminPanelAssignmentController extends Controller
             $label = $isOther
                 ? 'another section ('.$other->defense_type.')'
                 : ($other->team?->team_name ?? 'Another team').' ('.$other->defense_type.')';
-            $sameBlock = $other->schedule_date->equalTo($slotStart);
-            $samePanel = $other->panels->pluck('expert_id')->sort()->values()->all() === $sorted;
 
-            if ($sameBlock && $other->venue === $venue) {
-                $conflicts[] = ['text' => "Venue \"{$venue}\" is already booked at that time by {$label}.", 'other' => $isOther];
-            }
-
-            foreach ($other->panels->whereIn('expert_id', $expertIds) as $panel) {
-                if ($sameBlock) {
-                    $conflicts[] = ['text' => ($panel->expert?->name ?? 'This panelist')." is already on a panel at that time for {$label}.", 'other' => $isOther];
-                } elseif (! $samePanel) {
-                    $conflicts[] = ['text' => ($panel->expert?->name ?? 'This panelist')." is already on a different panel that day for {$label}.", 'other' => $isOther];
-                }
+            if ($why = $this->clash($other, $ids, $slotStart, $slotEnd, $venue, $label)) {
+                $conflicts[] = ['text' => $why, 'other' => $isOther];
             }
         }
 
         return collect($conflicts)->unique('text')->values()->all();
+    }
+
+    /**
+     * Why booking $s stops panelists $ids from sitting in $venue from $start
+     * to $end, or null when it doesn't. The generator, saving and moving a
+     * defense all ask this, so they can't disagree.
+     *
+     * - A room holds one defense at a time.
+     * - A panelist sits one defense at a time.
+     * - A panelist keeps one room for the whole day: the first defense they
+     *   sit that day decides the room for every other one.
+     */
+    private function clash(DefenseSchedule $s, array $ids, Carbon $start, Carbon $end, string $venue, string $who): ?string
+    {
+        if (! $s->schedule_date->isSameDay($start)) {
+            return null;
+        }
+
+        $overlaps = $s->schedule_date->lt($end) && $start->lt(DefenseBoard::endOf($s));
+        $shared = $s->panels->first(fn ($p) => in_array((int) $p->expert_id, $ids, true));
+        $name = $shared?->expert?->name ?? 'A panelist';
+
+        if ($shared && $overlaps) {
+            return "{$name} is already on {$who}'s panel at this time.";
+        }
+
+        if ($shared && $s->venue !== $venue) {
+            return "{$name} is in {$s->venue} that day for {$who}, so this panel has to use {$s->venue} too.";
+        }
+
+        if ($overlaps && $s->venue === $venue) {
+            return "{$venue} is taken at this time by {$who}.";
+        }
+
+        return null;
+    }
+
+    /** Why nobody can defend at $start, or null when the time is usable. */
+    private function unusableTime(Carbon $start): ?string
+    {
+        if ($start->isWeekend()) {
+            return 'Defenses are held on weekdays only.';
+        }
+
+        if ($start->lt(now())) {
+            return 'That time has already passed.';
+        }
+
+        return null;
     }
 
     /**
@@ -391,9 +501,9 @@ class AdminPanelAssignmentController extends Controller
             'data' => [
                 'defense_type' => $type,
                 'window' => ['start_date' => $window->start_date->toDateString(), 'end_date' => $window->end_date->toDateString()],
-                'time_slots' => self::TIME_SLOTS,
+                'time_slots' => DefenseBoard::slots($window->duration_minutes),
+                'minutes' => $window->duration_minutes,
                 'venues' => self::VENUES,
-                'session_hours' => self::SESSION_HOURS,
                 'draft' => $draft,
                 'unplaced' => $unplaced,
                 'not_ready' => $notReady,
@@ -415,7 +525,7 @@ class AdminPanelAssignmentController extends Controller
             'items' => ['required', 'array', 'min:1'],
             'items.*.defense_id' => ['required', 'integer'],
             'items.*.date' => ['required', 'date_format:Y-m-d'],
-            'items.*.start_time' => ['required', 'in:'.implode(',', self::TIME_SLOTS)],
+            'items.*.start_time' => ['required', 'date_format:H:i'],
             'items.*.venue' => ['required', 'in:'.implode(',', self::VENUES)],
         ]);
 
@@ -427,6 +537,7 @@ class AdminPanelAssignmentController extends Controller
         }
 
         $capsa = $this->capsa();
+        $minutes = $window->duration_minutes;
         $readyById = $this->schedulingCandidates($type, $capsa)[0]->keyBy('defense_id');
         $saved = [];
         $skipped = [];
@@ -447,7 +558,14 @@ class AdminPanelAssignmentController extends Controller
                 continue;
             }
 
+            if (! in_array($item['start_time'], DefenseBoard::slots($minutes), true)) {
+                $skip($item['start_time'].' is not a start time for '.$minutes.'-minute defenses.');
+
+                continue;
+            }
+
             $start = Carbon::parse($item['date'].' '.$item['start_time']);
+            $end = $start->copy()->addMinutes($minutes);
 
             if ($start->lt($window->start_date->copy()->startOfDay()) || $start->gt($window->end_date->copy()->endOfDay())) {
                 $skip('That date is outside the '.$type.' window.');
@@ -455,13 +573,19 @@ class AdminPanelAssignmentController extends Controller
                 continue;
             }
 
-            if ($conflicts = $this->conflictsForManualOverride($schedule, $start, $item['venue'], $capsa)) {
+            if ($why = $this->unusableTime($start)) {
+                $skip($why);
+
+                continue;
+            }
+
+            if ($conflicts = $this->conflictsForManualOverride($schedule, $start, $end, $item['venue'], $capsa)) {
                 $skip(implode(' ', array_column($conflicts, 'text')));
 
                 continue;
             }
 
-            $schedule->update(['schedule_date' => $start, 'end_date' => $start->copy()->addHours(self::SESSION_HOURS), 'venue' => $item['venue']]);
+            $schedule->update(['schedule_date' => $start, 'end_date' => $end, 'venue' => $item['venue']]);
             $this->syncDefensePanelToGoogleCalendar($schedule);
             app(DefenseScheduleNotifier::class)->scheduled($schedule);
 
@@ -499,7 +623,7 @@ class AdminPanelAssignmentController extends Controller
 
     public function indexWindows(): JsonResponse
     {
-        $data = collect($this->board->windows())->map(fn ($w, $type) => ['defense_type' => $type, 'start_date' => $w['start'], 'end_date' => $w['end']])->values();
+        $data = collect($this->board->windows())->map(fn ($w, $type) => ['defense_type' => $type, 'start_date' => $w['start'], 'end_date' => $w['end'], 'duration_minutes' => $w['minutes']])->values();
 
         return response()->json(['success' => true, 'data' => $data]);
     }
@@ -516,28 +640,37 @@ class AdminPanelAssignmentController extends Controller
         $validated = $request->validate([
             'start_date' => ['required', 'date'],
             'end_date' => ['required', 'date', 'after_or_equal:start_date'],
+            'duration_minutes' => ['nullable', 'integer', 'in:'.implode(',', DefenseBoard::DURATIONS)],
         ]);
 
-        $window = DefenseWindow::updateOrCreate(['defense_type' => $defenseType], $validated);
+        $window = DefenseWindow::updateOrCreate(['defense_type' => $defenseType], array_filter($validated, fn ($v) => $v !== null));
 
         return response()->json([
             'success' => true,
-            'data' => ['defense_type' => $window->defense_type, 'start_date' => $window->start_date->toDateString(), 'end_date' => $window->end_date->toDateString()],
+            'data' => [
+                'defense_type' => $window->defense_type,
+                'start_date' => $window->start_date->toDateString(),
+                'end_date' => $window->end_date->toDateString(),
+                'duration_minutes' => $window->duration_minutes,
+                'slots' => DefenseBoard::slots($window->duration_minutes),
+            ],
         ]);
     }
 
     /**
-     * The first block in the window this panel can take, never double-booking
-     * a room or a panelist in any section. A panel that already sits on a day
-     * keeps that day and room, taking its next free block, so one panel judges
-     * several teams back-to-back.
+     * The first weekday slot in the window, not yet passed, that this panel
+     * can take without breaking a rule in clash(), in any section. Days a
+     * panelist already sits are tried first, in that day's room, so a panel
+     * judges several teams back-to-back without anyone moving rooms.
      *
      * @param  Collection<int, DefenseSchedule>|null  $held  Slots suggested in this draft but not saved.
-     * @param  string|null  $skipped  Set to why the window's first block could not be used, when it could not.
+     * @param  string|null  $skipped  Set to why the window's first slot could not be used, when it could not.
      */
     private function findSlotForPanel(DefenseWindow $window, array $expertIds, ?int $excludeScheduleId, ?Collection $held, CapstoneExpert $capsa, ?string &$skipped = null): array
     {
-        $sorted = collect($expertIds)->sort()->values()->all();
+        $ids = array_map('intval', $expertIds);
+        $minutes = $window->duration_minutes;
+        $slots = DefenseBoard::slots($minutes);
 
         $booked = DefenseSchedule::whereBetween('schedule_date', [$window->start_date->copy()->startOfDay(), $window->end_date->copy()->endOfDay()])
             ->whereNotNull('venue')
@@ -550,35 +683,22 @@ class AdminPanelAssignmentController extends Controller
         $who = fn (DefenseSchedule $s) => $s->team && ! $this->board->covers($capsa, $s->team) ? 'another section' : 'Team '.($s->team?->team_name ?? '');
 
         // Null when this panel can sit in $venue at $slotStart, otherwise why not.
-        $reason = function (Carbon $slotStart, string $venue) use ($booked, $sorted, $who): ?string {
-            foreach ($booked->filter(fn ($s) => $s->schedule_date->isSameDay($slotStart)) as $s) {
-                $theirs = $s->panels->pluck('expert_id')->sort()->values()->all();
+        $reason = function (Carbon $slotStart, string $venue) use ($booked, $ids, $minutes, $who): ?string {
+            $slotEnd = $slotStart->copy()->addMinutes($minutes);
 
-                // The same panel may judge several teams that day, never two at once.
-                if ($theirs === $sorted) {
-                    if ($s->schedule_date->equalTo($slotStart)) {
-                        return 'This panel is already with '.$who($s).' at this time.';
-                    }
-
-                    continue;
-                }
-
-                if ($s->schedule_date->equalTo($slotStart) && $s->venue === $venue) {
-                    return $venue.' is taken at this time by '.$who($s).'.';
-                }
-
-                $shared = $s->panels->first(fn ($p) => in_array($p->expert_id, $sorted));
-
-                if ($shared) {
-                    return ($shared->expert?->name ?? 'A panelist').' sits on '.$who($s)."'s panel that day.";
+            foreach ($booked as $s) {
+                if ($why = $this->clash($s, $ids, $slotStart, $slotEnd, $venue, $who($s))) {
+                    return $why;
                 }
             }
 
             return null;
         };
 
+        $slot = fn (Carbon $start, string $venue) => ['schedule_date' => $start, 'end_date' => $start->copy()->addMinutes($minutes), 'venue' => $venue];
+
         $ownDays = $booked->where('defense_type', $window->defense_type)
-            ->filter(fn ($s) => $s->panels->pluck('expert_id')->sort()->values()->all() === $sorted)
+            ->filter(fn ($s) => $s->panels->whereIn('expert_id', $ids)->isNotEmpty())
             ->sortBy('schedule_date')
             ->groupBy(fn ($s) => $s->schedule_date->toDateString());
 
@@ -586,24 +706,31 @@ class AdminPanelAssignmentController extends Controller
             $day = $daySchedules->first()->schedule_date->copy()->startOfDay();
             $venue = $daySchedules->first()->venue;
 
-            foreach (self::TIME_SLOTS as $time) {
+            foreach ($slots as $time) {
                 $slotStart = $day->copy()->setTimeFromTimeString($time);
 
-                if (! $daySchedules->contains(fn ($s) => $s->schedule_date->equalTo($slotStart)) && $reason($slotStart, $venue) === null) {
-                    return ['schedule_date' => $slotStart, 'end_date' => $slotStart->copy()->addHours(self::SESSION_HOURS), 'venue' => $venue];
+                if ($this->unusableTime($slotStart) === null && $reason($slotStart, $venue) === null) {
+                    return $slot($slotStart, $venue);
                 }
             }
         }
 
+        // On a new day the panel's own rooms go first, so it stays put where it can.
+        $venues = $ownDays->flatten()->pluck('venue')->concat(self::VENUES)->unique()->values();
+
         foreach (CarbonPeriod::create($window->start_date, $window->end_date) as $date) {
-            foreach (self::TIME_SLOTS as $time) {
+            foreach ($slots as $time) {
                 $slotStart = $date->copy()->setTimeFromTimeString($time);
 
-                foreach (self::VENUES as $venue) {
+                if ($this->unusableTime($slotStart) !== null) {
+                    continue;
+                }
+
+                foreach ($venues as $venue) {
                     $why = $reason($slotStart, $venue);
 
                     if ($why === null) {
-                        return ['schedule_date' => $slotStart, 'end_date' => $slotStart->copy()->addHours(self::SESSION_HOURS), 'venue' => $venue];
+                        return $slot($slotStart, $venue);
                     }
 
                     $skipped ??= 'Not earlier: '.$slotStart->format('M j').', '.$slotStart->format('g:i A').', '.$why;
@@ -645,7 +772,7 @@ class AdminPanelAssignmentController extends Controller
 
         $memberEmails = $schedule->team ? $schedule->team->members->pluck('email')->filter()->values()->all() : [];
         $byExpert = $connected->keyBy('expert_id');
-        $endDate = $schedule->end_date ?? $schedule->schedule_date->copy()->addHours(self::SESSION_HOURS);
+        $endDate = DefenseBoard::endOf($schedule);
 
         foreach ($connected as $panel) {
             $attendees = collect($memberEmails)->merge($byExpert->except([$panel->expert_id])->pluck('expert.email')->filter())->unique()->values()->all();

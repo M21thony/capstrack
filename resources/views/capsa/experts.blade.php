@@ -24,8 +24,7 @@
 
   /* ── Compact table ───────────────────────────────────────────────────
      One line per person. Status is a dot beside the name, which buys the
-     width back for the sections and the expertise - the two columns that
-     were being squeezed. */
+     width back for the expertise, the column that was being squeezed. */
   .table td{padding-top:9px;padding-bottom:9px;vertical-align:middle}
   .table thead th{position:sticky;top:0;z-index:2;background:var(--bg2)}
   .cx-who{display:flex;align-items:center;gap:9px;cursor:pointer;min-width:0}
@@ -37,7 +36,6 @@
   .cx-dot-active{background:var(--green)}
   .cx-dot-full{background:var(--amber)}
   .cx-dot-offline{background:var(--border2)}
-  .cx-sections{font-size:11.5px;color:var(--text2);white-space:nowrap}
   .cx-skills{max-width:240px}
   .cx-chip{display:inline-block;max-width:150px;padding:2px 8px;margin:1px 3px 1px 0;border-radius:6px;
            background:var(--bg4);color:var(--text2);font-size:11px;font-weight:500;
@@ -189,9 +187,10 @@
      that way (see CapstoneExpert::parsedCapacity()), one "ALL" row when
      they're not. Read-only here - editing capacity is Admin's job. */
   .capacity-stack{display:flex;flex-direction:column;gap:5px}
-  .capacity-row{display:grid;grid-template-columns:38px 1fr 34px;align-items:center;gap:8px}
+  .capacity-row{display:grid;grid-template-columns:38px 60px auto;align-items:center;gap:8px}
+  .capacity-row .pbar{width:60px}
   .capacity-prog{font-size:10px;font-weight:700;color:var(--text3);letter-spacing:0.3px}
-  .capacity-count{font-variant-numeric:tabular-nums;font-size:11px;color:var(--text3);text-align:right}
+  .capacity-count{font-variant-numeric:tabular-nums;font-size:11px;color:var(--text3)}
 
   /* Manage Roles - the one action this page has. */
   .roles-btn{
@@ -210,7 +209,7 @@
 
   /* Personal info modal - opens on clicking an expert's name/avatar, and
      shows what the table row can't fit (full expertise list, credentials,
-     department, sections). Rides on the page's existing .ct-modal-overlay /
+     degree, program). Rides on the page's existing .ct-modal-overlay /
      .ct-modal-card shell so it looks and behaves like every other dialog
      here. Shared markup/behavior with the other copy of this page. */
   .expert-name-trigger{cursor:pointer}
@@ -399,7 +398,7 @@
       {{-- Roles are the only column a CaPSA can change, and a page that does
            not say so invites trying the others. --}}
       <p class="table-legend">
-        <b>Roles</b> are yours to set. <b>Sections</b> are the admin's.
+        <b>Roles</b> are yours to set.
         <b>Accepts</b> and <b>Expertise</b> belong to the expert &mdash; they choose which programs
         to take teams from and how many, on their own profile.
       </p>
@@ -463,7 +462,7 @@
       'noun' => 'expert',
       'actions' => [
         ['id' => 'bulkRoles', 'label' => 'Set roles'],
-        ['id' => 'bulkRemove', 'label' => 'Remove', 'danger' => true],
+        ['id' => 'bulkRemove', 'label' => 'Deactivate', 'danger' => true],
       ],
     ])
 
@@ -473,10 +472,9 @@
           <tr>
             {{-- Status is a dot beside the name rather than a column of its
                  own: it carries one bit, and a whole column to say "Offline"
-                 is width the sections and the expertise need more. --}}
+                 is width the expertise needs more. --}}
             <th style="padding-left:20px">Expert</th>
             <th>Role(s)</th>
-            <th>Sections</th>
             <th>Expertise</th>
             <th>Accepts <span class="th-owner">expert sets</span></th>
             <th style="text-align:right;padding-right:20px">Action</th>
@@ -516,6 +514,14 @@
               $computedStatus = $isOff ? 'off' : ($isFull ? 'full' : ($isOnline ? 'active' : 'offline'));
               $capacityRows = $expert->parsedCapacity();
 
+              // Filled counts per program, for the split-cap rows in the
+              // Accepts cell. One grouped query, and only when the cap is
+              // actually split - a single "ALL" cap draws its bar from the
+              // overall count instead.
+              $programCounts = count($capacityRows) > 1
+                  ? $expert->approvedTeamCountsByProgram()
+                  : [];
+
               // One mapping, on the model, so the pills here and the ones on
               // the expert's own profile panel cannot drift apart.
               $roleLabel = fn (string $roleName) => \App\Models\Role::labelFor($roleName);
@@ -529,8 +535,6 @@
                 'highest_degree' => $expert->highest_degree,
                 'degree_title' => $expert->degree_title,
                 'program' => $expert->program,
-                'is_capsa' => (bool) $expert->is_capsa,
-                'sections' => $expert->sections ?? [],
                 'roles' => $expert->roles->pluck('role_name')->map($roleLabel)->values(),
                 'expertise' => $expertiseList->values(),
                 // Empty rather than "ALL: max 0" - the detail panel reads
@@ -583,13 +587,6 @@
                 </div>
               </div>
             </td>
-            <td data-label="Sections" class="cx-sections">
-              @if ($expert->is_capsa)
-                {{ !empty($expert->sections) ? implode(', ', $expert->sections) : 'none set' }}
-              @else
-                <span style="color:var(--text3)">&mdash;</span>
-              @endif
-            </td>
 
             {{-- A chip each, so a long name truncates on its own instead of
                  being joined to the next one and cut mid-word. The counter
@@ -619,16 +616,23 @@
                   <span style="font-size:11px;color:var(--text3)">{{ $teamCount }}/{{ $maxTeams }} · {{ $slotsLeft }} left</span>
                 </div>
               @else
+                {{-- One row per program, in the same shape as the single-cap
+                     row above: bar plus n/max. A stack of bare "max" numbers
+                     with the program floating far left of them read as two
+                     unrelated columns, and said nothing about how full each
+                     program already was. --}}
                 <div class="capacity-stack">
                   @foreach ($capacityRows as [$program, $max])
+                    @php $filled = $programCounts[$program] ?? 0; @endphp
                     <div class="capacity-row">
                       <span class="capacity-prog">{{ $program }}</span>
-                      <span></span>
-                      <span class="capacity-count">max {{ $max }}</span>
+                      <div class="pbar">
+                        <div class="pbar-fill pf-green" style="width:{{ $max > 0 ? round(($filled / $max) * 100) : 0 }}%"></div>
+                      </div>
+                      <span class="capacity-count">{{ $filled }}/{{ $max }}</span>
                     </div>
                   @endforeach
                 </div>
-                <div style="font-size:10px;color:var(--text3);margin-top:4px">{{ $teamCount }} total assigned</div>
               @endif
             </td>
 
@@ -747,10 +751,6 @@
       <div>
         <div class="expert-detail-field-label">Program</div>
         <div class="expert-detail-field-value" id="detailProgram">—</div>
-      </div>
-      <div id="detailSectionsWrap" style="display:none">
-        <div class="expert-detail-field-label">Sections</div>
-        <div class="expert-detail-field-value" id="detailSections">—</div>
       </div>
       <div>
         <div class="expert-detail-field-label">Expertise</div>
@@ -1391,14 +1391,6 @@ function openExpertDetail(data) {
   document.getElementById('detailProgram').textContent = data.program || 'Not set';
   document.getElementById('detailExpertise').textContent = data.expertise.length ? data.expertise.join(', ') : 'None specified';
   document.getElementById('detailCapacity').textContent = data.capacity.length ? data.capacity.join(' · ') : 'Not set';
-
-  const sectionsWrap = document.getElementById('detailSectionsWrap');
-  if (data.is_capsa) {
-    sectionsWrap.style.display = '';
-    document.getElementById('detailSections').textContent = data.sections.length ? data.sections.join(', ') : 'None set';
-  } else {
-    sectionsWrap.style.display = 'none';
-  }
 
   // No separate "CAPSA" chip - is_capsa stays synced with the
   // capstone_adviser role, so data.roles already says "Capstone Subject

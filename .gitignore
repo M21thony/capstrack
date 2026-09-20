@@ -35,3 +35,8 @@ Thumbs.db
 test-results/
 playwright-report/
 storage/app/playwright-videos/
+
+# Stray tool dirs and downloaded installers
+.kilo/
+.impeccable/
+*.exe

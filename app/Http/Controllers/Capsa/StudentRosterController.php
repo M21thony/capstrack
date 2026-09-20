@@ -124,7 +124,7 @@ class StudentRosterController extends Controller
                 ]);
 
                 $created++;
-                $enrolments[] = [$student->student_id, $row['school_year']];
+                $enrolments[] = [$student->student_id, $row['school_year'], $row['course']];
 
                 continue;
             }
@@ -138,13 +138,13 @@ class StudentRosterController extends Controller
                 $alreadyComplete++;
             }
 
-            $enrolments[] = [$student->student_id, $row['school_year']];
+            $enrolments[] = [$student->student_id, $row['school_year'], $row['course']];
 
             $matched++;
         }
 
-        foreach ($enrolments as [$studentId, $year]) {
-            StudentSchoolYear::recordFor($studentId, $year);
+        foreach ($enrolments as [$studentId, $year, $course]) {
+            StudentSchoolYear::recordFor($studentId, $year, Student::mapCourseToProgram((string) $course));
         }
 
         return response()->json([

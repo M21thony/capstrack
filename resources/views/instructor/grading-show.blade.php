@@ -194,6 +194,7 @@
       <section class="gs-area" id="gs-remarks-area" hidden>
         <div class="gs-head"><h2>Remarks and decision</h2></div>
         <div class="gs-remarks">
+          
           <form id="gradingForm" class="gs-panel" onsubmit="return false">
             @csrf
             <h3>Your remarks</h3>
@@ -240,8 +241,6 @@
                   </label>
                 @endforeach
               </div>
-              <label for="outcome-remarks" style="font-size:12.5px;font-weight:600">Panel remarks (optional)</label>
-              <textarea id="outcome-remarks" class="remarks-field" style="min-height:70px" placeholder="What the panel wants the team to know about this decision."></textarea>
               <button type="button" class="gs-btn gs-btn-primary" id="record-outcome-btn" onclick="recordOutcome()">Record panel decision</button>
             @endif
           </div>
@@ -534,7 +533,6 @@ function recordOutcome() {
   if (!picked) { showFormError('Choose what the panel decided.'); return; }
 
   const btn = $('record-outcome-btn');
-  const remarksEl = $('outcome-remarks');
   btn.disabled = true;
   btn.textContent = 'Recording...';
 
@@ -545,7 +543,7 @@ function recordOutcome() {
       'Accept': 'application/json',
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ outcome: picked.value, remarks: remarksEl ? remarksEl.value : null }),
+    body: JSON.stringify({ outcome: picked.value }),
   })
     .then(r => r.json())
     .then(res => {
@@ -588,17 +586,17 @@ function postGrade(url, statusMsg, method) {
       dirty = false;
       saveStatus.textContent = statusMsg;
       if (data.data && data.data.status === 'submitted') {
-        // Their score was the last one in and they are the chair: the
-        // decision is theirs to record now, on this page. Reloading brings
-        // the options in - and with every criterion scored, the page opens
-        // straight on Remarks and decision.
+        // If they can record outcome (Panel Chair, all grades in, no outcome yet),
+        // navigate to the Remarks & Decision tab instead of redirecting
         if (data.data.can_record_outcome) {
           saveStatus.textContent = 'Submitted - everyone has scored, record the decision below';
-          setTimeout(() => window.location.reload(), 700);
-
+          // Navigate to Remarks tab
+          go({{ $sections->count() }}, 0);
+          draw();
           return;
         }
 
+        // For non-chair or when outcome already recorded, return to team list
         setTimeout(() => { window.location.href = '{{ route('instructor.grading') }}'; }, 900);
       }
     })

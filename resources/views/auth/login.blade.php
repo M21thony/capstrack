@@ -264,6 +264,39 @@
     color: rgba(255,255,255,0.5);
   }
 
+  .team-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    background: none;
+    border: none;
+    padding: 0;
+    font-family: 'DM Sans', sans-serif;
+    font-variant-numeric: tabular-nums;
+    font-size: inherit;
+    color: rgba(255,255,255,0.5);
+    text-decoration: none;
+    cursor: pointer;
+    transition: color 0.15s ease;
+  }
+  .team-link svg {
+    width: 15px;
+    height: 15px;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    transition: transform 0.15s ease;
+  }
+  .team-link:hover { color: var(--gold-bright); }
+  .team-link:hover svg { transform: translateX(3px); }
+  .team-link:focus-visible {
+    outline: 2px solid var(--gold);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
   /* ══════════════════════ RIGHT — SIGN-IN PANEL ══════════════════════ */
   .signin-panel {
     flex: 1 1 44%;
@@ -557,7 +590,10 @@
 
   <div class="brand-bottom">
     <span>© {{ date('Y') }} CSPC College of Computer Studies</span>
-    <span class="tag">CapsTrack</span>
+    <a href="{{ route('team') }}" class="team-link" id="meet-team-btn">
+      Meet the Team
+      <svg viewBox="0 0 24 24" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+    </a>
   </div>
 </div>
 
@@ -590,18 +626,17 @@
     <div class="note-box">
       <p>How sign-in works</p>
       <ul>
-        <li><strong>Students</strong> — sign in with your CSPC Mail to reach your dashboard right away.</li>
-        <li><strong>Instructors</strong> — sign in the same way, then request account access.</li>
-        <li>Approval can take up to <strong>3 days</strong>. You'll get an email once it's reviewed.</li>
+        <li><strong>Students</strong> — Sign in with your CSPC Mail <strong>Once your CaPSA uploaded your section list</strong?.</li>
+        <li><strong>Experts</strong> — Sign in your CSPC Mail <strong>Once the CaPSA uploaded expert list</strong?.</li>
       </ul>
     </div>
 
-    <div class="divider">or</div>
+    <div class="divider"></div>
 
     {{-- Applying for your own account is switched off (see routes/web.php).
          The line says who to ask instead, because a person with no account is
          the one reader who cannot do anything about it themselves. --}}
-    <p class="request-link">Accounts are added by a CaPSA. If you cannot sign in, ask one to add you.</p>
+    <!-- <p class="request-link">Accounts are added by a CaPSA. If you cannot sign in, ask one to add you.</p> -->
 
     <p class="signin-footer">CapsTrack — CSPC College of Computer Studies</p>
   </div>

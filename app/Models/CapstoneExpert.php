@@ -25,7 +25,7 @@ use Illuminate\Support\Str;
     'program_slots',
     'program',
     'sections',
-        'degree_title',
+    'degree_title',
     'school_year',
     'rejection_reason',
     'reject_attempts',
@@ -138,16 +138,16 @@ class CapstoneExpert extends Authenticatable
     }
 
     /**
-      * How many teams this expert takes, or null if they have never said.
-      *
-      * This used to hand back 4 for a null, which meant every account ever
-      * made was credited with four teams' worth of slots nobody had agreed
-      * to - and that number decided who could still be assigned.
-      */
-     public function getMaxTeamsAttribute($value): ?int
-     {
-         return $value === null ? null : (int) $value;
-     }
+     * How many teams this expert takes, or null if they have never said.
+     *
+     * This used to hand back 4 for a null, which meant every account ever
+     * made was credited with four teams' worth of slots nobody had agreed
+     * to - and that number decided who could still be assigned.
+     */
+    public function getMaxTeamsAttribute($value): ?int
+    {
+        return $value === null ? null : (int) $value;
+    }
 
     // Removed getExpertiseAttribute accessor to allow direct relationship access
 
@@ -444,22 +444,56 @@ class CapstoneExpert extends Authenticatable
 
     /**
      * How many teams this expert already advises in $program.
-     *
-     * A team's program comes from student_s_y.program - the enrolment row
-     * that records which program a student was in for a school year. That is
-     * a better source than the leader's students.course: it already stores
-     * the short code (BSIT, BSCS...) that parsedCapacity() returns, and it is
-     * populated for teams whose leader has no course set.
      */
     public function approvedTeamCountForProgram(string $program): int
     {
+        return $this->approvedTeamCountsByProgram()[$program] ?? 0;
+    }
+
+    /**
+     * The per-program filled counts behind parsedCapacity(), in one query -
+     * [program => teams]. The expert list reads it so a split cap (say
+     * 2 - BSIT, 1 - BSIS) can show each program's own progress bar instead
+     * of a bare "max n" per line, and the apply check uses the same numbers
+     * to stop accepting once a cap is met.
+     *
+     * A team's program comes from student_s_y.program - the enrolment row
+     * that records which program a student was in for a school year. The
+     * writers that predate that column left it null though, and a team
+     * counted for no program read as zero-filled no matter how many teams
+     * had been approved - so a member's course stands in when the row does
+     * not say, mapped the same way the profile save maps it.
+     *
+     * @return array<string, int>
+     */
+    public function approvedTeamCountsByProgram(): array
+    {
         return DB::table('capstone_expert_application as a')
             ->join('student_s_y as sy', 'sy.team_id', '=', 'a.team_id')
+            ->leftJoin('students as s', 's.student_id', '=', 'sy.student_id')
             ->where('a.expert_id', $this->expert_id)
             ->where('a.status', 'approved')
-            ->where('sy.program', $program)
-            ->distinct()
-            ->count('a.team_id');
+            ->select('a.team_id', 'sy.program', 's.course')
+            ->get()
+            // One program per team, from any enrolment row that can name
+            // one; every member of a team is in the same program, and the
+            // count is of teams, so extras only ever agree.
+            ->groupBy('team_id')
+            ->map(function ($rows) {
+                foreach ($rows as $row) {
+                    $program = $row->program ?: Student::mapCourseToProgram((string) ($row->course ?? ''));
+
+                    if ($program) {
+                        return $program;
+                    }
+                }
+
+                return null;
+            })
+            ->filter()
+            ->countBy()
+            ->map(fn ($teams) => (int) $teams)
+            ->all();
     }
 
     /**
