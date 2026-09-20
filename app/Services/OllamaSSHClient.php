@@ -383,7 +383,7 @@ class OllamaSSHClient
     public function embed(string $text): array
     {
         $payload = [
-            'model' => config('services.ollama.embed_model', 'nomic-embed-text'),
+            'model' => config('services.ollama.embed_model'),
             'prompt' => mb_substr($text, 0, 4000),
             // The embedding model pays the same reload cost as the big one.
             'keep_alive' => config('services.ollama.keep_alive', '30m'),
