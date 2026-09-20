@@ -3,13 +3,13 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Collection;
 
 /**
- * A team asking its CaPSA to remove an expert who already took them on.
+ * A team asking an expert who already took them on to let them go.
  *
- * Decided on the Leave Requests tab of Team Management, beside member leave
- * requests, and scoped to the CaPSA's sections the same way.
+ * The team cannot drop that expert by itself. The request goes to the expert
+ * it names, who decides it on their Assignments page: releasing the team
+ * removes the assignment, declining keeps them on.
  */
 class ExpertRemovalRequest extends Model
 {
@@ -72,27 +72,5 @@ class ExpertRemovalRequest extends Model
     public function isPending(): bool
     {
         return $this->status === self::PENDING;
-    }
-
-    /**
-     * Only the requests from teams in this CaPSA's sections.
-     *
-     * @param  Collection<int, self>  $requests
-     * @return Collection<int, self>
-     */
-    public static function visibleTo(CapstoneExpert $capsa, Collection $requests): Collection
-    {
-        $scope = app(\App\Support\SectionScope::class);
-        $sections = $capsa->sections ?? [];
-
-        return $requests
-            ->filter(fn (self $r) => $r->team && $scope->covers($sections, $scope->sectionFor($r->team)))
-            ->values();
-    }
-
-    /** How many are waiting on this CaPSA. */
-    public static function pendingCountFor(CapstoneExpert $capsa): int
-    {
-        return static::visibleTo($capsa, static::pending()->with('team')->get())->count();
     }
 }

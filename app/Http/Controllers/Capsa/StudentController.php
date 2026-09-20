@@ -244,6 +244,8 @@ class StudentController extends Controller
         unset($data['year'], $data['section'], $data['transfer']);
         $student->fill($data + ['course' => $course, 'year_section' => $yearSection])->save();
 
+        $this->keepOnList($student);
+
         $moved = Student::computeSectionLabel($course, $yearSection);
 
         return response()->json([
@@ -254,6 +256,44 @@ class StudentController extends Controller
                 ? trim($student->f_name.' '.$student->l_name).' has been transferred to '.$moved.'.'
                 : 'Saved.',
         ]);
+    }
+
+    /**
+     * Make the class list agree with the student a CaPSA just saved.
+     *
+     * The list is what admits somebody at sign-in, and the page a CaPSA works
+     * from is built from the accounts, not the list. The two drifted: a
+     * student who signed in before any list was uploaded had an account and
+     * a section, showed in their CaPSA's section, and was still turned away
+     * as "not on your section's list". Saving them here is the moment a
+     * CaPSA vouches for them, so the list is written then, and carries the
+     * section they now have rather than the one they were uploaded with.
+     */
+    private function keepOnList(Student $student): void
+    {
+        $email = Str::lower(trim((string) $student->email));
+        $program = Student::mapCourseToProgram((string) $student->course);
+
+        if ($email === '' || $program === null || blank($student->year_section)) {
+            return;
+        }
+
+        $fields = [
+            'name' => trim($student->f_name.' '.$student->l_name) ?: $email,
+            'student_number' => $student->student_number,
+            'section' => $student->year_section,
+            'program' => $program,
+        ];
+
+        $listed = StudentRoster::whereRaw('LOWER(email) = ?', [$email])->first();
+
+        if ($listed) {
+            $listed->update($fields);
+
+            return;
+        }
+
+        StudentRoster::create(['email' => $email, 'school_year' => Term::currentSchoolYear()] + $fields);
     }
 
     /**

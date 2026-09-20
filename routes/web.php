@@ -23,7 +23,6 @@ use App\Http\Controllers\Capsa\DefenseSchedulingController;
 use App\Http\Controllers\Capsa\DeliverableCheckController;
 use App\Http\Controllers\Capsa\DeliverableController;
 use App\Http\Controllers\Capsa\DocumentFileController;
-use App\Http\Controllers\Capsa\ExpertRemovalRequestController;
 use App\Http\Controllers\Capsa\ExpertRosterController;
 use App\Http\Controllers\Capsa\RemovalController;
 use App\Http\Controllers\Capsa\SectionProgressController;
@@ -42,6 +41,7 @@ use App\Http\Controllers\Instructor\DocReviewController;
 use App\Http\Controllers\Instructor\GradingController;
 use App\Http\Controllers\Instructor\ProfileController as InstructorProfileController;
 use App\Http\Controllers\Instructor\ProgressController as InstructorProgressController;
+use App\Http\Controllers\Instructor\RemovalRequestController;
 use App\Http\Controllers\Instructor\ScheduleController;
 use App\Http\Controllers\Instructor\TeamController as InstructorTeamController;
 use App\Http\Controllers\Instructor\TitleConfirmationController;
@@ -56,6 +56,7 @@ use App\Http\Controllers\RecruitmentController;
 use App\Http\Controllers\Student\ArchiveController as StudentArchiveController;
 use App\Http\Controllers\Student\DefenseScoresController;
 use App\Http\Controllers\Student\ExpertController as StudentExpertController;
+use App\Http\Controllers\Student\PortalTourController;
 use App\Http\Controllers\Student\ProgressController as StudentProgressController;
 use App\Http\Controllers\Student\ResourceController as StudentResourceController;
 use App\Http\Controllers\StudentConsultationController;
@@ -206,8 +207,6 @@ Route::middleware(['expert.auth', 'no.cache', 'track.expert'])->prefix('capsa')-
         // A member leaving a team that passed Title Defense - the CaPSA decides.
         Route::get('/leave-requests', [App\Http\Controllers\Capsa\LeaveRequestController::class, 'index'])->name('leave_requests');
         Route::patch('/leave-requests/{leaveRequest}', [App\Http\Controllers\Capsa\LeaveRequestController::class, 'update'])->name('leave_requests.update');
-        // A team changing an expert who already took them on - the CaPSA decides.
-        Route::patch('/expert-removal-requests/{expertRemovalRequest}', [ExpertRemovalRequestController::class, 'update'])->name('expert_removal_requests.update');
         Route::get('/verify-teams', fn () => redirect()->route('capsa.team_management', ['tab' => 'verification']))->name('verify_teams');
         Route::patch('/verify-teams/{team}', [AdminTeamVerificationController::class, 'verify'])->name('verify_teams.verify');
         Route::patch('/verify-teams/pre-proposals/{preProposal}', [AdminTeamVerificationController::class, 'updatePreProposal'])->name('verify_teams.pre_proposals.update');
@@ -296,6 +295,9 @@ Route::middleware(['expert.auth', 'expert.approved', 'no.cache', 'track.expert']
     Route::get('/assignments', [InstructorAssignmentController::class, 'index'])->name('assignments');
     Route::patch('/assignments/{assignment}', [InstructorAssignmentController::class, 'update'])->name('assignments.update');
     Route::delete('/assignments/{assignment}', [InstructorAssignmentController::class, 'remove'])->name('assignments.remove');
+    // A team asking this expert to let them go. Only the expert decides - a
+    // team cannot drop an expert who already took them on.
+    Route::patch('/removal-requests/{expertRemovalRequest}', [RemovalRequestController::class, 'update'])->name('removal-requests.update');
     // The pre-proposal PDF a team applied with, when they used the one
     // their CaPSA approved instead of attaching a file.
     Route::get('/assignments/{assignment}/pre-proposal', [InstructorAssignmentController::class, 'preProposalDocument'])->name('assignments.pre_proposal');
@@ -448,6 +450,8 @@ Route::middleware(['auth', 'no.cache', 'track.expert'])->group(function () {
             // The manuscript a finished team hands in, from the archive page.
             Route::post('/archive/manuscript', [StudentArchiveController::class, 'submit'])->name('student.archive.manuscript.submit');
             Route::redirect('/profile', '/student/personal-info/edit')->name('student.profile');
+            // Finished or skipped the welcome tour; either way, done with it.
+            Route::put('/tour', [PortalTourController::class, 'update'])->name('student.tour.update');
         });
     });
 
