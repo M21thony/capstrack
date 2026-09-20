@@ -11,10 +11,11 @@ class ChecklistMilestone extends Model
 {
     use SoftDeletes;
 
-    protected $fillable = ['checklist_id', 'name', 'position', 'archived_at'];
+    protected $fillable = ['checklist_id', 'name', 'position', 'requires_previous', 'archived_at'];
 
     protected $casts = [
         'position' => 'integer',
+        'requires_previous' => 'boolean',
         'archived_at' => 'datetime',
     ];
 

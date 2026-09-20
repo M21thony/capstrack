@@ -235,7 +235,7 @@
             </div>
             <div class="spm-status">{{ $status }}</div>
             @if ($canUpload)
-              <a class="spm-upload {{ $row->state === 'overdue' ? 'urgent' : '' }}" href="{{ route('student.submission', ['item' => $uploadFor->id]) }}">{{ $uploadLabel }}</a>
+              <button type="button" class="spm-upload {{ $row->state === 'overdue' ? 'urgent' : '' }}" onclick="window.openSubmissionDrawer && window.openSubmissionDrawer('{{ $uploadFor->id }}')">{{ $uploadLabel }}</button>
             @else
               <span></span>
             @endif

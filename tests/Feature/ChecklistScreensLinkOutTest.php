@@ -45,8 +45,8 @@ class ChecklistScreensLinkOutTest extends TestCase
 
         $this->actingAs($this->student)->get('/student/progress')
             ->assertOk()
-            ->assertSee(route('student.submission', ['item' => $draft->id]), false)
-            ->assertDontSee(route('student.submission', ['item' => $defense->id]), false);
+            ->assertSee("openSubmissionDrawer('{$draft->id}')", false)
+            ->assertDontSee("openSubmissionDrawer('{$defense->id}')", false);
     }
 
     /** Changes are asked for on the draft, so the revision goes up against the draft. */
@@ -66,7 +66,7 @@ class ChecklistScreensLinkOutTest extends TestCase
             ->assertOk()
             ->assertSee('1st revision requested')
             ->assertSee('Upload 1st revision')
-            ->assertSee(route('student.submission', ['item' => $draft->id]), false);
+            ->assertSee("openSubmissionDrawer('{$draft->id}')", false);
     }
 
     public function test_the_capsa_opens_an_uploaded_scan_from_the_tracker(): void

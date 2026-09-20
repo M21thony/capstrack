@@ -276,7 +276,9 @@ class BugsFromTestingRoundTest extends TestCase
         $html = $this->actingAs($student, 'web')->get(route('student.experts'))->assertOk()->getContent();
 
         $this->assertStringNotContainsString('View Original PDF', $html);
-        $this->assertStringNotContainsString('id="previewDialog"', $html);
+        // The preview window itself is on every student page now, so what
+        // has to be gone is the button, not the window.
+        $this->assertStringNotContainsString('pre-proposal/1/document', $html);
     }
 
     public function test_a_team_can_open_its_own_document(): void

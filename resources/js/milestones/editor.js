@@ -540,7 +540,10 @@ export function openEditor({ urls, checklistId = null, onClose = null }) {
 
     h.append(
       hd, chev, el('span', 'ms-ord', String(idx + 1)), name, nameActs,
-      el('span', 'ms-ecount', plural(items.length, 'deliverable')), el('span', 'ms-spacer'),
+      el('span', 'ms-ecount', plural(items.length, 'deliverable')),
+      // The first milestone has nothing before it to wait for.
+      ...(idx === 0 ? [] : [gateBox(m)]),
+      el('span', 'ms-spacer'),
       btn('Add deliverables', 'ms-btn-add', () => openAdd(m), 'plus'),
       btn('Archive', '', () => run(
         async () => { await api('PATCH', fill(urls.milestone, m.id), { archived: true }); await reload(); },
@@ -913,6 +916,29 @@ export function openEditor({ urls, checklistId = null, onClose = null }) {
   }
 
   // ── Small helpers ─────────────────────────────────────────────────────
+
+  /** The gate: teams cannot hand anything in here until the one before it is done. */
+  function gateBox(m) {
+    const wrap = el('label', 'ms-gate');
+    const box = el('input');
+    box.type = 'checkbox';
+    box.checked = !!m.requires_previous;
+    box.dataset.key = 'gate-' + m.id;
+    const set = on => api('PATCH', fill(urls.milestone, m.id), { requires_previous: on }).then(reload);
+    box.addEventListener('change', () => {
+      const on = box.checked;
+      E.focusKey = 'gate-' + m.id;
+      run(
+        () => set(on),
+        on
+          ? `${m.name} now opens only after the milestone before it is complete.`
+          : `${m.name} is open to teams whenever they reach it.`,
+        () => set(!on),
+      );
+    });
+    wrap.append(box, el('span', '', 'Opens only after the milestone before it is complete'));
+    return wrap;
+  }
 
   function pickBox(key, label) {
     const box = el('input');

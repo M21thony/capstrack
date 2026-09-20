@@ -7,59 +7,9 @@
 <meta name="csrf-token" content="{{ csrf_token() }}"/>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="{{ asset('css/admin.css') }}"/>
+<link rel="stylesheet" href="{{ asset('css/team-management.css') }}"/>
 <style>
-  .tm-note{font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:16px}
-
-  /* State pills. Each colour means one thing: amber waits on someone,
-     red is blocked, green is settled, grey is nothing yet. */
-  .tm-pill{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:700;padding:3px 9px;border-radius:999px;text-transform:uppercase;letter-spacing:0.3px;white-space:nowrap}
-  .tm-pill-green{background:var(--green-bg);color:var(--green)}
-  .tm-pill-amber{background:var(--amber-bg);color:var(--amber)}
-  .tm-pill-red{background:var(--red-bg);color:var(--red)}
-  .tm-pill-grey{background:var(--bg4);color:var(--text3)}
-
-  .tm-bar{width:96px;height:6px;border-radius:999px;background:var(--bg4);overflow:hidden}
-  .tm-bar-fill{height:100%;border-radius:999px;background:var(--accent)}
-  .tm-bar-label{font-size:11px;color:var(--text3);font-variant-numeric:tabular-nums;}
-
-  .tm-roles{display:flex;gap:4px;flex-wrap:nowrap}
-  .tm-score{display:flex;justify-content:space-between;gap:12px;font-size:11.5px;line-height:1.7;white-space:nowrap}
-  .tm-score-stage{color:var(--text3)}
-  .tm-score b{color:var(--text);font-variant-numeric:tabular-nums}
-  .tm-score-wait{color:var(--amber);font-variant-numeric:tabular-nums}
-  .tm-role{font-size:9.5px;font-weight:700;padding:2px 7px;border-radius:5px;text-transform:uppercase;letter-spacing:0.3px}
-  .tm-role-on{background:var(--accent-light);color:var(--accent3)}
-  .tm-role-off{background:var(--bg4);color:var(--text3);opacity:.75}
-
-
   .tm-empty{text-align:center;padding:44px 20px;color:var(--text3);font-size:13px;line-height:1.6}
-
-  /* ── Page head + grouped toolbar ──
-     Seven equal tabs in one flat row, each wearing a red count badge, read
-     as seven unrelated pages and a wall of errors. They are three clusters
-     - the teams themselves, the decisions waiting on her, and the requests
-     and setup - so the toolbar says so, and the counts wear the neutral
-     pill the rest of the app uses (red stays reserved for blocked). */
-  .tm-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:14px}
-  .tm-head-desc{font-size:13px;color:var(--text2);line-height:1.5}
-  .tm-head-summary{font-size:12px;color:var(--text3);margin-top:4px}
-  .tm-head-summary b{color:var(--text);font-weight:600}
-  .tm-section-filter{display:flex;align-items:center;gap:8px;flex-shrink:0}
-  .tm-section-filter label{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.4px}
-  .tm-section-filter select{padding:7px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:12px;font-family:inherit}
-  .tm-section-filter a{font-size:12px;color:var(--text3);text-decoration:none}
-  .tm-section-filter a:hover{color:var(--text)}
-  .tm-toolbar{display:flex;align-items:stretch;flex-wrap:wrap;border-bottom:1px solid var(--border);margin-bottom:18px}
-  .tm-group{display:flex;align-items:center;gap:2px;padding:0 16px}
-  .tm-group:first-child{padding-left:0}
-  .tm-group-label{font-size:9.5px;font-weight:700;letter-spacing:0.6px;text-transform:uppercase;color:var(--text3);margin-right:8px;white-space:nowrap}
-  .tm-group-sep{width:1px;background:var(--border);margin:10px 0;flex-shrink:0}
-  .tm-tab{display:inline-flex;align-items:center;gap:6px;font-family:'DM Sans',sans-serif;font-size:12.5px;font-weight:600;padding:10px 10px;border-bottom:2px solid transparent;margin-bottom:-1px;color:var(--text2);text-decoration:none;white-space:nowrap;transition:.13s}
-  .tm-tab:hover{color:var(--text);background:var(--bg4)}
-  .tm-tab:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
-  .tm-tab.active{color:var(--accent3);border-bottom-color:var(--accent)}
-  .tm-count{font-size:10px;font-weight:700;min-width:17px;height:17px;padding:0 5px;border-radius:9px;background:var(--bg4);color:var(--text3);display:inline-flex;align-items:center;justify-content:center;font-variant-numeric:tabular-nums}
-  .tm-tab.active .tm-count{background:var(--accent-light);color:var(--accent3)}
 </style>
 @include('partials.skeleton-head', ['skReveal' => 'flex'])
 </head>
@@ -93,31 +43,61 @@
       <div class="card" style="padding:12px 16px;margin-bottom:14px;border-left:3px solid var(--red);font-size:12.5px;color:var(--text2)">{!! session('error') !!}</div>
     @endif
 
+    @if ($tab !== 'teams')
+
+      {{-- The same trail as every other level, so these three pages are named
+           and have a way back, instead of opening with no title on them. --}}
+      @include('capsa.partials.team-management._crumb', ['trail' => [
+        ['Team Management', route('capsa.team_management')],
+        [['milestones' => 'Milestones', 'leave_requests' => 'Leave Requests', 'rules' => 'Team Settings'][$tab], null],
+      ]])
+      @include('capsa.partials.team-management.' . $tab, $tabData)
+
+    @elseif ($allSections === [])
+
+      <div class="card"><div class="tm-empty">
+        You have no sections assigned yet, so there are no teams to manage.<br>
+        An Admin assigns sections when they make someone a CaPSA.
+      </div></div>
+
+    @else
+
+    {{-- No `use` here: this block sits inside @else, and PHP only allows
+         imports at the top level of a file. Both classes are written out. --}}
     @php
-      $tabs = [
-        'teams' => 'All Teams',
-        'pre_proposals' => 'Pre-Proposals',
-        'verification' => 'Verification',
-        'papers' => 'Document Review',
-        'milestones' => 'Milestones',
-        'leave_requests' => 'Leave Requests',
-        'rules' => 'Team Rules',
-      ];
-      // Neither of these is a list of teams to filter by section.
-      // Nor is Milestones, which has its own section tabs.
-      $sectionFiltered = ! in_array($tab, ['leave_requests', 'rules', 'milestones'], true);
-      $qs = fn (string $t) => ['tab' => $t] + ($selectedSection ? ['section' => $selectedSection] : []);
+      $maxMembers = \App\Models\Team::maxMembers();
+      $roleColours = ['adviser' => '#1d4ed8', 'consultant' => '#0891b2', 'grammarian' => '#b45309'];
 
-      // Seven equal tabs read as seven unrelated pages. They are not - three
-      // clusters, each named for what the tabs inside it are for.
-      $tabGroups = [
-        ['label' => 'Teams', 'tabs' => ['teams']],
-        ['label' => 'Review queue', 'tabs' => ['pre_proposals', 'verification', 'papers']],
-        ['label' => 'Requests & setup', 'tabs' => ['leave_requests', 'rules', 'milestones']],
-      ];
+      // Said once, so the Status column, the Status filter and the tiles
+      // cannot disagree about what a team's state is called.
+      $statusOf = fn ($r) => $r->team->is_confirmed ? 'Verified'
+        : ($r->awaitingVerification ? 'To verify' : ucfirst($r->team->team_status));
+      $statusPill = ['Verified' => 'p-green', 'To verify' => 'p-amber'];
 
-      // Where her decisions wait, in one line - the point of the tab counts
-      // without opening each tab to find them.
+      $isDone = fn ($r) => $r->milestones && $r->milestones->total > 0
+        && $r->milestones->completed === $r->milestones->total;
+      $needsHer = fn ($r) => $r->pendingProposalCount > 0 || $r->awaitingVerification || $r->papersToCheck > 0;
+
+      $completedCount = $rows->filter($isDone)->count();
+      $reviewCount = $rows->reject($isDone)->filter($needsHer)->count();
+
+      // One column per milestone name, in the order the checklists first
+      // mention them, so sections that share a checklist line up and one that
+      // does not still gets its own columns rather than the wrong team's.
+      // ponytail: the header's due date and lock come from the first section
+      // that has that milestone. Split the grid per section if two checklists
+      // ever disagree about them.
+      $columns = [];
+      foreach ($rows as $r) {
+        foreach ($r->milestones->milestones ?? [] as $ms) {
+          $columns[$ms->milestone->name] ??= [
+            'due' => $ms->due_on,
+            'gated' => (bool) $ms->milestone->requires_previous,
+          ];
+        }
+      }
+
+      // Where her decisions wait, in one line.
       $waiting = [];
       $n = $counts['pre_proposals'] ?? 0;
       if ($n > 0) { $waiting[] = $n.' '.Str::plural('title', $n).' to review'; }
@@ -130,56 +110,257 @@
       $waiting = implode(' &middot; ', $waiting);
     @endphp
 
-    <div class="tm-head">
-      <div class="tm-head-text">
-        <div class="tm-head-desc">Every team in your sections, and everything about them waiting on you, on one page.</div>
-        @if ($waiting !== '')
-          <div class="tm-head-summary"><b>Waiting on you:</b> {!! $waiting !!}</div>
-        @endif
+    <div class="tmx">
+      {{-- The same trail every level below uses, so the list is plainly the
+           top of it rather than a page with no place in the trail. --}}
+      @include('capsa.partials.team-management._crumb', ['trail' => [['Team Management', null]]])
+
+      <div class="phead">
+        <div class="tile"><x-tm-icon n="users" s="22" /></div>
+        <div style="min-width:0">
+          <h1>Team Management</h1>
+          <p>{!! $waiting !== '' ? '<b>Waiting on you:</b> '.$waiting : 'Every team in your sections, and everything about them, on one page.' !!}</p>
+        </div>
+        {{-- The three cross-team tools. Not facts about one team, so they stay
+             pages of their own rather than folding into this one. --}}
+        <div class="setw" style="display:flex;gap:9px;flex-wrap:wrap">
+          <a class="btn btn-o" href="{{ route('capsa.team_management', ['tab' => 'milestones']) }}">
+            <x-tm-icon n="clip" s="16" />Milestones
+            @if (($counts['milestones'] ?? 0) > 0)<span class="nb">{{ $counts['milestones'] }} to check</span>@endif
+          </a>
+          <a class="btn btn-o" href="{{ route('capsa.team_management', ['tab' => 'leave_requests']) }}">
+            <x-tm-icon n="mail" s="16" />Leave Requests
+            @if (($counts['leave_requests'] ?? 0) > 0)<span class="nb">{{ $counts['leave_requests'] }}</span>@endif
+          </a>
+          <a class="btn btn-o" href="{{ route('capsa.team_management', ['tab' => 'rules']) }}">
+            <x-tm-icon n="gear" s="16" />Team Settings
+          </a>
+        </div>
       </div>
 
-      @if ($sectionFiltered)
-        <form class="tm-section-filter" method="get" action="{{ route('capsa.team_management') }}">
-          <input type="hidden" name="tab" value="{{ $tab }}"/>
-          <label for="tm-section-select">Section</label>
-          <select id="tm-section-select" name="section" onchange="this.form.submit()">
-            <option value="">All my sections</option>
+      <div class="stats">
+        <div class="stat">
+          <div><div class="lab">Total Teams</div><div class="num">{{ $rows->count() }}</div></div>
+          <div class="tile" style="background:var(--accent-bg);color:var(--accent3)"><x-tm-icon n="users" s="20" /></div>
+        </div>
+        <div class="stat">
+          <div><div class="lab">In Progress</div><div class="num">{{ $rows->count() - $completedCount - $reviewCount }}</div></div>
+          <div class="tile" style="background:var(--amber-bg);color:var(--amber)"><x-tm-icon n="clock" s="20" /></div>
+        </div>
+        <div class="stat">
+          <div><div class="lab">For Review</div><div class="num">{{ $reviewCount }}</div></div>
+          <div class="tile" style="background:var(--violet-bg);color:var(--violet)"><x-tm-icon n="file" s="20" /></div>
+        </div>
+        <div class="stat">
+          <div><div class="lab">Completed</div><div class="num">{{ $completedCount }}</div></div>
+          <div class="tile" style="background:var(--green-bg);color:var(--green)"><x-tm-icon n="check" s="20" /></div>
+        </div>
+      </div>
+
+      <div class="tools">
+        <label class="fs">
+          <x-tm-icon n="search" s="16" />
+          <input type="text" id="tm-q" placeholder="Search by team name, title, or member..." aria-label="Search teams">
+        </label>
+
+        {{-- Section stays a real page load: it decides which teams are here
+             at all, not just which of them are shown. --}}
+        <form method="get" action="{{ route('capsa.team_management') }}" style="display:contents">
+          <select class="sel" name="section" aria-label="Section" onchange="this.form.submit()">
+            <option value="">All Sections</option>
             @foreach ($sectionOptions as $section)
               <option value="{{ $section }}" @selected($selectedSection === $section)>{{ $section }}</option>
             @endforeach
           </select>
-          @if ($selectedSection)
-            <a href="{{ route('capsa.team_management', ['tab' => $tab]) }}">Clear</a>
-          @endif
         </form>
-      @endif
-    </div>
 
-    <div class="tm-toolbar">
-      @foreach ($tabGroups as $gi => $group)
-        @if ($gi > 0)<span class="tm-group-sep" aria-hidden="true"></span>@endif
-        <div class="tm-group">
-          <span class="tm-group-label">{{ $group['label'] }}</span>
-          @foreach ($group['tabs'] as $key)
-            <a href="{{ route('capsa.team_management', $qs($key)) }}" class="tm-tab {{ $tab === $key ? 'active' : '' }}">
-              {{ $tabs[$key] }}
-              @if (($counts[$key] ?? 0) > 0 && $key !== 'teams')
-                <span class="tm-count">{{ $counts[$key] }}</span>
-              @endif
-            </a>
+        <select class="sel" id="tm-st" aria-label="Status">
+          <option value="">All Status</option>
+          @foreach ($rows->map($statusOf)->unique()->sort() as $status)
+            <option value="{{ $status }}">{{ $status }}</option>
           @endforeach
+        </select>
+
+        <div class="seg" role="group" aria-label="Show">
+          <button type="button" data-v="teams" aria-pressed="true">Teams</button>
+          <button type="button" data-v="progress" aria-pressed="false">Progress</button>
         </div>
-      @endforeach
+      </div>
+
+      <div class="tcard" id="tm-teams">
+        <div class="tscroll"><table>
+          <thead><tr>
+            <th style="width:44px"><input type="checkbox" id="tm-all" aria-label="Select all teams"></th>
+            <th>Team</th><th>Section</th><th>Title</th><th>Experts</th>
+            <th>Milestones</th><th>Defense Score</th><th>Status</th><th>Actions</th>
+          </tr></thead>
+          <tbody>
+            @foreach ($rows as $row)
+              @php
+                $status = $statusOf($row);
+                $href = route('capsa.team_management.show', $row->team->team_id);
+                $haystack = Str::lower(collect([
+                  $row->team->team_name, $row->team->project_title, $row->section, $row->leaderName,
+                ])->merge($row->members->map(fn ($m) => trim(($m->f_name ?? '').' '.($m->l_name ?? ''))))
+                  ->filter()->implode(' '));
+                $score = $defenseScores->get($row->team->team_id, collect())->last(fn ($s) => $s->average !== null);
+              @endphp
+              <tr data-q="{{ $haystack }}" data-st="{{ $status }}" data-href="{{ $href }}">
+                <td><input type="checkbox" aria-label="Select {{ $row->team->team_name }}"></td>
+
+                <td><div style="display:flex;align-items:center;gap:11px">
+                  <div class="av" style="background:linear-gradient(135deg,{{ $row->gradient }})">{{ $row->initials }}</div>
+                  <div style="min-width:0">
+                    <div class="tname">{{ $row->team->team_name }}</div>
+                    <div class="tsub">{{ $row->members->count() }}/{{ $maxMembers }} members &middot; {{ $row->leaderName }}</div>
+                  </div>
+                </div></td>
+
+                <td><span class="pill {{ $row->section === \App\Support\SectionScope::UNASSIGNED ? 'p-gray' : 'p-gold' }}">{{ $row->section }}</span></td>
+
+                <td style="max-width:210px"><div style="font-size:12.5px;line-height:1.45">
+                  @if ($row->team->project_title)
+                    {{ $row->team->project_title }}
+                  @else
+                    <span class="tsub">{{ [
+                      'awaiting_team_choice' => $row->approvedProposalCount.' recommended - the team is choosing',
+                      'settling' => 'One title recommended',
+                      'awaiting_review' => 'Waiting on your review',
+                    ][$row->titleState] ?? 'No titles yet' }}</span>
+                  @endif
+                </div></td>
+
+                <td><div class="chips" aria-label="{{ $row->engagedRoles->count() }} of 3 experts">
+                  @foreach ($roleColours as $role => $colour)
+                    @php $who = $row->engagedRoles->get($role); @endphp
+                    @if ($who)
+                      <span style="background:{{ $colour }}" title="{{ ucfirst($role) }}: {{ $who->name }}">{{ collect(preg_split('/\s+/', trim($who->name)))->filter()->map(fn ($w) => mb_strtoupper(mb_substr($w, 0, 1)))->take(2)->implode('') }}</span>
+                    @else
+                      <span class="more" title="No {{ $role }} yet">&ndash;</span>
+                    @endif
+                  @endforeach
+                </div></td>
+
+                <td>
+                  @if ($row->milestones && $row->milestones->total > 0)
+                    <div style="display:flex;align-items:center;gap:9px">
+                      <div class="bar {{ $row->milestones->overdue ? 'od' : '' }}"><i style="width:{{ $row->milestones->percent }}%"></i></div>
+                      <span class="barn">{{ $row->milestones->completed }}/{{ $row->milestones->total }}</span>
+                    </div>
+                    @if ($row->milestones->overdue)
+                      <div class="od-note">{{ $row->milestones->overdue }} overdue</div>
+                    @endif
+                  @else
+                    <span class="tsub">No checklist yet</span>
+                  @endif
+                </td>
+
+                <td>
+                  @if ($score)
+                    <b style="color:var(--ink);font-size:13.5px;font-variant-numeric:tabular-nums">{{ \App\Support\DefenseScores::format($score->average) }}</b>
+                    <div class="tsub">{{ $score->label }}</div>
+                  @else
+                    <span class="tsub">{{ $row->currentStage ?: 'Not scheduled' }}</span>
+                  @endif
+                </td>
+
+                <td>
+                  <span class="pill {{ $statusPill[$status] ?? 'p-gray' }}">{{ $status }}</span>
+                  {{-- Missing a stage's window is a fact about where they are,
+                       not a second status, so it sits under the pill. --}}
+                  @if ($row->failedStage)
+                    <div class="od-note">Missed {{ Str::before($row->failedStage, ' Defense') }} deadline</div>
+                  @elseif ($row->papersToCheck)
+                    <div class="tsub">{{ $row->papersToCheck }} {{ Str::plural('paper', $row->papersToCheck) }} to check</div>
+                  @endif
+                </td>
+
+                <td><a class="vd" href="{{ $href }}"><x-tm-icon n="user" s="14" />View Details</a></td>
+              </tr>
+            @endforeach
+            <tr class="tm-none" @if ($rows->isNotEmpty()) hidden @endif>
+              <td colspan="9" style="text-align:center;padding:46px 20px;color:var(--mut)">
+                @if ($rows->isEmpty())
+                  No teams in {{ $selectedSection ? 'section '.$selectedSection : 'your sections' }} yet.
+                @else
+                  No teams match that search.
+                @endif
+              </td>
+            </tr>
+          </tbody>
+        </table></div>
+        <div class="tfoot"><span class="c" data-count>{{ $rows->count() }} {{ Str::plural('team', $rows->count()) }}</span></div>
+      </div>
+
+      <div class="tcard" id="tm-progress" hidden>
+        <div class="tscroll"><table class="pg">
+          <thead><tr>
+            <th>Team</th>
+            @foreach ($columns as $name => $col)
+              <th>{{ $name }}<small>
+                @if ($col['gated'])<x-tm-icon n="lock" s="11" />@endif
+                {{ $col['due'] ? 'Due '.\Illuminate\Support\Carbon::parse($col['due'])->format('M j') : 'No due date' }}
+              </small></th>
+            @endforeach
+            <th>Overall</th>
+          </tr></thead>
+          <tbody>
+            @foreach ($rows as $row)
+              @php
+                // Keyed by name so a team lands in the right column even when
+                // its section's checklist is shorter than another's.
+                $byName = collect($row->milestones->milestones ?? [])
+                  ->mapWithKeys(fn ($ms, $i) => [$ms->milestone->name => [$ms, $i]]);
+              @endphp
+              <tr data-q="{{ Str::lower($row->team->team_name.' '.$row->section) }}" data-st="{{ $statusOf($row) }}">
+                <td><div style="display:flex;align-items:center;gap:10px">
+                  <div class="av" style="background:linear-gradient(135deg,{{ $row->gradient }})">{{ $row->initials }}</div>
+                  <div><div class="tname">{{ $row->team->team_name }}</div><div class="tsub">{{ $row->section }}</div></div>
+                </div></td>
+
+                @foreach ($columns as $name => $col)
+                  <td>
+                    @if ($byName->has($name))
+                      @php
+                        [$ms, $i] = $byName[$name];
+                        [$word, , $icon] = \App\Support\MilestoneProgress::milestoneState($ms);
+                        $tone = ['Completed' => 'd', 'Overdue' => 'o', 'In progress' => 'p', 'Locked' => 'k'][$word] ?? 'n';
+                      @endphp
+                      <a class="cell c-{{ $tone }}"
+                         href="{{ route('capsa.team_management.show', [$row->team->team_id, 'milestone' => $i]) }}"
+                         aria-label="{{ $row->team->team_name }}, {{ $name }}: {{ $word }}{{ $ms->locked ? '' : ", {$ms->completed} of {$ms->total} done" }}">
+                        <span class="cn"><x-tm-icon :n="$icon" s="13" />{{ $ms->locked ? '' : "{$ms->completed}/{$ms->total}" }}</span>
+                        <span class="cw">{{ $word }}</span>
+                      </a>
+                    @else
+                      <span class="tsub" style="display:block;text-align:center">&ndash;</span>
+                    @endif
+                  </td>
+                @endforeach
+
+                <td><div style="display:flex;align-items:center;gap:8px">
+                  <div class="bar {{ $row->milestones?->overdue ? 'od' : '' }}"><i style="width:{{ $row->milestones->percent ?? 0 }}%"></i></div>
+                  <span class="barn">{{ $row->milestones->completed ?? 0 }}/{{ $row->milestones->total ?? 0 }}</span>
+                </div></td>
+              </tr>
+            @endforeach
+            <tr class="tm-none" @if ($rows->isNotEmpty()) hidden @endif>
+              <td colspan="{{ count($columns) + 2 }}" style="text-align:center;padding:46px 20px;color:var(--mut)">
+                No teams match that search.
+              </td>
+            </tr>
+          </tbody>
+        </table></div>
+        <div class="legend">
+          <span><i class="c-d"></i>Completed</span>
+          <span><i class="c-p"></i>In progress</span>
+          <span><i class="c-o"></i>Overdue</span>
+          <span><i class="c-n"></i>Not started</span>
+          <span><i class="c-k"></i>Locked</span>
+          <span><x-tm-icon n="lock" s="12" />Opens only after the milestone before it is complete</span>
+        </div>
+      </div>
     </div>
-
-    @if ($allSections === [])
-      <div class="card"><div class="tm-empty">
-        You have no sections assigned yet, so there are no teams to manage.<br>
-        An Admin assigns sections when they make someone a CaPSA.
-      </div></div>
-    @else
-
-      @include('capsa.partials.team-management.' . $tab, $tabData)
 
     @endif
 
@@ -187,10 +368,51 @@
   </div>
 </div>
 @include('capsa.partials.skeleton-toggle')
-@include('capsa.partials.team-review-modal')
 @include('partials.confirm-sheet')
 <div id="tm-toast" class="toast"></div>
 
+@if ($tab === 'teams' && $allSections !== [])
+<script>
+  (function () {
+    /* Search and Status hide rows in both tables at once. Section is a real
+       page load, because it decides which teams are on the page at all. */
+    const box = document.getElementById('tm-q'), status = document.getElementById('tm-st'),
+          rows = [...document.querySelectorAll('tr[data-q]')];
+
+    const apply = () => {
+      const q = box.value.trim().toLowerCase(), st = status.value;
+      rows.forEach(r => { r.hidden = !(r.dataset.q.includes(q) && (!st || r.dataset.st === st)); });
+
+      document.querySelectorAll('tbody').forEach(b => {
+        const shown = [...b.querySelectorAll('tr[data-q]')].filter(r => !r.hidden).length;
+        const none = b.querySelector('.tm-none');
+        if (none) none.hidden = shown > 0;
+      });
+
+      const shown = [...document.querySelectorAll('#tm-teams tr[data-q]')].filter(r => !r.hidden).length;
+      document.querySelector('[data-count]').textContent = shown + (shown === 1 ? ' team' : ' teams');
+    };
+    box.oninput = apply;
+    status.onchange = apply;
+
+    /* Anywhere on the row opens the team, except the parts that do their own thing. */
+    document.querySelectorAll('tr[data-href]').forEach(r => r.onclick = e => {
+      if (!e.target.closest('input,a,button')) location.href = r.dataset.href;
+    });
+
+    const all = document.getElementById('tm-all');
+    all.onchange = () => document.querySelectorAll('#tm-teams tbody tr[data-q]').forEach(r => {
+      if (!r.hidden) r.querySelector('input[type=checkbox]').checked = all.checked;
+    });
+
+    document.querySelectorAll('.seg button').forEach(b => b.onclick = () => {
+      document.querySelectorAll('.seg button').forEach(x => x.setAttribute('aria-pressed', x === b));
+      document.getElementById('tm-teams').hidden = b.dataset.v !== 'teams';
+      document.getElementById('tm-progress').hidden = b.dataset.v !== 'progress';
+    });
+  })();
+</script>
+@endif
 
 @include('partials.escape-closes-modals')
 </body>

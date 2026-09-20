@@ -27,6 +27,7 @@ class CapstonePreProposal extends Model
         'duplication_status',
         'approved_status',
         'rejection_reason',
+        'capsa_note',
         'submitted_at',
     ];
 

@@ -200,6 +200,12 @@ Route::middleware(['expert.auth', 'no.cache', 'track.expert'])->prefix('capsa')-
         // route names so nothing that links to them breaks, but its page
         // redirects here - it was only ever half of this.
         Route::get('/team-management', [TeamManagementController::class, 'index'])->name('team_management');
+        // One page per level of detail, each an ordinary URL, so the browser's
+        // Back button, a reload, a new tab and a bookmark all work on their own.
+        Route::get('/team-management/{team}', [TeamManagementController::class, 'show'])->name('team_management.show');
+        Route::get('/team-management/{team}/pre-proposals', [TeamManagementController::class, 'preProposals'])->name('team_management.pre_proposals');
+        Route::get('/team-management/{team}/pre-proposals/{preProposal}', [TeamManagementController::class, 'title'])->name('team_management.title');
+        Route::get('/team-management/{team}/pre-proposals/{preProposal}/similar/{rank}', [TeamManagementController::class, 'similar'])->name('team_management.similar');
         // The rules every team is formed under: its size, and whether students
         // may create or join one. One resource, replaced whole on save.
         Route::get('/team-rules', [TeamRulesController::class, 'show'])->name('team_rules');
@@ -207,7 +213,7 @@ Route::middleware(['expert.auth', 'no.cache', 'track.expert'])->prefix('capsa')-
         // A member leaving a team that passed Title Defense - the CaPSA decides.
         Route::get('/leave-requests', [App\Http\Controllers\Capsa\LeaveRequestController::class, 'index'])->name('leave_requests');
         Route::patch('/leave-requests/{leaveRequest}', [App\Http\Controllers\Capsa\LeaveRequestController::class, 'update'])->name('leave_requests.update');
-        Route::get('/verify-teams', fn () => redirect()->route('capsa.team_management', ['tab' => 'verification']))->name('verify_teams');
+        Route::get('/verify-teams', fn () => redirect()->route('capsa.team_management'))->name('verify_teams');
         Route::patch('/verify-teams/{team}', [AdminTeamVerificationController::class, 'verify'])->name('verify_teams.verify');
         Route::patch('/verify-teams/pre-proposals/{preProposal}', [AdminTeamVerificationController::class, 'updatePreProposal'])->name('verify_teams.pre_proposals.update');
         Route::get('/verify-teams/pre-proposals/{preProposal}/document', [AdminTeamVerificationController::class, 'viewPreProposalDocument'])->name('verify_teams.pre_proposals.document');

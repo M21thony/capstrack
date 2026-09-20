@@ -106,9 +106,8 @@ class StudentReviewController extends Controller
             'next' => $document->nextRoundLabel(),
             'due' => $item?->due_date?->format('M j'),
             'requirement' => $item?->title,
-            'submitUrl' => $item
-                ? route('student.submission', ['item' => $item->id])
-                : route('student.submission'),
+            // The submit panel opens on this page; it needs the line, not a URL.
+            'itemId' => $item?->id,
         ];
     }
 

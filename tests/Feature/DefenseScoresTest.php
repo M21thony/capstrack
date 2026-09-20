@@ -122,10 +122,10 @@ class DefenseScoresTest extends TestCase
         $capsa = $this->makeCapsa(CapstoneExpert::factory()->create(['approved_status' => true, 'sections' => ['BSIT-3A']]));
 
         $this->actingAs($capsa, 'expert')
-            ->get(route('capsa.team_management', ['tab' => 'teams']))
+            ->get(route('capsa.team_management'))
             ->assertOk()
-            ->assertSee('Defense Scores')
-            ->assertSeeInOrder(['Scored Team', 'Title', '75']);
+            ->assertSee('Defense Score')
+            ->assertSeeInOrder(['Scored Team', '75', 'Title']);
     }
 
     public function test_the_adviser_sees_it_and_a_consultant_does_not(): void

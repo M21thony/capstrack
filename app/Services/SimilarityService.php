@@ -373,6 +373,28 @@ PROMPT;
         return array_values($all);
     }
 
+    /**
+     * An archive abstract with the words it shares with the title lit up.
+     *
+     * A literal, reader-verifiable signal: the words are the ones
+     * extractHighlightWords() picked, so the marking and the words come from
+     * the same place. Escapes first, so the text stays text.
+     *
+     * @param  array<int, string>  $words
+     */
+    public static function highlight(?string $text, array $words): string
+    {
+        $escaped = e($text ?? '');
+
+        if ($words === []) {
+            return $escaped;
+        }
+
+        $pattern = '/('.implode('|', array_map(fn ($w) => preg_quote($w, '/'), $words)).')/i';
+
+        return preg_replace($pattern, '<mark>$1</mark>', $escaped);
+    }
+
     // ── 3. TRUE RAG: embed query → cosine similarity → top N ──────────
     public function findSimilarDocuments(array $concepts, int $topN = 10): array
     {

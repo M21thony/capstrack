@@ -146,6 +146,7 @@ class ChecklistController extends Controller
                 'id' => $milestone->id,
                 'name' => $milestone->name,
                 'archived' => (bool) $milestone->archived_at,
+                'requires_previous' => (bool) $milestone->requires_previous,
                 'deliverables' => $milestone->deliverables->map(fn (Deliverable $d) => self::deliverable($d))->values(),
             ])->values(),
         ];

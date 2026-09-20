@@ -139,7 +139,7 @@ class AdminTeamVerificationTest extends TestCase
         ]);
     }
 
-    public function test_admin_can_see_complete_unverified_teams_on_verification_page(): void
+    public function test_admin_can_see_complete_unverified_teams_on_the_team_list(): void
     {
         $this->createAdmin();
         $leader = $this->createLeader();
@@ -151,10 +151,11 @@ class AdminTeamVerificationTest extends TestCase
             'leader_id' => $leader->student_id,
         ]);
 
-        $response = $this->get(route('capsa.team_management', ['tab' => 'verification']));
+        $response = $this->get(route('capsa.team_management'));
 
         $response->assertOk();
         $response->assertSee($team->team_name);
+        $response->assertSee('To verify');
         $response->assertDontSee($onGoing->team_name);
     }
 
@@ -232,10 +233,11 @@ class AdminTeamVerificationTest extends TestCase
         $this->assertSame(0, $team->preProposals()->whereNotNull('submitted_at')->count());
 
         $this->actingAs(CapstoneExpert::find(1), 'expert');
-        $response = $this->get(route('capsa.team_management', ['tab' => 'verification']));
+        $response = $this->get(route('capsa.team_management'));
 
         $response->assertOk();
-        $response->assertSee('No teams awaiting verification');
+        $response->assertSee($team->team_name);
+        $response->assertDontSee('To verify');
     }
 
     public function test_resubmitting_puts_a_team_back_in_the_verification_queue(): void
@@ -262,10 +264,11 @@ class AdminTeamVerificationTest extends TestCase
         $this->patch(route('student.pre-proposal.submit'), ['status' => 'submitted'])->assertSessionHas('status');
 
         $this->actingAs(CapstoneExpert::find(1), 'expert');
-        $response = $this->get(route('capsa.team_management', ['tab' => 'verification']));
+        $response = $this->get(route('capsa.team_management'));
 
         $response->assertOk();
         $response->assertSee($team->team_name);
+        $response->assertSee('To verify');
     }
 
     public function test_student_confirm_route_was_removed(): void
@@ -327,7 +330,7 @@ class AdminTeamVerificationTest extends TestCase
         ]);
         $teamB = $this->createCompleteTeam($leaderB, 'Team BSIT');
 
-        $response = $this->get(route('capsa.team_management', ['tab' => 'verification']));
+        $response = $this->get(route('capsa.team_management'));
 
         $response->assertOk();
         $response->assertDontSee($teamA->team_name);
@@ -377,7 +380,7 @@ class AdminTeamVerificationTest extends TestCase
         $leader = $this->createLeader();
         $team = $this->createCompleteTeam($leader);
 
-        $response = $this->get(route('capsa.team_management', ['tab' => 'verification']));
+        $response = $this->get(route('capsa.team_management'));
 
         $response->assertOk();
         $response->assertDontSee($team->team_name);
@@ -430,11 +433,10 @@ class AdminTeamVerificationTest extends TestCase
         ]);
     }
 
-    // The Verification tab carries both states at once, under their own
-    // headings, rather than the two separate tabs Team Verification used -
-    // splitting them meant clicking away to answer "did I already do that
-    // one?". What matters is that each team lands under the right heading.
-    public function test_verification_separates_teams_awaiting_from_teams_already_verified(): void
+    // Verification is no longer a place of its own. Every team is on the one
+    // list and carries its own status, so "did I already do that one?" is
+    // answered by the row rather than by clicking between two tabs.
+    public function test_the_team_list_marks_each_team_verified_or_to_verify(): void
     {
         $this->createAdmin();
 
@@ -445,24 +447,19 @@ class AdminTeamVerificationTest extends TestCase
         $verifiedTeam = $this->createCompleteTeam($leaderB, 'Team Done');
         $verifiedTeam->update(['is_confirmed' => true]);
 
-        $response = $this->get(route('capsa.team_management', ['tab' => 'verification']));
+        $response = $this->get(route('capsa.team_management'));
 
         $response->assertOk();
 
         $html = $response->getContent();
-        $awaitingAt = strpos($html, 'Awaiting verification');
-        $verifiedAt = strpos($html, '>Verified<');
 
-        $this->assertNotFalse($awaitingAt);
-        $this->assertNotFalse($verifiedAt);
-
-        // Each name falls between the heading it belongs under and the next.
-        $this->assertGreaterThan($awaitingAt, strpos($html, $pendingTeam->team_name));
-        $this->assertLessThan($verifiedAt, strpos($html, $pendingTeam->team_name));
-        $this->assertGreaterThan($verifiedAt, strpos($html, $verifiedTeam->team_name));
+        // The status sits on the same row as the team, so neither can be read
+        // off against the wrong one.
+        $this->assertMatchesRegularExpression('/data-q="[^"]*team pending[^"]*" data-st="To verify"/', $html);
+        $this->assertMatchesRegularExpression('/data-q="[^"]*team done[^"]*" data-st="Verified"/', $html);
     }
 
-    public function test_section_filter_limits_teams_in_both_tabs(): void
+    public function test_section_filter_limits_the_team_list(): void
     {
         $this->createAdmin(['BSCS-4A', 'BSIT-3A']);
 
@@ -476,7 +473,7 @@ class AdminTeamVerificationTest extends TestCase
         ]);
         $bsitTeam = $this->createCompleteTeam($leaderB, 'Team BSIT');
 
-        $response = $this->get(route('capsa.team_management', ['tab' => 'verification', 'section' => 'BSIT-3A']));
+        $response = $this->get(route('capsa.team_management', ['section' => 'BSIT-3A']));
 
         $response->assertOk();
         $response->assertSee($bsitTeam->team_name);
@@ -603,14 +600,14 @@ class AdminTeamVerificationTest extends TestCase
         $this->assertDatabaseHas('team', ['team_id' => $team->team_id, 'is_confirmed' => false]);
     }
 
-    public function test_verify_modal_surfaces_pre_proposal_content(): void
+    public function test_the_title_page_surfaces_pre_proposal_content(): void
     {
         $this->createAdmin();
         $leader = $this->createLeader();
         $team = $this->createCompleteTeam($leader);
-        $this->createPendingProposal($team, $leader, 1, self::PROJECT_TITLE);
+        $proposal = $this->createPendingProposal($team, $leader, 1, self::PROJECT_TITLE);
 
-        $response = $this->get(route('capsa.team_management', ['tab' => 'verification']));
+        $response = $this->get(route('capsa.team_management.title', [$team->team_id, $proposal->id]));
 
         $response->assertOk();
         $response->assertSee('A problem.');
@@ -650,7 +647,7 @@ class AdminTeamVerificationTest extends TestCase
         $response->assertNotFound();
     }
 
-    public function test_verify_modal_includes_a_document_link_for_each_proposal(): void
+    public function test_the_title_page_links_to_the_original_document(): void
     {
         \Illuminate\Support\Facades\Storage::fake();
         $this->createAdmin();
@@ -658,16 +655,11 @@ class AdminTeamVerificationTest extends TestCase
         $team = $this->createCompleteTeam($leader);
         $proposal = $this->createPendingProposal($team, $leader, 1, self::PROJECT_TITLE);
 
-        $response = $this->get(route('capsa.team_management', ['tab' => 'verification']));
-
-        // The payload is embedded as an @json()-encoded string inside an
-        // HTML attribute, so its slashes come out backslash-escaped just
-        // like every other field in it - check for that literal fragment
-        // rather than a plain URL string.
-        $expectedFragment = str_replace('/', '\/', '/verify-teams/pre-proposals/'.$proposal->id.'/document');
+        $response = $this->get(route('capsa.team_management.title', [$team->team_id, $proposal->id]));
 
         $response->assertOk();
-        $response->assertSee($expectedFragment, false);
+        $response->assertSee('View original PDF');
+        $response->assertSee(route('capsa.verify_teams.pre_proposals.document', $proposal->id), false);
     }
 
     // -- The title is not settled until the review is over -----------------
@@ -812,7 +804,7 @@ class AdminTeamVerificationTest extends TestCase
         // The team is still writing this one - never submitted.
         $third->update(['submitted_at' => null, 'title' => 'A Draft Nobody Has Turned In Yet']);
 
-        $html = $this->get(route('capsa.team_management', ['tab' => 'pre_proposals']))
+        $html = $this->get(route('capsa.team_management.pre_proposals', $team->team_id))
             ->assertOk()->getContent();
 
         $this->assertStringNotContainsString(

@@ -123,7 +123,9 @@
       @endif
     </a>
     <div class="nav-section">Documents</div>
-    <a href="{{ route('student.submission') }}" data-tour-target="student.submission" class="nav-item {{ request()->routeIs('student.submission') ? 'active' : '' }}">
+    {{-- Opens the panel on the page you are already on, instead of going somewhere. --}}
+    <a href="{{ route('student.submission') }}" data-tour-target="student.submission" class="nav-item"
+       onclick="event.preventDefault(); window.openSubmissionDrawer && window.openSubmissionDrawer('');">
       <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
       Document Submission
     </a>
@@ -343,6 +345,43 @@
   }
   updateThemeUI();
 </script>
+{{-- ── Submit document: the panel, on every student page ── --}}
+<link rel="stylesheet" href="{{ asset('css/submission-drawer.css') }}">
+
+<button class="fab" type="button" onclick="window.openSubmissionDrawer && window.openSubmissionDrawer('')">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+  Submit document
+</button>
+
+<div class="sc" id="submission-scrim"></div>
+
+<aside class="dw" id="submission-drawer" data-url="{{ route('student.submission') }}"
+       role="dialog" aria-label="Submit a document">
+  <div class="ph">
+    <h2>Submit a document</h2>
+    <button class="x" type="button" data-drawer-close aria-label="Close">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+    </button>
+  </div>
+  {{-- The form is fetched into here each time the panel opens. --}}
+  <div id="submission-drawer-slot" style="display:flex;flex-direction:column;flex:1;min-height:0"></div>
+</aside>
+
+{{-- One preview window and one message box for the whole student side. --}}
+<dialog class="preview-dialog" id="previewDialog">
+  <div class="preview-head">
+    <h2 id="previewTitle">Preview</h2>
+    <button class="x" type="button" onclick="document.getElementById('previewDialog').close()" aria-label="Close preview">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+    </button>
+  </div>
+  <div class="preview-body" id="previewBody"></div>
+</dialog>
+
+<div id="submission-toast"></div>
+
+@vite(['resources/js/submission-drawer.js', 'resources/js/submission-preview.js'])
+
 @include('partials.sidebar-scroll-restore')
 
 @include('student.partials.portal-tour')

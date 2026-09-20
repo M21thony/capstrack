@@ -58,7 +58,10 @@ class EveryStaffPageStillOpensTest extends TestCase
         $expert = $this->everyHat();
 
         foreach (\App\Http\Controllers\Capsa\TeamManagementController::TABS as $tab) {
+            // The tabs that became pages of their own send their old URL on
+            // to the list, so follow the hop instead of failing on it.
             $this->actingAs($expert, 'expert')
+                ->followingRedirects()
                 ->get(route('capsa.team_management', ['tab' => $tab]))
                 ->assertOk();
         }
