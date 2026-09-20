@@ -22,7 +22,192 @@ class SimilarityService
     }
 
     // ── 2. Extract key concepts from PDF text ─────────────────────────
+    //
+    // The pre-proposal is a fixed form with fixed headings, so every section
+    // is read straight off it. This used to be one more call to the model,
+    // and that call was not repeatable: the same PDF, byte for byte, came
+    // back with its scope trimmed to 187 characters on one run and 526 on
+    // another, and with a different keyword list each time - one of them led
+    // by "CSPC" and "College of Computer Studies", the very terms the rest of
+    // the pipeline works to ignore.
+    //
+    // Everything downstream is built on these concepts, so an unsteady read
+    // of the form made the final percentage unsteady too: an archived smart
+    // door lock scored 75% against this project on one run and 25% on the
+    // next, off one unchanged file. Splitting on the headings hands the judge
+    // each section as the team actually wrote it, and three to four times
+    // more of it, since the model paraphrased the long sections even though
+    // its prompt told it to copy them. Measured against that same document,
+    // five runs - two of them after forcing the model out of memory and back
+    // in - returned identical scores.
     public function extractKeyConcepts(string $pdfText): array
+    {
+        $sections = $this->splitPreProposalForm($pdfText);
+
+        // Not the standard form: an older layout, a scan, a PDF whose text
+        // layer came out mangled. Ask the model, which is what every upload
+        // used to do.
+        if (count($sections) < 6) {
+            return $this->extractKeyConceptsWithAi($pdfText);
+        }
+
+        $agenda = preg_split('/\s*[;\n]\s*|\s+\x{2022}\s+/u', $sections['research_agenda'] ?? '', -1, PREG_SPLIT_NO_EMPTY);
+
+        return [
+            'title' => $sections['title'] ?? '',
+            'main_topic' => $this->firstSentence($sections['proposed_solution'] ?? ''),
+            'domain' => $this->deriveDomain($sections),
+            'keywords' => $this->deriveKeywords($sections),
+            'problem_statement' => $sections['problem_statement'] ?? '',
+            'proposed_solution' => $sections['proposed_solution'] ?? '',
+            'scope' => $sections['scope'] ?? '',
+            'limitations' => $sections['limitations'] ?? '',
+            'sdg_goals' => $sections['sdg_goals'] ?? '',
+            'research_agenda' => $this->normalizeToStringList(array_map('trim', $agenda)),
+            'sdm' => $sections['sdm'] ?? 'Agile Development Methodology',
+            // Nothing in the app reads these two - they are here so the saved
+            // shape is the same one every existing check has.
+            'technologies' => [],
+            'target_users' => '',
+        ];
+    }
+
+    // The form's headings, in the order it prints them. A section runs from
+    // the end of its own heading to the start of the next one.
+    private const FORM_HEADINGS = [
+        'team_alias' => 'Team Alias',
+        'title' => 'Project Title',
+        'proponents' => 'Proponents/Researchers',
+        'sdg_goals' => 'Applicable UN Sustainable Development Goals',
+        'research_agenda' => 'Applicable Research Agenda and Priority Area',
+        'problem_statement' => 'Problem Statement',
+        'proposed_solution' => 'Proposed Solution',
+        'scope' => 'Scope of the Proposed Solution',
+        'limitations' => 'Limitations of the Proposed Solution',
+        'sdm' => 'Software Development Methodology',
+    ];
+
+    private function splitPreProposalForm(string $text): array
+    {
+        // Longer headings contain shorter ones ("Scope of the Proposed
+        // Solution" contains "Proposed Solution"), which is harmless here:
+        // the scan runs left to right, so the outer heading always matches
+        // first at its own earlier position and takes the inner one with it.
+        $alternation = implode('|', array_map(
+            fn ($heading) => preg_quote($heading, '/'),
+            self::FORM_HEADINGS
+        ));
+
+        // The trailing s? absorbs the plural the form uses on some headings
+        // from one intake to the next ("Goal:" printed as "Goals:").
+        if (! preg_match_all('/('.$alternation.')s?\s*:\s*/i', $text, $found, PREG_OFFSET_CAPTURE)) {
+            return [];
+        }
+
+        $keyForLabel = array_flip(array_map('strtolower', self::FORM_HEADINGS));
+        $sections = [];
+
+        foreach ($found[1] as $i => [$heading, $position]) {
+            $start = $position + strlen($found[0][$i][0]);
+            $end = $found[1][$i + 1][1] ?? strlen($text);
+            $body = trim(substr($text, $start, $end - $start));
+            $key = $keyForLabel[strtolower($heading)] ?? null;
+
+            // A heading printed with nothing under it is the same as a
+            // heading that is not there at all.
+            if ($key !== null && $body !== '') {
+                $sections[$key] = $body;
+            }
+        }
+
+        return $sections;
+    }
+
+    // Stands in for the model's one-sentence summary. Capped because it feeds
+    // both the embedding and the word-highlighting, and a whole section
+    // pasted in here would light up half of a matched abstract.
+    private function firstSentence(string $text): string
+    {
+        // Several teams write the Proposed Solution as a bullet list, so the
+        // first sentence arrives wearing its bullet. Left on, the glyph goes
+        // into the embedding as a token of its own.
+        $text = preg_replace('/^[\s\x{2022}\x{00B7}\x{25CF}\x{25AA}\-\x{2013}\x{2014}*]+/u', '', trim($text));
+        $first = preg_split('/(?<=[.!?])\s+/', $text, 2)[0] ?? '';
+
+        return mb_substr($first, 0, 300);
+    }
+
+    // The form has no domain field, so it is read off the words the team
+    // used. Most specific first: a study that mentions both a sensor and a
+    // website is an IoT study with a web front end, not a web system.
+    private function deriveDomain(array $sections): string
+    {
+        $text = strtolower(implode(' ', $sections));
+
+        $domains = [
+            'IoT' => 'iot|sensor|arduino|rfid|raspberry|microcontroller|esp32',
+            'Mobile App' => 'android|mobile app|smartphone',
+            'AI/ML' => 'machine learning|artificial intelligence|neural network|deep learning|natural language',
+            'Web System' => 'web-based|web based|website|web app|browser',
+            'Desktop App' => 'desktop application|standalone application',
+        ];
+
+        foreach ($domains as $domain => $pattern) {
+            if (preg_match('/'.$pattern.'/', $text)) {
+                return $domain;
+            }
+        }
+
+        return 'Management System';
+    }
+
+    // No keyword field on the form either. These are the words the team
+    // repeated most, minus everything this service already treats as filler -
+    // the shared stop words, the words true of every capstone in the archive,
+    // and the school's own name.
+    private function deriveKeywords(array $sections): array
+    {
+        // stopWordsList() is deliberately not extended here - it also feeds
+        // the embedding, and every archived vector was built with exactly
+        // that list. These are the grammar words it happens not to carry,
+        // which matter here only because a form section is prose where a
+        // title is not: "will" was coming out as a team's top keyword.
+        $filler = array_merge($this->stopWordsList(), $this->genericCapstoneWords(), [
+            'will', 'shall', 'would', 'could', 'should', 'must', 'been', 'being',
+            'they', 'them', 'these', 'those', 'there', 'when', 'where', 'which',
+            'while', 'than', 'then', 'that', 'this', 'such', 'each', 'also',
+            'into', 'through', 'during', 'other', 'more', 'most', 'only', 'very',
+            'some', 'both', 'because', 'however', 'currently', 'often', 'able',
+            'need', 'needs', 'make', 'makes', 'made', 'time', 'times', 'well',
+        ]);
+
+        $text = strtolower(implode(' ', array_filter([
+            $sections['title'] ?? '',
+            $sections['problem_statement'] ?? '',
+            $sections['proposed_solution'] ?? '',
+            $sections['scope'] ?? '',
+        ])));
+
+        preg_match_all('/[a-z][a-z\-]{3,}/', $text, $matches);
+
+        $counts = [];
+
+        foreach ($matches[0] as $word) {
+            if (in_array($word, $filler, true) || $this->isInstitutional($word)) {
+                continue;
+            }
+
+            $counts[$word] = ($counts[$word] ?? 0) + 1;
+        }
+
+        arsort($counts);
+
+        return array_slice(array_keys($counts), 0, 10);
+    }
+
+    // The original reader: hand the model the whole form and ask for the same
+    // shape back. Only reached now when the headings are missing.
+    private function extractKeyConceptsWithAi(string $pdfText): array
     {
         $truncated = mb_substr($pdfText, 0, 6000);
 
