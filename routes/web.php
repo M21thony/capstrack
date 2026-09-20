@@ -34,6 +34,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DirectoryController;
 use App\Http\Controllers\DuplicationController;
 use App\Http\Controllers\ExpertController;
+use App\Http\Controllers\ExpertNotificationController;
 use App\Http\Controllers\Instructor\AssignmentController as InstructorAssignmentController;
 use App\Http\Controllers\Instructor\ConsultationLogController;
 use App\Http\Controllers\Instructor\DashboardController as InstructorDashboardController;
@@ -52,6 +53,7 @@ use App\Http\Controllers\PdfAnnotationController;
 use App\Http\Controllers\PersonalInfoController;
 use App\Http\Controllers\PreProposalController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\PushSubscriptionController;
 use App\Http\Controllers\RecruitmentController;
 use App\Http\Controllers\Student\ArchiveController as StudentArchiveController;
 use App\Http\Controllers\Student\DefenseScoresController;
@@ -473,7 +475,29 @@ Route::middleware(['auth', 'no.cache', 'track.expert'])->group(function () {
     Route::put('/notifications/{notification}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
     Route::patch('/notifications', [NotificationController::class, 'markAllRead'])->name('notifications.mark-all-read');
     Route::put('/notifications/seen', [NotificationController::class, 'markSeen'])->name('notifications.seen');
+    Route::put('/notifications/preferences', [NotificationController::class, 'preferences'])->name('notifications.preferences');
+    // The browser hands us the address its push service gave it.
+    Route::post('/push/subscribe', [PushSubscriptionController::class, 'store'])->name('push.subscribe');
 });
+// The bell on every expert page - CaPSA, admin and instructor alike, since one
+// person is often more than one of those. Deliberately not behind
+// expert.approved: an unapproved expert still needs to hear a team apply to them.
+Route::prefix('instructor/notifications')
+    ->middleware(['expert.auth', 'no.cache'])
+    ->name('instructor.notifications.')
+    ->group(function () {
+        Route::get('/', [ExpertNotificationController::class, 'index'])->name('index');
+        Route::get('/count', [ExpertNotificationController::class, 'count'])->name('count');
+        Route::put('/preferences', [ExpertNotificationController::class, 'preferences'])->name('preferences');
+        Route::put('/seen', [ExpertNotificationController::class, 'markSeen'])->name('seen');
+        Route::put('/{notification}/read', [ExpertNotificationController::class, 'markAsRead'])->name('read');
+        Route::patch('/', [ExpertNotificationController::class, 'markAllRead'])->name('mark-all-read');
+    });
+// The browser hands us the address its push service gave it.
+Route::post('instructor/push/subscribe', [PushSubscriptionController::class, 'store'])
+    ->middleware(['expert.auth'])
+    ->name('instructor.push.subscribe');
+
 Route::prefix('instructor/schedule')
     ->middleware(['expert.auth', 'no.cache', 'track.expert'])
     ->group(function () {
