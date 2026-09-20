@@ -272,46 +272,6 @@
         <div class="card" style="margin-bottom:12px;padding:10px 14px;border-color:var(--green);background:var(--green-bg);color:var(--green);font-size:13px">{{ session('status') }}</div>
       @endif
 
-      @foreach ($removalRequests as $rr)
-        {{-- A team that already has this expert asking to be let go. The team
-             cannot drop them on its own - this expert is the one who decides. --}}
-        @php
-          $rrRole = $rr->assignment?->engaged_role_name ?: 'expert';
-          $rrLeader = trim(($rr->requester->f_name ?? '').' '.($rr->requester->l_name ?? '')) ?: 'The team leader';
-          $rrHasError = $errors->removal->any() && (int) old('removal_id') === (int) $rr->id;
-        @endphp
-        <div class="card" id="removal-{{ $rr->id }}" style="margin-bottom:12px;padding:14px 16px;border-color:rgba(185,28,28,.28);background:var(--red-bg, rgba(220,38,38,.07))">
-          <div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap">
-            <b style="font-size:14px">{{ $rr->team->team_name }} asks you to let them go</b>
-            <span style="font-size:12px;color:var(--text3)">
-              You are their {{ $rrRole }}. They cannot remove you themselves, so it is your call.
-              Asked {{ $rr->created_at->diffForHumans() }} by {{ $rrLeader }}.
-            </span>
-          </div>
-          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--text3);margin:10px 0 3px">Their reason</div>
-          <div style="font-size:14px;margin-bottom:12px;white-space:pre-line">{{ $rr->reason }}</div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start">
-            <form method="POST" action="{{ route('instructor.removal-requests.update', $rr) }}"
-                  onsubmit="return confirm('Stop being the {{ $rrRole }} of {{ addslashes($rr->team->team_name) }}? They can then apply to another {{ $rrRole }}.')">
-              @csrf @method('PATCH')
-              <input type="hidden" name="removal_id" value="{{ $rr->id }}">
-              <input type="hidden" name="decision" value="release">
-              <button class="btn btn-primary" type="submit">Release team</button>
-            </form>
-            <form method="POST" action="{{ route('instructor.removal-requests.update', $rr) }}" style="display:flex;gap:6px;flex:1;min-width:280px">
-              @csrf @method('PATCH')
-              <input type="hidden" name="removal_id" value="{{ $rr->id }}">
-              <input type="hidden" name="decision" value="decline">
-              <input class="input" name="note" value="{{ $rrHasError ? old('note') : '' }}" placeholder="Stay on - tell them why (e.g. let us finish Chapter 1 first)" minlength="10" maxlength="1000" required style="flex:1">
-              <button class="btn btn-ghost" type="submit">Decline</button>
-            </form>
-          </div>
-          @if ($rrHasError)
-            <div style="font-size:12px;color:var(--red);margin-top:6px">{{ $errors->removal->first() }}</div>
-          @endif
-        </div>
-      @endforeach
-
       @foreach ($titleConfirmations as $tc)
         {{-- A team the panel sent back for a new title: its adviser confirms the one the CaPSA approved. --}}
         <div class="card" style="margin-bottom:12px;padding:14px 16px;border-color:rgba(180,83,9,.3);background:var(--amber-bg)">
