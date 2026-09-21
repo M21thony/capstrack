@@ -14,10 +14,11 @@ use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
 /**
- * A student asking their CaPSA for a member to leave a locked team.
+ * A student asking their CaPSA for a member to leave a team.
  *
- * Only for teams that passed Title Defense. Before that, leaving goes through
- * the leader the way it always has; this is not a second way around them.
+ * A member leaving always needs the CaPSA. A leader removing someone only
+ * does once the team passed Title Defense; before that the leader removes
+ * members directly.
  */
 class LeaveRequestController extends Controller
 {
@@ -39,10 +40,6 @@ class LeaveRequestController extends Controller
             return $this->refuse($request, 'You are not in a team.');
         }
 
-        if (! $team->isTeamLocked()) {
-            return $this->refuse($request, 'Your team has not passed Title Defense, so members still leave through the team leader.');
-        }
-
         $isLeader = (int) $team->leader_id === (int) $me->student_id;
 
         if ($validated['type'] === MemberLeaveRequest::LEAVE) {
@@ -54,6 +51,10 @@ class LeaveRequestController extends Controller
 
             $subjectId = (int) $me->student_id;
         } else {
+            if (! $team->isTeamLocked()) {
+                return $this->refuse($request, 'Your team has not passed Title Defense, so you can remove members yourself.');
+            }
+
             if (! $isLeader) {
                 return $this->refuse($request, 'Only the team leader can ask for a member to be removed.', 403);
             }

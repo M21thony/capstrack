@@ -16,8 +16,8 @@ use Illuminate\Validation\Rule;
 use Illuminate\Http\RedirectResponse;
 
 /**
- * Where a CaPSA decides whether a member may leave a team that passed Title
- * Defense.
+ * Where a CaPSA decides whether a member may leave a team, or be removed from
+ * one that passed Title Defense.
  */
 class LeaveRequestController extends Controller
 {

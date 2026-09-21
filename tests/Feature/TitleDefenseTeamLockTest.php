@@ -180,7 +180,6 @@ class TitleDefenseTeamLockTest extends TestCase
         [$team, , $a] = $this->lockedTeam();
 
         $this->actingAs($a, 'web')->delete(route('team.destroy'))->assertSessionHas('error', Team::TEAM_LOCKED);
-        $this->actingAs($a, 'web')->post(route('team.leave-request'))->assertSessionHas('error', Team::TEAM_LOCKED);
         $this->actingAs($a, 'web')->deleteJson('/api/teams/'.$team->team_id)->assertStatus(422);
 
         $this->assertTrue($this->inTeam($a, $team));
@@ -194,19 +193,6 @@ class TitleDefenseTeamLockTest extends TestCase
         $this->actingAs($leader, 'web')->delete(route('team.members.remove', $a))->assertSessionHas('error', Team::TEAM_LOCKED);
         $this->actingAs($leader, 'web')->deleteJson('/api/teams/'.$team->team_id.'/members/'.$a->student_id)->assertStatus(422);
 
-        $this->assertTrue($this->inTeam($a, $team));
-    }
-
-    /** A leave request from before the lock must not approve itself when its timer runs out. */
-    public function test_an_old_leave_request_does_not_approve_itself_after_the_lock(): void
-    {
-        [$team, , $a, $b] = $this->lockedTeam();
-        $old = LeaveApproval::create(['student_id' => $a->student_id, 'team_id' => $team->team_id, 'attempt' => 1, 'status' => LeaveApproval::STATUS_PENDING, 'expires_at' => now()->subHour()]);
-
-        // Any leave action sweeps expired requests first.
-        $this->actingAs($b, 'web')->post(route('team.leave-request'));
-
-        $this->assertSame(LeaveApproval::STATUS_CANCELLED, $old->fresh()->status);
         $this->assertTrue($this->inTeam($a, $team));
     }
 
@@ -234,13 +220,40 @@ class TitleDefenseTeamLockTest extends TestCase
         $this->assertSame(0, MemberLeaveRequest::count());
     }
 
-    /** Before Title Defense, leaving still goes through the leader - this is not a way around them. */
-    public function test_an_unlocked_team_cannot_use_leave_requests(): void
+    /** Before Title Defense a member still asks the CaPSA to leave; the leader removes members directly. */
+    public function test_an_unlocked_team_asks_the_capsa_to_leave_but_not_to_remove(): void
     {
-        [, , $a] = $this->team();
+        [$team, $leader, $a, $b] = $this->team();
 
-        $this->askToLeave($a)->assertStatus(422);
-        $this->assertSame(0, MemberLeaveRequest::count());
+        $this->askToLeave($a)->assertCreated();
+        $this->assertTrue($this->inTeam($a, $team), 'asking is not leaving');
+
+        $this->actingAs($leader, 'web')->postJson(route('team.capsa-leave-requests.store'), [
+            'type' => MemberLeaveRequest::REMOVE, 'student_id' => $b->student_id, 'reason' => 'Has not shown up for any meeting.',
+        ])->assertStatus(422);
+        $this->assertSame(1, MemberLeaveRequest::count());
+    }
+
+    public function test_a_member_of_an_unlocked_team_cannot_just_leave(): void
+    {
+        [$team, , $a] = $this->team();
+
+        $this->actingAs($a, 'web')->delete(route('team.destroy'))->assertSessionHas('error', MemberLeaveRequest::ASK_CAPSA);
+        $this->actingAs($a, 'web')->deleteJson('/api/teams/'.$team->team_id)->assertStatus(422);
+
+        $this->assertTrue($this->inTeam($a, $team));
+    }
+
+    public function test_the_capsa_approves_a_leave_from_an_unlocked_team(): void
+    {
+        [$team, , $a] = $this->team();
+        $this->askToLeave($a)->assertCreated();
+        $request = MemberLeaveRequest::first();
+
+        $this->actingAs($this->capsa(), 'expert')
+            ->patchJson(route('capsa.leave_requests.update', $request), ['status' => 'approved'])->assertOk();
+
+        $this->assertFalse($this->inTeam($a, $team));
     }
 
     public function test_the_leader_asks_to_remove_and_the_member_is_told(): void

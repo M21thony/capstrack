@@ -75,7 +75,7 @@
 
     <div class="rr-head">
       <div>
-        <div class="rr-sub">A team that passes Title Defense keeps its members. When one of them has to leave, or a team wants to change an expert who already took them on, the request comes to you with a reason.</div>
+        <div class="rr-sub">A member can only leave a team with your approval, and once a team passes Title Defense its leader can't remove anyone either. Those requests, and teams asking to change an expert who already took them on, come to you with a reason.</div>
       </div>
       <span class="rr-locked">
         <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
@@ -195,7 +195,7 @@
       </div>
       <div class="rr-empty" id="pending-empty" @if($pending->isNotEmpty() || $expertPending->isNotEmpty()) hidden @endif>
         <b>Nothing waiting</b>
-        When a member of a locked team asks to leave, a leader asks to remove someone, or a team asks to change an expert, it shows up here.
+        When a member asks to leave, a leader of a locked team asks to remove someone, or a team asks to change an expert, it shows up here.
       </div>
     </section>
 
@@ -348,7 +348,7 @@
       : 'Decline this request?';
     $('rr-confirm-lede').textContent = d.type === 'expert'
       ? d.team + ' asked to change an expert who already took them on. This cannot be undone from here.'
-      : d.team + ' passed Title Defense. This cannot be undone from here.';
+      : 'This cannot be undone from here.';
 
     const list = $('rr-effects');
     list.innerHTML = '';
