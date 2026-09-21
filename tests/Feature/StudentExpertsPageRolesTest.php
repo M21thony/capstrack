@@ -226,6 +226,32 @@ class StudentExpertsPageRolesTest extends TestCase
         $this->assertStringContainsString('Filled', $rolesGrid);
     }
 
+    /** Your Experts shows the expert's own photo; the empty slot shows nobody. */
+    public function test_your_experts_shows_the_experts_photo(): void
+    {
+        [$student, $team] = $this->makeLeaderWithTeam();
+        $expert = $this->makeExpertWithRoles(['adviser']);
+        $expert->update(['profile_picture' => 'https://lh3.googleusercontent.com/a/adviser-photo']);
+
+        TeamExpertAssignment::create([
+            'team_id' => $team->team_id,
+            'expert_id' => $expert->expert_id,
+            'expert_role_id' => $this->expertRoleId($expert, 'adviser'),
+            'status' => 'approved',
+        ]);
+
+        $html = $this->actingAs($student, 'web')->get('/student/experts')->getContent();
+
+        $adviser = $this->checklistRow($html, 'adviser');
+        $this->assertStringContainsString('src="https://lh3.googleusercontent.com/a/adviser-photo"', $adviser);
+        // The leader can still ask for a change, from a button that says so.
+        $this->assertStringContainsString('>Change</button>', $adviser);
+
+        $consultant = $this->checklistRow($html, 'consultant');
+        $this->assertStringContainsString('Not chosen yet', $consultant);
+        $this->assertStringNotContainsString('<img', $consultant);
+    }
+
     private function checklistRow(string $html, string $role): string
     {
         $start = strpos($html, 'data-slot-role="'.$role.'"');

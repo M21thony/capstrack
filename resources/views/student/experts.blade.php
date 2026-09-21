@@ -453,62 +453,56 @@
       @endif
 
 
-      {{-- Who your team actually has, across the page rather than down the
-           side of it. It sat in the right-hand panel where filled and empty
-           differed by the colour of a ten-pixel pill, so three rows read as
-           three identical rows and a team could not tell at a glance whether
-           they had an adviser. --}}
+      {{-- Who your team actually has: one card per slot, each under the role
+           card of the same name, with the expert's own photo. A team can tell
+           at a glance whether they have an adviser - and who it is. --}}
       @if($team)
-        @php $filledCount = count($filledSlots) + count($unslotted); @endphp
+        @php
+          $filledCount = count($filledSlots) + count($unslotted);
+          // Approved before roles were recorded, so they belong to no slot.
+          // Listed rather than dropped: they are still your expert.
+          $yxTiles = collect(['adviser', 'consultant', 'grammarian'])
+            ->map(fn ($r) => ['slot' => $r, 'label' => ucfirst($r), 'a' => $filledSlots[$r] ?? null])
+            ->concat(collect($unslotted)->map(fn ($a) => ['slot' => null, 'label' => 'Assigned', 'a' => $a]));
+        @endphp
         <div class="yx">
-          {{-- The count travels with the label rather than sitting opposite
-               the chips: pushed to the far edge it was the first thing to wrap
-               onto a second line, which left the strip two rows tall with one
-               number stranded under it. --}}
-          <span class="yx-head">
+          <div class="yx-head">
             <span class="yx-lab">Your Experts</span>
             <span class="yx-count">
               <b>{{ $filledCount }} of 3</b> {{ $filledCount >= 3 ? 'filled - your team is set' : 'filled' }}
             </span>
-          </span>
-          <span class="yx-sep"></span>
+          </div>
 
-          @foreach(['adviser', 'consultant', 'grammarian'] as $slotRole)
-            @php $a = $filledSlots[$slotRole] ?? null; @endphp
-            <span class="yx-chip {{ $a ? 'is-set' : 'is-open' }}" data-slot-role="{{ $slotRole }}">
-              <span class="yx-mark">@if($a)<svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>@else?@endif</span>
-              <span class="yx-role">{{ ucfirst($slotRole) }}</span>
-              @if($a)
-                <span class="yx-name" title="{{ $a->expert?->name }}">{{ $a->expert?->name }}</span>
-                @php $pendingRemoval = collect($pendingRemovalIds)->firstWhere('assignment', (int) $a->assignment_id); @endphp
-                @if($isLeader && $pendingRemoval)
-                  <button type="button" class="yx-cancel" title="Waiting on your section's CaPSA - click to take the request back"
-                          onclick="openWithdrawRemovalModal({{ $pendingRemoval['request'] }}, '{{ addslashes($a->expert?->name ?? 'this expert') }}')">Cancel request<svg viewBox="0 0 24 24" width="11" height="11" stroke="currentColor" fill="none" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
-                @elseif($isLeader)
-                  <button type="button" class="yx-x" title="Ask your section's CaPSA to change {{ $a->expert?->name ?? 'this expert' }}"
-                          onclick="openChangeExpertModal({{ $a->assignment_id }}, '{{ addslashes($a->expert?->name ?? '') }}', '{{ addslashes(ucfirst($a->engaged_role_name ?? 'expert')) }}')"><svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg></button>
+          <div class="yx-slots">
+            @foreach($yxTiles as $tile)
+              @php $a = $tile['a']; $ex = $a?->expert; @endphp
+              <div class="yx-slot {{ $a ? 'is-set' : 'is-open' }}" @if($tile['slot']) data-slot-role="{{ $tile['slot'] }}" @endif>
+                @if($a)
+                  {{-- Photo over initials, as on the cards below: a photo that
+                       fails to load removes itself and the initials show. --}}
+                  <span class="avatar">{{ $ex?->avatarInitials() }}@if($ex?->hasAvatarImage())<img class="avatar-photo" src="{{ $ex->avatarUrl() }}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">@endif</span>
+                @else
+                  <span class="yx-empty" aria-hidden="true">?</span>
                 @endif
-              @endif
-            </span>
-          @endforeach
-
-          {{-- Approved before roles were recorded, so they belong to no slot.
-               Listed rather than dropped: they are still your expert. --}}
-          @foreach($unslotted as $a)
-            <span class="yx-chip is-set">
-              <span class="yx-mark"><svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg></span>
-              <span class="yx-role">Assigned</span>
-              <span class="yx-name">{{ $a->expert?->name ?? 'Unknown' }}</span>
-              @php $pendingRemoval = collect($pendingRemovalIds)->firstWhere('assignment', (int) $a->assignment_id); @endphp
-              @if($isLeader && $pendingRemoval)
-                <button type="button" class="yx-cancel" title="Waiting on your section's CaPSA - click to take the request back"
-                        onclick="openWithdrawRemovalModal({{ $pendingRemoval['request'] }}, '{{ addslashes($a->expert?->name ?? 'this expert') }}')">Cancel request<svg viewBox="0 0 24 24" width="11" height="11" stroke="currentColor" fill="none" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
-              @elseif($isLeader)
-                <button type="button" class="yx-x" title="Ask your section's CaPSA to change {{ $a->expert?->name ?? 'this expert' }}"
-                        onclick="openChangeExpertModal({{ $a->assignment_id }}, '{{ addslashes($a->expert?->name ?? '') }}', '{{ addslashes(ucfirst($a->engaged_role_name ?? 'expert')) }}')"><svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg></button>
-              @endif
-            </span>
-          @endforeach
+                <span class="yx-who">
+                  <span class="yx-top">
+                    <span class="yx-role">{{ $tile['label'] }}</span>
+                    @if($a && $isLeader)
+                      @php $pendingRemoval = collect($pendingRemovalIds)->firstWhere('assignment', (int) $a->assignment_id); @endphp
+                      @if($pendingRemoval)
+                        <button type="button" class="yx-act" title="Waiting on your section's CaPSA - click to take the request back"
+                                onclick="openWithdrawRemovalModal({{ $pendingRemoval['request'] }}, '{{ addslashes($ex?->name ?? 'this expert') }}')">Cancel request</button>
+                      @else
+                        <button type="button" class="yx-act" title="Ask your section's CaPSA to change {{ $ex?->name ?? 'this expert' }}"
+                                onclick="openChangeExpertModal({{ $a->assignment_id }}, '{{ addslashes($ex?->name ?? '') }}', '{{ addslashes(ucfirst($a->engaged_role_name ?? 'expert')) }}')">Change</button>
+                      @endif
+                    @endif
+                  </span>
+                  <span class="yx-name">{{ $a ? ($ex?->name ?? 'Unknown') : 'Not chosen yet' }}</span>
+                </span>
+              </div>
+            @endforeach
+          </div>
         </div>
       @endif
 

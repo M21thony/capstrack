@@ -220,4 +220,38 @@ class StudentConsultationExpertListTest extends TestCase
         $this->assertCount(1, $experts, 'one person, one entry');
         $this->assertSame('Adviser, Consultant', $experts->first()->role_name);
     }
+
+    /** The role card shows the expert's own photo, not only their initials. */
+    public function test_the_role_card_shows_the_experts_photo(): void
+    {
+        $team = DB::table('team')->insertGetId(['team_name' => 'Team Delta', 'team_status' => 'Active']);
+
+        $student = Student::factory()->withCompleteProfile()->create(['email' => 'consult5@my.cspc.edu.ph']);
+        DB::table('student_s_y')->insert([
+            'student_id' => $student->student_id, 'team_id' => $team,
+            'program' => 'BSCS', 'student_status' => 'Active',
+        ]);
+
+        $withPhoto = $this->makeExpert('photo@gmail.com', 'Ada', 'Adviser');
+        DB::table('capstone_experts')->where('expert_id', $withPhoto)
+            ->update(['profile_picture' => 'https://lh3.googleusercontent.com/a/adviser-photo']);
+        $withoutPhoto = $this->makeExpert('nophoto@gmail.com', 'Cara', 'Consultant');
+
+        foreach ([[$withPhoto, 'adviser'], [$withoutPhoto, 'consultant']] as [$expertId, $role]) {
+            DB::table('capstone_expert_application')->insert([
+                'team_id' => $team, 'expert_id' => $expertId,
+                'expert_role_id' => DB::table('expert_roles')->insertGetId(['expert_id' => $expertId, 'role_id' => $this->makeRole($role)]),
+                'status' => 'approved', 'created_at' => now(), 'updated_at' => now(),
+            ]);
+        }
+
+        $response = $this->actingAs($student, 'web')->get(route('student.consultation'))->assertOk();
+
+        $experts = $response->viewData('experts')->keyBy('expert_id');
+        $this->assertSame('https://lh3.googleusercontent.com/a/adviser-photo', $experts[$withPhoto]->avatar);
+        // No photo saved: the initials stand alone.
+        $this->assertNull($experts[$withoutPhoto]->avatar);
+
+        $response->assertSee('src="https://lh3.googleusercontent.com/a/adviser-photo"', false);
+    }
 }

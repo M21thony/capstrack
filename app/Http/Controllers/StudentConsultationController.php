@@ -126,7 +126,7 @@ class StudentConsultationController extends Controller
                 ->where('a.status', 'approved')
                 ->where('e.approved_status', true)
                 ->whereRaw('LOWER(r.role_name) IN (?, ?, ?)', ['adviser', 'consultant', 'grammarian'])
-                ->select('e.expert_id', 'e.first_name', 'e.last_name', 'r.role_name')
+                ->select('e.expert_id', 'e.first_name', 'e.last_name', 'e.profile_picture', 'r.role_name')
                 ->distinct()
                 ->get();
 
@@ -147,11 +147,15 @@ class StudentConsultationController extends Controller
                 ->map(function ($group) use ($rankOf) {
                     $first = $group->first();
                     $roles = $group->pluck('role_name')->unique()->sortBy($rankOf)->values();
+                    // The model decides what counts as a usable photo - a
+                    // URL, or a preset that exists on disk - so ask it.
+                    $photo = new CapstoneExpert(['profile_picture' => $first->profile_picture]);
 
                     return (object) [
                         'expert_id' => $first->expert_id,
                         'first_name' => $first->first_name,
                         'last_name' => $first->last_name,
+                        'avatar' => $photo->hasAvatarImage() ? $photo->avatarUrl() : null,
                         'role_name' => $roles->map('ucfirst')->implode(', '),
                         'is_adviser' => $roles->contains(fn ($r) => strtolower($r) === 'adviser'),
                         // Their most senior role, which is where they sit.
