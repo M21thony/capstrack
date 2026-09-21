@@ -213,6 +213,61 @@ class GoogleCalendarService
         ]);
     }
 
+    /**
+     * Find the open-slot placeholders the old behaviour left on a calendar.
+     *
+     * They were titled "<slot type> — Available Slot" and given an unbounded
+     * weekly RRULE, so each one still emails the expert 24 hours and 1 hour
+     * before every occurrence, forever. Nothing in the database points at
+     * them any more, so they can only be found by asking the calendar.
+     *
+     * singleEvents stays false on purpose: that returns a repeating event
+     * once instead of one row per occurrence, and deleting it takes every
+     * occurrence with it.
+     *
+     * @return array<string,string> event id => title
+     */
+    public function findSlotPlaceholders(int $expertId): array
+    {
+        $service = new Calendar($this->getClient($expertId));
+
+        $found = [];
+        $pageToken = null;
+
+        do {
+            $events = $service->events->listEvents('primary', [
+                'q' => 'Available Slot',
+                'singleEvents' => false,
+                'maxResults' => 250,
+                'pageToken' => $pageToken,
+            ]);
+
+            foreach ($events->getItems() as $event) {
+                // The search is a loose text match over the whole event, so
+                // check the title really is one of ours before offering it
+                // up for deletion.
+                if (str_ends_with((string) $event->getSummary(), 'Available Slot')) {
+                    $found[$event->getId()] = (string) $event->getSummary();
+                }
+            }
+
+            $pageToken = $events->getNextPageToken();
+        } while ($pageToken);
+
+        return $found;
+    }
+
+    /**
+     * Delete without telling anyone. cancelBookingEvent notifies, which is
+     * right for a real consultation and wrong for clearing spam - a
+     * cancellation notice per placeholder is just more of the same mail.
+     */
+    public function deleteEventQuietly(int $expertId, string $googleEventId): void
+    {
+        (new Calendar($this->getClient($expertId)))
+            ->events->delete('primary', $googleEventId, ['sendUpdates' => 'none']);
+    }
+
     public function cancelBookingEvent(int $expertId, string $googleEventId): void
     {
         $client = $this->getClient($expertId);
