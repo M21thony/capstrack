@@ -569,6 +569,12 @@
             <div class="pp-field"><label>Limitations</label><textarea name="limitations" id="limitations" style="min-height:48px"></textarea></div>
           </div>
           <div class="pp-field"><label>Software Development Methodology</label><input type="text" name="sdm" id="sdm" value="Agile Development Methodology"></div>
+          <div class="pp-field"><label>Clients/Organization</label><input type="text" name="clients" id="clients" placeholder="The organization the system is being built for"></div>
+          <div class="pp-field"><label>Address of the Organization</label><input type="text" name="client_address" id="client_address"></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+            <div class="pp-field"><label>Name of Representative</label><input type="text" name="client_representative" id="client_representative"></div>
+            <div class="pp-field"><label>Their Position in the Organization</label><input type="text" name="client_position" id="client_position"></div>
+          </div>
 
           <fieldset class="pp-field pp-tags" id="pp-tags">
             <legend>Project Tags <span class="pp-required">Required</span></legend>
@@ -862,6 +868,10 @@ function ppFormIsComplete(form) {
     ['scope', 'Fill in the scope.'],
     ['limitations', 'Fill in the limitations.'],
     ['sdm', 'Fill in the software development methodology.'],
+    ['clients', 'Name the client or organization this is for.'],
+    ['client_address', 'Fill in the address of the organization.'],
+    ['client_representative', 'Name the representative of the organization.'],
+    ['client_position', 'Fill in the position that representative holds.'],
   ];
 
   for (const [id, message] of needed) {
@@ -1238,6 +1248,10 @@ function renderResult(data, fileName) {
     document.getElementById('scope').value = data.concepts.scope || '';
     document.getElementById('limitations').value = data.concepts.limitations || '';
     if (data.concepts.sdm) document.getElementById('sdm').value = data.concepts.sdm;
+    // Not read out of the PDF - the team names their own client, so a new
+    // document starts these blank instead of keeping the last answers.
+    ['clients', 'client_address', 'client_representative', 'client_position']
+      .forEach(id => { document.getElementById(id).value = ''; });
     // A new document is a new project: its tags are chosen fresh.
     document.querySelectorAll('#pp-tags input[name="tags[]"]').forEach(b => { b.checked = false; });
     updateTagPills();

@@ -888,6 +888,10 @@
         'Scope' => $approvedProposal->scope,
         'Limitations' => $approvedProposal->limitations,
         'Software development method' => $approvedProposal->sdm,
+        'Clients/Organization' => $approvedProposal->clients,
+        'Address of the organization' => $approvedProposal->client_address,
+        'Representative' => $approvedProposal->client_representative,
+        'Their position' => $approvedProposal->client_position,
         'Research agenda' => $approvedProposal->research_agenda,
         'SDG goals' => $approvedProposal->sdg_goals,
       ] as $label => $value)

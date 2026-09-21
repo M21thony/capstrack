@@ -55,6 +55,8 @@ class PreProposalTagsTest extends TestCase
             'title' => self::TITLE, 'sdg_goals' => 'SDG 3', 'research_agenda' => ['Health'],
             'problem_statement' => 'x', 'proposed_solution' => 'x', 'scope' => 'x', 'limitations' => 'x',
             'sdm' => 'Agile', 'duplication_check_id' => $check->id,
+            'clients' => 'Barangay Hall', 'client_address' => 'Naga City',
+            'client_representative' => 'Ana Cruz', 'client_position' => 'Secretary',
         ];
 
         if ($tags !== null) {
