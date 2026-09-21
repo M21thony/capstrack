@@ -64,6 +64,7 @@
 <body>
 
 @include('capsa._sidebar')
+@include('partials.sidebar-toggle')
 
 <div class="main">
   <div class="topbar">

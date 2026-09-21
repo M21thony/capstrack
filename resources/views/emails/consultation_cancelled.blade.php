@@ -33,7 +33,10 @@
         <div class="details">
             <div><strong>Type:</strong> {{ ucfirst($booking->schedule->slot_type ?? 'Consultation') }}</div>
             <div><strong>Date:</strong> {{ \Carbon\Carbon::parse($booking->session_date)->format('F j, Y (l)') }}</div>
-            <div><strong>Time:</strong> {{ \Carbon\Carbon::parse($booking->schedule->start_time)->format('h:i A') }} – {{ \Carbon\Carbon::parse($booking->schedule->end_time)->format('h:i A') }}</div>
+            {{-- The slot row can be gone while the booking is still here: the tables
+                 are MyISAM, so the ON DELETE CASCADE on schedule_id never runs. The
+                 consultation page already prints a dash for that; the mail crashed. --}}
+            <div><strong>Time:</strong> {{ $booking->schedule?->start_time ? \Carbon\Carbon::parse($booking->schedule->start_time)->format('h:i A') : '—' }} – {{ $booking->schedule?->end_time ? \Carbon\Carbon::parse($booking->schedule->end_time)->format('h:i A') : '—' }}</div>
             @if($team)
             <div><strong>Team:</strong> {{ $team->team_name }}</div>
             @endif
