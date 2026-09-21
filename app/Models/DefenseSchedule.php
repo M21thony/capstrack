@@ -4,6 +4,8 @@ namespace App\Models;
 
 use App\Support\DefenseOutcome;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 
 class DefenseSchedule extends Model
 {
@@ -51,6 +53,26 @@ class DefenseSchedule extends Model
         return $this->hasMany(PanelGrade::class, 'defense_id', 'defense_id');
     }
 
+    /**
+     * When this defense ends.
+     *
+     * The scheduler always writes an end time, but a defense made some other
+     * way can have none, or one that is not after its start - a length of
+     * nothing. Those were all the same two hours before the length could be
+     * set, so that is what they are taken to be: a defense that takes no time
+     * would otherwise never clash with anything.
+     */
+    public function endsAt(): ?Carbon
+    {
+        if (! $this->schedule_date) {
+            return null;
+        }
+
+        return $this->end_date && $this->end_date->gt($this->schedule_date)
+            ? $this->end_date
+            : $this->schedule_date->copy()->addMinutes(DefenseWindow::DEFAULT_DURATION);
+    }
+
     public function isRedefense(): bool
     {
         return (int) $this->attempt > 1;
@@ -62,7 +84,7 @@ class DefenseSchedule extends Model
         return $this->relationLoaded('panels') ? $this->panels->count() : $this->panels()->count();
     }
 
-    /** @return \Illuminate\Support\Collection<int, PanelGrade> */
+    /** @return Collection<int, PanelGrade> */
     public function submittedGrades()
     {
         return $this->relationLoaded('grades')

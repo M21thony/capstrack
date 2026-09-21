@@ -33,8 +33,6 @@ class DefenseBoard
     /** Pre-proposal Defense has no fee; the other three do. */
     public const PAID_STAGES = ['Title Defense', 'Pre Oral Defense', 'Final Oral Defense'];
 
-    public const TIME_SLOTS = ['08:00', '10:00', '12:00', '14:00'];
-
     public const VENUES = ['Mac Lab', 'Open Lab'];
 
     // Team tags are picked from a fixed list, but an expert's expertise is
@@ -149,6 +147,7 @@ class DefenseBoard
                 'schedule' => $schedule?->schedule_date ? [
                     'date' => $schedule->schedule_date->toDateString(),
                     'time' => $schedule->schedule_date->format('H:i'),
+                    'end' => $schedule->endsAt()->format('H:i'),
                     'venue' => $schedule->venue,
                 ] : null,
                 'outcome' => $schedule?->outcome ? $schedule->outcomeLabel() : null,
@@ -272,20 +271,31 @@ class DefenseBoard
             'stage' => $s->defense_type,
             'date' => $s->schedule_date->toDateString(),
             'time' => $s->schedule_date->format('H:i'),
+            'end' => $s->endsAt()->format('H:i'),
             'venue' => $s->venue,
             'panel' => $s->panels->pluck('expert_id')->map(fn ($id) => (int) $id)->values(),
         ])->values()->all();
     }
 
-    /** @return array<string, array{start: ?string, end: ?string}> */
+    /**
+     * Each stage's window: the dates, and how long its defenses run.
+     * A stage with no window yet still reports the default length, so a page
+     * can offer times before any dates are set.
+     *
+     * @return array<string, array{start: ?string, end: ?string, duration: int, slots: array<int, string>}>
+     */
     public function windows(): array
     {
         $windows = DefenseWindow::whereIn('defense_type', self::STAGES)->get()->keyBy('defense_type');
 
-        return collect(self::STAGES)->mapWithKeys(fn ($stage) => [$stage => [
-            'start' => $windows->get($stage)?->start_date?->toDateString(),
-            'end' => $windows->get($stage)?->end_date?->toDateString(),
-        ]])->all();
+        return collect(self::STAGES)->mapWithKeys(function ($stage) use ($windows) {
+            $window = $windows->get($stage);
+
+            return [$stage => [
+                'start' => $window?->start_date?->toDateString(),
+                'end' => $window?->end_date?->toDateString(),
+            ] + ($window ?? new DefenseWindow(['defense_type' => $stage]))->settings()];
+        })->all();
     }
 
     /** Whether panelists will find a rubric to grade this stage with. */
@@ -356,6 +366,7 @@ class DefenseBoard
                 foreach ($candidates as $candidate) {
                     if (str_contains($field, $candidate) || str_contains($candidate, $field)) {
                         $matched[] = $tag;
+
                         continue 3;
                     }
                 }
