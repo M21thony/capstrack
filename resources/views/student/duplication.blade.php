@@ -1290,8 +1290,10 @@ function renderMatchItem(m, i, checkId) {
   const flagged = isFlagged(s);
   const why = m.similarities || m.reason || '';
 
+  // from=pp tells the match page it was opened here and not from the full
+  // report, so its Back button comes back to this page.
   return `
-    <a class="mrow" href="${DUP_MATCH_URL.replace('__C__', checkId).replace('__R__', i + 1)}">
+    <a class="mrow" href="${DUP_MATCH_URL.replace('__C__', checkId).replace('__R__', i + 1)}?from=pp">
       <div>
         <div class="pc" style="color:${s === null ? 'var(--text3)' : (flagged ? 'var(--red)' : 'var(--text2)')}">${s === null ? '—' : s + '%'}</div>
         <span class="bar"><i style="width:${s || 0}%;background:${flagged ? 'var(--red)' : 'var(--green)'}"></i></span>
