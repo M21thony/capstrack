@@ -253,9 +253,17 @@
 
     @foreach ($rows as $i => [$bold, $text, $atDeadline])
         <tr>
-            {{-- The empty half of the column has to be as short as its row,
-                 or its own padding props every one-line remark open. --}}
-            <td class="{{ $atDeadline ? 'label-cell' : '' }}" style="{{ $atDeadline ? '' : 'border-top:none; padding:0 6px; font-size:10pt; line-height:1.15;' }} {{ $loop->last && $placed ? '' : 'border-bottom:none;' }} vertical-align:top;">{{ $atDeadline ? $deadlineText : '' }}&nbsp;</td>
+            @if ($atDeadline)
+                {{-- One tall cell the rest of the way down, the way the printed
+                     form draws it. The label is two lines deep in a column this
+                     narrow, so sitting it in a single row would punch a hole
+                     that size in the remarks beside it. --}}
+                <td class="label-cell" rowspan="{{ count($rows) - $i }}" style="vertical-align:top;">{{ $deadlineText }}</td>
+            @elseif (! $placed || $i < $cross)
+                {{-- The empty half of the column has to be as short as its row,
+                     or its own padding props every one-line remark open. --}}
+                <td style="border-top:none; border-bottom:none; padding:0 6px; font-size:10pt; line-height:1.15; vertical-align:top;">&nbsp;</td>
+            @endif
             <td colspan="7" class="no-left" style="border-top:none; padding:0 6px; font-size:10pt; line-height:1.15; {{ $loop->last && $placed ? '' : 'border-bottom:none;' }} {{ $bold ? 'font-weight:bold;' : '' }}">{!! nl2br(e($text)) !!}</td>
         </tr>
     @endforeach
