@@ -52,7 +52,9 @@
 .role-blurb{font-size:11px;color:var(--text3);line-height:1.4}
 .role-who{display:flex;align-items:center;gap:8px;margin-top:6px;padding-top:9px;border-top:1px solid var(--border)}
 .role-who-avatar{width:26px;height:26px;border-radius:50%;background:var(--accent);color:#18191f;font-size:10px;font-weight:700;
-                 display:flex;align-items:center;justify-content:center;flex-shrink:0}
+                 display:flex;align-items:center;justify-content:center;flex-shrink:0;position:relative;overflow:hidden}
+/* Their own photo over the initials; one that fails to load removes itself. */
+.role-who-avatar img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .role-who-text{display:flex;flex-direction:column;min-width:0}
 .role-who-name{font-size:12px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .role-who-role{font-size:10px;color:var(--text3)}
@@ -331,7 +333,7 @@
                 <span class="role-blurb">{{ $card['blurb'] }}</span>
                 <span class="role-who">
                   @if($who)
-                    <span class="role-who-avatar">{{ mb_strtoupper(mb_substr($who->first_name, 0, 1).mb_substr($who->last_name, 0, 1)) }}</span>
+                    <span class="role-who-avatar">{{ mb_strtoupper(mb_substr($who->first_name, 0, 1).mb_substr($who->last_name, 0, 1)) }}@if($who->avatar)<img src="{{ $who->avatar }}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">@endif</span>
                     <span class="role-who-text">
                       <span class="role-who-name">{{ $who->first_name }} {{ $who->last_name }}</span>
                       <span class="role-who-role">{{ ucfirst($role) }}</span>

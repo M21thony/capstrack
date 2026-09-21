@@ -655,88 +655,45 @@ select.input{cursor:pointer}
 .panel-count{margin:0 0 9px;font-size:12px;color:var(--text3)}
 .panel-count b{color:var(--amber);font-weight:700}
 /* ══ Your Experts ══
-   Across the page under the role picker rather than down the side of it, and
-   loud enough to be seen without being looked for. The first pass was a white
-   band with a 1px grey border on a near-white page, holding small pale chips:
-   from any distance it read as one more empty panel.
+   A label line, then one card per slot on the same three columns as the role
+   cards above, so each expert sits under the role they fill. A filled slot
+   is the expert's photo (their initials when they have none), the role and
+   the name; an open slot is a dashed outline saying so. Cards rather than
+   the solid green pills this used to be - a row of capsules read as three
+   buttons, not three people. */
+.yx{display:flex;flex-direction:column;gap:8px;margin:12px 0 0}
+.yx-head{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 10px}
+.yx-lab{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text2)}
+.yx-count{font-size:12.5px;color:var(--text2)}
+.yx-count b{color:var(--text);font-weight:700;font-variant-numeric:tabular-nums}
 
-   Three things carry it now. The band is inset - darker than the page rather
-   than lighter - so it separates from the cards above without pretending to
-   be one. A filled slot is a solid green pill, which is the only saturated
-   thing on this part of the page. And the chips and the count sit together as
-   one group instead of at opposite ends of the row, so it reads as a sentence
-   rather than a bar with something stranded on the end of it. */
-.yx{
-  display:flex;align-items:center;column-gap:11px;row-gap:9px;flex-wrap:wrap;
-  margin:12px 0 0;padding:15px 17px;
-  /* The same card as everything else on the page - white, one hairline, 11px
-     - rather than the inset grey it started as. It does not need a ground of
-     its own to be seen: the solid green pill is the loud part, and it is
-     louder on white than it was on grey. */
+.yx-slots{display:grid;grid-template-columns:repeat(3,1fr);gap:11px}
+.yx-slot{
+  display:flex;align-items:center;gap:10px;min-width:0;padding:10px 12px;
   background:var(--bg2);border:1px solid var(--border);border-radius:11px;
 }
-/* A long name - "Mark Anthony Balilla" is a real one - pushes the last chip
-   onto a second line on a narrower window. That is fine and better than
-   truncating somebody's name; the row gap is here so it lands as a second
-   line rather than a cramped one. */
-.yx-lab{
-  font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
-  color:var(--text2);white-space:nowrap;
+.yx-slot.is-open{background:none;border:1.5px dashed var(--border2)}
+.yx-empty{
+  width:36px;height:36px;border-radius:50%;flex-shrink:0;display:grid;place-items:center;
+  border:1.5px dashed var(--border2);color:var(--text3);font-size:13px;font-weight:700;
 }
-.yx-sep{width:1px;height:28px;background:var(--border2)}
-
-.yx-chip{
-  display:inline-flex;align-items:center;gap:9px;min-width:0;
-  padding:7px 15px 7px 7px;border-radius:999px;white-space:nowrap;
+.yx-who{display:flex;flex-direction:column;gap:2px;flex:1;min-width:0}
+/* The button shares the role's line so the name gets the card's full width;
+   on a narrow card it drops under the role rather than overlapping it. */
+.yx-top{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:2px 8px}
+.yx-role{font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--text3)}
+/* A long name - "Mark Anthony Balilla" is a real one - wraps onto a second
+   line rather than being cut off. */
+.yx-name{font-size:14px;font-weight:700;line-height:1.3;color:var(--text);overflow-wrap:anywhere}
+.yx-slot.is-open .yx-name{font-weight:500;color:var(--text3)}
+/* Change / Cancel request: a small labelled button rather than a bare icon. */
+.yx-act{
+  flex-shrink:0;padding:2px 8px;cursor:pointer;white-space:nowrap;
+  background:var(--bg2);border:1px solid var(--border2);border-radius:6px;color:var(--text2);
+  font-family:'DM Sans',sans-serif;font-size:11px;font-weight:600;
 }
-/* Solid, not tinted: a filled slot should be the thing your eye lands on. */
-.yx-chip.is-set{background:var(--green);box-shadow:0 1px 3px rgba(22,163,74,.28)}
-.yx-chip.is-open{border:1.5px dashed var(--border2);background:var(--bg3);padding:6px 15px 6px 6px}
-
-.yx-mark{
-  width:23px;height:23px;border-radius:50%;flex-shrink:0;display:grid;place-items:center;
-  font-size:12px;font-weight:700;
-}
-.yx-chip.is-set .yx-mark{background:rgba(255,255,255,.22);color:#fff}
-.yx-chip.is-open .yx-mark{background:var(--bg4);color:var(--text3);border:1px solid var(--border2)}
-
-/* On a filled chip the name is the answer and the role is the label, so they
-   are not the same size. They were both 11.5px at weight 600, which left
-   "Adviser" and "Neil Inocencio" reading as equal halves of one phrase. */
-.yx-role{font-size:12.5px;font-weight:600;color:var(--text2)}
-.yx-chip.is-set .yx-role{
-  font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;
-  color:rgba(255,255,255,.72);
-}
-.yx-name{
-  font-size:14.5px;font-weight:700;letter-spacing:-.01em;color:#fff;
-  min-width:0;overflow:hidden;text-overflow:ellipsis;
-}
-
-.yx-x{
-  width:23px;height:23px;flex-shrink:0;margin-left:2px;border:0;border-radius:7px;
-  background:rgba(255,255,255,.16);color:#fff;cursor:pointer;display:grid;place-items:center;
-}
-.yx-x:hover{background:rgba(255,255,255,.32)}
-
-/* A change request waiting on the CaPSA: one merged pill on the chip itself,
-   in place of the separate "Change requested" label and x-button it used to
-   sit beside - two controls for one state read as clutter. */
-.yx-cancel{
-  display:inline-flex;align-items:center;gap:5px;margin-left:2px;flex-shrink:0;
-  border:0;border-radius:999px;padding:4px 10px;cursor:pointer;
-  background:rgba(255,255,255,.16);color:#fff;
-  font-family:'DM Sans',sans-serif;font-size:10.5px;font-weight:600;white-space:nowrap;
-}
-.yx-cancel svg{stroke:rgba(255,255,255,.85)}
-.yx-cancel:hover{background:rgba(255,255,255,.32)}
-
-/* Label over count, one block at the left. Pushed to the far edge with
-   margin-left:auto the count was the first thing to wrap, and a strip two
-   rows tall with a number stranded on the second is worse than no count. */
-.yx-head{display:flex;flex-direction:column;gap:3px;white-space:nowrap;margin-right:2px}
-.yx-count{font-size:12.5px;color:var(--text2);line-height:1.2}
-.yx-count b{color:var(--text);font-weight:700;font-variant-numeric:tabular-nums}
+.yx-act:hover{border-color:var(--text3);color:var(--text)}
+.yx-act:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
 /* Said once, above the applications that are finished. */
 .req-divider{
@@ -787,7 +744,7 @@ select.input{cursor:pointer}
 
 /* ── phones: the strip becomes a plain list, as it always did ── */
 @media (max-width:1024px){
-  .roles{grid-template-columns:1fr}
+  .roles,.yx-slots{grid-template-columns:1fr}
   .rail{display:flex!important;flex-direction:column;overflow-x:visible;height:auto}
   .rail-nav,.rail-pager{display:none!important}
   .listwrap{display:none!important}
