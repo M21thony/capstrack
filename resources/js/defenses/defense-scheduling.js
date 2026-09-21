@@ -3,7 +3,7 @@
  * which cannot and why, what is on the calendar (other sections greyed out),
  * the shared defense window, Generate schedule, and moving one defense.
  */
-import { $, esc, initials, fmtDay, fmtShort, SLOT_LABEL, api, toast, reloadWith, showFlash, clashWith, wireDialogs } from './shared.js';
+import { $, esc, initials, fmtDay, fmtShort, slotRange, slotLabel, addMinutes, durationText, slotsFor, api, toast, reloadWith, showFlash, clashWith, wireDialogs } from './shared.js';
 
 const root = document.getElementById('dx-sched');
 const S = JSON.parse(root.dataset.state);
@@ -31,7 +31,7 @@ const allBookings = except => [
   ...OTHER,
 ];
 
-const windowLabel = w => (w?.start && w?.end ? `${fmtShort(w.start)} – ${fmtShort(w.end)}, ${w.end.slice(0, 4)}` : 'not set');
+const windowLabel = w => (w?.start && w?.end ? `${fmtShort(w.start)} – ${fmtShort(w.end)}, ${w.end.slice(0, 4)} · ${durationText(w.duration)} each` : 'not set');
 
 /* ---------------- The board ---------------- */
 let schedTab = 'ready';
@@ -75,9 +75,9 @@ function render() {
       ...scheduled.filter(match).map(t => {
         // Grading and the panel's decision, as they come in.
         const progress = t.outcome ? ` · ${t.outcome}` : t.panel_size ? ` · Graded ${t.graded} of ${t.panel_size}` : '';
-        return { at: t.schedule.date + t.schedule.time, html: `<tr><td class="dx-when">${fmtDay(t.schedule.date)}</td><td>${SLOT_LABEL[t.schedule.time] || t.schedule.time}</td><td>${esc(t.schedule.venue)}</td><td>${teamCell(t, esc(progress))}</td><td class="dx-panel-names">${panelNames(t)}</td><td><div class="dx-acts">${t.passed ? '' : `<button class="dx-btn dx-btn-sm" data-override="${t.id}"><svg><use href="#dx-i-edit"/></svg>Change</button>`}</div></td></tr>` };
+        return { at: t.schedule.date + t.schedule.time, html: `<tr><td class="dx-when">${fmtDay(t.schedule.date)}</td><td>${slotRange(t.schedule.time, t.schedule.end)}</td><td>${esc(t.schedule.venue)}</td><td>${teamCell(t, esc(progress))}</td><td class="dx-panel-names">${panelNames(t)}</td><td><div class="dx-acts">${t.passed ? '' : `<button class="dx-btn dx-btn-sm" data-override="${t.id}"><svg><use href="#dx-i-edit"/></svg>Change</button>`}</div></td></tr>` };
       }),
-      ...($('#s-others').checked && !q ? OTHER : []).map(o => ({ at: o.date + o.time, html: `<tr class="dx-other"><td class="dx-when">${fmtDay(o.date)}</td><td>${SLOT_LABEL[o.time] || o.time}</td><td>${esc(o.venue)}</td><td><span class="dx-strong">${esc(o.section)}</span><span class="dx-muted" style="display:block">Other section · ${esc(o.stage)}</span></td><td class="dx-panel-names">${o.panel.map(id => esc(nameOf(id))).join('<br>')}</td><td></td></tr>` })),
+      ...($('#s-others').checked && !q ? OTHER : []).map(o => ({ at: o.date + o.time, html: `<tr class="dx-other"><td class="dx-when">${fmtDay(o.date)}</td><td>${slotRange(o.time, o.end)}</td><td>${esc(o.venue)}</td><td><span class="dx-strong">${esc(o.section)}</span><span class="dx-muted" style="display:block">Other section · ${esc(o.stage)}</span></td><td class="dx-panel-names">${o.panel.map(id => esc(nameOf(id))).join('<br>')}</td><td></td></tr>` })),
     ].sort((a, b) => a.at.localeCompare(b.at)).map(r => r.html);
     $('#sched-table').innerHTML = table(['16%', '15%', '10%', '20%', '29%', '10%'], ['Date', 'Time', 'Venue', 'Team', 'Panel', 'Actions'], rows, `Nothing scheduled for ${STAGE} yet.`);
   }
@@ -88,11 +88,24 @@ function render() {
 }
 
 /* ---------------- Defense window ---------------- */
+const DURATIONS = [15, 20, 30, 45, 60, 75, 90, 105, 120, 150, 180, 240];
+
+/** What the chosen length would make of the defense day, said before anything is saved. */
+function previewSlots() {
+  const duration = +$('#w-duration').value;
+  const slots = slotsFor(S.day.start, S.day.end, duration);
+  $('#w-slots').innerHTML = `<div class="dx-slots-head"><b>${slots.length} ${slots.length === 1 ? 'defense' : 'defenses'} a day</b> <span class="dx-muted">in each room, so up to ${slots.length * S.venues.length} across ${S.venues.length} rooms</span></div>`
+    + slots.map(x => `<span class="dx-slot">${esc(slotLabel(x, duration))}</span>`).join('');
+}
+
 function openWindow() {
   const w = WINDOWS[STAGE] || {};
-  $('#w-sub').textContent = `The dates ${STAGE} is defended within, for every section.`;
+  $('#w-sub').textContent = `The dates ${STAGE} is defended within, and how long each defense runs, for every section.`;
   $('#w-start').value = w.start || '';
   $('#w-end').value = w.end || '';
+  $('#w-duration').innerHTML = DURATIONS.map(m => `<option value="${m}">${durationText(m)}</option>`).join('');
+  $('#w-duration').value = w.duration;
+  previewSlots();
   $('#d-window').showModal();
 }
 
@@ -100,11 +113,17 @@ async function saveWindow() {
   const start = $('#w-start').value, end = $('#w-end').value;
   if (!start || !end || end < start) { toast('Pick a first day, and a last day on or after it.'); return; }
   try {
-    const res = await api('PUT', URLS.window.replace('__STAGE__', encodeURIComponent(STAGE)), { start_date: start, end_date: end });
-    WINDOWS[STAGE] = { start: res.data.start_date, end: res.data.end_date };
+    const res = await api('PUT', URLS.window.replace('__STAGE__', encodeURIComponent(STAGE)), {
+      start_date: start, end_date: end, duration_minutes: +$('#w-duration').value,
+    });
+    const d = res.data;
+    WINDOWS[STAGE] = { start: d.start_date, end: d.end_date, duration: d.duration_minutes, slots: d.time_slots };
+    // The Change dialog offers this stage's own times.
+    S.slots = d.time_slots;
+    S.session_minutes = d.duration_minutes;
     $('#d-window').close();
     render();
-    toast(`${STAGE} window saved.`);
+    toast(`${STAGE} window saved.${d.already_scheduled ? ` ${d.already_scheduled} already scheduled ${d.already_scheduled === 1 ? 'defense keeps' : 'defenses keep'} the time it has.` : ''}`);
   } catch (e) {
     toast(e.message);
   }
@@ -139,7 +158,7 @@ function drawGenerate() {
         <td><span class="dx-strong">${esc(s.team.name)}</span><span class="dx-muted" style="display:block">${esc(s.team.section)}</span><span class="dx-skip-note" data-skip>${esc(s.skipped)}</span><span class="dx-clash-note" data-clash></span></td>
         <td class="dx-panel-names">${panelNames(s.team)}</td>
         <td><input type="date" data-g="date" value="${s.date}" min="${w.start_date}" max="${w.end_date}" aria-label="Date for ${esc(s.team.name)}"></td>
-        <td><select data-g="time" aria-label="Time for ${esc(s.team.name)}">${gen.time_slots.map(x => `<option value="${x}" ${x === s.time ? 'selected' : ''}>${SLOT_LABEL[x] || x}</option>`).join('')}</select></td>
+        <td><select data-g="time" aria-label="Time for ${esc(s.team.name)}">${gen.time_slots.map(x => `<option value="${x}" ${x === s.time ? 'selected' : ''}>${slotLabel(x, gen.session_minutes)}</option>`).join('')}</select></td>
         <td><select data-g="venue" aria-label="Venue for ${esc(s.team.name)}">${gen.venues.map(v => `<option ${v === s.venue ? 'selected' : ''}>${esc(v)}</option>`).join('')}</select></td>
       </tr>`).join('')}</tbody></table>`
     : '<div class="dx-empty-note" style="text-align:center;padding:24px">No team is ready to schedule yet. The list below says what each one still needs.</div>')
@@ -155,8 +174,8 @@ function checkClashes() {
   document.querySelectorAll('#g-body tr[data-i]').forEach(tr => {
     const s = draft[+tr.dataset.i];
     tr.classList.toggle('dx-off', !s.on);
-    const others = on.filter(o => o !== s).map(o => ({ panel: o.panel, date: o.date, time: o.time, venue: o.venue, who: `Team ${o.team.name}` }));
-    const clash = s.on ? clashWith([...fixed, ...others], s.panel, s.date, s.time, s.venue, nameOf) : null;
+    const others = on.filter(o => o !== s).map(o => ({ panel: o.panel, date: o.date, time: o.time, end: addMinutes(o.time, gen.session_minutes), venue: o.venue, who: `Team ${o.team.name}` }));
+    const clash = s.on ? clashWith([...fixed, ...others], s.panel, s.date, s.time, addMinutes(s.time, gen.session_minutes), s.venue, nameOf) : null;
     tr.classList.toggle('dx-clash', !!clash);
     tr.querySelector('[data-clash]').textContent = clash ? clash.text : '';
     tr.querySelector('[data-skip]').hidden = !!clash;
@@ -193,7 +212,7 @@ function openOverride(id) {
   overriding = t;
   overrideConfirm = false;
   $('#o-sub').textContent = `Team ${t.name} · ${STAGE}. Moves this team only.`;
-  $('#o-time').innerHTML = S.slots.map(x => `<option value="${x}">${SLOT_LABEL[x] || x}</option>`).join('');
+  $('#o-time').innerHTML = S.slots.map(x => `<option value="${x}">${slotLabel(x, S.session_minutes)}</option>`).join('');
   $('#o-venue').innerHTML = S.venues.map(v => `<option>${esc(v)}</option>`).join('');
   Object.assign($('#o-date'), { value: t.schedule.date, min: w.start || '', max: w.end || '' });
   $('#o-time').value = t.schedule.time;
@@ -240,6 +259,7 @@ $('#g-body').addEventListener('change', e => {
 });
 $('#g-save').addEventListener('click', saveGenerate);
 $('#o-save').addEventListener('click', saveOverride);
+$('#w-duration').addEventListener('input', previewSlots);
 ['#o-date', '#o-time', '#o-venue'].forEach(s => $(s).addEventListener('change', () => { overrideConfirm = false; $('#o-conflict').hidden = true; $('#o-save').textContent = 'Save'; }));
 
 wireDialogs();

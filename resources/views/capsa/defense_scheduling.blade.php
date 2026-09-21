@@ -91,7 +91,9 @@
         <div><label class="dx-lbl" for="w-start">First day</label><input class="dx-field" type="date" id="w-start" style="width:100%"></div>
         <div><label class="dx-lbl" for="w-end">Last day</label><input class="dx-field" type="date" id="w-end" style="width:100%"></div>
       </div>
-      <div class="dx-muted">Defenses run 8 AM to 4 PM in 2-hour blocks, in Mac Lab and Open Lab. Saving only stores the dates; nobody is scheduled until you use Generate schedule.</div>
+      <div><label class="dx-lbl" for="w-duration">Length of each defense</label><select class="dx-field" id="w-duration" style="width:100%"></select></div>
+      <div class="dx-slots" id="w-slots" aria-live="polite"></div>
+      <div class="dx-muted">Defenses run from 8 AM to 5 PM, in Mac Lab and Open Lab. Saving only stores these settings; nobody is scheduled until you use Generate schedule. Defenses that already have a time keep it.</div>
     </div>
     <div class="dx-dlg-foot"><span class="dx-grow"></span><button class="dx-btn" data-close>Cancel</button><button class="dx-btn dx-btn-gold" id="w-save">Save window</button></div>
   </div>

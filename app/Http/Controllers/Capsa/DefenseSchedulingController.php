@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Capsa;
 
 use App\Http\Controllers\Controller;
 use App\Models\CapstoneExpert;
+use App\Models\DefenseWindow;
 use App\Support\DefenseBoard;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -27,6 +28,7 @@ class DefenseSchedulingController extends Controller
         $stage = $this->board->openingStage($capsa, $request->query('defense_type'));
         $rows = $this->board->rows($capsa, $stage);
         $other = $this->board->otherBookings(array_column($rows, 'id'));
+        $windows = $this->board->windows();
 
         return view('capsa.defense_scheduling', [
             'state' => [
@@ -37,9 +39,13 @@ class DefenseSchedulingController extends Controller
                 'names' => DefenseBoard::names($rows, $other),
                 'sections' => $capsa->sections ?? [],
                 'other' => $other,
-                'windows' => $this->board->windows(),
+                'windows' => $windows,
                 'has_rubric' => DefenseBoard::hasRubric($stage),
-                'slots' => DefenseBoard::TIME_SLOTS,
+                // What the Change dialog offers: this stage's own times, from its window.
+                'slots' => $windows[$stage]['slots'],
+                'session_minutes' => $windows[$stage]['duration'],
+                // The defense day, for previewing what a length will do to it.
+                'day' => ['start' => DefenseWindow::DAY_START, 'end' => DefenseWindow::DAY_END],
                 'venues' => DefenseBoard::VENUES,
             ],
         ]);

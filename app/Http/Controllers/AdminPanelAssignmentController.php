@@ -18,6 +18,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 /**
@@ -32,12 +33,6 @@ class AdminPanelAssignmentController extends Controller
     private const DEFENSE_TYPES = DefenseBoard::STAGES;
 
     private const VENUES = DefenseBoard::VENUES;
-
-    // Defense day runs 8am-5pm in fixed 2-hour blocks; a 4-6pm block would
-    // run past the cutoff, so the last hour is never used.
-    private const TIME_SLOTS = DefenseBoard::TIME_SLOTS;
-
-    private const SESSION_HOURS = 2;
 
     public function __construct(private GoogleCalendarService $calendar, private DefenseBoard $board) {}
 
@@ -248,12 +243,16 @@ class AdminPanelAssignmentController extends Controller
      */
     public function updateSchedule(Request $request, DefenseSchedule $defense): JsonResponse
     {
+        // The times on offer are the stage's own: how long its defenses run
+        // is set on its window.
+        $window = DefenseWindow::forStage($defense->defense_type);
+
         $validated = $request->validate([
             'schedule_date' => ['required', 'date'],
-            'start_time' => ['required', 'string', 'in:'.implode(',', self::TIME_SLOTS)],
+            'start_time' => ['required', 'string', Rule::in($window->slotTimes())],
             'venue' => ['required', 'string', 'in:'.implode(',', self::VENUES)],
             'confirm' => ['nullable', 'boolean'],
-        ]);
+        ], ['start_time.in' => 'That is not one of the time slots for this stage.']);
 
         $defense->loadMissing('panels.expert', 'team.members');
         $capsa = $this->capsa();
@@ -263,7 +262,8 @@ class AdminPanelAssignmentController extends Controller
         }
 
         $slotStart = Carbon::parse($validated['schedule_date'])->setTimeFromTimeString($validated['start_time']);
-        $conflicts = $this->conflictsForManualOverride($defense, $slotStart, $validated['venue'], $capsa);
+        $slotEnd = $slotStart->copy()->addMinutes($window->durationMinutes());
+        $conflicts = $this->conflictsForManualOverride($defense, $slotStart, $slotEnd, $validated['venue'], $capsa);
 
         if ($conflicts) {
             $other = collect($conflicts)->contains('other', true);
@@ -283,7 +283,7 @@ class AdminPanelAssignmentController extends Controller
 
         $defense->update([
             'schedule_date' => $slotStart,
-            'end_date' => $slotStart->copy()->addHours(self::SESSION_HOURS),
+            'end_date' => $slotEnd,
             'venue' => $validated['venue'],
         ]);
 
@@ -294,13 +294,17 @@ class AdminPanelAssignmentController extends Controller
     }
 
     /**
-     * A room is taken only in that exact block; a panelist is taken in that
-     * block, and anywhere else that day on a different panel. Checked across
-     * every stage and every section.
+     * A room is taken while another defense is using it; a panelist is taken
+     * for that time, and anywhere else that day on a different panel. Checked
+     * across every stage and every section.
+     *
+     * "At the same time" means the two overlap, not that they start together:
+     * a stage set to one hour and another set to two are cut into different
+     * slots, and a panelist due at 9:00 in one is not free at 9:30 in the other.
      *
      * @return array<int, array{text: string, other: bool}>
      */
-    private function conflictsForManualOverride(DefenseSchedule $defense, Carbon $slotStart, string $venue, CapstoneExpert $capsa): array
+    private function conflictsForManualOverride(DefenseSchedule $defense, Carbon $slotStart, Carbon $slotEnd, string $venue, CapstoneExpert $capsa): array
     {
         $expertIds = $defense->panels->pluck('expert_id')->all();
         $sorted = collect($expertIds)->sort()->values()->all();
@@ -316,7 +320,7 @@ class AdminPanelAssignmentController extends Controller
             $label = $isOther
                 ? 'another section ('.$other->defense_type.')'
                 : ($other->team?->team_name ?? 'Another team').' ('.$other->defense_type.')';
-            $sameBlock = $other->schedule_date->equalTo($slotStart);
+            $sameBlock = $this->overlap($other, $slotStart, $slotEnd);
             $samePanel = $other->panels->pluck('expert_id')->sort()->values()->all() === $sorted;
 
             if ($sameBlock && $other->venue === $venue) {
@@ -391,9 +395,9 @@ class AdminPanelAssignmentController extends Controller
             'data' => [
                 'defense_type' => $type,
                 'window' => ['start_date' => $window->start_date->toDateString(), 'end_date' => $window->end_date->toDateString()],
-                'time_slots' => self::TIME_SLOTS,
+                'time_slots' => $window->slotTimes(),
+                'session_minutes' => $window->durationMinutes(),
                 'venues' => self::VENUES,
-                'session_hours' => self::SESSION_HOURS,
                 'draft' => $draft,
                 'unplaced' => $unplaced,
                 'not_ready' => $notReady,
@@ -415,7 +419,7 @@ class AdminPanelAssignmentController extends Controller
             'items' => ['required', 'array', 'min:1'],
             'items.*.defense_id' => ['required', 'integer'],
             'items.*.date' => ['required', 'date_format:Y-m-d'],
-            'items.*.start_time' => ['required', 'in:'.implode(',', self::TIME_SLOTS)],
+            'items.*.start_time' => ['required', 'date_format:H:i'],
             'items.*.venue' => ['required', 'in:'.implode(',', self::VENUES)],
         ]);
 
@@ -448,6 +452,13 @@ class AdminPanelAssignmentController extends Controller
             }
 
             $start = Carbon::parse($item['date'].' '.$item['start_time']);
+            $end = $start->copy()->addMinutes($window->durationMinutes());
+
+            if (! in_array($item['start_time'], $window->slotTimes(), true)) {
+                $skip('That time is not one of the '.$type.' time slots.');
+
+                continue;
+            }
 
             if ($start->lt($window->start_date->copy()->startOfDay()) || $start->gt($window->end_date->copy()->endOfDay())) {
                 $skip('That date is outside the '.$type.' window.');
@@ -455,13 +466,13 @@ class AdminPanelAssignmentController extends Controller
                 continue;
             }
 
-            if ($conflicts = $this->conflictsForManualOverride($schedule, $start, $item['venue'], $capsa)) {
+            if ($conflicts = $this->conflictsForManualOverride($schedule, $start, $end, $item['venue'], $capsa)) {
                 $skip(implode(' ', array_column($conflicts, 'text')));
 
                 continue;
             }
 
-            $schedule->update(['schedule_date' => $start, 'end_date' => $start->copy()->addHours(self::SESSION_HOURS), 'venue' => $item['venue']]);
+            $schedule->update(['schedule_date' => $start, 'end_date' => $end, 'venue' => $item['venue']]);
             $this->syncDefensePanelToGoogleCalendar($schedule);
             app(DefenseScheduleNotifier::class)->scheduled($schedule);
 
@@ -499,15 +510,20 @@ class AdminPanelAssignmentController extends Controller
 
     public function indexWindows(): JsonResponse
     {
-        $data = collect($this->board->windows())->map(fn ($w, $type) => ['defense_type' => $type, 'start_date' => $w['start'], 'end_date' => $w['end']])->values();
+        $data = collect($this->board->windows())->map(fn ($w, $type) => ['defense_type' => $type, 'start_date' => $w['start'], 'end_date' => $w['end']] + $this->settingsPayload($w))->values();
 
         return response()->json(['success' => true, 'data' => $data]);
     }
 
     /**
      * PUT /panel_assignment/windows/{defenseType} - the dates a stage is
-     * defended within, shared by every section. Saving only stores them;
-     * nobody is scheduled until Generate schedule is reviewed and saved.
+     * defended within, and how long each defense runs, shared by every
+     * section. Saving only stores them; nobody is scheduled until Generate
+     * schedule is reviewed and saved, and a defense that already has a time
+     * keeps it - changing the length only shapes the ones made from now on.
+     *
+     * The length is optional so a caller that only knows the dates (the page
+     * before it had this field) leaves it as it was.
      */
     public function updateWindow(Request $request, string $defenseType): JsonResponse
     {
@@ -516,14 +532,46 @@ class AdminPanelAssignmentController extends Controller
         $validated = $request->validate([
             'start_date' => ['required', 'date'],
             'end_date' => ['required', 'date', 'after_or_equal:start_date'],
+            'duration_minutes' => ['sometimes', 'required', 'integer', 'between:'.DefenseWindow::MIN_DURATION.','.DefenseWindow::MAX_DURATION, 'multiple_of:'.DefenseWindow::STEP],
+        ], [
+            'duration_minutes.between' => 'A defense can run from '.DefenseWindow::MIN_DURATION.' minutes to '.(DefenseWindow::MAX_DURATION / 60).' hours.',
+            'duration_minutes.multiple_of' => 'Set the length in steps of '.DefenseWindow::STEP.' minutes.',
         ]);
 
-        $window = DefenseWindow::updateOrCreate(['defense_type' => $defenseType], $validated);
+        $window = DefenseWindow::forStage($defenseType)->fill($validated);
+        $window->defense_type = $defenseType;
+        $window->save();
 
         return response()->json([
             'success' => true,
-            'data' => ['defense_type' => $window->defense_type, 'start_date' => $window->start_date->toDateString(), 'end_date' => $window->end_date->toDateString()],
+            'data' => [
+                'defense_type' => $window->defense_type,
+                'start_date' => $window->start_date->toDateString(),
+                'end_date' => $window->end_date->toDateString(),
+                // Told, not guessed: these keep the length they were made with.
+                'already_scheduled' => DefenseSchedule::where('defense_type', $defenseType)->whereNotNull('schedule_date')->count(),
+            ] + $this->settingsPayload($window->settings()),
         ]);
+    }
+
+    /**
+     * How the page names a window's length.
+     *
+     * @param  array<string, mixed>  $settings  From DefenseWindow::settings(), or a row of DefenseBoard::windows().
+     * @return array{duration_minutes: int, time_slots: array<int, string>}
+     */
+    private function settingsPayload(array $settings): array
+    {
+        return [
+            'duration_minutes' => $settings['duration'],
+            'time_slots' => $settings['slots'],
+        ];
+    }
+
+    /** Whether a booked defense is on during any of the given time. */
+    private function overlap(DefenseSchedule $booked, Carbon $start, Carbon $end): bool
+    {
+        return $booked->schedule_date->lt($end) && $booked->endsAt()->gt($start);
     }
 
     /**
@@ -549,21 +597,27 @@ class AdminPanelAssignmentController extends Controller
 
         $who = fn (DefenseSchedule $s) => $s->team && ! $this->board->covers($capsa, $s->team) ? 'another section' : 'Team '.($s->team?->team_name ?? '');
 
+        $minutes = $window->durationMinutes();
+        $slots = $window->slotTimes();
+
         // Null when this panel can sit in $venue at $slotStart, otherwise why not.
-        $reason = function (Carbon $slotStart, string $venue) use ($booked, $sorted, $who): ?string {
+        $reason = function (Carbon $slotStart, string $venue) use ($booked, $sorted, $who, $minutes): ?string {
+            $slotEnd = $slotStart->copy()->addMinutes($minutes);
+
             foreach ($booked->filter(fn ($s) => $s->schedule_date->isSameDay($slotStart)) as $s) {
                 $theirs = $s->panels->pluck('expert_id')->sort()->values()->all();
+                $clashes = $this->overlap($s, $slotStart, $slotEnd);
 
                 // The same panel may judge several teams that day, never two at once.
                 if ($theirs === $sorted) {
-                    if ($s->schedule_date->equalTo($slotStart)) {
+                    if ($clashes) {
                         return 'This panel is already with '.$who($s).' at this time.';
                     }
 
                     continue;
                 }
 
-                if ($s->schedule_date->equalTo($slotStart) && $s->venue === $venue) {
+                if ($clashes && $s->venue === $venue) {
                     return $venue.' is taken at this time by '.$who($s).'.';
                 }
 
@@ -586,24 +640,24 @@ class AdminPanelAssignmentController extends Controller
             $day = $daySchedules->first()->schedule_date->copy()->startOfDay();
             $venue = $daySchedules->first()->venue;
 
-            foreach (self::TIME_SLOTS as $time) {
+            foreach ($slots as $time) {
                 $slotStart = $day->copy()->setTimeFromTimeString($time);
 
-                if (! $daySchedules->contains(fn ($s) => $s->schedule_date->equalTo($slotStart)) && $reason($slotStart, $venue) === null) {
-                    return ['schedule_date' => $slotStart, 'end_date' => $slotStart->copy()->addHours(self::SESSION_HOURS), 'venue' => $venue];
+                if ($reason($slotStart, $venue) === null) {
+                    return ['schedule_date' => $slotStart, 'end_date' => $slotStart->copy()->addMinutes($minutes), 'venue' => $venue];
                 }
             }
         }
 
         foreach (CarbonPeriod::create($window->start_date, $window->end_date) as $date) {
-            foreach (self::TIME_SLOTS as $time) {
+            foreach ($slots as $time) {
                 $slotStart = $date->copy()->setTimeFromTimeString($time);
 
                 foreach (self::VENUES as $venue) {
                     $why = $reason($slotStart, $venue);
 
                     if ($why === null) {
-                        return ['schedule_date' => $slotStart, 'end_date' => $slotStart->copy()->addHours(self::SESSION_HOURS), 'venue' => $venue];
+                        return ['schedule_date' => $slotStart, 'end_date' => $slotStart->copy()->addMinutes($minutes), 'venue' => $venue];
                     }
 
                     $skipped ??= 'Not earlier: '.$slotStart->format('M j').', '.$slotStart->format('g:i A').', '.$why;
@@ -645,7 +699,7 @@ class AdminPanelAssignmentController extends Controller
 
         $memberEmails = $schedule->team ? $schedule->team->members->pluck('email')->filter()->values()->all() : [];
         $byExpert = $connected->keyBy('expert_id');
-        $endDate = $schedule->end_date ?? $schedule->schedule_date->copy()->addHours(self::SESSION_HOURS);
+        $endDate = $schedule->endsAt();
 
         foreach ($connected as $panel) {
             $attendees = collect($memberEmails)->merge($byExpert->except([$panel->expert_id])->pluck('expert.email')->filter())->unique()->values()->all();
