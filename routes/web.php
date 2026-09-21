@@ -383,9 +383,6 @@ Route::middleware(['auth', 'no.cache', 'track.expert'])->group(function () {
     Route::put('/team/leadership/{notification}/reminder', [TeamController::class, 'remindLeadershipLater'])->name('team.leadership.remind-later');
     Route::delete('/team/members/{student}', [TeamController::class, 'removeMember'])->name('team.members.remove');
     Route::delete('/team', [TeamController::class, 'destroy'])->name('team.destroy');
-    Route::post('/team/leave-requests', [TeamController::class, 'requestLeave'])->name('team.leave-request');
-    Route::patch('/team/leave-requests/{approval}', [TeamController::class, 'updateLeave'])->name('team.leave.update');
-    Route::get('/team/leave/popups', [TeamController::class, 'leavePopups'])->name('team.leave.popups');
     // After Title Defense, leaving or removing a member is asked of the CaPSA.
     Route::post('/team/capsa-leave-requests', [LeaveRequestController::class, 'store'])->name('team.capsa-leave-requests.store');
     Route::patch('/team/capsa-leave-requests/{leaveRequest}', [LeaveRequestController::class, 'update'])->name('team.capsa-leave-requests.update');
