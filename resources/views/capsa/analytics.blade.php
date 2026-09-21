@@ -57,7 +57,7 @@
     <!-- TOP STAT CHIPS -->
     <div class="grid-4" style="margin-bottom:16px">
       <div class="stat-chip"><div class="stat-n" style="color:var(--accent3)">{{ $totalArchived }}</div><div class="stat-l">Total Archived</div><div class="stat-sub">System-wide</div></div>
-      <div class="stat-chip"><div class="stat-n" style="color:var(--green)">{{ $completionRate }}%</div><div class="stat-l">Avg Completion Rate</div><div class="stat-sub">{{ $completedTeams }}/{{ $totalTeams }} teams completed</div></div>
+      <div class="stat-chip"><div class="stat-n" style="color:var(--green)">{{ $completionRate === null ? '—' : $completionRate.'%' }}</div><div class="stat-l">Avg Completion Rate</div><div class="stat-sub">{{ $completionRate === null ? 'No section has a checklist yet' : $completedTeams.'/'.$trackedTeams.' teams completed' }}@if($untrackedTeams > 0 && $completionRate !== null)<br>{{ $untrackedTeams }} not counted (no checklist)@endif</div></div>
       <div class="stat-chip"><div class="stat-n" style="color:var(--blue)">{{ $totalExperts }}</div><div class="stat-l">Active Experts</div><div class="stat-sub">{{ $totalStudents }} students enrolled</div></div>
       <div class="stat-chip"><div class="stat-n" style="color:var(--red)">{{ $overdueTeams }}</div><div class="stat-l">Overdue Teams</div><div class="stat-sub">{{ $activeTeams }} active teams</div></div>
     </div>
