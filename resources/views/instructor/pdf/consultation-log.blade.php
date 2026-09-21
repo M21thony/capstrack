@@ -119,7 +119,13 @@
 
     <tr>
         <td style="height:370px; border-top:none; border-bottom:none;">&nbsp;</td>
-        <td colspan="7" rowspan="2" class="no-left remarks-box" style="vertical-align:top; padding:0;">
+        {{-- Not one cell spanning both rows. When the remarks ran long enough
+             to need a second page DomPDF sheared that cell in half and the
+             second page came out as a lone Deadline box with no right-hand
+             side at all. Two ordinary rows with the rule between them switched
+             off look the same and survive the break - which is how the form
+             itself is built, a vertical merge with the border set to nil. --}}
+        <td colspan="7" class="no-left" style="vertical-align:top; border-bottom:none; padding:0;">
             <div style="padding:4px 6px;">
                 @if ($approvedAt)
                     <p style="margin:0 0 6px 0; font-weight:bold;">
@@ -153,11 +159,10 @@
     </tr>
 
     <tr>
-        <td class="label-cell" style="vertical-align:middle; padding:0;">
-            <div style="height:131px; padding:4px 6px; box-sizing:border-box;">
-                Deadline: {{ $deadline ? \Illuminate\Support\Carbon::parse($deadline)->format('F j, Y') : '' }}
-            </div>
+        <td class="label-cell" style="height:131px; vertical-align:top;">
+            Deadline: {{ $deadline ? \Illuminate\Support\Carbon::parse($deadline)->format('F j, Y') : '' }}
         </td>
+        <td colspan="7" class="no-left" style="border-top:none;">&nbsp;</td>
     </tr>
 </table>
 
