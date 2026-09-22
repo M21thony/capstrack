@@ -292,7 +292,9 @@
           <div style="font-size:14px;margin-bottom:12px;white-space:pre-line">{{ $rr->reason }}</div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start">
             <form method="POST" action="{{ route('instructor.removal-requests.update', $rr) }}"
-                  onsubmit="return confirm('Stop being the {{ $rrRole }} of {{ addslashes($rr->team->team_name) }}? They can then apply to another {{ $rrRole }}.')">
+                  data-confirm-release
+                  data-role="{{ $rrRole }}"
+                  data-team="{{ $rr->team->team_name }}">
               @csrf @method('PATCH')
               <input type="hidden" name="removal_id" value="{{ $rr->id }}">
               <input type="hidden" name="decision" value="release">
@@ -1002,6 +1004,30 @@ function closeSidebar() { document.body.classList.remove('sidebar-open'); }
 </script>
 
 @include('instructor.partials.expert-profile')
+@include('partials.app-dialog')
+<script>
+document.addEventListener('submit', async function (e) {
+  const form = e.target.closest('form[data-confirm-release]');
+  if (!form || form.dataset.confirmed === 'yes') return;
+
+  e.preventDefault();
+
+  const role = form.dataset.role || 'adviser';
+  const ok = await confirmSheet({
+    title: 'Stop being the ' + role + ' of ' + form.dataset.team + '?',
+    names: [form.dataset.team],
+    body: 'They leave your list straight away and can then apply to another ' + role
+        + '. Their documents and consultation history stay with the team.',
+    confirmLabel: 'Release team',
+    danger: true,
+  });
+
+  if (!ok) return;
+
+  form.dataset.confirmed = 'yes';
+  form.submit();
+});
+</script>
 @include('partials.escape-closes-modals')
 </body>
 </html>

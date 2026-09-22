@@ -106,5 +106,7 @@ function toggleSidebar() { if (sidebarEl) { sidebarEl.classList.contains('mobile
 function openSidebar() { if (!sidebarEl || !sidebarOverlay) return; sidebarEl.classList.add('mobile-open'); sidebarOverlay.classList.add('open'); document.body.style.overflow = 'hidden'; }
 function closeSidebar() { if (!sidebarEl || !sidebarOverlay) return; sidebarEl.classList.remove('mobile-open'); sidebarOverlay.classList.remove('open'); document.body.style.overflow = ''; }
 </script>
+@include('partials.app-dialog')
+@include('partials.escape-closes-modals')
 </body>
 </html>

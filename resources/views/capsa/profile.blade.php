@@ -674,6 +674,7 @@
               <input type="text" id="newFolderName" placeholder="e.g. Batch 2026 - Section A" style="flex:1;padding:9px 12px;border:1.5px solid var(--pf-border);border-radius:8px;font-size:13.5px;font-family:'DM Sans',sans-serif" />
               <button type="button" id="addFolderBtn" style="padding:9px 16px;border:none;border-radius:8px;background:var(--pf-accent);color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap">Add Folder</button>
             </div>
+            <div id="folderNotice" hidden style="margin-bottom:16px"></div>
             <div id="folderListContainer" style="display:flex;flex-direction:column;gap:6px">
               <div class="pf-empty" id="folderListEmpty">Loading…</div>
             </div>
@@ -938,16 +939,27 @@ if (folderListContainer) {
         addFolderBtn.disabled = false;
         addFolderBtn.textContent = 'Add Folder';
         if (!data.success) {
-          alert(data.message || 'Could not create folder.');
+          formNotice('folderNotice', {
+            tone: 'error',
+            title: '\u201c' + name + '\u201d was not created',
+            body: data.message || 'The server refused it without saying why.',
+          });
+          newFolderInput.focus();
           return;
         }
         newFolderInput.value = '';
+        formNotice.clear('folderNotice');
         loadFolders();
       })
       .catch(function () {
         addFolderBtn.disabled = false;
         addFolderBtn.textContent = 'Add Folder';
-        alert('Could not create folder.');
+        formNotice('folderNotice', {
+          tone: 'error',
+          title: '\u201c' + name + '\u201d was not created',
+          body: 'CapsTrack could not reach the server. The name is still in the box \u2014 try again.',
+        });
+        newFolderInput.focus();
       });
   });
 
@@ -971,13 +983,21 @@ if (folderListContainer) {
       .then(function (r) { return r.json(); })
       .then(function (data) {
         if (!data.success) {
-          alert(data.message || 'Could not delete folder.');
+          formNotice('folderNotice', {
+            tone: 'error',
+            title: 'That folder was not deleted',
+            body: data.message || 'The server refused it without saying why. It is still on the list.',
+          });
           return;
         }
         loadFolders();
       })
       .catch(function () {
-        alert('Could not delete folder.');
+        formNotice('folderNotice', {
+          tone: 'error',
+          title: 'That folder was not deleted',
+          body: 'CapsTrack could not reach the server. Nothing changed \u2014 try again.',
+        });
       });
   });
 
@@ -985,7 +1005,8 @@ if (folderListContainer) {
 }
 </script>
 
-@include('partials.confirm-sheet')
+@include('partials.form-notice')
+@include('partials.app-dialog')
 @include('partials.escape-closes-modals')
 </body>
 </html>

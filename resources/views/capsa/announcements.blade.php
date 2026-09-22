@@ -167,6 +167,7 @@
               <div class="target-group" id="sectionCheckboxes"></div>
             </div>
           </div>
+          <div id="annNotice" hidden style="margin-top:16px"></div>
           <div style="display:flex;gap:8px;margin-top:16px">
             <button class="btn" style="flex:1;justify-content:center;font-size:13px;background:var(--text);color:var(--navy-text);border:none" onclick="savePost()">
               <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
@@ -611,7 +612,16 @@ function savePost() {
 
   if (!title) { return; }
   if (!body) { return; }
-  if (targetAudience.length === 0) { alert('Please select at least one target audience.'); return; }
+  if (targetAudience.length === 0) {
+    formNotice('annNotice', {
+      tone: 'error',
+      title: 'Choose who this goes to',
+      body: 'Pick at least one audience under Send To. Your draft is kept.',
+    });
+    document.querySelector('#targetGroup input')?.focus();
+    return;
+  }
+  formNotice.clear('annNotice');
 
   // Extract @mentions from body to determine team_id
   var teamId = null;
@@ -642,7 +652,15 @@ function savePost() {
   })
     .then(function(r) { return r.json(); })
     .then(function() { location.reload(); })
-    .catch(function() { alert('Failed to save post.'); });
+    .catch(function() {
+      formNotice('annNotice', {
+        tone: 'error',
+        title: 'The post was not saved',
+        body: 'Your draft is still here and nothing reached the sections.',
+        actionLabel: 'Post again',
+        onAction: savePost,
+      });
+    });
 }
 
 function editAnnouncement(id) {
@@ -719,7 +737,15 @@ function confirmDelete() {
     },
   })
     .then(function() { location.reload(); })
-    .catch(function() { alert('Failed to delete.'); btn.textContent = 'Delete'; btn.disabled = false; });
+    .catch(function() {
+      btn.textContent = 'Delete';
+      btn.disabled = false;
+      formNotice('annNotice', {
+        tone: 'error',
+        title: 'That announcement was not deleted',
+        body: 'It is still posted. CapsTrack could not reach the server.',
+      });
+    });
 }
 
 // ---- Milestone Review Modal ----
@@ -785,7 +811,13 @@ function verifySubmission(annId, submissionId, verified) {
   })
     .then(function(r) { return r.json(); })
     .then(function() { location.reload(); })
-    .catch(function() { alert('Failed to verify submission.'); });
+    .catch(function() {
+      formNotice('annNotice', {
+        tone: 'error',
+        title: 'The submission was not recorded',
+        body: 'Its milestone is unchanged. CapsTrack could not reach the server.',
+      });
+    });
 }
 
 function closeReviewModal() {
@@ -835,6 +867,7 @@ function closeSidebar() {
   document.body.style.overflow = '';
 }
 </script>
+@include('partials.form-notice')
 @include('partials.escape-closes-modals')
 </body>
 </html>

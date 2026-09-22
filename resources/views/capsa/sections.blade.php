@@ -975,7 +975,7 @@ function uploadStudentRoster(btn) {
   </div>
 </div>
 
-@include('partials.confirm-sheet')
+@include('partials.app-dialog')
 @include('partials.row-menu')
 @include('partials.email-lookup', [
     'input' => 'add-student-email',

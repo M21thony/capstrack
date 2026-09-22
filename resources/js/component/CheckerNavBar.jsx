@@ -16,11 +16,27 @@ const roleWord = (role) => (role ? role.replace(/_/g, " ") : null);
  * saved, and the one thing to do at the end - finish the review.
  */
 function CheckerNavbar({ ctx, status, verdict, saveState, driveSyncState, driveSyncError, onExport, onFinish, versions = [], comparing = false, onCompare, showChanges = true, onToggleChanges }) {
+  // Leaving mid-save loses remarks, so this asks in the app's own dialog rather
+  // than the browser's. The navigation is always stopped first and re-issued
+  // from the promise, because the answer cannot arrive synchronously.
   const leave = (e) => {
-    if ((saveState === "saving" || driveSyncState === "syncing")
-      && !window.confirm("Your remarks are still saving. Leave anyway?")) {
-      e.preventDefault();
-    }
+    if (saveState !== "saving" && driveSyncState !== "syncing") return;
+
+    e.preventDefault();
+    const href = e.currentTarget.href;
+    const syncing = driveSyncState === "syncing" && saveState !== "saving";
+
+    window.confirmSheet({
+      title: "Leave while your remarks are still saving?",
+      body: syncing
+        ? "Your remarks are saved in CapsTrack but have not reached Drive yet. Leaving now means this version is not filed in the department folder."
+        : "The remarks you have just written are still on their way to the server. Leaving now loses them, and the team sees the document without them.",
+      confirmLabel: "Leave anyway",
+      cancelLabel: "Stay on this page",
+      danger: true,
+    }).then((ok) => {
+      if (ok) window.location.assign(href);
+    });
   };
 
   const saveText = saveState === "saving" ? "Saving…"
