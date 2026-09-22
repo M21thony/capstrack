@@ -82,7 +82,7 @@ class RowActionsAndBulkSheetsTest extends TestCase
         // What replaced them.
         $this->assertStringContainsString('id="bulk-program-scrim"', $html);
         $this->assertStringContainsString('id="bulk-section-scrim"', $html);
-        $this->assertStringContainsString('id="cf-scrim"', $html);
+        $this->assertStringContainsString('id="ad-scrim"', $html);
     }
 
     public function test_the_row_carries_the_year_and_letter_the_sheet_reads(): void

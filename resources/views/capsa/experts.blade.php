@@ -1549,7 +1549,7 @@ onBulk('bulkRemove', function (ids, rows) {
 });
 </script>
 
-@include('partials.confirm-sheet')
+@include('partials.app-dialog')
 @include('partials.row-menu')
 @include('partials.email-lookup', ['input' => 'addExpertEmail', 'kind' => 'expert', 'nameInput' => 'addExpertName'])
 

@@ -355,7 +355,7 @@ function closeSidebar() {
   document.body.style.overflow = '';
 }
 </script>
-@include('partials.confirm-sheet')
+@include('partials.app-dialog')
 @include('partials.escape-closes-modals')
 </body>
 </html>

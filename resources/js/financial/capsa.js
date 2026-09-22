@@ -108,7 +108,13 @@ async function decide(ids, status, reason = '') {
       await send('PATCH', URLS.record.replace('__ID__', rec(fee, ids[0]).id), status === 'verified' ? { status: 'approved' } : { status: 'rejected', rejection_reason: reason });
     }
   } catch (e) {
-    toast(e.message);
+    await outcomeDialog({
+      tone: 'error',
+      title: ids.length > 1 ? 'Those receipts were not updated' : 'That receipt was not updated',
+      reason: e.message,
+      body: 'Nothing changed. The list is exactly as it was before you clicked.',
+      primaryLabel: 'Back to receipts',
+    });
     return false;
   }
   ids.forEach(m => Object.assign(R[`${fee}:${m}`], status === 'verified' ? { status, on: today() } : { status, reason }));
@@ -144,7 +150,14 @@ $('#c-all').addEventListener('change', e => { visible().flatMap(g => g.ids).filt
 $('#c-bulk-clear').addEventListener('click', () => { picked.clear(); render(); });
 $('#c-bulk-verify').addEventListener('click', async () => {
   const ids = [...picked];
-  if (!confirm(`Verify ${ids.length} ${ids.length === 1 ? 'receipt' : 'receipts'} without opening each one?`)) return;
+  const ok = await confirmSheet({
+    title: `Verify ${ids.length} ${ids.length === 1 ? 'receipt' : 'receipts'} without opening each one?`,
+    names: ids.map(m => NAME[m]).filter(Boolean),
+    body: 'Each one is marked paid against this fee and the members are told. A verification cannot be taken back \u2014 one made by mistake has to be sent back to the team instead.',
+    confirmLabel: `Verify ${ids.length}`,
+    danger: true,
+  });
+  if (!ok) return;
   if (await decide(ids, 'verified')) toast(`Verified ${ids.length} ${ids.length === 1 ? 'receipt' : 'receipts'}.`);
 });
 $('#c-insp').addEventListener('click', async e => {
@@ -177,7 +190,13 @@ $('#f-save').addEventListener('click', async () => {
     await send('POST', URLS.fees, { defense_type: stage, course: program, amount, description: $('#f-note').value.trim() || null });
     reloadWith(`${stage} Fee saved.`);
   } catch (e) {
-    toast(e.message);
+    await outcomeDialog({
+      tone: 'error',
+      title: 'The fee was not saved',
+      reason: e.message,
+      body: 'No fee was created, and the amounts already set are untouched. Your entries are still in the form.',
+      primaryLabel: 'Back to the form',
+    });
   }
 });
 

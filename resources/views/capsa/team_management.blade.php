@@ -392,7 +392,7 @@
   </div>
 </div>
 @include('capsa.partials.skeleton-toggle')
-@include('partials.confirm-sheet')
+@include('partials.app-dialog')
 <div id="tm-toast" class="toast"></div>
 
 @if ($tab === 'teams' && $allSections !== [])
