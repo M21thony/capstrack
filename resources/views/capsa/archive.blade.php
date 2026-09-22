@@ -123,7 +123,10 @@
           <div class="form-group"><label class="label">Capstone Title</label><input class="input" id="arch-title" placeholder="Full title of the capstone study"/></div>
           <div class="form-group"><label class="label">Proponents (comma-separated)</label><input class="input" id="arch-authors" placeholder="e.g. Dela Cruz, J., Santos, M."/></div>
           <div class="grid-2" style="gap:8px">
-            <div class="form-group"><label class="label">Year</label><select class="input" id="arch-year">
+            {{-- Its own id: the page filter above is also a Year select, and
+                 getElementById takes the first one, so saving read the filter
+                 and threw away the year picked here. --}}
+            <div class="form-group"><label class="label">Year</label><select class="input" id="arch-new-year">
               @for ($y = (int) date('Y'); $y >= (int) date('Y') - 10; $y--)
                 <option>{{ $y }}</option>
               @endfor
@@ -239,7 +242,7 @@ function saveArchive() {
     body: JSON.stringify({
       title: title,
       authors: document.getElementById('arch-authors').value.trim() || null,
-      academic_year: document.getElementById('arch-year').value,
+      academic_year: document.getElementById('arch-new-year').value,
       program: document.getElementById('arch-program').value,
       abstract: document.getElementById('arch-abstract').value.trim() || null,
       tag_ids: Array.prototype.slice.call(document.querySelectorAll('.arch-tag:checked'))

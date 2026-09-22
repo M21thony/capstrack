@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Mail\ReviewReminderMail;
 use App\Models\CapstoneDocumentReview;
 use App\Models\CapstoneExpert;
+use App\Services\Notifier;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -48,6 +49,23 @@ class SendReviewReminders extends Command
             }
 
             $documents = $documents->sortBy(fn ($d) => $d->due_on ?? '9999-12-31')->values();
+
+            $count = $documents->count();
+            $soonest = $documents->first();
+
+            Notifier::toExpert(
+                $expert,
+                'review_reminder',
+                $count === 1 ? '1 document waiting on you' : "{$count} documents waiting on you",
+                'Soonest: <strong>'.e($soonest->title).'</strong> from <strong>'
+                    .e($soonest->team_name ?? 'a team').'</strong>'
+                    .($soonest->due_on ? ', due '.e($soonest->due_on) : '').'.',
+                route('instructor.docreview'),
+            );
+
+            if (! $expert->wants('review_reminder', 'email')) {
+                continue;
+            }
 
             try {
                 Mail::to($expert->email)->queue(new ReviewReminderMail($expert, $documents));

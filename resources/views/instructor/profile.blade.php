@@ -43,6 +43,8 @@
         Edit Profile
       </button>
     </div>
+
+    <div style="margin-top:20px">@include('partials.notification-settings')</div>
   </div>
   </div>
 </div>

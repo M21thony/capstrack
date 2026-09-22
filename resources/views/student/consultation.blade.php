@@ -33,30 +33,36 @@
 
 /* ── Who to consult ── */
 .role-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px}
-.role-card{display:flex;flex-direction:column;gap:6px;text-align:left;padding:13px 14px;border:1.5px solid var(--border);
+.role-card{display:flex;flex-direction:column;gap:10px;text-align:left;padding:13px 14px;border:1.5px solid var(--border);
            border-radius:12px;background:var(--bg2);cursor:pointer;font-family:inherit;transition:border-color .15s,background .15s}
 .role-card:hover:not(:disabled){border-color:var(--accent);background:var(--accent-light)}
 .role-card.selected{border-color:var(--accent);background:var(--accent-light)}
 .role-card.empty,.role-card:disabled{opacity:.55;cursor:not-allowed}
-.role-card-top{display:flex;align-items:center;justify-content:space-between}
-.role-ico{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center}
-.role-ico svg{width:17px;height:17px;fill:none;stroke-width:2;stroke:currentColor}
+/* The person, large, on top; the kind of consultation, smaller, under them. */
+.role-who{display:flex;align-items:center;gap:10px}
+.role-who-avatar{width:40px;height:40px;border-radius:50%;background:var(--accent);color:#18191f;font-size:14px;font-weight:700;
+                 display:flex;align-items:center;justify-content:center;flex-shrink:0;position:relative;overflow:hidden}
+/* Their own photo over the initials; one that fails to load removes itself. */
+.role-who-avatar img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+/* Nobody in this role yet: an empty circle the size of a photo, so the three
+   cards still line up. */
+.role-who-avatar.is-empty{background:none;border:1.5px dashed var(--border2)}
+/* A long name wraps onto a second line rather than being cut off. */
+.role-who-name{font-size:14px;font-weight:700;color:var(--text);line-height:1.3;overflow-wrap:anywhere}
+.role-who-none{font-size:12px;color:var(--text3);font-style:italic}
+/* The dot is the only thing saying which one is chosen, so it is not
+   decoration - it carries the selection. */
+.role-radio{width:15px;height:15px;border-radius:50%;border:1.5px solid var(--border2);flex-shrink:0;margin-left:auto}
+.role-card.selected .role-radio{border-color:var(--accent);border-width:4.5px}
+.role-kind{display:flex;align-items:center;gap:9px;padding-top:10px;border-top:1px solid var(--border)}
+.role-ico{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.role-ico svg{width:15px;height:15px;fill:none;stroke-width:2;stroke:currentColor}
 .role-ico-consultant{background:var(--blue-bg);color:var(--blue)}
 .role-ico-adviser{background:var(--green-bg);color:var(--green)}
 .role-ico-grammarian{background:var(--amber-bg);color:var(--amber)}
-/* The dot is the only thing saying which one is chosen, so it is not
-   decoration - it carries the selection. */
-.role-radio{width:15px;height:15px;border-radius:50%;border:1.5px solid var(--border2);flex-shrink:0}
-.role-card.selected .role-radio{border-color:var(--accent);border-width:4.5px}
-.role-name{font-size:13px;font-weight:600;color:var(--text);line-height:1.3}
+.role-kind-text{display:flex;flex-direction:column;gap:1px;min-width:0}
+.role-name{font-size:12px;font-weight:600;color:var(--text2);line-height:1.3}
 .role-blurb{font-size:11px;color:var(--text3);line-height:1.4}
-.role-who{display:flex;align-items:center;gap:8px;margin-top:6px;padding-top:9px;border-top:1px solid var(--border)}
-.role-who-avatar{width:26px;height:26px;border-radius:50%;background:var(--accent);color:#18191f;font-size:10px;font-weight:700;
-                 display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.role-who-text{display:flex;flex-direction:column;min-width:0}
-.role-who-name{font-size:12px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.role-who-role{font-size:10px;color:var(--text3)}
-.role-who-none{font-size:11px;color:var(--text3);font-style:italic}
 
 /* ── Schedule ── */
 .sched-note{display:flex;align-items:center;gap:8px;padding:9px 12px;border-radius:9px;background:var(--blue-bg);
@@ -315,7 +321,19 @@
                       data-role="{{ $role }}"
                       @disabled(! $who)
                       onclick="pickRole(this, {{ $who?->expert_id ?? 'null' }})">
-                <span class="role-card-top">
+                {{-- The person first: a team is choosing who they will meet.
+                     What kind of consultation that is sits under them. --}}
+                <span class="role-who">
+                  @if($who)
+                    <span class="role-who-avatar" aria-hidden="true">{{ mb_strtoupper(mb_substr($who->first_name, 0, 1).mb_substr($who->last_name, 0, 1)) }}@if($who->avatar)<img src="{{ $who->avatar }}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">@endif</span>
+                    <span class="role-who-name">{{ $who->first_name }} {{ $who->last_name }}</span>
+                  @else
+                    <span class="role-who-avatar is-empty" aria-hidden="true"></span>
+                    <span class="role-who-none">No {{ $role }} assigned yet</span>
+                  @endif
+                  <span class="role-radio" aria-hidden="true"></span>
+                </span>
+                <span class="role-kind">
                   <span class="role-ico role-ico-{{ $role }}">
                     @if($role === 'consultant')
                       <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg>
@@ -325,20 +343,10 @@
                       <svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
                     @endif
                   </span>
-                  <span class="role-radio" aria-hidden="true"></span>
-                </span>
-                <span class="role-name">{{ $card['title'] }}</span>
-                <span class="role-blurb">{{ $card['blurb'] }}</span>
-                <span class="role-who">
-                  @if($who)
-                    <span class="role-who-avatar">{{ mb_strtoupper(mb_substr($who->first_name, 0, 1).mb_substr($who->last_name, 0, 1)) }}</span>
-                    <span class="role-who-text">
-                      <span class="role-who-name">{{ $who->first_name }} {{ $who->last_name }}</span>
-                      <span class="role-who-role">{{ ucfirst($role) }}</span>
-                    </span>
-                  @else
-                    <span class="role-who-none">No {{ $role }} assigned yet</span>
-                  @endif
+                  <span class="role-kind-text">
+                    <span class="role-name">{{ $card['title'] }}</span>
+                    <span class="role-blurb">{{ $card['blurb'] }}</span>
+                  </span>
                 </span>
               </button>
             @endforeach

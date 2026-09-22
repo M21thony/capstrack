@@ -88,7 +88,7 @@ class TeamLock
         }
     }
 
-    /** Take a member off a locked team, as a CaPSA approved. */
+    /** Take a member off a team, as a CaPSA approved. */
     public function release(MemberLeaveRequest $request, CapstoneExpert $capsa, ?string $note): void
     {
         $team = $request->team;

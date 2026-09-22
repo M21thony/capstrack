@@ -93,7 +93,7 @@ class FeeBoard
         ];
     }
 
-    private function members(Collection $schoolYears): Collection
+    public function members(Collection $schoolYears): Collection
     {
         return $schoolYears->filter(fn ($sy) => $sy->student)
             ->map(fn ($sy) => ['id' => (int) $sy->student_id, 'name' => $this->nameOf($sy->student)])
@@ -112,7 +112,7 @@ class FeeBoard
      *
      * @return array<string, array<string, mixed>>
      */
-    private function receipts(Collection $feeIds, Collection $studentIds): array
+    public function receipts(Collection $feeIds, Collection $studentIds): array
     {
         if ($feeIds->isEmpty() || $studentIds->isEmpty()) {
             return [];

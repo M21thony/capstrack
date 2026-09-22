@@ -20,3 +20,7 @@ Schedule::command('milestones:send-review-reminders')->dailyAt('07:00');
 // Milestones and deliverables a CaPSA removed are kept a few days so Undo can
 // bring them back, then deleted for good.
 Schedule::command('checklists:purge-removed')->dailyAt('02:00');
+
+// A few days before a checklist deadline, each team that has not met it hears
+// about it once. Web only - there was never an email for this.
+Schedule::command('milestones:send-due-reminders')->dailyAt('07:05');

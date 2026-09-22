@@ -3,76 +3,93 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\ArchivedDocument;
-use App\Models\CapstoneExpert;
-use App\Models\Student;
-use App\Models\StudentSchoolYear;
-use App\Models\Team;
-use Illuminate\Support\Facades\DB;
+use App\Support\DefenseAnalytics;
+use App\Support\DefenseProgress;
+use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
+/**
+ * The Analytics page, for the Admin and for every CaPSA.
+ *
+ * Both open the same page and see different amounts of it: an Admin every
+ * team, a CaPSA the teams in their sections. That scoping is not done here -
+ * DefenseAnalytics does it from the signed-in expert - so the page and the
+ * CSV cannot disagree about who is in them.
+ */
 class AnalyticsController extends Controller
 {
-    public function index()
+    public function index(Request $request, DefenseAnalytics $analytics)
     {
-        $totalArchived = ArchivedDocument::count();
-        $totalExperts = CapstoneExpert::where('approved_status', true)->count();
-        $totalStudents = Student::count();
-        $totalTeams = Team::count();
-
-        $completedTeams = Team::whereNotExists(function ($q) {
-            $q->select(DB::raw(1))
-                ->from('milestones')
-                ->whereColumn('milestones.team_id', 'team.team_id')
-                ->where('milestones.status', '!=', 'completed');
-        })->whereExists(function ($q) {
-            $q->select(DB::raw(1))
-                ->from('milestones')
-                ->whereColumn('milestones.team_id', 'team.team_id');
-        })->count();
-        $activeTeams = Team::where('team_status', 'Active')->count();
-        $completionRate = $totalTeams > 0 ? round(($completedTeams / $totalTeams) * 100) : 0;
-
-        $overdueTeams = Team::where('team_status', 'Active')
-            ->whereExists(function ($q) {
-                $q->select(DB::raw(1))
-                    ->from('milestones')
-                    ->whereColumn('milestones.team_id', 'team.team_id')
-                    ->where('milestones.status', 'overdue');
-            })
-            ->count();
-
-        $selectedYear = request('year');
-        $years = ArchivedDocument::selectRaw('DISTINCT academic_year')
-            ->orderBy('academic_year', 'desc')
-            ->pluck('academic_year');
-        $yearlyQuery = ArchivedDocument::selectRaw('academic_year, COUNT(*) as total')
-            ->groupBy('academic_year')
-            ->orderBy('academic_year');
-        if ($selectedYear) {
-            $yearlyQuery->where('academic_year', $selectedYear);
-        }
-        $yearlyArchive = $yearlyQuery->pluck('total', 'academic_year');
-        $maxYearlyCount = $yearlyArchive->max() ?: 1;
-
-        $programDistribution = StudentSchoolYear::selectRaw('program, COUNT(DISTINCT student_id) as total')
-            ->whereNotNull('program')
-            ->groupBy('program')
-            ->pluck('total', 'program');
-
-        return view('capsa.analytics', [
-            'totalArchived' => $totalArchived,
-            'totalExperts' => $totalExperts,
-            'totalStudents' => $totalStudents,
-            'totalTeams' => $totalTeams,
-            'completionRate' => $completionRate,
-            'completedTeams' => $completedTeams,
-            'activeTeams' => $activeTeams,
-            'overdueTeams' => $overdueTeams,
-            'yearlyArchive' => $yearlyArchive,
-            'maxYearlyCount' => $maxYearlyCount,
-            'years' => $years,
-            'selectedYear' => $selectedYear,
-            'programDistribution' => $programDistribution,
+        $filters = $request->validate([
+            'school_year' => ['nullable', 'string', 'max:20'],
+            'program' => ['nullable', 'string', 'max:20'],
+            'section' => ['nullable', 'string', 'max:60'],
+            'tag' => ['nullable', 'string', 'max:60'],
+            'export' => ['nullable', 'in:csv'],
         ]);
+
+        $data = $analytics->build(auth('expert')->user(), $filters);
+
+        if (($filters['export'] ?? null) === 'csv') {
+            return $this->csv($data);
+        }
+
+        return view('capsa.analytics', ['a' => $data]);
+    }
+
+    /**
+     * The team-by-team table, as it stands under the filters on the page.
+     *
+     * One row per team because that is what gets opened in a spreadsheet and
+     * counted, filtered and pivoted by whoever asked for the export. Tags are
+     * joined into one cell for the same reason; a row per tag would list a
+     * team several times.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function csv(array $data): StreamedResponse
+    {
+        $year = $data['filters']['school_year'] === DefenseAnalytics::ALL_YEARS ? 'all-years' : $data['filters']['school_year'];
+        $filename = 'defense-results-'.$year.'-'.now()->format('Y-m-d').'.csv';
+
+        return response()->streamDownload(function () use ($data) {
+            $out = fopen('php://output', 'w');
+
+            // Excel opens a CSV in the local code page unless it finds a BOM,
+            // which turns the "·" in a section name into mojibake.
+            fwrite($out, "\xEF\xBB\xBF");
+
+            fputcsv($out, array_merge(
+                ['Team', 'Project title', 'Section', 'Project tags'],
+                DefenseProgress::STAGES,
+                ['Defense attempts'],
+            ));
+
+            foreach ($data['teams'] as $team) {
+                fputcsv($out, array_merge(
+                    array_map($this->safeCell(...), [$team['name'], $team['title'], $team['section'], implode(', ', $team['tags'])]),
+                    array_map(
+                        fn (string $stage) => $team['stages'][$stage] ? DefenseAnalytics::statusLabel($team['stages'][$stage]) : '',
+                        DefenseProgress::STAGES
+                    ),
+                    [$team['attempts']],
+                ));
+            }
+
+            fclose($out);
+        }, $filename, ['Content-Type' => 'text/csv; charset=UTF-8']);
+    }
+
+    /**
+     * A team name is typed by a student, and a cell that starts with = + - or @
+     * is run as a formula when the file is opened. Prefixing a quote keeps it
+     * text.
+     */
+    private function safeCell(?string $value): string
+    {
+        $value = (string) $value;
+        $formulaStarts = ['=', '+', '-', '@', "\t", "\r"];
+
+        return $value !== '' && in_array($value[0], $formulaStarts, true) ? "'".$value : $value;
     }
 }

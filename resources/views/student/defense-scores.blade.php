@@ -166,5 +166,12 @@ function dsShow(id, tab) {
 }
 </script>
 @include('partials.escape-closes-modals')
+<script>
+{{-- The hamburger button and the overlay both called these and nothing
+     defined them, so the menu would not open on a phone. Same two lines as
+     every other student page. --}}
+function toggleSidebar() { document.body.classList.toggle('sidebar-open'); }
+function closeSidebar() { document.body.classList.remove('sidebar-open'); }
+</script>
 </body>
 </html>

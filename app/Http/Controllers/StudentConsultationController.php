@@ -11,6 +11,7 @@ use App\Models\ConsultationBooking;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
 use App\Services\GoogleCalendarService;
+use App\Services\Notifier;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -125,7 +126,7 @@ class StudentConsultationController extends Controller
                 ->where('a.status', 'approved')
                 ->where('e.approved_status', true)
                 ->whereRaw('LOWER(r.role_name) IN (?, ?, ?)', ['adviser', 'consultant', 'grammarian'])
-                ->select('e.expert_id', 'e.first_name', 'e.last_name', 'r.role_name')
+                ->select('e.expert_id', 'e.first_name', 'e.last_name', 'e.profile_picture', 'r.role_name')
                 ->distinct()
                 ->get();
 
@@ -146,11 +147,15 @@ class StudentConsultationController extends Controller
                 ->map(function ($group) use ($rankOf) {
                     $first = $group->first();
                     $roles = $group->pluck('role_name')->unique()->sortBy($rankOf)->values();
+                    // The model decides what counts as a usable photo - a
+                    // URL, or a preset that exists on disk - so ask it.
+                    $photo = new CapstoneExpert(['profile_picture' => $first->profile_picture]);
 
                     return (object) [
                         'expert_id' => $first->expert_id,
                         'first_name' => $first->first_name,
                         'last_name' => $first->last_name,
+                        'avatar' => $photo->hasAvatarImage() ? $photo->avatarUrl() : null,
                         'role_name' => $roles->map('ucfirst')->implode(', '),
                         'is_adviser' => $roles->contains(fn ($r) => strtolower($r) === 'adviser'),
                         // Their most senior role, which is where they sit.
@@ -429,8 +434,26 @@ class StudentConsultationController extends Controller
     {
         $members = $team->members->pluck('email')->filter()->reject(fn ($e) => $e === $expert->email)->unique()->values();
 
+        Notifier::toExpert(
+            $expert,
+            'consultation_booked',
+            'Consultation booked',
+            '<strong>'.e($team->team_name).'</strong> booked a consultation on '
+                .$booking->session_date->format('D, j M Y').'.',
+            route('instructor.schedule'),
+            ['team_id' => $team->team_id, 'booking_id' => $booking->booking_id],
+        );
+
         try {
-            Mail::to($expert->email)->cc($members->all())->queue(new ConsultationBookedMail($booking, $expert, $team));
+            // An expert who has turned this email off still gets the desktop
+            // notification above, and the team still gets their own copy.
+            $mail = new ConsultationBookedMail($booking, $expert, $team);
+
+            if ($expert->wants('consultation_booked', 'email')) {
+                Mail::to($expert->email)->cc($members->all())->queue($mail);
+            } elseif ($members->isNotEmpty()) {
+                Mail::to($members->all())->queue($mail);
+            }
         } catch (\Exception $e) {
             \Log::warning('Consultation booked email failed', ['error' => $e->getMessage()]);
         }
@@ -443,6 +466,10 @@ class StudentConsultationController extends Controller
     private function notifyExpertOfCancellation(ConsultationBooking $booking, $expert, ?Team $team, $student, string $reason): void
     {
         $studentName = trim(($student->f_name ?? '').' '.($student->l_name ?? '')) ?: $student->email;
+
+        if (! $expert->wants('consultation_cancelled', 'email')) {
+            return;
+        }
 
         try {
             Mail::to($expert->email)->send(new ConsultationCancelledMail($booking, $expert, $team, $studentName, $reason));
@@ -551,6 +578,22 @@ class StudentConsultationController extends Controller
             'cancellation_requested_at' => now(),
             'cancellation_requested_by' => trim(($student->f_name ?? '').' '.($student->l_name ?? '')) ?: $student->email,
         ]);
+
+        // Nothing told the expert a team wanted out. The booking stays on
+        // their calendar until they approve it, so if they never look at the
+        // page the slot is held for a session nobody is coming to.
+        $who = $booking->team?->team_name
+            ?: (trim(($student->f_name ?? '').' '.($student->l_name ?? '')) ?: $student->email);
+
+        Notifier::toExpert(
+            $booking->schedule?->expert,
+            'consultation_cancelled',
+            'Cancellation requested',
+            '<strong>'.e($who).'</strong> asked to call off the '
+                .$booking->session_date->format('D, j M Y').' consultation.',
+            route('instructor.schedule'),
+            ['booking_id' => $booking->booking_id],
+        );
 
         return response()->json(['success' => true]);
     }

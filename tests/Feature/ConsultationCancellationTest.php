@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Jobs\SendWebPush;
 use App\Jobs\SyncConsultationCancellation;
 use App\Mail\ConsultationCancelledMail;
 use App\Models\CapstoneExpert;
@@ -111,7 +112,10 @@ class ConsultationCancellationTest extends TestCase
         $this->assertNotNull($booking->cancellation_requested_at);
         $this->assertSame('Team conflict with another deadline.', $booking->cancellation_reason);
         $this->assertFalse((bool) DB::table('consultation_schedule')->where('schedule_id', $scheduleId)->value('is_available'));
-        Queue::assertNothingPushed();
+        // The expert is told straight away, but nothing is undone yet: the
+        // slot and the calendar are only touched once they approve.
+        Queue::assertPushed(SendWebPush::class);
+        Queue::assertNotPushed(SyncConsultationCancellation::class);
 
         // Asking twice is refused.
         $this->actingAs($student, 'web')

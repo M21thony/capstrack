@@ -42,7 +42,7 @@ class EveryStaffPageStillOpensTest extends TestCase
         $routes = [
             'capsa.dashboard', 'capsa.experts', 'capsa.sections', 'capsa.approval', 'capsa.panel_assignment',
             'capsa.team_management', 'capsa.rubric_management', 'capsa.financial', 'capsa.archive',
-            'capsa.resources', 'capsa.announcements', 'capsa.analytics', 'capsa.activitylog',
+            'capsa.resources', 'capsa.announcements', 'capsa.reports', 'capsa.analytics', 'capsa.activitylog',
             'admin.dashboard', 'admin.students', 'admin.settings',
         ];
 

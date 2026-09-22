@@ -682,6 +682,8 @@
         </div>
       @endif
 
+      <div style="margin-top:24px">@include('partials.notification-settings')</div>
+
     </div>
   </div>
   </div>

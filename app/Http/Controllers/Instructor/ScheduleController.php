@@ -496,6 +496,32 @@ class ScheduleController extends Controller
             return response()->json(['error' => 'That overlaps another slot you already have.'], 422);
         }
 
+        // Moving a slot moves every session booked on it, so the same guard
+        // deleteSlot, removeOccurrence and replaceOccurrence already make
+        // belongs here too - this was the one way the day or the time of a
+        // consultation could change with the team never being told.
+        // Only when the timing actually changes: turning a slot off or
+        // changing how many can book it leaves the session where it is.
+        $movesTheSession = $newDay !== $slot->available_date
+            || $newStart !== substr((string) $slot->start_time, 0, 5)
+            || $newEnd !== substr((string) $slot->end_time, 0, 5)
+            || $newRecur !== ($slot->recur ?? 'weekly')
+            || (string) $newDate !== (string) $slot->specific_date;
+
+        if ($movesTheSession) {
+            $booked = DB::table('consultation_booking')
+                ->where('schedule_id', $id)
+                ->where('booking_status', 'scheduled')
+                ->whereDate('session_date', '>=', now()->toDateString())
+                ->exists();
+
+            if ($booked) {
+                return response()->json([
+                    'error' => 'A team has booked this slot. Cancel the booking first, so they are told.',
+                ], 422);
+            }
+        }
+
         $updates = array_filter([
             'available_date' => $request->available_date,
             'start_time' => $request->start_time,

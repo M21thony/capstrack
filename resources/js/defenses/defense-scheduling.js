@@ -157,14 +157,26 @@ function openWindow() {
   $('#d-window').showModal();
 }
 
-function pickLength(m) {
-  document.querySelectorAll('#w-length [data-minutes]').forEach(b => b.classList.toggle('is-on', +b.dataset.minutes === m));
+// Anything other than a preset button is a custom length, typed in minutes.
+function pickLength(m, custom = false) {
+  let preset = false;
+  document.querySelectorAll('#w-length [data-minutes]').forEach(b => {
+    const on = !custom && +b.dataset.minutes === m;
+    b.classList.toggle('is-on', on);
+    preset ||= on;
+  });
+  $('#w-length [data-custom]').classList.toggle('is-on', !preset);
+  $('#w-custom').hidden = preset;
+  if (!preset) $('#w-minutes').value = m;
 }
 
 async function saveWindow() {
   const start = $('#w-start').value, end = $('#w-end').value;
-  const minutes = +($('#w-length .is-on')?.dataset.minutes || 120);
+  const custom = $('#w-length [data-custom]').classList.contains('is-on');
+  const minutes = custom ? +$('#w-minutes').value : +($('#w-length .is-on')?.dataset.minutes || 120);
   if (!start || !end || end < start) { toast('Pick a first day, and a last day on or after it.'); return; }
+  const min = +$('#w-minutes').min, max = +$('#w-minutes').max;
+  if (!Number.isInteger(minutes) || minutes < min || minutes > max) { toast(`Type a length from ${min} to ${max} minutes.`); return; }
   try {
     const res = await api('PUT', URLS.window.replace('__STAGE__', encodeURIComponent(STAGE)), { start_date: start, end_date: end, duration_minutes: minutes });
     WINDOWS[STAGE] = { start: res.data.start_date, end: res.data.end_date, minutes: res.data.duration_minutes, slots: res.data.slots };
@@ -442,7 +454,11 @@ $('#sched-table').addEventListener('click', e => {
 document.querySelectorAll('#dx-stages [data-stage]').forEach(b => b.addEventListener('click', () => loadStage(b.dataset.stage)));
 $('#open-window').addEventListener('click', openWindow);
 $('#w-save').addEventListener('click', saveWindow);
-$('#w-length').addEventListener('click', e => { const b = e.target.closest('[data-minutes]'); if (b) pickLength(+b.dataset.minutes); });
+$('#w-length').addEventListener('click', e => {
+  const b = e.target.closest('[data-minutes]');
+  if (b) pickLength(+b.dataset.minutes);
+  else if (e.target.closest('[data-custom]')) { pickLength(+$('#w-minutes').value || 45, true); $('#w-minutes').focus(); }
+});
 $('#open-generate').addEventListener('click', openGenerate);
 $('#g-body').addEventListener('change', e => {
   const tr = e.target.closest('tr[data-i]');

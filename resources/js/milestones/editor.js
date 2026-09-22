@@ -917,7 +917,7 @@ export function openEditor({ urls, checklistId = null, onClose = null }) {
 
   // ── Small helpers ─────────────────────────────────────────────────────
 
-  /** The gate: teams cannot hand anything in here until the one before it is done. */
+  /** The gate: teams cannot hand anything in here until every milestone above it is done. */
   function gateBox(m) {
     const wrap = el('label', 'ms-gate');
     const box = el('input');
@@ -931,12 +931,12 @@ export function openEditor({ urls, checklistId = null, onClose = null }) {
       run(
         () => set(on),
         on
-          ? `${m.name} now opens only after the milestone before it is complete.`
-          : `${m.name} is open to teams whenever they reach it.`,
+          ? `${m.name} now opens only after every milestone above it is complete.`
+          : `${m.name} now opens together with the milestone above it.`,
         () => set(!on),
       );
     });
-    wrap.append(box, el('span', '', 'Opens only after the milestone before it is complete'));
+    wrap.append(box, el('span', '', 'Opens only after every milestone above it is complete'));
     return wrap;
   }
 

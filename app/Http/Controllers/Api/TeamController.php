@@ -12,7 +12,6 @@ use App\Models\StudentSchoolYear;
 use App\Models\Team;
 use App\Models\TeamInvitation;
 use App\Models\Term;
-use App\Support\StudentTeam;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -248,39 +247,8 @@ class TeamController extends Controller
             ]);
         }
 
-        // The row holding the team, not whichever row came back first -
-        // clearing the wrong year left the student in the team.
-        StudentTeam::rowFor($studentId)?->update(['team_id' => null, 's_role_id' => null]);
-
-        $this->logActivity(
-            $studentId,
-            'team_left',
-            'Left team <strong>'.e($team->team_name ?? 'the team').'</strong>',
-            ['team_id' => $team->team_id]
-        );
-
-        if ($team) {
-            $leaderId = $team->leader_id;
-            if ($leaderId) {
-                Notification::create([
-                    'student_id' => $leaderId,
-                    'type' => 'member_left',
-                    'title' => 'Member Left',
-                    'message' => ($student ? $student->f_name.' '.$student->l_name : 'A member').' has left the team.',
-                    'link' => route('student.team'),
-                ]);
-            }
-        }
-
-        Recruitment::where('student_id', $studentId)->delete();
-
-        $remainingCount = StudentSchoolYear::where('team_id', $team->team_id)->count();
-        if ($remainingCount === 0) {
-            TeamInvitation::where('team_id', $team->team_id)->delete();
-            $team->delete();
-        }
-
-        return response()->json(['message' => 'You have left the team.']);
+        // A member leaves only with their CaPSA's approval.
+        return response()->json(['message' => \App\Models\MemberLeaveRequest::ASK_CAPSA], 422);
     }
 
     public function transferLeadership(Request $request, Team $team): JsonResponse

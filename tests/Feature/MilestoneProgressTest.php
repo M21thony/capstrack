@@ -60,7 +60,7 @@ class MilestoneProgressTest extends TestCase
         $this->assertSame(100, $progress->percent);
     }
 
-    public function test_a_chapter_draft_closes_when_the_team_uploads_it(): void
+    public function test_a_chapter_draft_counts_by_chapter_and_is_only_handed_in_on_upload(): void
     {
         $checklist = $this->emptyChecklist($this->capsa);
         $draft = $this->addDeliverable($checklist, ['title' => 'Chapter 2 Draft', 'kind' => Deliverable::DOCUMENT, 'chapter' => '2']);
@@ -70,6 +70,37 @@ class MilestoneProgressTest extends TestCase
         $this->assertSame(MilestoneProgress::NOT_STARTED, $this->progressOf($checklist, $this->team, $draft)->state);
 
         $this->upload($this->student, null, chapter: 'Chapter 2');
+        $state = $this->progressOf($checklist, $this->team, $draft);
+        $this->assertSame(MilestoneProgress::HANDED_IN, $state->state);
+        $this->assertSame('adviser', $state->waiting_on);
+    }
+
+    /** Handed in, reviewed, revised, approved by both - only then done. */
+    public function test_a_chapter_draft_is_done_only_when_adviser_and_consultant_approve(): void
+    {
+        $checklist = $this->emptyChecklist($this->capsa);
+        $draft = $this->addDeliverable($checklist, ['title' => 'Chapter 1 Draft', 'kind' => Deliverable::DOCUMENT, 'chapter' => '1']);
+        $expert = CapstoneExpert::factory()->create(['approved_status' => true])->expert_id;
+        $review = fn (int $file, string $role, string $verdict, $at) => CapstoneDocumentReview::create([
+            'file_id' => $file, 'expert_id' => $expert, 'role' => $role,
+            'review_status' => CapstoneDocumentReview::REVIEWED, 'verdict' => $verdict, 'verdict_at' => $at,
+        ]);
+
+        $first = $this->upload($this->student, $draft, now()->subDays(5)->toDateTimeString());
+        $review($first, 'adviser', CapstoneDocumentReview::NEEDS_REVISION, now()->subDays(4));
+
+        $state = $this->progressOf($checklist, $this->team, $draft);
+        $this->assertSame(MilestoneProgress::WAITING_ON_TEAM, $state->waiting_on);
+        $this->assertTrue($state->changes_requested);
+
+        $second = $this->upload($this->student, $draft, now()->subDays(3)->toDateTimeString());
+        $review($second, 'adviser', CapstoneDocumentReview::APPROVED, now()->subDays(2));
+
+        $state = $this->progressOf($checklist, $this->team, $draft);
+        $this->assertSame(MilestoneProgress::HANDED_IN, $state->state);
+        $this->assertSame('consultant', $state->waiting_on);
+
+        $review($second, 'consultant', CapstoneDocumentReview::APPROVED, now()->subDay());
         $this->assertSame(MilestoneProgress::DONE, $this->progressOf($checklist, $this->team, $draft)->state);
     }
 
