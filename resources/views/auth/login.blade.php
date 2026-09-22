@@ -231,12 +231,9 @@
       </ul>
     </details>
 
-    <div class="order-7 my-3 flex items-center gap-3.5 text-[10px] tracking-[0.12em] text-[#a8a293] uppercase md:text-[10.5px] tabular-nums before:h-px before:flex-1 before:bg-line before:content-[''] after:h-px after:flex-1 after:bg-line after:content-['']">or</div>
-
-    {{-- Applying for your own account is switched off (see routes/web.php).
-         The line says who to ask instead, because a person with no account is
-         the one reader who cannot do anything about it themselves. --}}
-    <p class="order-8 m-0 flex min-h-11 items-center justify-center text-center text-[12.5px] leading-normal text-ink-soft md:text-[13px]">Accounts are added by a CaPSA. If you cannot sign in, ask one to add you.</p>
+    {{-- A plain rule, not an "or": there is no second way to sign in, and the
+         line about asking a CaPSA for an account is gone with it. --}}
+    <div class="order-7 my-3 h-px bg-line"></div>
 
     <p class="order-9 mt-4 text-center text-[10px] text-[#a8a293] md:text-[11px] lg:mt-[clamp(12px,2.5vh,32px)]">CapsTrack — CSPC College of Computer Studies
       <span class="mx-1.5 text-[#cfc9ba]">·</span>
