@@ -36,9 +36,9 @@ async function drawPdf(box, url, label) {
 /*
  * The milestone tracker.
  *
- * A CaPSA sees one section at a time: its teams in a table, each opening to
- * its milestones and their deliverables, with the signed papers waiting for
- * her check. An adviser sees the teams they advise or consult for, read-only.
+ * A CaPSA sees one section at a time: its teams in a table, each opening a
+ * page of its own - reached by a breadcrumb, not a dropdown - with every
+ * milestone and deliverable, and the signed papers waiting for her check. An adviser sees the teams they advise or consult for, read-only.
  * Only the lists scroll, never the page.
  */
 
@@ -52,12 +52,8 @@ function start(root) {
   const CAPSA = root.dataset.mode === 'capsa';
   const URLS = JSON.parse(root.dataset.urls || '{}');
   const overview = JSON.parse(root.dataset.state || '{}');
-  const S = { data: overview.current || null, filter: 'all', q: '', focusKey: null };
-
-  // One dropdown open at a time: a team, and one milestone inside it.
-  const teamOpen = new Set();
-  const phaseOpen = new Set();
-  const phaseSeen = new Set();
+  // team: the team whose page is open, if any; jump: the milestone to scroll it to.
+  const S = { data: overview.current || null, filter: 'all', q: '', focusKey: null, team: null, jump: null };
 
   const closed = r => r.state === 'done' || r.state === 'done_late';
 
@@ -92,8 +88,21 @@ function start(root) {
       return;
     }
 
+    const team = d.checklist && d.teams.find(t => t.id === S.team);
+    if (team) {
+      root.append(teamPage(d, team));
+      return;
+    }
+
     root.append(band(d));
     root.append(d.checklist ? teamsPanel(d) : noChecklist(d));
+  }
+
+  function openTeam(t, milestone = null) {
+    S.team = t.id;
+    S.jump = milestone;
+    S.focusKey = 'crumb';
+    render();
   }
 
   function edit() {
@@ -135,6 +144,7 @@ function start(root) {
     try {
       S.data = overview.all?.[name] ?? await api('GET', fill(URLS.section, name));
       S.q = '';
+      S.team = null;
       syncCounts();
       render();
     } catch (e) {
@@ -223,7 +233,7 @@ function start(root) {
 
     const scroll = el('div', 'ms-scroll');
     scroll.dataset.scroll = 'track:' + d.section;
-    const foot = el('div', 'ms-panel-foot', `${plural(shown.length, 'team')} · click a team to see its milestones`);
+    const foot = el('div', 'ms-panel-foot', `${plural(shown.length, 'team')} · click a team to open its milestones`);
     panel.append(head, scroll, foot);
 
     const table = el('table', 'ms-table');
@@ -246,28 +256,21 @@ function start(root) {
       table.append(body);
     }
 
-    shown.forEach(({ t, c }) => table.append(teamBody(d, t, c)));
-
-    // An opened team's row sticks just under the column names.
-    requestAnimationFrame(() => scroll.style.setProperty('--ms-thead', thead.offsetHeight + 'px'));
+    const body = el('tbody');
+    shown.forEach(({ t, c }) => body.append(teamRow(d, t, c)));
+    table.append(body);
 
     return panel;
   }
 
-  /** A team's own tbody, so its sticky row lets go once its list ends. */
-  function teamBody(d, t, c) {
-    const key = d.section + ':' + t.id;
-    const open = teamOpen.has(key);
-    const body = el('tbody');
-
-    const tr = el('tr', 'ms-team-row' + (open ? ' ms-open' : ''));
+  function teamRow(d, t, c) {
+    const tr = el('tr', 'ms-team-row');
     const first = el('td');
-    const expander = el('button', 'ms-expander');
-    expander.type = 'button';
-    expander.dataset.key = 'team-' + key;
-    expander.setAttribute('aria-expanded', String(open));
-    expander.append(icon('chev', 'ms-chevi'), el('span', '', t.name));
-    first.append(expander);
+    const name = el('button', 'ms-expander');
+    name.type = 'button';
+    name.dataset.key = 'team-' + d.section + ':' + t.id;
+    name.append(el('span', '', t.name));
+    first.append(name);
     tr.append(first);
 
     d.milestones.forEach(name => {
@@ -277,16 +280,8 @@ function start(root) {
       const td = el('td');
       const cell = el('span', ('ms-cell ' + cls).trim(), (pc.overdue ? '! ' : full ? '✓ ' : '') + `${pc.closed}/${pc.total}`);
       cell.title = `${name}: ${pc.closed} closed, ${pc.handed} waiting, ${pc.overdue} overdue. Click to open it.`;
-      // Clicking a count opens this team at that milestone.
-      td.addEventListener('click', e => {
-        e.stopPropagation();
-        teamOpen.clear();
-        teamOpen.add(key);
-        phaseSeen.add(key);
-        phaseOpen.clear();
-        phaseOpen.add(key + '|' + name);
-        render();
-      });
+      // Clicking a count opens this team's page at that milestone.
+      td.addEventListener('click', e => { e.stopPropagation(); openTeam(t, name); });
       td.append(cell);
       tr.append(td);
     });
@@ -301,66 +296,86 @@ function start(root) {
       : c.check ? pill('ms-pill-amb', c.check + ' to check') : pill('ms-pill-grn', 'On track'));
     tr.append(status);
 
-    tr.addEventListener('click', () => { openOnly(teamOpen, key); S.focusKey = 'team-' + key; render(); });
-    body.append(tr);
-
-    if (open) body.append(detail(d, t, key));
-
-    return body;
+    tr.addEventListener('click', () => openTeam(t));
+    return tr;
   }
 
-  function detail(d, t, key) {
-    const tr = el('tr', 'ms-detail-row');
-    const td = el('td');
-    td.colSpan = d.milestones.length + 3;
-    const inner = el('div', 'ms-inner');
+  // ── One team's page ───────────────────────────────────────────────────
+
+  /**
+   * A team on a page of its own, reached from the table and left by the
+   * breadcrumb. Every milestone and every item is on show: nothing to open.
+   */
+  function teamPage(d, t) {
+    const panel = el('section', 'ms-panel');
+    panel.setAttribute('aria-label', t.name);
+
+    const head = el('div', 'ms-panel-head');
+    const crumb = el('nav', 'ms-crumb');
+    crumb.setAttribute('aria-label', 'Breadcrumb');
+    const back = el('button', 'ms-crumb-link', 'All teams in ' + d.section);
+    back.type = 'button';
+    back.dataset.key = 'crumb';
+    back.addEventListener('click', () => {
+      S.team = null;
+      S.focusKey = 'team-' + d.section + ':' + t.id;
+      render();
+    });
+    crumb.append(back, el('span', 'ms-crumb-sep', '›'), el('b', '', t.name));
+    head.append(crumb, el('span', 'ms-spacer'), progress(counts(t.rows)));
+
+    const scroll = el('div', 'ms-scroll');
+    scroll.dataset.scroll = 'team:' + d.section + ':' + t.id;
+    const inner = el('div', 'ms-inner ms-page');
 
     const people = el('div', 'ms-inner-head');
     people.append('Adviser ', el('b', '', t.adviser || 'not chosen yet'), ' · Consultant ', el('b', '', t.consultant || 'not chosen yet'));
     if (t.members.length) people.append(' · ' + t.members.join(', '));
     inner.append(people);
 
-    const groups = d.milestones.map(name => ({ name, rows: t.rows.filter(r => r.milestone === name) }));
+    const locked = t.locked || {};
 
-    // First time a team opens: the milestone with a paper to check, or else the first one not finished.
-    if (!phaseSeen.has(key)) {
-      phaseSeen.add(key);
-      const first = groups.find(g => g.rows.some(r => r.to_check)) || groups.find(g => g.rows.some(r => !closed(r)));
-      if (first) openOnly(phaseOpen, key + '|' + first.name);
-    }
+    d.milestones.forEach(name => {
+      const rows = t.rows.filter(r => r.milestone === name);
+      const pc = counts(rows);
+      const box = el('section', 'ms-mgroup');
+      box.dataset.milestone = name;
 
-    groups.forEach(g => {
-      const phaseKey = key + '|' + g.name;
-      const open = phaseOpen.has(phaseKey);
-      const pc = counts(g.rows);
-      const box = el('div', 'ms-mgroup');
+      const dues = rows.map(r => r.due).filter(Boolean).sort();
+      const [status, tone] = name in locked
+        ? ['Locked until ' + (locked[name] || 'the milestone before it') + ' is complete', '']
+        : pc.overdue ? [pc.overdue + ' overdue', 'ms-t-red']
+          : pc.check ? [pc.check + ' to check', 'ms-t-amb']
+            : pc.total && pc.closed === pc.total ? ['Complete', 'ms-t-grn'] : ['', ''];
 
-      const row = el('button', 'ms-mrow');
-      row.type = 'button';
-      row.dataset.key = 'ph-' + phaseKey;
-      row.setAttribute('aria-expanded', String(open));
-      const dues = g.rows.map(r => r.due).filter(Boolean).sort();
+      const row = el('div', 'ms-mrow ms-mhead');
       row.append(
-        icon('chev', 'ms-chevi'),
-        el('b', '', g.name),
-        pc.overdue ? pill('ms-pill-red', pc.overdue + ' overdue')
-          : pc.check ? pill('ms-pill-amb', pc.check + ' to check')
-            : pc.total && pc.closed === pc.total ? pill('ms-pill-grn', 'Done') : el('span'),
+        el('h3', '', name),
+        el('span', tone, status),
         el('span', '', `${pc.closed} of ${pc.total} closed`),
         el('span', '', !dues.length ? 'No due date'
           : dues[0] === dues[dues.length - 1] ? 'Due ' + fmtDate(dues[0])
             : `Due ${fmtDate(dues[0])} – ${fmtDate(dues[dues.length - 1])}`),
       );
-      row.addEventListener('click', () => { openOnly(phaseOpen, phaseKey); S.focusKey = 'ph-' + phaseKey; render(); });
       box.append(row);
-
-      if (open) g.rows.forEach(r => box.append(item(r, t)));
+      rows.forEach(r => box.append(item(r, t)));
       inner.append(box);
     });
 
-    td.append(inner);
-    tr.append(td);
-    return tr;
+    scroll.append(inner);
+    panel.append(head, scroll, el('div', 'ms-panel-foot', plural(d.milestones.length, 'milestone')));
+
+    // Opened from one milestone's count: start there.
+    if (S.jump) {
+      const jump = S.jump;
+      S.jump = null;
+      requestAnimationFrame(() => {
+        const target = [...scroll.querySelectorAll('.ms-mgroup')].find(g => g.dataset.milestone === jump);
+        if (target) scroll.scrollTop = target.offsetTop - scroll.offsetTop;
+      });
+    }
+
+    return panel;
   }
 
   function item(r, t) {
@@ -406,7 +421,7 @@ function start(root) {
     return {
       form: `Closed when ${who} the signed form`,
       approval: `Closed when ${who} the CLF signed by ${signer}`,
-      document: 'Closes when the team uploads it',
+      document: 'Closes when the adviser and the consultant both approve it',
       defense: 'Closes when the panel records a pass',
       custom: CAPSA ? 'Ticked by you' : 'Ticked by the CaPSA',
     }[r.kind] || '';
@@ -567,12 +582,5 @@ function start(root) {
 
   function pill(cls, text) {
     return el('span', 'ms-pill ' + cls, text);
-  }
-
-  /** Opening one closes whichever was open; opening the open one closes it. */
-  function openOnly(set, key) {
-    const was = set.has(key);
-    set.clear();
-    if (!was) set.add(key);
   }
 }
