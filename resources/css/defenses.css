@@ -85,6 +85,13 @@
 .dx-pill-assigned{background:var(--dx-blue-bg);color:var(--dx-blue)}
 .dx-pill-scheduled{background:var(--dx-green-bg);color:var(--dx-green)}
 .dx-pill-notready{background:#eceef2;color:var(--dx-ink2)}
+/* The Scheduled tab's Result column: what the panel decided, or that there is
+   nothing to decide yet. Tones match DefenseOutcome::tone() server-side, so a
+   colour always means the same thing wherever this app shows an outcome. */
+.dx-pill-pass{background:var(--dx-green-bg);color:var(--dx-green)}
+.dx-pill-major{background:var(--dx-amber-bg);color:var(--dx-amber)}
+.dx-pill-fail{background:var(--dx-red-bg);color:var(--dx-red)}
+.dx-pill-ongoing{background:var(--dx-blue-bg);color:var(--dx-blue)}
 .dx-sched-note{display:block;font-size:11px;margin-top:4px;line-height:1.3}
 .dx-sched-note.dx-ok{color:var(--dx-green)} .dx-sched-note.dx-no{color:var(--dx-red)} .dx-sched-note.dx-wait{color:var(--dx-ink3)}
 

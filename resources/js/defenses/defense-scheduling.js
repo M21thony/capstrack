@@ -35,6 +35,19 @@ const panelOf = t => (t.panel ? [t.panel.chair, t.panel.m1, t.panel.m2].filter(B
 const panelNames = t => SEATS.map(([k]) => (t.panel?.[k] ? `${esc(nameOf(t.panel[k]))}${k === 'chair' ? ' <span class="dx-muted">(Chair)</span>' : ''}` : '')).filter(Boolean).join('<br>');
 const teamCell = (t, extra = '') => `<div class="dx-team"><span class="dx-tbadge dx-sm">${esc(initials(t.name))}</span><span><span class="dx-strong">${esc(t.name)}</span><span class="dx-muted" style="display:block">${esc(t.section)}${extra}</span></span></div>`;
 
+/**
+ * What the panel decided, for the Scheduled tab's Result column - or that
+ * there is nothing to decide yet. "Awaiting result" (the defense has already
+ * happened) is told apart from "Ongoing" (it hasn't) so a CaPSA can tell a
+ * panel that has fallen behind from one that simply hasn't sat yet.
+ */
+const resultBadge = t => {
+  if (!t.schedule) return '';
+  if (t.outcome) return `<span class="dx-pill dx-pill-${t.outcome_tone || 'pass'}">${esc(t.outcome)}</span>`;
+  const past = new Date(`${t.schedule.date}T${t.schedule.time}`) < new Date();
+  return past ? '<span class="dx-pill dx-pill-major">Awaiting result</span>' : '<span class="dx-pill dx-pill-ongoing">Ongoing</span>';
+};
+
 /** Pre-proposal Defense reads as "Pre-proposal", Pre Oral as "POD". */
 const stageShort = s => ({
   'Pre-proposal Defense': 'Pre-proposal',
@@ -98,6 +111,7 @@ let schedTab = 'ready';
 function render() {
   $('#window-label').textContent = windowLabel(WINDOWS[STAGE]);
   $('#my-sections').textContent = S.sections.length ? S.sections.join(', ') : 'All sections';
+  $('#export-schedule').href = `${URLS.self}?defense_type=${encodeURIComponent(STAGE)}&export=xlsx`;
   const q = $('#s-search').value.toLowerCase();
   const match = t => !q || t.name.toLowerCase().includes(q);
   const ready = TEAMS.filter(readyToSchedule);
@@ -133,13 +147,13 @@ function render() {
     $('#tab-hint').textContent = "Other sections' defense schedules are shown greyed out, so you can see why a room or panelist is taken.";
     const rows = [
       ...scheduled.filter(match).map(t => {
-        // Grading and the panel's decision, as they come in.
-        const progress = t.outcome ? ` · ${t.outcome}` : t.panel_size ? ` · Graded ${t.graded} of ${t.panel_size}` : '';
-        return { at: t.schedule.date + t.schedule.time, html: `<tr><td class="dx-when">${fmtDay(t.schedule.date)}</td><td>${slotLabel(t.schedule.time, t.schedule.end)}</td><td>${esc(t.schedule.venue)}</td><td>${teamCell(t, esc(progress))}</td><td class="dx-panel-names">${panelNames(t)}</td><td><div class="dx-acts">${t.passed ? '' : `<button class="dx-btn dx-btn-sm" data-override="${t.id}"><svg><use href="#dx-i-edit"/></svg>Change</button>`}</div></td></tr>` };
+        // The panel's decision has its own column now; grading is what's left to say here.
+        const progress = !t.outcome && t.panel_size ? ` · Graded ${t.graded} of ${t.panel_size}` : '';
+        return { at: t.schedule.date + t.schedule.time, html: `<tr><td class="dx-when">${fmtDay(t.schedule.date)}</td><td>${slotLabel(t.schedule.time, t.schedule.end)}</td><td>${esc(t.schedule.venue)}</td><td>${teamCell(t, esc(progress))}</td><td class="dx-panel-names">${panelNames(t)}</td><td>${resultBadge(t)}</td><td><div class="dx-acts">${t.passed ? '' : `<button class="dx-btn dx-btn-sm" data-override="${t.id}"><svg><use href="#dx-i-edit"/></svg>Change</button>`}</div></td></tr>` };
       }),
-      ...($('#s-others').checked && !q ? OTHER : []).map(o => ({ at: o.date + o.time, html: `<tr class="dx-other"><td class="dx-when">${fmtDay(o.date)}</td><td>${slotLabel(o.time, o.end)}</td><td>${esc(o.venue)}</td><td><span class="dx-strong">${esc(o.section)}</span><span class="dx-muted" style="display:block">Other section · ${esc(o.stage)}</span></td><td class="dx-panel-names">${o.panel.map(id => esc(nameOf(id))).join('<br>')}</td><td></td></tr>` })),
+      ...($('#s-others').checked && !q ? OTHER : []).map(o => ({ at: o.date + o.time, html: `<tr class="dx-other"><td class="dx-when">${fmtDay(o.date)}</td><td>${slotLabel(o.time, o.end)}</td><td>${esc(o.venue)}</td><td><span class="dx-strong">${esc(o.section)}</span><span class="dx-muted" style="display:block">Other section · ${esc(o.stage)}</span></td><td class="dx-panel-names">${o.panel.map(id => esc(nameOf(id))).join('<br>')}</td><td></td><td></td></tr>` })),
     ].sort((a, b) => a.at.localeCompare(b.at)).map(r => r.html);
-    $('#sched-table').innerHTML = table(['16%', '15%', '10%', '20%', '29%', '10%'], ['Date', 'Time', 'Venue', 'Team', 'Panel', 'Actions'], rows, `Nothing scheduled for ${STAGE} yet.`);
+    $('#sched-table').innerHTML = table(['14%', '13%', '9%', '18%', '21%', '15%', '10%'], ['Date', 'Time', 'Venue', 'Team', 'Panel', 'Result', 'Actions'], rows, `Nothing scheduled for ${STAGE} yet.`);
   }
 
   const w = WINDOWS[STAGE];
