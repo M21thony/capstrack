@@ -26,6 +26,7 @@ use App\Http\Controllers\Capsa\DocumentFileController;
 use App\Http\Controllers\Capsa\ExpertRemovalRequestController;
 use App\Http\Controllers\Capsa\ExpertRosterController;
 use App\Http\Controllers\Capsa\RemovalController;
+use App\Http\Controllers\Capsa\ReportController;
 use App\Http\Controllers\Capsa\SectionProgressController;
 use App\Http\Controllers\Capsa\StudentController as CapsaStudentController;
 use App\Http\Controllers\Capsa\StudentRosterController;
@@ -243,6 +244,9 @@ Route::middleware(['expert.auth', 'no.cache', 'track.expert'])->prefix('capsa')-
         Route::delete('/deliverables/{deliverable}/checks/{team}', [DeliverableCheckController::class, 'destroy'])->name('deliverables.checks.destroy');
         // One section of the tracker, loaded when its tab is picked.
         Route::get('/sections/{section}/progress', [SectionProgressController::class, 'show'])->name('sections.progress');
+        // Reports: counts per section, a page per section, and a PDF or Excel copy.
+        Route::get('/reports', [ReportController::class, 'index'])->name('reports');
+        Route::get('/reports/section/{section}', [ReportController::class, 'section'])->name('reports.section');
         // The file a team uploaded for a line, opened by the CaPSA to check it.
         Route::get('/documents/{document}/file', [DocumentFileController::class, 'show'])->name('documents.file');
         Route::get('/rubric_management', [GradingRubricController::class, 'index'])->name('rubric_management');
