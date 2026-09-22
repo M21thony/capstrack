@@ -44,6 +44,7 @@
       <symbol id="dx-i-cal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></symbol>
       <symbol id="dx-i-spark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18M9 15l2 2 4-4"/></symbol>
       <symbol id="dx-i-edit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></symbol>
+      <symbol id="dx-i-download" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></symbol>
     </svg>
 
     <header class="dx-head">
@@ -56,6 +57,11 @@
         <button class="dx-btn" id="open-window"><svg><use href="#dx-i-cal"/></svg>Defense window: <span id="window-label"></span></button>
         <span class="dx-scope">Your sections: <b id="my-sections"></b></span>
         <span class="dx-grow"></span>
+        {{-- Every scheduled defense for the stage in view, in the department's
+             own spreadsheet layout - see App\Support\DefenseScheduleWorkbook.
+             Its href is kept in sync with the stage in JS, since the stage
+             switches without a page reload. --}}
+        <a class="dx-btn" id="export-schedule" download><svg><use href="#dx-i-download"/></svg>Export to Excel</a>
         <button class="dx-btn dx-btn-gold" id="open-generate"><svg><use href="#dx-i-spark"/></svg>Generate schedule</button>
       </div>
       {{-- Only a warning: scheduling goes ahead, but nobody can grade this
