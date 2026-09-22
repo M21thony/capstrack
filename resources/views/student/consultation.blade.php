@@ -1113,6 +1113,12 @@ setInterval(function () {
   if (document.visibilityState === 'visible') { refreshConsultationData(false); }
 }, 30000);
 
+// Coming back to the tab (e.g. from the expert's window) shouldn't wait for
+// the next 30-second tick to show what changed while it was hidden.
+document.addEventListener('visibilitychange', function () {
+  if (document.visibilityState === 'visible') { refreshConsultationData(false); }
+});
+
 async function bookSlot(scheduleId) {
   const dateKey = currentSlotModalDateKey;
   try {
