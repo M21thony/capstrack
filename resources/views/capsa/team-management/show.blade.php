@@ -179,14 +179,11 @@
           @if ($selected->due_on)
             <span><x-tm-icon n="cal" s="13" />Due {{ \Illuminate\Support\Carbon::parse($selected->due_on)->format('M j, Y') }}</span>
           @endif
-          @if ($selected->milestone->requires_previous && $selected->requires)
-            <span><x-tm-icon n="lock" s="13" />Needs {{ $selected->requires }} complete first</span>
-          @endif
         </div>
 
         @if ($selected->locked)
           <div class="lockmsg"><x-tm-icon n="lock" s="16" />
-            <span>The team can't hand anything in for {{ $selected->milestone->name }} until {{ $selected->requires }} is complete.</span></div>
+            <span>The team can't hand anything in for {{ $selected->milestone->name }} yet: it waits for {{ $selected->requires }}.</span></div>
         @endif
 
         {{-- Flat: every item of the chosen milestone, nothing folded away. --}}
@@ -198,11 +195,11 @@
                 'd' => ['Done', 'p-green'], 'l' => ['Done late', 'p-green'], 'h' => ['Handed in', 'p-blue'],
                 'o' => ['Overdue', 'p-red'], 'n' => ['Not started', 'p-gray'],
               ][$short];
-              $note = MilestoneProgress::itemNote($item, $selected->locked, $selected->requires);
+              $note = MilestoneProgress::itemNote($item, $item->locked, $item->waits_for);
               $steps = MilestoneProgress::steps($item->item->kind, $item->state, $item->waiting_on);
               $stepsDone = collect($steps)->where('state', 'done')->count();
             @endphp
-            <li class="it {{ $short }}{{ $selected->locked ? ' lk' : '' }}">
+            <li class="it {{ $short }}{{ $item->locked ? ' lk' : '' }}">
               <div class="nm">{{ $item->item->title }}@if ($note)<small>{{ $note }}</small>@endif</div>
               <ol class="stp" aria-label="{{ $stepsDone }} of {{ count($steps) }} steps done">
                 @foreach ($steps as $step)
@@ -210,7 +207,7 @@
                   <li class="{{ $dot }}"><span class="sd">@if ($dot === 'y')<x-tm-icon n="check" s="10" bold />@endif</span>{{ $step['label'] }}</li>
                 @endforeach
               </ol>
-              @if ($selected->locked)
+              @if ($item->locked)
                 <span class="pill p-gray"><x-tm-icon n="lock" s="11" />Locked</span>
               @else
                 <span class="pill {{ $mark[1] }}">{{ $mark[0] }}</span>

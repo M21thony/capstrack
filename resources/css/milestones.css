@@ -148,6 +148,7 @@
 .ms-item .ms-i { width: 15px; height: 15px; }
 .ms-item-title { font-weight: 600; }
 .ms-note { display: block; font-weight: 400; color: var(--amber); font-size: 12px; }
+.ms-wait { color: var(--text3); }
 .ms-who { font-size: 12px; color: var(--text3); }
 .ms-st-done { color: var(--green); }
 .ms-st-handed { color: var(--amber); }

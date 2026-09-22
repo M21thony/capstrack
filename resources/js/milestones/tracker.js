@@ -343,7 +343,7 @@ function start(root) {
 
       const dues = rows.map(r => r.due).filter(Boolean).sort();
       const [status, tone] = name in locked
-        ? ['Locked until ' + (locked[name] || 'the milestone before it') + ' is complete', '']
+        ? ['Waits for ' + (locked[name] || 'the milestone before it'), '']
         : pc.overdue ? [pc.overdue + ' overdue', 'ms-t-red']
           : pc.check ? [pc.check + ' to check', 'ms-t-amb']
             : pc.total && pc.closed === pc.total ? ['Complete', 'ms-t-grn'] : ['', ''];
@@ -383,6 +383,8 @@ function start(root) {
     const state = stateIcon(r);
     const title = el('span', 'ms-item-title', r.title);
     if (r.note) title.append(el('span', 'ms-note', `“${r.note}”`));
+    // Its own place in the milestone's order; a locked milestone says so once, above.
+    if (r.waits_for && !(r.milestone in (t.locked || {}))) title.append(el('span', 'ms-note ms-wait', 'Waits for ' + r.waits_for));
     const when = r.due ? (closed(r) ? 'was due ' : 'due ') + fmtDate(r.due) : 'no due date';
     const act = el('span', 'ms-item-act');
     const action = actionFor(r, t);
