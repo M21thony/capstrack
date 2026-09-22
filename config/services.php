@@ -58,6 +58,11 @@ return [
     ],
 
     'ollama' => [
+        // Where to reach Ollama directly over the web, e.g. a RunPod pod's
+        // https://<pod-id>-11434.proxy.runpod.net. Empty: go through the SSH
+        // tunnel below to the Windows laptop, as before.
+        'url' => env('OLLAMA_URL'),
+
         'model' => env('OLLAMA_MODEL', 'qwen2.5:7B'),
         'embed_model' => env('OLLAMA_EMBED_MODEL'),
 

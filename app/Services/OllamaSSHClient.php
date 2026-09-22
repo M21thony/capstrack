@@ -2,7 +2,10 @@
 
 namespace App\Services;
 
+use Illuminate\Http\Client\Pool;
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use phpseclib3\Crypt\PublicKeyLoader;
 use phpseclib3\Net\SFTP;
@@ -99,8 +102,31 @@ class OllamaSSHClient
         return preg_match('/^[A-Za-z]:/', $posix) ? '/'.$posix : $posix;
     }
 
+    /** Ollama's own address when it is reached directly, not through SSH. */
+    private function directUrl(): ?string
+    {
+        $url = config('services.ollama.url');
+
+        return $url ? rtrim($url, '/') : null;
+    }
+
     private function runCurl(string $jsonPayload, string $endpoint): string
     {
+        if ($url = $this->directUrl()) {
+            $output = Http::timeout(300)->retry(2, 1000, throw: false)
+                ->withBody($jsonPayload, 'application/json')
+                ->post($url.$endpoint)
+                ->body();
+
+            if (empty(trim($output))) {
+                throw new \Exception("Empty response from Ollama at {$endpoint}.");
+            }
+
+            $this->markWarm();
+
+            return $output;
+        }
+
         $ssh = $this->getConnection();
         $tempDir = $this->getRemoteTempDir($ssh);
         $remotePath = $tempDir.'\\ollama_'.uniqid().'.json';
@@ -298,6 +324,27 @@ class OllamaSSHClient
                     'top_k' => 1,
                 ],
             ];
+        }
+
+        if ($url = $this->directUrl()) {
+            $responses = Http::pool(fn (Pool $pool) => array_map(
+                fn ($payload) => $pool->timeout(300)->post($url.'/api/generate', $payload),
+                $payloads
+            ));
+
+            $answers = [];
+
+            foreach ($responses as $i => $response) {
+                if ($response instanceof Response && $response->successful() && isset($response->json()['response'])) {
+                    $answers[$i] = $response->json()['response'];
+                }
+            }
+
+            if ($answers !== []) {
+                $this->markWarm();
+            }
+
+            return $answers;
         }
 
         $ssh = $this->getConnection();

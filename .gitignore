@@ -40,3 +40,10 @@ storage/app/playwright-videos/
 .kilo/
 .impeccable/
 *.exe
+
+# Local scratch scripts and database dumps - never deploy these
+/capstrackdb.sql
+*.sql
+/zz_test.php
+/check_team*.php
+/how --stat*
