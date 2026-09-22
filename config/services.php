@@ -49,6 +49,14 @@ return [
         'secret_key' => env('RECAPTCHA_SECRET_KEY', '6LeGxAcTAAAAAD19URmB6m1OSQC9FLgT3IQCOgNY'),
     ],
 
+    // Web push. Empty keys are not an error - push simply stays off and
+    // everything else (the bell, the emails) carries on as before.
+    'webpush' => [
+        'public_key' => env('VAPID_PUBLIC_KEY'),
+        'private_key' => env('VAPID_PRIVATE_KEY'),
+        'subject' => env('VAPID_SUBJECT', 'mailto:capstrack@cspc.edu.ph'),
+    ],
+
     'ollama' => [
         'model' => env('OLLAMA_MODEL', 'qwen2.5:7B'),
         'embed_model' => env('OLLAMA_EMBED_MODEL'),

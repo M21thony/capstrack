@@ -75,7 +75,7 @@
 
     <div class="rr-head">
       <div>
-        <div class="rr-sub">A team that passes Title Defense keeps its members. When one of them has to leave, the request comes to you with a reason.</div>
+        <div class="rr-sub">A member can only leave a team with your approval, and once a team passes Title Defense its leader can't remove anyone either. Those requests, and teams asking to change an expert who already took them on, come to you with a reason.</div>
       </div>
       <span class="rr-locked">
         <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
@@ -85,10 +85,10 @@
 
     <div class="rr-tabs" role="tablist" aria-label="Requests">
       <button type="button" class="rr-tab" role="tab" id="tab-pending" aria-controls="panel-pending" aria-selected="true">
-        Waiting<span class="rr-count {{ $pending->count() ? 'has' : '' }}" id="count-pending">{{ $pending->count() }}</span>
+        Waiting<span class="rr-count {{ $pending->count() + $expertPending->count() ? 'has' : '' }}" id="count-pending">{{ $pending->count() + $expertPending->count() }}</span>
       </button>
       <button type="button" class="rr-tab" role="tab" id="tab-decided" aria-controls="panel-decided" aria-selected="false" tabindex="-1">
-        Decided<span class="rr-count" id="count-decided">{{ $decided->count() }}</span>
+        Decided<span class="rr-count" id="count-decided">{{ $decided->count() + $expertDecided->count() }}</span>
       </button>
     </div>
 
@@ -155,10 +155,47 @@
             </div>
           </article>
         @endforeach
+        @foreach($expertPending as $r)
+          @php
+            $expertName = $r->expert?->name ?? 'An expert';
+            $role = $r->assignment?->engaged_role_name ?: 'expert';
+            $requesterName = trim(($r->requester->f_name ?? '').' '.($r->requester->l_name ?? '')) ?: 'The leader';
+            $initials = collect(explode(' ', $expertName))->filter()->map(fn ($w) => mb_strtoupper(mb_substr($w, 0, 1)))->take(2)->implode('');
+          @endphp
+          <article class="rr-card" id="ereq-{{ $r->id }}"
+                   data-id="{{ $r->id }}"
+                   data-url="{{ route('capsa.expert_removal_requests.update', $r) }}"
+                   data-member="{{ $expertName }}"
+                   data-role="{{ $role }}"
+                   data-team="{{ $r->team->team_name }}"
+                   data-type="expert"
+                   data-requester="{{ $requesterName }}">
+            <div class="rr-top">
+              <div class="rr-avatar" aria-hidden="true">{{ $initials ?: '?' }}</div>
+              <div class="rr-main">
+                <div class="rr-line">
+                  <b>{{ $requesterName }}</b> (leader) asks to remove <b>{{ $expertName }}</b> as {{ $role }} of <b>{{ $r->team->team_name }}</b>
+                </div>
+                <div class="rr-meta">
+                  <span>{{ $expertSectionOf[$r->id] }}</span>
+                  <span title="{{ $r->created_at->format('M j, Y g:i A') }}">Asked {{ $r->created_at->diffForHumans() }}</span>
+                </div>
+              </div>
+              <span class="rr-type remove">Expert change</span>
+            </div>
+
+            <p class="rr-reason"><span class="rr-reason-label">Leader's reason</span>{{ $r->reason }}</p>
+
+            <div class="rr-actions">
+              <button type="button" class="rr-btn" data-decide="declined">Decline</button>
+              <button type="button" class="rr-btn rr-btn-primary" data-decide="approved">Approve</button>
+            </div>
+          </article>
+        @endforeach
       </div>
-      <div class="rr-empty" id="pending-empty" @if($pending->isNotEmpty()) hidden @endif>
+      <div class="rr-empty" id="pending-empty" @if($pending->isNotEmpty() || $expertPending->isNotEmpty()) hidden @endif>
         <b>Nothing waiting</b>
-        When a member of a locked team asks to leave, or a leader asks to remove someone, it shows up here.
+        When a member asks to leave, a leader of a locked team asks to remove someone, or a team asks to change an expert, it shows up here.
       </div>
     </section>
 
@@ -191,8 +228,28 @@
             <span class="rr-meta">{{ ($r->decided_at ?? $r->updated_at)?->format('M j, Y') }}</span>
           </article>
         @endforeach
+        @foreach($expertDecided as $r)
+          @php
+            $decider = trim(($r->decider->first_name ?? '').' '.($r->decider->last_name ?? ''));
+            $label = ['approved' => 'Approved', 'declined' => 'Declined', 'withdrawn' => 'Closed'][$r->status] ?? ucfirst($r->status);
+          @endphp
+          <article class="rr-card rr-decided">
+            <span class="rr-status {{ $r->status }}">{{ $label }}</span>
+            <div class="rr-main">
+              <div class="rr-line">Expert change: <b>{{ $r->expert?->name ?? 'Expert' }}</b> · {{ $r->team?->team_name }}</div>
+              <div class="rr-meta">
+                <span>{{ $expertSectionOf[$r->id] ?? '' }}</span>
+                @if($decider)<span>By {{ $decider }}</span>@endif
+              </div>
+              @if($r->decision_note)
+                <div class="rr-decision">“{{ $r->decision_note }}”</div>
+              @endif
+            </div>
+            <span class="rr-meta">{{ ($r->decided_at ?? $r->updated_at)?->format('M j, Y') }}</span>
+          </article>
+        @endforeach
       </div>
-      <div class="rr-empty" id="decided-empty" @if($decided->isNotEmpty()) hidden @endif>
+      <div class="rr-empty" id="decided-empty" @if($decided->isNotEmpty() || $expertDecided->isNotEmpty()) hidden @endif>
         <b>No decisions yet</b>
         Requests you approve or decline are kept here.
       </div>
@@ -246,6 +303,15 @@
 
   function effectsFor(card, decision) {
     const d = card.dataset;
+    if (d.type === 'expert') {
+      return decision === 'declined'
+        ? [{ text: d.member + ' stays the ' + d.role + ' of ' + d.team + '.' }, { text: d.requester + ' is told you declined, with your reason.' }]
+        : [
+            { text: d.member + ' is removed as the ' + d.role + ' of ' + d.team + ' straight away.' },
+            { text: 'The team can apply to another ' + d.role + '.' },
+            { text: 'Every member of the team is notified.' },
+          ];
+    }
     const leave = d.type === 'leave';
     if (decision === 'declined') {
       return [
@@ -278,9 +344,11 @@
     const approve = decision === 'approved';
 
     $('rr-confirm-title').textContent = approve
-      ? (d.type === 'leave' ? 'Let ' + d.member + ' leave?' : 'Remove ' + d.member + '?')
+      ? (d.type === 'leave' ? 'Let ' + d.member + ' leave?' : (d.type === 'expert' ? 'Remove ' + d.member + ' as ' + d.role + '?' : 'Remove ' + d.member + '?'))
       : 'Decline this request?';
-    $('rr-confirm-lede').textContent = d.team + ' passed Title Defense. This cannot be undone from here.';
+    $('rr-confirm-lede').textContent = d.type === 'expert'
+      ? d.team + ' asked to change an expert who already took them on. This cannot be undone from here.'
+      : 'This cannot be undone from here.';
 
     const list = $('rr-effects');
     list.innerHTML = '';
@@ -334,7 +402,7 @@
     main.className = 'rr-main';
     const line = document.createElement('div');
     line.className = 'rr-line';
-    line.append((d.type === 'leave' ? 'Leaving' : 'Removal') + ': ');
+    line.append((d.type === 'leave' ? 'Leaving' : (d.type === 'expert' ? 'Expert change' : 'Removal')) + ': ');
     const b = document.createElement('b');
     b.textContent = d.member;
     line.append(b, ' · ' + d.team);

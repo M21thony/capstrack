@@ -30,6 +30,8 @@ class MemberLeaveRequest extends Model
 
     public const REASON_MIN = 15;
 
+    public const ASK_CAPSA = "Leaving a team needs your CaPSA's approval. Use Ask CaPSA to Leave on the Team page.";
+
     protected $fillable = [
         'team_id',
         'student_id',

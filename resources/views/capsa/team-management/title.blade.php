@@ -24,6 +24,10 @@
     'Scope' => $title['scope'],
     'Limitations' => $title['limitations'],
     'Development method' => $title['sdm'],
+    'Clients/Organization' => $title['clients'] ?? null,
+    'Address of the organization' => $title['client_address'] ?? null,
+    'Representative' => $title['client_representative'] ?? null,
+    'Their position' => $title['client_position'] ?? null,
     'Tags' => is_array($title['tags']) ? implode(', ', $title['tags']) : $title['tags'],
   ];
 @endphp

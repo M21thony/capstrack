@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Models\LeaveApproval;
+use App\Models\MemberLeaveRequest;
 use App\Models\Notification;
 use App\Models\Recruitment;
 use App\Models\Student;
@@ -143,98 +143,6 @@ class TeamCreationTest extends TestCase
         $this->assertDatabaseHas('team', ['team_id' => $team->team_id]);
     }
 
-    public function test_leader_sees_leave_approval_actions_and_member_is_forced_after_three_declines(): void
-    {
-        $leader = Student::create([
-            'email' => 'leave.leader@my.cspc.edu.ph',
-            'f_name' => 'Leah',
-            'l_name' => 'Leader',
-            'student_number' => '100000001',
-            'p_picture' => 'avatar-01',
-            'course' => 'Bachelor of Science in Computer Science',
-            'year_section' => '4th · A',
-        ]);
-
-        $member = Student::create([
-            'email' => 'leave.member@my.cspc.edu.ph',
-            'f_name' => 'Milo',
-            'l_name' => 'Member',
-        ]);
-
-        $team = Team::create([
-            'team_name' => 'Team Leave Flow',
-            'team_status' => 'Active',
-            'leader_id' => $leader->student_id,
-        ]);
-
-        StudentSchoolYear::create([
-            'student_id' => $leader->student_id,
-            'team_id' => $team->team_id,
-        ]);
-
-        StudentSchoolYear::create([
-            'student_id' => $member->student_id,
-            'team_id' => $team->team_id,
-        ]);
-
-        $this->actingAs($member, 'web');
-
-        $response = $this->post('/team/leave-requests');
-        $response->assertRedirect(route('student.team'));
-        $response->assertSessionHas('status');
-
-        $approval = LeaveApproval::where('student_id', $member->student_id)
-            ->where('team_id', $team->team_id)
-            ->latest('id')
-            ->first();
-
-        $this->assertNotNull($approval);
-        $this->assertSame('pending', $approval->status);
-
-        $this->actingAs($leader, 'web');
-        $teamPage = $this->get(route('student.team'));
-        $teamPage->assertOk();
-        $teamPage->assertSee('/team/leave-requests/'.$approval->id, false);
-        $teamPage->assertSee('value="declined"', false);
-
-        $this->patch('/team/leave-requests/'.$approval->id, ['status' => 'declined']);
-        $approval->refresh();
-        $this->assertSame('declined', $approval->status);
-
-        $this->actingAs($member, 'web');
-        $this->post('/team/leave-requests');
-        $secondApproval = LeaveApproval::where('student_id', $member->student_id)
-            ->where('team_id', $team->team_id)
-            ->latest('id')
-            ->first();
-        $this->assertNotNull($secondApproval);
-        $this->assertSame(2, $secondApproval->attempt);
-
-        $this->actingAs($leader, 'web');
-        $this->patch('/team/leave-requests/'.$secondApproval->id, ['status' => 'declined']);
-        $secondApproval->refresh();
-        $this->assertSame('declined', $secondApproval->status);
-
-        $this->actingAs($member, 'web');
-        $this->post('/team/leave-requests');
-        $thirdApproval = LeaveApproval::where('student_id', $member->student_id)
-            ->where('team_id', $team->team_id)
-            ->latest('id')
-            ->first();
-        $this->assertNotNull($thirdApproval);
-        $this->assertSame(3, $thirdApproval->attempt);
-
-        $this->actingAs($leader, 'web');
-        $this->patch('/team/leave-requests/'.$thirdApproval->id, ['status' => 'declined']);
-
-        $memberSy = StudentSchoolYear::where('student_id', $member->student_id)->first();
-        $this->assertNull($memberSy->team_id);
-        $this->assertDatabaseHas('notifications', [
-            'student_id' => $member->student_id,
-            'type' => 'leave_force',
-        ]);
-    }
-
     public function test_leader_can_transfer_then_leave(): void
     {
         $leader = Student::create([
@@ -322,26 +230,15 @@ class TeamCreationTest extends TestCase
             'leader_id' => $member->student_id,
         ]);
 
-        // Now the original leader can leave (they are a regular member now)
+        // Now the original leader is a regular member, so leaving goes to the CaPSA
         $this->actingAs($leader, 'web');
         $response = $this->delete('/team');
-        $response->assertRedirect(route('student.team'));
-        $response->assertSessionHas('status', 'Your leave request has been sent to the team leader. It will auto-approve after '.LeaveApproval::EXPIRY_HOURS.' hours if unanswered.');
+        $response->assertSessionHas('error', MemberLeaveRequest::ASK_CAPSA);
+        $this->assertSame($team->team_id, StudentSchoolYear::where('student_id', $leader->student_id)->value('team_id'));
 
-        // A leave approval was created for the original leader, pending the new leader's response
-        $leaveApproval = LeaveApproval::where('student_id', $leader->student_id)
-            ->where('team_id', $team->team_id)
-            ->where('status', LeaveApproval::STATUS_PENDING)
-            ->latest('id')
-            ->first();
-        $this->assertNotNull($leaveApproval);
-
-        // New leader approves the leave request
-        $this->actingAs($member, 'web');
-        $this->patch('/team/leave-requests/'.$leaveApproval->id, ['status' => 'approved']);
-
-        // Verify the original leader's team_id is null
-        $this->assertNull(StudentSchoolYear::where('student_id', $leader->student_id)->value('team_id'));
+        $this->postJson(route('team.capsa-leave-requests.store'), [
+            'type' => MemberLeaveRequest::LEAVE, 'reason' => 'Transferring to another campus next term.',
+        ])->assertCreated();
 
         // Team should still exist (new leader is still there)
         $this->assertDatabaseHas('team', ['team_id' => $team->team_id]);

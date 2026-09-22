@@ -397,7 +397,7 @@
                     <div style="font-size: 11px; color: var(--text3);">{{ $memberRole }}</div>
                   </div>
                   <div style="background: {{ $isTeamLeader ? '#fef3c7' : 'var(--bg2)' }}; color: {{ $isTeamLeader ? '#92400e' : 'var(--text3)' }}; padding: 3px 8px; border-radius: 6px; font-size: 10px; font-weight: 700;">{{ $isTeamLeader ? 'LEADER' : 'MEMBER' }}</div>
-                  @if($teamLocked && $leaveRequests->contains('student_id', $member->student_id))
+                  @if($leaveRequests->contains('student_id', $member->student_id))
                     <span title="A request about this member is waiting on your CaPSA" style="font-size:9px;font-weight:700;color:var(--amber);background:var(--amber-bg);padding:2px 6px;border-radius:4px;white-space:nowrap;">WITH CAPSA</span>
                   @elseif($teamLocked && $isLeader && !$isThisUser)
                     <button type="button" onclick="openCapsaLeaveModal('remove', {{ $member->student_id }}, '{{ addslashes(trim($member->f_name . ' ' . $member->l_name)) }}')" style="background:none;border:none;color:#ef4444;cursor:pointer;padding:4px;font-size:14px;line-height:1;" title="Ask your CaPSA to remove this member" aria-label="Ask your CaPSA to remove {{ trim($member->f_name . ' ' . $member->l_name) }}">✕</button>
@@ -542,51 +542,10 @@
         </div>
       </div>
 
-      @if($isLeader && $pendingLeaveApprovals->count() > 0)
-      <div style="margin-top: 16px; background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 16px;">
-        <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 14px;">PENDING LEAVE REQUESTS</div>
-        <div style="display: flex; flex-direction: column; gap: 10px;">
-          @foreach($pendingLeaveApprovals as $approval)
-            @php
-              $leaveMember = $approval->student;
-              $leaveName = trim(($leaveMember->f_name ?? '').' '.($leaveMember->l_name ?? '')) ?: 'A member';
-            @endphp
-            <div style="display: flex; align-items: center; gap: 10px; padding: 10px; border: 1px solid var(--border); border-radius: 8px;">
-              <div style="width: 34px; height: 34px; border-radius: 50%; background: var(--bg2); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: var(--text); overflow: hidden; flex-shrink: 0;">
-                @if ($leaveMember && $leaveMember->avatarUrl())
-                  <img src="{{ $leaveMember->avatarUrl() }}" alt="" style="width: 100%; height: 100%; object-fit: cover;">
-                @else
-                  {{ $leaveMember ? $leaveMember->avatarInitials() : '?' }}
-                @endif
-              </div>
-              <div style="flex: 1; min-width: 0;">
-                <div style="font-size: 13px; font-weight: 600; color: var(--text);">{{ $leaveName }}</div>
-                <div style="font-size: 11px; color: var(--text3);">Requesting to leave the team (attempt {{ $approval->attempt }}/{{ \App\Models\LeaveApproval::MAX_ATTEMPTS }})</div>
-              </div>
-              <div style="display: flex; gap: 8px; flex-shrink: 0;">
-                <form method="POST" action="{{ route('team.leave.update', $approval->id) }}" style="display:inline;">
-                  @method('PATCH')
-                  <input type="hidden" name="status" value="approved">
-                  @csrf
-                  <button type="submit" style="padding: 6px 12px; border-radius: 6px; border: 1px solid var(--green); background: var(--green-bg); color: var(--green); font-size: 11px; font-weight: 700; cursor: pointer;">Approve</button>
-                </form>
-                <form method="POST" action="{{ route('team.leave.update', $approval->id) }}" style="display:inline;">
-                  @method('PATCH')
-                  <input type="hidden" name="status" value="declined">
-                  @csrf
-                  <button type="submit" style="padding: 6px 12px; border-radius: 6px; border: 1px solid var(--red); background: var(--red-bg); color: var(--red); font-size: 11px; font-weight: 700; cursor: pointer;">Decline</button>
-                </form>
-              </div>
-            </div>
-          @endforeach
-        </div>
-      </div>
-      @endif
-
       @if($leaveRequests->isNotEmpty())
       <div style="margin-top: 16px; background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 16px;">
         <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3);">WAITING ON YOUR CAPSA</div>
-        <div style="font-size: 11px; color: var(--text3); margin: 3px 0 12px;">Your team's members are locked, so these need your CaPSA's decision.</div>
+        <div style="font-size: 11px; color: var(--text3); margin: 3px 0 12px;">These need your CaPSA's decision.</div>
         <div style="display: flex; flex-direction: column; gap: 10px;">
           @foreach($leaveRequests as $rr)
             @php
@@ -640,17 +599,9 @@
             @method('DELETE')
             <button type="button" onclick="confirmLeaveTeam()" style="padding: 5px 10px; border-radius: 6px; border: 1px solid var(--red); background: var(--red-bg); color: var(--red); font-size: 10px; font-weight: 700; cursor: pointer;">Leave Team</button>
           </form>
-        @elseif($teamLocked)
+        @else
           @php $myLeaveRequest = $leaveRequests->firstWhere('student_id', auth()->user()->student_id); @endphp
           <button type="button" @if(!$myLeaveRequest) onclick="openCapsaLeaveModal('leave')" @endif title="{{ $myLeaveRequest ? 'Your request is waiting on your CaPSA' : 'Ask your CaPSA to let you leave' }}" style="padding: 5px 10px; border-radius: 6px; border: 1px solid var(--red); background: var(--red-bg); color: var(--red); font-size: 10px; font-weight: 700; {{ $myLeaveRequest ? 'opacity:0.6;cursor:not-allowed;' : 'cursor:pointer;' }}">{{ $myLeaveRequest ? 'Leave Request with CaPSA' : 'Ask CaPSA to Leave' }}</button>
-        @else
-          @php
-            $leavePending = $hasPendingLeaveApproval;
-            $leaveLabel = $leavePending ? 'Leave Pending' : 'Leave Team';
-            $leaveOnclick = $leavePending ? '' : 'openLeaveRequestModal()';
-            $leaveStateStyle = $leavePending ? 'opacity:0.6;cursor:not-allowed;' : '';
-          @endphp
-          <button type="button" onclick="{{ $leaveOnclick }}" title="Leave Team" style="padding: 5px 10px; border-radius: 6px; border: 1px solid var(--red); background: var(--red-bg); color: var(--red); font-size: 10px; font-weight: 700; cursor: pointer; {{ $leaveStateStyle }}">{{ $leaveLabel }}</button>
         @endif
       </div>
       </div>
@@ -1185,52 +1136,8 @@
     @method('DELETE')
 </form>
 
-<form method="POST" action="{{ route('team.leave-request') }}" id="leave-request-form" style="display:none;">
-    @csrf
-</form>
-
-@if($myTeam && !$isLeader)
-{{-- Leave Request Modal --}}
-<div class="modal-overlay" id="leaveRequestModal" onclick="if(event.target==this) closeLeaveRequestModal()">
-  <div class="card modal-card modal-card--team" style="width: 440px; padding: 30px; text-align: center; position: relative;">
-    <button type="button" onclick="closeLeaveRequestModal()" class="pm-close-btn" aria-label="Close" style="position: absolute; top: 20px; right: 20px;">
-      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-    </button>
-    <div style="width:56px;height:56px;border-radius:50%;background:rgba(239,68,68,0.08);color:#ef4444;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
-      <svg width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-    </div>
-    <div class="section-title">Request to Leave Team</div>
-    <div id="lrm-member" style="display:flex;align-items:center;gap:12px;margin-top:18px;padding:12px;border:1px solid var(--border);border-radius:12px;background:var(--bg2);text-align:left;">
-      <div id="lrm-avatar" style="width:44px;height:44px;border-radius:50%;background:#7c3aed;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#1a1a1a;overflow:hidden;flex-shrink:0;">
-        @if(auth()->user()->avatarUrl())
-          <img src="{{ auth()->user()->avatarUrl() }}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">
-        @else
-          {{ auth()->user()->avatarInitials() }}
-        @endif
-      </div>
-      <div style="flex:1;min-width:0;">
-        <div style="font-size:14px;font-weight:600;color:var(--text);">{{ auth()->user()->f_name }} {{ auth()->user()->l_name }}</div>
-        <div style="font-size:12px;color:var(--text3);">{{ $myTeam->team_name }}</div>
-      </div>
-    </div>
-    <p style="margin-top:16px;font-size:13px;color:var(--text2);line-height:1.6;text-align:left;">
-      Your request will be sent to <strong style="color:var(--text);">{{ $teamLeaderName ?? 'your team leader' }}</strong> for approval.
-    </p>
-    <ul style="margin:10px 0 0;padding-left:18px;font-size:12px;color:var(--text2);line-height:1.7;text-align:left;">
-      <li>If the leader does not respond within <strong style="color:var(--text);">3 hours</strong>, your leave will be <strong style="color:var(--text);">automatically approved</strong>.</li>
-      <li>If declined, you can try again — up to <strong style="color:var(--text);">3 times</strong>. After 3 declines, you will be <strong style="color:var(--text);">automatically removed</strong>.</li>
-      <li>Your recruitment post will be removed once you leave.</li>
-    </ul>
-    <div style="display:flex;gap:10px;margin-top:20px;">
-      <button type="button" class="btn-primary" style="flex:1;background:#ef4444;border-color:#ef4444;" onclick="submitLeaveRequest()">Send Leave Request</button>
-      <button type="button" class="google-btn" style="flex:1;border:none;" onclick="closeLeaveRequestModal()">Cancel</button>
-    </div>
-  </div>
-</div>
-@endif
-
-@if($myTeam && $teamLocked)
-{{-- Leave request: leaving, or removing a member, after Title Defense --}}
+@if($myTeam)
+{{-- Leave request: leaving, or (after Title Defense) removing a member --}}
 <div class="modal-overlay" id="capsaLeaveModal" onclick="if(event.target==this) closeCapsaLeaveModal()">
   <div class="card modal-card modal-card--team" role="dialog" aria-modal="true" aria-labelledby="rrm-title" style="width: 460px; padding: 30px; position: relative;">
     <button type="button" onclick="closeCapsaLeaveModal()" class="pm-close-btn" aria-label="Close" style="position: absolute; top: 20px; right: 20px;">
@@ -1885,20 +1792,6 @@ function confirmLeaveTeam() {
     @endif
 }
 
-function openLeaveRequestModal() {
-    var modal = document.getElementById('leaveRequestModal');
-    if (modal) modal.classList.add('active');
-}
-
-function closeLeaveRequestModal() {
-    var modal = document.getElementById('leaveRequestModal');
-    if (modal) modal.classList.remove('active');
-}
-
-function submitLeaveRequest() {
-    document.getElementById('leave-request-form').submit();
-}
-
 var removeMemberId = null;
 
 function openRemoveMemberModal(studentId, name, email, info, avatarUrl) {
@@ -1923,7 +1816,7 @@ function submitRemoveMember() {
     form.submit();
 }
 
-@if($teamLocked)
+@if($myTeam)
 var LEAVE_REASON_MIN = {{ \App\Models\MemberLeaveRequest::REASON_MIN }};
 
 function openCapsaLeaveModal(type, studentId, name) {
@@ -1932,7 +1825,7 @@ function openCapsaLeaveModal(type, studentId, name) {
     document.getElementById('rrm-student').value = leave ? '' : studentId;
     document.getElementById('rrm-title').textContent = leave ? 'Ask your CaPSA to leave' : 'Ask your CaPSA to remove ' + name;
     document.getElementById('rrm-lede').textContent = leave
-        ? 'Your team passed Title Defense, so its members are locked. Your CaPSA reads your reason and decides whether you can leave.'
+        ? 'Leaving a team needs your CaPSA\'s approval. Your CaPSA reads your reason and decides whether you can leave.'
         : 'Your team passed Title Defense, so you cannot remove members yourself. Your CaPSA reads your reason and decides.';
 
     var effects = leave

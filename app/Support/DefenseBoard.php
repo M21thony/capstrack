@@ -38,7 +38,10 @@ class DefenseBoard
     /** A stage with no window yet is timed as two-hour defenses. */
     public const DEFAULT_MINUTES = 120;
 
-    public const DURATIONS = [60, 90, 120];
+    /** A custom length: at least half an hour, at most a whole morning (8-12). */
+    public const MIN_MINUTES = 30;
+
+    public const MAX_MINUTES = 240;
 
     /**
      * Start times for defenses of this length: back to back from 8:00 until

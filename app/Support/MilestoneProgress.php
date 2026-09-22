@@ -135,27 +135,42 @@ class MilestoneProgress
      * The same items grouped into their milestones, in checklist order, each
      * with the gate worked out.
      *
-     * A gated milestone is locked until every item of the one before it is
-     * complete. Nothing stores that: it is read off the states here, so the
-     * grid, the team page and the student's upload all read one answer.
+     * A gated milestone is locked until every milestone above it is complete.
+     * An ungated one opens together with the milestone above it, so chapters
+     * can run side by side behind one gate. Nothing stores that: it is read
+     * off the states here, so the grid, the team page and the student's
+     * upload all read one answer.
      *
-     * The lock carries itself down the checklist - a locked milestone is by
-     * definition not complete, so the next gated one stays shut too.
+     * Each item also carries its own lock (locked, waits_for): the milestone's,
+     * or the order inside it - see itemWaitsFor().
      *
      * @return Collection<int, object>
      */
     private static function byMilestone(Collection $rows): Collection
     {
-        $previousComplete = true;
-        $previousName = null;
+        $unfinished = [];
+        $above = null;
 
         return $rows
             ->groupBy(fn ($row) => $row->milestone->id)
-            ->map(function (Collection $items) use (&$previousComplete, &$previousName) {
+            ->map(function (Collection $items) use (&$unfinished, &$above) {
                 $milestone = $items->first()->milestone;
                 $total = $items->count();
                 $completed = $items->whereIn('state', self::COMPLETE_STATES)->count();
-                $locked = (bool) $milestone->requires_previous && ! $previousComplete;
+                $waitsFor = $milestone->requires_previous
+                    ? ($unfinished ? self::names($unfinished) : null)
+                    : $above;
+                $locked = $waitsFor !== null;
+
+                $before = collect();
+
+                foreach ($items as $row) {
+                    $row->waits_for = in_array($row->state, self::COMPLETE_STATES, true)
+                        ? null
+                        : ($waitsFor ?? self::itemWaitsFor($row, $before));
+                    $row->locked = $row->waits_for !== null;
+                    $before->push($row);
+                }
 
                 $summary = (object) [
                     'milestone' => $milestone,
@@ -169,15 +184,49 @@ class MilestoneProgress
                     // inside it is the date the CaPSA means by "due".
                     'due_on' => $items->pluck('due_on')->filter()->max(),
                     // Named only when it matters: what this one is waiting for.
-                    'requires' => $milestone->requires_previous ? $previousName : null,
+                    'requires' => $waitsFor,
                 ];
 
-                $previousComplete = $total > 0 && $completed === $total;
-                $previousName = $milestone->name;
+                if ($completed < $total) {
+                    $unfinished[] = $milestone->name;
+                }
+                $above = $waitsFor;
 
                 return $summary;
             })
             ->values();
+    }
+
+    /**
+     * The order inside a milestone, the way the paper process runs:
+     *
+     *   a signed approval waits for every draft above it (a chapter's CLF
+     *     is signed once its draft has passed)
+     *   a defense waits for everything above it (the recommending CLFs and
+     *     the hearing notice come first)
+     *   anything below a defense waits for the defense
+     *
+     * Forms with no defense above them are free to come in any order.
+     */
+    private static function itemWaitsFor(object $row, Collection $before): ?string
+    {
+        $open = $before->reject(fn ($r) => in_array($r->state, self::COMPLETE_STATES, true));
+
+        $needs = (match ($row->item->kind) {
+            Deliverable::DEFENSE => $open,
+            Deliverable::APPROVAL => $open->where('item.kind', Deliverable::DOCUMENT),
+            default => collect(),
+        })->merge($open->where('item.kind', Deliverable::DEFENSE));
+
+        return $needs->isEmpty() ? null : self::names($needs->pluck('item.title')->unique()->all());
+    }
+
+    /** "A", "A and B", "A, B and C". */
+    private static function names(array $names): string
+    {
+        $last = array_pop($names);
+
+        return $names ? implode(', ', $names).' and '.$last : $last;
     }
 
     /**
@@ -321,7 +370,7 @@ class MilestoneProgress
         $submittedAt = $reviewed->min('created_at');
 
         [$closedAt, $started, $waitingOn, $changesRequested] = match ($deliverable->kind) {
-            Deliverable::DOCUMENT => [$own->min('created_at'), false, null, false],
+            Deliverable::DOCUMENT => self::documentState($own, $myReviews),
             Deliverable::DEFENSE => self::defenseState($deliverable, $defenses),
             default => self::checkedState($deliverable, $own, $reviewed, $myReviews, $approvedAt, $check),
         };
@@ -411,6 +460,43 @@ class MilestoneProgress
             && ! $reviewed->contains(fn ($upload) => $upload->created_at > $latest->verdict_at);
 
         return [null, true, $changesRequested ? self::WAITING_ON_TEAM : $deliverable->role, $changesRequested];
+    }
+
+    /**
+     * [closedAt, started, waitingOn, changesRequested] for a document. It
+     * runs the whole cycle - handed in, reviewed, revised, approved - and is
+     * done only once the adviser's and the consultant's latest verdicts are
+     * both approved. Uploading it is only the first step.
+     */
+    private static function documentState(Collection $own, Collection $reviews): array
+    {
+        if ($own->isEmpty()) {
+            return [null, false, null, false];
+        }
+
+        $decided = $reviews->whereNotNull('verdict_at')->sortBy('verdict_at');
+
+        // Asked for changes and nothing uploaded since: the team owes a new version.
+        $latest = $decided->last();
+
+        if ($latest && $latest->verdict === CapstoneDocumentReview::NEEDS_REVISION
+            && ! $own->contains(fn ($upload) => $upload->created_at > $latest->verdict_at)) {
+            return [null, true, self::WAITING_ON_TEAM, true];
+        }
+
+        $approvals = [];
+
+        foreach (['adviser', 'consultant'] as $role) {
+            $last = $decided->where('role', $role)->last();
+
+            if ($last?->verdict !== CapstoneDocumentReview::APPROVED) {
+                return [null, true, $role, false];
+            }
+
+            $approvals[] = $last->verdict_at;
+        }
+
+        return [max($approvals), true, null, false];
     }
 
     /**

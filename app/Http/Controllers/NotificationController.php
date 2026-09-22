@@ -3,16 +3,60 @@
 namespace App\Http\Controllers;
 
 use App\Models\Notification;
+use App\Support\NotificationTypes;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class NotificationController extends Controller
 {
+    /**
+     * Which column in `notifications` holds the person these belong to.
+     *
+     * A notification is owned by exactly one of student_id or expert_id.
+     * ExpertNotificationController overrides these three and inherits the
+     * rest, so the bell behaves identically on both sides of CapsTrack.
+     */
+    protected function ownerColumn(): string
+    {
+        return 'student_id';
+    }
+
+    protected function person(Request $request)
+    {
+        return $request->user();
+    }
+
+    protected function ownerId(Request $request): int
+    {
+        return (int) $this->person($request)->student_id;
+    }
+
+    /** Save this person's notification switches. */
+    public function preferences(Request $request): JsonResponse
+    {
+        $person = $this->person($request);
+
+        $validated = $request->validate([
+            'all' => ['sometimes', 'boolean'],
+            'on' => ['array'],
+            'on.*' => ['boolean'],
+        ]);
+
+        $person->saveNotificationPrefs(
+            $validated['on'] ?? [],
+            (bool) ($validated['all'] ?? true),
+        );
+
+        return response()->json([
+            'success' => true,
+            'prefs' => $person->notification_prefs,
+            'types' => NotificationTypes::for($person->notificationAudience()),
+        ]);
+    }
+
     public function index(Request $request): JsonResponse
     {
-        $studentId = $request->user()->student_id;
-
-        $notifications = Notification::where('student_id', $studentId)
+        $notifications = Notification::where($this->ownerColumn(), $this->ownerId($request))
             ->latest('created_at')
             ->take(20)
             ->get()
@@ -32,9 +76,7 @@ class NotificationController extends Controller
 
     public function count(Request $request): JsonResponse
     {
-        $studentId = $request->user()->student_id;
-
-        $count = Notification::where('student_id', $studentId)
+        $count = Notification::where($this->ownerColumn(), $this->ownerId($request))
             ->where('is_read', false)
             ->count();
 
@@ -43,9 +85,7 @@ class NotificationController extends Controller
 
     public function markAsRead(Request $request, Notification $notification): JsonResponse
     {
-        $studentId = $request->user()->student_id;
-
-        if ($notification->student_id !== $studentId) {
+        if ((int) $notification->{$this->ownerColumn()} !== $this->ownerId($request)) {
             abort(403);
         }
 
@@ -56,9 +96,7 @@ class NotificationController extends Controller
 
     public function markAllRead(Request $request): JsonResponse
     {
-        $studentId = $request->user()->student_id;
-
-        Notification::where('student_id', $studentId)
+        Notification::where($this->ownerColumn(), $this->ownerId($request))
             ->where('is_read', false)
             ->update(['is_read' => true]);
 

@@ -345,13 +345,10 @@
   }
   updateThemeUI();
 </script>
-{{-- ── Submit document: the panel, on every student page ── --}}
+{{-- ── Submit document: the panel, opened from Documents in the nav above.
+     It had a floating button down in the corner too, sitting on top of every
+     page's own content to do the very same thing. ── --}}
 <link rel="stylesheet" href="{{ asset('css/submission-drawer.css') }}">
-
-<button class="fab" type="button" onclick="window.openSubmissionDrawer && window.openSubmissionDrawer('')">
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
-  Submit document
-</button>
 
 <div class="sc" id="submission-scrim"></div>
 

@@ -28,6 +28,14 @@
       ? 'This one came back on keywords, but was never scored'
       : ($flagged ? 'Your title is highly similar to' : 'Your title overlaps')
         .' a '.$year.' '.$program.' capstone';
+
+  // A match opened straight from the Pre-Proposal page has to go back there.
+  // Sending them to the full report drops them on a page they never opened.
+  // Previous and Next carry the marker so it survives paging between matches.
+  $fromPreProposal = request('from') === 'pp';
+  $backUrl = $fromPreProposal ? route('student.duplication') : route('student.duplication.report', $check->id);
+  $backText = $fromPreProposal ? 'Back to your pre-proposal' : 'Back to all '.$total.' matches';
+  $step = fn ($r) => route('student.duplication.similar', ['check' => $check->id, 'rank' => $r] + ($fromPreProposal ? ['from' => 'pp'] : []));
 @endphp
 
 <nav class="dup-crumb" aria-label="Breadcrumb">
@@ -39,18 +47,18 @@
 </nav>
 
 <div class="pager">
-  <a class="pbtn" href="{{ route('student.duplication.report', $check->id) }}">
+  <a class="pbtn" href="{{ $backUrl }}">
     <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
-    Back to all {{ $total }} matches
+    {{ $backText }}
   </a>
   <div style="display:flex;gap:8px">
     <a class="pbtn {{ $rank > 1 ? '' : 'off' }}"
-       @if ($rank > 1) href="{{ route('student.duplication.similar', [$check->id, $rank - 1]) }}" @endif>
+       @if ($rank > 1) href="{{ $step($rank - 1) }}" @endif>
       <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
       Previous{{ $rank > 1 ? ' · '.$reads($prevScore) : '' }}
     </a>
     <a class="pbtn {{ $rank < $total ? '' : 'off' }}"
-       @if ($rank < $total) href="{{ route('student.duplication.similar', [$check->id, $rank + 1]) }}" @endif>
+       @if ($rank < $total) href="{{ $step($rank + 1) }}" @endif>
       Next{{ $rank < $total ? ' · '.$reads($nextScore) : '' }}
       <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
     </a>

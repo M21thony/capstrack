@@ -12,6 +12,7 @@ use App\Models\ExpertRemovalRequest;
 use App\Models\Student;
 use App\Models\StudentSchoolYear;
 use App\Models\TeamExpertAssignment;
+use App\Services\Notifier;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -287,6 +288,19 @@ class StudentExpertController extends Controller
                 'message' => $validated['message'],
             ]);
 
+            // Before this, an expert found out a team had applied only by
+            // opening the Assignments page and noticing. No email was ever
+            // sent for an application, so nothing here replaces one.
+            $role = $assignment->engaged_role_name;
+            Notifier::toExpert(
+                (int) $assignment->expert_id,
+                'expert_application',
+                'New application',
+                '<strong>'.e($team->team_name).'</strong> applied to you'.($role ? ' as their '.e($role) : '').'.',
+                route('instructor.assignments'),
+                ['team_id' => $team->team_id],
+            );
+
             return response()->json([
                 'success' => true,
                 'message' => 'Application sent successfully. Waiting for the expert to approve.',
@@ -332,24 +346,22 @@ class StudentExpertController extends Controller
             ], 403);
         }
 
-        // A team cannot drop an expert who already took them on. It asks,
-        // and the expert decides; they stay the team's expert until they
-        // agree. An application the expert has not answered yet is still
-        // the team's to withdraw, below.
+        // An expert who already took the team on is only changed with the
+        // CaPSA's permission. The request goes to them; the expert stays
+        // until they approve it. An application still waiting on the expert
+        // is the team's to withdraw, below.
         if ($assignment->status === 'approved') {
-            $expertName = $assignment->expert?->name ?? 'your expert';
-
             if (mb_strlen(trim($request->reason)) < ExpertRemovalRequest::REASON_MIN) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Give '.$expertName.' a reason they can decide on - at least '.ExpertRemovalRequest::REASON_MIN.' characters.',
+                    'message' => 'Give your CaPSA a reason they can decide on - at least '.ExpertRemovalRequest::REASON_MIN.' characters.',
                 ], 422);
             }
 
             if (ExpertRemovalRequest::pending()->where('assignment_id', $assignment->assignment_id)->exists()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'A request to remove '.$expertName.' is already waiting on them.',
+                    'message' => 'A request to remove this expert is already waiting on your CaPSA.',
                 ], 422);
             }
 
@@ -365,14 +377,14 @@ class StudentExpertController extends Controller
             ActivityLog::create([
                 'student_id' => $student->student_id,
                 'type' => 'expert_removal_requested',
-                'description' => 'Asked expert '.($assignment->expert?->name ?? '#'.$assignment->expert_id)." to let the team go — Reason: {$request->reason}",
+                'description' => 'Asked the CaPSA to remove expert '.($assignment->expert?->name ?? '#'.$assignment->expert_id)." — Reason: {$request->reason}",
                 'metadata' => ['assignment_id' => $assignment->assignment_id, 'expert_id' => $assignment->expert_id],
                 'created_at' => now(),
             ]);
 
             return response()->json([
                 'success' => true,
-                'message' => 'Sent to '.$expertName.'. They stay your expert until they agree.',
+                'message' => 'Sent to your CaPSA. The expert stays with your team until they approve.',
             ]);
         }
 

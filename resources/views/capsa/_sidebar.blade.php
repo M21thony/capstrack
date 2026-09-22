@@ -316,6 +316,12 @@
     @endif
 
     <div class="nav-section">Reports</div>
+    @if ($isCapsa)
+    <a href="{{ route('capsa.reports') }}" class="nav-item {{ str_starts_with($currentRoute ?? '', 'capsa.reports') ? 'active' : '' }}">
+      <svg viewBox="0 0 24 24"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>
+      Reports
+    </a>
+    @endif
     <a href="{{ route($rolePrefix.'analytics') }}" class="nav-item {{ $currentRoute === $rolePrefix.'analytics' ? 'active' : '' }}">
       <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
       Analytics

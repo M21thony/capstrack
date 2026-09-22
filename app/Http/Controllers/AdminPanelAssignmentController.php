@@ -640,7 +640,7 @@ class AdminPanelAssignmentController extends Controller
         $validated = $request->validate([
             'start_date' => ['required', 'date'],
             'end_date' => ['required', 'date', 'after_or_equal:start_date'],
-            'duration_minutes' => ['nullable', 'integer', 'in:'.implode(',', DefenseBoard::DURATIONS)],
+            'duration_minutes' => ['nullable', 'integer', 'min:'.DefenseBoard::MIN_MINUTES, 'max:'.DefenseBoard::MAX_MINUTES],
         ]);
 
         $window = DefenseWindow::updateOrCreate(['defense_type' => $defenseType], array_filter($validated, fn ($v) => $v !== null));

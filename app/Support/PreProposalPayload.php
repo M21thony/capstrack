@@ -55,6 +55,10 @@ class PreProposalPayload
                 'scope' => $p->scope,
                 'limitations' => $p->limitations,
                 'sdm' => $p->sdm,
+                'clients' => $p->clients,
+                'client_address' => $p->client_address,
+                'client_representative' => $p->client_representative,
+                'client_position' => $p->client_position,
                 'tags' => $p->tags ?? [],
                 // The whole duplication report, not the top three with their
                 // titles. The CAPSA is deciding whether a title is too close

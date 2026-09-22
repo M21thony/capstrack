@@ -51,9 +51,14 @@ class SyncConsultationCancellation implements ShouldQueue
         }
 
         try {
-            Mail::to($expert->email)->send(
-                new ConsultationCancelledMail($booking, $expert, $booking->team, $this->studentName, $this->reason)
-            );
+            // The expert approved this cancellation themselves, so the only
+            // thing left to do is send the copy for their records - and only
+            // if they still want it.
+            if ($expert->wants('consultation_cancelled', 'email')) {
+                Mail::to($expert->email)->send(
+                    new ConsultationCancelledMail($booking, $expert, $booking->team, $this->studentName, $this->reason)
+                );
+            }
         } catch (\Throwable $e) {
             Log::warning('Consultation cancelled email failed', ['error' => $e->getMessage()]);
         }

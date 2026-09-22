@@ -453,58 +453,56 @@
       @endif
 
 
-      {{-- Who your team actually has, across the page rather than down the
-           side of it. It sat in the right-hand panel where filled and empty
-           differed by the colour of a ten-pixel pill, so three rows read as
-           three identical rows and a team could not tell at a glance whether
-           they had an adviser. --}}
+      {{-- Who your team actually has: one card per slot, each under the role
+           card of the same name, with the expert's own photo. A team can tell
+           at a glance whether they have an adviser - and who it is. --}}
       @if($team)
-        @php $filledCount = count($filledSlots) + count($unslotted); @endphp
+        @php
+          $filledCount = count($filledSlots) + count($unslotted);
+          // Approved before roles were recorded, so they belong to no slot.
+          // Listed rather than dropped: they are still your expert.
+          $yxTiles = collect(['adviser', 'consultant', 'grammarian'])
+            ->map(fn ($r) => ['slot' => $r, 'label' => ucfirst($r), 'a' => $filledSlots[$r] ?? null])
+            ->concat(collect($unslotted)->map(fn ($a) => ['slot' => null, 'label' => 'Assigned', 'a' => $a]));
+        @endphp
         <div class="yx">
-          {{-- The count travels with the label rather than sitting opposite
-               the chips: pushed to the far edge it was the first thing to wrap
-               onto a second line, which left the strip two rows tall with one
-               number stranded under it. --}}
-          <span class="yx-head">
+          <div class="yx-head">
             <span class="yx-lab">Your Experts</span>
             <span class="yx-count">
               <b>{{ $filledCount }} of 3</b> {{ $filledCount >= 3 ? 'filled - your team is set' : 'filled' }}
             </span>
-          </span>
-          <span class="yx-sep"></span>
+          </div>
 
-          @foreach(['adviser', 'consultant', 'grammarian'] as $slotRole)
-            @php $a = $filledSlots[$slotRole] ?? null; @endphp
-            <span class="yx-chip {{ $a ? 'is-set' : 'is-open' }}" data-slot-role="{{ $slotRole }}">
-              <span class="yx-mark">@if($a)<svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>@else?@endif</span>
-              <span class="yx-role">{{ ucfirst($slotRole) }}</span>
-              @if($a)
-                <span class="yx-name" title="{{ $a->expert?->name }}">{{ $a->expert?->name }}</span>
-                @if($isLeader && in_array((int) $a->assignment_id, $pendingRemovalIds, true))
-                  <span class="yx-pending" title="Waiting on {{ $a->expert?->name ?? 'your expert' }} to decide">Removal requested</span>
-                @elseif($isLeader)
-                  <button type="button" class="yx-x" title="Ask {{ $a->expert?->name ?? 'this expert' }} to let your team go"
-                          onclick="openRemoveModal({{ $a->assignment_id }}, '{{ addslashes($a->expert?->name ?? '') }}', true)"><svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+          <div class="yx-slots">
+            @foreach($yxTiles as $tile)
+              @php $a = $tile['a']; $ex = $a?->expert; @endphp
+              <div class="yx-slot {{ $a ? 'is-set' : 'is-open' }}" @if($tile['slot']) data-slot-role="{{ $tile['slot'] }}" @endif>
+                @if($a)
+                  {{-- Photo over initials, as on the cards below: a photo that
+                       fails to load removes itself and the initials show. --}}
+                  <span class="avatar">{{ $ex?->avatarInitials() }}@if($ex?->hasAvatarImage())<img class="avatar-photo" src="{{ $ex->avatarUrl() }}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">@endif</span>
+                @else
+                  <span class="yx-empty" aria-hidden="true">?</span>
                 @endif
-              @endif
-            </span>
-          @endforeach
-
-          {{-- Approved before roles were recorded, so they belong to no slot.
-               Listed rather than dropped: they are still your expert. --}}
-          @foreach($unslotted as $a)
-            <span class="yx-chip is-set">
-              <span class="yx-mark"><svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg></span>
-              <span class="yx-role">Assigned</span>
-              <span class="yx-name">{{ $a->expert?->name ?? 'Unknown' }}</span>
-              @if($isLeader && in_array((int) $a->assignment_id, $pendingRemovalIds, true))
-                <span class="yx-pending" title="Waiting on {{ $a->expert?->name ?? 'your expert' }} to decide">Removal requested</span>
-              @elseif($isLeader)
-                <button type="button" class="yx-x" title="Ask {{ $a->expert?->name ?? 'this expert' }} to let your team go"
-                        onclick="openRemoveModal({{ $a->assignment_id }}, '{{ addslashes($a->expert?->name ?? '') }}', true)"><svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
-              @endif
-            </span>
-          @endforeach
+                <span class="yx-who">
+                  <span class="yx-top">
+                    <span class="yx-role">{{ $tile['label'] }}</span>
+                    @if($a && $isLeader)
+                      @php $pendingRemoval = collect($pendingRemovalIds)->firstWhere('assignment', (int) $a->assignment_id); @endphp
+                      @if($pendingRemoval)
+                        <button type="button" class="yx-act" title="Waiting on your section's CaPSA - click to take the request back"
+                                onclick="openWithdrawRemovalModal({{ $pendingRemoval['request'] }}, '{{ addslashes($ex?->name ?? 'this expert') }}')">Cancel request</button>
+                      @else
+                        <button type="button" class="yx-act" title="Ask your section's CaPSA to change {{ $ex?->name ?? 'this expert' }}"
+                                onclick="openChangeExpertModal({{ $a->assignment_id }}, '{{ addslashes($ex?->name ?? '') }}', '{{ addslashes(ucfirst($a->engaged_role_name ?? 'expert')) }}')">Change</button>
+                      @endif
+                    @endif
+                  </span>
+                  <span class="yx-name">{{ $a ? ($ex?->name ?? 'Unknown') : 'Not chosen yet' }}</span>
+                </span>
+              </div>
+            @endforeach
+          </div>
         </div>
       @endif
 
@@ -884,6 +882,10 @@
         'Scope' => $approvedProposal->scope,
         'Limitations' => $approvedProposal->limitations,
         'Software development method' => $approvedProposal->sdm,
+        'Clients/Organization' => $approvedProposal->clients,
+        'Address of the organization' => $approvedProposal->client_address,
+        'Representative' => $approvedProposal->client_representative,
+        'Their position' => $approvedProposal->client_position,
         'Research agenda' => $approvedProposal->research_agenda,
         'SDG goals' => $approvedProposal->sdg_goals,
       ] as $label => $value)
@@ -1484,20 +1486,136 @@ function openReqInfoModal(data) {
   openModal('req-info-modal');
 }
 
-// A team cannot drop an expert who already took them on. For them this
-// sends a request to that expert instead of removing, and they decide.
-var removeNeedsExpert = false;
+// ── Change Expert ──────────────────────────────────────────────────────
+// An expert who already took the team on can only be changed with the
+// section CaPSA's approval, so this dialog sends them a request. It never
+// removes anything - the server turns this exact call into a request when
+// the assignment is approved, and the CaPSA decides on it from there.
+var changeExpertSection = @json($teamSection !== '' ? 'Decided by the CaPSA for your section: '.$teamSection : '');
 
 function openChangeExpertModal(assignmentId, expertName, role) {
   currentRemoveId = assignmentId;
-  removeNeedsExpert = !!approved;
-  document.getElementById('remove-title').textContent = removeNeedsExpert ? 'Ask ' + expertName + ' to let your team go?' : 'Remove Expert?';
-  document.getElementById('remove-desc').textContent = removeNeedsExpert
-    ? expertName + ' already took your team on, so you cannot remove them yourself. They decide, and stay your expert until they agree.'
-    : 'Are you sure you want to remove this expert from your team?';
-  document.getElementById('remove-detail').innerHTML = '<strong>' + expertName + '</strong>'
-    + (removeNeedsExpert ? '' : '<br><span style="font-size:11px;color:var(--red);">This action cannot be undone.</span>');
-  document.getElementById('btn-confirm-remove').textContent = removeNeedsExpert ? 'Send request' : 'Yes, Remove';
+  document.getElementById('change-expert-detail').innerHTML = '<strong>' + escapeHtmlText(expertName) + '</strong>'
+    + (role ? '<br><span style="font-size:11px;color:var(--text3);">Your team’s ' + escapeHtmlText(role) + '</span>' : '')
+    + (changeExpertSection ? '<br><span style="font-size:11px;color:var(--text2);display:inline-block;margin-top:6px;">' + escapeHtmlText(changeExpertSection) + '</span>' : '');
+  document.getElementById('change-expert-reason').value = '';
+  document.getElementById('change-expert-reason').classList.remove('error');
+  document.getElementById('err-change-expert-reason').classList.remove('show');
+  document.getElementById('change-expert-reason-count').textContent = '0';
+  document.getElementById('btn-confirm-change-expert').disabled = true;
+  openModal('change-expert-modal');
+}
+
+function closeChangeExpertModal() {
+  closeModal('change-expert-modal');
+}
+
+function validateChangeExpertInput() {
+  var reason = document.getElementById('change-expert-reason').value.trim();
+  // The CaPSA decides on the reason, so it needs to be a real one.
+  var ok = reason.length >= {{ \App\Models\ExpertRemovalRequest::REASON_MIN }};
+
+  document.getElementById('change-expert-reason').classList.toggle('error', reason.length > 0 && !ok);
+  document.getElementById('err-change-expert-reason').classList.toggle('show', reason.length > 0 && !ok);
+  document.getElementById('btn-confirm-change-expert').disabled = !ok;
+}
+
+function confirmChangeExpert() {
+  if (!currentRemoveId) return;
+
+  var reason = document.getElementById('change-expert-reason').value.trim();
+  if (!reason) return;
+
+  var btn = document.getElementById('btn-confirm-change-expert');
+  btn.disabled = true;
+  btn.textContent = 'Sending...';
+
+  fetch('/api/assignments/' + currentRemoveId, {
+    method: 'DELETE',
+    headers: {
+      'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    },
+    body: JSON.stringify({ reason: reason }),
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    closeModal('change-expert-modal');
+    if (data.success) {
+      showToast(data.message, 'success');
+      setTimeout(function() { location.reload(); }, 1200);
+    } else {
+      showToast(data.message || 'Failed to send the request', 'error');
+      btn.disabled = false;
+      btn.textContent = 'Send to CaPSA';
+    }
+  })
+  .catch(function() {
+    closeModal('change-expert-modal');
+    showToast('Network error. Please try again.', 'error');
+    btn.disabled = false;
+    btn.textContent = 'Send to CaPSA';
+  });
+}
+
+// Take Back a Change Request - undo while the CaPSA has not decided.
+var withdrawRemovalId = null;
+
+function openWithdrawRemovalModal(requestId, expertName) {
+  withdrawRemovalId = requestId;
+  document.getElementById('withdraw-removal-name').textContent = expertName;
+  var btn = document.getElementById('btn-confirm-withdraw-removal');
+  btn.disabled = false;
+  btn.textContent = 'Take it back';
+  openModal('withdraw-removal-modal');
+}
+
+function closeWithdrawRemovalModal() {
+  closeModal('withdraw-removal-modal');
+}
+
+function confirmWithdrawRemoval() {
+  if (!withdrawRemovalId) return;
+
+  var btn = document.getElementById('btn-confirm-withdraw-removal');
+  btn.disabled = true;
+  btn.textContent = 'Taking back...';
+
+  fetch('/api/expert-removal-requests/' + withdrawRemovalId, {
+    method: 'DELETE',
+    headers: {
+      'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+      'Accept': 'application/json',
+    },
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    closeModal('withdraw-removal-modal');
+    if (data.success) {
+      showToast(data.message, 'success');
+      setTimeout(function() { location.reload(); }, 1200);
+    } else {
+      showToast(data.message || 'Could not take the request back', 'error');
+      btn.disabled = false;
+      btn.textContent = 'Take it back';
+    }
+  })
+  .catch(function() {
+    closeModal('withdraw-removal-modal');
+    showToast('Network error. Please try again.', 'error');
+    btn.disabled = false;
+    btn.textContent = 'Take it back';
+  });
+}
+
+// ── Remove Expert (withdraw an unanswered application) ─────────────────
+// The delete modal is only reached for applications the expert has not
+// answered yet - those are the team's to withdraw directly.
+function openRemoveModal(assignmentId, expertName) {
+  currentRemoveId = assignmentId;
+  document.getElementById('remove-detail').innerHTML = '<strong>' + escapeHtmlText(expertName) + '</strong>'
+    + '<br><span style="font-size:11px;color:var(--red);">This action cannot be undone.</span>';
   document.getElementById('remove-confirm-input').value = '';
   document.getElementById('remove-confirm-input').classList.remove('error');
   document.getElementById('err-remove-confirm').classList.remove('show');
@@ -1517,8 +1635,6 @@ function validateRemoveInput() {
   var confirmInput = document.getElementById('remove-confirm-input').value.trim();
   var reason = document.getElementById('remove-reason').value.trim();
   var confirmOk = confirmInput.toLowerCase() === 'remove';
-  // The expert decides on the reason, so it needs to be a real one.
-  var reasonOk = reason.length >= (removeNeedsExpert ? {{ \App\Models\ExpertRemovalRequest::REASON_MIN }} : 1);
 
   document.getElementById('remove-confirm-input').classList.toggle('error', confirmInput.length > 0 && !confirmOk);
   document.getElementById('err-remove-confirm').classList.toggle('show', confirmInput.length > 0 && !confirmOk);
@@ -1536,8 +1652,8 @@ function confirmRemove() {
 
   var btn = document.getElementById('btn-confirm-remove');
   btn.disabled = true;
-  btn.textContent = removeNeedsExpert ? 'Sending...' : 'Removing...';
-  var idleLabel = removeNeedsExpert ? 'Send request' : 'Yes, Remove';
+  btn.textContent = 'Removing...';
+  var idleLabel = 'Yes, Remove';
 
   fetch('/api/assignments/' + currentRemoveId, {
     method: 'DELETE',

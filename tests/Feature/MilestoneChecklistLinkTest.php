@@ -39,12 +39,12 @@ class MilestoneChecklistLinkTest extends TestCase
         $this->checklist = $this->emptyChecklist($this->capsaFor());
     }
 
-    private function review(int $fileId, ?string $verdict = null, ?string $at = null): void
+    private function review(int $fileId, ?string $verdict = null, ?string $at = null, string $role = 'adviser'): void
     {
         CapstoneDocumentReview::create([
             'file_id' => $fileId,
             'expert_id' => $this->adviser->expert_id,
-            'role' => 'adviser',
+            'role' => $role,
             'review_status' => $verdict ? CapstoneDocumentReview::REVIEWED : CapstoneDocumentReview::AWAITING,
             'verdict' => $verdict,
             'verdict_at' => $at,
@@ -56,13 +56,13 @@ class MilestoneChecklistLinkTest extends TestCase
         return $this->progressOf($this->checklist, $this->team, $deliverable);
     }
 
-    public function test_an_upload_naming_a_line_closes_it_whatever_the_file_is_called(): void
+    public function test_an_upload_naming_a_line_hands_it_in_whatever_the_file_is_called(): void
     {
         $bpa = $this->addDeliverable($this->checklist, ['title' => 'Business Process Analysis', 'kind' => Deliverable::DOCUMENT]);
 
         $this->upload($this->student, $bpa, path: 'submissions/final_na_final.pdf');
 
-        $this->assertSame(MilestoneProgress::DONE, $this->state($bpa)->state);
+        $this->assertSame(MilestoneProgress::HANDED_IN, $this->state($bpa)->state);
     }
 
     public function test_an_upload_for_feedback_only_moves_nothing(): void
@@ -118,7 +118,9 @@ class MilestoneChecklistLinkTest extends TestCase
             'title' => 'Chapter 3 Draft', 'kind' => Deliverable::DOCUMENT, 'due_date' => now()->subDays(6)->toDateString(),
         ]);
 
-        $this->upload($this->student, $draft, now()->subDays(2)->toDateTimeString());
+        $file = $this->upload($this->student, $draft, now()->subDays(2)->toDateTimeString());
+        $this->review($file, CapstoneDocumentReview::APPROVED, now()->toDateTimeString());
+        $this->review($file, CapstoneDocumentReview::APPROVED, now()->toDateTimeString(), 'consultant');
 
         $state = $this->state($draft);
         $this->assertSame(MilestoneProgress::DONE_LATE, $state->state);

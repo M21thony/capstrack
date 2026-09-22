@@ -23,8 +23,10 @@ use App\Http\Controllers\Capsa\DefenseSchedulingController;
 use App\Http\Controllers\Capsa\DeliverableCheckController;
 use App\Http\Controllers\Capsa\DeliverableController;
 use App\Http\Controllers\Capsa\DocumentFileController;
+use App\Http\Controllers\Capsa\ExpertRemovalRequestController;
 use App\Http\Controllers\Capsa\ExpertRosterController;
 use App\Http\Controllers\Capsa\RemovalController;
+use App\Http\Controllers\Capsa\ReportController;
 use App\Http\Controllers\Capsa\SectionProgressController;
 use App\Http\Controllers\Capsa\StudentController as CapsaStudentController;
 use App\Http\Controllers\Capsa\StudentRosterController;
@@ -34,6 +36,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DirectoryController;
 use App\Http\Controllers\DuplicationController;
 use App\Http\Controllers\ExpertController;
+use App\Http\Controllers\ExpertNotificationController;
 use App\Http\Controllers\Instructor\AssignmentController as InstructorAssignmentController;
 use App\Http\Controllers\Instructor\ConsultationLogController;
 use App\Http\Controllers\Instructor\DashboardController as InstructorDashboardController;
@@ -41,7 +44,6 @@ use App\Http\Controllers\Instructor\DocReviewController;
 use App\Http\Controllers\Instructor\GradingController;
 use App\Http\Controllers\Instructor\ProfileController as InstructorProfileController;
 use App\Http\Controllers\Instructor\ProgressController as InstructorProgressController;
-use App\Http\Controllers\Instructor\RemovalRequestController;
 use App\Http\Controllers\Instructor\ScheduleController;
 use App\Http\Controllers\Instructor\TeamController as InstructorTeamController;
 use App\Http\Controllers\Instructor\TitleConfirmationController;
@@ -52,6 +54,7 @@ use App\Http\Controllers\PdfAnnotationController;
 use App\Http\Controllers\PersonalInfoController;
 use App\Http\Controllers\PreProposalController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\PushSubscriptionController;
 use App\Http\Controllers\RecruitmentController;
 use App\Http\Controllers\Student\ArchiveController as StudentArchiveController;
 use App\Http\Controllers\Student\DefenseScoresController;
@@ -213,6 +216,8 @@ Route::middleware(['expert.auth', 'no.cache', 'track.expert'])->prefix('capsa')-
         // A member leaving a team that passed Title Defense - the CaPSA decides.
         Route::get('/leave-requests', [App\Http\Controllers\Capsa\LeaveRequestController::class, 'index'])->name('leave_requests');
         Route::patch('/leave-requests/{leaveRequest}', [App\Http\Controllers\Capsa\LeaveRequestController::class, 'update'])->name('leave_requests.update');
+        // A team changing an expert who already took them on - the CaPSA decides.
+        Route::patch('/expert-removal-requests/{expertRemovalRequest}', [ExpertRemovalRequestController::class, 'update'])->name('expert_removal_requests.update');
         Route::get('/verify-teams', fn () => redirect()->route('capsa.team_management'))->name('verify_teams');
         Route::patch('/verify-teams/{team}', [AdminTeamVerificationController::class, 'verify'])->name('verify_teams.verify');
         Route::patch('/verify-teams/pre-proposals/{preProposal}', [AdminTeamVerificationController::class, 'updatePreProposal'])->name('verify_teams.pre_proposals.update');
@@ -239,6 +244,9 @@ Route::middleware(['expert.auth', 'no.cache', 'track.expert'])->prefix('capsa')-
         Route::delete('/deliverables/{deliverable}/checks/{team}', [DeliverableCheckController::class, 'destroy'])->name('deliverables.checks.destroy');
         // One section of the tracker, loaded when its tab is picked.
         Route::get('/sections/{section}/progress', [SectionProgressController::class, 'show'])->name('sections.progress');
+        // Reports: counts per section, a page per section, and a PDF or Excel copy.
+        Route::get('/reports', [ReportController::class, 'index'])->name('reports');
+        Route::get('/reports/section/{section}', [ReportController::class, 'section'])->name('reports.section');
         // The file a team uploaded for a line, opened by the CaPSA to check it.
         Route::get('/documents/{document}/file', [DocumentFileController::class, 'show'])->name('documents.file');
         Route::get('/rubric_management', [GradingRubricController::class, 'index'])->name('rubric_management');
@@ -301,9 +309,6 @@ Route::middleware(['expert.auth', 'expert.approved', 'no.cache', 'track.expert']
     Route::get('/assignments', [InstructorAssignmentController::class, 'index'])->name('assignments');
     Route::patch('/assignments/{assignment}', [InstructorAssignmentController::class, 'update'])->name('assignments.update');
     Route::delete('/assignments/{assignment}', [InstructorAssignmentController::class, 'remove'])->name('assignments.remove');
-    // A team asking this expert to let them go. Only the expert decides - a
-    // team cannot drop an expert who already took them on.
-    Route::patch('/removal-requests/{expertRemovalRequest}', [RemovalRequestController::class, 'update'])->name('removal-requests.update');
     // The pre-proposal PDF a team applied with, when they used the one
     // their CaPSA approved instead of attaching a file.
     Route::get('/assignments/{assignment}/pre-proposal', [InstructorAssignmentController::class, 'preProposalDocument'])->name('assignments.pre_proposal');
@@ -382,9 +387,6 @@ Route::middleware(['auth', 'no.cache', 'track.expert'])->group(function () {
     Route::put('/team/leadership/{notification}/reminder', [TeamController::class, 'remindLeadershipLater'])->name('team.leadership.remind-later');
     Route::delete('/team/members/{student}', [TeamController::class, 'removeMember'])->name('team.members.remove');
     Route::delete('/team', [TeamController::class, 'destroy'])->name('team.destroy');
-    Route::post('/team/leave-requests', [TeamController::class, 'requestLeave'])->name('team.leave-request');
-    Route::patch('/team/leave-requests/{approval}', [TeamController::class, 'updateLeave'])->name('team.leave.update');
-    Route::get('/team/leave/popups', [TeamController::class, 'leavePopups'])->name('team.leave.popups');
     // After Title Defense, leaving or removing a member is asked of the CaPSA.
     Route::post('/team/capsa-leave-requests', [LeaveRequestController::class, 'store'])->name('team.capsa-leave-requests.store');
     Route::patch('/team/capsa-leave-requests/{leaveRequest}', [LeaveRequestController::class, 'update'])->name('team.capsa-leave-requests.update');
@@ -473,7 +475,29 @@ Route::middleware(['auth', 'no.cache', 'track.expert'])->group(function () {
     Route::put('/notifications/{notification}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
     Route::patch('/notifications', [NotificationController::class, 'markAllRead'])->name('notifications.mark-all-read');
     Route::put('/notifications/seen', [NotificationController::class, 'markSeen'])->name('notifications.seen');
+    Route::put('/notifications/preferences', [NotificationController::class, 'preferences'])->name('notifications.preferences');
+    // The browser hands us the address its push service gave it.
+    Route::post('/push/subscribe', [PushSubscriptionController::class, 'store'])->name('push.subscribe');
 });
+// The bell on every expert page - CaPSA, admin and instructor alike, since one
+// person is often more than one of those. Deliberately not behind
+// expert.approved: an unapproved expert still needs to hear a team apply to them.
+Route::prefix('instructor/notifications')
+    ->middleware(['expert.auth', 'no.cache'])
+    ->name('instructor.notifications.')
+    ->group(function () {
+        Route::get('/', [ExpertNotificationController::class, 'index'])->name('index');
+        Route::get('/count', [ExpertNotificationController::class, 'count'])->name('count');
+        Route::put('/preferences', [ExpertNotificationController::class, 'preferences'])->name('preferences');
+        Route::put('/seen', [ExpertNotificationController::class, 'markSeen'])->name('seen');
+        Route::put('/{notification}/read', [ExpertNotificationController::class, 'markAsRead'])->name('read');
+        Route::patch('/', [ExpertNotificationController::class, 'markAllRead'])->name('mark-all-read');
+    });
+// The browser hands us the address its push service gave it.
+Route::post('instructor/push/subscribe', [PushSubscriptionController::class, 'store'])
+    ->middleware(['expert.auth'])
+    ->name('instructor.push.subscribe');
+
 Route::prefix('instructor/schedule')
     ->middleware(['expert.auth', 'no.cache', 'track.expert'])
     ->group(function () {

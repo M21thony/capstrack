@@ -113,9 +113,6 @@
 .ms-table td.ms-none { color: var(--text3); padding: 14px; }
 .ms-team-row { cursor: pointer; }
 .ms-team-row:hover td { background: var(--bg3); }
-/* An opened team's row sticks under the column names while its list scrolls. */
-.ms-team-row.ms-open td { background: var(--accent-light); position: sticky; top: var(--ms-thead, 32px); z-index: 2; box-shadow: inset 0 -1px 0 #e3d08f; }
-.ms-team-row.ms-open td:first-child { box-shadow: inset 3px 0 0 var(--accent), inset 0 -1px 0 #e3d08f; }
 .ms-expander { border: none; background: none; cursor: pointer; display: flex; gap: 5px; align-items: center; text-align: left; padding: 0; font-weight: 700; font-size: 13.5px; min-height: 31px; max-width: 100%; min-width: 0; }
 .ms-expander span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ms-cell { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; padding: 2px 6px; border-radius: 6px; font-size: 11.5px; font-weight: 600; border: 1px solid var(--border); background: var(--bg3); color: var(--text3); white-space: nowrap; cursor: pointer; font-variant-numeric: tabular-nums; }
@@ -129,18 +126,29 @@
 .ms-track-done { background: var(--green); }
 .ms-track-wait { background: var(--amber); opacity: .55; }
 
-.ms-detail-row td { background: var(--bg3); padding: 0; height: auto; white-space: normal; }
+/* One team's page: a breadcrumb back to the table, every milestone laid out. */
+.ms-crumb { display: flex; align-items: center; gap: 8px; font-size: 13.5px; min-width: 0; }
+.ms-crumb-link { border: 0; background: none; padding: 0; cursor: pointer; font: inherit; color: var(--text2); text-decoration: underline; text-decoration-color: var(--border); text-underline-offset: 3px; }
+.ms-crumb-link:hover { color: var(--text); text-decoration-color: var(--accent); }
+.ms-crumb-sep { color: var(--text3); }
+.ms-crumb b { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ms-inner { padding: 5px 13px 8px 37px; }
+.ms-page { padding: 8px 16px 14px; }
+.ms-mrow.ms-mhead { grid-template-columns: minmax(160px, 1fr) minmax(150px, 1.2fr) 110px 150px; cursor: default; padding: 14px 0 6px; }
+.ms-mhead h3 { margin: 0; font-size: 14px; color: var(--text); }
+.ms-t-red { color: var(--red); font-weight: 600; }
+.ms-t-amb { color: var(--amber); font-weight: 600; }
+.ms-t-grn { color: var(--green); font-weight: 600; }
 .ms-inner-head { font-size: 12px; color: var(--text3); padding: 3px 0 5px; }
 .ms-inner-head b { color: var(--text2); font-weight: 600; }
 .ms-mgroup { border-top: 1px solid var(--border); }
 .ms-mrow { width: 100%; display: grid; grid-template-columns: 18px minmax(160px, 1fr) 110px 120px 150px; gap: 10px; align-items: center; border: 0; background: none; text-align: left; padding: 6px 0; cursor: pointer; font-size: 12.5px; color: var(--text2); }
 .ms-mrow b { font-size: 13px; color: var(--text); }
-.ms-mrow:hover b { text-decoration: underline; text-decoration-color: var(--accent); text-underline-offset: 3px; }
 .ms-item { display: grid; grid-template-columns: 16px minmax(200px, 1.3fr) 190px minmax(0, 1fr) auto; gap: 10px; align-items: center; font-size: 12.5px; padding: 4px 0 4px 28px; border-top: 1px solid var(--border); min-height: 36px; }
 .ms-item .ms-i { width: 15px; height: 15px; }
 .ms-item-title { font-weight: 600; }
 .ms-note { display: block; font-weight: 400; color: var(--amber); font-size: 12px; }
+.ms-wait { color: var(--text3); }
 .ms-who { font-size: 12px; color: var(--text3); }
 .ms-st-done { color: var(--green); }
 .ms-st-handed { color: var(--amber); }
