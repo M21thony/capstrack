@@ -75,8 +75,8 @@ class StudentChecklistTest extends TestCase
         $this->get('/student/progress')
             ->assertOk()
             ->assertSee('With your adviser')
-            // and the draft itself closed on the upload
-            ->assertSee('1 of 19 closed');
+            // and the draft is not closed until adviser and consultant approve it
+            ->assertSee('0 of 19 closed');
     }
 
     public function test_a_paper_sent_back_shows_the_capsas_note(): void
