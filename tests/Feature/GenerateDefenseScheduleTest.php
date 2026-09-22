@@ -491,6 +491,20 @@ class GenerateDefenseScheduleTest extends TestCase
         $this->assertSame(90, DefenseWindow::where('defense_type', self::STAGE)->value('duration_minutes'));
     }
 
+    /** A custom length, not one of the buttons, within half an hour to a whole morning. */
+    public function test_the_window_takes_a_custom_length(): void
+    {
+        $put = fn (int $minutes) => $this->actingAs($this->capsa, 'expert')
+            ->putJson(route('api.admin.panel_assignment.windows.update', self::STAGE), ['start_date' => '2027-03-15', 'end_date' => '2027-03-16', 'duration_minutes' => $minutes]);
+
+        $put(80)->assertOk()->assertJsonPath('data.slots', ['08:00', '09:20', '10:40', '13:00', '14:20', '15:40']);
+        $this->assertSame(80, DefenseWindow::where('defense_type', self::STAGE)->value('duration_minutes'));
+
+        $put(20)->assertStatus(422);
+        $put(300)->assertStatus(422);
+        $this->assertSame(80, DefenseWindow::where('defense_type', self::STAGE)->value('duration_minutes'));
+    }
+
     public function test_the_conference_room_can_be_booked(): void
     {
         $schedule = $this->panel($this->team('Alpha'), CapstoneExpert::factory()->create(['approved_status' => true]));

@@ -100,6 +100,11 @@
           <button type="button" class="dx-seg-btn" data-minutes="60">1 hour</button>
           <button type="button" class="dx-seg-btn" data-minutes="90">1½ hours</button>
           <button type="button" class="dx-seg-btn" data-minutes="120">2 hours</button>
+          <button type="button" class="dx-seg-btn" data-custom>Custom</button>
+        </div>
+        <div id="w-custom" hidden style="margin-top:8px">
+          <label class="dx-lbl" for="w-minutes">Minutes per defense ({{ \App\Support\DefenseBoard::MIN_MINUTES }}–{{ \App\Support\DefenseBoard::MAX_MINUTES }})</label>
+          <input class="dx-field" type="number" id="w-minutes" min="{{ \App\Support\DefenseBoard::MIN_MINUTES }}" max="{{ \App\Support\DefenseBoard::MAX_MINUTES }}" step="5" style="width:140px">
         </div>
       </div>
       <div class="dx-muted">Weekdays, 8 AM – 5 PM, lunch 12–1 kept free. Saving only stores the dates; nobody is scheduled until you use Generate schedule.</div>
