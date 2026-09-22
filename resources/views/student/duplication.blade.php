@@ -55,8 +55,21 @@
 
 .upload-zone.has-file { border-color: var(--primary, #5b5bd6); background: var(--bg3); }
 
+/* Your pre-proposals: one block per saved title, the card edge to edge. */
+.pp-card{padding:0}
+.pp-card>.card-header{padding:24px 24px 14px;margin:0;border-bottom:1px solid var(--border)}
+.pp{padding:11px 24px;border-top:1px solid var(--border)}
+.pp:first-child{border-top:none}
+.pp-line{display:flex;gap:8px;align-items:flex-start}
+.pp .t{font-size:12px;font-weight:600;line-height:1.4;color:var(--text);min-width:0}
+.pp .t.is-rejected{color:var(--text3);text-decoration:line-through}
+.pp .s{font-size:11.5px;font-variant-numeric:tabular-nums;font-weight:700;margin-top:5px}
+.pp .st{font-size:11.5px;color:var(--text2);line-height:1.5;margin-top:3px}
+.pp .lk{margin-top:6px;display:flex;align-items:center;gap:14px}
+.pp .lk .match-abstract-toggle{margin:0}
+.pick{width:15px;height:15px;margin-top:1px;flex-shrink:0;accent-color:var(--accent3);cursor:pointer}
 .pp-chosen{display:inline-flex;align-items:center;gap:5px;font-weight:700;color:var(--green,#16a34a)}
-.pp-row.is-chosen{border-left:3px solid var(--green,#16a34a);padding-left:9px}
+.pp-row.is-chosen{border-left:3px solid var(--green,#16a34a);padding-left:21px}
 /* Still readable, just plainly not the one being worked on. */
 .pp-row.is-set-aside{opacity:.62}
 /* The one small text button left on this page: Remove, on a saved title. */
@@ -97,8 +110,11 @@
 @media (prefers-reduced-motion: reduce) { .pp-pill span { transition: none; } }
 
 /* Turn-in bar at the foot of the Your Pre-Proposals card. */
-.pp-submit-bar { flex-shrink: 0; border-top: 1px solid var(--border); padding: 12px 0 4px; margin-top: 10px; }
-.pp-btn-submit { width: 100%; justify-content: center; gap: 7px; font-size: 12.5px; padding: 9px 12px; }
+.pp-submit-bar { flex-shrink: 0; margin-top: auto; border-top: 1px solid var(--border); padding: 13px 24px; background: var(--bg3); border-radius: 0 0 14px 14px; }
+.pp-submit-q { font-size: 12px; color: var(--text2); line-height: 1.5; margin-bottom: 10px; }
+.pp-submit-q b { color: var(--text); font-weight: 600; }
+.pp-btn-submit { width: 100%; justify-content: center; gap: 7px; font-size: 12.5px; padding: 9px 12px; background: var(--navy-mid); color: #fff; box-shadow: none; }
+.pp-btn-submit:hover { background: #2a2d38; transform: none; box-shadow: none; }
 .pp-btn-submit:disabled { background: var(--bg3); color: var(--text3); border: 1px solid var(--border); cursor: not-allowed; }
 .pp-btn-unsubmit { width: 100%; justify-content: center; font-size: 12px; padding: 7px 12px; background: transparent; color: var(--text2); border: 1px solid var(--border); }
 .pp-btn-unsubmit:hover { border-color: var(--red); color: var(--red); }
@@ -107,7 +123,6 @@
 .pp-submit-state svg { flex-shrink: 0; }
 .pp-submit-state-title { font-size: 12px; font-weight: 700; }
 .pp-submit-state-sub { font-size: 10.5px; opacity: 0.85; margin-top: 1px; }
-.pp-badge-draft { background: var(--bg4); color: var(--text3); }
 
 /* Tooltip on the locked Submit button, on a wrapper because a disabled
    button emits no hover events of its own. */
@@ -355,15 +370,12 @@
         </div>
       </div>
 
-      <div class="card dup-portrait">
+      <div class="card dup-portrait pp-card">
         <div class="card-header" style="flex-shrink:0;flex-direction:column;align-items:flex-start;gap:2px">
           <span class="card-title" style="display:inline-flex;align-items:center;gap:7px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Your Pre-Proposals</span>
           <span style="font-size:11px;color:var(--text3);font-weight:400">
-            @if ($turnedIn)
-              {{ $proposals->count() }} turned in
-            @else
-              {{ $proposals->count() }} saved &middot; {{ $recommendedProposals }} suggested
-            @endif
+            {{ $proposals->count() }} {{ $turnedIn ? 'turned in' : 'saved' }}
+            &middot; {{ $proposals->where('status', 'approved')->count() }} recommended
           </span>
         </div>
         <div style="overflow-y:auto;flex:1">
@@ -380,76 +392,76 @@
                 $rowSetAside = $team?->selected_pre_proposal_id && ! $rowChosen
                     && $proposal->status === 'approved';
               @endphp
-              <div class="pp-row @if($rowChosen) is-chosen @elseif($rowSetAside) is-set-aside @endif"
-                   style="padding:10px 0;border-top:1px solid var(--border)">
-                @php
-                  // A draft the leader could still choose to turn in. Nothing
-                  // to tick once the set is in, and nothing for a member to
-                  // tick at all.
-                  $pickable = $isLeader && ! $turnedIn && ! $proposal->submitted_at;
-                @endphp
-                <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:4px">
+              @php
+                // A draft the leader could still choose to turn in. Nothing
+                // to tick once the set is in, and nothing for a member to
+                // tick at all.
+                $pickable = $isLeader && ! $turnedIn && ! $proposal->submitted_at;
+                $removable = $proposal->status !== 'approved' && ! $turnedIn;
+              @endphp
+              <div class="pp pp-row @if($rowChosen) is-chosen @elseif($rowSetAside) is-set-aside @endif">
+                <div class="pp-line">
                   @if ($pickable)
                     {{-- Attached to the submit form further down the page by
                          its id, so unticking one is all it takes to leave a
                          title out. Before this the only way was to delete it,
                          which threw away its duplication report with it. --}}
-                    <input type="checkbox" class="pp-pick" name="ids[]" value="{{ $proposal->id }}"
+                    <input type="checkbox" class="pick pp-pick" name="ids[]" value="{{ $proposal->id }}"
                            form="pp-submit-form" checked onchange="refreshSubmitCount()"
-                           aria-label="Submit {{ $proposal->title }}"
-                           style="margin-top:2px;width:15px;height:15px;flex-shrink:0;accent-color:var(--accent,#5b5bd6);cursor:pointer">
+                           aria-label="Submit {{ $proposal->title }}">
                   @endif
-                  <div style="font-size:12px;font-weight:500;min-width:0;{{ $proposal->status === 'rejected' ? 'color:var(--text3);text-decoration:line-through' : 'color:var(--text)' }}">{{ $proposal->title }}</div>
+                  <div @class(['t', 'is-rejected' => $proposal->status === 'rejected'])>{{ $proposal->title }}</div>
                 </div>
-                @if ($proposal->submitted_at || $proposal->status !== 'pending')
-                  <span class="badge {{ $proposal->status === 'approved' ? 'badge-green' : ($proposal->status === 'rejected' ? 'badge-red' : 'badge-amber') }}">{{ $proposal->status === 'approved' ? 'Recommended' : ucfirst($proposal->status) }}</span>
-                @else
-                  <span class="badge pp-badge-draft">Draft</span>
-                @endif
-
-                @if ($proposal->status === 'rejected')
-                  <div class="pp-hint" style="color:var(--red)">{{ $proposal->rejection_reason }}</div>
-                @elseif ($proposal->status === 'approved')
-                  @if ($team?->selected_pre_proposal_id && (int) $team->selected_pre_proposal_id === (int) $proposal->id)
-                    <div class="pp-hint pp-chosen">
-                      <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                      This is your team's title.
-                    </div>
-                  @elseif ($team?->selected_pre_proposal_id)
-                    <div class="pp-hint">Recommended, but not the title your team chose.</div>
-                  @else
-                    <div class="pp-hint">Locked in as a candidate.</div>
-                  @endif
-                  @if ($proposal->capsa_note)
-                    <div class="pp-hint">Suggestion from your CaPSA: {{ $proposal->capsa_note }}</div>
-                  @endif
-                @elseif ($proposal->submitted_at)
-                  <div class="pp-hint">Awaiting adviser review.</div>
-                @else
-                  <div class="pp-hint">Draft &mdash; not submitted yet.</div>
-                @endif
 
                 @if ($check)
                   @php $rowFlagged = $check->top_score >= 65; @endphp
-                  <div class="pp-hint" style="color:{{ $rowFlagged ? 'var(--red)' : 'var(--text2)' }}">
+                  <div class="s" style="color:{{ $rowFlagged ? 'var(--red)' : 'var(--text2)' }}">
                     {{ $check->top_score }}% highest match{{ $rowFlagged ? ' · highly similar' : '' }}
                   </div>
-                  <div style="margin-top:6px">
-                    <a class="golink" href="{{ route('student.duplication.report', $check->id) }}">
-                      Similarity Report
-                      <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
-                    </a>
+                @endif
+
+                {{-- One line saying where the title stands, in place of a badge. --}}
+                <div class="st">
+                  @if ($proposal->status === 'rejected')
+                    <b style="color:var(--red)">Rejected</b>@if ($proposal->rejection_reason) &mdash; &ldquo;{{ $proposal->rejection_reason }}&rdquo;@endif
+                  @elseif ($proposal->status === 'approved')
+                    @if ($rowChosen)
+                      <span class="pp-chosen">
+                        <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                        This is your team's title.
+                      </span>
+                    @elseif ($team?->selected_pre_proposal_id)
+                      <b style="color:var(--green)">Recommended by your CaPSA</b> &mdash; not the title your team chose.
+                    @else
+                      <b style="color:var(--green)">Recommended by your CaPSA</b> &mdash; waiting for your adviser.
+                    @endif
+                  @elseif ($proposal->submitted_at)
+                    <b>Submitted</b> &mdash; waiting for your CaPSA to review.
+                  @else
+                    <b>Draft</b> &mdash; not submitted yet.
+                  @endif
+                </div>
+                @if ($proposal->status === 'approved' && $proposal->capsa_note)
+                  <div class="st">Suggestion from your CaPSA: {{ $proposal->capsa_note }}</div>
+                @endif
+
+                @if ($check || $removable)
+                  <div class="lk">
+                    @if ($check)
+                      <a class="golink" href="{{ route('student.duplication.report', $check->id) }}">
+                        Similarity Report
+                        <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+                      </a>
+                    @endif
+                    @if ($removable)
+                      <form method="POST" action="{{ route('student.pre-proposal.destroy', $proposal->id) }}" id="remove-form-{{ $proposal->id }}" style="display:inline">
+                        @csrf
+                        @method('DELETE')
+                        <button type="button" class="match-abstract-toggle" style="color:var(--red)" onclick="openRemoveConfirm({{ $proposal->id }})">Remove</button>
+                      </form>
+                    @endif
                   </div>
                 @endif
-
-                @if ($proposal->status !== 'approved' && ! $turnedIn)
-                  <form method="POST" action="{{ route('student.pre-proposal.destroy', $proposal->id) }}" id="remove-form-{{ $proposal->id }}" style="display:inline">
-                    @csrf
-                    @method('DELETE')
-                    <button type="button" class="match-abstract-toggle" style="margin-top:8px;margin-left:12px;color:var(--red)" onclick="openRemoveConfirm({{ $proposal->id }})">Remove</button>
-                  </form>
-                @endif
-
               </div>
             @endforeach
           @endif
@@ -488,6 +500,10 @@
             @if (! $isLeader)
               <div class="pp-submit-note">Only your team leader can submit these for checking.</div>
             @elseif ($canTurnIn)
+              <div class="pp-submit-q" id="pp-submit-note">
+                <b>{{ $draftCount === 1 ? 'Your title is ticked.' : 'All '.$draftCount.' of your titles are ticked.' }}</b>
+                You can take them back until your CaPSA starts reviewing.
+              </div>
               {{-- Turning in fewer than the suggested number is a decision, not
                    an error, so it is asked about once rather than forbidden. --}}
               <form method="POST" action="{{ route('student.pre-proposal.submit') }}"
@@ -505,11 +521,6 @@
                   Submit for Checking
                 </button>
               </form>
-              <div class="pp-submit-note" id="pp-submit-note">
-                Hands
-                {{ $draftCount === 1 ? 'your title' : 'all '.$draftCount.' titles' }}
-                to your CaPSA to review.
-              </div>
             @else
               <div class="pp-submit-note">Save a pre-proposal title first.</div>
             @endif
@@ -755,15 +766,14 @@ function refreshSubmitCount() {
 
   if (!note) return;
 
-  if (picked === 0) {
-    note.textContent = 'Tick at least one title to submit.';
-  } else if (picked === total) {
-    note.textContent = 'Hands ' + (total === 1 ? 'your title' : 'all ' + total + ' titles')
-      + ' to your CaPSA to review.';
-  } else {
-    note.textContent = 'Hands ' + picked + ' of ' + total + ' to your CaPSA. The '
-      + (total - picked === 1 ? 'other stays a draft' : 'others stay drafts') + ', report and all.';
-  }
+  // Numbers only, so building it as HTML is safe.
+  const ticked = picked === 0 ? 'No title is ticked.'
+    : total === 1 ? 'Your title is ticked.'
+    : picked === total ? 'All ' + total + ' of your titles are ticked.'
+    : picked + ' of your ' + total + ' titles are ticked.';
+  note.innerHTML = '<b>' + ticked + '</b> ' + (picked === 0
+    ? 'Tick at least one title to submit.'
+    : 'You can take them back until your CaPSA starts reviewing.');
 }
 
 document.addEventListener('DOMContentLoaded', refreshSubmitCount);
