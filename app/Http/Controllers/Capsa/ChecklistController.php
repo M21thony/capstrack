@@ -186,7 +186,7 @@ class ChecklistController extends Controller
         $checklist = Checklist::create(['capsa_id' => $capsaId, 'program' => $source->program, 'title' => $source->title]);
 
         foreach ($source->milestones()->active()->with(['deliverables' => fn ($q) => $q->whereNull('archived_at')])->get() as $position => $milestone) {
-            $copy = $checklist->milestones()->create(['name' => $milestone->name, 'position' => $position]);
+            $copy = $checklist->milestones()->create(['name' => $milestone->name, 'position' => $position, 'requires_previous' => $milestone->requires_previous]);
 
             foreach ($milestone->deliverables->values() as $at => $deliverable) {
                 $copy->deliverables()->create(

@@ -13,6 +13,9 @@ class ChecklistMilestone extends Model
 
     protected $fillable = ['checklist_id', 'name', 'position', 'requires_previous', 'archived_at'];
 
+    /** In order by default: each opens once the one before it is complete. */
+    protected $attributes = ['requires_previous' => true];
+
     protected $casts = [
         'position' => 'integer',
         'requires_previous' => 'boolean',

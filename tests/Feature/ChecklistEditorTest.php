@@ -111,6 +111,8 @@ class ChecklistEditorTest extends TestCase
 
         $milestone = $this->postJson(route('capsa.checklists.milestones.store', $checklist), ['name' => 'Chapter 4'])
             ->assertCreated()
+            // In order unless the CaPSA unticks it.
+            ->assertJsonPath('requires_previous', true)
             ->json();
 
         $this->postJson(route('capsa.checklist_milestones.deliverables.store', $milestone['id']), [
