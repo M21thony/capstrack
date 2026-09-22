@@ -86,6 +86,7 @@ class ChecklistTracker
             'due' => $row->due_on?->toDateString(),
             'closed' => $row->closed_at?->toDateString(),
             'days_late' => $row->days_late,
+            'waits_for' => $row->waits_for ?? null,
             'revision' => $row->revision,
             'changes_requested' => $row->changes_requested,
             'note' => $row->note,

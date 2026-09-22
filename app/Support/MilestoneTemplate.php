@@ -28,6 +28,9 @@ class MilestoneTemplate
 {
     public const CAPSTONE_1 = 'capstone_1';
 
+    /** The milestones that open only once everything above them is complete. */
+    private const GATES = ['Pre-proposal', 'Chapter 1', 'Title Defense'];
+
     public static function all(): array
     {
         return [
@@ -111,7 +114,13 @@ class MilestoneTemplate
         ]);
 
         foreach (collect($template['items'])->groupBy('phase')->values() as $position => $lines) {
-            $milestone = $checklist->milestones()->create(['name' => $lines->first()['phase'], 'position' => $position]);
+            $milestone = $checklist->milestones()->create([
+                'name' => $lines->first()['phase'],
+                'position' => $position,
+                // Chapters open together once the pre-proposal is passed; Title
+                // Defense waits for all of them.
+                'requires_previous' => in_array($lines->first()['phase'], self::GATES, true),
+            ]);
 
             foreach ($lines->values() as $at => $line) {
                 $milestone->deliverables()->create([

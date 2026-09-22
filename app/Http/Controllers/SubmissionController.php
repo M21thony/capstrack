@@ -76,12 +76,12 @@ class SubmissionController extends Controller
             // read, asked here so nothing can be handed in past a milestone
             // that shows as locked on screen.
             $gate = MilestoneProgress::forTeam($checklist, (int) $teamModel->team_id)
-                ->milestones->firstWhere('milestone.id', $item->milestone->id);
+                ->items->firstWhere('item.id', $item->id);
 
             if ($gate?->locked) {
                 return response()->json([
                     'success' => false,
-                    'message' => $item->milestone->name.' opens once '.($gate->requires ?? 'the milestone before it').' is complete.',
+                    'message' => $item->title." can't be handed in yet: it waits for ".$gate->waits_for.'.',
                 ], 422);
             }
         }
@@ -306,8 +306,8 @@ class SubmissionController extends Controller
             : null;
 
         if ($progress) {
-            // Walked milestone by milestone, because the lock is a property of
-            // the milestone, not of its lines - each line has to carry it down.
+            // Each line carries its own lock: its milestone's, or the order
+            // inside the milestone.
             $checklistItems = $progress->milestones
                 ->flatMap(fn ($ms) => $ms->items
                     ->reject(fn ($row) => $row->item->kind === Deliverable::DEFENSE
@@ -318,9 +318,9 @@ class SubmissionController extends Controller
                         'phase' => $ms->milestone->name,
                         'kind' => $row->item->kind,
                         'role' => $row->item->role,
-                        'locked' => $ms->locked,
+                        'locked' => $row->locked,
                         'note' => match (true) {
-                            $ms->locked => 'opens once '.($ms->requires ?? 'the milestone before it').' is complete',
+                            $row->locked => 'waits for '.$row->waits_for,
                             (bool) $row->note => 'sent back: '.$row->note,
                             $row->changes_requested => self::ordinal($row->revision).' revision requested',
                             $row->waiting_on === MilestoneProgress::WAITING_ON_SIGNED_COPY => 'approved, upload the signed copy',
