@@ -227,7 +227,7 @@
       </summary>
       <ul class="m-0 flex list-none flex-col gap-2 px-4 pb-4 md:pt-4">
         <li class="relative pl-3.5 text-[12px] leading-[1.5] text-ink-soft md:text-[12.5px] before:absolute before:top-[7px] before:left-0 before:size-1 before:rounded-full before:bg-gold before:content-['']"><strong class="font-semibold text-ink">Students</strong> — sign in with your CSPC Mail <strong class="font-semibold text-ink">once your CaPSA has uploaded your section list</strong>.</li>
-        <li class="relative pl-3.5 text-[12px] leading-[1.5] text-ink-soft md:text-[12.5px] before:absolute before:top-[7px] before:left-0 before:size-1 before:rounded-full before:bg-gold before:content-['']"><strong class="font-semibold text-ink">Experts</strong> — sign in with your CSPC Mail <strong class="font-semibold text-ink">once the CaPSA has uploaded the expert list</strong>.</li>
+        <li class="relative pl-3.5 text-[12px] leading-[1.5] text-ink-soft md:text-[12.5px] before:absolute before:top-[7px] before:left-0 before:size-1 before:rounded-full before:bg-gold before:content-['']"><strong class="font-semibold text-ink">Experts</strong> — sign in with your CSPC Mail <strong class="font-semibold text-ink">once a CaPSA has uploaded the expert list</strong>.</li>
       </ul>
     </details>
 
