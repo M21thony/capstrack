@@ -149,6 +149,11 @@ class ChecklistTracker
                     'rows' => isset($progress[$team->team_id])
                         ? $progress[$team->team_id]->items->map(fn ($row) => self::row($row, $team->team_id, $canCheck))->values()
                         : [],
+                    // Milestone name => the one it waits for, for each still locked.
+                    'locked' => isset($progress[$team->team_id])
+                        ? $progress[$team->team_id]->milestones->where('locked', true)
+                            ->mapWithKeys(fn ($m) => [$m->milestone->name => $m->requires])
+                        : [],
                 ];
             })->values(),
         ];

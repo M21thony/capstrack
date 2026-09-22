@@ -1,7 +1,8 @@
 {{-- Milestones: the tracker.
 
-     One section at a time. Teams down the table, each opening to its
-     milestones and their deliverables; the signed papers waiting for the
+     One section at a time. Teams down the table, each opening a page of its
+     own (breadcrumb back, no dropdowns) with every milestone and
+     deliverable on show; the signed papers waiting for the
      CaPSA's check are what she acts on here. Edit milestones opens the
      checklist editor. Drawn by resources/js/milestones/tracker.js from the
      JSON below - only the lists inside it scroll, never the page. --}}
