@@ -12,6 +12,7 @@ use App\Models\Role;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
 use App\Models\TeamExpertAssignment;
+use Carbon\Carbon;
 use Illuminate\Support\Collection;
 
 /**
@@ -185,6 +186,11 @@ class DefenseBoard
                     'venue' => $schedule->venue,
                 ] : null,
                 'outcome' => $schedule?->outcome ? $schedule->outcomeLabel() : null,
+                // For the Scheduled tab's Result badge: pass/major/fail read
+                // straight off DefenseOutcome; a scheduled defense with no
+                // outcome yet is its own tone, not "none" (not_scheduled at
+                // all) - the JS tells them apart by whether a date exists.
+                'outcome_tone' => $schedule?->outcome ? DefenseOutcome::tone($schedule->outcome) : 'ongoing',
                 'passed' => $schedule ? DefenseOutcome::isPass($schedule->outcome) : false,
                 'graded' => $schedule ? $schedule->submittedGrades()->count() : 0,
                 'panel_size' => $schedule ? $schedule->panelSize() : 0,
@@ -342,7 +348,7 @@ class DefenseBoard
     }
 
     /** When a defense ends; rows with no end, or one not after the start, count as two hours. */
-    public static function endOf(DefenseSchedule $s): \Carbon\Carbon
+    public static function endOf(DefenseSchedule $s): Carbon
     {
         return $s->end_date?->gt($s->schedule_date) ? $s->end_date : $s->schedule_date->copy()->addMinutes(self::DEFAULT_MINUTES);
     }
