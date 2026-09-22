@@ -64,7 +64,7 @@ class SubmissionChecklistLinkTest extends TestCase
         return $this->actingAs($this->student)->post(route('student.submission.store'), $data);
     }
 
-    public function test_a_file_sent_for_a_deliverable_is_recorded_against_it_and_closes_it(): void
+    public function test_a_file_sent_for_a_deliverable_is_recorded_against_it_and_hands_it_in(): void
     {
         $bpa = $this->addDeliverable($this->checklist, ['title' => 'Business Process Analysis', 'kind' => Deliverable::DOCUMENT]);
 
@@ -75,7 +75,7 @@ class SubmissionChecklistLinkTest extends TestCase
         ])->assertOk()->assertJson(['success' => true]);
 
         $this->assertSame($bpa->id, (int) CapstoneDocument::first()->deliverable_id);
-        $this->assertSame(MilestoneProgress::DONE, $this->progressOf($this->checklist, $this->team, $bpa)->state);
+        $this->assertSame(MilestoneProgress::HANDED_IN, $this->progressOf($this->checklist, $this->team, $bpa)->state);
     }
 
     public function test_a_deliverable_from_another_checklist_is_refused(): void

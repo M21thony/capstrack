@@ -321,7 +321,7 @@ class MilestoneProgress
         $submittedAt = $reviewed->min('created_at');
 
         [$closedAt, $started, $waitingOn, $changesRequested] = match ($deliverable->kind) {
-            Deliverable::DOCUMENT => [$own->min('created_at'), false, null, false],
+            Deliverable::DOCUMENT => self::documentState($own, $myReviews),
             Deliverable::DEFENSE => self::defenseState($deliverable, $defenses),
             default => self::checkedState($deliverable, $own, $reviewed, $myReviews, $approvedAt, $check),
         };
@@ -411,6 +411,43 @@ class MilestoneProgress
             && ! $reviewed->contains(fn ($upload) => $upload->created_at > $latest->verdict_at);
 
         return [null, true, $changesRequested ? self::WAITING_ON_TEAM : $deliverable->role, $changesRequested];
+    }
+
+    /**
+     * [closedAt, started, waitingOn, changesRequested] for a document. It
+     * runs the whole cycle - handed in, reviewed, revised, approved - and is
+     * done only once the adviser's and the consultant's latest verdicts are
+     * both approved. Uploading it is only the first step.
+     */
+    private static function documentState(Collection $own, Collection $reviews): array
+    {
+        if ($own->isEmpty()) {
+            return [null, false, null, false];
+        }
+
+        $decided = $reviews->whereNotNull('verdict_at')->sortBy('verdict_at');
+
+        // Asked for changes and nothing uploaded since: the team owes a new version.
+        $latest = $decided->last();
+
+        if ($latest && $latest->verdict === CapstoneDocumentReview::NEEDS_REVISION
+            && ! $own->contains(fn ($upload) => $upload->created_at > $latest->verdict_at)) {
+            return [null, true, self::WAITING_ON_TEAM, true];
+        }
+
+        $approvals = [];
+
+        foreach (['adviser', 'consultant'] as $role) {
+            $last = $decided->where('role', $role)->last();
+
+            if ($last?->verdict !== CapstoneDocumentReview::APPROVED) {
+                return [null, true, $role, false];
+            }
+
+            $approvals[] = $last->verdict_at;
+        }
+
+        return [max($approvals), true, null, false];
     }
 
     /**
