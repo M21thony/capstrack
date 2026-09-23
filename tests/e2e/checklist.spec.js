@@ -97,7 +97,7 @@ test('duplication: Apply is locked on a title the team set aside', async ({ page
   await expect(page.locator('text=Not your chosen title').first()).toBeVisible();
 });
 
-test('duplication: a short title is caught before the scan is lost', async ({ page }, testInfo) => {
+test('duplication: an over-long title is caught before the scan is lost', async ({ page }, testInfo) => {
   await student(page, 'duplication');
 
   test.skip(
@@ -106,19 +106,23 @@ test('duplication: a short title is caught before the scan is lost', async ({ pa
   );
 
   // Submitting used to reach the server, be rejected, and reload the page -
-  // taking the duplication result on it. Nothing should navigate now.
+  // taking the duplication result on it. Nothing should navigate now, and
+  // the problem is written under the title itself. Filler words ("a", "of",
+  // "for") are not counted, so sixteen real words are needed to go over.
   const before = page.url();
 
   await page.evaluate(() => {
-    document.getElementById('title').value = 'Too short';
+    document.getElementById('title').value =
+      'Smart adaptive predictive integrated distributed autonomous networked crop yield '
+      + 'monitoring platform using sensor data analytics mobile alerts';
     document.getElementById('pp-form').requestSubmit();
   });
 
   await page.waitForTimeout(600);
-  await shot(page, testInfo, 'short-title-refused');
+  await shot(page, testInfo, 'long-title-refused');
 
   expect(page.url(), 'the page did not reload').toBe(before);
-  await expect(page.locator('#toast, .msg-toast, .toast').first()).toContainText(/11-12|meaningful/i);
+  await expect(page.locator('#title-error')).toContainText(/15 meaningful words/i);
 });
 
 // ── Admin ─────────────────────────────────────────────────────────────────
