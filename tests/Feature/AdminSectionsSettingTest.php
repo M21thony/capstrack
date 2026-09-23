@@ -2,10 +2,11 @@
 
 namespace Tests\Feature;
 
+use App\Http\Controllers\AdminProfileController;
 use App\Models\CapstoneExpert;
 use App\Models\Student;
-use App\Http\Controllers\AdminProfileController;
 use App\Support\SectionCatalog;
+use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -24,7 +25,7 @@ class AdminSectionsSettingTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->seed(\Database\Seeders\RoleSeeder::class);
+        $this->seed(RoleSeeder::class);
     }
 
     private function admin(): CapstoneExpert
@@ -49,15 +50,14 @@ class AdminSectionsSettingTest extends TestCase
         $this->assertSame(0, Student::count());
         $this->assertSame([], AdminProfileController::getAllAvailableSections());
 
-        // Adding one section is the whole of the fix.
+        // Adding one range of sections is the whole of the fix.
         $this->post(route('admin.settings.sections.store'), [
             'programs' => ['BSIT'],
-            'years' => [4],
             'from' => 'A',
             'to' => 'B',
         ])->assertRedirect();
 
-        $this->assertSame(['BSIT-4A', 'BSIT-4B'], AdminProfileController::getAllAvailableSections());
+        $this->assertSame(['BSIT-3A', 'BSIT-3B', 'BSIT-4A', 'BSIT-4B'], AdminProfileController::getAllAvailableSections());
 
         $this->postJson(route('admin.experts.capsa.store'), [
             'email' => 'first.capsa@cspc.edu.ph',
@@ -86,14 +86,17 @@ class AdminSectionsSettingTest extends TestCase
         );
     }
 
-    /** Several programs and several years at once, which is how a term is set up. */
-    public function test_programs_and_years_multiply_out(): void
+    /**
+     * Several programs at once, each made for 3rd and 4th year: capstone
+     * runs from the second semester of 3rd year through 4th year, so the
+     * Admin no longer picks year levels.
+     */
+    public function test_programs_multiply_out_across_both_capstone_years(): void
     {
         $this->actingAs($this->admin(), 'expert');
 
         $this->post(route('admin.settings.sections.store'), [
             'programs' => ['BSIT', 'BSIS'],
-            'years' => [3, 4],
             'from' => 'A',
             'to' => 'B',
         ])->assertRedirect();
@@ -112,12 +115,25 @@ class AdminSectionsSettingTest extends TestCase
     {
         $this->actingAs($this->admin(), 'expert');
 
-        $payload = ['programs' => ['BSIT'], 'years' => [4], 'from' => 'A', 'to' => 'C'];
+        $payload = ['programs' => ['BSIT'], 'from' => 'A', 'to' => 'C'];
 
         $this->post(route('admin.settings.sections.store'), $payload);
         $this->post(route('admin.settings.sections.store'), $payload);
 
-        $this->assertSame(['BSIT-4A', 'BSIT-4B', 'BSIT-4C'], SectionCatalog::defined());
+        $this->assertSame(['BSIT-3A', 'BSIT-3B', 'BSIT-3C', 'BSIT-4A', 'BSIT-4B', 'BSIT-4C'], SectionCatalog::defined());
+    }
+
+    /** A year level sent by an old form is ignored; there is no first-year capstone section. */
+    public function test_a_year_level_is_no_longer_chosen(): void
+    {
+        $this->actingAs($this->admin(), 'expert');
+
+        $this->post(route('admin.settings.sections.store'), [
+            'programs' => ['BSIT'], 'years' => [1], 'from' => 'A', 'to' => 'A',
+        ])->assertRedirect();
+
+        $this->assertSame(['BSIT-3A', 'BSIT-4A'], SectionCatalog::defined());
+        $this->get(route('admin.settings'))->assertOk()->assertDontSee('Year levels');
     }
 
     /**
@@ -165,7 +181,7 @@ class AdminSectionsSettingTest extends TestCase
         $this->actingAs($capsa, 'expert');
 
         $this->post(route('admin.settings.sections.store'), [
-            'programs' => ['BSIT'], 'years' => [4], 'from' => 'A', 'to' => 'B',
+            'programs' => ['BSIT'], 'from' => 'A', 'to' => 'B',
         ])->assertForbidden();
 
         $this->assertSame([], SectionCatalog::defined());
@@ -177,7 +193,7 @@ class AdminSectionsSettingTest extends TestCase
         $this->actingAs($this->admin(), 'expert');
 
         $this->post(route('admin.settings.sections.store'), [
-            'programs' => ['BSHM'], 'years' => [4], 'from' => 'A', 'to' => 'B',
+            'programs' => ['BSHM'], 'from' => 'A', 'to' => 'B',
         ])->assertSessionHasErrors('programs.0');
 
         $this->assertSame([], SectionCatalog::defined());

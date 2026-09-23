@@ -18,7 +18,7 @@ class SettingsController extends Controller
             'currentSchoolYear' => Setting::get('current_school_year'),
             'sections' => SectionCatalog::defined(),
             'programs' => CapstoneExpert::PROGRAMS,
-            'years' => SectionCatalog::YEARS,
+            'years' => SectionCatalog::CAPSTONE_YEARS,
             'letters' => str_split(SectionCatalog::LETTERS),
         ]);
     }
@@ -37,8 +37,11 @@ class SettingsController extends Controller
     }
 
     /**
-     * Write down a run of sections - one program, one year, a range of
-     * letters.
+     * Write down a run of sections - programs and a range of letters, for
+     * each capstone year level (3rd and 4th).
+     *
+     * The Admin used to pick year levels too. Capstone only ever runs in 3rd
+     * and 4th year, so that choice could only be got wrong.
      *
      * A range rather than one at a time because a department does not run
      * section D without running A, B and C, and typing eight labels by hand
@@ -49,19 +52,16 @@ class SettingsController extends Controller
         $validated = $request->validate([
             'programs' => ['required', 'array', 'min:1'],
             'programs.*' => ['string', 'in:'.implode(',', CapstoneExpert::PROGRAMS)],
-            'years' => ['required', 'array', 'min:1'],
-            'years.*' => ['integer', 'in:'.implode(',', SectionCatalog::YEARS)],
             'from' => ['required', 'string', 'size:1', 'alpha'],
             'to' => ['required', 'string', 'size:1', 'alpha'],
         ], [
             'programs.required' => 'Choose at least one program.',
-            'years.required' => 'Choose at least one year level.',
         ]);
 
         $made = [];
 
         foreach ($validated['programs'] as $program) {
-            foreach ($validated['years'] as $year) {
+            foreach (SectionCatalog::CAPSTONE_YEARS as $year) {
                 $made = array_merge($made, SectionCatalog::range($program, (int) $year, $validated['from'], $validated['to']));
             }
         }

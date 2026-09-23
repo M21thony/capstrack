@@ -24,8 +24,15 @@ class SectionCatalog
     /** Section letters an Admin may choose between. */
     public const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
-    /** Year levels a capstone section can sit in. */
+    /** Year levels a section label can carry. */
     public const YEARS = [1, 2, 3, 4];
+
+    /**
+     * The year levels capstone runs across: it starts in the second semester
+     * of 3rd year and carries on through 4th year. Sections are added for
+     * both, so an Admin only picks programs and letters.
+     */
+    public const CAPSTONE_YEARS = [3, 4];
 
     /**
      * The sections an Admin has written down.
