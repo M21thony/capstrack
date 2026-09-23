@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\CapstoneDocument;
 use App\Models\CapstoneExpert;
 use App\Models\CapstonePreProposal;
 use App\Models\Checklist;
@@ -171,6 +172,32 @@ class CapsaTeamManagementTest extends TestCase
         $response->assertOk();
         $response->assertSee('2/4');
         $response->assertSee('1 overdue');
+    }
+
+    /**
+     * A signed paper closes on the CaPSA's check, and the check lives in the
+     * Milestones tracker. On the team's own page the line used to read
+     * "Handed in" and stop there, with nothing to click.
+     */
+    public function test_a_paper_waiting_on_her_check_is_clickable_from_the_team_page(): void
+    {
+        $capsa = $this->makeCapsaWithSections();
+        [$team, $leader] = $this->makeTeamInSection('Team Waiting');
+
+        $form = Checklist::create(['capsa_id' => $capsa->expert_id, 'program' => 'BSIT', 'title' => 'Capstone 1 Checklist'])
+            ->milestones()->create(['name' => 'Getting started', 'position' => 0])
+            ->deliverables()->create(['title' => 'Signed Project Team Assignment Form', 'kind' => Deliverable::FORM, 'position' => 0]);
+
+        CapstoneDocument::create([
+            'student_id' => $leader->student_id, 'file_name' => 'scan.pdf', 'deliverable_id' => $form->id,
+            'file_path' => 'submissions/scan.pdf', 'file_version' => 1, 'document_status' => 'Pending',
+        ]);
+
+        $response = $this->get(route('capsa.team_management.show', $team->team_id));
+
+        $response->assertOk();
+        // Straight to the tracker's check for this very paper, not just the tab.
+        $response->assertSee('team='.$team->team_id.'&amp;check='.$form->id, false);
     }
 
     /**

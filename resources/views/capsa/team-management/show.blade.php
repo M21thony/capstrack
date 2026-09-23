@@ -209,6 +209,14 @@
               </ol>
               @if ($item->locked)
                 <span class="pill p-gray"><x-tm-icon n="lock" s="11" />Locked</span>
+              @elseif ($item->waiting_on === MilestoneProgress::WAITING_ON_CAPSA && in_array($item->item->kind, \App\Models\Deliverable::CHECKED_BY_CAPSA, true))
+                {{-- A signed paper closes on the CaPSA's check, and the check
+                     itself lives in the Milestones tracker. Without this the
+                     line just said "Handed in" with nothing to click. --}}
+                <a class="btn btn-p" href="{{ route('capsa.team_management', [
+                     'tab' => 'milestones', 'section' => $row->section,
+                     'team' => $team->team_id, 'check' => $item->item->id,
+                   ]) }}">Check</a>
               @else
                 <span class="pill {{ $mark[1] }}">{{ $mark[0] }}</span>
               @endif
