@@ -1,4 +1,6 @@
 *{box-sizing:border-box;margin:0;padding:0}
+/* The reset above takes away the margin:auto that centres a native <dialog>; give it back. */
+dialog{margin:auto}
 :root{
   --bg:#f2f3f5;--bg2:#ffffff;--bg3:#f7f8fa;--bg4:#eceef2;
   --border:#e0e2e8;--border2:#c8cad4;
