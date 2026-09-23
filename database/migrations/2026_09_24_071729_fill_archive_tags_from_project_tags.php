@@ -1,5 +1,6 @@
 <?php
 
+use App\Support\ArchiveTagGuesser;
 use App\Support\ProjectTags;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
@@ -9,8 +10,10 @@ use Illuminate\Support\Facades\DB;
  *
  * archived_doc_tags was empty, so an archived capstone could not be tagged
  * and Analytics' archive chart had nothing to count. It now holds the same
- * list a team picks from on its pre-proposal, and every capstone a team
- * handed in to the archive takes the tags from the pre-proposal it chose.
+ * list a team picks from on its pre-proposal. Every capstone a team handed
+ * in takes the tags of the pre-proposal it chose, and every other one - the
+ * library's list - is tagged from its title and abstract, so none is left
+ * uncounted.
  */
 return new class extends Migration
 {
@@ -40,6 +43,18 @@ return new class extends Migration
                 }
             }
         }
+
+        $tagged = DB::table('archived_tag_relation')->pluck('archive_id')->unique()->all();
+
+        DB::table('archived_documents')
+            ->whereNotIn('archived_id', $tagged)
+            ->orderBy('archived_id')
+            ->get(['archived_id', 'title', 'abstract'])
+            ->each(function ($doc) use ($have) {
+                foreach (ArchiveTagGuesser::guess($doc->title, $doc->abstract) as $name) {
+                    DB::table('archived_tag_relation')->insert(['archive_id' => $doc->archived_id, 'tag_id' => $have[$name]]);
+                }
+            });
     }
 
     public function down(): void

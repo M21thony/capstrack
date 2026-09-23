@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\ArchivedDocTag;
 use App\Models\ArchivedDocument;
+use App\Support\ArchiveTagGuesser;
 use App\Support\ProjectTags;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -51,9 +52,11 @@ class ArchiveController extends Controller
 
         $archive = ArchivedDocument::create($data);
 
-        if (! empty($data['tag_ids'])) {
-            $archive->tags()->sync($data['tag_ids']);
-        }
+        // Every capstone carries at least one tag, so Analytics counts it:
+        // none picked means the ones its title and abstract suggest.
+        $archive->tags()->sync(! empty($data['tag_ids'])
+            ? $data['tag_ids']
+            : ArchivedDocTag::idsFor(ArchiveTagGuesser::guess($data['title'], $data['abstract'] ?? null)));
 
         return response()->json($archive->load('tags'), 201);
     }
@@ -131,9 +134,11 @@ class ArchiveController extends Controller
     public function updateTags(Request $request, ArchivedDocument $archive)
     {
         $data = $request->validate([
-            'tag_ids' => ['present', 'array', 'max:'.ProjectTags::MAX],
+            'tag_ids' => ['required', 'array', 'min:1', 'max:'.ProjectTags::MAX],
             'tag_ids.*' => ['integer', 'exists:archived_doc_tags,tag_id'],
         ], [
+            'tag_ids.required' => 'Pick at least one tag.',
+            'tag_ids.min' => 'Pick at least one tag.',
             'tag_ids.max' => 'Pick at most '.ProjectTags::MAX.' tags.',
         ]);
 
