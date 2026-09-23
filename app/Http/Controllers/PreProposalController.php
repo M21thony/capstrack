@@ -3,11 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\ArchivedDocument;
+use App\Models\CapstoneExpert;
 use App\Models\CapstonePreProposal;
 use App\Models\DuplicationCheck;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
 use App\Services\OllamaSSHClient;
+use App\Services\RecipientResolver;
 use App\Services\SimilarityService;
 use App\Support\ProjectTags;
 use App\Support\StudentTeam;
@@ -100,7 +102,7 @@ class PreProposalController extends Controller
             'retiredProposals' => $team ? $team->allPreProposals()->whereNotNull('retired_at')->get() : collect(),
             'awaitingAdviser' => $team ? TitleRevision::awaitingAdviser($team) : null,
             'adviserName' => $team
-                ? \App\Models\CapstoneExpert::find(app(\App\Services\RecipientResolver::class)->resolveTeamRoleExpert($team->team_id, 'adviser'))?->name
+                ? CapstoneExpert::find(app(RecipientResolver::class)->resolveTeamRoleExpert($team->team_id, 'adviser'))?->name
                 : null,
         ]);
     }
@@ -134,16 +136,23 @@ class PreProposalController extends Controller
             ->with('status', 'Title revised. It becomes final once you upload the Signed Final Project Title Form.');
     }
 
-    /** 11-12 meaningful words, as every title in the college is written. */
+    /** Meaningful words a title may have; filler like "a", "of", "for" is not counted. */
+    public const TITLE_MAX_WORDS = 15;
+
+    /**
+     * A title may run to fifteen meaningful words. There is no minimum any
+     * more: the old 11-12 rule turned good short titles away and sent teams
+     * padding them to pass a counter.
+     */
     private function titleRule(): array
     {
         return [
-            'required', 'string', 'max:150',
+            'required', 'string', 'max:255',
             function ($attr, $value, $fail) {
-                $count = $this->countMeaningfulWords($value ?? '');
+                $count = $this->countMeaningfulWords((string) $value);
 
-                if ($count < 11 || $count > 12) {
-                    $fail("Title must contain 11–12 meaningful words (filler words like 'a', 'of', 'in' don't count). Current count: {$count}.");
+                if ($count > self::TITLE_MAX_WORDS) {
+                    $fail('Keep the title to '.self::TITLE_MAX_WORDS." meaningful words or fewer (filler words like 'a', 'of', 'for' don't count). It has {$count}.");
                 }
             },
         ];
@@ -380,8 +389,8 @@ class PreProposalController extends Controller
         $team = $this->currentTeam($request);
 
         $mine = ($team && StudentSchoolYear::where('team_id', $team->team_id)
-                ->where('s_y_id', $check->student_s_y_id)
-                ->exists())
+            ->where('s_y_id', $check->student_s_y_id)
+            ->exists())
             || StudentSchoolYear::where('student_id', $request->user()->student_id)
                 ->where('s_y_id', $check->student_s_y_id)
                 ->exists();
@@ -547,16 +556,16 @@ class PreProposalController extends Controller
             'title' => $this->titleRule(),
             'sdg_goals' => ['required', 'string', 'max:150'],
             'research_agenda' => ['required', 'array', 'min:1'],
-            'research_agenda.*' => ['string', 'max:150'],
+            'research_agenda.*' => ['required', 'string'],
             'problem_statement' => ['required', 'string'],
             'proposed_solution' => ['required', 'string'],
             'scope' => ['required', 'string'],
             'limitations' => ['required', 'string'],
-            'sdm' => ['required', 'string', 'max:100'],
+            'sdm' => ['required', 'string', 'max:255'],
             'clients' => ['required', 'string', 'max:255'],
             'client_address' => ['required', 'string', 'max:255'],
-            'client_representative' => ['required', 'string', 'max:150'],
-            'client_position' => ['required', 'string', 'max:150'],
+            'client_representative' => ['required', 'string', 'max:255'],
+            'client_position' => ['required', 'string', 'max:255'],
             'tags' => ['required', 'array', 'min:'.ProjectTags::MIN, 'max:'.ProjectTags::MAX],
             'tags.*' => ['string', 'distinct', Rule::in(ProjectTags::OPTIONS)],
             'duplication_check_id' => ['required', 'integer'],
@@ -565,6 +574,8 @@ class PreProposalController extends Controller
             'tags.min' => 'Pick at least one tag for what kind of project this is.',
             'tags.max' => 'Pick at most '.ProjectTags::MAX.' tags.',
             'tags.*.in' => 'Pick tags from the list.',
+            'research_agenda.required' => 'Add at least one research agenda or priority area.',
+            'title.required' => 'Give your pre-proposal a title.',
         ]);
 
         $check = DuplicationCheck::whereHas(
@@ -573,7 +584,7 @@ class PreProposalController extends Controller
         )->find($validated['duplication_check_id']);
 
         if (! $check) {
-            return redirect()->route('student.duplication')
+            return redirect()->route('student.duplication')->withInput()
                 ->with('error', 'Run the duplication check for this proposal first.');
         }
 
@@ -582,7 +593,7 @@ class PreProposalController extends Controller
         // is not a choice - and it went in silently, so a team could fill
         // every slot with one proposal and think they had done the work.
         if ($clash = $this->clashingProposal($team, $validated['title'], $check->id)) {
-            return redirect()->route('student.duplication')->with(
+            return redirect()->route('student.duplication')->withInput()->with(
                 'error',
                 $clash->duplication_check_id === $check->id
                     ? 'That is the same document you already turned in as Pre-Proposal '
@@ -657,7 +668,7 @@ class PreProposalController extends Controller
         // A new title after the defense goes to the team's adviser to confirm first.
         // Skipped when their CaPSA is also their adviser: that person already
         // recommended this title, so the pick stands like any other.
-        $resolver = app(\App\Services\RecipientResolver::class);
+        $resolver = app(RecipientResolver::class);
         $adviserId = $resolver->resolveTeamRoleExpert((int) $team->team_id, 'adviser');
         $sameExpert = $adviserId && $adviserId === $resolver->resolveSubjectAdviserAdmin((int) $team->team_id);
 
