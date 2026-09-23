@@ -55,6 +55,25 @@
   .ann-modal-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-top:14px;border-top:1px solid var(--border)}
   .ann-modal-sender{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--text)}
   .ann-modal-date{font-size:12px;color:var(--text3)}
+/* Where your team is: progress on the left, what is next on the right. */
+.now-card .card-header{align-items:center}
+.now-link{font-size:12.5px;font-weight:600;color:var(--accent3,#8a6e10);text-decoration:none}
+.now-link:hover{text-decoration:underline}
+.now-empty{margin:0;font-size:13.5px;color:var(--text2)}
+.now-empty a{color:var(--accent3,#8a6e10);font-weight:600}
+.now-grid{display:grid;grid-template-columns:minmax(200px,1fr) 2fr;gap:24px;align-items:start}
+.now-pct{font-size:34px;font-weight:700;line-height:1;letter-spacing:-.02em;color:var(--text);font-variant-numeric:tabular-nums}
+.now-bar{height:8px;border-radius:4px;background:var(--bg4,#eceef2);overflow:hidden;margin:12px 0 8px}
+.now-bar span{display:block;height:100%;background:var(--accent,#c9a82c);border-radius:4px}
+.now-sub{font-size:12.5px;color:var(--text2)}
+.now-list{display:flex;flex-direction:column;gap:8px}
+.now-row{display:flex;gap:12px;align-items:baseline;padding:10px 12px;border-radius:10px;background:var(--bg3,#f7f8fa);font-size:13.5px;color:var(--text)}
+.now-row b{flex-shrink:0;min-width:120px;font-weight:700}
+.now-row span{color:var(--text2);min-width:0}
+.now-row.bad{background:rgba(220,38,38,.07)}
+.now-row.bad b{color:var(--red,#dc2626)}
+.now-row.ok b{color:var(--green,#16a34a)}
+@media (max-width:760px){.now-grid{grid-template-columns:1fr}.now-row{flex-direction:column;gap:2px}.now-row b{min-width:0}}
 </style>
 @include('partials.skeleton-head', ['skReveal' => 'opacity'])
 </head>
@@ -78,12 +97,7 @@
     {{-- Skeleton loader --}}
     <div id="contentWrapper" style="position: relative;">
 <div id="skeleton-content" class="sk-overlay">
-      <div class="grid-4" style="margin-bottom:16px">
-        <x-dashboard.stat-chip loading />
-        <x-dashboard.stat-chip loading />
-        <x-dashboard.stat-chip loading />
-        <x-dashboard.stat-chip loading />
-      </div>
+      <div class="sk" style="height:132px;border-radius:14px;margin-bottom:16px"></div>
       <div class="card" style="margin-bottom:16px">
         <div class="card-header">
           <span class="sk" style="width:130px;height:14px;border-radius:4px;"></span>
@@ -101,32 +115,6 @@
         @endfor
       </div>
       <div style="height:16px"></div>
-      <div class="grid-2" style="margin-bottom:16px">
-        <div class="card">
-          <div class="card-header"><span class="sk" style="width:140px;height:14px;border-radius:4px;"></span></div>
-          @for ($i = 0; $i < 4; $i++)
-          <div style="display:flex;gap:10px;padding:10px 0;align-items:center">
-            <div class="sk" style="width:28px;height:28px;border-radius:50%;flex-shrink:0"></div>
-            <div style="flex:1">
-              <div class="sk" style="width:70%;height:12px;border-radius:4px;margin-bottom:6px"></div>
-              <div class="sk" style="width:100%;height:6px;border-radius:3px"></div>
-            </div>
-          </div>
-          @endfor
-        </div>
-        <div class="card">
-          <div class="card-header"><span class="sk" style="width:120px;height:14px;border-radius:4px;"></span></div>
-          @for ($i = 0; $i < 4; $i++)
-          <div style="display:flex;gap:10px;padding:10px 0;align-items:center">
-            <div class="sk" style="width:26px;height:26px;border-radius:8px;flex-shrink:0"></div>
-            <div style="flex:1">
-              <div class="sk" style="width:85%;height:12px;border-radius:4px;margin-bottom:6px"></div>
-              <div class="sk" style="width:30%;height:10px;border-radius:4px"></div>
-            </div>
-          </div>
-          @endfor
-        </div>
-      </div>
       <div class="dash-grid-v3">
         <div class="card">
           <div class="card-header"><span class="sk" style="width:130px;height:14px;border-radius:4px;"></span></div>
@@ -170,11 +158,51 @@
 
     {{-- Content --}}
     <div id="real-content" style="opacity:0">
-    <div class="grid-4" style="margin-bottom:16px">
-      <x-dashboard.stat-chip value="{{ $overallProgress }}%" label="Overall Progress" color="var(--accent)" />
-      <x-dashboard.stat-chip value="{{ $docsSubmitted }}" label="Docs Submitted" color="var(--green)" />
-      <x-dashboard.stat-chip value="{{ $pendingReviews }}" label="Pending Reviews" color="var(--amber)" />
-      <x-dashboard.stat-chip value="{{ $teamGroupsCount }}" label="Team Groups" color="var(--purple)" />
+    {{-- What the team has to do next, from its section's checklist: the
+         one card worth reading first. Everything else on this page is
+         something that happened, not something to do. --}}
+    <div class="card now-card" id="now-card" style="margin-bottom:16px">
+      <div class="card-header">
+        <span class="card-title">Where your team is</span>
+        @if ($progress)
+          <a class="now-link" href="{{ route('student.progress') }}">Open Progress Tracker →</a>
+        @endif
+      </div>
+      @if (! $myTeam)
+        <p class="now-empty">You are not in a team yet. <a href="{{ route('student.team') }}">Form or join a team</a> to start your capstone.</p>
+      @elseif (! $progress)
+        <p class="now-empty">Your section's checklist is not set up yet. Your CaPSA adds it; it shows here once they do.</p>
+      @else
+        <div class="now-grid">
+          <div class="now-progress">
+            <div class="now-pct">{{ $overallProgress }}%</div>
+            <div class="now-bar"><span style="width:{{ $overallProgress }}%"></span></div>
+            <div class="now-sub">{{ $progress->completed }} of {{ $progress->total }} requirements done{{ $currentMilestone ? ' · now on '.$currentMilestone : '' }}</div>
+          </div>
+          <div class="now-list">
+            @if ($overdueItems->isNotEmpty())
+              <div class="now-row bad">
+                <b>{{ $overdueItems->count() }} overdue</b>
+                <span>{{ $overdueItems->take(2)->map(fn ($r) => $r->item->title)->implode(', ') }}{{ $overdueItems->count() > 2 ? ' and '.($overdueItems->count() - 2).' more' : '' }}</span>
+              </div>
+            @endif
+            @if ($nextItem)
+              <div class="now-row">
+                <b>Next due {{ \Carbon\Carbon::parse($nextItem->due_on)->format('M j') }}</b>
+                <span>{{ $nextItem->item->title }}</span>
+              </div>
+            @elseif ($overdueItems->isEmpty())
+              <div class="now-row ok"><b>Nothing due</b><span>You are on track.</span></div>
+            @endif
+            @if ($nextDefense)
+              <div class="now-row">
+                <b>{{ $nextDefense->defense_type }}</b>
+                <span>{{ $nextDefense->schedule_date->format('D, M j') }}@if ($nextDefense->schedule_date->format('H:i') !== '00:00') · {{ $nextDefense->schedule_date->format('g:i A') }}@endif{{ $nextDefense->venue ? ' · '.$nextDefense->venue : '' }}</span>
+              </div>
+            @endif
+          </div>
+        </div>
+      @endif
     </div>
 
     <x-dashboard.info-card
@@ -274,67 +302,6 @@
     </div>
 
     <div style="height:16px"></div>
-
-    <div class="grid-2" style="margin-bottom:16px">
-      <x-dashboard.info-card
-        title="Milestone Progress"
-        :badge="$milestones->where('status', 'in_progress')->count() > 0 ? 'In Progress' : null"
-        :badgeClass="'badge-accent'"
-        :empty="$milestones->isEmpty()"
-        emptyMessage="No milestones yet. Track your progress from the Progress page."
-      >
-        <div class="milestone-list">
-          @foreach ($milestones->take(4) as $milestone)
-            @php
-              $pct = $milestone->status === 'completed' ? 100 : ($milestone->status === 'in_progress' ? 50 : 0);
-              $isDone = $milestone->status === 'completed';
-              $isActive = $milestone->status === 'in_progress';
-            @endphp
-            <div class="m-item">
-              <div class="m-icon @if($isDone) m-icon-done @elseif($isActive) m-icon-active @else m-icon-todo @endif">
-                @if ($isDone)
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                @elseif ($isActive)
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                @else
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/></svg>
-                @endif
-              </div>
-              <div class="m-body">
-                <div class="m-top">
-                  <span class="m-title">{{ $milestone->title }}</span>
-                  <span class="m-badge @if($isDone) m-badge-done @elseif($isActive) m-badge-active @else m-badge-todo @endif">
-                    @if($isDone) Completed @elseif($isActive) In Progress @else To Do @endif
-                  </span>
-                </div>
-                <div class="m-bar-wrap">
-                  <div class="m-bar">
-                    <div class="m-fill @if($isDone) m-fill-done @elseif($isActive) m-fill-active @else m-fill-todo @endif" style="width:{{ $pct }}%"></div>
-                  </div>
-                  <span class="m-pct">{{ $pct }}%</span>
-                </div>
-              </div>
-            </div>
-          @endforeach
-        </div>
-      </x-dashboard.info-card>
-
-      <x-dashboard.info-card
-        title="Recent Activity"
-        :empty="$activities->isEmpty()"
-        emptyMessage="No recent activity."
-      >
-        <div class="act-scroll" style="max-height:260px">
-          @foreach ($activities as $activity)
-            <div class="activity-item">
-              <div class="act-icon" style="background:{!! $activity->icon_bg !!}">{!! $activity->icon_svg !!}</div>
-              <div class="act-text">{!! $activity->text !!}<div class="act-time">{{ $activity->time }}</div></div>
-            </div>
-          @endforeach
-        </div>
-      </x-dashboard.info-card>
-    </div>
-
     <div class="dash-grid-v3">
       <x-dashboard.info-card title="Capstone Expert" :empty="!$myTeam || $myTeam->expertAssignments->isEmpty()" emptyMessage="No experts assigned to your team.">
         @if ($myTeam && $myTeam->expertAssignments->isNotEmpty())
@@ -378,7 +345,7 @@
       </x-dashboard.info-card>
     </div>
 
-    <div class="grid-2" style="margin-top:16px;margin-bottom:16px">
+    <div style="margin-top:16px;margin-bottom:16px">
     <x-dashboard.info-card
       title="Defense Results"
       :empty="$defenseResults->isEmpty()"
@@ -431,53 +398,6 @@
       </div>
     </x-dashboard.info-card>
 
-    <x-dashboard.info-card
-      title="Recent Expenses & Receipts"
-      :empty="$recentExpenses->isEmpty()"
-      emptyMessage="Submit your first receipt on the Financial Records page."
-    >
-      @foreach ($recentExpenses as $expense)
-        @php
-          $badgeClass = match ($expense->f_record_status) {
-            'pending' => 'badge badge-amber',
-            'verified' => 'badge badge-green',
-            'rejected' => 'badge badge-red',
-            default => 'badge',
-          };
-          $badgeText = match ($expense->f_record_status) {
-            'pending' => 'Waiting',
-            'verified' => 'Verified',
-            'rejected' => 'Sent back',
-            default => $expense->f_record_status,
-          };
-          $expenseTitle = $expense->expensePost?->title ?? $expense->payment_for ?? 'N/A';
-          $receiptImageUrl = $expense->receipt_image ? asset('storage/'.$expense->receipt_image) : null;
-          $uploadedDt = $expense->uploaded_at ? \Carbon\Carbon::parse($expense->uploaded_at) : null;
-        @endphp
-        <div class="history-item">
-          <div style="flex:1;min-width:0;">
-            <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-              <span style="font-size:13px;font-weight:600;">{{ $expenseTitle }}</span>
-              <span class="{{ $badgeClass }}" style="font-size:9px;">{{ $badgeText }}</span>
-            </div>
-            <div class="activity-meta">
-              <span style="font-size:11px;color:var(--text3);">₱{{ number_format($expense->amount ?? 0, 2) }} · {{ $uploadedDt ? $uploadedDt->format('M d') : 'N/A' }}</span>
-            </div>
-          </div>
-          @if ($receiptImageUrl)
-            <img src="{{ $receiptImageUrl }}"
-                alt="Receipt for {{ $expenseTitle }}"
-                class="receipt-thumb"
-                title="Click to view full receipt"
-                onclick="openReceipt(this.src)">
-          @else
-            <div class="receipt-thumb receipt-thumb--empty" style="width:40px;height:40px;border-radius:6px;background:var(--bg2);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="var(--text3)" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-            </div>
-          @endif
-        </div>
-      @endforeach
-    </x-dashboard.info-card>
     </div>
 
     <div class="legal-credits">
@@ -587,21 +507,8 @@ function openAnnModal(el) {
 function closeAnnModal() {
   document.getElementById('annModal').classList.remove('open');
 }
-
-function openReceipt(url) {
-  if (!url) return;
-  document.getElementById('receiptPreviewFull').src = url;
-  document.getElementById('receiptPreviewModal').classList.add('active');
-}
-
-function closeReceiptPreview() {
-  document.getElementById('receiptPreviewModal').classList.remove('active');
-}
 </script>
 
-<div class="modal-overlay" id="receiptPreviewModal" onclick="if(event.target===this)closeReceiptPreview()">
-  <img id="receiptPreviewFull" src="" alt="Receipt preview" class="modal-img" />
-</div>
 @include('partials.escape-closes-modals')
 </body>
 </html>
