@@ -31,28 +31,60 @@ class FinancialReceiptsTest extends TestCase
         return ExpensePost::create(['title' => $stage.' Fee', 'course' => 'BSIT', 'year_level' => '3rd', 'defense_type' => $stage, 'amount' => 500, 'is_active' => true]);
     }
 
-    private function upload($student, ExpensePost $fee)
+    private function upload($student, ExpensePost $fee, ?string $or = '0012345')
     {
-        return $this->actingAs($student)->post(route('student.financial.submit'), [
+        return $this->actingAs($student)->post(route('student.financial.submit'), array_filter([
             'expense_post_id' => $fee->id,
+            'receipt_number' => $or,
             'receipt_image' => UploadedFile::fake()->image('receipt.jpg'),
-        ]);
+        ], fn ($v) => $v !== null));
     }
 
-    public function test_a_member_uploads_without_a_receipt_number_and_can_replace_a_waiting_photo(): void
+    public function test_a_member_uploads_the_or_number_with_the_photo_and_can_replace_a_waiting_one(): void
     {
         [, $student] = $this->teamInSection('Alpha');
         $fee = $this->fee();
 
-        $this->upload($student, $fee)->assertSessionHasNoErrors();
+        $this->upload($student, $fee, ' or 0012345 ')->assertSessionHasNoErrors();
         $first = FinancialRecord::sole()->receipt_image;
+        $this->assertSame('OR 0012345', FinancialRecord::sole()->receipt_number);
 
-        $this->upload($student, $fee)->assertSessionHasNoErrors();
+        $this->upload($student, $fee, '0012399')->assertSessionHasNoErrors();
 
         $record = FinancialRecord::sole();
         $this->assertSame('pending', $record->f_record_status);
-        $this->assertNull($record->receipt_number);
+        $this->assertSame('0012399', $record->receipt_number);
         $this->assertNotSame($first, $record->receipt_image);
+    }
+
+    /** The OR number and the photo go together: either alone is refused. */
+    public function test_a_receipt_needs_both_the_or_number_and_the_photo(): void
+    {
+        [, $student] = $this->teamInSection('Alpha');
+        $fee = $this->fee();
+
+        $this->upload($student, $fee, null)->assertSessionHasErrors('receipt_number');
+        $this->actingAs($student)->post(route('student.financial.submit'), ['expense_post_id' => $fee->id, 'receipt_number' => '0012345'])
+            ->assertSessionHasErrors('receipt_image');
+
+        $this->assertSame(0, FinancialRecord::count());
+    }
+
+    /** The CaPSA is told when the same OR number is on another receipt. */
+    public function test_the_same_or_number_on_two_receipts_is_flagged(): void
+    {
+        $capsa = $this->capsaFor(['BSIT-3A']);
+        [, $a] = $this->teamInSection('Alpha');
+        [, $b] = $this->teamInSection('Bravo');
+        $fee = $this->fee();
+        $this->upload($a, $fee, '0012345');
+        $this->upload($b, $fee, '0012345');
+
+        $this->actingAs($capsa, 'expert')
+            ->get(route('capsa.financial'))
+            ->assertOk()
+            ->assertViewHas('state', fn ($state) => $state['receipts'][$fee->id.':'.$a->student_id]['or'] === '0012345'
+                && $state['receipts'][$fee->id.':'.$a->student_id]['or_also'] === [trim($b->f_name.' '.$b->l_name)]);
     }
 
     public function test_a_sent_back_receipt_waits_again_once_replaced(): void

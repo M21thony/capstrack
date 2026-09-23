@@ -9,7 +9,6 @@ use App\Http\Controllers\Admin\GradingRubricController;
 use App\Http\Controllers\Admin\ResourcesController;
 use App\Http\Controllers\Admin\SettingsController as AdminSettingsController;
 use App\Http\Controllers\Admin\StudentAccountsController;
-use App\Http\Controllers\AdminApprovalController;
 use App\Http\Controllers\AdminDashboardController;
 use App\Http\Controllers\AdminExpertsController;
 use App\Http\Controllers\AdminFinancialController;
@@ -32,6 +31,7 @@ use App\Http\Controllers\Capsa\StudentController as CapsaStudentController;
 use App\Http\Controllers\Capsa\StudentRosterController;
 use App\Http\Controllers\Capsa\TeamManagementController;
 use App\Http\Controllers\Capsa\TeamRulesController;
+use App\Http\Controllers\Capsa\YearPromotionController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DirectoryController;
 use App\Http\Controllers\DuplicationController;
@@ -71,6 +71,7 @@ use App\Http\Controllers\TeamController;
 use App\Models\CapstoneExpert;
 use App\Models\Student;
 use App\Models\StudentSchoolYear;
+use App\Support\CapsaReports;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
@@ -184,13 +185,11 @@ Route::get('/admin/{path}', function (string $path) {
 // the one that should be right.
 Route::middleware(['expert.auth', 'no.cache', 'track.expert'])->prefix('capsa')->name('capsa.')->group(function () use ($pagesBothRolesOpen) {
     Route::middleware('expert.capsa')->group(function () {
-        // Approving an account also assigns that expert's role(s) - approve()
-        // requires role_ids - so this stays CaPSA-only: assigning expert
-        // categories is CaPSA's call, not Admin's.
-        Route::get('/approval', [AdminApprovalController::class, 'index'])->name('approval');
-        Route::patch('/approval/{expert_id}', [AdminApprovalController::class, 'update'])->name('approval.update');
-        // Changing them afterwards is the same call, so it sits beside it rather
-        // than in the shared block. Admin's copy of Expert Management lists
+        // Account Approval is gone: nobody applies for an account any more -
+        // faculty come in on an uploaded list or are added by address - so its
+        // queue was always empty. An old bookmark lands on Expert Management.
+        Route::redirect('/approval', '/capsa/experts');
+        // Assigning an expert's roles is the CaPSA's call, not Admin's. Admin's copy of Expert Management lists
         // CaPSAs and only CaPSAs, so there was never an expert on that page whose
         // roles an Admin could be setting - and a button they cannot use is a
         // smaller problem than an endpoint they still can.
@@ -244,9 +243,11 @@ Route::middleware(['expert.auth', 'no.cache', 'track.expert'])->prefix('capsa')-
         Route::delete('/deliverables/{deliverable}/checks/{team}', [DeliverableCheckController::class, 'destroy'])->name('deliverables.checks.destroy');
         // One section of the tracker, loaded when its tab is picked.
         Route::get('/sections/{section}/progress', [SectionProgressController::class, 'show'])->name('sections.progress');
-        // Reports: counts per section, a page per section, and a PDF or Excel copy.
+        // Reports: pick a period, open a report as a table, download it as a PDF or Excel sheet.
         Route::get('/reports', [ReportController::class, 'index'])->name('reports');
         Route::get('/reports/section/{section}', [ReportController::class, 'section'])->name('reports.section');
+        Route::get('/reports/{report}', [ReportController::class, 'show'])->name('reports.show')
+            ->whereIn('report', array_keys(CapsaReports::REPORTS));
         // The file a team uploaded for a line, opened by the CaPSA to check it.
         Route::get('/documents/{document}/file', [DocumentFileController::class, 'show'])->name('documents.file');
         Route::get('/rubric_management', [GradingRubricController::class, 'index'])->name('rubric_management');
@@ -280,6 +281,9 @@ Route::middleware(['expert.auth', 'no.cache', 'track.expert'])->prefix('capsa')-
         // section for a group sends only that, and both are partial changes to the
         // same record. DELETE takes them off the roster - the account stays,
         // because their team history and submissions hang off it.
+        // Year Promotion without a file: move chosen sections up a year.
+        Route::get('/students/promotion', [YearPromotionController::class, 'preview'])->name('students.promotion');
+        Route::post('/students/promotion', [YearPromotionController::class, 'store'])->name('students.promotion.store');
         Route::post('/students', [CapsaStudentController::class, 'store'])->name('students.store');
         Route::patch('/students/{student}', [CapsaStudentController::class, 'update'])->name('students.update');
         Route::delete('/students/{student}', [CapsaStudentController::class, 'destroy'])->name('students.destroy');

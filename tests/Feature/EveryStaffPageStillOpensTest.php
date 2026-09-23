@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Http\Controllers\Capsa\TeamManagementController;
 use App\Models\CapstoneExpert;
 use App\Models\DefenseSchedule;
 use App\Models\Role;
@@ -40,7 +41,7 @@ class EveryStaffPageStillOpensTest extends TestCase
         $expert = $this->everyHat();
 
         $routes = [
-            'capsa.dashboard', 'capsa.experts', 'capsa.sections', 'capsa.approval', 'capsa.panel_assignment',
+            'capsa.dashboard', 'capsa.experts', 'capsa.sections', 'capsa.panel_assignment',
             'capsa.team_management', 'capsa.rubric_management', 'capsa.financial', 'capsa.archive',
             'capsa.resources', 'capsa.announcements', 'capsa.reports', 'capsa.analytics', 'capsa.activitylog',
             'admin.dashboard', 'admin.students', 'admin.settings',
@@ -57,7 +58,7 @@ class EveryStaffPageStillOpensTest extends TestCase
     {
         $expert = $this->everyHat();
 
-        foreach (\App\Http\Controllers\Capsa\TeamManagementController::TABS as $tab) {
+        foreach (TeamManagementController::TABS as $tab) {
             // The tabs that became pages of their own send their old URL on
             // to the list, so follow the hop instead of failing on it.
             $this->actingAs($expert, 'expert')
@@ -83,7 +84,7 @@ class EveryStaffPageStillOpensTest extends TestCase
             ->assertOk()
             ->assertSeeInOrder([
                 'Overview', 'Dashboard', 'Announcements',
-                'People', 'Account Approval', 'Expert Management', 'Student Section List', 'Student Accounts',
+                'People', 'Expert Management', 'Student Section List', 'Student Accounts',
                 'Teams', 'Team Management', 'My Teams', 'Team Assignments',
                 'Defenses', 'Panel Assignment', 'Team Grading', 'Grading Rubrics',
                 'Advising', 'My Schedule', 'Document Review',

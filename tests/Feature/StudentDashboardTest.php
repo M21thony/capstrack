@@ -40,7 +40,7 @@ class StudentDashboardTest extends TestCase
         $response->assertOk();
     }
 
-    public function test_student_dashboard_loads_with_correct_team_groups_filter(): void
+    public function test_a_student_without_a_team_is_pointed_to_forming_one(): void
     {
         // Current logged-in student (BSCS 4A)
         $student = Student::factory()->withCompleteProfile()->create([
@@ -98,17 +98,17 @@ class StudentDashboardTest extends TestCase
             ->get(route('student.dashboard'));
 
         $response->assertOk();
-        $response->assertViewHas('teamGroupsCount', 1);
-        $response->assertViewHas('docsSubmitted', 0);
-        $response->assertViewHas('pendingReviews', 0);
+        // The dashboard leads with what to do next; without a team, that is forming one.
         $response->assertViewHas('overallProgress', 0);
+        $response->assertSee('Where your team is');
+        $response->assertSee('Form or join a team');
 
         // Verify team name card shows "No Team" since current student doesn't have a team
         $response->assertSee('Team (No Team)');
         $response->assertSee('Join a team to see members here.');
     }
 
-    public function test_student_dashboard_loads_own_team_details_and_activities(): void
+    public function test_student_dashboard_loads_own_team_details(): void
     {
         $student = Student::factory()->withCompleteProfile()->create([
             'email' => 'student@my.cspc.edu.ph',
@@ -164,7 +164,6 @@ class StudentDashboardTest extends TestCase
 
         $response->assertOk();
         $response->assertViewHas('myTeam');
-        $response->assertViewHas('activities');
 
         // Team name should appear in the card header
         $response->assertSee('Team (Team Omega)');
@@ -172,13 +171,8 @@ class StudentDashboardTest extends TestCase
         // The student's own name should appear in the team members list
         $response->assertSee($student->f_name);
 
-        // Activities should contain at least the team_created and invitation activities
-        $activities = $response->viewData('activities');
-        $this->assertNotEmpty($activities);
-
-        // Verify the invitation to invitee appears in the activity feed text
-        $inviteActivity = $activities->first(fn ($a) => str_contains($a->text, $invitee->f_name));
-        $this->assertNotNull($inviteActivity, 'Invitation activity not found in activity feed');
+        // The activity feed left the dashboard: it said what happened, not what to do next.
+        $response->assertDontSee('Recent Activity');
     }
 
     public function test_student_sees_announcement_targeting_students_from_admin_with_matching_sections(): void

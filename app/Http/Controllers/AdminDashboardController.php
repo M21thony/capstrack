@@ -2,188 +2,89 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\ActivityLog;
-use App\Models\ArchivedDocument;
 use App\Models\CapstoneExpert;
+use App\Models\CapstonePreProposal;
+use App\Models\DefenseSchedule;
+use App\Models\FinancialRecord;
+use App\Models\MemberLeaveRequest;
+use App\Models\Setting;
 use App\Models\Student;
-use App\Models\Team;
-use App\Models\TeamExpertAssignment;
-use App\Support\ActivityScope;
+use App\Support\CapsaReports;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Str;
 use Illuminate\View\View;
 
+/**
+ * The first page an Admin or a CaPSA sees: what is waiting on them, and
+ * nothing else.
+ *
+ * It used to open on archive charts and all-time totals, which ask nothing of
+ * anybody and already live on Analytics. A CaPSA now sees the work waiting in
+ * their own sections and the defenses coming up; an Admin sees what the
+ * system still needs from them, like a section nobody covers.
+ */
 class AdminDashboardController extends Controller
 {
+    public function __construct(private CapsaReports $reports) {}
+
     public function index(): View
     {
-        $now = now();
-        $currentYear = (int) $now->format('Y');
-        $currentMonth = (int) $now->format('n');
+        /** @var CapstoneExpert $viewer */
+        $viewer = Auth::guard('expert')->user();
 
-        $syStart = $currentMonth >= 6 ? $currentYear : $currentYear - 1;
-        $syEnd = $syStart + 1;
-        $currentSchoolYearLabel = 'SY '.$syStart.'–'.$syEnd;
-
-        $totalStudents = Student::count();
-        $totalExperts = CapstoneExpert::where('approved_status', true)->count();
-        $activeTeams = Team::where('is_confirmed', false)->where('team_status', '!=', 'Full')->count();
-        $completedTeams = Team::where('is_confirmed', true)->count();
-        $pendingVerificationTeams = Team::submittedForChecking()->where('is_confirmed', false)->count();
-        $pendingApprovals = CapstoneExpert::where('approved_status', false)
-            ->whereNull('rejection_reason')
-            ->count();
-        $archivedCapstones = ArchivedDocument::count();
-
-        $selectedYear = request('year');
-        $years = ArchivedDocument::selectRaw('DISTINCT academic_year')
-            ->orderBy('academic_year', 'desc')
-            ->pluck('academic_year');
-        $yearlyQuery = ArchivedDocument::selectRaw('academic_year, COUNT(*) as total')
-            ->groupBy('academic_year')
-            ->orderBy('academic_year');
-        if ($selectedYear) {
-            $yearlyQuery->where('academic_year', $selectedYear);
-        }
-        $yearlyArchive = $yearlyQuery->pluck('total', 'academic_year');
-        $maxYearlyCount = $yearlyArchive->max() ?: 1;
-
-        $verifiedTeams = Team::where('is_confirmed', true)->get();
-        $tagCounts = [];
-        foreach ($verifiedTeams as $team) {
-            if ($team->tags && is_array($team->tags)) {
-                foreach ($team->tags as $tag) {
-                    $tag = trim($tag);
-                    if ($tag !== '') {
-                        $tagCounts[$tag] = ($tagCounts[$tag] ?? 0) + 1;
-                    }
-                }
-            }
-        }
-        arsort($tagCounts);
-        $totalTags = array_sum($tagCounts);
-        $colorPalette = ['#1d4ed8', '#7c3aed', '#16a34a', '#b45309', '#c9960c', '#0891b2', '#dc2626', '#ca8a04', '#9333ea', '#0d9488'];
-        $topTags = array_slice($tagCounts, 0, 10, true);
-        $otherCount = $totalTags - array_sum($topTags);
-        if ($otherCount > 0) {
-            $topTags['Others'] = $otherCount;
-        }
-        $categories = [];
-        $cumulativeOffset = 25;
-        $i = 0;
-        foreach ($topTags as $tag => $count) {
-            $pct = $totalTags > 0 ? round(($count / $totalTags) * 100) : 0;
-            $categories[] = [
-                'name' => $tag,
-                'count' => $count,
-                'percentage' => $pct,
-                'color' => $colorPalette[$i % count($colorPalette)],
-                'dasharray' => max($pct, 1).' '.max(100 - $pct, 0),
-                'dashoffset' => -$cumulativeOffset,
-            ];
-            $cumulativeOffset += $pct;
-            $i++;
-        }
-
-        $pendingExperts = CapstoneExpert::where('approved_status', false)
-            ->whereNull('rejection_reason')
-            ->with(['roles', 'expertise'])
-            ->latest('created_at')
-            ->take(5)
-            ->get();
-
-        $recentActivity = $this->buildRecentActivity();
-
-        return view('capsa.dashboard', compact(
-            'totalStudents',
-            'totalExperts',
-            'activeTeams',
-            'completedTeams',
-            'pendingVerificationTeams',
-            'pendingApprovals',
-            'currentSchoolYearLabel',
-            'pendingExperts',
-            'recentActivity',
-            'archivedCapstones',
-            'categories',
-            'totalTags',
-            'years',
-            'yearlyArchive',
-            'maxYearlyCount',
-            'selectedYear',
-        ));
+        return view('capsa.dashboard', [
+            'viewer' => $viewer,
+            'capsa' => $viewer->is_capsa ? $this->forCapsa($viewer) : null,
+            'admin' => $viewer->is_admin ? $this->forAdmin() : null,
+        ]);
     }
 
-    private function buildRecentActivity(): array
+    /** @return array<string, mixed> */
+    private function forCapsa(CapstoneExpert $capsa): array
     {
-        $activities = collect();
+        // The running term, the CaPSA's sections - the same teams Reports counts.
+        $ctx = $this->reports->context($capsa, []);
+        $teams = $ctx['teams'];
+        $teamIds = $teams->pluck('team_id');
+        $studentIds = $ctx['records']->toBase()->only($teamIds->all())->flatten(1)->pluck('student_id')->unique();
 
-        CapstoneExpert::where('approved_status', false)
-            ->whereNull('rejection_reason')
-            ->latest('created_at')
-            ->take(5)
-            ->get()
-            ->each(function ($e) use ($activities) {
-                $activities->push([
-                    'iconSvg' => '<svg viewBox="0 0 24 24" style="stroke:var(--accent3);width:13px;height:13px;fill:none;stroke-width:2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
-                    'text' => "<strong>{$e->first_name} {$e->last_name}</strong> requested an expert account",
-                    'time' => $e->created_at?->diffForHumans(),
-                ]);
-            });
+        $progress = collect($this->reports->build('progress', $ctx)['rows']);
+        $behind = $progress->filter(fn ($r) => $r['cells']['overdue'][1] > 0)->count();
 
-        CapstoneExpert::where('approved_status', true)
-            ->orderBy('created_at', 'desc')
-            ->take(5)
-            ->get()
-            ->each(function ($e) use ($activities) {
-                $activities->push([
-                    'iconSvg' => '<svg viewBox="0 0 24 24" style="stroke:var(--green);width:13px;height:13px;fill:none;stroke-width:2.5"><polyline points="20 6 9 17 4 12"/></svg>',
-                    'text' => "<strong>{$e->first_name} {$e->last_name}</strong> was approved as an expert",
-                    'time' => $e->created_at?->diffForHumans(),
-                ]);
-            });
+        return [
+            'toVerify' => $teams->filter(fn ($t) => $t->team_status === 'complete' && ! $t->is_confirmed)->count(),
+            'titles' => CapstonePreProposal::whereIn('team_id', $teamIds)
+                ->whereNotNull('submitted_at')->whereNull('retired_at')
+                ->where('approved_status', false)->whereNull('rejection_reason')
+                ->distinct('team_id')->count('team_id'),
+            'receipts' => FinancialRecord::whereIn('student_id', $studentIds)
+                ->whereNull('verified_at')->whereNotNull('receipt_image')
+                ->where(fn ($q) => $q->whereNull('f_record_status')->orWhere('f_record_status', 'pending'))
+                ->count(),
+            'leaveRequests' => MemberLeaveRequest::pendingCountFor($capsa),
+            'teamCount' => $teams->count(),
+            'sectionCount' => $teams->map(fn ($t) => $ctx['teamSections'][$t->team_id])->unique()->count(),
+            'behind' => $behind,
+            'unverified' => $teams->where('is_confirmed', false)->count(),
+            'period' => 'S.Y. '.$ctx['year'].($ctx['term'] !== '' ? ' · '.$ctx['termOptions'][$ctx['term']] : ''),
+            'defenses' => DefenseSchedule::whereIn('team_id', $teamIds)
+                ->whereBetween('schedule_date', [now()->startOfDay(), now()->addDays(14)->endOfDay()])
+                ->with('team')->orderBy('schedule_date')->take(6)->get(),
+        ];
+    }
 
-        TeamExpertAssignment::with(['team', 'expert', 'role', 'expertRole.role'])
-            ->latest('created_at')
-            ->take(10)
-            ->get()
-            ->each(function ($a) use ($activities) {
-                $teamName = $a->team?->team_name ?? 'Unknown';
-                $expertName = $a->expert ? "{$a->expert->first_name} {$a->expert->last_name}" : 'Unknown';
-                // role() is belongsToMany (via expert_roles) — always a collection, never a single model.
-                $roleName = $a->role->first()?->role_name ?? '';
+    /** @return array<string, mixed> */
+    private function forAdmin(): array
+    {
+        $capsas = CapstoneExpert::whereHas('roles', fn ($q) => $q->where('role_name', CapstoneExpert::CAPSA_ROLE))->get();
+        $covered = $capsas->flatMap(fn ($c) => $c->sections ?? [])->unique()->all();
+        $uncovered = array_values(array_diff(AdminProfileController::getAllAvailableSections(), $covered));
 
-                if ($a->status === 'pending') {
-                    $activities->push([
-                        'iconSvg' => '<svg viewBox="0 0 24 24" style="stroke:var(--accent3);width:13px;height:13px;fill:none;stroke-width:2.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',
-                        'text' => "<strong>Team {$teamName}</strong> applied for {$expertName} as ".Str::title($roleName),
-                        'time' => $a->created_at?->diffForHumans(),
-                    ]);
-                }
-            });
-
-        // Same rule as the bell and the Activity Log page: a CaPSA sees the
-        // sections they cover, the admin sees everything.
-        $visibleIds = ActivityScope::studentIdsFor(Auth::guard('expert')->user());
-
-        ActivityLog::when($visibleIds !== null, fn ($q) => $q->whereIn('student_id', $visibleIds))
-            ->latest('created_at')
-            ->take(10)
-            ->get()
-            ->each(function ($log) use ($activities) {
-                $activities->push([
-                    'iconSvg' => '<svg viewBox="0 0 24 24" style="stroke:var(--blue);width:13px;height:13px;fill:none;stroke-width:2.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>',
-                    'text' => $log->description,
-                    'time' => $log->created_at?->diffForHumans(),
-                ]);
-            });
-
-        return $activities
-            ->sortByDesc(function ($a) {
-                return $a['time'] ?? '';
-            })
-            ->values()
-            ->take(10)
-            ->toArray();
+        return [
+            'students' => Student::count(),
+            'experts' => CapstoneExpert::where('approved_status', true)->count(),
+            'capsas' => $capsas->count(),
+            'uncovered' => $uncovered,
+            'schoolYear' => Setting::get('current_school_year'),
+        ];
     }
 }

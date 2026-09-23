@@ -129,7 +129,8 @@ class StudentFinancialController extends Controller
         $validated = $request->validate([
             'expense_post_id' => ['required', 'exists:expense_posts,id'],
             'receipt_image' => ['required', 'image', 'max:10240'],
-        ]);
+            'receipt_number' => FinancialRecord::orNumberRules(),
+        ], FinancialRecord::orNumberMessages());
 
         /** @var Student $student */
         $student = $request->user();
@@ -152,7 +153,7 @@ class StudentFinancialController extends Controller
         }
 
         // A first receipt, or a new photo for one still waiting or sent back.
-        $record = FinancialRecord::submitFor($student, ExpensePost::findOrFail($validated['expense_post_id']), $request->file('receipt_image'));
+        $record = FinancialRecord::submitFor($student, ExpensePost::findOrFail($validated['expense_post_id']), $request->file('receipt_image'), $validated['receipt_number']);
 
         $record->load('expensePost');
 
