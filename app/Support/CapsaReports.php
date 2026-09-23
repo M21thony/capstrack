@@ -52,11 +52,20 @@ class CapsaReports
 
     public const DASH = '—';
 
+    /** The columns each one-row-per-team report has, key => heading. */
+    public const TEAM_COLUMNS = [
+        'progress' => ['team' => 'Team', 'section' => 'Section', 'milestone' => 'Current milestone', 'done' => 'Requirements done', 'overdue' => 'Overdue', 'status' => 'Status'],
+        'master' => ['team' => 'Team', 'section' => 'Section', 'title' => 'Project title', 'members' => 'Members', 'adviser' => 'Adviser', 'consultant' => 'Consultant', 'grammarian' => 'Grammarian'],
+        'results' => ['team' => 'Team', 'section' => 'Section', 'title' => 'Project title', 'verdict' => 'Verdict', 'average' => 'Average score'],
+        'fees' => ['team' => 'Team', 'section' => 'Section', 'members' => 'Members', 'paid' => 'Paid', 'waiting' => 'Receipts to check', 'collected' => 'Collected', 'status' => 'Status'],
+    ];
+
     private const ROLES = ['adviser' => 'Adviser', 'consultant' => 'Consultant', 'grammarian' => 'Grammarian'];
 
     private ?array $progressCache = null;
 
-    private ?Collection $assignmentCache = null;
+    /** @var array<string, Collection> approved assignments, by the team list they were asked for */
+    private array $assignmentCache = [];
 
     public function __construct(
         private SectionScope $scope,
@@ -228,7 +237,7 @@ class CapsaReports
                 'milestone' => $p ? $this->currentMilestone($p) : null,
                 'done' => $p->completed ?? 0,
                 'total' => $p->total ?? 0,
-                'overdue' => $p ? $p->items->where('state', MilestoneProgress::OVERDUE)->map(fn ($i) => $i['item']->title)->values()->all() : [],
+                'overdue' => $p ? $p->items->where('state', MilestoneProgress::OVERDUE)->map(fn ($i) => $i->item->title)->values()->all() : [],
                 'verified' => (bool) $team->is_confirmed,
                 'url' => route('capsa.team_management.show', $team->team_id),
             ];
@@ -262,7 +271,7 @@ class CapsaReports
         $behind = collect($rows)->filter(fn ($r) => $r['cells']['overdue'][1] > 0)->count();
 
         return [
-            'columns' => $this->cols(['team' => 'Team', 'section' => 'Section', 'milestone' => 'Current milestone', 'done' => 'Requirements done', 'overdue' => 'Overdue', 'status' => 'Status'], ['done', 'overdue']),
+            'columns' => $this->cols(self::TEAM_COLUMNS['progress'], ['done', 'overdue']),
             'rows' => $rows,
             'total' => null,
             'summary' => $this->count(count($rows), 'team').' · '.$behind.' with overdue items',
@@ -343,7 +352,7 @@ class CapsaReports
         }
 
         return [
-            'columns' => $this->cols(['team' => 'Team', 'section' => 'Section', 'title' => 'Project title', 'members' => 'Members', 'adviser' => 'Adviser', 'consultant' => 'Consultant', 'grammarian' => 'Grammarian'], []),
+            'columns' => $this->cols(self::TEAM_COLUMNS['master'], []),
             'rows' => $rows,
             'total' => null,
             'summary' => $this->count(count($rows), 'team').' · '.collect($rows)->filter(fn ($r) => $r['cells']['adviser'] !== self::DASH)->count().' with an adviser',
@@ -419,7 +428,7 @@ class CapsaReports
         $avg = $scores->isEmpty() ? self::DASH : DefenseScores::format(round($scores->avg(), 2));
 
         return [
-            'columns' => $this->cols(['team' => 'Team', 'section' => 'Section', 'title' => 'Project title', 'verdict' => 'Verdict', 'average' => 'Average score'], ['average']),
+            'columns' => $this->cols(self::TEAM_COLUMNS['results'], ['average']),
             'rows' => $rows,
             'total' => $rows ? ['team' => ['b', 'All sections'], 'section' => '', 'title' => $withVerdict.' of '.count($rows).' teams have a verdict', 'verdict' => '', 'average' => ['b', $avg]] : null,
             'summary' => $this->count(count($rows), 'team').' · '.$ctx['stage'].' · average of scored teams: '.$avg,
@@ -523,7 +532,7 @@ class CapsaReports
         $collected = $this->money($this->collected($members));
 
         return [
-            'columns' => $this->cols(['team' => 'Team', 'section' => 'Section', 'members' => 'Members', 'paid' => 'Paid', 'waiting' => 'Receipts to check', 'collected' => 'Collected', 'status' => 'Status'], ['members', 'paid', 'waiting', 'collected']),
+            'columns' => $this->cols(self::TEAM_COLUMNS['fees'], ['members', 'paid', 'waiting', 'collected']),
             'rows' => $rows,
             'total' => $rows && $posted ? [
                 'team' => ['b', 'All sections'], 'section' => '',
@@ -670,18 +679,16 @@ class CapsaReports
     /** @return Collection<int, TeamExpertAssignment> */
     private function approvedAssignments(array $teamIds, bool $fresh = false): Collection
     {
-        if (! $fresh && $this->assignmentCache !== null) {
-            return $this->assignmentCache->whereIn('team_id', $teamIds)->values();
+        $key = collect($teamIds)->map(fn ($id) => (int) $id)->unique()->sort()->implode(',');
+
+        if (! $fresh && isset($this->assignmentCache[$key])) {
+            return $this->assignmentCache[$key];
         }
 
         $found = TeamExpertAssignment::whereIn('team_id', $teamIds)->where('status', 'approved')
             ->with(['expert', 'expertRole.role', 'role', 'team'])->get();
 
-        if (! $fresh) {
-            $this->assignmentCache = $found;
-        }
-
-        return $found;
+        return $fresh ? $found : $this->assignmentCache[$key] = $found;
     }
 
     private function roleKey(TeamExpertAssignment $a): ?string

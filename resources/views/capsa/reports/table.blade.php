@@ -288,7 +288,7 @@
     </div>
 
     <div class="rp-tools" role="toolbar" aria-label="Table tools">
-      <label class="rp-search">{!! $I['search'] !!}<input type="search" id="rp-q" placeholder="Search this table" value="{{ request('q') }}" aria-label="Search this table" @disabled(! $hasRows)></label>
+      <label class="rp-search">{!! $I['search'] !!}<input type="search" id="rp-q" placeholder="Search this table" value="{{ $search }}" aria-label="Search this table" @disabled(! $hasRows)></label>
 
       @if ($teamReport)
         <div class="rp-seg" role="group" aria-label="Rows">
@@ -596,13 +596,14 @@ function openDim(el) { el.classList.add('active'); document.body.style.overflow 
       th.classList.remove('gstart');
       if (th.hidden) return;
       // The pinned first column is a band of its own; the rest of its report carries on unlabelled.
-      if (last && i > 1 && last.dataset.group === th.dataset.group) { last.colSpan += 1; return; }
+      if (last && !last.dataset.pinned && last.dataset.group === th.dataset.group) { last.colSpan += 1; return; }
       var b = document.createElement('th');
       var starts = !last || last.dataset.group !== th.dataset.group;
       b.dataset.group = th.dataset.group;
       b.className = 'band-' + th.dataset.band;
       b.textContent = starts ? th.dataset.group : '';
       if (last && starts) { b.classList.add('gstart'); th.classList.add('gstart'); }
+      if (i === 0) b.dataset.pinned = '1';
       bands.appendChild(b);
       last = b;
     });
@@ -748,6 +749,8 @@ function openDim(el) { el.classList.add('active'); document.body.style.overflow 
     var canR = scroller.scrollLeft + scroller.clientWidth < scroller.scrollWidth - 2;
     edgeL.hidden = !canL;
     edgeR.hidden = !canR;
+    // Just right of the pinned column, so it never covers the names in it.
+    edgeL.style.left = (heads.cells[0].getBoundingClientRect().width + 8) + 'px';
     hint.hidden = !(canL || canR);
   }
   function step(dir) { scroller.scrollBy({ left: dir * Math.max(240, Math.round(scroller.clientWidth * 0.6)) }); }
