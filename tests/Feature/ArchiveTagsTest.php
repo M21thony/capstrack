@@ -10,6 +10,7 @@ use App\Models\DuplicationCheck;
 use App\Models\Student;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
+use App\Support\ArchiveTagGuesser;
 use App\Support\DefenseAnalytics;
 use App\Support\ProjectTags;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -72,6 +73,40 @@ class ArchiveTagsTest extends TestCase
         $this->assertSame(['Mobile App'], ArchivedDocument::where('title', 'Barangay Health Records')->sole()->tags()->pluck('tag_name')->all());
     }
 
+    /** Every capstone ends up with a tag: the library's list is tagged from its titles. */
+    public function test_the_migration_leaves_no_capstone_untagged(): void
+    {
+        $iot = ArchivedDocument::create(['title' => 'RFID-BASED PARKING MANAGEMENT SYSTEM FOR CSPC', 'academic_year' => '2024', 'program' => 'BSIT']);
+        $plain = ArchivedDocument::create(['title' => 'Strategic Plan for CSPC Leons Utilization', 'academic_year' => '2020', 'program' => 'BSIT']);
+
+        (require base_path('database/migrations/2026_09_24_071729_fill_archive_tags_from_project_tags.php'))->up();
+
+        $this->assertEqualsCanonicalizing(['IoT', 'Management System'], $iot->tags()->pluck('tag_name')->all());
+        $this->assertSame([ArchiveTagGuesser::FALLBACK], $plain->tags()->pluck('tag_name')->all());
+        $this->assertSame(0, ArchivedDocument::doesntHave('tags')->count());
+    }
+
+    public function test_the_guesser_reads_the_kind_of_project_from_the_words_used(): void
+    {
+        $this->assertSame(['Web-based', 'Management System'], ArchiveTagGuesser::guess('Web-Based Sangguniang Kabataan Management System'));
+        $this->assertContains('Computer Vision', ArchiveTagGuesser::guess('Cacao Disease Detection using VGG16 Architecture'));
+        $this->assertContains('AR / VR', ArchiveTagGuesser::guess('Augmented Reality Mobile Application for the Center for Rinconada Culture'));
+        $this->assertLessThanOrEqual(ProjectTags::MAX, count(ArchiveTagGuesser::guess('AI chatbot mobile web-based IoT RFID blockchain GIS game e-commerce analytics')));
+    }
+
+    public function test_a_capstone_added_without_tags_gets_suggested_ones_and_tags_cannot_be_emptied(): void
+    {
+        $this->actingAsCapsa();
+
+        $this->postJson(route('api.admin.archive.store'), ['title' => 'Online Marketplace for Bamboo Crafts', 'academic_year' => '2024', 'program' => 'BSIT'])
+            ->assertCreated();
+        $archive = ArchivedDocument::where('title', 'Online Marketplace for Bamboo Crafts')->sole();
+        $this->assertContains('E-commerce', $archive->tags()->pluck('tag_name')->all());
+
+        $this->patchJson(route('api.admin.archive.tags.update', $archive), ['tag_ids' => []])->assertStatus(422);
+        $this->assertNotSame(0, $archive->tags()->count());
+    }
+
     public function test_no_more_than_the_limit(): void
     {
         $archive = $this->archived();
@@ -94,7 +129,8 @@ class ArchiveTagsTest extends TestCase
         (require base_path('database/migrations/2026_09_24_071729_fill_archive_tags_from_project_tags.php'))->up();
 
         $this->assertSame(['Game Development'], $archive->tags()->pluck('tag_name')->all());
-        $this->assertSame(0, $untouched->tags()->count());
+        // No team behind it: tagged from its title instead ("Crop Yield Tracker" is a tracking system).
+        $this->assertSame(['Management System'], $untouched->tags()->pluck('tag_name')->all());
     }
 
     /** @return array{0: Team} */
