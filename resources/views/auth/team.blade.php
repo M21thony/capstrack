@@ -332,11 +332,19 @@
 
   /* ══════════════════════ RESPONSIVE ══════════════════════ */
   @media (max-width: 1000px) {
+    /* body's align-items/justify-content: center only works while the card
+       is shorter than the viewport. Stacked, the hero panel + five person
+       cards run taller than a phone screen, and a centred flex item that
+       overflows gets clipped equally off both edges — the top of the page
+       (the "Built by team Bulbasaur" panel) ends up scrolled above y:0
+       with no way to reach it. Below this breakpoint the page just flows
+       top-to-bottom instead, same as login.blade.php's own phone layout. */
+    body { display: block; padding: 0; }
     .team-page { flex-direction: column; min-height: 100vh; border-radius: 0; max-width: 100%; }
     .story-panel { flex: none; padding: 32px 24px; }
     .story-mid { margin: 28px 0 40px; }
     .trend-motif { width: 60%; opacity: 0.3; }
-    .people-panel { padding: 36px 20px 56px; }
+    .people-panel { flex: none; padding: 36px 20px 56px; overflow-y: visible; }
     .people-grid { grid-template-columns: repeat(2, minmax(150px, 220px)); }
     .person-card, .person-card:nth-child(4) { grid-column: auto; }
     /* The odd 5th card gets its own centred row, sized like its siblings. */
