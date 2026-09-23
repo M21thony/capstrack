@@ -137,13 +137,10 @@
                typed in here were checkboxes with no value and no tag behind
                them, so ticking one did nothing and could not. --}}
           @if ($tags->isNotEmpty())
-            <div class="form-group"><label class="label">Category Tags</label>
-              <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:2px">
+            <div class="form-group"><label class="label">Kind of Project <span style="font-weight:400;text-transform:none;color:var(--text3)">(up to {{ \App\Support\ProjectTags::MAX }}, counted in Analytics)</span></label>
+              <div class="tag-pills" data-max="{{ \App\Support\ProjectTags::MAX }}">
                 @foreach ($tags as $tag)
-                  <label style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer">
-                    <input type="checkbox" class="arch-tag" value="{{ $tag->tag_id }}" style="accent-color:var(--accent)"/>
-                    {{ $tag->tag_name }}
-                  </label>
+                  <label class="tag-pill"><input type="checkbox" class="arch-tag" value="{{ $tag->tag_id }}"/><span>{{ $tag->tag_name }}</span></label>
                 @endforeach
               </div>
             </div>
@@ -180,7 +177,10 @@
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
           <span style="font-size:11px;color:var(--text3)">{{ $archive->program ?? 'N/A' }} — CCS</span>
-          <button class="btn btn-danger" style="font-size:10px;padding:3px 10px" onclick="deleteArchive({{ $archive->archived_id }})">Remove</button>
+          <span style="display:flex;gap:6px">
+            <button class="btn" style="font-size:10px;padding:3px 10px" onclick="editTags({{ $archive->archived_id }}, @js($archive->title), @js($archive->tags->pluck('tag_id')->all()))">Tags</button>
+            <button class="btn btn-danger" style="font-size:10px;padding:3px 10px" onclick="deleteArchive({{ $archive->archived_id }})">Remove</button>
+          </span>
         </div>
       </div>
     @empty
@@ -193,10 +193,82 @@
 </div>
 @include('capsa.partials.skeleton-toggle')
 
+{{-- A capstone's kinds of project, set after it is in the archive. --}}
+<dialog id="tag-dialog" aria-labelledby="tag-dialog-title" style="border:0;border-radius:14px;padding:22px;width:min(520px,calc(100vw - 32px));box-shadow:0 24px 60px rgba(0,0,0,.28)">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:6px">
+    <div><div id="tag-dialog-title" style="font-size:16px;font-weight:700;color:var(--text)">Kind of project</div>
+      <div id="tag-dialog-sub" style="font-size:12.5px;color:var(--text3);margin-top:2px"></div></div>
+    <button type="button" aria-label="Close" onclick="document.getElementById('tag-dialog').close()" style="background:none;border:0;font-size:20px;line-height:1;cursor:pointer;color:var(--text3)">&times;</button>
+  </div>
+  <p style="font-size:12.5px;color:var(--text2);margin:0 0 12px">Pick up to {{ \App\Support\ProjectTags::MAX }}. Analytics counts the archive by these.</p>
+  <div class="tag-pills" id="tag-dialog-pills" data-max="{{ \App\Support\ProjectTags::MAX }}">
+    @foreach ($tags as $tag)
+      <label class="tag-pill"><input type="checkbox" value="{{ $tag->tag_id }}"/><span>{{ $tag->tag_name }}</span></label>
+    @endforeach
+  </div>
+  <div id="tag-dialog-error" hidden style="font-size:12px;color:var(--red);margin-top:10px"></div>
+  <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px">
+    <button type="button" class="btn" onclick="document.getElementById('tag-dialog').close()">Cancel</button>
+    <button type="button" class="btn btn-primary" id="tag-dialog-save">Save tags</button>
+  </div>
+</dialog>
+<style>
+  .tag-pills{display:flex;flex-wrap:wrap;gap:6px;margin-top:2px}
+  .tag-pill{position:relative;cursor:pointer}
+  .tag-pill input{position:absolute;opacity:0;width:1px;height:1px}
+  .tag-pill span{display:inline-flex;align-items:center;min-height:28px;padding:3px 11px;border:1px solid var(--border);border-radius:999px;background:var(--bg2);font-size:12px;color:var(--text2)}
+  .tag-pill input:checked + span{background:var(--accent);border-color:var(--accent);color:#18191f;font-weight:600}
+  .tag-pill input:focus-visible + span{outline:2px solid var(--accent3);outline-offset:2px}
+  .tag-pill input:disabled + span{opacity:.45;cursor:not-allowed}
+</style>
+
 <script>
 const CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]').content;
 
 function showAddArchive(){document.getElementById('add-archive-modal').style.display='block'}
+
+// At most MAX tags in any tag list: the rest turn off once the limit is reached.
+document.querySelectorAll('.tag-pills').forEach(function (box) {
+  box.addEventListener('change', function () { limitTags(box); });
+});
+function limitTags(box) {
+  var max = Number(box.dataset.max), boxes = box.querySelectorAll('input');
+  var n = Array.prototype.filter.call(boxes, function (b) { return b.checked; }).length;
+  boxes.forEach(function (b) { b.disabled = !b.checked && n >= max; });
+}
+
+var editingArchive = null;
+function editTags(id, title, current) {
+  editingArchive = id;
+  var box = document.getElementById('tag-dialog-pills');
+  box.querySelectorAll('input').forEach(function (b) { b.checked = current.indexOf(Number(b.value)) !== -1; });
+  limitTags(box);
+  document.getElementById('tag-dialog-sub').textContent = title;
+  document.getElementById('tag-dialog-error').hidden = true;
+  document.getElementById('tag-dialog').showModal();
+}
+document.getElementById('tag-dialog-save').addEventListener('click', function () {
+  var btn = this, err = document.getElementById('tag-dialog-error');
+  var ids = Array.prototype.slice.call(document.querySelectorAll('#tag-dialog-pills input:checked')).map(function (b) { return Number(b.value); });
+  btn.disabled = true;
+  fetch('/api/admin/archive/' + editingArchive + '/tags', {
+    method: 'PATCH',
+    headers: { 'X-CSRF-TOKEN': CSRF_TOKEN, 'Accept': 'application/json', 'Content-Type': 'application/json' },
+    body: JSON.stringify({ tag_ids: ids }),
+  })
+    .then(function (r) { return r.json().then(function (b) { return { ok: r.ok, b: b }; }); })
+    .then(function (res) {
+      if (!res.ok) {
+        var m = res.b && res.b.errors ? Object.values(res.b.errors).flat()[0] : (res.b && res.b.message);
+        err.textContent = m || 'The tags were not saved.';
+        err.hidden = false;
+        btn.disabled = false;
+        return;
+      }
+      location.reload();
+    })
+    .catch(function () { err.textContent = 'Could not reach the server. Please try again.'; err.hidden = false; btn.disabled = false; });
+});
 function hideAddArchive(){document.getElementById('add-archive-modal').style.display='none'}
 function filterArch(){
   const q=(document.getElementById('arch-search').value||'').toLowerCase();
