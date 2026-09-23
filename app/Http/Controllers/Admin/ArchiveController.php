@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\ArchivedDocTag;
 use App\Models\ArchivedDocument;
+use App\Support\ProjectTags;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -44,7 +45,7 @@ class ArchiveController extends Controller
             'file_name' => 'nullable|string|max:255',
             'file_path' => 'nullable|string|max:500',
             'file_size' => 'nullable|integer',
-            'tag_ids' => 'nullable|array',
+            'tag_ids' => 'nullable|array|max:'.ProjectTags::MAX,
             'tag_ids.*' => 'exists:archived_doc_tags,tag_id',
         ]);
 
@@ -68,7 +69,7 @@ class ArchiveController extends Controller
             'file_name' => 'nullable|string|max:255',
             'file_path' => 'nullable|string|max:500',
             'file_size' => 'nullable|integer',
-            'tag_ids' => 'nullable|array',
+            'tag_ids' => 'nullable|array|max:'.ProjectTags::MAX,
             'tag_ids.*' => 'exists:archived_doc_tags,tag_id',
         ]);
 
@@ -104,6 +105,12 @@ class ArchiveController extends Controller
         if ($data['decision'] === 'published') {
             $archive->update(['submission_status' => ArchivedDocument::PUBLISHED]);
 
+            // The kind of project the team said it was on its chosen
+            // pre-proposal, so Analytics counts it without anyone retyping it.
+            if ($archive->tags()->doesntExist() && ($tags = $archive->team?->selectedPreProposal?->tags)) {
+                $archive->tags()->sync(ArchivedDocTag::idsFor($tags));
+            }
+
             return response()->json([
                 'success' => true,
                 'message' => $archive->title.' is now in the archive.',
@@ -118,6 +125,21 @@ class ArchiveController extends Controller
             'success' => true,
             'message' => 'Submission declined. The team can hand in a new copy.',
         ]);
+    }
+
+    /** Just the tags, from the tag editor on a capstone's card. */
+    public function updateTags(Request $request, ArchivedDocument $archive)
+    {
+        $data = $request->validate([
+            'tag_ids' => ['present', 'array', 'max:'.ProjectTags::MAX],
+            'tag_ids.*' => ['integer', 'exists:archived_doc_tags,tag_id'],
+        ], [
+            'tag_ids.max' => 'Pick at most '.ProjectTags::MAX.' tags.',
+        ]);
+
+        $archive->tags()->sync($data['tag_ids']);
+
+        return response()->json(['success' => true, 'tags' => $archive->tags()->pluck('tag_name')]);
     }
 
     public function destroy(ArchivedDocument $archive)
