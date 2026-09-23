@@ -53,6 +53,10 @@ final class NotificationTypes
             'label' => 'A milestone deadline is coming up',
             'email' => false,
         ],
+        'checklist_item_added' => [
+            'label' => 'Our CaPSA adds something new to our checklist',
+            'email' => false,
+        ],
         'consultation_reminder' => [
             'label' => 'Our consultation is happening today',
             'email' => true,

@@ -74,9 +74,9 @@
           <button class="dx-btn dx-btn-sm dx-btn-gold" id="sel-assign"><svg><use href="#dx-i-users"/></svg>Assign panel to selected</button>
         </div>
         <div class="dx-table-wrap">
-          <table>
+          <table id="panel-table">
             <colgroup><col style="width:34px"><col style="width:14%"><col style="width:17%"><col style="width:18%"><col style="width:18%"><col style="width:14%"><col style="width:140px"></colgroup>
-            <thead><tr><th><input type="checkbox" id="pick-all" aria-label="Select every team that can take a panel"></th><th>Team</th><th>Capstone title</th><th>Team experts</th><th>Panel</th><th>Status</th><th style="text-align:right">Actions</th></tr></thead>
+            <thead><tr><th class="dx-pick-cell"><input type="checkbox" id="pick-all" aria-label="Select every team that can take a panel"></th><th>Team</th><th>Capstone title</th><th>Team experts</th><th>Panel</th><th>Status</th><th style="text-align:right">Actions</th></tr></thead>
             <tbody id="rows"></tbody>
           </table>
         </div>

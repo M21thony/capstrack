@@ -134,14 +134,14 @@ function render() {
       : 'Panel assigned and requirements done. Pre-proposal Defense has no fee.';
     const passed = ['Experts', S.stages.indexOf(STAGE) > 0 && 'Previous stage passed', 'Requirements done', 'Panel assigned', hasFee() && 'Fees verified'].filter(Boolean);
     $('#sched-table').innerHTML = table(['24%', '26%', '34%', '16%'], ['Team', 'Panel', 'Checks', 'Actions'],
-      ready.filter(match).map(t => `<tr><td>${teamCell(t, t.attempt > 1 ? ` · Redefense ${t.attempt}` : '')}</td><td class="dx-panel-names">${panelNames(t)}</td><td><div class="dx-checks">${passed.map(p => `<span class="dx-check">✓ ${p}</span>`).join('')}</div></td><td style="text-align:right"><button class="dx-btn dx-btn-sm dx-btn-gold" data-schedule="${t.id}">Schedule</button></td></tr>`),
+      ready.filter(match).map(t => `<tr><td data-label="Team">${teamCell(t, t.attempt > 1 ? ` · Redefense ${t.attempt}` : '')}</td><td class="dx-panel-names" data-label="Panel">${panelNames(t)}</td><td data-label="Checks"><div class="dx-checks">${passed.map(p => `<span class="dx-check">✓ ${p}</span>`).join('')}</div></td><td style="text-align:right" data-label="Actions"><button class="dx-btn dx-btn-sm dx-btn-gold" data-schedule="${t.id}">Schedule</button></td></tr>`),
       "No team can be scheduled yet. The Can't be scheduled tab says what each one needs.");
   } else if (schedTab === 'blocked') {
     $('#tab-hint').textContent = 'These teams are left out of Generate schedule until they finish what is listed.';
     const key = $('#reason-filter').value;
     $('#sched-table').innerHTML = table(['26%', '34%', '40%'], ['Team', 'Panel', 'Still needs'],
       blocked.filter(match).filter(t => !key || t.blockers.some(b => b.key === key))
-        .map(t => `<tr><td>${teamCell(t)}</td><td class="dx-panel-names">${t.panel ? panelNames(t) : '<span class="dx-none">Not assigned</span>'}</td><td><div class="dx-checks">${t.blockers.map(b => `<span class="dx-check dx-no">${esc(b.text)}</span>`).join('')}</div></td></tr>`),
+        .map(t => `<tr><td data-label="Team">${teamCell(t)}</td><td class="dx-panel-names" data-label="Panel">${t.panel ? panelNames(t) : '<span class="dx-none">Not assigned</span>'}</td><td data-label="Still needs"><div class="dx-checks">${t.blockers.map(b => `<span class="dx-check dx-no">${esc(b.text)}</span>`).join('')}</div></td></tr>`),
       'No team matches.');
   } else {
     $('#tab-hint').textContent = "Other sections' defense schedules are shown greyed out, so you can see why a room or panelist is taken.";
@@ -149,9 +149,9 @@ function render() {
       ...scheduled.filter(match).map(t => {
         // The panel's decision has its own column now; grading is what's left to say here.
         const progress = !t.outcome && t.panel_size ? ` · Graded ${t.graded} of ${t.panel_size}` : '';
-        return { at: t.schedule.date + t.schedule.time, html: `<tr><td class="dx-when">${fmtDay(t.schedule.date)}</td><td>${slotLabel(t.schedule.time, t.schedule.end)}</td><td>${esc(t.schedule.venue)}</td><td>${teamCell(t, esc(progress))}</td><td class="dx-panel-names">${panelNames(t)}</td><td>${resultBadge(t)}</td><td><div class="dx-acts">${t.passed ? '' : `<button class="dx-btn dx-btn-sm" data-override="${t.id}"><svg><use href="#dx-i-edit"/></svg>Change</button>`}</div></td></tr>` };
+        return { at: t.schedule.date + t.schedule.time, html: `<tr><td class="dx-when" data-label="Date">${fmtDay(t.schedule.date)}</td><td data-label="Time">${slotLabel(t.schedule.time, t.schedule.end)}</td><td data-label="Venue">${esc(t.schedule.venue)}</td><td data-label="Team">${teamCell(t, esc(progress))}</td><td class="dx-panel-names" data-label="Panel">${panelNames(t)}</td><td data-label="Result">${resultBadge(t)}</td><td data-label="Actions"><div class="dx-acts">${t.passed ? '' : `<button class="dx-btn dx-btn-sm" data-override="${t.id}"><svg><use href="#dx-i-edit"/></svg>Change</button>`}</div></td></tr>` };
       }),
-      ...($('#s-others').checked && !q ? OTHER : []).map(o => ({ at: o.date + o.time, html: `<tr class="dx-other"><td class="dx-when">${fmtDay(o.date)}</td><td>${slotLabel(o.time, o.end)}</td><td>${esc(o.venue)}</td><td><span class="dx-strong">${esc(o.section)}</span><span class="dx-muted" style="display:block">Other section · ${esc(o.stage)}</span></td><td class="dx-panel-names">${o.panel.map(id => esc(nameOf(id))).join('<br>')}</td><td></td><td></td></tr>` })),
+      ...($('#s-others').checked && !q ? OTHER : []).map(o => ({ at: o.date + o.time, html: `<tr class="dx-other"><td class="dx-when" data-label="Date">${fmtDay(o.date)}</td><td data-label="Time">${slotLabel(o.time, o.end)}</td><td data-label="Venue">${esc(o.venue)}</td><td data-label="Team"><span class="dx-strong">${esc(o.section)}</span><span class="dx-muted" style="display:block">Other section · ${esc(o.stage)}</span></td><td class="dx-panel-names" data-label="Panel">${o.panel.map(id => esc(nameOf(id))).join('<br>')}</td><td data-label="Result"></td><td data-label="Actions"></td></tr>` })),
     ].sort((a, b) => a.at.localeCompare(b.at)).map(r => r.html);
     $('#sched-table').innerHTML = table(['14%', '13%', '9%', '18%', '21%', '15%', '10%'], ['Date', 'Time', 'Venue', 'Team', 'Panel', 'Result', 'Actions'], rows, `Nothing scheduled for ${STAGE} yet.`);
   }

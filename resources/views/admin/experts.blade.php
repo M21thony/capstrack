@@ -479,7 +479,10 @@
     {{-- Filters on their own line. They were sharing a strip with the count
          and the two buttons, which made "look for something" and "do
          something" compete for the same row. --}}
-    <div class="page-filters">
+    {{-- One dropdown and one button - unlike CaPSA's own copy of this page,
+         which carries two of each - so on a phone these still fit the one
+         line they share on desktop instead of needing to stack. --}}
+    <div class="page-filters page-filters-inline">
       <div class="experts-search">
         <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         <input class="input" id="experts-search-input" placeholder="Search experts by name or expertise..."/>

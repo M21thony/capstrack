@@ -539,6 +539,37 @@
               </div>
             </div>
           </div>
+
+          {{-- Defense Panel: who the CaPSA put on the team's next defense.
+               Assigning a panel writes the same three experts onto every
+               stage at once, so this is "the" panel rather than one for a
+               single date - see TeamController::index(). --}}
+          <div style="margin-top: 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 14px; padding: 14px;">
+            <div style="font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 12px;">DEFENSE PANEL</div>
+            @if($panel->isNotEmpty())
+              <div style="font-size: 10.5px; color: var(--text3); margin-bottom: 10px;">Assigned for your {{ $panelDefenseType }}</div>
+              <div style="display: flex; flex-direction: column;">
+                @foreach($panel as $seat)
+                  @php $ex = $seat->expert; @endphp
+                  <div style="display: flex; align-items: center; gap: 10px; padding: 7px 0; @if(!$loop->last) border-bottom: 1px solid var(--border); @endif">
+                    <div style="width: 32px; height: 32px; border-radius: 50%; background: #7c3aed; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: #fff; overflow: hidden; flex-shrink: 0;">
+                      @if($ex?->hasAvatarImage())
+                        <img src="{{ $ex->avatarUrl() }}" alt="" style="width: 100%; height: 100%; object-fit: cover;">
+                      @else
+                        {{ $ex?->avatarInitials() }}
+                      @endif
+                    </div>
+                    <div style="flex: 1; min-width: 0;">
+                      <div style="font-size: 12px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ $ex?->name ?? 'Unknown' }}</div>
+                      <div style="font-size: 10.5px; color: var(--text3);">{{ $seat->panel_role }}</div>
+                    </div>
+                  </div>
+                @endforeach
+              </div>
+            @else
+              <div style="font-size: 11.5px; color: var(--text3); line-height: 1.5;">Not assigned yet. Your CaPSA sets your defense panel once your team is ready.</div>
+            @endif
+          </div>
         </div>
       </div>
 
