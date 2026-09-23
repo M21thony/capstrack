@@ -59,13 +59,13 @@ function renderRows() {
       ? `<button class="dx-icon-btn" data-menu="${t.id}" aria-label="More actions for ${esc(t.name)}" aria-haspopup="menu"><svg><use href="#dx-i-more"/></svg></button>`
       : '<span class="dx-icon-btn" aria-hidden="true"></span>';
     return `<tr class="${A.teams.has(t.id) ? 'dx-is-picked' : ''}">
-      <td><input type="checkbox" data-pick="${t.id}" ${s === 'notready' ? `disabled title="${esc(need)} first"` : ''} ${A.teams.has(t.id) ? 'checked' : ''} aria-label="Select ${esc(t.name)}"></td>
-      <td><div class="dx-team"><span class="dx-tbadge">${esc(initials(t.name))}</span><span><span class="dx-strong">${esc(t.name)}</span><span class="dx-muted" style="display:block">${esc(t.section)} · ${t.members} ${t.members === 1 ? 'member' : 'members'}</span></span></div></td>
-      <td class="dx-title-cell"><span class="dx-clamp" title="${esc(t.title || '')}">${esc(t.title || '—')}</span></td>
-      <td><div class="dx-experts">${expertLine('Adv', t.adviser, 'adviser')}${expertLine('Con', t.consultant, 'consultant')}${expertLine('Gra', t.grammarian, 'grammarian')}</div></td>
-      <td>${panel}</td>
-      <td><span class="dx-pill ${STATUS[s][1]}">${STATUS[s][0]}</span></td>
-      <td><div class="dx-acts">${main}${more}</div></td>
+      <td class="dx-pick-cell"><input type="checkbox" data-pick="${t.id}" ${s === 'notready' ? `disabled title="${esc(need)} first"` : ''} ${A.teams.has(t.id) ? 'checked' : ''} aria-label="Select ${esc(t.name)}"></td>
+      <td data-label="Team"><div class="dx-team"><span class="dx-tbadge">${esc(initials(t.name))}</span><span><span class="dx-strong">${esc(t.name)}</span><span class="dx-muted" style="display:block">${esc(t.section)} · ${t.members} ${t.members === 1 ? 'member' : 'members'}</span></span></div></td>
+      <td class="dx-title-cell" data-label="Capstone title"><span class="dx-clamp" title="${esc(t.title || '')}">${esc(t.title || '—')}</span></td>
+      <td data-label="Team experts"><div class="dx-experts">${expertLine('Adv', t.adviser, 'adviser')}${expertLine('Con', t.consultant, 'consultant')}${expertLine('Gra', t.grammarian, 'grammarian')}</div></td>
+      <td data-label="Panel">${panel}</td>
+      <td data-label="Status"><span class="dx-pill ${STATUS[s][1]}">${STATUS[s][0]}</span></td>
+      <td data-label="Actions"><div class="dx-acts">${main}${more}</div></td>
     </tr>`;
   }).join('') || '<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--dx-ink3)">No team matches these filters.</td></tr>';
 
