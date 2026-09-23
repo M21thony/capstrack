@@ -5,10 +5,10 @@ namespace Tests\Feature;
 use App\Models\CapstoneExpert;
 use App\Models\DefenseSchedule;
 use App\Models\LeaveApproval;
+use App\Models\MemberLeaveRequest;
 use App\Models\Notification;
 use App\Models\Recruitment;
 use App\Models\Role;
-use App\Models\MemberLeaveRequest;
 use App\Models\Student;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
@@ -210,6 +210,50 @@ class TitleDefenseTeamLockTest extends TestCase
         ]);
         $this->assertTrue($this->inTeam($a, $team), 'asking is not leaving');
         $this->assertTrue(Notification::where('student_id', $leader->student_id)->where('type', 'leave_request_sent')->exists());
+    }
+
+    public function test_the_sections_capsa_is_notified_with_the_reason(): void
+    {
+        [$team, , $a] = $this->lockedTeam();
+        $capsa = $this->capsa(['BSIT-3A']);
+        $otherCapsa = $this->capsa(['BSIT-4B']);
+
+        $this->askToLeave($a, 'My family is moving to Cebu next month.')->assertCreated();
+
+        $notification = Notification::where('expert_id', $capsa->expert_id)->where('type', 'leave_request_received')->first();
+        $this->assertNotNull($notification, 'the CaPSA who decides is told');
+        $this->assertSame('Student asked to leave a team', $notification->title);
+        $this->assertStringContainsString('My family is moving to Cebu next month.', $notification->message);
+        $this->assertStringContainsString('Ana Tester', $notification->message);
+        $this->assertSame(route('capsa.team_management', ['tab' => 'leave_requests']), $notification->link);
+
+        $this->assertFalse(Notification::where('expert_id', $otherCapsa->expert_id)->exists(), 'another section\'s CaPSA is not');
+    }
+
+    public function test_the_capsa_is_notified_of_a_removal_request_with_who_and_why(): void
+    {
+        [, $leader, $a] = $this->lockedTeam();
+        $capsa = $this->capsa();
+
+        $this->actingAs($leader, 'web')->postJson(route('team.capsa-leave-requests.store'), [
+            'type' => 'remove', 'student_id' => $a->student_id, 'reason' => 'Has not attended a single meeting since June.',
+        ])->assertCreated();
+
+        $notification = Notification::where('expert_id', $capsa->expert_id)->where('type', 'leave_request_received')->first();
+        $this->assertNotNull($notification);
+        $this->assertSame('Leader asked to remove a member', $notification->title);
+        $this->assertStringContainsString('Ana Tester', $notification->message);
+        $this->assertStringContainsString('Has not attended a single meeting since June.', $notification->message);
+    }
+
+    public function test_a_refused_request_notifies_no_capsa(): void
+    {
+        [, , $a] = $this->lockedTeam();
+        $this->capsa();
+
+        $this->askToLeave($a, 'bye')->assertStatus(422);
+
+        $this->assertFalse(Notification::whereNotNull('expert_id')->exists());
     }
 
     public function test_a_request_needs_a_real_reason(): void

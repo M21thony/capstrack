@@ -286,6 +286,41 @@
     </div>
 
     <div id="real-content" style="opacity:0">
+    {{-- A form on this page can submit from either the team card up here or
+         the recruitment feed further down - Send to CaPSA, Update Team, a
+         recruitment post, an invite response. Wherever it came from, the
+         redirect lands back at the top of the page, so the confirmation
+         belongs here too. It used to sit after the team card and before the
+         feed, which put it off-screen below the fold for the one action
+         (asking to leave, or to remove a member) that opens furthest from
+         it - a request that had gone through read as if nothing had
+         happened. --}}
+    @if($errors->any())
+      <div class="alert" style="background: #fef2f2; border: 1px solid #fecaca; color: #ef4444; padding: 10px 14px; border-radius: 8px; margin-bottom: 16px;">
+        @foreach($errors->all() as $error)
+          <div>{{ $error }}</div>
+        @endforeach
+      </div>
+    @endif
+
+    {{-- LeaveRequestController::refuse() (and several other controllers that
+         redirect back here) flash the reason under 'error', not 'status' -
+         a request the CaPSA feature turned down (already pending, team not
+         locked yet, a leader trying to leave without handing off first) had
+         nothing on screen saying so, which is indistinguishable from the
+         request never having been sent at all. --}}
+    @if(session('error'))
+      <div class="alert" style="background: #fef2f2; border: 1px solid #fecaca; color: #ef4444; padding: 10px 14px; border-radius: 8px; margin-bottom: 16px;">
+        {{ session('error') }}
+      </div>
+    @endif
+
+    @if(session('status'))
+      <div class="alert" style="background: #f0fdf4; border: 1px solid #bbf7d0; color: #15803d; padding: 10px 14px; border-radius: 8px; margin-bottom: 16px;">
+        {{ session('status') }}
+      </div>
+    @endif
+
     @if($myTeam)
     <!-- TEAM DASHBOARD -->
     <div class="team-dashboard-compact" style="margin-bottom: 16px;">
@@ -638,20 +673,6 @@
       </div>
       </div>
     </div>
-    @endif
-
-    @if($errors->any())
-      <div class="alert" style="background: #fef2f2; border: 1px solid #fecaca; color: #ef4444; padding: 10px 14px; border-radius: 8px; margin-bottom: 16px;">
-        @foreach($errors->all() as $error)
-          <div>{{ $error }}</div>
-        @endforeach
-      </div>
-    @endif
-
-    @if(session('status'))
-      <div class="alert" style="background: #f0fdf4; border: 1px solid #bbf7d0; color: #15803d; padding: 10px 14px; border-radius: 8px; margin-bottom: 16px;">
-        {{ session('status') }}
-      </div>
     @endif
 
     <!-- SEARCH AND FILTERS -->
