@@ -4,7 +4,10 @@ namespace App\Support;
 
 use App\Models\CapstoneExpert;
 use App\Models\Checklist;
+use App\Models\Student;
+use App\Models\StudentSchoolYear;
 use App\Models\Team;
+use Illuminate\Support\Collection;
 
 /**
  * Which checklist a team follows: the one its section's CaPSA keeps for the
@@ -17,6 +20,43 @@ class TeamChecklist
     public function for(Team $team): ?Checklist
     {
         return $this->forSection($this->sections->sectionFor($team));
+    }
+
+    /**
+     * The other direction: every student on every team that follows this
+     * checklist. A checklist covers a whole program across every section its
+     * CaPSA runs, so "who does this change reach" is the same question as
+     * "which of this CaPSA's teams are in that program" - answered with the
+     * same filter the team-management list uses, so the two cannot drift.
+     *
+     * @return Collection<int, Student>
+     */
+    public function studentsFollowing(Checklist $checklist): Collection
+    {
+        $capsa = $checklist->capsa;
+
+        if (! $capsa) {
+            return collect();
+        }
+
+        $syRecords = StudentSchoolYear::whereNotNull('team_id')->with('student')->get()->groupBy('team_id');
+        $candidates = Team::whereIn('team_id', $syRecords->keys())->get();
+
+        $filtered = $this->sections->filterTeams($candidates, $syRecords, $capsa->sections ?? []);
+
+        $students = collect();
+
+        foreach ($filtered['teams'] as $team) {
+            $section = $filtered['teamSections'][$team->team_id];
+
+            if (self::programOf($section) !== $checklist->program) {
+                continue;
+            }
+
+            $students = $students->merge($filtered['teamMembers'][$team->team_id]);
+        }
+
+        return $students->unique('student_id')->values();
     }
 
     public function forSection(string $section): ?Checklist

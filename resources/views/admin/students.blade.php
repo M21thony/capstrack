@@ -16,6 +16,12 @@
   .std-who{display:flex;align-items:center;gap:9px;min-width:0}
   .std-email{font-size:12px;color:var(--text3);max-width:230px;
              overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  /* Caps the column in the desktop table; on the phone card layout the same
+     max-width left this row short of the card's own width, the same gap
+     admin/experts' .cx-skills left behind before that got the same fix. */
+  @media (max-width:768px){
+    .table td.std-email{max-width:none}
+  }
   /* Figures that line up down the column, which is all the old monospace
      was ever doing here. */
   .std-num{font-variant-numeric:tabular-nums;font-size:12px;color:var(--text2)}
@@ -173,15 +179,15 @@
               ];
             @endphp
             <tr id="student-row-{{ $student->student_id }}">
-              <td class="std-num" style="padding-left:20px">{{ $student->student_number ?? '—' }}</td>
-              <td>
+              <td class="std-num" style="padding-left:20px" data-label="Student No.">{{ $student->student_number ?? '—' }}</td>
+              <td data-label="Name">
                 <div class="std-who">
                   <img src="{{ $student->avatarUrl() }}" alt="" loading="lazy" class="std-av"
                        onerror="this.onerror=null;this.src='{{ asset('images/default-avatar.jpg') }}';">
                   <span class="std-name">{{ trim($student->f_name.' '.$student->l_name) }}</span>
                 </div>
               </td>
-              <td class="std-email" title="{{ $student->email }}">{{ $student->email }}</td>
+              <td class="std-email" title="{{ $student->email }}" data-label="Email">{{ $student->email }}</td>
               @php
                 // Program, year and section are three things read down a
                 // column. They were one string - the full course name and
@@ -191,15 +197,15 @@
                 $year = count($ys) === 2 ? $ys[0] : '';
                 $section = count($ys) === 2 ? $ys[1] : ($ys[0] ?? '');
               @endphp
-              <td title="{{ $student->course }}">
+              <td title="{{ $student->course }}" data-label="Program">
                 @if ($program)
                   <span class="std-prog">{{ $program }}</span>
                 @else
                   <span class="std-none">{{ $student->course ?: '—' }}</span>
                 @endif
               </td>
-              <td class="std-num">{{ $year !== '' ? $year : '—' }}</td>
-              <td class="std-num">{{ $section !== '' ? $section : '—' }}</td>
+              <td class="std-num" data-label="Year">{{ $year !== '' ? $year : '—' }}</td>
+              <td class="std-num" data-label="Section">{{ $section !== '' ? $section : '—' }}</td>
             </tr>
           @empty
             <tr><td colspan="6" style="padding:24px 20px;text-align:center;color:var(--text3);font-size:13px">No student accounts found.</td></tr>

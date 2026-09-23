@@ -217,7 +217,7 @@
     {{-- Three lines of housekeeping sitting directly under the button pushed
          the button itself up the screen on a phone. Folded away by default
          there; from tablet up there is room, so it stays open. --}}
-    <details id="signin-note" class="order-5 mt-0 rounded-xl border border-line bg-sand md:order-6 md:mt-4">
+    <details id="signin-note" class="order-5 mt-0 rounded-xl border border-line bg-sand md:order-6 md:mt-4" open>
       <summary class="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-[11px] font-bold tracking-[0.04em] text-gold-dim uppercase md:text-xs tabular-nums [&::-webkit-details-marker]:hidden">
         <span class="flex items-center gap-2">
           <svg viewBox="0 0 24 24" class="size-3.5 flex-none fill-none stroke-current stroke-2 [stroke-linecap:round] [stroke-linejoin:round]" aria-hidden="true"><circle cx="12" cy="12" r="9"/><line x1="12" y1="11" x2="12" y2="16"/><circle cx="12" cy="7.75" r="0.75" fill="currentColor" stroke="none"/></svg>
@@ -310,16 +310,19 @@ document.getElementById('google-login-form').addEventListener('submit', function
     });
 });
 
-// A closed <details> hides its children however they are styled, so CSS alone
-// cannot open it from tablet up - the summary is hidden there by media query,
-// and this keeps the panel itself in step with the same breakpoint.
+// The note ships open by default at every width. From tablet up its summary
+// is hidden by media query, so there's no control left to reopen it if a
+// resize (e.g. a phone rotating past the breakpoint) ever left it closed -
+// this just re-forces it open once there's no toggle to do that by hand. On
+// phones, where the summary stays visible, a visitor's own toggle is left
+// alone.
 (function () {
     const note = document.getElementById('signin-note');
     if (!note) { return; }
     const wide = window.matchMedia('(min-width: 768px)');
-    const syncNote = function () { note.open = wide.matches; };
-    syncNote();
-    wide.addEventListener('change', syncNote);
+    const forceOpenWhenWide = function () { if (wide.matches) { note.open = true; } };
+    forceOpenWhenWide();
+    wide.addEventListener('change', forceOpenWhenWide);
 })();
 
 const expertRemovedModal = document.getElementById('expert-removed-modal');

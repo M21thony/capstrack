@@ -56,6 +56,56 @@
 .tmx tbody tr:last-child td{border-bottom:0}
 .tmx td input[type=checkbox],
 .tmx th input[type=checkbox]{width:16px;height:16px;accent-color:var(--accent);cursor:pointer;margin:0}
+
+/* ── Teams table → cards on phone ──
+   Eight columns plus the select checkbox needs real width, so the table
+   stays a real, horizontally-scrolling grid down to tablet - .tcols above
+   already switches to one column at 1000px, and this follows the same cutoff.
+   Below it there isn't room to show even two columns without hiding the rest
+   behind a scrollbar nobody thinks to reach for, on what is this page's main
+   list, not a secondary detail. Each row becomes its own card instead, same
+   as every other list in the app.
+
+   Scoped to #tm-teams alone: the Progress tab (#tm-progress, table.pg) has
+   its own per-milestone columns with no data-label on their cells, so the
+   same transform there would just print blank labelled rows. It keeps the
+   scrolling grid, the same call already made for other dense grids in the
+   app (Team Breakdown on admin/experts, Defense Scheduling's stage tabs). */
+@media (max-width:1000px){
+  #tm-teams .tscroll{overflow-x:visible}
+  #tm-teams table{min-width:0}
+  #tm-teams table,#tm-teams thead,#tm-teams tbody,#tm-teams tr,#tm-teams th,#tm-teams td{display:block}
+  #tm-teams thead{display:none}
+  #tm-teams tbody tr{position:relative;background:var(--card);border:1px solid var(--line);border-radius:14px;
+    padding:14px;margin:0 0 10px;cursor:pointer}
+  #tm-teams tbody tr:last-child{margin-bottom:0}
+  #tm-teams tbody tr:hover td{background:none}
+  #tm-teams td{padding:7px 0;border-bottom:0;display:flex;align-items:flex-start;gap:10px;font-size:12.5px}
+  #tm-teams td::before{content:attr(data-label);flex:0 0 84px;padding-top:1px;font-size:10px;font-weight:700;
+    color:var(--mut);letter-spacing:.4px;text-transform:uppercase}
+
+  /* The checkbox moves into the card's own corner instead of sitting in a
+     labelled row of its own above the team's name - the same fix given to
+     admin/experts' and capsa/sections' row-select checkbox. */
+  #tm-teams td.tm-check{position:absolute;top:14px;right:14px;padding:0}
+  #tm-teams td.tm-check::before{content:none}
+
+  /* Team is the card's own headline - an avatar and a name need no label
+     telling you they are "Team", and the checkbox sits over this row's
+     right edge so its text gets the same clearance. */
+  #tm-teams td[data-label="Team"]{padding-top:0;padding-right:30px}
+  #tm-teams td[data-label="Team"]::before{display:none}
+
+  /* The row's own inline max-width:210px keeps Title from crowding its
+     neighbours in the desktop grid; on a card of its own, that inline style
+     (which beats any stylesheet rule short of !important) just wrapped the
+     title down a narrow 210px column instead of using the card's full width. */
+  #tm-teams td[data-label="Title"]{max-width:none!important}
+
+  #tm-teams td[data-label="Actions"]{margin-top:4px;padding-top:10px;border-top:1px solid var(--line);justify-content:center}
+  #tm-teams td[data-label="Actions"]::before{display:none}
+  #tm-teams td[data-label="Actions"] .vd{width:100%;justify-content:center}
+}
 .tmx .tname{font-size:13.5px;font-weight:600;color:var(--ink)}
 .tmx .tsub{font-size:11.5px;color:var(--mut);margin-top:1px}
 .tmx .av{border-radius:50%;display:flex;align-items:center;justify-content:center;
@@ -475,3 +525,17 @@
 .tmx{padding:24px;font-size:14px;line-height:1.5}
 @media (max-width:680px){.tmx{padding:16px}}
 .tmx *{box-sizing:border-box}
+
+/* Page head: .phead never wrapped, so on a phone the fixed-size h1 and the
+   right-margined .pacts fought for the same row and overlapped instead of
+   the buttons dropping to their own line. */
+@media (max-width:640px){
+  .tmx .phead{flex-wrap:wrap}
+  .tmx .phead .tile{width:40px;height:40px}
+  .tmx .phead h1{font-size:19px}
+  .tmx .phead p{font-size:12.5px}
+  .tmx .pacts{width:100%;margin-left:0}
+  .tmx .pacts .btn{flex:1 1 auto;justify-content:center}
+  .tmx .setw{flex:1 1 auto}
+  .tmx .setw .btn{width:100%}
+}

@@ -5,14 +5,16 @@ namespace App\Http\Controllers\Capsa;
 use App\Http\Controllers\Controller;
 use App\Models\Checklist;
 use App\Models\ChecklistMilestone;
+use App\Services\Notifier;
 use App\Support\ChecklistAccess;
+use App\Support\TeamChecklist;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 /** Adding, renaming, archiving and removing a milestone on a CaPSA's checklist. */
 class ChecklistMilestoneController extends Controller
 {
-    public function __construct(private ChecklistAccess $access) {}
+    public function __construct(private ChecklistAccess $access, private TeamChecklist $checklists) {}
 
     /** A new milestone goes at the end; the CaPSA drags it where it belongs. */
     public function store(Request $request, Checklist $checklist): JsonResponse
@@ -25,6 +27,14 @@ class ChecklistMilestoneController extends Controller
             'name' => trim($data['name']),
             'position' => (int) $checklist->milestones()->withTrashed()->max('position') + 1,
         ]);
+
+        Notifier::toStudents(
+            $this->checklists->studentsFollowing($checklist),
+            'checklist_item_added',
+            'New in your checklist',
+            '"'.$milestone->name.'" was added to your checklist.',
+            route('student.progress'),
+        );
 
         return response()->json($this->present($milestone), 201);
     }

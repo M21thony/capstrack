@@ -66,12 +66,12 @@
         <tbody>
         @forelse($logs as $log)
           <tr>
-            <td style="padding-left:20px"><a href="javascript:void(0)" onclick="openLogModal({{ $log->id }})" style="color:var(--accent);text-decoration:underline;font-size:12px;font-variant-numeric:tabular-nums;">#{{ $log->id }}</a></td>
-            <td style="font-variant-numeric:tabular-nums;font-size:11px;color:var(--text3)">{{ $log->created_at->format('M j · H:i') }}</td>
-            <td class="td-main">{{ $log->student?->f_name }} {{ $log->student?->l_name }}</td>
-            <td><span class="badge badge-gold" style="font-size:10px">{{ $log->student?->currentTeam?->team_name ?? $log->metadata['team_name'] ?? 'N/A' }}</span></td>
-            <td><span class="badge badge-blue" style="font-size:10px">{{ $log->type }}</span></td>
-            <td style="font-size:12px;color:var(--text2)">{!! Str::limit($log->description, 60) !!}</td>
+            <td style="padding-left:20px" data-label="ID"><a href="javascript:void(0)" onclick="openLogModal({{ $log->id }})" style="color:var(--accent);text-decoration:underline;font-size:12px;font-variant-numeric:tabular-nums;">#{{ $log->id }}</a></td>
+            <td style="font-variant-numeric:tabular-nums;font-size:11px;color:var(--text3)" data-label="Time">{{ $log->created_at->format('M j · H:i') }}</td>
+            <td class="td-main" data-label="Student">{{ $log->student?->f_name }} {{ $log->student?->l_name }}</td>
+            <td data-label="Team"><span class="badge badge-gold" style="font-size:10px">{{ $log->student?->currentTeam?->team_name ?? $log->metadata['team_name'] ?? 'N/A' }}</span></td>
+            <td data-label="Action"><span class="badge badge-blue" style="font-size:10px">{{ $log->type }}</span></td>
+            <td style="font-size:12px;color:var(--text2)" data-label="Description">{!! Str::limit($log->description, 60) !!}</td>
           </tr>
         @empty
           <tr><td colspan="6" style="text-align:center;padding:32px;color:var(--text3)">No activity logs found.</td></tr>
