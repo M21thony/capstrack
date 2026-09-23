@@ -42,6 +42,10 @@ final class NotificationTypes
             'label' => 'Documents are still waiting on my review',
             'email' => true,
         ],
+        'leave_request_received' => [
+            'label' => 'A student asks to leave a team, or a leader asks to remove a member',
+            'email' => false,
+        ],
     ];
 
     public const STUDENT = [
