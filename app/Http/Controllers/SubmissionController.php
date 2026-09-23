@@ -11,6 +11,7 @@ use App\Services\GoogleDriveService;
 use App\Services\Notifier;
 use App\Services\RecipientResolver;
 use App\Support\MilestoneProgress;
+use App\Support\SectionScope;
 use App\Support\StudentTeam;
 use App\Support\TeamChecklist;
 use Illuminate\Http\Request;
@@ -149,6 +150,23 @@ class SubmissionController extends Controller
             'file_version' => $lastVersion + 1,
             'document_status' => 'Pending',
         ]);
+
+        // A paper goes into no reviewer's queue - it waits on the section's
+        // CaPSA, who until now was told nothing and only found it by opening
+        // the Milestones tab and picking the right section.
+        if ($isPaper) {
+            Notifier::toExpert(
+                (int) $checklist->capsa_id,
+                'paper_to_check',
+                'Signed paper to check',
+                '<strong>'.e($team->team_name ?? 'A team').'</strong> handed in <strong>'.e($item->title).'</strong>.',
+                route('capsa.team_management', array_filter([
+                    'tab' => 'milestones',
+                    'section' => app(SectionScope::class)->sectionFor($teamModel),
+                ])),
+                ['team_id' => $studentYear->team_id, 'deliverable_id' => $item->id, 'file_id' => $document->file_id],
+            );
+        }
 
         $results = [];
 

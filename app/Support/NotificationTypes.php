@@ -38,6 +38,10 @@ final class NotificationTypes
             'label' => 'A team sends a document for my review',
             'email' => false,
         ],
+        'paper_to_check' => [
+            'label' => 'A team hands in a signed paper for me to check',
+            'email' => false,
+        ],
         'review_reminder' => [
             'label' => 'Documents are still waiting on my review',
             'email' => true,
