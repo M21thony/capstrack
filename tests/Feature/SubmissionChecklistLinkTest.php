@@ -7,6 +7,7 @@ use App\Models\CapstoneDocumentReview;
 use App\Models\CapstoneExpert;
 use App\Models\Checklist;
 use App\Models\Deliverable;
+use App\Models\Notification;
 use App\Models\Student;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
@@ -33,6 +34,8 @@ class SubmissionChecklistLinkTest extends TestCase
 
     private Checklist $checklist;
 
+    private CapstoneExpert $capsa;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -56,7 +59,8 @@ class SubmissionChecklistLinkTest extends TestCase
             'status' => 'approved', 'created_at' => now(), 'updated_at' => now(),
         ]);
 
-        $this->checklist = $this->emptyChecklist($this->capsaFor());
+        $this->capsa = $this->capsaFor();
+        $this->checklist = $this->emptyChecklist($this->capsa);
     }
 
     private function send(array $data)
@@ -115,6 +119,21 @@ class SubmissionChecklistLinkTest extends TestCase
         }
 
         $this->assertSame(0, CapstoneDocumentReview::count());
+    }
+
+    /** Nobody reviews a paper, so if the CaPSA is not told one arrived, nobody is. */
+    public function test_the_capsa_is_told_a_signed_paper_is_waiting(): void
+    {
+        $form = $this->addDeliverable($this->checklist, ['title' => 'Signed Project Team Assignment Form']);
+
+        $this->send(['file' => UploadedFile::fake()->image('scan.jpg'), 'deliverable_id' => $form->id])->assertOk();
+
+        $told = Notification::where('expert_id', $this->capsa->expert_id)->where('type', 'paper_to_check')->sole();
+
+        $this->assertStringContainsString('Signed Project Team Assignment Form', $told->message);
+        // Deep-linked: the Milestones tab, already on this team's section.
+        $this->assertStringContainsString('tab=milestones', $told->link);
+        $this->assertStringContainsString('section=BSIT-3A', $told->link);
     }
 
     public function test_a_photo_is_only_accepted_for_a_signed_paper(): void
