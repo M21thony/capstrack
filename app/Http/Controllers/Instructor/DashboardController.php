@@ -6,10 +6,14 @@ use App\Http\Controllers\Controller;
 use App\Models\Announcement;
 use App\Models\CapstoneDocumentReview;
 use App\Models\CapstoneExpert;
+use App\Models\CapstonePreProposal;
 use App\Models\ConsultationSchedule;
+use App\Models\DefensePanel;
+use App\Models\PanelGrade;
 use App\Models\TeamExpertAssignment;
+use App\Services\RecipientResolver;
+use App\Support\TitleRevision;
 use Carbon\Carbon;
-use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
@@ -99,81 +103,62 @@ class DashboardController extends Controller
             ->take(5)
             ->values();
 
-        $consultations = ConsultationSchedule::where('expert_id', $expertId)
-            ->where('specific_date', '>=', now()->toDateString())
-            ->orderBy('specific_date')
-            ->orderBy('start_time')
-            ->take(5)
-            ->get();
+        // New titles waiting for this expert to confirm as a team's adviser:
+        // the same list Team Assignments shows, counted.
+        $resolver = app(RecipientResolver::class);
+        $titlesToApprove = CapstonePreProposal::where('adviser_status', TitleRevision::PENDING)
+            ->whereNull('retired_at')
+            ->get(['id', 'team_id'])
+            ->filter(fn ($p) => $resolver->resolveTeamRoleExpert((int) $p->team_id, 'adviser') === (int) $expertId)
+            ->count();
 
-        $recentActivity = $this->buildRecentActivity($expertId);
+        // Defenses this expert sat on (the date has come) with no grade of theirs submitted yet.
+        $panels = DefensePanel::where('expert_id', $expertId)->with(['schedule.team'])->get()
+            ->filter(fn ($panel) => $panel->schedule?->schedule_date !== null);
+        $submitted = PanelGrade::where('expert_id', $expertId)->where('status', 'submitted')->pluck('defense_id')->all();
+        $gradesToSubmit = $panels
+            ->filter(fn ($panel) => $panel->schedule->schedule_date->lte(now()) && ! in_array($panel->defense_id, $submitted, true))
+            ->unique('defense_id')->count();
+
+        // What is coming up, soonest first: defenses they sit on and consultation slots.
+        $upcoming = $panels
+            ->filter(fn ($panel) => $panel->schedule->schedule_date->gte(now()->startOfDay()))
+            ->unique('defense_id')
+            ->map(fn ($panel) => (object) [
+                'when' => $panel->schedule->schedule_date,
+                'timed' => $panel->schedule->schedule_date->format('H:i') !== '00:00',
+                'what' => $panel->schedule->defense_type,
+                'who' => $panel->schedule->team?->team_name,
+                'where' => $panel->schedule->venue,
+                'tag' => $panel->panel_role ?: 'Panel',
+            ])
+            ->concat(ConsultationSchedule::where('expert_id', $expertId)
+                ->where('specific_date', '>=', now()->toDateString())
+                ->withCount('bookings')
+                ->orderBy('specific_date')->orderBy('start_time')
+                ->take(10)->get()
+                ->map(fn ($slot) => (object) [
+                    'when' => Carbon::parse($slot->specific_date.' '.($slot->start_time ?: '00:00')),
+                    'timed' => (bool) $slot->start_time,
+                    'what' => 'Consultation',
+                    'who' => $slot->bookings_count ? $slot->bookings_count.' booked' : 'No bookings yet',
+                    'where' => null,
+                    'tag' => 'Consultation',
+                ]))
+            ->sortBy('when')->take(6)->values();
 
         return view('instructor.dashboard', compact(
             'pendingApplications',
             'pendingApplicationsNew',
+            'titlesToApprove',
             'docsForReview',
             'oldestDocReview',
+            'gradesToSubmit',
             'upcomingConsults',
             'teamsAdvised',
             'announcements',
-            'consultations',
-            'recentActivity',
+            'upcoming',
             'expert',
         ));
-    }
-
-    private function buildRecentActivity(int $expertId): array
-    {
-        $activities = [];
-
-        $teamIds = TeamExpertAssignment::where('expert_id', $expertId)
-            ->where('status', 'approved')
-            ->pluck('team_id');
-
-        if ($teamIds->isNotEmpty()) {
-            $submissions = DB::table('capstone_documents')
-                ->join('student_s_y', 'capstone_documents.student_id', '=', 'student_s_y.student_id')
-                ->join('team', 'student_s_y.team_id', '=', 'team.team_id')
-                ->whereIn('student_s_y.team_id', $teamIds)
-                ->select('team.team_name', 'capstone_documents.file_name', 'capstone_documents.created_at')
-                ->latest('capstone_documents.created_at')
-                ->take(10)
-                ->get();
-
-            foreach ($submissions as $s) {
-                $activities[] = [
-                    'iconSvg' => '<svg viewBox="0 0 24 24" style="stroke:var(--green);width:13px;height:13px;fill:none;stroke-width:2.5"><polyline points="20 6 9 17 4 12"/></svg>',
-                    'text' => "<strong>{$s->team_name}</strong> submitted {$s->file_name} for review",
-                    'time' => $s->created_at ? Carbon::parse($s->created_at)->diffForHumans() : '',
-                ];
-            }
-        }
-
-        $reviewedDocs = DB::table('capstone_document_review')
-            ->join('capstone_documents', 'capstone_document_review.file_id', '=', 'capstone_documents.file_id')
-            ->join('student_s_y', 'capstone_documents.student_id', '=', 'student_s_y.student_id')
-            ->join('team', 'student_s_y.team_id', '=', 'team.team_id')
-            ->where('capstone_document_review.expert_id', $expertId)
-            // Was 'approved', which nothing writes - the activity feed had a
-            // permanently empty section. 'Reviewed' is what finishing sets.
-            ->where('capstone_document_review.review_status', CapstoneDocumentReview::REVIEWED)
-            ->select('team.team_name', 'capstone_document_review.reviewed_at')
-            ->latest('capstone_document_review.reviewed_at')
-            ->take(5)
-            ->get();
-
-        foreach ($reviewedDocs as $r) {
-            $activities[] = [
-                'iconSvg' => '<svg viewBox="0 0 24 24" style="stroke:var(--blue);width:13px;height:13px;fill:none;stroke-width:2.5"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>',
-                'text' => "<strong>{$r->team_name}</strong> document review completed",
-                'time' => $r->reviewed_at ? Carbon::parse($r->reviewed_at)->diffForHumans() : '',
-            ];
-        }
-
-        usort($activities, function ($a, $b) {
-            return ($b['time'] ?? '') <=> ($a['time'] ?? '');
-        });
-
-        return array_slice($activities, 0, 10);
     }
 }

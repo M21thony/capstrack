@@ -27,146 +27,102 @@
   </div>
 
   <div id="skeleton-content" class="sk-overlay">
+    <div class="sk" style="width:260px;height:16px;border-radius:4px;margin-bottom:14px"></div>
     <div class="grid-4" style="margin-bottom:16px">
       <div class="sk" style="height:78px;border-radius:14px"></div>
       <div class="sk" style="height:78px;border-radius:14px"></div>
       <div class="sk" style="height:78px;border-radius:14px"></div>
       <div class="sk" style="height:78px;border-radius:14px"></div>
     </div>
-    <div class="grid-3" style="margin-bottom:16px">
-      <div class="sk" style="height:78px;border-radius:14px"></div>
-      <div class="sk" style="height:78px;border-radius:14px"></div>
-      <div class="sk" style="height:78px;border-radius:14px"></div>
-    </div>
-    <div class="grid-2" style="margin-bottom:16px">
-      <div class="card"><div class="sk" style="height:180px;border-radius:12px"></div></div>
-      <div class="card"><div class="sk" style="height:180px;border-radius:12px"></div></div>
-    </div>
-    <div class="dash-grid-v3">
-      <div class="card">
-        <div class="sk" style="width:160px;height:16px;border-radius:4px;margin-bottom:16px"></div>
-        <div class="sk" style="height:56px;border-radius:8px;margin-bottom:10px"></div>
-        <div class="sk" style="height:56px;border-radius:8px"></div>
-      </div>
-      <div class="card">
-        <div class="sk" style="width:130px;height:16px;border-radius:4px;margin-bottom:16px"></div>
-        <div class="sk" style="height:40px;border-radius:8px;margin-bottom:8px"></div>
-        <div class="sk" style="height:40px;border-radius:8px"></div>
-      </div>
+    <div class="grid-2">
+      <div class="card"><div class="sk" style="height:150px;border-radius:12px"></div></div>
+      <div class="card"><div class="sk" style="height:150px;border-radius:12px"></div></div>
     </div>
   </div>
-
   <div id="real-content" style="display:none;flex:1;overflow:hidden;flex-direction:column;">
   <div class="content">
-    <div class="grid-4" style="margin-bottom:16px">
-      <x-dashboard.stat-chip value="{{ $totalStudents }}" label="Total Students" sub="Enrolled users" color="var(--blue)" />
-      <x-dashboard.stat-chip value="{{ $totalExperts }}" label="Total Experts" sub="Approved faculty accounts" color="var(--purple)" />
-      <x-dashboard.stat-chip value="{{ $activeTeams }}" label="Active Teams" sub="{{ $currentSchoolYearLabel }}" color="var(--green)" />
-      <x-dashboard.stat-chip value="{{ $completedTeams }}" label="Completed Teams" sub="{{ $currentSchoolYearLabel }}" color="var(--accent3)" />
-    </div>
+    <style>
+      .dash-lead{font-size:13.5px;color:var(--text2);margin:0 0 12px}
+      .dash-lead b{color:var(--text)}
+      .dash-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:16px}
+      .dash-tiles .stat-chip.quiet .stat-n{color:var(--text3)!important}
+      .dash-facts{display:flex;flex-direction:column;gap:8px}
+      .dash-fact{display:flex;justify-content:space-between;gap:12px;padding:10px 12px;border-radius:10px;background:var(--bg3);font-size:13.5px}
+      .dash-fact b{font-variant-numeric:tabular-nums}
+      .dash-fact.bad b{color:var(--red)}
+      .dash-link{display:inline-block;margin-top:12px;font-size:12.5px;font-weight:600;color:var(--accent3);text-decoration:none}
+      .dash-link:hover{text-decoration:underline}
+      .dash-def{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-top:1px solid var(--border);font-size:13.5px}
+      .dash-def:first-child{border-top:0;padding-top:0}
+      .dash-def small{display:block;color:var(--text3);font-size:12px}
+      .dash-sec{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+      .dash-sec span{padding:3px 9px;border-radius:999px;background:var(--red-bg);color:var(--red);font-size:12px;font-weight:600}
+    </style>
 
-    <div class="grid-3" style="margin-bottom:16px">
-      <x-dashboard.stat-chip value="{{ $pendingVerificationTeams }}" label="Pending Verification" sub="Complete teams awaiting review" color="var(--amber)" />
-      <x-dashboard.stat-chip value="{{ $pendingApprovals }}" label="Pending Approvals" sub="Expert accounts awaiting review" color="var(--red)" />
-      <x-dashboard.stat-chip value="{{ $archivedCapstones }}" label="Archived Capstones" sub="All time" color="var(--blue)" />
-    </div>
-
-    <div class="grid-2" style="margin-bottom:16px">
-      <div class="card">
-        <div class="card-header">
-          <span class="card-title">Capstones Submitted per Year</span>
-          <select onchange="window.location='?year='+this.value" style="font-family:'DM Sans',sans-serif;font-size:11px;font-weight:600;padding:4px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text2);outline:none;cursor:pointer;">
-            <option value="">All Years</option>
-            @foreach($years as $year)
-            <option value="{{ $year }}" @selected((string) $selectedYear === (string) $year)>{{ $year }}</option>
-            @endforeach
-          </select>
-        </div>
-        <div style="display:flex;align-items:flex-end;gap:6px;height:140px;padding-bottom:4px;position:relative">
-          @forelse($yearlyArchive as $year => $count)
-          <div style="display:flex;flex-direction:column;align-items:center;flex:1">
-            <span style="font-size:9px;color:var(--text3);font-variant-numeric:tabular-nums;margin-bottom:4px">{{ $count }}</span>
-            <div style="width:100%;max-width:30px;background:{{ (string) $selectedYear === (string) $year ? 'var(--accent)' : 'var(--bg4)' }};border-radius:4px 4px 0 0;height:{{ max(round(($count / $maxYearlyCount) * 90), 8) }}px"></div>
-            <div style="font-size:9px;color:{{ (string) $selectedYear === (string) $year ? 'var(--accent3)' : 'var(--text3)' }};font-weight:{{ (string) $selectedYear === (string) $year ? 700 : 400 }};margin-top:4px">{{ substr($year, 2) }}</div>
-          </div>
-          @empty
-          <div style="width:100%;text-align:center;font-size:12px;color:var(--text3);padding-bottom:20px;">No archived capstones yet.</div>
-          @endforelse
-        </div>
+    @if ($capsa)
+      @php
+        $tile = fn ($n) => $n ? '' : 'quiet';
+      @endphp
+      <p class="dash-lead"><b>Waiting on you</b> · {{ $capsa['period'] }} · {{ $capsa['teamCount'] }} {{ \Illuminate\Support\Str::plural('team', $capsa['teamCount']) }} in your {{ $capsa['sectionCount'] }} {{ \Illuminate\Support\Str::plural('section', $capsa['sectionCount']) }}</p>
+      <div class="dash-tiles">
+        <x-dashboard.stat-chip :href="route('capsa.team_management')" class="{{ $tile($capsa['toVerify']) }}" value="{{ $capsa['toVerify'] }}" label="Teams to Verify" sub="{{ $capsa['toVerify'] ? 'Complete, waiting for you' : 'Nothing waiting' }}" color="var(--amber)" />
+        <x-dashboard.stat-chip :href="route('capsa.team_management')" class="{{ $tile($capsa['titles']) }}" value="{{ $capsa['titles'] }}" label="Titles to Review" sub="{{ $capsa['titles'] ? 'Turned in by teams' : 'Nothing waiting' }}" color="var(--accent3)" />
+        <x-dashboard.stat-chip :href="route('capsa.financial')" class="{{ $tile($capsa['receipts']) }}" value="{{ $capsa['receipts'] }}" label="Receipts to Check" sub="{{ $capsa['receipts'] ? 'Uploaded by students' : 'Nothing waiting' }}" color="var(--green)" />
+        <x-dashboard.stat-chip :href="route('capsa.team_management')" class="{{ $tile($capsa['leaveRequests']) }}" value="{{ $capsa['leaveRequests'] }}" label="Member Requests" sub="{{ $capsa['leaveRequests'] ? 'Asking to leave or remove' : 'Nothing waiting' }}" color="var(--red)" />
+        <x-dashboard.stat-chip :href="route('capsa.approval')" class="{{ $tile($capsa['expertApprovals']) }}" value="{{ $capsa['expertApprovals'] }}" label="Expert Accounts" sub="{{ $capsa['expertApprovals'] ? 'To approve' : 'Nothing waiting' }}" color="var(--blue)" />
       </div>
 
-      <div class="card">
-        <div class="card-header">
-          <span class="card-title">Capstone Categories</span>
-          <span class="badge badge-gray">Verified Teams</span>
-        </div>
-        <div class="donut-wrap" style="margin-top:8px">
-          <svg class="donut" viewBox="0 0 36 36">
-            <circle cx="18" cy="18" r="15.9" fill="none" stroke="#f0f2f5" stroke-width="3.8"/>
-            @foreach($categories as $cat)
-            <circle cx="18" cy="18" r="15.9" fill="none" stroke="{{ $cat['color'] }}" stroke-width="3.8" stroke-dasharray="{{ $cat['dasharray'] }}" stroke-dashoffset="{{ $cat['dashoffset'] }}" transform="rotate(-90 18 18)"/>
-            @endforeach
-            <text x="18" y="20" text-anchor="middle" font-size="5" fill="#1e2128" font-weight="700">{{ $totalTags }}</text>
-          </svg>
-          <div class="donut-legend">
-            @forelse($categories as $cat)
-            <div class="donut-item"><div class="donut-dot" style="background:{{ $cat['color'] }}"></div><span style="flex:1">{{ $cat['name'] }}</span><span style="font-variant-numeric:tabular-nums;font-size:11px;color:var(--text2)">{{ $cat['count'] }} ({{ $cat['percentage'] }}%)</span></div>
-            @empty
-            <div class="donut-item"><span style="color:var(--text3)">No verified team tags yet.</span></div>
-            @endforelse
+      <div class="grid-2" style="margin-bottom:16px">
+        <div class="card">
+          <div class="card-header"><span class="card-title">Your Teams</span></div>
+          <div class="dash-facts">
+            <div class="dash-fact {{ $capsa['behind'] ? 'bad' : '' }}"><span>With overdue checklist items</span><b>{{ $capsa['behind'] }}</b></div>
+            <div class="dash-fact"><span>Not verified yet</span><b>{{ $capsa['unverified'] }}</b></div>
+            <div class="dash-fact"><span>Teams in your sections</span><b>{{ $capsa['teamCount'] }}</b></div>
           </div>
+          <a class="dash-link" href="{{ route('capsa.reports.show', 'progress') }}">See Team Progress →</a>
         </div>
-      </div>
-    </div>
-
-    <div class="dash-grid-v3">
-      {{-- Account Approval is CaPSA-only (approving also assigns the
-           expert's role), but this dashboard is shared with Admin - so
-           this card is hidden from a non-CaPSA viewer rather than
-           showing them links that 403. --}}
-      @if (auth('expert')->user()?->is_capsa)
-      <x-dashboard.info-card
-        title="Pending Expert Approvals"
-        :actionUrl="route('capsa.approval')"
-        actionText="View All"
-        :empty="$pendingExperts->isEmpty()"
-        emptyMessage="No pending approvals."
-      >
-        <div class="gap-12">
-          @foreach ($pendingExperts as $expert)
-            <div class="expert-row">
-              <div class="expert-av" style="background:linear-gradient(135deg,#1d4ed8,#7c3aed)">{{ $expert->avatarInitials() }}</div>
-              <div style="flex:1">
-                <div style="font-size:13px;font-weight:600;color:var(--text)">{{ $expert->name }}</div>
-                <div style="font-size:11px;color:var(--text3)">
-                  {{ $expert->specialization ?: 'No role set' }}
-                  @if ($expert->program)
-                    · {{ $expert->program }}
-                  @endif
-                </div>
-              </div>
-              <div style="display:flex;gap:6px">
-                <a href="{{ route('capsa.approval') }}" class="btn btn-success" style="font-size:10px;padding:4px 10px">Review</a>
-              </div>
+        <x-dashboard.info-card title="Defenses in the Next Two Weeks" :empty="$capsa['defenses']->isEmpty()" emptyMessage="No defenses in the next two weeks.">
+          @foreach ($capsa['defenses'] as $d)
+            <div class="dash-def">
+              <span><b>{{ $d->team?->team_name ?? 'A team' }}</b><small>{{ $d->defense_type }}{{ $d->venue ? ' · '.$d->venue : '' }}</small></span>
+              <span style="text-align:right;white-space:nowrap">{{ $d->schedule_date->format('D, M j') }}@if ($d->schedule_date->format('H:i') !== '00:00')<small>{{ $d->schedule_date->format('g:i A') }}</small>@endif</span>
             </div>
           @endforeach
-        </div>
-      </x-dashboard.info-card>
-      @endif
+        </x-dashboard.info-card>
+      </div>
+    @endif
 
-      <x-dashboard.info-card
-        title="Recent Activity"
-        :actionUrl="route('capsa.activitylog')"
-        actionText="View All"
-        :empty="empty($recentActivity)"
-        emptyMessage="No recent activity."
-      >
-        <x-dashboard.activity-feed :items="$recentActivity" emptyMessage="No recent activity." />
-      </x-dashboard.info-card>
-    </div>
+    @if ($admin)
+      <p class="dash-lead"><b>System</b> · what the department still needs set up</p>
+      <div class="dash-tiles">
+        <x-dashboard.stat-chip :href="route('admin.experts')" value="{{ count($admin['uncovered']) }}" label="Sections Without a CaPSA" sub="{{ count($admin['uncovered']) ? 'Nobody verifies these teams' : 'Every section is covered' }}" color="{{ count($admin['uncovered']) ? 'var(--red)' : 'var(--green)' }}" />
+        <x-dashboard.stat-chip :href="route('admin.experts')" value="{{ $admin['capsas'] }}" label="CaPSAs" sub="Running the subject" color="var(--accent3)" />
+        <x-dashboard.stat-chip :href="route('admin.students')" value="{{ $admin['students'] }}" label="Students" sub="With accounts" color="var(--blue)" />
+        <x-dashboard.stat-chip value="{{ $admin['experts'] }}" label="Experts" sub="Approved faculty" color="var(--purple)" />
+      </div>
+      @if ($admin['uncovered'] || ! $admin['schoolYear'])
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-header"><span class="card-title">Needs Attention</span></div>
+          <div class="dash-facts">
+            @if (! $admin['schoolYear'])
+              <div class="dash-fact bad"><span>The current school year is not set. Uploads and reports are stamped with it.</span><a class="dash-link" style="margin:0" href="{{ route('admin.settings') }}">Set it →</a></div>
+            @endif
+            @if ($admin['uncovered'])
+              <div class="dash-fact bad" style="display:block">
+                <span>{{ count($admin['uncovered']) }} {{ \Illuminate\Support\Str::plural('section', count($admin['uncovered'])) }} with no CaPSA. Their teams cannot be verified until someone covers them.</span>
+                <div class="dash-sec">@foreach (array_slice($admin['uncovered'], 0, 24) as $section)<span>{{ $section }}</span>@endforeach @if (count($admin['uncovered']) > 24)<span>+{{ count($admin['uncovered']) - 24 }} more</span>@endif</div>
+                <a class="dash-link" href="{{ route('admin.experts') }}">Make or update a CaPSA →</a>
+              </div>
+            @endif
+          </div>
+        </div>
+      @endif
+    @endif
   </div>
   </div>
 </div>
+
 @include('capsa.partials.skeleton-toggle')
 
 <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
