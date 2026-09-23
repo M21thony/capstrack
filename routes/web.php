@@ -339,6 +339,7 @@ Route::get('/', function () {
 
 Route::get('/login', [AuthController::class, 'login'])->name('login');
 Route::get('/team', [AuthController::class, 'team'])->name('team');
+Route::view('/privacy', 'privacy')->name('privacy');
 Route::post('/login/google', [AuthController::class, 'initiateGoogleLogin'])->name('login.google.initiate');
 Route::get('/login/google/callback', [AuthController::class, 'handleGoogleCallback'])->name('login.google.callback');
 Route::get('/login/google/mock', [AuthController::class, 'showMockLogin'])->name('login.google.mock');
