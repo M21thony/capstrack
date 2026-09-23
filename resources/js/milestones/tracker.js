@@ -66,7 +66,20 @@ function start(root) {
   // The page shows a loading skeleton first; measure again once the real content is revealed.
   const realContent = document.getElementById('real-content');
   if (realContent) new MutationObserver(fit).observe(realContent, { attributes: true, attributeFilter: ['style'] });
+
+  // A link from elsewhere - the bell, a team's own page - can name the team
+  // and the paper: ?team=9&check=1 lands on that team with the scan already
+  // open, rather than leaving the CaPSA to hunt for the row.
+  const link = new URLSearchParams(location.search);
+  const linked = (S.data?.teams || []).find(t => t.id === Number(link.get('team')));
+  if (linked) S.team = linked.id;
+
   render();
+
+  if (linked) {
+    const wanted = linked.rows.find(r => r.id === Number(link.get('check')) && r.to_check && r.file_url);
+    if (wanted) openCheck(wanted, linked);
+  }
 
   function render() {
     redraw(root, () => { root.replaceChildren(); draw(); }, S);
