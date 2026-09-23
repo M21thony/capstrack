@@ -108,15 +108,21 @@ class StudentController extends Controller
             'email' => ['required', 'email', 'max:190'],
             'f_name' => ['required', 'string', 'max:60'],
             'l_name' => ['required', 'string', 'max:60'],
-            'student_number' => ['nullable', 'string', 'max:30'],
+            // Required: the number is how the registrar's lists and the
+            // CaPSA's own records find a student, and one added without it
+            // stayed without it.
+            'student_number' => ['required', 'string', 'max:30'],
             'course' => ['required', Rule::in(array_keys(Student::PROGRAM_COURSES))],
             // Only 3rd and 4th year take capstone, so those are the only
             // years a student can be put into from here.
             'year' => ['required', 'integer', Rule::in(Student::CAPSTONE_YEARS)],
             'section' => ['required', 'string', 'max:4', 'regex:/^[A-Za-z]+$/'],
+        ], [
+            'student_number.required' => 'Enter the student number.',
         ]);
 
         $email = Str::lower(trim($data['email']));
+        $data['student_number'] = trim($data['student_number']);
         $yearSection = self::yearSection((string) $data['year'], $data['section']);
         $schoolYear = Term::currentSchoolYear();
 
@@ -140,10 +146,20 @@ class StudentController extends Controller
             ], 422);
         }
 
+        // student_number is unique, so a number another account holds would
+        // fail on save; say whose problem it is instead.
+        if (Student::where('student_number', $data['student_number'])->whereRaw('LOWER(email) != ?', [$email])->exists()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'That student number already belongs to another student.',
+                'errors' => ['student_number' => ['That student number already belongs to another student.']],
+            ], 422);
+        }
+
         $fields = [
             'f_name' => trim($data['f_name']),
             'l_name' => trim($data['l_name']),
-            'student_number' => $data['student_number'] ?? null,
+            'student_number' => $data['student_number'],
             'course' => $data['course'],
             'year_section' => $yearSection,
         ];

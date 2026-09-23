@@ -1002,7 +1002,7 @@ function uploadStudentRoster(btn) {
         <div class="form-group sheet-col"><label class="label" for="add-student-last">Last name</label>
           <input class="input" id="add-student-last" autocomplete="off"></div>
         <div class="form-group sheet-col"><label class="label" for="add-student-number">Student no.</label>
-          <input class="input" id="add-student-number" placeholder="optional" autocomplete="off"></div>
+          <input class="input" id="add-student-number" placeholder="e.g. 221001135" required aria-required="true" autocomplete="off"></div>
       </div>
 
       <div class="sheet-row">
@@ -1254,6 +1254,14 @@ function saveNewStudent() {
   const err = document.getElementById('add-student-error');
   const btn = document.getElementById('add-student-btn');
   err.style.display = 'none';
+
+  const number = document.getElementById('add-student-number');
+  if (!number.value.trim()) {
+    err.textContent = 'Enter the student number.';
+    err.style.display = 'block';
+    number.focus();
+    return;
+  }
   btn.disabled = true;
   btn.textContent = 'Adding…';
 
@@ -1264,7 +1272,7 @@ function saveNewStudent() {
       email: document.getElementById('add-student-email').value.trim(),
       f_name: document.getElementById('add-student-first').value.trim(),
       l_name: document.getElementById('add-student-last').value.trim(),
-      student_number: document.getElementById('add-student-number').value.trim() || null,
+      student_number: document.getElementById('add-student-number').value.trim(),
       course: document.getElementById('add-student-course').value,
       // The year and the letter go separately - the stored shape has a
       // separator nobody would guess, so the server puts it together.
