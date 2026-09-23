@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Capsa;
 
 use App\Http\Controllers\Controller;
+use App\Models\CapstoneExpert;
 use App\Models\Student;
 use App\Models\StudentRoster;
 use App\Models\StudentSchoolYear;
@@ -68,6 +69,9 @@ class StudentRosterController extends Controller
     {
         $request->validate([
             'file' => ['required', 'file', 'mimes:xlsx,xls,csv,txt'],
+            // Year Promotion: the 4th-year sections the CaPSA stays on with their students.
+            'stay_on' => ['nullable', 'array'],
+            'stay_on.*' => ['string'],
         ]);
 
         $read = $this->read($request->file('file')->getRealPath());
@@ -84,6 +88,10 @@ class StudentRosterController extends Controller
         $enrolments = [];
         $filled = 0;
         $alreadyComplete = 0;
+
+        // Worked out before anything is written: a promotion is the year on
+        // the list against the year the account has now.
+        $promotions = $this->promotions($read['rows']);
 
         foreach ($read['rows'] as $row) {
             StudentRoster::updateOrCreate(
@@ -159,8 +167,12 @@ class StudentRosterController extends Controller
             StudentSchoolYear::recordFor($studentId, $year, Student::mapCourseToProgram((string) $course));
         }
 
+        $kept = $this->stayOn($promotions, (array) $request->input('stay_on', []));
+
         return response()->json([
             'success' => true,
+            'promoted' => array_sum(array_column($promotions, 'students')),
+            'kept_sections' => $kept,
             'inserted' => $inserted,
             'matched' => $matched,
             'created' => $created,
@@ -230,6 +242,7 @@ class StudentRosterController extends Controller
                 'section' => $row['section'],
                 'school_year' => $row['school_year'],
                 'action' => $action,
+                'promotion' => $student ? $this->promotionOf($student, $row) : null,
                 // Named, not counted: "course, year_section" says what a
                 // re-upload is about to rewrite, where "2 fields" does not.
                 'changes' => array_keys($changes),
@@ -239,6 +252,7 @@ class StudentRosterController extends Controller
         return response()->json([
             'success' => true,
             'rows' => $rows,
+            'promotions' => $this->promotions($read['rows']),
             'create' => $create,
             'update' => $update,
             'unchanged' => $unchanged,
@@ -392,6 +406,88 @@ class StudentRosterController extends Controller
      * The preview reports these and the upload writes them, from this one
      * method - so the preview cannot promise something the upload does not do.
      */
+    /**
+     * Year Promotion: the student's section now and on the list, when the
+     * list puts them in a higher year ("BSIT-3A" to "BSIT-4A").
+     *
+     * The year comes from the list itself, never worked out by adding one,
+     * so a student repeating a year or moving section is read as the list
+     * says.
+     *
+     * @return array{from: string, to: string}|null
+     */
+    private function promotionOf(Student $student, array $row): ?array
+    {
+        $from = Student::computeSectionLabel($student->course, $student->year_section);
+        $to = Student::computeSectionLabel($row['course'] ?: $student->course, $row['year_section'] ?: null);
+        $yearOf = fn (?string $label) => $label && preg_match('/-(\d+)/', $label, $m) ? (int) $m[1] : null;
+
+        return $from && $to && $yearOf($to) !== null && $yearOf($from) !== null && $yearOf($to) > $yearOf($from)
+            ? ['from' => $from, 'to' => $to]
+            : null;
+    }
+
+    /**
+     * Who moves up, by section: how many students go from each section to
+     * which, whether the uploading CaPSA has them now, and who (if anyone)
+     * already covers the section they are going to.
+     *
+     * @return list<array{from: string, to: string, students: int, mine: bool, covered_by: ?string, already_mine: bool}>
+     */
+    private function promotions(array $rows): array
+    {
+        $capsa = Auth::guard('expert')->user();
+        $mine = $capsa?->sections ?? [];
+        $moves = [];
+
+        foreach ($rows as $row) {
+            $student = Student::whereRaw('LOWER(email) = ?', [$row['email']])->first();
+            if ($student && ($p = $this->promotionOf($student, $row))) {
+                $key = $p['from'].'>'.$p['to'];
+                $moves[$key] ??= $p + ['students' => 0];
+                $moves[$key]['students']++;
+            }
+        }
+
+        $owners = CapstoneExpert::whereNotNull('sections')->get(['expert_id', 'first_name', 'middle_name', 'last_name', 'suffix', 'sections']);
+
+        return array_values(array_map(function ($m) use ($mine, $owners, $capsa) {
+            $owner = $owners->first(fn ($e) => in_array($m['to'], $e->sections ?? [], true));
+
+            return $m + [
+                'mine' => in_array($m['from'], $mine, true),
+                'already_mine' => in_array($m['to'], $mine, true),
+                'covered_by' => $owner && $owner->expert_id !== $capsa?->expert_id ? $owner->name : null,
+            ];
+        }, $moves));
+    }
+
+    /**
+     * Put the CaPSA on the sections their students moved up into, where they
+     * asked to be. Only a section they had the students in before, and only
+     * one nobody else covers - two CaPSAs on one section is two people
+     * approving the same teams. Their old sections stay theirs.
+     *
+     * @return string[] the sections added
+     */
+    private function stayOn(array $promotions, array $asked): array
+    {
+        $capsa = Auth::guard('expert')->user();
+        if (! $capsa || $asked === []) {
+            return [];
+        }
+
+        $allowed = collect($promotions)
+            ->filter(fn ($p) => $p['mine'] && ! $p['already_mine'] && $p['covered_by'] === null)
+            ->pluck('to')->unique()->intersect($asked)->values()->all();
+
+        if ($allowed !== []) {
+            $capsa->update(['sections' => array_values(array_unique([...($capsa->sections ?? []), ...$allowed]))]);
+        }
+
+        return $allowed;
+    }
+
     private function changesFor(Student $student, array $row): array
     {
         [$first, $middle, $last] = $this->nameParts($row['raw'], $student);
