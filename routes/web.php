@@ -9,7 +9,6 @@ use App\Http\Controllers\Admin\GradingRubricController;
 use App\Http\Controllers\Admin\ResourcesController;
 use App\Http\Controllers\Admin\SettingsController as AdminSettingsController;
 use App\Http\Controllers\Admin\StudentAccountsController;
-use App\Http\Controllers\AdminApprovalController;
 use App\Http\Controllers\AdminDashboardController;
 use App\Http\Controllers\AdminExpertsController;
 use App\Http\Controllers\AdminFinancialController;
@@ -186,13 +185,11 @@ Route::get('/admin/{path}', function (string $path) {
 // the one that should be right.
 Route::middleware(['expert.auth', 'no.cache', 'track.expert'])->prefix('capsa')->name('capsa.')->group(function () use ($pagesBothRolesOpen) {
     Route::middleware('expert.capsa')->group(function () {
-        // Approving an account also assigns that expert's role(s) - approve()
-        // requires role_ids - so this stays CaPSA-only: assigning expert
-        // categories is CaPSA's call, not Admin's.
-        Route::get('/approval', [AdminApprovalController::class, 'index'])->name('approval');
-        Route::patch('/approval/{expert_id}', [AdminApprovalController::class, 'update'])->name('approval.update');
-        // Changing them afterwards is the same call, so it sits beside it rather
-        // than in the shared block. Admin's copy of Expert Management lists
+        // Account Approval is gone: nobody applies for an account any more -
+        // faculty come in on an uploaded list or are added by address - so its
+        // queue was always empty. An old bookmark lands on Expert Management.
+        Route::redirect('/approval', '/capsa/experts');
+        // Assigning an expert's roles is the CaPSA's call, not Admin's. Admin's copy of Expert Management lists
         // CaPSAs and only CaPSAs, so there was never an expert on that page whose
         // roles an Admin could be setting - and a button they cannot use is a
         // smaller problem than an endpoint they still can.

@@ -61,7 +61,6 @@ class AdminDashboardController extends Controller
                 ->where(fn ($q) => $q->whereNull('f_record_status')->orWhere('f_record_status', 'pending'))
                 ->count(),
             'leaveRequests' => MemberLeaveRequest::pendingCountFor($capsa),
-            'expertApprovals' => CapstoneExpert::where('approved_status', false)->whereNull('rejection_reason')->count(),
             'teamCount' => $teams->count(),
             'sectionCount' => $teams->map(fn ($t) => $ctx['teamSections'][$t->team_id])->unique()->count(),
             'behind' => $behind,
