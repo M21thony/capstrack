@@ -24,21 +24,22 @@ function render() {
     const f = FEES.find(x => x.id === fee), r = rec(fee, ME), s = st(fee, ME);
     const where = f.note ? ` at the ${esc(f.note)}` : '';
     const thumb = r && s !== 'sent_back' && r.img ? `<button class="fx-mine-thumb" data-full="${esc(r.img)}" aria-label="View your receipt"><img src="${esc(r.img)}" alt=""></button>` : '';
+    const or = r?.or && s !== 'sent_back' ? ` · OR ${esc(r.or)}` : '';
     const text = !S.can_submit && s === 'none'
       ? `<strong>Upload your ${esc(f.stage)} Fee receipt</strong><span class="fx-muted">${S.team ? 'Your team leader has to submit your pre-proposals for checking on the Duplication Checker page first.' : 'Join a team first.'}</span>`
       : {
-        none: `<strong>Upload your ${esc(f.stage)} Fee receipt</strong><span class="fx-muted">Pay ${peso(f.amount)}${where}, then take a photo of the official receipt.</span>`,
-        pending: `<strong>${statusHtml('pending')}</strong><span class="fx-muted">Uploaded ${esc(r?.at || '')}. Your CaPSA is checking it.</span>`,
-        verified: `<strong>${statusHtml('verified')}</strong><span class="fx-muted">Checked on ${esc(r?.on || '')}. Nothing else to do.</span>`,
+        none: `<strong>Upload your ${esc(f.stage)} Fee receipt</strong><span class="fx-muted">Pay ${peso(f.amount)}${where}, then enter the OR number and take a photo of the official receipt.</span>`,
+        pending: `<strong>${statusHtml('pending')}</strong><span class="fx-muted">Uploaded ${esc(r?.at || '')}${or}. Your CaPSA is checking it.</span>`,
+        verified: `<strong>${statusHtml('verified')}</strong><span class="fx-muted">Checked on ${esc(r?.on || '')}${or}. Nothing else to do.</span>`,
         sent_back: `<strong>${statusHtml('sent_back')}</strong><span class="fx-reason">${esc(r?.reason || '')}</span>`,
       }[s];
     const label = S.can_submit ? {
       none: '<svg><use href="#fx-i-camera"/></svg>Upload receipt',
-      sent_back: '<svg><use href="#fx-i-camera"/></svg>Upload a new photo',
-      pending: '<svg><use href="#fx-i-upload"/></svg>Replace photo',
+      sent_back: '<svg><use href="#fx-i-camera"/></svg>Upload again',
+      pending: '<svg><use href="#fx-i-upload"/></svg>Replace',
     }[s] : null;
     $('#s-mine').innerHTML = thumb + `<div class="fx-mine-text">${text}</div>`
-      + (label ? `<label class="fx-btn ${s === 'pending' ? '' : 'fx-btn-primary'} fx-file">${label}<input type="file" accept="image/*" capture="environment" aria-label="Upload a photo of your receipt"></label>` : '');
+      + (label ? `<button type="button" class="fx-btn ${s === 'pending' ? '' : 'fx-btn-primary'}" data-open-upload>${label}</button>` : '');
   }
 
   const members = S.members, c = { pending: 0, verified: 0, sent_back: 0, none: 0 };
@@ -48,28 +49,71 @@ function render() {
   $('#s-team').innerHTML = members.map(m => `<tr><td>${esc(m.name)}${m.id === ME ? '<span class="fx-leader">You</span>' : m.id === S.team?.leader ? '<span class="fx-leader">Leader</span>' : ''}</td><td>${statusHtml(fee ? st(fee, m.id) : 'none')}</td><td class="fx-col-up fx-num fx-muted">${esc((fee && rec(fee, m.id)?.at) || '—')}</td></tr>`).join('');
 }
 
-async function upload(file) {
-  if (!file || !file.type.startsWith('image/')) { toast('Use a photo or scan of the receipt (JPG or PNG).'); return; }
+/* ---------- Upload: the OR number and the photo go together ---------- */
+const dlg = $('#fx-d-upload');
+let chosen = null;
+
+function uploadError(text) {
+  $('#u-err').textContent = text;
+  $('#u-err').hidden = !text;
+}
+
+function pick(file) {
+  if (!file) return;
+  if (!file.type.startsWith('image/')) { uploadError('Use a photo or scan of the receipt (JPG or PNG).'); return; }
+  chosen = file;
+  uploadError('');
+  const img = $('#u-preview');
+  img.src = URL.createObjectURL(file);
+  img.hidden = false;
+  $('#u-pick-t').textContent = 'Choose a different photo';
+}
+
+function openUpload(file) {
+  chosen = null;
+  $('#u-or').value = '';
+  $('#u-file').value = '';
+  $('#u-preview').hidden = true;
+  $('#u-pick-t').textContent = 'Take or choose a photo';
+  uploadError('');
+  dlg.showModal();
+  if (file) pick(file);
+  $('#u-or').focus();
+}
+
+async function upload() {
+  const number = $('#u-or').value.trim();
+  if (!number) { uploadError('Enter the OR number printed on your official receipt.'); $('#u-or').focus(); return; }
+  if (!chosen) { uploadError('Add a photo of the receipt.'); return; }
   const was = st(fee, ME);
   const form = new FormData();
   form.append('expense_post_id', fee);
-  form.append('receipt_image', file);
-  toast('Uploading…');
+  form.append('receipt_number', number);
+  form.append('receipt_image', chosen);
+  const btn = $('#u-send');
+  btn.disabled = true;
   try {
     const res = await send('POST', URLS.upload, form);
-    R[`${fee}:${ME}`] = { id: res.data.id, status: 'pending', img: res.data.receipt_image, at: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) };
+    R[`${fee}:${ME}`] = { id: res.data.id, status: 'pending', img: res.data.receipt_image, or: res.data.receipt_number, at: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) };
+    dlg.close();
     render();
-    toast(was === 'pending' ? 'Photo replaced. Your CaPSA sees the new one.' : 'Uploaded. Your CaPSA will check it.');
+    toast(was === 'pending' ? 'Replaced. Your CaPSA sees the new one.' : 'Sent. Your CaPSA will check the OR number against the photo.');
   } catch (e) {
-    toast(e.message);
+    uploadError(e.message);
+  } finally {
+    btn.disabled = false;
   }
 }
 
+$('#u-file').addEventListener('change', e => pick(e.target.files[0]));
+$('#u-send').addEventListener('click', upload);
+$('#u-or').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); upload(); } });
+$('#s-mine').addEventListener('click', e => { if (e.target.closest('[data-open-upload]')) openUpload(); });
+
 $('#s-fees').addEventListener('click', e => { const b = e.target.closest('[data-fee]'); if (b) { fee = +b.dataset.fee; render(); } });
-$('#s-mine').addEventListener('change', e => { if (e.target.type === 'file') upload(e.target.files[0]); });
 $('#s-mine').addEventListener('dragover', e => { if (S.can_submit && fee && st(fee, ME) !== 'verified') { e.preventDefault(); $('#s-mine').classList.add('fx-drag'); } });
 $('#s-mine').addEventListener('dragleave', () => $('#s-mine').classList.remove('fx-drag'));
-$('#s-mine').addEventListener('drop', e => { e.preventDefault(); $('#s-mine').classList.remove('fx-drag'); if (S.can_submit && fee && st(fee, ME) !== 'verified') upload(e.dataTransfer.files[0]); });
+$('#s-mine').addEventListener('drop', e => { e.preventDefault(); $('#s-mine').classList.remove('fx-drag'); if (S.can_submit && fee && st(fee, ME) !== 'verified') openUpload(e.dataTransfer.files[0]); });
 
 wireDialogs();
 render();
