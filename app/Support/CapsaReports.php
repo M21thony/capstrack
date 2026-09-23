@@ -228,7 +228,7 @@ class CapsaReports
                 'milestone' => $p ? $this->currentMilestone($p) : null,
                 'done' => $p->completed ?? 0,
                 'total' => $p->total ?? 0,
-                'overdue' => $p ? $p->items->where('state', MilestoneProgress::OVERDUE)->map(fn ($i) => $i['item']->title)->values()->all() : [],
+                'overdue' => $p ? $p->items->where('state', MilestoneProgress::OVERDUE)->map(fn ($i) => $i->item->title)->values()->all() : [],
                 'verified' => (bool) $team->is_confirmed,
                 'url' => route('capsa.team_management.show', $team->team_id),
             ];

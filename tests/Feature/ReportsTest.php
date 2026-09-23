@@ -41,6 +41,22 @@ class ReportsTest extends TestCase
             ->assertViewHas('teamCount', 1);
     }
 
+    /** A team with overdue requirements - the everyday case - opens with them named in its side panel. */
+    public function test_a_team_with_overdue_items_opens_and_names_them(): void
+    {
+        $capsa = $this->capsaFor(['BSIT-3A']);
+        $checklist = $this->emptyChecklist($capsa);
+        $this->addDeliverable($checklist, ['title' => 'Signed Project Team Assignment Form', 'due_date' => now()->subWeek()->toDateString()]);
+        [$team] = $this->teamInSection('Alpha');
+
+        foreach (['progress', 'master', 'results', 'fees', 'schedule', 'experts'] as $report) {
+            $this->actingAs($capsa, 'expert')->get(route('capsa.reports.show', $report))->assertOk();
+        }
+
+        $this->get(route('capsa.reports.show', 'progress'))
+            ->assertViewHas('details', fn ($d) => $d[$team->team_id]['overdue'] === ['Signed Project Team Assignment Form']);
+    }
+
     public function test_team_progress_has_a_row_per_team_and_no_verified_column(): void
     {
         $capsa = $this->capsaFor(['BSIT-3A', 'BSIT-3B']);
