@@ -33,6 +33,7 @@
 
     <svg width="0" height="0" style="position:absolute" aria-hidden="true">
       <symbol id="fx-i-upload" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/></symbol>
+      <symbol id="fx-i-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></symbol>
       <symbol id="fx-i-camera" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3z"/><circle cx="12" cy="13" r="3"/></symbol>
     </svg>
 
@@ -61,6 +62,22 @@
 </div>
 
 <dialog id="fx-d-image" class="fx-dialog fx-image" aria-label="Receipt, full size"><img id="fx-img-full" alt=""></dialog>
+
+{{-- Both, together: the OR number as typed and the photo it has to match.
+     The CaPSA checks one against the other before verifying. --}}
+<dialog id="fx-d-upload" class="fx-dialog" aria-labelledby="fx-d-upload-t">
+  <div class="fx-dlg-head"><h2 id="fx-d-upload-t">Upload your receipt</h2><button class="fx-icon-btn" data-close aria-label="Close"><svg><use href="#fx-i-x"/></svg></button></div>
+  <div class="fx-dlg-body">
+    <div><label class="fx-lbl" for="u-or">OR number</label>
+      <input class="fx-field" id="u-or" autocomplete="off" maxlength="40" placeholder="As printed on the official receipt" aria-describedby="u-or-help">
+      <div class="fx-muted" id="u-or-help" style="font-size:12px;margin-top:4px">Your CaPSA checks this against the number in the photo.</div></div>
+    <div><span class="fx-lbl">Photo of the receipt</span>
+      <label class="fx-btn fx-file" id="u-pick"><svg><use href="#fx-i-camera"/></svg><span id="u-pick-t">Take or choose a photo</span><input type="file" id="u-file" accept="image/*" capture="environment" aria-label="Photo of your receipt"></label>
+      <img id="u-preview" alt="The receipt you picked" hidden style="display:block;margin-top:10px;max-width:100%;max-height:220px;border-radius:8px;border:1px solid var(--border,#e0e2e8)"></div>
+    <div id="u-err" role="alert" style="font-size:12.5px;color:#b42318" hidden></div>
+  </div>
+  <div class="fx-dlg-foot"><button class="fx-btn" data-close>Cancel</button><button class="fx-btn fx-btn-primary" id="u-send"><svg><use href="#fx-i-upload"/></svg>Send to CaPSA</button></div>
+</dialog>
 
 <script>
 function toggleSidebar() {

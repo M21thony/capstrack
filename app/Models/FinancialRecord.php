@@ -60,7 +60,31 @@ class FinancialRecord extends Model
      *
      * No receipt number: the CaPSA reads it off the photo.
      */
-    public static function submitFor(Student $student, ExpensePost $post, UploadedFile $file): self
+    /**
+     * The OR number as it is compared: trimmed, upper-case, single spaces.
+     * "or 00123 " and "OR 00123" are the same receipt.
+     */
+    public static function normaliseOrNumber(string $number): string
+    {
+        return strtoupper(preg_replace('/\s+/', ' ', trim($number)));
+    }
+
+    /** Validation for the OR number a student types from their official receipt. */
+    public static function orNumberRules(): array
+    {
+        return ['required', 'string', 'max:40', 'regex:/^[A-Za-z0-9][A-Za-z0-9 \-\/#.]*$/'];
+    }
+
+    /** @return array<string, string> */
+    public static function orNumberMessages(): array
+    {
+        return [
+            'receipt_number.required' => 'Enter the OR number printed on your official receipt.',
+            'receipt_number.regex' => 'Type the OR number as it is printed: letters, numbers and dashes.',
+        ];
+    }
+
+    public static function submitFor(Student $student, ExpensePost $post, UploadedFile $file, string $orNumber): self
     {
         $current = self::where('student_id', $student->student_id)
             ->where('expense_post_id', $post->id)
@@ -75,6 +99,8 @@ class FinancialRecord extends Model
 
         $values = [
             'receipt_image' => $file->store('receipts', 'public'),
+            // Typed by the student; the CaPSA checks it against the photo before verifying.
+            'receipt_number' => self::normaliseOrNumber($orNumber),
             'f_record_status' => 'pending',
             'rejection_reason' => null,
             'verified_at' => null,

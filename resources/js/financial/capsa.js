@@ -74,7 +74,7 @@ function render() {
   renderInspector();
 }
 
-const QUICK = ['The photo is blurry.', 'The amount is wrong.', "It isn't the official receipt.", 'The name is a different person.'];
+const QUICK = ['The OR number does not match the receipt.', 'The photo is blurry.', 'The amount is wrong.', "It isn't the official receipt.", 'The name is a different person.'];
 function renderInspector() {
   const el = $('#c-insp');
   if (!selected) { el.innerHTML = '<div class="fx-insp-none">Pick a receipt from the list.</div>'; return; }
@@ -86,11 +86,19 @@ function renderInspector() {
         <textarea class="fx-field" id="c-reason" placeholder="${esc(NAME[m].split(' ')[0])} sees this."></textarea>
         <div class="fx-quick">${QUICK.map(q => `<button type="button" data-quick>${q}</button>`).join('')}</div>
         <div class="fx-pair"><button class="fx-btn" data-cancel>Cancel</button><button class="fx-btn fx-btn-bad" data-confirm-back><svg><use href="#fx-i-undo"/></svg>Send back</button></div></div>`
-    : `<div class="fx-decide"><div class="fx-pair"><button class="fx-btn fx-btn-bad" data-back><svg><use href="#fx-i-undo"/></svg>Send back</button><button class="fx-btn fx-btn-ok" data-verify><svg><use href="#fx-i-check"/></svg>Verify</button></div>
+    : `<div class="fx-decide">${r.or ? `<label class="fx-or-check"><input type="checkbox" id="c-or-ok"> The OR number on the photo is <b>${esc(r.or)}</b></label>` : ''}
+        <div class="fx-pair"><button class="fx-btn fx-btn-bad" data-back><svg><use href="#fx-i-undo"/></svg>Send back</button><button class="fx-btn fx-btn-ok" data-verify ${r.or ? 'disabled' : ''}><svg><use href="#fx-i-check"/></svg>Verify</button></div>
         <div class="fx-keys"><kbd>V</kbd> verify · <kbd>B</kbd> send back · <kbd>J</kbd><kbd>K</kbd> next / previous</div></div>`;
+  // The number the student typed, beside the photo it has to match.
+  const orRow = r.or
+    ? `<dt>OR number</dt><dd class="fx-num fx-or">${esc(r.or)}</dd>`
+    : '<dt>OR number</dt><dd class="fx-muted">Not given (uploaded before OR numbers were asked for)</dd>';
+  const orAlso = r.or && r.or_also?.length
+    ? `<div class="fx-or-warn">This OR number is also on ${esc(r.or_also.join(', '))}'s receipt. Check it is not the same payment claimed twice.</div>`
+    : '';
   el.innerHTML = head
     + `<button class="fx-insp-img" data-full="${esc(r.img)}" aria-label="Open full size"><img src="${esc(r.img)}" alt="${esc(NAME[m])}'s receipt"></button>
-       <dl class="fx-meta"><dt>Status</dt><dd>${statusHtml(s)}</dd><dt>Amount due</dt><dd class="fx-num">${peso(f.amount)}</dd><dt>Uploaded</dt><dd class="fx-num">${esc(r.at || '—')}</dd>
+       ${orAlso}<dl class="fx-meta">${orRow}<dt>Status</dt><dd>${statusHtml(s)}</dd><dt>Amount due</dt><dd class="fx-num">${peso(f.amount)}</dd><dt>Uploaded</dt><dd class="fx-num">${esc(r.at || '—')}</dd>
        ${s === 'verified' ? `<dt>Verified</dt><dd class="fx-num">${esc(r.on || '')}</dd>` : ''}${s === 'sent_back' ? `<dt>Reason</dt><dd style="color:var(--fx-bad)">${esc(r.reason)}</dd>` : ''}</dl>`
     + decide;
   if (sendingBack) $('#c-reason').focus();
@@ -103,9 +111,13 @@ async function decide(ids, status, reason = '') {
   const before = visible().flatMap(g => g.ids), at = before.indexOf(selected);
   try {
     if (ids.length > 1) {
-      await send('PATCH', URLS.records, { ids: ids.map(m => rec(fee, m).id), status: 'approved' });
+      const res = await send('PATCH', URLS.records, { ids: ids.map(m => rec(fee, m).id), status: 'approved' });
+      // Receipts with an OR number stay waiting: they are checked one at a time.
+      const done = new Set(res.data?.verified ?? []);
+      ids = ids.filter(m => done.has(rec(fee, m).id));
+      if (res.data?.skipped?.length) toast(res.message);
     } else {
-      await send('PATCH', URLS.record.replace('__ID__', rec(fee, ids[0]).id), status === 'verified' ? { status: 'approved' } : { status: 'rejected', rejection_reason: reason });
+      await send('PATCH', URLS.record.replace('__ID__', rec(fee, ids[0]).id), status === 'verified' ? { status: 'approved', or_confirmed: true } : { status: 'rejected', rejection_reason: reason });
     }
   } catch (e) {
     await outcomeDialog({
@@ -153,17 +165,24 @@ $('#c-bulk-verify').addEventListener('click', async () => {
   const ok = await confirmSheet({
     title: `Verify ${ids.length} ${ids.length === 1 ? 'receipt' : 'receipts'} without opening each one?`,
     names: ids.map(m => NAME[m]).filter(Boolean),
-    body: 'Each one is marked paid against this fee and the members are told. A verification cannot be taken back \u2014 one made by mistake has to be sent back to the team instead.',
+    body: 'Each one is marked paid against this fee and the members are told. A receipt with an OR number is not included: open it and check the number against the photo. A verification cannot be taken back \u2014 one made by mistake has to be sent back to the team instead.',
     confirmLabel: `Verify ${ids.length}`,
     danger: true,
   });
   if (!ok) return;
   if (await decide(ids, 'verified')) toast(`Verified ${ids.length} ${ids.length === 1 ? 'receipt' : 'receipts'}.`);
 });
+$('#c-insp').addEventListener('change', e => {
+  if (e.target.id === 'c-or-ok') $('#c-insp [data-verify]').disabled = !e.target.checked;
+});
 $('#c-insp').addEventListener('click', async e => {
   const b = e.target.closest('button');
   if (!b) return;
-  if (b.hasAttribute('data-verify')) { const m = selected; if (await decide([m], 'verified')) toast(`Verified ${NAME[m]}.`); }
+  if (b.hasAttribute('data-verify')) {
+    if (b.disabled) return;
+    const m = selected;
+    if (await decide([m], 'verified')) toast(`Verified ${NAME[m]}.`);
+  }
   if (b.hasAttribute('data-back')) { sendingBack = true; renderInspector(); }
   if (b.hasAttribute('data-cancel')) { sendingBack = false; renderInspector(); }
   if (b.hasAttribute('data-quick')) { $('#c-reason').value = b.textContent; }
@@ -179,7 +198,12 @@ document.addEventListener('keydown', async e => {
   const k = e.key.toLowerCase();
   if (k === 'j' || e.key === 'ArrowDown') { e.preventDefault(); move(1); }
   if (k === 'k' || e.key === 'ArrowUp') { e.preventDefault(); move(-1); }
-  if (k === 'v' && selected && st(fee, selected) === 'pending') { const m = selected; if (await decide([m], 'verified')) toast(`Verified ${NAME[m]}.`); }
+  if (k === 'v' && selected && st(fee, selected) === 'pending') {
+    const box = $('#c-or-ok');
+    if (box && !box.checked) { toast('Check the OR number against the photo and tick the box first.'); box.focus(); return; }
+    const m = selected;
+    if (await decide([m], 'verified')) toast(`Verified ${NAME[m]}.`);
+  }
   if (k === 'b' && selected && st(fee, selected) === 'pending') { e.preventDefault(); sendingBack = true; renderInspector(); }
 });
 $('#c-new-fee').addEventListener('click', () => { $('#f-amount').value = ''; $('#f-note').value = ''; $('#fx-d-fee').showModal(); });

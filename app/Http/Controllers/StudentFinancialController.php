@@ -29,7 +29,8 @@ class StudentFinancialController extends Controller
         $validated = $request->validate([
             'expense_post_id' => ['required', 'exists:expense_posts,id'],
             'receipt_image' => ['required', 'image', 'max:10240'],
-        ]);
+            'receipt_number' => FinancialRecord::orNumberRules(),
+        ], FinancialRecord::orNumberMessages());
 
         /** @var Student $student */
         $student = auth()->user();
@@ -43,7 +44,7 @@ class StudentFinancialController extends Controller
             ])->withInput();
         }
 
-        FinancialRecord::submitFor($student, ExpensePost::findOrFail($validated['expense_post_id']), $request->file('receipt_image'));
+        FinancialRecord::submitFor($student, ExpensePost::findOrFail($validated['expense_post_id']), $request->file('receipt_image'), $validated['receipt_number']);
 
         return redirect()->back()->with('success', 'Receipt sent to your CaPSA.');
     }
