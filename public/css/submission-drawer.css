@@ -6,134 +6,235 @@
    Loaded once from student/partials/sidebar.blade.php.
    ────────────────────────────────────────────────────────────── */
 
-/* The gold button, bottom right of every student page. */
 /* The dim behind the panel. Clicking it closes the panel. */
-.sc{position:fixed;inset:0;background:rgba(24,25,31,.45);opacity:0;pointer-events:none;transition:opacity .2s;z-index:1200}
+.sc{position:fixed;inset:0;background:rgba(24,25,31,.45);backdrop-filter:blur(2px);opacity:0;pointer-events:none;transition:opacity .2s;z-index:1200}
 .sc.on{opacity:1;pointer-events:auto}
 
 .dw{
-  position:fixed;top:0;right:0;bottom:0;width:min(440px,94%);z-index:1201;
+  position:fixed;top:0;right:0;bottom:0;width:min(480px,94%);z-index:1201;
   background:var(--bg2);border-left:1px solid var(--border);
-  transform:translateX(103%);transition:transform .22s ease;
+  transform:translateX(103%);transition:transform .25s cubic-bezier(.2,.8,.2,1);
   display:flex;flex-direction:column;box-shadow:-16px 0 46px rgba(24,25,31,.2);
 }
 .dw.on{transform:translateX(0)}
 @media (prefers-reduced-motion:reduce){.dw,.sc{transition:none}}
 
-.dw .ph{display:flex;align-items:center;gap:10px;padding:16px 20px;border-bottom:1px solid var(--border)}
-.dw .ph h2{flex:1;margin:0;font-size:15px;font-weight:700;color:var(--text)}
-.dw .x{
-  width:30px;height:30px;flex-shrink:0;
+/* ── Header ── */
+.dw .ph{display:flex;align-items:center;gap:12px;padding:18px 22px;border-bottom:1px solid var(--border)}
+.dw .ph-icon{
+  width:40px;height:40px;flex-shrink:0;border-radius:12px;
   display:flex;align-items:center;justify-content:center;
-  border:1px solid var(--border);border-radius:8px;
-  background:var(--bg3);color:var(--text2);cursor:pointer;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));color:#18191f;
+  box-shadow:0 4px 12px rgba(201,168,44,.3);
 }
-.dw .x:hover{border-color:var(--accent);color:var(--text)}
+.dw .ph-icon svg{width:20px;height:20px}
+.dw .ph-text{flex:1;min-width:0}
+.dw .ph h2{margin:0;font-size:16px;font-weight:700;color:var(--text)}
+.dw .ph-text p{margin:2px 0 0;font-size:12px;color:var(--text3)}
+.dw .x{
+  width:32px;height:32px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  border:1px solid var(--border);border-radius:9px;
+  background:var(--bg3);color:var(--text2);cursor:pointer;transition:all .15s;
+}
+.dw .x:hover{border-color:var(--accent);color:var(--text);transform:rotate(90deg)}
 .dw .x svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2.2}
+
 /* The fetched form fills the drawer: body scrolls, footer stays put. */
 #submission-form-root{display:flex;flex-direction:column;flex:1;min-height:0}
-.dwb{padding:18px 20px;overflow-y:auto;flex:1}
-.dwf{padding:15px 20px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:9px}
-.dw-loading{padding:26px 20px;font-size:13px;color:var(--text3)}
+.dwb{padding:20px 22px;overflow-y:auto;flex:1;counter-reset:step}
+.dwf{padding:14px 22px;border-top:1px solid var(--border);display:flex;gap:10px;background:var(--bg2)}
+.dw-loading{padding:26px 22px;font-size:13px;color:var(--text3)}
 
-/* ── The form itself, moved here from Styles/submission.css ── */
-.dwb .form-section{margin-bottom:22px}
-.dwb .form-section:last-of-type{margin-bottom:0}
-.dwb .section-label{
-  display:flex;align-items:center;gap:7px;
-  font-size:11px;font-weight:700;color:var(--accent3);
-  text-transform:uppercase;letter-spacing:.7px;margin-bottom:12px;
+/* ── Steps ── */
+.dwb .form-section{
+  position:relative;padding:0 0 24px 44px;margin:0;
 }
-.dwb .section-label svg{width:13px;height:13px;stroke:var(--accent3);fill:none;stroke-width:2}
+/* The line joining one step's number to the next. */
+.dwb .form-section::before{
+  content:"";position:absolute;left:14px;top:34px;bottom:6px;width:2px;
+  background:var(--border);border-radius:2px;
+}
+.dwb .form-section:last-of-type{padding-bottom:4px}
+.dwb .form-section:last-of-type::before{display:none}
+
+.step-head{display:flex;align-items:flex-start;gap:12px;margin:0 0 12px -44px}
+.step-num{
+  counter-increment:step;
+  width:30px;height:30px;flex-shrink:0;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  background:var(--accent-light);border:1.5px solid var(--accent);
+  color:var(--accent3);font-size:13px;font-weight:700;
+}
+.step-num::before{content:counter(step)}
+.step-title{margin:4px 0 0;font-size:14px;font-weight:700;color:var(--text)}
+.step-sub{margin:2px 0 0;font-size:12px;color:var(--text3)}
+
+/* ── Inputs ── */
 .dwb .input,.dwb select{
-  width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:9px;
+  width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:10px;
   background:var(--bg2);color:var(--text);font-family:inherit;font-size:13px;
+  transition:border-color .15s,box-shadow .15s;
 }
-.dwb .input:focus,.dwb select:focus{outline:2px solid var(--accent);outline-offset:1px}
+.dwb .input:hover,.dwb select:hover{border-color:var(--border2)}
+.dwb .input:focus,.dwb select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow)}
+.dwb .pm-label{display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:6px}
 
-.recipient-group{display:grid;grid-template-columns:1fr;gap:9px}
+.recipient-hint{font-size:11.5px;line-height:1.5;color:var(--text3);margin:8px 0 0}
+.recipient-hint--warn{
+  padding:10px 12px;border-radius:10px;
+  background:var(--accent-light);border:1px solid rgba(201,168,44,.3);color:var(--text2);
+}
+
+/* ── Upload ── */
+.drop-zone{
+  border:2px dashed var(--border2);border-radius:14px;padding:26px 16px;
+  display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px;
+  cursor:pointer;background:var(--bg3);
+  transition:border-color .2s,background .2s,transform .15s;
+}
+.drop-zone:hover,.drop-zone:focus-visible{border-color:var(--accent);background:var(--accent-glow);outline:none}
+.drop-zone.drag-over{border-color:var(--accent);background:var(--accent-light);transform:scale(1.01)}
+.drop-zone.has-file{border-style:solid;border-color:var(--accent);background:var(--accent-light);padding:16px}
+.drop-icon{
+  width:48px;height:48px;border-radius:50%;flex-shrink:0;
+  background:var(--bg2);border:1px solid rgba(201,168,44,.3);
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 2px 8px rgba(24,25,31,.06);
+}
+.drop-icon svg{width:22px;height:22px;stroke:var(--accent3);fill:none;stroke-width:2}
+.drop-zone.has-file .drop-icon{width:38px;height:38px}
+.drop-zone.has-file .drop-icon svg{width:18px;height:18px}
+.drop-info{min-width:0}
+.drop-info p{margin:0;font-size:14px;font-weight:600;color:var(--text)}
+.drop-info span{display:block;margin-top:2px;font-size:12px;color:var(--text3)}
+.drop-browse{
+  font-size:12px;font-weight:600;color:var(--accent3);
+  padding:6px 14px;border-radius:999px;border:1px solid rgba(201,168,44,.4);background:var(--bg2);
+}
+.drop-zone.has-file .drop-browse{display:none}
+
+/* One card per queued file, each with the checklist line it goes to. */
+.file-list{display:grid;gap:8px;margin-top:10px}
+.file-list:empty{display:none}
+.file-row{
+  display:grid;gap:10px;padding:12px;
+  border:1px solid var(--border);border-radius:12px;background:var(--bg2);
+  box-shadow:0 1px 2px rgba(24,25,31,.04);
+}
+.file-row-name{
+  position:relative;padding-left:44px;min-height:34px;
+  font-size:13px;font-weight:600;color:var(--text);min-width:0;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+/* A document icon, drawn in CSS so the script building the rows stays as is. */
+.file-row-name::before{
+  content:"";position:absolute;left:0;top:0;width:34px;height:34px;border-radius:9px;
+  background:var(--accent-light) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238a6e10' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z'/%3E%3Cpath d='M14 2v6h6M8 13h8M8 17h5'/%3E%3C/svg%3E") center/16px no-repeat;
+  border:1px solid rgba(201,168,44,.3);
+}
+.file-row-name small{display:block;margin-top:1px;font-size:11.5px;font-weight:400;color:var(--text3)}
+.file-row select{width:100%;min-width:0;font-size:12.5px}
+.file-row-acts{display:flex;gap:6px;justify-content:flex-end}
+.file-row-remove,.file-row-preview{
+  font:inherit;font-size:12px;font-weight:600;
+  border:1px solid var(--border);border-radius:8px;padding:6px 12px;cursor:pointer;
+  background:var(--bg3);color:var(--text2);transition:all .15s;
+}
+.file-row-preview{color:var(--text)}
+.file-row-remove:hover{border-color:var(--red);color:var(--red);background:var(--bg2)}
+.file-row-preview:hover{border-color:var(--accent);background:var(--accent-glow)}
+
+/* ── Recipients ── */
+.recipient-group{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .recipient-check{
-  display:flex;align-items:center;gap:10px;padding:10px 12px;
-  border:1.5px solid var(--border);border-radius:11px;background:var(--bg3);
-  cursor:pointer;transition:border-color .15s,background .15s;
+  position:relative;display:flex;align-items:center;gap:10px;padding:11px 12px;
+  border:1.5px solid var(--border);border-radius:12px;background:var(--bg2);
+  cursor:pointer;transition:border-color .15s,background .15s,box-shadow .15s;
 }
 .recipient-check:hover{border-color:var(--accent);background:var(--accent-glow)}
-.recipient-check:has(input:checked){border-color:var(--accent);background:var(--accent-light)}
-.recipient-check--disabled{opacity:.45;cursor:not-allowed}
+.recipient-check:has(input:checked){border-color:var(--accent);background:var(--accent-light);box-shadow:0 0 0 3px var(--accent-glow)}
+.recipient-check:has(input:focus-visible){box-shadow:0 0 0 3px var(--accent-glow)}
+.recipient-check--disabled{opacity:.5;cursor:not-allowed;background:var(--bg3)}
 .recipient-check--disabled:hover{border-color:var(--border);background:var(--bg3)}
-.recipient-check--disabled input{cursor:not-allowed}
-.recipient-check input{width:16px;height:16px;accent-color:var(--accent);cursor:pointer;flex-shrink:0}
+/* The tick sits in the card's corner; the card itself is the target. */
+.recipient-check input{
+  position:absolute;top:8px;right:8px;margin:0;
+  appearance:none;-webkit-appearance:none;
+  width:18px;height:18px;border-radius:50%;
+  border:1.5px solid var(--border2);background:var(--bg2);cursor:pointer;
+  transition:background .15s,border-color .15s;
+}
+.recipient-check input:checked{
+  border-color:var(--accent);
+  background:var(--accent) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2318191f' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center/11px no-repeat;
+}
+.recipient-check input:focus-visible{outline:none}
+.recipient-check--disabled input{cursor:not-allowed;opacity:.6}
 .recipient-icon{
-  width:28px;height:28px;border-radius:8px;flex-shrink:0;
+  width:32px;height:32px;border-radius:9px;flex-shrink:0;
   background:rgba(201,168,44,0.12);border:1px solid rgba(201,168,44,0.22);
   display:flex;align-items:center;justify-content:center;
 }
-.recipient-icon svg{width:14px;height:14px;stroke:var(--accent3);fill:none;stroke-width:2}
-.recipient-text{flex:1;min-width:0;display:flex;flex-direction:column;font-size:13px;font-weight:500;color:var(--text)}
+.recipient-icon svg{width:15px;height:15px;stroke:var(--accent3);fill:none;stroke-width:2}
+.recipient-text{
+  flex:1;min-width:0;padding-right:16px;
+  display:flex;flex-direction:column;font-size:13px;font-weight:600;color:var(--text);
+}
 .recipient-text small{
-  margin-top:1px;font-size:10.5px;font-weight:400;color:var(--text3);
+  margin-top:1px;font-size:11px;font-weight:400;color:var(--text3);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
-.recipient-hint{font-size:11.5px;color:var(--text3);margin-top:10px}
 
-.folder-select-wrap{margin-top:12px}
-.folder-select-hint{font-size:11px;color:var(--text3);margin-top:6px}
+.folder-select-wrap{margin-top:12px;padding:12px;border:1px solid var(--border);border-radius:12px;background:var(--bg3)}
+.folder-select-hint{font-size:11px;color:var(--text3);margin:6px 0 0}
 
-.drop-zone{
-  border:2px dashed var(--border2);border-radius:14px;padding:22px 16px;
-  display:flex;align-items:center;gap:14px;cursor:pointer;background:var(--bg3);
-  transition:border-color .2s,background .2s;
+/* ── Review ── */
+.doc-info-grid{
+  margin:0;border:1px solid var(--border);border-radius:12px;background:var(--bg3);overflow:hidden;
 }
-.drop-zone:hover{border-color:var(--accent);background:var(--accent-glow)}
-.drop-zone.has-file{border-style:solid;border-color:var(--accent);background:var(--accent-light)}
-.drop-icon{
-  width:40px;height:40px;border-radius:11px;flex-shrink:0;
-  background:rgba(201,168,44,0.12);border:1px solid rgba(201,168,44,0.25);
-  display:flex;align-items:center;justify-content:center;
+.doc-info-grid .info-row{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:10px 14px;border-bottom:1px solid var(--border);
 }
-.drop-icon svg{width:19px;height:19px;stroke:var(--accent3);fill:none;stroke-width:2}
-.drop-info{text-align:left;min-width:0}
-.drop-info p{margin:0;font-size:13.5px;font-weight:600;color:var(--text)}
-.drop-info span{font-size:11.5px;color:var(--text3)}
+.doc-info-grid .info-row:last-child{border-bottom:0}
+.doc-info-grid .info-label{flex-shrink:0;font-size:12px;color:var(--text3)}
+.doc-info-grid .info-value{
+  margin:0;min-width:0;text-align:right;font-size:13px;font-weight:600;color:var(--text);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.version-pill{
+  display:inline-block;padding:3px 10px;border-radius:999px;
+  background:var(--accent-light);border:1px solid rgba(201,168,44,.35);
+  color:var(--accent3);font-size:12px;font-weight:700;
+}
+.tip{
+  display:flex;gap:10px;align-items:flex-start;margin-top:10px;padding:10px 12px;
+  border-radius:10px;background:var(--accent-glow);
+}
+.tip svg{width:16px;height:16px;flex-shrink:0;margin-top:1px;stroke:var(--accent3)}
+.tip .recipient-hint{margin:0;color:var(--text2)}
+.tip strong{color:var(--text)}
 
-.doc-info-grid{display:grid;grid-template-columns:1fr;gap:12px;margin-bottom:10px}
-.doc-info-grid .info-label{font-size:11px;color:var(--text3);display:block;margin-bottom:3px}
-.doc-info-grid .info-value{font-size:13px;font-weight:600;color:var(--text)}
-#chapterHint{margin-top:0}
-
+/* ── Footer buttons ── */
 .btn-submit{
-  width:100%;padding:12px;border:none;border-radius:9px;cursor:pointer;
-  background:var(--accent);color:#18191f;
+  flex:2;padding:12px;border:none;border-radius:10px;cursor:pointer;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));color:#18191f;
   font-family:inherit;font-size:13.5px;font-weight:700;
   display:flex;align-items:center;justify-content:center;gap:8px;
-  transition:background .15s;
+  box-shadow:0 4px 14px rgba(201,168,44,.3);
+  transition:transform .15s,box-shadow .15s,filter .15s;
 }
-.btn-submit:hover{background:var(--accent2)}
-.btn-submit:disabled{opacity:.6;cursor:progress}
+.btn-submit:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(201,168,44,.4);filter:brightness(1.03)}
+.btn-submit:active{transform:translateY(0)}
+.btn-submit:disabled{opacity:.6;cursor:progress;transform:none}
 .btn-submit svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2.5}
 .btn-cancel{
-  width:100%;padding:11px;border:1px solid var(--border);border-radius:9px;cursor:pointer;
-  background:var(--bg3);color:var(--text2);
-  font-family:inherit;font-size:13px;font-weight:600;
-}
-.btn-cancel:hover{border-color:var(--border2);color:var(--text)}
-
-/* One row per queued file, each with the checklist line it goes to. */
-.file-list{display:grid;gap:6px;margin-top:10px}
-.file-list:empty{display:none}
-.file-row{display:grid;gap:8px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg2)}
-.file-row-name{font-size:13px;font-weight:600;color:var(--text);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.file-row-name small{display:block;font-size:11.5px;font-weight:400;color:var(--text3)}
-.file-row select{width:100%;min-width:0;font-size:12.5px}
-.file-row-acts{display:flex;gap:6px}
-.file-row-remove,.file-row-preview{
-  font:inherit;font-size:12px;font-weight:600;
-  border:1px solid var(--border);border-radius:6px;padding:5px 10px;cursor:pointer;
+  flex:1;padding:12px;border:1px solid var(--border);border-radius:10px;cursor:pointer;
   background:var(--bg2);color:var(--text2);
+  font-family:inherit;font-size:13px;font-weight:600;transition:all .15s;
 }
-.file-row-preview{color:var(--text)}
-.file-row-remove:hover{border-color:var(--red);color:var(--red)}
-.file-row-preview:hover{border-color:var(--accent)}
+.btn-cancel:hover{border-color:var(--border2);color:var(--text);background:var(--bg3)}
 
 /* The preview window: the file as it will be sent, before sending it. */
 .preview-dialog{
@@ -145,6 +246,11 @@
 .preview-dialog[open]{display:flex;flex-direction:column}
 .preview-head{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--border)}
 .preview-head h2{flex:1;min-width:0;margin:0;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.preview-head .x{
+  width:32px;height:32px;flex-shrink:0;display:flex;align-items:center;justify-content:center;
+  border:1px solid var(--border);border-radius:9px;background:var(--bg3);color:var(--text2);cursor:pointer;
+}
+.preview-head .x svg{width:16px;height:16px}
 .preview-body{
   flex:1;min-height:0;overflow:auto;background:var(--bg3);padding:12px;
   display:grid;justify-items:center;align-content:start;gap:12px;
@@ -168,4 +274,7 @@
 
 @media (max-width:520px){
   .dw{width:100%}
+  .dw .ph,.dwb,.dwf{padding-left:16px;padding-right:16px}
+  .recipient-group{grid-template-columns:1fr}
+  #submission-toast{left:16px;right:16px;bottom:16px;max-width:none}
 }

@@ -355,7 +355,13 @@
 <aside class="dw" id="submission-drawer" data-url="{{ route('student.submission') }}"
        role="dialog" aria-label="Submit a document">
   <div class="ph">
-    <h2>Submit a document</h2>
+    <span class="ph-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6M12 18v-6M9 15l3-3 3 3"/></svg>
+    </span>
+    <div class="ph-text">
+      <h2>Submit a document</h2>
+      <p>Upload your work and send it for review</p>
+    </div>
     <button class="x" type="button" data-drawer-close aria-label="Close">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M18 6 6 18M6 6l12 12"/></svg>
     </button>
