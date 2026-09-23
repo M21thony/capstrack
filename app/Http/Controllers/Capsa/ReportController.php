@@ -77,11 +77,11 @@ class ReportController extends Controller
     {
         $ctx = $this->reports->context(auth('expert')->user(), $request->query());
         $teamReport = in_array($report, CapsaReports::TEAM_REPORTS, true);
-        $bySection = $teamReport && $request->query('rows') === 'sections';
+        $bySection = $teamReport && $this->text($request, 'rows') === 'sections';
 
         $merged = [];
         if ($teamReport && ! $bySection) {
-            $asked = array_filter(explode(',', (string) $request->query('merge', '')));
+            $asked = $this->list($request, 'merge');
             $merged = array_values(array_filter(CapsaReports::TEAM_REPORTS, fn ($r) => $r !== $report && in_array($r, $asked, true)));
         }
 
@@ -94,17 +94,17 @@ class ReportController extends Controller
         // Column order and which are hidden; the first column names the row and always shows first.
         $keys = array_keys($table['columns']);
         $first = $keys[0];
-        $order = array_values(array_intersect(explode(',', (string) $request->query('order', '')), $keys));
+        $order = array_values(array_intersect($this->list($request, 'order'), $keys));
         $order = array_values(array_unique([$first, ...array_diff($order, [$first]), ...array_diff($keys, $order)]));
-        $hidden = array_values(array_diff(array_intersect(explode(',', (string) $request->query('hide', '')), $keys), [$first]));
+        $hidden = array_values(array_diff(array_intersect($this->list($request, 'hide'), $keys), [$first]));
         $visible = array_values(array_diff($order, $hidden));
 
         $name = CapsaReports::REPORTS[$report][0];
         $scope = $this->scopeLine($report, $ctx, $bySection, $merged);
-        $download = $request->query('download');
+        $download = $this->text($request, 'download');
 
         if ($download === 'pdf' || $download === 'xlsx') {
-            $rows = $this->searchAndSort($table['rows'], $visible, (string) $request->query('q', ''), (string) $request->query('sort', ''), $request->query('dir') === 'desc');
+            $rows = $this->searchAndSort($table['rows'], $visible, $this->text($request, 'q'), $this->text($request, 'sort'), $this->text($request, 'dir') === 'desc');
             $fileName = Str::slug($name).'_'.$ctx['year'].'_'.now()->toDateString();
             $sheet = $this->plain($table, $rows, $visible, $groups);
 
@@ -125,7 +125,7 @@ class ReportController extends Controller
         }
 
         $mergeable = $teamReport ? array_values(array_diff(CapsaReports::TEAM_REPORTS, [$report])) : [];
-        $baseKeys = array_keys($this->reports->build($report, $ctx)['columns']);
+        $baseKeys = $teamReport ? array_keys(CapsaReports::TEAM_COLUMNS[$report]) : [];
 
         return view('capsa.reports.table', [
             'ctx' => $ctx,
@@ -143,11 +143,12 @@ class ReportController extends Controller
                 'key' => $r,
                 'name' => CapsaReports::REPORTS[$r][0],
                 'band' => CapsaReports::BANDS[$r],
-                'columns' => collect($this->reports->build($r, $ctx)['columns'])->except(['team', 'section', ...$baseKeys])->map(fn ($c) => $c['label'])->all(),
+                'columns' => collect(CapsaReports::TEAM_COLUMNS[$r])->except(['team', 'section', ...$baseKeys])->all(),
             ])->all(),
             'extra' => $this->reports->extraFilters($report, $ctx),
             'mergeExtra' => array_merge(...array_map(fn ($r) => $this->reports->extraFilters($r, $ctx), $mergeable ?: ['master'])),
             'scope' => $scope,
+            'search' => $this->text($request, 'q'),
             'period' => $this->periodQuery($ctx),
             'details' => $bySection || $report === 'experts' ? [] : $this->reports->teamDetails($ctx, array_values(array_filter(array_column($table['rows'], 'id')))),
         ]);
@@ -186,6 +187,28 @@ class ReportController extends Controller
         }
 
         return [$table, $groups];
+    }
+
+    /** A query value as text; anything else (a list, say, from a hand-edited link) reads as nothing. */
+    private function text(Request $request, string $key): string
+    {
+        $value = $request->query($key);
+
+        return is_string($value) ? $value : '';
+    }
+
+    /**
+     * A comma-separated query value as a list. A list-style parameter
+     * (key[]=a&key[]=b) is read the same way.
+     *
+     * @return string[]
+     */
+    private function list(Request $request, string $key): array
+    {
+        $value = $request->query($key);
+        $items = is_array($value) ? array_filter($value, 'is_string') : explode(',', is_string($value) ? $value : '');
+
+        return array_values(array_filter(array_map('trim', $items), fn ($v) => $v !== ''));
     }
 
     /** @return array<string, string> the period filters, for links that keep them */

@@ -57,6 +57,32 @@ class ReportsTest extends TestCase
             ->assertViewHas('details', fn ($d) => $d[$team->team_id]['overdue'] === ['Signed Project Team Assignment Form']);
     }
 
+    /** A hand-edited or old link with list-style parameters opens the report instead of failing. */
+    public function test_odd_query_parameters_do_not_break_the_table(): void
+    {
+        $capsa = $this->capsaFor(['BSIT-3A']);
+        $this->teamInSection('Alpha');
+        $this->actingAs($capsa, 'expert');
+
+        $odd = ['merge' => ['master'], 'hide' => ['section'], 'order' => ['team'], 'q' => ['a'], 'sort' => ['team'], 'dir' => ['desc'], 'rows' => ['sections'], 'year' => ['x'], 'section' => ['y']];
+        $this->get(route('capsa.reports.show', ['report' => 'progress'] + $odd))->assertOk();
+        $this->get(route('capsa.reports.show', ['report' => 'progress', 'download' => 'xlsx'] + $odd))->assertOk();
+        $this->get(route('capsa.reports', $odd))->assertOk();
+    }
+
+    /** The merge dialog lists each report's columns without building every report. */
+    public function test_the_merge_dialog_lists_the_other_reports_columns(): void
+    {
+        $capsa = $this->capsaFor(['BSIT-3A']);
+        $this->teamInSection('Alpha');
+
+        $this->actingAs($capsa, 'expert')
+            ->get(route('capsa.reports.show', 'progress'))
+            ->assertOk()
+            ->assertViewHas('mergeable', fn ($m) => collect($m)->pluck('key')->all() === ['master', 'results', 'fees']
+                && $m[0]['columns'] === ['title' => 'Project title', 'members' => 'Members', 'adviser' => 'Adviser', 'consultant' => 'Consultant', 'grammarian' => 'Grammarian']);
+    }
+
     public function test_team_progress_has_a_row_per_team_and_no_verified_column(): void
     {
         $capsa = $this->capsaFor(['BSIT-3A', 'BSIT-3B']);
