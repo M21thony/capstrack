@@ -113,12 +113,24 @@ class StudentRosterController extends Controller
             if (! $student) {
                 [$first, $middle, $last] = $this->nameParts($row['raw'], null);
 
+                $number = $row['student_number'] ?: null;
+
+                // students.student_number is unique, so a number another
+                // account already holds - the template's own example row, or
+                // a hand-typed list that reuses one - would 500 the whole
+                // upload on insert. Add the student without it and say so,
+                // rather than losing every other row to one bad number.
+                if ($number !== null && $this->numberTakenByOther($number, null)) {
+                    $read['errors'][] = "Row {$row['row']}: student number {$number} already belongs to another account - added without it.";
+                    $number = null;
+                }
+
                 $student = Student::create([
                     'email' => $row['email'],
                     'f_name' => $first,
                     'm_name' => $middle,
                     'l_name' => $last,
-                    'student_number' => $row['student_number'] ?: null,
+                    'student_number' => $number,
                     'course' => $row['course'],
                     'year_section' => $row['year_section'] ?: null,
                 ]);
@@ -188,6 +200,13 @@ class StudentRosterController extends Controller
 
         foreach ($read['rows'] as $row) {
             $student = Student::whereRaw('LOWER(email) = ?', [$row['email']])->first();
+
+            // Warn before the upload, not after it crashes: a number that
+            // already belongs to a different account is dropped on import, so
+            // the CaPSA sees which rows will not carry theirs.
+            if ($row['student_number'] !== '' && $this->numberTakenByOther($row['student_number'], $student?->student_id)) {
+                $read['errors'][] = "Row {$row['row']}: student number {$row['student_number']} already belongs to another account.";
+            }
 
             if (! $student) {
                 $action = 'create';
@@ -397,6 +416,12 @@ class StudentRosterController extends Controller
             'student_number' => $row['student_number'],
         ], fn ($value, $field) => filled($value) && blank($student->{$field}), ARRAY_FILTER_USE_BOTH);
 
+        // Never propose a number another account already holds: the column is
+        // unique, so writing it would 500 the update the way a create collides.
+        if (isset($fromList['student_number']) && $this->numberTakenByOther((string) $fromList['student_number'], $student->student_id)) {
+            unset($fromList['student_number']);
+        }
+
         // Only what actually differs, so the count means something and an
         // unchanged row is not reported as touched.
         return array_filter(
@@ -404,6 +429,25 @@ class StudentRosterController extends Controller
             fn ($value, $field) => (string) $student->{$field} !== (string) $value,
             ARRAY_FILTER_USE_BOTH
         );
+    }
+
+    /**
+     * Whether this student number is already held by a different account.
+     *
+     * students.student_number is unique, so writing a number another student
+     * already carries throws and turns the whole upload into a 500. A list
+     * typed by hand - and the template's own example row - can easily reuse
+     * one, so the row keeps its account and drops the number instead.
+     */
+    private function numberTakenByOther(string $number, ?int $exceptStudentId): bool
+    {
+        if ($number === '') {
+            return false;
+        }
+
+        return Student::where('student_number', $number)
+            ->when($exceptStudentId, fn ($query) => $query->where('student_id', '!=', $exceptStudentId))
+            ->exists();
     }
 
     /**
