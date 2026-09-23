@@ -98,6 +98,7 @@ Route::middleware(['web', 'expert.auth'])
 
             Route::post('/archive', [ArchiveController::class, 'store'])->name('api.admin.archive.store');
             Route::put('/archive/{archive}', [ArchiveController::class, 'update'])->name('api.admin.archive.update');
+            Route::patch('/archive/{archive}/tags', [ArchiveController::class, 'updateTags'])->name('api.admin.archive.tags.update');
             // Publish or decline a manuscript a team handed in itself.
             Route::patch('/archive/{archive}/submission', [ArchiveController::class, 'decideSubmission'])->name('api.admin.archive.submission.update');
             Route::delete('/archive/{archive}', [ArchiveController::class, 'destroy'])->name('api.admin.archive.destroy');
