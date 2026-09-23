@@ -1933,6 +1933,13 @@ document.addEventListener('DOMContentLoaded', function () {
   var wanted = new URLSearchParams(window.location.search).get('apply');
   if (!wanted) return;
 
+  // One-shot. Left in the URL, this fired again on every later load of the
+  // page - applying reloads, and so does coming back after a decision - so
+  // the modal reopened by itself long after the link that asked for it.
+  var cleaned = new URL(window.location.href);
+  cleaned.searchParams.delete('apply');
+  history.replaceState(null, '', cleaned.pathname + cleaned.search + cleaned.hash);
+
   var card = document.querySelector('.expert-card-compact[data-expert-id="' + CSS.escape(wanted) + '"]');
   var btn = card ? card.querySelector('[data-apply-expert]') : null;
 
