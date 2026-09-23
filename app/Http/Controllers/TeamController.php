@@ -225,8 +225,47 @@ class TeamController extends Controller
                 return ! $remindAt || now()->gte(Carbon::parse($remindAt));
             });
 
+        // The panel sitting on the team's next defense. Assigning a panel
+        // (AdminPanelAssignmentController::assign) writes the same three
+        // experts onto every stage's schedule at once, so the current stage's
+        // row is where to look - falling back to whichever schedule most
+        // recently carried a panel, so a team that has finished every stage
+        // still sees who sat on its last one instead of an empty card.
+        $panel = collect();
+        $panelDefenseType = null;
+
+        if ($myTeam) {
+            $stage = (new \App\Support\DefenseProgress)->currentStage($myTeam);
+
+            $schedule = \App\Models\DefenseSchedule::where('team_id', $myTeam->team_id)
+                ->when($stage, fn ($q) => $q->where('defense_type', $stage))
+                ->latestAttempt()
+                ->with('panels.expert')
+                ->first();
+
+            if (! $schedule || $schedule->panels->isEmpty()) {
+                $schedule = \App\Models\DefenseSchedule::where('team_id', $myTeam->team_id)
+                    ->whereHas('panels')
+                    ->with('panels.expert')
+                    ->latest('defense_id')
+                    ->first();
+            }
+
+            if ($schedule) {
+                $panelDefenseType = $schedule->defense_type;
+                $panel = $schedule->panels->sortBy(fn ($p) => match ($p->panel_role) {
+                    'Panel Chair' => 0,
+                    'Panel Member 1' => 1,
+                    'Panel Member 2' => 2,
+                    default => 3,
+                })->values();
+            }
+        }
+
         return view('student.team', [
             'myTeam' => $myTeam,
+            'panel' => $panel,
+            'panelDefenseType' => $panelDefenseType,
             // The CaPSA's Team Rules, so a closed door is said before anyone fills in a form.
             'creationAllowed' => Team::creationAllowed(),
             'joiningAllowed' => Team::joiningAllowed(),

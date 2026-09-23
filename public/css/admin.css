@@ -1375,6 +1375,32 @@ textarea.input{resize:vertical;min-height:80px}
   .experts-search input{width:100%!important;max-width:100%!important;padding:11px 14px 11px 38px!important;font-size:14px;border-radius:20px;background:var(--bg2);border-color:var(--border)}
   .experts-count{font-size:11px;padding:4px 12px;border-radius:20px;width:fit-content;margin:0 auto;text-align:center;background:var(--bg4)}
 
+  /* ── Experts filters: search + status + Add CaPSA, kept on one line (phone) ──
+     Admin's copy of this bar carries exactly one dropdown and one button, so
+     unlike CaPSA's own (two of each, see .page-filters-inline's absence
+     there), it can keep the single line it already has on desktop instead of
+     stacking three rows deep - the search field is what gives, everything
+     else stays its natural width. */
+  /* Same specificity as the base ".page-filters{flex-wrap:wrap}" (line 1771,
+     unconditional - always in play here too) but declared earlier in the
+     file, so on its own it lost that tie and never actually went nowrap.
+     The extra class breaks the tie outright rather than relying on where
+     each rule happens to sit. */
+  /* Every descendant rule below is prefixed with the same compound
+     ".page-filters.page-filters-inline" - matching ".page-filters
+     .experts-search{flex:1;min-width:200px}" and ".page-filter{min-width:
+     138px}" (both 2 classes, both declared later in the file) tie on
+     specificity, and a tie goes to whichever comes last - which was them,
+     not this block, so the fixed-width rules kept winning silently. */
+  .page-filters.page-filters-inline{flex-wrap:nowrap}
+  .page-filters.page-filters-inline .experts-search{flex:1 1 auto!important;min-width:0!important}
+  .page-filters.page-filters-inline .experts-search input{width:100%!important;max-width:100%!important;
+    padding:9px 10px 9px 30px!important;font-size:12.5px;border-radius:8px}
+  .page-filters.page-filters-inline .experts-search svg{left:10px;width:13px;height:13px}
+  .page-filters.page-filters-inline .page-filter{flex:0 0 auto!important;width:auto!important;min-width:0!important;padding:0 8px;font-size:12px}
+  .page-filters.page-filters-inline .page-filters-actions{width:auto!important;flex:0 0 auto;margin-left:0}
+  .page-filters.page-filters-inline .page-filters-actions .btn{flex:0 0 auto;padding:0 10px;font-size:12px}
+
   /* ── Bottom Sheet: Review Modal ── */
   .review-overlay{align-items:flex-end}
   .review-modal{width:100%!important;max-width:100%!important;max-height:85vh;border-radius:16px 16px 0 0;animation:sheetUp 0.25s ease;margin-top:auto}
@@ -1411,7 +1437,27 @@ textarea.input{resize:vertical;min-height:80px}
 
   /* ── Experts table → card layout on mobile ── */
   .table, .table thead, .table tbody, .table th, .table td, .table tr{display:block}
-  .table thead{display:none}
+
+  /* partials/row-select.blade.php puts the bulk-action bar inside <thead> -
+     it swaps places with the real heading row when something is selected.
+     Hiding thead outright hid the swapped-in bar along with it, so selecting
+     a row on mobile picked it silently and there was no visible way left to
+     act on the selection. Only the plain heading row is hidden; the bar
+     stays, restyled as its own toolbar at the top of the list. */
+  .table thead tr:not(.rs-bar){display:none}
+  .table thead tr.rs-bar{display:flex;align-items:center;background:var(--navy-mid);
+    border:none;box-shadow:none;border-radius:12px;padding:0;margin-bottom:10px}
+  /* .list-card .table thead th is sticky for the desktop table's scrolling
+     column headers - inherited here it let the checkbox th detach from the
+     row and stick to the list's own scroll position instead of sitting
+     beside the "N selected" text where the flex row puts it. */
+  .table thead tr.rs-bar th{background:none;padding:10px 12px;position:static;top:auto;box-shadow:none;border-bottom:none}
+  .table thead tr.rs-bar th.rs-cell{flex:none;padding:0 0 0 12px}
+  .table thead tr.rs-bar th:not(.rs-cell){flex:1;min-width:0}
+  .rs-bar .selbar{flex-wrap:wrap;row-gap:8px}
+  .rs-bar .selbar-sep{display:none}
+  .rs-bar .selbar-clear{margin-left:auto}
+
   .table tr{background:#fff;border:1.5px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,0.04)}
   .table tr:hover td{background:transparent}
   .table td{padding:6px 0;border-bottom:none;font-size:12px;display:flex;align-items:center;gap:8px}
@@ -1425,16 +1471,44 @@ textarea.input{resize:vertical;min-height:80px}
   .table tr{padding:14px;border-radius:14px}
   .table td{padding:5px 0;gap:6px}
   .table td::before{font-size:9px;width:65px;letter-spacing:.3px}
-  .table td:first-child::before{display:none}
-  .table td:first-child>div{gap:8px!important}
-  .table td:first-child .expert-av{width:36px!important;height:36px!important;font-size:12px!important;border-radius:10px!important}
-  .table td:first-child .td-main{font-size:14px}
-  .table td:first-child div[style*="font-size:11px"]{font-size:10px!important}
-  .table td:last-child{padding-bottom:0;flex-direction:column;gap:6px;padding-top:8px;border-top:1px solid var(--border);margin-top:4px}
-  .table td:last-child::before{display:none}
-  .table td:last-child button,.table td:last-child .btn-transfer,.table td:last-child .btn-remove{width:100%;justify-content:center;padding:9px 14px!important;border-radius:10px!important;font-size:13px!important;margin-left:0!important}
-  .table td:last-child span[style*="font-size:11px"]{width:100%;text-align:center;padding:8px 14px;background:var(--bg3);border-radius:8px;box-sizing:border-box}
+
+  /* Bulk-select (partials/row-select.blade.php) inserts a checkbox <td>
+     before every row's own first cell, so ":first-child" here - meant for
+     the identity column - matched the checkbox instead on any page that
+     turns bulk-select on: the "Expert" label came back, and the avatar row
+     it was meant to style stayed plain. Matched by data-label instead, so
+     it holds whether or not a checkbox column is there at all. */
+  .table td[data-label="Expert"]{padding-top:0;padding-right:32px}
+  .table td[data-label="Expert"]::before{display:none}
+  .table td[data-label="Expert"]>div{gap:8px!important}
+  .table td[data-label="Expert"] .expert-av{width:36px!important;height:36px!important;font-size:12px!important;border-radius:10px!important}
+  .table td[data-label="Expert"] .td-main{font-size:14px}
+  .table td[data-label="Expert"] div[style*="font-size:11px"]{font-size:10px!important}
+
+  /* The checkbox itself moves into the card's own top-right corner instead
+     of sitting in a full label-and-gap row of its own above the avatar - a
+     15px tick was claiming an entire empty row at the top of every card. */
+  .table tr{position:relative}
+  .table td.rs-cell{position:absolute;top:14px;right:14px;width:auto;padding:0!important;margin:0}
+  .table td.rs-cell::before{content:none}
+
+  /* This footer treatment (border, centred/full-width controls, no label) is
+     for an actual actions cell - :has(.rowmenu) is what every real one on
+     every page actually has in it. Without that check it fired on ANY
+     table's last column: admin/students' table ends on a plain "Section"
+     letter with no actions at all, and that cell was getting boxed off with
+     a stray border and its "SECTION" label silently dropped, from a rule
+     written for a button it didn't have. */
+  .table td:last-child:has(.rowmenu){padding-bottom:0;flex-direction:column;gap:6px;padding-top:8px;border-top:1px solid var(--border);margin-top:4px}
+  .table td:last-child:has(.rowmenu)::before{display:none}
+  .table td:last-child:has(.rowmenu) button,.table td:last-child:has(.rowmenu) .btn-transfer,.table td:last-child:has(.rowmenu) .btn-remove{width:100%;justify-content:center;padding:9px 14px!important;border-radius:10px!important;font-size:13px!important;margin-left:0!important}
+  .table td:last-child:has(.rowmenu) span[style*="font-size:11px"]{width:100%;text-align:center;padding:8px 14px;background:var(--bg3);border-radius:8px;box-sizing:border-box}
   .table td[data-label="Expertise"]{font-size:11px!important;line-height:1.4;white-space:normal;word-break:break-word}
+  /* .cx-skills' 240px max-width keeps the desktop column from ballooning
+     with chips; on the card layout that just left the row short of the
+     card's full width, which is exactly the gap a selected row's tint
+     rendered as a bare patch of the card's own background. */
+  .table td.cx-skills{max-width:none}
 
   /* ── Team Breakdown: keep as horizontal scrollable table on mobile ── */
   .tb-scroll-wrap{overflow-x:auto!important;-webkit-overflow-scrolling:touch;scroll-behavior:smooth}

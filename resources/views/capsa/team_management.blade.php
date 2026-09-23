@@ -16,8 +16,12 @@
 <body>
 
 @include('capsa._sidebar')
+@include('partials.sidebar-toggle')
 <div class="main">
   <div class="topbar">
+    <button class="hamburger-btn" onclick="toggleSidebar()" aria-label="Toggle sidebar">
+      <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
     <div class="page-title">Team Management</div>
     <div class="topbar-actions">
       @include('capsa.partials.notification-dropdown')
@@ -230,9 +234,9 @@
                 $score = $defenseScores->get($row->team->team_id, collect())->last(fn ($s) => $s->average !== null);
               @endphp
               <tr data-q="{{ $haystack }}" data-st="{{ $status }}" data-href="{{ $href }}">
-                <td><input type="checkbox" aria-label="Select {{ $row->team->team_name }}"></td>
+                <td class="tm-check"><input type="checkbox" aria-label="Select {{ $row->team->team_name }}"></td>
 
-                <td><div style="display:flex;align-items:center;gap:11px">
+                <td data-label="Team"><div style="display:flex;align-items:center;gap:11px">
                   <div class="av" style="background:linear-gradient(135deg,{{ $row->gradient }})">{{ $row->initials }}</div>
                   <div style="min-width:0">
                     <div class="tname">{{ $row->team->team_name }}</div>
@@ -240,9 +244,9 @@
                   </div>
                 </div></td>
 
-                <td><span class="pill {{ $row->section === \App\Support\SectionScope::UNASSIGNED ? 'p-gray' : 'p-gold' }}">{{ $row->section }}</span></td>
+                <td data-label="Section"><span class="pill {{ $row->section === \App\Support\SectionScope::UNASSIGNED ? 'p-gray' : 'p-gold' }}">{{ $row->section }}</span></td>
 
-                <td style="max-width:210px"><div style="font-size:12.5px;line-height:1.45">
+                <td style="max-width:210px" data-label="Title"><div style="font-size:12.5px;line-height:1.45">
                   @if ($row->team->project_title)
                     {{ $row->team->project_title }}
                   @else
@@ -254,7 +258,7 @@
                   @endif
                 </div></td>
 
-                <td><div class="chips" aria-label="{{ $row->engagedRoles->count() }} of 3 experts">
+                <td data-label="Experts"><div class="chips" aria-label="{{ $row->engagedRoles->count() }} of 3 experts">
                   @foreach ($roleColours as $role => $colour)
                     @php $who = $row->engagedRoles->get($role); @endphp
                     @if ($who)
@@ -265,7 +269,7 @@
                   @endforeach
                 </div></td>
 
-                <td>
+                <td data-label="Milestones">
                   @if ($row->milestones && $row->milestones->total > 0)
                     <div style="display:flex;align-items:center;gap:9px">
                       <div class="bar {{ $row->milestones->overdue ? 'od' : '' }}"><i style="width:{{ $row->milestones->percent }}%"></i></div>
@@ -279,7 +283,7 @@
                   @endif
                 </td>
 
-                <td>
+                <td data-label="Defense Score">
                   @if ($score)
                     <b style="color:var(--ink);font-size:13.5px;font-variant-numeric:tabular-nums">{{ \App\Support\DefenseScores::format($score->average) }}</b>
                     <div class="tsub">{{ $score->label }}</div>
@@ -288,7 +292,7 @@
                   @endif
                 </td>
 
-                <td>
+                <td data-label="Status">
                   <span class="pill {{ $statusPill[$status] ?? 'p-gray' }}">{{ $status }}</span>
                   {{-- Missing a stage's window is a fact about where they are,
                        not a second status, so it sits under the pill. --}}
@@ -299,7 +303,7 @@
                   @endif
                 </td>
 
-                <td><a class="vd" href="{{ $href }}"><x-tm-icon n="user" s="14" />View Details</a></td>
+                <td data-label="Actions"><a class="vd" href="{{ $href }}"><x-tm-icon n="user" s="14" />View Details</a></td>
               </tr>
             @endforeach
             <tr class="tm-none" @if ($rows->isNotEmpty()) hidden @endif>

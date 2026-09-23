@@ -292,8 +292,8 @@
                   data-letter="{{ strtoupper($section) }}"
                   data-team="{{ $sy && $sy->team ? '1' : '0' }}"
                   data-search="{{ Str::lower($student->f_name.' '.$student->l_name.' '.$student->email.' '.$student->student_number) }}">
-                <td class="std-mono" style="padding-left:20px">{{ $student->student_number ?: '—' }}</td>
-                <td>
+                <td class="std-mono" style="padding-left:20px" data-label="Student no.">{{ $student->student_number ?: '—' }}</td>
+                <td data-label="Student">
                   {{-- The address under the name rather than nowhere: two
                        students share a surname often enough that it is what
                        tells them apart. --}}
@@ -306,15 +306,15 @@
                      in the app - BSIT-4A. Split across three it read as three
                      unrelated facts, and no other screen names a section that
                      way, so the same student looked different here. --}}
-                <td class="std-mono">{{ \App\Models\Student::computeSectionLabel($student->course, $student->year_section) ?? '—' }}</td>
-                <td>
+                <td class="std-mono" data-label="Section">{{ \App\Models\Student::computeSectionLabel($student->course, $student->year_section) ?? '—' }}</td>
+                <td data-label="Team">
                   @if ($sy && $sy->team)
                     {{ $sy->team->team_name ?? 'Team #' . $sy->team->team_id }}
                   @else
                     <span style="color:var(--text3)">—</span>
                   @endif
                 </td>
-                <td>
+                <td data-label="Status">
                   {{-- A student added by email exists before they ever sign
                        in. Without a word for that the row looks broken rather
                        than waiting. --}}
@@ -325,7 +325,7 @@
                   @endif
                 </td>
                 @if ($viewerIsCapsa)
-                  <td style="text-align:right;padding-right:20px">
+                  <td style="text-align:right;padding-right:20px" data-label="Action">
                     @php
                       // Built above the tag: a multi-line @json inside an
                       // attribute is a parse error, and the message points at
