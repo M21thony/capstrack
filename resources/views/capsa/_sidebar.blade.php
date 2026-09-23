@@ -20,17 +20,6 @@
 
     $currentRoute = Route::currentRouteName();
 
-    $pendingExpertIds = App\Models\CapstoneExpert::where('approved_status', false)
-        ->whereNull('rejection_reason')
-        ->pluck('expert_id')
-        ->toArray();
-    $seenPendingExpertIds = session('admin_seen_pending_expert_ids', []);
-    $unseenPendingExpertCount = count(array_diff($pendingExpertIds, $seenPendingExpertIds));
-
-    if ($currentRoute === 'capsa.approval') {
-        session()->put('admin_seen_pending_expert_ids', array_unique(array_merge($seenPendingExpertIds, $pendingExpertIds)));
-    }
-
     // Counted from whatever the badge's own page actually lists. Admin's
     // Expert Management is CaPSAs and nothing else, so counting every
     // approved expert put a 10 beside a page showing three.
@@ -192,17 +181,6 @@
     @endif
 
     <div class="nav-section">People</div>
-    @if ($isCapsa)
-    <a href="{{ route('capsa.approval') }}" class="nav-item {{ $currentRoute === 'capsa.approval' ? 'active' : '' }}">
-      <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/></svg>
-      Account Approval
-      {{-- Always rendered, hidden when there is nothing to show. The approval
-           page keeps this in step as accounts are approved or rejected
-           without a reload, and it cannot fill in a span that is not there. --}}
-      <span class="nav-badge red" id="sidebar-pending-badge"
-            @if ($unseenPendingExpertCount < 1) style="display:none" @endif>{{ $badge($unseenPendingExpertCount) }}</span>
-    </a>
-    @endif
     <a href="{{ route($rolePrefix.'experts') }}" class="nav-item {{ $currentRoute === $rolePrefix.'experts' ? 'active' : '' }}">
       <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
       Expert Management

@@ -69,7 +69,6 @@
         <x-dashboard.stat-chip :href="route('capsa.team_management')" class="{{ $tile($capsa['titles']) }}" value="{{ $capsa['titles'] }}" label="Titles to Review" sub="{{ $capsa['titles'] ? 'Turned in by teams' : 'Nothing waiting' }}" color="var(--accent3)" />
         <x-dashboard.stat-chip :href="route('capsa.financial')" class="{{ $tile($capsa['receipts']) }}" value="{{ $capsa['receipts'] }}" label="Receipts to Check" sub="{{ $capsa['receipts'] ? 'Uploaded by students' : 'Nothing waiting' }}" color="var(--green)" />
         <x-dashboard.stat-chip :href="route('capsa.team_management')" class="{{ $tile($capsa['leaveRequests']) }}" value="{{ $capsa['leaveRequests'] }}" label="Member Requests" sub="{{ $capsa['leaveRequests'] ? 'Asking to leave or remove' : 'Nothing waiting' }}" color="var(--red)" />
-        <x-dashboard.stat-chip :href="route('capsa.approval')" class="{{ $tile($capsa['expertApprovals']) }}" value="{{ $capsa['expertApprovals'] }}" label="Expert Accounts" sub="{{ $capsa['expertApprovals'] ? 'To approve' : 'Nothing waiting' }}" color="var(--blue)" />
       </div>
 
       <div class="grid-2" style="margin-bottom:16px">

@@ -117,8 +117,8 @@ class ExpertLoginTest extends TestCase
         $response->assertSee('Insufficient credentials.');
     }
 
-    /** @test */
-    public function test_admin_approval_page_can_be_rendered_successfully(): void
+    /** Account Approval was removed; an old link to it lands on Expert Management. */
+    public function test_the_old_account_approval_link_goes_to_expert_management(): void
     {
         $admin = $this->makeCapsa(CapstoneExpert::create([
             'email' => 'admin.test@gmail.com',
@@ -128,11 +128,11 @@ class ExpertLoginTest extends TestCase
             'approved_status' => true,
         ]));
 
-        $this->actingAs($admin, 'expert');
+        $this->actingAs($admin, 'expert')
+            ->get('/capsa/approval')
+            ->assertRedirect('/capsa/experts');
 
-        $response = $this->get('/capsa/approval');
-        $response->assertStatus(200);
-        $response->assertSee('Expert Account Approval');
+        $this->get(route('capsa.dashboard'))->assertOk()->assertDontSee('Account Approval');
     }
 
     public function test_instructor_sidebar_shows_real_avatar_photo_not_hardcoded_initials(): void
