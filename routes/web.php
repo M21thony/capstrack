@@ -32,6 +32,7 @@ use App\Http\Controllers\Capsa\StudentController as CapsaStudentController;
 use App\Http\Controllers\Capsa\StudentRosterController;
 use App\Http\Controllers\Capsa\TeamManagementController;
 use App\Http\Controllers\Capsa\TeamRulesController;
+use App\Http\Controllers\Capsa\YearPromotionController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DirectoryController;
 use App\Http\Controllers\DuplicationController;
@@ -283,6 +284,9 @@ Route::middleware(['expert.auth', 'no.cache', 'track.expert'])->prefix('capsa')-
         // section for a group sends only that, and both are partial changes to the
         // same record. DELETE takes them off the roster - the account stays,
         // because their team history and submissions hang off it.
+        // Year Promotion without a file: move chosen sections up a year.
+        Route::get('/students/promotion', [YearPromotionController::class, 'preview'])->name('students.promotion');
+        Route::post('/students/promotion', [YearPromotionController::class, 'store'])->name('students.promotion.store');
         Route::post('/students', [CapsaStudentController::class, 'store'])->name('students.store');
         Route::patch('/students/{student}', [CapsaStudentController::class, 'update'])->name('students.update');
         Route::delete('/students/{student}', [CapsaStudentController::class, 'destroy'])->name('students.destroy');
