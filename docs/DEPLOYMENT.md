@@ -119,6 +119,13 @@ sudo cp deploy/nginx.conf /etc/nginx/sites-available/capstrack
 sudo ln -s /etc/nginx/sites-available/capstrack /etc/nginx/sites-enabled/
 sudo rm /etc/nginx/sites-enabled/default
 sudo cp deploy/php.ini /etc/php/8.4/fpm/conf.d/99-capstrack.ini
+
+# nginx ships no type for .mjs, so the PDF viewer's worker goes out as
+# octet-stream and the browser refuses to start it: every scan in the CaPSA's
+# check window then says it cannot be shown. Add it to the shared table - a
+# types block in the site file would replace the table, not extend it.
+sudo sed -i 's|^\(\s*application/javascript\s*\)js;|js mjs;|' /etc/nginx/mime.types
+
 sudo systemctl restart php8.4-fpm nginx
 
 sudo cp deploy/capstrack-worker.conf /etc/supervisor/conf.d/
