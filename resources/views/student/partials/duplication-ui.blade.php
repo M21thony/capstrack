@@ -7,7 +7,7 @@
 --}}
 <style>
 /* ── the trail back, on both of the new pages ───────────────────── */
-.dup-crumb{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--text3);flex-wrap:wrap;margin-bottom:14px}
+.dup-crumb{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--text3);flex-wrap:wrap;margin-bottom:10px}
 .dup-crumb a{color:var(--text2);text-decoration:none;border-bottom:1px solid transparent}
 .dup-crumb a:hover{color:var(--accent3);border-bottom-color:var(--accent)}
 .dup-crumb a:focus-visible{outline:2px solid var(--accent3);outline-offset:2px;border-radius:3px}
@@ -21,7 +21,7 @@
 .verdict .doc .t{font-size:15px;font-weight:600;letter-spacing:-.2px;line-height:1.35;color:var(--text)}
 .verdict .doc .m{font-size:11.5px;color:var(--text3);margin-top:3px}
 
-/* One line only: 65% and above is highly similar. Below it the checker says
+/* One line only: 65% and above counts as close. Below it the checker says
    nothing, because recommending or rejecting a title is the CaPSA's call. */
 .stateline{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:700;padding:5px 11px;border-radius:7px}
 .s-red{background:var(--red-bg);color:var(--red)}
@@ -169,4 +169,107 @@
   font-size: 11px; font-weight: 600;
   color: var(--primary, #5b5bd6); flex-shrink: 0;
 }
+
+/* ── the report page, fitted to one screen ──────────────────────── */
+/* The team's words beside what came back and the suggested experts
+   underneath, with nothing scrolling inside anything: a laptop screen shows
+   it whole, a shorter one scrolls the page once. The percentage keeps its
+   colour; the words beside it stay calm (App\Support\SimilarityBand). */
+.sim-close{color:var(--red)}
+.sim-some{color:#b45309}
+.sim-little{color:var(--green)}
+.sim-none{color:var(--text3)}
+.band{display:inline-flex;align-items:center;padding:3px 9px;border-radius:999px;font-size:11.5px;font-weight:600;white-space:nowrap}
+.band-close{background:#fdf3e2;color:#8a5300}
+.band-some{background:#eef1f6;color:#3d4a63}
+.band-little,.band-none{background:var(--bg4);color:var(--text2)}
+
+.card.rp-head{display:flex;align-items:center;gap:16px;padding:10px 16px;margin-bottom:10px;flex-wrap:wrap}
+.rp-back{width:38px;height:38px;flex-shrink:0;display:grid;place-items:center;border:1px solid var(--border);border-radius:9px;color:var(--text)}
+.rp-back:hover{border-color:var(--border2)}
+.rp-back:focus-visible,.rp-row:focus-visible,.rp-read:focus-visible,.rp-more:focus-visible{outline:2px solid var(--accent3);outline-offset:2px}
+.rp-back svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2.4}
+.rp-score{display:flex;flex-direction:column;align-items:center;flex-shrink:0}
+.rp-pc{font-size:32px;font-weight:700;letter-spacing:-1px;line-height:1;font-variant-numeric:tabular-nums}
+.rp-pc small{font-size:18px}
+.rp-cap{font-size:10.5px;color:var(--text3);margin-top:3px}
+.rp-doc{flex:1;min-width:240px}
+.rp-title{margin:0;font-size:15.5px;font-weight:600;line-height:1.35;color:var(--text);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.rp-meta{display:flex;align-items:center;gap:8px;margin-top:4px;font-size:12px;color:var(--text3);min-width:0}
+.rp-meta>span:last-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.rp-counts{display:flex;gap:6px;flex-wrap:wrap;flex-shrink:0}
+.rp-counts .band{font-size:11px}
+
+.rp-grid{display:grid;grid-template-columns:440px minmax(0,1fr);gap:14px;align-items:stretch}
+@media (max-width:1100px){.rp-grid{grid-template-columns:minmax(0,1fr)}}
+.rp-grid>.card{padding:0;display:flex;flex-direction:column;min-width:0;overflow:hidden}
+.rp-card-h{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:10px 18px}
+.rp-card-h h2,.rp-experts h2{margin:0;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text2)}
+.rp-card-h span{font-size:11.5px;color:var(--text3)}
+
+.rp-mine{background:var(--accent-light,#faf7ed)!important;border-color:rgba(201,168,44,.45)!important}
+.rp-mine .rp-card-h{border-bottom:1px solid rgba(201,168,44,.35)}
+.rp-body{padding:10px 18px;display:flex;flex-direction:column;gap:8px}
+.rp-field .k{font-size:10.5px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--text3);margin-bottom:3px}
+.rp-v-title{font-size:14px;font-weight:600;line-height:1.4;color:var(--text);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.rp-v{font-size:12.5px;line-height:1.55;color:var(--text);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.rp-sdgs{display:flex;flex-wrap:wrap;gap:4px}
+.rp-sdgs span,.rp-more{padding:2px 9px;border-radius:999px;font-size:11.5px;font-weight:500;background:#eef1fb;color:#33449a}
+.rp-more{border:1px solid #c9d2f0;background:#fff;font-family:inherit;cursor:pointer}
+.rp-foot{margin-top:auto;padding:10px 18px 14px;border-top:1px solid rgba(201,168,44,.35)}
+.rp-read{display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 14px;border:1px solid #d9c98f;border-radius:9px;background:#fff;color:var(--accent3,#8a6e10);font:inherit;font-size:13px;font-weight:600;cursor:pointer}
+.rp-read svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:2.2}
+
+.rp-list .rp-card-h{border-bottom:1px solid var(--border)}
+.rp-row{display:grid;grid-template-columns:54px minmax(0,1fr);gap:12px;align-items:center;min-height:46px;padding:4px 18px;box-sizing:border-box;border-top:1px solid var(--border);text-decoration:none;color:inherit;transition:background .15s}
+.rp-row:first-of-type{border-top:none}
+.rp-row:hover{background:var(--bg3)}
+.rp-rank b{display:block;font-size:14.5px;font-weight:700;font-variant-numeric:tabular-nums}
+.rp-rank small{font-size:10.5px;color:var(--text3)}
+.rp-what{min-width:0}
+.rp-what b,.rp-what small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rp-what b{font-size:13px;font-weight:600;color:var(--text)}
+.rp-what small{font-size:11.5px;color:var(--text2);margin-top:2px}
+.rp-what small span{color:var(--text3)}
+
+.card.rp-experts{margin-top:10px;padding:10px 14px 12px}
+.rp-experts-h{display:flex;align-items:baseline;gap:14px;margin:0 4px 8px;min-width:0}
+.rp-experts-h h2{margin:0;flex-shrink:0}
+.rp-experts-h .dup-apply-note{margin:0;font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.dup-apply-btn.rp-lock{padding:6px 8px}
+.rp-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.rp-experts-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+@media (max-width:1100px){.rp-experts-grid{grid-template-columns:minmax(0,1fr)}}
+.rp-expert{display:flex;gap:12px;align-items:flex-start;padding:10px 14px;border:1px solid var(--border);border-radius:12px;min-width:0}
+.rp-expert-who{flex:1;min-width:0}
+/* Shown whole: a name, field or reason cut off with "…" left the team
+   guessing who the expert is and why they were suggested. */
+.rp-expert-who .n{font-size:13.5px;font-weight:600;color:var(--text);line-height:1.35}
+.rp-expert-who .x{font-size:11.5px;color:var(--primary,#3f55b5);margin-top:2px;line-height:1.45}
+.rp-expert-who .r{font-size:11.5px;color:var(--text3);margin-top:3px;line-height:1.45}
+
+.rp-dialog{border:0;border-radius:16px;padding:0;width:min(720px,calc(100vw - 32px));max-height:min(86vh,900px);box-shadow:0 24px 60px rgba(0,0,0,.28)}
+.rp-dialog::backdrop{background:rgba(15,16,22,.55)}
+.rp-dialog-h{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding:18px 22px 14px;border-bottom:1px solid var(--border);position:sticky;top:0;background:#fff}
+.rp-dialog-h .k{font-size:10.5px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--text3)}
+.rp-dialog-h h2{margin:3px 0 0;font-size:16px;line-height:1.4;color:var(--text)}
+.rp-x{width:34px;height:34px;flex-shrink:0;display:grid;place-items:center;border:1px solid var(--border);border-radius:9px;background:#fff;color:var(--text3);cursor:pointer}
+.rp-x svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2.2}
+.rp-dialog-b{padding:6px 22px 22px}
+
+/* ── the scan card on the Pre-Proposal page ─────────────────────── */
+/* Empty until a scan: no bar, and no warning showing before anything
+   has been checked. After one, the same calm words as the report. */
+.scan-card{align-items:center}
+.sc-empty,.sc-result{display:flex;align-items:center;gap:18px;flex:1;min-width:0;flex-wrap:wrap}
+.sc-empty[hidden],.sc-result[hidden]{display:none}
+.sc-empty-ic{width:52px;height:52px;flex-shrink:0;border:2px dashed var(--border2);border-radius:12px;display:grid;place-items:center;color:var(--text3)}
+.sc-empty-ic svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2}
+.sc-score{display:flex;flex-direction:column;align-items:center;flex-shrink:0}
+.sc-score .bigscore{font-size:38px}
+.sc-cap{font-size:10.5px;color:var(--text3);margin-top:4px}
+.sc-line{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px}
+.sc-counts{display:inline-flex;gap:6px;flex-wrap:wrap}
+.sc-counts .band{font-size:11px}
+.scan-card .doc .m b{font-weight:600;color:var(--text)}
 </style>

@@ -13,6 +13,7 @@ use App\Services\RecipientResolver;
 use App\Services\SimilarityService;
 use App\Support\ProjectTags;
 use App\Support\ResearchAgenda;
+use App\Support\SimilarityBand;
 use App\Support\StudentTeam;
 use App\Support\SustainableDevelopmentGoals;
 use App\Support\TitleRevision;
@@ -404,8 +405,11 @@ class PreProposalController extends Controller
 
         // What the team wrote. The saved pre-proposal is the record once one
         // exists; before that the only copy is what was read out of the PDF.
+        $sdgs = SustainableDevelopmentGoals::split($proposal?->sdg_goals ?? ($concepts['sdg_goals'] ?? null));
+        $agenda = ResearchAgenda::items($proposal?->research_agenda ?? ($concepts['research_agenda'] ?? []));
         $fields = [
-            'SDG' => $this->asText($proposal?->sdg_goals ?? ($concepts['sdg_goals'] ?? null)),
+            'SDG' => implode("\n", $sdgs),
+            'Research agenda and priority areas' => implode("\n", $agenda),
             'Problem statement' => $proposal?->problem_statement ?? ($concepts['problem_statement'] ?? null),
             'Proposed solution' => $proposal?->proposed_solution ?? ($concepts['proposed_solution'] ?? null),
             'Scope' => $proposal?->scope ?? ($concepts['scope'] ?? null),
@@ -427,7 +431,11 @@ class PreProposalController extends Controller
             'proposal' => $proposal,
             'title' => $proposal?->title ?? ($concepts['title'] ?? 'Your pre-proposal'),
             'fields' => array_filter($fields, fn ($v) => filled($v)),
-            'matches' => $check->matchesWithAuthors(),
+            'sdgs' => $sdgs,
+            // The three parts the page shows a few lines of; the rest is one click away.
+            'lead' => array_filter(array_intersect_key($fields, array_flip(['Problem statement', 'Proposed solution', 'Scope'])), fn ($v) => filled($v)),
+            'matches' => $matches = $check->matchesWithAuthors(),
+            'bands' => SimilarityBand::counts($matches),
             'archiveTotal' => ArchivedDocument::count(),
             'applyOpen' => $proposal?->status === 'approved' && $isLeader && ! $setAside,
             'applyLockShort' => match (true) {
