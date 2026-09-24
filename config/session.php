@@ -38,6 +38,12 @@ return [
     // sends the person back to the sign-in page with no explanation.
     'lifetime' => (int) env('SESSION_LIFETIME', 10080),
 
+    // Signed out after this many minutes without anyone using the page -
+    // clicking, typing, scrolling. Background checks (the bell, consultation
+    // slots) do not count. A warning with a way to stay comes a minute
+    // before, and the sign-in page then says why. 0 turns it off.
+    'idle_timeout' => (int) env('SESSION_IDLE_TIMEOUT', 10),
+
     'expire_on_close' => env('SESSION_EXPIRE_ON_CLOSE', false),
 
     /*
