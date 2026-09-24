@@ -6,6 +6,7 @@ use App\Models\CapstoneDocument;
 use App\Models\CapstoneExpert;
 use App\Models\CapstonePreProposal;
 use App\Models\Checklist;
+use App\Models\DefenseSchedule;
 use App\Models\Deliverable;
 use App\Models\DeliverableCheck;
 use App\Models\DuplicationCheck;
@@ -303,6 +304,23 @@ class CapsaTeamManagementTest extends TestCase
         $this->assertStringNotContainsString('tab-count', $html);
     }
 
+    /** Members show their profile photo; anyone without one keeps their initials. */
+    public function test_the_team_page_shows_members_profile_photos(): void
+    {
+        $this->makeCapsaWithSections();
+        [$team, $leader] = $this->makeTeamInSection('Team Photos');
+        $leader->update(['f_name' => 'Ana', 'l_name' => 'Reyes', 'p_picture' => 'https://lh3.googleusercontent.com/a/ana-photo']);
+        $member = Student::factory()->withCompleteProfile()->create(['f_name' => 'Ben', 'l_name' => 'Cruz', 'p_picture' => null]);
+        StudentSchoolYear::create(['student_id' => $member->student_id, 'team_id' => $team->team_id]);
+
+        $html = $this->get(route('capsa.team_management.show', $team->team_id))->assertOk()->getContent();
+
+        $this->assertStringContainsString('<img src="https://lh3.googleusercontent.com/a/ana-photo"', $html);
+        $this->assertSame(1, substr_count($html, 'referrerpolicy="no-referrer" onerror="this.remove()"'));
+        // Ben has no photo: his initials are what shows.
+        $this->assertMatchesRegularExpression('/>BC\s*<\/div>/', $html);
+    }
+
     public function test_the_team_page_counts_titles_awaiting_review(): void
     {
         $this->makeCapsaWithSections();
@@ -328,7 +346,7 @@ class CapsaTeamManagementTest extends TestCase
         $this->makeCapsaWithSections();
         [$team] = $this->makeTeamInSection('Team Scheduled');
 
-        \App\Models\DefenseSchedule::create([
+        DefenseSchedule::create([
             'team_id' => $team->team_id,
             'defense_type' => 'Title Defense',
             'attempt' => 1,
