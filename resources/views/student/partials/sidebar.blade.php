@@ -385,6 +385,8 @@
 
 @vite(['resources/js/submission-drawer.js', 'resources/js/submission-preview.js'])
 
+{{-- The app's own ask-first dialog, for the submit drawer's "Is this the right file?". --}}
+@include('partials.app-dialog')
 @include('partials.sidebar-scroll-restore')
 
 @include('student.partials.portal-tour')
