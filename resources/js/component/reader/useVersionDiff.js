@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { pdfjs } from "react-pdf";
-import { compareVersions, remarksNearChanges } from "./versionDiff";
+import { compareVersions, remarksNearChanges, sharedPhrases, MIN_SHARED } from "./versionDiff";
 
 const normalise = (s) => s.toLowerCase().normalize("NFKD").replace(/[^\p{L}\p{N}]+/gu, "");
 // A page number in the header or footer would count as changed whenever pages
@@ -81,7 +81,8 @@ export async function readWords(url) {
 
 /**
  * Compares the document with an earlier version ({file, remarks} URLs).
- * Status: idle, loading, ready, notext (a scanned PDF has no words) or error.
+ * Status: idle, loading, ready, notext (a scanned PDF has no words),
+ * unrelated (almost nothing in common - likely the wrong file) or error.
  */
 export function useVersionDiff(currentUrl, base) {
   const [state, setState] = useState({ status: "idle" });
@@ -98,6 +99,9 @@ export function useVersionDiff(currentUrl, base) {
       .then(([oldWords, newWords, remarks]) => {
         if (!live) return;
         if (!oldWords.length || !newWords.length) { setState({ status: "notext" }); return; }
+        // Every word would show as changed, which tells the reviewer nothing.
+        const shared = sharedPhrases(oldWords, newWords);
+        if (shared !== null && shared < MIN_SHARED) { setState({ status: "unrelated", shared }); return; }
         // ponytail: runs on the main thread; move to a worker if long documents freeze the page.
         const diff = compareVersions(oldWords, newWords);
         setState({ status: "ready", changes: diff.changes, marks: diff.marks, oldMarks: diff.oldMarks, remarks: remarksNearChanges(remarks, oldWords, newWords, diff) });

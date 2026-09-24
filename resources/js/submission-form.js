@@ -7,6 +7,7 @@
 export function initSubmissionForm(root) {
   const SUBMIT_URL = root.dataset.submitUrl;
   const NEXT_VERSION_URL = root.dataset.nextVersionUrl;
+  const CHECK_URL = root.dataset.checkUrl;
   const FOLDERS_URL = root.dataset.foldersUrl;
   const CSRF_TOKEN = root.dataset.csrf;
 
@@ -238,6 +239,26 @@ export function initSubmissionForm(root) {
     }
   }
 
+  // A draft for a checklist line, read on the server against the line and the
+  // team's last upload for it. A check that fails to answer never stops a send.
+  async function checkFiles() {
+    const found = [];
+    for (const entry of files) {
+      const option = optionFor(entry.itemId);
+      if (!CHECK_URL || !option || option.dataset.kind !== 'document' || !entry.file.name.toLowerCase().endsWith('.pdf')) continue;
+      const fd = new FormData();
+      fd.append('file', entry.file);
+      fd.append('deliverable_id', entry.itemId);
+      try {
+        const data = await fetch(CHECK_URL, { method: 'POST', headers: { 'X-CSRF-TOKEN': CSRF_TOKEN, 'Accept': 'application/json' }, body: fd }).then(r => r.json());
+        (data.warnings || []).forEach(w => found.push(w.message));
+      } catch (e) {
+        // Say nothing: the upload itself still goes through as before.
+      }
+    }
+    return found;
+  }
+
   // Each file is its own submission, sent one after another, so every file is
   // stored, versioned and ticked on the checklist line it was given.
   $('submitBtn').addEventListener('click', async function () {
@@ -264,6 +285,26 @@ export function initSubmissionForm(root) {
     const btn = this;
     const originalText = btn.innerHTML;
     btn.disabled = true;
+
+    // Is each draft the file they mean to send? Chapter 3 sent as the next
+    // Chapter 1 is caught here, while it can still be swapped. Only a warning:
+    // a chapter can really have been rewritten.
+    btn.innerHTML = 'Checking your files…';
+    const warnings = await checkFiles();
+    if (warnings.length) {
+      const go = await window.confirmSheet({
+        title: 'Is this the right file?',
+        names: warnings,
+        body: 'Check the file before sending it. If it is right, send it anyway.',
+        confirmLabel: 'Send anyway',
+        cancelLabel: 'Go back',
+      });
+      if (!go) {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+        return;
+      }
+    }
 
     const total = files.length;
     let sent = 0;

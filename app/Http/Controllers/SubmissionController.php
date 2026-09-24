@@ -11,9 +11,11 @@ use App\Services\GoogleDriveService;
 use App\Services\Notifier;
 use App\Services\RecipientResolver;
 use App\Support\MilestoneProgress;
+use App\Support\RevisionCheck;
 use App\Support\SectionScope;
 use App\Support\StudentTeam;
 use App\Support\TeamChecklist;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -236,6 +238,32 @@ class SubmissionController extends Controller
     // detection + grouping rules as store(), so the read-only Version (and
     // Detected Chapter) labels on the form always match what actually
     // happens on submit.
+    /**
+     * Warnings about a draft before it is sent: its first page names another
+     * chapter, or it shares almost nothing with the team's last upload for
+     * the same line - Chapter 3 sent as the next Chapter 1. Only warnings; the
+     * student may send it anyway. See RevisionCheck.
+     */
+    public function warnings(Request $request): JsonResponse
+    {
+        $request->validate([
+            'file' => 'required|file|max:25600',
+            'deliverable_id' => 'required|integer',
+        ]);
+
+        $file = $request->file('file');
+        $item = Deliverable::active()->find($request->integer('deliverable_id'));
+        $team = StudentTeam::memberIdsFor(Auth::id());
+
+        if (! $item || $team === [] || strtolower($file->getClientOriginalExtension()) !== 'pdf') {
+            return response()->json(['warnings' => []]);
+        }
+
+        return response()->json([
+            'warnings' => RevisionCheck::warnings($file->getRealPath(), $file->getClientOriginalName(), $item, $team),
+        ]);
+    }
+
     public function nextVersionForTitle(Request $request)
     {
         $request->validate(['title' => 'required|string|max:255']);
