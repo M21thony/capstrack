@@ -257,6 +257,7 @@
                       'awaiting_team_choice' => $row->approvedProposalCount.' recommended - the team is choosing',
                       'settling' => 'One title recommended',
                       'awaiting_review' => 'Waiting on your review',
+                      'all_rejected' => 'All titles turned down - the team is writing new ones',
                     ][$row->titleState] ?? 'No titles yet' }}</span>
                   @endif
                 </div></td>
