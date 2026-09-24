@@ -1169,3 +1169,23 @@ a.btn.content,
 /* A booked slot cannot be deleted or hidden, so it says so rather than
    offering controls that refuse. */
 .slot-held{display:flex;color:var(--green);padding:2px 3px;cursor:help}
+
+/* ── Phone ─────────────────────────────────────────────────────────────
+   .sched-layout{1fr 336px} above comes after the 1024px rule that stacks
+   it, so it won: on a phone the calendar kept its desktop width and the
+   side column sat off the right edge. Restated here, last, so it holds. */
+@media (max-width: 1024px) {
+  .sched-layout { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 768px) {
+  /* Seven days have to share a phone's width: no column may ask for more. */
+  .cal-grid, .calendar-grid-2week { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+  .cal-grid > *, .calendar-grid-2week > * { min-width: 0; }
+}
+@media (max-width: 768px) {
+  /* Month arrows on one line, the view buttons full width under them. */
+  .cal-controls { flex-wrap: wrap; width: 100%; }
+  .cal-controls .cal-month-display { flex: 1; text-align: center; }
+  .cal-controls .mode-toggle { flex: 1 1 100%; display: flex; }
+  .cal-controls .mode-toggle .mode-btn { flex: 1; padding-left: 6px; padding-right: 6px; }
+}

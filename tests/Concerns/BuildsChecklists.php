@@ -84,6 +84,7 @@ trait BuildsChecklists
 
         return DB::table('capstone_documents')->insertGetId([
             'student_id' => $student->student_id,
+            'team_id' => StudentSchoolYear::where('student_id', $student->student_id)->value('team_id'),
             'file_name' => pathinfo($path, PATHINFO_FILENAME),
             'file_path' => $path,
             'chapter' => $chapter,

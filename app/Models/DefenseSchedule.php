@@ -63,36 +63,54 @@ class DefenseSchedule extends Model
         return $this->relationLoaded('panels') ? $this->panels->count() : $this->panels()->count();
     }
 
-    /** @return Collection<int, PanelGrade> */
+    /**
+     * The grades with scores in them.
+     *
+     * @return Collection<int, PanelGrade>
+     */
     public function submittedGrades()
     {
-        return $this->relationLoaded('grades')
-            ? $this->grades->where('status', 'submitted')
-            : $this->grades()->where('status', 'submitted')->get();
+        return $this->gradesWithStatus([PanelGrade::SUBMITTED]);
     }
 
-    /** Whether every panelist has turned their grade in. */
+    /**
+     * Panelists who declined to score this team.
+     *
+     * @return Collection<int, PanelGrade>
+     */
+    public function abstainedGrades()
+    {
+        return $this->gradesWithStatus([PanelGrade::ABSTAINED]);
+    }
+
+    /** How many panelists are done with this team: scored it, or abstained. */
+    public function gradesInCount(): int
+    {
+        return $this->gradesWithStatus([PanelGrade::SUBMITTED, PanelGrade::ABSTAINED])->count();
+    }
+
+    /**
+     * Whether every panelist has turned their grade in: scored it, or
+     * abstained. A panel that all abstained is in too - the chair can still
+     * record the decision (a redefense, say); the team's score just stays
+     * blank.
+     */
     public function allGradesIn(): bool
     {
         $size = $this->panelSize();
 
-        return $size > 0 && $this->submittedGrades()->count() === $size;
+        return $size > 0 && $this->gradesInCount() === $size;
     }
 
     /**
-     * The team's score for this defense: every panelist's total added up and
-     * divided by the size of the panel - three, normally.
+     * The team's score for this defense: every scoring panelist's total added
+     * up and divided by how many scored - three, normally.
      *
-     * Dividing by the panel rather than by however many have submitted is the
-     * point. Averaging the grades that happen to be in reports a finished
-     * looking score off two of three panelists, and that number then moves
-     * when the third arrives. Null until everyone has graded, so a partial
-     * result is never shown as a final one.
-     *
-     * A panelist may abstain on a criterion. Then that criterion is averaged
-     * over the panelists who scored it, and the criteria are added up, so an
-     * abstention is not a zero against the team. With no abstentions this is
-     * the same number as the totals over the panel.
+     * Divided by the panelists who scored, not by however many have submitted
+     * so far: null until the whole panel is in, so a partial result is never
+     * shown as a final one. A panelist who abstained is left out of both the
+     * sum and the count, so they neither pull the average down nor stand in
+     * for a score of zero.
      */
     public function panelAverage(): ?float
     {
@@ -100,26 +118,25 @@ class DefenseSchedule extends Model
             return null;
         }
 
-        $grades = $this->submittedGrades();
+        $scored = $this->submittedGrades();
 
-        if ($grades->every(fn (PanelGrade $g) => empty($g->abstained))) {
-            return round($grades->sum(fn (PanelGrade $g) => (float) $g->total_score) / $this->panelSize(), 2);
-        }
-
-        $byCriterion = [];
-
-        foreach ($grades as $grade) {
-            foreach ($grade->scores ?? [] as $criterionId => $score) {
-                $byCriterion[$criterionId][] = (float) $score;
-            }
-        }
-
-        // Every panelist abstained on everything: there is no score to give.
-        if ($byCriterion === []) {
+        // Everyone abstained: there is no score to give.
+        if ($scored->isEmpty()) {
             return null;
         }
 
-        return round(array_sum(array_map(fn (array $scores) => array_sum($scores) / count($scores), $byCriterion)), 2);
+        return round($scored->sum(fn (PanelGrade $g) => (float) $g->total_score) / $scored->count(), 2);
+    }
+
+    /**
+     * @param  array<int, string>  $statuses
+     * @return Collection<int, PanelGrade>
+     */
+    private function gradesWithStatus(array $statuses)
+    {
+        return $this->relationLoaded('grades')
+            ? $this->grades->whereIn('status', $statuses)->values()
+            : $this->grades()->whereIn('status', $statuses)->get();
     }
 
     public function team()

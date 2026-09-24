@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Student;
 
 use App\Http\Controllers\Controller;
 use App\Models\DefenseSchedule;
+use App\Models\PanelGrade;
 use App\Models\StudentSchoolYear;
 use App\Support\DefenseProgress;
 use Illuminate\Support\Facades\Auth;
@@ -25,7 +26,9 @@ class DefenseScoresController extends Controller
         $defenses = $teamId
             ? DefenseSchedule::where('team_id', $teamId)
                 ->whereNotNull('outcome')
-                ->with(['panels.expert', 'grades' => fn ($q) => $q->where('status', 'submitted')->with('rubric.criteria')])
+                // Abstentions too, so the sheet can say who abstained rather
+                // than leave that panelist's column looking unfinished.
+                ->with(['panels.expert', 'grades' => fn ($q) => $q->whereIn('status', [PanelGrade::SUBMITTED, PanelGrade::ABSTAINED])->with('rubric.criteria')])
                 ->get()
                 ->sortBy(fn ($d) => sprintf('%02d-%02d', $order[$d->defense_type] ?? 99, $d->attempt))
                 ->values()

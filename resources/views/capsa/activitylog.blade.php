@@ -41,12 +41,12 @@
 
   <div id="real-content" style="display:none;flex:1;overflow:hidden;flex-direction:column;">
   <div class="content">
-    <form method="GET" class="row" style="margin-bottom:16px;gap:8px">
+    <form method="GET" class="row log-filters" style="margin-bottom:16px;gap:8px">
       <input class="input" name="search" placeholder="Search by student or action..." style="max-width:300px" value="{{ request('search') }}"/>
       <select class="input" name="type" style="width:180px" onchange="this.form.submit()">
         <option value="">All Actions</option>
         @foreach($types as $t)
-        <option value="{{ $t }}" {{ request('type') === $t ? 'selected' : '' }}>{{ $t }}</option>
+        <option value="{{ $t }}" {{ request('type') === $t ? 'selected' : '' }}>{{ \App\Support\ActivityIcons::for($t)['label'] }}</option>
         @endforeach
       </select>
       <button class="btn btn-ghost" style="font-size:11px;padding:5px 12px">Filter</button>
@@ -70,7 +70,8 @@
             <td style="font-variant-numeric:tabular-nums;font-size:11px;color:var(--text3)" data-label="Time">{{ $log->created_at->format('M j · H:i') }}</td>
             <td class="td-main" data-label="Student">{{ $log->student?->f_name }} {{ $log->student?->l_name }}</td>
             <td data-label="Team"><span class="badge badge-gold" style="font-size:10px">{{ $log->student?->currentTeam?->team_name ?? $log->metadata['team_name'] ?? 'N/A' }}</span></td>
-            <td data-label="Action"><span class="badge badge-blue" style="font-size:10px">{{ $log->type }}</span></td>
+            @php $face = \App\Support\ActivityIcons::for($log->type); @endphp
+            <td data-label="Action"><span class="al-action al-tone-{{ $face['tone'] }}" title="{{ $log->type }}">{!! $face['svg'] !!}{{ $face['label'] }}</span></td>
             <td style="font-size:12px;color:var(--text2)" data-label="Description">{!! Str::limit($log->description, 60) !!}</td>
           </tr>
         @empty
