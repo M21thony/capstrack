@@ -1,0 +1,266 @@
+/* The guided portal tour, for every portal (partials/portal-tour.blade.php).
+   The same rules the student stylesheet has always carried, here so the
+   CaPSA, Admin and Expert portals can load them without a build step. */
+/* ── Guided tour ──
+   The walkthrough (partials/portal-tour): the screen dims, the thing being
+   explained is outlined in white, and a note with an arrow says what it is.
+   The heading is Poppins, bold and round enough to read at a glance over
+   the dim; the sentence under it stays DM Sans like the rest of the portal. */
+body.tour-open{
+  overflow:hidden;
+}
+
+.gt{
+  position:fixed;
+  inset:0;
+  z-index:3000;
+  font-family:'DM Sans',sans-serif;
+}
+
+.gt[hidden]{
+  display:none !important;
+}
+
+/* Catches every click, so nothing under the dim can be pressed by accident
+   mid-tour. Clear when a spotlight does the dimming; dark on its own for
+   the welcome and the send-off, which point at nothing. */
+.gt-shield{
+  position:absolute;
+  inset:0;
+  background:transparent;
+  cursor:pointer;
+}
+
+.gt.is-centered .gt-shield{
+  background:rgba(8,8,12,0.86);
+  cursor:default;
+}
+
+.gt.is-centered .gt-spot{
+  opacity:0;
+}
+
+/* The cut-out: a white frame whose enormous shadow is the dim. */
+.gt-spot{
+  position:fixed;
+  border:3px solid #fff;
+  border-radius:8px;
+  box-shadow:0 0 0 9999px rgba(8,8,12,0.86);
+  pointer-events:none;
+  transition:left .35s cubic-bezier(0.16,1,0.3,1),top .35s cubic-bezier(0.16,1,0.3,1),width .35s cubic-bezier(0.16,1,0.3,1),height .35s cubic-bezier(0.16,1,0.3,1),opacity .2s;
+}
+
+.gt-arrow{
+  position:fixed;
+  inset:0;
+  width:100%;
+  height:100%;
+  overflow:visible;
+  pointer-events:none;
+}
+
+.gt-arrow path{
+  fill:none;
+  stroke:#fff;
+  stroke-width:2.6;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+
+.gt-note{
+  position:fixed;
+  color:#fff;
+  text-shadow:0 1px 2px rgba(0,0,0,0.55),0 0 22px rgba(0,0,0,0.6);
+  pointer-events:none;
+  opacity:0;
+  transform:translateY(6px);
+  transition:opacity .25s ease,transform .25s ease;
+}
+
+.gt-note.is-in{
+  opacity:1;
+  transform:none;
+}
+
+.gt-note[data-side="left"]{
+  text-align:right;
+}
+
+.gt-note[data-side="center"]{
+  text-align:center;
+}
+
+.gt-label{
+  margin:0;
+  font-family:'Poppins','DM Sans',sans-serif;
+  font-size:22px;
+  font-weight:600;
+  line-height:1.25;
+  letter-spacing:-0.015em;
+  color:#fff;
+  text-wrap:balance;
+}
+
+.gt-note[data-side="center"] .gt-label{
+  font-size:32px;
+  font-weight:700;
+  color:var(--accent);
+}
+
+.gt-body{
+  margin:8px 0 0;
+  font-size:14.5px;
+  line-height:1.55;
+  color:rgba(255,255,255,0.86);
+  text-wrap:pretty;
+}
+
+.gt-note[data-side="center"] .gt-body{
+  font-size:15.5px;
+  max-width:36ch;
+  margin-left:auto;
+  margin-right:auto;
+}
+
+.gt-next-up{
+  pointer-events:auto;
+  display:grid;
+  grid-template-columns:1fr auto;
+  align-items:center;
+  gap:2px 14px;
+  margin-top:22px;
+  padding:14px 18px;
+  border-radius:14px;
+  text-align:left;
+  text-decoration:none;
+  color:#fff;
+  background:rgba(255,255,255,0.08);
+  border:1.5px dashed rgba(255,255,255,0.45);
+  transition:border-color .15s,background .15s;
+}
+
+.gt-next-up[hidden]{
+  display:none;
+}
+
+.gt-next-up:hover{
+  border-color:var(--accent);
+  background:rgba(255,255,255,0.12);
+}
+
+.gt-next-up-label{
+  font-size:11px;
+  font-weight:600;
+  letter-spacing:0.07em;
+  text-transform:uppercase;
+  color:var(--accent);
+}
+
+.gt-next-up-title{
+  grid-column:1;
+  font-size:16px;
+  font-weight:600;
+}
+
+.gt-next-up svg{
+  grid-column:2;
+  grid-row:1 / span 2;
+  width:18px;
+  height:18px;
+  fill:none;
+  stroke:var(--accent);
+  stroke-width:2.2;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+
+/* The controls, bottom right, where the picture this was modelled on keeps
+   its Skip. Rounded pills, outlined except the one that moves you on. */
+.gt-bar{
+  position:fixed;
+  right:24px;
+  bottom:24px;
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+
+.gt-count{
+  margin-right:8px;
+  font-size:13px;
+  font-weight:600;
+  letter-spacing:0.04em;
+  color:rgba(255,255,255,0.7);
+  font-variant-numeric:tabular-nums;
+}
+
+.gt-count:empty{
+  display:none;
+}
+
+.gt-pill{
+  min-height:44px;
+  padding:0 24px;
+  border-radius:999px;
+  font-family:inherit;
+  font-size:15px;
+  font-weight:600;
+  cursor:pointer;
+  transition:background .15s,border-color .15s,color .15s;
+}
+
+.gt-pill[hidden]{
+  display:none;
+}
+
+.gt-pill-ghost{
+  background:transparent;
+  border:2px solid rgba(255,255,255,0.75);
+  color:#fff;
+}
+
+.gt-pill-ghost:hover{
+  background:rgba(255,255,255,0.12);
+  border-color:#fff;
+}
+
+.gt-pill-solid{
+  min-width:112px;
+  background:var(--accent);
+  border:2px solid var(--accent);
+  color:#18191f;
+}
+
+.gt-pill-solid:hover{
+  background:var(--accent2);
+  border-color:var(--accent2);
+}
+
+.gt-pill:focus-visible,
+.gt-next-up:focus-visible{
+  outline:2px solid #fff;
+  outline-offset:3px;
+}
+
+@media (max-width:768px){
+  .gt-label{ font-size:20px; }
+  .gt-note[data-side="center"] .gt-label{ font-size:26px; }
+  .gt-body{ font-size:14px; }
+
+  .gt-bar{
+    left:16px;
+    right:16px;
+    justify-content:flex-end;
+    bottom:calc(16px + env(safe-area-inset-bottom));
+  }
+
+  .gt-count{ margin-right:auto; }
+  .gt-pill{ padding:0 18px; }
+  .gt-pill-solid{ min-width:0; flex:0 0 auto; }
+}
+
+@media (prefers-reduced-motion:reduce){
+  .gt-spot,
+  .gt-note{ transition:none; }
+}
+

@@ -1,4 +1,5 @@
-<script>document.documentElement.setAttribute('data-theme',localStorage.getItem('theme')||'light')</script>
+{{-- The student portal is light only; a theme saved back when it had a dark mode is ignored. --}}
+<script>document.documentElement.setAttribute('data-theme','light')</script>
 @php
     $student = Auth::user();
     $yearParts = explode(' · ', $student->year_section ?? '');
@@ -172,11 +173,6 @@
       <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
       Portal Tour
     </button>
-    <div class="nav-section">Appearance</div>
-    <button class="nav-item nav-item-button" onclick="toggleTheme()" style="cursor:pointer">
-      <svg id="themeIcon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-      <span id="themeLabel">Dark Mode</span>
-    </button>
     <form id="logout-form" action="{{ route('logout') }}" method="POST">
         @csrf
         <button type="submit" class="nav-item nav-item-button">
@@ -186,6 +182,18 @@
     </form>
   </nav>
 </div>
+
+@include('partials.mobile-tabbar', ['tabs' => [
+    ['label' => 'Home', 'href' => route('student.dashboard'), 'active' => request()->routeIs('student.dashboard'),
+        'icon' => '<path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/>'],
+    ['label' => 'Team', 'href' => route('student.team'), 'active' => request()->routeIs('student.team'), 'badge' => $newPostCount,
+        'icon' => '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>'],
+    // Handing in a document is what a student comes here to do most.
+    ['label' => 'Submit', 'onclick' => "window.openSubmissionDrawer && window.openSubmissionDrawer('')", 'primary' => true,
+        'icon' => '<path d="M12 19V5"/><path d="m5 12 7-7 7 7"/>'],
+    ['label' => 'Progress', 'href' => route('student.progress'), 'active' => request()->routeIs('student.progress'),
+        'icon' => '<path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 5-6"/>'],
+]])
 
 <style>
   .profile-modal .pm-close-btn { display: inline-flex; align-items: center; justify-content: center; margin-left: auto; flex-shrink: 0; width: auto; height: auto; padding: 4px; background: none; background-color: transparent; color: rgba(255,255,255,0.4); border: none; border-radius: 0; line-height: 1; cursor: pointer; transition: color 0.13s ease-in-out; outline: none; }
@@ -322,29 +330,6 @@
   }
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeProfile(); });
 
-  function toggleTheme() {
-    var html = document.documentElement;
-    var isDark = html.getAttribute('data-theme') === 'dark';
-    html.setAttribute('data-theme', isDark ? 'light' : 'dark');
-    localStorage.setItem('theme', isDark ? 'light' : 'dark');
-    updateThemeUI();
-  }
-  function updateThemeUI() {
-    var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-    var icon = document.getElementById('themeIcon');
-    var label = document.getElementById('themeLabel');
-    if (!icon || !label) return;
-    if (isDark) {
-      icon.setAttribute('viewBox', '0 0 24 24');
-      icon.innerHTML = '<circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>';
-      label.textContent = 'Light Mode';
-    } else {
-      icon.setAttribute('viewBox', '0 0 24 24');
-      icon.innerHTML = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
-      label.textContent = 'Dark Mode';
-    }
-  }
-  updateThemeUI();
 </script>
 {{-- ── Submit document: the form's styles and script, for the Document
      Submission page and for a page that opens the form in place. ── --}}

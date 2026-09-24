@@ -4,16 +4,17 @@ namespace App\Http\Controllers\Capsa;
 
 use App\Http\Controllers\Controller;
 use App\Models\CapstoneExpert;
-use App\Models\Notification;
+use App\Models\ExpertRemovalRequest;
 use App\Models\MemberLeaveRequest;
+use App\Models\Notification;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
 use App\Services\TeamLock;
 use App\Support\SectionScope;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
-use Illuminate\Http\RedirectResponse;
 
 /**
  * Where a CaPSA decides whether a member may leave a team, or be removed from
@@ -42,9 +43,9 @@ class LeaveRequestController extends Controller
         $teamIds = $requests->pluck('team_id')->unique()->values();
 
         // Teams asking to change an expert who already took them on.
-        $expertRequests = \App\Models\ExpertRemovalRequest::visibleTo(
+        $expertRequests = ExpertRemovalRequest::visibleTo(
             $capsa,
-            \App\Models\ExpertRemovalRequest::with(['team', 'expert', 'assignment.expertRole.role', 'requester', 'decider'])->latest()->limit(300)->get()
+            ExpertRemovalRequest::with(['team', 'expert', 'assignment.expertRole.role', 'requester', 'decider'])->latest()->limit(300)->get()
         );
         [$expertPending, $expertDecided] = $expertRequests->partition(fn ($r) => $r->isPending());
 
@@ -146,6 +147,8 @@ class LeaveRequestController extends Controller
                 ? 'Your CaPSA declined your request to leave '.$teamName.'. You are still on the team.'
                 : 'Your CaPSA declined your request to remove a member from '.$teamName.'.').$why,
             'link' => route('student.team'),
+            // Which request, so tapping it can show the whole decision.
+            'data' => ['leave_request_id' => $leaveRequest->id],
         ]);
 
         // The member a removal was about was told it was asked; they are told
@@ -157,6 +160,8 @@ class LeaveRequestController extends Controller
                 'title' => 'You stay on the team',
                 'message' => 'Your CaPSA declined the request to remove you from '.$teamName.'.'.$why,
                 'link' => route('student.team'),
+                // Which request, so tapping it can show the whole decision.
+                'data' => ['leave_request_id' => $leaveRequest->id],
             ]);
         }
     }
