@@ -30,12 +30,7 @@ return [
             'body' => 'This is where your team runs its capstone. Let us show you around - it takes less than a minute.',
             'target' => [],
         ],
-        [
-            'key' => 'profile',
-            'label' => 'This is you',
-            'body' => 'Tap here to see your details, your team and your role.',
-            'target' => ['#profile-trigger'],
-        ],
+        // The team is step 1: nothing else on the portal works without one.
         [
             'key' => 'team',
             'label' => 'Start here: form your team',
@@ -77,6 +72,12 @@ return [
             'label' => 'Templates and past work',
             'body' => 'Download guides from your CaPSA and browse past capstones for ideas.',
             'target' => ['student.resources', 'student.archive'],
+        ],
+        [
+            'key' => 'profile',
+            'label' => 'This is you',
+            'body' => 'Tap here to see your details, your team and your role.',
+            'target' => ['#profile-trigger'],
         ],
         [
             'key' => 'notifications',
