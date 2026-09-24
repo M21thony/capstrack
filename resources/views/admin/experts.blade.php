@@ -324,6 +324,7 @@
   .section-group.open .group-chevron{transform:rotate(90deg)}
   .group-all{width:15px;height:15px;accent-color:var(--accent);flex-shrink:0}
   .group-name{font-size:12.5px;font-weight:700;color:#0f172a;letter-spacing:0.2px}
+  .group-from{font-size:10.5px;font-weight:500;color:#64748b}
   .group-count{margin-left:auto;font-size:10px;font-weight:700;color:#94a3b8;font-variant-numeric:tabular-nums;background:#eceef2;padding:2px 8px;border-radius:999px}
   .section-group.all-selected .group-count{background:var(--accent-light);color:var(--accent3)}
   .section-group-body{display:none;grid-template-columns:repeat(3, 1fr);gap:5px 8px;padding:6px 8px 8px 33px}
@@ -945,6 +946,9 @@
             <svg class="group-chevron" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
             <input type="checkbox" class="group-all" onclick="event.stopPropagation()" onchange="toggleGroupAll(this)">
             <span class="group-name">{{ $program }}</span>
+            @if (str_contains($program, '4th year'))
+              <span class="group-from">from the student list</span>
+            @endif
             <span class="group-count">0/{{ $sections->count() }}</span>
           </div>
           <div class="section-group-body">

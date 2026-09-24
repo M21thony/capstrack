@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\CapstoneExpert;
+use App\Models\Student;
+use App\Support\SectionCatalog;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -109,6 +111,27 @@ class CapsaSectionsUpdateTest extends TestCase
      * The page has to offer it. Without a button, the only way to change a
      * section is still to remove the person as CaPSA and start again.
      */
+    /**
+     * The picker groups sections by program and year, so picking a whole
+     * group never takes 3rd and 4th year together.
+     */
+    public function test_the_picker_groups_sections_by_year(): void
+    {
+        SectionCatalog::store(['BSIT-3A', 'BSIT-3B']);
+        Student::create([
+            'email' => 'fourth@my.cspc.edu.ph', 'f_name' => 'F', 'l_name' => 'Y',
+            'course' => 'Bachelor of Science in Information Technology', 'year_section' => '4th '.json_decode('"·"').' B',
+        ]);
+
+        $this->actingAs($this->admin(), 'expert')->get(route('admin.experts'))
+            ->assertOk()
+            ->assertViewHas('groupedSections', fn ($groups) => $groups->map->values()->map->all()->all() === [
+                'BSIT · 3rd year' => ['BSIT-3A', 'BSIT-3B'],
+                'BSIT · 4th year' => ['BSIT-4B'],
+            ])
+            ->assertSee('from the student list');
+    }
+
     public function test_the_experts_page_offers_it_for_a_capsa(): void
     {
         $this->actingAs($this->admin(), 'expert');
