@@ -5,10 +5,11 @@ namespace Tests\Feature;
 use App\Models\CapstoneExpert;
 use App\Models\Student;
 use App\Models\StudentRoster;
-use App\Models\Term;
 use App\Models\StudentSchoolYear;
+use App\Models\Term;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Tests\TestCase;
@@ -51,6 +52,39 @@ class StudentListUploadTest extends TestCase
     }
 
     private const HEADER = ['Email', 'Name', 'Student No.', 'Course/Program', 'Year', 'Section'];
+
+    /** Every student is added with their number: a row without one is skipped and named. */
+    public function test_a_new_student_without_a_student_number_is_skipped(): void
+    {
+        $this->actingAs($this->capsa(), 'expert');
+
+        $response = $this->post(route('capsa.rosters.students.store'), [
+            'file' => $this->listFile(self::HEADER, [
+                ['numbered@my.cspc.edu.ph', 'Cruz, Ana B.', '221001136', 'BSIT', 4, 'B'],
+                ['nonumber@my.cspc.edu.ph', 'Reyes, Ben C.', '', 'BSIT', 4, 'B'],
+            ]),
+        ])->assertOk();
+
+        $this->assertSame(1, $response->json('skipped'));
+        $this->assertStringContainsString("Row 3: 'nonumber@my.cspc.edu.ph' has no student number - skipped.", implode(' ', $response->json('errors') ?? []));
+        $this->assertTrue(Student::where('email', 'numbered@my.cspc.edu.ph')->exists());
+        $this->assertFalse(Student::where('email', 'nonumber@my.cspc.edu.ph')->exists());
+    }
+
+    /** A student already on file with a number may be on a list that leaves the number out. */
+    public function test_a_row_without_a_number_still_updates_a_student_who_has_one(): void
+    {
+        $this->actingAs($this->capsa(), 'expert');
+        $student = Student::create(['email' => 'known@my.cspc.edu.ph', 'f_name' => 'K', 'l_name' => 'N', 'student_number' => '221001137']);
+
+        $this->post(route('capsa.rosters.students.store'), [
+            'file' => $this->listFile(self::HEADER, [['known@my.cspc.edu.ph', 'N, K', '', 'BSIT', 4, 'B']]),
+        ])->assertOk()->assertJson(['skipped' => 0]);
+
+        $student->refresh();
+        $this->assertSame('221001137', $student->student_number);
+        $this->assertSame('Bachelor of Science in Information Technology', $student->course);
+    }
 
     public function test_it_fills_in_the_blanks_on_an_account_that_signed_in_first(): void
     {
@@ -465,8 +499,8 @@ class StudentListUploadTest extends TestCase
 
         $this->assertSame(1, Student::where('email', 'junk@my.cspc.edu.ph')->count());
         $this->assertSame(
-            \App\Models\Term::currentSchoolYear(),
-            \App\Models\StudentRoster::where('email', 'junk@my.cspc.edu.ph')->value('school_year'),
+            Term::currentSchoolYear(),
+            StudentRoster::where('email', 'junk@my.cspc.edu.ph')->value('school_year'),
             'the term that is running, not the one typed in the file'
         );
     }
@@ -626,7 +660,7 @@ class StudentListUploadTest extends TestCase
         $response->assertOk();
         $response->assertDownload('Student List Template.xlsx');
 
-        $sheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($response->baseResponse->getFile()->getPathname())
+        $sheet = IOFactory::load($response->baseResponse->getFile()->getPathname())
             ->getActiveSheet()
             ->toArray();
 
@@ -649,7 +683,7 @@ class StudentListUploadTest extends TestCase
     {
         $this->actingAs($this->capsa(), 'expert');
 
-        $headings = \PhpOffice\PhpSpreadsheet\IOFactory::load(
+        $headings = IOFactory::load(
             $this->get(route('capsa.rosters.students.template'))->baseResponse->getFile()->getPathname()
         )->getActiveSheet()->toArray()[0];
 
