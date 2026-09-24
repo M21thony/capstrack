@@ -71,7 +71,8 @@ class SuggestionLabelsTest extends TestCase
         // markup they emit, not the class name, which is also a CSS rule.
         $drawn = 0;
 
-        foreach (['duplication.blade.php', 'duplication/report.blade.php'] as $view) {
+        // The report draws its cards from one partial.
+        foreach (['duplication.blade.php', 'duplication/_expert.blade.php'] as $view) {
             $drawn += substr_count(
                 file_get_contents(resource_path('views/student/'.$view)),
                 'class="sx-role">Recommended '

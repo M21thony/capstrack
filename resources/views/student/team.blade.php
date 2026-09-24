@@ -1219,7 +1219,7 @@
         <span id="rrm-hint">At least {{ \App\Models\MemberLeaveRequest::REASON_MIN }} characters. Your team sees this too.</span>
         <span id="rrm-count" style="white-space:nowrap;">0 / 1000</span>
       </div>
-      <div id="rrm-error" role="alert" style="display:none;margin-top:8px;padding:8px 10px;border-radius:8px;background:var(--red-bg);border:1px solid rgba(239,68,68,0.3);color:var(--red);font-size:12px;font-weight:600;"></div>
+      <div id="rrm-error" role="alert" style="display:none;margin-top:6px;font-size:12px;color:#ef4444;"></div>
       <ul id="rrm-effects" style="margin:12px 0 0;padding-left:18px;font-size:12px;color:var(--text2);line-height:1.7;"></ul>
       <div style="display:flex;gap:10px;margin-top:18px;">
         <button type="submit" class="btn-primary" id="rrm-submit" style="flex:1;">Send to CaPSA</button>

@@ -6,6 +6,7 @@ use App\Models\CapstoneExpert;
 use App\Models\Role;
 use App\Models\Student;
 use App\Models\StudentSchoolYear;
+use App\Models\Team;
 use App\Models\Term;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -75,6 +76,39 @@ class CapsaStudentCrudTest extends TestCase
             'student_id' => $student->student_id,
             'school_year' => Term::currentSchoolYear(),
         ]);
+    }
+
+    /**
+     * A student added by hand and one from the uploaded class list are
+     * classmates. The hand-added one used to be saved as "BSIT" and the
+     * uploaded one under the full course name, and classmates are matched on
+     * that column - so a leader could not see, or fill an open slot with,
+     * the student their CaPSA had just added.
+     */
+    public function test_a_hand_added_student_is_a_classmate_of_the_uploaded_ones(): void
+    {
+        $this->actingAs($this->capsa(), 'expert')
+            ->postJson(route('capsa.students.store'), [
+                'email' => 'n.enriquez@my.cspc.edu.ph', 'f_name' => 'Nadine', 'l_name' => 'Enriquez', 'student_number' => '2023-0419',
+                'course' => 'BSIT', 'year' => 4, 'section' => 'A',
+            ])
+            ->assertStatus(201);
+
+        $added = Student::whereRaw('LOWER(email) = ?', ['n.enriquez@my.cspc.edu.ph'])->firstOrFail();
+        $this->assertSame('Bachelor of Science in Information Technology', $added->course);
+
+        // A leader from the uploaded list, with a team and a slot to fill.
+        $leader = Student::create([
+            'email' => 'leader@my.cspc.edu.ph', 'f_name' => 'Lea', 'l_name' => 'Der',
+            'course' => 'Bachelor of Science in Information Technology', 'year_section' => '4th · A',
+        ]);
+        $team = Team::create(['team_name' => 'Slots', 'leader_id' => $leader->student_id, 'team_status' => 'Active']);
+        StudentSchoolYear::create(['student_id' => $leader->student_id, 'team_id' => $team->team_id, 'school_year' => Term::currentSchoolYear()]);
+
+        $ids = collect($this->actingAs($leader, 'web')->getJson(route('team.available-classmates'))->assertOk()->json('classmates'))
+            ->pluck('student_id')->map(fn ($id) => (int) $id);
+
+        $this->assertContains($added->student_id, $ids->all());
     }
 
     /** Taking somebody back does not leave them without one either. */

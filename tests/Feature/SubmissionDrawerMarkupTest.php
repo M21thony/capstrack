@@ -10,10 +10,9 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * Handing in a file happens where the student already is: the Document
- * Submission page from the menu, or the form opened in place under a line on
- * Progress or in the Review Viewer. The in-place form is fetched, so asked for
- * that way the route answers with the form alone.
+ * Every upload opens the same small pop-up over the page the student is on.
+ * The Document Submission page carries no form of its own - just what the
+ * team has sent and a button that opens the pop-up.
  */
 class SubmissionDrawerMarkupTest extends TestCase
 {
@@ -34,19 +33,7 @@ class SubmissionDrawerMarkupTest extends TestCase
         ]);
     }
 
-    public function test_opened_in_place_the_route_answers_with_the_short_form_alone(): void
-    {
-        $response = $this->actingAs($this->student)
-            ->get(route('student.submission', ['inline' => 1]), ['X-Requested-With' => 'XMLHttpRequest'])
-            ->assertOk();
-
-        $response->assertSee('id="submission-form-root"', false);
-        $response->assertSee('data-mode="inline"', false);
-        $response->assertSee('data-submission-close', false);
-        $this->assertStringNotContainsString('<html', $response->getContent());
-    }
-
-    public function test_from_the_menu_it_is_a_page_with_the_teams_submissions(): void
+    public function test_the_page_has_no_form_only_the_submissions_and_a_button(): void
     {
         CapstoneDocument::create([
             'student_id' => $this->student->student_id, 'file_name' => 'Chapter1_final', 'chapter' => 'Chapter 1',
@@ -55,23 +42,34 @@ class SubmissionDrawerMarkupTest extends TestCase
 
         $response = $this->actingAs($this->student)->get(route('student.submission'))->assertOk();
 
-        $this->assertStringContainsString('<html', $response->getContent());
-        $response->assertSee('data-mode="page"', false);
         $response->assertSee("Your team's submissions", false);
         $response->assertSee('Chapter1_final');
         $response->assertSee('version 2');
-        // Nothing to cancel on its own page.
-        $response->assertDontSee('data-submission-close', false);
+        $response->assertSee("window.openSubmission('', this)", false);
+        $response->assertSee('Submit a document');
+        $response->assertDontSee('id="submission-form-root"', false);
+        $response->assertDontSee('id="dropZone"', false);
+        $response->assertDontSee('data-open-upload', false);
     }
 
-    public function test_every_student_page_can_open_the_form_but_does_not_carry_it(): void
+    public function test_the_old_in_place_form_is_gone(): void
+    {
+        $this->actingAs($this->student)
+            ->get(route('student.submission', ['inline' => 1]), ['X-Requested-With' => 'XMLHttpRequest'])
+            ->assertOk()
+            ->assertDontSee('id="submission-form-root"', false)
+            ->assertDontSee('data-mode="inline"', false);
+    }
+
+    public function test_every_student_page_can_open_the_pop_up(): void
     {
         $response = $this->actingAs($this->student)->get(route('student.dashboard'))->assertOk();
 
-        $response->assertSee('name="submission-form-url"', false);
+        $response->assertSee('id="upload-config"', false);
+        $response->assertSee(json_encode(route('student.submission.plan')), false);
+        $response->assertSee(json_encode(route('student.submission.store')), false);
         $response->assertSee('id="submission-toast"', false);
+        $response->assertDontSee('name="submission-form-url"', false);
         $response->assertDontSee('id="submission-form-root"', false);
-        // The slide-in panel is gone.
-        $response->assertDontSee('id="submission-drawer"', false);
     }
 }

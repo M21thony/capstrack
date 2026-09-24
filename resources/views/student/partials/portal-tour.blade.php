@@ -18,10 +18,9 @@
         ];
     })->values();
 
-    // Where the last step sends them: the first thing they have not done.
-    // Someone who joined a team through an invite before ever seeing this
-    // does not need pointing at Team Management.
-    $studentHasTeamForTour = $studentHasTeam ?? false;
+    // Where the last step sends them. Always the team first: experts, titles
+    // and documents all hang off it, and a team already formed is still
+    // where its members, invites and settings live.
 @endphp
 
 @include('partials.portal-tour', [
@@ -29,6 +28,6 @@
     'tourSteps' => $studentTourSteps,
     'tourAutoOpen' => $student->needsPortalTour(),
     'tourSaveUrl' => route('student.tour.update'),
-    'tourNextUrl' => route($studentHasTeamForTour ? 'student.experts' : 'student.team'),
-    'tourNextLabel' => $studentHasTeamForTour ? 'Choose your experts' : 'Form your team',
+    'tourNextUrl' => route('student.team'),
+    'tourNextLabel' => 'Create your team in Team Management',
 ])
