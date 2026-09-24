@@ -135,6 +135,11 @@ class MobileTabBarTest extends TestCase
         // The developers' credit is added at the foot of every portal page.
         $this->assertStringContainsString('Jolina · John Kenneth · Mark Anthony · Ian Cyrus · Alexa Nicole', $html);
         $this->assertStringContainsString("credits.className = 'legal-credits sys-credits';", $html);
+        // On a short page it is held at the bottom, not left under the last card,
+        // and re-measured as the page loads and changes.
+        $this->assertStringContainsString("credits.style.marginTop = (BASE + free) + 'px';", $html);
+        $this->assertStringContainsString('new ResizeObserver(refit).observe(content);', $html);
+        $this->assertStringContainsString('}).observe(main, { childList: true, subtree: true', $html);
     }
 
     /** The two expert status pages have no portal sidebar, so they carry it themselves. */
