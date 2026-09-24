@@ -206,6 +206,7 @@
 .ppf-wordcount.is-ok { background: var(--green-bg, rgba(22,163,74,.08)); color: var(--green); }
 .ppf-wordcount.is-off { background: var(--amber-bg, rgba(217,119,6,.08)); color: var(--amber, #b45309); }
 .ppf .pp-tags { margin: 0; }
+.ppf #pp-sdgs { margin-bottom: 14px; }
 /* The chips are labels too, so the old grey-capitals label rule reached
    them; they read as the words they are. */
 .ppf .pp-pill { display: inline-block; margin: 0; font-size: inherit; font-weight: inherit; text-transform: none; letter-spacing: 0; color: inherit; }
@@ -677,7 +678,7 @@
         // field never costs them the rest of the form.
         $ppOld = [
           'title' => old('title', ''),
-          'sdg_goals' => old('sdg_goals', ''),
+          'sdg_goals' => \App\Support\SustainableDevelopmentGoals::split(old('sdg_goals', [])),
           'problem_statement' => old('problem_statement', ''),
           'proposed_solution' => old('proposed_solution', ''),
           'scope' => old('scope', ''),
@@ -689,15 +690,7 @@
           'client_position' => old('client_position', ''),
         ];
         $ppOldTags = (array) old('tags', []);
-        $ppSdgs = [
-          'SDG 1 – No Poverty', 'SDG 2 – Zero Hunger', 'SDG 3 – Good Health and Well-being',
-          'SDG 4 – Quality Education', 'SDG 5 – Gender Equality', 'SDG 6 – Clean Water and Sanitation',
-          'SDG 7 – Affordable and Clean Energy', 'SDG 8 – Decent Work and Economic Growth',
-          'SDG 9 – Industry, Innovation and Infrastructure', 'SDG 10 – Reduced Inequality',
-          'SDG 11 – Sustainable Cities and Communities', 'SDG 12 – Responsible Consumption and Production',
-          'SDG 13 – Climate Action', 'SDG 14 – Life Below Water', 'SDG 15 – Life on Land',
-          'SDG 16 – Peace, Justice and Strong Institutions', 'SDG 17 – Partnerships for the Goals',
-        ];
+        $ppSdgs = \App\Support\SustainableDevelopmentGoals::ALL;
         $ppErr = fn ($key) => $errors->first($key) ?: $errors->first($key.'.*');
         // Refused after the checks passed (a repeated title, a missing scan):
         // the details still come back, with the reason on top of the form.
@@ -756,16 +749,20 @@
                 <div class="pp-error" id="title-error">{{ $ppErr('title') }}</div>
               </div>
 
-              <div class="pp-field{{ $ppErr('sdg_goals') ? ' has-error' : '' }}" data-field="sdg_goals">
-                <label for="sdg">UN Sustainable Development Goal</label>
-                <select name="sdg_goals" id="sdg" onchange="clearFieldError(this)" aria-describedby="sdg-error">
-                  <option value="" disabled {{ $ppOld['sdg_goals'] ? '' : 'selected' }}>Select a goal…</option>
+              {{-- A study often serves more than one goal, so each is a tick. --}}
+              <fieldset class="pp-field pp-tags{{ $ppErr('sdg_goals') ? ' has-error' : '' }}" id="pp-sdgs" data-field="sdg_goals" aria-describedby="sdg-error">
+                <legend>UN Sustainable Development Goals</legend>
+                <div class="pp-help" style="margin:0 0 8px"><span>Tick every goal your study serves.</span><span class="pp-counter" id="pp-sdg-count" aria-live="polite">0 picked</span></div>
+                <div class="pp-pills">
                   @foreach ($ppSdgs as $sdg)
-                    <option value="{{ $sdg }}" @selected($ppOld['sdg_goals'] === $sdg)>{{ $sdg }}</option>
+                    <label class="pp-pill">
+                      <input type="checkbox" name="sdg_goals[]" value="{{ $sdg }}" onchange="updateSdgCount(); clearFieldError(this)" @checked(in_array($sdg, $ppOld['sdg_goals'], true))>
+                      <span>{{ $sdg }}</span>
+                    </label>
                   @endforeach
-                </select>
+                </div>
                 <div class="pp-error" id="sdg-error">{{ $ppErr('sdg_goals') }}</div>
-              </div>
+              </fieldset>
 
               <div class="pp-field{{ $ppErr('research_agenda') ? ' has-error' : '' }}" data-field="research_agenda">
                 <label for="agenda-input">Research agenda and priority areas</label>
@@ -1154,7 +1151,6 @@ function ppFormIsComplete(form) {
   }
 
   const needed = [
-    ['sdg_goals', 'sdg', 'Choose a Sustainable Development Goal.'],
     ['problem_statement', 'problem', 'Fill in the problem statement.'],
     ['proposed_solution', 'solution', 'Fill in the proposed solution.'],
     ['scope', 'scope', 'Fill in the scope.'],
@@ -1169,6 +1165,10 @@ function ppFormIsComplete(form) {
     const el = document.getElementById(n[1]);
     if (el && !String(el.value || '').trim()) problems.push([n[0], n[2]]);
   });
+
+  if (!form.querySelectorAll('input[name="sdg_goals[]"]:checked').length) {
+    problems.unshift(['sdg_goals', 'Choose at least one Sustainable Development Goal.']);
+  }
 
   // Something typed into the agenda box but not added yet still counts:
   // it is what the student meant, and losing it on save would be a surprise.
@@ -1255,7 +1255,7 @@ let agendaSuggested = [];
 // refresh brought back a research agenda the student had removed - and wiped
 // every other edit with it. Kept in this browser only; saving the
 // pre-proposal, or clearing the scan, lets it go.
-const PP_DRAFT_FIELDS = ['title', 'sdg', 'problem', 'solution', 'scope', 'limitations', 'sdm',
+const PP_DRAFT_FIELDS = ['title', 'problem', 'solution', 'scope', 'limitations', 'sdm',
   'clients', 'client_address', 'client_representative', 'client_position'];
 let ppDraftReady = false;
 
@@ -1267,8 +1267,9 @@ function saveDraft() {
   const fields = {};
   PP_DRAFT_FIELDS.forEach(function (f) { const el = document.getElementById(f); if (el) fields[f] = el.value; });
   const tags = Array.from(document.querySelectorAll('#pp-tags input[name="tags[]"]:checked')).map(function (b) { return b.value; });
+  const sdgs = Array.from(document.querySelectorAll('#pp-sdgs input[name="sdg_goals[]"]:checked')).map(function (b) { return b.value; });
   try {
-    localStorage.setItem(ppDraftKey(id), JSON.stringify({ fields: fields, agenda: agendaTags, tags: tags }));
+    localStorage.setItem(ppDraftKey(id), JSON.stringify({ fields: fields, agenda: agendaTags, tags: tags, sdgs: sdgs }));
     ppAutosaveStatus('Saved on this device · ' + new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }), 'saved');
   } catch (e) {
     // Private browsing or storage full: the form still works, it just is not kept.
@@ -1308,6 +1309,10 @@ function applyDraft(draft) {
     if (el) el.value = value;
   });
   document.querySelectorAll('#pp-tags input[name="tags[]"]').forEach(function (b) { b.checked = (draft.tags || []).includes(b.value); });
+  // A draft from before goals were ticks kept one goal as a field.
+  const sdgs = Array.isArray(draft.sdgs) ? draft.sdgs : (draft.fields && draft.fields.sdg ? [draft.fields.sdg] : []);
+  document.querySelectorAll('#pp-sdgs input[name="sdg_goals[]"]').forEach(function (b) { b.checked = sdgs.includes(b.value); });
+  updateSdgCount();
   agendaTags = Array.isArray(draft.agenda) ? draft.agenda.slice() : [];
 }
 
@@ -1426,23 +1431,32 @@ renderAgendaTags();
 updateTagPills();
 updateWordCount();
 
-function selectSdgOption(extractedValue) {
-  // The extraction prompt allows for multiple SDGs ("Goal(s)"), so the AI
-  // can return an array even though this dropdown only holds one selection -
-  // normalize to a single string (using the first value) before matching,
-  // rather than crashing on .toLowerCase() when it's not already a string.
-  if (Array.isArray(extractedValue)) {
-    extractedValue = extractedValue[0];
+function updateSdgCount() {
+  const count = document.getElementById('pp-sdg-count');
+  if (count) count.textContent = document.querySelectorAll('#pp-sdgs input[name="sdg_goals[]"]:checked').length + ' picked';
+}
+updateSdgCount();
+
+// Tick every goal the PDF names. The extraction may give a list, one line
+// ("SDG 4 – Quality Education, SDG 9 – ..."), or only numbers ("SDG 4 and 9"),
+// so each "SDG n" found is ticked, and anything else is matched by name.
+function selectSdgOptions(extracted) {
+  const boxes = Array.from(document.querySelectorAll('#pp-sdgs input[name="sdg_goals[]"]'));
+  boxes.forEach(function (b) { b.checked = false; });
+  const text = (Array.isArray(extracted) ? extracted : [extracted])
+    .filter(function (v) { return typeof v === 'string'; })
+    .join(', ');
+  if (text) {
+    const numbers = [];
+    const re = /SDG\s*#?\s*(\d{1,2})/gi;
+    let m;
+    while ((m = re.exec(text)) !== null) numbers.push(m[1]);
+    boxes.forEach(function (b) {
+      const own = b.value.match(/^SDG (\d+) /)[1];
+      if (numbers.includes(own) || text.toLowerCase().includes(b.value.toLowerCase())) b.checked = true;
+    });
   }
-  if (typeof extractedValue !== 'string' || !extractedValue) return;
-  const select = document.getElementById('sdg');
-  const options = Array.from(select.options);
-  let match = options.find(o => o.value.toLowerCase() === extractedValue.toLowerCase());
-  if (!match) {
-    const numMatch = extractedValue.match(/SDG\s*(\d+)/i);
-    if (numMatch) match = options.find(o => o.value.toLowerCase().startsWith('sdg ' + numMatch[1] + ' '));
-  }
-  if (match) select.value = match.value;
+  updateSdgCount();
 }
 
 let checkAbortController = null;
@@ -1579,7 +1593,10 @@ function cancelCheck() {
   // than anything Blade complains about.
   $lastCheckPayload = [
       'duplication_check_id' => $lastCheck->id,
-      'concepts' => $lastCheck->concepts,
+      // A scan saved before bulleted items were split apart.
+      'concepts' => array_merge((array) $lastCheck->concepts, [
+          'research_agenda' => \App\Support\ResearchAgenda::items(($lastCheck->concepts ?? [])['research_agenda'] ?? []),
+      ]),
       'top_score' => $lastCheck->top_score,
       'verdict' => $lastCheck->verdict,
       'matches' => $lastCheck->matches,
@@ -1746,7 +1763,7 @@ function renderResult(data, fileName, onLoad) {
     document.querySelectorAll('#pp-tags input[name="tags[]"]').forEach(b => { b.checked = false; });
     updateTagPills();
     updateWordCount();
-    selectSdgOption(data.concepts.sdg_goals);
+    selectSdgOptions(data.concepts.sdg_goals);
 
     agendaSuggested = pdfAgenda(data);
     agendaTags = agendaSuggested.slice();

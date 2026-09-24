@@ -905,7 +905,7 @@
         'Address of the organization' => $approvedProposal->client_address,
         'Representative' => $approvedProposal->client_representative,
         'Their position' => $approvedProposal->client_position,
-        'Research agenda' => $approvedProposal->research_agenda,
+        'Research agenda' => \App\Support\ResearchAgenda::items($approvedProposal->research_agenda),
         'SDG goals' => $approvedProposal->sdg_goals,
       ] as $label => $value)
         @if(filled($value))

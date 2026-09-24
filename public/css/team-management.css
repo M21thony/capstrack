@@ -278,6 +278,8 @@
 .tmx .ans{display:grid;grid-template-columns:max-content minmax(0,1fr);gap:5px 14px;margin:0;font-size:12.5px;line-height:1.5}
 .tmx .ans dt{color:var(--mut)}
 .tmx .ans dd{margin:0;color:var(--ink);overflow-wrap:anywhere}
+.tmx .ans .ans-list{margin:0;padding-left:18px;display:grid;gap:3px}
+.tmx .ans .ans-list li{padding-left:2px}
 @media (max-width:520px){
 .tmx .ans{grid-template-columns:1fr}
 .tmx .ans dd{margin-bottom:4px}

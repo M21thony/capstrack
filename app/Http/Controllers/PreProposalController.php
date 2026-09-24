@@ -12,7 +12,9 @@ use App\Services\OllamaSSHClient;
 use App\Services\RecipientResolver;
 use App\Services\SimilarityService;
 use App\Support\ProjectTags;
+use App\Support\ResearchAgenda;
 use App\Support\StudentTeam;
+use App\Support\SustainableDevelopmentGoals;
 use App\Support\TitleRevision;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -70,34 +72,9 @@ class PreProposalController extends Controller
                 && ! $this->isTurnedIn($team),
             'recommendedProposals' => self::RECOMMENDED_PROPOSALS,
             'archiveTotal' => ArchivedDocument::count(),
-            // The most recent check this team ran that has not been turned
-            // into a saved pre-proposal yet.
-            //
-            // runCheck() writes the result to the database before it answers,
-            // so it has always survived - it simply was not drawn again, and
-            // every reload therefore looked like the scan had been thrown
-            // away. Unsubmitting reloads. So does a rejected form. So does
-            // pressing back.
-            'lastCheck' => $team
-                ? DuplicationCheck::whereIn(
-                    'student_s_y_id',
-                    StudentSchoolYear::where('team_id', $team->team_id)->pluck('s_y_id')
-                )
-                    // Any pre-proposal, not just this team's. A check is
-                    // recorded against the student, so leaving a team and
-                    // making a new one carries the old scan across - while
-                    // the pre-proposal it fed stays with the team they left.
-                    // Excluding only this team's put that spent scan back on
-                    // the page, where clearing it was refused and the reason
-                    // named a document that is not there to remove.
-                    ->whereNotExists(function ($q) {
-                        $q->selectRaw(1)
-                            ->from('capstone_pre_proposals')
-                            ->whereColumn('capstone_pre_proposals.duplication_check_id', 'duplication_checks.id');
-                    })
-                    ->latest('id')
-                    ->first()
-                : null,
+            // The scan this student is working on: their own latest, until it
+            // is saved as a pre-proposal. See openScan().
+            'lastCheck' => $team ? $this->openScan($request) : null,
             'reviewStarted' => (bool) $team && $this->reviewStarted($team),
             // After the Pre-proposal Defense: a title passed with revision can
             // be reworded until the final title form is in; a team sent back
@@ -557,9 +534,15 @@ class PreProposalController extends Controller
 
         $slot = $this->nextAvailableSlot($team);
 
+        // A single goal, from a page opened before a study could name several.
+        if (is_string($request->input('sdg_goals'))) {
+            $request->merge(['sdg_goals' => SustainableDevelopmentGoals::split($request->input('sdg_goals'))]);
+        }
+
         $validated = $request->validate([
             'title' => $this->titleRule(),
-            'sdg_goals' => ['required', 'string', 'max:150'],
+            'sdg_goals' => ['required', 'array', 'min:1'],
+            'sdg_goals.*' => ['required', 'string', 'distinct', 'max:150'],
             'research_agenda' => ['required', 'array', 'min:1'],
             'research_agenda.*' => ['required', 'string'],
             'problem_statement' => ['required', 'string'],
@@ -579,6 +562,8 @@ class PreProposalController extends Controller
             'tags.min' => 'Pick at least one tag for what kind of project this is.',
             'tags.max' => 'Pick at most '.ProjectTags::MAX.' tags.',
             'tags.*.in' => 'Pick tags from the list.',
+            'sdg_goals.required' => 'Choose at least one Sustainable Development Goal.',
+            'sdg_goals.min' => 'Choose at least one Sustainable Development Goal.',
             'research_agenda.required' => 'Add at least one research agenda or priority area.',
             'title.required' => 'Give your pre-proposal a title.',
         ]);
@@ -614,8 +599,8 @@ class PreProposalController extends Controller
             [
                 'duplication_check_id' => $check->id,
                 'title' => $validated['title'],
-                'sdg_goals' => $validated['sdg_goals'],
-                'research_agenda' => $validated['research_agenda'],
+                'sdg_goals' => SustainableDevelopmentGoals::join($validated['sdg_goals']),
+                'research_agenda' => ResearchAgenda::items($validated['research_agenda']),
                 'problem_statement' => $validated['problem_statement'],
                 'proposed_solution' => $validated['proposed_solution'],
                 'scope' => $validated['scope'],
@@ -928,6 +913,33 @@ class PreProposalController extends Controller
                 ->orWhere(fn ($q) => $q->whereNotNull('rejection_reason')
                     ->when($roundStart, fn ($q) => $q->where('submitted_at', '>=', $roundStart))))
             ->exists();
+    }
+
+    /**
+     * The scan the signed-in student is working on: the latest one they ran,
+     * while it has not been saved as a pre-proposal.
+     *
+     * runCheck() writes the result before it answers, so a reload, Back, an
+     * unsubmit or a rejected form draws it again rather than losing it. It
+     * used to be the team's latest unsaved scan, which put one member's scan
+     * on every teammate's page, and once that scan was saved it brought back
+     * an older one the team had already moved on from. A newer scan replaces
+     * an older one, and a saved one is done with.
+     */
+    private function openScan(Request $request): ?DuplicationCheck
+    {
+        $latest = DuplicationCheck::whereIn(
+            'student_s_y_id',
+            StudentSchoolYear::where('student_id', $request->user()->student_id)->select('s_y_id')
+        )
+            ->latest('id')
+            ->first();
+
+        // Any pre-proposal, not just this team's: a scan saved by a team the
+        // student has since left is spent too.
+        return $latest && ! CapstonePreProposal::where('duplication_check_id', $latest->id)->exists()
+            ? $latest
+            : null;
     }
 
     private function currentTeam(Request $request): ?Team

@@ -68,4 +68,20 @@ class SimilarityServiceResearchAgendaTest extends TestCase
 
         $this->assertSame(['Applications and Systems Development', 'e-Services'], $concepts['research_agenda']);
     }
+
+    public function test_one_entry_holding_several_bulleted_items_is_split_apart(): void
+    {
+        $this->mock(OllamaSSHClient::class, function ($mock) {
+            $mock->shouldReceive('generate')->andReturn(json_encode([
+                'title' => 'A Title', 'main_topic' => 'Topic', 'domain' => 'Web System', 'keywords' => ['a'],
+                'problem_statement' => 'p', 'proposed_solution' => 's', 'scope' => 'sc', 'limitations' => 'l',
+                'sdg_goals' => 'SDG 4', 'sdm' => 'Agile', 'technologies' => [], 'target_users' => 'Students',
+                'research_agenda' => ["• Applications and Systems Development • e-Services\n● Data Science"],
+            ]));
+        });
+
+        $concepts = app(SimilarityService::class)->extractKeyConcepts('some pdf text');
+
+        $this->assertSame(['Applications and Systems Development', 'e-Services', 'Data Science'], $concepts['research_agenda']);
+    }
 }
