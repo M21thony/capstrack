@@ -18,7 +18,8 @@
   $top = (int) round((float) ($title['duplication']['top_score'] ?? 0));
   $highlySimilar = collect($matches)->filter(fn ($m) => (float) ($m['score'] ?? 0) >= 65)->count();
   $answers = [
-    'SDG' => is_array($title['sdg_goals']) ? implode(', ', $title['sdg_goals']) : $title['sdg_goals'],
+    'SDG' => \App\Support\SustainableDevelopmentGoals::split($title['sdg_goals']),
+    'Research agenda and priority areas' => $title['research_agenda'] ?? [],
     'Problem statement' => $title['problem_statement'],
     'Proposed solution' => $title['proposed_solution'],
     'Scope' => $title['scope'],
@@ -70,7 +71,21 @@
     <h4>Pre-proposal form</h4>
     <dl class="ans">
       @foreach ($answers as $label => $value)
-        <dt>{{ $label }}</dt><dd>{{ filled($value) ? $value : '—' }}</dd>
+        <dt>{{ $label }}</dt>
+        <dd>
+          @if (is_array($value) && count($value) > 1)
+            {{-- One line each, the way the form lists them. --}}
+            <ul class="ans-list">
+              @foreach ($value as $item)
+                <li>{{ $item }}</li>
+              @endforeach
+            </ul>
+          @elseif (is_array($value))
+            {{ $value[0] ?? '—' }}
+          @else
+            {{ filled($value) ? $value : '—' }}
+          @endif
+        </dd>
       @endforeach
     </dl>
   </div>
