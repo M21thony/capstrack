@@ -132,7 +132,7 @@ class SubmissionController extends Controller
         // both told they were on Version 1 of it.
         // A file sent for a checklist line is a revision of that line whatever
         // it is called, so the line is the grouping key when there is one.
-        $lastVersion = CapstoneDocument::whereIn('student_id', StudentTeam::memberIdsFor($studentId))
+        $lastVersion = CapstoneDocument::ofTeam((int) $studentYear->team_id)
             ->when(
                 $item,
                 fn ($query) => $query->where('deliverable_id', $item->id),
@@ -146,6 +146,7 @@ class SubmissionController extends Controller
 
         $document = CapstoneDocument::create([
             'student_id' => $studentId,
+            'team_id' => $studentYear->team_id,
             'file_name' => $title,
             'chapter' => $chapter,
             'deliverable_id' => $item?->id,
@@ -254,14 +255,14 @@ class SubmissionController extends Controller
 
         $file = $request->file('file');
         $item = Deliverable::active()->find($request->integer('deliverable_id'));
-        $team = StudentTeam::memberIdsFor(Auth::id());
+        $teamId = StudentTeam::idFor(Auth::id());
 
-        if (! $item || $team === [] || strtolower($file->getClientOriginalExtension()) !== 'pdf') {
+        if (! $item || $teamId === null || strtolower($file->getClientOriginalExtension()) !== 'pdf') {
             return response()->json(['warnings' => []]);
         }
 
         return response()->json([
-            'warnings' => RevisionCheck::warnings($file->getRealPath(), $file->getClientOriginalName(), $item, $team),
+            'warnings' => RevisionCheck::warnings($file->getRealPath(), $file->getClientOriginalName(), $item, $teamId),
         ]);
     }
 
@@ -276,7 +277,7 @@ class SubmissionController extends Controller
         // Counted across the whole team, not the one account uploading. A
         // chapter is the team's, so two members each sending "Chapter 1" were
         // both told they were on Version 1 of it.
-        $lastVersion = CapstoneDocument::whereIn('student_id', StudentTeam::memberIdsFor($studentId))
+        $lastVersion = CapstoneDocument::forTeamOf($studentId)
             ->when(
                 $chapter,
                 fn ($query) => $query->where('chapter', $chapter),
@@ -422,7 +423,7 @@ class SubmissionController extends Controller
      */
     private function submittedByTeam(int $studentId): Collection
     {
-        return CapstoneDocument::whereIn('student_id', StudentTeam::memberIdsFor($studentId) ?: [$studentId])
+        return CapstoneDocument::forTeamOf($studentId)
             ->with(['deliverable', 'reviews'])
             ->latest('created_at')
             ->take(50)

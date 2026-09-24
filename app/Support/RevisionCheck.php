@@ -36,10 +36,10 @@ class RevisionCheck
     private const NUMBERS = ['one' => 1, 'two' => 2, 'three' => 3, 'four' => 4, 'five' => 5, 'six' => 6];
 
     /**
-     * @param  int[]  $teamStudentIds  whose earlier uploads count as "the last one"
+     * @param  int  $teamId  whose earlier uploads count as "the last one"
      * @return array<int, array{type: string, message: string}>
      */
-    public static function warnings(string $path, string $fileName, Deliverable $item, array $teamStudentIds): array
+    public static function warnings(string $path, string $fileName, Deliverable $item, int $teamId): array
     {
         if ($item->kind !== Deliverable::DOCUMENT) {
             return [];
@@ -62,7 +62,7 @@ class RevisionCheck
             ];
         }
 
-        $last = CapstoneDocument::whereIn('student_id', $teamStudentIds)
+        $last = CapstoneDocument::ofTeam($teamId)
             ->where('deliverable_id', $item->id)
             ->orderByDesc('file_version')
             ->first();
