@@ -108,6 +108,7 @@ class GradingController extends Controller
             return (object) array_merge((array) $row, [
                 'status' => $grade?->status ?? $row->status,
                 'total_score' => $grade?->total_score ?? $row->total_score,
+                'abstained' => $grade !== null && ! empty($grade->abstained),
             ]);
         })
             // Still to grade first, then by date.
@@ -256,6 +257,9 @@ class GradingController extends Controller
         $validator = Validator::make($request->all(), [
             'scores' => ['nullable', 'array'],
             'scores.*' => ['nullable', 'numeric'],
+            // Criteria the panelist abstains from grading - some do for a team that is redefending.
+            'abstained' => ['nullable', 'array'],
+            'abstained.*' => ['integer'],
             // Optional now, and kept only as a panelist's own note to
             // themselves before the briefing. The decision that counts is the
             // panel's, recorded once by the chair - see recordOutcome().
@@ -272,10 +276,18 @@ class GradingController extends Controller
 
         $validated = $validator->validated();
         $rawScores = $validated['scores'] ?? [];
+        $abstainedOn = array_map('intval', $validated['abstained'] ?? []);
         $cleanScores = [];
+        $abstained = [];
         $total = 0.0;
 
         foreach ($rubric->criteria as $criterion) {
+            if (in_array((int) $criterion->criterion_id, $abstainedOn, true)) {
+                $abstained[] = (int) $criterion->criterion_id;
+
+                continue;
+            }
+
             $given = $rawScores[$criterion->criterion_id] ?? null;
 
             if ($given === null || $given === '') {
@@ -299,10 +311,10 @@ class GradingController extends Controller
             $total += (float) $given;
         }
 
-        if ($status === 'submitted' && count($cleanScores) < $rubric->criteria->count()) {
+        if ($status === 'submitted' && count($cleanScores) + count($abstained) < $rubric->criteria->count()) {
             return response()->json([
                 'success' => false,
-                'message' => 'Please score every criterion before submitting.',
+                'message' => 'Score or abstain on every criterion before submitting.',
             ], 422);
         }
 
@@ -314,6 +326,7 @@ class GradingController extends Controller
             [
                 'rubric_id' => $rubric->rubric_id,
                 'scores' => $cleanScores,
+                'abstained' => $abstained,
                 'total_score' => count($cleanScores) > 0 ? $total : null,
                 'verdict' => $validated['verdict'] ?? null,
                 'remarks' => $validated['remarks'] ?? null,
