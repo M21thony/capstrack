@@ -24,6 +24,8 @@
 /* One line only: 65% and above counts as close. Below it the checker says
    nothing, because recommending or rejecting a title is the CaPSA's call. */
 .stateline{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:700;padding:5px 11px;border-radius:7px}
+/* Its display above would otherwise beat [hidden]. */
+.stateline[hidden]{display:none}
 .s-red{background:var(--red-bg);color:var(--red)}
 .s-grey{background:var(--bg4);color:var(--text2)}
 .scalebar{display:flex;height:7px;border-radius:4px;overflow:hidden;background:var(--bg4);min-width:200px;flex:1}

@@ -4,12 +4,14 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Announcement;
+use App\Models\CapstoneExpert;
 use App\Models\Milestone;
 use App\Models\Notification;
 use App\Models\Student;
 use App\Models\StudentMilestone;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
+use App\Services\Notifier;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -214,6 +216,20 @@ class AnnouncementController extends Controller
             foreach ($studentNotifs->chunk(100) as $chunk) {
                 Notification::insert($chunk->toArray());
             }
+        }
+
+        // Experts read these on their dashboard; the bell now tells them one was posted.
+        if (array_intersect(['all', 'expert', 'panel'], $audience)) {
+            CapstoneExpert::where('approved_status', true)
+                ->where('expert_id', '!=', $announcement->admin_id)
+                ->get()
+                ->each(fn (CapstoneExpert $expert) => Notifier::toExpert(
+                    $expert,
+                    'announcement',
+                    $data['title'],
+                    Str::limit(strip_tags($data['body']), 120),
+                    route('instructor.dashboard'),
+                ));
         }
 
         return response()->json($announcement);

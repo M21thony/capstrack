@@ -293,7 +293,7 @@
           <div class="ann-modal-tags" id="annModalTags"></div>
           <div class="ann-modal-footer">
           <div class="ann-modal-sender">
-            <img class="ann-avatar" id="annModalAvatar" src="" alt="">
+            <img class="ann-avatar" id="annModalAvatar" alt="" hidden>
             <span id="annModalName"></span>
           </div>
           <div class="ann-modal-date" id="annModalDate"></div>
@@ -466,8 +466,13 @@ function openAnnModal(el) {
   document.getElementById('annModalDate').textContent = el.dataset.date;
   document.getElementById('annModalName').textContent = el.dataset.adminName;
 
+  // No photo, or one that will not load, shows no picture rather than a
+  // broken-image box beside the sender's name.
   var avatar = document.getElementById('annModalAvatar');
-  avatar.src = el.dataset.adminAvatar;
+  avatar.onerror = function () { avatar.hidden = true; };
+  avatar.hidden = !el.dataset.adminAvatar;
+  if (el.dataset.adminAvatar) avatar.src = el.dataset.adminAvatar;
+  else avatar.removeAttribute('src');
 
   var priority = el.dataset.priority;
   var priorityEl = document.getElementById('annModalPriority');
