@@ -448,6 +448,8 @@ Route::middleware(['auth', 'no.cache', 'track.expert'])->group(function () {
             Route::post('/submission', [SubmissionController::class, 'store'])->name('student.submission.store');
             Route::get('/submission/subject-adviser-folders', [SubmissionController::class, 'subjectAdviserFolders'])->name('student.submission.subject-adviser-folders');
             Route::get('/submission/next-version', [SubmissionController::class, 'nextVersionForTitle'])->name('student.submission.next-version');
+            // Asked before a draft goes up: is this the file they mean to send?
+            Route::post('/submission/warnings', [SubmissionController::class, 'warnings'])->name('student.submission.warnings');
             Route::get('/review', [StudentReviewController::class, 'index'])->name('student.review');
             Route::get('/review/{review}/pdf', [StudentReviewController::class, 'file'])->name('student.review.pdf');
             Route::get('/review/{review}/remarks', [StudentReviewController::class, 'remarks'])->name('student.review.remarks');

@@ -27,6 +27,7 @@
 <div id="submission-form-root"
      data-submit-url="{{ route('student.submission.store') }}"
      data-next-version-url="{{ route('student.submission.next-version') }}"
+     data-check-url="{{ route('student.submission.warnings') }}"
      data-folders-url="{{ route('student.submission.subject-adviser-folders') }}"
      data-csrf="{{ csrf_token() }}">
 
