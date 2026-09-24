@@ -105,6 +105,35 @@ class NotificationPopupsTest extends TestCase
         $this->assertFalse(Notification::where('expert_id', $adviser->expert_id)->exists());
     }
 
+    /** The column's default is the database's clock, which on UTC is eight hours behind Manila. */
+    public function test_a_notification_is_stamped_with_the_apps_clock_not_the_databases(): void
+    {
+        $this->travelTo(now()->setDateTime(2026, 9, 25, 14, 30, 0));
+        $student = Student::factory()->withCompleteProfile()->create();
+
+        $notification = Notification::create(['student_id' => $student->student_id, 'type' => 'team_verified', 'title' => 'Your team is verified', 'is_read' => false]);
+
+        $this->assertSame('2026-09-25 14:30:00', $notification->fresh()->created_at->format('Y-m-d H:i:s'));
+        $this->assertSame('0 seconds ago', $notification->fresh()->created_at->diffForHumans());
+    }
+
+    public function test_the_bell_carries_each_notifications_exact_time_so_its_age_keeps_counting(): void
+    {
+        $this->travelTo(now()->setDateTime(2026, 9, 25, 14, 30, 0));
+        $student = Student::factory()->withCompleteProfile()->create(['tutorial_completed_at' => now()]);
+        $expert = CapstoneExpert::factory()->create(['approved_status' => true, 'is_admin' => false]);
+        Notification::create(['student_id' => $student->student_id, 'type' => 'team_verified', 'title' => 'Your team is verified', 'is_read' => false]);
+        Notification::create(['expert_id' => $expert->expert_id, 'type' => 'document_submitted', 'title' => 'A team sent Chapter 1', 'is_read' => false]);
+
+        $this->actingAs($student)->get(route('student.progress'))
+            ->assertOk()
+            ->assertSee('data-at="2026-09-25T14:30:00+08:00"', false);
+
+        $this->actingAs($expert, 'expert')->get(route('instructor.dashboard'))
+            ->assertOk()
+            ->assertSee('data-at="2026-09-25T14:30:00+08:00"', false);
+    }
+
     public function test_an_expert_who_turned_announcements_off_is_not_told(): void
     {
         $adviser = CapstoneExpert::factory()->create([

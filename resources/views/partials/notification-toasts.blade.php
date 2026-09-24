@@ -80,6 +80,30 @@
     return new DOMParser().parseFromString(html || '', 'text/html').body.textContent.trim();
   }
 
+  // "5 minutes ago", worked out in the browser from the exact moment, so it
+  // keeps counting while the page stays open instead of freezing at load.
+  function ago(iso) {
+    var then = Date.parse(iso);
+    if (isNaN(then)) return '';
+    var s = Math.max(0, Math.round((Date.now() - then) / 1000));
+    if (s < 45) return 'just now';
+    var steps = [[60, 'minute'], [3600, 'hour'], [86400, 'day'], [604800, 'week'], [2629800, 'month'], [31557600, 'year']];
+    for (var i = steps.length - 1; i >= 0; i--) {
+      var n = Math.floor(s / steps[i][0]);
+      if (n >= 1) return n + ' ' + steps[i][1] + (n === 1 ? '' : 's') + ' ago';
+    }
+    return '1 minute ago';
+  }
+
+  function tick() {
+    document.querySelectorAll('#notif-dropdown [data-at], #nt-stack [data-at]').forEach(function (el) {
+      var text = ago(el.dataset.at);
+      if (text && el.textContent !== text) el.textContent = text;
+    });
+  }
+  tick();
+  setInterval(tick, 30000);
+
   var ICONS = {
     announcement: ['rgba(249,115,22,0.14)', '#ea580c', '<path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/>'],
     bell: ['rgba(201,168,44,0.16)', '#8a6e10', '<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>']
@@ -150,7 +174,12 @@
     }
     var foot = document.createElement('div');
     foot.className = 'nt-foot';
-    if (n.time) { var t = document.createElement('span'); t.textContent = n.time; foot.appendChild(t); }
+    if (n.time || n.at) {
+      var t = document.createElement('span');
+      if (n.at) t.dataset.at = n.at;
+      t.textContent = n.at ? ago(n.at) : n.time;
+      foot.appendChild(t);
+    }
     var go = document.createElement('span');
     go.className = 'nt-go';
     go.textContent = n.summary ? 'Open notifications' : 'View';
@@ -221,6 +250,7 @@
           title: q('.notif-item-title'),
           message: q('.notif-item-msg'),
           time: q('.notif-item-time'),
+          at: (item.querySelector('.notif-item-time[data-at]') || { dataset: {} }).dataset.at,
           type: item.dataset.type || '',
           iconNode: item.querySelector('.notif-item-icon')
         };
@@ -240,7 +270,7 @@
           // Anything already on the page, or older than the page itself, is
           // not news: the load above has had its say about those.
           if (inBell(n.id) || (n.created_at && Date.parse(n.created_at) < loadedAt - 120000)) { old.push(n.id); return; }
-          fresh.push({ id: n.id, type: n.type, title: n.title, message: textOf(n.message), time: n.time, link: n.link });
+          fresh.push({ id: n.id, type: n.type, title: n.title, message: textOf(n.message), time: n.time, at: n.created_at, link: n.link });
         });
         remember(old);
         if (fresh.length) { bumpDot(fresh.length); popAll(fresh); }

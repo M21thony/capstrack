@@ -59,7 +59,7 @@
           <div class="notif-item-body">
             <div class="notif-item-title">{{ $notif->title }}</div>
             <div class="notif-item-msg">{!! $notif->message !!}</div>
-            <div class="notif-item-time">{{ $notif->created_at->diffForHumans() }}</div>
+            <div class="notif-item-time" data-at="{{ $notif->created_at->toIso8601String() }}">{{ $notif->created_at->diffForHumans() }}</div>
             <div class="notif-actions" style="display:flex;gap:8px;margin-top:10px;">
               <form method="POST" action="{{ route('team.leadership.update', $notif->id) }}" style="display:inline;" id="leadership-accept-{{ $notif->id }}">
               @method('PATCH')
@@ -85,7 +85,7 @@
         <div class="notif-item-body">
           <div class="notif-item-title">{{ $notif->title }}</div>
           <div class="notif-item-msg">{!! $notif->message !!}</div>
-          <div class="notif-item-time">{{ $notif->created_at->diffForHumans() }}</div>
+          <div class="notif-item-time" data-at="{{ $notif->created_at->toIso8601String() }}">{{ $notif->created_at->diffForHumans() }}</div>
         </div>
       </a>
       @endif
