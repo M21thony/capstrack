@@ -1113,6 +1113,8 @@ function ppFormIsComplete(form) {
   if (!problems.length) {
     const save = document.getElementById('pp-save-btn');
     if (save) { save.disabled = true; save.textContent = 'Saving…'; }
+    // A rejected save comes back with the answers filled in by the server.
+    forgetDraft((document.getElementById('check-id') || {}).value);
     return true;
   }
 
@@ -1171,6 +1173,46 @@ document.addEventListener('input', function (e) {
 // "From your PDF" row, one click from coming back.
 let agendaTags = @json(array_values(array_filter((array) old('research_agenda', []), fn ($v) => is_string($v) && trim($v) !== '')));
 let agendaSuggested = [];
+
+// What the student has typed, kept per scan until it is saved. Drawing the
+// last scan again on load used to fill the form from the PDF once more, so a
+// refresh brought back a research agenda the student had removed - and wiped
+// every other edit with it. Kept in this browser only; saving the
+// pre-proposal, or clearing the scan, lets it go.
+const PP_DRAFT_FIELDS = ['title', 'sdg', 'problem', 'solution', 'scope', 'limitations', 'sdm',
+  'clients', 'client_address', 'client_representative', 'client_position'];
+let ppDraftReady = false;
+
+function ppDraftKey(id) { return 'pp-draft:' + id; }
+
+function saveDraft() {
+  const id = (document.getElementById('check-id') || {}).value;
+  if (!ppDraftReady || !id || !document.getElementById('pp-form')) return;
+  const fields = {};
+  PP_DRAFT_FIELDS.forEach(function (f) { const el = document.getElementById(f); if (el) fields[f] = el.value; });
+  const tags = Array.from(document.querySelectorAll('#pp-tags input[name="tags[]"]:checked')).map(function (b) { return b.value; });
+  try { localStorage.setItem(ppDraftKey(id), JSON.stringify({ fields: fields, agenda: agendaTags, tags: tags })); } catch (e) {}
+}
+
+function loadDraft(id) {
+  try { return JSON.parse(localStorage.getItem(ppDraftKey(id)) || 'null'); } catch (e) { return null; }
+}
+
+function forgetDraft(id) {
+  try { localStorage.removeItem(ppDraftKey(id)); } catch (e) {}
+}
+
+function applyDraft(draft) {
+  Object.entries(draft.fields || {}).forEach(function ([f, value]) {
+    const el = document.getElementById(f);
+    if (el) el.value = value;
+  });
+  document.querySelectorAll('#pp-tags input[name="tags[]"]').forEach(function (b) { b.checked = (draft.tags || []).includes(b.value); });
+  agendaTags = Array.isArray(draft.agenda) ? draft.agenda.slice() : [];
+}
+
+document.addEventListener('input', function (e) { if (e.target.closest && e.target.closest('#pp-form')) saveDraft(); });
+document.addEventListener('change', function (e) { if (e.target.closest && e.target.closest('#pp-form')) saveDraft(); });
 
 function agendaHas(list, text) {
   const key = text.toLowerCase();
@@ -1239,6 +1281,7 @@ function renderAgendaTags() {
     suggestList.appendChild(b);
   });
   suggestWrap.hidden = left.length === 0;
+  saveDraft();
 }
 
 function rememberAgendaSuggestions() {
@@ -1451,7 +1494,7 @@ function cancelCheck() {
 // reload therefore looked like the scan had been thrown away. Unsubmitting
 // reloads. So does a rejected form, or pressing back.
 document.addEventListener('DOMContentLoaded', function () {
-  renderResult(@json($lastCheckPayload), @json($lastCheckName));
+  renderResult(@json($lastCheckPayload), @json($lastCheckName), true);
 });
 @endif
 
@@ -1489,6 +1532,7 @@ function reallyClearScanResult() {
         return;
       }
 
+      forgetDraft(lastCheckData.duplication_check_id);
       showToast(d.message, 'success');
       setTimeout(() => window.location.reload(), 600);
     })
@@ -1501,7 +1545,21 @@ const DUP_REPORT_URL = @json(route('student.duplication.report', ['check' => '__
 const DUP_MATCH_URL = @json(route('student.duplication.similar', ['check' => '__C__', 'rank' => '__R__']));
 const ARCHIVE_TOTAL = {{ $archiveTotal }};
 
-function renderResult(data, fileName) {
+// The research agenda the PDF suggests, as plain distinct strings.
+function pdfAgenda(data) {
+  const items = data && data.concepts && Array.isArray(data.concepts.research_agenda) ? data.concepts.research_agenda : [];
+  return items
+    .map(item => typeof item === 'string' ? item : (item && (item.name || item.title || item.agenda || item.label || item.text || item.value)) || '')
+    .map(s => String(s).trim())
+    .filter((s, i, all) => s.length > 0 && all.findIndex(o => o.toLowerCase() === s.toLowerCase()) === i);
+}
+
+const PP_HAS_OLD_INPUT = @json(session()->hasOldInput('duplication_check_id'));
+
+// onLoad: drawing the last scan again as the page opens, not a fresh scan.
+// Then what the student already typed - a rejected save, or edits kept from
+// before the refresh - is what the form shows, not the PDF again.
+function renderResult(data, fileName, onLoad) {
   lastCheckData = data;
 
   // Everything from here that writes into the Pre-Proposal Details form has
@@ -1560,7 +1618,19 @@ function renderResult(data, fileName) {
     instrList.innerHTML = `<div style="font-size:11px;color:var(--text3);text-align:center;padding:16px 0">No instructor suggestions available</div>`;
   }
 
-  if (ppForm) {
+  const ppDraft = onLoad && ppForm ? loadDraft(data.duplication_check_id) : null;
+
+  if (ppForm && onLoad && PP_HAS_OLD_INPUT) {
+    // A rejected save: the server has put the student's own answers back in.
+    agendaSuggested = pdfAgenda(data);
+    renderAgendaTags();
+  } else if (ppForm && ppDraft) {
+    agendaSuggested = pdfAgenda(data);
+    applyDraft(ppDraft);
+    updateTagPills();
+    updateWordCount();
+    renderAgendaTags();
+  } else if (ppForm) {
     document.getElementById('title').value = data.concepts.title || '';
     document.getElementById('problem').value = data.concepts.problem_statement || '';
     document.getElementById('solution').value = data.concepts.proposed_solution || '';
@@ -1577,16 +1647,8 @@ function renderResult(data, fileName) {
     updateWordCount();
     selectSdgOption(data.concepts.sdg_goals);
 
-    if (Array.isArray(data.concepts.research_agenda) && data.concepts.research_agenda.length) {
-      agendaSuggested = data.concepts.research_agenda
-        .map(item => typeof item === 'string' ? item : (item && (item.name || item.title || item.agenda || item.label || item.text || item.value)) || '')
-        .map(s => String(s).trim())
-        .filter((s, i, all) => s.length > 0 && all.findIndex(o => o.toLowerCase() === s.toLowerCase()) === i);
-      agendaTags = agendaSuggested.slice();
-    } else {
-      agendaSuggested = [];
-      agendaTags = [];
-    }
+    agendaSuggested = pdfAgenda(data);
+    agendaTags = agendaSuggested.slice();
     renderAgendaTags();
     rememberAgendaSuggestions();
     // A new scan starts clean: old complaints belong to the last document.
@@ -1594,6 +1656,11 @@ function renderResult(data, fileName) {
     const summary = document.getElementById('pp-summary');
     if (summary) summary.hidden = true;
   }
+
+  // Only now: saving before the form was filled would keep the PDF's
+  // answers over the student's own.
+  ppDraftReady = true;
+  saveDraft();
 
   // One of these two is on the page, never both: the button while the team
   // can still add a title, the note once their set is turned in.
