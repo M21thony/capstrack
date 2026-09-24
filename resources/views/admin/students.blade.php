@@ -160,7 +160,7 @@
             <th>Program</th>
             <th>Year</th>
             <th>Section</th>
-
+            <th aria-label="Actions"></th>
           </tr>
         </thead>
         <tbody>
@@ -206,9 +206,16 @@
               </td>
               <td class="std-num" data-label="Year">{{ $year !== '' ? $year : '—' }}</td>
               <td class="std-num" data-label="Section">{{ $section !== '' ? $section : '—' }}</td>
+              <td style="text-align:right;padding-right:16px">
+                <button type="button" class="btn btn-sm btn-ghost std-remove"
+                        data-url="{{ route('admin.students.destroy', $student->student_id) }}"
+                        data-name="{{ trim($student->f_name.' '.$student->l_name) ?: $student->email }}"
+                        data-row="student-row-{{ $student->student_id }}"
+                        onclick="removeStudent(this)">Remove</button>
+              </td>
             </tr>
           @empty
-            <tr><td colspan="6" style="padding:24px 20px;text-align:center;color:var(--text3);font-size:13px">No student accounts found.</td></tr>
+            <tr><td colspan="7" style="padding:24px 20px;text-align:center;color:var(--text3);font-size:13px">No student accounts found.</td></tr>
           @endforelse
         </tbody>
       </table>
@@ -256,10 +263,12 @@ function showToast(message, type = 'success') {
     <div class="ct-toast-icon ${type}">${icons[type] || icons.success}</div>
     <div class="ct-toast-body">
       <p class="ct-toast-title">${type === 'error' ? 'Error' : 'Success'}</p>
-      <p class="ct-toast-msg">${message}</p>
+      <p class="ct-toast-msg"></p>
     </div>
     <button class="ct-toast-close" onclick="this.closest('.ct-toast').remove()">&times;</button>
   `;
+  // Names are data, not markup.
+  toast.querySelector('.ct-toast-msg').textContent = message;
   document.getElementById('ct-toast-container').appendChild(toast);
   setTimeout(() => {
     toast.classList.add('hiding');
@@ -267,7 +276,37 @@ function showToast(message, type = 'success') {
   }, 4000);
 }
 
+
+// ── REMOVE ─────────────────────────────────────────────
+// For good: the account, and their place on their team. Asked first, in the
+// app's own dialog, with Cancel as the reflex.
+async function removeStudent(button) {
+  const name = button.dataset.name;
+  const yes = await confirmSheet({
+    title: 'Remove ' + name + '?',
+    body: 'Their account is deleted and they leave their team. If they lead it, the next member takes over; if no one else is on it, the team is removed too. This cannot be undone.',
+    confirmLabel: 'Remove student',
+    danger: true,
+  });
+  if (!yes) return;
+
+  button.disabled = true;
+  try {
+    const res = await fetch(button.dataset.url, {
+      method: 'DELETE',
+      headers: { 'X-CSRF-TOKEN': CSRF_TOKEN, 'Accept': 'application/json' },
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.success) throw new Error(data.message || 'Could not remove ' + name + '.');
+    document.getElementById(button.dataset.row)?.remove();
+    showToast(data.message, 'success');
+  } catch (e) {
+    button.disabled = false;
+    showToast(e.message, 'error');
+  }
+}
 </script>
+@include('partials.app-dialog')
 @include('partials.escape-closes-modals')
 </body>
 </html>
