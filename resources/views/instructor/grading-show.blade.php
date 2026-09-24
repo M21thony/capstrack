@@ -457,11 +457,16 @@ function draw() {
   $('gs-abstain-note').hidden = !abstaining;
 }
 
-$('gs-abstain').onclick = () => {
+$('gs-abstain').onclick = async () => {
   if (abstained.size) {
     abstained.clear();
   } else {
-    if (!confirm('Abstain from grading this team? Any scores on this sheet are cleared, and the team\'s score is the other panelists\'.')) return;
+    const yes = await confirmSheet({
+      title: 'Abstain from grading this team?',
+      body: 'Any scores on this sheet are cleared. The team\'s score comes from the other panelists, and your sheet still counts as turned in once you submit.',
+      confirmLabel: 'Abstain all',
+    });
+    if (!yes) return;
     ALL.forEach(c => { abstained.add(c.id); delete scores[c.id]; });
   }
   dirty = true;
@@ -654,6 +659,7 @@ function closeSidebar() {
   document.body.style.overflow = '';
 }
 </script>
+@include('partials.app-dialog')
 @include('partials.escape-closes-modals')
 </body>
 </html>
