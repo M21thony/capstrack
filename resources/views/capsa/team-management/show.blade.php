@@ -212,10 +212,13 @@
               @elseif ($item->waiting_on === MilestoneProgress::WAITING_ON_CAPSA && in_array($item->item->kind, \App\Models\Deliverable::CHECKED_BY_CAPSA, true))
                 {{-- A signed paper closes on the CaPSA's check, and the check
                      itself lives in the Milestones tracker. Without this the
-                     line just said "Handed in" with nothing to click. --}}
+                     line just said "Handed in" with nothing to click. Once
+                     it is checked, or put down, the tracker brings her back
+                     here (return). --}}
                 <a class="btn btn-p" href="{{ route('capsa.team_management', [
                      'tab' => 'milestones', 'section' => $row->section,
                      'team' => $team->team_id, 'check' => $item->item->id,
+                     'return' => route('capsa.team_management.show', $team->team_id, false),
                    ]) }}">Check</a>
               @else
                 <span class="pill {{ $mark[1] }}">{{ $mark[0] }}</span>
