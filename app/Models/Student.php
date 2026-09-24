@@ -211,6 +211,13 @@ class Student extends Authenticatable
     {
         static::deleting(function (self $student) {
             StudentRoster::whereRaw('LOWER(email) = ?', [Str::lower($student->email)])->delete();
+
+            // Off their team too: an enrolment row left naming the team made it
+            // look like it still had a member (Team Torchic, "0/5 members").
+            StudentSchoolYear::withoutGlobalScope(StudentSchoolYear::ACTIVE_TERM_SCOPE)
+                ->where('student_id', $student->student_id)
+                ->whereNotNull('team_id')
+                ->update(['team_id' => null, 's_role_id' => null]);
         });
     }
 
