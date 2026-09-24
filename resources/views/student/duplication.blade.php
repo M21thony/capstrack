@@ -126,6 +126,7 @@
 .pp-chip-add { display: flex; gap: 6px; align-items: center; }
 .pp-field .pp-chip-add input[type="text"] { border: none; background: transparent; padding: 5px 6px; box-shadow: none; flex: 1; min-width: 0; }
 .pp-suggest { display: flex; align-items: flex-start; gap: 8px; margin-top: 8px; font-size: 11.5px; color: var(--text3); }
+.pp-suggest[hidden] { display: none; }
 .pp-suggest > span { padding-top: 5px; flex-shrink: 0; }
 .pp-suggest > div { display: flex; flex-wrap: wrap; gap: 6px; }
 .pp-suggest-chip { border: 1px dashed var(--border); background: transparent; color: var(--text2); border-radius: 999px; padding: 4px 10px; font-size: 12px; font-family: inherit; cursor: pointer; text-align: left; }

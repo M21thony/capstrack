@@ -52,7 +52,9 @@ class PreProposalDraftAutosaveTest extends TestCase
             // The check being drawn is the one whose draft survives the cleanup.
             ->assertSee('const current = "'.$check->id.'";', false)
             // And its saved answers are laid over the PDF's after it is drawn.
-            ->assertSee('applyDraft(ppDraft);', false);
+            ->assertSee('applyDraft(ppDraft);', false)
+            // "From your PDF:" stays hidden while there is nothing left to suggest.
+            ->assertSee('.pp-suggest[hidden] { display: none; }', false);
     }
 
     public function test_once_the_check_is_saved_as_a_pre_proposal_no_draft_is_kept(): void
