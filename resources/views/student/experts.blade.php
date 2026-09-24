@@ -424,7 +424,9 @@
           'consultant' => 'Provides subject-matter expertise and technical advice',
           'grammarian' => 'Reviews and ensures quality of written documentation',
         ];
-        $approvedAssignments = $assignments->where('status', 'approved');
+        // An assignment whose expert account is gone is nobody: it showed as an
+        // "Unknown" card and made the count read "4 of 3".
+        $approvedAssignments = $assignments->where('status', 'approved')->filter(fn ($a) => $a->expert);
 
         // Keyed by the role the team actually engaged them as. Anyone approved
         // before roles were recorded has no slot, so they are listed under the

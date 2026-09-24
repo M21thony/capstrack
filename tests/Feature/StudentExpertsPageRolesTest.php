@@ -132,6 +132,30 @@ class StudentExpertsPageRolesTest extends TestCase
         );
     }
 
+    /** An expert whose account is gone is nobody: no "Unknown" card, not counted. */
+    public function test_an_assignment_whose_expert_is_gone_is_not_shown_or_counted(): void
+    {
+        [$student, $team] = $this->makeLeaderWithTeam();
+        $adviser = $this->makeExpertWithRoles(['adviser']);
+        $gone = $this->makeExpertWithRoles(['consultant']);
+
+        foreach ([[$adviser, 'adviser'], [$gone, 'consultant']] as [$expert, $role]) {
+            TeamExpertAssignment::create([
+                'team_id' => $team->team_id,
+                'expert_id' => $expert->expert_id,
+                'expert_role_id' => $this->expertRoleId($expert, $role),
+                'status' => 'approved',
+            ]);
+        }
+        $gone->delete();
+
+        $this->actingAs($student, 'web')->get('/student/experts')
+            ->assertOk()
+            ->assertSee(e($adviser->name))
+            ->assertDontSee('Unknown')
+            ->assertSee('<b>1 of 3</b>', false);
+    }
+
     /**
      * The Request Experts section is only rendered when there is something in
      * it, so a pending request has to be what puts it there - otherwise a
