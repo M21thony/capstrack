@@ -1,8 +1,15 @@
 {{--
-  The submit-document form, on its own so the drawer can fetch it.
-  It is a fragment, not a page: no <html>, no styles, no scripts.
-  The drawer asks for it fresh every time it opens, so the version
-  number, the recipients and the checklist lines are never stale.
+  The submit-document form. Two layouts:
+
+    page    the Document Submission page, every step shown
+    inline  opened in place under a line's Upload button (Progress) or the
+            reviewer's decision (Review Viewer). The line is already known,
+            so "What is this for?" and the summary are left out: just the
+            file, who it goes to, and Submit.
+
+  A fragment, not a page: no <html>, no styles, no scripts. Fetched fresh
+  each time it opens, so the version number, the recipients and the
+  checklist lines are never stale.
 
   Laid out as numbered steps (numbers come from a CSS counter, so they
   stay right when the checklist step is absent). Every id the script in
@@ -22,9 +29,12 @@
         'subject_adviser' => 'M12 2 3 7v6c0 5.25 3.75 9.75 9 11 5.25-1.25 9-5.75 9-11V7l-9-5Z',
     ];
     $assignedRecipients = collect($roleLabels)->filter(fn ($label, $roleKey) => ! is_null(($recipients[$roleKey]['expert_id'] ?? null)));
+    $mode ??= 'page';
+    // The line is known when it was opened from one, so the step asking for it is not shown.
+    $lineKnown = $mode === 'inline' && $selectedItemId && $checklistItems->contains(fn ($ci) => $ci->id === $selectedItemId && ! $ci->locked);
 @endphp
 
-<div id="submission-form-root"
+<div id="submission-form-root" class="sub-form sub-form--{{ $mode }}" data-mode="{{ $mode }}"
      data-submit-url="{{ route('student.submission.store') }}"
      data-next-version-url="{{ route('student.submission.next-version') }}"
      data-check-url="{{ route('student.submission.warnings') }}"
@@ -33,7 +43,7 @@
 
   <div class="dwb">
     @if ($checklistItems->isNotEmpty())
-      <section class="form-section step">
+      <section class="form-section step" @if ($lineKnown) hidden @endif>
         <div class="step-head">
           <span class="step-num" aria-hidden="true"></span>
           <div>
@@ -132,7 +142,7 @@
       @endif
     </section>
 
-    <section class="form-section step">
+    <section class="form-section step" @if ($mode === 'inline') hidden @endif>
       <div class="step-head">
         <span class="step-num" aria-hidden="true"></span>
         <div>
@@ -162,7 +172,9 @@
   </div>
 
   <div class="dwf">
-    <button class="btn-cancel" type="button" data-drawer-close>Cancel</button>
+    @if ($mode === 'inline')
+      <button class="btn-cancel" type="button" data-submission-close>Cancel</button>
+    @endif
     <button class="btn-submit" type="button" id="submitBtn">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 2 11 13M22 2 15 22l-4-9-9-4 20-7Z"/></svg>
       Submit for Review

@@ -43,6 +43,8 @@ export function initSubmissionForm(root) {
   // photo will do.
   const checklistSelect = $('checklistItem');
   const checklistHint = $('checklistHint');
+  // Opened from a line (Progress, Review Viewer): every file goes to that line.
+  const lineFixed = !!(checklistSelect && checklistSelect.closest('section')?.hidden);
 
   // Several files can go at once, each to its own checklist line.
   let files = []; // [{ file, itemId }]
@@ -118,7 +120,7 @@ export function initSubmissionForm(root) {
         showToast(file.name + ' is too large. Max 25MB.', 'error');
         continue;
       }
-      files.push({ file: file, itemId: matchItem(file.name) || (checklistSelect ? checklistSelect.value : '') });
+      files.push({ file: file, itemId: lineFixed ? checklistSelect.value : (matchItem(file.name) || (checklistSelect ? checklistSelect.value : '')) });
     }
     renderFiles();
     applyChecklistItem();
@@ -143,7 +145,7 @@ export function initSubmissionForm(root) {
       name.appendChild(size);
       row.appendChild(name);
 
-      if (checklistSelect) {
+      if (checklistSelect && !lineFixed) {
         const select = checklistSelect.cloneNode(true);
         select.removeAttribute('id');
         select.value = entry.itemId;
