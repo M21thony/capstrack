@@ -141,7 +141,7 @@
         <div class="preview" id="sectionPreview"></div>
 
         <button type="submit" class="btn btn-primary" style="margin-top:13px">Add sections</button>
-        <p class="set-hint">Each section is added for 3rd and 4th year, since capstone runs from the second semester of 3rd year through 4th year. A section a student is already enrolled in is listed whether or not it is added here &mdash; this is for the ones nobody has arrived in yet.</p>
+        <p class="set-hint">Sections are added for 3rd year, where capstone starts. A 4th-year section comes from the student list: it appears once a list or Year Promotion puts students in it, and a CaPSA is assigned to it then. A section a student is already enrolled in is listed whether or not it is added here &mdash; this is for the ones nobody has arrived in yet.</p>
       </form>
     </div>
 
@@ -204,7 +204,7 @@ function previewSections(){
   var box = document.getElementById('sectionPreview');
 
   var programs = [].slice.call(form.querySelectorAll('input[name="programs[]"]:checked')).map(function (i) { return i.value; });
-  // Capstone runs across 3rd and 4th year, so every section is made for both.
+  // 3rd year, where capstone starts; 4th-year sections come from the student list.
   var years = @json($years);
   var from = SECTION_LETTERS.indexOf(document.getElementById('fromLetter').value);
   var to = SECTION_LETTERS.indexOf(document.getElementById('toLetter').value);
