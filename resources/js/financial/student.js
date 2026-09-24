@@ -38,7 +38,7 @@ function render() {
       pending: '<svg><use href="#fx-i-upload"/></svg>Replace photo',
     }[s] : null;
     $('#s-mine').innerHTML = thumb + `<div class="fx-mine-text">${text}</div>`
-      + (label ? `<label class="fx-btn ${s === 'pending' ? '' : 'fx-btn-primary'} fx-file">${label}<input type="file" accept="image/*" capture="environment" aria-label="Upload a photo of your receipt"></label>` : '');
+      + (label ? `<label class="fx-btn ${s === 'pending' ? '' : 'fx-btn-primary'} fx-file">${label}<input type="file" accept="image/*" aria-label="Choose a photo of your receipt"></label>` : '');
   }
 
   const members = S.members, c = { pending: 0, verified: 0, sent_back: 0, none: 0 };

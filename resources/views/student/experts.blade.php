@@ -265,6 +265,44 @@
   #real-content .overview-panel { grid-template-columns: minmax(0, 1fr) !important; }
 }
 
+/* ── Expert cards on a phone: a list you scroll down, each card whole ──
+   The desktop strip runs sideways, sized to fit one screen, and the older
+   phone rules shrank every card to one row with its expertise and
+   availability hidden. Here each expert is a full card, one under another,
+   and the list/table toggle is dropped: a table does not fit a phone. */
+@media (max-width: 768px) {
+  #viewSeg { display: none !important; }
+  #results.view-list .listwrap { display: none !important; }
+  #results .railwrap, #results .rail-pager { display: block !important; }
+  #results .rail-pager, .rail-nav { display: none !important; }
+  #rail.rail {
+    display: flex !important; flex-direction: column; gap: 10px;
+    overflow: visible !important; scroll-snap-type: none; max-height: none !important;
+  }
+  #rail .expert-card-compact {
+    display: grid !important; grid-template-columns: 48px minmax(0, 1fr);
+    column-gap: 12px !important; row-gap: 10px !important;
+    align-items: start !important; text-align: left !important;
+    padding: 14px !important; border-radius: 14px !important;
+    cursor: pointer !important;
+  }
+  #rail .expert-card-compact > .role-dot { display: block !important; top: 14px; right: 14px; left: auto; }
+  #rail .expert-card-compact .who { grid-column: 1 / -1; display: flex !important; align-items: center; gap: 12px; flex-direction: row !important; }
+  #rail .expert-card-compact .expert-avatar-wrap { width: 48px !important; height: 48px !important; flex: none; margin: 0 !important; }
+  #rail .expert-card-compact .ex-nm { font-size: 15px !important; font-weight: 700; text-align: left !important; white-space: normal !important; }
+  #rail .expert-card-compact .chips,
+  #rail .expert-card-compact > div:not(.who):not(.avail):not(.chips),
+  #rail .expert-card-compact .avail { grid-column: 1 / -1; display: block !important; }
+  #rail .expert-card-compact .chips { display: flex !important; flex-wrap: wrap; gap: 5px; }
+  #rail .expert-card-compact .tags { display: flex !important; flex-wrap: wrap; gap: 5px; max-height: none !important; }
+  #rail .expert-card-compact .tags .t { display: inline-block !important; }
+  #rail .expert-card-compact .lbl { display: block !important; margin-bottom: 4px; font-size: 10.5px; }
+  #rail .expert-card-compact .slot-caption { display: block !important; font-size: 12.5px; font-weight: 600; text-transform: none; letter-spacing: 0; color: var(--text2); }
+  #rail .expert-card-compact .slot-caption.is-full { color: var(--red); }
+  #rail .expert-card-compact .btn { grid-column: 1 / -1; width: 100% !important; justify-content: center; padding: 10px 12px !important; font-size: 12.5px !important; }
+  #rail .expert-card-compact .btn svg { width: 14px !important; height: 14px !important; }
+}
+
 </style>
 @include('partials.skeleton-head', ['skReveal' => 'opacity'])
 </head>

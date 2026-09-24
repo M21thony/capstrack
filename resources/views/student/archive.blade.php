@@ -9,6 +9,69 @@
 @vite('resources/student-ui/styles.css')
 <x-dashboard.styles />
 <style>
+  /* ── Archive: search bar, study cards and the abstract ── */
+  .arx-bar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; padding: 10px; background: #fff; border: 1px solid var(--border); border-radius: 14px; box-shadow: 0 1px 3px rgba(0,0,0,.04); }
+  .arx-search { flex: 1 1 280px; display: flex; align-items: center; gap: 8px; padding: 0 12px; min-height: 40px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg3); }
+  .arx-search:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); background: #fff; }
+  .arx-search svg { width: 16px; height: 16px; flex: none; fill: none; stroke: var(--text3); stroke-width: 2.2; stroke-linecap: round; }
+  .arx-search input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; font: inherit; font-size: 13.5px; color: var(--text); }
+  .arx-select { flex: 0 1 190px; min-height: 40px; border-radius: 10px; }
+  .arx-count { margin: 0 2px 12px; font-size: 12px; color: var(--text3); }
+  .arx-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+  .arx-card { position: relative; gap: 8px !important; padding: 18px !important; border-radius: 16px !important; border: 1px solid var(--border) !important; outline: none; }
+  .arx-card::before { content: ""; position: absolute; left: 0; top: 18px; bottom: 18px; width: 3px; border-radius: 0 3px 3px 0; background: var(--accent); opacity: 0; transition: opacity .15s; }
+  .arx-card:hover::before, .arx-card:focus-visible::before { opacity: 1; }
+  .arx-card:focus-visible { box-shadow: 0 0 0 3px var(--accent-glow) !important; }
+  .arx-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .arx-sy { font-size: 10.5px; font-weight: 700; letter-spacing: .06em; color: #8a6500; background: rgba(245,193,0,.14); padding: 3px 9px; border-radius: 999px; }
+  .arx-prog { font-size: 11px; font-weight: 600; color: var(--text3); }
+  .arx-title { margin: 2px 0 0; font-size: 15px; font-weight: 700; line-height: 1.35; color: var(--text); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .arx-authors { font-size: 12px; font-style: italic; color: var(--text2); }
+  .arx-abstract { margin: 0; font-size: 12.5px; line-height: 1.55; color: var(--text3); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .arx-tags { display: flex; flex-wrap: wrap; gap: 5px; }
+  .arx-tag { font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: var(--bg3); color: var(--text2); border: 1px solid var(--border); }
+  .arx-read { margin-top: auto; padding-top: 8px; border-top: 1px dashed var(--border); display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 700; color: #8a6500; }
+  .arx-read svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; transition: transform .15s; }
+  .arx-card:hover .arx-read svg { transform: translateX(3px); }
+  .arx-empty { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6px; padding: 48px 20px; background: #fff; border: 1px dashed var(--border); border-radius: 16px; color: var(--text3); }
+  .arx-empty-ic { width: 52px; height: 52px; border-radius: 16px; display: grid; place-items: center; background: rgba(245,193,0,.12); color: #8a6500; margin-bottom: 6px; }
+  .arx-empty-ic svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .arx-empty b { font-size: 14.5px; color: var(--text); }
+  .arx-empty p { margin: 0; font-size: 12.5px; max-width: 320px; }
+
+  .arx-modal { background: rgba(15,17,23,.55) !important; cursor: default !important; padding: 20px; overflow-y: auto; align-items: flex-start !important; }
+  .arx-sheet { position: relative; width: min(720px, 100%); margin: auto; background: #fff; border-radius: 16px; border-top: 5px solid var(--accent); box-shadow: 0 24px 70px rgba(0,0,0,.3); }
+  .arx-x { position: absolute; top: 12px; right: 12px; width: 34px; height: 34px; border-radius: 10px; border: 1px solid var(--border); background: #fff; color: var(--text3); cursor: pointer; display: grid; place-items: center; }
+  .arx-x svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2.2; }
+  .arx-m-body { padding: 40px 48px 32px; }
+  .arx-m-kicker { text-align: center; font-size: 10.5px; font-weight: 700; letter-spacing: .2em; text-transform: uppercase; color: #8a6500; }
+  .arx-m-title { margin: 12px 0 0; text-align: center; font-family: Georgia, 'Times New Roman', serif; font-size: 21px; line-height: 1.35; text-transform: uppercase; color: var(--text); }
+  .arx-m-authors { margin-top: 10px; text-align: center; font-family: Georgia, serif; font-style: italic; font-size: 13.5px; color: var(--text2); }
+  .arx-m-meta { display: grid; grid-template-columns: repeat(3, 1fr); margin: 20px 0 0; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+  .arx-m-meta div { padding: 9px 12px; text-align: center; background: var(--bg3); border-right: 1px solid var(--border); }
+  .arx-m-meta div:last-child { border-right: 0; }
+  .arx-m-meta dt { font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--text3); }
+  .arx-m-meta dd { margin: 3px 0 0; font-size: 13px; font-weight: 600; color: var(--text); }
+  .arx-m-heading { display: flex; align-items: center; gap: 12px; margin: 26px 0 12px; font-family: Georgia, serif; font-size: 14px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; color: var(--text); }
+  .arx-m-heading::before, .arx-m-heading::after { content: ""; flex: 1; height: 1px; background: var(--border); }
+  .arx-m-text { font-family: Georgia, serif; font-size: 14.5px; line-height: 1.8; color: var(--text); text-align: justify; }
+  .arx-m-text p { margin: 0 0 10px; text-indent: 2.2em; }
+  .arx-m-none { text-align: center; font-style: italic; color: var(--text3); text-indent: 0 !important; }
+  .arx-m-keywords { margin-top: 18px; font-family: Georgia, serif; font-size: 13px; color: var(--text2); }
+  @media (max-width: 640px) {
+    .arx-bar { padding: 8px; }
+    .arx-search { flex-basis: 100%; }
+    .arx-select { flex: 1 1 0; min-width: 0; }
+    .arx-grid { grid-template-columns: 1fr; gap: 10px; }
+    .arx-modal { padding: 0; align-items: flex-end !important; }
+    .arx-sheet { margin: auto 0 0; border-radius: 18px 18px 0 0; max-height: 92dvh; overflow-y: auto; }
+    .arx-m-body { padding: 36px 18px 24px; }
+    .arx-m-title { font-size: 17px; }
+    .arx-m-meta { grid-template-columns: 1fr; }
+    .arx-m-meta div { border-right: 0; border-bottom: 1px solid var(--border); }
+    .arx-m-meta div:last-child { border-bottom: 0; }
+    .arx-m-text { text-align: left; }
+  }
   @keyframes sk-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
   .sk-overlay { position: absolute; inset: 0; background: var(--bg); z-index: 10; }
   .sk { background: linear-gradient(90deg, var(--bg4) 25%, var(--bg2) 50%, var(--bg4) 75%); background-size: 200% 100%; animation: sk-shimmer 1.5s ease-in-out infinite; border-radius: 8px; }
@@ -204,43 +267,127 @@
 </div>
 @endif
 
-<div class="row" style="margin-bottom:16px;gap:8px;flex-wrap:wrap">
-  <input class="input" id="archive-search" placeholder="Search by title or keyword..." style="flex:1;min-width:200px;max-width:380px" oninput="filterArchive()" />
-  <select class="input" id="archive-year" style="width:120px" onchange="filterArchive()">
-    <option value="">All Years</option>
-    @foreach($archives->pluck('academic_year')->unique()->sort() as $year)
-    <option>{{ $year }}</option>
+@php
+  // academic_year holds the school year's first year: 2026 is S.Y. 2026-2027.
+  $archSy = fn ($y) => $y ? $y.'–'.((int) $y + 1) : 'Not recorded';
+  $archAbstracts = $archives->mapWithKeys(fn ($a) => [$a->archived_id => [
+      'title' => $a->title,
+      'authors' => $a->authors,
+      'abstract' => $a->abstract,
+      'program' => $a->program ?: 'CCS',
+      'sy' => $archSy($a->academic_year),
+      'date' => $a->submitted_at?->format('F j, Y'),
+      'tags' => $a->tags->pluck('tag_name')->values(),
+  ]]);
+@endphp
+
+{{-- Search and filters, one bar. --}}
+<div class="arx-bar">
+  <label class="arx-search">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+    <input id="archive-search" type="search" placeholder="Search titles, proponents or abstracts" oninput="filterArchive()" autocomplete="off" />
+  </label>
+  <select class="input arx-select" id="archive-year" onchange="filterArchive()" aria-label="School year">
+    <option value="">All school years</option>
+    @foreach($archives->pluck('academic_year')->filter()->unique()->sortDesc() as $year)
+    <option value="{{ $year }}">S.Y. {{ $archSy($year) }}</option>
     @endforeach
   </select>
-  <select class="input" id="archive-tag" style="width:160px" onchange="filterArchive()">
-    <option value="">All Categories</option>
+  <select class="input arx-select" id="archive-tag" onchange="filterArchive()" aria-label="Category">
+    <option value="">All categories</option>
     @foreach($tags as $tag)
     <option value="{{ $tag->tag_name }}">{{ $tag->tag_name }}</option>
     @endforeach
   </select>
-  <span style="margin-left:auto;font-size:12px;color:var(--text3)" id="archive-count">Showing {{ $archives->count() }} studies</span>
 </div>
-<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px" id="archive-grid">
+<div class="arx-count" id="archive-count">Showing {{ $archives->count() }} {{ Str::plural('study', $archives->count()) }}</div>
+
+<div class="arx-grid" id="archive-grid">
   @foreach($archives as $archive)
-  <div class="archive-card"
+  <article class="archive-card arx-card" tabindex="0" role="button"
+    aria-label="Read the abstract of {{ $archive->title }}"
+    onclick="openArchiveAbstract({{ $archive->archived_id }})"
+    onkeydown="if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openArchiveAbstract({{ $archive->archived_id }}); }"
     data-tags="{{ $archive->tags->pluck('tag_name')->implode(',') }}"
     data-year="{{ $archive->academic_year }}"
-    data-title="{{ strtolower($archive->title) }}">
-    <div class="archive-year">{{ $archive->academic_year ?? 'N/A' }}</div>
-    <div class="archive-title">{{ $archive->title }}</div>
-    <div class="archive-proponents">{{ $archive->abstract ? Str::limit($archive->abstract, 80) : 'No description' }}</div>
-    <div class="archive-tags">
-      @foreach($archive->tags as $tag)
-      <span class="archive-tag" style="background:{{ $tag->tag_color ?? 'var(--accent-glow)' }};color:var(--text1)">{{ $tag->tag_name }}</span>
-      @endforeach
+    data-title="{{ strtolower($archive->title.' '.$archive->authors.' '.$archive->abstract) }}">
+    <div class="arx-top">
+      <span class="arx-sy">S.Y. {{ $archSy($archive->academic_year) }}</span>
+      <span class="arx-prog">{{ $archive->program ?: 'CCS' }}</span>
     </div>
-    <div class="archive-footer">
-      <span style="font-size:11px;color:var(--text3)">{{ $archive->program ?? 'N/A' }} &middot; CCS</span>
-    </div>
-  </div>
+    <h3 class="arx-title">{{ $archive->title }}</h3>
+    @if ($archive->authors)
+      <div class="arx-authors">{{ $archive->authors }}</div>
+    @endif
+    <p class="arx-abstract">{{ $archive->abstract ? Str::limit($archive->abstract, 150) : 'No abstract recorded.' }}</p>
+    @if ($archive->tags->isNotEmpty())
+      <div class="arx-tags">
+        @foreach($archive->tags->take(3) as $tag)
+          <span class="arx-tag">{{ $tag->tag_name }}</span>
+        @endforeach
+        @if ($archive->tags->count() > 3)<span class="arx-tag arx-more">+{{ $archive->tags->count() - 3 }}</span>@endif
+      </div>
+    @endif
+    <span class="arx-read">Read abstract
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+  </article>
   @endforeach
 </div>
-<div id="archive-empty" style="display:none;text-align:center;padding:48px;color:var(--text3);font-size:13px">No archived capstones match your search.</div>
+
+@if ($archives->isEmpty())
+  <div class="arx-empty">
+    <span class="arx-empty-ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 8v13H3V8"/><rect x="1" y="3" width="22" height="5" rx="1"/><path d="M10 12h4"/></svg></span>
+    <b>No archived capstones yet</b>
+    <p>Finished capstones appear here once your CaPSA publishes them.</p>
+  </div>
+@endif
+<div class="arx-empty" id="archive-empty" style="display:none">
+  <span class="arx-empty-ic"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></span>
+  <b>No matches</b>
+  <p>No archived capstones match your search. Try other words or clear a filter.</p>
+</div>
+
+{{-- The abstract, as it reads in the manuscript. Filled in as text. --}}
+<div class="modal-overlay arx-modal" id="arx-modal" onclick="if (event.target === this) closeArchiveAbstract()">
+  <article class="arx-sheet" role="dialog" aria-modal="true" aria-labelledby="arx-m-title">
+    <button type="button" class="arx-x" aria-label="Close" onclick="closeArchiveAbstract()">
+      <svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
+    </button>
+    <div class="arx-m-body">
+      <div class="arx-m-kicker">Capstone Project</div>
+      <h2 class="arx-m-title" id="arx-m-title"></h2>
+      <div class="arx-m-authors" id="arx-m-authors"></div>
+      <dl class="arx-m-meta">
+        <div><dt>Program</dt><dd id="arx-m-prog"></dd></div>
+        <div><dt>School Year</dt><dd id="arx-m-sy"></dd></div>
+        <div><dt>Date</dt><dd id="arx-m-date"></dd></div>
+      </dl>
+      <div class="arx-m-heading">Abstract</div>
+      <div class="arx-m-text" id="arx-m-text"></div>
+      <div class="arx-m-keywords" id="arx-m-keywords" hidden><b>Keywords:</b> <span></span></div>
+    </div>
+  </article>
+</div>
+<script>
+  const ARCHIVE_ABSTRACTS = @json($archAbstracts);
+  function openArchiveAbstract(id) {
+    const d = ARCHIVE_ABSTRACTS[id]; if (!d) return;
+    const set = (k, v) => { document.getElementById(k).textContent = v || '—'; };
+    set('arx-m-title', d.title); set('arx-m-authors', d.authors || 'No proponents recorded');
+    set('arx-m-prog', d.program); set('arx-m-sy', 'S.Y. ' + d.sy); set('arx-m-date', d.date || 'Not recorded');
+    const text = document.getElementById('arx-m-text'); text.innerHTML = '';
+    const paras = (d.abstract || '').split(/\n\s*\n/).map(p => p.replace(/\s*\n\s*/g, ' ').trim()).filter(Boolean);
+    if (!paras.length) { const e = document.createElement('p'); e.className = 'arx-m-none'; e.textContent = 'No abstract was recorded for this capstone.'; text.appendChild(e); }
+    paras.forEach(p => { const e = document.createElement('p'); e.textContent = p; text.appendChild(e); });
+    const kw = document.getElementById('arx-m-keywords'); kw.hidden = !d.tags.length; kw.querySelector('span').textContent = d.tags.join(', ');
+    document.getElementById('arx-modal').classList.add('active');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeArchiveAbstract() {
+    document.getElementById('arx-modal').classList.remove('active');
+    document.body.style.overflow = '';
+  }
+</script>
     </div>
   </div>
 </div>
@@ -315,10 +462,11 @@ function filterArchive() {
   });
 
   var count = document.getElementById('archive-count');
-  if (count) count.textContent = 'Showing ' + shown + ' studies';
+  if (count) count.textContent = 'Showing ' + shown + (shown === 1 ? ' study' : ' studies');
 
   var empty = document.getElementById('archive-empty');
-  if (empty) empty.style.display = shown === 0 ? 'block' : 'none';
+  // Only a search that found nothing; an empty archive says so on its own.
+  if (empty) empty.style.display = shown === 0 && cards.length ? 'flex' : 'none';
 }
 
 // ── Manuscript modal ──────────────────────────────────────────────────────
