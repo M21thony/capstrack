@@ -28,11 +28,13 @@ class SectionCatalog
     public const YEARS = [1, 2, 3, 4];
 
     /**
-     * The year levels capstone runs across: it starts in the second semester
-     * of 3rd year and carries on through 4th year. Sections are added for
-     * both, so an Admin only picks programs and letters.
+     * The year a section is added for. Capstone starts in the second
+     * semester of 3rd year, so that is where an Admin's sections begin; a
+     * 4th-year section comes from the student list (or Year Promotion) once
+     * students are in it, and its CaPSA is assigned then - often not the
+     * same one as in 3rd year.
      */
-    public const CAPSTONE_YEARS = [3, 4];
+    public const STARTING_YEAR = 3;
 
     /**
      * The sections an Admin has written down.
