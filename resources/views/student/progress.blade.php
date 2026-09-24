@@ -404,7 +404,9 @@
                 $closer = 'Closed when your CaPSA recommends one of your pre-proposal titles — nothing to upload';
             }
             // Everything is handed in through Document Submission; a defense is not, nor the recommended title.
-            $canUpload = ! $done && ! $byRecommendation && $item->kind !== 'defense' && $item->kind !== 'custom'
+            // A line still waiting on an earlier one cannot be handed in yet, so
+            // it offers no Upload that could only say so.
+            $canUpload = ! $done && ! $byRecommendation && ! $row->locked && $item->kind !== 'defense' && $item->kind !== 'custom'
                 && (in_array($row->state, ['not_started', 'overdue'], true) || $row->changes_requested || $row->waiting_on === 'signed_copy');
             // A reviewer asks for changes on the chapter draft, so that is what the revision goes up as.
             $uploadFor = $item->kind === 'approval' && $row->changes_requested && ! $row->note
