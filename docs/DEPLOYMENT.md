@@ -104,6 +104,7 @@ Then on the server:
 
 ```bash
 sudo usermod -aG www-data azureuser   # log out and back in after this
+sudo chown azureuser:www-data .env && sudo chmod 640 .env   # www-data must read it
 sudo chown -R azureuser:www-data storage bootstrap/cache
 sudo chmod -R ug+rwX storage bootstrap/cache
 sudo find storage bootstrap/cache -type d -exec chmod g+s {} +
