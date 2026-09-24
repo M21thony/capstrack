@@ -17,6 +17,7 @@ use App\Support\StudentTeam;
 use App\Support\TeamChecklist;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -399,8 +400,50 @@ class SubmissionController extends Controller
         // before-a-file-is-chosen placeholder.
         $nextVersion = 1;
 
-        // A fragment, not a page: the drawer drops it straight into the panel.
-        return view('student.partials.submission-form', compact('recipients', 'nextVersion', 'checklistItems', 'selectedItemId'));
+        // Asked for by a page opening the form in place: the form alone, in its
+        // short layout. Opened from the menu: the Document Submission page.
+        if ($request->ajax()) {
+            $mode = $request->boolean('inline') ? 'inline' : 'page';
+
+            return view('student.partials.submission-form', compact('recipients', 'nextVersion', 'checklistItems', 'selectedItemId', 'mode'));
+        }
+
+        return view('student.submission', compact('recipients', 'nextVersion', 'checklistItems', 'selectedItemId') + [
+            'mode' => 'page',
+            'submitted' => $this->submittedByTeam($studentId),
+        ]);
+    }
+
+    /**
+     * What the team has sent, newest first: each file, the requirement it was
+     * for, its version, and where it stands.
+     *
+     * @return Collection<int, object>
+     */
+    private function submittedByTeam(int $studentId): Collection
+    {
+        return CapstoneDocument::whereIn('student_id', StudentTeam::memberIdsFor($studentId) ?: [$studentId])
+            ->with(['deliverable', 'reviews'])
+            ->latest('created_at')
+            ->take(50)
+            ->get()
+            ->map(function (CapstoneDocument $document) {
+                $verdicts = $document->reviews->pluck('verdict')->filter();
+
+                return (object) [
+                    'name' => $document->file_name,
+                    'for' => $document->deliverable?->title ?? ($document->chapter ?: 'Feedback only'),
+                    'version' => (int) $document->file_version,
+                    'round' => $document->roundLabel(),
+                    'sent' => $document->created_at,
+                    'status' => match (true) {
+                        $verdicts->contains(CapstoneDocumentReview::NEEDS_REVISION) => ['Revision asked', 'revise'],
+                        $verdicts->isNotEmpty() && $verdicts->every(fn ($v) => $v === CapstoneDocumentReview::APPROVED) => ['Approved', 'ok'],
+                        $document->reviews->isNotEmpty() => ['With reviewers', ''],
+                        default => ['Sent', ''],
+                    },
+                ];
+            });
     }
 
     private static function ordinal(int $n): string
