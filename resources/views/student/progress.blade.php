@@ -341,7 +341,7 @@
             };
             $iconKey = $done ? 'done' : $row->state;
           @endphp
-          <div class="spm-item">
+          <div class="spm-item" data-submission-host>
             <svg class="spm-dot spm-{{ $iconKey }}" viewBox="0 0 24 24" role="img" aria-label="{{ $status }}">{!! $icons[$iconKey] !!}</svg>
             <div>
               <div class="spm-title">
@@ -357,7 +357,7 @@
             </div>
             <div class="spm-status st-{{ $iconKey }}">{{ $status }}</div>
             @if ($canUpload)
-              <button type="button" class="spm-upload {{ $row->state === 'overdue' ? 'urgent' : '' }}" onclick="window.openSubmissionDrawer && window.openSubmissionDrawer('{{ $uploadFor->id }}')">
+              <button type="button" class="spm-upload {{ $row->state === 'overdue' ? 'urgent' : '' }}" onclick="window.openSubmission && window.openSubmission('{{ $uploadFor->id }}', this)">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
                 {{ $uploadLabel }}
               </button>
