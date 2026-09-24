@@ -65,7 +65,12 @@ class StudentReviewController extends Controller
 
     public static function roleLabel(?string $role): string
     {
-        return $role ? ucwords(str_replace('_', ' ', $role)) : 'Reviewer';
+        return match ($role) {
+            null, '' => 'Reviewer',
+            'subject_adviser' => 'CaPSA',
+            'panel' => 'Panelist',
+            default => ucwords(str_replace('_', ' ', $role)),
+        };
     }
 
     public static function verdictLabel(CapstoneDocumentReview $review): string

@@ -205,6 +205,24 @@
      there is a copy of them per page, so the new ones live here: one file,
      included on every student page, and no build step to forget. */
   .pm-header { align-items: flex-start; }
+
+  /* On a phone the panel sat 250px from the left, beside a sidebar that is
+     not there, so most of it ran off the screen. It rises from the bottom
+     instead, the full width, over a dimmed page. */
+  @media (max-width: 768px) {
+    .profile-overlay.open { background: rgba(15,17,23,.45); pointer-events: all; }
+    .profile-modal {
+      left: 0 !important; right: 0; top: auto !important; bottom: 0;
+      width: 100% !important; height: auto !important; max-height: 88dvh;
+      border-right: 0; border-radius: 18px 18px 0 0;
+      transform: translateY(24px) !important;
+      box-shadow: 0 -12px 40px rgba(0,0,0,.25);
+      padding-bottom: env(safe-area-inset-bottom);
+      z-index: 1001 !important;
+    }
+    .profile-overlay.open .profile-modal { transform: none !important; }
+    .profile-overlay { z-index: 1000 !important; }
+  }
   .pm-header-name { font-size: 16px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.25; white-space: normal; overflow-wrap: anywhere; }
   .pm-header-sub { font-size: 11.5px; color: rgba(255,255,255,0.6); margin-top: 5px; display: flex; align-items: center; flex-wrap: wrap; }
   .pm-sep { margin: 0 6px; color: rgba(255,255,255,0.3); }
@@ -331,12 +349,21 @@
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeProfile(); });
 
 </script>
-{{-- ── Submit document: the form's styles and script, for the Document
-     Submission page and for a page that opens the form in place. ── --}}
+{{-- ── The upload pop-up every Upload / Submit button opens. ── --}}
 <link rel="stylesheet" href="{{ asset('css/submission-drawer.css') }}">
 
-{{-- Where the form is fetched from when a page opens it in place. --}}
-<meta name="submission-form-url" content="{{ route('student.submission') }}">
+{{-- Where the pop-up asks, checks and sends. --}}
+@php
+  $uploadConfig = [
+      'plan' => route('student.submission.plan'),
+      'check' => route('student.submission.warnings'),
+      'store' => route('student.submission.store'),
+      'folders' => route('student.submission.subject-adviser-folders'),
+      'review' => route('student.review'),
+      'csrf' => csrf_token(),
+  ];
+@endphp
+<script type="application/json" id="upload-config">@json($uploadConfig)</script>
 
 {{-- One preview window and one message box for the whole student side. --}}
 <dialog class="preview-dialog" id="previewDialog">
@@ -353,7 +380,7 @@
 
 @vite(['resources/js/submission-drawer.js', 'resources/js/submission-preview.js'])
 
-{{-- The app's own ask-first dialog, for the submit form's "Is this the right file?". --}}
+{{-- The app's own ask-first dialog. --}}
 @include('partials.app-dialog')
 @include('partials.sidebar-scroll-restore')
 

@@ -160,7 +160,10 @@ class StudentController extends Controller
             'f_name' => trim($data['f_name']),
             'l_name' => trim($data['l_name']),
             'student_number' => $data['student_number'],
-            'course' => $data['course'],
+            // The full course name, as the class-list upload stores it.
+            // Classmates are matched on this column, so a student saved as
+            // "BSIT" never showed up beside the ones saved from the list.
+            'course' => Student::PROGRAM_COURSES[$data['course']],
             'year_section' => $yearSection,
         ];
 
@@ -237,7 +240,9 @@ class StudentController extends Controller
         // Where they would end up, not just where they are - otherwise a move
         // out of your section into someone else's would pass the check above
         // and then be beyond your reach to undo.
-        $course = $data['course'] ?? $student->course;
+        // Stored as the full course name, as the class-list upload does.
+        $course = isset($data['course']) ? Student::PROGRAM_COURSES[$data['course']] : $student->course;
+        unset($data['course']);
 
         $parts = explode(' · ', (string) $student->year_section);
         $year = $data['year'] ?? preg_replace('/[^0-9]/', '', $parts[0] ?? '');

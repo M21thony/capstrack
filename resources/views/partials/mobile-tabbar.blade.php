@@ -173,8 +173,57 @@
     credits.className = 'legal-credits sys-credits';
     credits.removeAttribute('style');
     content.appendChild(credits);
+
+    // On a short or empty page the credits would ride up under the last
+    // card, halfway up the screen. The gap above them grows by whatever
+    // room is left, so they sit at the bottom until the page is long enough
+    // to push them there itself. Re-measured whenever the page changes size
+    // or content (the skeleton lifting, a list loading, a filter emptying it).
+    var BASE = 40;
+    var queued = false;
+    var fit = function () {
+      queued = false;
+      credits.style.marginTop = BASE + 'px';
+      // Where the credits end, measured from the top of the scrolling area
+      // (scrollHeight never reports less than the visible height, so it
+      // cannot say how much room is left).
+      var box = content.getBoundingClientRect();
+      var end = credits.getBoundingClientRect().bottom - box.top - content.clientTop + content.scrollTop;
+      var bottom = content.clientHeight - parseFloat(getComputedStyle(content).paddingBottom || 0);
+      var free = Math.floor(bottom - end) - 1;
+      if (free > 0) {
+        credits.style.marginTop = (BASE + free) + 'px';
+      }
+    };
+    // A timer rather than an animation frame: frames never come in a tab
+    // opened in the background, and the page would be found as it loaded.
+    var refit = function () {
+      if (!queued) {
+        queued = true;
+        setTimeout(fit, 30);
+      }
+    };
+    fit();
+    window.addEventListener('resize', refit);
+    window.addEventListener('load', refit);
+    if (window.ResizeObserver) {
+      new ResizeObserver(refit).observe(content);
+    }
+    if (window.MutationObserver) {
+      new MutationObserver(function (records) {
+        // Its own margin changing is not news.
+        if (records.some(function (r) { return !credits.contains(r.target); })) {
+          refit();
+        }
+        // The whole page, not only the scrolling area: the skeleton lifting
+        // is a change to the wrapper around it.
+      }).observe(main, { childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'class', 'hidden', 'open'] });
+    }
   });
 </script>
+
+{{-- Every portal page carries this bar, so the idle sign-out rides with it. --}}
+@include('partials.idle-logout')
 @endonce
 
 <nav class="mtab" aria-label="Main">

@@ -1077,8 +1077,10 @@ async function refreshConsultationData(showFeedback) {
   if (refreshBtn) { refreshBtn.style.opacity = '0.5'; }
 
   try {
+    // The 30-second background poll is passive: it must not keep an idle
+    // session alive. The Refresh button is someone at the page.
     const res = await fetch('{{ route("student.consultation.refresh") }}', {
-      headers: { 'Accept': 'application/json' },
+      headers: showFeedback ? { 'Accept': 'application/json' } : { 'Accept': 'application/json', 'X-Idle-Passive': '1' },
     });
     if (!res.ok) { throw new Error('Refresh failed (' + res.status + ')'); }
     const data = await res.json();

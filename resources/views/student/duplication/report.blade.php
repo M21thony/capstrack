@@ -146,34 +146,34 @@
 
 @if (count($check->instructors_suggested ?? []))
   <section class="card rp-experts" aria-labelledby="rp-experts-h">
+    @php
+      // Three full cards at a time, advisers first. A card for every
+      // suggestion wrapped onto more rows and pushed the page past the fold;
+      // paging keeps the section one row tall with nothing cut off or folded.
+      $suggested = collect($check->suggestionsForDisplay())->sortBy(fn ($i) => ['Adviser' => 0, 'Consultant' => 1][$i['role_label'] ?? ''] ?? 2)->values();
+      $perPage = 3;
+    @endphp
     <div class="rp-experts-h">
       <h2 id="rp-experts-h">Suggested experts</h2>
       @unless ($applyOpen)
         <div class="dup-apply-note" title="{{ $applyLockReason }}">{{ $applyLockReason }}</div>
       @endunless
+      @if ($suggested->count() > $perPage)
+        <div class="rp-pager" data-per-page="{{ $perPage }}" data-total="{{ $suggested->count() }}">
+          <span class="rp-pager-count" aria-live="polite">1&ndash;{{ $perPage }} of {{ $suggested->count() }}</span>
+          <button type="button" class="rp-page-btn" data-step="-1" aria-label="Previous experts" disabled>
+            <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+          <button type="button" class="rp-page-btn" data-step="1" aria-label="Next experts">
+            <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+          </button>
+        </div>
+      @endif
     </div>
-    @php
-      // One column per role, whatever the number of suggestions: the first
-      // in each role shown whole, the rest one click away. A card for every
-      // suggestion wrapped onto more rows and pushed the page past the fold.
-      $byRole = collect($check->suggestionsForDisplay())->groupBy(fn ($i) => $i['role_label'] ?? 'Expert');
-    @endphp
-    <div class="rp-experts-grid" style="--roles: {{ max(1, min(3, $byRole->count())) }}">
-      @foreach ($byRole as $role => $people)
-        <div class="rp-role">
-          <div class="sx-role">Recommended {{ $role }}@if ($people->count() > 1) <span>&middot; {{ $people->count() }} suggested</span>@endif</div>
-          @include('student.duplication._expert', ['i' => $people->first()])
-          @if ($people->count() > 1)
-            <details class="rp-also">
-              <summary>
-                <span class="rp-also-lbl">Also suggested:</span>
-                <span class="rp-also-names">{{ $people->slice(1)->pluck('name')->implode(' · ') }}</span>
-              </summary>
-              @foreach ($people->slice(1) as $other)
-                @include('student.duplication._expert', ['i' => $other])
-              @endforeach
-            </details>
-          @endif
+    <div class="rp-experts-grid" id="rp-experts-grid">
+      @foreach ($suggested as $n => $i)
+        <div class="rp-card-slot" @if ($n >= $perPage) hidden @endif>
+          @include('student.duplication._expert', ['i' => $i])
         </div>
       @endforeach
     </div>
@@ -202,6 +202,25 @@
 </dialog>
 
 <script>
+// Suggested experts, three at a time.
+(function () {
+  var pager = document.querySelector('.rp-pager');
+  if (!pager) return;
+  var per = +pager.dataset.perPage, total = +pager.dataset.total, start = 0;
+  var slots = document.querySelectorAll('#rp-experts-grid .rp-card-slot');
+  var count = pager.querySelector('.rp-pager-count');
+  var prev = pager.querySelector('[data-step="-1"]'), next = pager.querySelector('[data-step="1"]');
+  pager.addEventListener('click', function (e) {
+    var btn = e.target.closest('.rp-page-btn');
+    if (!btn || btn.disabled) return;
+    start = Math.min(Math.max(0, start + (+btn.dataset.step) * per), Math.floor((total - 1) / per) * per);
+    slots.forEach(function (slot, n) { slot.hidden = n < start || n >= start + per; });
+    count.textContent = (start + 1) + '\u2013' + Math.min(start + per, total) + ' of ' + total;
+    prev.disabled = start === 0;
+    next.disabled = start + per >= total;
+  });
+})();
+
 function openFullPreProposal() {
   var d = document.getElementById('rp-full');
   if (d && !d.open) d.showModal();

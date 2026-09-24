@@ -7,6 +7,7 @@ use App\Models\GoogleDriveToken;
 use App\Models\Student;
 use App\Models\StudentRoster;
 use App\Services\GoogleDriveService;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -189,13 +190,21 @@ class AuthController extends Controller
         if (app()->environment('local')) {
             $http = $http->withOptions(['verify' => false]);
         }
-        $response = $http->post('https://oauth2.googleapis.com/token', [
-            'code' => $code,
-            'client_id' => config('services.google.client_id'),
-            'client_secret' => config('services.google.client_secret'),
-            'redirect_uri' => config('services.google.redirect_uri'),
-            'grant_type' => 'authorization_code',
-        ]);
+        // Google not answering was a 500 with no way back but the Back
+        // button; it is a sign-in that did not finish, so it says so.
+        try {
+            $response = $http->post('https://oauth2.googleapis.com/token', [
+                'code' => $code,
+                'client_id' => config('services.google.client_id'),
+                'client_secret' => config('services.google.client_secret'),
+                'redirect_uri' => config('services.google.redirect_uri'),
+                'grant_type' => 'authorization_code',
+            ]);
+        } catch (ConnectionException $e) {
+            logger()->warning('Google sign-in: token request failed', ['message' => $e->getMessage()]);
+
+            return redirect('/login')->withErrors(['message' => 'Google did not answer in time. Please sign in again.']);
+        }
 
         if (! $response->successful()) {
             return redirect('/login')->withErrors(['message' => 'Failed to obtain access token from Google.']);
@@ -207,9 +216,15 @@ class AuthController extends Controller
         if (app()->environment('local')) {
             $httpUserInfo = $httpUserInfo->withOptions(['verify' => false]);
         }
-        $userInfoResponse = $httpUserInfo->get('https://www.googleapis.com/oauth2/v3/userinfo', [
-            'access_token' => $accessToken,
-        ]);
+        try {
+            $userInfoResponse = $httpUserInfo->get('https://www.googleapis.com/oauth2/v3/userinfo', [
+                'access_token' => $accessToken,
+            ]);
+        } catch (ConnectionException $e) {
+            logger()->warning('Google sign-in: user info request failed', ['message' => $e->getMessage()]);
+
+            return redirect('/login')->withErrors(['message' => 'Google did not answer in time. Please sign in again.']);
+        }
 
         if (! $userInfoResponse->successful()) {
             return redirect('/login')->withErrors(['message' => 'Failed to retrieve user information from Google.']);
@@ -217,6 +232,10 @@ class AuthController extends Controller
 
         $userInfo = $userInfoResponse->json();
         $email = $userInfo['email'] ?? null;
+
+        if (! is_string($email) || $email === '') {
+            return redirect('/login')->withErrors(['message' => 'Google did not share an email address for this account. Please sign in again.']);
+        }
         $firstName = $userInfo['given_name'] ?? null;
         $lastName = $userInfo['family_name'] ?? null;
 
@@ -604,13 +623,29 @@ class AuthController extends Controller
             return $existing;
         }
 
+        // Student numbers are unique. One already on another account - a
+        // student added by hand under another address, a typo on a list -
+        // made this insert fail, and a listed student got a 500 and could
+        // not get in at all. They get in without it; the account that holds
+        // the number keeps it, and the clash is logged for the CaPSA to sort.
+        $number = trim((string) ($roster->student_number ?? '')) ?: null;
+
+        if ($number !== null && (mb_strlen($number) > 20 || Student::where('student_number', $number)->exists())) {
+            logger()->warning('Student number from the class list cannot be used (taken, or too long); signing in without it', [
+                'email' => $email,
+                'student_number' => $number,
+                'held_by' => Student::where('student_number', $number)->value('email'),
+            ]);
+            $number = null;
+        }
+
         return Student::firstOrCreate(
             ['email' => $email],
             [
                 'f_name' => $firstName,
                 'l_name' => $lastName,
                 'p_picture' => $picture,
-                'student_number' => $roster->student_number ?? null,
+                'student_number' => $number,
                 // The list stores the program code; everywhere else stores the
                 // course's full name, and a mix of the two means two students
                 // on the same course never match each other.
