@@ -142,9 +142,9 @@ class DashboardController extends Controller
 
             foreach ($submissions as $s) {
                 $activities[] = [
-                    'iconSvg' => '<svg viewBox="0 0 24 24" style="stroke:var(--green);width:13px;height:13px;fill:none;stroke-width:2.5"><polyline points="20 6 9 17 4 12"/></svg>',
-                    'text' => "<strong>{$s->team_name}</strong> submitted {$s->file_name} for review",
-                    'time' => $s->created_at ? Carbon::parse($s->created_at)->diffForHumans() : '',
+                    'type' => 'document_submitted',
+                    'text' => '<strong>'.e($s->team_name).'</strong> sent <strong>'.e($s->file_name).'</strong> for review',
+                    'at' => $s->created_at ? Carbon::parse($s->created_at) : null,
                 ];
             }
         }
@@ -164,16 +164,19 @@ class DashboardController extends Controller
 
         foreach ($reviewedDocs as $r) {
             $activities[] = [
-                'iconSvg' => '<svg viewBox="0 0 24 24" style="stroke:var(--blue);width:13px;height:13px;fill:none;stroke-width:2.5"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>',
-                'text' => "<strong>{$r->team_name}</strong> document review completed",
-                'time' => $r->reviewed_at ? Carbon::parse($r->reviewed_at)->diffForHumans() : '',
+                'type' => 'document_reviewed',
+                'text' => 'You finished reviewing <strong>'.e($r->team_name).'</strong>\'s document',
+                'at' => $r->reviewed_at ? Carbon::parse($r->reviewed_at) : null,
             ];
         }
 
-        usort($activities, function ($a, $b) {
-            return ($b['time'] ?? '') <=> ($a['time'] ?? '');
-        });
-
-        return array_slice($activities, 0, 10);
+        // Newest first by the time itself. It used to sort on "3 days ago"
+        // as text, which is alphabetical order, not time order.
+        return collect($activities)
+            ->filter(fn ($a) => $a['at'] !== null)
+            ->sortByDesc(fn ($a) => $a['at']->timestamp)
+            ->values()
+            ->take(10)
+            ->all();
     }
 }

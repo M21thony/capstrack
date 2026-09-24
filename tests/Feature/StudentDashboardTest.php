@@ -177,7 +177,7 @@ class StudentDashboardTest extends TestCase
         $this->assertNotEmpty($activities);
 
         // Verify the invitation to invitee appears in the activity feed text
-        $inviteActivity = $activities->first(fn ($a) => str_contains($a->text, $invitee->f_name));
+        $inviteActivity = $activities->first(fn ($a) => str_contains($a['text'], $invitee->f_name));
         $this->assertNotNull($inviteActivity, 'Invitation activity not found in activity feed');
     }
 

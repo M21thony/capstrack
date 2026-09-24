@@ -114,52 +114,54 @@ class AdminDashboardController extends Controller
         ));
     }
 
+    /**
+     * The dashboard feed, newest first: expert sign-ups and approvals, teams
+     * applying for experts, and what students did (activity_log). Each item
+     * names its type, so the feed draws its icon (App\Support\ActivityIcons),
+     * and carries its time as a date - it used to sort on '2 weeks ago' as
+     * text, which put entries in alphabetical order rather than by time.
+     */
     private function buildRecentActivity(): array
     {
         $activities = collect();
+        $name = fn ($e) => e(trim(($e->first_name ?? '').' '.($e->last_name ?? '')));
 
         CapstoneExpert::where('approved_status', false)
             ->whereNull('rejection_reason')
             ->latest('created_at')
             ->take(5)
             ->get()
-            ->each(function ($e) use ($activities) {
-                $activities->push([
-                    'iconSvg' => '<svg viewBox="0 0 24 24" style="stroke:var(--accent3);width:13px;height:13px;fill:none;stroke-width:2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
-                    'text' => "<strong>{$e->first_name} {$e->last_name}</strong> requested an expert account",
-                    'time' => $e->created_at?->diffForHumans(),
-                ]);
-            });
+            ->each(fn ($e) => $activities->push([
+                'type' => 'expert_requested',
+                'text' => '<strong>'.$name($e).'</strong> requested an expert account',
+                'at' => $e->created_at,
+            ]));
 
         CapstoneExpert::where('approved_status', true)
             ->orderBy('created_at', 'desc')
             ->take(5)
             ->get()
-            ->each(function ($e) use ($activities) {
-                $activities->push([
-                    'iconSvg' => '<svg viewBox="0 0 24 24" style="stroke:var(--green);width:13px;height:13px;fill:none;stroke-width:2.5"><polyline points="20 6 9 17 4 12"/></svg>',
-                    'text' => "<strong>{$e->first_name} {$e->last_name}</strong> was approved as an expert",
-                    'time' => $e->created_at?->diffForHumans(),
-                ]);
-            });
+            ->each(fn ($e) => $activities->push([
+                'type' => 'expert_approved',
+                'text' => '<strong>'.$name($e).'</strong> was approved as an expert',
+                'at' => $e->created_at,
+            ]));
 
         TeamExpertAssignment::with(['team', 'expert', 'role', 'expertRole.role'])
+            ->where('status', 'pending')
             ->latest('created_at')
             ->take(10)
             ->get()
-            ->each(function ($a) use ($activities) {
-                $teamName = $a->team?->team_name ?? 'Unknown';
-                $expertName = $a->expert ? "{$a->expert->first_name} {$a->expert->last_name}" : 'Unknown';
-                // role() is belongsToMany (via expert_roles) — always a collection, never a single model.
+            ->each(function ($a) use ($activities, $name) {
+                // role() is belongsToMany (via expert_roles) - always a collection, never a single model.
                 $roleName = $a->role->first()?->role_name ?? '';
 
-                if ($a->status === 'pending') {
-                    $activities->push([
-                        'iconSvg' => '<svg viewBox="0 0 24 24" style="stroke:var(--accent3);width:13px;height:13px;fill:none;stroke-width:2.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',
-                        'text' => "<strong>Team {$teamName}</strong> applied for {$expertName} as ".Str::title($roleName),
-                        'time' => $a->created_at?->diffForHumans(),
-                    ]);
-                }
+                $activities->push([
+                    'type' => 'expert_application',
+                    'text' => '<strong>Team '.e($a->team?->team_name ?? 'Unknown').'</strong> applied for '
+                        .($a->expert ? $name($a->expert) : 'an expert').($roleName ? ' as '.e(Str::title($roleName)) : ''),
+                    'at' => $a->created_at,
+                ]);
             });
 
         // Same rule as the bell and the Activity Log page: a CaPSA sees the
@@ -170,20 +172,18 @@ class AdminDashboardController extends Controller
             ->latest('created_at')
             ->take(10)
             ->get()
-            ->each(function ($log) use ($activities) {
-                $activities->push([
-                    'iconSvg' => '<svg viewBox="0 0 24 24" style="stroke:var(--blue);width:13px;height:13px;fill:none;stroke-width:2.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>',
-                    'text' => $log->description,
-                    'time' => $log->created_at?->diffForHumans(),
-                ]);
-            });
+            ->each(fn ($log) => $activities->push([
+                'type' => $log->type,
+                // Written by the app, which escapes what it puts in.
+                'text' => $log->description,
+                'at' => $log->created_at,
+            ]));
 
         return $activities
-            ->sortByDesc(function ($a) {
-                return $a['time'] ?? '';
-            })
+            ->filter(fn ($a) => $a['at'] !== null)
+            ->sortByDesc(fn ($a) => $a['at']->timestamp)
             ->values()
-            ->take(10)
+            ->take(12)
             ->toArray();
     }
 }

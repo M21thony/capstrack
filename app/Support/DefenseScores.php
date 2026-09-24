@@ -48,7 +48,7 @@ class DefenseScores
                 'label' => self::SHORT[$s->defense_type] ?? $s->defense_type,
                 'attempt' => max(1, (int) $s->attempt),
                 'average' => $s->panelAverage(),
-                'graded' => $s->submittedGrades()->count(),
+                'graded' => $s->gradesInCount(),
                 'panel_size' => $s->panelSize(),
             ])
             // One line per stage: the latest attempt only. A failed attempt is
