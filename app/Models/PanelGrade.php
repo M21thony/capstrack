@@ -15,6 +15,7 @@ class PanelGrade extends Model
         'expert_id',
         'rubric_id',
         'scores',
+        'abstained',
         'total_score',
         'verdict',
         'remarks',
@@ -26,9 +27,16 @@ class PanelGrade extends Model
     {
         return [
             'scores' => 'array',
+            'abstained' => 'array',
             'total_score' => 'decimal:2',
             'submitted_at' => 'datetime',
         ];
+    }
+
+    /** Whether the panelist abstained from grading this criterion. */
+    public function abstainedOn(int|string $criterionId): bool
+    {
+        return in_array((string) $criterionId, array_map('strval', $this->abstained ?? []), true);
     }
 
     public function schedule()
