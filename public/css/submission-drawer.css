@@ -46,29 +46,33 @@
 .dwf{padding:14px 22px;border-top:1px solid var(--border);display:flex;gap:10px;background:var(--bg2)}
 .dw-loading{padding:26px 22px;font-size:13px;color:var(--text3)}
 
-/* ── Steps ── */
+/* ── Steps: one card each, numbered by a CSS counter ── */
+.dwb{background:var(--bg3)}
 .dwb .form-section{
-  position:relative;padding:0 0 24px 44px;margin:0;
+  position:relative;margin:0 0 12px;padding:14px 16px 16px;
+  background:var(--bg2);border:1px solid var(--border);border-radius:16px;
+  box-shadow:0 1px 2px rgba(24,25,31,.04);
 }
-/* The line joining one step's number to the next. */
-.dwb .form-section::before{
-  content:"";position:absolute;left:14px;top:34px;bottom:6px;width:2px;
-  background:var(--border);border-radius:2px;
-}
-.dwb .form-section:last-of-type{padding-bottom:4px}
-.dwb .form-section:last-of-type::before{display:none}
+.dwb .form-section:last-of-type{margin-bottom:0}
+/* A step turns green once it has what it needs. */
+.dwb .form-section:has(.drop-zone.has-file),
+.dwb .form-section:has(.recipient-check input:checked),
+.dwb .form-section:has(#checklistItem option:checked:not([value=""])){border-color:rgba(22,163,74,.35)}
+.dwb .form-section:has(.drop-zone.has-file) .step-num,
+.dwb .form-section:has(.recipient-check input:checked) .step-num,
+.dwb .form-section:has(#checklistItem option:checked:not([value=""])) .step-num{background:var(--green);border-color:var(--green);color:#fff}
 
-.step-head{display:flex;align-items:flex-start;gap:12px;margin:0 0 12px -44px}
+.step-head{display:flex;align-items:center;gap:12px;margin:0 0 12px}
 .step-num{
   counter-increment:step;
-  width:30px;height:30px;flex-shrink:0;border-radius:50%;
+  width:30px;height:30px;flex-shrink:0;border-radius:10px;
   display:flex;align-items:center;justify-content:center;
   background:var(--accent-light);border:1.5px solid var(--accent);
-  color:var(--accent3);font-size:13px;font-weight:700;
+  color:var(--accent3);font-size:13px;font-weight:700;transition:background .2s,border-color .2s,color .2s;
 }
 .step-num::before{content:counter(step)}
-.step-title{margin:4px 0 0;font-size:14px;font-weight:700;color:var(--text)}
-.step-sub{margin:2px 0 0;font-size:12px;color:var(--text3)}
+.step-title{margin:0;font-size:14px;font-weight:700;color:var(--text)}
+.step-sub{margin:1px 0 0;font-size:12px;color:var(--text3)}
 
 /* ── Inputs ── */
 .dwb .input,.dwb select{
@@ -273,8 +277,24 @@
 #submission-toast.error{border-left-color:var(--red)}
 
 @media (max-width:520px){
-  .dw{width:100%}
-  .dw .ph,.dwb,.dwf{padding-left:16px;padding-right:16px}
-  .recipient-group{grid-template-columns:1fr}
+  .dw{width:100%;border-left:0}
+  .dw .ph{padding:14px 16px}
+  .dw .ph-icon{width:36px;height:36px;border-radius:11px}
+  .dw .x{width:38px;height:38px}
+  .dwb{padding:12px}
+  .dwb .form-section{padding:12px 12px 14px;border-radius:14px}
+  .dwf{padding:10px 12px calc(10px + env(safe-area-inset-bottom))}
+  /* The drop zone as one row: icon, words, and the button to browse. */
+  .drop-zone{flex-direction:row;text-align:left;padding:14px;gap:12px}
+  .drop-icon{width:42px;height:42px}
+  .drop-info{flex:1}
+  .drop-info p{font-size:13.5px}
+  .drop-info span{font-size:11.5px}
+  /* Two recipients a row, the tick under the icon's corner. */
+  .recipient-group{grid-template-columns:1fr 1fr;gap:8px}
+  .recipient-check{flex-direction:column;align-items:flex-start;gap:8px;padding:10px}
+  .recipient-text{padding-right:0;width:100%;font-size:12.5px}
+  .doc-info-grid .info-row{padding:9px 12px}
+  .btn-submit,.btn-cancel{padding:13px}
   #submission-toast{left:16px;right:16px;bottom:16px;max-width:none}
 }
