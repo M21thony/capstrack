@@ -1,0 +1,199 @@
+{{--
+  The phone tab bar: a portal's most-used pages along the bottom of the
+  screen, the way a phone app is laid out, and Menu for everything else.
+  Shown only at phone width; on a wider screen the sidebar does this job.
+
+  Included by each portal's sidebar partial, which knows the user's roles:
+    $tabs = [[
+      'label' => 'Home',
+      'icon' => '<path d="..."/>',       // inner SVG, 24x24 viewBox
+      'href' => route(...),              // or 'onclick' => '...'
+      'active' => bool,
+      'badge' => int,                    // optional
+      'primary' => bool,                 // optional: the raised centre action
+    ], ...]
+
+  Menu opens the sidebar by pressing the page's own ☰ button, because every
+  page already wires that one up, each in its own way.
+--}}
+@once
+<style>
+  .mtab{display:none}
+  @media (max-width:768px){
+    .mtab{
+      display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);
+      position:fixed;left:0;right:0;bottom:0;z-index:390;
+      height:calc(62px + env(safe-area-inset-bottom));padding:0 4px env(safe-area-inset-bottom);
+      background:#fff;border-top:1px solid var(--border);
+      box-shadow:0 -6px 20px rgba(24,25,31,.07);
+    }
+    .mtab-item{
+      position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+      min-width:0;padding:6px 2px 4px;border:0;background:none;cursor:pointer;text-decoration:none;
+      font-family:inherit;font-size:10.5px;font-weight:600;color:var(--text3);
+      -webkit-tap-highlight-color:transparent;
+    }
+    .mtab-item span.lb{max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .mtab-ic{position:relative;display:flex;align-items:center;justify-content:center;width:44px;height:28px;border-radius:14px;transition:background .15s}
+    .mtab-ic svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+    .mtab-item:active .mtab-ic{background:var(--bg3)}
+    .mtab-item.on{color:var(--text)}
+    .mtab-item.on .mtab-ic{background:var(--accent-light,#faf7ed);color:var(--accent3,#8a6e10)}
+    .mtab-badge{
+      position:absolute;top:-3px;right:4px;min-width:16px;height:16px;padding:0 4px;border-radius:8px;
+      background:var(--red,#dc2626);color:#fff;font-size:9.5px;font-weight:700;line-height:16px;text-align:center;
+      box-shadow:0 0 0 2px #fff;
+    }
+    /* The one action a portal is for, raised out of the bar. */
+    .mtab-item.primary .mtab-ic{
+      width:50px;height:50px;margin-top:-26px;border-radius:17px;
+      background:var(--accent);color:#18191f;box-shadow:0 6px 16px rgba(201,168,44,.45);
+    }
+    .mtab-item.primary .mtab-ic svg{width:24px;height:24px;stroke-width:2.4}
+    .mtab-item.primary{color:var(--text)}
+
+    /* The bar sits over the bottom of the screen, so the page ends above it.
+       dvh: a phone's address bar comes and goes, and 100vh ignores it. */
+    .main{height:100dvh;padding-bottom:calc(62px + env(safe-area-inset-bottom))}
+    .toast,.toast-wrap,#submission-toast,#archive-toast{bottom:calc(76px + env(safe-area-inset-bottom))!important}
+
+    /* Menu in the bar replaces the ☰ in the top bar. The button stays in the
+       page, hidden, because Menu opens the sidebar by pressing it. */
+    .topbar .hamburger-btn{display:none!important}
+    .topbar{padding-left:16px}
+
+    /* The notification panel, as a phone sheet: the width of the screen
+       less a margin, from under the top bar all the way to the bottom of the
+       screen however many notifications there are, with only the list
+       scrolling. On a desktop it is a 380px dropdown hung off the bell, which
+       on a phone ran past the left edge. !important: two student stylesheets
+       set their own phone size with it. */
+    .topbar .notif-dropdown{
+      position:fixed!important;top:66px!important;left:10px!important;right:10px!important;
+      bottom:calc(10px + env(safe-area-inset-bottom))!important;
+      width:auto!important;max-width:none!important;height:auto!important;max-height:none!important;
+      border-radius:16px!important;overflow:hidden;
+      box-shadow:0 18px 50px rgba(15,17,23,.3)!important;
+    }
+    /* Nothing to show: the message sits in the middle of the sheet. */
+    .topbar .notif-dropdown .notif-list:has(.notif-empty){display:flex;align-items:center;justify-content:center}
+    .topbar .notif-dropdown.open{display:flex!important;flex-direction:column}
+    .topbar .notif-dropdown > *{flex:none}
+    .topbar .notif-dropdown .notif-list{flex:1 1 auto;min-height:0;max-height:none!important;overflow-y:auto;overscroll-behavior:contain}
+    .topbar .notif-dropdown .notif-item{padding:13px 16px}
+    .topbar .notif-dropdown .notif-item-title{font-size:13.5px}
+    .topbar .notif-dropdown .notif-item-msg{font-size:12.5px}
+
+    /* Behind it, a dim that closes it: tapping outside closes the panel and
+       does nothing else, instead of also opening whatever was under the tap. */
+    .mnotif-scrim.on{display:block;position:fixed;inset:0;z-index:9998;background:rgba(15,17,23,.4);animation:mnotifFade .15s ease}
+  }
+  .mnotif-scrim{display:none}
+  @keyframes mnotifFade{from{opacity:0}to{opacity:1}}
+
+  /* The developers' credit, at the foot of every page in every portal. It
+     is the last thing in the page's scrolling area, so it is only seen at the
+     end of the page and never sits over or beside anything. */
+  .sys-credits{flex:none;width:100%;margin-top:40px;padding:16px 12px 18px;border-top:1px dashed var(--border);
+    text-align:center;opacity:.55;clear:both}
+  .sys-credits .credits-title{font-size:8px;font-weight:600;letter-spacing:1px;text-transform:uppercase;
+    color:var(--text3);margin-bottom:4px}
+  .sys-credits .credits-names{font-size:9.5px;font-weight:500;letter-spacing:.3px;color:var(--text3)}
+</style>
+<script>
+  // Every portal's bell toggles .open on #notif-dropdown; the dim follows it.
+  // A tap on the dim reaches the bells' own "click outside closes" handlers,
+  // so this only has to show and hide it.
+  document.addEventListener('DOMContentLoaded', function () {
+    var panel = document.getElementById('notif-dropdown');
+    if (!panel || !window.MutationObserver) {
+      return;
+    }
+    var scrim = document.createElement('div');
+    scrim.className = 'mnotif-scrim';
+    scrim.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(scrim);
+    new MutationObserver(function () {
+      scrim.classList.toggle('on', panel.classList.contains('open'));
+    }).observe(panel, { attributes: true, attributeFilter: ['class'] });
+  });
+
+  // The credits go at the end of the page's scrolling area. A page that has
+  // no scrolling area - a full-screen tool like the grading sheet - is left
+  // alone, since anything added there would take room from the page itself.
+  // A page that already carries the credits keeps its own copy; one left
+  // outside the scrolling area (pinned to the bottom of the screen) is moved
+  // into it, so there is only ever one, and it is always last.
+  document.addEventListener('DOMContentLoaded', function () {
+    var main = document.querySelector('.main');
+    if (!main) {
+      return;
+    }
+    var scrolls = function (el) {
+      return !!el && /(auto|scroll)/.test(getComputedStyle(el).overflowY);
+    };
+    // Where the page scrolls, in order: the page area itself; else a page
+    // container of its own (Defense Scheduling, Financial on a phone); else,
+    // on pages that hold still and scroll one list, the end of that list.
+    // .content here is the page container, not the few buttons that also
+    // wear it for its colours (see expert.css).
+    // The page is often still hidden behind its loading skeleton here, so
+    // sizes cannot tell the real page from the placeholder or a pop-up;
+    // what they are called can.
+    var isPage = function (el) {
+      return el.tagName === 'DIV'
+        && !el.closest('#skeleton-content, .sk-overlay, .modal-overlay, dialog, .notif-dropdown, [class*="modal"], [class*="overlay"]');
+    };
+    var first = function (selector, test) {
+      return Array.prototype.find.call(main.querySelectorAll(selector), function (el) { return isPage(el) && test(el); });
+    };
+    var content = first(':scope > .content, div.content', function () { return true; });
+    if (!scrolls(content)) {
+      content = first(':scope > *, :scope > #real-content > *', scrolls)
+        || first('.list-card, .dx-table-wrap, .fx-scroll', scrolls);
+    }
+    if (!content) {
+      return;
+    }
+    var style = getComputedStyle(content);
+    // A row of side-by-side columns has no "end" to put it at.
+    if (style.display.indexOf('flex') !== -1 && style.flexDirection.indexOf('row') === 0 && style.flexWrap === 'nowrap') {
+      return;
+    }
+
+    var credits = document.querySelector('.legal-credits');
+    if (credits && content.contains(credits)) {
+      return;
+    }
+    if (!credits) {
+      credits = document.createElement('div');
+      credits.innerHTML = '<div class="credits-title">System Developers</div>'
+        + '<div class="credits-names">Jolina · John Kenneth · Mark Anthony · Ian Cyrus · Alexa Nicole</div>';
+    }
+    credits.className = 'legal-credits sys-credits';
+    credits.removeAttribute('style');
+    content.appendChild(credits);
+  });
+</script>
+@endonce
+
+<nav class="mtab" aria-label="Main">
+  @foreach ($tabs as $tab)
+    @php
+      $classes = 'mtab-item'.(! empty($tab['active']) ? ' on' : '').(! empty($tab['primary']) ? ' primary' : '');
+      $badge = (int) ($tab['badge'] ?? 0);
+      $inner = '<span class="mtab-ic"><svg viewBox="0 0 24 24" aria-hidden="true">'.$tab['icon'].'</svg>'
+          .($badge > 0 ? '<span class="mtab-badge">'.($badge > 9 ? '9+' : $badge).'</span>' : '')
+          .'</span><span class="lb">'.e($tab['label']).'</span>';
+    @endphp
+    @if (! empty($tab['href']))
+      <a href="{{ $tab['href'] }}" class="{{ $classes }}" @if (! empty($tab['active'])) aria-current="page" @endif>{!! $inner !!}</a>
+    @else
+      <button type="button" class="{{ $classes }}" onclick="{{ $tab['onclick'] }}">{!! $inner !!}</button>
+    @endif
+  @endforeach
+  <button type="button" class="mtab-item" onclick="var h = document.querySelector('.hamburger-btn'); if (h) { h.click(); }" aria-label="Open the full menu">
+    <span class="mtab-ic"><svg viewBox="0 0 24 24" aria-hidden="true"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg></span>
+    <span class="lb">Menu</span>
+  </button>
+</nav>

@@ -36,6 +36,32 @@
   .gl-go{font:inherit;font-size:12px;font-weight:600;border-radius:6px;padding:6px 12px;border:1px solid var(--border2);background:var(--bg2);color:var(--text);text-decoration:none;white-space:nowrap}
   .gl-go.primary{background:var(--accent);border-color:var(--accent);color:#18191f}
   .gl-empty{padding:40px 16px;text-align:center;color:var(--text3);font-size:13px}
+
+  /* A phone gets one card per defense instead of a six-column row: the team
+     on top, what and when under it, and the button across the bottom. */
+  @media (max-width:700px){
+    .gl{max-height:none;overflow:visible}
+    .gl-scroll{overflow:visible}
+    .gl-filter{margin-left:0;width:100%}
+    .gl-filter button{flex:1}
+    .gl table,.gl tbody{display:block}
+    .gl thead{display:none}
+    .gl tbody tr{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 12px;padding:14px;border-bottom:1px solid var(--border)}
+    .gl tbody tr:last-of-type{border-bottom:0}
+    .gl tbody tr:hover td{background:none}
+    .gl td{display:block;padding:0;border:0;font-size:12.5px;min-width:0}
+    .gl td:nth-child(1){grid-column:1 / -1}
+    .gl td:nth-child(2){grid-column:1}
+    .gl td:nth-child(3){grid-column:2;text-align:right;color:var(--text3);font-size:12px}
+    .gl td:nth-child(4){grid-column:1 / -1;color:var(--text2)}
+    .gl td:nth-child(5){grid-column:1}
+    .gl td:nth-child(6){grid-column:1 / -1;text-align:left!important}
+    .gl-team small{max-width:none;white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+    .gl-go{display:block;text-align:center;padding:10px 12px;font-size:13px}
+    .gl-none td{grid-column:1 / -1}
+    /* display:grid above would otherwise show rows the filter hid. */
+    .gl tbody tr[hidden]{display:none}
+  }
 </style>
 </head>
 <body>
@@ -80,15 +106,15 @@
         <div style="font-size:13px;color:var(--text3);max-width:400px;margin:0 auto">You haven't been placed on a defense panel yet. Once an admin assigns you to a team's panel, it will show up here.</div>
       </div>
     @else
-      @php $toGrade = $rows->where('status', '!=', 'submitted')->count(); @endphp
+      @php $toGrade = $rows->whereNotIn('status', ['submitted', 'abstained'])->count(); @endphp
       <section class="gl" aria-label="Defenses to grade">
         <div class="gl-head">
           <b>Your defenses</b>
-          <span class="sub">{{ $toGrade }} to grade · {{ $rows->count() - $toGrade }} submitted</span>
+          <span class="sub">{{ $toGrade }} to grade · {{ $rows->count() - $toGrade }} done</span>
           <div class="gl-filter" role="group" aria-label="Show">
             <button type="button" data-show="all" aria-pressed="true">All</button>
             <button type="button" data-show="todo" aria-pressed="false">To grade</button>
-            <button type="button" data-show="done" aria-pressed="false">Submitted</button>
+            <button type="button" data-show="done" aria-pressed="false">Done</button>
           </div>
         </div>
         <div class="gl-scroll">
@@ -98,7 +124,8 @@
               @foreach($rows as $row)
                 @php
                   $url = route('instructor.grading.show', $row->defense_id);
-                  $done = $row->status === 'submitted';
+                  // Abstaining finishes a panelist's part as much as scoring does.
+                  $done = in_array($row->status, ['submitted', 'abstained'], true);
                   $isRedefense = ($row->attempt ?? 1) > 1;
                   $attempt = $row->attempt ?? 1;
                   $ordinal = $attempt === 2 ? '2nd' : ($attempt === 3 ? '3rd' : $attempt.'th');
@@ -131,7 +158,9 @@
                     </div>
                   </td>
                   <td>
-                    @if($done)
+                    @if($row->status === 'abstained')
+                      <span class="badge badge-gray" style="font-size:10px">Abstained</span>
+                    @elseif($done)
                       <span class="badge badge-green" style="font-size:10px">Submitted{{ $row->total_score !== null ? ' · '.rtrim(rtrim(number_format((float) $row->total_score, 2), '0'), '.') : '' }}</span>
                     @elseif($row->status === 'draft')
                       <span class="badge badge-amber" style="font-size:10px">Draft saved</span>

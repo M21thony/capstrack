@@ -5,9 +5,9 @@ namespace App\Services;
 use App\Models\ActivityLog;
 use App\Models\CapstoneExpert;
 use App\Models\LeaveApproval;
+use App\Models\MemberLeaveRequest;
 use App\Models\Notification;
 use App\Models\Recruitment;
-use App\Models\MemberLeaveRequest;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
 use App\Models\TeamInvitation;
@@ -119,6 +119,8 @@ class TeamLock
                 : 'Your CaPSA approved your leader\'s request to remove you from '.$teamName.'.')
                 .' You are no longer on the team.'.$noteText,
             'link' => route('student.team'),
+            // Which request, so tapping it can show the whole decision.
+            'data' => ['leave_request_id' => $request->id],
         ]);
 
         foreach (StudentSchoolYear::where('team_id', $request->team_id)->pluck('student_id') as $memberId) {
@@ -128,6 +130,7 @@ class TeamLock
                 'title' => 'Member left the team',
                 'message' => '<strong>'.$name.'</strong> is no longer on '.$teamName.'. Your CaPSA approved it.'.$noteText,
                 'link' => route('student.team'),
+                'data' => ['leave_request_id' => $request->id],
             ]);
         }
 

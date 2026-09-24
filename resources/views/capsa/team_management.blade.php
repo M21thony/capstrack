@@ -142,6 +142,9 @@
             <button class="btn btn-o" type="button" id="setBtn" aria-expanded="false" aria-controls="setMenu">
               <x-tm-icon n="gear" s="16" />Team Settings
             </button>
+            {{-- On a phone the panel is a bottom sheet; this dims the page behind it,
+                 and tapping it cancels the same as clicking away does. --}}
+            <div class="set-scrim" id="setScrim" hidden></div>
             <div class="menu" id="setMenu" hidden>
               <h3>Team Settings</h3>
               <label class="opt" for="tsize">
@@ -475,11 +478,14 @@
     const setOpen = on => {
       if (on) { tsize.value = RULES.max; acreate.checked = RULES.create; ajoin.checked = RULES.join; checkSize(); }
       setMenu.hidden = !on;
+      document.getElementById('setScrim').hidden = !on;
       setBtn.setAttribute('aria-expanded', on);
       if (on) tsize.focus();
     };
 
     setBtn.onclick = () => setOpen(setMenu.hidden);
+    // Inside .setw, so the click-away rule below does not see it: it cancels itself.
+    document.getElementById('setScrim').onclick = () => { setOpen(false); setBtn.focus(); };
     tsize.oninput = checkSize;
     document.getElementById('setX').onclick = () => { setOpen(false); setBtn.focus(); };
     document.addEventListener('click', e => { if (!setMenu.hidden && !e.target.closest('.setw')) setOpen(false); });

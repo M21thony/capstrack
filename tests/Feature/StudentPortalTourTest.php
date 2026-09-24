@@ -145,8 +145,10 @@ class StudentPortalTourTest extends TestCase
         $html = $this->actingAs($student, 'web')->get(route('student.dashboard'))
             ->assertOk()->getContent();
 
-        $this->assertStringContainsString("sessionStorage.setItem('gt-done', '1')", $html);
-        $this->assertStringContainsString("&& !markedDone()", $html);
+        // Kept per portal, so finishing one portal's tour does not hide another's.
+        $this->assertStringContainsString("sessionStorage.setItem('gt-done:' + tourKey, '1')", $html);
+        $this->assertStringContainsString('data-tour-key="student"', $html);
+        $this->assertStringContainsString('&& !markedDone()', $html);
         $this->assertStringContainsString('if (!r.ok)', $html);
     }
 

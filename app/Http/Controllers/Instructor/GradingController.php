@@ -21,6 +21,9 @@ class GradingController extends Controller
 {
     private const VERDICTS = ['approved', 'revision', 'rejected'];
 
+    /** An abstention needs a reason the panel and CaPSA can read. */
+    private const ABSTAIN_REASON_MIN = 10;
+
     // Who a panelist can grade comes from defense_panels (the real,
     // admin-driven panel assignment), not a "panel" role — no such role
     // has ever been seeded, so gating on it always denied everyone.
@@ -57,7 +60,7 @@ class GradingController extends Controller
                         ->where('expert_id', $expert->expert_id)
                         ->first();
 
-                    return ! $grade || $grade->status !== 'submitted';
+                    return ! $grade || ! in_array($grade->status, [PanelGrade::SUBMITTED, PanelGrade::ABSTAINED], true);
                 })->sortByDesc(fn ($s) => $s->attempt)->first();
             }
 
@@ -111,7 +114,7 @@ class GradingController extends Controller
             ]);
         })
             // Still to grade first, then by date.
-            ->sortBy(fn ($r) => ($r->status === 'submitted' ? '1' : '0').$r->schedule_date->format('YmdHi'))
+            ->sortBy(fn ($r) => (in_array($r->status, [PanelGrade::SUBMITTED, PanelGrade::ABSTAINED], true) ? '1' : '0').$r->schedule_date->format('YmdHi'))
             ->values();
 
         return view('instructor.grading', ['rows' => $rows]);
@@ -218,9 +221,111 @@ class GradingController extends Controller
             // each panelist and tallied. Everyone else just scores.
             'isChair' => $panel->panel_role === 'Panel Chair',
             'outcomeOptions' => DefenseOutcome::forStage($defense->defense_type),
-            'gradesIn' => $defense->submittedGrades()->count(),
+            'gradesIn' => $defense->gradesInCount(),
             'panelSize' => $defense->panelSize(),
+            // Everyone else abstained and nobody scored: the chair's view says
+            // why the decision cannot be recorded yet.
+            'nobodyScored' => $defense->gradesInCount() === $defense->panelSize() && $defense->submittedGrades()->isEmpty(),
         ]);
+    }
+
+    /**
+     * Decline to score this team, with the reason.
+     *
+     * Counts as turned in so the panel is not held up, and is left out of the
+     * team's average. Not once the decision is recorded - the average it
+     * produced is what the team was told - and never by the last panelist
+     * still able to score: somebody has to.
+     */
+    public function abstain(Request $request, DefenseSchedule $defense): JsonResponse
+    {
+        $this->panelFor($defense);
+
+        $validator = Validator::make($request->all(), [
+            'reason' => ['required', 'string', 'min:'.self::ABSTAIN_REASON_MIN, 'max:1000'],
+        ], [
+            'reason.required' => 'Give the reason you are abstaining.',
+            'reason.min' => 'Give the reason you are abstaining - at least '.self::ABSTAIN_REASON_MIN.' characters.',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'message' => $validator->errors()->first()], 422);
+        }
+
+        if ($defense->hasOutcome()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'The panel has already recorded its decision for this defense.',
+            ], 422);
+        }
+
+        $rubric = $this->rubricFor($defense->defense_type);
+
+        if (! $rubric) {
+            return response()->json(['success' => false, 'message' => 'No active rubric is configured for this defense stage.'], 422);
+        }
+
+        /** @var CapstoneExpert $expert */
+        $expert = auth()->guard('expert')->user();
+
+        $othersAbstained = $defense->abstainedGrades()->where('expert_id', '!=', $expert->expert_id)->count();
+
+        if ($othersAbstained >= $defense->panelSize() - 1) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Every other panelist has abstained, so you are the only one left to score this team.',
+            ], 422);
+        }
+
+        PanelGrade::updateOrCreate(
+            ['defense_id' => $defense->defense_id, 'expert_id' => $expert->expert_id],
+            [
+                'rubric_id' => $rubric->rubric_id,
+                'scores' => [],
+                'total_score' => null,
+                'verdict' => null,
+                'remarks' => trim($validator->validated()['reason']),
+                'status' => PanelGrade::ABSTAINED,
+                'submitted_at' => now(),
+            ]
+        );
+
+        $defense->unsetRelation('grades');
+
+        return response()->json([
+            'success' => true,
+            'message' => 'You abstained from grading this team.',
+            'data' => ['status' => PanelGrade::ABSTAINED],
+        ]);
+    }
+
+    /** Take the abstention back and score the team after all. */
+    public function withdrawAbstention(DefenseSchedule $defense): JsonResponse
+    {
+        $this->panelFor($defense);
+
+        if ($defense->hasOutcome()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'The panel has already recorded its decision for this defense.',
+            ], 422);
+        }
+
+        /** @var CapstoneExpert $expert */
+        $expert = auth()->guard('expert')->user();
+
+        $grade = PanelGrade::where('defense_id', $defense->defense_id)
+            ->where('expert_id', $expert->expert_id)
+            ->where('status', PanelGrade::ABSTAINED)
+            ->first();
+
+        if (! $grade) {
+            return response()->json(['success' => false, 'message' => 'You have not abstained from this team.'], 422);
+        }
+
+        $grade->update(['status' => PanelGrade::DRAFT, 'remarks' => null, 'submitted_at' => null]);
+
+        return response()->json(['success' => true, 'message' => 'Abstention withdrawn. You can score this team now.']);
     }
 
     public function save(Request $request, DefenseSchedule $defense): JsonResponse
@@ -388,7 +493,7 @@ class GradingController extends Controller
         if (! $defense->allGradesIn()) {
             return response()->json([
                 'success' => false,
-                'message' => 'Every panelist has to submit their scores before the outcome can be recorded.',
+                'message' => 'Every panelist has to submit their scores or abstain before the outcome can be recorded.',
             ], 422);
         }
 
