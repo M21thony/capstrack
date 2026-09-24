@@ -82,16 +82,47 @@
 }
 .match-abstract-toggle:hover { text-decoration: underline; }
 
-.pp-field { margin-bottom: 14px; }
-.pp-field label { display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 6px; letter-spacing: 0.4px; }
+.pp-field { margin-bottom: 16px; min-width: 0; }
+.pp-field:last-child { margin-bottom: 0; }
+.pp-field > label, .pp-tags legend { display: block; font-size: 12.5px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
 .pp-field input[type="text"], .pp-field select, .pp-field textarea {
-  width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border);
-  background: var(--bg2); color: var(--text); font-size: 13px; box-sizing: border-box; font-family: inherit;
+  width: 100%; padding: 9px 12px; border-radius: 8px; border: 1px solid var(--border);
+  background: var(--bg); color: var(--text); font-size: 13.5px; line-height: 1.5; box-sizing: border-box; font-family: inherit;
+  transition: border-color .15s, box-shadow .15s;
 }
-.pp-field textarea { min-height: 70px; resize: vertical; }
-.pp-hint { font-size: 11px; color: var(--text3); margin-top: 4px; }
-.pp-tags { border: none; padding: 0; margin: 0 0 16px; min-width: 0; }
-.pp-tags legend { display: flex; align-items: center; gap: 8px; padding: 0; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); letter-spacing: 0.4px; margin-bottom: 4px; }
+.pp-field input[type="text"]:hover, .pp-field select:hover, .pp-field textarea:hover { border-color: var(--text3); }
+.pp-field input[type="text"]:focus, .pp-field select:focus, .pp-field textarea:focus {
+  outline: none; border-color: var(--accent, #c9a82c); box-shadow: 0 0 0 3px rgba(201,168,44,.18);
+}
+.pp-field textarea { min-height: 76px; resize: vertical; }
+.pp-field textarea#title { min-height: 0; font-weight: 600; font-size: 14.5px; }
+.pp-help { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; font-size: 11.5px; color: var(--text3); margin-top: 6px; line-height: 1.45; }
+.pp-counter { flex-shrink: 0; font-variant-numeric: tabular-nums; font-weight: 600; color: var(--text2); }
+.pp-counter.over { color: var(--red); }
+.pp-counter.at-limit { color: var(--accent3, #8a6e10); }
+.pp-error { font-size: 12px; color: var(--red); margin-top: 6px; line-height: 1.4; }
+.pp-error:empty { display: none; }
+.pp-field.has-error input[type="text"], .pp-field.has-error select, .pp-field.has-error textarea, .pp-field.has-error .pp-chipbox { border-color: var(--red); }
+.pp-field.has-error .pp-pill span { border-color: var(--red); }
+.pp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }
+.pp-grid .pp-field:last-child { margin-bottom: 16px; }
+.pp-section:last-child .pp-grid .pp-field:nth-last-child(-n+2) { margin-bottom: 0; }
+
+/* Research agenda: chips and the box to add one, drawn as one field. */
+.pp-chipbox { border: 1px solid var(--border); border-radius: 8px; background: var(--bg); padding: 6px; cursor: text; transition: border-color .15s, box-shadow .15s; }
+.pp-chipbox:focus-within { border-color: var(--accent, #c9a82c); box-shadow: 0 0 0 3px rgba(201,168,44,.18); }
+.pp-chipbox .pp-tag-list { margin: 0; }
+.pp-chipbox .pp-tag-list:not(:empty) { margin-bottom: 6px; }
+.pp-chip-add { display: flex; gap: 6px; align-items: center; }
+.pp-field .pp-chip-add input[type="text"] { border: none; background: transparent; padding: 5px 6px; box-shadow: none; flex: 1; min-width: 0; }
+.pp-suggest { display: flex; align-items: flex-start; gap: 8px; margin-top: 8px; font-size: 11.5px; color: var(--text3); }
+.pp-suggest > span { padding-top: 5px; flex-shrink: 0; }
+.pp-suggest > div { display: flex; flex-wrap: wrap; gap: 6px; }
+.pp-suggest-chip { border: 1px dashed var(--border); background: transparent; color: var(--text2); border-radius: 999px; padding: 4px 10px; font-size: 12px; font-family: inherit; cursor: pointer; text-align: left; }
+.pp-suggest-chip:hover { border-style: solid; border-color: var(--accent, #c9a82c); color: var(--text); }
+
+.pp-tags { border: none; padding: 0; margin: 0; min-width: 0; }
+.pp-tags legend { padding: 0; }
 .pp-required { font-size: 9.5px; font-weight: 700; letter-spacing: .3px; color: var(--red); background: var(--red-bg, rgba(220,38,38,.07)); padding: 1px 6px; border-radius: 999px; }
 .pp-pills { display: flex; flex-wrap: wrap; gap: 6px; }
 .pp-pill { position: relative; cursor: pointer; }
@@ -116,77 +147,6 @@
 .pp-submit-state-title { font-size: 12px; font-weight: 700; }
 .pp-submit-state-sub { font-size: 10.5px; opacity: 0.85; margin-top: 1px; }
 .pp-badge-draft { background: var(--bg4); color: var(--text3); }
-/* ── Pre-Proposal Details modal (.ppf) ───────────────────────────────────
-   A fixed header and footer with the four sections scrolling between them,
-   so the heading and Save stay in view however far down the form you are.
-   Scoped to .ppf: .pp-modal-overlay and .pp-modal-box also dress the page's
-   three small confirm dialogs. */
-.pp-modal-box.ppf { max-width: 780px; width: 100%; max-height: min(90vh, 920px); padding: 0; overflow: hidden; display: flex; flex-direction: column; border-radius: 18px; }
-.ppf-form { display: flex; flex-direction: column; flex: 1; min-height: 0; }
-.ppf-head { display: flex; align-items: flex-start; gap: 14px; padding: 20px 22px 16px; border-bottom: 1px solid var(--border); background: var(--bg2); }
-.ppf-head-icon { width: 42px; height: 42px; flex: none; border-radius: 12px; display: grid; place-items: center; background: var(--accent-light, #faf7ed); color: var(--accent3, #8a6e10); border: 1px solid rgba(201,168,44,.3); }
-.ppf-head-icon svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-.ppf-head-text { flex: 1; min-width: 0; }
-.ppf-head h2 { margin: 0; font-size: 17px; font-weight: 700; color: var(--text); }
-.ppf-head p { margin: 3px 0 0; font-size: 12.5px; line-height: 1.45; color: var(--text3); }
-.ppf-close { width: 34px; height: 34px; flex: none; display: grid; place-items: center; border: 1px solid var(--border); border-radius: 10px; background: var(--bg2); color: var(--text3); cursor: pointer; }
-.ppf-close:hover { color: var(--text); border-color: var(--border2); }
-.ppf-close svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2.2; }
-
-.ppf-body { flex: 1; min-height: 0; overflow-y: auto; padding: 16px 22px 18px; background: var(--bg3); scrollbar-width: thin; }
-.ppf-note { margin: 0 0 12px; font-size: 11.5px; color: var(--text3); }
-.ppf-section { background: var(--bg2); border: 1px solid var(--border); border-radius: 14px; padding: 18px 18px 16px; margin-bottom: 12px; }
-.ppf-section:last-child { margin-bottom: 0; }
-.ppf-section-head { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px dashed var(--border); }
-.ppf-num { width: 28px; height: 28px; flex: none; border-radius: 50%; display: grid; place-items: center; font-size: 13px; font-weight: 700; background: var(--accent, #c9a82c); color: #18191f; }
-.ppf-section-head h3 { margin: 3px 0 0; font-size: 14.5px; font-weight: 700; color: var(--text); }
-.ppf-section-head p { margin: 2px 0 0; font-size: 12px; line-height: 1.45; color: var(--text3); }
-
-/* Labels a person reads, not a wall of grey capitals. */
-.ppf .pp-field { margin-bottom: 14px; }
-.ppf .pp-field:last-child, .ppf .ppf-grid .pp-field { margin-bottom: 0; }
-.ppf .ppf-grid { margin-bottom: 14px; }
-.ppf .ppf-grid:last-child { margin-bottom: 0; }
-.ppf .pp-field > label { font-size: 12.5px; font-weight: 600; text-transform: none; letter-spacing: 0; color: var(--text); margin-bottom: 6px; }
-.ppf .pp-field input[type="text"], .ppf .pp-field select, .ppf .pp-field textarea { border-radius: 10px; padding: 10px 12px; font-size: 13.5px; line-height: 1.5; }
-.ppf .pp-field input[type="text"]:focus, .ppf .pp-field select:focus, .ppf .pp-field textarea:focus { outline: none; border-color: var(--accent, #c9a82c); box-shadow: 0 0 0 3px var(--accent-glow, rgba(201,168,44,.12)); }
-.ppf .pp-field textarea { min-height: 0; resize: vertical; }
-.ppf .ppf-title-input { resize: none; font-weight: 600; font-size: 14px; }
-.ppf-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-
-/* The title's word count says plainly whether it is there yet. */
-.ppf-wordcount { display: inline-flex; align-items: center; gap: 4px; margin-top: 6px; padding: 3px 10px; border-radius: 999px; background: var(--bg3); font-size: 11.5px; }
-.ppf-wordcount.is-ok { background: var(--green-bg, rgba(22,163,74,.08)); color: var(--green); }
-.ppf-wordcount.is-off { background: var(--amber-bg, rgba(217,119,6,.08)); color: var(--amber, #b45309); }
-.ppf .pp-tags { margin: 0; }
-/* The chips are labels too, so the old grey-capitals label rule reached
-   them; they read as the words they are. */
-.ppf .pp-pill { display: inline-block; margin: 0; font-size: inherit; font-weight: inherit; text-transform: none; letter-spacing: 0; color: inherit; }
-.ppf .pp-pill span { font-size: 12.5px; }
-.ppf-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-
-.ppf-foot { display: flex; justify-content: flex-end; align-items: center; gap: 10px; padding: 14px 22px; border-top: 1px solid var(--border); background: var(--bg2); }
-.ppf-cancel { background: var(--bg2); border: 1px solid var(--border); color: var(--text2); }
-.ppf-cancel:hover { border-color: var(--border2); color: var(--text); }
-.ppf-save { display: inline-flex; align-items: center; gap: 8px; padding-left: 18px; padding-right: 18px; }
-.ppf-save svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
-
-/* A phone gets the whole screen: nothing around it to tap by mistake, and
-   the two-column rows stacked. */
-@media (max-width: 640px) {
-  #pp-form-modal-overlay { padding: 0; align-items: stretch; }
-  .pp-modal-box.ppf { max-width: none; max-height: none; height: 100dvh; border-radius: 0; }
-  .ppf-head { padding: 14px 16px 12px; gap: 12px; }
-  .ppf-head-icon { width: 36px; height: 36px; border-radius: 10px; }
-  .ppf-head h2 { font-size: 16px; }
-  .ppf-body { padding: 12px 12px 16px; }
-  .ppf-section { padding: 14px 14px 14px; border-radius: 12px; }
-  .ppf-grid { grid-template-columns: 1fr; }
-  .ppf-foot { padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); }
-  .ppf-foot .ppf-cancel { flex: none; }
-  .ppf-foot .ppf-save { flex: 1; justify-content: center; white-space: nowrap; }
-}
-
 .pp-autosave { display: inline-flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 11.5px; font-weight: 500; color: var(--text3); }
 .pp-autosave::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--border2); }
 .pp-autosave.is-saved { color: var(--green); }
@@ -220,12 +180,16 @@
 @media (prefers-reduced-motion: reduce) {
   .pp-submit-wrap::after, .pp-submit-wrap::before { transition: none; }
 }
-.pp-tag-list { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
-.pp-tag { display: inline-flex; align-items: center; gap: 6px; background: var(--bg3); border: 1px solid var(--border); border-radius: 6px; padding: 4px 10px; font-size: 12px; color: var(--text2); }
-.pp-tag button { border: none; background: none; color: var(--text3); cursor: pointer; font-size: 12px; padding: 0; }
+.pp-tag-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.pp-tag { display: inline-flex; align-items: center; gap: 4px; max-width: 100%; background: var(--bg3); border: 1px solid var(--border); border-radius: 6px; padding: 3px 4px 3px 10px; font-size: 12.5px; color: var(--text); line-height: 1.4; }
+.pp-tag > span { overflow-wrap: anywhere; }
+.pp-tag button { flex-shrink: 0; width: 22px; height: 22px; border: none; border-radius: 4px; background: none; color: var(--text3); cursor: pointer; font-size: 15px; line-height: 1; padding: 0; }
+.pp-tag button:hover { background: var(--bg4, rgba(0,0,0,.06)); color: var(--red); }
 
-.pp-modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 1500; align-items: center; justify-content: center; padding: 24px; }
+.pp-modal-overlay { display: none; position: fixed; inset: 0; background: rgba(12,16,28,0.55); z-index: 1500; align-items: center; justify-content: center; padding: 24px; }
 .pp-modal-overlay.show { display: flex; }
+
+.pp-hint { font-size: 11px; color: var(--text3); margin-top: 4px; }
 .pp-modal-box { width: 100%; max-width: 760px; max-height: 82vh; overflow-y: auto; position: relative; }
 /* Every modal still scrolls with the wheel/trackpad - just no visible
    track running down it. */
@@ -233,6 +197,49 @@
 .pp-modal-box::-webkit-scrollbar { display: none; }
 .pp-modal-close { position: absolute; top: 10px; right: 10px; border: none; background: none; font-size: 20px; line-height: 1; cursor: pointer; color: var(--text3); padding: 4px; }
 .pp-modal-close:hover { color: var(--text); }
+
+/* Pre-Proposal Details: a fixed header and footer, only the fields scroll. */
+.pp-dialog { width: 100%; max-width: 780px; max-height: min(92vh, 900px); display: flex; background: var(--bg2); border: 1px solid var(--border); border-radius: 14px; box-shadow: 0 24px 60px rgba(0,0,0,.28); overflow: hidden; }
+.pp-dialog form { display: flex; flex-direction: column; width: 100%; min-height: 0; }
+.pp-dialog-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 18px 22px 14px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.pp-dialog-head h2 { margin: 0; font-size: 17px; font-weight: 700; color: var(--text); }
+.pp-dialog-head p { margin: 3px 0 0; font-size: 12.5px; color: var(--text3); }
+.pp-x { flex-shrink: 0; width: 32px; height: 32px; display: grid; place-items: center; border: none; border-radius: 8px; background: none; color: var(--text3); cursor: pointer; }
+.pp-x:hover { background: var(--bg3); color: var(--text); }
+.pp-x svg { width: 18px; height: 18px; stroke: currentColor; stroke-width: 2; fill: none; stroke-linecap: round; }
+.pp-dialog-body { flex: 1; min-height: 0; overflow-y: auto; padding: 6px 22px 20px; overscroll-behavior: contain; }
+.pp-section { padding: 18px 0; border-bottom: 1px solid var(--border); }
+.pp-section:last-child { border-bottom: none; padding-bottom: 4px; }
+.pp-section h3 { display: flex; align-items: center; gap: 10px; margin: 0 0 14px; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--text2); }
+.pp-section h3 span { width: 22px; height: 22px; display: grid; place-items: center; border-radius: 50%; background: var(--accent, #c9a82c); color: #18191f; font-size: 11px; letter-spacing: 0; }
+.pp-section-note { margin: -8px 0 14px; font-size: 12px; color: var(--text3); }
+.pp-summary { margin-top: 14px; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--red); background: var(--red-bg, rgba(220,38,38,.07)); color: var(--text); font-size: 12.5px; }
+.pp-summary b { color: var(--red); font-weight: 600; }
+.pp-summary ul { margin: 6px 0 0; padding-left: 18px; color: var(--text2); }
+.pp-dialog-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 22px; border-top: 1px solid var(--border); background: var(--bg2); flex-shrink: 0; }
+.pp-foot-note { font-size: 12px; color: var(--text3); }
+.pp-foot-actions { display: flex; gap: 8px; }
+.pp-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 36px; padding: 0 16px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+.pp-btn:hover { border-color: var(--text3); }
+.pp-btn.small { min-height: 30px; padding: 0 12px; font-size: 12px; flex-shrink: 0; }
+.pp-btn.primary { background: var(--accent, #c9a82c); border-color: var(--accent, #c9a82c); color: #18191f; }
+.pp-btn.primary:hover { filter: brightness(1.05); }
+.pp-btn:disabled { opacity: .6; cursor: progress; }
+.pp-btn:focus-visible, .pp-suggest-chip:focus-visible, .pp-tag button:focus-visible, .pp-x:focus-visible { outline: 2px solid var(--accent3, #8a6e10); outline-offset: 2px; }
+
+@media (max-width: 640px) {
+  .pp-modal-overlay { padding: 0; align-items: stretch; }
+  .pp-dialog { max-width: none; max-height: none; height: 100%; border-radius: 0; border: none; }
+  .pp-dialog-head, .pp-dialog-body, .pp-dialog-foot { padding-left: 16px; padding-right: 16px; }
+  .pp-grid { grid-template-columns: 1fr; }
+  .pp-section:last-child .pp-grid .pp-field:nth-last-child(2) { margin-bottom: 16px; }
+  .pp-foot-note { display: none; }
+  .pp-foot-actions { width: 100%; }
+  .pp-foot-actions .pp-btn { flex: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pp-field input[type="text"], .pp-field select, .pp-field textarea, .pp-chipbox { transition: none; }
+}
 
 @keyframes sk-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 .sk-overlay { position: absolute; inset: 0; background: var(--bg); z-index: 10; }
@@ -604,122 +611,193 @@
     </div>
 
     @if ($canSubmitMore)
-      {{-- Pre-Proposal Details: four short sections instead of one long list,
-           with the heading and the Save button always in view. Every id and
-           name below is what the page's scripts read (prefill from the PDF,
-           the draft, the checks before saving), so they stay as they were. --}}
+      @php
+        // What the student typed comes back after a failed save, so a rejected
+        // field never costs them the rest of the form.
+        $ppOld = [
+          'title' => old('title', ''),
+          'sdg_goals' => old('sdg_goals', ''),
+          'problem_statement' => old('problem_statement', ''),
+          'proposed_solution' => old('proposed_solution', ''),
+          'scope' => old('scope', ''),
+          'limitations' => old('limitations', ''),
+          'sdm' => old('sdm', 'Agile Development Methodology'),
+          'clients' => old('clients', ''),
+          'client_address' => old('client_address', ''),
+          'client_representative' => old('client_representative', ''),
+          'client_position' => old('client_position', ''),
+        ];
+        $ppOldTags = (array) old('tags', []);
+        $ppSdgs = [
+          'SDG 1 – No Poverty', 'SDG 2 – Zero Hunger', 'SDG 3 – Good Health and Well-being',
+          'SDG 4 – Quality Education', 'SDG 5 – Gender Equality', 'SDG 6 – Clean Water and Sanitation',
+          'SDG 7 – Affordable and Clean Energy', 'SDG 8 – Decent Work and Economic Growth',
+          'SDG 9 – Industry, Innovation and Infrastructure', 'SDG 10 – Reduced Inequality',
+          'SDG 11 – Sustainable Cities and Communities', 'SDG 12 – Responsible Consumption and Production',
+          'SDG 13 – Climate Action', 'SDG 14 – Life Below Water', 'SDG 15 – Life on Land',
+          'SDG 16 – Peace, Justice and Strong Institutions', 'SDG 17 – Partnerships for the Goals',
+        ];
+        $ppErr = fn ($key) => $errors->first($key) ?: $errors->first($key.'.*');
+        // Refused after the checks passed (a repeated title, a missing scan):
+        // the details still come back, with the reason on top of the form.
+        $ppRefused = ! $errors->any() && session()->has('error') && old('duplication_check_id') !== null;
+      @endphp
       <div class="pp-modal-overlay" id="pp-form-modal-overlay" onclick="if (event.target === this) closePpFormModal()">
-      <div class="card pp-modal-box ppf" id="pp-form-card" role="dialog" aria-modal="true" aria-labelledby="ppf-title">
-        <form method="POST" action="{{ route('student.pre-proposal.store') }}" id="pp-form" class="ppf-form"
+      <div class="pp-dialog" id="pp-form-card" role="dialog" aria-modal="true" aria-labelledby="pp-form-heading">
+        <form method="POST" action="{{ route('student.pre-proposal.store') }}" id="pp-form" novalidate
               onsubmit="return ppFormIsComplete(this)">
           @csrf
-          <input type="hidden" name="duplication_check_id" id="check-id" value="">
+          <input type="hidden" name="duplication_check_id" id="check-id" value="{{ old('duplication_check_id') }}">
 
-          <header class="ppf-head">
-            <span class="ppf-head-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6M9 13h6M9 17h4"/></svg>
-            </span>
-            <div class="ppf-head-text">
-              <h2 id="ppf-title">Complete your Pre-Proposal</h2>
-              <p>We filled this in from your PDF. Check each part, fix anything, then save.</p>
+          <header class="pp-dialog-head">
+            <div>
+              <h2 id="pp-form-heading">Pre-Proposal Details</h2>
+              <p>Filled in from your PDF. Check each part, change what needs changing, then save.</p>
               {{-- Filled in by the draft script below: what you type is kept on
                    this device until the pre-proposal is saved. --}}
               <span class="pp-autosave" id="pp-autosave" aria-live="polite">Your answers save automatically as you type.</span>
             </div>
-            <button type="button" class="ppf-close" onclick="closePpFormModal()" aria-label="Close">
-              <svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
+            <button type="button" class="pp-x" onclick="closePpFormModal()" aria-label="Close">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
             </button>
           </header>
 
-          <div class="ppf-body">
-            <p class="ppf-note">All fields are required.</p>
+          <div class="pp-dialog-body">
+            <div class="pp-summary" id="pp-summary" role="alert" @if (! $errors->any() && ! $ppRefused) hidden @endif>
+              @if ($ppRefused)
+                <b>{{ session('error') }}</b>
+              @else
+                <b>Some details need a look before this can be saved.</b>
+                <ul id="pp-summary-list">
+                  @foreach ($errors->keys() as $key)
+                    <li>{{ $errors->first($key) }}</li>
+                  @endforeach
+                </ul>
+              @endif
+            </div>
 
-            <section class="ppf-section">
-              <div class="ppf-section-head"><span class="ppf-num">1</span><div><h3>Title and focus</h3><p>What the study is called and what it serves.</p></div></div>
+            <section class="pp-section">
+              <h3><span>1</span> Title and focus</h3>
 
-              <div class="pp-field">
+              <div class="pp-field{{ $ppErr('title') ? ' has-error' : '' }}" data-field="title">
                 <label for="title">Title</label>
-                <textarea name="title" id="title" rows="2" class="ppf-title-input" oninput="updateWordCount()"
-                          onkeydown="if (event.key === 'Enter') event.preventDefault()"></textarea>
-                <div class="pp-hint ppf-wordcount" id="ppf-wordcount">
-                  <span><b id="word-count">0</b> meaningful words</span> · needs 11–12
+                <textarea name="title" id="title" rows="2" class="pp-grow" oninput="updateWordCount(); clearFieldError(this)" aria-describedby="title-help title-error">{{ $ppOld['title'] }}</textarea>
+                <div class="pp-help" id="title-help">
+                  <span>Up to {{ \App\Http\Controllers\PreProposalController::TITLE_MAX_WORDS }} meaningful words. Filler words like "a", "of" and "for" don't count.</span>
+                  <span class="pp-counter" id="word-counter"><span id="word-count">0</span> / {{ \App\Http\Controllers\PreProposalController::TITLE_MAX_WORDS }}</span>
                 </div>
+                <div class="pp-error" id="title-error">{{ $ppErr('title') }}</div>
               </div>
 
-              <div class="pp-field">
+              <div class="pp-field{{ $ppErr('sdg_goals') ? ' has-error' : '' }}" data-field="sdg_goals">
                 <label for="sdg">UN Sustainable Development Goal</label>
-                <select name="sdg_goals" id="sdg">
-                  <option value="" disabled selected>Select a goal...</option>
-                  @foreach ([
-                    'SDG 1 – No Poverty', 'SDG 2 – Zero Hunger', 'SDG 3 – Good Health and Well-being',
-                    'SDG 4 – Quality Education', 'SDG 5 – Gender Equality', 'SDG 6 – Clean Water and Sanitation',
-                    'SDG 7 – Affordable and Clean Energy', 'SDG 8 – Decent Work and Economic Growth',
-                    'SDG 9 – Industry, Innovation and Infrastructure', 'SDG 10 – Reduced Inequality',
-                    'SDG 11 – Sustainable Cities and Communities', 'SDG 12 – Responsible Consumption and Production',
-                    'SDG 13 – Climate Action', 'SDG 14 – Life Below Water', 'SDG 15 – Life on Land',
-                    'SDG 16 – Peace, Justice and Strong Institutions', 'SDG 17 – Partnerships for the Goals',
-                  ] as $sdg)
-                    <option value="{{ $sdg }}">{{ $sdg }}</option>
+                <select name="sdg_goals" id="sdg" onchange="clearFieldError(this)" aria-describedby="sdg-error">
+                  <option value="" disabled {{ $ppOld['sdg_goals'] ? '' : 'selected' }}>Select a goal…</option>
+                  @foreach ($ppSdgs as $sdg)
+                    <option value="{{ $sdg }}" @selected($ppOld['sdg_goals'] === $sdg)>{{ $sdg }}</option>
                   @endforeach
                 </select>
+                <div class="pp-error" id="sdg-error">{{ $ppErr('sdg_goals') }}</div>
               </div>
 
-              <div class="pp-field">
-                <label for="agenda-input">Research agenda and priority area</label>
-                <div class="pp-tag-list" id="agenda-list"></div>
-                <input type="text" id="agenda-input" placeholder="Type a priority area and press Enter">
-                <div class="pp-hint">Add one or more. Press Enter after each.</div>
+              <div class="pp-field{{ $ppErr('research_agenda') ? ' has-error' : '' }}" data-field="research_agenda">
+                <label for="agenda-input">Research agenda and priority areas</label>
+                <div class="pp-chipbox" onclick="document.getElementById('agenda-input').focus()">
+                  <div class="pp-tag-list" id="agenda-list" aria-live="polite"></div>
+                  <div class="pp-chip-add">
+                    <input type="text" id="agenda-input" placeholder="Add a priority area" aria-describedby="agenda-help agenda-error">
+                    <button type="button" class="pp-btn small" onclick="addAgendaFromInput()">Add</button>
+                  </div>
+                </div>
+                <div class="pp-help" id="agenda-help"><span>Press Enter or Add after each one. Add as many as apply.</span></div>
+                <div class="pp-suggest" id="agenda-suggest" hidden>
+                  <span>From your PDF:</span>
+                  <div id="agenda-suggest-list"></div>
+                </div>
+                <div class="pp-error" id="agenda-error">{{ $ppErr('research_agenda') }}</div>
                 <div id="agenda-hidden"></div>
               </div>
-            </section>
 
-            <section class="ppf-section">
-              <div class="ppf-section-head"><span class="ppf-num">2</span><div><h3>The project</h3><p>The problem, your answer to it, and its limits.</p></div></div>
-
-              <div class="pp-field"><label for="problem">Problem statement</label><textarea name="problem_statement" id="problem" rows="4"></textarea></div>
-              <div class="pp-field"><label for="solution">Proposed solution</label><textarea name="proposed_solution" id="solution" rows="4"></textarea></div>
-              <div class="ppf-grid">
-                <div class="pp-field"><label for="scope">Scope</label><textarea name="scope" id="scope" rows="3"></textarea></div>
-                <div class="pp-field"><label for="limitations">Limitations</label><textarea name="limitations" id="limitations" rows="3"></textarea></div>
-              </div>
-              <div class="pp-field"><label for="sdm">Software development methodology</label><input type="text" name="sdm" id="sdm" value="Agile Development Methodology"></div>
-            </section>
-
-            <section class="ppf-section">
-              <div class="ppf-section-head"><span class="ppf-num">3</span><div><h3>Client or organization</h3><p>Who the system is being built for. Not in your PDF, so fill these in.</p></div></div>
-
-              <div class="pp-field"><label for="clients">Organization name</label><input type="text" name="clients" id="clients" placeholder="e.g. Camarines Sur Polytechnic Colleges"></div>
-              <div class="pp-field"><label for="client_address">Address</label><input type="text" name="client_address" id="client_address" placeholder="Street, city, province"></div>
-              <div class="ppf-grid">
-                <div class="pp-field"><label for="client_representative">Representative</label><input type="text" name="client_representative" id="client_representative" placeholder="Full name"></div>
-                <div class="pp-field"><label for="client_position">Their position</label><input type="text" name="client_position" id="client_position" placeholder="e.g. Registrar"></div>
-              </div>
-            </section>
-
-            <section class="ppf-section">
-              <div class="ppf-section-head"><span class="ppf-num">4</span><div><h3>Project tags</h3><p>What kind of project is this? Pick {{ \App\Support\ProjectTags::MIN }} to {{ \App\Support\ProjectTags::MAX }}.</p></div></div>
-
-              <fieldset class="pp-field pp-tags" id="pp-tags">
-                <legend class="ppf-sr">Project tags</legend>
+              <fieldset class="pp-field pp-tags{{ $ppErr('tags') ? ' has-error' : '' }}" id="pp-tags" data-field="tags">
+                <legend>Project tags</legend>
+                <div class="pp-help" style="margin:0 0 8px"><span>What kind of project is this? Pick {{ \App\Support\ProjectTags::MIN }} to {{ \App\Support\ProjectTags::MAX }}.</span><span class="pp-counter" id="pp-tag-count" aria-live="polite">0 of {{ \App\Support\ProjectTags::MAX }}</span></div>
                 <div class="pp-pills">
                   @foreach (\App\Support\ProjectTags::OPTIONS as $tag)
                     <label class="pp-pill">
-                      <input type="checkbox" name="tags[]" value="{{ $tag }}" onchange="updateTagPills()">
+                      <input type="checkbox" name="tags[]" value="{{ $tag }}" onchange="updateTagPills(); clearFieldError(this)" @checked(in_array($tag, $ppOldTags, true))>
                       <span>{{ $tag }}</span>
                     </label>
                   @endforeach
                 </div>
-                <div class="pp-hint" id="pp-tag-count" aria-live="polite">0 of {{ \App\Support\ProjectTags::MAX }} picked</div>
+                <div class="pp-error" id="tags-error">{{ $ppErr('tags') }}</div>
               </fieldset>
+            </section>
+
+            <section class="pp-section">
+              <h3><span>2</span> The project</h3>
+              <div class="pp-field{{ $ppErr('problem_statement') ? ' has-error' : '' }}" data-field="problem_statement">
+                <label for="problem">Problem statement</label>
+                <textarea name="problem_statement" id="problem" class="pp-grow" rows="3" oninput="clearFieldError(this)">{{ $ppOld['problem_statement'] }}</textarea>
+                <div class="pp-error">{{ $ppErr('problem_statement') }}</div>
+              </div>
+              <div class="pp-field{{ $ppErr('proposed_solution') ? ' has-error' : '' }}" data-field="proposed_solution">
+                <label for="solution">Proposed solution</label>
+                <textarea name="proposed_solution" id="solution" class="pp-grow" rows="3" oninput="clearFieldError(this)">{{ $ppOld['proposed_solution'] }}</textarea>
+                <div class="pp-error">{{ $ppErr('proposed_solution') }}</div>
+              </div>
+              <div class="pp-grid">
+                <div class="pp-field{{ $ppErr('scope') ? ' has-error' : '' }}" data-field="scope">
+                  <label for="scope">Scope</label>
+                  <textarea name="scope" id="scope" class="pp-grow" rows="3" oninput="clearFieldError(this)">{{ $ppOld['scope'] }}</textarea>
+                  <div class="pp-error">{{ $ppErr('scope') }}</div>
+                </div>
+                <div class="pp-field{{ $ppErr('limitations') ? ' has-error' : '' }}" data-field="limitations">
+                  <label for="limitations">Limitations</label>
+                  <textarea name="limitations" id="limitations" class="pp-grow" rows="3" oninput="clearFieldError(this)">{{ $ppOld['limitations'] }}</textarea>
+                  <div class="pp-error">{{ $ppErr('limitations') }}</div>
+                </div>
+              </div>
+              <div class="pp-field{{ $ppErr('sdm') ? ' has-error' : '' }}" data-field="sdm">
+                <label for="sdm">Software development methodology</label>
+                <input type="text" name="sdm" id="sdm" value="{{ $ppOld['sdm'] }}" oninput="clearFieldError(this)">
+                <div class="pp-error">{{ $ppErr('sdm') }}</div>
+              </div>
+            </section>
+
+            <section class="pp-section">
+              <h3><span>3</span> The client</h3>
+              <p class="pp-section-note">The organization the system is being built for.</p>
+              <div class="pp-grid">
+                <div class="pp-field{{ $ppErr('clients') ? ' has-error' : '' }}" data-field="clients">
+                  <label for="clients">Organization</label>
+                  <input type="text" name="clients" id="clients" value="{{ $ppOld['clients'] }}" oninput="clearFieldError(this)">
+                  <div class="pp-error">{{ $ppErr('clients') }}</div>
+                </div>
+                <div class="pp-field{{ $ppErr('client_address') ? ' has-error' : '' }}" data-field="client_address">
+                  <label for="client_address">Address</label>
+                  <input type="text" name="client_address" id="client_address" value="{{ $ppOld['client_address'] }}" oninput="clearFieldError(this)">
+                  <div class="pp-error">{{ $ppErr('client_address') }}</div>
+                </div>
+                <div class="pp-field{{ $ppErr('client_representative') ? ' has-error' : '' }}" data-field="client_representative">
+                  <label for="client_representative">Representative's name</label>
+                  <input type="text" name="client_representative" id="client_representative" value="{{ $ppOld['client_representative'] }}" oninput="clearFieldError(this)">
+                  <div class="pp-error">{{ $ppErr('client_representative') }}</div>
+                </div>
+                <div class="pp-field{{ $ppErr('client_position') ? ' has-error' : '' }}" data-field="client_position">
+                  <label for="client_position">Their position</label>
+                  <input type="text" name="client_position" id="client_position" value="{{ $ppOld['client_position'] }}" oninput="clearFieldError(this)">
+                  <div class="pp-error">{{ $ppErr('client_position') }}</div>
+                </div>
+              </div>
             </section>
           </div>
 
-          <footer class="ppf-foot">
-            <button type="button" class="btn ppf-cancel" onclick="closePpFormModal()">Cancel</button>
-            <button type="submit" class="btn btn-primary ppf-save">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
-              Save This Pre-Proposal
-            </button>
+          <footer class="pp-dialog-foot">
+            <span class="pp-foot-note" id="pp-foot-note">Every field is needed to save.</span>
+            <div class="pp-foot-actions">
+              <button type="button" class="pp-btn" onclick="closePpFormModal()">Cancel</button>
+              <button type="submit" class="pp-btn primary" id="pp-save-btn">Save pre-proposal</button>
+            </div>
           </footer>
         </form>
       </div>
@@ -976,62 +1054,85 @@ function countMeaningfulWords(text) {
 // Everything the server would reject, checked before the form is posted.
 //
 // A rejection there answers with a redirect, which reloads the page - and the
-// duplication result the student just waited on is on that page. Losing a
-// scan to a title one word short is a bad trade, and the count that catches
-// it has been sitting on screen the whole time.
+// duplication result the student just waited on is on that page. So every
+// problem is found here first and shown under the field it belongs to, all at
+// once, instead of one toast at a time.
+const TITLE_MAX_WORDS = {{ \App\Http\Controllers\PreProposalController::TITLE_MAX_WORDS }};
+
+function setFieldError(key, message) {
+  const field = document.querySelector('#pp-form [data-field="' + key + '"]');
+  if (!field) return;
+  const box = field.querySelector('.pp-error');
+  if (box) box.textContent = message || '';
+  field.classList.toggle('has-error', !!message);
+}
+
+function clearFieldError(input) {
+  const field = input && input.closest('[data-field]');
+  if (field && field.classList.contains('has-error')) setFieldError(field.dataset.field, '');
+}
+
 function ppFormIsComplete(form) {
+  const problems = [];
   const title = document.getElementById('title');
-  const words = countMeaningfulWords(title ? title.value : '');
+  const titleText = title ? title.value.trim() : '';
+  const words = countMeaningfulWords(titleText);
 
-  if (words < 11 || words > 12) {
-    showToast('Your title needs 11-12 meaningful words. It currently has ' + words + '.', 'error');
-    if (title) { title.focus(); }
-
-    return false;
+  if (!titleText) {
+    problems.push(['title', 'Give your pre-proposal a title.']);
+  } else if (words > TITLE_MAX_WORDS) {
+    problems.push(['title', 'Keep the title to ' + TITLE_MAX_WORDS + ' meaningful words or fewer. It has ' + words + '.']);
   }
 
-  // The rest are plain "required" rules, named the way the form labels them.
   const needed = [
-    ['sdg', 'Choose a Sustainable Development Goal.'],
-    ['problem', 'Fill in the problem statement.'],
-    ['solution', 'Fill in the proposed solution.'],
-    ['scope', 'Fill in the scope.'],
-    ['limitations', 'Fill in the limitations.'],
-    ['sdm', 'Fill in the software development methodology.'],
-    ['clients', 'Name the client or organization this is for.'],
-    ['client_address', 'Fill in the address of the organization.'],
-    ['client_representative', 'Name the representative of the organization.'],
-    ['client_position', 'Fill in the position that representative holds.'],
+    ['sdg_goals', 'sdg', 'Choose a Sustainable Development Goal.'],
+    ['problem_statement', 'problem', 'Fill in the problem statement.'],
+    ['proposed_solution', 'solution', 'Fill in the proposed solution.'],
+    ['scope', 'scope', 'Fill in the scope.'],
+    ['limitations', 'limitations', 'Fill in the limitations.'],
+    ['sdm', 'sdm', 'Fill in the software development methodology.'],
+    ['clients', 'clients', 'Name the organization this is for.'],
+    ['client_address', 'client_address', 'Fill in the address of the organization.'],
+    ['client_representative', 'client_representative', 'Name the representative of the organization.'],
+    ['client_position', 'client_position', 'Fill in the position that representative holds.'],
   ];
+  needed.forEach(function (n) {
+    const el = document.getElementById(n[1]);
+    if (el && !String(el.value || '').trim()) problems.push([n[0], n[2]]);
+  });
 
-  for (const [id, message] of needed) {
-    const field = document.getElementById(id);
-
-    if (field && !String(field.value || '').trim()) {
-      showToast(message, 'error');
-      field.focus();
-
-      return false;
-    }
-  }
-
+  // Something typed into the agenda box but not added yet still counts:
+  // it is what the student meant, and losing it on save would be a surprise.
+  const agendaInput = document.getElementById('agenda-input');
+  if (agendaInput && agendaInput.value.trim()) addAgendaFromInput();
   if (!form.querySelectorAll('input[name="research_agenda[]"]').length) {
-    showToast('Add at least one research agenda or priority area.', 'error');
-    const agenda = document.getElementById('agenda-input');
-    if (agenda) { agenda.focus(); }
-
-    return false;
+    problems.push(['research_agenda', 'Add at least one research agenda or priority area.']);
   }
 
   if (!form.querySelectorAll('input[name="tags[]"]:checked').length) {
-    showToast('Pick at least one tag for what kind of project this is.', 'error');
-    const firstTag = form.querySelector('input[name="tags[]"]');
-    if (firstTag) { firstTag.focus(); }
-
-    return false;
+    problems.push(['tags', 'Pick at least one tag for what kind of project this is.']);
   }
 
-  return true;
+  document.querySelectorAll('#pp-form [data-field]').forEach(function (f) { setFieldError(f.dataset.field, ''); });
+  const summary = document.getElementById('pp-summary');
+  if (summary) summary.hidden = true;
+
+  if (!problems.length) {
+    const save = document.getElementById('pp-save-btn');
+    if (save) { save.disabled = true; save.textContent = 'Saving…'; }
+    return true;
+  }
+
+  problems.forEach(function (p) { setFieldError(p[0], p[1]); });
+  const first = document.querySelector('#pp-form [data-field="' + problems[0][0] + '"]');
+  if (first) {
+    first.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    const focusable = first.querySelector('input:not([type=hidden]):not([disabled]), select, textarea');
+    if (focusable) focusable.focus({ preventScroll: true });
+  }
+  showToast(problems.length === 1 ? problems[0][1] : problems.length + ' details need a look before this can be saved.', 'error');
+
+  return false;
 }
 
 // Tag pills: at most MAX picked. Once the limit is reached the rest are
@@ -1044,7 +1145,8 @@ function updateTagPills() {
   boxes.forEach(b => { b.disabled = !b.checked && picked >= TAG_MAX; });
   const count = document.getElementById('pp-tag-count');
   if (count) {
-    count.textContent = picked + ' of ' + TAG_MAX + ' picked' + (picked >= TAG_MAX ? ' - that is the most you can pick' : '');
+    count.textContent = picked + ' of ' + TAG_MAX;
+    count.classList.toggle('at-limit', picked >= TAG_MAX);
   }
 }
 
@@ -1054,16 +1156,49 @@ function updateWordCount() {
   if (!el || !titleEl) return;
   const words = countMeaningfulWords(titleEl.value);
   el.textContent = words;
-  // Green once the title is the right length, amber while it is not.
-  const pill = document.getElementById('ppf-wordcount');
-  if (pill) {
-    pill.classList.toggle('is-ok', words >= 11 && words <= 12);
-    pill.classList.toggle('is-off', words > 0 && (words < 11 || words > 12));
-  }
+  const counter = document.getElementById('word-counter');
+  if (counter) counter.classList.toggle('over', words > TITLE_MAX_WORDS);
 }
-updateWordCount();
 
-let agendaTags = [];
+// Long answers are the norm here, so the boxes grow with what is typed
+// instead of hiding it behind a tiny scrollbar.
+function growTextarea(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight + 2, 320) + 'px';
+}
+function growAllTextareas() {
+  document.querySelectorAll('#pp-form textarea.pp-grow').forEach(growTextarea);
+}
+document.addEventListener('input', function (e) {
+  if (e.target.matches && e.target.matches('#pp-form textarea.pp-grow')) growTextarea(e.target);
+});
+
+// What the student has chosen, and what the PDF suggested. Removing a
+// suggestion used to lose it for good; it now drops back into the
+// "From your PDF" row, one click from coming back.
+let agendaTags = @json(array_values(array_filter((array) old('research_agenda', []), fn ($v) => is_string($v) && trim($v) !== '')));
+let agendaSuggested = [];
+
+function agendaHas(list, text) {
+  const key = text.toLowerCase();
+  return list.some(function (t) { return t.toLowerCase() === key; });
+}
+
+function addAgenda(text) {
+  text = String(text || '').trim();
+  if (!text || agendaHas(agendaTags, text)) return;
+  agendaTags.push(text);
+  renderAgendaTags();
+  setFieldError('research_agenda', '');
+}
+
+function addAgendaFromInput() {
+  const input = document.getElementById('agenda-input');
+  if (!input) return;
+  addAgenda(input.value);
+  input.value = '';
+  input.focus();
+}
 
 function renderAgendaTags() {
   const list = document.getElementById('agenda-list');
@@ -1074,11 +1209,18 @@ function renderAgendaTags() {
   agendaTags.forEach(function (tag, i) {
     const chip = document.createElement('span');
     chip.className = 'pp-tag';
-    chip.textContent = tag + ' ';
+    const label = document.createElement('span');
+    label.textContent = tag;
+    chip.appendChild(label);
     const removeBtn = document.createElement('button');
     removeBtn.type = 'button';
     removeBtn.textContent = '×';
-    removeBtn.onclick = function () { agendaTags.splice(i, 1); renderAgendaTags(); };
+    removeBtn.setAttribute('aria-label', 'Remove ' + tag);
+    removeBtn.onclick = function (e) {
+      e.stopPropagation();
+      agendaTags.splice(i, 1);
+      renderAgendaTags();
+    };
     chip.appendChild(removeBtn);
     list.appendChild(chip);
 
@@ -1088,19 +1230,65 @@ function renderAgendaTags() {
     input.value = tag;
     hidden.appendChild(input);
   });
+
+  const suggestWrap = document.getElementById('agenda-suggest');
+  const suggestList = document.getElementById('agenda-suggest-list');
+  if (!suggestWrap || !suggestList) return;
+  suggestList.innerHTML = '';
+  const left = agendaSuggested.filter(function (t) { return !agendaHas(agendaTags, t); });
+  left.forEach(function (tag) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'pp-suggest-chip';
+    b.textContent = '+ ' + tag;
+    b.setAttribute('aria-label', 'Add ' + tag + ' back');
+    b.onclick = function () { addAgenda(tag); };
+    suggestList.appendChild(b);
+  });
+  suggestWrap.hidden = left.length === 0;
 }
+
+function rememberAgendaSuggestions() {
+  const id = (document.getElementById('check-id') || {}).value;
+  if (!id) return;
+  try { sessionStorage.setItem('pp-agenda-suggested', JSON.stringify({ id: id, items: agendaSuggested })); } catch (e) {}
+}
+
+// After a failed save the page reloads; the PDF's suggestions come back with
+// it, as long as it is the same scan.
+(function restoreAgendaSuggestions() {
+  const id = (document.getElementById('check-id') || {}).value;
+  if (!id) return;
+  try {
+    const saved = JSON.parse(sessionStorage.getItem('pp-agenda-suggested') || 'null');
+    if (saved && String(saved.id) === String(id) && Array.isArray(saved.items)) agendaSuggested = saved.items;
+  } catch (e) {}
+})();
 
 const agendaInput = document.getElementById('agenda-input');
 if (agendaInput) {
   agendaInput.addEventListener('keydown', function (e) {
-    if (e.key === 'Enter' && this.value.trim()) {
+    if (e.key === 'Enter') {
       e.preventDefault();
-      agendaTags.push(this.value.trim());
-      this.value = '';
+      addAgendaFromInput();
+    } else if (e.key === 'Backspace' && !this.value && agendaTags.length) {
+      agendaTags.pop();
       renderAgendaTags();
     }
   });
 }
+// The title wraps like a paragraph but is one line: Enter must not put a
+// line break into it, and a pasted one is folded into a space.
+const titleBox = document.getElementById('title');
+if (titleBox) {
+  titleBox.addEventListener('keydown', function (e) { if (e.key === 'Enter') e.preventDefault(); });
+  titleBox.addEventListener('input', function () {
+    if (/[\r\n]/.test(this.value)) this.value = this.value.replace(/\s*[\r\n]+\s*/g, ' ');
+  });
+}
+renderAgendaTags();
+updateTagPills();
+updateWordCount();
 
 // ── Draft: the Pre-Proposal Details form is kept as it is typed ──────────
 //
@@ -1502,12 +1690,21 @@ function renderResult(data, fileName) {
     selectSdgOption(data.concepts.sdg_goals);
 
     if (Array.isArray(data.concepts.research_agenda) && data.concepts.research_agenda.length) {
-      agendaTags = data.concepts.research_agenda
+      agendaSuggested = data.concepts.research_agenda
         .map(item => typeof item === 'string' ? item : (item && (item.name || item.title || item.agenda || item.label || item.text || item.value)) || '')
         .map(s => String(s).trim())
-        .filter(s => s.length > 0);
-      renderAgendaTags();
+        .filter((s, i, all) => s.length > 0 && all.findIndex(o => o.toLowerCase() === s.toLowerCase()) === i);
+      agendaTags = agendaSuggested.slice();
+    } else {
+      agendaSuggested = [];
+      agendaTags = [];
     }
+    renderAgendaTags();
+    rememberAgendaSuggestions();
+    // A new scan starts clean: old complaints belong to the last document.
+    document.querySelectorAll('#pp-form [data-field]').forEach(f => setFieldError(f.dataset.field, ''));
+    const summary = document.getElementById('pp-summary');
+    if (summary) summary.hidden = true;
 
     // Then whatever the team had typed for this check, over the top.
     restorePpDraft();
@@ -1533,12 +1730,17 @@ function openPpFormModal() {
   // Not on the page once a team has turned their titles in - the checker
   // stays open to them, the form does not.
   const ppOverlay = document.getElementById('pp-form-modal-overlay');
-  if (ppOverlay) ppOverlay.classList.add('show');
+  if (!ppOverlay) return;
+  ppOverlay.classList.add('show');
+  document.body.style.overflow = 'hidden';
+  growAllTextareas();
+  updateWordCount();
 }
 
 function closePpFormModal() {
   const ppOverlay = document.getElementById('pp-form-modal-overlay');
   if (ppOverlay) ppOverlay.classList.remove('show');
+  document.body.style.overflow = '';
 }
 
 // 65% and above is highly similar. Below that the checker says nothing, and
@@ -1651,8 +1853,18 @@ document.querySelectorAll('.nav-item').forEach(function(el) {
 @if (session('error'))
   showToast(@json(session('error')), 'error');
 @endif
+@if (! $errors->any() && session()->has('error') && old('duplication_check_id') !== null)
+  if (document.getElementById('pp-form-modal-overlay')) openPpFormModal();
+@endif
 @if ($errors->any())
-  showToast(@json($errors->first()), 'error');
+  // The save was refused: bring the form back with everything that was typed
+  // and the problems marked, rather than a toast over an empty page.
+  if (document.getElementById('pp-form-modal-overlay')) {
+    openPpFormModal();
+    const firstBad = document.querySelector('#pp-form .pp-field.has-error');
+    if (firstBad) firstBad.scrollIntoView({ block: 'center' });
+  }
+  showToast(@json($errors->count() > 1 ? $errors->count().' details need a look before this can be saved.' : $errors->first()), 'error');
 @endif
 </script>
 

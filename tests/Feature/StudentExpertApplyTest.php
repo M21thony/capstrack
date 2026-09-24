@@ -230,7 +230,7 @@ class StudentExpertApplyTest extends TestCase
         [$student, $team] = $this->makeLeaderWithTeam();
         $expert = $this->makeAdviserExpert();
 
-        $assignment = new TeamExpertAssignment();
+        $assignment = new TeamExpertAssignment;
         $assignment->team_id = $team->team_id;
         $assignment->expert_id = $expert->expert_id;
         $assignment->status = 'pending';
@@ -257,7 +257,7 @@ class StudentExpertApplyTest extends TestCase
         [$student, $team] = $this->makeLeaderWithTeam();
         $expert = $this->makeAdviserExpert();
 
-        $assignment = new TeamExpertAssignment();
+        $assignment = new TeamExpertAssignment;
         $assignment->team_id = $team->team_id;
         $assignment->expert_id = $expert->expert_id;
         $assignment->status = 'pending';
@@ -505,11 +505,11 @@ class StudentExpertApplyTest extends TestCase
     }
 
     /**
-     * Dropping a team went through on one click with nothing recorded and
-     * nobody told - a team simply lost its adviser. It now needs a reason and
-     * the word typed, and the team is told why.
+     * An expert cannot drop a team they approved. The team planned around
+     * that yes; a change of expert goes through their CaPSA, the same way the
+     * students' own side asks for one.
      */
-    public function test_an_expert_cannot_drop_a_team_without_a_reason(): void
+    public function test_an_expert_cannot_drop_a_team_they_approved(): void
     {
         [$student, $team] = $this->makeLeaderWithTeam();
         $expert = $this->makeAdviserExpert();
@@ -528,14 +528,15 @@ class StudentExpertApplyTest extends TestCase
 
         $this->deleteJson(route('instructor.assignments.remove', $assignment->assignment_id), [
             'reason' => 'Schedule clash this semester.',
-            'confirm' => 'nope',
+            'confirm' => 'remove',
         ])->assertStatus(422);
 
-        $this->assertNotNull($assignment->fresh(), 'The assignment was dropped anyway.');
+        $this->assertNotNull($assignment->fresh(), 'The approved team was dropped anyway.');
+        $this->assertSame(0, Notification::where('student_id', $student->student_id)->where('type', 'expert_removed')->count());
     }
 
-    /** With both, it goes through and the team is told why. */
-    public function test_dropping_a_team_tells_them_why(): void
+    /** A declined request can be cleared off the list; the team is not told again. */
+    public function test_a_declined_request_can_be_cleared_from_the_list_without_telling_the_team_again(): void
     {
         [$student, $team] = $this->makeLeaderWithTeam();
         $expert = $this->makeAdviserExpert();
@@ -544,23 +545,16 @@ class StudentExpertApplyTest extends TestCase
             'team_id' => $team->team_id,
             'expert_id' => $expert->expert_id,
             'expert_role_id' => $this->expertRoleId($expert, 'adviser'),
-            'status' => 'approved',
+            'status' => 'rejected',
+            'rejection_reason' => 'Tighten the problem statement, then apply again.',
         ]);
 
         $this->actingAs($expert, 'expert');
 
-        $this->deleteJson(route('instructor.assignments.remove', $assignment->assignment_id), [
-            'reason' => 'Schedule clash this semester.',
-            'confirm' => 'remove',
-        ])->assertOk();
+        $this->deleteJson(route('instructor.assignments.remove', $assignment->assignment_id), [])
+            ->assertOk();
 
         $this->assertNull($assignment->fresh());
-
-        $note = Notification::where('student_id', $student->student_id)
-            ->where('type', 'expert_removed')
-            ->first();
-
-        $this->assertNotNull($note, 'The team was never told.');
-        $this->assertStringContainsString('Schedule clash this semester.', $note->message);
+        $this->assertSame(0, Notification::where('student_id', $student->student_id)->where('type', 'expert_removed')->count());
     }
 }
