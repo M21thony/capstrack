@@ -69,6 +69,19 @@ class CapsaArchiveAbstractTest extends TestCase
             ->assertSee('S.Y. 2026–2027');
     }
 
+    public function test_the_study_count_matches_the_published_capstones(): void
+    {
+        foreach (['First Study', 'Second Study'] as $title) {
+            $this->capstone(['title' => $title, 'academic_year' => 2025, 'submission_status' => ArchivedDocument::PUBLISHED]);
+        }
+        $this->capstone(['title' => 'Still Pending', 'academic_year' => 2025, 'submission_status' => ArchivedDocument::PENDING, 'submitted_at' => now()]);
+
+        $this->actingAs($this->capsa(), 'expert')->get(route('capsa.archive'))
+            ->assertOk()
+            ->assertSee('Showing 2 studies')
+            ->assertDontSee('Showing 8 studies');
+    }
+
     /** The abstract is whatever a team typed: it reaches the page as data, never as markup. */
     public function test_an_abstract_is_never_rendered_as_html(): void
     {
