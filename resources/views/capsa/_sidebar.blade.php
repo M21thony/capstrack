@@ -312,6 +312,12 @@
       @endif
     </a>
 
+    <div class="nav-section">Help</div>
+    <button type="button" class="nav-item" onclick="openPortalTour()" style="cursor:pointer;width:100%;background:none;border:0;font:inherit;text-align:left">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      Portal Tour
+    </button>
+
     <div class="nav-section">Account</div>
     @if ($isAdmin)
     <a href="{{ route('admin.settings') }}" class="nav-item {{ $currentRoute === 'admin.settings' ? 'active' : '' }}">
@@ -328,6 +334,45 @@
     </a>
   </nav>
 </div>
+@php
+    // The phone tab bar: only pages this account can open, most-used first.
+    $phoneTabs = [[
+        'label' => 'Home', 'href' => route($rolePrefix.'dashboard'), 'active' => $currentRoute === $rolePrefix.'dashboard',
+        'icon' => '<path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/>',
+    ]];
+    if ($isCapsa) {
+        $phoneTabs[] = ['label' => 'Teams', 'href' => route('capsa.team_management'), 'active' => str_starts_with((string) $currentRoute, 'capsa.team_management'),
+            'badge' => $teamManagementBadge ?? 0,
+            'icon' => '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>'];
+        $phoneTabs[] = ['label' => 'Defenses', 'href' => route('capsa.defense_scheduling'), 'active' => $currentRoute === 'capsa.defense_scheduling',
+            'icon' => '<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>'];
+    }
+    // An admin who is not also a CaPSA runs accounts and reports, so their
+    // bar is the people they manage and the numbers they read.
+    if ($isAdmin && ! $isCapsa) {
+        $phoneTabs[] = ['label' => 'Experts', 'href' => route('admin.experts'), 'active' => $currentRoute === 'admin.experts',
+            'badge' => $unseenExpertCount ?? 0,
+            'icon' => '<circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/>'];
+    }
+    if ($isAdmin) {
+        $phoneTabs[] = ['label' => 'Students', 'href' => route('admin.students'), 'active' => $currentRoute === 'admin.students',
+            'icon' => '<path d="M22 10 12 5 2 10l10 5 10-5Z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/>'];
+    }
+    if ($isAdmin && ! $isCapsa) {
+        $phoneTabs[] = ['label' => 'Analytics', 'href' => route('admin.analytics'), 'active' => $currentRoute === 'admin.analytics',
+            'icon' => '<path d="M3 3v18h18"/><rect x="7" y="12" width="3" height="6"/><rect x="12" y="8" width="3" height="10"/><rect x="17" y="5" width="3" height="13"/>'];
+    }
+    if ($isExpert) {
+        $phoneTabs[] = ['label' => 'Grading', 'href' => route('instructor.grading'), 'active' => in_array($currentRoute, ['instructor.grading', 'instructor.grading.show'], true),
+            'icon' => '<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>'];
+        $phoneTabs[] = ['label' => 'Reviews', 'href' => route('instructor.docreview'), 'active' => $currentRoute === 'instructor.docreview',
+            'badge' => $unseenExpertDocReviewCount ?? 0,
+            'icon' => '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6M9 13h6M9 17h4"/>'];
+    }
+@endphp
+@include('partials.mobile-tabbar', ['tabs' => array_slice($phoneTabs, 0, 4)])
+{{-- The guided tour: the CaPSA's, or the Admin's for an admin who is not also a CaPSA. --}}
+@include('partials.staff-portal-tour', ['tourKey' => $isCapsa ? 'capsa' : 'admin', 'expert' => $admin])
 @if ($adminHasExpertRole)
   @include('instructor.partials.expert-profile')
 @endif

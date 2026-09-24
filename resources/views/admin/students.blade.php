@@ -21,6 +21,32 @@
      admin/experts' .cx-skills left behind before that got the same fix. */
   @media (max-width:768px){
     .table td.std-email{max-width:none}
+
+    /* A phone card per student that reads at a glance: the name as its
+       title, the email under it, and number, program, year and section as
+       one line of chips - rather than six labelled rows a screen tall. */
+    .std-table tbody tr{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+    .std-table tbody td{width:auto;padding:0!important}
+    .std-table tbody td::before{display:none}
+    .std-table td[data-label="Name"]{order:1;flex:1 1 100%}
+    .std-table td[data-label="Name"] .std-av{width:36px;height:36px;border-radius:10px}
+    .std-table td[data-label="Name"] .std-name{font-size:14.5px;white-space:normal}
+    .std-table td[data-label="Email"]{order:2;flex:1 1 100%;padding-left:44px!important;margin-top:-10px;
+      font-size:12px;color:var(--text3)}
+    .std-table td[data-label="Student No."],
+    .std-table td[data-label="Program"],
+    .std-table td[data-label="Year"],
+    .std-table td[data-label="Section"]{order:3;margin-top:4px;font-size:11.5px;color:var(--text2);
+      background:var(--bg3);border:1px solid var(--border);border-radius:999px;padding:3px 9px!important}
+    .std-table td[data-label="Program"]{order:4;background:none;border:0;padding:0!important}
+    .std-table td[data-label="Year"]{order:5}
+    .std-table td[data-label="Section"]{order:6}
+    .std-table td[data-label="Year"]::before{display:inline;content:'Year ';font-size:11px;font-weight:400;
+      text-transform:none;letter-spacing:0;width:auto;color:var(--text3)}
+    .std-table td[data-label="Section"]::before{display:inline;content:'Sec ';font-size:11px;font-weight:400;
+      text-transform:none;letter-spacing:0;width:auto;color:var(--text3)}
+    .std-table td[data-label="Student No."]::before{display:inline;content:'#';font-size:11px;font-weight:400;
+      text-transform:none;letter-spacing:0;width:auto;color:var(--text3)}
   }
   /* Figures that line up down the column, which is all the old monospace
      was ever doing here. */
@@ -149,7 +175,7 @@
     </div>
 
     <div class="card list-card">
-      <table class="table">
+      <table class="table std-table">
         <thead>
           <tr>
             {{-- The unique key first: a student number names exactly one

@@ -12,6 +12,13 @@
   @keyframes sk-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
   .sk-overlay { position: absolute; inset: 0; background: var(--bg); z-index: 10; }
   .sk { background: linear-gradient(90deg, var(--bg4) 25%, var(--bg2) 50%, var(--bg4) 75%); background-size: 200% 100%; animation: sk-shimmer 1.5s ease-in-out infinite; border-radius: 8px; }
+  /* On a phone the three filters stack, each the full width, rather than
+     running off the right edge in one fixed-width row. */
+  @media (max-width: 768px) {
+    .res-filters { flex-wrap: wrap; width: 100%; }
+    .res-filters > * { flex: 1 1 100%; width: 100% !important; }
+    .res-filters input { width: 100% !important; }
+  }
 </style>
 @include('partials.skeleton-head', ['skReveal' => 'opacity'])
 </head>
@@ -84,7 +91,7 @@
     </div>
 
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap">
-      <div style="display:flex;gap:8px;align-items:center">
+      <div class="res-filters" style="display:flex;gap:8px;align-items:center">
         <select class="input" id="cat-filter" style="width:160px;font-size:12px">
           <option value="all">All Categories</option>
           <option value="pre-proposal">Pre-Proposal</option>

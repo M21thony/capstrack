@@ -21,7 +21,6 @@
     ])->values();
 
     $savedScores = collect($existingScores)->mapWithKeys(fn ($v, $k) => [(string) $k => (float) $v]);
-    $savedAbstained = collect($grade?->abstained ?? [])->map(fn ($id) => (string) $id)->values();
 @endphp
 <!DOCTYPE html>
 <html lang="en">
@@ -58,6 +57,18 @@
   .gs-btn-primary{background:var(--navy-dark);border-color:var(--navy-dark);color:#fff}
   .gs-btn-primary:hover:not(:disabled){color:#fff}
   .gs-btn:disabled{opacity:.4;cursor:default}
+  .gs-btn-abstain{color:var(--text3);border-style:dashed}
+  .gs-btn-abstain:hover:not(:disabled){color:var(--red);border-color:var(--red)}
+  .gs-btn-danger{background:var(--red);border-color:var(--red);color:#fff}
+  .gs-btn-danger:hover:not(:disabled){color:#fff;filter:brightness(.95)}
+  .gs-alert.abstained{border:1px solid var(--border2);background:var(--bg3);color:var(--text2)}
+  .gs-alert.abstained b{color:var(--text)}
+  .gs-alert.abstained .why{display:block;margin-top:3px;font-style:italic;color:var(--text3)}
+  .abstain-box{width:min(460px,calc(100vw - 32px))}
+  .abstain-label{display:block;font-size:12px;font-weight:600;color:var(--text);margin-bottom:6px}
+  #abstain-reason{width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font:inherit;font-size:13px;line-height:1.5;resize:vertical}
+  #abstain-reason:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow)}
+  .abstain-count{margin-top:4px;font-size:11.5px;color:var(--text3)}
 
   .gs-steps{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);background:var(--bg2);border-bottom:1px solid var(--border)}
   .gs-step{font:inherit;border:none;background:none;border-bottom:2px solid transparent;padding:8px 10px;text-align:left;cursor:pointer;min-width:0;display:grid;gap:1px}
@@ -101,8 +112,6 @@
   .gs-cell[aria-pressed="true"]::after{content:"✓";position:absolute;top:7px;right:9px;font-size:12px;color:var(--accent3);font-weight:700}
   .gs-score{padding:9px 12px;text-align:right;font-weight:600}
   .gs-score.empty{color:var(--border2);font-weight:400}
-  .gs td.gs-score.abs{padding:9px 12px;text-align:right;white-space:nowrap;color:var(--text3);font-weight:500;font-style:italic}
-
   .gs-subtotal{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-top:1px solid var(--border);background:var(--bg3);font-size:12.5px;color:var(--text2)}
   .gs-subtotal b{color:var(--text)}
 
@@ -174,8 +183,12 @@
 
     <div>
       <p class="gs-alert err" id="formError" role="alert" hidden></p>
-      <p class="gs-alert" id="gs-abstain-note" style="border:1px solid var(--border2);background:var(--bg3);color:var(--text2)" hidden>You are abstaining from grading this team. Submit to turn that in, or score any criterion to grade after all. The team's score is the other panelists'.</p>
-      @if($grade?->status === 'submitted')
+      @if($grade?->isAbstained())
+        <div class="gs-alert abstained">
+          <b>You abstained from grading this team.</b> Your scores are left out of the team's average.
+          <span class="why">Your reason: &ldquo;{{ $grade->remarks }}&rdquo;</span>
+        </div>
+      @elseif($grade?->status === 'submitted')
         <div class="gs-alert ok">You already submitted a grade for this team. You can still change it - submitting again replaces your previous grade.</div>
       @endif
     </div>
@@ -188,7 +201,6 @@
       <div class="gs-stat"><b class="num" id="gs-left">0</b><small>criteria left</small></div>
       <div class="gs-stat"><b class="num"><span id="gs-total">0</span><small style="display:inline;font-size:12px"> / {{ $fmt($rubric->total_points) }}</small></b><small>points</small></div>
       <button type="button" class="gs-btn" id="gs-jump">Next unscored</button>
-      <button type="button" class="gs-btn" id="gs-abstain" title="Abstain from grading this team - some panelists do for a team that is redefending">Abstain all</button>
     </header>
 
     <nav class="gs-steps" id="gs-steps" aria-label="Rubric sections"></nav>
@@ -206,7 +218,8 @@
             {{-- Remarks are this panelist's own. The verdict is not: the panel
                  confers and gives the team one result, recorded once by the
                  chair beside this. --}}
-            <textarea name="remarks" class="remarks-field" placeholder="Your comments for the team - what you want them to fix, or what worked.">{{ $grade?->remarks }}</textarea>
+            {{-- An abstention's remarks are its reason, not comments for the team. --}}
+            <textarea name="remarks" class="remarks-field" placeholder="Your comments for the team - what you want them to fix, or what worked.">{{ $grade?->isAbstained() ? '' : $grade?->remarks }}</textarea>
           </form>
 
           <div class="gs-panel">
@@ -232,9 +245,9 @@
             @elseif (! $isChair)
               <p class="outcome-note">Your Panel Chair records the panel&rsquo;s decision after the briefing. Score the rubric and leave your remarks.</p>
             @elseif ($gradesIn < $panelSize)
-              <p class="outcome-note">{{ $gradesIn }} of {{ $panelSize }} panelists have submitted their scores. The decision can be recorded once everyone has.</p>
+              <p class="outcome-note">{{ $gradesIn }} of {{ $panelSize }} panelists have submitted their scores or abstained. The decision can be recorded once everyone has.</p>
             @else
-              <p class="outcome-note">All {{ $panelSize }} panelists have scored. Record what the panel agreed &mdash; the team is told this, and it is what happens next.</p>
+              <p class="outcome-note">All {{ $panelSize }} panelists are in. Record what the panel agreed &mdash; the team is told this, and it is what happens next.</p>
               <div class="outcome-options">
                 @foreach ($outcomeOptions as $option)
                   <label class="outcome-option is-{{ \App\Support\DefenseOutcome::tone($option) }}">
@@ -255,13 +268,43 @@
 
     <footer class="gs-foot">
       <div class="hint"><kbd>←</kbd><kbd>→</kbd> sections · <kbd>↑</kbd><kbd>↓</kbd> rows · <kbd>1</kbd>–<kbd>4</kbd> score and move on</div>
-      <span class="gs-saved" id="saveStatus">{{ $grade ? ($grade->status === 'submitted' ? 'Submitted' : 'Draft saved') : '' }}</span>
-      <button type="button" class="gs-btn" onclick="saveDraft()">Save draft</button>
-      <button type="button" class="gs-btn gs-btn-primary" id="gs-submit" onclick="submitGrade()" disabled>Submit grade</button>
+      @if ($grade?->isAbstained())
+        <span class="gs-saved" id="saveStatus">Abstained</span>
+        @unless ($defense->hasOutcome())
+          <button type="button" class="gs-btn gs-btn-primary" id="gs-withdraw" onclick="withdrawAbstention()">Withdraw abstention and grade</button>
+        @endunless
+      @else
+        <span class="gs-saved" id="saveStatus">{{ $grade ? ($grade->status === 'submitted' ? 'Submitted' : 'Draft saved') : '' }}</span>
+        @unless ($defense->hasOutcome())
+          <button type="button" class="gs-btn gs-btn-abstain" onclick="openAbstain()" title="Decline to score this team, with a reason">Abstain</button>
+        @endunless
+        <button type="button" class="gs-btn" onclick="saveDraft()">Save draft</button>
+        <button type="button" class="gs-btn gs-btn-primary" id="gs-submit" onclick="submitGrade()" disabled>Submit grade</button>
+      @endif
     </footer>
 
   </div>
   </div>
+  </div>
+</div>
+
+{{-- Abstaining: declining to score this team, with the reason. --}}
+<div class="modal-overlay" id="abstain-modal" onclick="if (event.target === this) closeAbstain()">
+  <div class="modal-box abstain-box" role="dialog" aria-modal="true" aria-labelledby="abstain-title">
+    <div class="modal-title" id="abstain-title">Abstain from grading {{ $defense->team?->team_name ?? 'this team' }}?</div>
+    <div class="modal-sub">
+      You will not score this team. Your abstention counts as turned in, so the panel is not held up,
+      and the team's average is taken from the panelists who scored.
+      The team sees that you abstained, not your reason.
+    </div>
+    <label for="abstain-reason" class="abstain-label">Reason</label>
+    <textarea id="abstain-reason" rows="4" maxlength="1000" placeholder="e.g. I advised this team, so I should not grade it."></textarea>
+    <div class="abstain-count" id="abstain-count">At least 10 characters.</div>
+    <p class="gs-alert err" id="abstain-error" role="alert" hidden style="margin:10px 0 0"></p>
+    <div class="modal-actions" style="margin-top:16px">
+      <button type="button" class="gs-btn" aria-label="Close" onclick="closeAbstain()">Cancel</button>
+      <button type="button" class="gs-btn gs-btn-danger" id="abstain-confirm" onclick="confirmAbstain()">Abstain</button>
+    </div>
   </div>
 </div>
 
@@ -271,9 +314,6 @@
 <script>
 const SECTIONS = {{ Js::from($sections) }};
 const scores = {{ Js::from((object) $savedScores->all()) }};
-// Abstain all: the panelist does not grade this team, so no criterion is left to do.
-const abstained = new Set({{ Js::from($savedAbstained) }});
-const done = c => c.id in scores || abstained.has(c.id);
 const RUBRIC_TOTAL = {{ (float) $rubric->total_points }};
 
 const ALL = SECTIONS.flatMap((s, si) => s.items.map(c => Object.assign(c, { sec: si })));
@@ -283,7 +323,7 @@ const el = (t, c, x) => { const e = document.createElement(t); if (c) e.classNam
 const fmt = n => +(+n).toFixed(2);
 const same = (a, b) => a !== undefined && Math.abs(a - b) < 0.001;
 const secScore = s => fmt(s.items.reduce((a, c) => a + (scores[c.id] ?? 0), 0));
-const secDone = s => s.items.filter(done).length;
+const secDone = s => s.items.filter(c => c.id in scores).length;
 const narrow = () => window.matchMedia('(max-width: 900px)').matches;
 
 let sec = 0, page = 0, pages = [[]], cur = 0;
@@ -291,7 +331,7 @@ let dirty = false;
 
 // Open on the first criterion still to score.
 (function start() {
-  const first = ALL.find(c => !done(c));
+  const first = ALL.find(c => !(c.id in scores));
   if (first) { cur = ALL.indexOf(first); sec = first.sec; } else { sec = REMARKS; }
 })();
 
@@ -342,7 +382,7 @@ function shell(box, s) {
 }
 
 function row(c, shared, cols) {
-  const tr = el('tr', (done(c) ? 'scored' : '') + (ALL.indexOf(c) === cur ? ' cur' : ''));
+  const tr = el('tr', (c.id in scores ? 'scored' : '') + (ALL.indexOf(c) === cur ? ' cur' : ''));
   const first = el('td'); const d = el('div', 'gs-crit');
   d.append(el('b', '', c.n)); if (c.d) d.append(el('small', '', c.d));
   d.onclick = () => { cur = ALL.indexOf(c); draw(); };
@@ -361,9 +401,7 @@ function row(c, shared, cols) {
     }
     tr.append(td);
   }
-  tr.append(abstained.has(c.id)
-    ? el('td', 'gs-score abs', 'Abstained')
-    : el('td', 'gs-score num' + (c.id in scores ? '' : ' empty'), c.id in scores ? fmt(scores[c.id]) : '—'));
+  tr.append(el('td', 'gs-score num' + (c.id in scores ? '' : ' empty'), c.id in scores ? fmt(scores[c.id]) : '—'));
   return tr;
 }
 
@@ -411,7 +449,7 @@ function drawSheet() {
 function drawOverview() {
   const ov = $('gs-overview'); ov.innerHTML = '';
   SECTIONS.forEach(s => { ov.append(el('span', '', s.name)); ov.append(el('b', 'num', fmt(secScore(s)) + ' / ' + fmt(s.max))); });
-  const left = ALL.filter(c => !done(c)).length;
+  const left = ALL.filter(c => !(c.id in scores)).length;
   ov.append(el('span', '', left ? left + ' criteria still to score' : 'Every criterion is scored'));
   ov.append(el('b', 'num', fmt(ALL.reduce((a, c) => a + (scores[c.id] ?? 0), 0)) + ' / ' + fmt(RUBRIC_TOTAL)));
 }
@@ -423,13 +461,11 @@ function go(s, p) {
   if (sec < REMARKS && !pages[page].some(c => ALL.indexOf(c) === cur)) { cur = ALL.indexOf(pages[page][0]); draw(); }
 }
 
-// Scoring anything means grading after all: the abstention is taken back.
 function score(c, s) {
   scores[c.id] = s;
-  abstained.clear();
   dirty = true;
   $('saveStatus').textContent = 'Unsaved changes';
-  const next = SECTIONS[c.sec].items.find(x => !done(x));
+  const next = SECTIONS[c.sec].items.find(x => !(x.id in scores));
   if (next) {
     cur = ALL.indexOf(next);
     const p = pages.findIndex(pg => pg.includes(next));
@@ -444,38 +480,22 @@ function draw() {
   $('gs-remarks-area').hidden = !onRemarks;
   drawSteps();
   if (onRemarks) drawOverview(); else drawSheet();
-  const n = ALL.filter(done).length;
+  const n = Object.keys(scores).length;
   const total = fmt(ALL.reduce((a, c) => a + (scores[c.id] ?? 0), 0));
   $('gs-total').textContent = total;
   $('gs-left').textContent = ALL.length - n;
   $('gs-jump').disabled = n === ALL.length;
-  // The server refuses a submission with any criterion unscored.
-  $('gs-submit').disabled = n < ALL.length;
-  $('gs-submit').title = n < ALL.length ? 'Score every criterion, or abstain all, first' : '';
-  const abstaining = abstained.size > 0;
-  $('gs-abstain').textContent = abstaining ? 'Undo abstain' : 'Abstain all';
-  $('gs-abstain-note').hidden = !abstaining;
+  // The server refuses a submission with any criterion unscored. There is no
+  // Submit button while abstaining.
+  const submit = $('gs-submit');
+  if (submit) {
+    submit.disabled = n < ALL.length;
+    submit.title = n < ALL.length ? 'Score every criterion first' : '';
+  }
 }
 
-$('gs-abstain').onclick = async () => {
-  if (abstained.size) {
-    abstained.clear();
-  } else {
-    const yes = await confirmSheet({
-      title: 'Abstain from grading this team?',
-      body: 'Any scores on this sheet are cleared. The team\'s score comes from the other panelists, and your sheet still counts as turned in once you submit.',
-      confirmLabel: 'Abstain all',
-    });
-    if (!yes) return;
-    ALL.forEach(c => { abstained.add(c.id); delete scores[c.id]; });
-  }
-  dirty = true;
-  $('saveStatus').textContent = 'Unsaved changes';
-  draw();
-};
-
 $('gs-jump').onclick = () => {
-  const c = ALL.find(x => !done(x)); if (!c) return;
+  const c = ALL.find(x => !(x.id in scores)); if (!c) return;
   cur = ALL.indexOf(c); sec = c.sec; page = 0; draw();
   const p = pages.findIndex(pg => pg.includes(c)); if (p > 0) { page = p; draw(); }
 };
@@ -556,7 +576,7 @@ function showFormError(msg) {
 
 function collectPayload() {
   const remarksField = document.querySelector('#gradingForm textarea[name="remarks"]');
-  return { scores: scores, abstained: [...abstained], remarks: remarksField ? remarksField.value : null };
+  return { scores: scores, remarks: remarksField ? remarksField.value : null };
 }
 
 // The panel's one decision, recorded by the chair after the briefing.
@@ -638,6 +658,87 @@ function postGrade(url, statusMsg, method) {
     });
 }
 
+/* ── Abstaining ──────────────────────────────────────────────── */
+const ABSTAIN_MIN = 10;
+
+function abstainFetch(method, body) {
+  return fetch('{{ route('instructor.grading.abstain', $defense->defense_id) }}', {
+    method: method,
+    credentials: 'same-origin',
+    headers: {
+      'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    },
+    body: body ? JSON.stringify(body) : null,
+  }).then(res => res.json());
+}
+
+function updateAbstainCount() {
+  const n = $('abstain-reason').value.trim().length;
+  $('abstain-count').textContent = n < ABSTAIN_MIN
+    ? (n ? (ABSTAIN_MIN - n) + ' more character' + (ABSTAIN_MIN - n === 1 ? '' : 's') + ' needed' : 'At least ' + ABSTAIN_MIN + ' characters.')
+    : n + ' / 1000';
+}
+
+function openAbstain() {
+  $('abstain-error').hidden = true;
+  updateAbstainCount();
+  $('abstain-modal').classList.add('show');
+  $('abstain-reason').focus();
+}
+
+function closeAbstain() { $('abstain-modal').classList.remove('show'); }
+
+function confirmAbstain() {
+  const reason = $('abstain-reason').value.trim();
+  const error = $('abstain-error');
+  const btn = $('abstain-confirm');
+
+  if (reason.length < ABSTAIN_MIN) {
+    error.textContent = 'Give the reason you are abstaining - at least ' + ABSTAIN_MIN + ' characters.';
+    error.hidden = false;
+    $('abstain-reason').focus();
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Abstaining…';
+
+  abstainFetch('POST', { reason: reason })
+    .then(res => {
+      if (!res.success) {
+        error.textContent = res.message || 'Could not record your abstention.';
+        error.hidden = false;
+        btn.disabled = false;
+        btn.textContent = 'Abstain';
+        return;
+      }
+      dirty = false;
+      window.location.reload();
+    })
+    .catch(() => {
+      error.textContent = 'Could not reach the server.';
+      error.hidden = false;
+      btn.disabled = false;
+      btn.textContent = 'Abstain';
+    });
+}
+
+function withdrawAbstention() {
+  const btn = $('gs-withdraw');
+  btn.disabled = true;
+
+  abstainFetch('DELETE')
+    .then(res => {
+      if (!res.success) { showFormError(res.message || 'Could not withdraw.'); btn.disabled = false; return; }
+      window.location.reload();
+    })
+    .catch(() => { showFormError('Could not reach the server.'); btn.disabled = false; });
+}
+
+if ($('abstain-reason')) $('abstain-reason').addEventListener('input', updateAbstainCount);
+
 function saveDraft() { postGrade('{{ route('instructor.grading.save', $defense->defense_id) }}', 'Draft saved', 'PUT'); }
 function submitGrade() { postGrade('{{ route('instructor.grading.submit', $defense->defense_id) }}', 'Submitted - returning to your teams…', 'PATCH'); }
 
@@ -659,7 +760,6 @@ function closeSidebar() {
   document.body.style.overflow = '';
 }
 </script>
-@include('partials.app-dialog')
 @include('partials.escape-closes-modals')
 </body>
 </html>

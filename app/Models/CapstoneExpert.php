@@ -108,7 +108,14 @@ class CapstoneExpert extends Authenticatable
         'reject_cooldown_until' => 'datetime',
         'last_seen_at' => 'datetime',
         'first_login_at' => 'datetime',
+        'tour_completed_at' => 'datetime',
     ];
+
+    /** Whether the portal tour still opens by itself: not yet finished or skipped. */
+    public function needsPortalTour(): bool
+    {
+        return $this->tour_completed_at === null;
+    }
 
     // The pivot's own key comes along so a caller can point at one specific
     // role of this expert - what a team's application records when it says

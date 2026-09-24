@@ -246,6 +246,25 @@
 .empty-state svg { width: 48px; height: 48px; stroke: var(--border2); margin-bottom: 12px; }
 .empty-state p { font-size: 14px; }
 
+/* ── Tablet and phone: one column that grows, and the page scrolls ──
+   experts.css keeps .content-grid at the height of the screen, which suits
+   the desktop's two columns. Once it becomes one column (1024px down) that
+   height stayed, and every section was squeezed into it: the roles list
+   poured out over Applications and How it works, and the credits sat on top
+   of Your Experts. Here, after experts.css, and with !important because its
+   phone rules use it. */
+@media (max-width: 1024px) {
+  .content-grid-wrap,
+  #real-content.content-grid { height: auto !important; min-height: 0 !important; }
+  #real-content.content-grid > * { flex-shrink: 0 !important; }
+  #real-content .experts-main { min-height: auto !important; }
+  #real-content .overview-panel { max-height: none !important; overflow: visible !important; }
+}
+/* Two boxes side by side left each about 180px - too narrow to read. */
+@media (max-width: 480px) {
+  #real-content .overview-panel { grid-template-columns: minmax(0, 1fr) !important; }
+}
+
 </style>
 @include('partials.skeleton-head', ['skReveal' => 'opacity'])
 </head>
