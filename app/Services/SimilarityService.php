@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\ArchivedDocument;
 use App\Models\CapstoneExpert;
 use App\Models\Role;
+use App\Support\ResearchAgenda;
 use Illuminate\Support\Facades\Log;
 use Smalot\PdfParser\Parser;
 
@@ -228,7 +229,7 @@ Return ONLY a valid JSON object. No explanation. No markdown fences.
   "proposed_solution": "copy the Proposed Solution section, 2-3 sentences or bullet points joined by '; '",
   "scope": "copy the Scope of the Proposed Solution section",
   "limitations": "copy the Limitations of the Proposed Solution section, bullet points joined by '; '",
-  "sdg_goals": "the Applicable UN Sustainable Development Goal(s), formatted exactly like 'SDG 4 – Quality Education' - if the document only gives a number or a short name, expand it to that exact 'SDG N – Full Name' format",
+  "sdg_goals": "every Applicable UN Sustainable Development Goal the document names, each formatted exactly like 'SDG 4 – Quality Education' and separated by ', ' - if the document only gives a number or a short name, expand it to that exact 'SDG N – Full Name' format",
   "research_agenda": ["each Applicable Research Agenda and Priority Area item as its own array entry, as a PLAIN STRING - never a nested object"],
   "sdm": "the Software Development Methodology named in the document, or 'Agile Development Methodology' if none is stated",
   "technologies": ["list of technologies mentioned"],
@@ -289,7 +290,8 @@ PROMPT;
             return null;
         }, $value);
 
-        return array_values(array_filter($strings, fn ($s) => $s !== null && $s !== ''));
+        // One entry holding several bulleted items is several items.
+        return ResearchAgenda::items(array_values(array_filter($strings, fn ($s) => $s !== null && $s !== '')));
     }
 
     // ── 1.5. Reject uploads that aren't actually a pre-proposal ────────
@@ -918,14 +920,17 @@ PROMPT;
 
             if ($escaped) {
                 $escaped = false;
+
                 continue;
             }
             if ($ch === '\\') {
                 $escaped = true;
+
                 continue;
             }
             if ($ch === '"') {
                 $inString = ! $inString;
+
                 continue;
             }
             if ($inString) {
@@ -977,55 +982,55 @@ PROMPT;
                 ."  nouns (broken equipment, parking entries, counselling appointments, capstone submissions),\n"
                 ."  there is no overlap to report and the score is low.\n"
                 ."- Be precise about WHAT KIND of difference you're citing - don't default to the word \"domain\" "
-                ."for everything, it sounds vague and technical. Plainer, more accurate words: \"area\" for the "
-                ."broad subject (education vs. retail vs. healthcare - two capstone-administration systems are the "
-                ."SAME area even if their specific features differ), \"scope\" for what the system actually covers "
+                .'for everything, it sounds vague and technical. Plainer, more accurate words: "area" for the '
+                .'broad subject (education vs. retail vs. healthcare - two capstone-administration systems are the '
+                .'SAME area even if their specific features differ), "scope" for what the system actually covers '
                 ."or leaves out, \"users\" when who it's built for differs, \"institution\" when it's the same kind "
-                ."of system just for a different school. Say whichever one is actually true, not whichever sounds "
+                .'of system just for a different school. Say whichever one is actually true, not whichever sounds '
                 ."most decisive.\n\n"
-                ."Decide whether the core concept genuinely matches, give your OWN similarity score from 0 to 100 "
-                ."based on core concept overlap (NOT on shared generic wording), and write ONE sentence explaining "
-                ."why or why not. Also give a short phrase (under 12 words) on what genuinely overlaps "
-                ."(\"similarities\") and what specific features/scope actually differ (\"differences\"), plus ONE "
-                ."clear, specific sentence of actionable advice (\"suggestion\") - name the actual feature/angle "
+                .'Decide whether the core concept genuinely matches, give your OWN similarity score from 0 to 100 '
+                .'based on core concept overlap (NOT on shared generic wording), and write ONE sentence explaining '
+                .'why or why not. Also give a short phrase (under 12 words) on what genuinely overlaps '
+                .'("similarities") and what specific features/scope actually differ ("differences"), plus ONE '
+                .'clear, specific sentence of actionable advice ("suggestion") - name the actual feature/angle '
                 ."the student should lean into or cut, never a generic \"differentiate your proposal further\".\n"
-                ."A score near 100 means essentially the same project idea. A score near 0 means a completely "
-                ."different purpose despite superficially similar wording (e.g. both being \"a management "
-                ."system\"). Sharing only generic words should score low (under 30); solving the same underlying "
-                ."problem with the same specific features should score high (over 65) even if worded differently. "
-                ."But same SUBJECT and users with a genuinely different FEATURE SET (not just different wording "
+                .'A score near 100 means essentially the same project idea. A score near 0 means a completely '
+                .'different purpose despite superficially similar wording (e.g. both being "a management '
+                .'system"). Sharing only generic words should score low (under 30); solving the same underlying '
+                .'problem with the same specific features should score high (over 65) even if worded differently. '
+                .'But same SUBJECT and users with a genuinely different FEATURE SET (not just different wording '
                 ."for the same features) is a real middle case - moderate, not high: score in the 40s.\n\n"
-                ."WORKED EXAMPLES - the deciding question is always \"a management/tracking/monitoring system "
+                .'WORKED EXAMPLES - the deciding question is always "a management/tracking/monitoring system '
                 ."FOR WHAT, and used by WHO?\", never just \"is it a management system?\":\n"
-                ."- \"Student Management System\" vs. \"Employee Management System\": BOTH are \"a management "
-                ."system\", but one manages students and the other manages employees - completely different "
+                .'- "Student Management System" vs. "Employee Management System": BOTH are "a management '
+                .'system", but one manages students and the other manages employees - completely different '
                 ."subjects and users. Score ~5-10, NOT high.\n"
-                ."- \"CapsTrack: Capstone Project Management System\" vs. \"Web-Based Management System for "
-                ."Production and Auxiliary Services with Inventory and Sales Tracking\": one manages capstone "
-                ."project workflow (advisers, submissions, duplication checking) for students; the other manages "
-                ."physical inventory and sales for an office. Sharing the phrase \"web-based management system\" "
+                .'- "CapsTrack: Capstone Project Management System" vs. "Web-Based Management System for '
+                .'Production and Auxiliary Services with Inventory and Sales Tracking": one manages capstone '
+                .'project workflow (advisers, submissions, duplication checking) for students; the other manages '
+                .'physical inventory and sales for an office. Sharing the phrase "web-based management system" '
                 ."is NOT core-concept overlap. Score ~5-10, NOT high.\n"
-                ."- \"CapsTrack: Capstone Project Management System\" vs. \"Capstone Project and Thesis Class "
-                ."Information Management System\": both manage the SAME subject (capstone/thesis projects) for "
-                ."the same kind of users (students and advisers/panelists) - genuine core-concept overlap, not "
-                ."just shared wording. But the actual FEATURES differ: one focuses on adviser-matching and AI "
-                ."duplication checking, the other on grading/participation rating and honorarium computation - "
-                ."real, substantive scope differences, not the same system relabeled. Same subject + different "
+                .'- "CapsTrack: Capstone Project Management System" vs. "Capstone Project and Thesis Class '
+                .'Information Management System": both manage the SAME subject (capstone/thesis projects) for '
+                .'the same kind of users (students and advisers/panelists) - genuine core-concept overlap, not '
+                .'just shared wording. But the actual FEATURES differ: one focuses on adviser-matching and AI '
+                .'duplication checking, the other on grading/participation rating and honorarium computation - '
+                .'real, substantive scope differences, not the same system relabeled. Same subject + different '
                 ."features = moderate score, around 40-50, not near-0 and not 80+.\n"
-                ."- \"Mobile app for reporting broken campus facilities, routing each report to "
-                ."maintenance staff and tracking it until resolved\" vs. \"Repair request and job-order "
-                ."system for a school maintenance office\": different words, and one side has an extra "
-                ."navigation feature - but the problem is identical (a broken thing gets reported, assigned "
-                ."and tracked to done) and the users are identical (people who report, staff who fix). That "
-                ."is a real duplicate risk. Score ~70, NOT low - an extra feature narrows the gap, it does "
+                .'- "Mobile app for reporting broken campus facilities, routing each report to '
+                .'maintenance staff and tracking it until resolved" vs. "Repair request and job-order '
+                .'system for a school maintenance office": different words, and one side has an extra '
+                .'navigation feature - but the problem is identical (a broken thing gets reported, assigned '
+                .'and tracked to done) and the users are identical (people who report, staff who fix). That '
+                .'is a real duplicate risk. Score ~70, NOT low - an extra feature narrows the gap, it does '
                 ."not remove it.\n"
-                ."Silently ask yourself \"a management system FOR WHAT, and used by WHO?\" for both the "
+                .'Silently ask yourself "a management system FOR WHAT, and used by WHO?" for both the '
                 ."pre-proposal and the archived document, then answer it BOTH ways:\n"
-                ."- if the WHAT differs (students vs. inventory, capstones vs. door access, records vs. "
+                .'- if the WHAT differs (students vs. inventory, capstones vs. door access, records vs. '
                 ."events), the score must be low regardless of how many words they share;\n"
-                ."- if the WHAT and the WHO are the same, the score must be high regardless of how "
+                .'- if the WHAT and the WHO are the same, the score must be high regardless of how '
                 ."differently the two are worded, and regardless of extra features on either side.\n"
-                ."Base this on what each one actually DOES, per its problem statement/solution/abstract "
+                .'Base this on what each one actually DOES, per its problem statement/solution/abstract '
                 ."below - not just its title.\n\n"
                 ."Return ONLY a JSON object. No markdown, no array, no extra text.\n"
                 .'{"matches":true|false,"score":<0-100>,"reason":"one sentence about core concept match or mismatch",'

@@ -262,6 +262,29 @@ class CapsaTeamManagementTest extends TestCase
      * The reject dialog names the title: a team submits three, and a dialog
      * that could be about any of them invites rejecting the wrong one.
      */
+    /**
+     * The research agenda is a list on the form, and reads as one here - a
+     * scan that ran the bullets together into one item included.
+     */
+    public function test_the_title_page_lists_the_research_agenda_one_item_per_line(): void
+    {
+        $this->makeCapsaWithSections();
+        [$team, , $sy] = $this->makeTeamInSection('Team Agenda');
+
+        $proposal = $this->addProposal($team, $sy, 1);
+        $proposal->update([
+            'research_agenda' => ['• Applications and Systems Development • e-Services • Data Science'],
+            'sdg_goals' => 'SDG 4 – Quality Education, SDG 9 – Industry, Innovation and Infrastructure',
+        ]);
+
+        $this->get(route('capsa.team_management.title', [$team->team_id, $proposal->id]))
+            ->assertOk()
+            ->assertSee('Research agenda and priority areas')
+            ->assertSeeInOrder(['<ul class="ans-list">', '<li>Applications and Systems Development</li>', '<li>e-Services</li>', '<li>Data Science</li>'], false)
+            ->assertSeeInOrder(['<li>SDG 4 – Quality Education</li>', '<li>SDG 9 – Industry, Innovation and Infrastructure</li>'], false)
+            ->assertDontSee('• e-Services');
+    }
+
     public function test_the_title_page_carries_the_recommend_and_reject_dialogs(): void
     {
         $this->makeCapsaWithSections();
