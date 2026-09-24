@@ -109,7 +109,9 @@
 .tmx .tname{font-size:13.5px;font-weight:600;color:var(--ink)}
 .tmx .tsub{font-size:11.5px;color:var(--mut);margin-top:1px}
 .tmx .av{border-radius:50%;display:flex;align-items:center;justify-content:center;
-  font-size:12px;font-weight:700;color:#fff;flex:none;width:38px;height:38px}
+  font-size:12px;font-weight:700;color:#fff;flex:none;width:38px;height:38px;position:relative;overflow:hidden}
+/* A profile photo sits over the initials; if it cannot load it removes itself and the initials show. */
+.tmx .av img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .tmx .chips{display:flex}
 .tmx .chips span{width:27px;height:27px;border-radius:50%;border:2px solid var(--card);margin-left:-7px;
   display:flex;align-items:center;justify-content:center;font-size:9.5px;font-weight:700;color:#fff}
