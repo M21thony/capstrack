@@ -415,6 +415,7 @@ function start(root) {
     if (r.state === 'not_started') return 'Open';
     switch (r.waiting_on) {
       case 'capsa': return CAPSA ? 'Waiting for your check' : "Waiting for the CaPSA's check";
+      case 'title_review': return CAPSA ? 'Titles waiting for your recommendation' : "Titles waiting for the CaPSA's recommendation";
       case 'team': return r.note ? 'Sent back' : ordinal(Math.max(1, r.revision)) + ' revision requested';
       case 'signed_copy': return 'Approved, signed copy not uploaded';
       case 'adviser':
@@ -433,6 +434,7 @@ function start(root) {
   function closer(r, t) {
     const who = CAPSA ? 'you check' : 'the CaPSA checks';
     const signer = (r.role === 'consultant' ? t.consultant : t.adviser) || 'the ' + (r.role || 'adviser');
+    if (r.by_recommendation) return `Closed when ${CAPSA ? 'you recommend' : 'the CaPSA recommends'} one of the team's titles`;
     return {
       form: `Closed when ${who} the signed form`,
       approval: `Closed when ${who} the CLF signed by ${signer}`,
