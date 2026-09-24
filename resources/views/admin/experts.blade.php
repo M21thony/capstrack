@@ -946,24 +946,45 @@
             <svg class="group-chevron" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
             <input type="checkbox" class="group-all" onclick="event.stopPropagation()" onchange="toggleGroupAll(this)">
             <span class="group-name">{{ $program }}</span>
-            @if (str_contains($program, '4th year'))
-              <span class="group-from">from the student list</span>
-            @endif
             <span class="group-count">0/{{ $sections->count() }}</span>
           </div>
           <div class="section-group-body">
             @foreach ($sections as $section)
               {{-- Who already covers it, so the picker can leave it out for
                    everyone else. Two CaPSAs on one section means two people
-                   approving the same teams. --}}
-              <label class="section-opt" data-name="{{ strtolower($section) }}"
-                     data-owner="{{ $sectionOwners[$section] ?? '' }}"><input type="checkbox" onchange="onSectionChange(this)"><span>{{ $section }}</span></label>
+                   approving the same teams. Shown as the letter alone:
+                   assigning takes a section, not a year - the value is still
+                   the whole label (BSIT-3A), the starting class. --}}
+              @php $letter = preg_replace('/^[A-Z]+-\d+/', '', $section) ?: $section; @endphp
+              <label class="section-opt" data-name="{{ strtolower($section) }}" data-value="{{ $section }}"
+                     data-show="{{ $program }} · {{ $letter }}"
+                     data-owner="{{ $sectionOwners[$section] ?? '' }}"><input type="checkbox" onchange="onSectionChange(this)"><span>{{ $letter }}</span></label>
             @endforeach
           </div>
         </div>
       @empty
-        <p style="font-size:12.5px;color:#94a3b8;text-align:left;padding:8px 2px;">No sections found yet - they're derived from enrolled students, so this fills in once the student roster has course/section data.</p>
+        <p style="font-size:12.5px;color:#94a3b8;text-align:left;padding:8px 2px;">No sections yet - add them in System Settings.</p>
       @endforelse
+
+      {{-- A class after Year Promotion. Only here once someone holds it or
+           students are in it, so saving a CaPSA who has one keeps it. --}}
+      @if ($laterSections->isNotEmpty())
+        <div class="section-group" data-program="later">
+          <div class="section-group-header" onclick="toggleGroup(this)">
+            <svg class="group-chevron" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+            <input type="checkbox" class="group-all" onclick="event.stopPropagation()" onchange="toggleGroupAll(this)">
+            <span class="group-name">Moved up to 4th year</span>
+            <span class="group-from">after Year Promotion</span>
+            <span class="group-count">0/{{ $laterSections->count() }}</span>
+          </div>
+          <div class="section-group-body">
+            @foreach ($laterSections as $section)
+              <label class="section-opt" data-name="{{ strtolower($section) }}" data-value="{{ $section }}" data-show="{{ $section }}"
+                     data-owner="{{ $sectionOwners[$section] ?? '' }}"><input type="checkbox" onchange="onSectionChange(this)"><span>{{ $section }}</span></label>
+            @endforeach
+          </div>
+        </div>
+      @endif
     </div>
     <p id="capsaSectionsError" style="display:none;color:#dc2626;font-size:12px;margin-top:6px;text-align:left;">Select at least one section.</p>
 
@@ -1137,7 +1158,7 @@ function checkSections(names) {
   const wanted = new Set(names.map(n => String(n).trim().toLowerCase()));
 
   document.querySelectorAll('#sectionList .section-opt').forEach(opt => {
-    const label = opt.querySelector('span').textContent.trim().toLowerCase();
+    const label = opt.dataset.value.trim().toLowerCase();
     if (wanted.has(label)) {
       opt.querySelector('input').checked = true;
       const group = opt.closest('.section-group');
@@ -1234,7 +1255,7 @@ document.getElementById('capsaCancelBtn').addEventListener('click', () => {
 
 capsaConfirmBtn.addEventListener('click', function () {
   const sections = [...document.querySelectorAll('#sectionList .section-opt input:checked')]
-    .map(cb => cb.closest('.section-opt').querySelector('span').textContent);
+    .map(cb => cb.closest('.section-opt').dataset.value);
   // Only the address is required. A name is overwritten at sign-in anyway,
   // and sections can be given to them from this same modal later.
   if (capsaAdding && !document.getElementById('capsaEmail').value.trim()) {
@@ -1437,7 +1458,7 @@ function renderSelectedSectionPreview() {
     return;
   }
   box.innerHTML = checked.map(opt => {
-    const label = opt.querySelector('span').textContent;
+    const label = opt.dataset.show;
     return `<span class="section-preview-tag">${label}<button type="button" onclick="removeSelectedSection('${opt.dataset.name}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></span>`;
   }).join('');
 }
