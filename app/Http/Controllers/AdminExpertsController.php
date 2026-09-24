@@ -7,6 +7,7 @@ use App\Models\ExpertExpertise;
 use App\Models\Notification;
 use App\Models\StudentSchoolYear;
 use App\Models\TeamExpertAssignment;
+use App\Support\SectionCatalog;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -60,23 +61,19 @@ class AdminExpertsController extends Controller
             ->sortBy(fn ($e) => $e->expert_id === $viewer?->expert_id ? 0 : 1)
             ->values();
 
-        // Section picker for the "Make CaPSA" and "Edit sections" modals -
-        // grouped by program and year ("BSIT-3A" -> "BSIT · 3rd year"), so a
-        // CaPSA covering every section of one year is one click on that group.
-        // Grouped by program alone, that click took 3rd and 4th year together,
-        // and every CaPSA looked like they ran both years at once. 3rd-year
-        // sections come from System Settings; 4th-year ones from the student
-        // list, once students are in them.
-        $groupedSections = collect(AdminProfileController::getAllAvailableSections())
-            ->groupBy(function (string $section) {
-                if (! preg_match('/^([A-Z]+)-(\d+)/', $section, $m)) {
-                    return $section;
-                }
+        // Section picker for the "Make CaPSA" and "Edit sections" modals.
+        // Assigning takes a section, not a year: the picker shows each
+        // program's letters, and a letter is that section's starting class
+        // (3rd year, where capstone starts - "BSIT-3A"). Where that class goes
+        // in 4th year is Year Promotion's call. A 4th-year section is only
+        // offered on its own, below, once someone holds it or students are in
+        // it, so saving a CaPSA who already has one does not drop it.
+        $available = collect(AdminProfileController::getAllAvailableSections());
+        $isStarting = fn (string $section) => (bool) preg_match('/^[A-Z]+-'.SectionCatalog::STARTING_YEAR.'[A-Z]*$/', $section);
 
-                $ordinal = [1 => '1st', 2 => '2nd', 3 => '3rd'][(int) $m[2]] ?? $m[2].'th';
-
-                return $m[1].' · '.$ordinal.' year';
-            });
+        $groupedSections = $available->filter($isStarting)
+            ->groupBy(fn (string $section) => explode('-', $section)[0]);
+        $laterSections = $available->reject($isStarting)->values();
 
         // Not route names: these are the two view FILES. They read the same
         // as the route names, which is how a bulk rename of route('admin.x')
@@ -97,6 +94,7 @@ class AdminExpertsController extends Controller
         return view($isCapsaOnly ? 'capsa.experts' : 'admin.experts', [
             'experts' => $experts,
             'groupedSections' => $groupedSections,
+            'laterSections' => $laterSections,
             'sectionOwners' => $sectionOwners,
         ]);
     }

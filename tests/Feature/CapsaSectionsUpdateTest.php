@@ -112,10 +112,11 @@ class CapsaSectionsUpdateTest extends TestCase
      * section is still to remove the person as CaPSA and start again.
      */
     /**
-     * The picker groups sections by program and year, so picking a whole
-     * group never takes 3rd and 4th year together.
+     * Assigning takes a section, not a year: each program's letters, standing
+     * for its starting (3rd-year) class. A 4th-year section is offered on its
+     * own, so saving a CaPSA who already holds one keeps it.
      */
-    public function test_the_picker_groups_sections_by_year(): void
+    public function test_the_picker_offers_sections_without_a_year(): void
     {
         SectionCatalog::store(['BSIT-3A', 'BSIT-3B']);
         Student::create([
@@ -123,13 +124,15 @@ class CapsaSectionsUpdateTest extends TestCase
             'course' => 'Bachelor of Science in Information Technology', 'year_section' => '4th '.json_decode('"·"').' B',
         ]);
 
-        $this->actingAs($this->admin(), 'expert')->get(route('admin.experts'))
+        $html = $this->actingAs($this->admin(), 'expert')->get(route('admin.experts'))
             ->assertOk()
-            ->assertViewHas('groupedSections', fn ($groups) => $groups->map->values()->map->all()->all() === [
-                'BSIT · 3rd year' => ['BSIT-3A', 'BSIT-3B'],
-                'BSIT · 4th year' => ['BSIT-4B'],
-            ])
-            ->assertSee('from the student list');
+            ->assertViewHas('groupedSections', fn ($groups) => $groups->map->values()->map->all()->all() === ['BSIT' => ['BSIT-3A', 'BSIT-3B']])
+            ->assertViewHas('laterSections', fn ($later) => $later->all() === ['BSIT-4B'])
+            ->assertSee('Moved up to 4th year')
+            ->getContent();
+
+        // The letter is what shows; the whole label is what is saved.
+        $this->assertMatchesRegularExpression('/data-value="BSIT-3A"\s+data-show="BSIT · A"[^>]*><input[^>]*><span>A<\/span>/', $html);
     }
 
     public function test_the_experts_page_offers_it_for_a_capsa(): void
