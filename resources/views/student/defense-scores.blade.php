@@ -83,6 +83,8 @@
       $seats = $d->panels->sortBy(fn ($p) => $p->panel_role === 'Panel Chair' ? 0 : 1)->values();
       $gradeOf = $d->grades->keyBy('expert_id');
       $scoreOf = fn ($seat, $c) => $gradeOf->get($seat->expert_id)?->scores[(string) $c->criterion_id] ?? null;
+      // A panelist may abstain from a criterion; say so rather than showing a blank.
+      $cellOf = fn ($seat, $c) => $gradeOf->get($seat->expert_id)?->abstainedOn($c->criterion_id) ? 'Abstained' : $fmt($scoreOf($seat, $c));
     @endphp
     <section id="ds-{{ $d->defense_id }}" class="ds-panel" role="tabpanel" @unless ($loop->last) hidden @endunless>
       <div class="ds-band is-{{ \App\Support\DefenseOutcome::tone($d->outcome) }}">
@@ -126,7 +128,7 @@
                       <td>{{ $c->criterion_name }}</td>
                       <td class="ds-max">{{ $fmt($c->max_points) }}</td>
                       @foreach ($seats as $seat)
-                        <td>{{ $fmt($scoreOf($seat, $c)) }}</td>
+                        <td>{{ $cellOf($seat, $c) }}</td>
                       @endforeach
                     </tr>
                   @endforeach
@@ -135,7 +137,8 @@
                   <td>Total</td>
                   <td>{{ $fmt($rubric->total_points) }}</td>
                   @foreach ($seats as $seat)
-                    <td>{{ $fmt($gradeOf->get($seat->expert_id)?->total_score) }}</td>
+                    @php $seatGrade = $gradeOf->get($seat->expert_id); @endphp
+                    <td>{{ $seatGrade && $seatGrade->total_score === null && ! empty($seatGrade->abstained) ? 'Abstained' : $fmt($seatGrade?->total_score) }}</td>
                   @endforeach
                 </tr>
               </tbody>

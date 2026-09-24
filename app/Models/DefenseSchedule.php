@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Support\DefenseOutcome;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Collection;
 
 class DefenseSchedule extends Model
 {
@@ -62,7 +63,7 @@ class DefenseSchedule extends Model
         return $this->relationLoaded('panels') ? $this->panels->count() : $this->panels()->count();
     }
 
-    /** @return \Illuminate\Support\Collection<int, PanelGrade> */
+    /** @return Collection<int, PanelGrade> */
     public function submittedGrades()
     {
         return $this->relationLoaded('grades')
@@ -87,6 +88,11 @@ class DefenseSchedule extends Model
      * looking score off two of three panelists, and that number then moves
      * when the third arrives. Null until everyone has graded, so a partial
      * result is never shown as a final one.
+     *
+     * A panelist may abstain on a criterion. Then that criterion is averaged
+     * over the panelists who scored it, and the criteria are added up, so an
+     * abstention is not a zero against the team. With no abstentions this is
+     * the same number as the totals over the panel.
      */
     public function panelAverage(): ?float
     {
@@ -94,9 +100,26 @@ class DefenseSchedule extends Model
             return null;
         }
 
-        $total = $this->submittedGrades()->sum(fn (PanelGrade $g) => (float) $g->total_score);
+        $grades = $this->submittedGrades();
 
-        return round($total / $this->panelSize(), 2);
+        if ($grades->every(fn (PanelGrade $g) => empty($g->abstained))) {
+            return round($grades->sum(fn (PanelGrade $g) => (float) $g->total_score) / $this->panelSize(), 2);
+        }
+
+        $byCriterion = [];
+
+        foreach ($grades as $grade) {
+            foreach ($grade->scores ?? [] as $criterionId => $score) {
+                $byCriterion[$criterionId][] = (float) $score;
+            }
+        }
+
+        // Every panelist abstained on everything: there is no score to give.
+        if ($byCriterion === []) {
+            return null;
+        }
+
+        return round(array_sum(array_map(fn (array $scores) => array_sum($scores) / count($scores), $byCriterion)), 2);
     }
 
     public function team()

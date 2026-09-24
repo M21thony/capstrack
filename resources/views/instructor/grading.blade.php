@@ -131,7 +131,9 @@
                     </div>
                   </td>
                   <td>
-                    @if($done)
+                    @if($done && ($row->abstained ?? false))
+                      <span class="badge badge-gray" style="font-size:10px">Submitted · Abstained</span>
+                    @elseif($done)
                       <span class="badge badge-green" style="font-size:10px">Submitted{{ $row->total_score !== null ? ' · '.rtrim(rtrim(number_format((float) $row->total_score, 2), '0'), '.') : '' }}</span>
                     @elseif($row->status === 'draft')
                       <span class="badge badge-amber" style="font-size:10px">Draft saved</span>
