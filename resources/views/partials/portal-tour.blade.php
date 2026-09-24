@@ -275,8 +275,11 @@
 
     // A target this page does not have (no bell on some layout, say) is
     // skipped in the direction of travel rather than pointed at nothing.
+    // Opening the phone sidebar here counts as moving it: the note below
+    // must wait for the slide, or it outlines a sliver at the screen's edge.
+    var openedForTarget = false;
     if (step.target.length && !els.length && isNarrow() && inSidebarSelector(step)) {
-      setSidebar(true);
+      openedForTarget = setSidebar(true);
       els = targetsOf(step);
     }
     if (step.target.length && !els.length) {
@@ -298,9 +301,9 @@
     skipBtn.hidden = current === last;
     nextBtn.textContent = current === 0 ? 'Start the tour' : current === last ? 'Done' : 'Next';
 
-    var moved = false;
+    var moved = openedForTarget;
     if (isNarrow()) {
-      moved = setSidebar(els.length > 0 && inSidebar(els));
+      moved = setSidebar(els.length > 0 && inSidebar(els)) || moved;
     }
     if (els.length) {
       els[0].scrollIntoView({ block: 'center', inline: 'nearest' });
@@ -392,6 +395,14 @@
 
   window.addEventListener('resize', function () {
     if (!tour.hidden) layout();
+  });
+
+  // Measure again once the phone sidebar has actually finished sliding: a
+  // slow phone can take longer than the timer above allows for.
+  document.querySelectorAll('.sidebar').forEach(function (side) {
+    side.addEventListener('transitionend', function (e) {
+      if (e.target === side && e.propertyName === 'transform' && !tour.hidden) layout();
+    });
   });
 
   document.addEventListener('keydown', function (e) {
