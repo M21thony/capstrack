@@ -60,12 +60,23 @@ class AdminExpertsController extends Controller
             ->sortBy(fn ($e) => $e->expert_id === $viewer?->expert_id ? 0 : 1)
             ->values();
 
-        // Section picker for the "Make CaPSA" modal - grouped by program
-        // (the part of the label before the dash, e.g. "BSIT-3A" -> "BSIT")
-        // so a CaPSA covering every section of a program is one click on
-        // that group, not checking each section one at a time.
+        // Section picker for the "Make CaPSA" and "Edit sections" modals -
+        // grouped by program and year ("BSIT-3A" -> "BSIT · 3rd year"), so a
+        // CaPSA covering every section of one year is one click on that group.
+        // Grouped by program alone, that click took 3rd and 4th year together,
+        // and every CaPSA looked like they ran both years at once. 3rd-year
+        // sections come from System Settings; 4th-year ones from the student
+        // list, once students are in them.
         $groupedSections = collect(AdminProfileController::getAllAvailableSections())
-            ->groupBy(fn ($section) => explode('-', $section)[0] ?? $section);
+            ->groupBy(function (string $section) {
+                if (! preg_match('/^([A-Z]+)-(\d+)/', $section, $m)) {
+                    return $section;
+                }
+
+                $ordinal = [1 => '1st', 2 => '2nd', 3 => '3rd'][(int) $m[2]] ?? $m[2].'th';
+
+                return $m[1].' · '.$ordinal.' year';
+            });
 
         // Not route names: these are the two view FILES. They read the same
         // as the route names, which is how a bulk rename of route('admin.x')
@@ -160,7 +171,6 @@ class AdminExpertsController extends Controller
                     .', so an address outside those could never be used.',
             ], 422);
         }
-
 
         // Never the Admin. Their account runs the system; it is not an
         // expert, and giving it a student-facing role is what put them in
@@ -611,7 +621,6 @@ class AdminExpertsController extends Controller
             ], 500);
         }
 
-
         // Never the Admin. Their account runs the system; it is not an
         // expert, and giving it a student-facing role is what put them in
         // front of every team on student/experts. Hiding them from the
@@ -712,6 +721,7 @@ class AdminExpertsController extends Controller
 
         return [mb_substr($name, 0, $at), mb_substr($name, $at + 1)];
     }
+
     public function toggleCapsa(Request $request, CapstoneExpert $expert): JsonResponse
     {
         if ($refusal = $this->refuseIfAdmin($expert)) {
