@@ -35,6 +35,7 @@
     'paper_to_check' => ['rgba(59,130,246,0.12)', '#3b82f6', '<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>'],
     'review_reminder' => ['rgba(249,115,22,0.12)', '#f97316', '<path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>'],
     'leave_request_received' => ['rgba(239,68,68,0.12)', '#ef4444', '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="17" y1="11" x2="23" y2="11"/>'],
+    'announcement' => ['rgba(249,115,22,0.12)', '#f97316', '<path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/>'],
   ];
 @endphp
 
@@ -128,7 +129,7 @@
   <div class="notif-list">
     @forelse ($bellItems as $n)
       @php [$bg, $fg, $path] = $bellIcons[$n->type] ?? ['rgba(100,116,139,0.12)', '#64748b', '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>']; @endphp
-      <a href="{{ $n->link ?: '#' }}" class="notif-item {{ $n->is_read ? '' : 'is-unread' }}" data-id="{{ $n->id }}">
+      <a href="{{ $n->link ?: '#' }}" class="notif-item {{ $n->is_read ? '' : 'is-unread' }}" data-id="{{ $n->id }}" data-type="{{ $n->type }}">
         <div class="notif-item-icon" style="background:{{ $bg }};color:{{ $fg }}">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">{!! $path !!}</svg>
         </div>
@@ -137,7 +138,7 @@
           {{-- Messages are written as HTML and escape their own values at
                the source, the same way the student bell renders them. --}}
           <div class="notif-item-msg">{!! $n->message !!}</div>
-          <div class="notif-item-time">{{ $n->created_at?->diffForHumans() }}</div>
+          <div class="notif-item-time" data-at="{{ $n->created_at?->toIso8601String() }}">{{ $n->created_at?->diffForHumans() }}</div>
         </div>
       </a>
     @empty
@@ -159,6 +160,14 @@
   </div>
 </div>
 </div>
+
+@if ($bellExpert)
+  @include('partials.notification-toasts', [
+    'toastFeed' => route('instructor.notifications.index'),
+    'toastRead' => url('instructor/notifications'),
+    'toastOwner' => 'e'.$bellExpert->expert_id,
+  ])
+@endif
 
 <script src="/js/capstrack-push.js" defer></script>
 <script>

@@ -159,12 +159,12 @@
       @endphp
       {{-- Approve/Decline only while it is still waiting: once read it is a record. --}}
       @if($notif->type === 'leadership_transfer_request' && ! $notif->is_read)
-        <div class="notif-item notif-item--action" data-id="{{ $notif->id }}">
+        <div class="notif-item notif-item--action" data-id="{{ $notif->id }}" data-type="{{ $notif->type }}">
           <div class="notif-item-icon" style="background:{{ $notifIcon['bg'] }};color:{{ $notifIcon['fg'] }}">{!! $notifIcon['svg'] !!}</div>
           <div class="notif-item-body">
             <div class="notif-item-title">{{ $notif->title }}</div>
             <div class="notif-item-msg">{!! $notif->message !!}</div>
-            <div class="notif-item-time">{{ $notif->created_at->diffForHumans() }}</div>
+            <div class="notif-item-time" data-at="{{ $notif->created_at->toIso8601String() }}">{{ $notif->created_at->diffForHumans() }}</div>
             <div class="notif-actions" style="display:flex;gap:8px;margin-top:10px;">
               <form method="POST" action="{{ route('team.leadership.update', $notif->id) }}" style="display:inline;" id="leadership-accept-{{ $notif->id }}">
               @method('PATCH')
@@ -184,13 +184,13 @@
       @else
       {{-- A CaPSA's decision on a leave request carries the whole of it, for
            the pop-up that opens instead of the Team page. --}}
-      <a href="{{ $notif->link ?? '#' }}" class="notif-item {{ $notif->is_read ? '' : 'is-unread' }}" data-id="{{ $notif->id }}"
+      <a href="{{ $notif->link ?? '#' }}" class="notif-item {{ $notif->is_read ? '' : 'is-unread' }}" data-id="{{ $notif->id }}" data-type="{{ $notif->type }}"
          @isset($leaveDecisions[$notif->id]) data-leave="{{ json_encode($leaveDecisions[$notif->id]) }}" @endisset>
         <div class="notif-item-icon" style="background:{{ $notifIcon['bg'] }};color:{{ $notifIcon['fg'] }}">{!! $notifIcon['svg'] !!}</div>
         <div class="notif-item-body">
           <div class="notif-item-title">{{ $notif->title }}</div>
           <div class="notif-item-msg">{!! $notif->message !!}</div>
-          <div class="notif-item-time">{{ $notif->created_at->diffForHumans() }}</div>
+          <div class="notif-item-time" data-at="{{ $notif->created_at->toIso8601String() }}">{{ $notif->created_at->diffForHumans() }}</div>
         </div>
       </a>
       @endif
@@ -448,6 +448,14 @@ document.addEventListener('click', function(e) {
   });
 });
 </script>
+
+@auth('web')
+  @include('partials.notification-toasts', [
+    'toastFeed' => route('notifications.index'),
+    'toastRead' => url('notifications'),
+    'toastOwner' => 's'.auth('web')->id(),
+  ])
+@endauth
 
 <script src="/js/capstrack-push.js" defer></script>
 <script>

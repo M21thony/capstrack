@@ -40,6 +40,16 @@ function render() {
     }[s] : null;
     $('#s-mine').innerHTML = thumb + `<div class="fx-mine-text">${text}</div>`
       + (label ? `<button type="button" class="fx-btn ${s === 'pending' ? '' : 'fx-btn-primary'}" data-open-upload>${label}</button>` : '');
+    // A photo whose file is gone shows a plain placeholder, not the browser's
+    // broken-image box, and no longer opens an empty viewer.
+    $('#s-mine').querySelectorAll('.fx-mine-thumb img').forEach(img => img.addEventListener('error', () => {
+      const box = img.closest('.fx-mine-thumb');
+      box.classList.add('is-missing');
+      box.removeAttribute('data-full');
+      box.disabled = true;
+      box.title = 'Receipt photo not found';
+      img.remove();
+    }));
   }
 
   const members = S.members, c = { pending: 0, verified: 0, sent_back: 0, none: 0 };
