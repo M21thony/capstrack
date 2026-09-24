@@ -480,6 +480,7 @@ class TeamManagementController extends Controller
             $approved->count() >= 2 => 'awaiting_team_choice',
             $approved->count() === 1 => 'settling',
             $proposals->isEmpty() => 'none_submitted',
+            $pending->isEmpty() => 'all_rejected',
             default => 'awaiting_review',
         };
 
@@ -529,5 +530,4 @@ class TeamManagementController extends Controller
                 && (bool) $team->selected_pre_proposal_id,
         ];
     }
-
 }
