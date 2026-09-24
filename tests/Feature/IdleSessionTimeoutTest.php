@@ -1,0 +1,159 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\CapstoneExpert;
+use App\Models\Student;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
+
+/**
+ * Ten minutes without doing anything signs a student or an expert out, on
+ * every portal, and the sign-in page says why.
+ */
+class IdleSessionTimeoutTest extends TestCase
+{
+    use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // phpunit.xml turns it off for every other test.
+        config(['session.idle_timeout' => 10]);
+    }
+
+    private function student(): Student
+    {
+        return Student::factory()->withCompleteProfile()->withTourCompleted()->create();
+    }
+
+    private function expert(): CapstoneExpert
+    {
+        return CapstoneExpert::factory()->create(['approved_status' => true, 'is_admin' => false, 'tour_completed_at' => now()]);
+    }
+
+    public function test_ten_idle_minutes_sign_a_student_out_and_the_sign_in_page_says_why(): void
+    {
+        $student = $this->student();
+        $this->actingAs($student, 'web')->get(route('student.dashboard'))->assertOk();
+
+        $this->travel(10)->minutes();
+
+        $this->get(route('student.dashboard'))
+            ->assertRedirect(route('login'))
+            ->assertSessionHas('session_expired', true);
+        $this->assertGuest('web');
+
+        $this->get(route('login'))
+            ->assertOk()
+            ->assertSee('Session expired.')
+            ->assertSee('You were signed out after 10 minutes of inactivity.');
+    }
+
+    public function test_using_the_portal_keeps_the_session(): void
+    {
+        $student = $this->student();
+        $this->actingAs($student, 'web')->get(route('student.dashboard'))->assertOk();
+
+        $this->travel(9)->minutes();
+        $this->get(route('student.progress'))->assertOk();
+        $this->travel(9)->minutes();
+
+        // Eighteen minutes in, but never ten of them idle.
+        $this->get(route('student.dashboard'))->assertOk();
+        $this->assertAuthenticatedAs($student, 'web');
+    }
+
+    public function test_the_pages_own_background_checks_do_not_count_as_activity(): void
+    {
+        $student = $this->student();
+        $this->actingAs($student, 'web')->get(route('student.dashboard'))->assertOk();
+
+        $this->travel(5)->minutes();
+        $this->getJson(route('notifications.index'), ['X-Idle-Passive' => '1'])->assertOk();
+        $this->travel(5)->minutes();
+
+        $this->get(route('student.dashboard'))->assertRedirect(route('login'));
+        $this->assertGuest('web');
+    }
+
+    public function test_a_request_from_a_page_script_after_the_timeout_gets_json(): void
+    {
+        $this->actingAs($this->student(), 'web')->get(route('student.dashboard'))->assertOk();
+
+        $this->travel(11)->minutes();
+
+        $this->getJson(route('notifications.index'))
+            ->assertUnauthorized()
+            ->assertJson(['status' => 'session_expired', 'redirect' => route('login')]);
+    }
+
+    public function test_an_expert_is_signed_out_the_same_way(): void
+    {
+        $expert = $this->expert();
+        $this->actingAs($expert, 'expert')->get(route('instructor.dashboard'))->assertOk();
+
+        $this->travel(10)->minutes();
+
+        $this->get(route('instructor.dashboard'))->assertRedirect(route('login'));
+        $this->assertGuest('expert');
+    }
+
+    public function test_stay_signed_in_keeps_the_session_going(): void
+    {
+        $student = $this->student();
+        $this->actingAs($student, 'web')->get(route('student.dashboard'))->assertOk();
+
+        $this->travel(9)->minutes();
+        $this->postJson(route('session.keep-alive'))->assertOk()->assertJson(['status' => 'active', 'idle_timeout' => 10]);
+        $this->travel(9)->minutes();
+
+        $this->get(route('student.dashboard'))->assertOk();
+    }
+
+    public function test_the_countdown_running_out_signs_them_out(): void
+    {
+        $this->actingAs($this->student(), 'web')->get(route('student.dashboard'))->assertOk();
+
+        $this->get(route('session.expired'))
+            ->assertRedirect(route('login'))
+            ->assertSessionHas('session_expired', true);
+        $this->assertGuest('web');
+
+        $this->postJson(route('session.keep-alive'))->assertUnauthorized();
+    }
+
+    public function test_every_portal_page_carries_the_countdown(): void
+    {
+        $this->actingAs($this->student(), 'web')->get(route('student.dashboard'))
+            ->assertOk()
+            ->assertSee('id="idle-logout"', false)
+            ->assertSee('data-minutes="10"', false)
+            ->assertSee('data-expired="'.route('session.expired').'"', false)
+            ->assertSee('action="'.route('logout').'"', false)
+            ->assertSee('Are you still there?');
+
+        $expert = $this->expert();
+        foreach (['instructor.dashboard'] as $page) {
+            $this->actingAs($expert, 'expert')->get(route($page))
+                ->assertOk()
+                ->assertSee('id="idle-logout"', false)
+                ->assertSee('action="'.route('expert.logout').'"', false);
+        }
+
+        $this->app['auth']->forgetGuards();
+        $this->get(route('login'))->assertDontSee('id="idle-logout"', false);
+    }
+
+    public function test_a_timeout_of_zero_turns_it_off(): void
+    {
+        config(['session.idle_timeout' => 0]);
+        $student = $this->student();
+        $this->actingAs($student, 'web')->get(route('student.dashboard'))->assertOk()->assertDontSee('id="idle-logout"', false);
+
+        $this->travel(60)->minutes();
+
+        $this->get(route('student.dashboard'))->assertOk();
+    }
+}

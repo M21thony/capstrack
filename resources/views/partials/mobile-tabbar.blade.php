@@ -221,6 +221,9 @@
     }
   });
 </script>
+
+{{-- Every portal page carries this bar, so the idle sign-out rides with it. --}}
+@include('partials.idle-logout')
 @endonce
 
 <nav class="mtab" aria-label="Main">

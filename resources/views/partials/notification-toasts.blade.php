@@ -260,7 +260,9 @@
 
   function check() {
     if (document.hidden) return;
-    fetch(stack.dataset.feed, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'same-origin' })
+    // Passive: a check the page makes by itself is not someone using it, and
+    // must not hold off the idle sign-out (EndIdleSession).
+    fetch(stack.dataset.feed, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest', 'X-Idle-Passive': '1' }, credentials: 'same-origin' })
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (data) {
         if (!data || !data.notifications) return;
