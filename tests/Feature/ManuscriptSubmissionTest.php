@@ -156,7 +156,9 @@ class ManuscriptSubmissionTest extends TestCase
     {
         Storage::fake('public');
         [$leader, $team] = $this->finishedTeam();
-        $existing = ArchivedDocTag::create(['tag_name' => 'IoT']);
+        // The archive's categories already hold the project tags, IoT among them.
+        $existing = ArchivedDocTag::firstOrCreate(['tag_name' => 'IoT']);
+        $before = ArchivedDocTag::count();
 
         $this->submitManuscript($leader, ['tags' => ['iot', 'Fire Safety', '  fire   safety ', '']])
             ->assertSessionHas('success');
@@ -165,7 +167,7 @@ class ManuscriptSubmissionTest extends TestCase
 
         // "iot" reuses the IoT category; "Fire Safety" is new, and kept once.
         $this->assertEqualsCanonicalizing(['IoT', 'Fire Safety'], $row->tags->pluck('tag_name')->all());
-        $this->assertSame(2, ArchivedDocTag::count());
+        $this->assertSame($before + 1, ArchivedDocTag::count());
         $this->assertTrue($row->tags->contains('tag_id', $existing->tag_id));
     }
 
