@@ -108,6 +108,7 @@ class GradingController extends Controller
             return (object) array_merge((array) $row, [
                 'status' => $grade?->status ?? $row->status,
                 'total_score' => $grade?->total_score ?? $row->total_score,
+                'abstained' => $grade !== null && ! empty($grade->abstained),
             ]);
         })
             // Still to grade first, then by date.

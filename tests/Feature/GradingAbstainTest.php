@@ -163,6 +163,33 @@ class GradingAbstainTest extends TestCase
             ->assertStatus(422);
     }
 
+    /** Abstain on the first try, send the team to redefense, and the redefense comes back to grade, marked as one. */
+    public function test_the_redefense_comes_back_on_the_list_to_grade(): void
+    {
+        $this->defense->update(['attempt' => 1]);
+        $all = [$this->criterion('Presentation'), $this->criterion('Content')];
+        foreach ([1, 2, 0] as $i) {
+            $this->submit($this->panel[$i], [], $all)->assertOk();
+        }
+        $this->actingAs($this->panel[0], 'expert')
+            ->postJson(route('instructor.grading.outcome', $this->defense->defense_id), ['outcome' => 'redefense'])
+            ->assertOk();
+
+        $this->get(route('instructor.grading'))
+            ->assertOk()
+            ->assertSee('Submitted · Abstained');
+
+        $redefense = DefenseSchedule::where('team_id', $this->defense->team_id)->where('attempt', 2)->sole();
+        $redefense->update(['schedule_date' => now()->addWeek()]);
+
+        $this->get(route('instructor.grading'))
+            ->assertOk()
+            ->assertViewHas('rows', fn ($rows) => $rows->sole()->defense_id === $redefense->defense_id
+                && $rows->sole()->attempt === 2 && $rows->sole()->status === 'not_started')
+            ->assertSee('Redefense · 2nd attempt')
+            ->assertDontSee('Submitted · Abstained');
+    }
+
     public function test_the_team_sees_abstained_instead_of_a_score(): void
     {
         [$p, $c] = [$this->criterion('Presentation'), $this->criterion('Content')];
