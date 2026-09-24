@@ -37,6 +37,7 @@ use App\Http\Controllers\DirectoryController;
 use App\Http\Controllers\DuplicationController;
 use App\Http\Controllers\ExpertController;
 use App\Http\Controllers\ExpertNotificationController;
+use App\Http\Controllers\IdleSessionController;
 use App\Http\Controllers\Instructor\AssignmentController as InstructorAssignmentController;
 use App\Http\Controllers\Instructor\ConsultationLogController;
 use App\Http\Controllers\Instructor\DashboardController as InstructorDashboardController;
@@ -344,6 +345,10 @@ Route::get('/', function () {
 });
 
 Route::get('/login', [AuthController::class, 'login'])->name('login');
+
+// Ten idle minutes: every portal page counts down (partials/idle-logout).
+Route::post('/session/keep-alive', [IdleSessionController::class, 'keepAlive'])->name('session.keep-alive');
+Route::get('/session/expired', [IdleSessionController::class, 'expired'])->name('session.expired');
 Route::get('/team', [AuthController::class, 'team'])->name('team');
 Route::view('/privacy', 'privacy')->name('privacy');
 Route::post('/login/google', [AuthController::class, 'initiateGoogleLogin'])->name('login.google.initiate');
@@ -535,23 +540,6 @@ Route::prefix('instructor/schedule')
         Route::delete('slots/{id}/occurrences/{date}', [ScheduleController::class, 'removeOccurrence'])
             ->where('date', '[0-9]{4}-[0-9]{2}-[0-9]{2}');
     });
-
-Route::post('/session/keep-alive', function () {
-    if (! Auth::check() && ! Auth::guard('expert')->check()) {
-        return response()->json(['success' => false], 401);
-    }
-
-    if (Auth::guard('expert')->check()) {
-        $expert = Auth::guard('expert')->user();
-        $expert->last_seen_at = now();
-        $expert->save();
-    }
-
-    request()->session()->regenerate();
-    request()->session()->put('_timeout_at', now()->addMinutes((int) config('session.lifetime'))->timestamp);
-
-    return response()->json(['success' => true]);
-});
 
 // ── Google Drive OAuth + resource/submission delivery (from earlier work) ──
 Route::middleware(['expert.auth', 'track.expert'])->prefix('admin/gdrive')->name('gdrive.')->group(function () {
