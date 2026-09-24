@@ -418,34 +418,48 @@
       </div>
     @endif
 
-    <!-- The one number a team came here to see, and the single line the
-         checker is allowed to say about it: 65% and above is highly similar.
-         Below that it says nothing at all, because recommending or rejecting
-         a title is the CaPSA's call, not a number's. -->
-    <div class="card verdict">
-      <div class="bigscore" id="sim-pct" style="color:var(--text2)">--</div>
-      <div class="doc">
-        <div class="t" id="doc-title">No document checked</div>
-        <div class="m" id="doc-meta">Upload a pre-proposal PDF to begin</div>
-      </div>
-      <div style="min-width:220px;flex:1">
-        <span class="stateline s-red" id="result-badge" hidden>
-          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-          Highly similar
+    {{-- The one number a team came here to see, said calmly. It used to sit
+         beside a red and green bar with "Highly similar" showing before any
+         scan had run, which read as a verdict already given. Now it is empty
+         until a scan, then gives the closest match (its percentage keeps its
+         colour), how many matches are close, some or little overlap, and
+         what the closest ones share. Recommending a title is still the
+         CaPSA's call, not a number's. --}}
+    <div class="card verdict scan-card">
+      <div class="sc-empty" id="sc-empty">
+        <span class="sc-empty-ic" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
         </span>
-        <div class="scalebar" style="margin-top:9px" role="img" aria-label="Anything from 65 percent upwards is marked highly similar">
-          <i style="width:65%;background:var(--green)"></i><i style="width:35%;background:var(--red)"></i>
+        <div class="doc">
+          <div class="t">No document checked yet</div>
+          <div class="m">Upload your pre-proposal PDF to see which archived capstones are close to it, and what they share.</div>
         </div>
-        <div class="scalekeys"><span><i class="key-dot" style="background:var(--red)"></i>65% and above is marked <b>highly similar</b>. Your CaPSA decides whether the title goes forward.</span></div>
       </div>
-      <a class="btn" id="full-report-btn" style="display:none;flex-shrink:0" href="#">Full Report</a>
-      {{-- The result survives a reload now, which is the point - and means
-           there has to be a way to be rid of it. A panel that cannot be
-           dismissed is its own kind of stuck. --}}
-      <button type="button" class="btn" id="clear-result-btn" title="Clear this result"
-              style="display:none;flex-shrink:0;padding:6px 10px" onclick="clearScanResult()">
-        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </button>
+      <div class="sc-result" id="sc-result" hidden>
+        <div class="sc-score">
+          <div class="bigscore" id="sim-pct"></div>
+          <div class="sc-cap">closest match</div>
+        </div>
+        <div class="doc">
+          <div class="sc-line">
+            <span class="band" id="sc-band"></span>
+            <span class="sc-counts" id="sc-counts"></span>
+          </div>
+          <div class="t" id="doc-title"></div>
+          <div class="m" id="doc-meta"></div>
+        </div>
+        <a class="pbtn" id="full-report-btn" style="display:none;flex-shrink:0" href="#">
+          See what is similar
+          <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+        </a>
+        {{-- The result survives a reload now, which is the point - and means
+             there has to be a way to be rid of it. A panel that cannot be
+             dismissed is its own kind of stuck. --}}
+        <button type="button" class="btn" id="clear-result-btn" title="Clear this result" aria-label="Clear this result"
+                style="display:none;flex-shrink:0;padding:6px 10px" onclick="clearScanResult()">
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
     </div>
 
     <div class="dup-layout">
@@ -551,10 +565,7 @@
                 </div>
 
                 @if ($check)
-                  @php $rowFlagged = $check->top_score >= 65; @endphp
-                  <div class="s" style="color:{{ $rowFlagged ? 'var(--red)' : 'var(--text2)' }}">
-                    {{ $check->top_score }}% highest match{{ $rowFlagged ? ' · highly similar' : '' }}
-                  </div>
+                  <div class="s"><b class="sim-{{ \App\Support\SimilarityBand::of($check->top_score) }}">{{ $check->top_score }}%</b> closest match &middot; {{ \App\Support\SimilarityBand::label($check->top_score) }}</div>
                 @endif
 
                 {{-- One line saying where the title stands, in place of a badge. --}}
@@ -1689,21 +1700,46 @@ function renderResult(data, fileName, onLoad) {
   const clearBtn = document.getElementById('clear-result-btn');
   if (clearBtn) clearBtn.style.display = 'inline-flex';
 
-  // One line, or none. The old three-band badge told a team their title was
-  // "Moderate Similarity", which reads as a verdict the checker is not
-  // entitled to give.
-  document.getElementById('result-badge').hidden = !isFlagged(data.top_score);
+  // Said calmly: the percentage keeps its colour, the words say what it
+  // means (the same bands as App\Support\SimilarityBand).
+  document.getElementById('sc-empty').hidden = true;
+  document.getElementById('sc-result').hidden = false;
 
+  const band = simBand(data.top_score);
   const simPct = document.getElementById('sim-pct');
-  simPct.innerHTML = Number(data.top_score) + '<span style="font-size:22px">%</span>';
-  simPct.style.color = isFlagged(data.top_score) ? 'var(--red)' : 'var(--text2)';
+  simPct.className = 'bigscore sim-' + band;
+  simPct.innerHTML = (data.top_score === null || data.top_score === undefined ? '—' : Number(data.top_score) + '<span style="font-size:22px">%</span>');
+
+  const bandEl = document.getElementById('sc-band');
+  bandEl.className = 'band band-' + band;
+  bandEl.textContent = SIM_BANDS[band];
+
+  const scored = (data.matches || []).map(m => m.assessed === false ? null : m.score);
+  const count = key => scored.filter(s => simBand(s) === key).length;
+  document.getElementById('sc-counts').innerHTML = ['close', 'some', 'little']
+    .map(k => '<span class="band band-' + k + '">' + count(k) + ' ' + { close: 'close', some: 'some overlap', little: 'little overlap' }[k] + '</span>')
+    .join('');
 
   document.getElementById('doc-title').textContent = data.concepts.title || fileName;
-  const flagged = (data.matches || []).filter(m => m.assessed !== false && isFlagged(m.score)).length;
-  document.getElementById('doc-meta').textContent =
-    'Checked against ' + ARCHIVE_TOTAL.toLocaleString() + ' archived capstones · the '
-    + (data.matches ? data.matches.length : 0) + ' closest came back'
-    + (flagged ? ', ' + flagged + ' of them highly similar' : '');
+
+  // What the closest ones share, in the check's own words.
+  const shared = (data.matches || [])
+    .filter(m => m.assessed !== false && simBand(m.score) === 'close')
+    .map(m => m.similarities || m.reason || '')
+    .filter(Boolean)
+    .slice(0, 3);
+  const meta = document.getElementById('doc-meta');
+  meta.textContent = '';
+  if (band === 'close' && shared.length) {
+    meta.append('The closest ones share ');
+    const b = document.createElement('b');
+    b.textContent = shared.join(' · ');
+    meta.append(b, '. Similar work is common and is not a rejection: it shows where yours should stand apart.');
+  } else if (band === 'close' || band === 'some') {
+    meta.textContent = 'Some archived capstones overlap with it. Open them to see what they share, and where yours stands apart.';
+  } else {
+    meta.textContent = 'Nothing in the archive is close to it. Your CaPSA still reviews every title.';
+  }
 
   document.getElementById('match-count').textContent = data.matches?.length ? data.matches.length + ' match' + (data.matches.length > 1 ? 'es' : '') + ' found' : '';
 
@@ -1810,16 +1846,17 @@ function closePpFormModal() {
   document.body.style.overflow = '';
 }
 
-// 65% and above is highly similar. Below that the checker says nothing, and
-// a match nothing scored carries a retrieval rank rather than a similarity,
+// How close a score is, in the same bands as App\Support\SimilarityBand.
+// A match nothing scored carries a retrieval rank rather than a similarity,
 // so it shows no number at all.
-function isFlagged(score) {
-  return score !== null && score !== undefined && score >= 65;
+const SIM_BANDS = @json(\App\Support\SimilarityBand::BANDS);
+function simBand(score) {
+  if (score === null || score === undefined) return 'none';
+  return score >= {{ \App\Support\SimilarityBand::CLOSE }} ? 'close' : (score >= {{ \App\Support\SimilarityBand::SOME }} ? 'some' : 'little');
 }
 
 function renderMatchItem(m, i, checkId) {
   const s = m.assessed === false ? null : (m.score === undefined ? null : m.score);
-  const flagged = isFlagged(s);
   const why = m.similarities || m.reason || '';
 
   // from=pp tells the match page it was opened here and not from the full
@@ -1827,8 +1864,7 @@ function renderMatchItem(m, i, checkId) {
   return `
     <a class="mrow" href="${DUP_MATCH_URL.replace('__C__', checkId).replace('__R__', i + 1)}?from=pp">
       <div>
-        <div class="pc" style="color:${s === null ? 'var(--text3)' : (flagged ? 'var(--red)' : 'var(--text2)')}">${s === null ? '—' : s + '%'}</div>
-        <span class="bar"><i style="width:${s || 0}%;background:${flagged ? 'var(--red)' : 'var(--green)'}"></i></span>
+        <div class="pc sim-${simBand(s)}">${s === null ? '—' : s + '%'}</div>
         <div class="rk">#${i + 1}</div>
       </div>
       <div>
