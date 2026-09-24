@@ -199,6 +199,8 @@ class CapsaTeamManagementTest extends TestCase
         $response->assertOk();
         // Straight to the tracker's check for this very paper, not just the tab.
         $response->assertSee('team='.$team->team_id.'&amp;check='.$form->id, false);
+        // and back to this page once it is checked or put down.
+        $response->assertSee('return='.urlencode('/capsa/team-management/'.$team->team_id), false);
     }
 
     /**

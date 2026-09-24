@@ -74,11 +74,30 @@ function start(root) {
   const linked = (S.data?.teams || []).find(t => t.id === Number(link.get('team')));
   if (linked) S.team = linked.id;
 
+  // Where to go once the linked paper is checked or put down - the page the
+  // Check button was on. Only a page of this site.
+  const returnTo = (() => {
+    try {
+      const to = new URL(link.get('return') || '', location.origin);
+      return link.get('return') && to.origin === location.origin ? to.href : null;
+    } catch (e) {
+      return null;
+    }
+  })();
+
+  // Opened once. Left in the address, Back or a reload would open it again.
+  if (link.has('check') || link.has('return')) {
+    const clean = new URL(location.href);
+    clean.searchParams.delete('check');
+    clean.searchParams.delete('return');
+    history.replaceState(history.state, '', clean);
+  }
+
   render();
 
   if (linked) {
     const wanted = linked.rows.find(r => r.id === Number(link.get('check')) && r.to_check && r.file_url);
-    if (wanted) openCheck(wanted, linked);
+    if (wanted) openCheck(wanted, linked, returnTo);
   }
 
   function render() {
@@ -457,6 +476,7 @@ function start(root) {
     return null;
   }
 
+  // True once saved, so a caller can move on; a refusal stays here to be read.
   async function setCheck(r, t, body, message) {
     const before = r.check;
     try {
@@ -470,8 +490,10 @@ function start(root) {
         replaceRow(t, back);
         render();
       });
+      return true;
     } catch (e) {
       toast(e.message);
+      return false;
     }
   }
 
@@ -481,8 +503,16 @@ function start(root) {
     syncCounts();
   }
 
-  function openCheck(r, t) {
+  // returnTo: the page the CaPSA came from. Deciding, or closing without
+  // deciding, takes her back there instead of leaving her on the tracker.
+  function openCheck(r, t, returnTo = null) {
     const dialog = el('dialog', 'ms-dialog ms-check');
+    let deciding = false;
+    const decide = async (body, message) => {
+      deciding = true;
+      dialog.close();
+      if (await setCheck(r, t, body, message) && returnTo) location.replace(returnTo);
+    };
     dialog.setAttribute('aria-label', `Check ${r.title} for ${t.name}`);
 
     const head = el('div', 'ms-ck-head');
@@ -530,10 +560,7 @@ function start(root) {
     side.append(checks, picks);
 
     const ask = () => picks.replaceChildren(
-      btn("Yes, it's complete", 'ms-btn-gold', () => {
-        dialog.close();
-        setCheck(r, t, { status: 'complete' }, `${r.title} closed for ${t.name}.`);
-      }),
+      btn("Yes, it's complete", 'ms-btn-gold', () => decide({ status: 'complete' }, `${r.title} closed for ${t.name}.`)),
       btn('No, send it back', 'ms-btn-warn', sendBack),
     );
 
@@ -549,8 +576,7 @@ function start(root) {
         note,
         btn('Send back with this note', 'ms-btn-warn', () => {
           if (!note.value.trim()) return note.focus();
-          dialog.close();
-          setCheck(r, t, { status: 'sent_back', note: note.value.trim() }, `${t.name} was asked to fix their ${r.title}.`);
+          decide({ status: 'sent_back', note: note.value.trim() }, `${t.name} was asked to fix their ${r.title}.`);
         }),
         btn('Cancel', '', ask),
       );
@@ -563,7 +589,10 @@ function start(root) {
     body.append(scan, side);
     dialog.append(head, body);
     document.body.append(dialog);
-    dialog.addEventListener('close', () => dialog.remove());
+    dialog.addEventListener('close', () => {
+      dialog.remove();
+      if (!deciding && returnTo) location.replace(returnTo);
+    });
     dialog.showModal();
   }
 
