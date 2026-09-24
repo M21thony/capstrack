@@ -324,14 +324,8 @@
         :empty="$activities->isEmpty()"
         emptyMessage="No recent activity."
       >
-        <div class="act-scroll" style="max-height:260px">
-          @foreach ($activities as $activity)
-            <div class="activity-item">
-              <div class="act-icon" style="background:{!! $activity->icon_bg !!}">{!! $activity->icon_svg !!}</div>
-              <div class="act-text">{!! $activity->text !!}<div class="act-time">{{ $activity->time }}</div></div>
-            </div>
-          @endforeach
-        </div>
+        {{-- The same timeline the CaPSA and Expert dashboards draw. --}}
+        <x-dashboard.activity-feed :items="$activities->take(20)->all()" emptyMessage="No recent activity." :maxHeight="300" />
       </x-dashboard.info-card>
     </div>
 

@@ -39,6 +39,7 @@
 .ds-total td{font-weight:700;background:var(--accent-light);border-bottom:0}
 .ds-max{color:var(--text3)}
 .ds-remarks{display:grid;gap:10px;max-height:calc(100vh - 290px);overflow:auto}
+.ds-abstained{font-style:italic;color:var(--text3);font-weight:500}
 .ds-card{background:var(--bg2);border:1px solid var(--border);border-radius:11px;padding:12px 14px;font-size:13px;line-height:1.5}
 .ds-card b{display:block;font-size:13px}
 .ds-card small{color:var(--text3);font-size:11.5px}
@@ -78,10 +79,11 @@
 
   @foreach ($defenses as $d)
     @php
-      $rubric = $d->grades->first()?->rubric;
+      $rubric = ($d->grades->firstWhere('status', 'submitted') ?? $d->grades->first())?->rubric;
       $criteria = $rubric ? $rubric->criteria->sortBy('sort_order')->groupBy(fn ($c) => $c->category ?? 'General') : collect();
       $seats = $d->panels->sortBy(fn ($p) => $p->panel_role === 'Panel Chair' ? 0 : 1)->values();
       $gradeOf = $d->grades->keyBy('expert_id');
+      $abstained = fn ($seat) => (bool) $gradeOf->get($seat->expert_id)?->isAbstained();
       $scoreOf = fn ($seat, $c) => $gradeOf->get($seat->expert_id)?->scores[(string) $c->criterion_id] ?? null;
     @endphp
     <section id="ds-{{ $d->defense_id }}" class="ds-panel" role="tabpanel" @unless ($loop->last) hidden @endunless>
@@ -118,7 +120,7 @@
                     <td>{{ $category }}</td>
                     <td class="ds-max">{{ $fmt($items->first()->category_max_points ?? $items->sum('max_points')) }}</td>
                     @foreach ($seats as $seat)
-                      <td>{{ $fmt($items->sum(fn ($c) => (float) $scoreOf($seat, $c))) }}</td>
+                      <td>{{ $abstained($seat) ? '—' : $fmt($items->sum(fn ($c) => (float) $scoreOf($seat, $c))) }}</td>
                     @endforeach
                   </tr>
                   @foreach ($items as $c)
@@ -135,7 +137,7 @@
                   <td>Total</td>
                   <td>{{ $fmt($rubric->total_points) }}</td>
                   @foreach ($seats as $seat)
-                    <td>{{ $fmt($gradeOf->get($seat->expert_id)?->total_score) }}</td>
+                    <td>@if ($abstained($seat))<span class="ds-abstained">Abstained</span>@else{{ $fmt($gradeOf->get($seat->expert_id)?->total_score) }}@endif</td>
                   @endforeach
                 </tr>
               </tbody>
@@ -148,7 +150,12 @@
             <div class="ds-card">
               <b>{{ $seat->expert?->first_name }} {{ $seat->expert?->last_name }}</b>
               <small>{{ $seat->panel_role }}</small>
-              <p>{{ $gradeOf->get($seat->expert_id)?->remarks ?: 'No remarks.' }}</p>
+              {{-- An abstention's reason stays with the panel. --}}
+              @if ($abstained($seat))
+                <p class="ds-abstained">Abstained from grading this defense. Not counted in the panel average.</p>
+              @else
+                <p>{{ $gradeOf->get($seat->expert_id)?->remarks ?: 'No remarks.' }}</p>
+              @endif
             </div>
           @endforeach
         </div>

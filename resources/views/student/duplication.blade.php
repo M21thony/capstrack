@@ -24,6 +24,14 @@
   min-height: 480px;
 }
 
+/* A phone has room for one column: the check, then the matches, then the
+   expert, one under the other, each as tall as it needs. */
+@media (max-width: 900px) {
+  .dup-layout { grid-template-columns: minmax(0, 1fr); height: auto; min-height: 0; }
+  .dup-layout > * { min-height: 0; }
+  #matches-panel { min-height: 280px; }
+}
+
 .dup-left {
   display: flex;
   flex-direction: column;
@@ -139,6 +147,12 @@
 .pp-submit-state-title { font-size: 12px; font-weight: 700; }
 .pp-submit-state-sub { font-size: 10.5px; opacity: 0.85; margin-top: 1px; }
 .pp-badge-draft { background: var(--bg4); color: var(--text3); }
+.pp-autosave { display: inline-flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 11.5px; font-weight: 500; color: var(--text3); }
+.pp-autosave::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--border2); }
+.pp-autosave.is-saved { color: var(--green); }
+.pp-autosave.is-saved::before { background: var(--green); }
+.pp-autosave.is-restored { color: var(--accent3); }
+.pp-autosave.is-restored::before { background: var(--accent); }
 
 /* Tooltip on the locked Submit button, on a wrapper because a disabled
    button emits no hover events of its own. */
@@ -639,6 +653,9 @@
             <div>
               <h2 id="pp-form-heading">Pre-Proposal Details</h2>
               <p>Filled in from your PDF. Check each part, change what needs changing, then save.</p>
+              {{-- Filled in by the draft script below: what you type is kept on
+                   this device until the pre-proposal is saved. --}}
+              <span class="pp-autosave" id="pp-autosave" aria-live="polite">Your answers save automatically as you type.</span>
             </div>
             <button type="button" class="pp-x" onclick="closePpFormModal()" aria-label="Close">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
@@ -1273,6 +1290,108 @@ renderAgendaTags();
 updateTagPills();
 updateWordCount();
 
+// ── Draft: the Pre-Proposal Details form is kept as it is typed ──────────
+//
+// The form is filled from the PDF each time the page draws the last check -
+// on every reload, on Back, after a rejected save - which put the PDF's
+// wording back and blanked the client and tag answers, so a team retyped
+// everything. What is typed is kept on this device, per check, and laid back
+// over the PDF's values. It goes once that check is saved as a pre-proposal
+// or cleared, since the page stops drawing it then (see the cleanup below).
+const PP_DRAFT_PREFIX = 'capstrack:pp-draft:';
+const PP_DRAFT_FIELDS = ['title', 'sdg', 'problem', 'solution', 'scope', 'limitations', 'sdm',
+  'clients', 'client_address', 'client_representative', 'client_position'];
+let ppFilling = false;   // true while renderResult() writes the PDF's values in
+let ppSaveTimer = null;
+
+function ppDraftKey() {
+  const id = document.getElementById('check-id');
+  return id && id.value ? PP_DRAFT_PREFIX + id.value : null;
+}
+
+function ppAutosaveStatus(text, state) {
+  const el = document.getElementById('pp-autosave');
+  if (!el) return;
+  el.textContent = text;
+  el.classList.toggle('is-saved', state === 'saved');
+  el.classList.toggle('is-restored', state === 'restored');
+}
+
+function savePpDraft() {
+  const key = ppDraftKey();
+  if (ppFilling || !key) return;
+  const draft = { fields: {}, agenda: agendaTags.slice(), tags: [] };
+  PP_DRAFT_FIELDS.forEach(function (id) {
+    const el = document.getElementById(id);
+    if (el) draft.fields[id] = el.value;
+  });
+  document.querySelectorAll('#pp-tags input[name="tags[]"]:checked').forEach(function (b) { draft.tags.push(b.value); });
+  try {
+    localStorage.setItem(key, JSON.stringify(draft));
+    const t = new Date();
+    ppAutosaveStatus('Saved on this device · ' + t.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }), 'saved');
+  } catch (e) {
+    // Private browsing or storage full: the form still works, it just is
+    // not kept.
+  }
+}
+
+function queuePpDraftSave() {
+  if (ppFilling) return;
+  clearTimeout(ppSaveTimer);
+  ppSaveTimer = setTimeout(savePpDraft, 400);
+}
+
+// Lay what was typed back over what the PDF said.
+function restorePpDraft() {
+  const key = ppDraftKey();
+  let draft = null;
+  try { draft = key ? JSON.parse(localStorage.getItem(key) || 'null') : null; } catch (e) { draft = null; }
+  if (!draft || !draft.fields) return false;
+
+  PP_DRAFT_FIELDS.forEach(function (id) {
+    const el = document.getElementById(id);
+    if (!el || typeof draft.fields[id] !== 'string') return;
+    // A select only takes a value it offers.
+    if (el.tagName === 'SELECT' && draft.fields[id] && !Array.from(el.options).some(o => o.value === draft.fields[id])) return;
+    el.value = draft.fields[id];
+  });
+  if (Array.isArray(draft.agenda)) {
+    agendaTags = draft.agenda.filter(s => typeof s === 'string' && s.trim());
+    renderAgendaTags();
+  }
+  if (Array.isArray(draft.tags)) {
+    document.querySelectorAll('#pp-tags input[name="tags[]"]').forEach(function (b) { b.checked = draft.tags.includes(b.value); });
+    updateTagPills();
+  }
+  updateWordCount();
+  ppAutosaveStatus('Your saved answers were restored.', 'restored');
+  return true;
+}
+
+(function () {
+  const form = document.getElementById('pp-form');
+  if (form) {
+    form.addEventListener('input', queuePpDraftSave);
+    form.addEventListener('change', queuePpDraftSave);
+    // Chips added or removed in the research agenda do not fire input on
+    // the form, so the list is watched instead.
+    const agenda = document.getElementById('agenda-hidden');
+    if (agenda && window.MutationObserver) {
+      new MutationObserver(queuePpDraftSave).observe(agenda, { childList: true });
+    }
+  }
+
+  // Drafts for any check the page is no longer drawing - saved as a
+  // pre-proposal, or cleared - are done with.
+  const current = @json(isset($lastCheck) && $lastCheck ? (string) $lastCheck->id : null);
+  try {
+    Object.keys(localStorage)
+      .filter(k => k.indexOf(PP_DRAFT_PREFIX) === 0 && k !== (current ? PP_DRAFT_PREFIX + current : ''))
+      .forEach(k => localStorage.removeItem(k));
+  } catch (e) {}
+})();
+
 function selectSdgOption(extractedValue) {
   // The extraction prompt allows for multiple SDGs ("Goal(s)"), so the AI
   // can return an array even though this dropdown only holds one selection -
@@ -1551,6 +1670,9 @@ function renderResult(data, fileName) {
   }
 
   if (ppForm) {
+    // The PDF's values go in first; nothing here is the team's own typing,
+    // so it is not saved as their draft.
+    ppFilling = true;
     document.getElementById('title').value = data.concepts.title || '';
     document.getElementById('problem').value = data.concepts.problem_statement || '';
     document.getElementById('solution').value = data.concepts.proposed_solution || '';
@@ -1583,6 +1705,12 @@ function renderResult(data, fileName) {
     document.querySelectorAll('#pp-form [data-field]').forEach(f => setFieldError(f.dataset.field, ''));
     const summary = document.getElementById('pp-summary');
     if (summary) summary.hidden = true;
+
+    // Then whatever the team had typed for this check, over the top.
+    restorePpDraft();
+    // Let the agenda watcher's queued save (from the renders above) pass
+    // before typing is saved again.
+    setTimeout(function () { ppFilling = false; }, 0);
   }
 
   // One of these two is on the page, never both: the button while the team

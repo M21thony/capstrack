@@ -246,6 +246,32 @@ class TitleDefenseTeamLockTest extends TestCase
         $this->assertStringContainsString('Has not attended a single meeting since June.', $notification->message);
     }
 
+    /** The Team page posts a plain form, not JSON; a declined request does not stop the member asking again. */
+    public function test_a_member_can_ask_again_from_the_team_page_after_a_decline(): void
+    {
+        [$team, , $a] = $this->team();
+        $capsa = $this->capsa();
+        MemberLeaveRequest::create([
+            'team_id' => $team->team_id, 'student_id' => $a->student_id, 'requested_by' => $a->student_id,
+            'type' => MemberLeaveRequest::LEAVE, 'reason' => 'An earlier reason that was declined.', 'status' => MemberLeaveRequest::DECLINED,
+        ]);
+
+        // Send to CaPSA is never a silently disabled button: a short reason gets a message instead.
+        $this->actingAs($a, 'web')->get(route('student.team'))
+            ->assertOk()
+            ->assertSee('Ask CaPSA to Leave')
+            ->assertSee('id="rrm-submit" style="flex:1;">Send to CaPSA', false)
+            ->assertSee('id="rrm-error"', false);
+
+        $this->actingAs($a, 'web')
+            ->post(route('team.capsa-leave-requests.store'), ['type' => MemberLeaveRequest::LEAVE, 'student_id' => '', 'reason' => 'Asking again with a new reason.'])
+            ->assertRedirect(route('student.team'))
+            ->assertSessionHas('status');
+
+        $this->assertSame(1, MemberLeaveRequest::pending()->where('student_id', $a->student_id)->count());
+        $this->assertTrue(Notification::where('expert_id', $capsa->expert_id)->where('type', 'leave_request_received')->exists());
+    }
+
     public function test_a_refused_request_notifies_no_capsa(): void
     {
         [, , $a] = $this->lockedTeam();

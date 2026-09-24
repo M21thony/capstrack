@@ -94,8 +94,6 @@ class DashboardController extends Controller
         $schedules->load('grades');
 
         return $schedules->map(function (DefenseSchedule $schedule) {
-            $grades = $schedule->submittedGrades();
-
             return (object) [
                 'defense_type' => $schedule->defense_type,
                 // A stage can be defended more than once. Both attempts are
@@ -105,7 +103,8 @@ class DashboardController extends Controller
                 'schedule_date' => $schedule->schedule_date,
                 'end_date' => $schedule->end_date,
                 'assigned_count' => $schedule->panelSize(),
-                'submitted_count' => $grades->count(),
+                // Scored or abstained: either way that panelist is done.
+                'submitted_count' => $schedule->gradesInCount(),
                 // Null until every panelist has graded - see panelAverage().
                 'average_score' => $schedule->panelAverage(),
             ];
@@ -237,37 +236,13 @@ class DashboardController extends Controller
             ->latest('created_at')
             ->take(50)
             ->get()
-            ->map(function ($log) {
-                $icon = match ($log->type) {
-                    'team_created' => ['bg' => 'var(--purple-bg)', 'svg' => '<svg viewBox="0 0 24 24" style="stroke:var(--purple);width:13px;height:13px;fill:none;stroke-width:2.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>'],
-                    'team_joined' => ['bg' => 'var(--purple-bg)', 'svg' => '<svg viewBox="0 0 24 24" style="stroke:var(--purple);width:13px;height:13px;fill:none;stroke-width:2.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>'],
-                    'team_left' => ['bg' => 'rgba(239,68,68,0.1)', 'svg' => '<svg viewBox="0 0 24 24" style="stroke:#ef4444;width:13px;height:13px;fill:none;stroke-width:2.5"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>'],
-                    'team_confirmed' => ['bg' => 'rgba(22,163,74,0.1)', 'svg' => '<svg viewBox="0 0 24 24" style="stroke:#16a34a;width:13px;height:13px;fill:none;stroke-width:2.5"><polyline points="20 6 9 17 4 12"/></svg>'],
-                    'team_verified' => ['bg' => 'rgba(22,163,74,0.1)', 'svg' => '<svg viewBox="0 0 24 24" style="stroke:#16a34a;width:13px;height:13px;fill:none;stroke-width:2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>'],
-                    'member_removed' => ['bg' => 'rgba(239,68,68,0.1)', 'svg' => '<svg viewBox="0 0 24 24" style="stroke:#ef4444;width:13px;height:13px;fill:none;stroke-width:2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'],
-                    'leadership_transferred' => ['bg' => 'rgba(251,191,36,0.15)', 'svg' => '<svg viewBox="0 0 24 24" style="stroke:#fbbf24;width:13px;height:13px;fill:none;stroke-width:2.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>'],
-                    'request_accepted' => ['bg' => 'rgba(22,163,74,0.1)', 'svg' => '<svg viewBox="0 0 24 24" style="stroke:#16a34a;width:13px;height:13px;fill:none;stroke-width:2.5"><polyline points="20 6 9 17 4 12"/></svg>'],
-                    'invitation_sent' => ['bg' => 'var(--accent-glow)', 'svg' => '<svg viewBox="0 0 24 24" style="stroke:var(--accent);width:13px;height:13px;fill:none;stroke-width:2.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>'],
-                    'post_created' => ['bg' => 'var(--accent-glow)', 'svg' => '<svg viewBox="0 0 24 24" style="stroke:var(--accent);width:13px;height:13px;fill:none;stroke-width:2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="m18.5 2.5 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>'],
-                    'post_updated' => ['bg' => 'var(--amber-bg)', 'svg' => '<svg viewBox="0 0 24 24" style="stroke:var(--amber);width:13px;height:13px;fill:none;stroke-width:2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>'],
-                    'request_sent' => ['bg' => 'var(--accent-glow)', 'svg' => '<svg viewBox="0 0 24 24" style="stroke:var(--accent);width:13px;height:13px;fill:none;stroke-width:2.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>'],
-                    'invitation_declined' => ['bg' => 'rgba(239,68,68,0.1)', 'svg' => '<svg viewBox="0 0 24 24" style="stroke:#ef4444;width:13px;height:13px;fill:none;stroke-width:2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'],
-                    'request_declined' => ['bg' => 'rgba(239,68,68,0.1)', 'svg' => '<svg viewBox="0 0 24 24" style="stroke:#ef4444;width:13px;height:13px;fill:none;stroke-width:2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'],
-                    'post_deleted' => ['bg' => 'rgba(239,68,68,0.1)', 'svg' => '<svg viewBox="0 0 24 24" style="stroke:#ef4444;width:13px;height:13px;fill:none;stroke-width:2.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>'],
-                    'team_status_changed' => ['bg' => 'var(--amber-bg)', 'svg' => '<svg viewBox="0 0 24 24" style="stroke:var(--amber);width:13px;height:13px;fill:none;stroke-width:2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>'],
-                    'member_count_changed' => ['bg' => 'var(--purple-bg)', 'svg' => '<svg viewBox="0 0 24 24" style="stroke:var(--purple);width:13px;height:13px;fill:none;stroke-width:2.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>'],
-                    'team_auto_closed' => ['bg' => 'rgba(239,68,68,0.1)', 'svg' => '<svg viewBox="0 0 24 24" style="stroke:#ef4444;width:13px;height:13px;fill:none;stroke-width:2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>'],
-                    default => ['bg' => 'var(--accent-glow)', 'svg' => '<svg viewBox="0 0 24 24" style="stroke:var(--accent);width:13px;height:13px;fill:none;stroke-width:2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>'],
-                };
-
-                return (object) [
-                    'text' => $log->description,
-                    'time' => $log->created_at->diffForHumans(),
-                    'icon_bg' => $icon['bg'],
-                    'icon_svg' => $icon['svg'],
-                    'timestamp' => $log->created_at->timestamp,
-                ];
-            });
+            // The icon and colour come from App\Support\ActivityIcons, by type,
+            // the same as on the CaPSA and Expert dashboards.
+            ->map(fn ($log) => [
+                'type' => $log->type,
+                'text' => $log->description,
+                'at' => $log->created_at,
+            ]);
 
         if ($teamId) {
             $announcementActivities = Announcement::with('admin')
@@ -276,20 +251,14 @@ class DashboardController extends Controller
                 ->latest('created_at')
                 ->take(10)
                 ->get()
-                ->map(function ($ann) {
-                    $adminName = $ann->admin?->name ?? 'Admin';
-
-                    return (object) [
-                        'text' => 'Team mentioned in announcement: <strong>'.e($ann->title).'</strong> <span style="color:var(--text3)">by '.e($adminName).'</span>',
-                        'time' => $ann->created_at->diffForHumans(),
-                        'icon_bg' => 'rgba(249,115,22,0.12)',
-                        'icon_svg' => '<svg viewBox="0 0 24 24" style="stroke:#f97316;width:13px;height:13px;fill:none;stroke-width:2.5"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>',
-                        'timestamp' => $ann->created_at->timestamp,
-                    ];
-                });
+                ->map(fn ($ann) => [
+                    'type' => 'announcement',
+                    'text' => 'Your team was mentioned in <strong>'.e($ann->title).'</strong> <span style="color:var(--text3)">by '.e($ann->admin?->name ?? 'your CaPSA').'</span>',
+                    'at' => $ann->created_at,
+                ]);
 
             $activities = $activities->concat($announcementActivities)
-                ->sortByDesc('timestamp')
+                ->sortByDesc(fn ($a) => $a['at']?->timestamp ?? 0)
                 ->take(50)
                 ->values();
         }

@@ -192,7 +192,8 @@ class DefenseBoard
                 // all) - the JS tells them apart by whether a date exists.
                 'outcome_tone' => $schedule?->outcome ? DefenseOutcome::tone($schedule->outcome) : 'ongoing',
                 'passed' => $schedule ? DefenseOutcome::isPass($schedule->outcome) : false,
-                'graded' => $schedule ? $schedule->submittedGrades()->count() : 0,
+                // Scored or abstained: either way that panelist is done.
+                'graded' => $schedule ? $schedule->gradesInCount() : 0,
                 'panel_size' => $schedule ? $schedule->panelSize() : 0,
                 'paid' => $paid->contains($team->team_id),
                 'blockers' => $this->blockers($team, $stage, $roles, $schedule, $paid),

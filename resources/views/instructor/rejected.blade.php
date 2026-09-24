@@ -221,5 +221,6 @@ p {
       Ask a CaPSA to add you to the expert list if this was a mistake.
     </div>
   </div>
+  @include('partials.system-credits')
 </div>
 @endsection
