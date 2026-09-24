@@ -21,7 +21,7 @@
 .verdict .doc .t{font-size:15px;font-weight:600;letter-spacing:-.2px;line-height:1.35;color:var(--text)}
 .verdict .doc .m{font-size:11.5px;color:var(--text3);margin-top:3px}
 
-/* One line only: 65% and above is highly similar. Below it the checker says
+/* One line only: 65% and above counts as close. Below it the checker says
    nothing, because recommending or rejecting a title is the CaPSA's call. */
 .stateline{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:700;padding:5px 11px;border-radius:7px}
 .s-red{background:var(--red-bg);color:var(--red)}
@@ -256,4 +256,20 @@
 .rp-x{width:34px;height:34px;flex-shrink:0;display:grid;place-items:center;border:1px solid var(--border);border-radius:9px;background:#fff;color:var(--text3);cursor:pointer}
 .rp-x svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2.2}
 .rp-dialog-b{padding:6px 22px 22px}
+
+/* ── the scan card on the Pre-Proposal page ─────────────────────── */
+/* Empty until a scan: no bar, and no warning showing before anything
+   has been checked. After one, the same calm words as the report. */
+.scan-card{align-items:center}
+.sc-empty,.sc-result{display:flex;align-items:center;gap:18px;flex:1;min-width:0;flex-wrap:wrap}
+.sc-empty[hidden],.sc-result[hidden]{display:none}
+.sc-empty-ic{width:52px;height:52px;flex-shrink:0;border:2px dashed var(--border2);border-radius:12px;display:grid;place-items:center;color:var(--text3)}
+.sc-empty-ic svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2}
+.sc-score{display:flex;flex-direction:column;align-items:center;flex-shrink:0}
+.sc-score .bigscore{font-size:38px}
+.sc-cap{font-size:10.5px;color:var(--text3);margin-top:4px}
+.sc-line{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px}
+.sc-counts{display:inline-flex;gap:6px;flex-wrap:wrap}
+.sc-counts .band{font-size:11px}
+.scan-card .doc .m b{font-weight:600;color:var(--text)}
 </style>
