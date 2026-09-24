@@ -331,12 +331,21 @@
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeProfile(); });
 
 </script>
-{{-- ── Submit document: the form's styles and script, for the Document
-     Submission page and for a page that opens the form in place. ── --}}
+{{-- ── The upload pop-up every Upload / Submit button opens. ── --}}
 <link rel="stylesheet" href="{{ asset('css/submission-drawer.css') }}">
 
-{{-- Where the form is fetched from when a page opens it in place. --}}
-<meta name="submission-form-url" content="{{ route('student.submission') }}">
+{{-- Where the pop-up asks, checks and sends. --}}
+@php
+  $uploadConfig = [
+      'plan' => route('student.submission.plan'),
+      'check' => route('student.submission.warnings'),
+      'store' => route('student.submission.store'),
+      'folders' => route('student.submission.subject-adviser-folders'),
+      'review' => route('student.review'),
+      'csrf' => csrf_token(),
+  ];
+@endphp
+<script type="application/json" id="upload-config">@json($uploadConfig)</script>
 
 {{-- One preview window and one message box for the whole student side. --}}
 <dialog class="preview-dialog" id="previewDialog">
@@ -353,7 +362,7 @@
 
 @vite(['resources/js/submission-drawer.js', 'resources/js/submission-preview.js'])
 
-{{-- The app's own ask-first dialog, for the submit form's "Is this the right file?". --}}
+{{-- The app's own ask-first dialog. --}}
 @include('partials.app-dialog')
 @include('partials.sidebar-scroll-restore')
 

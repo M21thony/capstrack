@@ -176,6 +176,7 @@ class SubmissionControllerTest extends TestCase
         DB::table('capstone_expert_application')->insert([
             'team_id' => $team->team_id,
             'expert_id' => $adviserId,
+            'expert_role_id' => DB::table('expert_roles')->where('expert_id', $adviserId)->value('expert_role_id'),
             'status' => 'approved',
             'created_at' => now(),
             'updated_at' => now(),
@@ -227,6 +228,7 @@ class SubmissionControllerTest extends TestCase
         DB::table('capstone_expert_application')->insert([
             'team_id' => $team->team_id,
             'expert_id' => $adviserId,
+            'expert_role_id' => DB::table('expert_roles')->where('expert_id', $adviserId)->value('expert_role_id'),
             'status' => 'approved',
             'created_at' => now(),
             'updated_at' => now(),
@@ -276,6 +278,7 @@ class SubmissionControllerTest extends TestCase
         DB::table('capstone_expert_application')->insert([
             'team_id' => $team->team_id,
             'expert_id' => $adviserId,
+            'expert_role_id' => DB::table('expert_roles')->where('expert_id', $adviserId)->value('expert_role_id'),
             'status' => 'approved',
             'created_at' => now(),
             'updated_at' => now(),

@@ -341,7 +341,7 @@
             };
             $iconKey = $done ? 'done' : $row->state;
           @endphp
-          <div class="spm-item" data-submission-host>
+          <div class="spm-item">
             <svg class="spm-dot spm-{{ $iconKey }}" viewBox="0 0 24 24" role="img" aria-label="{{ $status }}">{!! $icons[$iconKey] !!}</svg>
             <div>
               <div class="spm-title">
