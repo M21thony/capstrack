@@ -69,7 +69,7 @@
               $isLeader = (int) $member->student_id === (int) $team->leader_id;
             @endphp
             <li class="{{ $isLeader ? 'lead' : '' }}">
-              <div class="av" style="background:{{ $avatar($member->student_id) }}">{{ $initialsOf($name) }}</div>
+              <div class="av" style="background:{{ $avatar($member->student_id) }}">{{ $initialsOf($name) }}@include('capsa.team-management._photo', ['url' => $member->avatarUrl()])</div>
               <b>{{ $name ?: 'Unnamed student' }}</b>
               <small>{{ $isLeader ? 'Leader' : 'Member' }}</small>
             </li>
@@ -95,7 +95,7 @@
               </li>
             @else
               <li>
-                <div class="av" style="background:{{ $avatar($seat->expert->expert_id) }}">{{ $initialsOf($seat->expert->name) }}</div>
+                <div class="av" style="background:{{ $avatar($seat->expert->expert_id) }}">{{ $initialsOf($seat->expert->name) }}@include('capsa.team-management._photo', ['url' => $seat->expert->avatarUrl()])</div>
                 <div class="who">
                   <div class="top"><span class="nm">{{ $seat->expert->name }}</span><span class="rl">{{ ucfirst($seat->role) }}</span></div>
                   @if ($seat->degree)<div class="deg">{{ $seat->degree }}</div>@endif
