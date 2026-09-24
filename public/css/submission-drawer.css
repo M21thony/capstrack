@@ -278,3 +278,40 @@
   .recipient-group{grid-template-columns:1fr}
   #submission-toast{left:16px;right:16px;bottom:16px;max-width:none}
 }
+
+/* ── The form in place ──
+   On the Document Submission page, and opened under the button that asked
+   for it (a line on Progress, the reviewer's decision in the Review Viewer).
+   A step left out is not drawn and not numbered. */
+.sub-form [hidden]{display:none !important}
+.sub-form .dwb{overflow:visible;flex:none}
+.sub-form--inline .form-section::before{display:none}
+
+.sub-inline{
+  margin:8px 0 14px;border:1px solid var(--accent);border-radius:12px;background:var(--bg2);
+  box-shadow:0 8px 22px rgba(24,25,31,.08);overflow:hidden;
+}
+.sub-inline-head{display:flex;align-items:center;gap:10px;padding:11px 16px;border-bottom:1px solid var(--border);background:var(--accent-light)}
+.sub-inline-head b{flex:1;min-width:0;font-size:13.5px;color:var(--text)}
+.sub-inline-head small{font-size:12px;color:var(--text3);font-weight:500}
+.sub-inline .dwb{padding:14px 16px 4px}
+.sub-inline .dwf{padding:12px 16px}
+.sub-inline .dw-loading{padding:18px 16px}
+/* In the Review Viewer the form opens inside the top bar, on a line of its own. */
+.rv-bar > .sub-inline{flex-basis:100%;margin:6px 0 2px;max-height:62vh;overflow:auto}
+
+.sub-page{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:18px;align-items:start}
+@media (max-width:1000px){.sub-page{grid-template-columns:1fr}}
+.sub-card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;overflow:hidden}
+.sub-card-h{padding:16px 20px;border-bottom:1px solid var(--border)}
+.sub-card-h h2{margin:0;font-size:15px;color:var(--text)}
+.sub-card-h p{margin:3px 0 0;font-size:12.5px;color:var(--text3)}
+.sub-list{list-style:none;margin:0;padding:0}
+.sub-list li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 12px;padding:12px 20px;border-bottom:1px solid var(--border)}
+.sub-list li:last-child{border-bottom:0}
+.sub-list b{font-size:13.5px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sub-list small{grid-column:1;font-size:12px;color:var(--text3)}
+.sub-list .sub-status{grid-row:1 / span 2;grid-column:2;align-self:center;font-size:12px;font-weight:600;padding:3px 10px;border-radius:999px;background:var(--bg4);color:var(--text2);white-space:nowrap}
+.sub-list .sub-status.revise{background:rgba(180,83,9,.09);color:#b45309}
+.sub-list .sub-status.ok{background:rgba(22,163,74,.09);color:#15803d}
+.sub-empty{padding:26px 20px;font-size:13px;color:var(--text3)}

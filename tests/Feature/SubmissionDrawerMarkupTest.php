@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\CapstoneDocument;
 use App\Models\Student;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
@@ -9,10 +10,10 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * Handing in a file no longer means going anywhere: the panel is on every
- * student page, and the form is fetched into it. So the submission route has
- * to answer with a fragment - markup with no page around it - and every
- * student page has to carry the panel it drops into.
+ * Handing in a file happens where the student already is: the Document
+ * Submission page from the menu, or the form opened in place under a line on
+ * Progress or in the Review Viewer. The in-place form is fetched, so asked for
+ * that way the route answers with the form alone.
  */
 class SubmissionDrawerMarkupTest extends TestCase
 {
@@ -33,20 +34,44 @@ class SubmissionDrawerMarkupTest extends TestCase
         ]);
     }
 
-    public function test_the_submission_route_answers_with_a_bare_form_not_a_page(): void
+    public function test_opened_in_place_the_route_answers_with_the_short_form_alone(): void
     {
-        $response = $this->actingAs($this->student)->get(route('student.submission'))->assertOk();
+        $response = $this->actingAs($this->student)
+            ->get(route('student.submission', ['inline' => 1]), ['X-Requested-With' => 'XMLHttpRequest'])
+            ->assertOk();
 
         $response->assertSee('id="submission-form-root"', false);
+        $response->assertSee('data-mode="inline"', false);
+        $response->assertSee('data-submission-close', false);
         $this->assertStringNotContainsString('<html', $response->getContent());
     }
 
-    public function test_every_student_page_carries_the_panel_but_not_the_form(): void
+    public function test_from_the_menu_it_is_a_page_with_the_teams_submissions(): void
+    {
+        CapstoneDocument::create([
+            'student_id' => $this->student->student_id, 'file_name' => 'Chapter1_final', 'chapter' => 'Chapter 1',
+            'file_path' => 'submissions/c1.pdf', 'file_version' => 2, 'document_status' => 'Pending',
+        ]);
+
+        $response = $this->actingAs($this->student)->get(route('student.submission'))->assertOk();
+
+        $this->assertStringContainsString('<html', $response->getContent());
+        $response->assertSee('data-mode="page"', false);
+        $response->assertSee("Your team's submissions", false);
+        $response->assertSee('Chapter1_final');
+        $response->assertSee('version 2');
+        // Nothing to cancel on its own page.
+        $response->assertDontSee('data-submission-close', false);
+    }
+
+    public function test_every_student_page_can_open_the_form_but_does_not_carry_it(): void
     {
         $response = $this->actingAs($this->student)->get(route('student.dashboard'))->assertOk();
 
-        $response->assertSee('id="submission-drawer"', false);
+        $response->assertSee('name="submission-form-url"', false);
         $response->assertSee('id="submission-toast"', false);
         $response->assertDontSee('id="submission-form-root"', false);
+        // The slide-in panel is gone.
+        $response->assertDontSee('id="submission-drawer"', false);
     }
 }

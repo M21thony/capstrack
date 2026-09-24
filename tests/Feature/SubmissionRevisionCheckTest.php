@@ -156,12 +156,25 @@ class SubmissionRevisionCheckTest extends TestCase
 
         $this->actingAs($this->student, 'web')->get(route('student.review', ['review_id' => $review->review_id]))
             ->assertOk()
-            ->assertSee("window.openSubmissionDrawer('{$line->id}')", false)
+            ->assertSee("window.openSubmission('{$line->id}', this)", false)
             ->assertSee('Submit 1st revision')
             ->assertSee('window.confirmSheet', false);
 
         // and what that drawer sends is checked like any other.
         $this->assertSame(['heading', 'unrelated'], $this->types($this->check($this->pdf('Chapter 3', self::CHAPTER_3), $line)));
+    }
+
+    /** Opened in place from a line, the form does not ask which line it is for; on its own page it does. */
+    public function test_the_form_opened_from_a_line_skips_what_is_this_for(): void
+    {
+        $line = $this->line($this->checklist, 'team_assignment_form');
+        $this->actingAs($this->student, 'web');
+
+        $inline = $this->get(route('student.submission', ['inline' => 1, 'item' => $line->id]), ['X-Requested-With' => 'XMLHttpRequest'])->assertOk()->getContent();
+        $this->assertMatchesRegularExpression('/<section class="form-section step"\s+hidden\s*>\s*<div class="step-head">\s*<span class="step-num" aria-hidden="true"><\/span>\s*<div>\s*<h3 class="step-title">What is this for\?/', $inline);
+
+        $page = $this->get(route('student.submission', ['item' => $line->id]))->assertOk()->getContent();
+        $this->assertDoesNotMatchRegularExpression('/hidden\s*>\s*<div class="step-head">\s*<span class="step-num" aria-hidden="true"><\/span>\s*<div>\s*<h3 class="step-title">What is this for/', $page);
     }
 
     public function test_the_drawer_asks_for_the_check_and_can_show_the_dialog(): void
