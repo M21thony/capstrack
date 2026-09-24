@@ -37,6 +37,14 @@ class DeliverableCheckController extends Controller
             'file_id' => ['nullable', 'integer'],
         ]);
 
+        // The same lock the team's upload is held to: nothing is closed past it.
+        $current = MilestoneProgress::forTeam($deliverable->milestone->checklist, $team->team_id)
+            ->items->first(fn ($r) => $r->item->id === $deliverable->id);
+
+        if ($current?->locked) {
+            return response()->json(['message' => $deliverable->title." can't be checked yet: it waits for ".$current->waits_for.'.'], 422);
+        }
+
         DeliverableCheck::updateOrCreate(
             ['deliverable_id' => $deliverable->id, 'team_id' => $team->team_id],
             [
