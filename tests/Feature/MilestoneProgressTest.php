@@ -2,11 +2,13 @@
 
 namespace Tests\Feature;
 
+use App\Models\CapstoneDocument;
 use App\Models\CapstoneDocumentReview;
 use App\Models\CapstoneExpert;
 use App\Models\Deliverable;
 use App\Models\DeliverableCheck;
 use App\Models\Student;
+use App\Models\StudentSchoolYear;
 use App\Models\Team;
 use App\Support\DefenseOutcome;
 use App\Support\MilestoneProgress;
@@ -280,5 +282,60 @@ class MilestoneProgressTest extends TestCase
 
         $this->assertSame(0, $all[$this->team->team_id]->completed);
         $this->assertSame(1, $all[$other->team_id]->completed);
+    }
+
+    /** A member who moves teams leaves their papers with the team they were sent for. */
+    public function test_a_members_uploads_from_a_team_they_left_do_not_open_the_new_teams_lines(): void
+    {
+        $checklist = $this->emptyChecklist($this->capsa);
+        $form = $this->addDeliverable($checklist, ['title' => 'Signed Project Team Assignment Form', 'kind' => Deliverable::FORM]);
+        $this->upload($this->student, $form, now()->subDays(10)->toDateTimeString());
+
+        $newTeam = Team::create(['team_name' => 'New Team', 'team_status' => 'Active', 'leader_id' => $this->student->student_id, 'is_confirmed' => true, 'member_count' => 5]);
+        StudentSchoolYear::where('student_id', $this->student->student_id)->update(['team_id' => $newTeam->team_id]);
+
+        $this->assertSame(MilestoneProgress::NOT_STARTED, $this->progressOf($checklist, $newTeam, $form)->state);
+        $this->assertSame(MilestoneProgress::WAITING_ON_CAPSA, $this->progressOf($checklist, $this->team, $form)->waiting_on);
+    }
+
+    /** Files from before uploads recorded their team: one sent before the team existed was for another. */
+    public function test_an_upload_with_no_team_counts_only_when_it_went_up_after_the_team_was_made(): void
+    {
+        $checklist = $this->emptyChecklist($this->capsa);
+        $form = $this->addDeliverable($checklist, ['title' => 'Signed Project Team Assignment Form', 'kind' => Deliverable::FORM]);
+        DB::table('team')->where('team_id', $this->team->team_id)->update(['created_at' => now()->subDays(3)]);
+
+        $before = $this->upload($this->student, $form, now()->subDays(5)->toDateTimeString());
+        DB::table('capstone_documents')->where('file_id', $before)->update(['team_id' => null]);
+        $this->assertSame(MilestoneProgress::NOT_STARTED, $this->progressOf($checklist, $this->team, $form)->state);
+
+        $after = $this->upload($this->student, $form, now()->subDay()->toDateTimeString());
+        DB::table('capstone_documents')->where('file_id', $after)->update(['team_id' => null]);
+        $this->assertSame(MilestoneProgress::WAITING_ON_CAPSA, $this->progressOf($checklist, $this->team, $form)->waiting_on);
+    }
+
+    public function test_a_new_upload_records_the_uploaders_team(): void
+    {
+        $document = CapstoneDocument::create([
+            'student_id' => $this->student->student_id, 'file_name' => 'Chapter 1', 'file_path' => 'submissions/c1.pdf',
+            'file_version' => 1, 'document_status' => 'Pending',
+        ]);
+
+        $this->assertSame($this->team->team_id, (int) $document->team_id);
+    }
+
+    public function test_existing_uploads_are_given_the_team_that_existed_when_they_went_up(): void
+    {
+        DB::table('team')->where('team_id', $this->team->team_id)->update(['created_at' => now()->subDays(3)]);
+        $before = $this->upload($this->student, null, now()->subDays(5)->toDateTimeString());
+        $after = $this->upload($this->student, null, now()->subDay()->toDateTimeString());
+        DB::table('capstone_documents')->update(['team_id' => null]);
+
+        $migration = require base_path('database/migrations/2026_09_24_120618_add_team_id_to_capstone_documents_table.php');
+        $migration->down();
+        $migration->up();
+
+        $this->assertNull(DB::table('capstone_documents')->where('file_id', $before)->value('team_id'));
+        $this->assertSame($this->team->team_id, (int) DB::table('capstone_documents')->where('file_id', $after)->value('team_id'));
     }
 }

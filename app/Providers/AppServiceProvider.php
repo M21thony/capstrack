@@ -10,6 +10,7 @@ use App\Models\Team;
 use App\Models\TeamInvitation;
 use App\Services\OllamaSSHClient;
 use App\Services\SimilarityService;
+use App\Support\LeaveDecisionDetails;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\View;
@@ -50,6 +51,16 @@ class AppServiceProvider extends ServiceProvider
                 $unreadCount = Notification::where('student_id', $studentId)
                     ->where('is_read', false)
                     ->count();
+                // What the bell lists: the latest, read or not, so marking
+                // them read changes how they look, not whether they are there
+                // - the same list the expert bell shows.
+                $bellNotifications = Notification::where('student_id', $studentId)
+                    ->latest('created_at')
+                    ->take(15)
+                    ->get();
+                // A CaPSA's decision on a leave request opens in a pop-up with
+                // the whole of it, not just the line in the bell.
+                $leaveDecisions = LeaveDecisionDetails::forNotifications($bellNotifications, (int) $studentId);
                 // "Later" on a join-request popup stores its id in
                 // dismissed_invitations (see InvitationController::remindLater())
                 // rather than a persisted remind_me_at column - there's no
@@ -77,7 +88,7 @@ class AppServiceProvider extends ServiceProvider
                     : $enrolment?->role?->s_role_name;
 
                 $view->with(compact(
-                    'unreadNotifications', 'unreadCount', 'joinRequestPopups',
+                    'unreadNotifications', 'unreadCount', 'bellNotifications', 'leaveDecisions', 'joinRequestPopups',
                     'panelTeam', 'panelRole'
                 ));
             }

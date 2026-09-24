@@ -626,7 +626,10 @@ class MilestoneProgress
 
     /**
      * Every upload by each team, oldest first, grouped by team. Any member's
-     * upload counts - the deliverable belongs to the team.
+     * upload counts - the deliverable belongs to the team - but only one sent
+     * for this team: a member's files from a team they left stay there. A
+     * file from before uploads recorded their team counts when it went up
+     * after the team was made.
      *
      * @return Collection<int, Collection<int, object>>
      */
@@ -636,10 +639,15 @@ class MilestoneProgress
             return collect();
         }
 
+        $ids = $teamIds->all();
+
         return DB::table('capstone_documents as d')
-            ->join('student_s_y as sy', 'sy.student_id', '=', 'd.student_id')
-            ->whereIn('sy.team_id', $teamIds->all())
-            ->select('sy.team_id', 'd.file_id', 'd.deliverable_id', 'd.chapter', 'd.file_path', 'd.created_at')
+            ->leftJoin('student_s_y as sy', fn ($join) => $join->on('sy.student_id', '=', 'd.student_id')->whereNull('d.team_id'))
+            ->leftJoin('team as t', 't.team_id', '=', 'sy.team_id')
+            ->where(fn ($q) => $q->whereIn('d.team_id', $ids)
+                ->orWhere(fn ($q) => $q->whereNull('d.team_id')->whereIn('sy.team_id', $ids)->whereColumn('d.created_at', '>=', 't.created_at')))
+            ->selectRaw('COALESCE(d.team_id, sy.team_id) as team_id')
+            ->addSelect('d.file_id', 'd.deliverable_id', 'd.chapter', 'd.file_path', 'd.created_at')
             ->distinct()
             ->orderBy('d.created_at')
             ->orderBy('d.file_id')

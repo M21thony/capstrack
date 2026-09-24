@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Support\StudentTeam;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 
@@ -13,6 +15,7 @@ class CapstoneDocument extends Model
 
     protected $fillable = [
         'student_id',
+        'team_id',
         'file_name',
         'file_path',
         'file_version',
@@ -20,6 +23,35 @@ class CapstoneDocument extends Model
         'chapter',
         'deliverable_id',
     ];
+
+    /** A file is sent for the uploader's team at the time, and stays that team's if they move. */
+    protected static function booted(): void
+    {
+        static::creating(function (CapstoneDocument $document) {
+            $document->team_id ??= StudentTeam::idFor($document->student_id);
+        });
+    }
+
+    /**
+     * What this team has uploaded. A file from before uploads recorded their
+     * team counts when its uploader is a member now and it went up after the
+     * team was made - one sent earlier was for the team they came from.
+     */
+    public function scopeOfTeam(Builder $query, int $teamId): Builder
+    {
+        return $query->where(fn (Builder $q) => $q->where('capstone_documents.team_id', $teamId)
+            ->orWhere(fn (Builder $q) => $q->whereNull('capstone_documents.team_id')
+                ->whereIn('capstone_documents.student_id', StudentSchoolYear::where('team_id', $teamId)->select('student_id'))
+                ->where('capstone_documents.created_at', '>=', Team::where('team_id', $teamId)->select('created_at'))));
+    }
+
+    /** The uploads of a student's team, or their own while they have none. */
+    public static function forTeamOf(int $studentId): Builder
+    {
+        $teamId = StudentTeam::idFor($studentId);
+
+        return $teamId === null ? self::where('student_id', $studentId) : self::ofTeam($teamId);
+    }
 
     public function reviews()
     {
@@ -58,10 +90,9 @@ class CapstoneDocument extends Model
      */
     public function earlierVersions(): Collection
     {
-        $teamId = StudentSchoolYear::where('student_id', $this->student_id)->whereNotNull('team_id')->value('team_id');
-        $students = $teamId ? StudentSchoolYear::where('team_id', $teamId)->pluck('student_id') : collect([$this->student_id]);
+        $teamId = $this->team_id ?? StudentTeam::idFor($this->student_id);
 
-        return self::whereIn('student_id', $students)
+        return ($teamId ? self::ofTeam($teamId) : self::where('student_id', $this->student_id))
             ->where('file_id', '!=', $this->file_id)
             ->where('file_version', '<', (int) $this->file_version)
             ->when(

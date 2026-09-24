@@ -84,8 +84,6 @@ class DashboardController extends Controller
         $schedules->load('grades');
 
         return $schedules->map(function (DefenseSchedule $schedule) {
-            $grades = $schedule->submittedGrades();
-
             return (object) [
                 'defense_type' => $schedule->defense_type,
                 // A stage can be defended more than once. Both attempts are
@@ -95,7 +93,8 @@ class DashboardController extends Controller
                 'schedule_date' => $schedule->schedule_date,
                 'end_date' => $schedule->end_date,
                 'assigned_count' => $schedule->panelSize(),
-                'submitted_count' => $grades->count(),
+                // Scored or abstained: either way that panelist is done.
+                'submitted_count' => $schedule->gradesInCount(),
                 // Null until every panelist has graded - see panelAverage().
                 'average_score' => $schedule->panelAverage(),
             ];
