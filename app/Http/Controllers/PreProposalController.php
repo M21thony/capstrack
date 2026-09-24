@@ -58,10 +58,15 @@ class PreProposalController extends Controller
             'canSubmitMore' => (bool) $team && ! $this->isTurnedIn($team),
             'isLeader' => (bool) $team && (int) $team->leader_id === (int) $request->user()->student_id,
             'turnedIn' => (bool) $team && $this->isTurnedIn($team),
-            'turnedInAt' => $proposals->whereNotNull('submitted_at')->min('submitted_at'),
+            'turnedInAt' => $proposals->whereNotNull('submitted_at')->whereNull('rejection_reason')->min('submitted_at'),
             'draftCount' => $proposals->whereNull('submitted_at')->count(),
             'canTurnIn' => (bool) $team
-                && $proposals->count() >= 1
+                && $proposals->whereNull('submitted_at')->isNotEmpty()
+                && ! $this->isTurnedIn($team),
+            // The CaPSA turned down every title the team handed in: the round
+            // is over, and the team writes new ones and submits again.
+            'allRejected' => (bool) $team
+                && $proposals->whereNotNull('submitted_at')->isNotEmpty()
                 && ! $this->isTurnedIn($team),
             'recommendedProposals' => self::RECOMMENDED_PROPOSALS,
             'archiveTotal' => ArchivedDocument::count(),
@@ -814,7 +819,9 @@ class PreProposalController extends Controller
                 ->with('error', 'Your CaPSA has already started reviewing these titles, so they can no longer be unsubmitted.');
         }
 
-        $team->preProposals()->update(['submitted_at' => null]);
+        // Only the titles still waiting: one the CaPSA turned down in an
+        // earlier round stays turned down, not a draft to hand in again.
+        $team->preProposals()->whereNull('rejection_reason')->update(['submitted_at' => null]);
 
         return redirect()->route('student.duplication')
             ->with('status', 'Unsubmitted. Your titles are drafts again - submit for checking when you are ready.');
@@ -891,9 +898,18 @@ class PreProposalController extends Controller
     }
 
     /** Whether this team has turned their pre-proposals in for checking. */
+    /**
+     * Whether the team's titles are with the CaPSA: submitted, and not all
+     * turned down. Once every one is rejected the round is over - the team
+     * saves new titles and submits again. Counting the rejected ones kept the
+     * page on "Submitted for checking" with no way forward.
+     */
     private function isTurnedIn(Team $team): bool
     {
-        return $team->preProposals()->whereNotNull('submitted_at')->exists();
+        return $team->preProposals()
+            ->whereNotNull('submitted_at')
+            ->where(fn ($q) => $q->where('approved_status', true)->orWhereNull('rejection_reason'))
+            ->exists();
     }
 
     /**
@@ -904,8 +920,13 @@ class PreProposalController extends Controller
      */
     private function reviewStarted(Team $team): bool
     {
+        // A title turned down in an earlier round says nothing about this one.
+        $roundStart = $team->preProposals()->whereNotNull('submitted_at')->whereNull('rejection_reason')->min('submitted_at');
+
         return $team->preProposals()
-            ->where(fn ($q) => $q->where('approved_status', true)->orWhereNotNull('rejection_reason'))
+            ->where(fn ($q) => $q->where('approved_status', true)
+                ->orWhere(fn ($q) => $q->whereNotNull('rejection_reason')
+                    ->when($roundStart, fn ($q) => $q->where('submitted_at', '>=', $roundStart))))
             ->exists();
     }
 
