@@ -2,10 +2,10 @@
 
 namespace App\Support;
 
+use App\Models\CapstoneDocument;
 use App\Models\CapstonePreProposal;
 use App\Models\DefenseSchedule;
 use App\Models\Team;
-use Illuminate\Support\Facades\DB;
 
 /**
  * When a team's title may change, read off its Pre-proposal Defense.
@@ -53,12 +53,9 @@ class TitleRevision
     /** Whether the team has uploaded its Signed Final Project Title Form since this moment. */
     public static function finalTitleFormIn(Team $team, mixed $since = null): bool
     {
-        return DB::table('capstone_documents as d')
-            ->join('deliverables as dl', 'dl.id', '=', 'd.deliverable_id')
-            ->join('student_s_y as sy', 'sy.student_id', '=', 'd.student_id')
-            ->where('sy.team_id', $team->team_id)
-            ->where('dl.template_key', self::FINAL_TITLE_FORM)
-            ->when($since, fn ($q) => $q->where('d.created_at', '>=', $since))
+        return CapstoneDocument::ofTeam($team->team_id)
+            ->whereHas('deliverable', fn ($q) => $q->where('template_key', self::FINAL_TITLE_FORM))
+            ->when($since, fn ($q) => $q->where('capstone_documents.created_at', '>=', $since))
             ->exists();
     }
 
