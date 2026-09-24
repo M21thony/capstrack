@@ -221,7 +221,8 @@ class StudentController extends Controller
         $data = $request->validate([
             'f_name' => ['sometimes', 'string', 'max:60'],
             'l_name' => ['sometimes', 'string', 'max:60'],
-            'student_number' => ['sometimes', 'nullable', 'string', 'max:30'],
+            // Required here as on Add Student: an edit cannot blank it.
+            'student_number' => ['sometimes', 'required', 'string', 'max:30'],
             'course' => ['sometimes', Rule::in(array_keys(Student::PROGRAM_COURSES))],
             'year' => ['sometimes', 'integer', Rule::in(Student::CAPSTONE_YEARS)],
             'section' => ['sometimes', 'string', 'max:4', 'regex:/^[A-Za-z]+$/'],
@@ -229,6 +230,8 @@ class StudentController extends Controller
             // student to a colleague; they may not do it by accident, and
             // they may not reach back afterwards.
             'transfer' => ['sometimes', 'boolean'],
+        ], [
+            'student_number.required' => 'Enter the student number.',
         ]);
 
         // Where they would end up, not just where they are - otherwise a move
