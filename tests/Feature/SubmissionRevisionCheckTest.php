@@ -164,26 +164,25 @@ class SubmissionRevisionCheckTest extends TestCase
         $this->assertSame(['heading', 'unrelated'], $this->types($this->check($this->pdf('Chapter 3', self::CHAPTER_3), $line)));
     }
 
-    /** Opened in place from a line, the form does not ask which line it is for; on its own page it does. */
+    /** Opened from a line, the pop-up does not ask which line it is for; opened from the menu it does. */
     public function test_the_form_opened_from_a_line_skips_what_is_this_for(): void
     {
         $line = $this->line($this->checklist, 'team_assignment_form');
         $this->actingAs($this->student, 'web');
 
-        $inline = $this->get(route('student.submission', ['inline' => 1, 'item' => $line->id]), ['X-Requested-With' => 'XMLHttpRequest'])->assertOk()->getContent();
-        $this->assertMatchesRegularExpression('/<section class="form-section step"\s+hidden\s*>\s*<div class="step-head">\s*<span class="step-num" aria-hidden="true"><\/span>\s*<div>\s*<h3 class="step-title">What is this for\?/', $inline);
+        $this->getJson(route('student.submission.plan', ['item' => $line->id]))->assertOk()
+            ->assertJsonPath('item.id', $line->id)
+            ->assertJsonPath('lines', []);
 
-        $page = $this->get(route('student.submission', ['item' => $line->id]))->assertOk()->getContent();
-        $this->assertDoesNotMatchRegularExpression('/hidden\s*>\s*<div class="step-head">\s*<span class="step-num" aria-hidden="true"><\/span>\s*<div>\s*<h3 class="step-title">What is this for/', $page);
+        $lines = collect($this->getJson(route('student.submission.plan'))->assertOk()->json('lines'));
+        $this->assertTrue($lines->contains('id', $line->id));
     }
 
     public function test_the_drawer_asks_for_the_check_and_can_show_the_dialog(): void
     {
-        $this->actingAs($this->student, 'web')
-            ->get(route('student.submission'), ['X-Requested-With' => 'XMLHttpRequest'])
-            ->assertOk()
-            ->assertSee('data-check-url="'.route('student.submission.warnings').'"', false);
-
-        $this->actingAs($this->student, 'web')->get('/student/progress')->assertOk()->assertSee('window.confirmSheet', false);
+        $this->actingAs($this->student, 'web')->get('/student/progress')->assertOk()
+            ->assertSee('id="upload-config"', false)
+            ->assertSee(json_encode(route('student.submission.warnings')), false)
+            ->assertSee('window.confirmSheet', false);
     }
 }

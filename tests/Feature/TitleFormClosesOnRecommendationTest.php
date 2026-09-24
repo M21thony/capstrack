@@ -115,10 +115,10 @@ class TitleFormClosesOnRecommendationTest extends TestCase
             ->assertOk()
             ->assertSee('Closed when your CaPSA recommends one of your pre-proposal titles');
 
-        $this->get(route('student.submission'), ['X-Requested-With' => 'XMLHttpRequest'])
-            ->assertOk()
-            ->assertViewHas('checklistItems', fn ($items) => ! $items->contains('id', $this->titleForm->id)
-                && $items->contains('id', $this->line($this->checklist, 'team_assignment_form')->id));
+        $lines = collect($this->getJson(route('student.submission.plan'))->assertOk()->json('lines'));
+
+        $this->assertFalse($lines->contains('id', $this->titleForm->id));
+        $this->assertTrue($lines->contains('id', $this->line($this->checklist, 'team_assignment_form')->id));
     }
 
     /** The other forms still wait on an upload and the CaPSA's check. */

@@ -164,9 +164,9 @@ class SubmissionChecklistLinkTest extends TestCase
     {
         $bpa = $this->addDeliverable($this->checklist, ['title' => 'Business Process Analysis', 'kind' => Deliverable::DOCUMENT]);
 
-        foreach (['bpa.pdf', 'bpa_revised_final.pdf'] as $name) {
+        foreach (['bpa.pdf' => 'first draft', 'bpa_revised_final.pdf' => 'revised draft'] as $name => $content) {
             $this->send([
-                'file' => UploadedFile::fake()->create($name, 50, 'application/pdf'),
+                'file' => UploadedFile::fake()->createWithContent($name, $content),
                 'recipients' => ['adviser'],
                 'deliverable_id' => $bpa->id,
             ])->assertOk();
@@ -175,16 +175,19 @@ class SubmissionChecklistLinkTest extends TestCase
         $this->assertSame([1, 2], CapstoneDocument::orderBy('file_id')->pluck('file_version')->all());
     }
 
-    /** Opened from the tracker, the form arrives with the deliverable already picked. */
+    /** Opened for one line (?item=), the page opens the upload pop-up straight onto it. */
     public function test_the_form_opens_with_the_deliverable_already_picked(): void
     {
         $draft = $this->addDeliverable($this->checklist, ['title' => 'Chapter 1 Draft', 'kind' => Deliverable::DOCUMENT]);
 
-        $response = $this->actingAs($this->student)
+        $this->actingAs($this->student)
             ->get(route('student.submission', ['item' => $draft->id]))
             ->assertOk()
-            ->assertSee('Chapter 1 Draft');
+            ->assertSee('data-open-upload="'.$draft->id.'"', false);
 
-        $this->assertMatchesRegularExpression('/value="'.$draft->id.'"\s+selected/', $response->getContent());
+        $this->getJson(route('student.submission.plan', ['item' => $draft->id]))
+            ->assertOk()
+            ->assertJsonPath('item.title', 'Chapter 1 Draft')
+            ->assertJsonPath('lines', []);
     }
 }
