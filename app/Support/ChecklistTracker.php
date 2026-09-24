@@ -80,6 +80,7 @@ class ChecklistTracker
             'title' => $item->title,
             'kind' => $item->kind,
             'role' => $item->role,
+            'by_recommendation' => $item->closesOnTitleRecommendation(),
             'state' => $row->state,
             'waiting_on' => $row->waiting_on,
             'to_check' => self::toCheck($row),
