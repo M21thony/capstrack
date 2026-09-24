@@ -34,6 +34,7 @@
     'document_submitted' => ['rgba(22,163,74,0.12)', '#16a34a', '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>'],
     'review_reminder' => ['rgba(249,115,22,0.12)', '#f97316', '<path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>'],
     'leave_request_received' => ['rgba(239,68,68,0.12)', '#ef4444', '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="17" y1="11" x2="23" y2="11"/>'],
+    'announcement' => ['rgba(249,115,22,0.12)', '#f97316', '<path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/>'],
   ];
 @endphp
 
@@ -73,7 +74,7 @@
   <div class="notif-list">
     @forelse ($bellItems as $n)
       @php [$bg, $fg, $path] = $bellIcons[$n->type] ?? ['rgba(100,116,139,0.12)', '#64748b', '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>']; @endphp
-      <a href="{{ $n->link ?: '#' }}" class="notif-item {{ $n->is_read ? '' : 'is-unread' }}" data-id="{{ $n->id }}">
+      <a href="{{ $n->link ?: '#' }}" class="notif-item {{ $n->is_read ? '' : 'is-unread' }}" data-id="{{ $n->id }}" data-type="{{ $n->type }}">
         <div class="notif-item-icon" style="background:{{ $bg }};color:{{ $fg }}">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">{!! $path !!}</svg>
         </div>
@@ -155,6 +156,14 @@
 .notif-footer a + a{border-left:1px solid var(--border)}
 .notif-footer a:hover{background:var(--bg3);color:var(--text2)}
 </style>
+
+@if ($bellExpert)
+  @include('partials.notification-toasts', [
+    'toastFeed' => route('instructor.notifications.index'),
+    'toastRead' => url('instructor/notifications'),
+    'toastOwner' => 'e'.$bellExpert->expert_id,
+  ])
+@endif
 
 <script src="/js/capstrack-push.js" defer></script>
 <script>
