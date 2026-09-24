@@ -137,6 +137,15 @@
 
   /* ── Team Dashboard Grid ── */
   .team-dashboard-grid { gap: 12px; }
+  /* The members and the overview sit side by side on a desktop; on a phone
+     the overview goes under the members. !important: the columns are set
+     inline on the element. */
+  @media (max-width: 768px) {
+    .team-dashboard-grid { grid-template-columns: minmax(0, 1fr) !important; }
+    /* These two sit outside the scrolling area, so on a phone they stayed
+       pinned over the bottom of the page above the tab bar. */
+    .main > .tutorial-note, .main > .legal-credits { display: none; }
+  }
   .team-dashboard-grid .team-members-panel,
   .team-dashboard-grid .team-overview-panel { border-radius: 14px; padding: 14px; }
   .team-actions-bar { margin-top: 14px; }
@@ -1200,19 +1209,23 @@
     </div>
     <div class="section-title" id="rrm-title">Ask your CaPSA</div>
     <p id="rrm-lede" style="margin-top:8px;font-size:13px;color:var(--text2);line-height:1.6;"></p>
-    <form method="POST" action="{{ route('team.capsa-leave-requests.store') }}" id="capsa-leave-form" style="margin-top:14px;">
+    {{-- novalidate: the reason's length is checked in updateCapsaLeaveReason()
+         and on submit below, so the student gets one plain message instead of
+         a button that silently does nothing. --}}
+    <form method="POST" action="{{ route('team.capsa-leave-requests.store') }}" id="capsa-leave-form" style="margin-top:14px;" novalidate>
       @csrf
       <input type="hidden" name="type" id="rrm-type">
       <input type="hidden" name="student_id" id="rrm-student">
       <label for="rrm-reason" style="display:block;font-size:12px;font-weight:600;color:var(--text);margin-bottom:6px;">Reason for your CaPSA</label>
       <textarea id="rrm-reason" name="reason" rows="4" minlength="{{ \App\Models\MemberLeaveRequest::REASON_MIN }}" maxlength="1000" required placeholder="What happened, and why it cannot be worked out within the team" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--bg2);color:var(--text);font:inherit;font-size:13px;line-height:1.5;resize:vertical;"></textarea>
       <div style="display:flex;justify-content:space-between;gap:10px;font-size:11px;color:var(--text3);margin-top:4px;">
-        <span>At least {{ \App\Models\MemberLeaveRequest::REASON_MIN }} characters. Your team sees this too.</span>
-        <span id="rrm-count">0 / 1000</span>
+        <span id="rrm-hint">At least {{ \App\Models\MemberLeaveRequest::REASON_MIN }} characters. Your team sees this too.</span>
+        <span id="rrm-count" style="white-space:nowrap;">0 / 1000</span>
       </div>
+      <div id="rrm-error" role="alert" style="display:none;margin-top:8px;padding:8px 10px;border-radius:8px;background:var(--red-bg);border:1px solid rgba(239,68,68,0.3);color:var(--red);font-size:12px;font-weight:600;"></div>
       <ul id="rrm-effects" style="margin:12px 0 0;padding-left:18px;font-size:12px;color:var(--text2);line-height:1.7;"></ul>
       <div style="display:flex;gap:10px;margin-top:18px;">
-        <button type="submit" class="btn-primary" id="rrm-submit" style="flex:1;" disabled>Send to CaPSA</button>
+        <button type="submit" class="btn-primary" id="rrm-submit" style="flex:1;">Send to CaPSA</button>
         <button type="button" class="google-btn" style="flex:1;border:none;" onclick="closeCapsaLeaveModal()">Cancel</button>
       </div>
     </form>
@@ -1893,6 +1906,8 @@ function openCapsaLeaveModal(type, studentId, name) {
 
     var reason = document.getElementById('rrm-reason');
     reason.value = '';
+    reason.style.borderColor = '';
+    document.getElementById('rrm-error').style.display = 'none';
     updateCapsaLeaveReason();
     document.getElementById('capsaLeaveModal').classList.add('active');
     reason.focus();
@@ -1902,14 +1917,44 @@ function closeCapsaLeaveModal() {
     document.getElementById('capsaLeaveModal').classList.remove('active');
 }
 
+// The button stays clickable: a disabled one looked exactly like an enabled
+// one, so a short reason made Send to CaPSA do nothing with nothing saying why.
 function updateCapsaLeaveReason() {
-    var n = document.getElementById('rrm-reason').value.trim().length;
-    document.getElementById('rrm-count').textContent = n + ' / 1000';
-    document.getElementById('rrm-submit').disabled = n < LEAVE_REASON_MIN;
+    var reason = document.getElementById('rrm-reason');
+    var n = reason.value.trim().length;
+    var missing = LEAVE_REASON_MIN - n;
+    var count = document.getElementById('rrm-count');
+
+    count.textContent = missing > 0
+        ? (n ? missing + ' more character' + (missing === 1 ? '' : 's') + ' needed' : '0 / 1000')
+        : n + ' / 1000';
+    count.style.color = missing > 0 && n ? 'var(--red)' : '';
+    count.style.fontWeight = missing > 0 && n ? '700' : '';
+
+    if (missing <= 0) {
+        document.getElementById('rrm-error').style.display = 'none';
+        reason.style.borderColor = '';
+    }
 }
 
 document.getElementById('rrm-reason').addEventListener('input', updateCapsaLeaveReason);
-document.getElementById('capsa-leave-form').addEventListener('submit', function () {
+document.getElementById('capsa-leave-form').addEventListener('submit', function (e) {
+    var reason = document.getElementById('rrm-reason');
+    var n = reason.value.trim().length;
+
+    if (n < LEAVE_REASON_MIN) {
+        e.preventDefault();
+        var error = document.getElementById('rrm-error');
+        error.textContent = n
+            ? 'Your reason is too short - add ' + (LEAVE_REASON_MIN - n) + ' more character' + (LEAVE_REASON_MIN - n === 1 ? '' : 's') + ' (at least ' + LEAVE_REASON_MIN + ') so your CaPSA can decide.'
+            : 'Write a reason for your CaPSA first (at least ' + LEAVE_REASON_MIN + ' characters).';
+        error.style.display = 'block';
+        reason.style.borderColor = 'var(--red)';
+        reason.focus();
+
+        return;
+    }
+
     var btn = document.getElementById('rrm-submit');
     btn.disabled = true;
     btn.textContent = 'Sending…';

@@ -10,6 +10,17 @@ class PanelGrade extends Model
 
     protected $primaryKey = 'grade_id';
 
+    public const DRAFT = 'draft';
+
+    public const SUBMITTED = 'submitted';
+
+    /**
+     * The panelist declined to score this team (a conflict of interest, say),
+     * with the reason in remarks. It counts as turned in, so the panel is not
+     * held up, but it is left out of the team's average.
+     */
+    public const ABSTAINED = 'abstained';
+
     protected $fillable = [
         'defense_id',
         'expert_id',
@@ -29,6 +40,11 @@ class PanelGrade extends Model
             'total_score' => 'decimal:2',
             'submitted_at' => 'datetime',
         ];
+    }
+
+    public function isAbstained(): bool
+    {
+        return $this->status === self::ABSTAINED;
     }
 
     public function schedule()

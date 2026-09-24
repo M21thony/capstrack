@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Support\DefenseOutcome;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Collection;
 
 class DefenseSchedule extends Model
 {
@@ -62,31 +63,56 @@ class DefenseSchedule extends Model
         return $this->relationLoaded('panels') ? $this->panels->count() : $this->panels()->count();
     }
 
-    /** @return \Illuminate\Support\Collection<int, PanelGrade> */
+    /**
+     * The grades with scores in them.
+     *
+     * @return Collection<int, PanelGrade>
+     */
     public function submittedGrades()
     {
-        return $this->relationLoaded('grades')
-            ? $this->grades->where('status', 'submitted')
-            : $this->grades()->where('status', 'submitted')->get();
+        return $this->gradesWithStatus([PanelGrade::SUBMITTED]);
     }
 
-    /** Whether every panelist has turned their grade in. */
+    /**
+     * Panelists who declined to score this team.
+     *
+     * @return Collection<int, PanelGrade>
+     */
+    public function abstainedGrades()
+    {
+        return $this->gradesWithStatus([PanelGrade::ABSTAINED]);
+    }
+
+    /** How many panelists are done with this team: scored it, or abstained. */
+    public function gradesInCount(): int
+    {
+        return $this->gradesWithStatus([PanelGrade::SUBMITTED, PanelGrade::ABSTAINED])->count();
+    }
+
+    /**
+     * Whether every panelist has turned their grade in.
+     *
+     * An abstention counts as turned in, but at least one panelist has to
+     * have actually scored - a panel that all abstained has no result to give.
+     */
     public function allGradesIn(): bool
     {
         $size = $this->panelSize();
 
-        return $size > 0 && $this->submittedGrades()->count() === $size;
+        return $size > 0
+            && $this->gradesInCount() === $size
+            && $this->submittedGrades()->isNotEmpty();
     }
 
     /**
-     * The team's score for this defense: every panelist's total added up and
-     * divided by the size of the panel - three, normally.
+     * The team's score for this defense: every scoring panelist's total added
+     * up and divided by how many scored - three, normally.
      *
-     * Dividing by the panel rather than by however many have submitted is the
-     * point. Averaging the grades that happen to be in reports a finished
-     * looking score off two of three panelists, and that number then moves
-     * when the third arrives. Null until everyone has graded, so a partial
-     * result is never shown as a final one.
+     * Divided by the panelists who scored, not by however many have submitted
+     * so far: null until the whole panel is in, so a partial result is never
+     * shown as a final one. A panelist who abstained is left out of both the
+     * sum and the count, so they neither pull the average down nor stand in
+     * for a score of zero.
      */
     public function panelAverage(): ?float
     {
@@ -94,9 +120,20 @@ class DefenseSchedule extends Model
             return null;
         }
 
-        $total = $this->submittedGrades()->sum(fn (PanelGrade $g) => (float) $g->total_score);
+        $scored = $this->submittedGrades();
 
-        return round($total / $this->panelSize(), 2);
+        return round($scored->sum(fn (PanelGrade $g) => (float) $g->total_score) / $scored->count(), 2);
+    }
+
+    /**
+     * @param  array<int, string>  $statuses
+     * @return Collection<int, PanelGrade>
+     */
+    private function gradesWithStatus(array $statuses)
+    {
+        return $this->relationLoaded('grades')
+            ? $this->grades->whereIn('status', $statuses)->values()
+            : $this->grades()->whereIn('status', $statuses)->get();
     }
 
     public function team()

@@ -300,6 +300,8 @@ Route::middleware(['expert.auth', 'expert.approved', 'no.cache', 'track.expert']
     Route::put('/grading/{defense}', [GradingController::class, 'save'])->name('grading.save');
     Route::patch('/grading/{defense}', [GradingController::class, 'submit'])->name('grading.submit');
     Route::post('/grading/{defense}/outcome', [GradingController::class, 'recordOutcome'])->name('grading.outcome');
+    Route::post('/grading/{defense}/abstain', [GradingController::class, 'abstain'])->name('grading.abstain');
+    Route::delete('/grading/{defense}/abstain', [GradingController::class, 'withdrawAbstention'])->name('grading.abstain.withdraw');
     Route::get('/docreview', [DocReviewController::class, 'index'])->name('docreview');
     Route::get('/docreview/{review}/annotate', [DocReviewController::class, 'annotate'])->name('docreview.annotate');
     Route::get('/assignments', [InstructorAssignmentController::class, 'index'])->name('assignments');
@@ -478,6 +480,12 @@ Route::middleware(['auth', 'no.cache', 'track.expert'])->group(function () {
 // The bell on every expert page - CaPSA, admin and instructor alike, since one
 // person is often more than one of those. Deliberately not behind
 // expert.approved: an unapproved expert still needs to hear a team apply to them.
+// Finished or skipped the portal tour - CaPSA, Admin and Expert alike, from
+// whichever sidebar they have.
+Route::put('instructor/tour', [App\Http\Controllers\Instructor\PortalTourController::class, 'update'])
+    ->middleware(['expert.auth'])
+    ->name('instructor.tour.update');
+
 Route::prefix('instructor/notifications')
     ->middleware(['expert.auth', 'no.cache'])
     ->name('instructor.notifications.')

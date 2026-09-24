@@ -22,7 +22,7 @@ class ArchiveController extends Controller
         // until somebody decides - an archived capstone is what similarity
         // checks compare against, so a team cannot put its own PDF in there.
         $pending = ArchivedDocument::pending()
-            ->with(['team', 'submitter'])
+            ->with(['team', 'submitter', 'tags'])
             ->orderBy('submitted_at')
             ->get();
 

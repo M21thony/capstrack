@@ -236,5 +236,6 @@ p {
       </button>
     </form>
   </div>
+  @include('partials.system-credits')
 </div>
 @endsection

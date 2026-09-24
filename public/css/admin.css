@@ -2090,3 +2090,17 @@ tr.cx-off:hover > td{opacity:.8}
 button.content,
 a.btn.content,
 .btn.content{padding:7px 16px;overflow:visible}
+
+/* ── Small phones: search gets a row of its own ─────────────────────────
+   On one line with a dropdown and a button, a 390px screen left the search
+   box a few characters wide ("Search experts by"), too narrow to read what
+   was typed. Below 480px it takes the full width, the rest goes under it. */
+@media (max-width:480px){
+  .page-filters.page-filters-inline{flex-wrap:wrap}
+  .page-filters.page-filters-inline .experts-search{flex:1 1 100%!important}
+  .page-filters.page-filters-inline .page-filter{flex:1 1 auto!important}
+
+  .log-filters{flex-wrap:wrap}
+  .log-filters input[name="search"]{flex:1 1 100%;max-width:none!important}
+  .log-filters select{flex:1;width:auto!important}
+}

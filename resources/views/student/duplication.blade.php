@@ -24,6 +24,14 @@
   min-height: 480px;
 }
 
+/* A phone has room for one column: the check, then the matches, then the
+   expert, one under the other, each as tall as it needs. */
+@media (max-width: 900px) {
+  .dup-layout { grid-template-columns: minmax(0, 1fr); height: auto; min-height: 0; }
+  .dup-layout > * { min-height: 0; }
+  #matches-panel { min-height: 280px; }
+}
+
 .dup-left {
   display: flex;
   flex-direction: column;
@@ -108,6 +116,83 @@
 .pp-submit-state-title { font-size: 12px; font-weight: 700; }
 .pp-submit-state-sub { font-size: 10.5px; opacity: 0.85; margin-top: 1px; }
 .pp-badge-draft { background: var(--bg4); color: var(--text3); }
+/* ── Pre-Proposal Details modal (.ppf) ───────────────────────────────────
+   A fixed header and footer with the four sections scrolling between them,
+   so the heading and Save stay in view however far down the form you are.
+   Scoped to .ppf: .pp-modal-overlay and .pp-modal-box also dress the page's
+   three small confirm dialogs. */
+.pp-modal-box.ppf { max-width: 780px; width: 100%; max-height: min(90vh, 920px); padding: 0; overflow: hidden; display: flex; flex-direction: column; border-radius: 18px; }
+.ppf-form { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.ppf-head { display: flex; align-items: flex-start; gap: 14px; padding: 20px 22px 16px; border-bottom: 1px solid var(--border); background: var(--bg2); }
+.ppf-head-icon { width: 42px; height: 42px; flex: none; border-radius: 12px; display: grid; place-items: center; background: var(--accent-light, #faf7ed); color: var(--accent3, #8a6e10); border: 1px solid rgba(201,168,44,.3); }
+.ppf-head-icon svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.ppf-head-text { flex: 1; min-width: 0; }
+.ppf-head h2 { margin: 0; font-size: 17px; font-weight: 700; color: var(--text); }
+.ppf-head p { margin: 3px 0 0; font-size: 12.5px; line-height: 1.45; color: var(--text3); }
+.ppf-close { width: 34px; height: 34px; flex: none; display: grid; place-items: center; border: 1px solid var(--border); border-radius: 10px; background: var(--bg2); color: var(--text3); cursor: pointer; }
+.ppf-close:hover { color: var(--text); border-color: var(--border2); }
+.ppf-close svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2.2; }
+
+.ppf-body { flex: 1; min-height: 0; overflow-y: auto; padding: 16px 22px 18px; background: var(--bg3); scrollbar-width: thin; }
+.ppf-note { margin: 0 0 12px; font-size: 11.5px; color: var(--text3); }
+.ppf-section { background: var(--bg2); border: 1px solid var(--border); border-radius: 14px; padding: 18px 18px 16px; margin-bottom: 12px; }
+.ppf-section:last-child { margin-bottom: 0; }
+.ppf-section-head { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px dashed var(--border); }
+.ppf-num { width: 28px; height: 28px; flex: none; border-radius: 50%; display: grid; place-items: center; font-size: 13px; font-weight: 700; background: var(--accent, #c9a82c); color: #18191f; }
+.ppf-section-head h3 { margin: 3px 0 0; font-size: 14.5px; font-weight: 700; color: var(--text); }
+.ppf-section-head p { margin: 2px 0 0; font-size: 12px; line-height: 1.45; color: var(--text3); }
+
+/* Labels a person reads, not a wall of grey capitals. */
+.ppf .pp-field { margin-bottom: 14px; }
+.ppf .pp-field:last-child, .ppf .ppf-grid .pp-field { margin-bottom: 0; }
+.ppf .ppf-grid { margin-bottom: 14px; }
+.ppf .ppf-grid:last-child { margin-bottom: 0; }
+.ppf .pp-field > label { font-size: 12.5px; font-weight: 600; text-transform: none; letter-spacing: 0; color: var(--text); margin-bottom: 6px; }
+.ppf .pp-field input[type="text"], .ppf .pp-field select, .ppf .pp-field textarea { border-radius: 10px; padding: 10px 12px; font-size: 13.5px; line-height: 1.5; }
+.ppf .pp-field input[type="text"]:focus, .ppf .pp-field select:focus, .ppf .pp-field textarea:focus { outline: none; border-color: var(--accent, #c9a82c); box-shadow: 0 0 0 3px var(--accent-glow, rgba(201,168,44,.12)); }
+.ppf .pp-field textarea { min-height: 0; resize: vertical; }
+.ppf .ppf-title-input { resize: none; font-weight: 600; font-size: 14px; }
+.ppf-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+/* The title's word count says plainly whether it is there yet. */
+.ppf-wordcount { display: inline-flex; align-items: center; gap: 4px; margin-top: 6px; padding: 3px 10px; border-radius: 999px; background: var(--bg3); font-size: 11.5px; }
+.ppf-wordcount.is-ok { background: var(--green-bg, rgba(22,163,74,.08)); color: var(--green); }
+.ppf-wordcount.is-off { background: var(--amber-bg, rgba(217,119,6,.08)); color: var(--amber, #b45309); }
+.ppf .pp-tags { margin: 0; }
+/* The chips are labels too, so the old grey-capitals label rule reached
+   them; they read as the words they are. */
+.ppf .pp-pill { display: inline-block; margin: 0; font-size: inherit; font-weight: inherit; text-transform: none; letter-spacing: 0; color: inherit; }
+.ppf .pp-pill span { font-size: 12.5px; }
+.ppf-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+.ppf-foot { display: flex; justify-content: flex-end; align-items: center; gap: 10px; padding: 14px 22px; border-top: 1px solid var(--border); background: var(--bg2); }
+.ppf-cancel { background: var(--bg2); border: 1px solid var(--border); color: var(--text2); }
+.ppf-cancel:hover { border-color: var(--border2); color: var(--text); }
+.ppf-save { display: inline-flex; align-items: center; gap: 8px; padding-left: 18px; padding-right: 18px; }
+.ppf-save svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+
+/* A phone gets the whole screen: nothing around it to tap by mistake, and
+   the two-column rows stacked. */
+@media (max-width: 640px) {
+  #pp-form-modal-overlay { padding: 0; align-items: stretch; }
+  .pp-modal-box.ppf { max-width: none; max-height: none; height: 100dvh; border-radius: 0; }
+  .ppf-head { padding: 14px 16px 12px; gap: 12px; }
+  .ppf-head-icon { width: 36px; height: 36px; border-radius: 10px; }
+  .ppf-head h2 { font-size: 16px; }
+  .ppf-body { padding: 12px 12px 16px; }
+  .ppf-section { padding: 14px 14px 14px; border-radius: 12px; }
+  .ppf-grid { grid-template-columns: 1fr; }
+  .ppf-foot { padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); }
+  .ppf-foot .ppf-cancel { flex: none; }
+  .ppf-foot .ppf-save { flex: 1; justify-content: center; white-space: nowrap; }
+}
+
+.pp-autosave { display: inline-flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 11.5px; font-weight: 500; color: var(--text3); }
+.pp-autosave::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--border2); }
+.pp-autosave.is-saved { color: var(--green); }
+.pp-autosave.is-saved::before { background: var(--green); }
+.pp-autosave.is-restored { color: var(--accent3); }
+.pp-autosave.is-restored::before { background: var(--accent); }
 
 /* Tooltip on the locked Submit button, on a wrapper because a disabled
    button emits no hover events of its own. */
@@ -519,78 +604,123 @@
     </div>
 
     @if ($canSubmitMore)
+      {{-- Pre-Proposal Details: four short sections instead of one long list,
+           with the heading and the Save button always in view. Every id and
+           name below is what the page's scripts read (prefill from the PDF,
+           the draft, the checks before saving), so they stay as they were. --}}
       <div class="pp-modal-overlay" id="pp-form-modal-overlay" onclick="if (event.target === this) closePpFormModal()">
-      <div class="card pp-modal-box" id="pp-form-card">
-        <button type="button" class="pp-modal-close" onclick="closePpFormModal()" aria-label="Close">&times;</button>
-        <div class="card-header" style="flex-direction:column;align-items:flex-start;gap:2px">
-          <span class="card-title">Pre-Proposal Details</span>
-          <span style="font-size:12px;color:var(--text3);font-weight:400">Pulled from your uploaded PDF — review and edit before saving.</span>
-        </div>
-        <form method="POST" action="{{ route('student.pre-proposal.store') }}" id="pp-form"
+      <div class="card pp-modal-box ppf" id="pp-form-card" role="dialog" aria-modal="true" aria-labelledby="ppf-title">
+        <form method="POST" action="{{ route('student.pre-proposal.store') }}" id="pp-form" class="ppf-form"
               onsubmit="return ppFormIsComplete(this)">
           @csrf
           <input type="hidden" name="duplication_check_id" id="check-id" value="">
 
-          <div class="pp-field">
-            <label>Title</label>
-            <input type="text" name="title" id="title" oninput="updateWordCount()">
-            <div class="pp-hint">Must contain 11–12 meaningful words. Current count: <span id="word-count">0</span></div>
-          </div>
-
-          <div class="pp-field">
-            <label>Applicable UN Sustainable Development Goal</label>
-            <select name="sdg_goals" id="sdg">
-              <option value="" disabled selected>Select a goal...</option>
-              @foreach ([
-                'SDG 1 – No Poverty', 'SDG 2 – Zero Hunger', 'SDG 3 – Good Health and Well-being',
-                'SDG 4 – Quality Education', 'SDG 5 – Gender Equality', 'SDG 6 – Clean Water and Sanitation',
-                'SDG 7 – Affordable and Clean Energy', 'SDG 8 – Decent Work and Economic Growth',
-                'SDG 9 – Industry, Innovation and Infrastructure', 'SDG 10 – Reduced Inequality',
-                'SDG 11 – Sustainable Cities and Communities', 'SDG 12 – Responsible Consumption and Production',
-                'SDG 13 – Climate Action', 'SDG 14 – Life Below Water', 'SDG 15 – Life on Land',
-                'SDG 16 – Peace, Justice and Strong Institutions', 'SDG 17 – Partnerships for the Goals',
-              ] as $sdg)
-                <option value="{{ $sdg }}">{{ $sdg }}</option>
-              @endforeach
-            </select>
-          </div>
-
-          <div class="pp-field">
-            <label>Applicable Research Agenda and Priority Area</label>
-            <div class="pp-tag-list" id="agenda-list"></div>
-            <input type="text" id="agenda-input" placeholder="Type a priority area and press Enter...">
-            <div id="agenda-hidden"></div>
-          </div>
-
-          <div class="pp-field"><label>Problem Statement</label><textarea name="problem_statement" id="problem"></textarea></div>
-          <div class="pp-field"><label>Proposed Solution</label><textarea name="proposed_solution" id="solution"></textarea></div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
-            <div class="pp-field"><label>Scope</label><textarea name="scope" id="scope" style="min-height:48px"></textarea></div>
-            <div class="pp-field"><label>Limitations</label><textarea name="limitations" id="limitations" style="min-height:48px"></textarea></div>
-          </div>
-          <div class="pp-field"><label>Software Development Methodology</label><input type="text" name="sdm" id="sdm" value="Agile Development Methodology"></div>
-          <div class="pp-field"><label>Clients/Organization</label><input type="text" name="clients" id="clients" placeholder="The organization the system is being built for"></div>
-          <div class="pp-field"><label>Address of the Organization</label><input type="text" name="client_address" id="client_address"></div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
-            <div class="pp-field"><label>Name of Representative</label><input type="text" name="client_representative" id="client_representative"></div>
-            <div class="pp-field"><label>Their Position in the Organization</label><input type="text" name="client_position" id="client_position"></div>
-          </div>
-
-          <fieldset class="pp-field pp-tags" id="pp-tags">
-            <legend>Project Tags <span class="pp-required">Required</span></legend>
-            <div class="pp-hint" style="margin:0 0 8px">What kind of project is this? Pick {{ \App\Support\ProjectTags::MIN }} to {{ \App\Support\ProjectTags::MAX }}.</div>
-            <div class="pp-pills">
-              @foreach (\App\Support\ProjectTags::OPTIONS as $tag)
-                <label class="pp-pill">
-                  <input type="checkbox" name="tags[]" value="{{ $tag }}" onchange="updateTagPills()">
-                  <span>{{ $tag }}</span>
-                </label>
-              @endforeach
+          <header class="ppf-head">
+            <span class="ppf-head-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6M9 13h6M9 17h4"/></svg>
+            </span>
+            <div class="ppf-head-text">
+              <h2 id="ppf-title">Complete your Pre-Proposal</h2>
+              <p>We filled this in from your PDF. Check each part, fix anything, then save.</p>
+              {{-- Filled in by the draft script below: what you type is kept on
+                   this device until the pre-proposal is saved. --}}
+              <span class="pp-autosave" id="pp-autosave" aria-live="polite">Your answers save automatically as you type.</span>
             </div>
-            <div class="pp-hint" id="pp-tag-count" aria-live="polite">0 of {{ \App\Support\ProjectTags::MAX }} picked</div>
-          </fieldset>
+            <button type="button" class="ppf-close" onclick="closePpFormModal()" aria-label="Close">
+              <svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
+            </button>
+          </header>
 
-          <button type="submit" class="btn btn-primary">Save This Pre-Proposal</button>
+          <div class="ppf-body">
+            <p class="ppf-note">All fields are required.</p>
+
+            <section class="ppf-section">
+              <div class="ppf-section-head"><span class="ppf-num">1</span><div><h3>Title and focus</h3><p>What the study is called and what it serves.</p></div></div>
+
+              <div class="pp-field">
+                <label for="title">Title</label>
+                <textarea name="title" id="title" rows="2" class="ppf-title-input" oninput="updateWordCount()"
+                          onkeydown="if (event.key === 'Enter') event.preventDefault()"></textarea>
+                <div class="pp-hint ppf-wordcount" id="ppf-wordcount">
+                  <span><b id="word-count">0</b> meaningful words</span> · needs 11–12
+                </div>
+              </div>
+
+              <div class="pp-field">
+                <label for="sdg">UN Sustainable Development Goal</label>
+                <select name="sdg_goals" id="sdg">
+                  <option value="" disabled selected>Select a goal...</option>
+                  @foreach ([
+                    'SDG 1 – No Poverty', 'SDG 2 – Zero Hunger', 'SDG 3 – Good Health and Well-being',
+                    'SDG 4 – Quality Education', 'SDG 5 – Gender Equality', 'SDG 6 – Clean Water and Sanitation',
+                    'SDG 7 – Affordable and Clean Energy', 'SDG 8 – Decent Work and Economic Growth',
+                    'SDG 9 – Industry, Innovation and Infrastructure', 'SDG 10 – Reduced Inequality',
+                    'SDG 11 – Sustainable Cities and Communities', 'SDG 12 – Responsible Consumption and Production',
+                    'SDG 13 – Climate Action', 'SDG 14 – Life Below Water', 'SDG 15 – Life on Land',
+                    'SDG 16 – Peace, Justice and Strong Institutions', 'SDG 17 – Partnerships for the Goals',
+                  ] as $sdg)
+                    <option value="{{ $sdg }}">{{ $sdg }}</option>
+                  @endforeach
+                </select>
+              </div>
+
+              <div class="pp-field">
+                <label for="agenda-input">Research agenda and priority area</label>
+                <div class="pp-tag-list" id="agenda-list"></div>
+                <input type="text" id="agenda-input" placeholder="Type a priority area and press Enter">
+                <div class="pp-hint">Add one or more. Press Enter after each.</div>
+                <div id="agenda-hidden"></div>
+              </div>
+            </section>
+
+            <section class="ppf-section">
+              <div class="ppf-section-head"><span class="ppf-num">2</span><div><h3>The project</h3><p>The problem, your answer to it, and its limits.</p></div></div>
+
+              <div class="pp-field"><label for="problem">Problem statement</label><textarea name="problem_statement" id="problem" rows="4"></textarea></div>
+              <div class="pp-field"><label for="solution">Proposed solution</label><textarea name="proposed_solution" id="solution" rows="4"></textarea></div>
+              <div class="ppf-grid">
+                <div class="pp-field"><label for="scope">Scope</label><textarea name="scope" id="scope" rows="3"></textarea></div>
+                <div class="pp-field"><label for="limitations">Limitations</label><textarea name="limitations" id="limitations" rows="3"></textarea></div>
+              </div>
+              <div class="pp-field"><label for="sdm">Software development methodology</label><input type="text" name="sdm" id="sdm" value="Agile Development Methodology"></div>
+            </section>
+
+            <section class="ppf-section">
+              <div class="ppf-section-head"><span class="ppf-num">3</span><div><h3>Client or organization</h3><p>Who the system is being built for. Not in your PDF, so fill these in.</p></div></div>
+
+              <div class="pp-field"><label for="clients">Organization name</label><input type="text" name="clients" id="clients" placeholder="e.g. Camarines Sur Polytechnic Colleges"></div>
+              <div class="pp-field"><label for="client_address">Address</label><input type="text" name="client_address" id="client_address" placeholder="Street, city, province"></div>
+              <div class="ppf-grid">
+                <div class="pp-field"><label for="client_representative">Representative</label><input type="text" name="client_representative" id="client_representative" placeholder="Full name"></div>
+                <div class="pp-field"><label for="client_position">Their position</label><input type="text" name="client_position" id="client_position" placeholder="e.g. Registrar"></div>
+              </div>
+            </section>
+
+            <section class="ppf-section">
+              <div class="ppf-section-head"><span class="ppf-num">4</span><div><h3>Project tags</h3><p>What kind of project is this? Pick {{ \App\Support\ProjectTags::MIN }} to {{ \App\Support\ProjectTags::MAX }}.</p></div></div>
+
+              <fieldset class="pp-field pp-tags" id="pp-tags">
+                <legend class="ppf-sr">Project tags</legend>
+                <div class="pp-pills">
+                  @foreach (\App\Support\ProjectTags::OPTIONS as $tag)
+                    <label class="pp-pill">
+                      <input type="checkbox" name="tags[]" value="{{ $tag }}" onchange="updateTagPills()">
+                      <span>{{ $tag }}</span>
+                    </label>
+                  @endforeach
+                </div>
+                <div class="pp-hint" id="pp-tag-count" aria-live="polite">0 of {{ \App\Support\ProjectTags::MAX }} picked</div>
+              </fieldset>
+            </section>
+          </div>
+
+          <footer class="ppf-foot">
+            <button type="button" class="btn ppf-cancel" onclick="closePpFormModal()">Cancel</button>
+            <button type="submit" class="btn btn-primary ppf-save">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+              Save This Pre-Proposal
+            </button>
+          </footer>
         </form>
       </div>
       </div>
@@ -921,7 +1051,15 @@ function updateTagPills() {
 function updateWordCount() {
   const el = document.getElementById('word-count');
   const titleEl = document.getElementById('title');
-  if (el && titleEl) el.textContent = countMeaningfulWords(titleEl.value);
+  if (!el || !titleEl) return;
+  const words = countMeaningfulWords(titleEl.value);
+  el.textContent = words;
+  // Green once the title is the right length, amber while it is not.
+  const pill = document.getElementById('ppf-wordcount');
+  if (pill) {
+    pill.classList.toggle('is-ok', words >= 11 && words <= 12);
+    pill.classList.toggle('is-off', words > 0 && (words < 11 || words > 12));
+  }
 }
 updateWordCount();
 
@@ -963,6 +1101,108 @@ if (agendaInput) {
     }
   });
 }
+
+// ── Draft: the Pre-Proposal Details form is kept as it is typed ──────────
+//
+// The form is filled from the PDF each time the page draws the last check -
+// on every reload, on Back, after a rejected save - which put the PDF's
+// wording back and blanked the client and tag answers, so a team retyped
+// everything. What is typed is kept on this device, per check, and laid back
+// over the PDF's values. It goes once that check is saved as a pre-proposal
+// or cleared, since the page stops drawing it then (see the cleanup below).
+const PP_DRAFT_PREFIX = 'capstrack:pp-draft:';
+const PP_DRAFT_FIELDS = ['title', 'sdg', 'problem', 'solution', 'scope', 'limitations', 'sdm',
+  'clients', 'client_address', 'client_representative', 'client_position'];
+let ppFilling = false;   // true while renderResult() writes the PDF's values in
+let ppSaveTimer = null;
+
+function ppDraftKey() {
+  const id = document.getElementById('check-id');
+  return id && id.value ? PP_DRAFT_PREFIX + id.value : null;
+}
+
+function ppAutosaveStatus(text, state) {
+  const el = document.getElementById('pp-autosave');
+  if (!el) return;
+  el.textContent = text;
+  el.classList.toggle('is-saved', state === 'saved');
+  el.classList.toggle('is-restored', state === 'restored');
+}
+
+function savePpDraft() {
+  const key = ppDraftKey();
+  if (ppFilling || !key) return;
+  const draft = { fields: {}, agenda: agendaTags.slice(), tags: [] };
+  PP_DRAFT_FIELDS.forEach(function (id) {
+    const el = document.getElementById(id);
+    if (el) draft.fields[id] = el.value;
+  });
+  document.querySelectorAll('#pp-tags input[name="tags[]"]:checked').forEach(function (b) { draft.tags.push(b.value); });
+  try {
+    localStorage.setItem(key, JSON.stringify(draft));
+    const t = new Date();
+    ppAutosaveStatus('Saved on this device · ' + t.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }), 'saved');
+  } catch (e) {
+    // Private browsing or storage full: the form still works, it just is
+    // not kept.
+  }
+}
+
+function queuePpDraftSave() {
+  if (ppFilling) return;
+  clearTimeout(ppSaveTimer);
+  ppSaveTimer = setTimeout(savePpDraft, 400);
+}
+
+// Lay what was typed back over what the PDF said.
+function restorePpDraft() {
+  const key = ppDraftKey();
+  let draft = null;
+  try { draft = key ? JSON.parse(localStorage.getItem(key) || 'null') : null; } catch (e) { draft = null; }
+  if (!draft || !draft.fields) return false;
+
+  PP_DRAFT_FIELDS.forEach(function (id) {
+    const el = document.getElementById(id);
+    if (!el || typeof draft.fields[id] !== 'string') return;
+    // A select only takes a value it offers.
+    if (el.tagName === 'SELECT' && draft.fields[id] && !Array.from(el.options).some(o => o.value === draft.fields[id])) return;
+    el.value = draft.fields[id];
+  });
+  if (Array.isArray(draft.agenda)) {
+    agendaTags = draft.agenda.filter(s => typeof s === 'string' && s.trim());
+    renderAgendaTags();
+  }
+  if (Array.isArray(draft.tags)) {
+    document.querySelectorAll('#pp-tags input[name="tags[]"]').forEach(function (b) { b.checked = draft.tags.includes(b.value); });
+    updateTagPills();
+  }
+  updateWordCount();
+  ppAutosaveStatus('Your saved answers were restored.', 'restored');
+  return true;
+}
+
+(function () {
+  const form = document.getElementById('pp-form');
+  if (form) {
+    form.addEventListener('input', queuePpDraftSave);
+    form.addEventListener('change', queuePpDraftSave);
+    // Chips added or removed in the research agenda do not fire input on
+    // the form, so the list is watched instead.
+    const agenda = document.getElementById('agenda-hidden');
+    if (agenda && window.MutationObserver) {
+      new MutationObserver(queuePpDraftSave).observe(agenda, { childList: true });
+    }
+  }
+
+  // Drafts for any check the page is no longer drawing - saved as a
+  // pre-proposal, or cleared - are done with.
+  const current = @json(isset($lastCheck) && $lastCheck ? (string) $lastCheck->id : null);
+  try {
+    Object.keys(localStorage)
+      .filter(k => k.indexOf(PP_DRAFT_PREFIX) === 0 && k !== (current ? PP_DRAFT_PREFIX + current : ''))
+      .forEach(k => localStorage.removeItem(k));
+  } catch (e) {}
+})();
 
 function selectSdgOption(extractedValue) {
   // The extraction prompt allows for multiple SDGs ("Goal(s)"), so the AI
@@ -1242,6 +1482,9 @@ function renderResult(data, fileName) {
   }
 
   if (ppForm) {
+    // The PDF's values go in first; nothing here is the team's own typing,
+    // so it is not saved as their draft.
+    ppFilling = true;
     document.getElementById('title').value = data.concepts.title || '';
     document.getElementById('problem').value = data.concepts.problem_statement || '';
     document.getElementById('solution').value = data.concepts.proposed_solution || '';
@@ -1265,6 +1508,12 @@ function renderResult(data, fileName) {
         .filter(s => s.length > 0);
       renderAgendaTags();
     }
+
+    // Then whatever the team had typed for this check, over the top.
+    restorePpDraft();
+    // Let the agenda watcher's queued save (from the renders above) pass
+    // before typing is saved again.
+    setTimeout(function () { ppFilling = false; }, 0);
   }
 
   // One of these two is on the page, never both: the button while the team
