@@ -3,6 +3,9 @@
 <div class="rp-expert">
   <div class="avatar">{{ strtoupper(substr($i['name'] ?? '?', 0, 1)) }}</div>
   <div class="rp-expert-who">
+    @if (! empty($i['role_label']))
+      <div class="sx-role">Recommended {{ $i['role_label'] }}</div>
+    @endif
     <div class="n">{{ $i['name'] ?? '' }}</div>
     <div class="x">{{ $i['expertise'] ?? '' }}</div>
     <div class="r">{{ $i['reason'] ?? '' }}</div>
