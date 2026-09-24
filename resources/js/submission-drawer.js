@@ -50,7 +50,9 @@ const svg = (name, size = 16, stroke = 2) =>
   `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="${stroke}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[name]}</svg>`;
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
-const mb = (bytes) => (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+const mb = (bytes) => bytes < 1024 * 1024
+  ? Math.max(1, Math.round(bytes / 1024)) + ' KB'
+  : (bytes / (1024 * 1024)).toFixed(1) + ' MB';
 const ext = (name) => (name.split('.').pop() || '').toLowerCase();
 const ordinal = (n) => n + (([11, 12, 13].includes(n % 100)) ? 'th' : ({ 1: 'st', 2: 'nd', 3: 'rd' }[n % 10] || 'th'));
 
@@ -123,6 +125,23 @@ export async function openSubmission(itemId, from) {
   dialog.addEventListener('cancel', (e) => {
     e.preventDefault();
     askToClose();
+  });
+  // Chrome closes a dialog on Escape without asking when there has been no
+  // click since, whatever cancel says. A file not yet sent is not lost that
+  // way: the pop-up comes straight back and asks.
+  dialog.addEventListener('close', (e) => {
+    // The event comes after close() returns, so it is matched to this pop-up.
+    if (!S || e.target !== dialog) return;
+    if (S.step === 'sending' || (S.file && ['pick', 'check', 'failed'].includes(S.step))) {
+      dialog.showModal();
+      if (S.step !== 'sending') {
+        S.confirmingClose = true;
+        render();
+        dialog.querySelector('[data-act="keep"]')?.focus();
+      }
+      return;
+    }
+    closeNow();
   });
   dialog.addEventListener('click', onClick);
   dialog.addEventListener('change', onChange);
@@ -268,7 +287,7 @@ async function serverCheck(file) {
     }).then((r) => r.json());
     if (S?.file !== file) return;
     S.same = data.same || null;
-    S.warnings = (data.warnings || []).map((w) => w.message);
+    S.warnings = data.warnings || [];
   } catch {
     // A check that does not answer never stops a send.
   }
@@ -565,10 +584,12 @@ function checkNotes() {
   if (S.same) out += note('warn', `<b>This is the same file as version ${S.same}${S.plan?.remark ? ', the one sent back' : ''}.</b> Did you pick the old one? Open your edited copy instead.`, linkBtn('Choose another file', 'browse'));
   const want = parseInt(S.plan?.item?.chapter, 10);
   const got = S.file && chapterInName(S.file.name);
-  if (!S.same && want && got && got !== want) {
+  const nameOff = !S.same && want && got && got !== want;
+  if (nameOff) {
     out += note('warn', `<b>The file name says Chapter ${got}</b>, but this is ${esc(S.plan.item.title)}. Preview it to be sure.`, linkBtn('Preview', 'preview') + linkBtn('Choose another file', 'browse'));
   }
-  if (!S.same) S.warnings.forEach((w) => { out += note('warn', esc(w)); });
+  // The first page naming another chapter says the same as the name did.
+  if (!S.same) S.warnings.filter((w) => !(nameOff && w.type === 'heading')).forEach((w) => { out += note('warn', esc(w.message)); });
   return out;
 }
 
@@ -633,7 +654,10 @@ function needsLine() {
 }
 
 function btn(text, act, { primary = false, disabled = false, icon = null } = {}) {
-  return `<button type="button" class="up-btn${primary ? ' primary' : ''}" data-act="${act}"${disabled ? ' disabled' : ''}>${icon ? svg(icon, 14, 2.4) : ''}${text}</button>`;
+  const mark = icon ? svg(icon, 14, 2.4) : '';
+  // An arrow onward reads after the word; everything else before it.
+  const inner = icon === 'right' ? text + mark : mark + text;
+  return `<button type="button" class="up-btn${primary ? ' primary' : ''}" data-act="${act}"${disabled ? ' disabled' : ''}>${inner}</button>`;
 }
 
 function render() {
