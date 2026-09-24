@@ -149,6 +149,8 @@
 /* Turn-in bar at the foot of the Your Pre-Proposals card. */
 .pp-submit-bar { flex-shrink: 0; margin-top: auto; border-top: 1px solid var(--border); padding: 13px 24px; background: var(--bg3); border-radius: 0 0 14px 14px; }
 .pp-submit-q { font-size: 12px; color: var(--text2); line-height: 1.5; margin-bottom: 10px; }
+.pp-submit-rejected { padding: 9px 11px; border-radius: 8px; background: var(--red-bg, rgba(220,38,38,.07)); color: var(--text); }
+.pp-submit-rejected b { color: var(--red); }
 .pp-submit-q b { color: var(--text); font-weight: 600; }
 .pp-btn-submit { width: 100%; justify-content: center; gap: 7px; font-size: 12.5px; padding: 9px 12px; background: var(--navy-mid); color: #fff; box-shadow: none; }
 .pp-btn-submit:hover { background: #2a2d38; transform: none; box-shadow: none; }
@@ -631,6 +633,12 @@
               <div class="pp-submit-note">Your team leader submitted these for checking.</div>
             @endif
           @else
+            @if ($allRejected)
+              <div class="pp-submit-q pp-submit-rejected" role="status">
+                <b>Your CaPSA did not recommend any of these titles.</b>
+                Save new titles{{ $isLeader ? ', then submit them for checking again' : ' - your team leader submits them' }}. You can remove the rejected ones.
+              </div>
+            @endif
             @if (! $isLeader)
               <div class="pp-submit-note">Only your team leader can submit these for checking.</div>
             @elseif ($canTurnIn)
@@ -656,7 +664,7 @@
                 </button>
               </form>
             @else
-              <div class="pp-submit-note">Save a pre-proposal title first.</div>
+              <div class="pp-submit-note">{{ $allRejected ? 'Save a new title to submit.' : 'Save a pre-proposal title first.' }}</div>
             @endif
           @endif
         </div>
