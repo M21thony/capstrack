@@ -237,7 +237,14 @@
 .pp-summary b { color: var(--red); font-weight: 600; }
 .pp-summary ul { margin: 6px 0 0; padding-left: 18px; color: var(--text2); }
 .pp-dialog-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 22px; border-top: 1px solid var(--border); background: var(--bg2); flex-shrink: 0; }
-.pp-foot-note { font-size: 12px; color: var(--text3); }
+.pp-foot-note { font-size: 12px; color: var(--text3); line-height: 1.5; min-width: 0; }
+.pp-foot-note.is-left { color: var(--text2); }
+.pp-foot-note.is-left b { color: var(--red); font-weight: 600; }
+.pp-foot-note.is-done { color: var(--green); font-weight: 600; }
+.pp-jump { padding: 0; border: 0; background: none; font: inherit; color: var(--text); text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+.pp-jump:hover { color: var(--red); }
+.pp-jump:focus-visible { outline: 2px solid var(--accent3, #8a6e10); outline-offset: 2px; border-radius: 2px; }
+.pp-btn.primary.is-blocked { background: #e9d98f; border-color: #e9d98f; color: #6b5a1a; }
 .pp-foot-actions { display: flex; gap: 8px; }
 .pp-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 36px; padding: 0 16px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
 .pp-btn:hover { border-color: var(--text3); }
@@ -253,7 +260,8 @@
   .pp-dialog-head, .pp-dialog-body, .pp-dialog-foot { padding-left: 16px; padding-right: 16px; }
   .pp-grid { grid-template-columns: 1fr; }
   .pp-section:last-child .pp-grid .pp-field:nth-last-child(2) { margin-bottom: 16px; }
-  .pp-foot-note { display: none; }
+  .pp-dialog-foot { flex-wrap: wrap; }
+  .pp-foot-note { width: 100%; }
   .pp-foot-actions { width: 100%; }
   .pp-foot-actions .pp-btn { flex: 1; }
 }
@@ -1100,7 +1108,10 @@ function clearFieldError(input) {
   if (field && field.classList.contains('has-error')) setFieldError(field.dataset.field, '');
 }
 
-function ppFormIsComplete(form) {
+// Everything the form still needs, in the order it is laid out. `commit`
+// adds whatever is typed in the agenda box but not added yet, which only a
+// save does - checking as the student types must not move their words.
+function ppProblems(form, commit) {
   const problems = [];
   const title = document.getElementById('title');
   const titleText = title ? title.value.trim() : '';
@@ -1110,6 +1121,23 @@ function ppFormIsComplete(form) {
     problems.push(['title', 'Give your pre-proposal a title.']);
   } else if (words > TITLE_MAX_WORDS) {
     problems.push(['title', 'Keep the title to ' + TITLE_MAX_WORDS + ' meaningful words or fewer. It has ' + words + '.']);
+  }
+
+  if (!form.querySelectorAll('input[name="sdg_goals[]"]:checked').length) {
+    problems.push(['sdg_goals', 'Choose at least one Sustainable Development Goal.']);
+  }
+
+  // Something typed into the agenda box but not added yet still counts:
+  // it is what the student meant, and losing it on save would be a surprise.
+  const agendaInput = document.getElementById('agenda-input');
+  if (commit && agendaInput && agendaInput.value.trim()) addAgendaFromInput();
+  const agendaPending = !commit && agendaInput && agendaInput.value.trim();
+  if (!form.querySelectorAll('input[name="research_agenda[]"]').length && !agendaPending) {
+    problems.push(['research_agenda', 'Add at least one research agenda or priority area.']);
+  }
+
+  if (!form.querySelectorAll('input[name="tags[]"]:checked').length) {
+    problems.push(['tags', 'Pick at least one tag for what kind of project this is.']);
   }
 
   const needed = [
@@ -1128,23 +1156,85 @@ function ppFormIsComplete(form) {
     if (el && !String(el.value || '').trim()) problems.push([n[0], n[2]]);
   });
 
-  if (!form.querySelectorAll('input[name="sdg_goals[]"]:checked').length) {
-    problems.unshift(['sdg_goals', 'Choose at least one Sustainable Development Goal.']);
-  }
+  // Laid out order, whatever order they were found in.
+  const order = Array.from(form.querySelectorAll('[data-field]')).map(function (f) { return f.dataset.field; });
+  return problems.sort(function (x, y) { return order.indexOf(x[0]) - order.indexOf(y[0]); });
+}
 
-  // Something typed into the agenda box but not added yet still counts:
-  // it is what the student meant, and losing it on save would be a surprise.
-  const agendaInput = document.getElementById('agenda-input');
-  if (agendaInput && agendaInput.value.trim()) addAgendaFromInput();
-  if (!form.querySelectorAll('input[name="research_agenda[]"]').length) {
-    problems.push(['research_agenda', 'Add at least one research agenda or priority area.']);
-  }
+// A field the server refused (a title already taken, say) keeps the server's
+// reason until the student changes that field.
+// Read as the script runs (the form is above it), before anything reopens it.
+const ppServerErrors = new Set(Array.from(document.querySelectorAll('#pp-form [data-field].has-error'), function (f) { return f.dataset.field; }));
 
-  if (!form.querySelectorAll('input[name="tags[]"]:checked').length) {
-    problems.push(['tags', 'Pick at least one tag for what kind of project this is.']);
-  }
+function ppFieldName(key) {
+  const field = document.querySelector('#pp-form [data-field="' + key + '"]');
+  const label = field && field.querySelector(':scope > label, legend');
+  return label ? label.textContent.trim() : key;
+}
 
-  document.querySelectorAll('#pp-form [data-field]').forEach(function (f) { setFieldError(f.dataset.field, ''); });
+// What is still missing, shown before Save is pressed: under each field, and
+// counted in the footer beside Save, updated as the student types.
+function refreshPpForm() {
+  const form = document.getElementById('pp-form');
+  if (!form) return [];
+  const problems = ppProblems(form, false);
+  const byField = Object.fromEntries(problems);
+
+  form.querySelectorAll('[data-field]').forEach(function (f) {
+    const key = f.dataset.field;
+    if (ppServerErrors.has(key)) return;
+    setFieldError(key, byField[key] || '');
+  });
+
+  const note = document.getElementById('pp-foot-note');
+  const save = document.getElementById('pp-save-btn');
+  if (note) {
+    note.replaceChildren();
+    note.classList.toggle('is-done', problems.length === 0);
+    note.classList.toggle('is-left', problems.length > 0);
+    if (!problems.length) {
+      note.textContent = 'Everything is filled in. Ready to save.';
+    } else {
+      const lead = document.createElement('b');
+      lead.textContent = problems.length === 1 ? '1 thing left: ' : problems.length + ' things left: ';
+      note.append(lead);
+      problems.slice(0, 3).forEach(function (p, i) {
+        if (i) note.append(', ');
+        const jump = document.createElement('button');
+        jump.type = 'button';
+        jump.className = 'pp-jump';
+        jump.textContent = ppFieldName(p[0]);
+        jump.addEventListener('click', function () { ppGoTo(p[0]); });
+        note.append(jump);
+      });
+      if (problems.length > 3) note.append(' and ' + (problems.length - 3) + ' more');
+    }
+  }
+  if (save) save.classList.toggle('is-blocked', problems.length > 0);
+  if (save) save.setAttribute('aria-describedby', 'pp-foot-note');
+  return problems;
+}
+
+function ppGoTo(key) {
+  const field = document.querySelector('#pp-form [data-field="' + key + '"]');
+  if (!field) return;
+  field.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  const focusable = field.querySelector('input:not([type=hidden]):not([disabled]), select, textarea');
+  if (focusable) focusable.focus({ preventScroll: true });
+}
+
+let ppRefreshTimer = null;
+function queuePpRefresh(e) {
+  const field = e && e.target && e.target.closest && e.target.closest('#pp-form [data-field]');
+  if (field) ppServerErrors.delete(field.dataset.field);
+  clearTimeout(ppRefreshTimer);
+  ppRefreshTimer = setTimeout(refreshPpForm, 120);
+}
+document.addEventListener('input', function (e) { if (e.target.closest && e.target.closest('#pp-form')) queuePpRefresh(e); });
+document.addEventListener('change', function (e) { if (e.target.closest && e.target.closest('#pp-form')) queuePpRefresh(e); });
+
+function ppFormIsComplete(form) {
+  const problems = ppProblems(form, true);
   const summary = document.getElementById('pp-summary');
   if (summary) summary.hidden = true;
 
@@ -1156,13 +1246,9 @@ function ppFormIsComplete(form) {
     return true;
   }
 
-  problems.forEach(function (p) { setFieldError(p[0], p[1]); });
-  const first = document.querySelector('#pp-form [data-field="' + problems[0][0] + '"]');
-  if (first) {
-    first.scrollIntoView({ block: 'center', behavior: 'smooth' });
-    const focusable = first.querySelector('input:not([type=hidden]):not([disabled]), select, textarea');
-    if (focusable) focusable.focus({ preventScroll: true });
-  }
+  ppServerErrors.clear();
+  refreshPpForm();
+  ppGoTo(problems[0][0]);
   showToast(problems.length === 1 ? problems[0][1] : problems.length + ' details need a look before this can be saved.', 'error');
 
   return false;
@@ -1349,6 +1435,8 @@ function renderAgendaTags() {
   });
   suggestWrap.hidden = left.length === 0;
   saveDraft();
+  // Chips added or removed fire no input event on the form.
+  if (document.getElementById('pp-form-modal-overlay')?.classList.contains('show')) queuePpRefresh();
 }
 
 function rememberAgendaSuggestions() {
@@ -1789,6 +1877,8 @@ function openPpFormModal() {
   document.body.style.overflow = 'hidden';
   growAllTextareas();
   updateWordCount();
+  // What still needs filling in shows as it opens, not after Save.
+  refreshPpForm();
 }
 
 function closePpFormModal() {
