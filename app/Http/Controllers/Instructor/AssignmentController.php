@@ -3,14 +3,16 @@
 namespace App\Http\Controllers\Instructor;
 
 use App\Http\Controllers\Controller;
+use App\Models\CapstonePreProposal;
 use App\Models\Notification;
 use App\Models\TeamExpertAssignment;
+use App\Services\RecipientResolver;
+use App\Support\TitleRevision;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\Validator;
 
 class AssignmentController extends Controller
 {
@@ -18,14 +20,17 @@ class AssignmentController extends Controller
     {
         $expert = Auth::guard('expert')->user();
 
+        // A queue is worked from the front: whoever has waited longest first.
         $pendingAssignments = TeamExpertAssignment::where('expert_id', $expert->expert_id)
             ->where('status', 'pending')
             ->with(['team', 'team.leader', 'team.members', 'expert.roles', 'expertRole.role', 'preProposal'])
+            ->oldest()
             ->get();
 
         $approvedAssignments = TeamExpertAssignment::where('expert_id', $expert->expert_id)
             ->where('status', 'approved')
             ->with(['team', 'team.leader', 'team.members', 'expert.roles', 'expertRole.role', 'preProposal'])
+            ->latest()
             ->get();
 
         $rejectedAssignments = TeamExpertAssignment::where('expert_id', $expert->expert_id)
@@ -88,22 +93,50 @@ class AssignmentController extends Controller
                 // that got through, not a PDF the team chose to attach.
                 'approved_title' => $a->preProposal?->title,
                 'date' => $a->created_at ? $a->created_at->format('M d, Y g:i A') : 'N/A',
+                // How long a request has sat in the queue. Three days is when
+                // a team starts to wonder whether anyone has seen it.
+                'waiting' => $a->created_at ? $a->created_at->diffForHumans(null, true) : '',
+                'stale' => $a->created_at ? $a->created_at->lte(now()->subDays(3)) : false,
+                'decided' => $a->updated_at ? $a->updated_at->format('M d, Y g:i A') : '',
                 'rejection_reason' => $a->rejection_reason ?? null,
                 'status' => $a->status ?? 'pending',
             ]];
         })->toArray();
 
         // New titles waiting for this expert to confirm as a team's adviser.
-        $resolver = app(\App\Services\RecipientResolver::class);
-        $titleConfirmations = \App\Models\CapstonePreProposal::where('adviser_status', \App\Support\TitleRevision::PENDING)
+        $resolver = app(RecipientResolver::class);
+        $titleConfirmations = CapstonePreProposal::where('adviser_status', TitleRevision::PENDING)
             ->whereNull('retired_at')
             ->with(['team', 'duplicationCheck'])
             ->get()
             ->filter(fn ($p) => $resolver->resolveTeamRoleExpert((int) $p->team_id, 'adviser') === (int) $expert->expert_id)
+            ->sortBy('created_at')
             ->values();
+
+        $titleData = $titleConfirmations->mapWithKeys(function ($tc) {
+            $setAside = $tc->team
+                ? $tc->team->allPreProposals()->whereNotNull('retired_at')->pluck('title')->filter()->values()->all()
+                : [];
+
+            return [$tc->id => [
+                'team' => $tc->team?->team_name ?? 'Unknown',
+                'title' => $tc->title,
+                'replaces' => $setAside,
+                'verdict' => $tc->duplicationCheck?->verdict,
+                'top_score' => $tc->duplicationCheck?->top_score,
+                'document' => $tc->duplicationCheck?->document_path
+                    ? route('instructor.title-confirmations.document', $tc)
+                    : null,
+                'update_url' => route('instructor.title-confirmations.update', $tc),
+                'date' => $tc->created_at ? $tc->created_at->format('M d, Y g:i A') : '',
+                'waiting' => $tc->created_at ? $tc->created_at->diffForHumans(null, true) : '',
+                'stale' => $tc->created_at ? $tc->created_at->lte(now()->subDays(3)) : false,
+            ]];
+        })->toArray();
 
         return view('instructor.assignments', [
             'titleConfirmations' => $titleConfirmations,
+            'titleData' => $titleData,
             'pendingAssignments' => $pendingAssignments,
             'approvedAssignments' => $approvedAssignments,
             'rejectedAssignments' => $rejectedAssignments,
@@ -289,43 +322,16 @@ class AssignmentController extends Controller
     }
 
     /**
-     * Drop a team an expert has already taken on.
+     * Clear a declined request off the expert's list.
      *
-     * This used to go through on one click, with nothing recorded and nobody
-     * told - a team simply lost its adviser and had no way of knowing why.
-     * It now asks for a reason and for the word to be typed, the same as the
-     * team's own side of this, and the reason reaches the team.
+     * An expert cannot drop a team they approved: the team built its plans
+     * around that yes, and a change of expert goes through their CaPSA (the
+     * students' own side asks for it the same way). What is left here is
+     * tidying the Declined tab. The team was already told why when it was
+     * declined, so nobody is notified again.
      */
     public function remove(Request $request, $id): JsonResponse
     {
-        // Checked by hand rather than through $request->validate(): this is
-        // only ever called by fetch(), and a failed validate() redirects,
-        // which reaches the browser as a page of HTML where JSON was
-        // expected and fails silently.
-        $validator = Validator::make($request->all(), [
-            'reason' => ['required', 'string', 'min:3', 'max:500'],
-            'confirm' => ['required', 'string'],
-        ], [
-            'reason.required' => 'Say why you are no longer working with this team.',
-            'reason.min' => 'Say why you are no longer working with this team.',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => $validator->errors()->first(),
-            ], 422);
-        }
-
-        $validated = $validator->validated();
-
-        if (strcasecmp(trim($validated['confirm']), 'remove') !== 0) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Type "remove" to confirm.',
-            ], 422);
-        }
-
         $expert = Auth::guard('expert')->user();
 
         $assignment = TeamExpertAssignment::where('assignment_id', $id)
@@ -342,12 +348,16 @@ class AssignmentController extends Controller
         if ($assignment->status === 'pending') {
             return response()->json([
                 'success' => false,
-                'message' => 'Please reject the request instead.',
+                'message' => 'Please decline the request instead.',
             ], 422);
         }
 
-        $team = $assignment->team;
-        $expertName = $expert->name;
+        if ($assignment->status === 'approved') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Approved teams stay with you. If you can no longer work with this team, ask their CaPSA.',
+            ], 422);
+        }
 
         if ($assignment->proposal_file) {
             Storage::disk('public')->delete($assignment->proposal_file);
@@ -355,24 +365,9 @@ class AssignmentController extends Controller
 
         $assignment->delete();
 
-        // The team finds out from this, so it is sent after the row is gone
-        // rather than in place of it - the assignment itself is what frees
-        // the slot, and the reason is what the team is owed.
-        if ($team && $team->leader_id) {
-            Notification::create([
-                'student_id' => $team->leader_id,
-                'type' => 'expert_removed',
-                'title' => 'Expert Withdrew',
-                'message' => e($expertName).' is no longer working with your team. Reason: '.e($validated['reason']),
-                'link' => route('student.experts'),
-                'is_read' => false,
-                'created_at' => now(),
-            ]);
-        }
-
         return response()->json([
             'success' => true,
-            'message' => 'Assignment removed successfully.',
+            'message' => 'Removed from your list.',
         ]);
     }
 }
