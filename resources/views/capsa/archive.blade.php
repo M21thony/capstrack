@@ -138,7 +138,7 @@
         </select>
       </div>
       <div style="display:flex;justify-content:flex-end;gap:8px;align-items:center">
-        <span style="font-size:12px;color:var(--text3)" id="arch-count">Showing 8 studies</span>
+        <span style="font-size:12px;color:var(--text3)" id="arch-count">Showing {{ $archives->count() }} {{ Str::plural('study', $archives->count()) }}</span>
       </div>
     </div>
 
@@ -373,7 +373,7 @@ function filterArch(){
     card.style.display=show?'':'none';
     if(show)c++;
   });
-  document.getElementById('arch-count').textContent='Showing '+c+' studies';
+  document.getElementById('arch-count').textContent='Showing '+c+' '+(c===1?'study':'studies');
   document.getElementById('arch-empty').style.display=c===0?'block':'none';
 }
 function saveArchive() {
