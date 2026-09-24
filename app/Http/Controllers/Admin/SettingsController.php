@@ -18,7 +18,7 @@ class SettingsController extends Controller
             'currentSchoolYear' => Setting::get('current_school_year'),
             'sections' => SectionCatalog::defined(),
             'programs' => CapstoneExpert::PROGRAMS,
-            'years' => SectionCatalog::CAPSTONE_YEARS,
+            'years' => [SectionCatalog::STARTING_YEAR],
             'letters' => str_split(SectionCatalog::LETTERS),
         ]);
     }
@@ -37,11 +37,12 @@ class SettingsController extends Controller
     }
 
     /**
-     * Write down a run of sections - programs and a range of letters, for
-     * each capstone year level (3rd and 4th).
+     * Write down a run of sections - programs and a range of letters - for
+     * 3rd year, where capstone starts.
      *
-     * The Admin used to pick year levels too. Capstone only ever runs in 3rd
-     * and 4th year, so that choice could only be got wrong.
+     * The Admin picks no year. 4th-year sections are not made here: made for
+     * both years at once, every CaPSA looked like they ran 3rd and 4th year
+     * together. They come from the student list once students are in them.
      *
      * A range rather than one at a time because a department does not run
      * section D without running A, B and C, and typing eight labels by hand
@@ -61,9 +62,7 @@ class SettingsController extends Controller
         $made = [];
 
         foreach ($validated['programs'] as $program) {
-            foreach (SectionCatalog::CAPSTONE_YEARS as $year) {
-                $made = array_merge($made, SectionCatalog::range($program, (int) $year, $validated['from'], $validated['to']));
-            }
+            $made = array_merge($made, SectionCatalog::range($program, SectionCatalog::STARTING_YEAR, $validated['from'], $validated['to']));
         }
 
         if ($made === []) {
