@@ -83,7 +83,7 @@
           {{-- Messages are written as HTML and escape their own values at
                the source, the same way the student bell renders them. --}}
           <div class="notif-item-msg">{!! $n->message !!}</div>
-          <div class="notif-item-time">{{ $n->created_at?->diffForHumans() }}</div>
+          <div class="notif-item-time" data-at="{{ $n->created_at?->toIso8601String() }}">{{ $n->created_at?->diffForHumans() }}</div>
         </div>
       </a>
     @empty
