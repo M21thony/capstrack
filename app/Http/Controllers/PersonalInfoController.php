@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StorePersonalInfoRequest;
 use App\Models\Student;
 use App\Models\StudentSchoolYear;
+use App\Models\Term;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 
@@ -73,7 +74,10 @@ class PersonalInfoController extends Controller
         $student->l_name = $validated['last_name'];
         $student->suffix = $validated['suffix'] ?? null;
         $student->student_number = $validated['student_id'];
-        $student->course = $validated['course'];
+        // Always the full course name, however it was entered: classmates are
+        // matched on this column, so "BSIT" and the full name must not differ.
+        $code = Student::mapCourseToProgram($validated['course']);
+        $student->course = $code ? Student::PROGRAM_COURSES[$code] : $validated['course'];
         $student->year_section = $validated['year'].' · '.strtoupper(substr($validated['section'], 0, 1));
 
         $student->save();
@@ -81,13 +85,13 @@ class PersonalInfoController extends Controller
         $program = Student::mapCourseToProgram($validated['course']);
 
         if ($program) {
-            $schoolYear = \App\Models\Term::currentSchoolYear();
+            $schoolYear = Term::currentSchoolYear();
 
             StudentSchoolYear::updateOrCreate(
                 // Keyed on the term too: this table is one row per student
                 // per term, so keying on the student alone reaches back and
                 // rewrites an earlier semester's row.
-                ['student_id' => $student->student_id, 'term_id' => \App\Models\Term::activeId()],
+                ['student_id' => $student->student_id, 'term_id' => Term::activeId()],
                 [
                     'program' => $program,
                     'school_year' => $schoolYear,
