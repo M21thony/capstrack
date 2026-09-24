@@ -1052,7 +1052,7 @@ function uploadStudentRoster(btn) {
         <div class="form-group sheet-col"><label class="label" for="edit-student-last">Last name</label>
           <input class="input" id="edit-student-last"></div>
         <div class="form-group sheet-col"><label class="label" for="edit-student-number">Student no.</label>
-          <input class="input" id="edit-student-number"></div>
+          <input class="input" id="edit-student-number" placeholder="e.g. 221001135" required aria-required="true"></div>
       </div>
 
       <div class="sheet-row">

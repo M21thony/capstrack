@@ -365,6 +365,15 @@ class StudentRosterController extends Controller
                 continue;
             }
 
+            // Every student is added with their number, as on Add Student. A
+            // row may leave it out only for a student already on file with one.
+            if ($get('student_number') === '' && ! Student::whereRaw('LOWER(email) = ?', [$email])->whereNotNull('student_number')->where('student_number', '!=', '')->exists()) {
+                $skipped++;
+                $errors[] = "Row {$rowNum}: '{$email}' has no student number - skipped.";
+
+                continue;
+            }
+
             // The Admin declares the school year, so every row of every
             // upload gets that one. A per-row column used to be able to
             // disagree with it, and a mistyped "26-27" skipped the student
