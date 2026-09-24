@@ -238,19 +238,17 @@
 .rp-experts-h .dup-apply-note{margin:0;font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 .dup-apply-btn.rp-lock{padding:6px 8px}
 .rp-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
-.rp-experts-grid{display:grid;grid-template-columns:repeat(var(--roles,3),minmax(0,1fr));gap:12px;align-items:start}
-.rp-role{display:flex;flex-direction:column;gap:6px;min-width:0}
-.rp-role>.sx-role{margin:0 2px}
-.rp-role>.sx-role span{font-weight:600;color:var(--text3);text-transform:none;letter-spacing:0}
-.rp-also{border:1px solid var(--border);border-radius:10px;background:var(--bg3)}
-.rp-also>summary{display:flex;gap:6px;align-items:center;min-width:0;padding:6px 12px;font-size:12px;color:var(--text2);cursor:pointer;list-style:none}
-.rp-also>summary::-webkit-details-marker{display:none}
-.rp-also>summary::after{content:"";flex-shrink:0;width:7px;height:7px;margin-left:auto;border-right:2px solid var(--text3);border-bottom:2px solid var(--text3);transform:rotate(45deg) translateY(-2px);transition:transform .15s}
-.rp-also[open]>summary::after{transform:rotate(-135deg)}
-.rp-also>summary:focus-visible{outline:2px solid var(--accent3);outline-offset:2px;border-radius:10px}
-.rp-also-lbl{flex-shrink:0;font-weight:600;color:var(--text)}
-.rp-also-names{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
-.rp-also .rp-expert{margin:0 8px 8px;background:#fff}
+.rp-experts-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.rp-card-slot{display:flex;min-width:0}
+.rp-card-slot[hidden]{display:none}
+.rp-card-slot>.rp-expert{flex:1}
+.rp-pager{display:flex;align-items:center;gap:6px;margin-left:auto;flex-shrink:0}
+.rp-pager-count{font-size:12px;color:var(--text3);font-variant-numeric:tabular-nums;margin-right:4px}
+.rp-page-btn{width:30px;height:30px;display:grid;place-items:center;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text);cursor:pointer}
+.rp-page-btn:hover:not(:disabled){border-color:var(--border2)}
+.rp-page-btn:disabled{opacity:.4;cursor:default}
+.rp-page-btn:focus-visible{outline:2px solid var(--accent3);outline-offset:2px}
+.rp-page-btn svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2.4}
 @media (max-width:1100px){.rp-experts-grid{grid-template-columns:minmax(0,1fr)}}
 .rp-expert{display:flex;gap:12px;align-items:flex-start;padding:10px 14px;border:1px solid var(--border);border-radius:12px;min-width:0}
 .rp-expert-who{flex:1;min-width:0}

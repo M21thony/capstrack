@@ -108,22 +108,36 @@ class SimilarityReportLayoutTest extends TestCase
         $this->assertSame(['close' => 1, 'some' => 0, 'little' => 0], SimilarityBand::counts([['score' => 80], ['score' => 90, 'assessed' => false]]));
     }
 
-    /** More suggestions do not mean more rows: one column per role, the rest folded. */
-    public function test_many_suggested_experts_stay_one_column_per_role(): void
+    /** More suggestions do not mean more rows: three full cards at a time, with arrows for the rest. */
+    public function test_many_suggested_experts_page_three_at_a_time(): void
     {
         $check = $this->report();
         $suggested = [];
-        foreach ([['Mark Balilla, MIT', 'adviser', 'Adviser'], ['Kenn Aurillas', 'adviser', 'Adviser'], ['Ian Tumambing', 'adviser', 'Adviser'], ['Maria Santos', 'consultant', 'Consultant']] as [$name, $role, $label]) {
+        foreach ([['Maria Santos', 'consultant', 'Consultant'], ['Mark Balilla, MIT', 'adviser', 'Adviser'], ['Kenn Aurillas', 'adviser', 'Adviser'], ['Ian Tumambing', 'adviser', 'Adviser']] as [$name, $role, $label]) {
             $expert = CapstoneExpert::factory()->create(['approved_status' => true]);
             $suggested[] = ['id' => $expert->expert_id, 'name' => $name, 'expertise' => 'Web Development', 'reason' => 'Fits the study.', 'role' => $role, 'role_label' => $label];
         }
         $check->update(['instructors_suggested' => $suggested]);
 
+        $html = $this->actingAs($this->leader)->get(route('student.duplication.report', $check->id))
+            ->assertSee('1&ndash;3 of 4', false)
+            ->assertSee('aria-label="Next experts"', false)
+            ->assertDontSee('<details', false)
+            // Advisers first; the fourth card waits behind the arrow, whole.
+            ->assertSeeInOrder(['Mark Balilla, MIT', 'Kenn Aurillas', 'Ian Tumambing', 'Maria Santos'])
+            ->getContent();
+
+        $this->assertSame(1, preg_match_all('/class="rp-card-slot"\s+hidden/', $html));
+    }
+
+    public function test_three_or_fewer_experts_need_no_arrows(): void
+    {
+        $check = $this->report();
+        $expert = CapstoneExpert::factory()->create(['approved_status' => true]);
+        $check->update(['instructors_suggested' => [['id' => $expert->expert_id, 'name' => 'Mark Balilla, MIT', 'expertise' => 'Web', 'reason' => 'Fits.', 'role' => 'adviser', 'role_label' => 'Adviser']]]);
+
         $this->actingAs($this->leader)->get(route('student.duplication.report', $check->id))
-            ->assertSee('style="--roles: 2"', false)
-            ->assertSee('Recommended Adviser <span>&middot; 3 suggested</span>', false)
-            ->assertSeeInOrder(['Mark Balilla, MIT', 'Also suggested:', 'Kenn Aurillas · Ian Tumambing', 'Recommended Consultant', 'Maria Santos'])
-            // The folded ones are still whole, one click away.
-            ->assertSee('<details class="rp-also">', false);
+            ->assertSee('Mark Balilla, MIT')
+            ->assertDontSee('aria-label="Next experts"', false);
     }
 }
