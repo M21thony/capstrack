@@ -27,7 +27,11 @@ use Illuminate\Support\Facades\DB;
  *             the CaPSA checks it complete.
  *
  * The Recommended Pre-Proposal Title Form is the one form that needs no
- * paper: the CaPSA recommends a title in CapsTrack, and that closes it. A signed CLF is paper like a
+ * paper: the CaPSA recommends a title in CapsTrack, and that closes it.
+ *
+ * The Signed Final Project Title Form is signed on the title the panel
+ * passed, so it waits for a passed Pre-proposal Defense wherever the line
+ * sits, and nothing sent or checked for it before that counts. A signed CLF is paper like a
  *             form: there is no e-signing, so the adviser's approval in
  *             Document Review is only a hint that the signed copy can follow.
  *
@@ -214,6 +218,8 @@ class MilestoneProgress
      *   a defense waits for everything above it (the recommending CLFs and
      *     the hearing notice come first)
      *   anything below a defense waits for the defense
+     *   the Signed Final Project Title Form waits for a passed Pre-proposal
+     *     Defense, wherever it sits
      *
      * Forms with no defense above them are free to come in any order.
      */
@@ -226,6 +232,10 @@ class MilestoneProgress
             Deliverable::APPROVAL => $open->where('item.kind', Deliverable::DOCUMENT),
             default => collect(),
         })->merge($open->where('item.kind', Deliverable::DEFENSE));
+
+        if ($needs->isEmpty() && ($row->awaits_defense ?? null)) {
+            return 'a passed '.$row->awaits_defense;
+        }
 
         return $needs->isEmpty() ? null : self::names($needs->pluck('item.title')->unique()->all());
     }
@@ -364,6 +374,16 @@ class MilestoneProgress
     ): object {
         $due = $deliverable->due_date;
         $byRecommendation = $deliverable->closesOnTitleRecommendation();
+
+        // Signed on the title the panel passed: before that pass, an upload or a check for it does not count.
+        $awaitsDefense = $deliverable->template_key === TitleRevision::FINAL_TITLE_FORM
+            && ! $defenses->get(DefenseOutcome::PRE_PROPOSAL)?->passed_at;
+
+        if ($awaitsDefense) {
+            $uploads = collect();
+            $check = null;
+        }
+
         // Nothing is uploaded for a line the recommendation closes; a file sent for it before is not waited on.
         $own = $byRecommendation ? collect() : self::uploadsForDeliverable($deliverable, $uploads);
 
@@ -406,6 +426,7 @@ class MilestoneProgress
             'check' => $check,
             'note' => $changesRequested && $check?->status === DeliverableCheck::SENT_BACK ? $check->note : null,
             'approved_at' => $approvedAt ? Carbon::parse($approvedAt) : null,
+            'awaits_defense' => $awaitsDefense ? DefenseOutcome::PRE_PROPOSAL : null,
         ];
 
         if ($closedAt) {
@@ -651,7 +672,8 @@ class MilestoneProgress
      */
     private static function defensesFor(Collection $teamIds, Collection $deliverables): Collection
     {
-        if ($deliverables->where('kind', Deliverable::DEFENSE)->isEmpty()) {
+        if ($deliverables->where('kind', Deliverable::DEFENSE)->isEmpty()
+            && $deliverables->where('template_key', TitleRevision::FINAL_TITLE_FORM)->isEmpty()) {
             return collect();
         }
 
