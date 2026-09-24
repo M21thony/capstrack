@@ -265,7 +265,7 @@
           <div class="ann-modal-tags" id="annModalTags"></div>
           <div class="ann-modal-footer">
           <div class="ann-modal-sender">
-            <img class="ann-avatar" id="annModalAvatar" src="" alt="">
+            <img class="ann-avatar" id="annModalAvatar" alt="" hidden>
             <span id="annModalName"></span>
           </div>
           <div class="ann-modal-date" id="annModalDate"></div>
@@ -463,7 +463,8 @@
                 alt="Receipt for {{ $expenseTitle }}"
                 class="receipt-thumb"
                 title="Click to view full receipt"
-                onclick="openReceipt(this.src)">
+                onclick="openReceipt(this.src)"
+                onerror="this.onerror=null;this.onclick=null;this.title='Receipt file not found';this.style.cursor='default';this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 40 40%22%3E%3Crect width=%2240%22 height=%2240%22 rx=%226%22 fill=%22%23f3f4f6%22/%3E%3Cg transform=%22translate(11 11)%22 fill=%22none%22 stroke=%22%239ca3af%22 stroke-width=%221.5%22%3E%3Crect x=%221%22 y=%221%22 width=%2216%22 height=%2216%22 rx=%222%22/%3E%3Ccircle cx=%225.5%22 cy=%225.5%22 r=%221.3%22/%3E%3Cpolyline points=%2217 12 12.5 7.5 3 17%22/%3E%3C/g%3E%3C/svg%3E'">
           @else
             <div class="receipt-thumb receipt-thumb--empty" style="width:40px;height:40px;border-radius:6px;background:var(--bg2);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
               <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="var(--text3)" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
@@ -540,8 +541,13 @@ function openAnnModal(el) {
   document.getElementById('annModalDate').textContent = el.dataset.date;
   document.getElementById('annModalName').textContent = el.dataset.adminName;
 
+  // No photo, or one that will not load, shows no picture rather than a
+  // broken-image box beside the sender's name.
   var avatar = document.getElementById('annModalAvatar');
-  avatar.src = el.dataset.adminAvatar;
+  avatar.onerror = function () { avatar.hidden = true; };
+  avatar.hidden = !el.dataset.adminAvatar;
+  if (el.dataset.adminAvatar) avatar.src = el.dataset.adminAvatar;
+  else avatar.removeAttribute('src');
 
   var priority = el.dataset.priority;
   var priorityEl = document.getElementById('annModalPriority');
