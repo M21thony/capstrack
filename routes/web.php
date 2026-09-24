@@ -142,10 +142,10 @@ Route::middleware(['expert.auth', 'no.cache', 'track.expert'])->prefix('admin')-
         // through the toggle - see AdminExpertsController::updateSections.
         Route::put('/experts/{expert}/sections', [AdminExpertsController::class, 'updateSections'])->name('experts.sections');
         // A register, not an editor. Students belong to their CaPSA - enrolled
-        // from the section list and the roster import, both on that side - so the
-        // write routes are gone rather than hidden: a button an admin cannot use
-        // is a smaller problem than an endpoint they still can.
+        // from the section list and the roster import, both on that side. The
+        // one write is removing an account outright, which is the Admin's.
         Route::get('/students', [StudentAccountsController::class, 'index'])->name('students');
+        Route::delete('/students/{student}', [StudentAccountsController::class, 'destroy'])->name('students.destroy');
         Route::get('/settings', [AdminSettingsController::class, 'index'])->name('settings');
         Route::put('/settings', [AdminSettingsController::class, 'update'])->name('settings.update');
         // Sections have to exist before anybody can be made a CaPSA over them,

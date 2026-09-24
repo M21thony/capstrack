@@ -4,7 +4,11 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Student;
+use App\Models\StudentSchoolYear;
+use App\Models\Team;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 // Account management for Students - a genuinely new surface, distinct from
@@ -86,7 +90,54 @@ class StudentAccountsController extends Controller
     }
 
     /**
-     * Manually add a single student account, bypassing the roster-upload +
-     * Google sign-in gate (e.g. a late enrollee who needs access now).
+     * Remove a student's account for good.
+     *
+     * Deleting the account takes them off their team (Student::booted). The
+     * team is left whole: a leader's team passes to the member who joined
+     * first, and a team with nobody left goes too, rather than staying on
+     * every list with 0 members.
      */
+    public function destroy(Student $student): JsonResponse
+    {
+        $name = trim($student->f_name.' '.$student->l_name) ?: $student->email;
+        $teamId = StudentSchoolYear::withoutGlobalScope(StudentSchoolYear::ACTIVE_TERM_SCOPE)
+            ->where('student_id', $student->student_id)
+            ->whereNotNull('team_id')
+            ->value('team_id');
+
+        $teamNote = DB::transaction(function () use ($student, $teamId) {
+            $student->delete();
+
+            $team = $teamId ? Team::find($teamId) : null;
+
+            if (! $team) {
+                return '';
+            }
+
+            $left = StudentSchoolYear::withoutGlobalScope(StudentSchoolYear::ACTIVE_TERM_SCOPE)
+                ->where('team_id', $team->team_id)
+                ->orderBy('s_y_id')
+                ->pluck('student_id');
+
+            if ($left->isEmpty()) {
+                $team->delete();
+
+                return ' '.$team->team_name.' had no one else, so it was removed too.';
+            }
+
+            if ((int) $team->leader_id === (int) $student->student_id) {
+                $team->update(['leader_id' => $left->first()]);
+                $leader = Student::find($left->first());
+
+                return ' '.trim(($leader?->f_name ?? '').' '.($leader?->l_name ?? '')).' now leads '.$team->team_name.'.';
+            }
+
+            return '';
+        });
+
+        return response()->json([
+            'success' => true,
+            'message' => $name.' was removed.'.$teamNote,
+        ]);
+    }
 }
