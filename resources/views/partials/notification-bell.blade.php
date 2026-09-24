@@ -38,6 +38,60 @@
   ];
 @endphp
 
+{{-- Before the markup, not after it: a style further down arrives after
+     the browser may already have painted the panel and its popups,
+     which then flashed full-size on a refresh. --}}
+<style>
+/* The panel hangs off the bell. Without a positioned wrapper of its own it
+   measures against <body> and lands most of a page below the button. */
+.notif-wrap{position:relative;display:inline-flex}
+.notif-btn{position:relative}
+.notif-dot{position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;border-radius:9px;background:#ef4444;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;line-height:1;padding:0 4px}
+
+.notif-dropdown{position:absolute;top:calc(100% + 8px);right:0;width:380px;max-height:480px;background:var(--bg2,#fff);border:1px solid var(--border);border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,0.12),0 0 0 1px rgba(0,0,0,0.04);z-index:9999;display:none;text-align:left}
+.notif-dropdown.open{display:block;animation:notifFadeIn .12s ease}
+@keyframes notifFadeIn{from{opacity:0;transform:translateY(-6px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+
+.notif-dropdown-header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 10px;border-bottom:1px solid var(--border)}
+.notif-dropdown-title{font-size:14px;font-weight:700;color:var(--text)}
+.notif-mark-all-btn{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border:none;border-radius:6px;background:rgba(37,99,235,0.08);color:#2563eb;font-size:11px;font-weight:600;cursor:pointer;transition:background .12s}
+.notif-mark-all-btn:hover{background:rgba(37,99,235,0.15)}
+
+.notif-ask{display:flex;align-items:center;gap:10px;justify-content:space-between;padding:11px 16px;border-bottom:1px solid var(--border);background:var(--bg3)}
+.notif-ask-t{font-size:12.5px;font-weight:700;color:var(--text)}
+.notif-ask-m{font-size:11px;color:var(--text3);margin-top:1px}
+.notif-ask-btn{flex-shrink:0;padding:6px 12px;border:none;border-radius:6px;background:#2563eb;color:#fff;font-size:11.5px;font-weight:700;cursor:pointer}
+.notif-ask-btn:hover{background:#1d4ed8}
+
+.notif-list{max-height:360px;overflow-y:auto}
+.notif-list::-webkit-scrollbar{width:4px}
+.notif-list::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+
+.notif-item{display:flex;align-items:flex-start;gap:12px;padding:12px 16px;text-decoration:none;transition:background .1s;border-bottom:1px solid var(--border);position:relative}
+.notif-item:last-child{border-bottom:none}
+.notif-item:hover{background:var(--bg3)}
+/* Anything not yet opened keeps a tint, so a full list still reads at a glance. */
+.notif-item.is-unread{background:rgba(37,99,235,0.05)}
+.notif-item.is-unread .notif-item-title{font-weight:700}
+
+.notif-item-icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.notif-item-icon svg{width:16px;height:16px}
+
+.notif-item-body{flex:1;min-width:0}
+.notif-item-title{font-size:13px;font-weight:600;color:var(--text);margin-bottom:2px;line-height:1.3}
+.notif-item-msg{font-size:12px;color:var(--text2);line-height:1.4}
+.notif-item-time{font-size:11px;color:var(--text3);margin-top:4px}
+
+.notif-item::before{content:'';position:absolute;top:14px;left:0;width:3px;height:20px;border-radius:0 3px 3px 0;background:var(--accent);opacity:0;transition:opacity .1s}
+.notif-item:hover::before{opacity:1}
+
+.notif-empty{padding:40px 18px;text-align:center;font-size:13px;color:var(--text3);display:flex;flex-direction:column;align-items:center}
+.notif-footer{display:flex;border-top:1px solid var(--border)}
+.notif-footer a{flex:1;padding:11px 8px;text-align:center;font-size:11.5px;font-weight:600;color:var(--text3);text-decoration:none}
+.notif-footer a + a{border-left:1px solid var(--border)}
+.notif-footer a:hover{background:var(--bg3);color:var(--text2)}
+</style>
+
 <div class="notif-wrap" id="notif-wrap"
      data-vapid="{{ config('services.webpush.public_key') }}"
      data-subscribe="{{ route('instructor.push.subscribe') }}"
@@ -105,57 +159,6 @@
   </div>
 </div>
 </div>
-
-<style>
-/* The panel hangs off the bell. Without a positioned wrapper of its own it
-   measures against <body> and lands most of a page below the button. */
-.notif-wrap{position:relative;display:inline-flex}
-.notif-btn{position:relative}
-.notif-dot{position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;border-radius:9px;background:#ef4444;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;line-height:1;padding:0 4px}
-
-.notif-dropdown{position:absolute;top:calc(100% + 8px);right:0;width:380px;max-height:480px;background:var(--bg2,#fff);border:1px solid var(--border);border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,0.12),0 0 0 1px rgba(0,0,0,0.04);z-index:9999;display:none;text-align:left}
-.notif-dropdown.open{display:block;animation:notifFadeIn .12s ease}
-@keyframes notifFadeIn{from{opacity:0;transform:translateY(-6px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
-
-.notif-dropdown-header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 10px;border-bottom:1px solid var(--border)}
-.notif-dropdown-title{font-size:14px;font-weight:700;color:var(--text)}
-.notif-mark-all-btn{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border:none;border-radius:6px;background:rgba(37,99,235,0.08);color:#2563eb;font-size:11px;font-weight:600;cursor:pointer;transition:background .12s}
-.notif-mark-all-btn:hover{background:rgba(37,99,235,0.15)}
-
-.notif-ask{display:flex;align-items:center;gap:10px;justify-content:space-between;padding:11px 16px;border-bottom:1px solid var(--border);background:var(--bg3)}
-.notif-ask-t{font-size:12.5px;font-weight:700;color:var(--text)}
-.notif-ask-m{font-size:11px;color:var(--text3);margin-top:1px}
-.notif-ask-btn{flex-shrink:0;padding:6px 12px;border:none;border-radius:6px;background:#2563eb;color:#fff;font-size:11.5px;font-weight:700;cursor:pointer}
-.notif-ask-btn:hover{background:#1d4ed8}
-
-.notif-list{max-height:360px;overflow-y:auto}
-.notif-list::-webkit-scrollbar{width:4px}
-.notif-list::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
-
-.notif-item{display:flex;align-items:flex-start;gap:12px;padding:12px 16px;text-decoration:none;transition:background .1s;border-bottom:1px solid var(--border);position:relative}
-.notif-item:last-child{border-bottom:none}
-.notif-item:hover{background:var(--bg3)}
-/* Anything not yet opened keeps a tint, so a full list still reads at a glance. */
-.notif-item.is-unread{background:rgba(37,99,235,0.05)}
-.notif-item.is-unread .notif-item-title{font-weight:700}
-
-.notif-item-icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
-.notif-item-icon svg{width:16px;height:16px}
-
-.notif-item-body{flex:1;min-width:0}
-.notif-item-title{font-size:13px;font-weight:600;color:var(--text);margin-bottom:2px;line-height:1.3}
-.notif-item-msg{font-size:12px;color:var(--text2);line-height:1.4}
-.notif-item-time{font-size:11px;color:var(--text3);margin-top:4px}
-
-.notif-item::before{content:'';position:absolute;top:14px;left:0;width:3px;height:20px;border-radius:0 3px 3px 0;background:var(--accent);opacity:0;transition:opacity .1s}
-.notif-item:hover::before{opacity:1}
-
-.notif-empty{padding:40px 18px;text-align:center;font-size:13px;color:var(--text3);display:flex;flex-direction:column;align-items:center}
-.notif-footer{display:flex;border-top:1px solid var(--border)}
-.notif-footer a{flex:1;padding:11px 8px;text-align:center;font-size:11.5px;font-weight:600;color:var(--text3);text-decoration:none}
-.notif-footer a + a{border-left:1px solid var(--border)}
-.notif-footer a:hover{background:var(--bg3);color:var(--text2)}
-</style>
 
 <script src="/js/capstrack-push.js" defer></script>
 <script>

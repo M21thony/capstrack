@@ -3,6 +3,111 @@
   $seenNotifIds = session('student_seen_notification_ids', []);
   $unseenNotifCount = count(array_diff($allUnreadIds, $seenNotifIds));
 @endphp
+{{-- Before the markup, not after it: a style further down arrives after
+     the browser may already have painted the panel and its popups,
+     which then flashed full-size on a refresh. --}}
+<style>
+.notif-dot{position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;border-radius:9px;background:#ef4444;border:2px solid var(--navy-mid);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;line-height:1;padding:0 4px}
+
+.nld-confirm-overlay{display:none;position:fixed;inset:0;z-index:99999;align-items:center;justify-content:center;background:rgba(15,16,22,0.75);backdrop-filter:blur(6px);padding:20px}
+.nld-confirm-overlay.active{display:flex}
+.nld-confirm-card{background:#fff;border-radius:18px;padding:28px 24px 22px;width:100%;max-width:380px;box-shadow:0 24px 60px rgba(0,0,0,0.25);text-align:center;transform:scale(0.92);transition:transform 0.22s cubic-bezier(0.16,1,0.3,1);position:relative}
+.nld-confirm-overlay.active .nld-confirm-card{transform:scale(1)}
+.nld-confirm-icon{width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 14px}
+.nld-confirm-title{font-size:16px;font-weight:700;color:var(--text,#111827)}
+.nld-confirm-msg{font-size:13px;color:var(--text2,#6b7280);margin-top:8px;line-height:1.5}
+.nld-confirm-msg strong{color:var(--text,#111827)}
+.nld-confirm-actions{display:flex;gap:10px;margin-top:22px}
+.nld-confirm-btn{flex:1;padding:10px;border-radius:8px;border:none;font-size:13px;font-weight:700;cursor:pointer;color:#fff;transition:background .12s}
+.nld-confirm-cancel{background:#f3f4f6;color:#374151}
+.nld-confirm-cancel:hover{background:#e5e7eb}
+[data-theme="dark"] .nld-confirm-card{background:#1f2433}
+[data-theme="dark"] .nld-confirm-title{color:#f3f4f6}
+[data-theme="dark"] .nld-confirm-msg strong{color:#f3f4f6}
+
+.notif-dropdown{position:absolute;top:calc(100% + 8px);right:0;width:380px;max-height:480px;background:#fff;border:1px solid var(--border);border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,0.12),0 0 0 1px rgba(0,0,0,0.04);z-index:9999;display:none}
+.notif-dropdown.open{display:block;animation:notifFadeIn .12s ease}
+@keyframes notifFadeIn{from{opacity:0;transform:translateY(-6px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+
+.notif-dropdown-header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 10px;border-bottom:1px solid var(--border)}
+.notif-dropdown-title{font-size:14px;font-weight:700;color:var(--text)}
+.notif-mark-all-btn{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border:none;border-radius:6px;background:rgba(37,99,235,0.08);color:#2563eb;font-size:11px;font-weight:600;cursor:pointer;transition:background .12s}
+.notif-mark-all-btn:hover{background:rgba(37,99,235,0.15)}
+
+.notif-list{max-height:380px;overflow-y:auto}
+.notif-list::-webkit-scrollbar{width:4px}
+.notif-list::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+
+.notif-item{display:flex;align-items:flex-start;gap:12px;padding:12px 16px;text-decoration:none;transition:background .1s;border-bottom:1px solid var(--border);position:relative}
+.notif-item:last-child{border-bottom:none}
+.notif-item:hover{background:var(--bg3)}
+
+/* ── The CaPSA's decision on a leave request ── */
+.ld-overlay{display:none;position:fixed;inset:0;z-index:99990;align-items:center;justify-content:center;padding:20px;background:rgba(15,16,22,.6);backdrop-filter:blur(3px)}
+.ld-overlay.show{display:flex}
+.ld-card{width:min(480px,100%);max-height:calc(100dvh - 40px);overflow:auto;background:#fff;border-radius:18px;box-shadow:0 24px 70px rgba(0,0,0,.3);display:flex;flex-direction:column}
+.ld-head{display:flex;align-items:flex-start;gap:12px;padding:20px 20px 16px;border-bottom:1px solid var(--border);border-top:5px solid var(--text3)}
+.ld-head.is-approved{border-top-color:var(--green)}
+.ld-head.is-declined{border-top-color:var(--red)}
+.ld-icon{width:40px;height:40px;flex:none;border-radius:12px;display:grid;place-items:center;background:var(--bg3);color:var(--text3)}
+.ld-icon svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.ld-head.is-approved .ld-icon{background:var(--green-bg);color:var(--green)}
+.ld-head.is-declined .ld-icon{background:var(--red-bg);color:var(--red)}
+.ld-head-text{flex:1;min-width:0}
+.ld-status{display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:2px 8px;border-radius:999px;background:var(--bg3);color:var(--text3)}
+.ld-head.is-approved .ld-status{background:var(--green-bg);color:var(--green)}
+.ld-head.is-declined .ld-status{background:var(--red-bg);color:var(--red)}
+.ld-head h3{margin:6px 0 0;font-size:16.5px;font-weight:700;color:var(--text)}
+.ld-head p{margin:3px 0 0;font-size:12.5px;line-height:1.45;color:var(--text2)}
+.ld-x{width:32px;height:32px;flex:none;display:grid;place-items:center;border:1px solid var(--border);border-radius:9px;background:#fff;color:var(--text3);cursor:pointer}
+.ld-x svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2.2}
+.ld-body{padding:16px 20px;display:grid;gap:14px}
+.ld-label{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);margin-bottom:5px}
+.ld-quote{padding:12px 14px;border-radius:12px;background:var(--bg3);border-left:4px solid var(--accent)}
+.ld-quote p{margin:0;font-size:14px;line-height:1.55;color:var(--text);white-space:pre-line}
+.ld-quote p.is-empty{font-style:italic;color:var(--text3)}
+.ld-by{margin-top:6px;font-size:12px;color:var(--text3)}
+.ld-rows{margin:0;border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.ld-rows > div{display:flex;justify-content:space-between;gap:14px;padding:9px 14px;border-bottom:1px solid var(--border);font-size:13px}
+.ld-rows > div:last-child{border-bottom:0}
+.ld-rows > div[hidden]{display:none}
+.ld-rows dt{color:var(--text3);flex:none}
+.ld-rows dd{margin:0;text-align:right;font-weight:600;color:var(--text);min-width:0;overflow-wrap:anywhere}
+.ld-own p{margin:0;font-size:13px;line-height:1.55;color:var(--text2);white-space:pre-line}
+.ld-foot{display:flex;justify-content:flex-end;gap:8px;padding:14px 20px;border-top:1px solid var(--border);background:var(--bg3)}
+.ld-btn{display:inline-flex;align-items:center;justify-content:center;padding:9px 16px;border-radius:9px;border:1px solid var(--border);background:#fff;color:var(--text2);font:inherit;font-size:13px;font-weight:600;cursor:pointer;text-decoration:none}
+.ld-btn-primary{background:var(--accent);border-color:var(--accent);color:#18191f}
+@media (max-width:560px){
+  .ld-overlay{padding:0;align-items:flex-end}
+  .ld-card{width:100%;max-height:92dvh;border-radius:18px 18px 0 0}
+  .ld-foot{padding-bottom:calc(14px + env(safe-area-inset-bottom))}
+  .ld-foot .ld-btn{flex:1}
+}
+/* Not yet read keeps a tint, so read and unread sit in one list and still
+   read apart at a glance - the same as the expert bell. */
+.notif-item.is-unread{background:rgba(37,99,235,0.05)}
+.notif-item.is-unread .notif-item-title{font-weight:700}
+
+.notif-item-icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.notif-item-icon svg{width:16px;height:16px}
+
+.notif-item-body{flex:1;min-width:0}
+.notif-item-title{font-size:13px;font-weight:600;color:var(--text);margin-bottom:2px;line-height:1.3}
+.notif-item-msg{font-size:12px;color:var(--text2);line-height:1.4}
+.notif-item-msg strong{color:var(--text);font-weight:600}
+.notif-item-time{font-size:11px;color:var(--text3);margin-top:4px}
+
+.notif-item::before{content:'';position:absolute;top:14px;left:0;width:3px;height:20px;border-radius:0 3px 3px 0;background:var(--accent);opacity:0;transition:opacity .1s}
+.notif-item:hover::before{opacity:1}
+
+.notif-empty{padding:40px 18px;text-align:center;font-size:13px;color:var(--text3);display:flex;flex-direction:column;align-items:center}
+
+.notif-ask{display:flex;align-items:center;gap:10px;padding:10px 16px;background:rgba(37,99,235,0.06);border-bottom:1px solid var(--border)}
+.notif-ask-text{flex:1;font-size:11.5px;color:var(--text2);line-height:1.4}
+.notif-ask-btn{padding:6px 12px;border:none;border-radius:6px;background:#2563eb;color:#fff;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0}
+.notif-ask-btn:hover{background:#1d4ed8}
+</style>
+
 {{-- Nothing on screen: just where capstrack-push.js reads the keys from. It is
      a bare element rather than a wrapper round the bell because the bell and
      its panel are already positioned by the page, and wrapping them would move
@@ -154,108 +259,6 @@
     </div>
   </div>
 </div>
-
-<style>
-.notif-dot{position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;border-radius:9px;background:#ef4444;border:2px solid var(--navy-mid);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;line-height:1;padding:0 4px}
-
-.nld-confirm-overlay{display:none;position:fixed;inset:0;z-index:99999;align-items:center;justify-content:center;background:rgba(15,16,22,0.75);backdrop-filter:blur(6px);padding:20px}
-.nld-confirm-overlay.active{display:flex}
-.nld-confirm-card{background:#fff;border-radius:18px;padding:28px 24px 22px;width:100%;max-width:380px;box-shadow:0 24px 60px rgba(0,0,0,0.25);text-align:center;transform:scale(0.92);transition:transform 0.22s cubic-bezier(0.16,1,0.3,1);position:relative}
-.nld-confirm-overlay.active .nld-confirm-card{transform:scale(1)}
-.nld-confirm-icon{width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 14px}
-.nld-confirm-title{font-size:16px;font-weight:700;color:var(--text,#111827)}
-.nld-confirm-msg{font-size:13px;color:var(--text2,#6b7280);margin-top:8px;line-height:1.5}
-.nld-confirm-msg strong{color:var(--text,#111827)}
-.nld-confirm-actions{display:flex;gap:10px;margin-top:22px}
-.nld-confirm-btn{flex:1;padding:10px;border-radius:8px;border:none;font-size:13px;font-weight:700;cursor:pointer;color:#fff;transition:background .12s}
-.nld-confirm-cancel{background:#f3f4f6;color:#374151}
-.nld-confirm-cancel:hover{background:#e5e7eb}
-[data-theme="dark"] .nld-confirm-card{background:#1f2433}
-[data-theme="dark"] .nld-confirm-title{color:#f3f4f6}
-[data-theme="dark"] .nld-confirm-msg strong{color:#f3f4f6}
-
-.notif-dropdown{position:absolute;top:calc(100% + 8px);right:0;width:380px;max-height:480px;background:#fff;border:1px solid var(--border);border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,0.12),0 0 0 1px rgba(0,0,0,0.04);z-index:9999;display:none}
-.notif-dropdown.open{display:block;animation:notifFadeIn .12s ease}
-@keyframes notifFadeIn{from{opacity:0;transform:translateY(-6px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
-
-.notif-dropdown-header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 10px;border-bottom:1px solid var(--border)}
-.notif-dropdown-title{font-size:14px;font-weight:700;color:var(--text)}
-.notif-mark-all-btn{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border:none;border-radius:6px;background:rgba(37,99,235,0.08);color:#2563eb;font-size:11px;font-weight:600;cursor:pointer;transition:background .12s}
-.notif-mark-all-btn:hover{background:rgba(37,99,235,0.15)}
-
-.notif-list{max-height:380px;overflow-y:auto}
-.notif-list::-webkit-scrollbar{width:4px}
-.notif-list::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
-
-.notif-item{display:flex;align-items:flex-start;gap:12px;padding:12px 16px;text-decoration:none;transition:background .1s;border-bottom:1px solid var(--border);position:relative}
-.notif-item:last-child{border-bottom:none}
-.notif-item:hover{background:var(--bg3)}
-
-/* ── The CaPSA's decision on a leave request ── */
-.ld-overlay{display:none;position:fixed;inset:0;z-index:99990;align-items:center;justify-content:center;padding:20px;background:rgba(15,16,22,.6);backdrop-filter:blur(3px)}
-.ld-overlay.show{display:flex}
-.ld-card{width:min(480px,100%);max-height:calc(100dvh - 40px);overflow:auto;background:#fff;border-radius:18px;box-shadow:0 24px 70px rgba(0,0,0,.3);display:flex;flex-direction:column}
-.ld-head{display:flex;align-items:flex-start;gap:12px;padding:20px 20px 16px;border-bottom:1px solid var(--border);border-top:5px solid var(--text3)}
-.ld-head.is-approved{border-top-color:var(--green)}
-.ld-head.is-declined{border-top-color:var(--red)}
-.ld-icon{width:40px;height:40px;flex:none;border-radius:12px;display:grid;place-items:center;background:var(--bg3);color:var(--text3)}
-.ld-icon svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
-.ld-head.is-approved .ld-icon{background:var(--green-bg);color:var(--green)}
-.ld-head.is-declined .ld-icon{background:var(--red-bg);color:var(--red)}
-.ld-head-text{flex:1;min-width:0}
-.ld-status{display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:2px 8px;border-radius:999px;background:var(--bg3);color:var(--text3)}
-.ld-head.is-approved .ld-status{background:var(--green-bg);color:var(--green)}
-.ld-head.is-declined .ld-status{background:var(--red-bg);color:var(--red)}
-.ld-head h3{margin:6px 0 0;font-size:16.5px;font-weight:700;color:var(--text)}
-.ld-head p{margin:3px 0 0;font-size:12.5px;line-height:1.45;color:var(--text2)}
-.ld-x{width:32px;height:32px;flex:none;display:grid;place-items:center;border:1px solid var(--border);border-radius:9px;background:#fff;color:var(--text3);cursor:pointer}
-.ld-x svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2.2}
-.ld-body{padding:16px 20px;display:grid;gap:14px}
-.ld-label{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);margin-bottom:5px}
-.ld-quote{padding:12px 14px;border-radius:12px;background:var(--bg3);border-left:4px solid var(--accent)}
-.ld-quote p{margin:0;font-size:14px;line-height:1.55;color:var(--text);white-space:pre-line}
-.ld-quote p.is-empty{font-style:italic;color:var(--text3)}
-.ld-by{margin-top:6px;font-size:12px;color:var(--text3)}
-.ld-rows{margin:0;border:1px solid var(--border);border-radius:12px;overflow:hidden}
-.ld-rows > div{display:flex;justify-content:space-between;gap:14px;padding:9px 14px;border-bottom:1px solid var(--border);font-size:13px}
-.ld-rows > div:last-child{border-bottom:0}
-.ld-rows > div[hidden]{display:none}
-.ld-rows dt{color:var(--text3);flex:none}
-.ld-rows dd{margin:0;text-align:right;font-weight:600;color:var(--text);min-width:0;overflow-wrap:anywhere}
-.ld-own p{margin:0;font-size:13px;line-height:1.55;color:var(--text2);white-space:pre-line}
-.ld-foot{display:flex;justify-content:flex-end;gap:8px;padding:14px 20px;border-top:1px solid var(--border);background:var(--bg3)}
-.ld-btn{display:inline-flex;align-items:center;justify-content:center;padding:9px 16px;border-radius:9px;border:1px solid var(--border);background:#fff;color:var(--text2);font:inherit;font-size:13px;font-weight:600;cursor:pointer;text-decoration:none}
-.ld-btn-primary{background:var(--accent);border-color:var(--accent);color:#18191f}
-@media (max-width:560px){
-  .ld-overlay{padding:0;align-items:flex-end}
-  .ld-card{width:100%;max-height:92dvh;border-radius:18px 18px 0 0}
-  .ld-foot{padding-bottom:calc(14px + env(safe-area-inset-bottom))}
-  .ld-foot .ld-btn{flex:1}
-}
-/* Not yet read keeps a tint, so read and unread sit in one list and still
-   read apart at a glance - the same as the expert bell. */
-.notif-item.is-unread{background:rgba(37,99,235,0.05)}
-.notif-item.is-unread .notif-item-title{font-weight:700}
-
-.notif-item-icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
-.notif-item-icon svg{width:16px;height:16px}
-
-.notif-item-body{flex:1;min-width:0}
-.notif-item-title{font-size:13px;font-weight:600;color:var(--text);margin-bottom:2px;line-height:1.3}
-.notif-item-msg{font-size:12px;color:var(--text2);line-height:1.4}
-.notif-item-msg strong{color:var(--text);font-weight:600}
-.notif-item-time{font-size:11px;color:var(--text3);margin-top:4px}
-
-.notif-item::before{content:'';position:absolute;top:14px;left:0;width:3px;height:20px;border-radius:0 3px 3px 0;background:var(--accent);opacity:0;transition:opacity .1s}
-.notif-item:hover::before{opacity:1}
-
-.notif-empty{padding:40px 18px;text-align:center;font-size:13px;color:var(--text3);display:flex;flex-direction:column;align-items:center}
-
-.notif-ask{display:flex;align-items:center;gap:10px;padding:10px 16px;background:rgba(37,99,235,0.06);border-bottom:1px solid var(--border)}
-.notif-ask-text{flex:1;font-size:11.5px;color:var(--text2);line-height:1.4}
-.notif-ask-btn{padding:6px 12px;border:none;border-radius:6px;background:#2563eb;color:#fff;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0}
-.notif-ask-btn:hover{background:#1d4ed8}
-</style>
 
 <script>
 var nldConfirmUrl = null;
