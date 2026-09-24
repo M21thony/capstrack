@@ -306,6 +306,7 @@
                 $row->state === 'overdue' => 'Overdue since '.$row->due_on->format('M j'),
                 $row->state === 'not_started' => $row->due_on ? 'Due '.$row->due_on->format('M j, Y') : 'Not started',
                 $row->waiting_on === 'capsa' => 'With your CaPSA to check',
+                $row->waiting_on === 'title_review' => 'With your CaPSA to recommend a title',
                 $row->waiting_on === 'team' && (bool) $row->note => 'Sent back by your CaPSA',
                 $row->waiting_on === 'team' => $ord(max(1, $row->revision)).' revision requested',
                 $row->waiting_on === 'signed_copy' => 'Approved — upload the signed copy',
@@ -321,8 +322,12 @@
                 'defense' => 'Closes when the panel records a pass',
                 'custom' => 'Ticked by your CaPSA',
             ][$item->kind] ?? '';
-            // Everything is handed in through Document Submission; a defense is not.
-            $canUpload = ! $done && $item->kind !== 'defense' && $item->kind !== 'custom'
+            $byRecommendation = $item->closesOnTitleRecommendation();
+            if ($byRecommendation) {
+                $closer = 'Closed when your CaPSA recommends one of your pre-proposal titles — nothing to upload';
+            }
+            // Everything is handed in through Document Submission; a defense is not, nor the recommended title.
+            $canUpload = ! $done && ! $byRecommendation && $item->kind !== 'defense' && $item->kind !== 'custom'
                 && (in_array($row->state, ['not_started', 'overdue'], true) || $row->changes_requested || $row->waiting_on === 'signed_copy');
             // A reviewer asks for changes on the chapter draft, so that is what the revision goes up as.
             $uploadFor = $item->kind === 'approval' && $row->changes_requested && ! $row->note

@@ -329,6 +329,7 @@ class SubmissionController extends Controller
             $checklistItems = $progress->milestones
                 ->flatMap(fn ($ms) => $ms->items
                     ->reject(fn ($row) => $row->item->kind === Deliverable::DEFENSE
+                        || $row->item->closesOnTitleRecommendation()
                         || in_array($row->state, MilestoneProgress::COMPLETE_STATES, true))
                     ->map(fn ($row) => (object) [
                         'id' => $row->item->id,
