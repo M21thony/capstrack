@@ -67,9 +67,10 @@ class MobileTabBarTest extends TestCase
             ->assertSee('if (moved > 6) hide();', false)
             ->assertSee('else if (moved < -6) show();', false)
             ->assertSee("spacer.className = 'mtab-spacer';", false)
-            // The pill on its gold lip; the middle is a +, the
+            // A small centred pill on a soft grey lip; the middle is a +, the
             // last tab the student's own picture (their initials without one).
-            ->assertSee('.mtab.is-floating::before{left:5px;right:5px;top:8px;bottom:-6px;background:var(--accent2,#b5941f)}', false)
+            ->assertSee('.mtab.is-floating::before{left:6px;right:6px;top:6px;bottom:-4px;background:rgba(24,25,31,.1)}', false)
+            ->assertSee('width:calc(100% - 32px);max-width:340px;margin:0 auto;', false)
             ->assertSee(PortalIcons::paths('add'), false)
             ->assertSee('<span class="mtab-ic mtab-avatar" aria-hidden="true">', false)
             ->assertSee($student->avatarInitials());
