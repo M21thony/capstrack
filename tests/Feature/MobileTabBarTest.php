@@ -59,6 +59,13 @@ class MobileTabBarTest extends TestCase
             ->assertDontSee('>Submit<', false)
             ->assertDontSee('class="mtab-item primary"', false);
 
+        // The developers' credit there is the size the student dashboard gives
+        // it, not a size larger from the receipt list's own type.
+        $this->actingAs($student)->get(route('student.financial'))
+            ->assertSee('#fx-student .sys-credits .credits-title{font-size:8px}', false)
+            ->assertSee('#fx-student .sys-credits .credits-names{font-size:9px}', false)
+            ->assertSee('#fx-student .sys-credits .credits-names{font-size:8px}', false);
+
         // Everywhere else it is still there.
         $this->actingAs($student)->get(route('student.progress'))
             ->assertOk()
