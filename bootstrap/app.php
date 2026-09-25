@@ -8,6 +8,7 @@ use App\Http\Middleware\EnsureExpertIsCapsa;
 use App\Http\Middleware\EnsureExpertIsStaff;
 use App\Http\Middleware\EnsureProfileIsComplete;
 use App\Http\Middleware\PreventBackHistory;
+use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\TrackExpertActivity;
 use App\Http\Middleware\TrackStudentActivity;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
@@ -43,6 +44,9 @@ return Application::configure(basePath: dirname(__DIR__))
             AddQueuedCookiesToResponse::class,
             StartSession::class,
         ]);
+
+        // On every response: web pages, the API, files and the health check.
+        $middleware->append(SecurityHeaders::class);
 
         // Ten idle minutes and anyone signed in, on any portal, is signed out.
         $middleware->web(append: [EndIdleSession::class]);
