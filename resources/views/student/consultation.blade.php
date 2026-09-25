@@ -160,6 +160,13 @@
 .sched-cal .calendar-grid{max-width:340px}
 .sched-cal .calendar-header{max-width:340px}
 .sched-cal .calendar-day{height:44px;width:44px;font-size:13px}
+/* On a small phone the seven days share the card's width instead of being
+   44px each - 314px of calendar in a 250px card ran off its right edge. */
+@media (max-width:480px){
+  .book-card{padding:16px 14px 14px}
+  .sched-cal .calendar-grid{grid-template-columns:repeat(7,minmax(0,1fr))}
+  .sched-cal .calendar-day{width:100%;max-width:44px;height:auto;aspect-ratio:1/1}
+}
 
 .appt-chev{width:15px;height:15px;fill:none;stroke:var(--text3);stroke-width:2.5;flex-shrink:0;align-self:center}
 .appt-row{align-items:center}

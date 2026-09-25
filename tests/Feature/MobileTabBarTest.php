@@ -66,7 +66,9 @@ class MobileTabBarTest extends TestCase
             ->assertDontSee('is-arriving', false)
             ->assertSee('.mtab.is-floating .mtab-item.on .lb{opacity:1;transform:none}', false)
             ->assertSee('.mtab.is-floating .mtab-item.primary:active .mtab-ic svg{transform:rotate(90deg)}', false)
-            ->assertSee('.mtab.is-floating.is-away{', false)
+            ->assertSee('.mtab.is-floating.is-away,.mtab.is-floating.is-covered{', false)
+            // Out of the way of an open pop-up, whose last button it covered.
+            ->assertSee("bar.classList.toggle('is-covered', Array.prototype.some.call(document.querySelectorAll(SHELLS), isOpen));", false)
             ->assertSee('if (moved > 6) hide();', false)
             ->assertSee('else if (moved < -6) show();', false)
             ->assertSee("spacer.className = 'mtab-spacer';", false)

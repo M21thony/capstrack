@@ -4,7 +4,9 @@
     $student = Auth::user();
     $yearParts = explode(' · ', $student->year_section ?? '');
     $sidebarYear = $yearParts[0] ?? '';
-    $sidebarSection = $yearParts[1] ?? '';
+    // Only the section's letter: year_section is "4th · A" from the profile
+    // form, but "4th Year · BSCS-4A" on older rows, which read "BSCS - 4BSCS-4A".
+    $sidebarSection = preg_match('/[A-Za-z]+$/', $yearParts[1] ?? '', $sectionLetter) ? $sectionLetter[0] : '';
     $courseAbbr = \App\Models\Student::mapCourseToProgram($student->course ?? '') ?? $student->course ?? '';
     $sidebarYearNum = preg_replace('/[^0-9]/', '', $sidebarYear);
     $sidebarYearSection = $courseAbbr ? $courseAbbr . ' - ' . $sidebarYearNum . $sidebarSection : $student->year_section ?? '';

@@ -604,6 +604,15 @@ mark{background:rgba(201,168,44,0.25);color:inherit;border-radius:2px;padding:0 
   .grid-2{grid-template-columns:1fr!important}
   /* .grid-4 (stat-chip rows) never had a mobile override either. */
   .grid-4{grid-template-columns:repeat(2,1fr)!important;gap:8px!important}
+  /* One phone layout for every student page: the top bar and the side
+     margins match the dashboard's, rather than a desktop's 26px either side
+     of a 390px screen. */
+  .topbar{padding:0 12px!important}
+  .topbar .page-title{font-size:15px!important}
+  .content{padding:12px!important}
+}
+@media (max-width:480px){
+  .content{padding:10px!important}
 }
 @media (max-width:640px){
   .filter-bar{flex-direction:column}

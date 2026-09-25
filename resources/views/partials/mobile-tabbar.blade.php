@@ -288,7 +288,7 @@
       inset:0;background:#fff;border:1px solid rgba(24,25,31,.08);
       box-shadow:0 8px 20px rgba(24,25,31,.1),0 1px 4px rgba(24,25,31,.05);
     }
-    .mtab.is-floating.is-away{
+    .mtab.is-floating.is-away,.mtab.is-floating.is-covered{
       transform:translateY(calc(100% + 32px + env(safe-area-inset-bottom, 0px)));
       opacity:0;pointer-events:none;
     }
@@ -368,7 +368,7 @@
   }
   @media (max-width:768px) and (prefers-reduced-motion:reduce){
     .mtab.is-floating{transition:opacity .15s linear}
-    .mtab.is-floating.is-away{transform:none}
+    .mtab.is-floating.is-away,.mtab.is-floating.is-covered{transform:none}
     .mtab-glide,.mtab-glide::before,.mtab.is-floating .mtab-ic,.mtab.is-floating .mtab-ic svg,.mtab.is-floating .lb{transition:none!important;animation:none!important}
     .mtab.is-floating .mtab-item:active .mtab-ic,.mtab.is-floating .mtab-item.primary:active .mtab-ic svg{transform:none}
   }
@@ -426,6 +426,30 @@
 
     // Tabbing onto it brings it back.
     bar.addEventListener('focusin', show);
+
+    // A pop-up open over the page: the bar steps out of its way, as it does
+    // for the keyboard. Many pop-ups sit lower than the bar, which covered
+    // their last button - Review & Submit on the expert application, say.
+    var SHELLS = '.modal-overlay, .upload-scrim, .ct-modal-overlay, .profile-overlay, .pp-modal-overlay, .popover-overlay, dialog[open], [aria-modal="true"]';
+    var isOpen = function (el) {
+      if (el.hidden || el.closest('.mtab, #portal-tour, .gt')) return false;
+      var cs = getComputedStyle(el);
+      if (cs.display === 'none' || cs.visibility === 'hidden' || cs.pointerEvents === 'none' || +cs.opacity < 0.05) return false;
+      var box = el.getBoundingClientRect();
+      return box.width > 0 && box.height > 0;
+    };
+    var pending = 0;
+    function checkCovered() {
+      pending = 0;
+      bar.classList.toggle('is-covered', Array.prototype.some.call(document.querySelectorAll(SHELLS), isOpen));
+    }
+    function soon() {
+      if (!pending) pending = requestAnimationFrame(checkCovered);
+    }
+    new MutationObserver(function () { soon(); setTimeout(soon, 350); })
+      .observe(document.body, { subtree: true, attributes: true, attributeFilter: ['class', 'style', 'hidden', 'open'] });
+    document.addEventListener('transitionend', soon, true);
+    checkCovered();
 
     // The room at the end of the page's own scrolling area rather than under
     // the whole page area.

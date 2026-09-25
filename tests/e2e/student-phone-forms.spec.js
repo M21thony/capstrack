@@ -213,3 +213,58 @@ test('the highlight glides on the tap and is not replayed on the page it opens',
   expect(await onTab()).toBe('Progress');
   await context.close();
 });
+
+/**
+ * The upload sheet shows everything it holds on a phone - on an iPhone it
+ * came up as a header, a sliver and its buttons - and its buttons stay on
+ * the screen.
+ */
+for (const [width, height] of [[390, 844], [320, 568]]) {
+  test(`the upload sheet shows its whole form on a ${width}x${height} phone`, async ({ browser }) => {
+    const context = await browser.newContext({ viewport: { width, height }, isMobile: true, hasTouch: true });
+    const page = await context.newPage();
+    await signIn(page, 'submission');
+    await page.evaluate(() => { document.querySelectorAll('.gt, .gt-shield').forEach((el) => el.remove()); document.body.classList.remove('tour-open'); });
+    await page.evaluate(() => window.openSubmissionDrawer());
+    await page.waitForTimeout(500);
+
+    const sheet = await page.evaluate(() => {
+      const d = document.querySelector('dialog.up[open]');
+      const body = d.querySelector('.up-body');
+      const foot = d.querySelector('.up-foot').getBoundingClientRect();
+      return { shown: body.clientHeight, whole: body.scrollHeight, footBottom: foot.bottom, top: d.getBoundingClientRect().top };
+    });
+    // All of it where it fits; where it does not, as much as the screen holds.
+    if (sheet.top > 20) expect(sheet.shown, 'the form is squeezed out of the sheet').toBe(sheet.whole);
+    else expect(sheet.shown).toBeGreaterThan(200);
+    expect(sheet.footBottom).toBeLessThanOrEqual(height + 1);
+    await expect(page.locator('dialog.up[open] .up-body select').first()).toBeVisible();
+    await context.close();
+  });
+}
+
+/** A pop-up's last button used to sit under the floating bar; the bar steps aside while one is open. */
+test('the floating bar steps aside while a pop-up is open', async ({ browser }) => {
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  const page = await context.newPage();
+  await signIn(page, 'experts');
+  await page.waitForTimeout(800);
+  const covered = () => page.evaluate(() => document.querySelector('.mtab').classList.contains('is-covered'));
+  expect(await covered()).toBe(false);
+
+  await page.evaluate(() => openModal('apply-modal'));
+  await page.waitForTimeout(700);
+  expect(await covered(), 'the bar is out of the way').toBe(true);
+  const reachable = await page.evaluate(() => {
+    const button = document.getElementById('btn-review-apply');
+    button.scrollIntoView({ block: 'end' });
+    const box = button.getBoundingClientRect();
+    return button.contains(document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2));
+  });
+  expect(reachable, 'Review & Submit can be tapped').toBe(true);
+
+  await page.evaluate(() => closeModal('apply-modal'));
+  await page.waitForTimeout(700);
+  expect(await covered(), 'back once it closes').toBe(false);
+  await context.close();
+});

@@ -17,6 +17,7 @@ dialog.up{
 dialog.up[open]{display:flex;flex-direction:column}
 dialog.up::backdrop{background:rgba(15,16,22,.5)}
 .up-grab{display:none}
+.up-grab,.up-head,.up-steps,.up-foot{flex-shrink:0}
 
 .up-head{display:flex;align-items:flex-start;gap:12px;padding:14px 16px 10px}
 .up-titles{flex:1;min-width:0}
@@ -40,8 +41,13 @@ dialog.up::backdrop{background:rgba(15,16,22,.5)}
 .up-steps li.now{font-weight:600}
 .up-steps li.now > span,.up-steps li.done > span{background:var(--accent,#c9a82c);color:#1b1e26}
 
+/* flex-basis auto, not flex:1's 0: the pop-up is as tall as what it holds
+   (height:fit-content), and an iPhone's WebKit measured a body with a 0
+   basis as 0 tall - the sheet came up as a header, a sliver and the
+   buttons, with "What is this for?" and the file box squeezed out of it.
+   It still shrinks, and scrolls, when there is more than the screen holds. */
 .up-body{
-  flex:1;min-height:0;overflow-y:auto;
+  flex:1 1 auto;min-height:0;overflow-y:auto;
   display:flex;flex-direction:column;gap:12px;padding:14px 16px;border-top:1px solid var(--border);
 }
 .up-foot{
@@ -199,6 +205,8 @@ button.up-pill{cursor:pointer}
 @media (max-width:600px){
   dialog.up{
     width:100%;max-width:100%;max-height:calc(100vh - 24px);max-height:calc(100dvh - 24px);margin:auto 0 0;top:auto;
+    /* Held to the bottom, so its own content sets its height. */
+    height:auto;
     border-radius:16px 16px 0 0;box-shadow:0 -12px 40px rgba(0,0,0,.25);
   }
   .up-grab{display:flex;justify-content:center;padding-top:8px}
