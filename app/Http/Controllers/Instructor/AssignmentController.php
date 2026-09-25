@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\CapstonePreProposal;
 use App\Models\Notification;
 use App\Models\TeamExpertAssignment;
+use App\Models\TitleChangeRequest;
 use App\Services\RecipientResolver;
 use App\Support\TitleRevision;
 use Illuminate\Http\JsonResponse;
@@ -134,7 +135,16 @@ class AssignmentController extends Controller
             ]];
         })->toArray();
 
+        // Passed teams asking to change part of their title, for this adviser.
+        $titleChanges = TitleChangeRequest::where('status', TitleChangeRequest::PENDING)
+            ->with(['team', 'requester'])
+            ->oldest()
+            ->get()
+            ->filter(fn ($c) => $resolver->resolveTeamRoleExpert((int) $c->team_id, 'adviser') === (int) $expert->expert_id)
+            ->values();
+
         return view('instructor.assignments', [
+            'titleChanges' => $titleChanges,
             'titleConfirmations' => $titleConfirmations,
             'titleData' => $titleData,
             'pendingAssignments' => $pendingAssignments,

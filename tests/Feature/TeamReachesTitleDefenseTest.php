@@ -307,6 +307,11 @@ class TeamReachesTitleDefenseTest extends TestCase
         $this->assertDone('pre_proposal_defense');
         $this->paper('final_title_form');
 
+        // Past the Pre-proposal, Chapters 1 to 3 open together: none waits for another.
+        foreach ([1, 2, 3] as $n) {
+            $this->assertFalse($this->state("chapter_{$n}_draft")->locked, "Chapter {$n} Draft opens after the Pre-proposal");
+        }
+
         // Chapters 1 to 3, each approved by both reviewers and signed off by the adviser.
         foreach ([1, 2, 3] as $n) {
             $this->chapter($n);

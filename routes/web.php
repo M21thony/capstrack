@@ -299,6 +299,8 @@ Route::middleware(['expert.auth', 'expert.approved', 'no.cache', 'track.expert']
     // An adviser confirming a team's new title after "Redefense with a new title".
     Route::patch('/title-confirmations/{preProposal}', [TitleConfirmationController::class, 'update'])->name('title-confirmations.update');
     Route::get('/title-confirmations/{preProposal}/document', [TitleConfirmationController::class, 'document'])->name('title-confirmations.document');
+    // An adviser deciding on a passed team's request to change part of its title.
+    Route::patch('/title-changes/{titleChangeRequest}', [TitleConfirmationController::class, 'decideChange'])->name('title-changes.update');
     Route::get('/progress', [InstructorProgressController::class, 'index'])->name('progress');
     Route::get('/profile', [InstructorProfileController::class, 'index'])->name('profile');
     Route::put('/profile', [InstructorProfileController::class, 'update'])->name('profile.update');
@@ -436,6 +438,8 @@ Route::middleware(['auth', 'no.cache', 'track.expert'])->group(function () {
     Route::patch('/pre-proposal', [PreProposalController::class, 'updateStatus'])->name('student.pre-proposal.submit');
     // Rewording a title the panel passed with revision.
     Route::patch('/pre-proposal/title', [PreProposalController::class, 'updateTitle'])->name('student.pre-proposal.title.update');
+    // After a pass: the leader asks the adviser to change part of the title.
+    Route::post('/pre-proposal/title-change', [PreProposalController::class, 'requestTitleChange'])->name('student.pre-proposal.title-change.store');
     Route::post('/pre-proposal/{preProposal}/choose', [PreProposalController::class, 'choose'])->name('student.pre-proposal.choose');
     Route::delete('/pre-proposal/{preProposal}', [PreProposalController::class, 'destroy'])->name('student.pre-proposal.destroy');
     Route::get('/pre-proposal/{preProposal}/document', [PreProposalController::class, 'document'])->name('student.pre-proposal.document');
