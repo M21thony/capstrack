@@ -258,7 +258,116 @@
 @include('partials.idle-logout')
 @endonce
 
-<nav class="mtab" aria-label="Main">
+@if ($floating ?? false)
+@once
+{{--
+  The floating bar, as the Facebook app draws it on an iPhone: a rounded
+  pill resting above the bottom of the screen rather than a strip along it,
+  out of the way while the page is being read downwards, and back the moment
+  it is scrolled up again (or reaches the top). Student portal only.
+--}}
+<style>
+  @media (max-width:768px){
+    .mtab.is-floating{
+      left:12px;right:12px;bottom:calc(10px + env(safe-area-inset-bottom, 0px));
+      height:64px;padding:0 6px;border:1px solid rgba(24,25,31,.07);border-radius:24px;
+      background:rgba(255,255,255,.97);
+      box-shadow:0 12px 32px rgba(24,25,31,.16),0 2px 8px rgba(24,25,31,.08);
+      transition:transform .3s cubic-bezier(.2,.8,.2,1),opacity .2s ease;
+      will-change:transform;
+    }
+    @supports ((-webkit-backdrop-filter:blur(1px)) or (backdrop-filter:blur(1px))){
+      .mtab.is-floating{
+        background:rgba(255,255,255,.8);
+        -webkit-backdrop-filter:saturate(180%) blur(18px);backdrop-filter:saturate(180%) blur(18px);
+      }
+    }
+    .mtab.is-floating.is-away{
+      transform:translateY(calc(100% + 16px + env(safe-area-inset-bottom, 0px)));
+      opacity:0;pointer-events:none;
+    }
+    .mtab.is-floating .mtab-item{padding:6px 2px}
+    /* Inside the pill, not standing out of it: the same size as the others,
+       told apart by its gold. */
+    .mtab.is-floating .mtab-item.primary .mtab-ic{width:48px;height:30px;margin-top:0;border-radius:15px;box-shadow:0 3px 10px rgba(201,168,44,.4)}
+    .mtab.is-floating .mtab-item.primary .mtab-ic svg{width:20px;height:20px}
+    .mtab.is-floating .mtab-badge{box-shadow:0 0 0 2px rgba(255,255,255,.95)}
+
+    /* The page scrolls clear of the pill; toasts sit above it. Where the
+       page's scrolling area can be found (the script below), the room is at
+       the end of it instead, so the page runs on underneath the pill like
+       the app's feed does, rather than stopping at a line above it. */
+    .main{padding-bottom:calc(84px + env(safe-area-inset-bottom, 0px))}
+    .mtab-spacer{flex:none;height:calc(84px + env(safe-area-inset-bottom, 0px));pointer-events:none}
+    .toast,.toast-wrap,#submission-toast,#archive-toast{bottom:calc(86px + env(safe-area-inset-bottom, 0px))!important}
+  }
+  @media (max-width:768px) and (prefers-reduced-motion:reduce){
+    .mtab.is-floating{transition:opacity .15s linear}
+    .mtab.is-floating.is-away{transform:none}
+  }
+</style>
+<script>
+  // The bar is drawn just after this script, so it is looked for once the
+  // page has been read.
+  document.addEventListener('DOMContentLoaded', function () {
+    var bar = document.querySelector('.mtab.is-floating');
+    if (!bar) return;
+
+    var last = new WeakMap();
+    function show() { bar.classList.remove('is-away'); }
+    function hide() { bar.classList.add('is-away'); }
+
+    // Pages scroll inside their own boxes here, not the window, so every
+    // scroll is heard on the way down and the ones that are the page itself
+    // are followed: tall enough to be the page, and not a pop-up, the menu or
+    // a list inside a card.
+    document.addEventListener('scroll', function (e) {
+      var box = e.target === document ? (document.scrollingElement || document.documentElement) : e.target;
+      if (!box || !box.getBoundingClientRect) return;
+      if (box.closest && box.closest('.sidebar, .notif-dropdown, dialog, .modal-overlay, [role="dialog"], [aria-modal="true"], .mtab')) return;
+      if (box.clientHeight < window.innerHeight * 0.5 || box.scrollHeight - box.clientHeight < 80) return;
+
+      var top = box.scrollTop;
+      var before = last.get(box);
+      last.set(box, top);
+      if (before === undefined) return;
+
+      if (top < 40) { show(); return; }
+      var moved = top - before;
+      if (moved > 6) hide();
+      else if (moved < -6) show();
+    }, { capture: true, passive: true });
+
+    // Tabbing onto it brings it back.
+    bar.addEventListener('focusin', show);
+
+    // The room at the end of the page's own scrolling area rather than under
+    // the whole page area.
+    var main = document.querySelector('.main');
+    if (!main || window.innerWidth > 768) return;
+    var scrolls = function (el) { return /(auto|scroll)/.test(getComputedStyle(el).overflowY); };
+    var scroller = [main.querySelector(':scope > .content')]
+      .concat(Array.prototype.slice.call(main.querySelectorAll('div')))
+      .find(function (el) {
+        return el && scrolls(el) && el.clientHeight >= window.innerHeight * 0.5
+          && !el.closest('.modal-overlay, dialog, [role="dialog"], .notif-dropdown, #skeleton-content, .sk-overlay');
+      });
+    if (!scroller) return;
+    main.style.paddingBottom = '0px';
+    var spacer = document.createElement('div');
+    spacer.className = 'mtab-spacer';
+    spacer.setAttribute('aria-hidden', 'true');
+    // Less whatever room the page already keeps at its end, so the gap above
+    // the pill is the same on every page.
+    var own = parseFloat(getComputedStyle(scroller).paddingBottom) || 0;
+    spacer.style.height = 'calc(' + Math.max(0, 86 - own) + 'px + env(safe-area-inset-bottom, 0px))';
+    scroller.appendChild(spacer);
+  });
+</script>
+@endonce
+@endif
+
+<nav class="mtab{{ ($floating ?? false) ? ' is-floating' : '' }}" aria-label="Main">
   @foreach ($tabs as $tab)
     @php
       $classes = 'mtab-item'.(! empty($tab['active']) ? ' on' : '').(! empty($tab['primary']) ? ' primary' : '');

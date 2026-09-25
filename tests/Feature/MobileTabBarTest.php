@@ -28,7 +28,7 @@ class MobileTabBarTest extends TestCase
 
         $html = $this->actingAs($student)->get(route('student.progress'))
             ->assertOk()
-            ->assertSee('class="mtab"', false)
+            ->assertSee('class="mtab is-floating"', false)
             ->assertSeeInOrder(['mtab-item', '>Home<', '>Team<', '>Submit<', '>Progress<', '>Menu<'], false)
             // Submit opens the drawer rather than leaving the page.
             ->assertSee('class="mtab-item primary" onclick="window.openSubmissionDrawer', false)
@@ -37,6 +37,36 @@ class MobileTabBarTest extends TestCase
         // The page it is on is the one marked, and only that one.
         $this->assertMatchesRegularExpression('#href="'.preg_quote(route('student.progress'), '#').'" class="mtab-item on"\s+aria-current="page"#', $html);
         $this->assertSame(1, substr_count($html, 'class="mtab-item on"'));
+    }
+
+    /**
+     * The student bar floats, as the Facebook app's does on an iPhone: a
+     * pill resting above the bottom of the screen that gets out of the way
+     * while the page is read downwards and comes back on the way up. The
+     * staff portals keep the plain bar along the bottom.
+     */
+    public function test_the_student_bar_floats_and_hides_while_reading_down(): void
+    {
+        $team = Team::create(['team_name' => 'Float Team', 'project_title' => 'Floats', 'team_status' => 'Active']);
+        $student = Student::factory()->withCompleteProfile()->create([
+            'course' => 'Bachelor of Science in Information Technology', 'year_section' => '3rd · A',
+        ]);
+        StudentSchoolYear::create(['student_id' => $student->student_id, 'team_id' => $team->team_id, 'program' => 'BSIT']);
+
+        $this->actingAs($student)->get(route('student.dashboard'))
+            ->assertOk()
+            ->assertSee('<nav class="mtab is-floating" aria-label="Main">', false)
+            ->assertSee('.mtab.is-floating.is-away{', false)
+            ->assertSee('if (moved > 6) hide();', false)
+            ->assertSee('else if (moved < -6) show();', false)
+            ->assertSee("spacer.className = 'mtab-spacer';", false);
+
+        $expert = CapstoneExpert::factory()->create(['approved_status' => true, 'is_admin' => false]);
+
+        $this->actingAs($expert, 'expert')->get(route('instructor.dashboard'))
+            ->assertOk()
+            ->assertSee('<nav class="mtab" aria-label="Main">', false)
+            ->assertDontSee('is-floating', false);
     }
 
     /**
@@ -54,7 +84,7 @@ class MobileTabBarTest extends TestCase
 
         $this->actingAs($student)->get(route('student.financial'))
             ->assertOk()
-            ->assertSee('class="mtab"', false)
+            ->assertSee('class="mtab is-floating"', false)
             ->assertSeeInOrder(['>Home<', '>Team<', '>Progress<', '>Menu<'], false)
             ->assertDontSee('>Submit<', false)
             ->assertDontSee('class="mtab-item primary"', false);

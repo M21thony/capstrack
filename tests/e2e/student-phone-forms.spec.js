@@ -114,3 +114,53 @@ test('on Android the page shrinks for the keyboard and the tab bar steps aside',
   expect(await placement(page, '#apply-message')).toEqual({ focused: true, fieldShowing: true, labelShowing: true, tabBarShowing: false });
   await context.close();
 });
+
+/**
+ * The floating bar: out of the way while reading down the page, back on the
+ * way up, and never over the last thing on the page once scrolled to the end.
+ */
+test('the student bar floats, hides reading down and comes back reading up', async ({ browser }) => {
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  const page = await context.newPage();
+  await signIn(page, 'dashboard');
+
+  const bar = page.locator('.mtab.is-floating');
+  await expect(bar).toBeVisible();
+  const box = await bar.boundingBox();
+  expect(box.x, 'the pill stands off the left edge').toBeGreaterThan(0);
+  expect(box.y + box.height, 'the pill stands off the bottom').toBeLessThan(844);
+
+  // Scrolled as a finger would, a little at a time.
+  const scroll = (distance) => page.evaluate(async (distance) => {
+    const box = document.querySelector('.mtab-spacer').parentElement;
+    for (let i = 0; i < 8; i++) { box.scrollTop += distance / 8; await new Promise((r) => setTimeout(r, 30)); }
+  }, distance);
+  const away = () => page.evaluate(() => document.querySelector('.mtab').classList.contains('is-away'));
+
+  test.skip(await page.evaluate(() => { const s = document.querySelector('.mtab-spacer')?.parentElement; return !s || s.scrollHeight - s.clientHeight < 300; }), 'this page is too short to scroll');
+
+  await scroll(400);
+  expect(await away(), 'hidden while reading down').toBe(true);
+  await scroll(-120);
+  expect(await away(), 'back on the way up').toBe(false);
+
+  // At the very end, the last thing on the page clears the bar.
+  await page.evaluate(() => { const s = document.querySelector('.mtab-spacer').parentElement; s.scrollTop = s.scrollHeight; });
+  await page.waitForTimeout(300);
+  const credits = await page.locator('.legal-credits').boundingBox();
+  const barTop = (await bar.boundingBox()).y;
+  expect(credits.y + credits.height, 'the credits end under the bar').toBeLessThanOrEqual(barTop);
+  await context.close();
+});
+
+test('Financial Records on a phone shows every member, not a sliver of the list', async ({ browser }) => {
+  const context = await browser.newContext({ viewport: { width: 390, height: 640 }, isMobile: true, hasTouch: true });
+  const page = await context.newPage();
+  await signIn(page, 'financial');
+  await page.waitForTimeout(800);
+
+  const list = await page.evaluate(() => { const s = document.querySelector('.fx-scroll'); return s ? { shown: s.clientHeight, whole: s.scrollHeight } : null; });
+  test.skip(!list, 'no member list on this page');
+  expect(list.shown).toBe(list.whole);
+  await context.close();
+});

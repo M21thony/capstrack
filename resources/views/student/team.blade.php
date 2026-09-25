@@ -1601,8 +1601,10 @@
          every member, so it is already true of whoever is reading this. --}}
     <p class="rolepick-shared">
       <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 18l6-6-6-6"/><path d="M8 6l-6 6 6 6"/></svg>
-      Everyone on the team is a <strong>{{ \App\Models\StudentRole::SHARED_ROLE_NAME }}</strong> as
-      well — writing and testing the system is shared by all of you.
+      {{-- One span: the paragraph is a flex row, and loose text beside the
+           <strong> became three narrow columns of their own on a phone. --}}
+      <span>Everyone on the team is a <strong>{{ \App\Models\StudentRole::SHARED_ROLE_NAME }}</strong> as
+      well — writing and testing the system is shared by all of you.</span>
     </p>
 
     <form method="POST" action="{{ route('team.role.update') }}" id="role-choice-form" style="display:none">
