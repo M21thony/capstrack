@@ -5,10 +5,11 @@ namespace Tests\Feature;
 use App\Models\CapstoneExpert;
 use App\Models\Student;
 use App\Models\StudentRoster;
-use App\Models\Term;
 use App\Models\StudentSchoolYear;
+use App\Models\Term;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Tests\TestCase;
@@ -352,6 +353,83 @@ class StudentListUploadTest extends TestCase
     }
 
     /** A middle initial is optional. */
+    /** A plain CSV, written in whatever encoding the program that saved it used. */
+    private function csvFile(array $lines, string $encoding, bool $bom = false): UploadedFile
+    {
+        $text = implode("\r\n", $lines)."\r\n";
+        $bytes = ($bom ? "\xEF\xBB\xBF" : '').mb_convert_encoding($text, $encoding, 'UTF-8');
+
+        $path = tempnam(sys_get_temp_dir(), 'list').'.csv';
+        file_put_contents($path, $bytes);
+
+        return new UploadedFile($path, 'Student List.csv', 'text/csv', null, true);
+    }
+
+    private const CSV_WITH_N_TILDE = [
+        'Email,Last Name,First Name,Middle Name,Student No.,Course/Program,Year,Section',
+        'juan.pena@my.cspc.edu.ph,Peña,Juan,Nuñez,221001135,BSIT,4,B',
+        'maria.ibanez@my.cspc.edu.ph,Ibáñez,María,Santos,221001136,BSIT,4,B',
+    ];
+
+    /**
+     * Excel on Windows saves "CSV (Comma delimited)" in Windows-1252, not
+     * UTF-8. Read as UTF-8, every ñ came out as a replacement character.
+     */
+    public function test_a_csv_saved_by_excel_on_windows_keeps_its_n_tilde(): void
+    {
+        $this->actingAs($this->capsa(), 'expert');
+
+        $this->post(route('capsa.rosters.students.store'), [
+            'file' => $this->csvFile(self::CSV_WITH_N_TILDE, 'Windows-1252'),
+        ])->assertOk()->assertJson(['created' => 2, 'skipped' => 0]);
+
+        $juan = Student::where('email', 'juan.pena@my.cspc.edu.ph')->first();
+        $this->assertSame('Peña', $juan->l_name);
+        $this->assertSame('Nuñez', $juan->m_name);
+        $this->assertSame('Ibáñez', Student::where('email', 'maria.ibanez@my.cspc.edu.ph')->value('l_name'));
+        $this->assertSame('María', Student::where('email', 'maria.ibanez@my.cspc.edu.ph')->value('f_name'));
+        $this->assertSame('Peña, Juan Nuñez', StudentRoster::where('email', 'juan.pena@my.cspc.edu.ph')->value('name'));
+    }
+
+    public function test_the_preview_shows_the_n_tilde_from_a_windows_csv(): void
+    {
+        $this->actingAs($this->capsa(), 'expert');
+
+        $this->post(route('capsa.rosters.students.preview'), [
+            'file' => $this->csvFile(self::CSV_WITH_N_TILDE, 'Windows-1252'),
+        ])->assertOk()->assertJsonPath('rows.0.name', 'Peña, Juan Nuñez');
+    }
+
+    /** "CSV UTF-8" from Excel, byte-order mark and all, still reads the same. */
+    public function test_a_utf8_csv_with_or_without_a_byte_order_mark_keeps_its_n_tilde(): void
+    {
+        $this->actingAs($this->capsa(), 'expert');
+
+        foreach ([false, true] as $bom) {
+            $this->post(route('capsa.rosters.students.preview'), [
+                'file' => $this->csvFile(self::CSV_WITH_N_TILDE, 'UTF-8', $bom),
+            ])->assertOk()
+                ->assertJsonPath('rows.0.name', 'Peña, Juan Nuñez')
+                ->assertJsonPath('rows.1.name', 'Ibáñez, María Santos');
+        }
+    }
+
+    public function test_a_workbook_keeps_its_n_tilde(): void
+    {
+        $this->actingAs($this->capsa(), 'expert');
+
+        $this->post(route('capsa.rosters.students.store'), [
+            'file' => $this->listFile(
+                ['Email', 'Last Name', 'First Name', 'Middle Name', 'Course/Program', 'Year', 'Section'],
+                [['nino.pena@my.cspc.edu.ph', 'Peña', 'Niño', 'Muñoz', 'BSIT', 4, 'B']]
+            ),
+        ])->assertOk();
+
+        $student = Student::where('email', 'nino.pena@my.cspc.edu.ph')->first();
+        $this->assertSame('Niño', $student->f_name);
+        $this->assertSame('Muñoz', $student->m_name);
+    }
+
     public function test_the_middle_initial_can_be_left_out(): void
     {
         $this->actingAs($this->capsa(), 'expert');
@@ -465,8 +543,8 @@ class StudentListUploadTest extends TestCase
 
         $this->assertSame(1, Student::where('email', 'junk@my.cspc.edu.ph')->count());
         $this->assertSame(
-            \App\Models\Term::currentSchoolYear(),
-            \App\Models\StudentRoster::where('email', 'junk@my.cspc.edu.ph')->value('school_year'),
+            Term::currentSchoolYear(),
+            StudentRoster::where('email', 'junk@my.cspc.edu.ph')->value('school_year'),
             'the term that is running, not the one typed in the file'
         );
     }
@@ -626,7 +704,7 @@ class StudentListUploadTest extends TestCase
         $response->assertOk();
         $response->assertDownload('Student List Template.xlsx');
 
-        $sheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($response->baseResponse->getFile()->getPathname())
+        $sheet = IOFactory::load($response->baseResponse->getFile()->getPathname())
             ->getActiveSheet()
             ->toArray();
 
@@ -649,7 +727,7 @@ class StudentListUploadTest extends TestCase
     {
         $this->actingAs($this->capsa(), 'expert');
 
-        $headings = \PhpOffice\PhpSpreadsheet\IOFactory::load(
+        $headings = IOFactory::load(
             $this->get(route('capsa.rosters.students.template'))->baseResponse->getFile()->getPathname()
         )->getActiveSheet()->toArray()[0];
 
