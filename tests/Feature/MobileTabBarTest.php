@@ -40,6 +40,32 @@ class MobileTabBarTest extends TestCase
     }
 
     /**
+     * On Financial Records the page is about a receipt. A big Submit in the
+     * middle of the bar read as the way to upload one, and opened the
+     * document form instead - so the bar there has no Submit.
+     */
+    public function test_financial_records_has_no_submit_document_button_in_the_bar(): void
+    {
+        $team = Team::create(['team_name' => 'Fee Team', 'project_title' => 'Fees', 'team_status' => 'Active']);
+        $student = Student::factory()->withCompleteProfile()->create([
+            'course' => 'Bachelor of Science in Information Technology', 'year_section' => '3rd · A',
+        ]);
+        StudentSchoolYear::create(['student_id' => $student->student_id, 'team_id' => $team->team_id, 'program' => 'BSIT']);
+
+        $this->actingAs($student)->get(route('student.financial'))
+            ->assertOk()
+            ->assertSee('class="mtab"', false)
+            ->assertSeeInOrder(['>Home<', '>Team<', '>Progress<', '>Menu<'], false)
+            ->assertDontSee('>Submit<', false)
+            ->assertDontSee('class="mtab-item primary"', false);
+
+        // Everywhere else it is still there.
+        $this->actingAs($student)->get(route('student.progress'))
+            ->assertOk()
+            ->assertSee('class="mtab-item primary" onclick="window.openSubmissionDrawer', false);
+    }
+
+    /**
      * The Capstone Expert page is one column below 1024px; it has to grow with
      * its content there, or its sections overlap each other on a phone.
      */
