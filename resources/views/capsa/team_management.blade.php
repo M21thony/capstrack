@@ -249,7 +249,7 @@
 
                 <td data-label="Section"><span class="pill {{ $row->section === \App\Support\SectionScope::UNASSIGNED ? 'p-gray' : 'p-gold' }}">{{ $row->section }}</span></td>
 
-                <td style="max-width:210px" data-label="Title"><div style="font-size:12.5px;line-height:1.45">
+                <td style="max-width:210px" data-label="Title"><div style="font-size:12.5px;line-height:1.45;overflow-wrap:anywhere">
                   @if ($row->team->project_title)
                     {{ $row->team->project_title }}
                   @else
