@@ -1,6 +1,7 @@
 {{--
   Pop-ups in the bottom corner for anything new in the bell - notifications
   and announcements alike - so an update is seen without opening the bell.
+  On a phone they are slim banners at the top of the screen instead.
 
   Included by both bells (partials/notification-bell for every expert page,
   student/partials/notification-dropdown for every student page), so every
@@ -44,14 +45,26 @@
 .nt.is-announcement .nt-bar{background:#f97316}
 .nt:hover .nt-bar{animation-play-state:paused}
 @keyframes ntBar{from{transform:scaleX(1)}to{transform:scaleX(0)}}
-/* On a phone the stack spans the screen and sits above the tab bar. */
+/* On a phone it is the phone's own kind of banner: one slim line of title
+   and one of message, dropping in at the top of the screen - clear of the
+   tab bar and of what is being read - the newest on top. The label, the time
+   and "View" give way; the colour says which kind it is and the whole
+   banner is the button. */
 @media (max-width:768px){
-  .nt-stack{left:12px;right:12px;width:auto;gap:8px;bottom:calc(86px + env(safe-area-inset-bottom))}
-  .nt{padding:12px 38px 13px 12px;gap:10px;border-radius:13px}
-  .nt-ic{width:32px;height:32px;border-radius:9px}
-  .nt-msg{-webkit-line-clamp:2}
-  .nt-foot{margin-top:6px}
+  .nt-stack{top:calc(10px + env(safe-area-inset-top, 0px));bottom:auto;left:12px;right:12px;width:auto;max-width:420px;margin:0 auto;gap:6px;flex-direction:column-reverse}
+  .nt{align-items:center;gap:10px;padding:9px 38px 10px 10px;border-left-width:3px;border-radius:14px;box-shadow:0 8px 24px rgba(24,25,31,.16);animation-name:ntDrop}
+  .nt.out{animation-name:ntLift}
+  .nt-ic{width:30px;height:30px;border-radius:9px}
+  .nt-ic svg{width:15px;height:15px}
+  .nt-kind,.nt-foot{display:none}
+  .nt-title{margin:0;font-size:13px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .nt-msg{margin-top:1px;font-size:12px;line-height:1.35;-webkit-line-clamp:1}
+  .nt-x{top:50%;right:6px;width:26px;height:26px;margin-top:-13px}
+  .nt-x svg{width:12px;height:12px}
+  .nt-bar{height:2px}
 }
+@keyframes ntDrop{from{opacity:0;transform:translateY(-18px)}to{opacity:1;transform:none}}
+@keyframes ntLift{to{opacity:0;transform:translateY(-18px)}}
 @media (prefers-reduced-motion:reduce){.nt,.nt.out{animation:none}.nt-bar{display:none}}
 </style>
 
