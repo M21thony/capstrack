@@ -68,7 +68,7 @@ class ConsultationPageStatesTest extends TestCase
             'consultation_limit' => 1, 'slot_type' => 'consult', 'is_available' => true, 'recur' => 'weekly',
         ]);
         DB::table('consultation_booking')->insert([
-            'student_id' => $student->student_id, 'schedule_id' => $slot->schedule_id, 'booking_status' => 'scheduled',
+            'student_id' => $student->student_id, 'team_id' => $team->team_id, 'schedule_id' => $slot->schedule_id, 'booking_status' => 'scheduled',
             'session_date' => now()->next('Monday')->toDateString(), 'created_at' => now(), 'updated_at' => now(),
         ]);
 
