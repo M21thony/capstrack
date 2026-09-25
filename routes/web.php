@@ -338,7 +338,7 @@ Route::get('/', function () {
 
 Route::get('/login', [AuthController::class, 'login'])->name('login');
 
-// Ten idle minutes: every portal page counts down (partials/idle-logout).
+// Ten idle minutes and the session ends, with no warning (partials/idle-logout).
 Route::post('/session/keep-alive', [IdleSessionController::class, 'keepAlive'])->name('session.keep-alive');
 Route::get('/session/expired', [IdleSessionController::class, 'expired'])->name('session.expired');
 Route::get('/team', [AuthController::class, 'team'])->name('team');

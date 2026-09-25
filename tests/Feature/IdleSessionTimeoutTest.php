@@ -100,7 +100,7 @@ class IdleSessionTimeoutTest extends TestCase
         $this->assertGuest('expert');
     }
 
-    public function test_stay_signed_in_keeps_the_session_going(): void
+    public function test_activity_reported_by_the_page_keeps_the_session_going(): void
     {
         $student = $this->student();
         $this->actingAs($student, 'web')->get(route('student.dashboard'))->assertOk();
@@ -112,7 +112,7 @@ class IdleSessionTimeoutTest extends TestCase
         $this->get(route('student.dashboard'))->assertOk();
     }
 
-    public function test_the_countdown_running_out_signs_them_out(): void
+    public function test_the_idle_time_running_out_signs_them_out(): void
     {
         $this->actingAs($this->student(), 'web')->get(route('student.dashboard'))->assertOk();
 
@@ -124,22 +124,20 @@ class IdleSessionTimeoutTest extends TestCase
         $this->postJson(route('session.keep-alive'))->assertUnauthorized();
     }
 
-    public function test_every_portal_page_carries_the_countdown(): void
+    public function test_every_portal_page_carries_the_idle_timer(): void
     {
         $this->actingAs($this->student(), 'web')->get(route('student.dashboard'))
             ->assertOk()
             ->assertSee('id="idle-logout"', false)
             ->assertSee('data-minutes="10"', false)
-            ->assertSee('data-expired="'.route('session.expired').'"', false)
-            ->assertSee('action="'.route('logout').'"', false)
-            ->assertSee('Are you still there?');
+            ->assertSee('data-expired="'.route('session.expired').'"', false);
 
         $expert = $this->expert();
         foreach (['instructor.dashboard'] as $page) {
             $this->actingAs($expert, 'expert')->get(route($page))
                 ->assertOk()
                 ->assertSee('id="idle-logout"', false)
-                ->assertSee('action="'.route('expert.logout').'"', false);
+                ->assertSee('data-expired="'.route('session.expired').'"', false);
         }
 
         $this->app['auth']->forgetGuards();
@@ -155,5 +153,21 @@ class IdleSessionTimeoutTest extends TestCase
         $this->travel(60)->minutes();
 
         $this->get(route('student.dashboard'))->assertOk();
+    }
+
+    /**
+     * Idle time ends the session on its own: no box asking whether they are
+     * still there, and no countdown to watch.
+     */
+    public function test_there_is_no_warning_box_or_countdown(): void
+    {
+        $this->actingAs($this->student(), 'web')->get(route('student.dashboard'))
+            ->assertOk()
+            ->assertDontSee('Are you still there?')
+            ->assertDontSee('Stay signed in')
+            ->assertDontSee('id="idl-count"', false)
+            ->assertDontSee('role="alertdialog"', false)
+            // Straight to the sign-out once the time is up.
+            ->assertSee('if (now - Math.max(last, shared()) >= LIMIT) { end(); return; }', false);
     }
 }

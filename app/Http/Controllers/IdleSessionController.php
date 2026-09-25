@@ -8,9 +8,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 /**
- * The two ends of the idle sign-out in partials/idle-logout: "Stay signed
- * in" (or someone busy on a page that sends nothing) keeps the session, and
- * the countdown running out ends it.
+ * The two ends of the idle sign-out in partials/idle-logout: someone busy on
+ * a page that sends nothing keeps the session, and the idle time running out
+ * ends it.
  */
 class IdleSessionController extends Controller
 {
