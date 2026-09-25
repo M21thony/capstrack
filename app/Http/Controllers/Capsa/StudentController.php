@@ -243,6 +243,9 @@ class StudentController extends Controller
             'f_name' => ['sometimes', 'string', 'max:60'],
             'm_name' => ['sometimes', 'nullable', 'string', 'max:60'],
             'l_name' => ['sometimes', 'string', 'max:60'],
+            // The address they sign in with. Checked below, where the reason
+            // a new one is refused can be stated.
+            'email' => ['sometimes', 'required', 'string', 'max:190'],
             // Required here as on Add Student: an edit cannot blank it.
             'student_number' => ['sometimes', 'required', 'string', 'max:30'],
             'course' => ['sometimes', Rule::in(array_keys(Student::PROGRAM_COURSES))],
@@ -254,7 +257,41 @@ class StudentController extends Controller
             'transfer' => ['sometimes', 'boolean'],
         ], [
             'student_number.required' => 'Enter the student number.',
+            'email.required' => 'Enter the email address.',
         ]);
+
+        $oldEmail = Str::lower(trim((string) $student->email));
+
+        if (array_key_exists('email', $data)) {
+            $email = $this->schoolEmail($data['email']);
+
+            if ($email === null) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Use the student\'s school address, ending in '.Student::EMAIL_DOMAIN.'.',
+                    'errors' => ['email' => ['Use the student\'s school address, ending in '.Student::EMAIL_DOMAIN.'.']],
+                ], 422);
+            }
+
+            // One address, one account: sign-in finds a student by email, so
+            // two accounts on the same address would leave one unreachable.
+            $holder = $email === $oldEmail ? null : Student::whereRaw('LOWER(email) = ?', [$email])
+                ->where('student_id', '!=', $student->student_id)
+                ->first();
+
+            if ($holder) {
+                $who = trim($holder->f_name.' '.$holder->l_name) ?: 'another student';
+                $message = "That address already belongs to {$who}".($holder->student_number ? " ({$holder->student_number})" : '').'.';
+
+                return response()->json([
+                    'success' => false,
+                    'message' => $message,
+                    'errors' => ['email' => [$message]],
+                ], 422);
+            }
+
+            $data['email'] = $email;
+        }
 
         // Where they would end up, not just where they are - otherwise a move
         // out of your section into someone else's would pass the check above
@@ -291,6 +328,10 @@ class StudentController extends Controller
         }
 
         $student->fill($data + ['course' => $course, 'year_section' => $yearSection])->save();
+
+        if (isset($data['email']) && $data['email'] !== $oldEmail) {
+            $this->moveListEntry($oldEmail, $data['email']);
+        }
 
         $this->keepOnList($student);
 
@@ -342,6 +383,51 @@ class StudentController extends Controller
         }
 
         StudentRoster::create(['email' => $email, 'school_year' => Term::currentSchoolYear()] + $fields);
+    }
+
+    /**
+     * A school address in the form sign-in compares against, or null when it
+     * is not one. Lower-cased, trimmed, and read without accents the way the
+     * class-list upload reads it, since Google never issues "ñ" in an address.
+     */
+    private function schoolEmail(string $raw): ?string
+    {
+        $email = Str::lower(trim($raw));
+        $plain = Str::ascii($email);
+
+        if ($plain !== $email && filter_var($plain, FILTER_VALIDATE_EMAIL)) {
+            $email = $plain;
+        }
+
+        if (! filter_var($email, FILTER_VALIDATE_EMAIL) || ! Str::endsWith($email, Student::EMAIL_DOMAIN)) {
+            return null;
+        }
+
+        return $email;
+    }
+
+    /**
+     * Carry the class-list entry over to a student's new address.
+     *
+     * The entry is what admits somebody at sign-in. Left on the old address,
+     * it would still let that address in, and signing in with it would build
+     * a second, empty account for the same student.
+     */
+    private function moveListEntry(string $oldEmail, string $newEmail): void
+    {
+        $old = StudentRoster::whereRaw('LOWER(email) = ?', [$oldEmail])->first();
+
+        if (! $old) {
+            return;
+        }
+
+        if (StudentRoster::whereRaw('LOWER(email) = ?', [$newEmail])->exists()) {
+            $old->delete();
+
+            return;
+        }
+
+        $old->update(['email' => $newEmail]);
     }
 
     /**

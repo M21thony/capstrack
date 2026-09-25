@@ -8,6 +8,14 @@
 <link rel="stylesheet" href="{{ asset('css/admin.css') }}"/>
 <meta name="csrf-token" content="{{ csrf_token() }}"/>
 <style>
+  /* A school address box: the domain sits in grey at the right end, so only
+     the name part is typed. Typing or pasting a whole address hides it. */
+  .email-field{position:relative}
+  .email-field .input{padding-right:136px}
+  .email-field.has-at .input{padding-right:14px}
+  .email-domain{position:absolute;right:14px;top:0;bottom:0;display:flex;align-items:center;
+    font-size:14px;color:var(--text3);pointer-events:none;white-space:nowrap}
+  .email-field.has-at .email-domain{display:none}
   .ct-modal-overlay{display:none;position:fixed;inset:0;background:rgba(15,23,42,0.5);z-index:9998;align-items:center;justify-content:center;animation:ctFadeIn 0.15s ease;padding:20px}
   .ct-modal-card{background:#fff;border-radius:14px;padding:28px;max-width:420px;width:100%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.25);animation:ctPopUp 0.2s cubic-bezier(0.16,1,0.3,1)}
   .ct-modal-title{font-size:17px;font-weight:700;color:#0f172a;margin-bottom:8px}
@@ -993,7 +1001,7 @@ function uploadStudentRoster(btn) {
 
       <div class="form-group">
         <label class="label" for="add-student-email">Email address</label>
-        <input class="input" id="add-student-email" type="email" placeholder="name@my.cspc.edu.ph" autocomplete="off">
+        <input class="input" id="add-student-email" type="text" inputmode="email" autocapitalize="off" spellcheck="false" placeholder="name" autocomplete="off">
         <p class="section-hint" id="add-student-hint">They sign in with this address, so it has to be the one the college gave them.</p>
       </div>
 
@@ -1050,7 +1058,11 @@ function uploadStudentRoster(btn) {
         </span>
       </div>
 
-      <p class="section-hint" id="edit-student-mail" style="margin:0 0 12px"></p>
+      <div class="form-group">
+        <label class="label" for="edit-student-email">Email address</label>
+        <input class="input" id="edit-student-email" type="text" inputmode="email" autocapitalize="off" spellcheck="false" placeholder="name" autocomplete="off" aria-describedby="edit-student-email-hint">
+        <p class="section-hint" id="edit-student-email-hint" style="margin:4px 0 0">The school Google account they sign in with.</p>
+      </div>
 
       <div class="sheet-row">
         <div class="form-group sheet-col"><label class="label" for="edit-student-first">First name</label>
@@ -1246,10 +1258,55 @@ function filterStudents() {
   });
 }
 
+// ── school address boxes ──
+// Only the name part is typed; the domain is shown in grey and added on save.
+// A whole address, typed, pasted or picked from the suggestions, is used as is.
+const STUDENT_DOMAIN = @json(\App\Models\Student::EMAIL_DOMAIN);
+
+function schoolEmailBox(id) {
+  const input = document.getElementById(id);
+  if (!input || input.closest('.email-field')) return;
+
+  const field = document.createElement('div');
+  field.className = 'email-field';
+  input.parentNode.insertBefore(field, input);
+  field.appendChild(input);
+
+  const domain = document.createElement('span');
+  domain.className = 'email-domain';
+  domain.setAttribute('aria-hidden', 'true');
+  domain.textContent = STUDENT_DOMAIN;
+  field.appendChild(domain);
+
+  input.setAttribute('aria-label', 'Email address, ending in ' + STUDENT_DOMAIN);
+  const sync = function () { field.classList.toggle('has-at', input.value.includes('@')); };
+  ['input', 'change', 'focus'].forEach(function (e) { input.addEventListener(e, sync); });
+  input.syncDomain = sync;
+  sync();
+}
+
+function schoolEmail(id) {
+  const value = document.getElementById(id).value.trim();
+  if (!value) return '';
+
+  return value.includes('@') ? value : value + STUDENT_DOMAIN;
+}
+
+function setSchoolEmail(id, email) {
+  const input = document.getElementById(id);
+  const value = String(email || '');
+  input.value = value.toLowerCase().endsWith(STUDENT_DOMAIN) ? value.slice(0, -STUDENT_DOMAIN.length) : value;
+  if (input.syncDomain) input.syncDomain();
+}
+
+schoolEmailBox('add-student-email');
+schoolEmailBox('edit-student-email');
+
 // ── add by email ──
 function openAddStudent() {
   ['add-student-email','add-student-first','add-student-middle','add-student-last','add-student-number','add-student-section']
     .forEach(function (id) { document.getElementById(id).value = ''; });
+  setSchoolEmail('add-student-email', '');
   document.getElementById('add-student-error').style.display = 'none';
   document.getElementById('add-student-scrim').hidden = false;
   document.body.style.overflow = 'hidden';
@@ -1281,7 +1338,7 @@ function saveNewStudent() {
     method: 'POST',
     headers: headers(),
     body: JSON.stringify({
-      email: document.getElementById('add-student-email').value.trim(),
+      email: schoolEmail('add-student-email'),
       f_name: document.getElementById('add-student-first').value.trim(),
       m_name: document.getElementById('add-student-middle').value.trim() || null,
       l_name: document.getElementById('add-student-last').value.trim(),
@@ -1320,7 +1377,7 @@ let editingStudent = null;
 function openEditStudent(student) {
   editingStudent = student;
   document.getElementById('edit-student-title').textContent = student.f_name + ' ' + student.l_name;
-  document.getElementById('edit-student-mail').textContent = student.email;
+  setSchoolEmail('edit-student-email', student.email);
   document.getElementById('edit-student-first').value = student.f_name || '';
   document.getElementById('edit-student-middle').value = student.m_name || '';
   document.getElementById('edit-student-last').value = student.l_name || '';
@@ -1347,7 +1404,32 @@ function saveEditStudent() {
   btn.disabled = true;
   btn.textContent = 'Saving…';
 
-  send(false);
+  // A new address changes how the student gets in, so it is asked about
+  // once before it is sent - the old address stops opening this account.
+  const newEmail = schoolEmail('edit-student-email').toLowerCase();
+  const oldEmail = String(editingStudent.email || '').trim().toLowerCase();
+
+  if (newEmail && newEmail !== oldEmail) {
+    const name = document.getElementById('edit-student-first').value.trim() || 'This student';
+
+    confirmSheet({
+      title: 'Change the sign-in email?',
+      body: name + ' will sign in with ' + newEmail + '. ' + (oldEmail || 'The old address')
+        + ' will no longer open this account. Their team, documents and history stay.',
+      confirmLabel: 'Change email',
+    }).then(function (agreed) {
+      if (agreed) {
+        send(false);
+
+        return;
+      }
+
+      btn.disabled = false;
+      btn.textContent = 'Save changes';
+    });
+  } else {
+    send(false);
+  }
 
   // transfer=true is the second attempt, after the CaPSA has been told what
   // moving a student out of their sections means. The server refuses the
@@ -1358,6 +1440,7 @@ function saveEditStudent() {
       method: 'PATCH',
       headers: headers(),
       body: JSON.stringify({
+        email: schoolEmail('edit-student-email'),
         f_name: document.getElementById('edit-student-first').value.trim(),
         m_name: document.getElementById('edit-student-middle').value.trim() || null,
         l_name: document.getElementById('edit-student-last').value.trim(),

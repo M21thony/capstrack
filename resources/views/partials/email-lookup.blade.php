@@ -70,8 +70,11 @@
       // Saying nothing was found is worth a row: a silent empty list reads as
       // "still loading", and this is also where "they are not in the system
       // yet, type the address in full" belongs.
-      list.innerHTML = '<div class="lookup-empty">Nobody in CapsTrack matches that. '
-        + 'Type the full address to add someone new.</div>';
+      // A box that shows the school domain itself only needs the name part.
+      const next = input.closest('.email-field')
+        ? 'Type their name part to add someone new.'
+        : 'Type the full address to add someone new.';
+      list.innerHTML = '<div class="lookup-empty">Nobody in CapsTrack matches that. ' + next + '</div>';
       list.hidden = false;
       return;
     }
