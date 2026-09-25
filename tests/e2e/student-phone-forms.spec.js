@@ -164,3 +164,34 @@ test('Financial Records on a phone shows every member, not a sliver of the list'
   expect(list.shown).toBe(list.whole);
   await context.close();
 });
+
+/**
+ * Tapping a tab glides the highlight there, and the page it opens carries on
+ * from the tab that was left rather than starting over on its own.
+ */
+test('the highlight glides from the tab left to the tab tapped', async ({ browser }) => {
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  const page = await context.newPage();
+  await signIn(page, 'dashboard');
+
+  const glideX = () => page.evaluate(() => new DOMMatrix(getComputedStyle(document.querySelector('.mtab-glide')).transform).m41);
+  const onTab = () => page.evaluate(() => document.querySelector('.mtab-item.on .lb')?.textContent);
+  expect(await onTab()).toBe('Home');
+  expect(await glideX()).toBe(0);
+
+  await Promise.all([
+    page.waitForURL(/progress/),
+    page.locator('.mtab-item', { hasText: 'Progress' }).tap(),
+  ]);
+  await page.waitForSelector('.mtab-glide');
+
+  // Mid-way on arrival, then settled under Progress, its name showing.
+  const column = await page.evaluate(() => document.querySelector('.mtab-item').getBoundingClientRect().width);
+  const early = await glideX();
+  await page.waitForTimeout(900);
+  expect(early, 'it starts from Home, not already at Progress').toBeLessThan(column * 3 - 1);
+  expect(await glideX()).toBeCloseTo(column * 3, 0);
+  expect(await onTab()).toBe('Progress');
+  expect(await page.evaluate(() => sessionStorage.getItem('mtab-from'))).toBeNull();
+  await context.close();
+});

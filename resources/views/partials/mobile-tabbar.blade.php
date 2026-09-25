@@ -268,12 +268,12 @@
 --}}
 <style>
   @media (max-width:768px){
-    /* A white pill resting on a gold lip, icons only - the look the app's
-       own bar has. The pill and the lip are the bar's two pseudo-elements,
-       lip first, so the pill paints over it and the icons over both. */
+    /* A white pill resting on a gold lip. The pill and the lip are the bar's
+       two pseudo-elements, lip first, so the pill paints over it, then the
+       gliding highlight, then the icons over all of them. */
     .mtab.is-floating{
       left:14px;right:14px;bottom:calc(16px + env(safe-area-inset-bottom, 0px));
-      height:58px;padding:0 6px;border:0;border-radius:29px;
+      height:64px;padding:0 6px;border:0;border-radius:32px;
       background:none;box-shadow:none;isolation:isolate;
       transition:transform .3s cubic-bezier(.2,.8,.2,1),opacity .2s ease;
       will-change:transform;
@@ -289,41 +289,87 @@
       opacity:0;pointer-events:none;
     }
 
-    .mtab.is-floating .mtab-item{padding:0;gap:0;color:#18191f}
-    /* The names stay for screen readers; the pictures say it on screen. */
-    .mtab.is-floating .mtab-item .lb{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
-    .mtab.is-floating .mtab-ic{width:48px;height:42px;border-radius:21px}
-    .mtab.is-floating .mtab-ic svg{width:24px;height:24px;stroke-width:2}
-    .mtab.is-floating .mtab-item.on{color:var(--accent3,#8a6e10)}
-    .mtab.is-floating .mtab-item.on .mtab-ic{width:64px;background:rgba(201,168,44,.16);color:var(--accent3,#8a6e10)}
-    .mtab.is-floating .mtab-item.on .mtab-ic svg{stroke-width:2.4}
-    .mtab.is-floating .mtab-item:active .mtab-ic{background:rgba(24,25,31,.06)}
-
-    /* The one action: a solid gold disc in the middle of the pill. */
-    .mtab.is-floating .mtab-item.primary .mtab-ic{
-      width:42px;height:42px;margin:0;border-radius:50%;
-      background:var(--accent,#c9a82c);color:#18191f;box-shadow:0 4px 12px rgba(201,168,44,.45);
+    /* The highlight: one pill that glides from the tab left to the tab
+       tapped, a column at a time (--i of --n), overshooting a touch the way
+       an app's does. */
+    .mtab-glide{
+      position:absolute;top:0;bottom:0;left:6px;z-index:0;pointer-events:none;
+      width:calc((100% - 12px) / var(--n, 5));
+      transform:translateX(calc(var(--i, 0) * 100%));
+      transition:transform .5s cubic-bezier(.34,1.36,.5,1),opacity .2s ease;
     }
-    .mtab.is-floating .mtab-item.primary .mtab-ic svg{width:22px;height:22px;stroke-width:2.6}
+    .mtab-glide::before{
+      content:"";position:absolute;left:50%;top:8px;width:56px;height:34px;margin-left:-28px;border-radius:17px;
+      background:rgba(201,168,44,.2);
+      transition:transform .5s cubic-bezier(.34,1.36,.5,1);
+    }
+    .mtab.is-floating:not(:has(.mtab-item.on)) .mtab-glide{opacity:0}
+    .mtab.is-floating.is-still .mtab-glide,.mtab.is-floating.is-still .mtab-ic,.mtab.is-floating.is-still .lb{transition:none!important}
+
+    .mtab.is-floating .mtab-item{z-index:1;padding:0;gap:0;color:#6b6f7b}
+    .mtab.is-floating .mtab-ic{
+      width:44px;height:34px;border-radius:17px;background:none!important;
+      transition:transform .45s cubic-bezier(.34,1.56,.64,1),color .2s ease;
+    }
+    .mtab.is-floating .mtab-ic svg{width:23px;height:23px;stroke-width:2;transition:stroke-width .2s ease}
+    /* The tab you are on lifts its icon and says its name beneath it. */
+    .mtab.is-floating .mtab-item .lb{
+      position:absolute;left:0;right:0;bottom:7px;text-align:center;
+      font-size:10px;font-weight:700;letter-spacing:.01em;
+      opacity:0;transform:translateY(6px) scale(.9);
+      transition:opacity .2s ease,transform .35s cubic-bezier(.34,1.56,.64,1);
+    }
+    .mtab.is-floating .mtab-item.on{color:var(--accent3,#8a6e10)}
+    .mtab.is-floating .mtab-item.on .mtab-ic{transform:translateY(-7px)}
+    .mtab.is-floating .mtab-item.on .mtab-ic svg{stroke-width:2.4}
+    .mtab.is-floating .mtab-item.on .lb{opacity:1;transform:none}
+    .mtab.is-floating .mtab-item.on.is-arriving .mtab-ic svg{animation:mtab-pop .5s cubic-bezier(.34,1.56,.64,1)}
+    @keyframes mtab-pop{0%{transform:scale(.7)}60%{transform:scale(1.15)}100%{transform:scale(1)}}
+
+    /* A finger on it presses it in; a pointer over it lifts it. */
+    .mtab.is-floating .mtab-item:active .mtab-ic{transform:scale(.86);transition-duration:.12s}
+    .mtab.is-floating .mtab-item.on:active .mtab-ic{transform:translateY(-7px) scale(.86)}
+    @media (hover:hover){
+      .mtab.is-floating .mtab-item:not(.on):not(.primary):hover{color:#18191f}
+      .mtab.is-floating .mtab-item:not(.on):not(.primary):hover .mtab-ic{transform:translateY(-3px)}
+    }
+
+    /* The one action: a solid gold disc in the middle, its + turning as it
+       is pressed. It and Menu keep their names for screen readers only. */
+    .mtab.is-floating .mtab-item.primary .lb,.mtab.is-floating .mtab-item:last-child .lb{width:1px;height:1px;left:auto;right:auto;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+    .mtab.is-floating .mtab-item.primary .mtab-ic{
+      width:46px;height:46px;margin:0;border-radius:50%;
+      background:var(--accent,#c9a82c)!important;color:#18191f;box-shadow:0 6px 14px rgba(201,168,44,.45);
+      transition:transform .35s cubic-bezier(.34,1.56,.64,1),box-shadow .2s ease;
+    }
+    .mtab.is-floating .mtab-item.primary .mtab-ic svg{width:22px;height:22px;stroke-width:2.6;transition:transform .35s cubic-bezier(.34,1.56,.64,1)}
+    .mtab.is-floating .mtab-item.primary:active .mtab-ic{transform:scale(.9);box-shadow:0 3px 8px rgba(201,168,44,.4)}
+    .mtab.is-floating .mtab-item.primary:active .mtab-ic svg{transform:rotate(90deg)}
+    @media (hover:hover){
+      .mtab.is-floating .mtab-item.primary:hover .mtab-ic{transform:translateY(-3px);box-shadow:0 10px 20px rgba(201,168,44,.5)}
+      .mtab.is-floating .mtab-item.primary:hover .mtab-ic svg{transform:rotate(90deg)}
+    }
 
     /* Menu wears the student's own picture, as the app's last tab does. */
     .mtab.is-floating .mtab-avatar{width:32px;height:32px;border-radius:50%;padding:0;overflow:hidden;
-      background:var(--accent-light,#faf7ed);box-shadow:0 0 0 2px #18191f;color:#18191f;font-size:12px;font-weight:700}
+      background:var(--accent-light,#faf7ed)!important;box-shadow:0 0 0 2px #18191f;color:#18191f;font-size:12px;font-weight:700}
     .mtab.is-floating .mtab-avatar img{width:100%;height:100%;object-fit:cover;display:block}
 
-    .mtab.is-floating .mtab-badge{top:2px;right:6px;box-shadow:0 0 0 2px #fff}
+    .mtab.is-floating .mtab-badge{top:0;right:4px;box-shadow:0 0 0 2px #fff}
 
     /* The page scrolls clear of the pill; toasts sit above it. Where the
        page's scrolling area can be found (the script below), the room is at
        the end of it instead, so the page runs on underneath the pill like
        the app's feed does, rather than stopping at a line above it. */
-    .main{padding-bottom:calc(92px + env(safe-area-inset-bottom, 0px))}
-    .mtab-spacer{flex:none;height:calc(92px + env(safe-area-inset-bottom, 0px));pointer-events:none}
-    .toast,.toast-wrap,#submission-toast,#archive-toast{bottom:calc(96px + env(safe-area-inset-bottom, 0px))!important}
+    .main{padding-bottom:calc(98px + env(safe-area-inset-bottom, 0px))}
+    .mtab-spacer{flex:none;height:calc(98px + env(safe-area-inset-bottom, 0px));pointer-events:none}
+    .toast,.toast-wrap,#submission-toast,#archive-toast{bottom:calc(102px + env(safe-area-inset-bottom, 0px))!important}
   }
   @media (max-width:768px) and (prefers-reduced-motion:reduce){
     .mtab.is-floating{transition:opacity .15s linear}
     .mtab.is-floating.is-away{transform:none}
+    .mtab-glide,.mtab-glide::before,.mtab.is-floating .mtab-ic,.mtab.is-floating .mtab-ic svg,.mtab.is-floating .lb{transition:none!important;animation:none!important}
+    .mtab.is-floating .mtab-item:active .mtab-ic,.mtab.is-floating .mtab-item.primary:active .mtab-ic svg{transform:none}
   }
 </style>
 <script>
@@ -332,6 +378,43 @@
   document.addEventListener('DOMContentLoaded', function () {
     var bar = document.querySelector('.mtab.is-floating');
     if (!bar) return;
+
+    // The highlight glides to a tab as soon as it is tapped, and the page it
+    // opens carries on from there: it starts where the last page's tab was
+    // and glides the rest of the way to its own.
+    var items = Array.prototype.slice.call(bar.querySelectorAll(':scope > .mtab-item'));
+    var current = items.findIndex(function (el) { return el.classList.contains('on'); });
+    var remember = function (i) { try { sessionStorage.setItem('mtab-from', String(i)); } catch (e) {} };
+    var recall = function () {
+      try { var i = sessionStorage.getItem('mtab-from'); sessionStorage.removeItem('mtab-from'); return i === null ? -1 : +i; } catch (e) { return -1; }
+    };
+    function select(i) {
+      items.forEach(function (el, n) { el.classList.toggle('on', n === i); });
+      bar.style.setProperty('--i', i);
+    }
+    var from = recall();
+    if (current >= 0 && from >= 0 && from < items.length && from !== current) {
+      bar.classList.add('is-still');
+      select(from);
+      void bar.offsetWidth;
+      requestAnimationFrame(function () {
+        bar.classList.remove('is-still');
+        requestAnimationFrame(function () {
+          select(current);
+          items[current].classList.add('is-arriving');
+        });
+      });
+    }
+    items.forEach(function (el, i) {
+      if (el.tagName !== 'A') return;
+      el.addEventListener('click', function (e) {
+        if (i === current || e.defaultPrevented || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button) return;
+        remember(current);
+        select(i);
+      });
+    });
+    // Back to this page from the browser's memory: the tab it is really on.
+    window.addEventListener('pageshow', function (e) { if (e.persisted && current >= 0) select(current); });
 
     var last = new WeakMap();
     function show() { bar.classList.remove('is-away'); }
@@ -380,14 +463,22 @@
     // Less whatever room the page already keeps at its end, so the gap above
     // the pill is the same on every page.
     var own = parseFloat(getComputedStyle(scroller).paddingBottom) || 0;
-    spacer.style.height = 'calc(' + Math.max(0, 94 - own) + 'px + env(safe-area-inset-bottom, 0px))';
+    spacer.style.height = 'calc(' + Math.max(0, 100 - own) + 'px + env(safe-area-inset-bottom, 0px))';
     scroller.appendChild(spacer);
   });
 </script>
 @endonce
 @endif
 
-<nav class="mtab{{ ($floating ?? false) ? ' is-floating' : '' }}" aria-label="Main">
+@php
+  $activeTab = collect($tabs)->search(fn (array $tab): bool => ! empty($tab['active']));
+@endphp
+@if ($floating ?? false)
+<nav class="mtab is-floating" aria-label="Main" style="--n:{{ count($tabs) + 1 }};--i:{{ $activeTab === false ? 0 : $activeTab }}">
+  <span class="mtab-glide" aria-hidden="true"></span>
+@else
+<nav class="mtab" aria-label="Main">
+@endif
   @foreach ($tabs as $tab)
     @php
       $classes = 'mtab-item'.(! empty($tab['active']) ? ' on' : '').(! empty($tab['primary']) ? ' primary' : '');
