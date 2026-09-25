@@ -23,7 +23,7 @@ html,body{height:100%;overflow:hidden}
 body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);display:flex;font-size:16px}
 
 /* SIDEBAR — dark charcoal with yellow accents */
-.sidebar{width:250px;min-width:250px;background:var(--navy-dark);border-right:none;display:flex;flex-direction:column;height:100vh;overflow:hidden}
+.sidebar{width:250px;min-width:250px;background:var(--navy-dark);border-right:none;display:flex;flex-direction:column;height:100vh;height:100dvh;overflow:hidden}
 .sidebar-brand{padding:20px 18px 18px;border-bottom:1px solid var(--navy-border);background:var(--navy-dark);display:flex;align-items:center;gap:12px}
 .brand-badge{display:inline-flex;align-items:center;gap:10px;flex:1}
 .brand-icon{width:38px;height:38px;background:var(--accent);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
@@ -50,7 +50,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
 .nav-badge.warn{background:#ef4444;color:white}
 
 /* TOPBAR — deep charcoal with yellow branding */
-.main{flex:1;display:flex;flex-direction:column;height:100vh;overflow:hidden;background:var(--bg)}
+.main{flex:1;display:flex;flex-direction:column;height:100vh;height:100dvh;overflow:hidden;background:var(--bg)}
 .topbar{height:58px;min-height:58px;border-bottom:2px solid var(--accent);display:flex;align-items:center;padding:0 26px;gap:14px;background:var(--navy-mid)}
 .page-title{font-size:17px;font-weight:500;color:var(--navy-text);flex:1;font-family:'DM Sans',sans-serif}
 .topbar-actions{display:flex;align-items:center;gap:10px;position:relative}
@@ -210,7 +210,7 @@ select.input{cursor:pointer}
 .stat-l{font-size:11px;color:var(--text3);letter-spacing:0.5px;text-transform:uppercase;font-weight:600}
 
 /* LOGIN */
-.login-wrap{display:flex;align-items:center;justify-content:center;height:calc(100vh - 52px);background:var(--bg)}
+.login-wrap{display:flex;align-items:center;justify-content:center;height:calc(100vh - 52px);height:calc(100dvh - 52px);background:var(--bg)}
 .login-card{background:#ffffff;border:1px solid var(--border);border-radius:18px;padding:44px;width:400px;text-align:center;box-shadow:0 8px 32px rgba(245,193,0,0.1),0 2px 8px rgba(0,0,0,0.06)}
 .login-logo{width:66px;height:66px;background:var(--navy-dark);border-radius:16px;display:flex;align-items:center;justify-content:center;margin:0 auto 22px;position:relative;overflow:hidden}
 .login-logo svg{width:30px;height:30px;stroke:var(--accent);fill:none;stroke-width:2}
@@ -310,7 +310,7 @@ mark{background:rgba(201,168,44,0.25);color:inherit;border-radius:2px;padding:0 
 .profile-overlay.open{display:block}
 
 /* ── PROFILE MODAL CARD ── */
-.profile-modal{position:fixed;top:0;left:250px;width:300px;height:100vh;background:var(--bg2);box-shadow:4px 0 24px rgba(0,0,0,0.18);overflow-y:auto;pointer-events:all;transform:translateX(-10px);opacity:0;transition:transform 0.18s ease,opacity 0.18s ease;z-index:201;border-right:1px solid var(--border)}
+.profile-modal{position:fixed;top:0;left:250px;width:300px;height:100vh;height:100dvh;background:var(--bg2);box-shadow:4px 0 24px rgba(0,0,0,0.18);overflow-y:auto;pointer-events:all;transform:translateX(-10px);opacity:0;transition:transform 0.18s ease,opacity 0.18s ease;z-index:201;border-right:1px solid var(--border)}
 .profile-overlay.open .profile-modal{transform:translateX(0);opacity:1}
 
 /* ── PROFILE MODAL HEADER ── */
@@ -513,7 +513,7 @@ mark{background:rgba(201,168,44,0.25);color:inherit;border-radius:2px;padding:0 
 .field-error{font-size:11px;color:var(--red);margin-top:5px;font-weight:500}
 
 /* Modal Content */
-.modal-content{background:#fff;border-radius:14px;width:90%;max-height:85vh;overflow-y:auto;box-shadow:0 24px 60px rgba(0,0,0,0.35);animation:modalIn 0.2s ease;cursor:default}
+.modal-content{background:#fff;border-radius:14px;width:90%;max-height:85vh;max-height:85dvh;overflow-y:auto;box-shadow:0 24px 60px rgba(0,0,0,0.35);animation:modalIn 0.2s ease;cursor:default}
 .modal-content--detail{max-width:880px}
 .modal-content::-webkit-scrollbar{width:4px}
 .modal-content::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
@@ -613,7 +613,7 @@ mark{background:rgba(201,168,44,0.25);color:inherit;border-radius:2px;padding:0 
   .receipt-card__aside{flex-direction:row;align-items:center;width:100%;justify-content:flex-end;padding-top:8px;border-top:1px solid var(--border);margin-top:4px}
   .modal-header{padding:16px 18px}
   .modal-body{padding:16px 18px 18px}
-  .modal-content{max-height:90vh}
+  .modal-content{max-height:90vh;max-height:90dvh}
   .feedback-info{flex-direction:column;gap:8px}
 }
 

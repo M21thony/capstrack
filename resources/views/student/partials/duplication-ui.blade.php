@@ -98,7 +98,7 @@
 /* ── the report page: the team's words beside what came back ────── */
 .capsa2{display:grid;grid-template-columns:480px minmax(0,1fr);gap:14px;align-items:stretch}
 @media (max-width:900px){.capsa2{grid-template-columns:1fr}}
-.capsa2>.card{display:flex;flex-direction:column;min-width:0;max-height:min(560px,max(300px,calc(100vh - 340px)));padding:0}
+.capsa2>.card{display:flex;flex-direction:column;min-width:0;max-height:min(560px,max(300px,calc(100vh - 340px)));max-height:min(560px,max(300px,calc(100dvh - 340px)));padding:0}
 .capsa2>.card>.card-header{flex-shrink:0;margin:0;padding:14px 24px;border-bottom:1px solid var(--border)}
 .capsa2 .scrolls{padding:16px 24px}
 .capsa2 .scrolls.dup-rows{padding:0;margin:0}
@@ -260,7 +260,7 @@
 .rp-expert-who .x{font-size:11.5px;color:var(--primary,#3f55b5);margin-top:2px;line-height:1.45}
 .rp-expert-who .r{font-size:11.5px;color:var(--text3);margin-top:3px;line-height:1.45}
 
-.rp-dialog{border:0;border-radius:16px;padding:0;width:min(720px,calc(100vw - 32px));max-height:min(86vh,900px);box-shadow:0 24px 60px rgba(0,0,0,.28)}
+.rp-dialog{border:0;border-radius:16px;padding:0;width:min(720px,calc(100vw - 32px));max-height:min(86vh,900px);max-height:min(86dvh,900px);box-shadow:0 24px 60px rgba(0,0,0,.28)}
 .rp-dialog::backdrop{background:rgba(15,16,22,.55)}
 .rp-dialog-h{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding:18px 22px 14px;border-bottom:1px solid var(--border);position:sticky;top:0;background:#fff}
 .rp-dialog-h .k{font-size:10.5px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--text3)}

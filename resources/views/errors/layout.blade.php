@@ -19,7 +19,7 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="{{ asset('css/admin.css') }}"/>
 <style>
-  .err-page{min-height:100vh;display:flex;flex-direction:column;background:var(--bg)}
+  .err-page{min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;background:var(--bg)}
   .err-bar{height:54px;flex-shrink:0;background:var(--navy-dark);display:flex;align-items:center;gap:12px;padding:0 24px}
   .err-bar-mark{width:22px;height:22px;border-radius:7px;background:var(--accent)}
   .err-bar-name{font-size:14px;font-weight:700;color:var(--navy-text);letter-spacing:-0.2px}

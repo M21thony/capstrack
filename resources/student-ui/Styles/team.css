@@ -23,7 +23,7 @@ html,body{height:100%;overflow:hidden}
 body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);display:flex;font-size:16px}
 
 /* SIDEBAR — dark charcoal with yellow accents */
-.sidebar{width:250px;min-width:250px;background:var(--navy-dark);border-right:none;display:flex;flex-direction:column;height:100vh;overflow:hidden}
+.sidebar{width:250px;min-width:250px;background:var(--navy-dark);border-right:none;display:flex;flex-direction:column;height:100vh;height:100dvh;overflow:hidden}
 .sidebar-brand{padding:20px 18px 18px;border-bottom:1px solid var(--navy-border);background:var(--navy-dark);display:flex;align-items:center;gap:12px}
 .brand-badge{display:inline-flex;align-items:center;gap:10px;flex:1}
 .brand-icon{width:38px;height:38px;background:var(--accent);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
@@ -50,7 +50,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
 .nav-badge.warn{background:#ef4444;color:white}
 
 /* TOPBAR — deep charcoal with yellow branding */
-.main{flex:1;display:flex;flex-direction:column;height:100vh;overflow:hidden;background:var(--bg)}
+.main{flex:1;display:flex;flex-direction:column;height:100vh;height:100dvh;overflow:hidden;background:var(--bg)}
 .topbar{height:58px;min-height:58px;border-bottom:2px solid var(--accent);display:flex;align-items:center;padding:0 26px;gap:14px;background:var(--navy-mid)}
 .page-title{font-size:17px;font-weight:500;color:var(--navy-text);flex:1;font-family:'DM Sans',sans-serif}
 .topbar-actions{display:flex;align-items:center;gap:10px;position:relative}
@@ -79,7 +79,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
 .profile-overlay.open{display:block}
 
 /* ── PROFILE MODAL CARD ── */
-.profile-modal{position:fixed;top:0;left:250px;width:300px;height:100vh;background:var(--bg2);box-shadow:4px 0 24px rgba(0,0,0,0.18);overflow-y:auto;pointer-events:all;transform:translateX(-10px);opacity:0;transition:transform 0.18s ease,opacity 0.18s ease;z-index:201;border-right:1px solid var(--border)}
+.profile-modal{position:fixed;top:0;left:250px;width:300px;height:100vh;height:100dvh;background:var(--bg2);box-shadow:4px 0 24px rgba(0,0,0,0.18);overflow-y:auto;pointer-events:all;transform:translateX(-10px);opacity:0;transition:transform 0.18s ease,opacity 0.18s ease;z-index:201;border-right:1px solid var(--border)}
 .profile-overlay.open .profile-modal{transform:translateX(0);opacity:1}
 
 /* ── PROFILE MODAL HEADER ── */
@@ -337,7 +337,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
   .modal-card .pm-close-btn{top:10px!important;right:10px!important;width:36px!important;height:36px!important}
   .modal-card .post-type-btn{font-size:11px!important;padding:8px!important}
   .modal-card .tag-input-field{min-height:46px!important;padding:10px 12px!important;border-radius:12px!important}
-  .modal-card .tag-suggestions-box{top:auto!important;bottom:100%!important;margin:0 0 6px!important;max-height:36vh!important;border-radius:12px!important;box-shadow:0 -12px 28px rgba(0,0,0,0.14)!important}
+  .modal-card .tag-suggestions-box{top:auto!important;bottom:100%!important;margin:0 0 6px!important;max-height:36vh!important;max-height:36dvh!important;border-radius:12px!important;box-shadow:0 -12px 28px rgba(0,0,0,0.14)!important}
   .modal-card .tag-suggestion-item{padding:12px 14px!important;font-size:14px!important}
   .modal-card .member-input-group{padding:10px 14px!important}
   .modal-card .modal-tutorial{padding:12px 14px!important;border-radius:12px!important}
@@ -432,8 +432,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
   .verified-badge-standalone svg{width:14px!important;height:14px!important}
 
   /* ── Notification Dropdown ── */
-  .notif-dropdown{width:calc(100vw - 24px)!important;right:0!important;top:calc(100% + 6px)!important;max-height:70vh!important;border-radius:10px!important}
-  .notif-list{max-height:calc(70vh - 52px)!important}
+  .notif-dropdown{width:calc(100vw - 24px)!important;right:0!important;top:calc(100% + 6px)!important;max-height:70vh!important;max-height:70dvh!important;border-radius:10px!important}
+  .notif-list{max-height:calc(70vh - 52px)!important;max-height:calc(70dvh - 52px)!important}
   .notif-item{padding:10px 14px!important;gap:10px!important}
   .notif-item-icon{width:28px!important;height:28px!important;border-radius:6px!important}
   .notif-item-icon svg{width:14px!important;height:14px!important}
@@ -458,7 +458,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
   .modal-card .member-input-group{padding:8px 12px!important;margin-bottom:16px!important}
   .modal-card .skill-chip{padding:5px 10px!important;font-size:11px!important}
   .modal-card .tag-input-field{min-height:42px!important;padding:8px 10px!important}
-  .modal-card .tag-suggestions-box{top:auto!important;bottom:100%!important;margin:0 0 6px!important;max-height:32vh!important;box-shadow:0 -12px 28px rgba(0,0,0,0.14)!important}
+  .modal-card .tag-suggestions-box{top:auto!important;bottom:100%!important;margin:0 0 6px!important;max-height:32vh!important;max-height:32dvh!important;box-shadow:0 -12px 28px rgba(0,0,0,0.14)!important}
   .modal-card--recruitment > div[style*="margin-top: 20px"]{gap:12px!important;margin-top:14px!important}
   .modal-card--recruitment #leader-fields:not([style*="none"]),.modal-card--recruitment #individual-fields:not([style*="none"]){gap:10px!important}
   .modal-card--recruitment #post-goal,.modal-card--recruitment #member-count{margin-bottom:0!important}

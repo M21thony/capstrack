@@ -10,7 +10,7 @@
 @include('partials.skeleton-head', ['skReveal' => 'block'])
 <style>
   /* One row per defense you sit on: what is left to grade reads first. */
-  .gl{background:var(--bg2);border:1px solid var(--border);border-radius:12px;display:flex;flex-direction:column;max-height:calc(100vh - 120px);overflow:hidden}
+  .gl{background:var(--bg2);border:1px solid var(--border);border-radius:12px;display:flex;flex-direction:column;max-height:calc(100vh - 120px);max-height:calc(100dvh - 120px);overflow:hidden}
   .gl-head{display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid var(--border);flex-wrap:wrap}
   .gl-head b{font-size:14px}
   .gl-head .sub{font-size:12.5px;color:var(--text3)}

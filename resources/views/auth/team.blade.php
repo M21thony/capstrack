@@ -47,7 +47,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    min-height: 100vh;
+    min-height: 100vh;min-height: 100dvh;
     overflow-x: hidden;
     padding: 28px 24px;
     background-image:
@@ -66,7 +66,7 @@
     display: flex;
     width: 100%;
     max-width: 1360px;
-    min-height: min(820px, calc(100vh - 56px));
+    min-height: min(820px, calc(100vh - 56px));min-height: min(820px, calc(100dvh - 56px));
     border-radius: 26px;
     overflow: hidden;
     box-shadow: 0 50px 100px -20px rgba(0,0,0,0.65), 0 0 0 1px rgba(255,255,255,0.04);
@@ -413,7 +413,7 @@
        with no way to reach it. Below this breakpoint the page just flows
        top-to-bottom instead, same as login.blade.php's own phone layout. */
     body { display: block; padding: 0; }
-    .team-page { flex-direction: column; min-height: 100vh; border-radius: 0; max-width: 100%; }
+    .team-page { flex-direction: column; min-height: 100vh;min-height: 100dvh; border-radius: 0; max-width: 100%; }
     .story-panel { flex: none; padding: 32px 24px; }
     .story-mid { margin: 28px 0 40px; }
     .trend-motif { width: 60%; opacity: 0.3; }

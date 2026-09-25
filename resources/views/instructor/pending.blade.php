@@ -27,7 +27,7 @@ body {
   font-family: 'DM Sans', sans-serif;
   background: var(--bg);
   color: var(--text1);
-  min-height: 100vh;
+  min-height: 100vh;min-height: 100dvh;
   display: flex;
   align-items: center;
   justify-content: center;

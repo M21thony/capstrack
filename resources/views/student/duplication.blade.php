@@ -20,7 +20,7 @@
      height that reaches the bottom with no overflow and no dead gap -
      hence a 248px offset (900 - 652). This holds at other viewport
      heights too since it's a flat pixel offset, not a hardcoded height. */
-  height: calc(100vh - 248px);
+  height: calc(100vh - 248px);height: calc(100dvh - 248px);
   min-height: 480px;
 }
 
@@ -210,7 +210,7 @@
 .pp-modal-overlay.show { display: flex; }
 
 .pp-hint { font-size: 11px; color: var(--text3); margin-top: 4px; }
-.pp-modal-box { width: 100%; max-width: 760px; max-height: 82vh; overflow-y: auto; position: relative; }
+.pp-modal-box { width: 100%; max-width: 760px; max-height: 82vh;max-height: 82dvh; overflow-y: auto; position: relative; }
 /* Every modal still scrolls with the wheel/trackpad - just no visible
    track running down it. */
 .pp-modal-box { scrollbar-width: none; -ms-overflow-style: none; }
@@ -219,7 +219,7 @@
 .pp-modal-close:hover { color: var(--text); }
 
 /* Pre-Proposal Details: a fixed header and footer, only the fields scroll. */
-.pp-dialog { width: 100%; max-width: 780px; max-height: min(92vh, 900px); display: flex; background: var(--bg2); border: 1px solid var(--border); border-radius: 14px; box-shadow: 0 24px 60px rgba(0,0,0,.28); overflow: hidden; }
+.pp-dialog { width: 100%; max-width: 780px; max-height: min(92vh, 900px);max-height: min(92dvh, 900px); display: flex; background: var(--bg2); border: 1px solid var(--border); border-radius: 14px; box-shadow: 0 24px 60px rgba(0,0,0,.28); overflow: hidden; }
 .pp-dialog form { display: flex; flex-direction: column; width: 100%; min-height: 0; }
 .pp-dialog-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 18px 22px 14px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
 .pp-dialog-head h2 { margin: 0; font-size: 17px; font-weight: 700; color: var(--text); }

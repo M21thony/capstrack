@@ -84,7 +84,7 @@
 .ms-badge { position: absolute; top: -7px; right: -7px; min-width: 19px; height: 19px; border-radius: 999px; background: var(--accent); color: var(--navy-dark, #18191f); font-size: 10.5px; font-weight: 700; display: grid; place-items: center; padding: 0 5px; border: 2px solid var(--bg); }
 
 /* ── Tracker ─────────────────────────────────────────────────────────── */
-.ms-app { height: var(--ms-h, 70vh); display: grid; grid-template-rows: auto auto minmax(0, 1fr); gap: 10px; font-size: 13.5px; line-height: 1.5; }
+.ms-app { height: var(--ms-h, 70vh);height: var(--ms-h, 70dvh); display: grid; grid-template-rows: auto auto minmax(0, 1fr); gap: 10px; font-size: 13.5px; line-height: 1.5; }
 .ms-top { display: flex; align-items: center; gap: 8px 12px; flex-wrap: wrap; }
 .ms-h { font-size: 19.5px; margin: 0; letter-spacing: -.01em; font-weight: 600; }
 .ms-band { display: flex; align-items: center; gap: 12px 26px; flex-wrap: wrap; background: var(--accent-light); border: 1px solid #e3d08f; border-radius: 11px; padding: 8px 16px; }
@@ -171,7 +171,7 @@
 .ms-sd .ms-acts .ms-btn { min-height: 37px; padding: 5px 15px; font-size: 13.5px; }
 
 /* Checking a signed paper */
-.ms-check { width: min(1040px, calc(100vw - 32px)); height: min(720px, calc(100vh - 32px)); }
+.ms-check { width: min(1040px, calc(100vw - 32px)); height: min(720px, calc(100vh - 32px));height: min(720px, calc(100dvh - 32px)); }
 .ms-check[open] { display: grid; grid-template-rows: auto minmax(0, 1fr); }
 .ms-ck-head { display: flex; align-items: center; gap: 12px; padding: 10px 16px; background: var(--navy-dark, #18191f); color: #fff; border-bottom: 2px solid var(--accent); }
 .ms-ck-head b { font-size: 15px; }
@@ -195,7 +195,7 @@
 .ms-picks textarea { border: 1px solid var(--border2); border-radius: 8px; padding: 8px 10px; min-height: 80px; resize: none; width: 100%; }
 
 /* Edit milestones */
-.ms-editor { width: calc(100vw - 48px); max-width: 1280px; height: calc(100vh - 48px); max-height: none; background: var(--bg, #f2f3f5); }
+.ms-editor { width: calc(100vw - 48px); max-width: 1280px; height: calc(100vh - 48px);height: calc(100dvh - 48px); max-height: none; background: var(--bg, #f2f3f5); }
 .ms-editor[open] { display: grid; grid-template-rows: auto minmax(0, 1fr); }
 .ms-ed-head { display: flex; align-items: center; gap: 8px 14px; padding: 6px 14px; background: var(--navy-dark, #18191f); color: #fff; border-bottom: 2px solid var(--accent); flex-wrap: wrap; }
 .ms-ed-head h2 { margin: 0; font-size: 16px; }

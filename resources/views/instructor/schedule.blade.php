@@ -282,7 +282,7 @@
 /* Availability, laid out like Google Calendar's appointment schedule: settings
    on the left, the week on the right, and every weekday saying either its
    hours or "Unavailable". */
-.ga-modal{width:min(780px,calc(100vw - 32px));max-height:calc(100vh - 32px);display:flex;flex-direction:column;
+.ga-modal{width:min(780px,calc(100vw - 32px));max-height:calc(100vh - 32px);max-height:calc(100dvh - 32px);display:flex;flex-direction:column;
   background:var(--bg2);border:1px solid var(--border);border-radius:14px;box-shadow:0 24px 60px -20px rgba(0,0,0,.45);overflow:hidden}
 .ga-head{display:flex;align-items:flex-start;gap:12px;padding:18px 20px 14px;border-bottom:1px solid var(--border)}
 .ga-head>div{flex:1;min-width:0}

@@ -10,7 +10,7 @@
 
 html,body.pi-page-body{
   height:auto;
-  min-height:100vh;
+  min-height:100vh;min-height:100dvh;
   overflow:auto;
   display:block;
   background:var(--bg);

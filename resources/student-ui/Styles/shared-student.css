@@ -641,8 +641,8 @@ body.tour-open{
   }
 
   /* ── Notification Dropdown ── */
-  .notif-dropdown{width:calc(100vw - 24px)!important;right:0!important;top:calc(100% + 6px)!important;max-height:70vh!important;border-radius:10px!important}
-  .notif-list{max-height:calc(70vh - 52px)!important}
+  .notif-dropdown{width:calc(100vw - 24px)!important;right:0!important;top:calc(100% + 6px)!important;max-height:70vh!important;max-height:70dvh!important;border-radius:10px!important}
+  .notif-list{max-height:calc(70vh - 52px)!important;max-height:calc(70dvh - 52px)!important}
   .notif-item{padding:10px 14px!important;gap:10px!important}
   .notif-item-icon{width:28px!important;height:28px!important;border-radius:6px!important}
   .notif-item-icon svg{width:14px!important;height:14px!important}

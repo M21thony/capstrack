@@ -15,7 +15,7 @@
   /* Scrolls without a bar. The panel is 300px wide and the bar took a slice
      of that off every row of chips, on a surface that is already obviously
      scrollable from its content running past the bottom. */
-  .ep-modal{position:fixed;top:0;left:250px;width:300px;height:100vh;background:#fff;box-shadow:4px 0 24px rgba(0,0,0,0.18);overflow-y:auto;pointer-events:all;transform:translateX(-10px);opacity:0;transition:transform 0.18s ease,opacity 0.18s ease;z-index:201;border-right:1px solid var(--border);scrollbar-width:none;-ms-overflow-style:none}
+  .ep-modal{position:fixed;top:0;left:250px;width:300px;height:100vh;height:100dvh;background:#fff;box-shadow:4px 0 24px rgba(0,0,0,0.18);overflow-y:auto;pointer-events:all;transform:translateX(-10px);opacity:0;transition:transform 0.18s ease,opacity 0.18s ease;z-index:201;border-right:1px solid var(--border);scrollbar-width:none;-ms-overflow-style:none}
   .ep-modal::-webkit-scrollbar{display:none}
   .ep-overlay.open .ep-modal{transform:translateX(0);opacity:1}
   /* Sits over the body now that there is no bar to sit in. Kept at the top
