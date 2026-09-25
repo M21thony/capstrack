@@ -5,7 +5,9 @@ namespace App\Support;
 use App\Models\CapstoneDocument;
 use App\Models\CapstonePreProposal;
 use App\Models\DefenseSchedule;
+use App\Models\DeliverableCheck;
 use App\Models\Team;
+use App\Models\TitleChangeRequest;
 
 /**
  * When a team's title may change, read off its Pre-proposal Defense.
@@ -17,6 +19,9 @@ use App\Models\Team;
  *                                  turns in new ones and keeps its experts.
  *                                  The CaPSA approves the new title, then the
  *                                  adviser confirms it before it is the team's.
+ *
+ * Once passed, the leader can also ask the adviser to change part of the
+ * title (a TitleChangeRequest); only an approved one replaces it.
  */
 class TitleRevision
 {
@@ -59,6 +64,18 @@ class TitleRevision
             ->exists();
     }
 
+    /**
+     * Whether the CaPSA has checked the team's Signed Final Project Title
+     * Form as complete. From then the title is final.
+     */
+    public static function finalTitleVerified(Team $team): bool
+    {
+        return DeliverableCheck::where('team_id', $team->team_id)
+            ->where('status', DeliverableCheck::COMPLETE)
+            ->whereHas('deliverable', fn ($q) => $q->where('template_key', self::FINAL_TITLE_FORM))
+            ->exists();
+    }
+
     /** Why the title cannot be revised, or null when it can. */
     public static function whyNot(Team $team): ?string
     {
@@ -77,6 +94,39 @@ class TitleRevision
     public static function canRevise(Team $team): bool
     {
         return self::whyNot($team) === null;
+    }
+
+    /**
+     * Why the team cannot ask its adviser to change part of its title, or
+     * null when it can. Open once the Pre-proposal Defense is passed and until
+     * the CaPSA verifies the Signed Final Project Title Form - except while
+     * the leader may still reword it freely (passed with revision, final
+     * title form not in) or a request is already with the adviser.
+     */
+    public static function whyNotRequestChange(Team $team): ?string
+    {
+        $decision = self::latestDecision($team);
+
+        return match (true) {
+            ! $decision || ! in_array($decision->outcome, [DefenseOutcome::PASSED, DefenseOutcome::PASSED_WITH_REVISION], true) => 'You can ask to change your title once your panel has passed it.',
+            ! $team->project_title => 'Your team has no approved title to change yet.',
+            self::finalTitleVerified($team) => 'Your CaPSA has verified your Signed Final Project Title Form, so the title is final.',
+            self::canRevise($team) => 'You can still reword your title yourself until the Signed Final Project Title Form is in.',
+            self::pendingChange($team) !== null => 'Your adviser is still deciding on the change you asked for.',
+            default => null,
+        };
+    }
+
+    /** The title change the team's adviser is still to decide on, if any. */
+    public static function pendingChange(Team $team): ?TitleChangeRequest
+    {
+        return TitleChangeRequest::where('team_id', $team->team_id)->where('status', TitleChangeRequest::PENDING)->latest('id')->first();
+    }
+
+    /** The most recent title change the adviser decided on, if any. */
+    public static function lastDecidedChange(Team $team): ?TitleChangeRequest
+    {
+        return TitleChangeRequest::where('team_id', $team->team_id)->where('status', '!=', TitleChangeRequest::PENDING)->latest('id')->first();
     }
 
     /** Whether the panel sent the team back for a new title it has not settled yet. */
