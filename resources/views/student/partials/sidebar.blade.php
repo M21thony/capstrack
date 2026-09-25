@@ -356,7 +356,7 @@
 
 </script>
 {{-- ── The upload pop-up every Upload / Submit button opens. ── --}}
-<link rel="stylesheet" href="{{ asset('css/submission-drawer.css') }}">
+<link rel="stylesheet" href="{{ \App\Support\PublicAsset::url('css/submission-drawer.css') }}">
 
 {{-- Where the pop-up asks, checks and sends. --}}
 @php

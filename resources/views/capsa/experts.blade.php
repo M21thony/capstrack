@@ -4,8 +4,8 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Expert Management - CapsTRACK Admin</title>
-<link href="{{ asset('css/fonts.css') }}" rel="stylesheet">
-<link rel="stylesheet" href="{{ asset('css/admin.css') }}"/>
+<link href="{{ \App\Support\PublicAsset::url('css/fonts.css') }}" rel="stylesheet">
+<link rel="stylesheet" href="{{ \App\Support\PublicAsset::url('css/admin.css') }}"/>
 <style>
   .ae-field{margin-bottom:14px}
   .ae-label{display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;

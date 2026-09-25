@@ -6,6 +6,7 @@ use App\Models\CapstoneExpert;
 use App\Models\Student;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
+use App\Support\PublicAsset;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\File;
 use Tests\TestCase;
@@ -50,7 +51,7 @@ class SelfHostedFontsTest extends TestCase
 
     public function test_the_portals_and_sign_in_link_the_sites_own_fonts(): void
     {
-        $link = 'href="'.asset('css/fonts.css').'" rel="stylesheet"';
+        $link = 'href="'.PublicAsset::url('css/fonts.css').'" rel="stylesheet"';
 
         $this->get(route('login'))->assertOk()->assertSee($link, false);
 

@@ -41,3 +41,28 @@ for (const [role, path, scroller] of LISTS) {
     expect(result).toEqual({ rowsScrolled: true, headingAtTop: true, listFitsScreen: true, pageStill: true });
   });
 }
+
+/** On a phone too, as the Section List: the team cards scroll inside the list and the page holds still. */
+test('capsa/team-management on a phone: the cards scroll inside the list', async ({ browser }) => {
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  const page = await context.newPage();
+  const response = await page.goto('/__dev-login-expert/capsa/dashboard');
+  test.skip(response.status() === 404, 'there is no capsa account in this database');
+  await page.goto('/capsa/team-management');
+  await page.waitForTimeout(1200);
+
+  const result = await page.evaluate(async () => {
+    const box = document.querySelector('#tm-teams .tscroll');
+    const body = box.querySelector('tbody');
+    const row = body.querySelector('tr');
+    for (let i = 0; i < 30; i++) body.appendChild(row.cloneNode(true));
+    await new Promise((r) => setTimeout(r, 150));
+    box.scrollTop = 500;
+    document.querySelector('.content').scrollTop = 500;
+    await new Promise((r) => setTimeout(r, 150));
+    return { listScrolled: box.scrollTop > 0, pageStill: document.querySelector('.content').scrollTop === 0, listTall: box.clientHeight > 300 };
+  });
+
+  expect(result).toEqual({ listScrolled: true, pageStill: true, listTall: true });
+  await context.close();
+});

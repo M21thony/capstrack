@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Sign in — CapsTrack</title>
-<link href="{{ asset('css/fonts.css') }}" rel="stylesheet">
+<link href="{{ \App\Support\PublicAsset::url('css/fonts.css') }}" rel="stylesheet">
 <script src="https://www.google.com/recaptcha/api.js?render={{ config('services.recaptcha.site_key') }}"></script>
 @vite(['resources/css/app.css'])
 <style>
