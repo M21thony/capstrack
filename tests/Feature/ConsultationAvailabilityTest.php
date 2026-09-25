@@ -2,11 +2,11 @@
 
 namespace Tests\Feature;
 
+use App\Mail\ConsultationBookedMail;
+use App\Mail\ConsultationReminderMail;
 use App\Models\CapstoneExpert;
 use App\Models\ConsultationAvailability;
 use App\Models\Student;
-use App\Mail\ConsultationBookedMail;
-use App\Mail\ConsultationReminderMail;
 use App\Services\GoogleCalendarService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -267,6 +267,7 @@ class ConsultationAvailabilityTest extends TestCase
         DB::table('consultation_schedule')->where('schedule_id', $scheduleId)->update(['end_time' => '23:30:00']);
         DB::table('consultation_booking')->insert([
             'student_id' => $student->student_id,
+            'team_id' => DB::table('student_s_y')->where('student_id', $student->student_id)->value('team_id'),
             'schedule_id' => $scheduleId,
             'session_date' => today()->toDateString(),
             'booking_status' => 'scheduled',
