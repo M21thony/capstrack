@@ -40,7 +40,7 @@ export function toast(text) {
   try { toastEl.hidePopover(); } catch { /* not open */ }
   try { toastEl.showPopover(); } catch { /* popovers unsupported */ }
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { try { toastEl.hidePopover(); } catch { /* closed */ } }, 3500);
+  toastTimer = setTimeout(() => { try { toastEl.hidePopover(); } catch { /* closed */ } }, 4000);
 }
 
 export function reloadWith(text) {

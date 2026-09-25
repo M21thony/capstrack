@@ -1285,7 +1285,7 @@ function showToast(msg){
   t.textContent = msg;
   t.classList.add('show');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(()=>t.classList.remove('show'),2800);
+  toastTimer = setTimeout(()=>t.classList.remove('show'),4000);
 }
 
 // -- INIT ----------------------------------------------------------------------

@@ -1031,7 +1031,7 @@ function showToast(message, type) {
   toast.classList.remove('success', 'error');
   toast.classList.add('show', type);
   clearTimeout(showToast._t);
-  showToast._t = setTimeout(() => toast.classList.remove('show'), 3500);
+  showToast._t = setTimeout(() => toast.classList.remove('show'), 4000);
 }
 
 const stopWords = new Set(['a','an','the','and','or','but','in','on','at','to','for',
