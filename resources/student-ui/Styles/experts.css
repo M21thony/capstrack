@@ -23,7 +23,7 @@ html,body{height:100%;overflow:hidden}
 body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);display:flex;font-size:16px}
 
 /* SIDEBAR — dark charcoal with yellow accents */
-.sidebar{width:250px;min-width:250px;background:var(--navy-dark);border-right:none;display:flex;flex-direction:column;height:100vh;overflow:hidden}
+.sidebar{width:250px;min-width:250px;background:var(--navy-dark);border-right:none;display:flex;flex-direction:column;height:100vh;height:100dvh;overflow:hidden}
 .sidebar-brand{padding:20px 18px 18px;border-bottom:1px solid var(--navy-border);background:var(--navy-dark);display:flex;align-items:center;gap:12px}
 .brand-badge{display:inline-flex;align-items:center;gap:10px;flex:1}
 .brand-icon{width:38px;height:38px;background:var(--accent);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
@@ -50,7 +50,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
 .nav-badge.warn{background:#ef4444;color:white}
 
 /* TOPBAR — deep charcoal with yellow branding */
-.main{flex:1;display:flex;flex-direction:column;height:100vh;overflow:hidden;background:var(--bg)}
+.main{flex:1;display:flex;flex-direction:column;height:100vh;height:100dvh;overflow:hidden;background:var(--bg)}
 .topbar{height:58px;min-height:58px;border-bottom:2px solid var(--accent);display:flex;align-items:center;padding:0 26px;gap:14px;background:var(--navy-mid)}
 .page-title{font-size:17px;font-weight:500;color:var(--navy-text);flex:1;font-family:'DM Sans',sans-serif}
 .topbar-actions{display:flex;align-items:center;gap:10px;position:relative}
@@ -81,7 +81,7 @@ select.input{cursor:pointer}
 .profile-overlay.open{display:block}
 
 /* ── PROFILE MODAL CARD ── */
-.profile-modal{position:fixed;top:0;left:250px;width:300px;height:100vh;background:var(--bg2);box-shadow:4px 0 24px rgba(0,0,0,0.18);overflow-y:auto;pointer-events:all;transform:translateX(-10px);opacity:0;transition:transform 0.18s ease,opacity 0.18s ease;z-index:201;border-right:1px solid var(--border)}
+.profile-modal{position:fixed;top:0;left:250px;width:300px;height:100vh;height:100dvh;background:var(--bg2);box-shadow:4px 0 24px rgba(0,0,0,0.18);overflow-y:auto;pointer-events:all;transform:translateX(-10px);opacity:0;transition:transform 0.18s ease,opacity 0.18s ease;z-index:201;border-right:1px solid var(--border)}
 .profile-overlay.open .profile-modal{transform:translateX(0);opacity:1}
 
 /* ── PROFILE MODAL HEADER ── */
@@ -139,7 +139,7 @@ select.input{cursor:pointer}
 
 
 /* ── EXPERT LAYOUT & CONTAINER ── */
-.content{display:grid;grid-template-columns:1fr 292px;grid-template-rows:auto 1fr;gap:22px;padding:24px 32px;width:100%;height:calc(100vh - 70px);overflow-y:auto;box-sizing:border-box} /* Grid with explicit rows */
+.content{display:grid;grid-template-columns:1fr 292px;grid-template-rows:auto 1fr;gap:22px;padding:24px 32px;width:100%;height:calc(100vh - 70px);height:calc(100dvh - 70px);overflow-y:auto;box-sizing:border-box} /* Grid with explicit rows */
 .page-tutorial{grid-column:1 / -1;grid-row:1;margin-bottom:16px} /* Tutorial spans full width in row 1 */
 .pagehead{grid-column:1 / -1;grid-row:2;margin:0}
 .experts-main{grid-column:1;grid-row:3;display:flex;flex-direction:column;min-width:0} /* Main content in row 3, column 1 */
@@ -234,7 +234,7 @@ select.input{cursor:pointer}
 
 /* ── EXPERT POST MODAL (bottom sheet, responsive only) ── */
 .expert-post-modal{display:none;align-items:flex-end!important;justify-content:center!important}
-.expert-post-modal .expert-post-box{background:var(--bg2);border-radius:20px 20px 0 0;width:100%;max-width:500px;padding:28px 24px 32px;position:relative;animation:epSlideUp .25s cubic-bezier(.16,1,.3,1);max-height:85vh;overflow-y:auto}
+.expert-post-modal .expert-post-box{background:var(--bg2);border-radius:20px 20px 0 0;width:100%;max-width:500px;padding:28px 24px 32px;position:relative;animation:epSlideUp .25s cubic-bezier(.16,1,.3,1);max-height:85vh;max-height:85dvh;overflow-y:auto}
 @keyframes epSlideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
 .expert-post-close{position:absolute;top:16px;right:16px;width:32px;height:32px;border-radius:50%;border:none;background:var(--bg3);color:var(--text2);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s;line-height:1}
 .expert-post-close:hover{background:var(--bg4);color:var(--text)}
@@ -370,7 +370,7 @@ select.input{cursor:pointer}
 
 /* ── PHONE (≤480px) ── */
 @media (max-width:480px){
-  .content{padding:10px!important;gap:16px!important;height:calc(100vh - 60px)!important}
+  .content{padding:10px!important;gap:16px!important;height:calc(100vh - 60px)!important;height:calc(100dvh - 60px)!important}
   .topbar .page-title{font-size:14px!important}
   .expert-grid{grid-template-columns:1fr!important;gap:6px!important}
 
@@ -725,7 +725,7 @@ select.input{cursor:pointer}
 /* Width lives in experts.blade.php as .modal-box.pp-box: this stylesheet is
    linked before that block, so a single-class rule here loses to
    .modal-box's 420px on equal weight. */
-.pp-box{max-width:94vw;max-height:84vh;display:flex;flex-direction:column;padding:0}
+.pp-box{max-width:94vw;max-height:84vh;max-height:84dvh;display:flex;flex-direction:column;padding:0}
 .pp-head{display:flex;align-items:flex-start;gap:12px;padding:16px 20px;border-bottom:1px solid var(--border)}
 .pp-eyebrow{font-size:9.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--text3);margin-bottom:4px}
 .pp-x{width:28px;height:28px;flex-shrink:0;border:none;background:transparent;border-radius:7px;color:var(--text3);cursor:pointer;display:grid;place-items:center}

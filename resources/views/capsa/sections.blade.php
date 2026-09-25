@@ -70,7 +70,7 @@
   .ct-file-remove:hover{color:#0f172a;background:#f1f5f9}
   .ct-preview-summary{display:flex;gap:16px;flex-wrap:wrap;font-size:12.5px;color:#475569;margin-bottom:12px}
   .ct-preview-summary strong{color:#0f172a}
-  .ct-preview-scroll{max-height:52vh;overflow:auto;border:1px solid #e2e8f0;border-radius:10px;margin-bottom:14px}
+  .ct-preview-scroll{max-height:52vh;max-height:52dvh;overflow:auto;border:1px solid #e2e8f0;border-radius:10px;margin-bottom:14px}
   .ct-preview-table{width:100%;border-collapse:collapse;font-size:12px}
   /* Fixed layout so the columns are shared out rather than each one taking
      whatever its longest value asks for - an email is what used to push the
@@ -525,7 +525,7 @@ function closeSidebar() {
       <span>Have the new school year's class list? It carries each student's year.</span>
       <a class="ct-template-link" href="#" onclick="closeYearPromotion(); openStudentRosterModal('promotion'); return false;">Upload it instead</a>
     </div>
-    <div id="ypBody" class="ct-preview-scroll" style="max-height:48vh;padding:4px 14px;border-radius:10px"><p class="ct-promo-note" style="padding:12px 0">Loading your sections…</p></div>
+    <div id="ypBody" class="ct-preview-scroll" style="max-height:48vh;max-height:48dvh;padding:4px 14px;border-radius:10px"><p class="ct-promo-note" style="padding:12px 0">Loading your sections…</p></div>
     <div id="ypResult" style="display:none;font-size:12.5px;margin-bottom:12px"></div>
     <div class="ct-modal-actions">
       <button type="button" class="ct-btn ct-btn-secondary" onclick="closeYearPromotion()">Cancel</button>

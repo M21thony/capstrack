@@ -128,7 +128,7 @@
 /* Team Info Modal */
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 300; display: none; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
 .modal-overlay.open { display: flex; }
-.modal-box { background: var(--bg2); border-radius: 16px; padding: 28px; width: 460px; max-width: 92vw; box-shadow: 0 20px 60px rgba(0,0,0,0.3); animation: modalIn 0.2s ease; max-height: 85vh; overflow-y: auto;scrollbar-width:none;-ms-overflow-style:none}
+.modal-box { background: var(--bg2); border-radius: 16px; padding: 28px; width: 460px; max-width: 92vw; box-shadow: 0 20px 60px rgba(0,0,0,0.3); animation: modalIn 0.2s ease; max-height: 85vh;max-height: 85dvh; overflow-y: auto;scrollbar-width:none;-ms-overflow-style:none}
 .modal-box::-webkit-scrollbar{display:none}
 @keyframes modalIn { from { opacity: 0; transform: scale(0.95) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
 .modal-box h3 { font-size: 18px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
@@ -167,7 +167,7 @@
 .hamburger-btn svg { width:16px; height:16px; stroke:rgba(255,255,200,0.7); fill:none; stroke-width:2; }
 .sidebar-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:400; }
 .sidebar-overlay.open { display:block; }
-.sidebar.mobile-open { display:flex; position:fixed; left:0; top:0; z-index:500; height:100vh; }
+.sidebar.mobile-open { display:flex; position:fixed; left:0; top:0; z-index:500; height:100vh;height:100dvh; }
 
 @media (max-width: 768px) {
   .sidebar { display:none; }
@@ -240,7 +240,7 @@
   /* -- Bottom Sheet Modal -- */
   .modal-overlay { align-items:flex-end; }
   .modal-overlay.open { display:flex; }
-  .modal-box { width:100% !important; max-width:100% !important; max-height:80vh; border-radius:16px 16px 0 0; padding:20px 18px 24px; animation:sheetUp 0.25s ease; margin-top:auto; }
+  .modal-box { width:100% !important; max-width:100% !important; max-height:80vh;max-height:80dvh; border-radius:16px 16px 0 0; padding:20px 18px 24px; animation:sheetUp 0.25s ease; margin-top:auto; }
   .modal-box::before { content:''; display:block; width:36px; height:4px; border-radius:2px; background:var(--border2); margin:-12px auto 14px; }
   .modal-box h3 { font-size:16px; }
   .modal-sub { font-size:12px; margin-bottom:14px; }

@@ -5,7 +5,7 @@ html,body{height:100%;overflow:hidden}
 body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);font-size:16px}
 
 /* LOGIN */
-.login-wrap{display:flex;align-items:center;justify-content:center;height:100vh;background:var(--bg);background-image:radial-gradient(var(--border) 0.5px,transparent 0.5px);background-size:24px 24px}
+.login-wrap{display:flex;align-items:center;justify-content:center;height:100vh;height:100dvh;background:var(--bg);background-image:radial-gradient(var(--border) 0.5px,transparent 0.5px);background-size:24px 24px}
 .login-card{background:var(--bg2);border:1px solid var(--border);border-radius:18px;padding:44px;width:400px;text-align:center;box-shadow:0 10px 40px rgba(0,0,0,0.04),0 2px 4px rgba(0,0,0,0.02);position:relative;z-index:10}
 .login-logo{width:160px;height:70px;border-radius:16px;display:flex;align-items:center;justify-content:center;margin:0 auto 22px;position:relative;overflow:hidden}
 .login-logo svg{width:30px;height:30px;stroke:var(--accent);fill:none;stroke-width:2}
@@ -47,7 +47,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
 .legal-back:hover{text-decoration:underline;transform:translateX(-4px)}
 .status-badge{font-variant-numeric:tabular-nums;font-size:10px;padding:2px 8px;border-radius:4px;text-transform:uppercase;font-weight:700}
 
-.login-wrap { height: 100vh; width: 100%; }
+.login-wrap { height: 100vh;height: 100dvh; width: 100%; }
 .login-logo img {width: 100%;height: auto;display: block;}
 
 .bypass-note{font-variant-numeric:tabular-nums;font-size:10px;font-weight:700;color:var(--red);background:var(--red-bg);padding:8px;border-radius:6px;margin-bottom:20px;text-transform:uppercase;letter-spacing:0.5px;border:1px dashed var(--red);text-align:center;display:block} 

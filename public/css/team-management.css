@@ -289,7 +289,7 @@
 .tmx .ans dd{margin-bottom:4px}
 }
 /* the original PDF opens full-size over the page, sized to the window, so it never runs past the screen */
-.tmx dialog.pdfd{max-width:1000px;height:90vh;overflow:hidden}
+.tmx dialog.pdfd{max-width:1000px;height:90vh;height:90dvh;overflow:hidden}
 .tmx dialog.pdfd[open]{display:flex;flex-direction:column}
 .tmx .pdfd .x{width:34px;height:34px;display:flex;align-items:center;justify-content:center;border:1px solid var(--line);
   border-radius:8px;background:var(--card);color:var(--ink2);cursor:pointer}
@@ -517,7 +517,7 @@
 .tmx .mh{padding:20px 22px 12px}
 .tmx .mh h4{margin:0;font-size:16px;font-weight:700}
 .tmx .mh .s{font-size:13px;color:var(--mut);margin-top:3px}
-.tmx .mb{padding:0 22px;max-height:52vh;overflow-y:auto}
+.tmx .mb{padding:0 22px;max-height:52vh;max-height:52dvh;overflow-y:auto}
 .tmx .mf{display:flex;gap:9px;justify-content:flex-end;padding:18px 22px 20px}
 
 /* The mockup drove every level with buttons and JS. Here each level is a

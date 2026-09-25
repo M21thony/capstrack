@@ -122,7 +122,7 @@
 /* Dialogs */
 .modal-overlay { position: fixed; inset: 0; background: rgba(17,19,24,0.5); z-index: 300; display: none; align-items: center; justify-content: center; padding: 16px; box-sizing: border-box; }
 .modal-overlay.open { display: flex; }
-.ta-dialog { width: 480px; max-width: 100%; max-height: calc(100vh - 32px); display: flex; flex-direction: column; background: var(--bg2); border-radius: 14px; box-shadow: 0 24px 60px rgba(0,0,0,0.3); overflow: hidden; animation: taIn 0.18s ease; }
+.ta-dialog { width: 480px; max-width: 100%; max-height: calc(100vh - 32px);max-height: calc(100dvh - 32px); display: flex; flex-direction: column; background: var(--bg2); border-radius: 14px; box-shadow: 0 24px 60px rgba(0,0,0,0.3); overflow: hidden; animation: taIn 0.18s ease; }
 @keyframes taIn { from { opacity: 0; transform: translateY(8px) scale(0.98); } to { opacity: 1; transform: none; } }
 .ta-dialog-head { display: flex; align-items: flex-start; gap: 14px; padding: 20px 22px 6px; }
 .ta-dialog-icon { width: 42px; height: 42px; flex-shrink: 0; border-radius: 999px; display: grid; place-items: center; }
@@ -149,7 +149,7 @@
 .ta-quick button[aria-pressed="true"] { background: var(--text); border-color: var(--text); color: var(--bg2); }
 
 /* Reading a pre-proposal: the document, what you need to decide, the decision. */
-.ta-viewer { width: 1180px; max-width: 100%; height: calc(100vh - 32px); }
+.ta-viewer { width: 1180px; max-width: 100%; height: calc(100vh - 32px);height: calc(100dvh - 32px); }
 .ta-viewer-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 12px 18px; border-bottom: 1px solid var(--border); }
 .ta-viewer-head h3 { font-size: 16px; }
 .ta-viewer-main { flex: 1; min-height: 0; display: flex; }
@@ -173,7 +173,7 @@
 .sidebar-overlay{display:none;position:fixed;inset:0;z-index:999;background:rgba(0,0,0,0.5)}
 @media(max-width:1024px){
   .hamburger-btn{display:inline-flex}
-  .sidebar{display:flex!important;position:fixed!important;left:0!important;top:0!important;height:100vh!important;z-index:1000;transform:translateX(-100%);transition:transform 0.25s cubic-bezier(0.16,1,0.3,1)}
+  .sidebar{display:flex!important;position:fixed!important;left:0!important;top:0!important;height:100vh!important;height:100dvh!important;z-index:1000;transform:translateX(-100%);transition:transform 0.25s cubic-bezier(0.16,1,0.3,1)}
   .sidebar-open .sidebar{transform:translateX(0)}
   .sidebar-open .sidebar-overlay{display:block}
   body.sidebar-open{overflow:hidden}
@@ -185,7 +185,7 @@
 @media (max-width: 900px) {
   .ta-content { overflow-y: auto; padding: 16px; }
   .ta-split { display: flex; flex-direction: column; flex: none; }
-  .ta-list { max-height: 60vh; }
+  .ta-list { max-height: 60vh;max-height: 60dvh; }
   .ta-panel { overflow: visible; }
   .ta-panel-body { overflow: visible; }
   .ta-viewer-side { display: none; }

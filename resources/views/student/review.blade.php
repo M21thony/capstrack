@@ -31,7 +31,7 @@
   .rv-pick-t b { font-size: 14px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .rv-pick-t small { font-size: 12px; color: var(--text3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .rv-chev { color: var(--text3); }
-  .rv-menu { position: absolute; top: calc(100% + 6px); left: 0; width: 460px; max-width: 90vw; background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 14px 34px rgba(24,25,31,.18); padding: 6px; z-index: 60; display: grid; gap: 2px; max-height: 70vh; overflow: auto; }
+  .rv-menu { position: absolute; top: calc(100% + 6px); left: 0; width: 460px; max-width: 90vw; background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 14px 34px rgba(24,25,31,.18); padding: 6px; z-index: 60; display: grid; gap: 2px; max-height: 70vh;max-height: 70dvh; overflow: auto; }
   .rv-menu-h { margin: 8px 8px 2px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--text3); }
   .rv-opt { display: flex; justify-content: space-between; gap: 10px; align-items: center; text-decoration: none; color: var(--text); border: 1px solid transparent; border-radius: 8px; padding: 7px 10px; }
   .rv-opt > span:first-child { display: grid; min-width: 0; }

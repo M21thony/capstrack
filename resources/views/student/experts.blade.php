@@ -9,7 +9,7 @@
 @vite(['resources/student-ui/Styles/experts.css'])
 <style>
 /* The recommended pre-proposal, drawn as pages - no iframe. Same look as the submission preview. */
-.preview-dialog{border:0;border-radius:12px;padding:0;margin:auto;inset:0;width:min(860px,calc(100vw - 32px));height:calc(100vh - 48px);box-shadow:0 24px 70px rgba(24,25,31,.3);background:var(--bg2,#fff)}
+.preview-dialog{border:0;border-radius:12px;padding:0;margin:auto;inset:0;width:min(860px,calc(100vw - 32px));height:calc(100vh - 48px);height:calc(100dvh - 48px);box-shadow:0 24px 70px rgba(24,25,31,.3);background:var(--bg2,#fff)}
 .preview-dialog::backdrop{background:rgba(24,25,31,.55)}
 .preview-dialog[open]{display:flex;flex-direction:column}
 .preview-head{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--border)}
@@ -112,7 +112,7 @@
    opened in a column narrower than a phone. A PDF page is the one thing on
    this site with a fixed aspect ratio - too narrow is unreadable, not just
    cramped. */
-.modal-box.pdf-box { width: 1000px; max-width: 95vw; height: 90vh; max-height: 90vh; }
+.modal-box.pdf-box { width: 1000px; max-width: 95vw; height: 90vh;height: 90dvh; max-height: 90vh;max-height: 90dvh; }
 #original-pdf-modal { z-index: 500; }
 /* The header is a strip above the document, not a heading block: a long
    title wrapped onto four lines and took a fifth of the reading area. */

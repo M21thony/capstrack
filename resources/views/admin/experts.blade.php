@@ -83,7 +83,7 @@
   .ct-file-remove:hover{color:#0f172a;background:#f1f5f9}
   .ct-preview-summary{display:flex;gap:16px;flex-wrap:wrap;font-size:12.5px;color:#475569;margin-bottom:12px}
   .ct-preview-summary strong{color:#0f172a}
-  .ct-preview-scroll{max-height:52vh;overflow:auto;border:1px solid #e2e8f0;border-radius:10px;margin-bottom:14px}
+  .ct-preview-scroll{max-height:52vh;max-height:52dvh;overflow:auto;border:1px solid #e2e8f0;border-radius:10px;margin-bottom:14px}
   /* Fixed layout so the columns are shared out rather than each one taking
      whatever its longest value asks for - an email is what would otherwise
      push the table past the modal and force a sideways scroll. */
@@ -204,7 +204,7 @@
      button stay put while a long expertise list scrolls. */
   .expert-detail-body{
     display:flex;flex-direction:column;gap:16px;text-align:left;
-    max-height:52vh;overflow-y:auto;scrollbar-width:none;
+    max-height:52vh;max-height:52dvh;overflow-y:auto;scrollbar-width:none;
   }
   .expert-detail-body::-webkit-scrollbar{display:none}
   .expert-detail-field-label{

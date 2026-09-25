@@ -131,10 +131,10 @@
   --dx-blue-bg:var(--blue-bg,rgba(29,78,216,.07)); --dx-r-sm:6px; --dx-r:10px; --dx-r-lg:14px;
   font:13px/1.45 'DM Sans',sans-serif; color:var(--dx-ink);
 }
-.dx-dialog{border:0;border-radius:var(--dx-r-lg);padding:0;margin:auto;inset:0;box-shadow:0 24px 70px rgba(24,25,31,.28);background:var(--dx-surface);width:min(520px,calc(100vw - 32px));max-height:calc(100vh - 40px)}
+.dx-dialog{border:0;border-radius:var(--dx-r-lg);padding:0;margin:auto;inset:0;box-shadow:0 24px 70px rgba(24,25,31,.28);background:var(--dx-surface);width:min(520px,calc(100vw - 32px));max-height:calc(100vh - 40px);max-height:calc(100dvh - 40px)}
 .dx-dialog.dx-wide{width:min(960px,calc(100vw - 32px))}
 .dx-dialog::backdrop{background:rgba(24,25,31,.55)}
-.dx-dlg{display:flex;flex-direction:column;max-height:calc(100vh - 40px)}
+.dx-dlg{display:flex;flex-direction:column;max-height:calc(100vh - 40px);max-height:calc(100dvh - 40px)}
 .dx-dlg-head{display:flex;align-items:flex-start;gap:10px;padding:16px 18px 12px;border-bottom:1px solid var(--dx-line)}
 .dx-dlg-head h2{margin:0;font-size:16px}
 .dx-dlg-head p{margin:2px 0 0;color:var(--dx-ink3);font-size:12px}
@@ -210,7 +210,7 @@
   .dx{overflow:auto;display:block}
   .dx > *{margin-bottom:12px}
   .dx-rules{grid-template-columns:1fr}
-  .dx-table-wrap{max-height:70vh;overflow-x:auto}
+  .dx-table-wrap{max-height:70vh;max-height:70dvh;overflow-x:auto}
   .dx table{min-width:980px}
 
   /* ── Panel Assignment's and Defense Scheduling's own team lists → cards ──

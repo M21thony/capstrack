@@ -19,7 +19,7 @@ html,body{height:100%;overflow:hidden}
 body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);display:flex;font-size:16px}
 
 /* ── SIDEBAR ── */
-.sidebar{width:250px;min-width:250px;background:var(--navy-dark);display:flex;flex-direction:column;height:100vh;overflow:hidden}
+.sidebar{width:250px;min-width:250px;background:var(--navy-dark);display:flex;flex-direction:column;height:100vh;height:100dvh;overflow:hidden}
 .sidebar-brand{padding:20px 18px 16px;border-bottom:1px solid var(--navy-border);display:flex;align-items:center;gap:12px}
 .brand-icon{width:38px;height:38px;background:var(--accent);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .brand-icon svg{width:19px;height:19px;stroke:#1e2028;fill:none;stroke-width:2.2}
@@ -60,7 +60,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
 .nav-group-body.collapsed{display:none}
 
 /* ── MAIN ── */
-.main{flex:1;display:flex;flex-direction:column;height:100vh;overflow:hidden}
+.main{flex:1;display:flex;flex-direction:column;height:100vh;height:100dvh;overflow:hidden}
 .topbar{height:58px;min-height:58px;border-bottom:2px solid var(--accent);display:flex;align-items:center;padding:0 26px;gap:14px;background:var(--navy-mid)}
 .page-title{font-size:17px;font-weight:500;color:var(--navy-text);flex:1}
 .topbar-actions{display:flex;align-items:center;gap:10px}
@@ -242,7 +242,7 @@ textarea.input{resize:vertical;min-height:80px}
 .atag-blockchain{background:rgba(201,168,44,0.08);color:var(--accent3);border:1px solid rgba(201,168,44,0.2)}
 
 /* ── LOGIN ── */
-.login-wrap{display:flex;align-items:center;justify-content:center;height:100vh;background:var(--navy-dark);position:relative;overflow:hidden}
+.login-wrap{display:flex;align-items:center;justify-content:center;height:100vh;height:100dvh;background:var(--navy-dark);position:relative;overflow:hidden}
 .login-bg-circle{position:absolute;border-radius:50%;background:rgba(201,168,44,0.04);pointer-events:none}
 .login-card{background:#fff;border-radius:16px;padding:40px;width:390px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.5),0 0 0 1px rgba(201,168,44,0.15)}
 .login-logo{width:60px;height:60px;background:var(--navy-dark);border-radius:14px;border-bottom:3px solid var(--accent);display:flex;align-items:center;justify-content:center;margin:0 auto 20px}
@@ -491,7 +491,7 @@ textarea.input{resize:vertical;min-height:80px}
 
 
 /* ── MAIN ── */
-.main{flex:1;display:flex;flex-direction:column;height:100vh;overflow:hidden}
+.main{flex:1;display:flex;flex-direction:column;height:100vh;height:100dvh;overflow:hidden}
 .topbar{height:58px;min-height:58px;border-bottom:2px solid var(--accent);display:flex;align-items:center;padding:0 26px;gap:14px;background:var(--navy-mid)}
 .page-title{font-size:17px;font-weight:500;color:var(--navy-text);flex:1}
 .topbar-actions{display:flex;align-items:center;gap:10px}
@@ -591,7 +591,7 @@ textarea.input{resize:vertical;min-height:80px}
 .modal-box-lg{width:min(720px,100%);display:flex;flex-direction:column}
 #rubric-modal{overflow-y:auto;align-items:flex-start}
 #rubric-modal .modal-box-lg{margin:auto}
-#rubric-modal .modal-box-lg.modal-criteria-mode{max-height:90vh;overflow:hidden}
+#rubric-modal .modal-box-lg.modal-criteria-mode{max-height:90vh;max-height:90dvh;overflow:hidden}
 .modal-icon-wrap{width:40px;height:40px;background:var(--red-bg);border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:12px}
 .rb-close-btn{background:none;border:none;cursor:pointer;color:var(--text3);padding:6px;border-radius:7px;transition:background .15s;flex-shrink:0;display:flex;align-items:center;justify-content:center}
 .rb-close-btn:hover{background:var(--bg4);color:var(--text)}
@@ -799,7 +799,7 @@ textarea.input{resize:vertical;min-height:80px}
 /* ── REVIEW MODAL ── */
 .review-overlay{position:fixed;inset:0;background:rgba(10,12,20,.55);backdrop-filter:blur(4px);z-index:200;display:none;align-items:center;justify-content:center;padding:20px}
 .review-overlay.show{display:flex}
-.review-modal{background:#fff;border-radius:20px;width:min(620px,100%);max-height:90vh;overflow-y:auto;box-shadow:0 24px 80px rgba(0,0,0,.25);border:1px solid var(--border);animation:modalIn .22s ease}
+.review-modal{background:#fff;border-radius:20px;width:min(620px,100%);max-height:90vh;max-height:90dvh;overflow-y:auto;box-shadow:0 24px 80px rgba(0,0,0,.25);border:1px solid var(--border);animation:modalIn .22s ease}
 @keyframes modalIn{from{opacity:0;transform:scale(.96) translateY(8px)}to{opacity:1;transform:scale(1) translateY(0)}}
 .review-modal::-webkit-scrollbar{width:4px}
 .review-modal::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px}
@@ -880,11 +880,11 @@ textarea.input{resize:vertical;min-height:80px}
 .hamburger-btn svg{width:16px;height:16px;stroke:rgba(255,255,200,0.7);fill:none;stroke-width:2}
 .sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:400}
 .sidebar-overlay.open{display:block}
-.sidebar.mobile-open{display:flex;position:fixed;left:0;top:0;z-index:500;height:100vh}
+.sidebar.mobile-open{display:flex;position:fixed;left:0;top:0;z-index:500;height:100vh;height:100dvh}
 
 /* Skeleton - shared by every admin page's loading state */
 @keyframes sk-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
-.sk-overlay { background: var(--bg); min-height: calc(100vh - 60px); padding: 20px; }
+.sk-overlay { background: var(--bg); min-height: calc(100vh - 60px);min-height: calc(100dvh - 60px); padding: 20px; }
 .sk { background: linear-gradient(90deg, var(--bg4) 25%, var(--bg2) 50%, var(--bg4) 75%); background-size: 200% 100%; animation: sk-shimmer 1.5s ease-in-out infinite; border-radius: 8px; }
 
 @media(max-width:768px){
@@ -1000,7 +1000,7 @@ textarea.input{resize:vertical;min-height:80px}
 
   /* ── Bottom Sheet: Review Modal ── */
   .review-overlay{align-items:flex-end}
-  .review-modal{width:100%!important;max-width:100%!important;max-height:85vh;border-radius:16px 16px 0 0;animation:sheetUp 0.25s ease;margin-top:auto}
+  .review-modal{width:100%!important;max-width:100%!important;max-height:85vh;max-height:85dvh;border-radius:16px 16px 0 0;animation:sheetUp 0.25s ease;margin-top:auto}
   .review-modal::before{content:'';display:block;width:36px;height:4px;border-radius:2px;background:var(--border2);margin:-8px auto 14px}
   .modal-header{padding:16px 18px 14px}
   .modal-header-av{width:42px;height:42px;font-size:13px;border-radius:10px}

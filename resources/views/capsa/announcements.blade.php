@@ -178,7 +178,7 @@
         </div>
       </div>
 
-      <div style="display:flex;flex-direction:column;gap:12px;height:calc(100vh - 120px);overflow-y:auto">
+      <div style="display:flex;flex-direction:column;gap:12px;height:calc(100vh - 120px);height:calc(100dvh - 120px);overflow-y:auto">
         <div style="display:flex;align-items:center;justify-content:space-between;flex-shrink:0;gap:8px">
           <span style="font-size:12px;color:var(--text3)">
             @php $activeCount = $announcements->where('is_active', true)->count(); @endphp
@@ -264,7 +264,7 @@
 
 {{-- Milestone Review Modal --}}
 <div class="modal-overlay" id="review-modal" onclick="if(event.target===this)closeReviewModal()">
-  <div class="modal-box" style="max-width:560px;max-height:80vh;overflow-y:auto">
+  <div class="modal-box" style="max-width:560px;max-height:80vh;max-height:80dvh;overflow-y:auto">
     <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px">
       <div>
         <div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:2px" id="review-post-title"></div>
@@ -830,7 +830,7 @@ function openSubmissionImage(url) {
   overlay.onclick = function() { overlay.remove(); };
   var img = document.createElement('img');
   img.src = url;
-  img.style.cssText = 'max-width:90vw;max-height:90vh;object-fit:contain;border-radius:8px;box-shadow:0 8px 32px rgba(0,0,0,0.5)';
+  img.style.cssText = 'max-width:90vw;max-height:90vh;max-height:90dvh;object-fit:contain;border-radius:8px;box-shadow:0 8px 32px rgba(0,0,0,0.5)';
   var closeBtn = document.createElement('button');
   closeBtn.innerHTML = '&times;';
   closeBtn.style.cssText = 'position:absolute;top:16px;right:16px;background:rgba(0,0,0,0.5);color:#fff;border:none;border-radius:50%;width:36px;height:36px;font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;padding:0';
