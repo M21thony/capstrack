@@ -184,7 +184,7 @@
   </nav>
 </div>
 
-@include('partials.mobile-tabbar', ['floating' => true, 'tabs' => array_values(array_filter([
+@include('partials.mobile-tabbar', ['floating' => true, 'menuAvatar' => ['url' => $student->avatarUrl(), 'initials' => $student->avatarInitials()], 'tabs' => array_values(array_filter([
     ['label' => 'Home', 'href' => route('student.dashboard'), 'active' => request()->routeIs('student.dashboard'),
         'icon' => App\Support\PortalIcons::paths('home')],
     ['label' => 'Team', 'href' => route('student.team'), 'active' => request()->routeIs('student.team'), 'badge' => $newPostCount,
@@ -194,7 +194,7 @@
     // and a big Submit button in the middle of the bar read as the way to do
     // that, then opened the document form instead.
     request()->routeIs('student.financial') ? null : ['label' => 'Submit', 'onclick' => "window.openSubmissionDrawer && window.openSubmissionDrawer('')", 'primary' => true,
-        'icon' => App\Support\PortalIcons::paths('submit')],
+        'icon' => App\Support\PortalIcons::paths('add')],
     ['label' => 'Progress', 'href' => route('student.progress'), 'active' => request()->routeIs('student.progress'),
         'icon' => App\Support\PortalIcons::paths('progress')],
 ]))])
