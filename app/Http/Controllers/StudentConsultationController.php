@@ -12,9 +12,11 @@ use App\Models\StudentSchoolYear;
 use App\Models\Team;
 use App\Services\GoogleCalendarService;
 use App\Services\Notifier;
+use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
@@ -240,7 +242,37 @@ class StudentConsultationController extends Controller
         return compact('experts', 'defaultExpertId', 'availableSlots', 'upcomingBookings', 'recentBookings', 'teamId', 'bookedExpertIds', 'bookingWindows');
     }
 
+    /**
+     * POST /student/consultation/book
+     *
+     * One booking at a time per expert. Checking a slot's capacity and then
+     * inserting the booking are two steps; two students booking the same
+     * one-person slot at the same moment both passed the check and both got
+     * in (performance test PT-04). The tables are MyISAM, so there is no
+     * transaction to lock a row in - a cache lock, held across every web
+     * worker, lines the requests up instead.
+     */
     public function book(Request $request)
+    {
+        $request->validate([
+            'schedule_id' => 'required|integer|exists:consultation_schedule,schedule_id',
+            'session_date' => 'nullable|date',
+        ]);
+
+        $expertId = ConsultationSchedule::where('schedule_id', $request->integer('schedule_id'))->value('expert_id');
+
+        try {
+            return Cache::lock('consultation-booking:expert:'.$expertId, 20)
+                ->block((int) config('capstrack.booking_lock_wait', 10), fn () => $this->bookSlot($request));
+        } catch (LockTimeoutException) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Many students are booking this expert right now. Try again in a moment.',
+            ], 503);
+        }
+    }
+
+    private function bookSlot(Request $request)
     {
         $request->validate([
             'schedule_id' => 'required|integer|exists:consultation_schedule,schedule_id',
