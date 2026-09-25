@@ -11,7 +11,9 @@
             <div class="page-tutorial-content">
                 <div class="page-tutorial-title">{{ $tutorial['title'] }}</div>
                 <p class="page-tutorial-summary">{{ $tutorial['summary'] }}</p>
-                <ol class="page-tutorial-steps">
+                {{-- A phone folds the steps away behind this; a wider screen shows them. --}}
+                <button type="button" class="page-tutorial-more" aria-expanded="false" aria-controls="tutorial-steps-{{ $page }}">How it works</button>
+                <ol class="page-tutorial-steps" id="tutorial-steps-{{ $page }}">
                     @foreach ($tutorial['steps'] as $step)
                         <li>{{ $step }}</li>
                     @endforeach
@@ -28,6 +30,12 @@
         if (!localStorage.getItem(key)) {
             el.hidden = false;
         }
+        var more = el.querySelector('.page-tutorial-more');
+        more.addEventListener('click', function () {
+            var open = el.classList.toggle('is-open');
+            more.setAttribute('aria-expanded', open ? 'true' : 'false');
+            more.textContent = open ? 'Hide steps' : 'How it works';
+        });
         el.querySelector('[data-dismiss-tutorial]').addEventListener('click', function () {
             localStorage.setItem(key, '1');
             el.hidden = true;

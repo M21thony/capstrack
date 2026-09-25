@@ -268,3 +268,27 @@ test('the floating bar steps aside while a pop-up is open', async ({ browser }) 
   expect(await covered(), 'back once it closes').toBe(false);
   await context.close();
 });
+
+/** The how-to card is a slim banner on a phone, its steps a tap away; the fonts come from this site. */
+test('the how-to card is a banner on a phone and the fonts are the site own', async ({ browser }) => {
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  await context.addInitScript(() => { try { localStorage.removeItem('capstrack_tutorial_dashboard'); } catch (e) {} });
+  const page = await context.newPage();
+  const fromGoogle = [];
+  page.on('request', (request) => { if (/fonts\.(googleapis|gstatic)\.com/.test(request.url())) fromGoogle.push(request.url()); });
+  await signIn(page, 'dashboard');
+  await page.evaluate(() => { document.querySelectorAll('.gt, .gt-shield').forEach((el) => el.remove()); document.body.classList.remove('tour-open'); });
+
+  const card = page.locator('#tutorial-dashboard');
+  await expect(card).toBeVisible();
+  expect((await card.boundingBox()).height, 'a banner, not half the screen').toBeLessThan(150);
+  await expect(card.locator('.page-tutorial-steps')).toBeHidden();
+
+  await card.locator('.page-tutorial-more').tap();
+  await expect(card.locator('.page-tutorial-steps')).toBeVisible();
+  await expect(card.locator('.page-tutorial-more')).toHaveAttribute('aria-expanded', 'true');
+
+  expect(await page.evaluate(async () => { await document.fonts.ready; return document.fonts.check('500 14px "DM Sans"'); })).toBe(true);
+  expect(fromGoogle).toEqual([]);
+  await context.close();
+});

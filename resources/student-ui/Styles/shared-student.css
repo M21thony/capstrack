@@ -236,16 +236,34 @@
   background:var(--accent2);
 }
 
+/* Shown on a phone only, where the steps fold away behind it. */
+.page-tutorial-more{display:none}
+
+/* On a phone the card was half the first screen of every page - title,
+   summary, three steps and a full-width button - before the page itself.
+   It is a slim banner there: the title and summary with a small Got it
+   beside them, and the steps a tap away under "How it works". */
 @media (max-width:640px){
   .page-tutorial-inner{
-    grid-template-columns:auto minmax(0,1fr);
-    padding:16px;
+    grid-template-columns:minmax(0,1fr) auto;
+    gap:4px 10px;
+    padding:12px 12px 12px 14px;
   }
-  .page-tutorial-dismiss{
-    grid-column:1 / -1;
-    width:100%;
-    min-height:44px;
+  .page-tutorial-icon{display:none}
+  .page-tutorial-title{font-size:14px;margin:2px 0}
+  .page-tutorial-summary{font-size:12.5px;line-height:1.45;margin:0}
+  .page-tutorial-more{
+    display:inline-flex;align-items:center;gap:5px;margin-top:6px;padding:4px 0;
+    border:0;background:none;font:inherit;font-size:12.5px;font-weight:600;color:var(--accent3);cursor:pointer;
   }
+  .page-tutorial-more::after{
+    content:"";width:6px;height:6px;margin-top:-3px;border:solid currentColor;border-width:0 1.8px 1.8px 0;
+    transform:rotate(45deg);transition:transform .2s;
+  }
+  .page-tutorial.is-open .page-tutorial-more::after{margin-top:3px;transform:rotate(-135deg)}
+  .page-tutorial-steps{display:none;margin-top:8px}
+  .page-tutorial.is-open .page-tutorial-steps{display:flex}
+  .page-tutorial-dismiss{min-height:32px;padding:6px 12px;border-radius:8px;font-size:12px}
 }
 
 /* ── Guided tour ──
@@ -607,37 +625,14 @@ body.tour-open{
 [data-theme="dark"] .ftab.active{background:var(--bg2)!important}
 
 @media (max-width:480px){
-  /* The page tutorial keeps its reading sizes on a phone. These used to drop
-     to 11px here, which is exactly where the text most needs to be legible;
-     the card tightens its padding instead, and gives the words the full
-     width by dropping the icon, which only repeats what the title says. */
+  /* The page tutorial's phone banner is set in the 640px block above. */
   .page-tutorial{
     margin-bottom:12px;
   }
 
   .page-tutorial-inner{
-    padding:14px;
-    gap:12px;
     border-left-width:3px;
     border-radius:12px;
-  }
-
-  .page-tutorial-inner{
-    grid-template-columns:minmax(0,1fr);
-  }
-
-  .page-tutorial-icon{
-    display:none;
-  }
-
-  .page-tutorial-title{
-    font-size:15px;
-    margin-top:4px;
-  }
-
-  .page-tutorial-summary,
-  .page-tutorial-steps li{
-    font-size:13px;
   }
 
   /* ── Notification Dropdown ── */
