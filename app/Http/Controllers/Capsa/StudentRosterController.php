@@ -629,7 +629,7 @@ class StudentRosterController extends Controller
     private function yearAndSection(string $year, string $section, string $combined): array
     {
         if ($combined !== '') {
-            $parts = array_map('trim', explode('·', $combined));
+            $parts = array_map('trim', explode('·', Student::normalizeYearSection($combined) ?? ''));
 
             return count($parts) === 2 ? [$parts[0], $parts[1]] : ['', trim($combined)];
         }
@@ -665,7 +665,7 @@ class StudentRosterController extends Controller
     private function yearSection(string $year, string $section, string $combined): string
     {
         if ($combined !== '') {
-            return $combined;
+            return Student::normalizeYearSection($combined) ?? '';
         }
 
         [$ordinal, $letter] = $this->yearAndSection($year, $section, $combined);

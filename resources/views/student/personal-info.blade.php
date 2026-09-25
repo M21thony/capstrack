@@ -4,13 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content">
     <title>{{ $isEditing ? 'Edit' : 'Complete' }} Personal Information - CapsTrack</title>
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link href="{{ \App\Support\PublicAsset::url('css/fonts.css') }}" rel="stylesheet">
     @vite('resources/student-ui/Styles/personal-info.css')
     <x-dashboard.styles />
     <style>
         @keyframes sk-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
         .sk-overlay { position: absolute; inset: 0; background: var(--bg2, #fff); padding: 40px; z-index: 10; }
         .sk { background: linear-gradient(90deg, var(--bg4) 25%, var(--bg2) 50%, var(--bg4) 75%); background-size: 200% 100%; animation: sk-shimmer 1.5s ease-in-out infinite; border-radius: 8px; }
+        .pi-leave { display: inline-flex; align-items: center; gap: 4px; margin-bottom: 14px; font-size: 13px; font-weight: 600; color: var(--accent3, #8a6e10); text-decoration: none; }
+        .pi-leave svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+        .pi-leave:hover { text-decoration: underline; }
     </style>
 @include('partials.skeleton-head', ['skReveal' => 'opacity'])
 </head>
@@ -40,6 +43,14 @@
             {{-- Content --}}
             <div id="real-content" style="opacity:0">
             <div class="pi-hero">
+                {{-- The form is a page of its own, without the sidebar or the
+                     phone's tab bar, so editing needs a way out. --}}
+                @if ($isEditing)
+                    <a href="{{ route('student.dashboard') }}" class="pi-leave">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+                        Back to dashboard
+                    </a>
+                @endif
                 <h1 class="pi-title">{{ $isEditing ? 'Update your profile' : 'Complete your profile' }}</h1>
                 @if (! $isEditing)
                     <p class="pi-meta">Takes about 2 minutes · required once</p>
