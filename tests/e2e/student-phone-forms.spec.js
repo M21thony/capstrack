@@ -292,3 +292,27 @@ test('the how-to card is a banner on a phone and the fonts are the site own', as
   expect(fromGoogle).toEqual([]);
   await context.close();
 });
+
+/** Consultation fits a phone: nothing runs off the side, and the date picker's days are round. */
+for (const [width, height] of [[390, 844], [320, 640]]) {
+  test(`consultation fits a ${width}x${height} phone`, async ({ browser }) => {
+    const context = await browser.newContext({ viewport: { width, height }, isMobile: true, hasTouch: true });
+    const page = await context.newPage();
+    await signIn(page, 'consultation');
+    await page.waitForTimeout(1200);
+
+    const result = await page.evaluate(() => {
+      const content = document.querySelector('.main .content');
+      const days = [...document.querySelectorAll('.sched-cal .calendar-day')].filter((d) => d.getBoundingClientRect().width > 0);
+      return {
+        sideways: content.scrollWidth - content.clientWidth,
+        pageWider: document.documentElement.scrollWidth - innerWidth,
+        oddDays: days.filter((d) => { const r = d.getBoundingClientRect(); return Math.abs(r.width - r.height) > 1.5 || parseFloat(getComputedStyle(d).borderLeftWidth) > 0; }).length,
+        emptyOrSteps: !!document.querySelector('.book-empty') !== !document.querySelector('.book-body').hidden,
+      };
+    });
+
+    expect(result).toEqual({ sideways: 0, pageWider: 0, oddDays: 0, emptyOrSteps: true });
+    await context.close();
+  });
+}
