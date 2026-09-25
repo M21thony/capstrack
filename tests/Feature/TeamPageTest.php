@@ -120,6 +120,19 @@ class TeamPageTest extends TestCase
         }
     }
 
+    /** Copying an address says so at the side of the screen, and shows the address. */
+    public function test_copying_an_email_shows_a_copied_notice(): void
+    {
+        $html = $this->get(route('team'))
+            ->assertOk()
+            ->assertSee('<div class="copy-toast" id="copy-toast" role="status" aria-live="polite">', false)
+            ->getContent();
+
+        $this->assertStringContainsString('showToast(true, email);', $html);
+        $this->assertStringContainsString("copied ? 'Copied' : \"Couldn't copy\"", $html);
+        $this->assertStringContainsString('.copy-toast.show {', $html);
+    }
+
     public function test_login_page_links_to_the_team_page(): void
     {
         $response = $this->get(route('login'));
