@@ -92,7 +92,7 @@ class StudentChecklistTest extends TestCase
             ->assertOk()
             ->assertSee('Sent back by your CaPSA')
             ->assertSee('Two members have not signed.')
-            ->assertSee('Upload again');
+            ->assertSee('Replace file');
     }
 
     public function test_archived_deliverables_are_not_shown(): void

@@ -9,6 +9,7 @@ use App\Models\FinancialRecord;
 use App\Models\Student;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
+use App\Services\Notifier;
 use App\Support\DefenseBoard;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -247,6 +248,16 @@ class AdminFinancialController extends Controller
         ]);
 
         $financialRecord->load(['student', 'expensePost']);
+
+        // The photo stays on record; the student is told what to change.
+        Notifier::toStudent(
+            $financialRecord->student,
+            'receipt_sent_back',
+            'Receipt sent back',
+            'Your CaPSA sent back your receipt for <strong>'.e($financialRecord->expensePost?->title ?? 'the fee').'</strong>: “'.e($validated['rejection_reason']).'” Upload a corrected photo.',
+            route('student.financial'),
+            ['financial_record_id' => $financialRecord->id],
+        );
 
         return response()->json([
             'success' => true,

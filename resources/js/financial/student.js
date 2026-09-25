@@ -35,7 +35,7 @@ function render() {
       }[s];
     const label = S.can_submit ? {
       none: '<svg><use href="#fx-i-camera"/></svg>Upload receipt',
-      sent_back: '<svg><use href="#fx-i-camera"/></svg>Upload again',
+      sent_back: '<svg><use href="#fx-i-camera"/></svg>Replace photo',
       pending: '<svg><use href="#fx-i-upload"/></svg>Replace',
     }[s] : null;
     $('#s-mine').innerHTML = thumb + `<div class="fx-mine-text">${text}</div>`
