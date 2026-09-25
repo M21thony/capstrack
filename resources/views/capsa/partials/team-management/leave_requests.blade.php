@@ -385,7 +385,7 @@
     el.style.borderLeftColor = ok ? 'var(--green)' : 'var(--red)';
     el.classList.add('show');
     clearTimeout(toast.timer);
-    toast.timer = setTimeout(() => el.classList.remove('show'), 3600);
+    toast.timer = setTimeout(() => el.classList.remove('show'), 4000);
   }
 
   function moveToDecided(card, data) {

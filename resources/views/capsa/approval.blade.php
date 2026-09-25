@@ -662,7 +662,7 @@ function showToast(type, msg){
 
   wrap.appendChild(t);
 
-  const DURATION_MS = 5200;
+  const DURATION_MS = 4000;
   setTimeout(()=>{
     t.style.animation='toastOut .35s ease forwards';
     setTimeout(()=>t.remove(), 360);
