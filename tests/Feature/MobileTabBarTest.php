@@ -60,7 +60,10 @@ class MobileTabBarTest extends TestCase
             ->assertSee('<nav class="mtab is-floating" aria-label="Main" style="--n:5;--i:0">', false)
             ->assertSee('<span class="mtab-glide" aria-hidden="true"></span>', false)
             ->assertSee('transform:translateX(calc(var(--i, 0) * 100%));', false)
-            ->assertSee("remember(current);\n        select(i);", false)
+            // Glides once, on the tap; the page it opens does not play it again.
+            ->assertSee("if (i === current || e.defaultPrevented || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button) return;\n        select(i);", false)
+            ->assertDontSee('mtab-from', false)
+            ->assertDontSee('is-arriving', false)
             ->assertSee('.mtab.is-floating .mtab-item.on .lb{opacity:1;transform:none}', false)
             ->assertSee('.mtab.is-floating .mtab-item.primary:active .mtab-ic svg{transform:rotate(90deg)}', false)
             ->assertSee('.mtab.is-floating.is-away{', false)

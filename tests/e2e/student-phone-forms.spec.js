@@ -166,10 +166,11 @@ test('Financial Records on a phone shows every member, not a sliver of the list'
 });
 
 /**
- * Tapping a tab glides the highlight there, and the page it opens carries on
- * from the tab that was left rather than starting over on its own.
+ * Tapping a tab glides the highlight there, once. The page it opens starts
+ * with the highlight already in place: the glide is not played again while
+ * that page loads.
  */
-test('the highlight glides from the tab left to the tab tapped', async ({ browser }) => {
+test('the highlight glides on the tap and is not replayed on the page it opens', async ({ browser }) => {
   const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
   const page = await context.newPage();
   await signIn(page, 'dashboard');
@@ -179,19 +180,36 @@ test('the highlight glides from the tab left to the tab tapped', async ({ browse
   expect(await onTab()).toBe('Home');
   expect(await glideX()).toBe(0);
 
-  await Promise.all([
-    page.waitForURL(/progress/),
-    page.locator('.mtab-item', { hasText: 'Progress' }).tap(),
-  ]);
-  await page.waitForSelector('.mtab-glide');
+  // On the tap, before the next page is there, it is already on its way.
+  // Noted in the page itself, since the page is on its way out.
+  await page.route('**/*', async (route) => {
+    if (route.request().isNavigationRequest()) await new Promise((r) => setTimeout(r, 1200));
+    await route.continue();
+  });
+  await page.evaluate(() => {
+    const link = [...document.querySelectorAll('.mtab-item')].find((el) => /Progress/.test(el.textContent));
+    link.addEventListener('click', () => setTimeout(() => {
+      const glide = new DOMMatrix(getComputedStyle(document.querySelector('.mtab-glide')).transform).m41;
+      const on = document.querySelector('.mtab-item.on .lb').textContent;
+      sessionStorage.setItem('__tap', JSON.stringify({ glide, on }));
+    }, 250));
+  });
+  await page.locator('.mtab-item', { hasText: 'Progress' }).tap();
 
-  // Mid-way on arrival, then settled under Progress, its name showing.
-  const column = await page.evaluate(() => document.querySelector('.mtab-item').getBoundingClientRect().width);
-  const early = await glideX();
-  await page.waitForTimeout(900);
-  expect(early, 'it starts from Home, not already at Progress').toBeLessThan(column * 3 - 1);
-  expect(await glideX()).toBeCloseTo(column * 3, 0);
+  // The page it opens: at Progress from its first frame, and staying put.
+  await page.waitForURL(/progress/);
+  await page.waitForSelector('.mtab-glide');
+  const seen = await page.evaluate(async () => {
+    const glide = document.querySelector('.mtab-glide');
+    const xs = [];
+    for (let n = 0; n < 12; n++) { xs.push(new DOMMatrix(getComputedStyle(glide).transform).m41); await new Promise((r) => setTimeout(r, 50)); }
+    return xs;
+  });
+  const tap = JSON.parse(await page.evaluate(() => sessionStorage.getItem('__tap')));
+  expect(tap.glide, 'it moves on the tap').toBeGreaterThan(0);
+  expect(tap.on).toBe('Progress');
+  const settled = await page.evaluate(() => document.querySelector('.mtab-item').getBoundingClientRect().width * 3);
+  for (const x of seen) expect(x, 'no second glide on arrival').toBeCloseTo(settled, 0);
   expect(await onTab()).toBe('Progress');
-  expect(await page.evaluate(() => sessionStorage.getItem('mtab-from'))).toBeNull();
   await context.close();
 });

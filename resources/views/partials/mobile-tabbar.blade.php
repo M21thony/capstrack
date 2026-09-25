@@ -308,7 +308,6 @@
       transition:transform .5s cubic-bezier(.34,1.36,.5,1);
     }
     .mtab.is-floating:not(:has(.mtab-item.on)) .mtab-glide{opacity:0}
-    .mtab.is-floating.is-still .mtab-glide,.mtab.is-floating.is-still .mtab-ic,.mtab.is-floating.is-still .lb{transition:none!important}
 
     .mtab.is-floating .mtab-item{z-index:1;padding:0;gap:0;color:#6b6f7b}
     .mtab.is-floating .mtab-ic{
@@ -327,8 +326,6 @@
     .mtab.is-floating .mtab-item.on .mtab-ic{transform:translateY(-6px)}
     .mtab.is-floating .mtab-item.on .mtab-ic svg{stroke-width:2.4}
     .mtab.is-floating .mtab-item.on .lb{opacity:1;transform:none}
-    .mtab.is-floating .mtab-item.on.is-arriving .mtab-ic svg{animation:mtab-pop .5s cubic-bezier(.34,1.56,.64,1)}
-    @keyframes mtab-pop{0%{transform:scale(.7)}60%{transform:scale(1.15)}100%{transform:scale(1)}}
 
     /* A finger on it presses it in; a pointer over it lifts it. */
     .mtab.is-floating .mtab-item:active .mtab-ic{transform:scale(.86);transition-duration:.12s}
@@ -383,37 +380,19 @@
     var bar = document.querySelector('.mtab.is-floating');
     if (!bar) return;
 
-    // The highlight glides to a tab as soon as it is tapped, and the page it
-    // opens carries on from there: it starts where the last page's tab was
-    // and glides the rest of the way to its own.
+    // The highlight glides to a tab as soon as it is tapped - once. The page
+    // it opens starts with the highlight already there, so the glide is not
+    // played a second time while that page loads.
     var items = Array.prototype.slice.call(bar.querySelectorAll(':scope > .mtab-item'));
     var current = items.findIndex(function (el) { return el.classList.contains('on'); });
-    var remember = function (i) { try { sessionStorage.setItem('mtab-from', String(i)); } catch (e) {} };
-    var recall = function () {
-      try { var i = sessionStorage.getItem('mtab-from'); sessionStorage.removeItem('mtab-from'); return i === null ? -1 : +i; } catch (e) { return -1; }
-    };
     function select(i) {
       items.forEach(function (el, n) { el.classList.toggle('on', n === i); });
       bar.style.setProperty('--i', i);
-    }
-    var from = recall();
-    if (current >= 0 && from >= 0 && from < items.length && from !== current) {
-      bar.classList.add('is-still');
-      select(from);
-      void bar.offsetWidth;
-      requestAnimationFrame(function () {
-        bar.classList.remove('is-still');
-        requestAnimationFrame(function () {
-          select(current);
-          items[current].classList.add('is-arriving');
-        });
-      });
     }
     items.forEach(function (el, i) {
       if (el.tagName !== 'A') return;
       el.addEventListener('click', function (e) {
         if (i === current || e.defaultPrevented || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button) return;
-        remember(current);
         select(i);
       });
     });
