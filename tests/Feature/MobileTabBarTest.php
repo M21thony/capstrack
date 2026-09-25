@@ -43,8 +43,8 @@ class MobileTabBarTest extends TestCase
     /**
      * The student bar floats, as the Facebook app's does on an iPhone: a
      * pill resting above the bottom of the screen that gets out of the way
-     * while the page is read downwards and comes back on the way up. The
-     * staff portals keep the plain bar along the bottom.
+     * while the page is read downwards and comes back on the way up. Every
+     * portal has it.
      */
     public function test_the_student_bar_floats_and_hides_while_reading_down(): void
     {
@@ -79,13 +79,32 @@ class MobileTabBarTest extends TestCase
             ->assertSee('background:var(--accent-light,#faf7ed)!important;box-shadow:none;', false)
             ->assertSee($student->avatarInitials());
 
-        $expert = CapstoneExpert::factory()->create(['approved_status' => true, 'is_admin' => false]);
+    }
+
+    /** The staff portals float the same bar: four tabs, and Menu as the person's own face or initials. */
+    public function test_every_staff_portal_floats_the_same_bar(): void
+    {
+        $expert = CapstoneExpert::factory()->create(['approved_status' => true, 'is_admin' => false, 'first_name' => 'Rhea', 'last_name' => 'Santos', 'profile_picture' => null]);
 
         $this->actingAs($expert, 'expert')->get(route('instructor.dashboard'))
             ->assertOk()
-            ->assertSee('<nav class="mtab" aria-label="Main">', false)
-            ->assertDontSee('is-floating', false)
-            ->assertDontSee('mtab-glide', false);
+            ->assertSee('<nav class="mtab is-floating" aria-label="Main" style="--n:5;--i:0">', false)
+            ->assertSee('<span class="mtab-glide" aria-hidden="true"></span>', false)
+            ->assertSee('<span class="mtab-ic mtab-avatar" aria-hidden="true">', false)
+            ->assertSeeInOrder(['mtab-avatar', 'RS', '>Menu<'], false);
+
+        $capsa = $this->makeCapsa(CapstoneExpert::factory()->create(['approved_status' => true, 'is_admin' => false, 'sections' => ['BSIT-3A'], 'profile_picture' => 'https://example.com/me.jpg']));
+
+        $this->actingAs($capsa, 'expert')->get(route('capsa.dashboard'))
+            ->assertOk()
+            ->assertSee('class="mtab is-floating"', false)
+            ->assertSeeInOrder(['mtab-avatar', '<img src="https://example.com/me.jpg"'], false);
+
+        $admin = CapstoneExpert::factory()->create(['approved_status' => true, 'is_admin' => true]);
+
+        $this->actingAs($admin, 'expert')->get(route('admin.students'))
+            ->assertOk()
+            ->assertSee('<nav class="mtab is-floating" aria-label="Main" style="--n:5;--i:2">', false);
     }
 
     /**
@@ -145,7 +164,7 @@ class MobileTabBarTest extends TestCase
 
         $page = $this->actingAs($capsa, 'expert')->get(route('capsa.dashboard'))->assertOk();
 
-        $page->assertSee('class="mtab"', false)
+        $page->assertSee('class="mtab is-floating"', false)
             ->assertSeeInOrder(['>Home<', '>Teams<', '>Defenses<', '>Menu<'], false)
             ->assertSee('href="'.route('capsa.team_management').'" class="mtab-item', false)
             // Not an admin, so no Students tab.
@@ -172,7 +191,7 @@ class MobileTabBarTest extends TestCase
 
         $this->actingAs($admin, 'expert')->get(route('admin.students'))
             ->assertOk()
-            ->assertSee('class="mtab"', false)
+            ->assertSee('class="mtab is-floating"', false)
             ->assertSeeInOrder(['>Home<', '>Experts<', '>Students<', '>Analytics<', '>Menu<'], false)
             ->assertSee('href="'.route('admin.dashboard').'" class="mtab-item', false)
             // Not a CaPSA, so no CaPSA-only pages in the bar.
@@ -187,7 +206,7 @@ class MobileTabBarTest extends TestCase
 
         $this->actingAs($expert, 'expert')->get(route('instructor.grading'))
             ->assertOk()
-            ->assertSee('class="mtab"', false)
+            ->assertSee('class="mtab is-floating"', false)
             ->assertSeeInOrder(['>Home<', '>Teams<', '>Reviews<', '>Grading<', '>Menu<'], false);
     }
 
@@ -200,7 +219,7 @@ class MobileTabBarTest extends TestCase
 
         $this->assertStringContainsString('.mtab{display:none}', $html);
         $this->assertStringContainsString('@media (max-width:768px){', $html);
-        $this->assertSame(1, substr_count($html, 'class="mtab"'), 'one bar per page');
+        $this->assertSame(1, substr_count($html, '<nav class="mtab'), 'one bar per page');
 
         // On a phone the top bar's ☰ gives way to Menu in the tab bar, but stays
         // in the page: Menu works by pressing it.

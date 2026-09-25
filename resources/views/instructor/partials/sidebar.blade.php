@@ -74,7 +74,7 @@
     'unseenScheduleCount' => $unseenScheduleCount,
   ])
 </div>
-@include('partials.mobile-tabbar', ['tabs' => [
+@include('partials.mobile-tabbar', ['floating' => true, 'menuAvatar' => $expert ? ['url' => $expert->hasAvatarImage() ? $expert->avatarUrl() : null, 'initials' => $expert->avatarInitials()] : null, 'tabs' => [
     ['label' => 'Home', 'href' => route('instructor.dashboard'), 'active' => request()->routeIs('instructor.dashboard'),
         'icon' => App\Support\PortalIcons::paths('home')],
     ['label' => 'Teams', 'href' => route('instructor.teams'), 'active' => request()->routeIs('instructor.teams'),

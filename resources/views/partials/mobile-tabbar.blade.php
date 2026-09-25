@@ -265,7 +265,7 @@
   The floating bar, as the Facebook app draws it on an iPhone: a rounded
   pill resting above the bottom of the screen rather than a strip along it,
   out of the way while the page is being read downwards, and back the moment
-  it is scrolled up again (or reaches the top). Student portal only.
+  it is scrolled up again (or reaches the top). Every portal has it.
 --}}
 <style>
   @media (max-width:768px){
@@ -362,7 +362,7 @@
        page's scrolling area can be found (the script below), the room is at
        the end of it instead, so the page runs on underneath the pill like
        the app's feed does, rather than stopping at a line above it. */
-    .main{padding-bottom:calc(86px + env(safe-area-inset-bottom, 0px))}
+    .main{padding-bottom:calc(76px + env(safe-area-inset-bottom, 0px))}
     .mtab-spacer{flex:none;height:calc(86px + env(safe-area-inset-bottom, 0px));pointer-events:none}
     .toast,.toast-wrap,#submission-toast,#archive-toast{bottom:calc(90px + env(safe-area-inset-bottom, 0px))!important}
   }

@@ -369,7 +369,7 @@
             'icon' => App\Support\PortalIcons::paths('file-review')];
     }
 @endphp
-@include('partials.mobile-tabbar', ['tabs' => array_slice($phoneTabs, 0, 4)])
+@include('partials.mobile-tabbar', ['floating' => true, 'menuAvatar' => $admin ? ['url' => $admin->hasAvatarImage() ? $admin->avatarUrl() : null, 'initials' => $admin->avatarInitials()] : null, 'tabs' => array_slice($phoneTabs, 0, 4)])
 {{-- The guided tour: the CaPSA's, or the Admin's for an admin who is not also a CaPSA. --}}
 @include('partials.staff-portal-tour', ['tourKey' => $isCapsa ? 'capsa' : 'admin', 'expert' => $admin])
 @if ($adminHasExpertRole)
