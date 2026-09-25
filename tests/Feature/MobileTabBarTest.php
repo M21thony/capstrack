@@ -73,6 +73,7 @@ class MobileTabBarTest extends TestCase
             ->assertSee('width:calc(100% - 32px);max-width:340px;margin:0 auto;', false)
             ->assertSee(PortalIcons::paths('add'), false)
             ->assertSee('<span class="mtab-ic mtab-avatar" aria-hidden="true">', false)
+            ->assertSee('background:var(--accent-light,#faf7ed)!important;box-shadow:none;', false)
             ->assertSee($student->avatarInitials());
 
         $expert = CapstoneExpert::factory()->create(['approved_status' => true, 'is_admin' => false]);

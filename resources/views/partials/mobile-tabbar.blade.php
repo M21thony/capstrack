@@ -355,7 +355,7 @@
 
     /* Menu wears the student's own picture, as the app's last tab does. */
     .mtab.is-floating .mtab-avatar{width:28px;height:28px;border-radius:50%;padding:0;overflow:hidden;
-      background:var(--accent-light,#faf7ed)!important;box-shadow:0 0 0 1.5px #18191f;color:#18191f;font-size:11px;font-weight:700}
+      background:var(--accent-light,#faf7ed)!important;box-shadow:none;color:#18191f;font-size:11px;font-weight:700}
     .mtab.is-floating .mtab-avatar img{width:100%;height:100%;object-fit:cover;display:block}
 
     .mtab.is-floating .mtab-badge{top:-1px;right:2px;min-width:14px;height:14px;padding:0 3px;font-size:8.5px;line-height:14px;box-shadow:0 0 0 2px #fff}
