@@ -2,7 +2,10 @@
 
 namespace App\Support;
 
+use App\Models\CapstoneExpert;
 use App\Models\Team;
+use App\Services\RecipientResolver;
+use App\Services\SimilarityService;
 
 /**
  * A team's pre-proposals in the shape the review modal reads.
@@ -20,8 +23,8 @@ class PreProposalPayload
         // The adviser's name, only looked up when a title is waiting on or
         // was decided by the adviser (a new title after a redefense).
         $adviserName = null;
-        $adviser = fn () => $adviserName ??= \App\Models\CapstoneExpert::find(
-            app(\App\Services\RecipientResolver::class)->resolveTeamRoleExpert((int) $team->team_id, 'adviser')
+        $adviser = fn () => $adviserName ??= CapstoneExpert::find(
+            app(RecipientResolver::class)->resolveTeamRoleExpert((int) $team->team_id, 'adviser')
         )?->name;
 
         // Only titles the team has turned in for checking. A draft they are
@@ -49,7 +52,7 @@ class PreProposalPayload
                 ] : null,
                 'set_aside' => (bool) $p->retired_at,
                 'sdg_goals' => $p->sdg_goals,
-                'research_agenda' => $p->research_agenda,
+                'research_agenda' => ResearchAgenda::items($p->research_agenda),
                 'problem_statement' => $p->problem_statement,
                 'proposed_solution' => $p->proposed_solution,
                 'scope' => $p->scope,
@@ -80,7 +83,7 @@ class PreProposalPayload
                         'differences' => $m['differences'] ?? null,
                         'suggestion' => $m['suggestion'] ?? null,
                     ])->values(),
-                    'highlight_words' => app(\App\Services\SimilarityService::class)
+                    'highlight_words' => app(SimilarityService::class)
                         ->extractHighlightWords($p->duplicationCheck->concepts ?? []),
                 ] : null,
                 'document_url' => $p->duplicationCheck ? route('capsa.verify_teams.pre_proposals.document', $p->id) : null,

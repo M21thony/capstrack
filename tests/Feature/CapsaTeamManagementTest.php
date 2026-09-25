@@ -2,9 +2,11 @@
 
 namespace Tests\Feature;
 
+use App\Models\CapstoneDocument;
 use App\Models\CapstoneExpert;
 use App\Models\CapstonePreProposal;
 use App\Models\Checklist;
+use App\Models\DefenseSchedule;
 use App\Models\Deliverable;
 use App\Models\DeliverableCheck;
 use App\Models\DuplicationCheck;
@@ -174,6 +176,34 @@ class CapsaTeamManagementTest extends TestCase
     }
 
     /**
+     * A signed paper closes on the CaPSA's check, and the check lives in the
+     * Milestones tracker. On the team's own page the line used to read
+     * "Handed in" and stop there, with nothing to click.
+     */
+    public function test_a_paper_waiting_on_her_check_is_clickable_from_the_team_page(): void
+    {
+        $capsa = $this->makeCapsaWithSections();
+        [$team, $leader] = $this->makeTeamInSection('Team Waiting');
+
+        $form = Checklist::create(['capsa_id' => $capsa->expert_id, 'program' => 'BSIT', 'title' => 'Capstone 1 Checklist'])
+            ->milestones()->create(['name' => 'Getting started', 'position' => 0])
+            ->deliverables()->create(['title' => 'Signed Project Team Assignment Form', 'kind' => Deliverable::FORM, 'position' => 0]);
+
+        CapstoneDocument::create([
+            'student_id' => $leader->student_id, 'file_name' => 'scan.pdf', 'deliverable_id' => $form->id,
+            'file_path' => 'submissions/scan.pdf', 'file_version' => 1, 'document_status' => 'Pending',
+        ]);
+
+        $response = $this->get(route('capsa.team_management.show', $team->team_id));
+
+        $response->assertOk();
+        // Straight to the tracker's check for this very paper, not just the tab.
+        $response->assertSee('team='.$team->team_id.'&amp;check='.$form->id, false);
+        // and back to this page once it is checked or put down.
+        $response->assertSee('return='.urlencode('/capsa/team-management/'.$team->team_id), false);
+    }
+
+    /**
      * The roles shown are the ones the team engaged, read from the
      * assignment's expert_role_id. An expert who is both an adviser and a
      * consultant must count as whichever this team took them for, not both.
@@ -232,6 +262,29 @@ class CapsaTeamManagementTest extends TestCase
      * The reject dialog names the title: a team submits three, and a dialog
      * that could be about any of them invites rejecting the wrong one.
      */
+    /**
+     * The research agenda is a list on the form, and reads as one here - a
+     * scan that ran the bullets together into one item included.
+     */
+    public function test_the_title_page_lists_the_research_agenda_one_item_per_line(): void
+    {
+        $this->makeCapsaWithSections();
+        [$team, , $sy] = $this->makeTeamInSection('Team Agenda');
+
+        $proposal = $this->addProposal($team, $sy, 1);
+        $proposal->update([
+            'research_agenda' => ['• Applications and Systems Development • e-Services • Data Science'],
+            'sdg_goals' => 'SDG 4 – Quality Education, SDG 9 – Industry, Innovation and Infrastructure',
+        ]);
+
+        $this->get(route('capsa.team_management.title', [$team->team_id, $proposal->id]))
+            ->assertOk()
+            ->assertSee('Research agenda and priority areas')
+            ->assertSeeInOrder(['<ul class="ans-list">', '<li>Applications and Systems Development</li>', '<li>e-Services</li>', '<li>Data Science</li>'], false)
+            ->assertSeeInOrder(['<li>SDG 4 – Quality Education</li>', '<li>SDG 9 – Industry, Innovation and Infrastructure</li>'], false)
+            ->assertDontSee('• e-Services');
+    }
+
     public function test_the_title_page_carries_the_recommend_and_reject_dialogs(): void
     {
         $this->makeCapsaWithSections();
@@ -276,6 +329,23 @@ class CapsaTeamManagementTest extends TestCase
         $this->assertStringNotContainsString('tab-count', $html);
     }
 
+    /** Members show their profile photo; anyone without one keeps their initials. */
+    public function test_the_team_page_shows_members_profile_photos(): void
+    {
+        $this->makeCapsaWithSections();
+        [$team, $leader] = $this->makeTeamInSection('Team Photos');
+        $leader->update(['f_name' => 'Ana', 'l_name' => 'Reyes', 'p_picture' => 'https://lh3.googleusercontent.com/a/ana-photo']);
+        $member = Student::factory()->withCompleteProfile()->create(['f_name' => 'Ben', 'l_name' => 'Cruz', 'p_picture' => null]);
+        StudentSchoolYear::create(['student_id' => $member->student_id, 'team_id' => $team->team_id]);
+
+        $html = $this->get(route('capsa.team_management.show', $team->team_id))->assertOk()->getContent();
+
+        $this->assertStringContainsString('<img src="https://lh3.googleusercontent.com/a/ana-photo"', $html);
+        $this->assertSame(1, substr_count($html, 'referrerpolicy="no-referrer" onerror="this.remove()"'));
+        // Ben has no photo: his initials are what shows.
+        $this->assertMatchesRegularExpression('/>BC\s*<\/div>/', $html);
+    }
+
     public function test_the_team_page_counts_titles_awaiting_review(): void
     {
         $this->makeCapsaWithSections();
@@ -301,7 +371,7 @@ class CapsaTeamManagementTest extends TestCase
         $this->makeCapsaWithSections();
         [$team] = $this->makeTeamInSection('Team Scheduled');
 
-        \App\Models\DefenseSchedule::create([
+        DefenseSchedule::create([
             'team_id' => $team->team_id,
             'defense_type' => 'Title Defense',
             'attempt' => 1,

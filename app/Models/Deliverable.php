@@ -34,6 +34,12 @@ class Deliverable extends Model
     /** The kinds the CaPSA's check closes. */
     public const CHECKED_BY_CAPSA = [self::FORM, self::APPROVAL, self::CUSTOM];
 
+    /**
+     * The Recommended Pre-Proposal Title Form. The CaPSA recommends a title in
+     * CapsTrack itself, so the line closes on that and nothing is uploaded for it.
+     */
+    public const TITLE_RECOMMENDATION = 'pre_proposal_title_form';
+
     protected $fillable = [
         'checklist_milestone_id',
         'template_key',
@@ -61,6 +67,12 @@ class Deliverable extends Model
     public function checks()
     {
         return $this->hasMany(DeliverableCheck::class);
+    }
+
+    /** Whether the CaPSA's title recommendation closes this line, not an upload. */
+    public function closesOnTitleRecommendation(): bool
+    {
+        return $this->template_key === self::TITLE_RECOMMENDATION;
     }
 
     /** What teams see: not archived, and not inside an archived milestone. */

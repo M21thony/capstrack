@@ -16,6 +16,38 @@
   .std-who{display:flex;align-items:center;gap:9px;min-width:0}
   .std-email{font-size:12px;color:var(--text3);max-width:230px;
              overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  /* Caps the column in the desktop table; on the phone card layout the same
+     max-width left this row short of the card's own width, the same gap
+     admin/experts' .cx-skills left behind before that got the same fix. */
+  @media (max-width:768px){
+    .table td.std-email{max-width:none}
+
+    /* A phone card per student that reads at a glance: the name as its
+       title, the email under it, and number, program, year and section as
+       one line of chips - rather than six labelled rows a screen tall. */
+    .std-table tbody tr{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+    .std-table tbody td{width:auto;padding:0!important}
+    .std-table tbody td::before{display:none}
+    .std-table td[data-label="Name"]{order:1;flex:1 1 100%}
+    .std-table td[data-label="Name"] .std-av{width:36px;height:36px;border-radius:10px}
+    .std-table td[data-label="Name"] .std-name{font-size:14.5px;white-space:normal}
+    .std-table td[data-label="Email"]{order:2;flex:1 1 100%;padding-left:44px!important;margin-top:-10px;
+      font-size:12px;color:var(--text3)}
+    .std-table td[data-label="Student No."],
+    .std-table td[data-label="Program"],
+    .std-table td[data-label="Year"],
+    .std-table td[data-label="Section"]{order:3;margin-top:4px;font-size:11.5px;color:var(--text2);
+      background:var(--bg3);border:1px solid var(--border);border-radius:999px;padding:3px 9px!important}
+    .std-table td[data-label="Program"]{order:4;background:none;border:0;padding:0!important}
+    .std-table td[data-label="Year"]{order:5}
+    .std-table td[data-label="Section"]{order:6}
+    .std-table td[data-label="Year"]::before{display:inline;content:'Year ';font-size:11px;font-weight:400;
+      text-transform:none;letter-spacing:0;width:auto;color:var(--text3)}
+    .std-table td[data-label="Section"]::before{display:inline;content:'Sec ';font-size:11px;font-weight:400;
+      text-transform:none;letter-spacing:0;width:auto;color:var(--text3)}
+    .std-table td[data-label="Student No."]::before{display:inline;content:'#';font-size:11px;font-weight:400;
+      text-transform:none;letter-spacing:0;width:auto;color:var(--text3)}
+  }
   /* Figures that line up down the column, which is all the old monospace
      was ever doing here. */
   .std-num{font-variant-numeric:tabular-nums;font-size:12px;color:var(--text2)}
@@ -143,7 +175,7 @@
     </div>
 
     <div class="card list-card">
-      <table class="table">
+      <table class="table std-table">
         <thead>
           <tr>
             {{-- The unique key first: a student number names exactly one
@@ -154,7 +186,7 @@
             <th>Program</th>
             <th>Year</th>
             <th>Section</th>
-
+            <th aria-label="Actions"></th>
           </tr>
         </thead>
         <tbody>
@@ -173,15 +205,15 @@
               ];
             @endphp
             <tr id="student-row-{{ $student->student_id }}">
-              <td class="std-num" style="padding-left:20px">{{ $student->student_number ?? '—' }}</td>
-              <td>
+              <td class="std-num" style="padding-left:20px" data-label="Student No.">{{ $student->student_number ?? '—' }}</td>
+              <td data-label="Name">
                 <div class="std-who">
                   <img src="{{ $student->avatarUrl() }}" alt="" loading="lazy" class="std-av"
                        onerror="this.onerror=null;this.src='{{ asset('images/default-avatar.jpg') }}';">
                   <span class="std-name">{{ trim($student->f_name.' '.$student->l_name) }}</span>
                 </div>
               </td>
-              <td class="std-email" title="{{ $student->email }}">{{ $student->email }}</td>
+              <td class="std-email" title="{{ $student->email }}" data-label="Email">{{ $student->email }}</td>
               @php
                 // Program, year and section are three things read down a
                 // column. They were one string - the full course name and
@@ -191,18 +223,25 @@
                 $year = count($ys) === 2 ? $ys[0] : '';
                 $section = count($ys) === 2 ? $ys[1] : ($ys[0] ?? '');
               @endphp
-              <td title="{{ $student->course }}">
+              <td title="{{ $student->course }}" data-label="Program">
                 @if ($program)
                   <span class="std-prog">{{ $program }}</span>
                 @else
                   <span class="std-none">{{ $student->course ?: '—' }}</span>
                 @endif
               </td>
-              <td class="std-num">{{ $year !== '' ? $year : '—' }}</td>
-              <td class="std-num">{{ $section !== '' ? $section : '—' }}</td>
+              <td class="std-num" data-label="Year">{{ $year !== '' ? $year : '—' }}</td>
+              <td class="std-num" data-label="Section">{{ $section !== '' ? $section : '—' }}</td>
+              <td style="text-align:right;padding-right:16px">
+                <button type="button" class="btn btn-sm btn-ghost std-remove"
+                        data-url="{{ route('admin.students.destroy', $student->student_id) }}"
+                        data-name="{{ trim($student->f_name.' '.$student->l_name) ?: $student->email }}"
+                        data-row="student-row-{{ $student->student_id }}"
+                        onclick="removeStudent(this)">Remove</button>
+              </td>
             </tr>
           @empty
-            <tr><td colspan="6" style="padding:24px 20px;text-align:center;color:var(--text3);font-size:13px">No student accounts found.</td></tr>
+            <tr><td colspan="7" style="padding:24px 20px;text-align:center;color:var(--text3);font-size:13px">No student accounts found.</td></tr>
           @endforelse
         </tbody>
       </table>
@@ -250,10 +289,12 @@ function showToast(message, type = 'success') {
     <div class="ct-toast-icon ${type}">${icons[type] || icons.success}</div>
     <div class="ct-toast-body">
       <p class="ct-toast-title">${type === 'error' ? 'Error' : 'Success'}</p>
-      <p class="ct-toast-msg">${message}</p>
+      <p class="ct-toast-msg"></p>
     </div>
     <button class="ct-toast-close" onclick="this.closest('.ct-toast').remove()">&times;</button>
   `;
+  // Names are data, not markup.
+  toast.querySelector('.ct-toast-msg').textContent = message;
   document.getElementById('ct-toast-container').appendChild(toast);
   setTimeout(() => {
     toast.classList.add('hiding');
@@ -261,7 +302,37 @@ function showToast(message, type = 'success') {
   }, 4000);
 }
 
+
+// ── REMOVE ─────────────────────────────────────────────
+// For good: the account, and their place on their team. Asked first, in the
+// app's own dialog, with Cancel as the reflex.
+async function removeStudent(button) {
+  const name = button.dataset.name;
+  const yes = await confirmSheet({
+    title: 'Remove ' + name + '?',
+    body: 'Their account is deleted and they leave their team. If they lead it, the next member takes over; if no one else is on it, the team is removed too. This cannot be undone.',
+    confirmLabel: 'Remove student',
+    danger: true,
+  });
+  if (!yes) return;
+
+  button.disabled = true;
+  try {
+    const res = await fetch(button.dataset.url, {
+      method: 'DELETE',
+      headers: { 'X-CSRF-TOKEN': CSRF_TOKEN, 'Accept': 'application/json' },
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.success) throw new Error(data.message || 'Could not remove ' + name + '.');
+    document.getElementById(button.dataset.row)?.remove();
+    showToast(data.message, 'success');
+  } catch (e) {
+    button.disabled = false;
+    showToast(e.message, 'error');
+  }
+}
 </script>
+@include('partials.app-dialog')
 @include('partials.escape-closes-modals')
 </body>
 </html>

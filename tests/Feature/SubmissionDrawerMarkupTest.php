@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\CapstoneDocument;
 use App\Models\Student;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
@@ -9,10 +10,9 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * Handing in a file no longer means going anywhere: the panel is on every
- * student page, and the form is fetched into it. So the submission route has
- * to answer with a fragment - markup with no page around it - and every
- * student page has to carry the panel it drops into.
+ * Every upload opens the same small pop-up over the page the student is on.
+ * The Document Submission page carries no form of its own - just what the
+ * team has sent and a button that opens the pop-up.
  */
 class SubmissionDrawerMarkupTest extends TestCase
 {
@@ -33,20 +33,43 @@ class SubmissionDrawerMarkupTest extends TestCase
         ]);
     }
 
-    public function test_the_submission_route_answers_with_a_bare_form_not_a_page(): void
+    public function test_the_page_has_no_form_only_the_submissions_and_a_button(): void
     {
+        CapstoneDocument::create([
+            'student_id' => $this->student->student_id, 'file_name' => 'Chapter1_final', 'chapter' => 'Chapter 1',
+            'file_path' => 'submissions/c1.pdf', 'file_version' => 2, 'document_status' => 'Pending',
+        ]);
+
         $response = $this->actingAs($this->student)->get(route('student.submission'))->assertOk();
 
-        $response->assertSee('id="submission-form-root"', false);
-        $this->assertStringNotContainsString('<html', $response->getContent());
+        $response->assertSee("Your team's submissions", false);
+        $response->assertSee('Chapter1_final');
+        $response->assertSee('version 2');
+        $response->assertSee("window.openSubmission('', this)", false);
+        $response->assertSee('Submit a document');
+        $response->assertDontSee('id="submission-form-root"', false);
+        $response->assertDontSee('id="dropZone"', false);
+        $response->assertDontSee('data-open-upload', false);
     }
 
-    public function test_every_student_page_carries_the_panel_but_not_the_form(): void
+    public function test_the_old_in_place_form_is_gone(): void
+    {
+        $this->actingAs($this->student)
+            ->get(route('student.submission', ['inline' => 1]), ['X-Requested-With' => 'XMLHttpRequest'])
+            ->assertOk()
+            ->assertDontSee('id="submission-form-root"', false)
+            ->assertDontSee('data-mode="inline"', false);
+    }
+
+    public function test_every_student_page_can_open_the_pop_up(): void
     {
         $response = $this->actingAs($this->student)->get(route('student.dashboard'))->assertOk();
 
-        $response->assertSee('id="submission-drawer"', false);
+        $response->assertSee('id="upload-config"', false);
+        $response->assertSee(json_encode(route('student.submission.plan')), false);
+        $response->assertSee(json_encode(route('student.submission.store')), false);
         $response->assertSee('id="submission-toast"', false);
+        $response->assertDontSee('name="submission-form-url"', false);
         $response->assertDontSee('id="submission-form-root"', false);
     }
 }

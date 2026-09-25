@@ -9,6 +9,28 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="{{ asset('css/expert.css') }}" />
+<style>
+  /* A phone gets the filters stacked full width, and one card per document
+     instead of a six-column row. */
+  @media (max-width: 700px) {
+    .dr-filters { flex-wrap: wrap; }
+    .dr-filters > .input { flex: 1 1 100%; width: 100% !important; max-width: none !important; }
+    .dr-filters > span[style*="flex:1"] { display: none; }
+    .dr-table, .dr-table tbody { display: block; width: 100%; }
+    .dr-table thead { display: none; }
+    .dr-table tbody tr.dr-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 10px; padding: 14px; border-bottom: 1px solid var(--border); }
+    .dr-table tbody tr.dr-row td { display: block; padding: 0 !important; border: 0; min-width: 0; }
+    .dr-table tbody tr.dr-row td:nth-child(1) { grid-column: 1 / -1; }
+    .dr-table tbody tr.dr-row td:nth-child(2) { grid-column: 1; }
+    .dr-table tbody tr.dr-row td:nth-child(3) { grid-column: 2; text-align: right; color: var(--text3); }
+    .dr-table tbody tr.dr-row td:nth-child(4) { grid-column: 1; color: var(--text3); }
+    .dr-table tbody tr.dr-row td:nth-child(5) { grid-column: 2; text-align: right; }
+    .dr-table tbody tr.dr-row td:nth-child(6) { grid-column: 1 / -1; }
+    .dr-table tbody tr.dr-row td:nth-child(6) .btn { width: 100%; justify-content: center; }
+    .dr-table tbody tr:not(.dr-row) { display: block; }
+    .dr-table tbody tr:not(.dr-row) td { display: block; }
+  }
+</style>
 @include('partials.skeleton-head', ['skReveal' => 'block'])
 </head>
 <body>
@@ -94,7 +116,7 @@
         sub="All time" color="var(--green)" />
     </div>
 
-    <div class="row" style="margin-bottom:14px;gap:8px">
+    <div class="row dr-filters" style="margin-bottom:14px;gap:8px">
       <input class="input" id="dr-search" placeholder="Search documents or teams..." style="max-width:280px"/>
       <select class="input" id="dr-team" style="width:160px">
         <option value="">All Teams</option>
@@ -113,7 +135,7 @@
       </span>
     </div>
     <div class="card" style="padding:0;overflow:hidden">
-      <table class="table">
+      <table class="table dr-table">
         <thead>
           <tr>
             <th style="padding-left:20px">Document</th>

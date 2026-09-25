@@ -1077,8 +1077,10 @@ async function refreshConsultationData(showFeedback) {
   if (refreshBtn) { refreshBtn.style.opacity = '0.5'; }
 
   try {
+    // The 30-second background poll is passive: it must not keep an idle
+    // session alive. The Refresh button is someone at the page.
     const res = await fetch('{{ route("student.consultation.refresh") }}', {
-      headers: { 'Accept': 'application/json' },
+      headers: showFeedback ? { 'Accept': 'application/json' } : { 'Accept': 'application/json', 'X-Idle-Passive': '1' },
     });
     if (!res.ok) { throw new Error('Refresh failed (' + res.status + ')'); }
     const data = await res.json();
@@ -1112,6 +1114,12 @@ document.getElementById('consultRefreshBtn')?.addEventListener('click', function
 setInterval(function () {
   if (document.visibilityState === 'visible') { refreshConsultationData(false); }
 }, 30000);
+
+// Coming back to the tab (e.g. from the expert's window) shouldn't wait for
+// the next 30-second tick to show what changed while it was hidden.
+document.addEventListener('visibilitychange', function () {
+  if (document.visibilityState === 'visible') { refreshConsultationData(false); }
+});
 
 async function bookSlot(scheduleId) {
   const dateKey = currentSlotModalDateKey;

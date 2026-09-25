@@ -2,6 +2,9 @@
 
 namespace Database\Seeders;
 
+use App\Models\ArchivedDocTag;
+use App\Models\ArchivedDocument;
+use App\Support\ArchiveTagGuesser;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use PhpOffice\PhpSpreadsheet\IOFactory;
@@ -44,7 +47,7 @@ class ArchivedDocumentSeeder extends Seeder
                 $program = 'BSCS';
             }
 
-            DB::table('archived_documents')->insert([
+            $archivedId = DB::table('archived_documents')->insertGetId([
                 'team_id' => null,
                 'title' => trim((string) $title),
                 'abstract' => $abstract ? trim((string) $abstract) : null,
@@ -53,7 +56,10 @@ class ArchivedDocumentSeeder extends Seeder
                 'file_name' => null,
                 'file_path' => '',
                 'file_size' => null,
-            ]);
+            ], 'archived_id');
+
+            // Tagged as it goes in, so the archive is counted in Analytics from the start.
+            ArchivedDocument::find($archivedId)?->tags()->sync(ArchivedDocTag::idsFor(ArchiveTagGuesser::guess((string) $title, $abstract ? (string) $abstract : null)));
 
             $inserted++;
         }

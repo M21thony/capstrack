@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\Student;
+use App\Models\StudentSchoolYear;
+use App\Models\Team;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Route;
 use Tests\TestCase;
@@ -98,7 +100,22 @@ class StudentPortalTourTest extends TestCase
 
         $this->actingAs($student, 'web')->get(route('student.dashboard'))
             ->assertSee('Your first step', false)
-            ->assertSee('href="'.route('student.team').'" class="gt-next-up"', false);
+            ->assertSee('href="'.route('student.team').'" class="gt-next-up"', false)
+            ->assertSee('Create your team in Team Management');
+    }
+
+    /** The team comes first even for a student already in one - never Choose your experts. */
+    public function test_the_first_step_is_team_management_even_for_a_student_with_a_team(): void
+    {
+        $student = Student::factory()->withCompleteProfile()->create();
+        $team = Team::create(['team_name' => 'Tour Team', 'team_status' => 'Active', 'leader_id' => $student->student_id]);
+        StudentSchoolYear::create(['student_id' => $student->student_id, 'team_id' => $team->team_id]);
+
+        $html = $this->actingAs($student, 'web')->get(route('student.dashboard'))->assertOk()->getContent();
+
+        $this->assertStringContainsString('href="'.route('student.team').'" class="gt-next-up"', $html);
+        $this->assertStringNotContainsString('href="'.route('student.experts').'" class="gt-next-up"', $html);
+        $this->assertStringContainsString('<span class="gt-next-up-title">Create your team in Team Management</span>', $html);
     }
 
     /**
@@ -145,9 +162,21 @@ class StudentPortalTourTest extends TestCase
         $html = $this->actingAs($student, 'web')->get(route('student.dashboard'))
             ->assertOk()->getContent();
 
-        $this->assertStringContainsString("sessionStorage.setItem('gt-done', '1')", $html);
-        $this->assertStringContainsString("&& !markedDone()", $html);
+        // Kept per portal, so finishing one portal's tour does not hide another's.
+        $this->assertStringContainsString("sessionStorage.setItem('gt-done:' + tourKey, '1')", $html);
+        $this->assertStringContainsString('data-tour-key="student"', $html);
+        $this->assertStringContainsString('&& !markedDone()', $html);
         $this->assertStringContainsString('if (!r.ok)', $html);
+    }
+
+    /** Step 1, right after the welcome, is forming the team in Team Management. */
+    public function test_the_first_pointed_step_is_forming_the_team(): void
+    {
+        $steps = config('student-tour.steps');
+
+        $this->assertSame('team', $steps[1]['key']);
+        $this->assertSame(['student.team'], $steps[1]['target']);
+        $this->assertSame('experts', $steps[2]['key']);
     }
 
     public function test_it_opens_and_closes_on_a_card_and_points_at_things_in_between(): void

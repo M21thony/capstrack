@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Capsa;
 use App\Http\Controllers\Controller;
 use App\Models\ChecklistMilestone;
 use App\Models\Deliverable;
+use App\Services\Notifier;
 use App\Support\ChecklistAccess;
+use App\Support\TeamChecklist;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -25,7 +27,7 @@ class DeliverableController extends Controller
         'due_date.before_or_equal' => 'Enter a due date before the year 2101.',
     ];
 
-    public function __construct(private ChecklistAccess $access) {}
+    public function __construct(private ChecklistAccess $access, private TeamChecklist $checklists) {}
 
     /** One deliverable per line pasted into "Add deliverables", all with the same settings. */
     public function store(Request $request, ChecklistMilestone $milestone): JsonResponse
@@ -50,7 +52,36 @@ class DeliverableController extends Controller
             'position' => $next + $i,
         ]));
 
+        $this->notifyAdded($milestone, $created->pluck('title'));
+
         return response()->json(['deliverables' => $created->map(fn ($d) => ChecklistController::deliverable($d))->values()], 201);
+    }
+
+    /**
+     * Every team on this checklist hears about a new requirement the moment
+     * it lands on their tracker, not the next time they happen to open it -
+     * the bell, and the desktop popup for whoever has allowed it (see
+     * Notifier).
+     */
+    private function notifyAdded(ChecklistMilestone $milestone, \Illuminate\Support\Collection $titles): void
+    {
+        $checklist = $milestone->checklist;
+
+        if (! $checklist || $titles->isEmpty()) {
+            return;
+        }
+
+        $message = $titles->count() === 1
+            ? '"'.$titles->first().'" was added to '.$milestone->name.'.'
+            : $titles->count().' new items were added to '.$milestone->name.'.';
+
+        Notifier::toStudents(
+            $this->checklists->studentsFollowing($checklist),
+            'checklist_item_added',
+            'New in your checklist',
+            $message,
+            route('student.progress'),
+        );
     }
 
     /** One cell edited in place. */

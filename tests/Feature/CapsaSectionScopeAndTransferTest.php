@@ -92,6 +92,23 @@ class CapsaSectionScopeAndTransferTest extends TestCase
         $this->assertStringNotContainsString($b->email, $html);
     }
 
+    /** Required on edit as on Add Student: the number cannot be blanked. */
+    public function test_an_edit_cannot_blank_the_student_number(): void
+    {
+        $student = $this->student('mine@my.cspc.edu.ph', '4th · A');
+        $student->update(['student_number' => '221001138']);
+        $capsa = $this->capsa(['BSIT-4A']);
+
+        foreach ([null, ''] as $blank) {
+            $this->actingAs($capsa, 'expert')
+                ->patchJson(route('capsa.students.update', $student), ['f_name' => 'Angel', 'student_number' => $blank])
+                ->assertStatus(422)
+                ->assertJsonPath('message', 'Enter the student number.');
+        }
+
+        $this->assertSame('221001138', $student->fresh()->student_number);
+    }
+
     // ── the transfer ──────────────────────────────────────────────────────
 
     /** Not by accident: the first attempt is refused and says why. */

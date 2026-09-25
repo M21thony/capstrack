@@ -9,7 +9,6 @@ use App\Http\Controllers\Admin\GradingRubricController;
 use App\Http\Controllers\Admin\ResourcesController;
 use App\Http\Controllers\Admin\SettingsController as AdminSettingsController;
 use App\Http\Controllers\Admin\StudentAccountsController;
-use App\Http\Controllers\AdminApprovalController;
 use App\Http\Controllers\AdminDashboardController;
 use App\Http\Controllers\AdminExpertsController;
 use App\Http\Controllers\AdminFinancialController;
@@ -32,11 +31,13 @@ use App\Http\Controllers\Capsa\StudentController as CapsaStudentController;
 use App\Http\Controllers\Capsa\StudentRosterController;
 use App\Http\Controllers\Capsa\TeamManagementController;
 use App\Http\Controllers\Capsa\TeamRulesController;
+use App\Http\Controllers\Capsa\YearPromotionController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DirectoryController;
 use App\Http\Controllers\DuplicationController;
 use App\Http\Controllers\ExpertController;
 use App\Http\Controllers\ExpertNotificationController;
+use App\Http\Controllers\IdleSessionController;
 use App\Http\Controllers\Instructor\AssignmentController as InstructorAssignmentController;
 use App\Http\Controllers\Instructor\ConsultationLogController;
 use App\Http\Controllers\Instructor\DashboardController as InstructorDashboardController;
@@ -71,6 +72,7 @@ use App\Http\Controllers\TeamController;
 use App\Models\CapstoneExpert;
 use App\Models\Student;
 use App\Models\StudentSchoolYear;
+use App\Support\CapsaReports;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
@@ -141,10 +143,10 @@ Route::middleware(['expert.auth', 'no.cache', 'track.expert'])->prefix('admin')-
         // through the toggle - see AdminExpertsController::updateSections.
         Route::put('/experts/{expert}/sections', [AdminExpertsController::class, 'updateSections'])->name('experts.sections');
         // A register, not an editor. Students belong to their CaPSA - enrolled
-        // from the section list and the roster import, both on that side - so the
-        // write routes are gone rather than hidden: a button an admin cannot use
-        // is a smaller problem than an endpoint they still can.
+        // from the section list and the roster import, both on that side. The
+        // one write is removing an account outright, which is the Admin's.
         Route::get('/students', [StudentAccountsController::class, 'index'])->name('students');
+        Route::delete('/students/{student}', [StudentAccountsController::class, 'destroy'])->name('students.destroy');
         Route::get('/settings', [AdminSettingsController::class, 'index'])->name('settings');
         Route::put('/settings', [AdminSettingsController::class, 'update'])->name('settings.update');
         // Sections have to exist before anybody can be made a CaPSA over them,
@@ -184,13 +186,11 @@ Route::get('/admin/{path}', function (string $path) {
 // the one that should be right.
 Route::middleware(['expert.auth', 'no.cache', 'track.expert'])->prefix('capsa')->name('capsa.')->group(function () use ($pagesBothRolesOpen) {
     Route::middleware('expert.capsa')->group(function () {
-        // Approving an account also assigns that expert's role(s) - approve()
-        // requires role_ids - so this stays CaPSA-only: assigning expert
-        // categories is CaPSA's call, not Admin's.
-        Route::get('/approval', [AdminApprovalController::class, 'index'])->name('approval');
-        Route::patch('/approval/{expert_id}', [AdminApprovalController::class, 'update'])->name('approval.update');
-        // Changing them afterwards is the same call, so it sits beside it rather
-        // than in the shared block. Admin's copy of Expert Management lists
+        // Account Approval is gone: nobody applies for an account any more -
+        // faculty come in on an uploaded list or are added by address - so its
+        // queue was always empty. An old bookmark lands on Expert Management.
+        Route::redirect('/approval', '/capsa/experts');
+        // Assigning an expert's roles is the CaPSA's call, not Admin's. Admin's copy of Expert Management lists
         // CaPSAs and only CaPSAs, so there was never an expert on that page whose
         // roles an Admin could be setting - and a button they cannot use is a
         // smaller problem than an endpoint they still can.
@@ -244,9 +244,11 @@ Route::middleware(['expert.auth', 'no.cache', 'track.expert'])->prefix('capsa')-
         Route::delete('/deliverables/{deliverable}/checks/{team}', [DeliverableCheckController::class, 'destroy'])->name('deliverables.checks.destroy');
         // One section of the tracker, loaded when its tab is picked.
         Route::get('/sections/{section}/progress', [SectionProgressController::class, 'show'])->name('sections.progress');
-        // Reports: counts per section, a page per section, and a PDF or Excel copy.
+        // Reports: pick a period, open a report as a table, download it as a PDF or Excel sheet.
         Route::get('/reports', [ReportController::class, 'index'])->name('reports');
         Route::get('/reports/section/{section}', [ReportController::class, 'section'])->name('reports.section');
+        Route::get('/reports/{report}', [ReportController::class, 'show'])->name('reports.show')
+            ->whereIn('report', array_keys(CapsaReports::REPORTS));
         // The file a team uploaded for a line, opened by the CaPSA to check it.
         Route::get('/documents/{document}/file', [DocumentFileController::class, 'show'])->name('documents.file');
         Route::get('/rubric_management', [GradingRubricController::class, 'index'])->name('rubric_management');
@@ -280,6 +282,9 @@ Route::middleware(['expert.auth', 'no.cache', 'track.expert'])->prefix('capsa')-
         // section for a group sends only that, and both are partial changes to the
         // same record. DELETE takes them off the roster - the account stays,
         // because their team history and submissions hang off it.
+        // Year Promotion without a file: move chosen sections up a year.
+        Route::get('/students/promotion', [YearPromotionController::class, 'preview'])->name('students.promotion');
+        Route::post('/students/promotion', [YearPromotionController::class, 'store'])->name('students.promotion.store');
         Route::post('/students', [CapsaStudentController::class, 'store'])->name('students.store');
         Route::patch('/students/{student}', [CapsaStudentController::class, 'update'])->name('students.update');
         Route::delete('/students/{student}', [CapsaStudentController::class, 'destroy'])->name('students.destroy');
@@ -304,6 +309,8 @@ Route::middleware(['expert.auth', 'expert.approved', 'no.cache', 'track.expert']
     Route::put('/grading/{defense}', [GradingController::class, 'save'])->name('grading.save');
     Route::patch('/grading/{defense}', [GradingController::class, 'submit'])->name('grading.submit');
     Route::post('/grading/{defense}/outcome', [GradingController::class, 'recordOutcome'])->name('grading.outcome');
+    Route::post('/grading/{defense}/abstain', [GradingController::class, 'abstain'])->name('grading.abstain');
+    Route::delete('/grading/{defense}/abstain', [GradingController::class, 'withdrawAbstention'])->name('grading.abstain.withdraw');
     Route::get('/docreview', [DocReviewController::class, 'index'])->name('docreview');
     Route::get('/docreview/{review}/annotate', [DocReviewController::class, 'annotate'])->name('docreview.annotate');
     Route::get('/assignments', [InstructorAssignmentController::class, 'index'])->name('assignments');
@@ -338,7 +345,12 @@ Route::get('/', function () {
 });
 
 Route::get('/login', [AuthController::class, 'login'])->name('login');
+
+// Ten idle minutes: every portal page counts down (partials/idle-logout).
+Route::post('/session/keep-alive', [IdleSessionController::class, 'keepAlive'])->name('session.keep-alive');
+Route::get('/session/expired', [IdleSessionController::class, 'expired'])->name('session.expired');
 Route::get('/team', [AuthController::class, 'team'])->name('team');
+Route::view('/privacy', 'privacy')->name('privacy');
 Route::post('/login/google', [AuthController::class, 'initiateGoogleLogin'])->name('login.google.initiate');
 Route::get('/login/google/callback', [AuthController::class, 'handleGoogleCallback'])->name('login.google.callback');
 Route::get('/login/google/mock', [AuthController::class, 'showMockLogin'])->name('login.google.mock');
@@ -443,6 +455,9 @@ Route::middleware(['auth', 'no.cache', 'track.expert'])->group(function () {
             Route::post('/submission', [SubmissionController::class, 'store'])->name('student.submission.store');
             Route::get('/submission/subject-adviser-folders', [SubmissionController::class, 'subjectAdviserFolders'])->name('student.submission.subject-adviser-folders');
             Route::get('/submission/next-version', [SubmissionController::class, 'nextVersionForTitle'])->name('student.submission.next-version');
+            // Asked before a draft goes up: is this the file they mean to send?
+            Route::post('/submission/warnings', [SubmissionController::class, 'warnings'])->name('student.submission.warnings');
+            Route::get('/submission/plan', [SubmissionController::class, 'plan'])->name('student.submission.plan');
             Route::get('/review', [StudentReviewController::class, 'index'])->name('student.review');
             Route::get('/review/{review}/pdf', [StudentReviewController::class, 'file'])->name('student.review.pdf');
             Route::get('/review/{review}/remarks', [StudentReviewController::class, 'remarks'])->name('student.review.remarks');
@@ -482,6 +497,12 @@ Route::middleware(['auth', 'no.cache', 'track.expert'])->group(function () {
 // The bell on every expert page - CaPSA, admin and instructor alike, since one
 // person is often more than one of those. Deliberately not behind
 // expert.approved: an unapproved expert still needs to hear a team apply to them.
+// Finished or skipped the portal tour - CaPSA, Admin and Expert alike, from
+// whichever sidebar they have.
+Route::put('instructor/tour', [App\Http\Controllers\Instructor\PortalTourController::class, 'update'])
+    ->middleware(['expert.auth'])
+    ->name('instructor.tour.update');
+
 Route::prefix('instructor/notifications')
     ->middleware(['expert.auth', 'no.cache'])
     ->name('instructor.notifications.')
@@ -519,23 +540,6 @@ Route::prefix('instructor/schedule')
         Route::delete('slots/{id}/occurrences/{date}', [ScheduleController::class, 'removeOccurrence'])
             ->where('date', '[0-9]{4}-[0-9]{2}-[0-9]{2}');
     });
-
-Route::post('/session/keep-alive', function () {
-    if (! Auth::check() && ! Auth::guard('expert')->check()) {
-        return response()->json(['success' => false], 401);
-    }
-
-    if (Auth::guard('expert')->check()) {
-        $expert = Auth::guard('expert')->user();
-        $expert->last_seen_at = now();
-        $expert->save();
-    }
-
-    request()->session()->regenerate();
-    request()->session()->put('_timeout_at', now()->addMinutes((int) config('session.lifetime'))->timestamp);
-
-    return response()->json(['success' => true]);
-});
 
 // ── Google Drive OAuth + resource/submission delivery (from earlier work) ──
 Route::middleware(['expert.auth', 'track.expert'])->prefix('admin/gdrive')->name('gdrive.')->group(function () {

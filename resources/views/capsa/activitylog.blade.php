@@ -41,12 +41,12 @@
 
   <div id="real-content" style="display:none;flex:1;overflow:hidden;flex-direction:column;">
   <div class="content">
-    <form method="GET" class="row" style="margin-bottom:16px;gap:8px">
+    <form method="GET" class="row log-filters" style="margin-bottom:16px;gap:8px">
       <input class="input" name="search" placeholder="Search by student or action..." style="max-width:300px" value="{{ request('search') }}"/>
       <select class="input" name="type" style="width:180px" onchange="this.form.submit()">
         <option value="">All Actions</option>
         @foreach($types as $t)
-        <option value="{{ $t }}" {{ request('type') === $t ? 'selected' : '' }}>{{ $t }}</option>
+        <option value="{{ $t }}" {{ request('type') === $t ? 'selected' : '' }}>{{ \App\Support\ActivityIcons::for($t)['label'] }}</option>
         @endforeach
       </select>
       <button class="btn btn-ghost" style="font-size:11px;padding:5px 12px">Filter</button>
@@ -66,12 +66,13 @@
         <tbody>
         @forelse($logs as $log)
           <tr>
-            <td style="padding-left:20px"><a href="javascript:void(0)" onclick="openLogModal({{ $log->id }})" style="color:var(--accent);text-decoration:underline;font-size:12px;font-variant-numeric:tabular-nums;">#{{ $log->id }}</a></td>
-            <td style="font-variant-numeric:tabular-nums;font-size:11px;color:var(--text3)">{{ $log->created_at->format('M j · H:i') }}</td>
-            <td class="td-main">{{ $log->student?->f_name }} {{ $log->student?->l_name }}</td>
-            <td><span class="badge badge-gold" style="font-size:10px">{{ $log->student?->currentTeam?->team_name ?? $log->metadata['team_name'] ?? 'N/A' }}</span></td>
-            <td><span class="badge badge-blue" style="font-size:10px">{{ $log->type }}</span></td>
-            <td style="font-size:12px;color:var(--text2)">{!! Str::limit($log->description, 60) !!}</td>
+            <td style="padding-left:20px" data-label="ID"><a href="javascript:void(0)" onclick="openLogModal({{ $log->id }})" style="color:var(--accent);text-decoration:underline;font-size:12px;font-variant-numeric:tabular-nums;">#{{ $log->id }}</a></td>
+            <td style="font-variant-numeric:tabular-nums;font-size:11px;color:var(--text3)" data-label="Time">{{ $log->created_at->format('M j · H:i') }}</td>
+            <td class="td-main" data-label="Student">{{ $log->student?->f_name }} {{ $log->student?->l_name }}</td>
+            <td data-label="Team"><span class="badge badge-gold" style="font-size:10px">{{ $log->student?->currentTeam?->team_name ?? $log->metadata['team_name'] ?? 'N/A' }}</span></td>
+            @php $face = \App\Support\ActivityIcons::for($log->type); @endphp
+            <td data-label="Action"><span class="al-action al-tone-{{ $face['tone'] }}" title="{{ $log->type }}">{!! $face['svg'] !!}{{ $face['label'] }}</span></td>
+            <td style="font-size:12px;color:var(--text2)" data-label="Description">{!! Str::limit($log->description, 60) !!}</td>
           </tr>
         @empty
           <tr><td colspan="6" style="text-align:center;padding:32px;color:var(--text3)">No activity logs found.</td></tr>
@@ -121,6 +122,16 @@
 .modal-box{background:#fff;border:1px solid var(--border);border-radius:16px;padding:32px;max-width:480px;width:90%}
 .modal-title{font-size:17px;font-weight:700;color:var(--text)}
 .modal-actions{display:flex;gap:10px;justify-content:flex-end}
+/* The action as a name and icon, coloured by what sort of thing happened. */
+.al-action{display:inline-flex;align-items:center;gap:6px;padding:3px 10px 3px 6px;border-radius:999px;font-size:11px;font-weight:600;white-space:nowrap;background:var(--al-bg);color:var(--al-fg)}
+.al-action svg{width:13px;height:13px;flex:none;fill:none;stroke:currentColor;stroke-width:2.3;stroke-linecap:round;stroke-linejoin:round}
+.al-tone-green{--al-bg:rgba(22,163,74,.12);--al-fg:#15803d}
+.al-tone-red{--al-bg:rgba(220,38,38,.1);--al-fg:#dc2626}
+.al-tone-amber{--al-bg:rgba(217,119,6,.12);--al-fg:#b45309}
+.al-tone-blue{--al-bg:rgba(37,99,235,.1);--al-fg:#2563eb}
+.al-tone-purple{--al-bg:rgba(124,58,237,.1);--al-fg:#7c3aed}
+.al-tone-gold{--al-bg:rgba(201,168,44,.16);--al-fg:#8a6e10}
+.al-tone-gray{--al-bg:var(--bg3);--al-fg:var(--text3)}
 </style>
 
 <script>

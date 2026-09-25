@@ -8,6 +8,30 @@ import { mergeRectsByLine } from "./Reader";
  */
 
 const MAX_EDITS = 2000;
+// Below this share of three-word phrases in common, the new file is not a
+// revision of the old one - most likely the wrong file (Chapter 3 sent as the
+// next Chapter 1). Same measure the upload's own check uses (RevisionCheck).
+export const MIN_SHARED = 0.25;
+const MIN_PHRASES = 20;
+
+/**
+ * The share of three-word phrases two word lists have in common, out of the
+ * shorter one's; null when either is too short to tell. A revision keeps most
+ * of its phrases; another chapter of the same study shares only a handful.
+ */
+export function sharedPhrases(oldWords, newWords) {
+  const phrases = (words) => {
+    const out = new Set();
+    for (let i = 0; i + 2 < words.length; i++) out.add(words[i].t + " " + words[i + 1].t + " " + words[i + 2].t);
+    return out;
+  };
+  const a = phrases(oldWords);
+  const b = phrases(newWords);
+  if (a.size < MIN_PHRASES || b.size < MIN_PHRASES) return null;
+  let common = 0;
+  a.forEach((p) => { if (b.has(p)) common++; });
+  return common / Math.min(a.size, b.size);
+}
 // How many words either side of a remark still count as "near" it.
 const NEAR = 25;
 

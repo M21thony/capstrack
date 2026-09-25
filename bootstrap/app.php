@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\CheckExpertApproval;
+use App\Http\Middleware\EndIdleSession;
 use App\Http\Middleware\EnsureExpertIsAdmin;
 use App\Http\Middleware\EnsureExpertIsAuthenticated;
 use App\Http\Middleware\EnsureExpertIsCapsa;
@@ -42,6 +43,10 @@ return Application::configure(basePath: dirname(__DIR__))
             AddQueuedCookiesToResponse::class,
             StartSession::class,
         ]);
+
+        // Ten idle minutes and anyone signed in, on any portal, is signed out.
+        $middleware->web(append: [EndIdleSession::class]);
+        $middleware->api(append: [EndIdleSession::class]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // Anything under api/* answers in JSON whatever the caller asked for.

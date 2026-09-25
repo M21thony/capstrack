@@ -2,11 +2,14 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Notification;
+use App\Models\CapstoneExpert;
 use App\Models\MemberLeaveRequest;
+use App\Models\Notification;
 use App\Models\Student;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
+use App\Services\Notifier;
+use App\Support\SectionScope;
 use App\Support\StudentTeam;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -108,6 +111,8 @@ class LeaveRequestController extends Controller
             ]);
 
         $subject = Student::find($subjectId);
+        $this->notifyCapsa($team, $leaveRequest, $myName, e(trim(($subject->f_name ?? '').' '.($subject->l_name ?? ''))));
+
         $this->logActivity(
             $me->student_id,
             'leave_request_sent',
@@ -142,6 +147,38 @@ class LeaveRequestController extends Controller
         return $request->expectsJson()
             ? response()->json(['success' => true, 'message' => 'Request withdrawn.'])
             : redirect()->route('student.team')->with('status', 'Request withdrawn.');
+    }
+
+    /**
+     * The CaPSA decides, so the CaPSA hears about it with the reason in hand.
+     * It goes to every CaPSA who can see the request on their Leave Requests
+     * tab - the same section rule MemberLeaveRequest::visibleTo() applies.
+     */
+    private function notifyCapsa(Team $team, MemberLeaveRequest $leaveRequest, string $requesterName, string $subjectName): void
+    {
+        $scope = app(SectionScope::class);
+        $section = $scope->sectionFor($team);
+
+        $capsas = CapstoneExpert::whereHas('roles', fn ($q) => $q->where('role_name', CapstoneExpert::CAPSA_ROLE))
+            ->get()
+            ->filter(fn (CapstoneExpert $capsa) => $scope->covers($capsa->sections ?? [], $section));
+
+        $teamName = '<strong>'.e($team->team_name).'</strong>'.($section !== '' ? ' ('.e($section).')' : '');
+        $isLeave = $leaveRequest->type === MemberLeaveRequest::LEAVE;
+
+        foreach ($capsas as $capsa) {
+            Notifier::toExpert(
+                $capsa,
+                'leave_request_received',
+                $isLeave ? 'Student asked to leave a team' : 'Leader asked to remove a member',
+                ($isLeave
+                    ? '<strong>'.$requesterName.'</strong> asked to leave '.$teamName.'.'
+                    : '<strong>'.$requesterName.'</strong> asked to remove <strong>'.$subjectName.'</strong> from '.$teamName.'.')
+                    .' Reason: "'.e($leaveRequest->reason).'"',
+                route('capsa.team_management', ['tab' => 'leave_requests']),
+                ['leave_request_id' => $leaveRequest->id, 'team_id' => $team->team_id],
+            );
+        }
     }
 
     private function refuse(Request $request, string $message, int $status = 422): JsonResponse|RedirectResponse

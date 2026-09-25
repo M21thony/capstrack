@@ -89,6 +89,25 @@ class AdminFinancialTest extends TestCase
         $this->assertSame(['verified', 'verified', 'rejected'], $records->map(fn ($r) => $r->fresh()->f_record_status)->all());
     }
 
+    /** One with an OR number is checked against its photo, never verified unopened. */
+    public function test_bulk_verify_leaves_receipts_with_an_or_number_waiting(): void
+    {
+        $post = $this->makeExpensePost();
+        $records = collect([null, 'OR-7788'])->map(fn ($or) => FinancialRecord::create([
+            'student_id' => Student::factory()->withCompleteProfile()->create()->student_id,
+            'expense_post_id' => $post->id, 'receipt_image' => 'receipts/x.jpg', 'receipt_number' => $or,
+            'f_record_status' => 'pending', 'payment_for' => $post->title, 'amount' => $post->amount, 'uploaded_at' => now(),
+        ]));
+
+        $this->actingAsExpertOnly()
+            ->patchJson(route('api.admin.financial.update-many'), ['ids' => $records->pluck('id')->all(), 'status' => 'approved'])
+            ->assertOk()
+            ->assertJsonPath('data.verified', [$records[0]->id])
+            ->assertJsonPath('data.skipped', [$records[1]->id]);
+
+        $this->assertSame(['verified', 'pending'], $records->map(fn ($r) => $r->fresh()->f_record_status)->all());
+    }
+
     private function makeExpensePost(): ExpensePost
     {
         return ExpensePost::create([
@@ -115,9 +134,14 @@ class AdminFinancialTest extends TestCase
             'uploaded_at' => now(),
         ]);
 
+        // A receipt with an OR number is only verified once the number on the photo is confirmed.
+        $this->actingAsExpertOnly()->patchJson(route('api.admin.financial.update', $record->id), ['status' => 'approved'])
+            ->assertStatus(422);
+        $this->assertSame('pending', $record->fresh()->f_record_status);
+
         $response = $this->actingAsExpertOnly()->patchJson(
             route('api.admin.financial.update', $record->id),
-            ['status' => 'approved']
+            ['status' => 'approved', 'or_confirmed' => true]
         );
 
         $response->assertOk()->assertJson(['success' => true]);

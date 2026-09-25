@@ -137,6 +137,15 @@
 
   /* ── Team Dashboard Grid ── */
   .team-dashboard-grid { gap: 12px; }
+  /* The members and the overview sit side by side on a desktop; on a phone
+     the overview goes under the members. !important: the columns are set
+     inline on the element. */
+  @media (max-width: 768px) {
+    .team-dashboard-grid { grid-template-columns: minmax(0, 1fr) !important; }
+    /* These two sit outside the scrolling area, so on a phone they stayed
+       pinned over the bottom of the page above the tab bar. */
+    .main > .tutorial-note, .main > .legal-credits { display: none; }
+  }
   .team-dashboard-grid .team-members-panel,
   .team-dashboard-grid .team-overview-panel { border-radius: 14px; padding: 14px; }
   .team-actions-bar { margin-top: 14px; }
@@ -286,6 +295,41 @@
     </div>
 
     <div id="real-content" style="opacity:0">
+    {{-- A form on this page can submit from either the team card up here or
+         the recruitment feed further down - Send to CaPSA, Update Team, a
+         recruitment post, an invite response. Wherever it came from, the
+         redirect lands back at the top of the page, so the confirmation
+         belongs here too. It used to sit after the team card and before the
+         feed, which put it off-screen below the fold for the one action
+         (asking to leave, or to remove a member) that opens furthest from
+         it - a request that had gone through read as if nothing had
+         happened. --}}
+    @if($errors->any())
+      <div class="alert" style="background: #fef2f2; border: 1px solid #fecaca; color: #ef4444; padding: 10px 14px; border-radius: 8px; margin-bottom: 16px;">
+        @foreach($errors->all() as $error)
+          <div>{{ $error }}</div>
+        @endforeach
+      </div>
+    @endif
+
+    {{-- LeaveRequestController::refuse() (and several other controllers that
+         redirect back here) flash the reason under 'error', not 'status' -
+         a request the CaPSA feature turned down (already pending, team not
+         locked yet, a leader trying to leave without handing off first) had
+         nothing on screen saying so, which is indistinguishable from the
+         request never having been sent at all. --}}
+    @if(session('error'))
+      <div class="alert" style="background: #fef2f2; border: 1px solid #fecaca; color: #ef4444; padding: 10px 14px; border-radius: 8px; margin-bottom: 16px;">
+        {{ session('error') }}
+      </div>
+    @endif
+
+    @if(session('status'))
+      <div class="alert" style="background: #f0fdf4; border: 1px solid #bbf7d0; color: #15803d; padding: 10px 14px; border-radius: 8px; margin-bottom: 16px;">
+        {{ session('status') }}
+      </div>
+    @endif
+
     @if($myTeam)
     <!-- TEAM DASHBOARD -->
     <div class="team-dashboard-compact" style="margin-bottom: 16px;">
@@ -539,6 +583,37 @@
               </div>
             </div>
           </div>
+
+          {{-- Defense Panel: who the CaPSA put on the team's next defense.
+               Assigning a panel writes the same three experts onto every
+               stage at once, so this is "the" panel rather than one for a
+               single date - see TeamController::index(). --}}
+          <div style="margin-top: 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 14px; padding: 14px;">
+            <div style="font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 12px;">DEFENSE PANEL</div>
+            @if($panel->isNotEmpty())
+              <div style="font-size: 10.5px; color: var(--text3); margin-bottom: 10px;">Assigned for your {{ $panelDefenseType }}</div>
+              <div style="display: flex; flex-direction: column;">
+                @foreach($panel as $seat)
+                  @php $ex = $seat->expert; @endphp
+                  <div style="display: flex; align-items: center; gap: 10px; padding: 7px 0; @if(!$loop->last) border-bottom: 1px solid var(--border); @endif">
+                    <div style="width: 32px; height: 32px; border-radius: 50%; background: #7c3aed; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: #fff; overflow: hidden; flex-shrink: 0;">
+                      @if($ex?->hasAvatarImage())
+                        <img src="{{ $ex->avatarUrl() }}" alt="" style="width: 100%; height: 100%; object-fit: cover;">
+                      @else
+                        {{ $ex?->avatarInitials() }}
+                      @endif
+                    </div>
+                    <div style="flex: 1; min-width: 0;">
+                      <div style="font-size: 12px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ $ex?->name ?? 'Unknown' }}</div>
+                      <div style="font-size: 10.5px; color: var(--text3);">{{ $seat->panel_role }}</div>
+                    </div>
+                  </div>
+                @endforeach
+              </div>
+            @else
+              <div style="font-size: 11.5px; color: var(--text3); line-height: 1.5;">Not assigned yet. Your CaPSA sets your defense panel once your team is ready.</div>
+            @endif
+          </div>
         </div>
       </div>
 
@@ -607,20 +682,6 @@
       </div>
       </div>
     </div>
-    @endif
-
-    @if($errors->any())
-      <div class="alert" style="background: #fef2f2; border: 1px solid #fecaca; color: #ef4444; padding: 10px 14px; border-radius: 8px; margin-bottom: 16px;">
-        @foreach($errors->all() as $error)
-          <div>{{ $error }}</div>
-        @endforeach
-      </div>
-    @endif
-
-    @if(session('status'))
-      <div class="alert" style="background: #f0fdf4; border: 1px solid #bbf7d0; color: #15803d; padding: 10px 14px; border-radius: 8px; margin-bottom: 16px;">
-        {{ session('status') }}
-      </div>
     @endif
 
     <!-- SEARCH AND FILTERS -->
@@ -1148,19 +1209,20 @@
     </div>
     <div class="section-title" id="rrm-title">Ask your CaPSA</div>
     <p id="rrm-lede" style="margin-top:8px;font-size:13px;color:var(--text2);line-height:1.6;"></p>
-    <form method="POST" action="{{ route('team.capsa-leave-requests.store') }}" id="capsa-leave-form" style="margin-top:14px;">
+    <form method="POST" action="{{ route('team.capsa-leave-requests.store') }}" id="capsa-leave-form" novalidate style="margin-top:14px;">
       @csrf
       <input type="hidden" name="type" id="rrm-type">
       <input type="hidden" name="student_id" id="rrm-student">
       <label for="rrm-reason" style="display:block;font-size:12px;font-weight:600;color:var(--text);margin-bottom:6px;">Reason for your CaPSA</label>
       <textarea id="rrm-reason" name="reason" rows="4" minlength="{{ \App\Models\MemberLeaveRequest::REASON_MIN }}" maxlength="1000" required placeholder="What happened, and why it cannot be worked out within the team" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--bg2);color:var(--text);font:inherit;font-size:13px;line-height:1.5;resize:vertical;"></textarea>
       <div style="display:flex;justify-content:space-between;gap:10px;font-size:11px;color:var(--text3);margin-top:4px;">
-        <span>At least {{ \App\Models\MemberLeaveRequest::REASON_MIN }} characters. Your team sees this too.</span>
-        <span id="rrm-count">0 / 1000</span>
+        <span id="rrm-hint">At least {{ \App\Models\MemberLeaveRequest::REASON_MIN }} characters. Your team sees this too.</span>
+        <span id="rrm-count" style="white-space:nowrap;">0 / 1000</span>
       </div>
+      <div id="rrm-error" role="alert" style="display:none;margin-top:6px;font-size:12px;color:#ef4444;"></div>
       <ul id="rrm-effects" style="margin:12px 0 0;padding-left:18px;font-size:12px;color:var(--text2);line-height:1.7;"></ul>
       <div style="display:flex;gap:10px;margin-top:18px;">
-        <button type="submit" class="btn-primary" id="rrm-submit" style="flex:1;" disabled>Send to CaPSA</button>
+        <button type="submit" class="btn-primary" id="rrm-submit" style="flex:1;">Send to CaPSA</button>
         <button type="button" class="google-btn" style="flex:1;border:none;" onclick="closeCapsaLeaveModal()">Cancel</button>
       </div>
     </form>
@@ -1841,6 +1903,10 @@ function openCapsaLeaveModal(type, studentId, name) {
 
     var reason = document.getElementById('rrm-reason');
     reason.value = '';
+    showCapsaLeaveError('');
+    var btn = document.getElementById('rrm-submit');
+    btn.disabled = false;
+    btn.textContent = 'Send to CaPSA';
     updateCapsaLeaveReason();
     document.getElementById('capsaLeaveModal').classList.add('active');
     reason.focus();
@@ -1850,14 +1916,35 @@ function closeCapsaLeaveModal() {
     document.getElementById('capsaLeaveModal').classList.remove('active');
 }
 
+// Send stays clickable. It used to be disabled until the reason was long
+// enough, but nothing drew it as disabled - so a click on a short reason did
+// nothing at all and read as the request being broken. Now the click says
+// what is missing, right under the box.
+function showCapsaLeaveError(message) {
+    var box = document.getElementById('rrm-error');
+    box.textContent = message;
+    box.style.display = message ? 'block' : 'none';
+    document.getElementById('rrm-reason').style.borderColor = message ? '#ef4444' : '';
+}
+
 function updateCapsaLeaveReason() {
     var n = document.getElementById('rrm-reason').value.trim().length;
     document.getElementById('rrm-count').textContent = n + ' / 1000';
-    document.getElementById('rrm-submit').disabled = n < LEAVE_REASON_MIN;
+    if (n >= LEAVE_REASON_MIN) showCapsaLeaveError('');
 }
 
 document.getElementById('rrm-reason').addEventListener('input', updateCapsaLeaveReason);
-document.getElementById('capsa-leave-form').addEventListener('submit', function () {
+document.getElementById('capsa-leave-form').addEventListener('submit', function (event) {
+    var reason = document.getElementById('rrm-reason');
+    var n = reason.value.trim().length;
+    if (n < LEAVE_REASON_MIN) {
+        event.preventDefault();
+        showCapsaLeaveError(n === 0
+            ? 'Write a reason for your CaPSA first.'
+            : 'Add a little more - at least ' + LEAVE_REASON_MIN + ' characters (' + (LEAVE_REASON_MIN - n) + ' to go).');
+        reason.focus();
+        return;
+    }
     var btn = document.getElementById('rrm-submit');
     btn.disabled = true;
     btn.textContent = 'Sending…';

@@ -7,6 +7,7 @@ use App\Models\ExpertExpertise;
 use App\Models\Notification;
 use App\Models\StudentSchoolYear;
 use App\Models\TeamExpertAssignment;
+use App\Support\SectionCatalog;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -60,12 +61,19 @@ class AdminExpertsController extends Controller
             ->sortBy(fn ($e) => $e->expert_id === $viewer?->expert_id ? 0 : 1)
             ->values();
 
-        // Section picker for the "Make CaPSA" modal - grouped by program
-        // (the part of the label before the dash, e.g. "BSIT-3A" -> "BSIT")
-        // so a CaPSA covering every section of a program is one click on
-        // that group, not checking each section one at a time.
-        $groupedSections = collect(AdminProfileController::getAllAvailableSections())
-            ->groupBy(fn ($section) => explode('-', $section)[0] ?? $section);
+        // Section picker for the "Make CaPSA" and "Edit sections" modals.
+        // Assigning takes a section, not a year: the picker shows each
+        // program's letters, and a letter is that section's starting class
+        // (3rd year, where capstone starts - "BSIT-3A"). Where that class goes
+        // in 4th year is Year Promotion's call. A 4th-year section is only
+        // offered on its own, below, once someone holds it or students are in
+        // it, so saving a CaPSA who already has one does not drop it.
+        $available = collect(AdminProfileController::getAllAvailableSections());
+        $isStarting = fn (string $section) => (bool) preg_match('/^[A-Z]+-'.SectionCatalog::STARTING_YEAR.'[A-Z]*$/', $section);
+
+        $groupedSections = $available->filter($isStarting)
+            ->groupBy(fn (string $section) => explode('-', $section)[0]);
+        $laterSections = $available->reject($isStarting)->values();
 
         // Not route names: these are the two view FILES. They read the same
         // as the route names, which is how a bulk rename of route('admin.x')
@@ -86,6 +94,7 @@ class AdminExpertsController extends Controller
         return view($isCapsaOnly ? 'capsa.experts' : 'admin.experts', [
             'experts' => $experts,
             'groupedSections' => $groupedSections,
+            'laterSections' => $laterSections,
             'sectionOwners' => $sectionOwners,
         ]);
     }
@@ -160,7 +169,6 @@ class AdminExpertsController extends Controller
                     .', so an address outside those could never be used.',
             ], 422);
         }
-
 
         // Never the Admin. Their account runs the system; it is not an
         // expert, and giving it a student-facing role is what put them in
@@ -611,7 +619,6 @@ class AdminExpertsController extends Controller
             ], 500);
         }
 
-
         // Never the Admin. Their account runs the system; it is not an
         // expert, and giving it a student-facing role is what put them in
         // front of every team on student/experts. Hiding them from the
@@ -712,6 +719,7 @@ class AdminExpertsController extends Controller
 
         return [mb_substr($name, 0, $at), mb_substr($name, $at + 1)];
     }
+
     public function toggleCapsa(Request $request, CapstoneExpert $expert): JsonResponse
     {
         if ($refusal = $this->refuseIfAdmin($expert)) {

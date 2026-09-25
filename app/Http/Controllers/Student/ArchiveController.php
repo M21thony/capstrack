@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Student;
 use App\Http\Controllers\Controller;
 use App\Models\ArchivedDocTag;
 use App\Models\ArchivedDocument;
+use App\Models\CapstonePreProposal;
 use App\Models\Student;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
@@ -27,8 +28,8 @@ class ArchiveController extends Controller
      */
     private const LAST_STAGE = 'Final Oral Defense';
 
-    /** How big a manuscript may be. The same ceiling staff uploads use. */
-    private const MAX_UPLOAD_MB = 20;
+    /** How many category tags one manuscript may carry. */
+    private const MAX_TAGS = 10;
 
     public function index(): View
     {
@@ -85,31 +86,52 @@ class ArchiveController extends Controller
         $data = $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'abstract' => ['required', 'string'],
-            'file' => ['required', 'file', 'mimes:pdf', 'max:'.(self::MAX_UPLOAD_MB * 1024)],
+            'tags' => ['nullable', 'array', 'max:'.self::MAX_TAGS],
+            'tags.*' => ['nullable', 'string', 'max:50'],
         ], [
-            'file.mimes' => 'The manuscript has to be a PDF.',
-            'file.max' => 'The manuscript may not be larger than '.self::MAX_UPLOAD_MB.' MB.',
+            'tags.max' => 'Pick at most '.self::MAX_TAGS.' tags.',
         ]);
 
-        $file = $request->file('file');
-        $path = $file->store('archived-manuscripts', 'public');
-
-        ArchivedDocument::create([
+        // Title, abstract and tags only: teams do not upload the PDF here.
+        $manuscript = ArchivedDocument::create([
             'team_id' => $team->team_id,
             'title' => $data['title'],
             'abstract' => $data['abstract'],
             'authors' => $this->authorsFor($team),
             'academic_year' => $this->academicYearFor($team),
             'program' => $this->programFor($team),
-            'file_name' => $file->getClientOriginalName(),
-            'file_path' => $path,
-            'file_size' => $file->getSize(),
             'submitted_by' => $student->student_id,
             'submitted_at' => now(),
             'submission_status' => ArchivedDocument::PENDING,
         ]);
 
+        $manuscript->tags()->sync($this->archiveTagIds($data['tags'] ?? []));
+
         return back()->with('success', 'Manuscript submitted. It goes into the archive once your CaPSA or the admin has reviewed it.');
+    }
+
+    /**
+     * The archive tags for these names, adding any the archive does not have.
+     *
+     * A tag a team brings is kept for every archive after it: it becomes a
+     * category the archive can be filtered by. Matched without regard to case
+     * so "IoT" and "iot" stay one category.
+     *
+     * @param  array<int, string>  $names
+     * @return array<int, int>
+     */
+    private function archiveTagIds(array $names): array
+    {
+        $existing = ArchivedDocTag::all();
+
+        return collect($names)
+            ->map(fn ($name) => trim(preg_replace('/\s+/', ' ', (string) $name)))
+            ->filter()
+            ->unique(fn ($name) => Str::lower($name))
+            ->map(fn ($name) => ($existing->first(fn (ArchivedDocTag $tag) => Str::lower($tag->tag_name) === Str::lower($name))
+                ?? ArchivedDocTag::create(['tag_name' => $name]))->tag_id)
+            ->values()
+            ->all();
     }
 
     private function teamFor(Student $student): ?Team
@@ -132,18 +154,25 @@ class ArchiveController extends Controller
      * What the archive page shows about submitting, decided here rather than
      * in the view so the page and the action behind it cannot disagree.
      *
-     * @return array{team: Team|null, isLeader: bool, isFinished: bool, existing: ArchivedDocument|null, defaultTitle: string, authors: string, year: int, program: string}
+     * @return array{team: Team|null, isLeader: bool, isFinished: bool, existing: ArchivedDocument|null, defaultTitle: string, defaultTags: array<int, string>, authors: string, year: int, schoolYear: string, date: string, program: string}
      */
     private function submissionState(Student $student, ?Team $team): array
     {
+        $year = $team ? $this->academicYearFor($team) : (int) now()->year;
+
         return [
+            'defaultTags' => $team ? $this->tagsFor($team) : [],
+            // Filled in by the system, never typed: the S.Y. the team is
+            // enrolled in and the day it is handed in.
+            'schoolYear' => $year.'–'.($year + 1),
+            'date' => now()->format('F j, Y'),
             'team' => $team,
             'isLeader' => $team !== null && $team->leader_id === $student->student_id,
             'isFinished' => $team !== null && app(DefenseProgress::class)->hasPassed($team, self::LAST_STAGE),
             'existing' => $team ? $this->submissionFor($team->team_id) : null,
             'defaultTitle' => $team ? $this->titleFor($team) : '',
             'authors' => $team ? $this->authorsFor($team) : '',
-            'year' => $team ? $this->academicYearFor($team) : (int) now()->year,
+            'year' => $year,
             'program' => $team ? $this->programFor($team) : '',
         ];
     }
@@ -157,11 +186,33 @@ class ArchiveController extends Controller
      */
     private function titleFor(Team $team): string
     {
+        return (string) ($this->settledProposalFor($team)?->title ?: $team->project_title ?: '');
+    }
+
+    /**
+     * The tags to prefill: the settled proposal's, else the team's own.
+     *
+     * @return array<int, string>
+     */
+    private function tagsFor(Team $team): array
+    {
+        $tags = $this->settledProposalFor($team)?->tags ?: $team->tags;
+
+        return collect(is_array($tags) ? $tags : [])
+            ->map(fn ($tag) => trim((string) $tag))
+            ->filter()
+            ->unique(fn ($tag) => Str::lower($tag))
+            ->take(self::MAX_TAGS)
+            ->values()
+            ->all();
+    }
+
+    /** The adviser-approved proposal, or the team's current one when none is. */
+    private function settledProposalFor(Team $team): ?CapstonePreProposal
+    {
         $proposals = $team->preProposals()->orderBy('slot')->get();
 
-        return (string) ($proposals->firstWhere('approved_status', true)?->title
-            ?? $proposals->first()?->title
-            ?? '');
+        return $proposals->firstWhere('approved_status', true) ?? $proposals->first();
     }
 
     /**

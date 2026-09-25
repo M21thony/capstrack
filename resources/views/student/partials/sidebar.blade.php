@@ -1,4 +1,5 @@
-<script>document.documentElement.setAttribute('data-theme',localStorage.getItem('theme')||'light')</script>
+{{-- The student portal is light only; a theme saved back when it had a dark mode is ignored. --}}
+<script>document.documentElement.setAttribute('data-theme','light')</script>
 @php
     $student = Auth::user();
     $yearParts = explode(' · ', $student->year_section ?? '');
@@ -123,9 +124,10 @@
       @endif
     </a>
     <div class="nav-section">Documents</div>
-    {{-- Opens the panel on the page you are already on, instead of going somewhere. --}}
-    <a href="{{ route('student.submission') }}" data-tour-target="student.submission" class="nav-item"
-       onclick="event.preventDefault(); window.openSubmissionDrawer && window.openSubmissionDrawer('');">
+    {{-- Its own page: the form, and what the team has already sent. A line's
+         Upload button on Progress, or Submit revision in the Review Viewer,
+         opens the form in place instead. --}}
+    <a href="{{ route('student.submission') }}" data-tour-target="student.submission" class="nav-item {{ request()->routeIs('student.submission') ? 'active' : '' }}">
       <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
       Document Submission
     </a>
@@ -171,11 +173,6 @@
       <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
       Portal Tour
     </button>
-    <div class="nav-section">Appearance</div>
-    <button class="nav-item nav-item-button" onclick="toggleTheme()" style="cursor:pointer">
-      <svg id="themeIcon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-      <span id="themeLabel">Dark Mode</span>
-    </button>
     <form id="logout-form" action="{{ route('logout') }}" method="POST">
         @csrf
         <button type="submit" class="nav-item nav-item-button">
@@ -185,6 +182,18 @@
     </form>
   </nav>
 </div>
+
+@include('partials.mobile-tabbar', ['tabs' => [
+    ['label' => 'Home', 'href' => route('student.dashboard'), 'active' => request()->routeIs('student.dashboard'),
+        'icon' => '<path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/>'],
+    ['label' => 'Team', 'href' => route('student.team'), 'active' => request()->routeIs('student.team'), 'badge' => $newPostCount,
+        'icon' => '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>'],
+    // Handing in a document is what a student comes here to do most.
+    ['label' => 'Submit', 'onclick' => "window.openSubmissionDrawer && window.openSubmissionDrawer('')", 'primary' => true,
+        'icon' => '<path d="M12 19V5"/><path d="m5 12 7-7 7 7"/>'],
+    ['label' => 'Progress', 'href' => route('student.progress'), 'active' => request()->routeIs('student.progress'),
+        'icon' => '<path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 5-6"/>'],
+]])
 
 <style>
   .profile-modal .pm-close-btn { display: inline-flex; align-items: center; justify-content: center; margin-left: auto; flex-shrink: 0; width: auto; height: auto; padding: 4px; background: none; background-color: transparent; color: rgba(255,255,255,0.4); border: none; border-radius: 0; line-height: 1; cursor: pointer; transition: color 0.13s ease-in-out; outline: none; }
@@ -196,6 +205,24 @@
      there is a copy of them per page, so the new ones live here: one file,
      included on every student page, and no build step to forget. */
   .pm-header { align-items: flex-start; }
+
+  /* On a phone the panel sat 250px from the left, beside a sidebar that is
+     not there, so most of it ran off the screen. It rises from the bottom
+     instead, the full width, over a dimmed page. */
+  @media (max-width: 768px) {
+    .profile-overlay.open { background: rgba(15,17,23,.45); pointer-events: all; }
+    .profile-modal {
+      left: 0 !important; right: 0; top: auto !important; bottom: 0;
+      width: 100% !important; height: auto !important; max-height: 88dvh;
+      border-right: 0; border-radius: 18px 18px 0 0;
+      transform: translateY(24px) !important;
+      box-shadow: 0 -12px 40px rgba(0,0,0,.25);
+      padding-bottom: env(safe-area-inset-bottom);
+      z-index: 1001 !important;
+    }
+    .profile-overlay.open .profile-modal { transform: none !important; }
+    .profile-overlay { z-index: 1000 !important; }
+  }
   .pm-header-name { font-size: 16px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.25; white-space: normal; overflow-wrap: anywhere; }
   .pm-header-sub { font-size: 11.5px; color: rgba(255,255,255,0.6); margin-top: 5px; display: flex; align-items: center; flex-wrap: wrap; }
   .pm-sep { margin: 0 6px; color: rgba(255,255,255,0.3); }
@@ -321,48 +348,22 @@
   }
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeProfile(); });
 
-  function toggleTheme() {
-    var html = document.documentElement;
-    var isDark = html.getAttribute('data-theme') === 'dark';
-    html.setAttribute('data-theme', isDark ? 'light' : 'dark');
-    localStorage.setItem('theme', isDark ? 'light' : 'dark');
-    updateThemeUI();
-  }
-  function updateThemeUI() {
-    var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-    var icon = document.getElementById('themeIcon');
-    var label = document.getElementById('themeLabel');
-    if (!icon || !label) return;
-    if (isDark) {
-      icon.setAttribute('viewBox', '0 0 24 24');
-      icon.innerHTML = '<circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>';
-      label.textContent = 'Light Mode';
-    } else {
-      icon.setAttribute('viewBox', '0 0 24 24');
-      icon.innerHTML = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
-      label.textContent = 'Dark Mode';
-    }
-  }
-  updateThemeUI();
 </script>
-{{-- ── Submit document: the panel, opened from Documents in the nav above.
-     It had a floating button down in the corner too, sitting on top of every
-     page's own content to do the very same thing. ── --}}
+{{-- ── The upload pop-up every Upload / Submit button opens. ── --}}
 <link rel="stylesheet" href="{{ asset('css/submission-drawer.css') }}">
 
-<div class="sc" id="submission-scrim"></div>
-
-<aside class="dw" id="submission-drawer" data-url="{{ route('student.submission') }}"
-       role="dialog" aria-label="Submit a document">
-  <div class="ph">
-    <h2>Submit a document</h2>
-    <button class="x" type="button" data-drawer-close aria-label="Close">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M18 6 6 18M6 6l12 12"/></svg>
-    </button>
-  </div>
-  {{-- The form is fetched into here each time the panel opens. --}}
-  <div id="submission-drawer-slot" style="display:flex;flex-direction:column;flex:1;min-height:0"></div>
-</aside>
+{{-- Where the pop-up asks, checks and sends. --}}
+@php
+  $uploadConfig = [
+      'plan' => route('student.submission.plan'),
+      'check' => route('student.submission.warnings'),
+      'store' => route('student.submission.store'),
+      'folders' => route('student.submission.subject-adviser-folders'),
+      'review' => route('student.review'),
+      'csrf' => csrf_token(),
+  ];
+@endphp
+<script type="application/json" id="upload-config">@json($uploadConfig)</script>
 
 {{-- One preview window and one message box for the whole student side. --}}
 <dialog class="preview-dialog" id="previewDialog">
@@ -379,6 +380,8 @@
 
 @vite(['resources/js/submission-drawer.js', 'resources/js/submission-preview.js'])
 
+{{-- The app's own ask-first dialog. --}}
+@include('partials.app-dialog')
 @include('partials.sidebar-scroll-restore')
 
 @include('student.partials.portal-tour')

@@ -38,9 +38,21 @@ final class NotificationTypes
             'label' => 'A team sends a document for my review',
             'email' => false,
         ],
+        'paper_to_check' => [
+            'label' => 'A team hands in a signed paper for me to check',
+            'email' => false,
+        ],
         'review_reminder' => [
             'label' => 'Documents are still waiting on my review',
             'email' => true,
+        ],
+        'leave_request_received' => [
+            'label' => 'A student asks to leave a team, or a leader asks to remove a member',
+            'email' => false,
+        ],
+        'announcement' => [
+            'label' => 'A CaPSA posts an announcement for experts',
+            'email' => false,
         ],
     ];
 
@@ -51,6 +63,10 @@ final class NotificationTypes
         ],
         'milestone_due' => [
             'label' => 'A milestone deadline is coming up',
+            'email' => false,
+        ],
+        'checklist_item_added' => [
+            'label' => 'Our CaPSA adds something new to our checklist',
             'email' => false,
         ],
         'consultation_reminder' => [
