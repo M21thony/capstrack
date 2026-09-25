@@ -58,4 +58,14 @@ class ToastDurationTest extends TestCase
         $this->assertStringContainsString('var life = '.self::FOUR_SECONDS.';', $source);
         $this->assertStringContainsString("bar.style.animationDuration = life + 'ms';", $source);
     }
+
+    /** On a phone a pop-up is a slim banner at the top: title and one line, no label or footer. */
+    public function test_the_notification_popups_are_slim_banners_at_the_top_on_a_phone(): void
+    {
+        $source = File::get(resource_path('views/partials/notification-toasts.blade.php'));
+
+        $this->assertStringContainsString('.nt-stack{top:calc(10px + env(safe-area-inset-top, 0px));bottom:auto;left:12px;right:12px;width:auto;max-width:420px;margin:0 auto;gap:6px;flex-direction:column-reverse}', $source);
+        $this->assertStringContainsString('.nt-kind,.nt-foot{display:none}', $source);
+        $this->assertStringContainsString('.nt-msg{margin-top:1px;font-size:12px;line-height:1.35;-webkit-line-clamp:1}', $source);
+    }
 }
