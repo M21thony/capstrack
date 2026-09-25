@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Activity Log - CapsTRACK Admin</title>
 <meta name="csrf-token" content="{{ csrf_token() }}"/>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
-<link rel="stylesheet" href="{{ asset('css/admin.css') }}"/>
+<link href="{{ \App\Support\PublicAsset::url('css/fonts.css') }}" rel="stylesheet">
+<link rel="stylesheet" href="{{ \App\Support\PublicAsset::url('css/admin.css') }}"/>
 @include('partials.skeleton-head', ['skReveal' => 'flex'])
 </head>
 <body>
@@ -40,7 +40,10 @@
   </div>
 
   <div id="real-content" style="display:none;flex:1;overflow:hidden;flex-direction:column;">
-  <div class="content">
+  {{-- A long list scrolls inside itself under headings that stay (admin.css,
+       "a long list scrolls inside itself"); the filters and the page
+       controls hold still around it. --}}
+  <div class="content list-page">
     <form method="GET" class="row log-filters" style="margin-bottom:16px;gap:8px">
       <input class="input" name="search" placeholder="Search by student or action..." style="max-width:300px" value="{{ request('search') }}"/>
       <select class="input" name="type" style="width:180px" onchange="this.form.submit()">
@@ -51,7 +54,7 @@
       </select>
       <button class="btn btn-ghost" style="font-size:11px;padding:5px 12px">Filter</button>
     </form>
-    <div class="card" style="padding:0;overflow:hidden">
+    <div class="card list-card">
       <table class="table">
         <thead>
           <tr>
@@ -79,7 +82,8 @@
         @endforelse
         </tbody>
       </table>
-      <div style="padding:14px 20px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+    </div>
+      <div class="list-foot">
         <span style="font-size:12px;color:var(--text3)">Showing {{ $logs->firstItem() }}–{{ $logs->lastItem() }} of {{ $logs->total() }} records</span>
         <div style="display:flex;gap:6px">
           @if($logs->onFirstPage())
@@ -94,7 +98,6 @@
           @endif
         </div>
       </div>
-    </div>
   </div>
   </div>
 </div>

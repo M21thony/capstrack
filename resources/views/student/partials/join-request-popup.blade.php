@@ -16,9 +16,9 @@
 
   /* The two this partial owns keep the behaviour outright, since a page's
      own rule has no business deciding whether these are visible. */
-  #jrp-overlay,#jrp-confirm-overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s}
+  #jrp-overlay,#jrp-confirm-overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .2s,visibility .2s}
   #jrp-overlay{z-index:1000}
-  #jrp-overlay.active,#jrp-confirm-overlay.active{opacity:1;pointer-events:auto}
+  #jrp-overlay.active,#jrp-confirm-overlay.active{opacity:1;visibility:visible;pointer-events:auto}
   .pm-close-btn{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;padding:0;background-color:var(--bg2);color:var(--text3);border:none;border-radius:50%;cursor:pointer;transition:all .15s ease-in-out;outline:none}
   .pm-close-btn:hover{background-color:var(--border);color:var(--text);transform:scale(1.05)}
 

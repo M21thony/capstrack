@@ -9,6 +9,7 @@ use App\Models\FinancialRecord;
 use App\Models\Student;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
+use App\Services\Notifier;
 use App\Support\DefenseBoard;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -186,6 +187,20 @@ class AdminFinancialController extends Controller
             ], 422);
         }
 
+        // A student can mistype the number they read off the receipt. The
+        // CaPSA, holding the photo, puts right what they typed - saved with
+        // the verification, never on its own.
+        $corrected = $request->validate([
+            'receipt_number' => ['sometimes', ...FinancialRecord::orNumberRules()],
+        ], [
+            'receipt_number.required' => 'Type the OR number printed on the receipt.',
+            'receipt_number.regex' => 'Type the OR number as it is printed: letters, numbers and dashes.',
+        ])['receipt_number'] ?? null;
+
+        if ($corrected !== null) {
+            $financialRecord->receipt_number = FinancialRecord::normaliseOrNumber($corrected);
+        }
+
         // The point of the OR number: somebody looked at the photo and saw it.
         if ($financialRecord->receipt_number && ! $request->boolean('or_confirmed')) {
             return response()->json([
@@ -233,6 +248,16 @@ class AdminFinancialController extends Controller
         ]);
 
         $financialRecord->load(['student', 'expensePost']);
+
+        // The photo stays on record; the student is told what to change.
+        Notifier::toStudent(
+            $financialRecord->student,
+            'receipt_sent_back',
+            'Receipt sent back',
+            'Your CaPSA sent back your receipt for <strong>'.e($financialRecord->expensePost?->title ?? 'the fee').'</strong>: “'.e($validated['rejection_reason']).'” Upload a corrected photo.',
+            route('student.financial'),
+            ['financial_record_id' => $financialRecord->id],
+        );
 
         return response()->json([
             'success' => true,

@@ -8,6 +8,8 @@ use App\Models\CapstonePreProposal;
 use App\Models\DuplicationCheck;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
+use App\Models\TitleChangeRequest;
+use App\Services\Notifier;
 use App\Services\OllamaSSHClient;
 use App\Services\RecipientResolver;
 use App\Services\SimilarityService;
@@ -22,6 +24,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -81,6 +84,10 @@ class PreProposalController extends Controller
             // be reworded until the final title form is in; a team sent back
             // for a new title sees the titles that were set aside.
             'canReviseTitle' => (bool) $team && TitleRevision::canRevise($team),
+            // Past that, a change to part of a passed title goes to the adviser.
+            'canRequestTitleChange' => (bool) $team && TitleRevision::whyNotRequestChange($team) === null,
+            'pendingTitleChange' => $team ? TitleRevision::pendingChange($team) : null,
+            'lastTitleChange' => $team ? TitleRevision::lastDecidedChange($team) : null,
             'needsNewTitle' => (bool) $team && TitleRevision::needsNewTitle($team),
             'retiredProposals' => $team ? $team->allPreProposals()->whereNotNull('retired_at')->get() : collect(),
             'awaitingAdviser' => $team ? TitleRevision::awaitingAdviser($team) : null,
@@ -117,6 +124,68 @@ class PreProposalController extends Controller
 
         return redirect()->route('student.duplication')
             ->with('status', 'Title revised. It becomes final once you upload the Signed Final Project Title Form.');
+    }
+
+    /**
+     * POST /pre-proposal/title-change - once the title has passed, the leader
+     * asks the adviser to change part of it. Nothing changes until the
+     * adviser approves (Instructor\TitleConfirmationController::decideChange).
+     */
+    public function requestTitleChange(Request $request): RedirectResponse
+    {
+        $team = $this->currentTeam($request);
+
+        if (! $team) {
+            abort(403);
+        }
+
+        if ((int) $team->leader_id !== (int) $request->user()->student_id) {
+            return redirect()->route('student.duplication')->with('error', 'Only the team leader can ask to change the title.');
+        }
+
+        if ($reason = TitleRevision::whyNotRequestChange($team)) {
+            return redirect()->route('student.duplication')->with('error', $reason);
+        }
+
+        $adviser = CapstoneExpert::find(app(RecipientResolver::class)->resolveTeamRoleExpert($team->team_id, 'adviser'));
+
+        if (! $adviser) {
+            return redirect()->route('student.duplication')->with('error', 'Your team needs an adviser to approve a title change.');
+        }
+
+        $validated = $request->validate([
+            'new_title' => [...$this->titleRule(), function ($attr, $value, $fail) use ($team) {
+                if (Str::lower(Str::squish((string) $value)) === Str::lower(Str::squish((string) $team->project_title))) {
+                    $fail('That is your title as it is now. Change the part you need to.');
+                }
+            }],
+            'reason' => ['required', 'string', 'min:10', 'max:500'],
+        ], [
+            'reason.required' => 'Say why the title needs to change, so your adviser can decide.',
+            'reason.min' => 'Say why the title needs to change, so your adviser can decide.',
+        ]);
+
+        $change = TitleChangeRequest::create([
+            'team_id' => $team->team_id,
+            'requested_by' => $request->user()->student_id,
+            'current_title' => (string) $team->project_title,
+            'new_title' => Str::squish($validated['new_title']),
+            'reason' => trim($validated['reason']),
+            'status' => TitleChangeRequest::PENDING,
+            'adviser_id' => $adviser->expert_id,
+        ]);
+
+        Notifier::toExpert(
+            $adviser,
+            'title_change_requested',
+            'Title change to approve',
+            '<strong>'.e($team->team_name).'</strong> asked to change their title to <strong>'.e($change->new_title).'</strong>.',
+            route('instructor.assignments'),
+            ['team_id' => $team->team_id, 'title_change_id' => $change->id],
+        );
+
+        return redirect()->route('student.duplication')
+            ->with('status', 'Sent to '.$adviser->name.'. Your title changes once they approve it.');
     }
 
     /** Meaningful words a title may have; filler like "a", "of", "for" is not counted. */
