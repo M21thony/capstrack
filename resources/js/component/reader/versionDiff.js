@@ -1,4 +1,4 @@
-import { mergeRectsByLine } from "./Reader";
+import { mergeRectsByLine } from "./rects.js";
 
 /*
  * What changed between two versions of a document, word by word. Lines are
@@ -75,6 +75,91 @@ export function editScript(a, b, maxD = MAX_EDITS) {
   return null;
 }
 
+const ANCHOR = 3;
+
+/**
+ * Three-word phrases found exactly once in a[a0, a1) and once in b[b0, b1),
+ * as [i, j] pairs rising on both sides. Where the two sides disagree on the
+ * order, the longest agreeing run wins; the rest were moved or matched by
+ * chance (patience diff).
+ */
+export function anchorsBetween(a, b, a0, a1, b0, b1) {
+  const once = (w, s, e) => {
+    const seen = new Map();
+    for (let i = s; i + ANCHOR <= e; i++) {
+      const key = w[i] + " " + w[i + 1] + " " + w[i + 2];
+      seen.set(key, seen.has(key) ? -1 : i);
+    }
+    return seen;
+  };
+  const inB = once(b, b0, b1);
+  const pairs = [];
+  once(a, a0, a1).forEach((i, key) => {
+    const j = inB.get(key);
+    if (i >= 0 && j >= 0) pairs.push([i, j]);
+  });
+  pairs.sort((p, q) => p[0] - q[0]);
+
+  const tails = [];
+  const prev = new Int32Array(pairs.length).fill(-1);
+  pairs.forEach(([, j], p) => {
+    let lo = 0;
+    let hi = tails.length;
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      if (pairs[tails[mid]][1] < j) lo = mid + 1; else hi = mid;
+    }
+    if (lo > 0) prev[p] = tails[lo - 1];
+    tails[lo] = p;
+  });
+  const chain = [];
+  for (let p = tails.length ? tails[tails.length - 1] : -1; p >= 0; p = prev[p]) chain.push(pairs[p]);
+  return chain.reverse();
+}
+
+/**
+ * Marks what differs between a[a0, a1) and b[b0, b1). A stretch with more
+ * changes than one pass allows - a whole manuscript whose lines all moved
+ * after a margin change, on top of its revisions - is cut at the phrases both
+ * sides share exactly once, and each piece between them is compared on its
+ * own. Only a piece with nothing left in common is marked whole.
+ */
+export function diffRange(a, b, a0, a1, b0, b1, removed, added) {
+  if (a0 === a1 || b0 === b1) {
+    removed.fill(1, a0, a1);
+    added.fill(1, b0, b1);
+    return;
+  }
+  const edit = editScript(a.slice(a0, a1), b.slice(b0, b1));
+  if (edit) {
+    removed.set(edit.removed, a0);
+    added.set(edit.added, b0);
+    return;
+  }
+  const chain = anchorsBetween(a, b, a0, a1, b0, b1);
+  if (!chain.length) {
+    removed.fill(1, a0, a1);
+    added.fill(1, b0, b1);
+    return;
+  }
+  let i = a0;
+  let j = b0;
+  for (const [ai, bj] of chain) {
+    if (ai < i || bj < j) {
+      // Overlaps the phrase before it: on the same diagonal it carries the match on.
+      if (ai - bj === i - j && ai + ANCHOR > i) {
+        j += ai + ANCHOR - i;
+        i = ai + ANCHOR;
+      }
+      continue;
+    }
+    diffRange(a, b, i, ai, j, bj, removed, added);
+    i = ai + ANCHOR;
+    j = bj + ANCHOR;
+  }
+  diffRange(a, b, i, a1, j, b1, removed, added);
+}
+
 /** The stretches [a0, a1) of the old list and [b0, b1) of the new that differ. */
 export function hunks(removed, added) {
   const out = [];
@@ -145,12 +230,9 @@ export function compareVersions(oldWords, newWords) {
       ])
     : [[0, oldWords.length, 0, newWords.length]];
 
-  stretches.forEach(([a0, a1, b0, b1]) => {
-    // ponytail: a stretch past MAX_EDITS is marked whole; it was rewritten anyway.
-    const edit = editScript(oldWords.slice(a0, a1).map((w) => w.t), newWords.slice(b0, b1).map((w) => w.t));
-    for (let i = a0; i < a1; i++) removed[i] = edit ? edit.removed[i - a0] : 1;
-    for (let j = b0; j < b1; j++) added[j] = edit ? edit.added[j - b0] : 1;
-  });
+  const oldText = oldWords.map((w) => w.t);
+  const newText = newWords.map((w) => w.t);
+  stretches.forEach(([a0, a1, b0, b1]) => diffRange(oldText, newText, a0, a1, b0, b1, removed, added));
 
   // The same letters split into different words ("C APSTRACK" and "CAPSTRACK")
   // is a difference in how the PDF was saved, not in what it says.
