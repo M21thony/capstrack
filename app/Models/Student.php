@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Models\Concerns\HasNotificationPrefs;
 use Database\Factories\StudentFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -47,6 +48,52 @@ class Student extends Authenticatable
             'last_seen_at' => 'datetime',
             'tutorial_completed_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Year and section, always stored the one way: "4th · A".
+     *
+     * A class list with a combined "Year & Section" column wrote whatever it
+     * held - "4th Year · BSCS-4A" - so one section was on file two ways.
+     * Classmates are matched on this column, and the sidebar read the long
+     * one as "BSCS - 4BSCS-4A".
+     */
+    protected function yearSection(): Attribute
+    {
+        return Attribute::make(set: fn (?string $value): ?string => self::normalizeYearSection($value));
+    }
+
+    /**
+     * "4th Year · BSCS-4A", "4 · a" and "4th · A" all read "4th · A". Only a
+     * value with the "·" between year and section is reworked; anything else
+     * is kept as it came, trimmed, rather than guessed at.
+     */
+    public static function normalizeYearSection(?string $value): ?string
+    {
+        $value = trim((string) $value);
+
+        if ($value === '') {
+            return null;
+        }
+
+        $parts = array_map('trim', explode('·', $value, 2));
+
+        if (count($parts) !== 2
+            || ! preg_match('/\d+/', $parts[0], $year)
+            || ! preg_match('/[A-Za-z]+$/', $parts[1], $section)) {
+            return $value;
+        }
+
+        $n = (int) $year[0];
+        $ordinal = match (true) {
+            $n % 100 >= 11 && $n % 100 <= 13 => $n.'th',
+            $n % 10 === 1 => $n.'st',
+            $n % 10 === 2 => $n.'nd',
+            $n % 10 === 3 => $n.'rd',
+            default => $n.'th',
+        };
+
+        return $ordinal.' · '.strtoupper($section[0]);
     }
 
     public function hasCompletedProfile(): bool

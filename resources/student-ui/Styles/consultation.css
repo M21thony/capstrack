@@ -85,7 +85,16 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
   /* .consultation-container never had a mobile override at all — the
      calendar (1fr) and sessions sidebar (fixed 320px) stayed side by side
      regardless of screen width, squeezing both into an unusable width. */
-  .consultation-container{grid-template-columns:1fr!important}
+  .consultation-container{grid-template-columns:minmax(0,1fr)!important}
+  /* A grid column is at least as wide as its widest line, so the booking
+     card ran off the right of a small phone; let it be the screen's width. */
+  .consultation-container>*{min-width:0}
+  /* One phone layout for every student page: the top bar and the side
+     margins match the dashboard's, rather than a desktop's 26px either side
+     of a 390px screen. */
+  .topbar{padding:0 12px!important}
+  .topbar .page-title{font-size:15px!important}
+  .content{padding:12px!important}
   /* Calendar is inherently 7 columns (one per weekday) — can't reduce the
      column count, so compact the cell padding/fonts instead so each day
      still gets a usable amount of its own narrow column. */
@@ -98,6 +107,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);dis
 }
 
 @media (max-width:480px){
+  .content{padding:10px!important}
   /* Trying to fit actual slot-time text (e.g. "9:00 AM – 10:00 AM") into
      a ~50px-wide column is what was making this look cramped/thin, not the
      cell size itself — shrinking the font further just makes it unreadable

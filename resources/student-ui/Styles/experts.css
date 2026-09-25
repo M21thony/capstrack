@@ -371,7 +371,7 @@ select.input{cursor:pointer}
 /* ── PHONE (≤480px) ── */
 @media (max-width:480px){
   .content{padding:10px!important;gap:16px!important;height:calc(100vh - 60px)!important;height:calc(100dvh - 60px)!important}
-  .topbar .page-title{font-size:14px!important}
+  .topbar .page-title{font-size:15px!important}
   .expert-grid{grid-template-columns:1fr!important;gap:6px!important}
 
   .expert-card-compact{padding:8px 10px!important;border-radius:8px!important;gap:8px!important}

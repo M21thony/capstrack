@@ -5,11 +5,17 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <meta name="csrf-token" content="{{ csrf_token() }}"/>
 <title>CapsTRACK — Expert Portal</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"/>
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
-<link rel="stylesheet" href="{{ asset('css/expert.css') }}" />
+<link href="{{ \App\Support\PublicAsset::url('css/fonts.css') }}" rel="stylesheet">
+<link rel="stylesheet" href="{{ \App\Support\PublicAsset::url('css/expert.css') }}" />
 <style>
+  /* A long list scrolls inside itself, under headings that stay: the Drive
+     card and the filters hold still and only the documents move, as the
+     staff portals' other long lists do. A phone keeps its cards below. */
+  @media (min-width: 701px) {
+    .content.dr-page { display: flex; flex-direction: column; }
+    .content.dr-page > .dr-card { flex: 1 1 0; min-height: 260px; overflow: auto; }
+    .dr-card .dr-table thead th { position: sticky; top: 0; z-index: 2; background: var(--bg3); border-bottom: 0; box-shadow: inset 0 -1px 0 var(--border); }
+  }
   /* A phone gets the filters stacked full width, and one card per document
      instead of a six-column row. */
   @media (max-width: 700px) {
@@ -31,7 +37,7 @@
     .dr-table tbody tr:not(.dr-row) td { display: block; }
   }
 </style>
-@include('partials.skeleton-head', ['skReveal' => 'block'])
+@include('partials.skeleton-head', ['skReveal' => 'flex'])
 </head>
 <body>
 @include('instructor.partials.sidebar', ['currentPage' => 'docreview'])
@@ -59,8 +65,8 @@
     </div>
   </div>
 
-  <div id="real-content" style="display:none">
-  <div class="content">
+  <div id="real-content" style="display:none;flex:1;min-height:0;flex-direction:column;overflow:hidden">
+  <div class="content dr-page">
     @if (session('success'))
       <div class="card" style="padding:10px 16px;margin-bottom:14px;background:rgba(22,163,74,0.08);border:1px solid rgba(22,163,74,0.25);color:var(--green);font-size:13px">
         {{ session('success') }}
@@ -134,7 +140,7 @@
         {{ $reviews->count() }} documents &middot; {{ $reviews->where('review_status', '!=', 'Reviewed')->count() }} pending
       </span>
     </div>
-    <div class="card" style="padding:0;overflow:hidden">
+    <div class="card dr-card" style="padding:0">
       <table class="table dr-table">
         <thead>
           <tr>
@@ -249,7 +255,7 @@
   </div>
 </div>
 @include('instructor.partials.expert-profile')
-@include('instructor.partials.skeleton-toggle')
+@include('instructor.partials.skeleton-toggle', ['revealDisplay' => 'flex'])
 <script>
 /* The three controls above the table were markup only - typing in the box
    or picking a team did nothing at all. They filter the rows now, and the
