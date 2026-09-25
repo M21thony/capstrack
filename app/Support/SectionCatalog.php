@@ -24,8 +24,17 @@ class SectionCatalog
     /** Section letters an Admin may choose between. */
     public const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
-    /** Year levels a capstone section can sit in. */
+    /** Year levels a section label can carry. */
     public const YEARS = [1, 2, 3, 4];
+
+    /**
+     * The year a section is added for. Capstone starts in the second
+     * semester of 3rd year, so that is where an Admin's sections begin; a
+     * 4th-year section comes from the student list (or Year Promotion) once
+     * students are in it, and its CaPSA is assigned then - often not the
+     * same one as in 3rd year.
+     */
+    public const STARTING_YEAR = 3;
 
     /**
      * The sections an Admin has written down.

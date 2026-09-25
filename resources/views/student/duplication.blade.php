@@ -24,6 +24,14 @@
   min-height: 480px;
 }
 
+/* A phone has room for one column: the check, then the matches, then the
+   expert, one under the other, each as tall as it needs. */
+@media (max-width: 900px) {
+  .dup-layout { grid-template-columns: minmax(0, 1fr); height: auto; min-height: 0; }
+  .dup-layout > * { min-height: 0; }
+  #matches-panel { min-height: 280px; }
+}
+
 .dup-left {
   display: flex;
   flex-direction: column;
@@ -87,16 +95,49 @@
 }
 .match-abstract-toggle:hover { text-decoration: underline; }
 
-.pp-field { margin-bottom: 14px; }
-.pp-field label { display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); margin-bottom: 6px; letter-spacing: 0.4px; }
+.pp-field { margin-bottom: 16px; min-width: 0; }
+.pp-field:last-child { margin-bottom: 0; }
+.pp-field > label, .pp-tags legend { display: block; font-size: 12.5px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
 .pp-field input[type="text"], .pp-field select, .pp-field textarea {
-  width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border);
-  background: var(--bg2); color: var(--text); font-size: 13px; box-sizing: border-box; font-family: inherit;
+  width: 100%; padding: 9px 12px; border-radius: 8px; border: 1px solid var(--border);
+  background: var(--bg); color: var(--text); font-size: 13.5px; line-height: 1.5; box-sizing: border-box; font-family: inherit;
+  transition: border-color .15s, box-shadow .15s;
 }
-.pp-field textarea { min-height: 70px; resize: vertical; }
-.pp-hint { font-size: 11px; color: var(--text3); margin-top: 4px; }
-.pp-tags { border: none; padding: 0; margin: 0 0 16px; min-width: 0; }
-.pp-tags legend { display: flex; align-items: center; gap: 8px; padding: 0; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text3); letter-spacing: 0.4px; margin-bottom: 4px; }
+.pp-field input[type="text"]:hover, .pp-field select:hover, .pp-field textarea:hover { border-color: var(--text3); }
+.pp-field input[type="text"]:focus, .pp-field select:focus, .pp-field textarea:focus {
+  outline: none; border-color: var(--accent, #c9a82c); box-shadow: 0 0 0 3px rgba(201,168,44,.18);
+}
+.pp-field textarea { min-height: 76px; resize: vertical; }
+.pp-field textarea#title { min-height: 0; font-weight: 600; font-size: 14.5px; }
+.pp-help { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; font-size: 11.5px; color: var(--text3); margin-top: 6px; line-height: 1.45; }
+.pp-counter { flex-shrink: 0; font-variant-numeric: tabular-nums; font-weight: 600; color: var(--text2); }
+.pp-counter.over { color: var(--red); }
+.pp-counter.at-limit { color: var(--accent3, #8a6e10); }
+.pp-error { font-size: 12px; color: var(--red); margin-top: 6px; line-height: 1.4; }
+.pp-error:empty { display: none; }
+.pp-field.has-error input[type="text"], .pp-field.has-error select, .pp-field.has-error textarea, .pp-field.has-error .pp-chipbox { border-color: var(--red); }
+.pp-field.has-error .pp-pill span { border-color: var(--red); }
+.pp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }
+.pp-grid .pp-field:last-child { margin-bottom: 16px; }
+.pp-section:last-child .pp-grid .pp-field:nth-last-child(-n+2) { margin-bottom: 0; }
+#pp-sdgs { margin-bottom: 16px; }
+
+/* Research agenda: chips and the box to add one, drawn as one field. */
+.pp-chipbox { border: 1px solid var(--border); border-radius: 8px; background: var(--bg); padding: 6px; cursor: text; transition: border-color .15s, box-shadow .15s; }
+.pp-chipbox:focus-within { border-color: var(--accent, #c9a82c); box-shadow: 0 0 0 3px rgba(201,168,44,.18); }
+.pp-chipbox .pp-tag-list { margin: 0; }
+.pp-chipbox .pp-tag-list:not(:empty) { margin-bottom: 6px; }
+.pp-chip-add { display: flex; gap: 6px; align-items: center; }
+.pp-field .pp-chip-add input[type="text"] { border: none; background: transparent; padding: 5px 6px; box-shadow: none; flex: 1; min-width: 0; }
+.pp-suggest { display: flex; align-items: flex-start; gap: 8px; margin-top: 8px; font-size: 11.5px; color: var(--text3); }
+.pp-suggest[hidden] { display: none; }
+.pp-suggest > span { padding-top: 5px; flex-shrink: 0; }
+.pp-suggest > div { display: flex; flex-wrap: wrap; gap: 6px; }
+.pp-suggest-chip { border: 1px dashed var(--border); background: transparent; color: var(--text2); border-radius: 999px; padding: 4px 10px; font-size: 12px; font-family: inherit; cursor: pointer; text-align: left; }
+.pp-suggest-chip:hover { border-style: solid; border-color: var(--accent, #c9a82c); color: var(--text); }
+
+.pp-tags { border: none; padding: 0; margin: 0; min-width: 0; }
+.pp-tags legend { padding: 0; }
 .pp-required { font-size: 9.5px; font-weight: 700; letter-spacing: .3px; color: var(--red); background: var(--red-bg, rgba(220,38,38,.07)); padding: 1px 6px; border-radius: 999px; }
 .pp-pills { display: flex; flex-wrap: wrap; gap: 6px; }
 .pp-pill { position: relative; cursor: pointer; }
@@ -112,6 +153,8 @@
 /* Turn-in bar at the foot of the Your Pre-Proposals card. */
 .pp-submit-bar { flex-shrink: 0; margin-top: auto; border-top: 1px solid var(--border); padding: 13px 24px; background: var(--bg3); border-radius: 0 0 14px 14px; }
 .pp-submit-q { font-size: 12px; color: var(--text2); line-height: 1.5; margin-bottom: 10px; }
+.pp-submit-rejected { padding: 9px 11px; border-radius: 8px; background: var(--red-bg, rgba(220,38,38,.07)); color: var(--text); }
+.pp-submit-rejected b { color: var(--red); }
 .pp-submit-q b { color: var(--text); font-weight: 600; }
 .pp-btn-submit { width: 100%; justify-content: center; gap: 7px; font-size: 12.5px; padding: 9px 12px; background: var(--navy-mid); color: #fff; box-shadow: none; }
 .pp-btn-submit:hover { background: #2a2d38; transform: none; box-shadow: none; }
@@ -123,6 +166,13 @@
 .pp-submit-state svg { flex-shrink: 0; }
 .pp-submit-state-title { font-size: 12px; font-weight: 700; }
 .pp-submit-state-sub { font-size: 10.5px; opacity: 0.85; margin-top: 1px; }
+.pp-badge-draft { background: var(--bg4); color: var(--text3); }
+.pp-autosave { display: inline-flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 11.5px; font-weight: 500; color: var(--text3); }
+.pp-autosave::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--border2); }
+.pp-autosave.is-saved { color: var(--green); }
+.pp-autosave.is-saved::before { background: var(--green); }
+.pp-autosave.is-restored { color: var(--accent3); }
+.pp-autosave.is-restored::before { background: var(--accent); }
 
 /* Tooltip on the locked Submit button, on a wrapper because a disabled
    button emits no hover events of its own. */
@@ -150,12 +200,16 @@
 @media (prefers-reduced-motion: reduce) {
   .pp-submit-wrap::after, .pp-submit-wrap::before { transition: none; }
 }
-.pp-tag-list { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
-.pp-tag { display: inline-flex; align-items: center; gap: 6px; background: var(--bg3); border: 1px solid var(--border); border-radius: 6px; padding: 4px 10px; font-size: 12px; color: var(--text2); }
-.pp-tag button { border: none; background: none; color: var(--text3); cursor: pointer; font-size: 12px; padding: 0; }
+.pp-tag-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.pp-tag { display: inline-flex; align-items: center; gap: 4px; max-width: 100%; background: var(--bg3); border: 1px solid var(--border); border-radius: 6px; padding: 3px 4px 3px 10px; font-size: 12.5px; color: var(--text); line-height: 1.4; }
+.pp-tag > span { overflow-wrap: anywhere; }
+.pp-tag button { flex-shrink: 0; width: 22px; height: 22px; border: none; border-radius: 4px; background: none; color: var(--text3); cursor: pointer; font-size: 15px; line-height: 1; padding: 0; }
+.pp-tag button:hover { background: var(--bg4, rgba(0,0,0,.06)); color: var(--red); }
 
-.pp-modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 1500; align-items: center; justify-content: center; padding: 24px; }
+.pp-modal-overlay { display: none; position: fixed; inset: 0; background: rgba(12,16,28,0.55); z-index: 1500; align-items: center; justify-content: center; padding: 24px; }
 .pp-modal-overlay.show { display: flex; }
+
+.pp-hint { font-size: 11px; color: var(--text3); margin-top: 4px; }
 .pp-modal-box { width: 100%; max-width: 760px; max-height: 82vh; overflow-y: auto; position: relative; }
 /* Every modal still scrolls with the wheel/trackpad - just no visible
    track running down it. */
@@ -163,6 +217,57 @@
 .pp-modal-box::-webkit-scrollbar { display: none; }
 .pp-modal-close { position: absolute; top: 10px; right: 10px; border: none; background: none; font-size: 20px; line-height: 1; cursor: pointer; color: var(--text3); padding: 4px; }
 .pp-modal-close:hover { color: var(--text); }
+
+/* Pre-Proposal Details: a fixed header and footer, only the fields scroll. */
+.pp-dialog { width: 100%; max-width: 780px; max-height: min(92vh, 900px); display: flex; background: var(--bg2); border: 1px solid var(--border); border-radius: 14px; box-shadow: 0 24px 60px rgba(0,0,0,.28); overflow: hidden; }
+.pp-dialog form { display: flex; flex-direction: column; width: 100%; min-height: 0; }
+.pp-dialog-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 18px 22px 14px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.pp-dialog-head h2 { margin: 0; font-size: 17px; font-weight: 700; color: var(--text); }
+.pp-dialog-head p { margin: 3px 0 0; font-size: 12.5px; color: var(--text3); }
+.pp-x { flex-shrink: 0; width: 32px; height: 32px; display: grid; place-items: center; border: none; border-radius: 8px; background: none; color: var(--text3); cursor: pointer; }
+.pp-x:hover { background: var(--bg3); color: var(--text); }
+.pp-x svg { width: 18px; height: 18px; stroke: currentColor; stroke-width: 2; fill: none; stroke-linecap: round; }
+.pp-dialog-body { flex: 1; min-height: 0; overflow-y: auto; padding: 6px 22px 20px; overscroll-behavior: contain; }
+.pp-section { padding: 18px 0; border-bottom: 1px solid var(--border); }
+.pp-section:last-child { border-bottom: none; padding-bottom: 4px; }
+.pp-section h3 { display: flex; align-items: center; gap: 10px; margin: 0 0 14px; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--text2); }
+.pp-section h3 span { width: 22px; height: 22px; display: grid; place-items: center; border-radius: 50%; background: var(--accent, #c9a82c); color: #18191f; font-size: 11px; letter-spacing: 0; }
+.pp-section-note { margin: -8px 0 14px; font-size: 12px; color: var(--text3); }
+.pp-summary { margin-top: 14px; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--red); background: var(--red-bg, rgba(220,38,38,.07)); color: var(--text); font-size: 12.5px; }
+.pp-summary b { color: var(--red); font-weight: 600; }
+.pp-summary ul { margin: 6px 0 0; padding-left: 18px; color: var(--text2); }
+.pp-dialog-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 22px; border-top: 1px solid var(--border); background: var(--bg2); flex-shrink: 0; }
+.pp-foot-note { font-size: 12px; color: var(--text3); line-height: 1.5; min-width: 0; }
+.pp-foot-note.is-left { color: var(--text2); }
+.pp-foot-note.is-left b { color: var(--red); font-weight: 600; }
+.pp-foot-note.is-done { color: var(--green); font-weight: 600; }
+.pp-jump { padding: 0; border: 0; background: none; font: inherit; color: var(--text); text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+.pp-jump:hover { color: var(--red); }
+.pp-jump:focus-visible { outline: 2px solid var(--accent3, #8a6e10); outline-offset: 2px; border-radius: 2px; }
+.pp-btn.primary.is-blocked { background: #e9d98f; border-color: #e9d98f; color: #6b5a1a; }
+.pp-foot-actions { display: flex; gap: 8px; }
+.pp-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 36px; padding: 0 16px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+.pp-btn:hover { border-color: var(--text3); }
+.pp-btn.small { min-height: 30px; padding: 0 12px; font-size: 12px; flex-shrink: 0; }
+.pp-btn.primary { background: var(--accent, #c9a82c); border-color: var(--accent, #c9a82c); color: #18191f; }
+.pp-btn.primary:hover { filter: brightness(1.05); }
+.pp-btn:disabled { opacity: .6; cursor: progress; }
+.pp-btn:focus-visible, .pp-suggest-chip:focus-visible, .pp-tag button:focus-visible, .pp-x:focus-visible { outline: 2px solid var(--accent3, #8a6e10); outline-offset: 2px; }
+
+@media (max-width: 640px) {
+  .pp-modal-overlay { padding: 0; align-items: stretch; }
+  .pp-dialog { max-width: none; max-height: none; height: 100%; border-radius: 0; border: none; }
+  .pp-dialog-head, .pp-dialog-body, .pp-dialog-foot { padding-left: 16px; padding-right: 16px; }
+  .pp-grid { grid-template-columns: 1fr; }
+  .pp-section:last-child .pp-grid .pp-field:nth-last-child(2) { margin-bottom: 16px; }
+  .pp-dialog-foot { flex-wrap: wrap; }
+  .pp-foot-note { width: 100%; }
+  .pp-foot-actions { width: 100%; }
+  .pp-foot-actions .pp-btn { flex: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pp-field input[type="text"], .pp-field select, .pp-field textarea, .pp-chipbox { transition: none; }
+}
 
 @keyframes sk-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 .sk-overlay { position: absolute; inset: 0; background: var(--bg); z-index: 10; }
@@ -281,34 +386,48 @@
       </div>
     @endif
 
-    <!-- The one number a team came here to see, and the single line the
-         checker is allowed to say about it: 65% and above is highly similar.
-         Below that it says nothing at all, because recommending or rejecting
-         a title is the CaPSA's call, not a number's. -->
-    <div class="card verdict">
-      <div class="bigscore" id="sim-pct" style="color:var(--text2)">--</div>
-      <div class="doc">
-        <div class="t" id="doc-title">No document checked</div>
-        <div class="m" id="doc-meta">Upload a pre-proposal PDF to begin</div>
-      </div>
-      <div style="min-width:220px;flex:1">
-        <span class="stateline s-red" id="result-badge" hidden>
-          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-          Highly similar
+    {{-- The one number a team came here to see, said calmly. It used to sit
+         beside a red and green bar with "Highly similar" showing before any
+         scan had run, which read as a verdict already given. Now it is empty
+         until a scan, then gives the closest match (its percentage keeps its
+         colour), how many matches are close, some or little overlap, and
+         what the closest ones share. Recommending a title is still the
+         CaPSA's call, not a number's. --}}
+    <div class="card verdict scan-card">
+      <div class="sc-empty" id="sc-empty">
+        <span class="sc-empty-ic" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
         </span>
-        <div class="scalebar" style="margin-top:9px" role="img" aria-label="Anything from 65 percent upwards is marked highly similar">
-          <i style="width:65%;background:var(--green)"></i><i style="width:35%;background:var(--red)"></i>
+        <div class="doc">
+          <div class="t">No document checked yet</div>
+          <div class="m">Upload your pre-proposal PDF to see which archived capstones are close to it, and what they share.</div>
         </div>
-        <div class="scalekeys"><span><i class="key-dot" style="background:var(--red)"></i>65% and above is marked <b>highly similar</b>. Your CaPSA decides whether the title goes forward.</span></div>
       </div>
-      <a class="btn" id="full-report-btn" style="display:none;flex-shrink:0" href="#">Full Report</a>
-      {{-- The result survives a reload now, which is the point - and means
-           there has to be a way to be rid of it. A panel that cannot be
-           dismissed is its own kind of stuck. --}}
-      <button type="button" class="btn" id="clear-result-btn" title="Clear this result"
-              style="display:none;flex-shrink:0;padding:6px 10px" onclick="clearScanResult()">
-        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </button>
+      <div class="sc-result" id="sc-result" hidden>
+        <div class="sc-score">
+          <div class="bigscore" id="sim-pct"></div>
+          <div class="sc-cap">closest match</div>
+        </div>
+        <div class="doc">
+          <div class="sc-line">
+            <span class="band" id="sc-band"></span>
+            <span class="sc-counts" id="sc-counts"></span>
+          </div>
+          <div class="t" id="doc-title"></div>
+          <div class="m" id="doc-meta"></div>
+        </div>
+        <a class="pbtn" id="full-report-btn" style="display:none;flex-shrink:0" href="#">
+          See what is similar
+          <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+        </a>
+        {{-- The result survives a reload now, which is the point - and means
+             there has to be a way to be rid of it. A panel that cannot be
+             dismissed is its own kind of stuck. --}}
+        <button type="button" class="btn" id="clear-result-btn" title="Clear this result" aria-label="Clear this result"
+                style="display:none;flex-shrink:0;padding:6px 10px" onclick="clearScanResult()">
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
     </div>
 
     <div class="dup-layout">
@@ -414,10 +533,7 @@
                 </div>
 
                 @if ($check)
-                  @php $rowFlagged = $check->top_score >= 65; @endphp
-                  <div class="s" style="color:{{ $rowFlagged ? 'var(--red)' : 'var(--text2)' }}">
-                    {{ $check->top_score }}% highest match{{ $rowFlagged ? ' · highly similar' : '' }}
-                  </div>
+                  <div class="s"><b class="sim-{{ \App\Support\SimilarityBand::of($check->top_score) }}">{{ $check->top_score }}%</b> closest match &middot; {{ \App\Support\SimilarityBand::label($check->top_score) }}</div>
                 @endif
 
                 {{-- One line saying where the title stands, in place of a badge. --}}
@@ -497,6 +613,12 @@
               <div class="pp-submit-note">Your team leader submitted these for checking.</div>
             @endif
           @else
+            @if ($allRejected)
+              <div class="pp-submit-q pp-submit-rejected" role="status">
+                <b>Your CaPSA did not recommend any of these titles.</b>
+                Save new titles{{ $isLeader ? ', then submit them for checking again' : ' - your team leader submits them' }}. You can remove the rejected ones.
+              </div>
+            @endif
             @if (! $isLeader)
               <div class="pp-submit-note">Only your team leader can submit these for checking.</div>
             @elseif ($canTurnIn)
@@ -522,7 +644,7 @@
                 </button>
               </form>
             @else
-              <div class="pp-submit-note">Save a pre-proposal title first.</div>
+              <div class="pp-submit-note">{{ $allRejected ? 'Save a new title to submit.' : 'Save a pre-proposal title first.' }}</div>
             @endif
           @endif
         </div>
@@ -530,78 +652,190 @@
     </div>
 
     @if ($canSubmitMore)
+      @php
+        // What the student typed comes back after a failed save, so a rejected
+        // field never costs them the rest of the form.
+        $ppOld = [
+          'title' => old('title', ''),
+          'sdg_goals' => \App\Support\SustainableDevelopmentGoals::split(old('sdg_goals', [])),
+          'problem_statement' => old('problem_statement', ''),
+          'proposed_solution' => old('proposed_solution', ''),
+          'scope' => old('scope', ''),
+          'limitations' => old('limitations', ''),
+          'sdm' => old('sdm', 'Agile Development Methodology'),
+          'clients' => old('clients', ''),
+          'client_address' => old('client_address', ''),
+          'client_representative' => old('client_representative', ''),
+          'client_position' => old('client_position', ''),
+        ];
+        $ppOldTags = (array) old('tags', []);
+        $ppSdgs = \App\Support\SustainableDevelopmentGoals::ALL;
+        $ppErr = fn ($key) => $errors->first($key) ?: $errors->first($key.'.*');
+        // Refused after the checks passed (a repeated title, a missing scan):
+        // the details still come back, with the reason on top of the form.
+        $ppRefused = ! $errors->any() && session()->has('error') && old('duplication_check_id') !== null;
+      @endphp
       <div class="pp-modal-overlay" id="pp-form-modal-overlay" onclick="if (event.target === this) closePpFormModal()">
-      <div class="card pp-modal-box" id="pp-form-card">
-        <button type="button" class="pp-modal-close" onclick="closePpFormModal()" aria-label="Close">&times;</button>
-        <div class="card-header" style="flex-direction:column;align-items:flex-start;gap:2px">
-          <span class="card-title">Pre-Proposal Details</span>
-          <span style="font-size:12px;color:var(--text3);font-weight:400">Pulled from your uploaded PDF — review and edit before saving.</span>
-        </div>
-        <form method="POST" action="{{ route('student.pre-proposal.store') }}" id="pp-form"
+      <div class="pp-dialog" id="pp-form-card" role="dialog" aria-modal="true" aria-labelledby="pp-form-heading">
+        <form method="POST" action="{{ route('student.pre-proposal.store') }}" id="pp-form" novalidate
               onsubmit="return ppFormIsComplete(this)">
           @csrf
-          <input type="hidden" name="duplication_check_id" id="check-id" value="">
+          <input type="hidden" name="duplication_check_id" id="check-id" value="{{ old('duplication_check_id') }}">
 
-          <div class="pp-field">
-            <label>Title</label>
-            <input type="text" name="title" id="title" oninput="updateWordCount()">
-            <div class="pp-hint">Must contain 11–12 meaningful words. Current count: <span id="word-count">0</span></div>
-          </div>
-
-          <div class="pp-field">
-            <label>Applicable UN Sustainable Development Goal</label>
-            <select name="sdg_goals" id="sdg">
-              <option value="" disabled selected>Select a goal...</option>
-              @foreach ([
-                'SDG 1 – No Poverty', 'SDG 2 – Zero Hunger', 'SDG 3 – Good Health and Well-being',
-                'SDG 4 – Quality Education', 'SDG 5 – Gender Equality', 'SDG 6 – Clean Water and Sanitation',
-                'SDG 7 – Affordable and Clean Energy', 'SDG 8 – Decent Work and Economic Growth',
-                'SDG 9 – Industry, Innovation and Infrastructure', 'SDG 10 – Reduced Inequality',
-                'SDG 11 – Sustainable Cities and Communities', 'SDG 12 – Responsible Consumption and Production',
-                'SDG 13 – Climate Action', 'SDG 14 – Life Below Water', 'SDG 15 – Life on Land',
-                'SDG 16 – Peace, Justice and Strong Institutions', 'SDG 17 – Partnerships for the Goals',
-              ] as $sdg)
-                <option value="{{ $sdg }}">{{ $sdg }}</option>
-              @endforeach
-            </select>
-          </div>
-
-          <div class="pp-field">
-            <label>Applicable Research Agenda and Priority Area</label>
-            <div class="pp-tag-list" id="agenda-list"></div>
-            <input type="text" id="agenda-input" placeholder="Type a priority area and press Enter...">
-            <div id="agenda-hidden"></div>
-          </div>
-
-          <div class="pp-field"><label>Problem Statement</label><textarea name="problem_statement" id="problem"></textarea></div>
-          <div class="pp-field"><label>Proposed Solution</label><textarea name="proposed_solution" id="solution"></textarea></div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
-            <div class="pp-field"><label>Scope</label><textarea name="scope" id="scope" style="min-height:48px"></textarea></div>
-            <div class="pp-field"><label>Limitations</label><textarea name="limitations" id="limitations" style="min-height:48px"></textarea></div>
-          </div>
-          <div class="pp-field"><label>Software Development Methodology</label><input type="text" name="sdm" id="sdm" value="Agile Development Methodology"></div>
-          <div class="pp-field"><label>Clients/Organization</label><input type="text" name="clients" id="clients" placeholder="The organization the system is being built for"></div>
-          <div class="pp-field"><label>Address of the Organization</label><input type="text" name="client_address" id="client_address"></div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
-            <div class="pp-field"><label>Name of Representative</label><input type="text" name="client_representative" id="client_representative"></div>
-            <div class="pp-field"><label>Their Position in the Organization</label><input type="text" name="client_position" id="client_position"></div>
-          </div>
-
-          <fieldset class="pp-field pp-tags" id="pp-tags">
-            <legend>Project Tags <span class="pp-required">Required</span></legend>
-            <div class="pp-hint" style="margin:0 0 8px">What kind of project is this? Pick {{ \App\Support\ProjectTags::MIN }} to {{ \App\Support\ProjectTags::MAX }}.</div>
-            <div class="pp-pills">
-              @foreach (\App\Support\ProjectTags::OPTIONS as $tag)
-                <label class="pp-pill">
-                  <input type="checkbox" name="tags[]" value="{{ $tag }}" onchange="updateTagPills()">
-                  <span>{{ $tag }}</span>
-                </label>
-              @endforeach
+          <header class="pp-dialog-head">
+            <div>
+              <h2 id="pp-form-heading">Pre-Proposal Details</h2>
+              <p>Filled in from your PDF. Check each part, change what needs changing, then save.</p>
+              {{-- Filled in by the draft script below: what you type is kept on
+                   this device until the pre-proposal is saved. --}}
+              <span class="pp-autosave" id="pp-autosave" aria-live="polite">Your answers save automatically as you type.</span>
             </div>
-            <div class="pp-hint" id="pp-tag-count" aria-live="polite">0 of {{ \App\Support\ProjectTags::MAX }} picked</div>
-          </fieldset>
+            <button type="button" class="pp-x" onclick="closePpFormModal()" aria-label="Close">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+            </button>
+          </header>
 
-          <button type="submit" class="btn btn-primary">Save This Pre-Proposal</button>
+          <div class="pp-dialog-body">
+            <div class="pp-summary" id="pp-summary" role="alert" @if (! $errors->any() && ! $ppRefused) hidden @endif>
+              @if ($ppRefused)
+                <b>{{ session('error') }}</b>
+              @else
+                <b>Some details need a look before this can be saved.</b>
+                <ul id="pp-summary-list">
+                  @foreach ($errors->keys() as $key)
+                    <li>{{ $errors->first($key) }}</li>
+                  @endforeach
+                </ul>
+              @endif
+            </div>
+
+            <section class="pp-section">
+              <h3><span>1</span> Title and focus</h3>
+
+              <div class="pp-field{{ $ppErr('title') ? ' has-error' : '' }}" data-field="title">
+                <label for="title">Title</label>
+                <textarea name="title" id="title" rows="2" class="pp-grow" oninput="updateWordCount(); clearFieldError(this)" aria-describedby="title-help title-error">{{ $ppOld['title'] }}</textarea>
+                <div class="pp-help" id="title-help">
+                  <span>Up to {{ \App\Http\Controllers\PreProposalController::TITLE_MAX_WORDS }} meaningful words. Filler words like "a", "of" and "for" don't count.</span>
+                  <span class="pp-counter" id="word-counter"><span id="word-count">0</span> / {{ \App\Http\Controllers\PreProposalController::TITLE_MAX_WORDS }}</span>
+                </div>
+                <div class="pp-error" id="title-error">{{ $ppErr('title') }}</div>
+              </div>
+
+              {{-- A study often serves more than one goal, so each is a tick. --}}
+              <fieldset class="pp-field pp-tags{{ $ppErr('sdg_goals') ? ' has-error' : '' }}" id="pp-sdgs" data-field="sdg_goals" aria-describedby="sdg-error">
+                <legend>UN Sustainable Development Goals</legend>
+                <div class="pp-help" style="margin:0 0 8px"><span>Tick every goal your study serves.</span><span class="pp-counter" id="pp-sdg-count" aria-live="polite">0 picked</span></div>
+                <div class="pp-pills">
+                  @foreach ($ppSdgs as $sdg)
+                    <label class="pp-pill">
+                      <input type="checkbox" name="sdg_goals[]" value="{{ $sdg }}" onchange="updateSdgCount(); clearFieldError(this)" @checked(in_array($sdg, $ppOld['sdg_goals'], true))>
+                      <span>{{ $sdg }}</span>
+                    </label>
+                  @endforeach
+                </div>
+                <div class="pp-error" id="sdg-error">{{ $ppErr('sdg_goals') }}</div>
+              </fieldset>
+
+              <div class="pp-field{{ $ppErr('research_agenda') ? ' has-error' : '' }}" data-field="research_agenda">
+                <label for="agenda-input">Research agenda and priority areas</label>
+                <div class="pp-chipbox" onclick="document.getElementById('agenda-input').focus()">
+                  <div class="pp-tag-list" id="agenda-list" aria-live="polite"></div>
+                  <div class="pp-chip-add">
+                    <input type="text" id="agenda-input" placeholder="Add a priority area" aria-describedby="agenda-help agenda-error">
+                    <button type="button" class="pp-btn small" onclick="addAgendaFromInput()">Add</button>
+                  </div>
+                </div>
+                <div class="pp-help" id="agenda-help"><span>Press Enter or Add after each one. Add as many as apply.</span></div>
+                <div class="pp-suggest" id="agenda-suggest" hidden>
+                  <span>From your PDF:</span>
+                  <div id="agenda-suggest-list"></div>
+                </div>
+                <div class="pp-error" id="agenda-error">{{ $ppErr('research_agenda') }}</div>
+                <div id="agenda-hidden"></div>
+              </div>
+
+              <fieldset class="pp-field pp-tags{{ $ppErr('tags') ? ' has-error' : '' }}" id="pp-tags" data-field="tags">
+                <legend>Project tags</legend>
+                <div class="pp-help" style="margin:0 0 8px"><span>What kind of project is this? Pick {{ \App\Support\ProjectTags::MIN }} to {{ \App\Support\ProjectTags::MAX }}.</span><span class="pp-counter" id="pp-tag-count" aria-live="polite">0 of {{ \App\Support\ProjectTags::MAX }}</span></div>
+                <div class="pp-pills">
+                  @foreach (\App\Support\ProjectTags::OPTIONS as $tag)
+                    <label class="pp-pill">
+                      <input type="checkbox" name="tags[]" value="{{ $tag }}" onchange="updateTagPills(); clearFieldError(this)" @checked(in_array($tag, $ppOldTags, true))>
+                      <span>{{ $tag }}</span>
+                    </label>
+                  @endforeach
+                </div>
+                <div class="pp-error" id="tags-error">{{ $ppErr('tags') }}</div>
+              </fieldset>
+            </section>
+
+            <section class="pp-section">
+              <h3><span>2</span> The project</h3>
+              <div class="pp-field{{ $ppErr('problem_statement') ? ' has-error' : '' }}" data-field="problem_statement">
+                <label for="problem">Problem statement</label>
+                <textarea name="problem_statement" id="problem" class="pp-grow" rows="3" oninput="clearFieldError(this)">{{ $ppOld['problem_statement'] }}</textarea>
+                <div class="pp-error">{{ $ppErr('problem_statement') }}</div>
+              </div>
+              <div class="pp-field{{ $ppErr('proposed_solution') ? ' has-error' : '' }}" data-field="proposed_solution">
+                <label for="solution">Proposed solution</label>
+                <textarea name="proposed_solution" id="solution" class="pp-grow" rows="3" oninput="clearFieldError(this)">{{ $ppOld['proposed_solution'] }}</textarea>
+                <div class="pp-error">{{ $ppErr('proposed_solution') }}</div>
+              </div>
+              <div class="pp-grid">
+                <div class="pp-field{{ $ppErr('scope') ? ' has-error' : '' }}" data-field="scope">
+                  <label for="scope">Scope</label>
+                  <textarea name="scope" id="scope" class="pp-grow" rows="3" oninput="clearFieldError(this)">{{ $ppOld['scope'] }}</textarea>
+                  <div class="pp-error">{{ $ppErr('scope') }}</div>
+                </div>
+                <div class="pp-field{{ $ppErr('limitations') ? ' has-error' : '' }}" data-field="limitations">
+                  <label for="limitations">Limitations</label>
+                  <textarea name="limitations" id="limitations" class="pp-grow" rows="3" oninput="clearFieldError(this)">{{ $ppOld['limitations'] }}</textarea>
+                  <div class="pp-error">{{ $ppErr('limitations') }}</div>
+                </div>
+              </div>
+              <div class="pp-field{{ $ppErr('sdm') ? ' has-error' : '' }}" data-field="sdm">
+                <label for="sdm">Software development methodology</label>
+                <input type="text" name="sdm" id="sdm" value="{{ $ppOld['sdm'] }}" oninput="clearFieldError(this)">
+                <div class="pp-error">{{ $ppErr('sdm') }}</div>
+              </div>
+            </section>
+
+            <section class="pp-section">
+              <h3><span>3</span> The client</h3>
+              <p class="pp-section-note">The organization the system is being built for.</p>
+              <div class="pp-grid">
+                <div class="pp-field{{ $ppErr('clients') ? ' has-error' : '' }}" data-field="clients">
+                  <label for="clients">Organization</label>
+                  <input type="text" name="clients" id="clients" value="{{ $ppOld['clients'] }}" oninput="clearFieldError(this)">
+                  <div class="pp-error">{{ $ppErr('clients') }}</div>
+                </div>
+                <div class="pp-field{{ $ppErr('client_address') ? ' has-error' : '' }}" data-field="client_address">
+                  <label for="client_address">Address</label>
+                  <input type="text" name="client_address" id="client_address" value="{{ $ppOld['client_address'] }}" oninput="clearFieldError(this)">
+                  <div class="pp-error">{{ $ppErr('client_address') }}</div>
+                </div>
+                <div class="pp-field{{ $ppErr('client_representative') ? ' has-error' : '' }}" data-field="client_representative">
+                  <label for="client_representative">Representative's name</label>
+                  <input type="text" name="client_representative" id="client_representative" value="{{ $ppOld['client_representative'] }}" oninput="clearFieldError(this)">
+                  <div class="pp-error">{{ $ppErr('client_representative') }}</div>
+                </div>
+                <div class="pp-field{{ $ppErr('client_position') ? ' has-error' : '' }}" data-field="client_position">
+                  <label for="client_position">Their position</label>
+                  <input type="text" name="client_position" id="client_position" value="{{ $ppOld['client_position'] }}" oninput="clearFieldError(this)">
+                  <div class="pp-error">{{ $ppErr('client_position') }}</div>
+                </div>
+              </div>
+            </section>
+          </div>
+
+          <footer class="pp-dialog-foot">
+            <span class="pp-foot-note" id="pp-foot-note">Every field is needed to save.</span>
+            <div class="pp-foot-actions">
+              <button type="button" class="pp-btn" onclick="closePpFormModal()">Cancel</button>
+              <button type="submit" class="pp-btn primary" id="pp-save-btn">Save pre-proposal</button>
+            </div>
+          </footer>
         </form>
       </div>
       </div>
@@ -856,62 +1090,168 @@ function countMeaningfulWords(text) {
 // Everything the server would reject, checked before the form is posted.
 //
 // A rejection there answers with a redirect, which reloads the page - and the
-// duplication result the student just waited on is on that page. Losing a
-// scan to a title one word short is a bad trade, and the count that catches
-// it has been sitting on screen the whole time.
-function ppFormIsComplete(form) {
+// duplication result the student just waited on is on that page. So every
+// problem is found here first and shown under the field it belongs to, all at
+// once, instead of one toast at a time.
+const TITLE_MAX_WORDS = {{ \App\Http\Controllers\PreProposalController::TITLE_MAX_WORDS }};
+
+function setFieldError(key, message) {
+  const field = document.querySelector('#pp-form [data-field="' + key + '"]');
+  if (!field) return;
+  const box = field.querySelector('.pp-error');
+  if (box) box.textContent = message || '';
+  field.classList.toggle('has-error', !!message);
+}
+
+function clearFieldError(input) {
+  const field = input && input.closest('[data-field]');
+  if (field && field.classList.contains('has-error')) setFieldError(field.dataset.field, '');
+}
+
+// Everything the form still needs, in the order it is laid out. `commit`
+// adds whatever is typed in the agenda box but not added yet, which only a
+// save does - checking as the student types must not move their words.
+function ppProblems(form, commit) {
+  const problems = [];
   const title = document.getElementById('title');
-  const words = countMeaningfulWords(title ? title.value : '');
+  const titleText = title ? title.value.trim() : '';
+  const words = countMeaningfulWords(titleText);
 
-  if (words < 11 || words > 12) {
-    showToast('Your title needs 11-12 meaningful words. It currently has ' + words + '.', 'error');
-    if (title) { title.focus(); }
-
-    return false;
+  if (!titleText) {
+    problems.push(['title', 'Give your pre-proposal a title.']);
+  } else if (words > TITLE_MAX_WORDS) {
+    problems.push(['title', 'Keep the title to ' + TITLE_MAX_WORDS + ' meaningful words or fewer. It has ' + words + '.']);
   }
 
-  // The rest are plain "required" rules, named the way the form labels them.
-  const needed = [
-    ['sdg', 'Choose a Sustainable Development Goal.'],
-    ['problem', 'Fill in the problem statement.'],
-    ['solution', 'Fill in the proposed solution.'],
-    ['scope', 'Fill in the scope.'],
-    ['limitations', 'Fill in the limitations.'],
-    ['sdm', 'Fill in the software development methodology.'],
-    ['clients', 'Name the client or organization this is for.'],
-    ['client_address', 'Fill in the address of the organization.'],
-    ['client_representative', 'Name the representative of the organization.'],
-    ['client_position', 'Fill in the position that representative holds.'],
-  ];
-
-  for (const [id, message] of needed) {
-    const field = document.getElementById(id);
-
-    if (field && !String(field.value || '').trim()) {
-      showToast(message, 'error');
-      field.focus();
-
-      return false;
-    }
+  if (!form.querySelectorAll('input[name="sdg_goals[]"]:checked').length) {
+    problems.push(['sdg_goals', 'Choose at least one Sustainable Development Goal.']);
   }
 
-  if (!form.querySelectorAll('input[name="research_agenda[]"]').length) {
-    showToast('Add at least one research agenda or priority area.', 'error');
-    const agenda = document.getElementById('agenda-input');
-    if (agenda) { agenda.focus(); }
-
-    return false;
+  // Something typed into the agenda box but not added yet still counts:
+  // it is what the student meant, and losing it on save would be a surprise.
+  const agendaInput = document.getElementById('agenda-input');
+  if (commit && agendaInput && agendaInput.value.trim()) addAgendaFromInput();
+  const agendaPending = !commit && agendaInput && agendaInput.value.trim();
+  if (!form.querySelectorAll('input[name="research_agenda[]"]').length && !agendaPending) {
+    problems.push(['research_agenda', 'Add at least one research agenda or priority area.']);
   }
 
   if (!form.querySelectorAll('input[name="tags[]"]:checked').length) {
-    showToast('Pick at least one tag for what kind of project this is.', 'error');
-    const firstTag = form.querySelector('input[name="tags[]"]');
-    if (firstTag) { firstTag.focus(); }
-
-    return false;
+    problems.push(['tags', 'Pick at least one tag for what kind of project this is.']);
   }
 
-  return true;
+  const needed = [
+    ['problem_statement', 'problem', 'Fill in the problem statement.'],
+    ['proposed_solution', 'solution', 'Fill in the proposed solution.'],
+    ['scope', 'scope', 'Fill in the scope.'],
+    ['limitations', 'limitations', 'Fill in the limitations.'],
+    ['sdm', 'sdm', 'Fill in the software development methodology.'],
+    ['clients', 'clients', 'Name the organization this is for.'],
+    ['client_address', 'client_address', 'Fill in the address of the organization.'],
+    ['client_representative', 'client_representative', 'Name the representative of the organization.'],
+    ['client_position', 'client_position', 'Fill in the position that representative holds.'],
+  ];
+  needed.forEach(function (n) {
+    const el = document.getElementById(n[1]);
+    if (el && !String(el.value || '').trim()) problems.push([n[0], n[2]]);
+  });
+
+  // Laid out order, whatever order they were found in.
+  const order = Array.from(form.querySelectorAll('[data-field]')).map(function (f) { return f.dataset.field; });
+  return problems.sort(function (x, y) { return order.indexOf(x[0]) - order.indexOf(y[0]); });
+}
+
+// A field the server refused (a title already taken, say) keeps the server's
+// reason until the student changes that field.
+// Read as the script runs (the form is above it), before anything reopens it.
+const ppServerErrors = new Set(Array.from(document.querySelectorAll('#pp-form [data-field].has-error'), function (f) { return f.dataset.field; }));
+
+function ppFieldName(key) {
+  const field = document.querySelector('#pp-form [data-field="' + key + '"]');
+  const label = field && field.querySelector(':scope > label, legend');
+  return label ? label.textContent.trim() : key;
+}
+
+// What is still missing, shown before Save is pressed: under each field, and
+// counted in the footer beside Save, updated as the student types.
+function refreshPpForm() {
+  const form = document.getElementById('pp-form');
+  if (!form) return [];
+  const problems = ppProblems(form, false);
+  const byField = Object.fromEntries(problems);
+
+  form.querySelectorAll('[data-field]').forEach(function (f) {
+    const key = f.dataset.field;
+    if (ppServerErrors.has(key)) return;
+    setFieldError(key, byField[key] || '');
+  });
+
+  const note = document.getElementById('pp-foot-note');
+  const save = document.getElementById('pp-save-btn');
+  if (note) {
+    note.replaceChildren();
+    note.classList.toggle('is-done', problems.length === 0);
+    note.classList.toggle('is-left', problems.length > 0);
+    if (!problems.length) {
+      note.textContent = 'Everything is filled in. Ready to save.';
+    } else {
+      const lead = document.createElement('b');
+      lead.textContent = problems.length === 1 ? '1 thing left: ' : problems.length + ' things left: ';
+      note.append(lead);
+      problems.slice(0, 3).forEach(function (p, i) {
+        if (i) note.append(', ');
+        const jump = document.createElement('button');
+        jump.type = 'button';
+        jump.className = 'pp-jump';
+        jump.textContent = ppFieldName(p[0]);
+        jump.addEventListener('click', function () { ppGoTo(p[0]); });
+        note.append(jump);
+      });
+      if (problems.length > 3) note.append(' and ' + (problems.length - 3) + ' more');
+    }
+  }
+  if (save) save.classList.toggle('is-blocked', problems.length > 0);
+  if (save) save.setAttribute('aria-describedby', 'pp-foot-note');
+  return problems;
+}
+
+function ppGoTo(key) {
+  const field = document.querySelector('#pp-form [data-field="' + key + '"]');
+  if (!field) return;
+  field.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  const focusable = field.querySelector('input:not([type=hidden]):not([disabled]), select, textarea');
+  if (focusable) focusable.focus({ preventScroll: true });
+}
+
+let ppRefreshTimer = null;
+function queuePpRefresh(e) {
+  const field = e && e.target && e.target.closest && e.target.closest('#pp-form [data-field]');
+  if (field) ppServerErrors.delete(field.dataset.field);
+  clearTimeout(ppRefreshTimer);
+  ppRefreshTimer = setTimeout(refreshPpForm, 120);
+}
+document.addEventListener('input', function (e) { if (e.target.closest && e.target.closest('#pp-form')) queuePpRefresh(e); });
+document.addEventListener('change', function (e) { if (e.target.closest && e.target.closest('#pp-form')) queuePpRefresh(e); });
+
+function ppFormIsComplete(form) {
+  const problems = ppProblems(form, true);
+  const summary = document.getElementById('pp-summary');
+  if (summary) summary.hidden = true;
+
+  if (!problems.length) {
+    const save = document.getElementById('pp-save-btn');
+    if (save) { save.disabled = true; save.textContent = 'Saving…'; }
+    // A rejected save comes back with the answers filled in by the server.
+    forgetDraft((document.getElementById('check-id') || {}).value);
+    return true;
+  }
+
+  ppServerErrors.clear();
+  refreshPpForm();
+  ppGoTo(problems[0][0]);
+  showToast(problems.length === 1 ? problems[0][1] : problems.length + ' details need a look before this can be saved.', 'error');
+
+  return false;
 }
 
 // Tag pills: at most MAX picked. Once the limit is reached the rest are
@@ -924,18 +1264,129 @@ function updateTagPills() {
   boxes.forEach(b => { b.disabled = !b.checked && picked >= TAG_MAX; });
   const count = document.getElementById('pp-tag-count');
   if (count) {
-    count.textContent = picked + ' of ' + TAG_MAX + ' picked' + (picked >= TAG_MAX ? ' - that is the most you can pick' : '');
+    count.textContent = picked + ' of ' + TAG_MAX;
+    count.classList.toggle('at-limit', picked >= TAG_MAX);
   }
 }
 
 function updateWordCount() {
   const el = document.getElementById('word-count');
   const titleEl = document.getElementById('title');
-  if (el && titleEl) el.textContent = countMeaningfulWords(titleEl.value);
+  if (!el || !titleEl) return;
+  const words = countMeaningfulWords(titleEl.value);
+  el.textContent = words;
+  const counter = document.getElementById('word-counter');
+  if (counter) counter.classList.toggle('over', words > TITLE_MAX_WORDS);
 }
-updateWordCount();
 
-let agendaTags = [];
+// Long answers are the norm here, so the boxes grow with what is typed
+// instead of hiding it behind a tiny scrollbar.
+function growTextarea(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight + 2, 320) + 'px';
+}
+function growAllTextareas() {
+  document.querySelectorAll('#pp-form textarea.pp-grow').forEach(growTextarea);
+}
+document.addEventListener('input', function (e) {
+  if (e.target.matches && e.target.matches('#pp-form textarea.pp-grow')) growTextarea(e.target);
+});
+
+// What the student has chosen, and what the PDF suggested. Removing a
+// suggestion used to lose it for good; it now drops back into the
+// "From your PDF" row, one click from coming back.
+let agendaTags = @json(array_values(array_filter((array) old('research_agenda', []), fn ($v) => is_string($v) && trim($v) !== '')));
+let agendaSuggested = [];
+
+// What the student has typed, kept per scan until it is saved. Drawing the
+// last scan again on load used to fill the form from the PDF once more, so a
+// refresh brought back a research agenda the student had removed - and wiped
+// every other edit with it. Kept in this browser only; saving the
+// pre-proposal, or clearing the scan, lets it go.
+const PP_DRAFT_FIELDS = ['title', 'problem', 'solution', 'scope', 'limitations', 'sdm',
+  'clients', 'client_address', 'client_representative', 'client_position'];
+let ppDraftReady = false;
+
+function ppDraftKey(id) { return 'pp-draft:' + id; }
+
+function saveDraft() {
+  const id = (document.getElementById('check-id') || {}).value;
+  if (!ppDraftReady || !id || !document.getElementById('pp-form')) return;
+  const fields = {};
+  PP_DRAFT_FIELDS.forEach(function (f) { const el = document.getElementById(f); if (el) fields[f] = el.value; });
+  const tags = Array.from(document.querySelectorAll('#pp-tags input[name="tags[]"]:checked')).map(function (b) { return b.value; });
+  const sdgs = Array.from(document.querySelectorAll('#pp-sdgs input[name="sdg_goals[]"]:checked')).map(function (b) { return b.value; });
+  try {
+    localStorage.setItem(ppDraftKey(id), JSON.stringify({ fields: fields, agenda: agendaTags, tags: tags, sdgs: sdgs }));
+    ppAutosaveStatus('Saved on this device · ' + new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }), 'saved');
+  } catch (e) {
+    // Private browsing or storage full: the form still works, it just is not kept.
+  }
+}
+
+function ppAutosaveStatus(text, state) {
+  const el = document.getElementById('pp-autosave');
+  if (!el) return;
+  el.textContent = text;
+  el.classList.toggle('is-saved', state === 'saved');
+  el.classList.toggle('is-restored', state === 'restored');
+}
+
+// Drafts for a scan the page no longer shows - saved as a pre-proposal, or
+// cleared - are done with.
+(function () {
+  const current = @json(isset($lastCheck) && $lastCheck ? (string) $lastCheck->id : null);
+  try {
+    Object.keys(localStorage)
+      .filter(function (k) { return k.indexOf('pp-draft:') === 0 && k !== (current ? ppDraftKey(current) : ''); })
+      .forEach(function (k) { localStorage.removeItem(k); });
+  } catch (e) {}
+})();
+
+function loadDraft(id) {
+  try { return JSON.parse(localStorage.getItem(ppDraftKey(id)) || 'null'); } catch (e) { return null; }
+}
+
+function forgetDraft(id) {
+  try { localStorage.removeItem(ppDraftKey(id)); } catch (e) {}
+}
+
+function applyDraft(draft) {
+  Object.entries(draft.fields || {}).forEach(function ([f, value]) {
+    const el = document.getElementById(f);
+    if (el) el.value = value;
+  });
+  document.querySelectorAll('#pp-tags input[name="tags[]"]').forEach(function (b) { b.checked = (draft.tags || []).includes(b.value); });
+  // A draft from before goals were ticks kept one goal as a field.
+  const sdgs = Array.isArray(draft.sdgs) ? draft.sdgs : (draft.fields && draft.fields.sdg ? [draft.fields.sdg] : []);
+  document.querySelectorAll('#pp-sdgs input[name="sdg_goals[]"]').forEach(function (b) { b.checked = sdgs.includes(b.value); });
+  updateSdgCount();
+  agendaTags = Array.isArray(draft.agenda) ? draft.agenda.slice() : [];
+}
+
+document.addEventListener('input', function (e) { if (e.target.closest && e.target.closest('#pp-form')) saveDraft(); });
+document.addEventListener('change', function (e) { if (e.target.closest && e.target.closest('#pp-form')) saveDraft(); });
+
+function agendaHas(list, text) {
+  const key = text.toLowerCase();
+  return list.some(function (t) { return t.toLowerCase() === key; });
+}
+
+function addAgenda(text) {
+  text = String(text || '').trim();
+  if (!text || agendaHas(agendaTags, text)) return;
+  agendaTags.push(text);
+  renderAgendaTags();
+  setFieldError('research_agenda', '');
+}
+
+function addAgendaFromInput() {
+  const input = document.getElementById('agenda-input');
+  if (!input) return;
+  addAgenda(input.value);
+  input.value = '';
+  input.focus();
+}
 
 function renderAgendaTags() {
   const list = document.getElementById('agenda-list');
@@ -946,11 +1397,18 @@ function renderAgendaTags() {
   agendaTags.forEach(function (tag, i) {
     const chip = document.createElement('span');
     chip.className = 'pp-tag';
-    chip.textContent = tag + ' ';
+    const label = document.createElement('span');
+    label.textContent = tag;
+    chip.appendChild(label);
     const removeBtn = document.createElement('button');
     removeBtn.type = 'button';
     removeBtn.textContent = '×';
-    removeBtn.onclick = function () { agendaTags.splice(i, 1); renderAgendaTags(); };
+    removeBtn.setAttribute('aria-label', 'Remove ' + tag);
+    removeBtn.onclick = function (e) {
+      e.stopPropagation();
+      agendaTags.splice(i, 1);
+      renderAgendaTags();
+    };
     chip.appendChild(removeBtn);
     list.appendChild(chip);
 
@@ -960,37 +1418,95 @@ function renderAgendaTags() {
     input.value = tag;
     hidden.appendChild(input);
   });
+
+  const suggestWrap = document.getElementById('agenda-suggest');
+  const suggestList = document.getElementById('agenda-suggest-list');
+  if (!suggestWrap || !suggestList) return;
+  suggestList.innerHTML = '';
+  const left = agendaSuggested.filter(function (t) { return !agendaHas(agendaTags, t); });
+  left.forEach(function (tag) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'pp-suggest-chip';
+    b.textContent = '+ ' + tag;
+    b.setAttribute('aria-label', 'Add ' + tag + ' back');
+    b.onclick = function () { addAgenda(tag); };
+    suggestList.appendChild(b);
+  });
+  suggestWrap.hidden = left.length === 0;
+  saveDraft();
+  // Chips added or removed fire no input event on the form.
+  if (document.getElementById('pp-form-modal-overlay')?.classList.contains('show')) queuePpRefresh();
 }
+
+function rememberAgendaSuggestions() {
+  const id = (document.getElementById('check-id') || {}).value;
+  if (!id) return;
+  try { sessionStorage.setItem('pp-agenda-suggested', JSON.stringify({ id: id, items: agendaSuggested })); } catch (e) {}
+}
+
+// After a failed save the page reloads; the PDF's suggestions come back with
+// it, as long as it is the same scan.
+(function restoreAgendaSuggestions() {
+  const id = (document.getElementById('check-id') || {}).value;
+  if (!id) return;
+  try {
+    const saved = JSON.parse(sessionStorage.getItem('pp-agenda-suggested') || 'null');
+    if (saved && String(saved.id) === String(id) && Array.isArray(saved.items)) agendaSuggested = saved.items;
+  } catch (e) {}
+})();
 
 const agendaInput = document.getElementById('agenda-input');
 if (agendaInput) {
   agendaInput.addEventListener('keydown', function (e) {
-    if (e.key === 'Enter' && this.value.trim()) {
+    if (e.key === 'Enter') {
       e.preventDefault();
-      agendaTags.push(this.value.trim());
-      this.value = '';
+      addAgendaFromInput();
+    } else if (e.key === 'Backspace' && !this.value && agendaTags.length) {
+      agendaTags.pop();
       renderAgendaTags();
     }
   });
 }
+// The title wraps like a paragraph but is one line: Enter must not put a
+// line break into it, and a pasted one is folded into a space.
+const titleBox = document.getElementById('title');
+if (titleBox) {
+  titleBox.addEventListener('keydown', function (e) { if (e.key === 'Enter') e.preventDefault(); });
+  titleBox.addEventListener('input', function () {
+    if (/[\r\n]/.test(this.value)) this.value = this.value.replace(/\s*[\r\n]+\s*/g, ' ');
+  });
+}
+renderAgendaTags();
+updateTagPills();
+updateWordCount();
 
-function selectSdgOption(extractedValue) {
-  // The extraction prompt allows for multiple SDGs ("Goal(s)"), so the AI
-  // can return an array even though this dropdown only holds one selection -
-  // normalize to a single string (using the first value) before matching,
-  // rather than crashing on .toLowerCase() when it's not already a string.
-  if (Array.isArray(extractedValue)) {
-    extractedValue = extractedValue[0];
+function updateSdgCount() {
+  const count = document.getElementById('pp-sdg-count');
+  if (count) count.textContent = document.querySelectorAll('#pp-sdgs input[name="sdg_goals[]"]:checked').length + ' picked';
+}
+updateSdgCount();
+
+// Tick every goal the PDF names. The extraction may give a list, one line
+// ("SDG 4 – Quality Education, SDG 9 – ..."), or only numbers ("SDG 4 and 9"),
+// so each "SDG n" found is ticked, and anything else is matched by name.
+function selectSdgOptions(extracted) {
+  const boxes = Array.from(document.querySelectorAll('#pp-sdgs input[name="sdg_goals[]"]'));
+  boxes.forEach(function (b) { b.checked = false; });
+  const text = (Array.isArray(extracted) ? extracted : [extracted])
+    .filter(function (v) { return typeof v === 'string'; })
+    .join(', ');
+  if (text) {
+    const numbers = [];
+    const re = /SDG\s*#?\s*(\d{1,2})/gi;
+    let m;
+    while ((m = re.exec(text)) !== null) numbers.push(m[1]);
+    boxes.forEach(function (b) {
+      const own = b.value.match(/^SDG (\d+) /)[1];
+      if (numbers.includes(own) || text.toLowerCase().includes(b.value.toLowerCase())) b.checked = true;
+    });
   }
-  if (typeof extractedValue !== 'string' || !extractedValue) return;
-  const select = document.getElementById('sdg');
-  const options = Array.from(select.options);
-  let match = options.find(o => o.value.toLowerCase() === extractedValue.toLowerCase());
-  if (!match) {
-    const numMatch = extractedValue.match(/SDG\s*(\d+)/i);
-    if (numMatch) match = options.find(o => o.value.toLowerCase().startsWith('sdg ' + numMatch[1] + ' '));
-  }
-  if (match) select.value = match.value;
+  updateSdgCount();
 }
 
 let checkAbortController = null;
@@ -1127,7 +1643,10 @@ function cancelCheck() {
   // than anything Blade complains about.
   $lastCheckPayload = [
       'duplication_check_id' => $lastCheck->id,
-      'concepts' => $lastCheck->concepts,
+      // A scan saved before bulleted items were split apart.
+      'concepts' => array_merge((array) $lastCheck->concepts, [
+          'research_agenda' => \App\Support\ResearchAgenda::items(($lastCheck->concepts ?? [])['research_agenda'] ?? []),
+      ]),
       'top_score' => $lastCheck->top_score,
       'verdict' => $lastCheck->verdict,
       'matches' => $lastCheck->matches,
@@ -1142,7 +1661,7 @@ function cancelCheck() {
 // reload therefore looked like the scan had been thrown away. Unsubmitting
 // reloads. So does a rejected form, or pressing back.
 document.addEventListener('DOMContentLoaded', function () {
-  renderResult(@json($lastCheckPayload), @json($lastCheckName));
+  renderResult(@json($lastCheckPayload), @json($lastCheckName), true);
 });
 @endif
 
@@ -1180,6 +1699,7 @@ function reallyClearScanResult() {
         return;
       }
 
+      forgetDraft(lastCheckData.duplication_check_id);
       showToast(d.message, 'success');
       setTimeout(() => window.location.reload(), 600);
     })
@@ -1192,7 +1712,21 @@ const DUP_REPORT_URL = @json(route('student.duplication.report', ['check' => '__
 const DUP_MATCH_URL = @json(route('student.duplication.similar', ['check' => '__C__', 'rank' => '__R__']));
 const ARCHIVE_TOTAL = {{ $archiveTotal }};
 
-function renderResult(data, fileName) {
+// The research agenda the PDF suggests, as plain distinct strings.
+function pdfAgenda(data) {
+  const items = data && data.concepts && Array.isArray(data.concepts.research_agenda) ? data.concepts.research_agenda : [];
+  return items
+    .map(item => typeof item === 'string' ? item : (item && (item.name || item.title || item.agenda || item.label || item.text || item.value)) || '')
+    .map(s => String(s).trim())
+    .filter((s, i, all) => s.length > 0 && all.findIndex(o => o.toLowerCase() === s.toLowerCase()) === i);
+}
+
+const PP_HAS_OLD_INPUT = @json(session()->hasOldInput('duplication_check_id'));
+
+// onLoad: drawing the last scan again as the page opens, not a fresh scan.
+// Then what the student already typed - a rejected save, or edits kept from
+// before the refresh - is what the form shows, not the PDF again.
+function renderResult(data, fileName, onLoad) {
   lastCheckData = data;
 
   // Everything from here that writes into the Pre-Proposal Details form has
@@ -1205,21 +1739,46 @@ function renderResult(data, fileName) {
   const clearBtn = document.getElementById('clear-result-btn');
   if (clearBtn) clearBtn.style.display = 'inline-flex';
 
-  // One line, or none. The old three-band badge told a team their title was
-  // "Moderate Similarity", which reads as a verdict the checker is not
-  // entitled to give.
-  document.getElementById('result-badge').hidden = !isFlagged(data.top_score);
+  // Said calmly: the percentage keeps its colour, the words say what it
+  // means (the same bands as App\Support\SimilarityBand).
+  document.getElementById('sc-empty').hidden = true;
+  document.getElementById('sc-result').hidden = false;
 
+  const band = simBand(data.top_score);
   const simPct = document.getElementById('sim-pct');
-  simPct.innerHTML = Number(data.top_score) + '<span style="font-size:22px">%</span>';
-  simPct.style.color = isFlagged(data.top_score) ? 'var(--red)' : 'var(--text2)';
+  simPct.className = 'bigscore sim-' + band;
+  simPct.innerHTML = (data.top_score === null || data.top_score === undefined ? '—' : Number(data.top_score) + '<span style="font-size:22px">%</span>');
+
+  const bandEl = document.getElementById('sc-band');
+  bandEl.className = 'band band-' + band;
+  bandEl.textContent = SIM_BANDS[band];
+
+  const scored = (data.matches || []).map(m => m.assessed === false ? null : m.score);
+  const count = key => scored.filter(s => simBand(s) === key).length;
+  document.getElementById('sc-counts').innerHTML = ['close', 'some', 'little']
+    .map(k => '<span class="band band-' + k + '">' + count(k) + ' ' + { close: 'close', some: 'some overlap', little: 'little overlap' }[k] + '</span>')
+    .join('');
 
   document.getElementById('doc-title').textContent = data.concepts.title || fileName;
-  const flagged = (data.matches || []).filter(m => m.assessed !== false && isFlagged(m.score)).length;
-  document.getElementById('doc-meta').textContent =
-    'Checked against ' + ARCHIVE_TOTAL.toLocaleString() + ' archived capstones · the '
-    + (data.matches ? data.matches.length : 0) + ' closest came back'
-    + (flagged ? ', ' + flagged + ' of them highly similar' : '');
+
+  // What the closest ones share, in the check's own words.
+  const shared = (data.matches || [])
+    .filter(m => m.assessed !== false && simBand(m.score) === 'close')
+    .map(m => m.similarities || m.reason || '')
+    .filter(Boolean)
+    .slice(0, 3);
+  const meta = document.getElementById('doc-meta');
+  meta.textContent = '';
+  if (band === 'close' && shared.length) {
+    meta.append('The closest ones share ');
+    const b = document.createElement('b');
+    b.textContent = shared.join(' · ');
+    meta.append(b, '. Similar work is common and is not a rejection: it shows where yours should stand apart.');
+  } else if (band === 'close' || band === 'some') {
+    meta.textContent = 'Some archived capstones overlap with it. Open them to see what they share, and where yours stands apart.';
+  } else {
+    meta.textContent = 'Nothing in the archive is close to it. Your CaPSA still reviews every title.';
+  }
 
   document.getElementById('match-count').textContent = data.matches?.length ? data.matches.length + ' match' + (data.matches.length > 1 ? 'es' : '') + ' found' : '';
 
@@ -1251,7 +1810,20 @@ function renderResult(data, fileName) {
     instrList.innerHTML = `<div style="font-size:11px;color:var(--text3);text-align:center;padding:16px 0">No instructor suggestions available</div>`;
   }
 
-  if (ppForm) {
+  const ppDraft = onLoad && ppForm ? loadDraft(data.duplication_check_id) : null;
+
+  if (ppForm && onLoad && PP_HAS_OLD_INPUT) {
+    // A rejected save: the server has put the student's own answers back in.
+    agendaSuggested = pdfAgenda(data);
+    renderAgendaTags();
+  } else if (ppForm && ppDraft) {
+    agendaSuggested = pdfAgenda(data);
+    applyDraft(ppDraft);
+    ppAutosaveStatus('Your saved answers were restored.', 'restored');
+    updateTagPills();
+    updateWordCount();
+    renderAgendaTags();
+  } else if (ppForm) {
     document.getElementById('title').value = data.concepts.title || '';
     document.getElementById('problem').value = data.concepts.problem_statement || '';
     document.getElementById('solution').value = data.concepts.proposed_solution || '';
@@ -1266,16 +1838,22 @@ function renderResult(data, fileName) {
     document.querySelectorAll('#pp-tags input[name="tags[]"]').forEach(b => { b.checked = false; });
     updateTagPills();
     updateWordCount();
-    selectSdgOption(data.concepts.sdg_goals);
+    selectSdgOptions(data.concepts.sdg_goals);
 
-    if (Array.isArray(data.concepts.research_agenda) && data.concepts.research_agenda.length) {
-      agendaTags = data.concepts.research_agenda
-        .map(item => typeof item === 'string' ? item : (item && (item.name || item.title || item.agenda || item.label || item.text || item.value)) || '')
-        .map(s => String(s).trim())
-        .filter(s => s.length > 0);
-      renderAgendaTags();
-    }
+    agendaSuggested = pdfAgenda(data);
+    agendaTags = agendaSuggested.slice();
+    renderAgendaTags();
+    rememberAgendaSuggestions();
+    // A new scan starts clean: old complaints belong to the last document.
+    document.querySelectorAll('#pp-form [data-field]').forEach(f => setFieldError(f.dataset.field, ''));
+    const summary = document.getElementById('pp-summary');
+    if (summary) summary.hidden = true;
   }
+
+  // Only now: saving before the form was filled would keep the PDF's
+  // answers over the student's own.
+  ppDraftReady = true;
+  saveDraft();
 
   // One of these two is on the page, never both: the button while the team
   // can still add a title, the note once their set is turned in.
@@ -1294,24 +1872,32 @@ function openPpFormModal() {
   // Not on the page once a team has turned their titles in - the checker
   // stays open to them, the form does not.
   const ppOverlay = document.getElementById('pp-form-modal-overlay');
-  if (ppOverlay) ppOverlay.classList.add('show');
+  if (!ppOverlay) return;
+  ppOverlay.classList.add('show');
+  document.body.style.overflow = 'hidden';
+  growAllTextareas();
+  updateWordCount();
+  // What still needs filling in shows as it opens, not after Save.
+  refreshPpForm();
 }
 
 function closePpFormModal() {
   const ppOverlay = document.getElementById('pp-form-modal-overlay');
   if (ppOverlay) ppOverlay.classList.remove('show');
+  document.body.style.overflow = '';
 }
 
-// 65% and above is highly similar. Below that the checker says nothing, and
-// a match nothing scored carries a retrieval rank rather than a similarity,
+// How close a score is, in the same bands as App\Support\SimilarityBand.
+// A match nothing scored carries a retrieval rank rather than a similarity,
 // so it shows no number at all.
-function isFlagged(score) {
-  return score !== null && score !== undefined && score >= 65;
+const SIM_BANDS = @json(\App\Support\SimilarityBand::BANDS);
+function simBand(score) {
+  if (score === null || score === undefined) return 'none';
+  return score >= {{ \App\Support\SimilarityBand::CLOSE }} ? 'close' : (score >= {{ \App\Support\SimilarityBand::SOME }} ? 'some' : 'little');
 }
 
 function renderMatchItem(m, i, checkId) {
   const s = m.assessed === false ? null : (m.score === undefined ? null : m.score);
-  const flagged = isFlagged(s);
   const why = m.similarities || m.reason || '';
 
   // from=pp tells the match page it was opened here and not from the full
@@ -1319,8 +1905,7 @@ function renderMatchItem(m, i, checkId) {
   return `
     <a class="mrow" href="${DUP_MATCH_URL.replace('__C__', checkId).replace('__R__', i + 1)}?from=pp">
       <div>
-        <div class="pc" style="color:${s === null ? 'var(--text3)' : (flagged ? 'var(--red)' : 'var(--text2)')}">${s === null ? '—' : s + '%'}</div>
-        <span class="bar"><i style="width:${s || 0}%;background:${flagged ? 'var(--red)' : 'var(--green)'}"></i></span>
+        <div class="pc sim-${simBand(s)}">${s === null ? '—' : s + '%'}</div>
         <div class="rk">#${i + 1}</div>
       </div>
       <div>
@@ -1412,8 +1997,18 @@ document.querySelectorAll('.nav-item').forEach(function(el) {
 @if (session('error'))
   showToast(@json(session('error')), 'error');
 @endif
+@if (! $errors->any() && session()->has('error') && old('duplication_check_id') !== null)
+  if (document.getElementById('pp-form-modal-overlay')) openPpFormModal();
+@endif
 @if ($errors->any())
-  showToast(@json($errors->first()), 'error');
+  // The save was refused: bring the form back with everything that was typed
+  // and the problems marked, rather than a toast over an empty page.
+  if (document.getElementById('pp-form-modal-overlay')) {
+    openPpFormModal();
+    const firstBad = document.querySelector('#pp-form .pp-field.has-error');
+    if (firstBad) firstBad.scrollIntoView({ block: 'center' });
+  }
+  showToast(@json($errors->count() > 1 ? $errors->count().' details need a look before this can be saved.' : $errors->first()), 'error');
 @endif
 </script>
 

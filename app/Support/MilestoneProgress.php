@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Models\CapstoneDocumentReview;
+use App\Models\CapstonePreProposal;
 use App\Models\Checklist;
 use App\Models\ChecklistMilestone;
 use App\Models\Deliverable;
@@ -23,7 +24,14 @@ use Illuminate\Support\Facades\DB;
  *   document  the team uploads it
  *   defense   the panel records a pass
  *   form, approval, custom
- *             the CaPSA checks it complete. A signed CLF is paper like a
+ *             the CaPSA checks it complete.
+ *
+ * The Recommended Pre-Proposal Title Form is the one form that needs no
+ * paper: the CaPSA recommends a title in CapsTrack, and that closes it.
+ *
+ * The Signed Final Project Title Form is signed on the title the panel
+ * passed, so it waits for a passed Pre-proposal Defense wherever the line
+ * sits, and nothing sent or checked for it before that counts. A signed CLF is paper like a
  *             form: there is no e-signing, so the adviser's approval in
  *             Document Review is only a hint that the signed copy can follow.
  *
@@ -65,6 +73,9 @@ class MilestoneProgress
     /** The panel asked for a re-defense and the next attempt is not scheduled yet. */
     public const WAITING_ON_REDEFENSE = 'redefense';
 
+    /** The titles are submitted and the CaPSA has not recommended one yet. */
+    public const WAITING_ON_TITLE_REVIEW = 'title_review';
+
     public static function forTeam(Checklist $checklist, int $teamId): object
     {
         return self::forTeams($checklist, [$teamId])[$teamId];
@@ -90,6 +101,7 @@ class MilestoneProgress
         $reviews = self::reviewsFor($uploads);
         $defenses = self::defensesFor($teamIds, $deliverables);
         $checks = self::checksFor($teamIds, $deliverables);
+        $titles = self::titlesFor($teamIds, $deliverables);
 
         $out = [];
 
@@ -105,6 +117,7 @@ class MilestoneProgress
                 $theirReviews,
                 $theirDefenses,
                 $checks->get($deliverable->id.'|'.$teamId),
+                $titles->get($teamId),
             ));
 
             $out[$teamId] = self::summarise($rows);
@@ -205,6 +218,8 @@ class MilestoneProgress
      *   a defense waits for everything above it (the recommending CLFs and
      *     the hearing notice come first)
      *   anything below a defense waits for the defense
+     *   the Signed Final Project Title Form waits for a passed Pre-proposal
+     *     Defense, wherever it sits
      *
      * Forms with no defense above them are free to come in any order.
      */
@@ -217,6 +232,10 @@ class MilestoneProgress
             Deliverable::APPROVAL => $open->where('item.kind', Deliverable::DOCUMENT),
             default => collect(),
         })->merge($open->where('item.kind', Deliverable::DEFENSE));
+
+        if ($needs->isEmpty() && ($row->awaits_defense ?? null)) {
+            return 'a passed '.$row->awaits_defense;
+        }
 
         return $needs->isEmpty() ? null : self::names($needs->pluck('item.title')->unique()->all());
     }
@@ -272,6 +291,7 @@ class MilestoneProgress
                 $item->waiting_on === self::WAITING_ON_SIGNED_COPY => 'Waiting on the signed copy',
                 $item->waiting_on === self::WAITING_ON_CAPSA => 'Waiting on your check',
                 $item->waiting_on === self::WAITING_ON_REDEFENSE => 'Waiting on the next defense date',
+                $item->waiting_on === self::WAITING_ON_TITLE_REVIEW => 'Waiting on your title recommendation',
                 $item->item->kind === Deliverable::DEFENSE => 'Scheduled',
                 $item->waiting_on !== null => 'Waiting on the '.$item->waiting_on,
                 default => 'Waiting on your check',
@@ -350,9 +370,22 @@ class MilestoneProgress
         Collection $reviews,
         Collection $defenses,
         ?DeliverableCheck $check,
+        ?object $titles = null,
     ): object {
         $due = $deliverable->due_date;
-        $own = self::uploadsForDeliverable($deliverable, $uploads);
+        $byRecommendation = $deliverable->closesOnTitleRecommendation();
+
+        // Signed on the title the panel passed: before that pass, an upload or a check for it does not count.
+        $awaitsDefense = $deliverable->template_key === TitleRevision::FINAL_TITLE_FORM
+            && ! $defenses->get(DefenseOutcome::PRE_PROPOSAL)?->passed_at;
+
+        if ($awaitsDefense) {
+            $uploads = collect();
+            $check = null;
+        }
+
+        // Nothing is uploaded for a line the recommendation closes; a file sent for it before is not waited on.
+        $own = $byRecommendation ? collect() : self::uploadsForDeliverable($deliverable, $uploads);
 
         // A CLF approves a chapter draft, so the draft's reviews are what say
         // whether the adviser has signed off - and how many rounds it took.
@@ -367,13 +400,15 @@ class MilestoneProgress
         }
 
         $approvedAt = $myReviews->where('verdict', CapstoneDocumentReview::APPROVED)->max('verdict_at');
-        $submittedAt = $reviewed->min('created_at');
+        $submittedAt = $byRecommendation ? $titles?->submitted_at : $reviewed->min('created_at');
 
-        [$closedAt, $started, $waitingOn, $changesRequested] = match ($deliverable->kind) {
-            Deliverable::DOCUMENT => self::documentState($own, $myReviews),
-            Deliverable::DEFENSE => self::defenseState($deliverable, $defenses),
-            default => self::checkedState($deliverable, $own, $reviewed, $myReviews, $approvedAt, $check),
-        };
+        [$closedAt, $started, $waitingOn, $changesRequested] = $byRecommendation
+            ? self::titleRecommendationState($titles, $check)
+            : match ($deliverable->kind) {
+                Deliverable::DOCUMENT => self::documentState($own, $myReviews),
+                Deliverable::DEFENSE => self::defenseState($deliverable, $defenses),
+                default => self::checkedState($deliverable, $own, $reviewed, $myReviews, $approvedAt, $check),
+            };
 
         $common = [
             'item' => $deliverable,
@@ -391,6 +426,7 @@ class MilestoneProgress
             'check' => $check,
             'note' => $changesRequested && $check?->status === DeliverableCheck::SENT_BACK ? $check->note : null,
             'approved_at' => $approvedAt ? Carbon::parse($approvedAt) : null,
+            'awaits_defense' => $awaitsDefense ? DefenseOutcome::PRE_PROPOSAL : null,
         ];
 
         if ($closedAt) {
@@ -460,6 +496,28 @@ class MilestoneProgress
             && ! $reviewed->contains(fn ($upload) => $upload->created_at > $latest->verdict_at);
 
         return [null, true, $changesRequested ? self::WAITING_ON_TEAM : $deliverable->role, $changesRequested];
+    }
+
+    /**
+     * [closedAt, started, waitingOn, changesRequested] for the Recommended
+     * Pre-Proposal Title Form: closed once the CaPSA recommends one of the
+     * team's titles. A check the CaPSA already recorded on it still counts.
+     */
+    private static function titleRecommendationState(?object $titles, ?DeliverableCheck $check): array
+    {
+        if ($check?->status === DeliverableCheck::COMPLETE) {
+            return [$check->checked_at, true, null, false];
+        }
+
+        if ($titles?->recommended_at) {
+            return [$titles->recommended_at, true, null, false];
+        }
+
+        if ($titles?->in_review) {
+            return [null, true, self::WAITING_ON_TITLE_REVIEW, false];
+        }
+
+        return [null, false, null, false];
     }
 
     /**
@@ -568,7 +626,10 @@ class MilestoneProgress
 
     /**
      * Every upload by each team, oldest first, grouped by team. Any member's
-     * upload counts - the deliverable belongs to the team.
+     * upload counts - the deliverable belongs to the team - but only one sent
+     * for this team: a member's files from a team they left stay there. A
+     * file from before uploads recorded their team counts when it went up
+     * after the team was made.
      *
      * @return Collection<int, Collection<int, object>>
      */
@@ -578,10 +639,15 @@ class MilestoneProgress
             return collect();
         }
 
+        $ids = $teamIds->all();
+
         return DB::table('capstone_documents as d')
-            ->join('student_s_y as sy', 'sy.student_id', '=', 'd.student_id')
-            ->whereIn('sy.team_id', $teamIds->all())
-            ->select('sy.team_id', 'd.file_id', 'd.deliverable_id', 'd.chapter', 'd.file_path', 'd.created_at')
+            ->leftJoin('student_s_y as sy', fn ($join) => $join->on('sy.student_id', '=', 'd.student_id')->whereNull('d.team_id'))
+            ->leftJoin('team as t', 't.team_id', '=', 'sy.team_id')
+            ->where(fn ($q) => $q->whereIn('d.team_id', $ids)
+                ->orWhere(fn ($q) => $q->whereNull('d.team_id')->whereIn('sy.team_id', $ids)->whereColumn('d.created_at', '>=', 't.created_at')))
+            ->selectRaw('COALESCE(d.team_id, sy.team_id) as team_id')
+            ->addSelect('d.file_id', 'd.deliverable_id', 'd.chapter', 'd.file_path', 'd.created_at')
             ->distinct()
             ->orderBy('d.created_at')
             ->orderBy('d.file_id')
@@ -614,7 +680,8 @@ class MilestoneProgress
      */
     private static function defensesFor(Collection $teamIds, Collection $deliverables): Collection
     {
-        if ($deliverables->where('kind', Deliverable::DEFENSE)->isEmpty()) {
+        if ($deliverables->where('kind', Deliverable::DEFENSE)->isEmpty()
+            && $deliverables->where('template_key', TitleRevision::FINAL_TITLE_FORM)->isEmpty()) {
             return collect();
         }
 
@@ -635,6 +702,30 @@ class MilestoneProgress
                     'awaiting_redefense' => in_array($latest->outcome, $redefense, true),
                 ];
             }));
+    }
+
+    /**
+     * Where each team's submitted pre-proposal titles stand, for the line the
+     * CaPSA's recommendation closes.
+     *
+     * @return Collection<int, object{submitted_at: mixed, recommended_at: mixed, in_review: bool}> keyed by team id
+     */
+    private static function titlesFor(Collection $teamIds, Collection $deliverables): Collection
+    {
+        if (! $deliverables->contains(fn (Deliverable $d) => $d->closesOnTitleRecommendation())) {
+            return collect();
+        }
+
+        return CapstonePreProposal::whereIn('team_id', $teamIds->all())
+            ->whereNotNull('submitted_at')
+            ->get(['team_id', 'approved_status', 'rejection_reason', 'submitted_at', 'retired_at', 'updated_at'])
+            ->groupBy('team_id')
+            ->map(fn (Collection $proposals) => (object) [
+                'submitted_at' => $proposals->min('submitted_at'),
+                'recommended_at' => $proposals->where('approved_status', true)->min('updated_at'),
+                'in_review' => $proposals->contains(fn (CapstonePreProposal $p) => ! $p->retired_at
+                    && ! $p->approved_status && $p->rejection_reason === null),
+            ]);
     }
 
     /** @return Collection<string, DeliverableCheck> keyed "deliverable|team" */

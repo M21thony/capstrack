@@ -70,8 +70,7 @@
   </div>
 
   <div id="skeleton-content" class="sk-overlay">
-    <div class="grid-4" style="margin-bottom:16px">
-      <div class="sk" style="height:78px;border-radius:14px"></div>
+    <div class="grid-3" style="margin-bottom:16px">
       <div class="sk" style="height:78px;border-radius:14px"></div>
       <div class="sk" style="height:78px;border-radius:14px"></div>
       <div class="sk" style="height:78px;border-radius:14px"></div>
@@ -89,28 +88,36 @@
         <div class="sk" style="height:56px;border-radius:8px"></div>
       </div>
     </div>
-    <div class="card">
-      <div class="sk" style="width:150px;height:16px;border-radius:4px;margin-bottom:16px"></div>
-      <div class="sk" style="height:40px;border-radius:8px;margin-bottom:8px"></div>
-      <div class="sk" style="height:40px;border-radius:8px;margin-bottom:8px"></div>
-      <div class="sk" style="height:40px;border-radius:8px"></div>
-    </div>
   </div>
 
   <div id="real-content" style="display:none">
   <div class="content">
-    <div class="grid-4" style="margin-bottom:16px">
-      <x-dashboard.stat-chip value="{{ $pendingApplications }}" label="Pending Applications" sub="{{ $pendingApplicationsNew }} new this week" color="var(--accent3)" />
+    {{-- What is waiting on this expert, each a link to where it is done.
+         Totals that ask nothing of them (slots open, teams advised) went. --}}
+    <div class="grid-3" style="margin-bottom:16px">
       <x-dashboard.stat-chip
+        :href="route('instructor.assignments')"
+        value="{{ $pendingApplications + $titlesToApprove }}"
+        label="Team Requests"
+        sub="{{ $titlesToApprove ? $titlesToApprove.' '.\Illuminate\Support\Str::plural('title', $titlesToApprove).' to approve' : ($pendingApplicationsNew ? $pendingApplicationsNew.' new this week' : 'Nothing waiting') }}"
+        color="var(--accent3)"
+      />
+      <x-dashboard.stat-chip
+        :href="route('instructor.docreview')"
         value="{{ $docsForReview }}"
-        label="Docs for Review"
+        label="Documents to Review"
         {{-- Waiting since it arrived. It used to read reviewed_at, which is null
              on anything still waiting, so this rendered "Oldest: " and nothing. --}}
-        sub="{{ $oldestDocReview ? 'Oldest: waiting '.$oldestDocReview->created_at?->diffForHumans(null, true) : 'No pending reviews' }}"
+        sub="{{ $oldestDocReview ? 'Oldest: waiting '.$oldestDocReview->created_at?->diffForHumans(null, true) : 'Nothing waiting' }}"
         color="var(--red)"
       />
-      <x-dashboard.stat-chip value="{{ $upcomingConsults }}" label="Upcoming Consults" sub="Available slots" color="var(--blue)" />
-      <x-dashboard.stat-chip value="{{ $teamsAdvised }}" label="Teams Advised" sub="Current" color="var(--green)" />
+      <x-dashboard.stat-chip
+        :href="route('instructor.grading')"
+        value="{{ $gradesToSubmit }}"
+        label="Grades to Submit"
+        sub="{{ $gradesToSubmit ? 'Defenses you sat on' : 'All graded' }}"
+        color="var(--blue)"
+      />
     </div>
 
     <div class="grid-2" style="margin-bottom:16px">
@@ -209,21 +216,19 @@
       </div>
 
       <x-dashboard.info-card
-        title="Upcoming Consultations"
-        :empty="$consultations->isEmpty()"
-        emptyMessage="No upcoming consultations."
-        scrollable
-        maxHeight="320"
+        title="Coming Up"
+        :empty="$upcoming->isEmpty()"
+        emptyMessage="No defenses or consultations coming up."
       >
         <div class="gap-12">
-          @foreach ($consultations as $consult)
+          @foreach ($upcoming as $item)
             <div class="consult-card">
               <div class="consult-header">
                 <div>
-                  <div class="consult-team">Schedule #{{ $consult->schedule_id }}</div>
-                  <div class="consult-meta">{{ $consult->specific_date ? \Carbon\Carbon::parse($consult->specific_date)->format('M j, Y') : 'TBA' }} {{ $consult->start_time ? '· '.\Carbon\Carbon::parse($consult->start_time)->format('g:i A') : '' }}</div>
+                  <div class="consult-team">{{ $item->what }}{{ $item->who ? ' · '.$item->who : '' }}</div>
+                  <div class="consult-meta">{{ $item->when->format('D, M j') }}{{ $item->timed ? ' · '.$item->when->format('g:i A') : '' }}{{ $item->where ? ' · '.$item->where : '' }}</div>
                 </div>
-                <span class="badge badge-blue">Upcoming</span>
+                <span class="badge {{ $item->tag === 'Consultation' ? 'badge-blue' : 'badge-gold' }}">{{ $item->tag }}</span>
               </div>
             </div>
           @endforeach
@@ -231,13 +236,6 @@
       </x-dashboard.info-card>
     </div>
 
-    <x-dashboard.info-card
-      title="Recent Activity"
-      :empty="empty($recentActivity)"
-      emptyMessage="No recent activity."
-    >
-      <x-dashboard.activity-feed :items="$recentActivity" emptyMessage="No recent activity." />
-    </x-dashboard.info-card>
   </div>
   </div>
 </div>

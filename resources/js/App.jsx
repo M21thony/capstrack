@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
-import CheckerNavbar from "./component/CheckerNavbar";
+import CheckerNavbar from "./component/CheckerNavBar";
 import PDFChecker from "./component/pages/PDFChecker";
 import StudentPdfViewer from "./component/pages/StudentPdfViewer";
 import FinishReview from "./component/FinishReview";

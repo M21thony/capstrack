@@ -191,6 +191,14 @@
     <h2 class="order-2 m-0 mb-1.5 text-xl font-bold tracking-[-0.015em] text-ink md:mb-2 md:text-3xl">Sign in to CapsTrack</h2>
     <p class="order-3 m-0 mb-4 text-[13px] leading-normal text-ink-soft md:mb-6 md:text-[15px]">Use your CSPC Mail to continue.</p>
 
+    @if (session('session_expired'))
+      {{-- Signed out by the idle timer (EndIdleSession / partials/idle-logout). --}}
+      <div class="order-4 mb-3.5 flex items-start gap-2.5 rounded-xl border border-amber-500/30 bg-amber-500/[0.08] px-4 py-3 text-[12.5px] leading-normal text-amber-800 md:text-[13px]" role="status">
+        <svg class="mt-px h-4 w-4 flex-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9 2h6"/></svg>
+        <span><strong class="font-semibold">Session expired.</strong> You were signed out after {{ config('session.idle_timeout') }} minutes of inactivity. Sign in again to continue.</span>
+      </div>
+    @endif
+
     @if ($errors->any())
       <div class="order-4 mb-3.5 rounded-xl border border-red-600/20 bg-red-600/[0.06] px-4 py-3 text-[12.5px] leading-normal text-red-700 md:text-[13px]">
         <ul class="m-0 list-disc pl-[18px]">
@@ -217,7 +225,7 @@
     {{-- Three lines of housekeeping sitting directly under the button pushed
          the button itself up the screen on a phone. Folded away by default
          there; from tablet up there is room, so it stays open. --}}
-    <details id="signin-note" class="order-5 mt-0 rounded-xl border border-line bg-sand md:order-6 md:mt-4">
+    <details id="signin-note" class="order-5 mt-0 rounded-xl border border-line bg-sand md:order-6 md:mt-4" open>
       <summary class="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-[11px] font-bold tracking-[0.04em] text-gold-dim uppercase md:text-xs tabular-nums [&::-webkit-details-marker]:hidden">
         <span class="flex items-center gap-2">
           <svg viewBox="0 0 24 24" class="size-3.5 flex-none fill-none stroke-current stroke-2 [stroke-linecap:round] [stroke-linejoin:round]" aria-hidden="true"><circle cx="12" cy="12" r="9"/><line x1="12" y1="11" x2="12" y2="16"/><circle cx="12" cy="7.75" r="0.75" fill="currentColor" stroke="none"/></svg>
@@ -226,18 +234,14 @@
         <svg viewBox="0 0 24 24" class="chevron size-4 flex-none fill-none stroke-current stroke-2 transition-transform duration-200 [stroke-linecap:round] [stroke-linejoin:round]" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
       </summary>
       <ul class="m-0 flex list-none flex-col gap-2 px-4 pb-4 md:pt-4">
-        <li class="relative pl-3.5 text-[12px] leading-[1.5] text-ink-soft md:text-[12.5px] before:absolute before:top-[7px] before:left-0 before:size-1 before:rounded-full before:bg-gold before:content-['']"><strong class="font-semibold text-ink">Students</strong> — sign in with your CSPC Mail to reach your dashboard right away.</li>
-        <li class="relative pl-3.5 text-[12px] leading-[1.5] text-ink-soft md:text-[12.5px] before:absolute before:top-[7px] before:left-0 before:size-1 before:rounded-full before:bg-gold before:content-['']"><strong class="font-semibold text-ink">Instructors</strong> — sign in the same way, then request account access.</li>
-        <li class="relative pl-3.5 text-[12px] leading-[1.5] text-ink-soft md:text-[12.5px] before:absolute before:top-[7px] before:left-0 before:size-1 before:rounded-full before:bg-gold before:content-['']">Approval can take up to <strong class="font-semibold text-ink">3 days</strong>. You'll get an email once it's reviewed.</li>
+        <li class="relative pl-3.5 text-[12px] leading-[1.5] text-ink-soft md:text-[12.5px] before:absolute before:top-[7px] before:left-0 before:size-1 before:rounded-full before:bg-gold before:content-['']"><strong class="font-semibold text-ink">Students</strong> — sign in with your CSPC Mail <strong class="font-semibold text-ink">once your CaPSA has uploaded your section list</strong>.</li>
+        <li class="relative pl-3.5 text-[12px] leading-[1.5] text-ink-soft md:text-[12.5px] before:absolute before:top-[7px] before:left-0 before:size-1 before:rounded-full before:bg-gold before:content-['']"><strong class="font-semibold text-ink">Experts</strong> — sign in with your CSPC Mail <strong class="font-semibold text-ink">once a CaPSA has uploaded the expert list</strong>.</li>
       </ul>
     </details>
 
-    <div class="order-7 my-3 flex items-center gap-3.5 text-[10px] tracking-[0.12em] text-[#a8a293] uppercase md:text-[10.5px] tabular-nums before:h-px before:flex-1 before:bg-line before:content-[''] after:h-px after:flex-1 after:bg-line after:content-['']">or</div>
-
-    {{-- Applying for your own account is switched off (see routes/web.php).
-         The line says who to ask instead, because a person with no account is
-         the one reader who cannot do anything about it themselves. --}}
-    <p class="order-8 m-0 flex min-h-11 items-center justify-center text-center text-[12.5px] leading-normal text-ink-soft md:text-[13px]">Accounts are added by a CaPSA. If you cannot sign in, ask one to add you.</p>
+    {{-- A plain rule, not an "or": there is no second way to sign in, and the
+         line about asking a CaPSA for an account is gone with it. --}}
+    <div class="order-7 my-3 h-px bg-line"></div>
 
     <p class="order-9 mt-4 text-center text-[10px] text-[#a8a293] md:text-[11px] lg:mt-[clamp(12px,2.5vh,32px)]">CapsTrack — CSPC College of Computer Studies
       <span class="mx-1.5 text-[#cfc9ba]">·</span>
@@ -314,16 +318,19 @@ document.getElementById('google-login-form').addEventListener('submit', function
     });
 });
 
-// A closed <details> hides its children however they are styled, so CSS alone
-// cannot open it from tablet up - the summary is hidden there by media query,
-// and this keeps the panel itself in step with the same breakpoint.
+// The note ships open by default at every width. From tablet up its summary
+// is hidden by media query, so there's no control left to reopen it if a
+// resize (e.g. a phone rotating past the breakpoint) ever left it closed -
+// this just re-forces it open once there's no toggle to do that by hand. On
+// phones, where the summary stays visible, a visitor's own toggle is left
+// alone.
 (function () {
     const note = document.getElementById('signin-note');
     if (!note) { return; }
     const wide = window.matchMedia('(min-width: 768px)');
-    const syncNote = function () { note.open = wide.matches; };
-    syncNote();
-    wide.addEventListener('change', syncNote);
+    const forceOpenWhenWide = function () { if (wide.matches) { note.open = true; } };
+    forceOpenWhenWide();
+    wide.addEventListener('change', forceOpenWhenWide);
 })();
 
 const expertRemovedModal = document.getElementById('expert-removed-modal');

@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\CapstoneDocument;
 use App\Models\CapstoneDocumentReview;
 use App\Models\PdfRemark;
-use App\Support\StudentTeam;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -24,7 +23,7 @@ class StudentReviewController extends Controller
     {
         abort_unless(
             $review->document
-            && in_array((int) $review->document->student_id, StudentTeam::memberIdsFor(Auth::id()), true),
+            && CapstoneDocument::forTeamOf(Auth::id())->whereKey($review->document->file_id)->exists(),
             403
         );
     }
@@ -35,7 +34,7 @@ class StudentReviewController extends Controller
 
         // Every document anybody on this team uploaded, with all its reviews -
         // turned in or not, since the picker also says who is still reviewing.
-        $documents = CapstoneDocument::whereIn('student_id', StudentTeam::memberIdsFor($studentId))
+        $documents = CapstoneDocument::forTeamOf($studentId)
             ->with([
                 'deliverable',
                 'reviews' => fn ($q) => $q->with('expert')->orderByDesc('reviewed_at'),
@@ -66,7 +65,12 @@ class StudentReviewController extends Controller
 
     public static function roleLabel(?string $role): string
     {
-        return $role ? ucwords(str_replace('_', ' ', $role)) : 'Reviewer';
+        return match ($role) {
+            null, '' => 'Reviewer',
+            'subject_adviser' => 'CaPSA',
+            'panel' => 'Panelist',
+            default => ucwords(str_replace('_', ' ', $role)),
+        };
     }
 
     public static function verdictLabel(CapstoneDocumentReview $review): string

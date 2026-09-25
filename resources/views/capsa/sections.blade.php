@@ -95,6 +95,16 @@
   .ct-tag{display:inline-block;padding:2px 8px;border-radius:6px;font-size:10.5px;font-weight:600;white-space:nowrap}
   .ct-tag-create{background:rgba(22,163,74,0.1);color:#15803d}
   .ct-tag-update{background:rgba(217,119,6,0.12);color:#b45309}
+  .ct-tag-promote{background:rgba(37,99,235,0.1);color:#1d4ed8}
+  .ct-promo{border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px;margin-bottom:12px;background:#f8fafc}
+  .ct-promo-title{font-size:13px;font-weight:700;color:#0f172a;margin-bottom:2px}
+  .ct-promo-sub{font-size:12px;color:#64748b;margin-bottom:10px}
+  .ct-promo-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding:8px 0;border-top:1px solid #e2e8f0;font-size:12.5px;color:#0f172a}
+  .ct-promo-row:first-of-type{border-top:0}
+  .ct-promo-move{font-weight:600;min-width:190px}
+  .ct-promo-row label{display:flex;align-items:center;gap:7px;cursor:pointer}
+  .ct-promo-row input{accent-color:#0f172a;width:15px;height:15px;margin:0}
+  .ct-promo-note{color:#64748b;font-size:12px}
   .ct-tag-same{background:rgba(107,114,128,0.1);color:#64748b}
   .ct-preview-changes{color:#64748b;font-size:11px}
   /* Preview sits between Cancel and Save: offered, not insisted on. */
@@ -215,6 +225,7 @@
       @if ($viewerIsCapsa)
         <span class="page-filters-actions">
           <button type="button" class="btn" onclick="openStudentRosterModal()">Upload List</button>
+          <button type="button" class="btn" onclick="openYearPromotion()">Year Promotion</button>
           <button type="button" class="btn btn-primary" onclick="openAddStudent()">
             <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             Add Student
@@ -292,8 +303,8 @@
                   data-letter="{{ strtoupper($section) }}"
                   data-team="{{ $sy && $sy->team ? '1' : '0' }}"
                   data-search="{{ Str::lower($student->f_name.' '.$student->l_name.' '.$student->email.' '.$student->student_number) }}">
-                <td class="std-mono" style="padding-left:20px">{{ $student->student_number ?: '—' }}</td>
-                <td>
+                <td class="std-mono" style="padding-left:20px" data-label="Student no.">{{ $student->student_number ?: '—' }}</td>
+                <td data-label="Student">
                   {{-- The address under the name rather than nowhere: two
                        students share a surname often enough that it is what
                        tells them apart. --}}
@@ -306,15 +317,15 @@
                      in the app - BSIT-4A. Split across three it read as three
                      unrelated facts, and no other screen names a section that
                      way, so the same student looked different here. --}}
-                <td class="std-mono">{{ \App\Models\Student::computeSectionLabel($student->course, $student->year_section) ?? '—' }}</td>
-                <td>
+                <td class="std-mono" data-label="Section">{{ \App\Models\Student::computeSectionLabel($student->course, $student->year_section) ?? '—' }}</td>
+                <td data-label="Team">
                   @if ($sy && $sy->team)
                     {{ $sy->team->team_name ?? 'Team #' . $sy->team->team_id }}
                   @else
                     <span style="color:var(--text3)">—</span>
                   @endif
                 </td>
-                <td>
+                <td data-label="Status">
                   {{-- A student added by email exists before they ever sign
                        in. Without a word for that the row looks broken rather
                        than waiting. --}}
@@ -325,7 +336,7 @@
                   @endif
                 </td>
                 @if ($viewerIsCapsa)
-                  <td style="text-align:right;padding-right:20px">
+                  <td style="text-align:right;padding-right:20px" data-label="Action">
                     @php
                       // Built above the tag: a multi-line @json inside an
                       // attribute is a parse error, and the message points at
@@ -412,8 +423,8 @@ function closeSidebar() {
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
       </span>
       <span class="ct-up-head-text">
-        <span class="ct-modal-title">Upload Student List</span>
-        <span class="ct-up-sub">Upload a spreadsheet file containing your students.</span>
+        <span class="ct-modal-title" id="studentRosterTitle">Upload Student List</span>
+        <span class="ct-up-sub" id="studentRosterSub">Upload a spreadsheet file containing your students.</span>
       </span>
       <button type="button" class="ct-up-close" onclick="closeStudentRosterModal()" aria-label="Close">
         <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -475,6 +486,10 @@ function closeSidebar() {
          undo, so the list is shown as it will be applied before it is. --}}
     <div id="studentRosterStep2" style="display:none">
       <div class="ct-preview-summary" id="studentRosterSummary"></div>
+      {{-- Year Promotion: who moves up a year, by section, and whether this
+           CaPSA stays on with them. A CaPSA can change in 4th year, so it is
+           a choice, not a given. --}}
+      <div class="ct-promo" id="studentRosterPromotions" style="display:none"></div>
       <div class="ct-preview-scroll"><table class="ct-preview-table" id="studentRosterPreviewTable"></table></div>
       <div id="studentRosterErrors" style="display:none"></div>
       <div id="studentRosterSaveResult" style="display:none;font-size:12px;margin-bottom:12px"></div>
@@ -486,7 +501,147 @@ function closeSidebar() {
   </div>
 </div>
 
+{{-- ══════════════════════════════════════════
+     YEAR PROMOTION — pick sections and move them up a year, or upload the
+     new school year's list. Either way accounts, teams and work stay.
+══════════════════════════════════════════ --}}
+<div id="yearPromotionModal" class="ct-modal-overlay">
+  <div class="ct-modal-card ct-upload-card ct-modal-card-wide" style="max-width:760px">
+    <div class="ct-up-head">
+      <span class="ct-up-head-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+      </span>
+      <span class="ct-up-head-text">
+        <span class="ct-modal-title">Year Promotion</span>
+        <span class="ct-up-sub">Move your students up a year: 3rd year to 4th. Their accounts, teams and work stay; only the year on each student changes.</span>
+      </span>
+      <button type="button" class="ct-up-close" onclick="closeYearPromotion()" aria-label="Close">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="ct-up-hint">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+      <span>Have the new school year's class list? It carries each student's year.</span>
+      <a class="ct-template-link" href="#" onclick="closeYearPromotion(); openStudentRosterModal('promotion'); return false;">Upload it instead</a>
+    </div>
+    <div id="ypBody" class="ct-preview-scroll" style="max-height:48vh;padding:4px 14px;border-radius:10px"><p class="ct-promo-note" style="padding:12px 0">Loading your sections…</p></div>
+    <div id="ypResult" style="display:none;font-size:12.5px;margin-bottom:12px"></div>
+    <div class="ct-modal-actions">
+      <button type="button" class="ct-btn ct-btn-secondary" onclick="closeYearPromotion()">Cancel</button>
+      <button type="button" id="ypGo" class="ct-btn ct-btn-primary" disabled onclick="confirmYearPromotion()">Move up</button>
+    </div>
+  </div>
+</div>
+
 <script>
+let ypData = [];
+let ypConfirming = false;
+
+function openYearPromotion() {
+  ypConfirming = false;
+  document.getElementById('ypResult').style.display = 'none';
+  document.getElementById('ypBody').innerHTML = '<p class="ct-promo-note" style="padding:12px 0">Loading your sections…</p>';
+  document.getElementById('yearPromotionModal').style.display = 'flex';
+  fetch('{{ route('capsa.students.promotion') }}', { headers: { 'Accept': 'application/json' } })
+    .then(r => r.json())
+    .then(data => { ypData = data.sections || []; renderYearPromotion(); })
+    .catch(() => { document.getElementById('ypBody').innerHTML = '<p style="color:#dc2626;padding:12px 0">Could not load your sections. Try again.</p>'; });
+}
+
+function closeYearPromotion() {
+  document.getElementById('yearPromotionModal').style.display = 'none';
+}
+
+function renderYearPromotion() {
+  const body = document.getElementById('ypBody');
+  if (!ypData.length) {
+    body.innerHTML = '<p class="ct-promo-note" style="padding:12px 0">None of your sections has students below 4th year, so there is nobody to move up.</p>';
+    updateYearPromotionButton();
+    return;
+  }
+
+  body.innerHTML = ypData.map((p, i) => {
+    const stay = p.already_mine
+      ? `<span class="ct-promo-note">You already cover ${escRoster(p.to)}.</span>`
+      : p.covered_by
+        ? `<span class="ct-promo-note">${escRoster(p.to)} is covered by ${escRoster(p.covered_by)}.</span>`
+        : `<label><input type="checkbox" class="yp-stay" data-to="${escRoster(p.to)}" checked>Stay their CaPSA in ${escRoster(p.to)}</label>`;
+    const people = p.students.map(s => `<label style="font-weight:400"><input type="checkbox" class="yp-student" data-section="${i}" value="${s.id}" checked>${escRoster(s.name)}${s.team ? ` <span class="ct-promo-note">· ${escRoster(s.team)}</span>` : ''}</label>`).join('');
+    return `<div class="ct-promo-row" style="display:block">
+      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px">
+        <label class="ct-promo-move"><input type="checkbox" class="yp-section" value="${escRoster(p.from)}" data-i="${i}">${escRoster(p.from)} → ${escRoster(p.to)} · ${p.students.length} student${p.students.length === 1 ? '' : 's'}</label>
+        ${stay}
+        <button type="button" class="ct-btn ct-btn-secondary" style="flex:0 0 auto;width:auto;padding:3px 10px;font-size:12px;margin-left:auto" onclick="const l = this.closest('.ct-promo-row').querySelector('.yp-people'); l.style.display = l.style.display === 'none' ? 'grid' : 'none';">Students</button>
+      </div>
+      <div class="yp-people" style="display:none;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:6px 14px;padding:10px 0 4px 22px">${people}
+        <p class="ct-promo-note" style="grid-column:1/-1;margin:0">Untick anyone who is not moving up, such as a student repeating the year.</p>
+      </div>
+    </div>`;
+  }).join('');
+
+  body.querySelectorAll('input').forEach(i => i.addEventListener('change', () => { ypConfirming = false; updateYearPromotionButton(); }));
+  updateYearPromotionButton();
+}
+
+function ypCount() {
+  const picked = [...document.querySelectorAll('.yp-section:checked')].map(b => b.dataset.i);
+  return [...document.querySelectorAll('.yp-student:checked')].filter(b => picked.includes(b.dataset.section)).length;
+}
+
+function updateYearPromotionButton() {
+  const btn = document.getElementById('ypGo');
+  const n = ypCount();
+  btn.disabled = n === 0;
+  btn.textContent = ypConfirming ? `Yes, move ${n} up` : (n ? `Move ${n} student${n === 1 ? '' : 's'} up` : 'Move up');
+}
+
+/** Two clicks: the first says what is about to happen, the second does it. */
+function confirmYearPromotion() {
+  const result = document.getElementById('ypResult');
+  if (!ypConfirming) {
+    ypConfirming = true;
+    result.style.display = 'block';
+    result.innerHTML = `<span style="color:#b45309">This changes the year on ${ypCount()} student${ypCount() === 1 ? '' : 's'} and there is no undo. Click again to go ahead.</span>`;
+    updateYearPromotionButton();
+    return;
+  }
+
+  const sections = [...document.querySelectorAll('.yp-section:checked')];
+  const form = new FormData();
+  sections.forEach(b => form.append('sections[]', b.value));
+  document.querySelectorAll('.yp-student:not(:checked)').forEach(b => form.append('exclude[]', b.value));
+  sections.forEach(b => {
+    const stay = b.closest('.ct-promo-row').querySelector('.yp-stay:checked');
+    if (stay) form.append('stay_on[]', stay.dataset.to);
+  });
+
+  const btn = document.getElementById('ypGo');
+  btn.disabled = true;
+  btn.textContent = 'Moving up…';
+  fetch('{{ route('capsa.students.promotion.store') }}', {
+    method: 'POST',
+    headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' },
+    body: form,
+  })
+    .then(r => r.json())
+    .then(data => {
+      if (!data.success) {
+        result.innerHTML = `<span style="color:#dc2626">${escRoster(data.message || 'Could not move them up.')}</span>`;
+        ypConfirming = false;
+        updateYearPromotionButton();
+        return;
+      }
+      result.innerHTML = `<span style="color:#15803d">${escRoster(data.message)}${data.kept_sections && data.kept_sections.length ? ' You now also cover ' + data.kept_sections.map(escRoster).join(', ') + '.' : ''}</span>`;
+      showToast(data.message, 'success');
+      setTimeout(() => window.location.reload(), 1200);
+    })
+    .catch(() => {
+      result.innerHTML = '<span style="color:#dc2626">Network error. Check the connection and try again.</span>';
+      ypConfirming = false;
+      updateYearPromotionButton();
+    });
+}
+
 function showToast(message, type = 'success') {
   const icons = {
     success: `<svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>`,
@@ -508,7 +663,19 @@ function showToast(message, type = 'success') {
 
 const studentRosterModal = document.getElementById('studentRosterModal');
 
-function openStudentRosterModal() {
+/**
+ * The same upload does both jobs. Year Promotion is an upload of the new
+ * school year's list: the year and section each student is in come from the
+ * list, their account, team and work stay, and the preview says who moves up.
+ */
+let rosterMode = 'upload';
+
+function openStudentRosterModal(mode) {
+  rosterMode = mode === 'promotion' ? 'promotion' : 'upload';
+  document.getElementById('studentRosterTitle').textContent = rosterMode === 'promotion' ? 'Year Promotion' : 'Upload Student List';
+  document.getElementById('studentRosterSub').textContent = rosterMode === 'promotion'
+    ? 'Upload the class list for the new school year. Each student moves to the year and section on the list; their account, team and work stay.'
+    : 'Upload a spreadsheet file containing your students.';
   clearStudentRosterFile();
   backToStudentRosterFile();
   studentRosterModal.style.display = 'flex';
@@ -658,13 +825,18 @@ function renderRosterPreview(data) {
     `<span><strong>${data.unchanged}</strong> unchanged</span>`,
   ];
   if (data.skipped) summary.push(`<span style="color:#b91c1c"><strong>${data.skipped}</strong> skipped</span>`);
+  const moving = (data.promotions || []).reduce((n, p) => n + p.students, 0);
+  if (moving) summary.splice(3, 0, `<span><strong>${moving}</strong> moving up a year</span>`);
   document.getElementById('studentRosterSummary').innerHTML = summary.join('');
+  renderPromotions(data.promotions || []);
 
   const head = `<thead><tr><th>Row</th><th>Name</th><th>Email</th><th>Student No.</th>
     <th>Program</th><th>Year</th><th>Section</th><th>School Year</th><th>Action</th></tr></thead>`;
 
   const body = data.rows.map(row => {
-    const [cls, label] = ROSTER_ACTIONS[row.action] || ROSTER_ACTIONS.unchanged;
+    const [cls, label] = row.promotion
+      ? ['ct-tag-promote', `Moves up: ${row.promotion.from} → ${row.promotion.to}`]
+      : (ROSTER_ACTIONS[row.action] || ROSTER_ACTIONS.unchanged);
     // Naming the fields is the point of the preview - "Update" alone does not
     // say that a re-upload is about to rewrite somebody's course.
     const changes = row.changes && row.changes.length
@@ -698,6 +870,36 @@ function renderRosterPreview(data) {
   }
 }
 
+function renderPromotions(promotions) {
+  const box = document.getElementById('studentRosterPromotions');
+
+  if (!promotions.length) {
+    box.style.display = rosterMode === 'promotion' ? 'block' : 'none';
+    box.innerHTML = '<div class="ct-promo-title">Nobody moves up a year</div>'
+      + '<div class="ct-promo-sub" style="margin:0">No student on this list is in a higher year than their account says. Check that this is the new school year\'s list.</div>';
+    return;
+  }
+
+  const rows = promotions.map(p => {
+    const move = `<span class="ct-promo-move">${escRoster(p.from)} → ${escRoster(p.to)} · ${p.students} student${p.students === 1 ? '' : 's'}</span>`;
+    let choice;
+    if (p.already_mine) {
+      choice = `<span class="ct-promo-note">You already cover ${escRoster(p.to)}.</span>`;
+    } else if (p.covered_by) {
+      choice = `<span class="ct-promo-note">${escRoster(p.to)} is covered by ${escRoster(p.covered_by)}. Ask the Admin to change it.</span>`;
+    } else if (!p.mine) {
+      choice = `<span class="ct-promo-note">Not your section now; nobody covers ${escRoster(p.to)} yet.</span>`;
+    } else {
+      choice = `<label><input type="checkbox" name="stay_on" value="${escRoster(p.to)}" checked>Stay their CaPSA in ${escRoster(p.to)}</label>`;
+    }
+    return `<div class="ct-promo-row">${move}${choice}</div>`;
+  }).join('');
+
+  box.style.display = 'block';
+  box.innerHTML = '<div class="ct-promo-title">Moving up a year</div>'
+    + '<div class="ct-promo-sub">Their teams and work stay. Untick a section if another CaPSA will take it in the new year.</div>' + rows;
+}
+
 function uploadStudentRoster(btn) {
   const fileInput = document.getElementById('studentRosterFile');
   // Saving is offered from both steps, so a failure has to be reported on
@@ -717,6 +919,11 @@ function uploadStudentRoster(btn) {
 
   const formData = new FormData();
   formData.append('file', fileInput.files[0]);
+  // Only what was on screen and ticked: saving from the first step keeps nobody on a new section.
+  if (previewing) {
+    document.querySelectorAll('#studentRosterPromotions input[name="stay_on"]:checked')
+      .forEach(box => formData.append('stay_on[]', box.value));
+  }
 
   fetch('{{ route('capsa.rosters.students.store') }}', {
     method: 'POST',
@@ -746,8 +953,12 @@ function uploadStudentRoster(btn) {
         html += '<div style="max-height:160px;overflow-y:auto;color:var(--text3);margin-top:6px">' +
           data.errors.map(e => `<div>${e}</div>`).join('') + '</div>';
       }
+      if (data.promoted) {
+        html += `<div style="margin-top:6px;color:#1d4ed8"><strong>${data.promoted}</strong> student${data.promoted === 1 ? '' : 's'} moved up a year.`
+          + (data.kept_sections && data.kept_sections.length ? ` You now also cover ${data.kept_sections.map(escRoster).join(', ')}.` : '') + '</div>';
+      }
       resultBox.innerHTML = html;
-      showToast('Student list uploaded.', 'success');
+      showToast(data.promoted ? 'Students moved up a year.' : 'Student list uploaded.', 'success');
       setTimeout(() => window.location.reload(), 1200);
     })
     .catch(() => {
@@ -791,7 +1002,7 @@ function uploadStudentRoster(btn) {
         <div class="form-group sheet-col"><label class="label" for="add-student-last">Last name</label>
           <input class="input" id="add-student-last" autocomplete="off"></div>
         <div class="form-group sheet-col"><label class="label" for="add-student-number">Student no.</label>
-          <input class="input" id="add-student-number" placeholder="optional" autocomplete="off"></div>
+          <input class="input" id="add-student-number" placeholder="e.g. 221001135" required aria-required="true" autocomplete="off"></div>
       </div>
 
       <div class="sheet-row">
@@ -841,7 +1052,7 @@ function uploadStudentRoster(btn) {
         <div class="form-group sheet-col"><label class="label" for="edit-student-last">Last name</label>
           <input class="input" id="edit-student-last"></div>
         <div class="form-group sheet-col"><label class="label" for="edit-student-number">Student no.</label>
-          <input class="input" id="edit-student-number"></div>
+          <input class="input" id="edit-student-number" placeholder="e.g. 221001135" required aria-required="true"></div>
       </div>
 
       <div class="sheet-row">
@@ -1043,6 +1254,14 @@ function saveNewStudent() {
   const err = document.getElementById('add-student-error');
   const btn = document.getElementById('add-student-btn');
   err.style.display = 'none';
+
+  const number = document.getElementById('add-student-number');
+  if (!number.value.trim()) {
+    err.textContent = 'Enter the student number.';
+    err.style.display = 'block';
+    number.focus();
+    return;
+  }
   btn.disabled = true;
   btn.textContent = 'Adding…';
 
@@ -1053,7 +1272,7 @@ function saveNewStudent() {
       email: document.getElementById('add-student-email').value.trim(),
       f_name: document.getElementById('add-student-first').value.trim(),
       l_name: document.getElementById('add-student-last').value.trim(),
-      student_number: document.getElementById('add-student-number').value.trim() || null,
+      student_number: document.getElementById('add-student-number').value.trim(),
       course: document.getElementById('add-student-course').value,
       // The year and the letter go separately - the stored shape has a
       // separator nobody would guess, so the server puts it together.

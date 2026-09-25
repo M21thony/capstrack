@@ -4,8 +4,10 @@ namespace Tests\Feature;
 
 use App\Http\Controllers\PreProposalController;
 use App\Models\ArchivedDocument;
+use App\Models\CapstoneExpert;
 use App\Models\CapstonePreProposal;
 use App\Models\DuplicationCheck;
+use App\Models\Role;
 use App\Models\Student;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
@@ -742,8 +744,7 @@ class PreProposalControllerTest extends TestCase
         $response = $this->get(route('student.duplication'));
 
         $response->assertOk();
-        $response->assertSee('Moderate Similarity');
-        $response->assertSee('42%');
+        $response->assertSee('<b class="sim-some">42%</b> closest match &middot; Some overlap', false);
     }
 
     // Regression: consolidating the standalone duplication checker into the
@@ -760,11 +761,11 @@ class PreProposalControllerTest extends TestCase
         // A real adviser: a suggestion naming somebody who is not an expert
         // is dropped on the way to the page rather than shown as a name the
         // team cannot act on.
-        $adviser = \App\Models\CapstoneExpert::factory()->create([
+        $adviser = CapstoneExpert::factory()->create([
             'first_name' => 'Ana', 'last_name' => 'Reyes, MIT', 'approved_status' => true,
         ]);
         $adviser->roles()->attach(
-            \App\Models\Role::firstOrCreate(['role_name' => 'adviser'])->role_id
+            Role::firstOrCreate(['role_name' => 'adviser'])->role_id
         );
 
         $check = DuplicationCheck::create([
@@ -788,7 +789,7 @@ class PreProposalControllerTest extends TestCase
         $response = $this->get(route('student.duplication'));
 
         $response->assertOk();
-        $response->assertSee('68% highest match');
+        $response->assertSee('<b class="sim-close">68%</b> closest match', false);
         $response->assertSee(route('student.duplication.report', $check->id), false);
 
         $report = $this->get(route('student.duplication.report', $check->id));
@@ -835,7 +836,7 @@ class PreProposalControllerTest extends TestCase
         [$student] = $this->makeLeaderWithTeam();
         $this->actingAs($student, 'web');
 
-        $this->mock(\App\Services\OllamaSSHClient::class, function ($mock) {
+        $this->mock(OllamaSSHClient::class, function ($mock) {
             $mock->shouldReceive('warmup')->andThrow(
                 new \Exception('Cannot connect to 127.0.0.1:22. Error 10061. No connection could be made because the target machine actively refused it')
             );
@@ -864,11 +865,11 @@ class PreProposalControllerTest extends TestCase
         [$student] = $this->makeLeaderWithTeam();
         $this->actingAs($student, 'web');
 
-        $this->mock(\App\Services\OllamaSSHClient::class, function ($mock) {
+        $this->mock(OllamaSSHClient::class, function ($mock) {
             $mock->shouldReceive('warmup')->andReturnNull();
         });
 
-        $this->mock(\App\Services\SimilarityService::class, function ($mock) {
+        $this->mock(SimilarityService::class, function ($mock) {
             $mock->shouldReceive('extractPdfText')->andReturn('');
         });
 

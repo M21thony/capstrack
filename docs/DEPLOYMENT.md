@@ -33,9 +33,11 @@ ssh -i path/to/key.pem azureuser@<your-domain>
 
 ```bash
 sudo apt update && sudo apt upgrade -y
+# Ubuntu ships PHP 8.3; composer.lock needs 8.4.
+sudo add-apt-repository -y ppa:ondrej/php && sudo apt update
 sudo apt install -y nginx mysql-server supervisor git unzip certbot python3-certbot-nginx \
-  php8.3-fpm php8.3-cli php8.3-mysql php8.3-mbstring php8.3-xml php8.3-curl php8.3-zip \
-  php8.3-gd php8.3-intl php8.3-bcmath php8.3-gmp
+  php8.4-fpm php8.4-cli php8.4-mysql php8.4-mbstring php8.4-xml php8.4-curl php8.4-zip \
+  php8.4-gd php8.4-intl php8.4-bcmath php8.4-gmp
 curl -sS https://getcomposer.org/installer | sudo php -- --install-dir=/usr/local/bin --filename=composer
 curl -fsSL https://deb.nodesource.com/setup_22.x | sudo bash - && sudo apt install -y nodejs
 ```
@@ -51,8 +53,10 @@ GRANT ALL ON capstrack.* TO 'capstrack'@'localhost';"
 Bring the data over from the laptop. Make a **fresh** export (the old
 `capstrackdb.sql` is from 17 September). On the laptop, in the project folder:
 
-```bash
-mysqldump -u root capstrack > capstrack-export.sql
+```powershell
+# Laptop, PowerShell (WAMP's MySQL). --result-file, not >, because
+# PowerShell's > writes UTF-16 and the import then fails.
+& "C:\wamp64\bin\mysql\mysql8.4.7\bin\mysqldump.exe" -u root --default-character-set=utf8mb4 --set-gtid-purged=OFF --result-file=capstrack-export.sql capstrackdb
 scp -i path/to/key.pem capstrack-export.sql azureuser@<your-domain>:~
 ```
 
@@ -100,6 +104,7 @@ Then on the server:
 
 ```bash
 sudo usermod -aG www-data azureuser   # log out and back in after this
+sudo chown azureuser:www-data .env && sudo chmod 640 .env   # www-data must read it
 sudo chown -R azureuser:www-data storage bootstrap/cache
 sudo chmod -R ug+rwX storage bootstrap/cache
 sudo find storage bootstrap/cache -type d -exec chmod g+s {} +
@@ -114,8 +119,15 @@ php artisan optimize
 sudo cp deploy/nginx.conf /etc/nginx/sites-available/capstrack
 sudo ln -s /etc/nginx/sites-available/capstrack /etc/nginx/sites-enabled/
 sudo rm /etc/nginx/sites-enabled/default
-sudo cp deploy/php.ini /etc/php/8.3/fpm/conf.d/99-capstrack.ini
-sudo systemctl restart php8.3-fpm nginx
+sudo cp deploy/php.ini /etc/php/8.4/fpm/conf.d/99-capstrack.ini
+
+# nginx ships no type for .mjs, so the PDF viewer's worker goes out as
+# octet-stream and the browser refuses to start it: every scan in the CaPSA's
+# check window then says it cannot be shown. Add it to the shared table - a
+# types block in the site file would replace the table, not extend it.
+sudo sed -i 's|^\(\s*application/javascript\s*\)js;|js mjs;|' /etc/nginx/mime.types
+
+sudo systemctl restart php8.4-fpm nginx
 
 sudo cp deploy/capstrack-worker.conf /etc/supervisor/conf.d/
 sudo supervisorctl reread && sudo supervisorctl update

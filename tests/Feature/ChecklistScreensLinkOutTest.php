@@ -5,7 +5,9 @@ namespace Tests\Feature;
 use App\Models\CapstoneDocumentReview;
 use App\Models\CapstoneExpert;
 use App\Models\Checklist;
+use App\Models\DefenseSchedule;
 use App\Models\Deliverable;
+use App\Models\DeliverableCheck;
 use App\Models\Student;
 use App\Models\Team;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -45,8 +47,25 @@ class ChecklistScreensLinkOutTest extends TestCase
 
         $this->actingAs($this->student)->get('/student/progress')
             ->assertOk()
-            ->assertSee("openSubmissionDrawer('{$draft->id}')", false)
-            ->assertDontSee("openSubmissionDrawer('{$defense->id}')", false);
+            ->assertSee("openSubmission('{$draft->id}', this)", false)
+            ->assertDontSee("openSubmission('{$defense->id}', this)", false);
+    }
+
+    /** A line still waiting on an earlier one offers no Upload that could only say "not yet". */
+    public function test_a_line_waiting_on_an_earlier_one_has_no_upload(): void
+    {
+        $checklist = $this->departmentChecklist($this->capsa);
+        foreach (['team_assignment_form', 'pre_proposal_title_form', 'role_acceptance_adviser', 'role_acceptance_consultant', 'role_acceptance_grammarian', 'final_title_form'] as $key) {
+            DeliverableCheck::create(['deliverable_id' => $this->line($checklist, $key)->id, 'team_id' => $this->team->team_id, 'status' => 'complete', 'checked_at' => now()]);
+        }
+        DefenseSchedule::create(['team_id' => $this->team->team_id, 'defense_type' => 'Pre-proposal Defense', 'attempt' => 1, 'schedule_date' => now(), 'outcome' => 'passed', 'outcome_recorded_at' => now()]);
+        $this->checklist->delete();
+
+        $this->actingAs($this->student)->get('/student/progress')
+            ->assertOk()
+            ->assertSee("openSubmission('{$this->line($checklist, 'chapter_1_draft')->id}', this)", false)
+            // The signed CLF waits for the draft it approves.
+            ->assertDontSee("openSubmission('{$this->line($checklist, 'clf_chapter_1')->id}', this)", false);
     }
 
     /** Changes are asked for on the draft, so the revision goes up against the draft. */
@@ -66,7 +85,7 @@ class ChecklistScreensLinkOutTest extends TestCase
             ->assertOk()
             ->assertSee('1st revision requested')
             ->assertSee('Upload 1st revision')
-            ->assertSee("openSubmissionDrawer('{$draft->id}')", false);
+            ->assertSee("openSubmission('{$draft->id}', this)", false);
     }
 
     public function test_the_capsa_opens_an_uploaded_scan_from_the_tracker(): void

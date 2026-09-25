@@ -18,6 +18,10 @@ export default function ChangesPanel({ top, base, diff, selectedChange, onOpenCh
     idle: null,
     loading: [`Comparing with ${base?.round || "the earlier version"}…`, "This takes a moment on long documents."],
     notext: ["Nothing to compare", "One of the versions has no text to read. It may be a scanned image."],
+    unrelated: [
+      "This may be the wrong file",
+      `It shares almost no text with ${base?.round || "the earlier version"} (${Math.round((diff.shared || 0) * 100)}% of its phrases). A revision keeps most of its words, so this looks like a different document - another chapter, perhaps. Open it to check, or send it back.`,
+    ],
     error: ["Could not compare", "The earlier version did not load. Reload the page to try again."],
   }[diff.status];
 

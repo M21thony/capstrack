@@ -118,11 +118,23 @@ class FeeBoard
             return [];
         }
 
-        return FinancialRecord::whereIn('expense_post_id', $feeIds)
+        $latest = FinancialRecord::whereIn('expense_post_id', $feeIds)
             ->whereIn('student_id', $studentIds)
             ->orderByDesc('id')
             ->get()
-            ->unique(fn (FinancialRecord $r) => $r->expense_post_id.':'.$r->student_id)
+            ->unique(fn (FinancialRecord $r) => $r->expense_post_id.':'.$r->student_id);
+
+        // The same OR number on somebody else's receipt: one payment claimed
+        // twice, or a typo. Said to the CaPSA, not refused - a parent paying
+        // for two students on one receipt is real.
+        $numbers = $latest->pluck('receipt_number')->filter()->unique()->values();
+        $usedBy = $numbers->isEmpty() ? collect() : FinancialRecord::whereIn('receipt_number', $numbers)
+            ->where(fn ($q) => $q->whereNull('f_record_status')->orWhere('f_record_status', '!=', 'rejected'))
+            ->with('student:student_id,f_name,l_name')
+            ->get(['id', 'student_id', 'receipt_number'])
+            ->groupBy('receipt_number');
+
+        return $latest
             ->mapWithKeys(fn (FinancialRecord $r) => [$r->expense_post_id.':'.$r->student_id => [
                 'id' => (int) $r->id,
                 'status' => FinancialRecord::statusKey($r->f_record_status),
@@ -130,6 +142,11 @@ class FeeBoard
                 'at' => $r->uploaded_at?->format('M j, Y'),
                 'on' => $r->verified_at?->format('M j, Y'),
                 'reason' => $r->rejection_reason,
+                'or' => $r->receipt_number,
+                'or_also' => $r->receipt_number
+                    ? $usedBy->get($r->receipt_number, collect())->reject(fn ($o) => $o->id === $r->id)
+                        ->map(fn ($o) => trim(($o->student?->f_name ?? '').' '.($o->student?->l_name ?? '')) ?: 'another student')->unique()->values()->all()
+                    : [],
             ]])
             ->all();
     }

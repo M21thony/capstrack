@@ -27,4 +27,16 @@ class Notification extends Model
         'is_read' => 'boolean',
         'created_at' => 'datetime',
     ];
+
+    /**
+     * Stamp the time here rather than leaving it to the column's database
+     * default: a database clock on UTC is eight hours behind the app's
+     * Asia/Manila, which put "8 hours ago" on everything just sent.
+     */
+    protected static function booted(): void
+    {
+        static::creating(function (Notification $notification): void {
+            $notification->created_at ??= now();
+        });
+    }
 }

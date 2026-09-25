@@ -69,7 +69,7 @@
               $isLeader = (int) $member->student_id === (int) $team->leader_id;
             @endphp
             <li class="{{ $isLeader ? 'lead' : '' }}">
-              <div class="av" style="background:{{ $avatar($member->student_id) }}">{{ $initialsOf($name) }}</div>
+              <div class="av" style="background:{{ $avatar($member->student_id) }}">{{ $initialsOf($name) }}@include('capsa.team-management._photo', ['url' => $member->avatarUrl()])</div>
               <b>{{ $name ?: 'Unnamed student' }}</b>
               <small>{{ $isLeader ? 'Leader' : 'Member' }}</small>
             </li>
@@ -95,7 +95,7 @@
               </li>
             @else
               <li>
-                <div class="av" style="background:{{ $avatar($seat->expert->expert_id) }}">{{ $initialsOf($seat->expert->name) }}</div>
+                <div class="av" style="background:{{ $avatar($seat->expert->expert_id) }}">{{ $initialsOf($seat->expert->name) }}@include('capsa.team-management._photo', ['url' => $seat->expert->avatarUrl()])</div>
                 <div class="who">
                   <div class="top"><span class="nm">{{ $seat->expert->name }}</span><span class="rl">{{ ucfirst($seat->role) }}</span></div>
                   @if ($seat->degree)<div class="deg">{{ $seat->degree }}</div>@endif
@@ -209,6 +209,17 @@
               </ol>
               @if ($item->locked)
                 <span class="pill p-gray"><x-tm-icon n="lock" s="11" />Locked</span>
+              @elseif ($item->waiting_on === MilestoneProgress::WAITING_ON_CAPSA && in_array($item->item->kind, \App\Models\Deliverable::CHECKED_BY_CAPSA, true))
+                {{-- A signed paper closes on the CaPSA's check, and the check
+                     itself lives in the Milestones tracker. Without this the
+                     line just said "Handed in" with nothing to click. Once
+                     it is checked, or put down, the tracker brings her back
+                     here (return). --}}
+                <a class="btn btn-p" href="{{ route('capsa.team_management', [
+                     'tab' => 'milestones', 'section' => $row->section,
+                     'team' => $team->team_id, 'check' => $item->item->id,
+                     'return' => route('capsa.team_management.show', $team->team_id, false),
+                   ]) }}">Check</a>
               @else
                 <span class="pill {{ $mark[1] }}">{{ $mark[0] }}</span>
               @endif

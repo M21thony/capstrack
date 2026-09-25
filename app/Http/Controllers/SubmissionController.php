@@ -4,25 +4,35 @@ namespace App\Http\Controllers;
 
 use App\Models\CapstoneDocument;
 use App\Models\CapstoneDocumentReview;
+use App\Models\CapstoneExpert;
 use App\Models\Deliverable;
 use App\Models\GoogleDriveToken;
+use App\Models\PdfRemark;
 use App\Models\Team;
 use App\Services\GoogleDriveService;
 use App\Services\Notifier;
 use App\Services\RecipientResolver;
 use App\Support\MilestoneProgress;
+use App\Support\RevisionCheck;
+use App\Support\SectionScope;
 use App\Support\StudentTeam;
+use App\Support\SubmissionRecipients;
 use App\Support\TeamChecklist;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class SubmissionController extends Controller
 {
     public function __construct(
         private GoogleDriveService $drive,
         private RecipientResolver $resolver,
+        private SubmissionRecipients $recipients,
     ) {}
 
     public function store(Request $request)
@@ -32,7 +42,7 @@ class SubmissionController extends Controller
             'chapter' => 'nullable|string|max:50',
             'file' => 'required|file|max:25600', // 25 MB
             'recipients' => 'nullable|array',
-            'recipients.*' => 'in:adviser,consultant,grammarian,subject_adviser',
+            'recipients.*' => 'in:'.implode(',', SubmissionRecipients::ROLES),
             'subject_adviser_folder_id' => 'nullable|string',
             'deliverable_id' => 'nullable|integer',
         ]);
@@ -100,10 +110,21 @@ class SubmissionController extends Controller
             ], 422);
         }
 
-        if (! $isPaper && empty($request->input('recipients'))) {
+        // Who it goes to is the line's rule, not whatever boxes were ticked: a
+        // revision goes back to exactly the people who had the last version.
+        $targets = $isPaper ? [] : $this->recipients->resolve($item, (int) $studentYear->team_id, (array) $request->input('recipients', []));
+
+        if (! $isPaper && $targets === []) {
             return response()->json([
                 'success' => false,
                 'message' => 'Pick at least one person to send this to.',
+            ], 422);
+        }
+
+        if ($item && ($same = $this->sameAsLast($file->getRealPath(), $item, (int) $studentYear->team_id))) {
+            return response()->json([
+                'success' => false,
+                'message' => "This is the same file as version {$same}. Pick your edited copy.",
             ], 422);
         }
         $storedPath = $file->store('submissions', 'local'); // adjust disk as needed
@@ -128,7 +149,7 @@ class SubmissionController extends Controller
         // both told they were on Version 1 of it.
         // A file sent for a checklist line is a revision of that line whatever
         // it is called, so the line is the grouping key when there is one.
-        $lastVersion = CapstoneDocument::whereIn('student_id', StudentTeam::memberIdsFor($studentId))
+        $lastVersion = CapstoneDocument::ofTeam((int) $studentYear->team_id)
             ->when(
                 $item,
                 fn ($query) => $query->where('deliverable_id', $item->id),
@@ -142,6 +163,7 @@ class SubmissionController extends Controller
 
         $document = CapstoneDocument::create([
             'student_id' => $studentId,
+            'team_id' => $studentYear->team_id,
             'file_name' => $title,
             'chapter' => $chapter,
             'deliverable_id' => $item?->id,
@@ -150,60 +172,59 @@ class SubmissionController extends Controller
             'document_status' => 'Pending',
         ]);
 
+        // A paper goes into no reviewer's queue - it waits on the section's
+        // CaPSA, who until now was told nothing and only found it by opening
+        // the Milestones tab and picking the right section.
+        if ($isPaper) {
+            Notifier::toExpert(
+                (int) $checklist->capsa_id,
+                'paper_to_check',
+                'Signed paper to check',
+                '<strong>'.e($team->team_name ?? 'A team').'</strong> handed in <strong>'.e($item->title).'</strong>.',
+                route('capsa.team_management', array_filter([
+                    'tab' => 'milestones',
+                    'section' => app(SectionScope::class)->sectionFor($teamModel),
+                ])),
+                ['team_id' => $studentYear->team_id, 'deliverable_id' => $item->id, 'file_id' => $document->file_id],
+            );
+        }
+
         $results = [];
 
-        foreach ($request->input('recipients', []) as $role) {
-            if ($role === 'subject_adviser' && ! $studentYear->program) {
+        foreach ($targets as $role => $expertIds) {
+            foreach ($expertIds as $expertId) {
+                $review = CapstoneDocumentReview::create([
+                    'file_id' => $document->file_id,
+                    'expert_id' => $expertId,
+                    'role' => $role,
+                    'review_status' => 'To Review',
+                    'version' => (string) $document->file_version,
+                    'drive_status' => 'pending',
+                ]);
+
+                // No email has ever gone out for a submission - the expert found
+                // out by opening Document Review. This is the first time they are
+                // actually told.
+                Notifier::toExpert(
+                    (int) $expertId,
+                    'document_submitted',
+                    'Document to review',
+                    '<strong>'.e($team->team_name ?? 'A team').'</strong> sent you <strong>'
+                        .e($document->file_name).'</strong> as their '.e(SubmissionRecipients::LABELS[$role]).'.',
+                    route('instructor.docreview'),
+                    ['team_id' => $studentYear->team_id, 'review_id' => $review->review_id],
+                );
+
+                $explicitFolderId = $role === 'subject_adviser' ? $request->input('subject_adviser_folder_id') : null;
+                $this->deliverToDrive($review, $expertId, $studentYear->team_id, $team->team_name ?? 'Unknown Team', $file, $originalExt, $explicitFolderId);
+
                 $results[] = [
                     'role' => $role,
-                    'status' => 'unresolved',
-                    'message' => 'Your program is not set, so a Subject Adviser could not be determined.',
+                    'label' => SubmissionRecipients::LABELS[$role],
+                    'name' => $review->expert?->name,
+                    'status' => $review->fresh()->drive_status,
                 ];
-
-                continue;
             }
-
-            $expertId = $this->resolver->resolve($role, $studentYear->team_id, $studentYear->program ?? '');
-
-            if (! $expertId) {
-                $results[] = [
-                    'role' => $role,
-                    'status' => 'unresolved',
-                    'message' => 'No expert currently assigned to this role.',
-                ];
-
-                continue;
-            }
-
-            $review = CapstoneDocumentReview::create([
-                'file_id' => $document->file_id,
-                'expert_id' => $expertId,
-                'role' => $role,
-                'review_status' => 'To Review',
-                'version' => (string) $document->file_version,
-                'drive_status' => 'pending',
-            ]);
-
-            // No email has ever gone out for a submission - the expert found
-            // out by opening Document Review. This is the first time they are
-            // actually told.
-            Notifier::toExpert(
-                (int) $expertId,
-                'document_submitted',
-                'Document to review',
-                '<strong>'.e($team->team_name ?? 'A team').'</strong> sent you <strong>'
-                    .e($document->file_name).'</strong> as their '.e(str_replace('_', ' ', $role)).'.',
-                route('instructor.docreview'),
-                ['team_id' => $studentYear->team_id, 'review_id' => $review->review_id],
-            );
-
-            $explicitFolderId = $role === 'subject_adviser' ? $request->input('subject_adviser_folder_id') : null;
-            $this->deliverToDrive($review, $expertId, $studentYear->team_id, $team->team_name ?? 'Unknown Team', $file, $originalExt, $explicitFolderId);
-
-            $results[] = [
-                'role' => $role,
-                'status' => $review->fresh()->drive_status,
-            ];
         }
 
         return response()->json([
@@ -218,6 +239,161 @@ class SubmissionController extends Controller
     // detection + grouping rules as store(), so the read-only Version (and
     // Detected Chapter) labels on the form always match what actually
     // happens on submit.
+    /**
+     * Warnings about a draft before it is sent: its first page names another
+     * chapter, or it shares almost nothing with the team's last upload for
+     * the same line - Chapter 3 sent as the next Chapter 1. Only warnings; the
+     * student may send it anyway. See RevisionCheck.
+     */
+    public function warnings(Request $request): JsonResponse
+    {
+        $request->validate([
+            'file' => 'required|file|max:25600',
+            'deliverable_id' => 'required|integer',
+        ]);
+
+        $file = $request->file('file');
+        $item = Deliverable::active()->find($request->integer('deliverable_id'));
+        $teamId = StudentTeam::idFor(Auth::id());
+
+        if (! $item || $teamId === null) {
+            return response()->json(['warnings' => [], 'same' => null]);
+        }
+
+        // The very file that was sent back: never worth sending again.
+        $same = $this->sameAsLast($file->getRealPath(), $item, $teamId);
+
+        return response()->json([
+            'warnings' => strtolower($file->getClientOriginalExtension()) === 'pdf'
+                ? RevisionCheck::warnings($file->getRealPath(), $file->getClientOriginalName(), $item, $teamId)
+                : [],
+            'same' => $same,
+        ]);
+    }
+
+    /**
+     * Everything the upload pop-up needs for one line: what it is, which
+     * version this would be, who it goes to, and - for a revision - what the
+     * reviewer asked for. With no line, only the lines the team may pick.
+     */
+    public function plan(Request $request): JsonResponse
+    {
+        $studentYear = DB::table('student_s_y')
+            ->where('student_id', Auth::id())
+            ->orderByDesc('school_year')
+            ->first();
+        $teamId = $studentYear?->team_id ? (int) $studentYear->team_id : null;
+
+        if (! $teamId) {
+            return response()->json(['message' => 'You are not currently assigned to a team.'], 422);
+        }
+
+        $lines = $this->openLines($teamId);
+        $item = $request->filled('item') ? Deliverable::active()->find($request->integer('item')) : null;
+
+        if ($item && ! $lines->contains('id', $item->id)) {
+            $item = null;
+        }
+
+        $line = $item ? $lines->firstWhere('id', $item->id) : null;
+
+        if ($line?->locked) {
+            return response()->json(['message' => $item->title." can't be handed in yet: it waits for ".$line->waits_for.'.'], 422);
+        }
+
+        $isPaper = $item && in_array($item->kind, Deliverable::CHECKED_BY_CAPSA, true);
+        $last = $item ? CapstoneDocument::ofTeam($teamId)->where('deliverable_id', $item->id)->orderByDesc('file_version')->first() : null;
+        $version = ($last?->file_version ?? 0) + 1;
+        $plan = $isPaper ? ['locked' => true, 'people' => []] : $this->recipients->plan($item, $teamId);
+
+        if ($isPaper) {
+            $capsaId = $this->resolver->resolveSubjectAdviserAdmin($teamId);
+            $capsa = $capsaId ? CapstoneExpert::find($capsaId) : null;
+            $plan['people'][] = [
+                'role' => 'subject_adviser', 'label' => 'CaPSA', 'name' => $capsa?->name,
+                'note' => null, 'on' => true, 'available' => true,
+            ];
+        }
+
+        return response()->json([
+            'item' => $item ? [
+                'id' => $item->id,
+                'title' => $item->title,
+                'phase' => $line?->phase,
+                'chapter' => SubmissionRecipients::chapterKey($item),
+                'due' => $item->due_date?->format('M j, Y'),
+                'paper' => $isPaper,
+            ] : null,
+            'version' => $item ? $version : null,
+            'round' => $version > 1 ? self::ordinal($version - 1).' revision' : null,
+            'accept' => $isPaper ? ['pdf', 'jpg', 'jpeg', 'png'] : ['pdf'],
+            'locked' => $plan['locked'],
+            'people' => array_map(fn ($p) => array_diff_key($p, ['expert_ids' => true]), $plan['people']),
+            'remark' => $last && ! $isPaper ? $this->remarkOn($last) : null,
+            'lines' => $item ? [] : $lines->reject(fn ($l) => $l->locked)->values()->map(fn ($l) => [
+                'id' => $l->id, 'title' => $l->title, 'phase' => $l->phase, 'note' => $l->note,
+            ]),
+        ]);
+    }
+
+    /**
+     * What the reviewer asked for on the version sent back: whose it is, how
+     * many remarks, and the first of them.
+     *
+     * @return array{who: string, count: int, first: ?string, url: string}|null
+     */
+    private function remarkOn(CapstoneDocument $document): ?array
+    {
+        $review = CapstoneDocumentReview::where('file_id', $document->file_id)
+            ->where('verdict', CapstoneDocumentReview::NEEDS_REVISION)
+            ->orderByDesc('verdict_at')
+            ->first();
+
+        if (! $review) {
+            return null;
+        }
+
+        $remarks = PdfRemark::where('review_id', $review->review_id)
+            ->whereNotNull('comment')
+            ->orderByDesc('is_general')
+            ->orderBy('created_at')
+            ->pluck('comment')
+            ->filter(fn ($c) => trim($c) !== '');
+
+        return [
+            'who' => 'Your '.(SubmissionRecipients::LABELS[$review->role] ?? 'reviewer'),
+            'count' => $remarks->count(),
+            'first' => $remarks->first() ? Str::limit(trim($remarks->first()), 90) : null,
+            'url' => route('student.review', ['review_id' => $review->review_id]),
+        ];
+    }
+
+    /**
+     * The version of this line the file is identical to, if any.
+     */
+    private function sameAsLast(string $path, Deliverable $item, int $teamId): ?int
+    {
+        $hash = @sha1_file($path);
+
+        if (! $hash) {
+            return null;
+        }
+
+        $earlier = CapstoneDocument::ofTeam($teamId)
+            ->where('deliverable_id', $item->id)
+            ->orderByDesc('file_version')
+            ->get(['file_path', 'file_version']);
+
+        foreach ($earlier as $document) {
+            if ($document->file_path && Storage::disk('local')->exists($document->file_path)
+                && sha1_file(Storage::disk('local')->path($document->file_path)) === $hash) {
+                return (int) $document->file_version;
+            }
+        }
+
+        return null;
+    }
+
     public function nextVersionForTitle(Request $request)
     {
         $request->validate(['title' => 'required|string|max:255']);
@@ -229,7 +405,7 @@ class SubmissionController extends Controller
         // Counted across the whole team, not the one account uploading. A
         // chapter is the team's, so two members each sending "Chapter 1" were
         // both told they were on Version 1 of it.
-        $lastVersion = CapstoneDocument::whereIn('student_id', StudentTeam::memberIdsFor($studentId))
+        $lastVersion = CapstoneDocument::forTeamOf($studentId)
             ->when(
                 $chapter,
                 fn ($query) => $query->where('chapter', $chapter),
@@ -287,73 +463,85 @@ class SubmissionController extends Controller
         ]);
     }
 
+    /**
+     * The Document Submission page: the team's submissions, and a button that
+     * opens the same small pop-up every other upload uses. Opened with
+     * ?item=, the pop-up opens on that line straight away.
+     */
     public function create(Request $request)
     {
-        $studentId = Auth::id();
+        return view('student.submission', [
+            'submitted' => $this->submittedByTeam(Auth::id()),
+            'selectedItemId' => (int) $request->query('item') ?: null,
+        ]);
+    }
 
-        $studentYear = DB::table('student_s_y')
-            ->where('student_id', $studentId)
-            ->orderByDesc('school_year')
-            ->first();
+    /**
+     * The team's checklist lines still open, each with its own lock: its
+     * milestone's, or the order inside the milestone. Defenses and the title
+     * form are never uploaded.
+     *
+     * @return Collection<int, object>
+     */
+    private function openLines(int $teamId): Collection
+    {
+        $progress = Team::find($teamId)?->checklistProgress();
 
-        // The team's checklist lines still open, for "What is this for?".
-        // Opened from a line on the Progress Tracker (?item=), that line
-        // arrives already picked.
-        $checklistItems = collect();
-
-        $progress = $studentYear && $studentYear->team_id
-            ? Team::find($studentYear->team_id)?->checklistProgress()
-            : null;
-
-        if ($progress) {
-            // Each line carries its own lock: its milestone's, or the order
-            // inside the milestone.
-            $checklistItems = $progress->milestones
-                ->flatMap(fn ($ms) => $ms->items
-                    ->reject(fn ($row) => $row->item->kind === Deliverable::DEFENSE
-                        || in_array($row->state, MilestoneProgress::COMPLETE_STATES, true))
-                    ->map(fn ($row) => (object) [
-                        'id' => $row->item->id,
-                        'title' => $row->item->title,
-                        'phase' => $ms->milestone->name,
-                        'kind' => $row->item->kind,
-                        'role' => $row->item->role,
-                        'locked' => $row->locked,
-                        'note' => match (true) {
-                            $row->locked => 'waits for '.$row->waits_for,
-                            (bool) $row->note => 'sent back: '.$row->note,
-                            $row->changes_requested => self::ordinal($row->revision).' revision requested',
-                            $row->waiting_on === MilestoneProgress::WAITING_ON_SIGNED_COPY => 'approved, upload the signed copy',
-                            default => null,
-                        },
-                    ]))
-                ->values();
+        if (! $progress) {
+            return collect();
         }
 
-        $selectedItemId = (int) $request->query('item');
+        return $progress->milestones
+            ->flatMap(fn ($ms) => $ms->items
+                ->reject(fn ($row) => $row->item->kind === Deliverable::DEFENSE
+                    || $row->item->closesOnTitleRecommendation()
+                    || in_array($row->state, MilestoneProgress::COMPLETE_STATES, true))
+                ->map(fn ($row) => (object) [
+                    'id' => $row->item->id,
+                    'title' => $row->item->title,
+                    'phase' => $ms->milestone->name,
+                    'locked' => $row->locked,
+                    'waits_for' => $row->waits_for,
+                    'note' => match (true) {
+                        (bool) $row->note => 'sent back: '.$row->note,
+                        $row->changes_requested => self::ordinal($row->revision).' revision requested',
+                        $row->waiting_on === MilestoneProgress::WAITING_ON_SIGNED_COPY => 'approved, upload the signed copy',
+                        default => null,
+                    },
+                ]))
+            ->values();
+    }
 
-        $recipients = [
-            'adviser' => ['expert_id' => null, 'name' => null],
-            'consultant' => ['expert_id' => null, 'name' => null],
-            'grammarian' => ['expert_id' => null, 'name' => null],
-            'subject_adviser' => ['expert_id' => null, 'name' => null],
-        ];
+    /**
+     * What the team has sent, newest first: each file, the requirement it was
+     * for, its version, and where it stands.
+     *
+     * @return Collection<int, object>
+     */
+    private function submittedByTeam(int $studentId): Collection
+    {
+        return CapstoneDocument::forTeamOf($studentId)
+            ->with(['deliverable', 'reviews'])
+            ->latest('created_at')
+            ->take(50)
+            ->get()
+            ->map(function (CapstoneDocument $document) {
+                $verdicts = $document->reviews->pluck('verdict')->filter();
 
-        if ($studentYear && $studentYear->team_id) {
-            $recipients = $this->resolver->getAssignedNames(
-                $studentYear->team_id,
-                $studentYear->program ?? ''
-            );
-        }
-
-        // Actual version depends on the file's name, which isn't known until
-        // one is selected client-side; the form fetches the real number via
-        // nextVersionForTitle() once a file is picked. This is just the
-        // before-a-file-is-chosen placeholder.
-        $nextVersion = 1;
-
-        // A fragment, not a page: the drawer drops it straight into the panel.
-        return view('student.partials.submission-form', compact('recipients', 'nextVersion', 'checklistItems', 'selectedItemId'));
+                return (object) [
+                    'name' => $document->file_name,
+                    'for' => $document->deliverable?->title ?? ($document->chapter ?: 'Feedback only'),
+                    'version' => (int) $document->file_version,
+                    'round' => $document->roundLabel(),
+                    'sent' => $document->created_at,
+                    'status' => match (true) {
+                        $verdicts->contains(CapstoneDocumentReview::NEEDS_REVISION) => ['Revision asked', 'revise'],
+                        $verdicts->isNotEmpty() && $verdicts->every(fn ($v) => $v === CapstoneDocumentReview::APPROVED) => ['Approved', 'ok'],
+                        $document->reviews->isNotEmpty() => ['With reviewers', ''],
+                        default => ['Sent', ''],
+                    },
+                ];
+            });
     }
 
     private static function ordinal(int $n): string

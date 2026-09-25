@@ -246,6 +246,63 @@
 .empty-state svg { width: 48px; height: 48px; stroke: var(--border2); margin-bottom: 12px; }
 .empty-state p { font-size: 14px; }
 
+/* ── Tablet and phone: one column that grows, and the page scrolls ──
+   experts.css keeps .content-grid at the height of the screen, which suits
+   the desktop's two columns. Once it becomes one column (1024px down) that
+   height stayed, and every section was squeezed into it: the roles list
+   poured out over Applications and How it works, and the credits sat on top
+   of Your Experts. Here, after experts.css, and with !important because its
+   phone rules use it. */
+@media (max-width: 1024px) {
+  .content-grid-wrap,
+  #real-content.content-grid { height: auto !important; min-height: 0 !important; }
+  #real-content.content-grid > * { flex-shrink: 0 !important; }
+  #real-content .experts-main { min-height: auto !important; }
+  #real-content .overview-panel { max-height: none !important; overflow: visible !important; }
+}
+/* Two boxes side by side left each about 180px - too narrow to read. */
+@media (max-width: 480px) {
+  #real-content .overview-panel { grid-template-columns: minmax(0, 1fr) !important; }
+}
+
+/* ── Expert cards on a phone: a list you scroll down, each card whole ──
+   The desktop strip runs sideways, sized to fit one screen, and the older
+   phone rules shrank every card to one row with its expertise and
+   availability hidden. Here each expert is a full card, one under another,
+   and the list/table toggle is dropped: a table does not fit a phone. */
+@media (max-width: 768px) {
+  #viewSeg { display: none !important; }
+  #results.view-list .listwrap { display: none !important; }
+  #results .railwrap, #results .rail-pager { display: block !important; }
+  #results .rail-pager, .rail-nav { display: none !important; }
+  #rail.rail {
+    display: flex !important; flex-direction: column; gap: 10px;
+    overflow: visible !important; scroll-snap-type: none; max-height: none !important;
+  }
+  #rail .expert-card-compact {
+    display: grid !important; grid-template-columns: 48px minmax(0, 1fr);
+    column-gap: 12px !important; row-gap: 10px !important;
+    align-items: start !important; text-align: left !important;
+    padding: 14px !important; border-radius: 14px !important;
+    cursor: pointer !important;
+  }
+  #rail .expert-card-compact > .role-dot { display: block !important; top: 14px; right: 14px; left: auto; }
+  #rail .expert-card-compact .who { grid-column: 1 / -1; display: flex !important; align-items: center; gap: 12px; flex-direction: row !important; }
+  #rail .expert-card-compact .expert-avatar-wrap { width: 48px !important; height: 48px !important; flex: none; margin: 0 !important; }
+  #rail .expert-card-compact .ex-nm { font-size: 15px !important; font-weight: 700; text-align: left !important; white-space: normal !important; }
+  #rail .expert-card-compact .chips,
+  #rail .expert-card-compact > div:not(.who):not(.avail):not(.chips),
+  #rail .expert-card-compact .avail { grid-column: 1 / -1; display: block !important; }
+  #rail .expert-card-compact .chips { display: flex !important; flex-wrap: wrap; gap: 5px; }
+  #rail .expert-card-compact .tags { display: flex !important; flex-wrap: wrap; gap: 5px; max-height: none !important; }
+  #rail .expert-card-compact .tags .t { display: inline-block !important; }
+  #rail .expert-card-compact .lbl { display: block !important; margin-bottom: 4px; font-size: 10.5px; }
+  #rail .expert-card-compact .slot-caption { display: block !important; font-size: 12.5px; font-weight: 600; text-transform: none; letter-spacing: 0; color: var(--text2); }
+  #rail .expert-card-compact .slot-caption.is-full { color: var(--red); }
+  #rail .expert-card-compact .btn { grid-column: 1 / -1; width: 100% !important; justify-content: center; padding: 10px 12px !important; font-size: 12.5px !important; }
+  #rail .expert-card-compact .btn svg { width: 14px !important; height: 14px !important; }
+}
+
 </style>
 @include('partials.skeleton-head', ['skReveal' => 'opacity'])
 </head>
@@ -367,7 +424,9 @@
           'consultant' => 'Provides subject-matter expertise and technical advice',
           'grammarian' => 'Reviews and ensures quality of written documentation',
         ];
-        $approvedAssignments = $assignments->where('status', 'approved');
+        // An assignment whose expert account is gone is nobody: it showed as an
+        // "Unknown" card and made the count read "4 of 3".
+        $approvedAssignments = $assignments->where('status', 'approved')->filter(fn ($a) => $a->expert);
 
         // Keyed by the role the team actually engaged them as. Anyone approved
         // before roles were recorded has no slot, so they are listed under the
@@ -886,7 +945,7 @@
         'Address of the organization' => $approvedProposal->client_address,
         'Representative' => $approvedProposal->client_representative,
         'Their position' => $approvedProposal->client_position,
-        'Research agenda' => $approvedProposal->research_agenda,
+        'Research agenda' => \App\Support\ResearchAgenda::items($approvedProposal->research_agenda),
         'SDG goals' => $approvedProposal->sdg_goals,
       ] as $label => $value)
         @if(filled($value))
@@ -1932,6 +1991,13 @@ document.addEventListener('keydown', function (e) {
 document.addEventListener('DOMContentLoaded', function () {
   var wanted = new URLSearchParams(window.location.search).get('apply');
   if (!wanted) return;
+
+  // One-shot. Left in the URL, this fired again on every later load of the
+  // page - applying reloads, and so does coming back after a decision - so
+  // the modal reopened by itself long after the link that asked for it.
+  var cleaned = new URL(window.location.href);
+  cleaned.searchParams.delete('apply');
+  history.replaceState(null, '', cleaned.pathname + cleaned.search + cleaned.hash);
 
   var card = document.querySelector('.expert-card-compact[data-expert-id="' + CSS.escape(wanted) + '"]');
   var btn = card ? card.querySelector('[data-apply-expert]') : null;

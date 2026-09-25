@@ -77,16 +77,17 @@ class TeamManagementController extends Controller
 
         // The Milestones tab is its own tracker: one section at a time, with
         // its own section tabs, so it ignores the page's section filter.
-        $tracker = $tab === 'milestones'
-            ? app(ChecklistTracker::class)->overview($capsaSections, $selectedSection)
-            : null;
+        // Built on every tab, not only that one: the count of papers waiting
+        // is the badge that says anything arrived at all, and computing it
+        // only once she was already looking at them told her nothing.
+        $tracker = app(ChecklistTracker::class)->overview($capsaSections, $selectedSection);
 
         return view('capsa.team_management', [
             'tab' => $tab,
             'rows' => $rows,
             // Each team's score at every defense, once its whole panel has graded.
             'defenseScores' => DefenseScores::forTeams($teamIds),
-            'tracker' => $tracker,
+            'tracker' => $tab === 'milestones' ? $tracker : null,
             // The tab that is still a page of its own brings its own data,
             // built only when it is the one open.
             'tabData' => match ($tab) {
@@ -105,7 +106,7 @@ class TeamManagementController extends Controller
                 'teams' => $rows->count(),
                 // Signed papers waiting for her check, the one thing on the
                 // tracker that is hers to act on.
-                'milestones' => $tracker ? collect($tracker['sections'])->sum('to_check') : null,
+                'milestones' => collect($tracker['sections'])->sum('to_check'),
                 'pre_proposals' => $rows->sum(fn ($r) => $r->pendingProposalCount),
                 'verification' => $rows->where('awaitingVerification', true)->count(),
                 'papers' => $rows->sum(fn ($r) => $r->papersToCheck),
@@ -479,6 +480,7 @@ class TeamManagementController extends Controller
             $approved->count() >= 2 => 'awaiting_team_choice',
             $approved->count() === 1 => 'settling',
             $proposals->isEmpty() => 'none_submitted',
+            $pending->isEmpty() => 'all_rejected',
             default => 'awaiting_review',
         };
 
@@ -528,5 +530,4 @@ class TeamManagementController extends Controller
                 && (bool) $team->selected_pre_proposal_id,
         ];
     }
-
 }

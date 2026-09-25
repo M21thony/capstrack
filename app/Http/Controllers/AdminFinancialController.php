@@ -68,6 +68,10 @@ class AdminFinancialController extends Controller
         $by = auth('expert')->user()->name;
 
         if ($status === 'approved') {
+            if ($financialRecord->receipt_number && ! $request->boolean('or_confirmed')) {
+                return redirect()->back()->withErrors(['or_confirmed' => 'Check that the OR number on the photo is '.$financialRecord->receipt_number.' before verifying.']);
+            }
+
             $financialRecord->update(['f_record_status' => 'verified', 'verified_at' => now(), 'verified_by' => $by]);
 
             return redirect()->back()->with('success', 'Receipt verified successfully.');

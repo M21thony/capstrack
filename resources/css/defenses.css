@@ -212,6 +212,45 @@
   .dx-rules{grid-template-columns:1fr}
   .dx-table-wrap{max-height:70vh;overflow-x:auto}
   .dx table{min-width:980px}
+
+  /* ── Panel Assignment's and Defense Scheduling's own team lists → cards ──
+     Both tables carry Experts, Panel, Status and the actual "Assign
+     Panel"/"Schedule" buttons past their first two columns - on a phone,
+     hiding those behind the horizontal scroll above hides the one thing
+     each table exists to let you do. Scoped to these two tables by id, not
+     every ".dx table" - the Generate-schedule draft grid (.dx-draft) is a
+     compare-many-rows-at-once editor genuinely suited to staying a wide,
+     scrolling grid, the same call already made for Team Breakdown on
+     admin/experts and the Pass-rate matrices on Analytics. */
+  .dx-table-wrap:has(#panel-table),
+  .dx-table-wrap:has(#sched-table){overflow-x:visible;max-height:none}
+  #panel-table,#sched-table{min-width:0}
+  #panel-table,#panel-table thead,#panel-table tbody,#panel-table tr,#panel-table th,#panel-table td,
+  #sched-table,#sched-table thead,#sched-table tbody,#sched-table tr,#sched-table th,#sched-table td{display:block}
+  #panel-table thead,#sched-table thead{display:none}
+  #panel-table tbody tr,#sched-table tbody tr{position:relative;background:var(--dx-surface);border:1px solid var(--dx-line);
+    border-radius:var(--dx-r-lg);padding:14px;margin:0 0 10px}
+  #panel-table tbody tr:last-child,#sched-table tbody tr:last-child{margin-bottom:0}
+  #panel-table td,#sched-table td{padding:7px 0;border-bottom:0;display:flex;align-items:flex-start;gap:10px}
+  #panel-table td::before,#sched-table td::before{content:attr(data-label);flex:0 0 84px;padding-top:1px;
+    font-size:10px;font-weight:700;color:var(--dx-ink3);letter-spacing:.4px;text-transform:uppercase}
+
+  /* The checkbox moves into the card's own corner instead of a labelled row
+     of its own - the same fix given to every other row-select checkbox in
+     the app (admin/experts, capsa/sections, capsa/team-management). */
+  #panel-table td.dx-pick-cell,#sched-table td.dx-pick-cell{position:absolute;top:14px;right:14px;padding:0}
+  #panel-table td.dx-pick-cell::before,#sched-table td.dx-pick-cell::before{content:none}
+
+  /* Team is the card's own headline - it needs no label saying so, and the
+     checkbox sits over this row's right edge so its text gets clearance. */
+  #panel-table td[data-label="Team"],#sched-table td[data-label="Team"]{padding-top:0;padding-right:30px}
+  #panel-table td[data-label="Team"]::before,#sched-table td[data-label="Team"]::before{display:none}
+
+  #panel-table td[data-label="Actions"],#sched-table td[data-label="Actions"]{margin-top:4px;padding-top:10px;
+    border-top:1px solid var(--dx-line);justify-content:center}
+  #panel-table td[data-label="Actions"]::before,#sched-table td[data-label="Actions"]::before{display:none}
+  #panel-table td[data-label="Actions"] .dx-acts,#sched-table td[data-label="Actions"] .dx-acts{width:100%;justify-content:center}
+  #panel-table td[data-label="Actions"] .dx-btn,#sched-table td[data-label="Actions"] .dx-btn{flex:1}
 }
 @media (max-width:720px){ .dx-assign,.dx-two{grid-template-columns:1fr} .dx{padding-inline:16px} }
 

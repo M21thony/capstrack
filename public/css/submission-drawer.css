@@ -1,141 +1,261 @@
 /* ──────────────────────────────────────────────────────────────
-   SUBMIT DOCUMENT DRAWER
-   The standalone Document Submission page is gone. Its form now
-   slides in from the right on any student page, so handing in a
-   file never means leaving what you were looking at.
-   Loaded once from student/partials/sidebar.blade.php.
+   THE UPLOAD POP-UP
+   One small window for every upload a student makes: choose the
+   file, check it (page one, quick checks, a full preview on
+   demand), send it. On a phone it is a sheet from the bottom.
+   Loaded once from student/partials/sidebar.blade.php; the
+   script is resources/js/submission-drawer.js.
    ────────────────────────────────────────────────────────────── */
 
-/* The gold button, bottom right of every student page. */
-/* The dim behind the panel. Clicking it closes the panel. */
-.sc{position:fixed;inset:0;background:rgba(24,25,31,.45);opacity:0;pointer-events:none;transition:opacity .2s;z-index:1200}
-.sc.on{opacity:1;pointer-events:auto}
+dialog.up{
+  position:fixed;inset:0;margin:auto;height:fit-content;
+  width:min(460px,calc(100vw - 32px));max-height:calc(100vh - 32px);
+  padding:0;border:0;border-radius:14px;overflow:hidden;
+  background:var(--bg2,#fff);color:var(--text,#1e2128);
+  box-shadow:0 24px 60px rgba(0,0,0,.3);font-family:inherit;
+}
+dialog.up[open]{display:flex;flex-direction:column}
+dialog.up::backdrop{background:rgba(15,16,22,.5)}
+.up-grab{display:none}
 
-.dw{
-  position:fixed;top:0;right:0;bottom:0;width:min(440px,94%);z-index:1201;
-  background:var(--bg2);border-left:1px solid var(--border);
-  transform:translateX(103%);transition:transform .22s ease;
-  display:flex;flex-direction:column;box-shadow:-16px 0 46px rgba(24,25,31,.2);
+.up-head{display:flex;align-items:flex-start;gap:12px;padding:14px 16px 10px}
+.up-titles{flex:1;min-width:0}
+.up-titles h2{margin:0;font-size:15px;font-weight:700;line-height:1.35;color:var(--text)}
+.up-titles p{margin:2px 0 0;font-size:12px;color:var(--text3)}
+.up-x{
+  width:32px;height:32px;flex-shrink:0;display:grid;place-items:center;
+  border:1px solid var(--border);border-radius:8px;background:var(--bg2,#fff);color:var(--text3);cursor:pointer;
 }
-.dw.on{transform:translateX(0)}
-@media (prefers-reduced-motion:reduce){.dw,.sc{transition:none}}
+.up-x:hover:not(:disabled){color:var(--text);border-color:var(--border2)}
+.up-x:disabled{color:var(--border2);cursor:not-allowed}
 
-.dw .ph{display:flex;align-items:center;gap:10px;padding:16px 20px;border-bottom:1px solid var(--border)}
-.dw .ph h2{flex:1;margin:0;font-size:15px;font-weight:700;color:var(--text)}
-.dw .x{
-  width:30px;height:30px;flex-shrink:0;
-  display:flex;align-items:center;justify-content:center;
-  border:1px solid var(--border);border-radius:8px;
-  background:var(--bg3);color:var(--text2);cursor:pointer;
+.up-steps{display:flex;align-items:center;gap:8px;margin:0;padding:0 16px 12px;list-style:none}
+.up-steps li{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:500;color:var(--text3)}
+.up-steps li + li::before{content:"";width:16px;height:1px;background:var(--border);margin-right:2px}
+.up-steps li > span{
+  width:18px;height:18px;border-radius:50%;display:grid;place-items:center;
+  font-size:10.5px;font-weight:700;background:var(--bg4,#eef0f3);color:var(--text3);
 }
-.dw .x:hover{border-color:var(--accent);color:var(--text)}
-.dw .x svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2.2}
-/* The fetched form fills the drawer: body scrolls, footer stays put. */
-#submission-form-root{display:flex;flex-direction:column;flex:1;min-height:0}
-.dwb{padding:18px 20px;overflow-y:auto;flex:1}
-.dwf{padding:15px 20px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:9px}
-.dw-loading{padding:26px 20px;font-size:13px;color:var(--text3)}
+.up-steps li.now,.up-steps li.done{color:var(--text)}
+.up-steps li.now{font-weight:600}
+.up-steps li.now > span,.up-steps li.done > span{background:var(--accent,#c9a82c);color:#1b1e26}
 
-/* ── The form itself, moved here from Styles/submission.css ── */
-.dwb .form-section{margin-bottom:22px}
-.dwb .form-section:last-of-type{margin-bottom:0}
-.dwb .section-label{
-  display:flex;align-items:center;gap:7px;
-  font-size:11px;font-weight:700;color:var(--accent3);
-  text-transform:uppercase;letter-spacing:.7px;margin-bottom:12px;
+.up-body{
+  flex:1;min-height:0;overflow-y:auto;
+  display:flex;flex-direction:column;gap:12px;padding:14px 16px;border-top:1px solid var(--border);
 }
-.dwb .section-label svg{width:13px;height:13px;stroke:var(--accent3);fill:none;stroke-width:2}
-.dwb .input,.dwb select{
-  width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:9px;
-  background:var(--bg2);color:var(--text);font-family:inherit;font-size:13px;
+.up-foot{
+  display:flex;align-items:center;justify-content:flex-end;gap:8px;
+  padding:12px 16px;border-top:1px solid var(--border);background:var(--bg3,#fafbfc);
 }
-.dwb .input:focus,.dwb select:focus{outline:2px solid var(--accent);outline-offset:1px}
+.up-loading{display:flex;align-items:center;gap:8px;margin:6px 0;font-size:13px;color:var(--text3)}
 
-.recipient-group{display:grid;grid-template-columns:1fr;gap:9px}
-.recipient-check{
-  display:flex;align-items:center;gap:10px;padding:10px 12px;
-  border:1.5px solid var(--border);border-radius:11px;background:var(--bg3);
-  cursor:pointer;transition:border-color .15s,background .15s;
+.up-btn{
+  height:38px;display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:0 14px;
+  border:1px solid var(--border);border-radius:9px;background:var(--bg2,#fff);color:var(--text2);
+  font:inherit;font-size:13px;font-weight:600;white-space:nowrap;cursor:pointer;text-decoration:none;
 }
-.recipient-check:hover{border-color:var(--accent);background:var(--accent-glow)}
-.recipient-check:has(input:checked){border-color:var(--accent);background:var(--accent-light)}
-.recipient-check--disabled{opacity:.45;cursor:not-allowed}
-.recipient-check--disabled:hover{border-color:var(--border);background:var(--bg3)}
-.recipient-check--disabled input{cursor:not-allowed}
-.recipient-check input{width:16px;height:16px;accent-color:var(--accent);cursor:pointer;flex-shrink:0}
-.recipient-icon{
-  width:28px;height:28px;border-radius:8px;flex-shrink:0;
-  background:rgba(201,168,44,0.12);border:1px solid rgba(201,168,44,0.22);
-  display:flex;align-items:center;justify-content:center;
+.up-btn:hover:not(:disabled){border-color:var(--border2);color:var(--text)}
+.up-btn.primary{border:0;background:var(--accent,#c9a82c);color:#1b1e26;font-weight:700}
+.up-btn.primary:hover:not(:disabled){filter:brightness(1.05);color:#1b1e26}
+.up-btn:disabled{cursor:not-allowed}
+.up-btn.primary:disabled{background:#e9d98f;color:#6b5a1a}
+.up-btn:focus-visible,.up-x:focus-visible,.up-link:focus-visible,.up-pill:focus-visible,.up-drop:focus-visible,.up-thumb:focus-visible{
+  outline:2px solid var(--accent3,#8a6e10);outline-offset:2px;
 }
-.recipient-icon svg{width:14px;height:14px;stroke:var(--accent3);fill:none;stroke-width:2}
-.recipient-text{flex:1;min-width:0;display:flex;flex-direction:column;font-size:13px;font-weight:500;color:var(--text)}
-.recipient-text small{
-  margin-top:1px;font-size:10.5px;font-weight:400;color:var(--text3);
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-}
-.recipient-hint{font-size:11.5px;color:var(--text3);margin-top:10px}
 
-.folder-select-wrap{margin-top:12px}
-.folder-select-hint{font-size:11px;color:var(--text3);margin-top:6px}
-
-.drop-zone{
-  border:2px dashed var(--border2);border-radius:14px;padding:22px 16px;
-  display:flex;align-items:center;gap:14px;cursor:pointer;background:var(--bg3);
-  transition:border-color .2s,background .2s;
+.up-link{
+  padding:0;border:0;background:none;font:inherit;font-size:12px;font-weight:600;
+  color:var(--accent3,#7a5f0a);text-decoration:underline;cursor:pointer;white-space:nowrap;
 }
-.drop-zone:hover{border-color:var(--accent);background:var(--accent-glow)}
-.drop-zone.has-file{border-style:solid;border-color:var(--accent);background:var(--accent-light)}
-.drop-icon{
-  width:40px;height:40px;border-radius:11px;flex-shrink:0;
-  background:rgba(201,168,44,0.12);border:1px solid rgba(201,168,44,0.25);
-  display:flex;align-items:center;justify-content:center;
+.up-link[data-muted]{color:var(--text2)}
+.up-muted{font-size:11.5px;color:var(--text3)}
+.up-dot{color:var(--border2)}
+.up-label{display:block;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text3)}
+.up-field{display:flex;flex-direction:column;gap:6px}
+.up-select{
+  width:100%;height:38px;padding:0 10px;border:1px solid var(--border);border-radius:9px;
+  background:var(--bg2,#fff);color:var(--text);font:inherit;font-size:13px;
 }
-.drop-icon svg{width:19px;height:19px;stroke:var(--accent3);fill:none;stroke-width:2}
-.drop-info{text-align:left;min-width:0}
-.drop-info p{margin:0;font-size:13.5px;font-weight:600;color:var(--text)}
-.drop-info span{font-size:11.5px;color:var(--text3)}
+.up-select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow,rgba(201,168,44,.18))}
+.up-picked-line{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:38px;padding:0 12px;border:1px solid var(--border);border-radius:9px;font-size:13px}
 
-.doc-info-grid{display:grid;grid-template-columns:1fr;gap:12px;margin-bottom:10px}
-.doc-info-grid .info-label{font-size:11px;color:var(--text3);display:block;margin-bottom:3px}
-.doc-info-grid .info-value{font-size:13px;font-weight:600;color:var(--text)}
-#chapterHint{margin-top:0}
+/* The remark a revision answers, in one line. */
+.up-remark{padding:9px 12px;border-radius:10px;background:#fdf3e2;font-size:12.5px;line-height:1.45;color:var(--text)}
+.up-remark b{color:#8a5300;font-weight:600}
+.up-remark-q{color:var(--text2)}
 
-.btn-submit{
-  width:100%;padding:12px;border:none;border-radius:9px;cursor:pointer;
-  background:var(--accent);color:#18191f;
-  font-family:inherit;font-size:13.5px;font-weight:700;
-  display:flex;align-items:center;justify-content:center;gap:8px;
-  transition:background .15s;
+/* Choose */
+.up-drop{
+  display:flex;flex-direction:column;align-items:center;gap:6px;padding:22px 16px;text-align:center;
+  border:1.5px dashed var(--border2,#cfd3dc);border-radius:12px;background:var(--bg3,#f8f9fb);cursor:pointer;
+  transition:border-color .15s,background .15s;
 }
-.btn-submit:hover{background:var(--accent2)}
-.btn-submit:disabled{opacity:.6;cursor:progress}
-.btn-submit svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2.5}
-.btn-cancel{
-  width:100%;padding:11px;border:1px solid var(--border);border-radius:9px;cursor:pointer;
-  background:var(--bg3);color:var(--text2);
-  font-family:inherit;font-size:13px;font-weight:600;
+.up-drop:hover{border-color:var(--accent)}
+.up-drop.over{border:2px dashed var(--accent);background:var(--accent-light,#faf7ed)}
+.up-drop.bad{border-color:var(--red,#c42424);background:rgba(196,36,36,.05)}
+.up-drop b{font-size:13.5px;color:var(--text)}
+.up-drop > span:not(.up-drop-ic){font-size:11.5px;color:var(--text3)}
+.up-drop-ic{
+  width:40px;height:40px;border-radius:10px;display:grid;place-items:center;
+  background:var(--bg2,#fff);border:1px solid #eadfb8;color:var(--accent3,#7a5f0a);
 }
-.btn-cancel:hover{border-color:var(--border2);color:var(--text)}
 
-/* One row per queued file, each with the checklist line it goes to. */
-.file-list{display:grid;gap:6px;margin-top:10px}
-.file-list:empty{display:none}
-.file-row{display:grid;gap:8px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg2)}
-.file-row-name{font-size:13px;font-weight:600;color:var(--text);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.file-row-name small{display:block;font-size:11.5px;font-weight:400;color:var(--text3)}
-.file-row select{width:100%;min-width:0;font-size:12.5px}
-.file-row-acts{display:flex;gap:6px}
-.file-row-remove,.file-row-preview{
-  font:inherit;font-size:12px;font-weight:600;
-  border:1px solid var(--border);border-radius:6px;padding:5px 10px;cursor:pointer;
-  background:var(--bg2);color:var(--text2);
+/* Messages: say what is wrong and how to fix it. */
+.up-note{display:flex;gap:9px;padding:10px 12px;border-radius:10px;font-size:12.5px;line-height:1.5;color:var(--text)}
+.up-note > svg{flex-shrink:0;margin-top:2px}
+.up-note.error{background:rgba(196,36,36,.07)}
+.up-note.error > svg{color:var(--red,#c42424)}
+.up-note.warn{background:#fdf3e2}
+.up-note.warn > svg{color:#8a5300}
+.up-note.info{background:var(--bg4,#f4f5f7)}
+.up-note.info > svg{color:var(--text3)}
+.up-note-acts{display:flex;flex-wrap:wrap;gap:12px;margin-top:6px}
+
+/* Check it */
+.up-file{display:flex;gap:14px;padding:12px;border:1px solid var(--border);border-radius:12px;background:var(--bg3,#fafbfc)}
+.up-thumb{
+  position:relative;width:92px;height:120px;flex-shrink:0;padding:0;overflow:hidden;
+  border:1px solid var(--border);border-radius:4px;background:#fff;cursor:zoom-in;
+  box-shadow:0 1px 4px rgba(0,0,0,.08);
 }
-.file-row-preview{color:var(--text)}
-.file-row-remove:hover{border-color:var(--red);color:var(--red)}
-.file-row-preview:hover{border-color:var(--accent)}
+.up-thumb:disabled{cursor:default}
+.up-thumb img{width:100%;height:100%;object-fit:contain;display:block}
+.up-thumb-blank{display:grid;place-items:center;width:100%;height:100%;color:var(--text3)}
+.up-thumb-eye{
+  position:absolute;right:4px;bottom:4px;width:24px;height:24px;border-radius:6px;
+  display:grid;place-items:center;background:rgba(27,30,38,.8);color:#fff;
+}
+.up-file-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px}
+.up-file-name{font-size:13px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.up-checks{list-style:none;margin:2px 0 0;padding:0;display:flex;flex-direction:column;gap:3px}
+.up-checks li{display:flex;align-items:flex-start;gap:6px;font-size:12px;line-height:1.4;color:var(--text)}
+.up-checks li > svg,.up-checks li > .up-spin{flex-shrink:0;margin-top:1px}
+.up-checks li.ok > svg{color:var(--green,#15803d)}
+.up-checks li.warn > svg{color:#b45309}
+.up-checks li.bad > svg{color:var(--red,#c42424)}
+.up-checks li.wait{color:var(--text3)}
+.up-tools{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:auto;padding-top:4px}
 
-/* The preview window: the file as it will be sent, before sending it. */
+/* Who it goes to */
+.up-goes-h{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px}
+.up-pills{display:flex;flex-wrap:wrap;gap:6px}
+.up-pill{
+  display:inline-flex;align-items:center;gap:5px;min-height:28px;padding:0 10px;border-radius:999px;
+  border:1px solid #d9c98f;background:var(--accent-light,#faf7ed);color:var(--text);
+  font:inherit;font-size:11.5px;white-space:nowrap;
+}
+.up-pill > svg{color:var(--accent3,#7a5f0a);flex-shrink:0}
+.up-pill b{font-weight:700}
+.up-pill span{color:var(--text3);font-weight:500;overflow:hidden;text-overflow:ellipsis;max-width:180px}
+button.up-pill{cursor:pointer}
+.up-pill.off{border:1px dashed var(--border2,#c3c7d0);background:var(--bg2,#fff);color:var(--text3)}
+.up-pill.off > svg{color:var(--text3)}
+.up-pill.na{border:1px dashed var(--border);background:var(--bg3);color:var(--text3);opacity:.7}
+.up-pill.na > svg{color:var(--text3)}
+.up-hint{margin:6px 0 0;font-size:11.5px;line-height:1.45;color:var(--text3)}
+.up-goes .up-field{margin-top:10px}
+
+/* Sending, failed */
+.up-row{display:flex;align-items:center;gap:12px}
+.up-mini{
+  width:40px;height:52px;flex-shrink:0;display:grid;place-items:center;overflow:hidden;
+  border:1px solid var(--border);border-radius:3px;background:#fff;color:var(--text3);
+}
+.up-mini img{width:100%;height:100%;object-fit:contain}
+.up-row-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;font-size:12.5px}
+.up-row-main > b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text)}
+.up-row-top{display:flex;justify-content:space-between;gap:10px}
+.up-row-top b{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text)}
+.up-row-top span{color:var(--text2)}
+.up-bar{height:6px;border-radius:3px;background:var(--bg4,#eef0f3);overflow:hidden}
+.up-bar i{display:block;height:100%;width:0;background:var(--accent,#c9a82c);transition:width .2s}
+
+/* Sent */
+.up-sent{display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 0;text-align:center}
+.up-sent-ic{width:46px;height:46px;border-radius:50%;display:grid;place-items:center;background:rgba(22,163,74,.1);color:var(--green,#15803d)}
+.up-sent > b{font-size:15px;color:var(--text)}
+.up-sent p{margin:0;font-size:12.5px;line-height:1.55;color:var(--text2)}
+
+/* Closing with a file not sent: asked once, over the pop-up. */
+.up-confirm{position:absolute;inset:0;z-index:2;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(255,255,255,.78)}
+.up-confirm > div{
+  width:min(340px,100%);padding:16px;border:1px solid var(--border);border-radius:12px;
+  background:var(--bg2,#fff);box-shadow:0 12px 36px rgba(0,0,0,.2);
+}
+.up-confirm b{font-size:14px;color:var(--text)}
+.up-confirm p{margin:4px 0 0;font-size:12.5px;line-height:1.5;color:var(--text2);overflow-wrap:anywhere}
+.up-confirm > div > div{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
+.up-confirm .up-btn.primary{background:var(--red,#c42424);color:#fff}
+
+.up-spin{
+  display:inline-block;width:12px;height:12px;border-radius:50%;
+  border:2px solid var(--border);border-top-color:var(--accent);animation:up-spin .8s linear infinite;
+}
+@keyframes up-spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.up-spin{animation-duration:2.4s}.up-bar i{transition:none}}
+
+/* On a phone: a sheet from the bottom, thumb-sized buttons. */
+@media (max-width:600px){
+  dialog.up{
+    width:100%;max-width:100%;max-height:calc(100dvh - 24px);margin:auto 0 0;top:auto;
+    border-radius:16px 16px 0 0;box-shadow:0 -12px 40px rgba(0,0,0,.25);
+  }
+  .up-grab{display:flex;justify-content:center;padding-top:8px}
+  .up-grab::before{content:"";width:40px;height:4px;border-radius:2px;background:#d7dae1}
+  .up-head{padding-top:8px}
+  .up-x{width:44px;height:44px;margin:-6px -10px 0 0;border:0}
+  .up-foot{padding:12px 16px calc(16px + env(safe-area-inset-bottom))}
+  .up-foot .up-btn{flex:1;height:46px;font-size:14px}
+  .up-foot .up-btn.primary{flex:2}
+  .up-pill{min-height:34px}
+}
+
+/* ── The full preview: every page, big ── */
+dialog.up-pv{
+  position:fixed;inset:0;margin:auto;
+  width:min(1120px,calc(100vw - 32px));height:calc(100vh - 48px);padding:0;border:0;border-radius:14px;overflow:hidden;
+  background:#2a2e38;color:#e8e9ec;box-shadow:0 24px 60px rgba(0,0,0,.4);font-family:inherit;
+}
+dialog.up-pv[open]{display:flex;flex-direction:column}
+dialog.up-pv::backdrop{background:rgba(10,11,15,.6)}
+.up-pv-bar{display:flex;align-items:center;gap:14px;min-height:52px;padding:0 14px;background:#1b1e26;flex-shrink:0;flex-wrap:wrap}
+.up-pv-name{font-size:13.5px;max-width:34ch;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.up-pv-meta{font-size:12px;color:#9aa0ad}
+.up-pv-grow{flex:1}
+.up-pv-nav{display:inline-flex;align-items:center;gap:6px;font-size:12.5px}
+.up-pv-nav button,.up-pv-x{
+  width:32px;height:32px;display:grid;place-items:center;border:1px solid #3a3f4c;border-radius:7px;
+  background:none;color:#e8e9ec;cursor:pointer;
+}
+.up-pv-nav button:disabled{opacity:.35;cursor:default}
+.up-pv-nav input{
+  width:44px;height:28px;padding:0 4px;text-align:center;border:1px solid #3a3f4c;border-radius:6px;
+  background:#2a2e38;color:#fff;font:inherit;
+}
+.up-pv-main{flex:1;min-height:0;display:flex}
+.up-pv-thumbs{
+  width:118px;flex-shrink:0;overflow-y:auto;padding:12px 0;border-right:1px solid #3a3f4c;
+  display:flex;flex-direction:column;align-items:center;gap:10px;
+}
+.up-pv-thumbs button{display:flex;flex-direction:column;align-items:center;gap:3px;padding:0;border:0;background:none;color:#9aa0ad;font:inherit;font-size:10.5px;cursor:pointer;opacity:.7}
+.up-pv-thumbs button canvas{width:66px;background:#fff;border-radius:2px;min-height:40px}
+.up-pv-thumbs button.on{opacity:1;color:#fff}
+.up-pv-thumbs button.on canvas{outline:2px solid var(--accent,#c9a82c);outline-offset:2px}
+.up-pv-stage{flex:1;min-width:0;overflow:auto;padding:24px;display:flex;justify-content:center;align-items:flex-start}
+.up-pv-stage:focus{outline:none}
+.up-pv-stage canvas,.up-pv-stage img{background:#fff;box-shadow:0 2px 12px rgba(0,0,0,.35);max-width:none}
+.up-pv-stage img{max-width:100%}
+.up-pv-foot{display:flex;align-items:center;gap:10px;padding:12px 16px;background:#1b1e26;flex-shrink:0;flex-wrap:wrap}
+.up-pv-foot > span{flex:1;min-width:200px;font-size:12.5px;color:#c9ccd4}
+@media (max-width:600px){
+  dialog.up-pv{width:100%;height:100dvh;max-height:none;border-radius:0}
+  .up-pv-thumbs,.up-pv-meta{display:none}
+  .up-pv-stage{padding:12px}
+  .up-pv-foot .up-btn{flex:1}
+}
+
+/* The preview window other pages open for a file already on the server. */
 .preview-dialog{
   border:0;border-radius:12px;padding:0;margin:auto;inset:0;z-index:1300;
   width:min(860px,calc(100vw - 32px));height:calc(100vh - 48px);
@@ -145,6 +265,11 @@
 .preview-dialog[open]{display:flex;flex-direction:column}
 .preview-head{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--border)}
 .preview-head h2{flex:1;min-width:0;margin:0;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.preview-head .x{
+  width:32px;height:32px;flex-shrink:0;display:flex;align-items:center;justify-content:center;
+  border:1px solid var(--border);border-radius:9px;background:var(--bg3);color:var(--text2);cursor:pointer;
+}
+.preview-head .x svg{width:16px;height:16px}
 .preview-body{
   flex:1;min-height:0;overflow:auto;background:var(--bg3);padding:12px;
   display:grid;justify-items:center;align-content:start;gap:12px;
@@ -152,7 +277,7 @@
 .preview-body canvas,.preview-body img{max-width:100%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.15)}
 .preview-note{margin:40px 0;font-size:13px;color:var(--text3)}
 
-/* The message that appears after a submission, on any page. */
+/* The notice after a send, on any page. */
 #submission-toast{
   position:fixed;bottom:30px;right:30px;z-index:2000;max-width:380px;
   display:flex;align-items:center;gap:10px;
@@ -165,7 +290,25 @@
 #submission-toast.show{opacity:1;transform:translateY(0)}
 #submission-toast.success{border-left-color:var(--green)}
 #submission-toast.error{border-left-color:var(--red)}
-
 @media (max-width:520px){
-  .dw{width:100%}
+  #submission-toast{left:16px;right:16px;bottom:16px;max-width:none}
+}
+
+/* ── The Document Submission page: what the team has sent ── */
+.sub-card{max-width:980px;background:var(--bg2);border:1px solid var(--border);border-radius:14px;overflow:hidden}
+.sub-card-h{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 20px;border-bottom:1px solid var(--border)}
+.sub-card-h h2{margin:0;font-size:15px;color:var(--text)}
+.sub-card-h p{margin:3px 0 0;font-size:12.5px;color:var(--text3)}
+.sub-list{list-style:none;margin:0;padding:0}
+.sub-list li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 12px;padding:12px 20px;border-bottom:1px solid var(--border)}
+.sub-list li:last-child{border-bottom:0}
+.sub-list b{font-size:13.5px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sub-list small{grid-column:1;font-size:12px;color:var(--text3)}
+.sub-list .sub-status{grid-row:1 / span 2;grid-column:2;align-self:center;font-size:12px;font-weight:600;padding:3px 10px;border-radius:999px;background:var(--bg4);color:var(--text2);white-space:nowrap}
+.sub-list .sub-status.revise{background:rgba(180,83,9,.09);color:#b45309}
+.sub-list .sub-status.ok{background:rgba(22,163,74,.09);color:#15803d}
+.sub-empty{padding:26px 20px;font-size:13px;color:var(--text3)}
+@media (max-width:600px){
+  .sub-card-h{flex-direction:column;align-items:stretch}
+  .sub-card-h .up-btn{height:44px}
 }

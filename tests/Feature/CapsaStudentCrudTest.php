@@ -6,6 +6,7 @@ use App\Models\CapstoneExpert;
 use App\Models\Role;
 use App\Models\Student;
 use App\Models\StudentSchoolYear;
+use App\Models\Team;
 use App\Models\Term;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -62,6 +63,7 @@ class CapsaStudentCrudTest extends TestCase
                 'email' => 'n.enriquez@my.cspc.edu.ph',
                 'f_name' => 'Nadine',
                 'l_name' => 'Enriquez',
+                'student_number' => '21-05117',
                 'course' => 'BSIT',
                 'year' => 4,
                 'section' => 'A',
@@ -74,6 +76,39 @@ class CapsaStudentCrudTest extends TestCase
             'student_id' => $student->student_id,
             'school_year' => Term::currentSchoolYear(),
         ]);
+    }
+
+    /**
+     * A student added by hand and one from the uploaded class list are
+     * classmates. The hand-added one used to be saved as "BSIT" and the
+     * uploaded one under the full course name, and classmates are matched on
+     * that column - so a leader could not see, or fill an open slot with,
+     * the student their CaPSA had just added.
+     */
+    public function test_a_hand_added_student_is_a_classmate_of_the_uploaded_ones(): void
+    {
+        $this->actingAs($this->capsa(), 'expert')
+            ->postJson(route('capsa.students.store'), [
+                'email' => 'n.enriquez@my.cspc.edu.ph', 'f_name' => 'Nadine', 'l_name' => 'Enriquez', 'student_number' => '2023-0419',
+                'course' => 'BSIT', 'year' => 4, 'section' => 'A',
+            ])
+            ->assertStatus(201);
+
+        $added = Student::whereRaw('LOWER(email) = ?', ['n.enriquez@my.cspc.edu.ph'])->firstOrFail();
+        $this->assertSame('Bachelor of Science in Information Technology', $added->course);
+
+        // A leader from the uploaded list, with a team and a slot to fill.
+        $leader = Student::create([
+            'email' => 'leader@my.cspc.edu.ph', 'f_name' => 'Lea', 'l_name' => 'Der',
+            'course' => 'Bachelor of Science in Information Technology', 'year_section' => '4th · A',
+        ]);
+        $team = Team::create(['team_name' => 'Slots', 'leader_id' => $leader->student_id, 'team_status' => 'Active']);
+        StudentSchoolYear::create(['student_id' => $leader->student_id, 'team_id' => $team->team_id, 'school_year' => Term::currentSchoolYear()]);
+
+        $ids = collect($this->actingAs($leader, 'web')->getJson(route('team.available-classmates'))->assertOk()->json('classmates'))
+            ->pluck('student_id')->map(fn ($id) => (int) $id);
+
+        $this->assertContains($added->student_id, $ids->all());
     }
 
     /** Taking somebody back does not leave them without one either. */
@@ -90,6 +125,7 @@ class CapsaStudentCrudTest extends TestCase
                 'email' => $student->email,
                 'f_name' => 'Angelo',
                 'l_name' => 'Bermudo',
+                'student_number' => '21-04128',
                 'course' => 'BSIT',
                 'year' => 4,
                 'section' => 'A',
@@ -119,12 +155,44 @@ class CapsaStudentCrudTest extends TestCase
         $this->assertSame('Kristine', Student::where('email', 'k.delarosa@my.cspc.edu.ph')->value('f_name'));
     }
 
+    /** The single add asks for the student number; the list upload is where it can be missing. */
+    public function test_a_student_cannot_be_added_without_a_student_number(): void
+    {
+        $this->actingAs($this->capsa(), 'expert')
+            ->postJson(route('capsa.students.store'), [
+                'email' => 'no.number@my.cspc.edu.ph',
+                'f_name' => 'No', 'l_name' => 'Number',
+                'course' => 'BSIT', 'year' => 4, 'section' => 'A',
+            ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('student_number');
+
+        $this->assertSame(0, Student::where('email', 'no.number@my.cspc.edu.ph')->count());
+    }
+
+    /** A number another student already holds is refused with a reason, not a server error. */
+    public function test_a_student_number_already_taken_is_refused(): void
+    {
+        $this->student();
+
+        $this->actingAs($this->capsa(), 'expert')
+            ->postJson(route('capsa.students.store'), [
+                'email' => 'second@my.cspc.edu.ph',
+                'f_name' => 'Second', 'l_name' => 'Person', 'student_number' => '21-04128',
+                'course' => 'BSIT', 'year' => 4, 'section' => 'A',
+            ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('student_number');
+
+        $this->assertSame(0, Student::where('email', 'second@my.cspc.edu.ph')->count());
+    }
+
     public function test_a_student_cannot_be_added_to_a_section_you_do_not_handle(): void
     {
         $this->actingAs($this->capsa(['BSIT-4A']), 'expert')
             ->postJson(route('capsa.students.store'), [
                 'email' => 'x@my.cspc.edu.ph',
-                'f_name' => 'X', 'l_name' => 'Y',
+                'f_name' => 'X', 'l_name' => 'Y', 'student_number' => '21-09992',
                 'course' => 'BSIT', 'year' => 4, 'section' => 'B',
             ])
             ->assertStatus(422);
@@ -140,7 +208,7 @@ class CapsaStudentCrudTest extends TestCase
         $this->actingAs($this->capsa(), 'expert')
             ->postJson(route('capsa.students.store'), [
                 'email' => $existing->email,
-                'f_name' => 'Someone', 'l_name' => 'Else',
+                'f_name' => 'Someone', 'l_name' => 'Else', 'student_number' => '21-09991',
                 'course' => 'BSIT', 'year' => 4, 'section' => 'A',
             ])
             ->assertStatus(422)
@@ -159,7 +227,7 @@ class CapsaStudentCrudTest extends TestCase
         $this->actingAs($this->capsa(['BSIT-4A']), 'expert')
             ->postJson(route('capsa.students.store'), [
                 'email' => $theirs->email,
-                'f_name' => 'Angelo', 'l_name' => 'Bermudo',
+                'f_name' => 'Angelo', 'l_name' => 'Bermudo', 'student_number' => '21-09993',
                 'course' => 'BSIT', 'year' => 4, 'section' => 'A',
             ])
             ->assertStatus(422);
@@ -187,7 +255,7 @@ class CapsaStudentCrudTest extends TestCase
         $this->actingAs($capsa, 'expert')
             ->postJson(route('capsa.students.store'), [
                 'email' => $student->email,
-                'f_name' => 'Angelo', 'l_name' => 'Bermudo',
+                'f_name' => 'Angelo', 'l_name' => 'Bermudo', 'student_number' => '21-04128',
                 'course' => 'BSIT', 'year' => 4, 'section' => 'A',
             ])
             ->assertOk()
@@ -207,7 +275,7 @@ class CapsaStudentCrudTest extends TestCase
         $this->actingAs($capsa, 'expert')
             ->postJson(route('capsa.students.store'), [
                 'email' => 'new.student@my.cspc.edu.ph',
-                'f_name' => 'New', 'l_name' => 'Student',
+                'f_name' => 'New', 'l_name' => 'Student', 'student_number' => '21-09994',
                 'course' => 'BSIT', 'year' => 1, 'section' => 'A',
             ])
             ->assertStatus(422)

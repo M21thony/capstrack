@@ -50,11 +50,11 @@ class NotificationBellScopeTest extends TestCase
         ]);
     }
 
-    private function logFor(Student $student, string $description): ActivityLog
+    private function logFor(Student $student, string $description, string $type = 'submitted_document'): ActivityLog
     {
         return ActivityLog::create([
             'student_id' => $student->student_id,
-            'type' => 'submitted_document',
+            'type' => $type,
             'description' => $description,
             'created_at' => now(),
         ]);
@@ -77,10 +77,11 @@ class NotificationBellScopeTest extends TestCase
         $mine = $this->studentIn('BSIT', '3 · A', 'Inside');
         $theirs = $this->studentIn('BSIS', '4 · B', 'Outside');
 
-        $this->logFor($mine, 'Inside submitted chapter one');
-        $this->logFor($theirs, 'Outside submitted chapter one');
+        $this->logFor($mine, 'Inside submitted chapter one', 'team_joined');
+        $this->logFor($theirs, 'Outside submitted chapter one', 'team_joined');
 
-        $response = $this->actingAs($capsa, 'expert')->get('/capsa/dashboard');
+        // The dashboard no longer carries an activity feed; the Activity Log is where it is read.
+        $response = $this->actingAs($capsa, 'expert')->get(route('capsa.activitylog'));
 
         $response->assertStatus(200);
         $response->assertSee('Inside submitted chapter one');

@@ -144,11 +144,15 @@ class AdminFinancialController extends Controller
         ]);
 
         $by = auth('expert')->user()->name;
-        $records = FinancialRecord::whereIn('id', $validated['ids'])
+        $waiting = FinancialRecord::whereIn('id', $validated['ids'])
             ->where('f_record_status', 'pending')
             ->with('student')
             ->get()
             ->filter(fn (FinancialRecord $r) => $this->covers($r));
+
+        // A receipt with an OR number is checked against its photo, one at a
+        // time; only the older ones without a number can go through unopened.
+        [$records, $skipped] = $waiting->partition(fn (FinancialRecord $r) => blank($r->receipt_number));
 
         foreach ($records as $record) {
             $record->update(['f_record_status' => 'verified', 'verified_at' => now(), 'verified_by' => $by]);
@@ -156,8 +160,9 @@ class AdminFinancialController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Verified '.$records->count().' '.($records->count() === 1 ? 'receipt' : 'receipts').'.',
-            'data' => ['verified' => $records->pluck('id')->values()],
+            'message' => 'Verified '.$records->count().' '.($records->count() === 1 ? 'receipt' : 'receipts').'.'
+                .($skipped->isNotEmpty() ? ' '.$skipped->count().' with an OR number '.($skipped->count() === 1 ? 'needs' : 'need').' checking one by one.' : ''),
+            'data' => ['verified' => $records->pluck('id')->values(), 'skipped' => $skipped->pluck('id')->values()],
         ]);
     }
 
@@ -178,6 +183,14 @@ class AdminFinancialController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'This receipt is already verified.',
+            ], 422);
+        }
+
+        // The point of the OR number: somebody looked at the photo and saw it.
+        if ($financialRecord->receipt_number && ! $request->boolean('or_confirmed')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Check that the OR number on the photo is '.$financialRecord->receipt_number.', then tick the box to verify.',
             ], 422);
         }
 
