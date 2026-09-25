@@ -1437,7 +1437,7 @@ function toast(msg) {
   t.textContent = msg;
   t.classList.add('show');
   clearTimeout(_tt);
-  _tt = setTimeout(function() { t.classList.remove('show'); }, 2600);
+  _tt = setTimeout(function() { t.classList.remove('show'); }, 4000);
 }
 
 // ── Mobile Sidebar ──

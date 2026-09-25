@@ -138,6 +138,9 @@ class MobileTabBarTest extends TestCase
         // On a short page it is held at the bottom, not left under the last card,
         // and re-measured as the page loads and changes.
         $this->assertStringContainsString("credits.style.marginTop = (BASE + free) + 'px';", $html);
+        // Measured in the box that is held to the screen's height, which on
+        // the expert pages is not the page container itself.
+        $this->assertStringContainsString('var box = holdingBox();', $html);
         $this->assertStringContainsString('new ResizeObserver(refit).observe(content);', $html);
         $this->assertStringContainsString('}).observe(main, { childList: true, subtree: true', $html);
     }

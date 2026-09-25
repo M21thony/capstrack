@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\CapstoneExpert;
 use App\Models\Role;
 use App\Models\Student;
+use App\Models\StudentRoster;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
 use App\Models\Term;
@@ -185,6 +186,89 @@ class CapsaStudentCrudTest extends TestCase
             ->assertJsonValidationErrors('student_number');
 
         $this->assertSame(0, Student::where('email', 'second@my.cspc.edu.ph')->count());
+    }
+
+    public function test_a_student_can_be_added_with_a_middle_name(): void
+    {
+        $this->actingAs($this->capsa(), 'expert')
+            ->postJson(route('capsa.students.store'), [
+                'email' => 'j.pena@my.cspc.edu.ph',
+                'f_name' => 'Juan',
+                'm_name' => ' Nuñez ',
+                'student_number' => '21-09001',
+                'l_name' => 'Peña',
+                'course' => 'BSIT',
+                'year' => 4,
+                'section' => 'A',
+            ])
+            ->assertStatus(201);
+
+        $student = Student::where('email', 'j.pena@my.cspc.edu.ph')->first();
+        $this->assertSame('Nuñez', $student->m_name);
+        $this->assertSame('Peña', $student->l_name);
+
+        // And on the class list row, in reading order.
+        $this->assertSame('Juan Nuñez Peña', StudentRoster::where('email', 'j.pena@my.cspc.edu.ph')->value('name'));
+    }
+
+    public function test_the_middle_name_can_be_left_out(): void
+    {
+        $this->actingAs($this->capsa(), 'expert')
+            ->postJson(route('capsa.students.store'), [
+                'email' => 'no.middle@my.cspc.edu.ph',
+                'f_name' => 'Ana',
+                'm_name' => '',
+                'student_number' => '21-09002',
+                'l_name' => 'Reyes',
+                'course' => 'BSIT',
+                'year' => 4,
+                'section' => 'A',
+            ])
+            ->assertStatus(201);
+
+        $this->assertNull(Student::where('email', 'no.middle@my.cspc.edu.ph')->value('m_name'));
+        $this->assertSame('Ana Reyes', StudentRoster::where('email', 'no.middle@my.cspc.edu.ph')->value('name'));
+    }
+
+    public function test_a_middle_name_can_be_changed_and_cleared(): void
+    {
+        $student = $this->student();
+        $capsa = $this->capsa();
+
+        $this->actingAs($capsa, 'expert')
+            ->patchJson(route('capsa.students.update', $student), ['m_name' => 'Santos'])
+            ->assertOk();
+        $this->assertSame('Santos', $student->fresh()->m_name);
+
+        $this->actingAs($capsa, 'expert')
+            ->patchJson(route('capsa.students.update', $student), ['m_name' => null])
+            ->assertOk();
+        $this->assertNull($student->fresh()->m_name);
+    }
+
+    /** A change that does not mention the middle name leaves it alone. */
+    public function test_a_change_without_the_middle_name_keeps_it(): void
+    {
+        $student = $this->student();
+        $student->update(['m_name' => 'Santos']);
+
+        $this->actingAs($this->capsa(['BSIT-4A', 'BSIT-4B']), 'expert')
+            ->patchJson(route('capsa.students.update', $student), ['year' => 4, 'section' => 'B'])
+            ->assertOk();
+
+        $this->assertSame('Santos', $student->fresh()->m_name);
+    }
+
+    public function test_the_add_and_edit_forms_ask_for_a_middle_name(): void
+    {
+        $student = $this->student();
+
+        $this->actingAs($this->capsa(), 'expert')->get(route('capsa.sections'))
+            ->assertOk()
+            ->assertSee('<label class="label" for="add-student-middle">Middle name</label>', false)
+            ->assertSee("m_name: document.getElementById('add-student-middle').value.trim() || null,", false)
+            ->assertSee('<label class="label" for="edit-student-middle">Middle name</label>', false)
+            ->assertSee("m_name: document.getElementById('edit-student-middle').value.trim() || null,", false);
     }
 
     public function test_a_student_cannot_be_added_to_a_section_you_do_not_handle(): void

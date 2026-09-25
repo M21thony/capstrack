@@ -32,7 +32,10 @@ function visible() {
 function render() {
   if (!fee) {
     $('#c-fees').innerHTML = '';
-    $('#c-body').innerHTML = '<div class="fx-empty">No defense fee yet. Create one with <b>New fee</b>: Title, Pre Oral or Final Oral Defense. Pre-proposal Defense has no fee.</div>';
+    // In the page's scrolling area, like the receipt list it stands in for,
+    // so the developers' credit (partials/mobile-tabbar) has an end of the
+    // page to sit at here too.
+    $('#c-body').innerHTML = '<div class="fx-scroll"><div class="fx-empty">No defense fee yet. Create one with <b>New fee</b>: Title, Pre Oral or Final Oral Defense. Pre-proposal Defense has no fee.</div></div>';
     return;
   }
   const f = FEES.find(x => x.id === fee), all = everyone();

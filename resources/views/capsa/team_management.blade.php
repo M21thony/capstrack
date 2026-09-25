@@ -459,7 +459,7 @@
       el.style.borderLeftColor = ok ? 'var(--green)' : 'var(--red)';
       el.classList.add('show');
       clearTimeout(toast.t);
-      toast.t = setTimeout(() => el.classList.remove('show'), 3200);
+      toast.t = setTimeout(() => el.classList.remove('show'), 4000);
     };
 
     const checkSize = () => {

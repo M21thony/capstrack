@@ -2644,7 +2644,7 @@ function showToast(msg, type = 'success') {
   toast.style.borderLeftColor = type === 'error' ? 'var(--red,#f87171)' : 'var(--accent,#00e5ff)';
   toast.classList.add('show');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => toast.classList.remove('show'), 3500);
+  toastTimer = setTimeout(() => toast.classList.remove('show'), 4000);
 }
 
 // ── KICK OFF ────────────────────────────────────────────────────

@@ -74,7 +74,7 @@ function App() {
   const showToast = useCallback((message, opts = {}) => {
     clearTimeout(toastTimerRef.current);
     setToast({ message, ...opts });
-    toastTimerRef.current = setTimeout(() => setToast(null), opts.undo ? 7000 : 4500);
+    toastTimerRef.current = setTimeout(() => setToast(null), 4000);
   }, []);
 
   const request = (url, options = {}) => fetch(url, {

@@ -97,6 +97,7 @@ class DirectoryController extends Controller
                 // who was removed from a section should fill in what is
                 // already known about them, leaving only the section to say.
                 'first_name' => $student->f_name,
+                'middle_name' => $student->m_name,
                 'last_name' => $student->l_name,
                 'student_number' => $student->student_number,
                 'in_section' => filled($student->year_section),

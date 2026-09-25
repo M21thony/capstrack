@@ -104,15 +104,15 @@
     @endphp
     <div class="grid-3" style="margin-bottom:14px">
       <x-dashboard.stat-chip
-        value="{{ $pendingReviews->count() }}" label="Waiting on you"
+        value="{{ $pendingReviews->count() }}" label="Waiting on you" icon="hourglass"
         sub="{{ $pendingReviews->isEmpty() ? 'Nothing outstanding' : 'Oldest first below' }}"
         color="var(--accent3)" />
       <x-dashboard.stat-chip
-        value="{{ $overdueReviews->count() }}" label="Over 5 days"
+        value="{{ $overdueReviews->count() }}" label="Over 5 days" icon="alarm"
         sub="{{ $overdueReviews->isEmpty() ? 'None running late' : 'These are late' }}"
         color="{{ $overdueReviews->isEmpty() ? 'var(--text3)' : 'var(--red)' }}" />
       <x-dashboard.stat-chip
-        value="{{ $reviews->where('review_status', 'Reviewed')->count() }}" label="Reviewed"
+        value="{{ $reviews->where('review_status', 'Reviewed')->count() }}" label="Reviewed" icon="file-check"
         sub="All time" color="var(--green)" />
     </div>
 

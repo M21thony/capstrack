@@ -5,10 +5,10 @@ namespace App\Http\Controllers\Capsa;
 use App\Http\Controllers\Controller;
 use App\Models\CapstoneExpert;
 use App\Models\ExpertExpertise;
+use App\Support\SpreadsheetFile;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
@@ -55,7 +55,7 @@ class ExpertRosterController extends Controller
      */
     private function read(string $path): array
     {
-        $spreadsheet = IOFactory::load($path);
+        $spreadsheet = SpreadsheetFile::load($path);
 
         $errors = [];
         $skipped = 0;

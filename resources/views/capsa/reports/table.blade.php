@@ -490,7 +490,7 @@ function openDim(el) { el.classList.add('active'); document.body.style.overflow 
     t.textContent = text;
     t.classList.add('show');
     clearTimeout(toast._t);
-    toast._t = setTimeout(function () { t.classList.remove('show'); }, 3200);
+    toast._t = setTimeout(function () { t.classList.remove('show'); }, 4000);
   }
 
   // Everything the table shows lives in the address, so the period filters,

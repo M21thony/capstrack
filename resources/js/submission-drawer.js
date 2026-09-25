@@ -897,7 +897,7 @@ export function showToast(message, type) {
   toast.classList.remove('success', 'error');
   toast.classList.add('show', type);
   clearTimeout(showToast._t);
-  showToast._t = setTimeout(() => toast.classList.remove('show'), 5000);
+  showToast._t = setTimeout(() => toast.classList.remove('show'), 4000);
 }
 
 try {

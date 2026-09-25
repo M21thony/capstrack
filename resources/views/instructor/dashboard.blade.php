@@ -98,14 +98,14 @@
       <x-dashboard.stat-chip
         :href="route('instructor.assignments')"
         value="{{ $pendingApplications + $titlesToApprove }}"
-        label="Team Requests"
+        label="Team Requests" icon="inbox"
         sub="{{ $titlesToApprove ? $titlesToApprove.' '.\Illuminate\Support\Str::plural('title', $titlesToApprove).' to approve' : ($pendingApplicationsNew ? $pendingApplicationsNew.' new this week' : 'Nothing waiting') }}"
         color="var(--accent3)"
       />
       <x-dashboard.stat-chip
         :href="route('instructor.docreview')"
         value="{{ $docsForReview }}"
-        label="Documents to Review"
+        label="Documents to Review" icon="file-review"
         {{-- Waiting since it arrived. It used to read reviewed_at, which is null
              on anything still waiting, so this rendered "Oldest: " and nothing. --}}
         sub="{{ $oldestDocReview ? 'Oldest: waiting '.$oldestDocReview->created_at?->diffForHumans(null, true) : 'Nothing waiting' }}"
@@ -114,7 +114,7 @@
       <x-dashboard.stat-chip
         :href="route('instructor.grading')"
         value="{{ $gradesToSubmit }}"
-        label="Grades to Submit"
+        label="Grades to Submit" icon="grading"
         sub="{{ $gradesToSubmit ? 'Defenses you sat on' : 'All graded' }}"
         color="var(--blue)"
       />
@@ -126,7 +126,7 @@
         :badge="$announcements->isNotEmpty() ? $announcements->count() : null"
         :badgeClass="'badge-accent'"
         :empty="$announcements->isEmpty()"
-        emptyMessage="No announcements."
+        emptyMessage="No announcements." emptyIcon="announcement"
       >
         <div class="ann-list">
           @foreach ($announcements as $announcement)
@@ -218,7 +218,7 @@
       <x-dashboard.info-card
         title="Coming Up"
         :empty="$upcoming->isEmpty()"
-        emptyMessage="No defenses or consultations coming up."
+        emptyMessage="No defenses or consultations coming up." emptyIcon="consultation"
       >
         <div class="gap-12">
           @foreach ($upcoming as $item)

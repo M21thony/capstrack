@@ -3056,7 +3056,7 @@ function showToast(msg, type) {
     if (!el) return;
     el.textContent = msg;
     el.className = 'msg-toast show ' + (type || '');
-    setTimeout(function() { el.classList.remove('show'); }, 3000);
+    setTimeout(function() { el.classList.remove('show'); }, 4000);
 }
 
 function filterFeed() {

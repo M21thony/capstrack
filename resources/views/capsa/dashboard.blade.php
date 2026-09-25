@@ -65,10 +65,10 @@
       @endphp
       <p class="dash-lead"><b>Waiting on you</b> · {{ $capsa['period'] }} · {{ $capsa['teamCount'] }} {{ \Illuminate\Support\Str::plural('team', $capsa['teamCount']) }} in your {{ $capsa['sectionCount'] }} {{ \Illuminate\Support\Str::plural('section', $capsa['sectionCount']) }}</p>
       <div class="dash-tiles">
-        <x-dashboard.stat-chip :href="route('capsa.team_management')" class="{{ $tile($capsa['toVerify']) }}" value="{{ $capsa['toVerify'] }}" label="Teams to Verify" sub="{{ $capsa['toVerify'] ? 'Complete, waiting for you' : 'Nothing waiting' }}" color="var(--amber)" />
-        <x-dashboard.stat-chip :href="route('capsa.team_management')" class="{{ $tile($capsa['titles']) }}" value="{{ $capsa['titles'] }}" label="Titles to Review" sub="{{ $capsa['titles'] ? 'Turned in by teams' : 'Nothing waiting' }}" color="var(--accent3)" />
-        <x-dashboard.stat-chip :href="route('capsa.financial')" class="{{ $tile($capsa['receipts']) }}" value="{{ $capsa['receipts'] }}" label="Receipts to Check" sub="{{ $capsa['receipts'] ? 'Uploaded by students' : 'Nothing waiting' }}" color="var(--green)" />
-        <x-dashboard.stat-chip :href="route('capsa.team_management')" class="{{ $tile($capsa['leaveRequests']) }}" value="{{ $capsa['leaveRequests'] }}" label="Member Requests" sub="{{ $capsa['leaveRequests'] ? 'Asking to leave or remove' : 'Nothing waiting' }}" color="var(--red)" />
+        <x-dashboard.stat-chip :href="route('capsa.team_management')" class="{{ $tile($capsa['toVerify']) }}" value="{{ $capsa['toVerify'] }}" label="Teams to Verify" icon="verified" sub="{{ $capsa['toVerify'] ? 'Complete, waiting for you' : 'Nothing waiting' }}" color="var(--amber)" />
+        <x-dashboard.stat-chip :href="route('capsa.team_management')" class="{{ $tile($capsa['titles']) }}" value="{{ $capsa['titles'] }}" label="Titles to Review" icon="file-check" sub="{{ $capsa['titles'] ? 'Turned in by teams' : 'Nothing waiting' }}" color="var(--accent3)" />
+        <x-dashboard.stat-chip :href="route('capsa.financial')" class="{{ $tile($capsa['receipts']) }}" value="{{ $capsa['receipts'] }}" label="Receipts to Check" icon="receipt" sub="{{ $capsa['receipts'] ? 'Uploaded by students' : 'Nothing waiting' }}" color="var(--green)" />
+        <x-dashboard.stat-chip :href="route('capsa.team_management')" class="{{ $tile($capsa['leaveRequests']) }}" value="{{ $capsa['leaveRequests'] }}" label="Member Requests" icon="user-clock" sub="{{ $capsa['leaveRequests'] ? 'Asking to leave or remove' : 'Nothing waiting' }}" color="var(--red)" />
       </div>
 
       <div class="grid-2" style="margin-bottom:16px">
@@ -81,7 +81,7 @@
           </div>
           <a class="dash-link" href="{{ route('capsa.reports.show', 'progress') }}">See Team Progress →</a>
         </div>
-        <x-dashboard.info-card title="Defenses in the Next Two Weeks" :empty="$capsa['defenses']->isEmpty()" emptyMessage="No defenses in the next two weeks.">
+        <x-dashboard.info-card title="Defenses in the Next Two Weeks" :empty="$capsa['defenses']->isEmpty()" emptyMessage="No defenses in the next two weeks." emptyIcon="defense">
           @foreach ($capsa['defenses'] as $d)
             <div class="dash-def">
               <span><b>{{ $d->team?->team_name ?? 'A team' }}</b><small>{{ $d->defense_type }}{{ $d->venue ? ' · '.$d->venue : '' }}</small></span>
@@ -95,10 +95,10 @@
     @if ($admin)
       <p class="dash-lead"><b>System</b> · what the department still needs set up</p>
       <div class="dash-tiles">
-        <x-dashboard.stat-chip :href="route('admin.experts')" value="{{ count($admin['uncovered']) }}" label="Sections Without a CaPSA" sub="{{ count($admin['uncovered']) ? 'Nobody verifies these teams' : 'Every section is covered' }}" color="{{ count($admin['uncovered']) ? 'var(--red)' : 'var(--green)' }}" />
-        <x-dashboard.stat-chip :href="route('admin.experts')" value="{{ $admin['capsas'] }}" label="CaPSAs" sub="Running the subject" color="var(--accent3)" />
-        <x-dashboard.stat-chip :href="route('admin.students')" value="{{ $admin['students'] }}" label="Students" sub="With accounts" color="var(--blue)" />
-        <x-dashboard.stat-chip value="{{ $admin['experts'] }}" label="Experts" sub="Approved faculty" color="var(--purple)" />
+        <x-dashboard.stat-chip :href="route('admin.experts')" value="{{ count($admin['uncovered']) }}" label="Sections Without a CaPSA" icon="section-list" sub="{{ count($admin['uncovered']) ? 'Nobody verifies these teams' : 'Every section is covered' }}" color="{{ count($admin['uncovered']) ? 'var(--red)' : 'var(--green)' }}" />
+        <x-dashboard.stat-chip :href="route('admin.experts')" value="{{ $admin['capsas'] }}" label="CaPSAs" icon="expert" sub="Running the subject" color="var(--accent3)" />
+        <x-dashboard.stat-chip :href="route('admin.students')" value="{{ $admin['students'] }}" label="Students" icon="student" sub="With accounts" color="var(--blue)" />
+        <x-dashboard.stat-chip value="{{ $admin['experts'] }}" label="Experts" icon="expert" sub="Approved faculty" color="var(--purple)" />
       </div>
       @if ($admin['uncovered'] || ! $admin['schoolYear'])
         <div class="card" style="margin-bottom:16px">
