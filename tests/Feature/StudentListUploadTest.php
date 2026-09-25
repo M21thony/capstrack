@@ -53,6 +53,22 @@ class StudentListUploadTest extends TestCase
 
     private const HEADER = ['Email', 'Name', 'Student No.', 'Course/Program', 'Year', 'Section'];
 
+    /** A combined "Year & Section" column is stored the way the rest of the app writes it. */
+    public function test_a_combined_year_and_section_column_is_stored_short(): void
+    {
+        $this->actingAs($this->capsa(), 'expert');
+        $dot = json_decode('"\u00b7"');
+
+        $this->post(route('capsa.rosters.students.store'), [
+            'file' => $this->listFile(['Email', 'Name', 'Student No.', 'Course/Program', 'Year & Section'], [
+                ['combined@my.cspc.edu.ph', 'Combined, Co B.', '221000077', 'BSIT', "4th Year {$dot} BSIT-4B"],
+            ]),
+        ])->assertOk();
+
+        $this->assertSame("4th {$dot} B", Student::where('email', 'combined@my.cspc.edu.ph')->value('year_section'));
+        $this->assertSame("4th {$dot} B", StudentRoster::where('email', 'combined@my.cspc.edu.ph')->value('section'));
+    }
+
     /** Every student is added with their number: a row without one is skipped and named. */
     public function test_a_new_student_without_a_student_number_is_skipped(): void
     {

@@ -77,7 +77,11 @@ class MilestoneProgressTest extends TestCase
         $this->assertSame('adviser', $state->waiting_on);
     }
 
-    /** Handed in, reviewed, revised, approved by both - only then done. */
+    /**
+     * Handed in, reviewed, revised, approved by both - only then done. Sent
+     * to the consultant as well, so their verdict is waited for; a draft that
+     * never went to them closes on the adviser's (TeamReachesTitleDefenseTest).
+     */
     public function test_a_chapter_draft_is_done_only_when_adviser_and_consultant_approve(): void
     {
         $checklist = $this->emptyChecklist($this->capsa);
@@ -96,13 +100,15 @@ class MilestoneProgressTest extends TestCase
         $this->assertTrue($state->changes_requested);
 
         $second = $this->upload($this->student, $draft, now()->subDays(3)->toDateTimeString());
+        CapstoneDocumentReview::create(['file_id' => $second, 'expert_id' => $expert, 'role' => 'consultant', 'review_status' => 'To Review']);
         $review($second, 'adviser', CapstoneDocumentReview::APPROVED, now()->subDays(2));
 
         $state = $this->progressOf($checklist, $this->team, $draft);
         $this->assertSame(MilestoneProgress::HANDED_IN, $state->state);
         $this->assertSame('consultant', $state->waiting_on);
 
-        $review($second, 'consultant', CapstoneDocumentReview::APPROVED, now()->subDay());
+        CapstoneDocumentReview::where('file_id', $second)->where('role', 'consultant')
+            ->update(['review_status' => CapstoneDocumentReview::REVIEWED, 'verdict' => CapstoneDocumentReview::APPROVED, 'verdict_at' => now()->subDay()]);
         $this->assertSame(MilestoneProgress::DONE, $this->progressOf($checklist, $this->team, $draft)->state);
     }
 
