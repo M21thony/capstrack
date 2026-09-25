@@ -133,6 +133,7 @@
 .pt-item-body{flex:1;min-width:0;display:grid;gap:3px}
 .pt-item-title{display:flex;align-items:center;flex-wrap:wrap;gap:6px;font-size:13.5px;font-weight:600;color:var(--text);line-height:1.35}
 .pt-item-who{font-size:11.5px;color:var(--text3)}
+.pt-kept{font-size:12px;color:var(--text2);margin-top:4px}
 .pt-note{font-size:12px;font-style:italic;color:var(--text2);padding:6px 10px;border-radius:8px;background:var(--bg3)}
 .pt-status{justify-self:start;margin-top:3px;font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;background:var(--bg3);color:var(--text2)}
 .pt-item.st-done .pt-status{background:var(--green-bg);color:var(--green)}
@@ -413,7 +414,7 @@
                 ? ($group->rows->first(fn ($r) => $r->item->kind === 'document')?->item ?? $item)
                 : $item;
             $uploadLabel = match (true) {
-                (bool) $row->note => 'Upload again',
+                (bool) $row->note => 'Replace file',
                 $row->changes_requested => 'Upload '.$ord(max(1, $row->revision)).' revision',
                 $row->waiting_on === 'signed_copy' => 'Upload signed CLF',
                 default => 'Upload',
@@ -432,6 +433,9 @@
               <div class="pt-item-who">{{ $closer }}</div>
               @if ($row->note)
                 <div class="pt-note">“{{ $row->note }}”</div>
+                @if ($row->waiting_on === 'team')
+                  <div class="pt-kept">The file you sent is kept. Replace it with a corrected copy.</div>
+                @endif
               @endif
               <span class="pt-status">{{ $status }}</span>
             </div>
