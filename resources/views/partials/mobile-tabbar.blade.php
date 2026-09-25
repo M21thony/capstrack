@@ -268,21 +268,24 @@
 --}}
 <style>
   @media (max-width:768px){
-    /* A white pill resting on a gold lip. The pill and the lip are the bar's
-       two pseudo-elements, lip first, so the pill paints over it, then the
+    /* A small white pill with a soft grey shadow for a lip, centred and no
+       wider than it needs to be - on a tablet too, rather than stretched
+       from edge to edge. The pill and the lip are the bar's two
+       pseudo-elements, lip first, so the pill paints over it, then the
        gliding highlight, then the icons over all of them. */
     .mtab.is-floating{
-      left:14px;right:14px;bottom:calc(16px + env(safe-area-inset-bottom, 0px));
-      height:64px;padding:0 6px;border:0;border-radius:32px;
+      left:0;right:0;width:calc(100% - 32px);max-width:340px;margin:0 auto;
+      bottom:calc(16px + env(safe-area-inset-bottom, 0px));
+      height:52px;padding:0 5px;border:0;border-radius:26px;
       background:none;box-shadow:none;isolation:isolate;
       transition:transform .3s cubic-bezier(.2,.8,.2,1),opacity .2s ease;
       will-change:transform;
     }
     .mtab.is-floating::before,.mtab.is-floating::after{content:"";position:absolute;border-radius:inherit;z-index:-1;pointer-events:none}
-    .mtab.is-floating::before{left:5px;right:5px;top:8px;bottom:-6px;background:var(--accent2,#b5941f)}
+    .mtab.is-floating::before{left:6px;right:6px;top:6px;bottom:-4px;background:rgba(24,25,31,.1)}
     .mtab.is-floating::after{
       inset:0;background:#fff;border:1px solid rgba(24,25,31,.08);
-      box-shadow:0 14px 30px rgba(24,25,31,.16),0 2px 6px rgba(24,25,31,.06);
+      box-shadow:0 8px 20px rgba(24,25,31,.1),0 1px 4px rgba(24,25,31,.05);
     }
     .mtab.is-floating.is-away{
       transform:translateY(calc(100% + 32px + env(safe-area-inset-bottom, 0px)));
@@ -293,13 +296,13 @@
        tapped, a column at a time (--i of --n), overshooting a touch the way
        an app's does. */
     .mtab-glide{
-      position:absolute;top:0;bottom:0;left:6px;z-index:0;pointer-events:none;
-      width:calc((100% - 12px) / var(--n, 5));
+      position:absolute;top:0;bottom:0;left:5px;z-index:0;pointer-events:none;
+      width:calc((100% - 10px) / var(--n, 5));
       transform:translateX(calc(var(--i, 0) * 100%));
       transition:transform .5s cubic-bezier(.34,1.36,.5,1),opacity .2s ease;
     }
     .mtab-glide::before{
-      content:"";position:absolute;left:50%;top:8px;width:56px;height:34px;margin-left:-28px;border-radius:17px;
+      content:"";position:absolute;left:50%;top:6px;width:44px;height:28px;margin-left:-22px;border-radius:14px;
       background:rgba(201,168,44,.2);
       transition:transform .5s cubic-bezier(.34,1.36,.5,1);
     }
@@ -308,19 +311,19 @@
 
     .mtab.is-floating .mtab-item{z-index:1;padding:0;gap:0;color:#6b6f7b}
     .mtab.is-floating .mtab-ic{
-      width:44px;height:34px;border-radius:17px;background:none!important;
+      width:38px;height:28px;border-radius:14px;background:none!important;
       transition:transform .45s cubic-bezier(.34,1.56,.64,1),color .2s ease;
     }
-    .mtab.is-floating .mtab-ic svg{width:23px;height:23px;stroke-width:2;transition:stroke-width .2s ease}
+    .mtab.is-floating .mtab-ic svg{width:20px;height:20px;stroke-width:2;transition:stroke-width .2s ease}
     /* The tab you are on lifts its icon and says its name beneath it. */
     .mtab.is-floating .mtab-item .lb{
-      position:absolute;left:0;right:0;bottom:7px;text-align:center;
-      font-size:10px;font-weight:700;letter-spacing:.01em;
+      position:absolute;left:0;right:0;bottom:4px;text-align:center;
+      font-size:9px;font-weight:700;letter-spacing:.01em;
       opacity:0;transform:translateY(6px) scale(.9);
       transition:opacity .2s ease,transform .35s cubic-bezier(.34,1.56,.64,1);
     }
     .mtab.is-floating .mtab-item.on{color:var(--accent3,#8a6e10)}
-    .mtab.is-floating .mtab-item.on .mtab-ic{transform:translateY(-7px)}
+    .mtab.is-floating .mtab-item.on .mtab-ic{transform:translateY(-6px)}
     .mtab.is-floating .mtab-item.on .mtab-ic svg{stroke-width:2.4}
     .mtab.is-floating .mtab-item.on .lb{opacity:1;transform:none}
     .mtab.is-floating .mtab-item.on.is-arriving .mtab-ic svg{animation:mtab-pop .5s cubic-bezier(.34,1.56,.64,1)}
@@ -328,7 +331,7 @@
 
     /* A finger on it presses it in; a pointer over it lifts it. */
     .mtab.is-floating .mtab-item:active .mtab-ic{transform:scale(.86);transition-duration:.12s}
-    .mtab.is-floating .mtab-item.on:active .mtab-ic{transform:translateY(-7px) scale(.86)}
+    .mtab.is-floating .mtab-item.on:active .mtab-ic{transform:translateY(-6px) scale(.86)}
     @media (hover:hover){
       .mtab.is-floating .mtab-item:not(.on):not(.primary):hover{color:#18191f}
       .mtab.is-floating .mtab-item:not(.on):not(.primary):hover .mtab-ic{transform:translateY(-3px)}
@@ -338,32 +341,32 @@
        is pressed. It and Menu keep their names for screen readers only. */
     .mtab.is-floating .mtab-item.primary .lb,.mtab.is-floating .mtab-item:last-child .lb{width:1px;height:1px;left:auto;right:auto;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
     .mtab.is-floating .mtab-item.primary .mtab-ic{
-      width:46px;height:46px;margin:0;border-radius:50%;
-      background:var(--accent,#c9a82c)!important;color:#18191f;box-shadow:0 6px 14px rgba(201,168,44,.45);
+      width:38px;height:38px;margin:0;border-radius:50%;
+      background:var(--accent,#c9a82c)!important;color:#18191f;box-shadow:0 4px 10px rgba(201,168,44,.35);
       transition:transform .35s cubic-bezier(.34,1.56,.64,1),box-shadow .2s ease;
     }
-    .mtab.is-floating .mtab-item.primary .mtab-ic svg{width:22px;height:22px;stroke-width:2.6;transition:transform .35s cubic-bezier(.34,1.56,.64,1)}
+    .mtab.is-floating .mtab-item.primary .mtab-ic svg{width:19px;height:19px;stroke-width:2.6;transition:transform .35s cubic-bezier(.34,1.56,.64,1)}
     .mtab.is-floating .mtab-item.primary:active .mtab-ic{transform:scale(.9);box-shadow:0 3px 8px rgba(201,168,44,.4)}
     .mtab.is-floating .mtab-item.primary:active .mtab-ic svg{transform:rotate(90deg)}
     @media (hover:hover){
-      .mtab.is-floating .mtab-item.primary:hover .mtab-ic{transform:translateY(-3px);box-shadow:0 10px 20px rgba(201,168,44,.5)}
+      .mtab.is-floating .mtab-item.primary:hover .mtab-ic{transform:translateY(-3px);box-shadow:0 7px 14px rgba(201,168,44,.45)}
       .mtab.is-floating .mtab-item.primary:hover .mtab-ic svg{transform:rotate(90deg)}
     }
 
     /* Menu wears the student's own picture, as the app's last tab does. */
-    .mtab.is-floating .mtab-avatar{width:32px;height:32px;border-radius:50%;padding:0;overflow:hidden;
-      background:var(--accent-light,#faf7ed)!important;box-shadow:0 0 0 2px #18191f;color:#18191f;font-size:12px;font-weight:700}
+    .mtab.is-floating .mtab-avatar{width:28px;height:28px;border-radius:50%;padding:0;overflow:hidden;
+      background:var(--accent-light,#faf7ed)!important;box-shadow:0 0 0 1.5px #18191f;color:#18191f;font-size:11px;font-weight:700}
     .mtab.is-floating .mtab-avatar img{width:100%;height:100%;object-fit:cover;display:block}
 
-    .mtab.is-floating .mtab-badge{top:0;right:4px;box-shadow:0 0 0 2px #fff}
+    .mtab.is-floating .mtab-badge{top:-1px;right:2px;min-width:14px;height:14px;padding:0 3px;font-size:8.5px;line-height:14px;box-shadow:0 0 0 2px #fff}
 
     /* The page scrolls clear of the pill; toasts sit above it. Where the
        page's scrolling area can be found (the script below), the room is at
        the end of it instead, so the page runs on underneath the pill like
        the app's feed does, rather than stopping at a line above it. */
-    .main{padding-bottom:calc(98px + env(safe-area-inset-bottom, 0px))}
-    .mtab-spacer{flex:none;height:calc(98px + env(safe-area-inset-bottom, 0px));pointer-events:none}
-    .toast,.toast-wrap,#submission-toast,#archive-toast{bottom:calc(102px + env(safe-area-inset-bottom, 0px))!important}
+    .main{padding-bottom:calc(86px + env(safe-area-inset-bottom, 0px))}
+    .mtab-spacer{flex:none;height:calc(86px + env(safe-area-inset-bottom, 0px));pointer-events:none}
+    .toast,.toast-wrap,#submission-toast,#archive-toast{bottom:calc(90px + env(safe-area-inset-bottom, 0px))!important}
   }
   @media (max-width:768px) and (prefers-reduced-motion:reduce){
     .mtab.is-floating{transition:opacity .15s linear}
@@ -463,7 +466,7 @@
     // Less whatever room the page already keeps at its end, so the gap above
     // the pill is the same on every page.
     var own = parseFloat(getComputedStyle(scroller).paddingBottom) || 0;
-    spacer.style.height = 'calc(' + Math.max(0, 100 - own) + 'px + env(safe-area-inset-bottom, 0px))';
+    spacer.style.height = 'calc(' + Math.max(0, 88 - own) + 'px + env(safe-area-inset-bottom, 0px))';
     scroller.appendChild(spacer);
   });
 </script>
