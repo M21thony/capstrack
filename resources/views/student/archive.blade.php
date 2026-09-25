@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content" />
 <title>Archived Capstones - CapsTrack</title>
 <meta name="csrf-token" content="{{ csrf_token() }}">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
@@ -64,7 +64,7 @@
     .arx-select { flex: 1 1 0; min-width: 0; }
     .arx-grid { grid-template-columns: 1fr; gap: 10px; }
     .arx-modal { padding: 0; align-items: flex-end !important; }
-    .arx-sheet { margin: auto 0 0; border-radius: 18px 18px 0 0; max-height: 92dvh; overflow-y: auto; }
+    .arx-sheet { margin: auto 0 0; border-radius: 18px 18px 0 0; max-height: 92vh;max-height: 92dvh; overflow-y: auto; }
     .arx-m-body { padding: 36px 18px 24px; }
     .arx-m-title { font-size: 17px; }
     .arx-m-meta { grid-template-columns: 1fr; }

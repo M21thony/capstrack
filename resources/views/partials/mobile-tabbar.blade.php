@@ -54,7 +54,7 @@
 
     /* The bar sits over the bottom of the screen, so the page ends above it.
        dvh: a phone's address bar comes and goes, and 100vh ignores it. */
-    .main{height:100dvh;padding-bottom:calc(62px + env(safe-area-inset-bottom))}
+    .main{height:100vh;height:100dvh;padding-bottom:calc(62px + env(safe-area-inset-bottom))}
     .toast,.toast-wrap,#submission-toast,#archive-toast{bottom:calc(76px + env(safe-area-inset-bottom))!important}
 
     /* Menu in the bar replaces the ☰ in the top bar. The button stays in the

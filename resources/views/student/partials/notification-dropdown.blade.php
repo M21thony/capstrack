@@ -45,7 +45,7 @@
 /* ── The CaPSA's decision on a leave request ── */
 .ld-overlay{display:none;position:fixed;inset:0;z-index:99990;align-items:center;justify-content:center;padding:20px;background:rgba(15,16,22,.6);backdrop-filter:blur(3px)}
 .ld-overlay.show{display:flex}
-.ld-card{width:min(480px,100%);max-height:calc(100dvh - 40px);overflow:auto;background:#fff;border-radius:18px;box-shadow:0 24px 70px rgba(0,0,0,.3);display:flex;flex-direction:column}
+.ld-card{width:min(480px,100%);max-height:calc(100vh - 40px);max-height:calc(100dvh - 40px);overflow:auto;background:#fff;border-radius:18px;box-shadow:0 24px 70px rgba(0,0,0,.3);display:flex;flex-direction:column}
 .ld-head{display:flex;align-items:flex-start;gap:12px;padding:20px 20px 16px;border-bottom:1px solid var(--border);border-top:5px solid var(--text3)}
 .ld-head.is-approved{border-top-color:var(--green)}
 .ld-head.is-declined{border-top-color:var(--red)}
@@ -79,7 +79,7 @@
 .ld-btn-primary{background:var(--accent);border-color:var(--accent);color:#18191f}
 @media (max-width:560px){
   .ld-overlay{padding:0;align-items:flex-end}
-  .ld-card{width:100%;max-height:92dvh;border-radius:18px 18px 0 0}
+  .ld-card{width:100%;max-height:92vh;max-height:92dvh;border-radius:18px 18px 0 0}
   .ld-foot{padding-bottom:calc(14px + env(safe-area-inset-bottom))}
   .ld-foot .ld-btn{flex:1}
 }

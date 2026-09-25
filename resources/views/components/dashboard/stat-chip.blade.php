@@ -33,7 +33,7 @@
             .stat-ic {
                 position:absolute; top:16px; right:16px; width:38px; height:38px; border-radius:11px;
                 display:flex; align-items:center; justify-content:center;
-                color:var(--stat-c); background:color-mix(in srgb, var(--stat-c) 13%, transparent);
+                color:var(--stat-c); background:rgba(127,127,127,.12); background:color-mix(in srgb, var(--stat-c) 13%, transparent);
             }
             .stat-ic svg { width:20px; height:20px; }
             @media (max-width:768px) {

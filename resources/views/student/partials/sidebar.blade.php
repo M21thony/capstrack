@@ -217,7 +217,7 @@
     .profile-overlay.open { background: rgba(15,17,23,.45); pointer-events: all; }
     .profile-modal {
       left: 0 !important; right: 0; top: auto !important; bottom: 0;
-      width: 100% !important; height: auto !important; max-height: 88dvh;
+      width: 100% !important; height: auto !important; max-height: 88vh;max-height: 88dvh;
       border-right: 0; border-radius: 18px 18px 0 0;
       transform: translateY(24px) !important;
       box-shadow: 0 -12px 40px rgba(0,0,0,.25);
@@ -387,5 +387,6 @@
 {{-- The app's own ask-first dialog. --}}
 @include('partials.app-dialog')
 @include('partials.sidebar-scroll-restore')
+@include('partials.keyboard-aware')
 
 @include('student.partials.portal-tour')
