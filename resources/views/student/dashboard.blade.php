@@ -171,10 +171,10 @@
     {{-- Content --}}
     <div id="real-content" style="opacity:0">
     <div class="grid-4" style="margin-bottom:16px">
-      <x-dashboard.stat-chip value="{{ $overallProgress }}%" label="Overall Progress" color="var(--accent)" />
-      <x-dashboard.stat-chip value="{{ $docsSubmitted }}" label="Docs Submitted" color="var(--green)" />
-      <x-dashboard.stat-chip value="{{ $pendingReviews }}" label="Pending Reviews" color="var(--amber)" />
-      <x-dashboard.stat-chip value="{{ $teamGroupsCount }}" label="Team Groups" color="var(--purple)" />
+      <x-dashboard.stat-chip value="{{ $overallProgress }}%" label="Overall Progress" icon="target" color="var(--accent)" />
+      <x-dashboard.stat-chip value="{{ $docsSubmitted }}" label="Docs Submitted" icon="file-check" color="var(--green)" />
+      <x-dashboard.stat-chip value="{{ $pendingReviews }}" label="Pending Reviews" icon="hourglass" color="var(--amber)" />
+      <x-dashboard.stat-chip value="{{ $teamGroupsCount }}" label="Team Groups" icon="team" color="var(--purple)" />
     </div>
 
     <x-dashboard.info-card
@@ -184,6 +184,7 @@
       :badgeClass="'badge-accent'"
       :empty="$announcements->isEmpty()"
       emptyMessage="No announcements for your section."
+      emptyIcon="announcement"
     >
       <div class="ann-list">
         @foreach ($announcements as $announcement)
@@ -282,6 +283,7 @@
         :badgeClass="'badge-accent'"
         :empty="$milestones->isEmpty()"
         emptyMessage="No milestones yet. Track your progress from the Progress page."
+        emptyIcon="milestone"
       >
         <div class="milestone-list">
           @foreach ($milestones->take(4) as $milestone)
@@ -323,6 +325,7 @@
         title="Recent Activity"
         :empty="$activities->isEmpty()"
         emptyMessage="No recent activity."
+        emptyIcon="history"
       >
         {{-- The same timeline the CaPSA and Expert dashboards draw. --}}
         <x-dashboard.activity-feed :items="$activities->take(20)->all()" emptyMessage="No recent activity." :maxHeight="300" />
@@ -330,7 +333,7 @@
     </div>
 
     <div class="dash-grid-v3">
-      <x-dashboard.info-card title="Capstone Expert" :empty="!$myTeam || $myTeam->expertAssignments->isEmpty()" emptyMessage="No experts assigned to your team.">
+      <x-dashboard.info-card title="Capstone Expert" :empty="!$myTeam || $myTeam->expertAssignments->isEmpty()" emptyMessage="No experts assigned to your team." emptyIcon="expert">
         @if ($myTeam && $myTeam->expertAssignments->isNotEmpty())
           @foreach ($myTeam->expertAssignments as $assignment)
             @php
@@ -354,7 +357,7 @@
         @endif
       </x-dashboard.info-card>
 
-      <x-dashboard.info-card title="Team ({{ $myTeam ? $myTeam->team_name : 'No Team' }})" :empty="$teamMembers->isEmpty()" emptyMessage="Join a team to see members here.">
+      <x-dashboard.info-card title="Team ({{ $myTeam ? $myTeam->team_name : 'No Team' }})" :empty="$teamMembers->isEmpty()" emptyMessage="Join a team to see members here." emptyIcon="team">
         @foreach ($teamMembers as $member)
           @php $isLeader = isset($leaderStudentId) && $member->student_id === $leaderStudentId; @endphp
           <div class="history-item">
@@ -377,6 +380,7 @@
       title="Defense Results"
       :empty="$defenseResults->isEmpty()"
       emptyMessage="No defense stages scheduled yet."
+      emptyIcon="defense"
     >
       <div class="milestone-list">
         @foreach ($defenseResults as $result)
@@ -429,6 +433,7 @@
       title="Recent Expenses & Receipts"
       :empty="$recentExpenses->isEmpty()"
       emptyMessage="Submit your first receipt on the Financial Records page."
+      emptyIcon="receipt"
     >
       @foreach ($recentExpenses as $expense)
         @php

@@ -2,6 +2,7 @@
     'headers' => [],
     'rows' => [],
     'emptyMessage' => 'No records found.',
+    'emptyIcon' => 'inbox',
     'loading' => false,
     'actionUrl' => null,
     'actionText' => 'View All',
@@ -21,7 +22,7 @@
             @endfor
         </div>
     @elseif (count($rows) === 0)
-        <x-dashboard.empty-state :message="$emptyMessage" />
+        <x-dashboard.empty-state :message="$emptyMessage" :icon="$emptyIcon" />
     @else
         <div style="overflow-x:auto">
             <table class="table">

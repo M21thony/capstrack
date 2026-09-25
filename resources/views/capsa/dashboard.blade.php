@@ -59,16 +59,16 @@
   <div id="real-content" style="display:none;flex:1;overflow:hidden;flex-direction:column;">
   <div class="content">
     <div class="grid-4" style="margin-bottom:16px">
-      <x-dashboard.stat-chip value="{{ $totalStudents }}" label="Total Students" sub="Enrolled users" color="var(--blue)" />
-      <x-dashboard.stat-chip value="{{ $totalExperts }}" label="Total Experts" sub="Approved faculty accounts" color="var(--purple)" />
-      <x-dashboard.stat-chip value="{{ $activeTeams }}" label="Active Teams" sub="{{ $currentSchoolYearLabel }}" color="var(--green)" />
-      <x-dashboard.stat-chip value="{{ $completedTeams }}" label="Completed Teams" sub="{{ $currentSchoolYearLabel }}" color="var(--accent3)" />
+      <x-dashboard.stat-chip value="{{ $totalStudents }}" label="Total Students" icon="student" sub="Enrolled users" color="var(--blue)" />
+      <x-dashboard.stat-chip value="{{ $totalExperts }}" label="Total Experts" icon="expert" sub="Approved faculty accounts" color="var(--purple)" />
+      <x-dashboard.stat-chip value="{{ $activeTeams }}" label="Active Teams" icon="team" sub="{{ $currentSchoolYearLabel }}" color="var(--green)" />
+      <x-dashboard.stat-chip value="{{ $completedTeams }}" label="Completed Teams" icon="trophy" sub="{{ $currentSchoolYearLabel }}" color="var(--accent3)" />
     </div>
 
     <div class="grid-3" style="margin-bottom:16px">
-      <x-dashboard.stat-chip value="{{ $pendingVerificationTeams }}" label="Pending Verification" sub="Complete teams awaiting review" color="var(--amber)" />
-      <x-dashboard.stat-chip value="{{ $pendingApprovals }}" label="Pending Approvals" sub="Expert accounts awaiting review" color="var(--red)" />
-      <x-dashboard.stat-chip value="{{ $archivedCapstones }}" label="Archived Capstones" sub="All time" color="var(--blue)" />
+      <x-dashboard.stat-chip value="{{ $pendingVerificationTeams }}" label="Pending Verification" icon="verified" sub="Complete teams awaiting review" color="var(--amber)" />
+      <x-dashboard.stat-chip value="{{ $pendingApprovals }}" label="Pending Approvals" icon="user-clock" sub="Expert accounts awaiting review" color="var(--red)" />
+      <x-dashboard.stat-chip value="{{ $archivedCapstones }}" label="Archived Capstones" icon="archive" sub="All time" color="var(--blue)" />
     </div>
 
     <div class="grid-2" style="margin-bottom:16px">
@@ -131,6 +131,7 @@
         actionText="View All"
         :empty="$pendingExperts->isEmpty()"
         emptyMessage="No pending approvals."
+        emptyIcon="user-check"
       >
         <div class="gap-12">
           @foreach ($pendingExperts as $expert)
@@ -160,6 +161,7 @@
         actionText="View All"
         :empty="empty($recentActivity)"
         emptyMessage="No recent activity."
+        emptyIcon="history"
       >
         <x-dashboard.activity-feed :items="$recentActivity" emptyMessage="No recent activity." />
       </x-dashboard.info-card>
