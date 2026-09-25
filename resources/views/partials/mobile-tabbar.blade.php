@@ -256,6 +256,7 @@
 
 {{-- Every portal page carries this bar, so the idle sign-out rides with it. --}}
 @include('partials.idle-logout')
+@include('partials.enter-submits')
 @endonce
 
 @if ($floating ?? false)

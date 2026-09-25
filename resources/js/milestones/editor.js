@@ -534,7 +534,9 @@ export function openEditor({ urls, checklistId = null, onClose = null }) {
       drawNameActs();
     });
     name.addEventListener('keydown', e => {
-      if (e.key === 'Enter' && E.pendingNames.has(m.id)) saveEdits([], [m.id]);
+      if (e.key !== 'Enter') return;
+      e.preventDefault();
+      if (E.pendingNames.has(m.id)) saveEdits([], [m.id]);
     });
     drawNameActs();
 
@@ -703,7 +705,9 @@ export function openEditor({ urls, checklistId = null, onClose = null }) {
     title.setAttribute('aria-label', 'Deliverable name');
     title.addEventListener('input', () => edit({ title: title.value.trim() || d.title }));
     title.addEventListener('keydown', e => {
-      if (e.key === 'Enter' && E.pending.has(d.id)) saveEdits([d.id], []);
+      if (e.key !== 'Enter') return;
+      e.preventDefault();
+      if (E.pending.has(d.id)) saveEdits([d.id], []);
     });
 
     const type = el('select');
