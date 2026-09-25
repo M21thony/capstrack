@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\CapstoneExpert;
 use App\Models\ExpertExpertise;
 use App\Models\Student;
+use App\Support\SectionCatalog;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -28,9 +29,9 @@ class AdminProfileController extends Controller
         // What an Admin has written down counts as much as what a student is
         // enrolled in - before a term starts there are no students, and a
         // section nobody is in yet is still a section somebody covers.
-        $sections = array_merge($sections, \App\Support\SectionCatalog::defined());
+        $sections = array_merge($sections, SectionCatalog::defined());
 
-        return \App\Support\SectionCatalog::tidy($sections);
+        return SectionCatalog::tidy($sections);
     }
 
     public function index(): View
@@ -53,6 +54,19 @@ class AdminProfileController extends Controller
     public function update(Request $request): RedirectResponse
     {
         $admin = auth('expert')->user();
+
+        // Sized to the columns: anything longer was a database error (a 500)
+        // rather than a message on the form.
+        $request->validate([
+            'first_name' => ['required', 'string', 'max:50'],
+            'middle_name' => ['nullable', 'string', 'max:50'],
+            'last_name' => ['required', 'string', 'max:50'],
+            'suffix' => ['nullable', 'string', 'max:50'],
+            'credentials' => ['nullable', 'string', 'max:50'],
+            'school_year' => ['nullable', 'string', 'max:20'],
+            'sections' => ['nullable', 'array'],
+            'sections.*' => ['string', 'max:50'],
+        ]);
 
         $sections = $request->input('sections', []);
 
