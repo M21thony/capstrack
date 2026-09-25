@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class ConsultationBooking extends Model
@@ -62,20 +63,46 @@ class ConsultationBooking extends Model
     }
 
     /**
-     * The bookings a team sees on its Consultation page. A booking whose team
-     * could not be worked out (see fillMissingTeams) is shown only to the
-     * student who made it, never to whichever team they are in now.
+     * The bookings a team sees on its Consultation page: only the ones booked
+     * for it. A booking whose team could not be worked out (see
+     * fillMissingTeams), or whose team no longer exists, is shown to no
+     * student at all.
+     *
+     * It used to be shown to the student who made it, wherever they are now -
+     * so a student who left their team still found their old team's session
+     * with that team's adviser on their new team's page, before the new team
+     * had any expert.
      */
-    public function scopeForTeamOf(Builder $query, int $studentId, ?int $teamId): Builder
+    public function scopeForTeam(Builder $query, ?int $teamId): Builder
     {
-        return $query->where(function (Builder $q) use ($studentId, $teamId) {
-            if ($teamId) {
-                $q->where('team_id', $teamId);
-            }
-
-            $q->orWhere(fn (Builder $mine) => $mine->whereNull('team_id')->where('student_id', $studentId));
-        });
+        return $teamId ? $query->where('team_id', $teamId) : $query->whereRaw('1 = 0');
     }
+
+    /**
+     * Call off every consultation a team still had coming up, when the team
+     * itself is gone. Nobody is left to attend, and the expert would
+     * otherwise keep the time free for it with no way to let it go.
+     *
+     * @return Collection<int, ConsultationBooking> the bookings cancelled
+     */
+    public static function cancelForRemovedTeam(int $teamId): Collection
+    {
+        $bookings = static::where('team_id', $teamId)->where('booking_status', 'scheduled')->get();
+
+        foreach ($bookings as $booking) {
+            $booking->forceFill([
+                'booking_status' => 'cancelled',
+                'cancellation_requested_at' => null,
+                'cancellation_reason' => self::TEAM_REMOVED,
+            ])->saveQuietly();
+
+            ConsultationSchedule::where('schedule_id', $booking->schedule_id)->update(['is_available' => true]);
+        }
+
+        return $bookings;
+    }
+
+    public const TEAM_REMOVED = 'The team no longer exists.';
 
     /**
      * Give every booking without a team the one it was made for.
@@ -85,7 +112,9 @@ class ConsultationBooking extends Model
      * the time, which names the team. Failing that, the student's team now -
      * but only when that team actually has the booking's expert, since
      * otherwise the student has moved on and the booking belongs to the team
-     * they left. Anything still unknown is left empty rather than guessed.
+     * they left. Failing that, the expert's only team, if they have one.
+     * Anything still unknown is left empty rather than guessed, and no
+     * student sees it.
      */
     public static function fillMissingTeams(): void
     {
@@ -118,6 +147,24 @@ class ConsultationBooking extends Model
                     ->exists();
 
                 $teamId = $expertIsTheirs ? $current : null;
+            }
+
+            // The one team the expert serves, when there is only one and it
+            // already existed when the booking was made - the booking can
+            // have been for no other. Covers an expert who had their
+            // "Consultation booked" notice turned off.
+            if (! $teamId && $booking->schedule) {
+                $served = DB::table('capstone_expert_application as a')
+                    ->join('team as t', 't.team_id', '=', 'a.team_id')
+                    ->where('a.expert_id', $booking->schedule->expert_id)
+                    ->where('a.status', 'approved')
+                    ->distinct()
+                    ->get(['t.team_id', 't.created_at']);
+
+                $only = $served->count() === 1 ? $served->first() : null;
+                $existedThen = $only && (! $only->created_at || ! $booking->created_at || $booking->created_at->gte($only->created_at));
+
+                $teamId = $existedThen ? (int) $only->team_id : null;
             }
 
             if ($teamId && Team::whereKey($teamId)->exists()) {

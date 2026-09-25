@@ -191,7 +191,7 @@ class StudentConsultationController extends Controller
         // too. By the team it was booked for, not by who is in the team now:
         // a student who joins brings no consultations with them, and the
         // team they left keeps theirs.
-        $myBookings = ConsultationBooking::forTeamOf($studentId, $teamId)
+        $myBookings = ConsultationBooking::forTeam($teamId)
             ->whereIn('booking_status', ['scheduled', 'done'])
             ->with(['schedule.expert', 'team'])
             ->get();
@@ -540,7 +540,7 @@ class StudentConsultationController extends Controller
             ->first();
         // Only the team the consultation was booked for can call it off.
         $booking = ConsultationBooking::where('booking_id', $bookingId)
-            ->forTeamOf($student->student_id, $studentYear?->team_id)
+            ->forTeam($studentYear?->team_id)
             ->where('booking_status', 'scheduled')
             ->firstOrFail();
 

@@ -251,7 +251,13 @@ class ConsultationBookingBelongsToItsTeamTest extends TestCase
         $new = $this->team('Team Without Experts');
         $mover = $this->member($old);
         $newMate = $this->member($new);
-        [, $slot] = $this->adviserOf($old);
+        [$expert, $slot] = $this->adviserOf($old);
+        // The expert also serves another team, so there is no telling which.
+        DB::table('capstone_expert_application')->insert([
+            'team_id' => $this->team('Team Other'), 'expert_id' => $expert->expert_id,
+            'expert_role_id' => DB::table('expert_roles')->where('expert_id', $expert->expert_id)->value('expert_role_id'),
+            'status' => 'approved', 'created_at' => now(), 'updated_at' => now(),
+        ]);
         $bookingId = $this->oldBooking($mover, $slot);
         $this->moveTo($mover, $new);
 
@@ -259,6 +265,118 @@ class ConsultationBookingBelongsToItsTeamTest extends TestCase
 
         $this->assertNull(ConsultationBooking::find($bookingId)->team_id, 'unknown is left empty, not guessed');
         $this->assertNotContains($bookingId, $this->upcomingFor($newMate));
-        $this->assertContains($bookingId, $this->upcomingFor($mover), 'the student who made it still sees it');
+        $this->assertNotContains($bookingId, $this->upcomingFor($mover), 'it was for the team they left, not for them');
+    }
+
+    public function test_an_old_booking_gets_the_experts_only_team(): void
+    {
+        $old = $this->team('Team Horde');
+        $mover = $this->member($old);
+        $stayer = $this->member($old);
+        [, $slot] = $this->adviserOf($old);
+        $bookingId = $this->oldBooking($mover, $slot);
+        $this->moveTo($mover, $this->team('Team Without Experts'));
+
+        ConsultationBooking::fillMissingTeams();
+
+        $this->assertSame($old, (int) ConsultationBooking::find($bookingId)->team_id);
+        $this->assertContains($bookingId, $this->upcomingFor($stayer));
+        $this->assertNotContains($bookingId, $this->upcomingFor($mover));
+    }
+
+    public function test_an_old_booking_is_not_given_an_only_team_made_after_it(): void
+    {
+        $old = $this->team('Team Horde');
+        $mover = $this->member($old);
+        [$expert, $slot] = $this->adviserOf($old);
+        $bookingId = $this->oldBooking($mover, $slot);
+        DB::table('consultation_booking')->where('booking_id', $bookingId)->update(['created_at' => now()->subDays(3)]);
+
+        // The team is gone; the expert now serves a team made since.
+        DB::table('capstone_expert_application')->where('team_id', $old)->delete();
+        DB::table('team')->where('team_id', $old)->delete();
+        $later = DB::table('team')->insertGetId(['team_name' => 'Team Later', 'team_status' => 'Active', 'created_at' => now()->subDay()]);
+        DB::table('capstone_expert_application')->insert([
+            'team_id' => $later, 'expert_id' => $expert->expert_id, 'expert_role_id' => DB::table('expert_roles')->where('expert_id', $expert->expert_id)->value('expert_role_id'),
+            'status' => 'approved', 'created_at' => now(), 'updated_at' => now(),
+        ]);
+
+        ConsultationBooking::fillMissingTeams();
+
+        $this->assertNull(ConsultationBooking::find($bookingId)->team_id);
+    }
+
+    public function test_an_old_booking_named_for_a_deleted_team_is_not_guessed_onto_another(): void
+    {
+        $old = $this->team('Team Horde');
+        $mover = $this->member($old);
+        [$expert, $slot] = $this->adviserOf($old);
+        $bookingId = $this->oldBooking($mover, $slot);
+        Notification::create([
+            'expert_id' => $expert->expert_id, 'type' => 'consultation_booked', 'title' => 'Consultation booked',
+            'data' => ['team_id' => $old, 'booking_id' => $bookingId], 'is_read' => false, 'created_at' => now(),
+        ]);
+        DB::table('team')->where('team_id', $old)->delete();
+
+        ConsultationBooking::fillMissingTeams();
+
+        $this->assertNull(ConsultationBooking::find($bookingId)->team_id);
+    }
+
+    // ----------------------------------------------------------------
+    // A team that no longer exists
+    // ----------------------------------------------------------------
+
+    public function test_a_leader_who_leaves_alone_ends_the_team_and_its_consultations(): void
+    {
+        $old = $this->team('Team Horde');
+        $leader = $this->member($old);
+        DB::table('team')->where('team_id', $old)->update(['leader_id' => $leader->student_id]);
+        [$expert, $slot] = $this->adviserOf($old);
+        $bookingId = $this->book($leader, $slot);
+
+        $this->actingAs($leader, 'web')->delete(route('team.destroy'))->assertRedirect(route('student.team'));
+        $this->assertDatabaseMissing('team', ['team_id' => $old]);
+
+        $booking = ConsultationBooking::find($bookingId);
+        $this->assertSame('cancelled', $booking->booking_status);
+        $this->assertSame(ConsultationBooking::TEAM_REMOVED, $booking->cancellation_reason);
+        $this->assertTrue((bool) DB::table('consultation_schedule')->where('schedule_id', $slot)->value('is_available'));
+        $this->assertDatabaseHas('notifications', ['expert_id' => $expert->expert_id, 'type' => 'consultation_cancelled']);
+
+        // Into a new team with no experts: nothing there.
+        $new = $this->team('Team Without Experts');
+        $newMate = $this->member($new);
+        $this->moveTo($leader, $new);
+        $this->assertSame([], $this->upcomingFor($leader));
+        $this->assertSame([], $this->upcomingFor($newMate));
+    }
+
+    public function test_upcoming_consultations_of_teams_already_gone_are_called_off(): void
+    {
+        $gone = $this->team('Team Gone');
+        $mover = $this->member($gone);
+        [$expert, $slot] = $this->adviserOf($gone);
+        $noticed = $this->oldBooking($mover, $slot);
+        Notification::create([
+            'expert_id' => $expert->expert_id, 'type' => 'consultation_booked', 'title' => 'Consultation booked',
+            'data' => ['team_id' => $gone, 'booking_id' => $noticed], 'is_read' => false, 'created_at' => now(),
+        ]);
+
+        $kept = $this->team('Team Kept');
+        $stayer = $this->member($kept);
+        [, $keptSlot] = $this->adviserOf($kept, 'Thrall Durotan');
+        $stays = $this->book($stayer, $keptSlot);
+
+        DB::table('team')->where('team_id', $gone)->delete();
+        $this->moveTo($mover, $this->team('Team Without Experts'));
+
+        $migration = require base_path('database/migrations/2026_09_25_230458_cancel_consultations_of_teams_that_no_longer_exist.php');
+        $migration->up();
+
+        $this->assertSame('cancelled', ConsultationBooking::find($noticed)->booking_status);
+        $this->assertTrue((bool) DB::table('consultation_schedule')->where('schedule_id', $slot)->value('is_available'));
+        $this->assertSame('scheduled', ConsultationBooking::find($stays)->booking_status);
+        $this->assertSame([], $this->upcomingFor($mover));
     }
 }
