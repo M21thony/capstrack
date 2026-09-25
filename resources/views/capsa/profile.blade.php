@@ -450,6 +450,12 @@
         <p class="pf-subtitle">Update your personal details and manage the sections assigned to you.</p>
       </div>
 
+      @if ($errors->any())
+        <div class="pf-status" role="alert" style="background:#fdecea;color:#b42318;border-color:#f5c2c0">
+          <span>{{ $errors->first() }}</span>
+        </div>
+      @endif
+
       @if (session('status'))
         <div class="pf-status">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>
@@ -533,29 +539,29 @@
                 <div class="pf-row">
                   <div class="pf-field">
                     <label class="label" for="first_name">First Name</label>
-                    <input id="first_name" name="first_name" class="input" placeholder="e.g. Juan" value="{{ old('first_name', $admin->first_name) }}" />
+                    <input id="first_name" name="first_name" maxlength="50" class="input" placeholder="e.g. Juan" value="{{ old('first_name', $admin->first_name) }}" />
                   </div>
                   <div class="pf-field">
                     <label class="label" for="middle_name">Middle Name</label>
-                    <input id="middle_name" name="middle_name" class="input" placeholder="Optional" value="{{ old('middle_name', $admin->middle_name) }}" />
+                    <input id="middle_name" name="middle_name" maxlength="50" class="input" placeholder="Optional" value="{{ old('middle_name', $admin->middle_name) }}" />
                   </div>
                 </div>
 
                 <div class="pf-row">
                   <div class="pf-field">
                     <label class="label" for="last_name">Last Name</label>
-                    <input id="last_name" name="last_name" class="input" placeholder="e.g. Dela Cruz" value="{{ old('last_name', $admin->last_name) }}" />
+                    <input id="last_name" name="last_name" maxlength="50" class="input" placeholder="e.g. Dela Cruz" value="{{ old('last_name', $admin->last_name) }}" />
                   </div>
                   <div class="pf-field">
                     <label class="label" for="suffix">Suffix (optional)</label>
-                    <input id="suffix" name="suffix" class="input" placeholder="e.g. Jr." value="{{ old('suffix', $admin->suffix) }}" />
+                    <input id="suffix" name="suffix" maxlength="50" class="input" placeholder="e.g. Jr." value="{{ old('suffix', $admin->suffix) }}" />
                   </div>
                 </div>
 
                 <div class="pf-row">
                   <div class="pf-field">
                     <label class="label" for="credentials">Credentials</label>
-                    <input id="credentials" name="credentials" class="input" placeholder="e.g. MIT, LPT" value="{{ old('credentials', $admin->credentials) }}" />
+                    <input id="credentials" name="credentials" maxlength="50" class="input" placeholder="e.g. MIT, LPT" value="{{ old('credentials', $admin->credentials) }}" />
                   </div>
                   <div class="pf-field">
                     <label class="label" for="school_year">School Year</label>
