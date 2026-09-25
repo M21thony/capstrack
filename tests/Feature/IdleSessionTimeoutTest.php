@@ -100,7 +100,7 @@ class IdleSessionTimeoutTest extends TestCase
         $this->assertGuest('expert');
     }
 
-    public function test_stay_signed_in_keeps_the_session_going(): void
+    public function test_activity_reported_by_the_page_keeps_the_session_going(): void
     {
         $student = $this->student();
         $this->actingAs($student, 'web')->get(route('student.dashboard'))->assertOk();
@@ -112,7 +112,7 @@ class IdleSessionTimeoutTest extends TestCase
         $this->get(route('student.dashboard'))->assertOk();
     }
 
-    public function test_the_countdown_running_out_signs_them_out(): void
+    public function test_the_idle_time_running_out_signs_them_out(): void
     {
         $this->actingAs($this->student(), 'web')->get(route('student.dashboard'))->assertOk();
 
@@ -124,22 +124,20 @@ class IdleSessionTimeoutTest extends TestCase
         $this->postJson(route('session.keep-alive'))->assertUnauthorized();
     }
 
-    public function test_every_portal_page_carries_the_countdown(): void
+    public function test_every_portal_page_carries_the_idle_timer(): void
     {
         $this->actingAs($this->student(), 'web')->get(route('student.dashboard'))
             ->assertOk()
             ->assertSee('id="idle-logout"', false)
             ->assertSee('data-minutes="10"', false)
-            ->assertSee('data-expired="'.route('session.expired').'"', false)
-            ->assertSee('action="'.route('logout').'"', false)
-            ->assertSee('Are you still there?');
+            ->assertSee('data-expired="'.route('session.expired').'"', false);
 
         $expert = $this->expert();
         foreach (['instructor.dashboard'] as $page) {
             $this->actingAs($expert, 'expert')->get(route($page))
                 ->assertOk()
                 ->assertSee('id="idle-logout"', false)
-                ->assertSee('action="'.route('expert.logout').'"', false);
+                ->assertSee('data-expired="'.route('session.expired').'"', false);
         }
 
         $this->app['auth']->forgetGuards();
@@ -151,13 +149,18 @@ class IdleSessionTimeoutTest extends TestCase
      * inert, so the question is asked inside it - otherwise it would show
      * behind the pop-up where "Stay signed in" cannot be pressed.
      */
-    public function test_the_question_can_be_answered_over_an_open_pop_up(): void
+    /**
+     * There used to be a question to answer, and it had to be moved inside an
+     * open pop-up to be answerable. With no question there is nothing to
+     * move: an open pop-up neither hides the sign-out nor holds it off.
+     */
+    public function test_an_open_pop_up_does_not_hold_off_the_sign_out(): void
     {
         $this->actingAs($this->student(), 'web')->get(route('student.dashboard'))
             ->assertOk()
-            ->assertSee("if (d.matches(':modal')) top = d;", false)
-            ->assertSee('if (box.parentNode !== host) host.appendChild(box);', false)
-            ->assertSee('if (!box.isConnected) home.appendChild(box);', false);
+            ->assertDontSee('host.appendChild(box)', false)
+            ->assertDontSee("d.matches(':modal')", false)
+            ->assertSee('if (now - Math.max(last, shared()) >= LIMIT) { end(); return; }', false);
     }
 
     public function test_a_timeout_of_zero_turns_it_off(): void
@@ -169,5 +172,21 @@ class IdleSessionTimeoutTest extends TestCase
         $this->travel(60)->minutes();
 
         $this->get(route('student.dashboard'))->assertOk();
+    }
+
+    /**
+     * Idle time ends the session on its own: no box asking whether they are
+     * still there, and no countdown to watch.
+     */
+    public function test_there_is_no_warning_box_or_countdown(): void
+    {
+        $this->actingAs($this->student(), 'web')->get(route('student.dashboard'))
+            ->assertOk()
+            ->assertDontSee('Are you still there?')
+            ->assertDontSee('Stay signed in')
+            ->assertDontSee('id="idl-count"', false)
+            ->assertDontSee('id="idl-stay"', false)
+            // Straight to the sign-out once the time is up.
+            ->assertSee('if (now - Math.max(last, shared()) >= LIMIT) { end(); return; }', false);
     }
 }

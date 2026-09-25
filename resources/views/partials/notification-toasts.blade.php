@@ -194,7 +194,8 @@
 
     var bar = document.createElement('span');
     bar.className = 'nt-bar';
-    var life = announcement ? 12000 : 9000;
+    // Every notice at the side of the screen stays four seconds.
+    var life = 4000;
     bar.style.animationDuration = life + 'ms';
     bar.addEventListener('animationend', function () { dismiss(el); });
     if (reduced) setTimeout(function () { dismiss(el); }, life);

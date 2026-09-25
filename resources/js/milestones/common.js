@@ -163,7 +163,7 @@ export function toast(text, undo = null) {
   try { toastEl.showPopover(); } catch { /* popovers unsupported */ }
   say(text);
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(hide, 7000);
+  toastTimer = setTimeout(hide, 4000);
 }
 
 let viaKeyboard = false;

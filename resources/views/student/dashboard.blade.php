@@ -211,7 +211,7 @@
       :badge="$announcements->isNotEmpty() ? $announcements->count() : null"
       :badgeClass="'badge-accent'"
       :empty="$announcements->isEmpty()"
-      emptyMessage="No announcements for your section."
+      emptyMessage="No announcements for your section." emptyIcon="announcement"
     >
       <div class="ann-list">
         @foreach ($announcements as $announcement)
@@ -303,7 +303,7 @@
 
     <div style="height:16px"></div>
     <div class="dash-grid-v3">
-      <x-dashboard.info-card title="Capstone Expert" :empty="!$myTeam || $myTeam->expertAssignments->isEmpty()" emptyMessage="No experts assigned to your team.">
+      <x-dashboard.info-card title="Capstone Expert" :empty="!$myTeam || $myTeam->expertAssignments->isEmpty()" emptyMessage="No experts assigned to your team." emptyIcon="expert">
         @if ($myTeam && $myTeam->expertAssignments->isNotEmpty())
           @foreach ($myTeam->expertAssignments as $assignment)
             @php
@@ -327,7 +327,7 @@
         @endif
       </x-dashboard.info-card>
 
-      <x-dashboard.info-card title="Team ({{ $myTeam ? $myTeam->team_name : 'No Team' }})" :empty="$teamMembers->isEmpty()" emptyMessage="Join a team to see members here.">
+      <x-dashboard.info-card title="Team ({{ $myTeam ? $myTeam->team_name : 'No Team' }})" :empty="$teamMembers->isEmpty()" emptyMessage="Join a team to see members here." emptyIcon="team">
         @foreach ($teamMembers as $member)
           @php $isLeader = isset($leaderStudentId) && $member->student_id === $leaderStudentId; @endphp
           <div class="history-item">
@@ -349,7 +349,7 @@
     <x-dashboard.info-card
       title="Defense Results"
       :empty="$defenseResults->isEmpty()"
-      emptyMessage="No defense stages scheduled yet."
+      emptyMessage="No defense stages scheduled yet." emptyIcon="defense"
     >
       <div class="milestone-list">
         @foreach ($defenseResults as $result)

@@ -344,6 +344,7 @@
                       $editPayload = [
                         'id' => $student->student_id,
                         'f_name' => $student->f_name,
+                        'm_name' => $student->m_name,
                         'l_name' => $student->l_name,
                         'student_number' => $student->student_number,
                         'course' => $student->programAbbr,
@@ -999,8 +1000,13 @@ function uploadStudentRoster(btn) {
       <div class="sheet-row">
         <div class="form-group sheet-col"><label class="label" for="add-student-first">First name</label>
           <input class="input" id="add-student-first" autocomplete="off"></div>
+        <div class="form-group sheet-col"><label class="label" for="add-student-middle">Middle name</label>
+          <input class="input" id="add-student-middle" placeholder="optional" autocomplete="off"></div>
         <div class="form-group sheet-col"><label class="label" for="add-student-last">Last name</label>
           <input class="input" id="add-student-last" autocomplete="off"></div>
+      </div>
+
+      <div class="sheet-row">
         <div class="form-group sheet-col"><label class="label" for="add-student-number">Student no.</label>
           <input class="input" id="add-student-number" placeholder="e.g. 221001135" required aria-required="true" autocomplete="off"></div>
       </div>
@@ -1049,8 +1055,13 @@ function uploadStudentRoster(btn) {
       <div class="sheet-row">
         <div class="form-group sheet-col"><label class="label" for="edit-student-first">First name</label>
           <input class="input" id="edit-student-first"></div>
+        <div class="form-group sheet-col"><label class="label" for="edit-student-middle">Middle name</label>
+          <input class="input" id="edit-student-middle" placeholder="optional"></div>
         <div class="form-group sheet-col"><label class="label" for="edit-student-last">Last name</label>
           <input class="input" id="edit-student-last"></div>
+      </div>
+
+      <div class="sheet-row">
         <div class="form-group sheet-col"><label class="label" for="edit-student-number">Student no.</label>
           <input class="input" id="edit-student-number" placeholder="e.g. 221001135" required aria-required="true"></div>
       </div>
@@ -1193,6 +1204,7 @@ function uploadStudentRoster(btn) {
     'kind' => 'student',
     'fields' => [
         'first_name' => 'add-student-first',
+        'middle_name' => 'add-student-middle',
         'last_name' => 'add-student-last',
         'student_number' => 'add-student-number',
     ],
@@ -1236,7 +1248,7 @@ function filterStudents() {
 
 // ── add by email ──
 function openAddStudent() {
-  ['add-student-email','add-student-first','add-student-last','add-student-number','add-student-section']
+  ['add-student-email','add-student-first','add-student-middle','add-student-last','add-student-number','add-student-section']
     .forEach(function (id) { document.getElementById(id).value = ''; });
   document.getElementById('add-student-error').style.display = 'none';
   document.getElementById('add-student-scrim').hidden = false;
@@ -1271,6 +1283,7 @@ function saveNewStudent() {
     body: JSON.stringify({
       email: document.getElementById('add-student-email').value.trim(),
       f_name: document.getElementById('add-student-first').value.trim(),
+      m_name: document.getElementById('add-student-middle').value.trim() || null,
       l_name: document.getElementById('add-student-last').value.trim(),
       student_number: document.getElementById('add-student-number').value.trim(),
       course: document.getElementById('add-student-course').value,
@@ -1309,6 +1322,7 @@ function openEditStudent(student) {
   document.getElementById('edit-student-title').textContent = student.f_name + ' ' + student.l_name;
   document.getElementById('edit-student-mail').textContent = student.email;
   document.getElementById('edit-student-first').value = student.f_name || '';
+  document.getElementById('edit-student-middle').value = student.m_name || '';
   document.getElementById('edit-student-last').value = student.l_name || '';
   document.getElementById('edit-student-number').value = student.student_number || '';
   document.getElementById('edit-student-course').value = student.course || 'BSIT';
@@ -1345,6 +1359,7 @@ function saveEditStudent() {
       headers: headers(),
       body: JSON.stringify({
         f_name: document.getElementById('edit-student-first').value.trim(),
+        m_name: document.getElementById('edit-student-middle').value.trim() || null,
         l_name: document.getElementById('edit-student-last').value.trim(),
         student_number: document.getElementById('edit-student-number').value.trim() || null,
         course: document.getElementById('edit-student-course').value,

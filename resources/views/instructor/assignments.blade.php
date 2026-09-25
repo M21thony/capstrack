@@ -1259,7 +1259,7 @@ function showToast(msg, type) {
   toast.textContent = msg;
   toast.className = 'msg-toast show ' + type;
   clearTimeout(showToast.t);
-  showToast.t = setTimeout(() => toast.classList.remove('show'), 4500);
+  showToast.t = setTimeout(() => toast.classList.remove('show'), 4000);
 }
 
 // ── first paint ───────────────────────────────────────────────────────────

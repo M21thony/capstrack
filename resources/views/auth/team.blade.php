@@ -330,6 +330,79 @@
     fill: currentColor;
   }
 
+  /* The "Copied" notice at the side of the screen, so the click is
+     acknowledged even when the envelope is scrolled out of sight or too
+     small to notice changing colour. */
+  .copy-toast {
+    position: fixed;
+    right: 24px;
+    bottom: 24px;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    max-width: calc(100vw - 32px);
+    padding: 12px 18px 12px 14px;
+    border-radius: 12px;
+    border-left: 3px solid var(--gold);
+    background: var(--navy-panel);
+    color: #fff;
+    box-shadow: 0 14px 34px rgba(0, 0, 0, 0.28);
+    font-size: 13.5px;
+    line-height: 1.35;
+    opacity: 0;
+    transform: translateX(24px);
+    pointer-events: none;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+  }
+  .copy-toast.show {
+    opacity: 1;
+    transform: none;
+  }
+  .copy-toast-ic {
+    flex: none;
+    width: 26px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: var(--gold);
+    color: var(--ink);
+  }
+  .copy-toast-ic svg {
+    width: 14px;
+    height: 14px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 3;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .copy-toast.failed .copy-toast-ic {
+    background: #f87171;
+  }
+  .copy-toast strong {
+    display: block;
+    font-weight: 700;
+  }
+  .copy-toast span {
+    display: block;
+    color: rgba(255, 255, 255, 0.7);
+    overflow-wrap: anywhere;
+  }
+  @media (max-width: 600px) {
+    .copy-toast {
+      right: 16px;
+      left: 16px;
+      bottom: calc(16px + env(safe-area-inset-bottom));
+      transform: translateY(16px);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .copy-toast { transition: none; }
+  }
+
   /* ══════════════════════ RESPONSIVE ══════════════════════ */
   @media (max-width: 1000px) {
     /* body's align-items/justify-content: center only works while the card
@@ -425,6 +498,11 @@
   </div>
 </div>
 
+<div class="copy-toast" id="copy-toast" role="status" aria-live="polite">
+  <span class="copy-toast-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m5 13 4 4 10-10"/></svg></span>
+  <div><strong id="copy-toast-title">Copied</strong><span id="copy-toast-text"></span></div>
+</div>
+
 <script>
   // The envelope copies the address rather than opening a mail client: this is
   // a showcase page people land on from the sign-in screen, so a mail window
@@ -435,20 +513,35 @@
       var markCopied = function () {
         button.classList.add('copied');
         window.setTimeout(function () { button.classList.remove('copied'); }, 1200);
+        showToast(true, email);
       };
+      var markFailed = function () { showToast(false, email); };
 
       if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(email).then(markCopied, function () { copyFromField(email, markCopied); });
+        navigator.clipboard.writeText(email).then(markCopied, function () { copyFromField(email, markCopied, markFailed); });
         return;
       }
 
-      copyFromField(email, markCopied);
+      copyFromField(email, markCopied, markFailed);
     });
   });
 
+  // Says so at the side of the screen, with the address itself - which is
+  // also how it can still be copied by hand when the browser refuses.
+  var toast = document.getElementById('copy-toast');
+  var toastTimer = null;
+  function showToast(copied, email) {
+    toast.classList.toggle('failed', !copied);
+    document.getElementById('copy-toast-title').textContent = copied ? 'Copied' : "Couldn't copy";
+    document.getElementById('copy-toast-text').textContent = copied ? email + ' is on your clipboard.' : 'The address is ' + email + '.';
+    toast.classList.add('show');
+    window.clearTimeout(toastTimer);
+    toastTimer = window.setTimeout(function () { toast.classList.remove('show'); }, 4000);
+  }
+
   // Older browsers and non-secure origins have no async clipboard API, so the
   // address goes through a hidden field and a copy command instead.
-  function copyFromField(text, done) {
+  function copyFromField(text, done, failed) {
     var field = document.createElement('textarea');
     field.value = text;
     field.setAttribute('readonly', 'readonly');
@@ -458,11 +551,15 @@
     field.select();
 
     try {
-      document.execCommand('copy');
-      done();
+      if (document.execCommand('copy')) {
+        done();
+      } else {
+        failed();
+      }
     } catch (error) {
-      // Clipboard access can still be refused; the title attribute already
-      // shows the address, so failing quietly beats an error popup.
+      // Clipboard access can still be refused; the notice then shows the
+      // address so it can be copied by hand.
+      failed();
     }
 
     document.body.removeChild(field);

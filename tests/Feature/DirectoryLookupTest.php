@@ -60,6 +60,18 @@ class DirectoryLookupTest extends TestCase
         $this->assertSame('Angelo Bermudo', $people[0]['name']);
     }
 
+    /** Picking a student fills in the Add Student form's middle name too. */
+    public function test_a_student_suggestion_carries_the_middle_name(): void
+    {
+        $this->student(['m_name' => 'Nuñez']);
+
+        $people = $this->actingAs($this->staff(), 'expert')
+            ->getJson(route('directory.people', ['q' => 'berm', 'kind' => 'student']))
+            ->json('people');
+
+        $this->assertSame('Nuñez', $people[0]['middle_name']);
+    }
+
     public function test_the_detail_says_where_they_already_are(): void
     {
         $this->student();

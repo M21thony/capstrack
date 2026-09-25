@@ -8,10 +8,10 @@ use App\Models\Student;
 use App\Models\StudentRoster;
 use App\Models\StudentSchoolYear;
 use App\Models\Term;
+use App\Support\SpreadsheetFile;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
@@ -319,7 +319,7 @@ class StudentRosterController extends Controller
      */
     private function read(string $path): array
     {
-        $rows = IOFactory::load($path)->getActiveSheet()->toArray();
+        $rows = SpreadsheetFile::load($path)->getActiveSheet()->toArray();
 
         $header = array_shift($rows);
         $columns = $this->mapHeadings($header ?? []);
