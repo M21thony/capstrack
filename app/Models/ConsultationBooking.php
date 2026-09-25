@@ -2,8 +2,10 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class ConsultationBooking extends Model
@@ -20,6 +22,7 @@ class ConsultationBooking extends Model
 
     protected $fillable = [
         'student_id',
+        'team_id',
         'schedule_id',
         'session_date',
         'booking_status',
@@ -48,16 +51,79 @@ class ConsultationBooking extends Model
         return $this->belongsTo(ConsultationSchedule::class, 'schedule_id', 'schedule_id');
     }
 
-    public function team()
+    /**
+     * The team the consultation was booked for - not the team the student
+     * who clicked Book happens to be in now. Asking through the student sent
+     * a moved student's old consultations along with them to their new team.
+     */
+    public function team(): BelongsTo
     {
-        return $this->hasOneThrough(
-            Team::class,
-            StudentSchoolYear::class,
-            'student_id',
-            'team_id',
-            'student_id',
-            'team_id'
-        );
+        return $this->belongsTo(Team::class, 'team_id', 'team_id');
+    }
+
+    /**
+     * The bookings a team sees on its Consultation page. A booking whose team
+     * could not be worked out (see fillMissingTeams) is shown only to the
+     * student who made it, never to whichever team they are in now.
+     */
+    public function scopeForTeamOf(Builder $query, int $studentId, ?int $teamId): Builder
+    {
+        return $query->where(function (Builder $q) use ($studentId, $teamId) {
+            if ($teamId) {
+                $q->where('team_id', $teamId);
+            }
+
+            $q->orWhere(fn (Builder $mine) => $mine->whereNull('team_id')->where('student_id', $studentId));
+        });
+    }
+
+    /**
+     * Give every booking without a team the one it was made for.
+     *
+     * Bookings used to record only the student. Where it can be known, the
+     * team comes from the "Consultation booked" notice the expert was sent at
+     * the time, which names the team. Failing that, the student's team now -
+     * but only when that team actually has the booking's expert, since
+     * otherwise the student has moved on and the booking belongs to the team
+     * they left. Anything still unknown is left empty rather than guessed.
+     */
+    public static function fillMissingTeams(): void
+    {
+        $missing = static::whereNull('team_id')->with('schedule')->get();
+
+        if ($missing->isEmpty()) {
+            return;
+        }
+
+        $noticed = Notification::where('type', 'consultation_booked')
+            ->whereNotNull('data')
+            ->get(['data'])
+            ->mapWithKeys(fn ($n) => isset($n->data['booking_id'], $n->data['team_id'])
+                ? [(int) $n->data['booking_id'] => (int) $n->data['team_id']]
+                : [])
+            ->all();
+
+        foreach ($missing as $booking) {
+            $teamId = $noticed[$booking->booking_id] ?? null;
+
+            if (! $teamId && $booking->schedule) {
+                $current = StudentSchoolYear::where('student_id', $booking->student_id)
+                    ->orderByDesc('school_year')
+                    ->value('team_id');
+
+                $expertIsTheirs = $current && DB::table('capstone_expert_application')
+                    ->where('team_id', $current)
+                    ->where('expert_id', $booking->schedule->expert_id)
+                    ->where('status', 'approved')
+                    ->exists();
+
+                $teamId = $expertIsTheirs ? $current : null;
+            }
+
+            if ($teamId && Team::whereKey($teamId)->exists()) {
+                $booking->forceFill(['team_id' => $teamId])->saveQuietly();
+            }
+        }
     }
 
     /**
@@ -90,10 +156,10 @@ class ConsultationBooking extends Model
                 // stuck as 'scheduled' forever, permanently blocking the team
                 // from booking anything else.
                 if (! $row->end_time) {
-                    return \Illuminate\Support\Carbon::parse($row->session_date)->lt($now->copy()->startOfDay());
+                    return Carbon::parse($row->session_date)->lt($now->copy()->startOfDay());
                 }
 
-                return \Illuminate\Support\Carbon::parse($row->session_date)
+                return Carbon::parse($row->session_date)
                     ->setTimeFromTimeString($row->end_time)
                     ->lt($now);
             })

@@ -60,6 +60,7 @@ class ConsultationCancellationTest extends TestCase
 
         $bookingId = DB::table('consultation_booking')->insertGetId([
             'student_id' => $student->student_id,
+            'team_id' => $team,
             'schedule_id' => $scheduleId,
             'session_date' => now()->addDays($daysAhead)->toDateString(),
             'booking_status' => 'scheduled',
