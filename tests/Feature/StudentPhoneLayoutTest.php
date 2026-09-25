@@ -196,6 +196,33 @@ class StudentPhoneLayoutTest extends TestCase
         }
     }
 
+    /**
+     * On a phone the how-to card was half the first screen of every page. It
+     * is a banner there, its steps folded behind "How it works".
+     */
+    public function test_the_how_to_card_is_a_banner_on_a_phone(): void
+    {
+        $this->actingAs($this->student())->get(route('student.dashboard'))
+            ->assertOk()
+            ->assertSee('<button type="button" class="page-tutorial-more" aria-expanded="false" aria-controls="tutorial-steps-dashboard">How it works</button>', false)
+            ->assertSee('<ol class="page-tutorial-steps" id="tutorial-steps-dashboard">', false)
+            ->assertSee("more.setAttribute('aria-expanded', open ? 'true' : 'false');", false);
+
+        $css = File::get(resource_path('student-ui/Styles/shared-student.css'));
+        $this->assertStringContainsString('.page-tutorial-steps{display:none;margin-top:8px}', $css);
+        $this->assertStringContainsString('.page-tutorial.is-open .page-tutorial-steps{display:flex}', $css);
+        $this->assertStringNotContainsString("grid-column:1 / -1;\n    width:100%;\n    min-height:44px;", $css);
+    }
+
+    /** A member's whole name on Financial Records, not "Christopher John Emmanuel …". */
+    public function test_financial_records_shows_whole_member_names(): void
+    {
+        $this->assertStringContainsString(
+            '.fx-student #s-team td:first-child{white-space:normal;overflow-wrap:anywhere;',
+            File::get(resource_path('css/financial.css'))
+        );
+    }
+
     /** The profile form has no sidebar or tab bar, so editing has its own way out. */
     public function test_editing_the_profile_has_a_way_back(): void
     {

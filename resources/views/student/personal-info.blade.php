@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content">
     <title>{{ $isEditing ? 'Edit' : 'Complete' }} Personal Information - CapsTrack</title>
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link href="{{ asset('css/fonts.css') }}" rel="stylesheet">
     @vite('resources/student-ui/Styles/personal-info.css')
     <x-dashboard.styles />
     <style>

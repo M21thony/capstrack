@@ -20,9 +20,10 @@
 @if ($tourSteps->isNotEmpty())
 <link rel="stylesheet" href="{{ asset('css/portal-tour.css') }}">
 @if ($tourAutoOpen)
-  {{-- The heading font is only worth fetching for someone about to see it;
-       a replay from the sidebar loads it then. --}}
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&display=swap" id="gt-font">
+  {{-- The site's own fonts (Poppins for the headings among them); the page
+       usually has them already, and a replay from the sidebar adds them
+       then. The font file itself is fetched only once a heading is drawn. --}}
+  <link rel="stylesheet" href="{{ asset('css/fonts.css') }}" id="gt-font">
 @endif
 
 <div class="gt" id="portal-tour" role="dialog" aria-modal="true" aria-labelledby="gt-label" aria-describedby="gt-body" hidden
@@ -351,7 +352,7 @@
     var link = document.createElement('link');
     link.id = 'gt-font';
     link.rel = 'stylesheet';
-    link.href = 'https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&display=swap';
+    link.href = @js(asset('css/fonts.css'));
     document.head.appendChild(link);
   }
 
