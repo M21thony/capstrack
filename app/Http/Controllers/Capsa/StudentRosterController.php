@@ -12,6 +12,7 @@ use App\Support\SpreadsheetFile;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
@@ -343,6 +344,15 @@ class StudentRosterController extends Controller
 
             if ($email === '' && $name === '') {
                 continue; // a blank line at the end of the sheet
+            }
+
+            // Google addresses are plain letters only, so a list typed from
+            // the student's name - "tobriñas" - means the account Google
+            // actually issued, "tobrinas". Read it as that, and say so.
+            $asciiEmail = Str::ascii($email);
+            if ($asciiEmail !== $email && filter_var($asciiEmail, FILTER_VALIDATE_EMAIL)) {
+                $errors[] = "Row {$rowNum}: '{$email}' read as '{$asciiEmail}', since school Google addresses cannot have accented letters.";
+                $email = $asciiEmail;
             }
 
             if (! filter_var($email, FILTER_VALIDATE_EMAIL)) {

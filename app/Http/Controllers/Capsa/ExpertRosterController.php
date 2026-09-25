@@ -9,6 +9,7 @@ use App\Support\SpreadsheetFile;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
@@ -116,6 +117,15 @@ class ExpertRosterController extends Controller
                     $errors[] = "{$where}: missing name or email - skipped.";
 
                     continue;
+                }
+
+                // Google addresses are plain letters only, so "peñafiel"
+                // typed from a name is the account "penafiel". Read it as
+                // that, and say so.
+                $asciiEmail = Str::ascii($email);
+                if ($asciiEmail !== $email && filter_var($asciiEmail, FILTER_VALIDATE_EMAIL)) {
+                    $errors[] = "{$where}: '{$email}' read as '{$asciiEmail}', since Google addresses cannot have accented letters.";
+                    $email = $asciiEmail;
                 }
 
                 if (! filter_var($email, FILTER_VALIDATE_EMAIL)) {
