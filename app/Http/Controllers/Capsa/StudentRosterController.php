@@ -8,6 +8,7 @@ use App\Models\Student;
 use App\Models\StudentRoster;
 use App\Models\StudentSchoolYear;
 use App\Models\Term;
+use App\Support\EmailAddress;
 use App\Support\SpreadsheetFile;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -339,7 +340,7 @@ class StudentRosterController extends Controller
             $rowNum = $i + 2;
             $get = fn (string $key) => isset($columns[$key]) ? trim((string) ($row[$columns[$key]] ?? '')) : '';
 
-            $email = mb_strtolower($get('email'));
+            $email = EmailAddress::clean($get('email'));
             $name = trim($get('name').' '.$get('last_name').' '.$get('first_name'));
 
             if ($email === '' && $name === '') {
