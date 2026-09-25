@@ -114,17 +114,56 @@
       $waiting = implode(' &middot; ', $waiting);
     @endphp
 
-    <div class="tmx">
-      {{-- The same trail every level below uses, so the list is plainly the
-           top of it rather than a page with no place in the trail. --}}
-      @include('capsa.partials.team-management._crumb', ['trail' => [['Team Management', null]]])
-
-      <div class="phead">
-        <div class="tile"><x-tm-icon n="users" s="22" /></div>
-        <div style="min-width:0">
-          <h1>Team Management</h1>
-          <p>{!! $waiting !== '' ? '<b>Waiting on you:</b> '.$waiting : 'Every team in your sections, and everything about them, on one page.' !!}</p>
+    {{-- Laid out as the Student Section List is: what the page holds in one
+         line, then the search, filters and ways in on the next, and the list
+         filling the rest of the screen and scrolling inside itself. The
+         title, crumb and four stat cards took a third of the screen, leaving
+         the table a strip. --}}
+    <div class="tmx tm-list">
+      <div class="page-head">
+        <div class="page-head-text">
+          <span class="page-count">{{ $rows->count() }}</span>
+          <span class="page-count-noun">{{ Str::plural('team', $rows->count()) }}</span>
+          <span class="page-facts">
+            <span class="fact">{{ $rows->count() - $completedCount - $reviewCount }} in progress</span>
+            <span class="fact">{{ $reviewCount }} for review</span>
+            <span class="fact">{{ $completedCount }} completed</span>
+            @if ($waiting !== '')
+              <span class="fact fact-warn"><b>Waiting on you:</b> {!! $waiting !!}</span>
+            @endif
+          </span>
         </div>
+      </div>
+
+      <div class="tools">
+        <label class="fs">
+          <x-tm-icon n="search" s="16" />
+          <input type="text" id="tm-q" placeholder="Search by team name, title, or member..." aria-label="Search teams">
+        </label>
+
+        {{-- Section stays a real page load: it decides which teams are here
+             at all, not just which of them are shown. --}}
+        <form method="get" action="{{ route('capsa.team_management') }}" style="display:contents">
+          <select class="sel" name="section" aria-label="Section" onchange="this.form.submit()">
+            <option value="">All Sections</option>
+            @foreach ($sectionOptions as $section)
+              <option value="{{ $section }}" @selected($selectedSection === $section)>{{ $section }}</option>
+            @endforeach
+          </select>
+        </form>
+
+        <select class="sel" id="tm-st" aria-label="Status">
+          <option value="">All Status</option>
+          @foreach ($rows->map($statusOf)->unique()->sort() as $status)
+            <option value="{{ $status }}">{{ $status }}</option>
+          @endforeach
+        </select>
+
+        <div class="seg" role="group" aria-label="Show">
+          <button type="button" data-v="teams" aria-pressed="true">Teams</button>
+          <button type="button" data-v="progress" aria-pressed="false">Progress</button>
+        </div>
+
         {{-- Milestones and Leave Requests are lists of their own, so they are
              pages. The three team rules are three small answers, so they open
              in a menu under their button rather than sending her away. --}}
@@ -166,55 +205,6 @@
               </div>
             </div>
           </div>
-        </div>
-      </div>
-
-      <div class="stats">
-        <div class="stat">
-          <div><div class="lab">Total Teams</div><div class="num">{{ $rows->count() }}</div></div>
-          <div class="tile" style="background:var(--accent-bg);color:var(--accent3)"><x-tm-icon n="users" s="20" /></div>
-        </div>
-        <div class="stat">
-          <div><div class="lab">In Progress</div><div class="num">{{ $rows->count() - $completedCount - $reviewCount }}</div></div>
-          <div class="tile" style="background:var(--amber-bg);color:var(--amber)"><x-tm-icon n="clock" s="20" /></div>
-        </div>
-        <div class="stat">
-          <div><div class="lab">For Review</div><div class="num">{{ $reviewCount }}</div></div>
-          <div class="tile" style="background:var(--violet-bg);color:var(--violet)"><x-tm-icon n="file" s="20" /></div>
-        </div>
-        <div class="stat">
-          <div><div class="lab">Completed</div><div class="num">{{ $completedCount }}</div></div>
-          <div class="tile" style="background:var(--green-bg);color:var(--green)"><x-tm-icon n="check" s="20" /></div>
-        </div>
-      </div>
-
-      <div class="tools">
-        <label class="fs">
-          <x-tm-icon n="search" s="16" />
-          <input type="text" id="tm-q" placeholder="Search by team name, title, or member..." aria-label="Search teams">
-        </label>
-
-        {{-- Section stays a real page load: it decides which teams are here
-             at all, not just which of them are shown. --}}
-        <form method="get" action="{{ route('capsa.team_management') }}" style="display:contents">
-          <select class="sel" name="section" aria-label="Section" onchange="this.form.submit()">
-            <option value="">All Sections</option>
-            @foreach ($sectionOptions as $section)
-              <option value="{{ $section }}" @selected($selectedSection === $section)>{{ $section }}</option>
-            @endforeach
-          </select>
-        </form>
-
-        <select class="sel" id="tm-st" aria-label="Status">
-          <option value="">All Status</option>
-          @foreach ($rows->map($statusOf)->unique()->sort() as $status)
-            <option value="{{ $status }}">{{ $status }}</option>
-          @endforeach
-        </select>
-
-        <div class="seg" role="group" aria-label="Show">
-          <button type="button" data-v="teams" aria-pressed="true">Teams</button>
-          <button type="button" data-v="progress" aria-pressed="false">Progress</button>
         </div>
       </div>
 

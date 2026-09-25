@@ -57,21 +57,25 @@
 .tmx td input[type=checkbox],
 .tmx th input[type=checkbox]{width:16px;height:16px;accent-color:var(--accent);cursor:pointer;margin:0}
 
-/* ── The list scrolls inside itself, under a header that stays ──
-   The whole page used to scroll, walking the column headings, the filters
-   and the counts off the top by the tenth team. On a computer the page now
-   fills the screen and only the rows move, as the admin's long lists do
-   (admin.css, "a long list scrolls inside itself"). The table keeps at
-   least 320px; a screen too short for that and the page scrolls as before.
-   Phones get the cards below instead, so this stops at their width. */
+/* ── The list page, laid out as the Student Section List ──
+   One line saying what the page holds, one line of search, filters and ways
+   in, and the list filling the rest of the screen - scrolling inside itself
+   under headings that stay, with the developers' credit at its end - as the
+   admin's long lists do (admin.css, "a long list scrolls inside itself").
+   The page used to scroll whole, walking the headings and filters off the
+   top by the tenth team. Phones get the cards below instead. */
+.tmx.tm-list{padding:0}
+.tmx .pacts .nb{font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px;background:var(--tint2);color:var(--ink2)}
+.tmx.tm-list .tools{margin-bottom:12px}
+.tmx.tm-list .fact-warn b{font-weight:600}
 @media (min-width:1001px){
-  .content:has(> .tmx){display:flex;flex-direction:column}
-  .content > .tmx{flex:1 0 auto;display:flex;flex-direction:column}
-  .tmx .tcard{flex:1 1 0;min-height:320px;display:flex;flex-direction:column}
-  .tmx .tcard[hidden]{display:none}
-  .tmx .tcard > .tscroll{flex:1;min-height:0;overflow:auto}
-  .tmx .tcard > .tfoot{flex:none}
-  .tmx th{
+  .content:has(> .tm-list){display:flex;flex-direction:column;min-height:0;overflow:hidden}
+  .content > .tm-list{flex:1;min-height:0;display:flex;flex-direction:column}
+  .tm-list .tcard{flex:1;min-height:0;display:flex;flex-direction:column}
+  .tm-list .tcard[hidden]{display:none}
+  .tm-list .tcard > .tscroll{flex:1;min-height:0;overflow:auto}
+  .tm-list .tcard > .tfoot{flex:none}
+  .tm-list th{
     position:sticky;top:0;z-index:2;
     /* The line under a sticky heading does not travel with it as a border
        in every browser; an inset shadow does. */
