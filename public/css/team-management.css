@@ -557,7 +557,7 @@
 @media (max-width:768px){
   .tmx .set-scrim:not([hidden]){display:block;position:fixed;inset:0;z-index:999;background:rgba(15,17,23,.45);
     animation:setFade .15s ease}
-  .tmx .menu{position:fixed;left:0;right:0;bottom:0;top:auto;z-index:1000;width:auto;max-height:85dvh;overflow-y:auto;
+  .tmx .menu{position:fixed;left:0;right:0;bottom:0;top:auto;z-index:1000;width:auto;max-height:85vh;max-height:85dvh;overflow-y:auto;
     border-radius:18px 18px 0 0;border-bottom:0;padding-bottom:env(safe-area-inset-bottom);
     box-shadow:0 -12px 40px rgba(15,23,42,.25);animation:setRise .2s ease}
   /* The handle that says "this is a sheet". */
