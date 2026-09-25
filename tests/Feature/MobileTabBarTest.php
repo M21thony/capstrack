@@ -56,12 +56,18 @@ class MobileTabBarTest extends TestCase
 
         $this->actingAs($student)->get(route('student.dashboard'))
             ->assertOk()
-            ->assertSee('<nav class="mtab is-floating" aria-label="Main">', false)
+            // Five places, Home the one you are on: the highlight starts there.
+            ->assertSee('<nav class="mtab is-floating" aria-label="Main" style="--n:5;--i:0">', false)
+            ->assertSee('<span class="mtab-glide" aria-hidden="true"></span>', false)
+            ->assertSee('transform:translateX(calc(var(--i, 0) * 100%));', false)
+            ->assertSee("remember(current);\n        select(i);", false)
+            ->assertSee('.mtab.is-floating .mtab-item.on .lb{opacity:1;transform:none}', false)
+            ->assertSee('.mtab.is-floating .mtab-item.primary:active .mtab-ic svg{transform:rotate(90deg)}', false)
             ->assertSee('.mtab.is-floating.is-away{', false)
             ->assertSee('if (moved > 6) hide();', false)
             ->assertSee('else if (moved < -6) show();', false)
             ->assertSee("spacer.className = 'mtab-spacer';", false)
-            // The pill on its gold lip, icons only; the middle is a +, the
+            // The pill on its gold lip; the middle is a +, the
             // last tab the student's own picture (their initials without one).
             ->assertSee('.mtab.is-floating::before{left:5px;right:5px;top:8px;bottom:-6px;background:var(--accent2,#b5941f)}', false)
             ->assertSee(PortalIcons::paths('add'), false)
@@ -73,7 +79,8 @@ class MobileTabBarTest extends TestCase
         $this->actingAs($expert, 'expert')->get(route('instructor.dashboard'))
             ->assertOk()
             ->assertSee('<nav class="mtab" aria-label="Main">', false)
-            ->assertDontSee('is-floating', false);
+            ->assertDontSee('is-floating', false)
+            ->assertDontSee('mtab-glide', false);
     }
 
     /**
