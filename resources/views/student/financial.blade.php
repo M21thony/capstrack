@@ -8,6 +8,19 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
 @vite(['resources/student-ui/styles.css', 'resources/css/financial.css', 'resources/js/financial/student.js'])
 <x-dashboard.styles />
+<style>
+  /* The developers' credit (placed by partials/mobile-tabbar) at the size the
+     student dashboard gives it. The receipt list's own 1.45 line height and
+     type made it read a size larger here than anywhere else in the portal. */
+  #fx-student .sys-credits{padding:12px 12px 14px;line-height:normal}
+  #fx-student .sys-credits .credits-title{font-size:8px}
+  #fx-student .sys-credits .credits-names{font-size:9px}
+  @media (max-width:768px){
+    #fx-student .sys-credits{padding:10px 12px}
+    #fx-student .sys-credits .credits-title{font-size:7px}
+    #fx-student .sys-credits .credits-names{font-size:8px}
+  }
+</style>
 </head>
 <body>
 @include('student.partials.sidebar')
