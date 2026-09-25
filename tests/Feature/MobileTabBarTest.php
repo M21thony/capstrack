@@ -6,6 +6,7 @@ use App\Models\CapstoneExpert;
 use App\Models\Student;
 use App\Models\StudentSchoolYear;
 use App\Models\Team;
+use App\Support\PortalIcons;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -59,7 +60,13 @@ class MobileTabBarTest extends TestCase
             ->assertSee('.mtab.is-floating.is-away{', false)
             ->assertSee('if (moved > 6) hide();', false)
             ->assertSee('else if (moved < -6) show();', false)
-            ->assertSee("spacer.className = 'mtab-spacer';", false);
+            ->assertSee("spacer.className = 'mtab-spacer';", false)
+            // The pill on its gold lip, icons only; the middle is a +, the
+            // last tab the student's own picture (their initials without one).
+            ->assertSee('.mtab.is-floating::before{left:5px;right:5px;top:8px;bottom:-6px;background:var(--accent2,#b5941f)}', false)
+            ->assertSee(PortalIcons::paths('add'), false)
+            ->assertSee('<span class="mtab-ic mtab-avatar" aria-hidden="true">', false)
+            ->assertSee($student->avatarInitials());
 
         $expert = CapstoneExpert::factory()->create(['approved_status' => true, 'is_admin' => false]);
 

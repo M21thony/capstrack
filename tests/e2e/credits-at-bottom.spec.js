@@ -50,12 +50,16 @@ for (const vp of VIEWPORTS) {
           for (let box = el.parentElement; box; box = box.parentElement) {
             box.scrollTop = box.scrollHeight;
           }
+          // Measured to the top of the phone tab bar, floating or not - with
+          // the student's floating one brought back if scrolling hid it.
           const bar = document.querySelector('.mtab');
-          const barHeight = bar && getComputedStyle(bar).display !== 'none' ? bar.getBoundingClientRect().height : 0;
-          return Math.round(innerHeight - barHeight - el.getBoundingClientRect().bottom);
+          bar?.classList.remove('is-away');
+          const barTop = bar && getComputedStyle(bar).display !== 'none' ? bar.getBoundingClientRect().top : innerHeight;
+          return Math.round(barTop - el.getBoundingClientRect().bottom);
         });
 
-        // Only the page's own bottom padding may sit below it.
+        // Only the page's own bottom padding (and, over a floating bar, a little
+        // clearance) may sit between it and the bar.
         expect(gap, `the credits end ${gap}px above the bottom of the screen`).toBeLessThanOrEqual(30);
         expect(gap, `the credits run ${-gap}px past the bottom of the screen`).toBeGreaterThanOrEqual(-2);
       });

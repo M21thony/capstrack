@@ -268,38 +268,58 @@
 --}}
 <style>
   @media (max-width:768px){
+    /* A white pill resting on a gold lip, icons only - the look the app's
+       own bar has. The pill and the lip are the bar's two pseudo-elements,
+       lip first, so the pill paints over it and the icons over both. */
     .mtab.is-floating{
-      left:12px;right:12px;bottom:calc(10px + env(safe-area-inset-bottom, 0px));
-      height:64px;padding:0 6px;border:1px solid rgba(24,25,31,.07);border-radius:24px;
-      background:rgba(255,255,255,.97);
-      box-shadow:0 12px 32px rgba(24,25,31,.16),0 2px 8px rgba(24,25,31,.08);
+      left:14px;right:14px;bottom:calc(16px + env(safe-area-inset-bottom, 0px));
+      height:58px;padding:0 6px;border:0;border-radius:29px;
+      background:none;box-shadow:none;isolation:isolate;
       transition:transform .3s cubic-bezier(.2,.8,.2,1),opacity .2s ease;
       will-change:transform;
     }
-    @supports ((-webkit-backdrop-filter:blur(1px)) or (backdrop-filter:blur(1px))){
-      .mtab.is-floating{
-        background:rgba(255,255,255,.8);
-        -webkit-backdrop-filter:saturate(180%) blur(18px);backdrop-filter:saturate(180%) blur(18px);
-      }
+    .mtab.is-floating::before,.mtab.is-floating::after{content:"";position:absolute;border-radius:inherit;z-index:-1;pointer-events:none}
+    .mtab.is-floating::before{left:5px;right:5px;top:8px;bottom:-6px;background:var(--accent2,#b5941f)}
+    .mtab.is-floating::after{
+      inset:0;background:#fff;border:1px solid rgba(24,25,31,.08);
+      box-shadow:0 14px 30px rgba(24,25,31,.16),0 2px 6px rgba(24,25,31,.06);
     }
     .mtab.is-floating.is-away{
-      transform:translateY(calc(100% + 16px + env(safe-area-inset-bottom, 0px)));
+      transform:translateY(calc(100% + 32px + env(safe-area-inset-bottom, 0px)));
       opacity:0;pointer-events:none;
     }
-    .mtab.is-floating .mtab-item{padding:6px 2px}
-    /* Inside the pill, not standing out of it: the same size as the others,
-       told apart by its gold. */
-    .mtab.is-floating .mtab-item.primary .mtab-ic{width:48px;height:30px;margin-top:0;border-radius:15px;box-shadow:0 3px 10px rgba(201,168,44,.4)}
-    .mtab.is-floating .mtab-item.primary .mtab-ic svg{width:20px;height:20px}
-    .mtab.is-floating .mtab-badge{box-shadow:0 0 0 2px rgba(255,255,255,.95)}
+
+    .mtab.is-floating .mtab-item{padding:0;gap:0;color:#18191f}
+    /* The names stay for screen readers; the pictures say it on screen. */
+    .mtab.is-floating .mtab-item .lb{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+    .mtab.is-floating .mtab-ic{width:48px;height:42px;border-radius:21px}
+    .mtab.is-floating .mtab-ic svg{width:24px;height:24px;stroke-width:2}
+    .mtab.is-floating .mtab-item.on{color:var(--accent3,#8a6e10)}
+    .mtab.is-floating .mtab-item.on .mtab-ic{width:64px;background:rgba(201,168,44,.16);color:var(--accent3,#8a6e10)}
+    .mtab.is-floating .mtab-item.on .mtab-ic svg{stroke-width:2.4}
+    .mtab.is-floating .mtab-item:active .mtab-ic{background:rgba(24,25,31,.06)}
+
+    /* The one action: a solid gold disc in the middle of the pill. */
+    .mtab.is-floating .mtab-item.primary .mtab-ic{
+      width:42px;height:42px;margin:0;border-radius:50%;
+      background:var(--accent,#c9a82c);color:#18191f;box-shadow:0 4px 12px rgba(201,168,44,.45);
+    }
+    .mtab.is-floating .mtab-item.primary .mtab-ic svg{width:22px;height:22px;stroke-width:2.6}
+
+    /* Menu wears the student's own picture, as the app's last tab does. */
+    .mtab.is-floating .mtab-avatar{width:32px;height:32px;border-radius:50%;padding:0;overflow:hidden;
+      background:var(--accent-light,#faf7ed);box-shadow:0 0 0 2px #18191f;color:#18191f;font-size:12px;font-weight:700}
+    .mtab.is-floating .mtab-avatar img{width:100%;height:100%;object-fit:cover;display:block}
+
+    .mtab.is-floating .mtab-badge{top:2px;right:6px;box-shadow:0 0 0 2px #fff}
 
     /* The page scrolls clear of the pill; toasts sit above it. Where the
        page's scrolling area can be found (the script below), the room is at
        the end of it instead, so the page runs on underneath the pill like
        the app's feed does, rather than stopping at a line above it. */
-    .main{padding-bottom:calc(84px + env(safe-area-inset-bottom, 0px))}
-    .mtab-spacer{flex:none;height:calc(84px + env(safe-area-inset-bottom, 0px));pointer-events:none}
-    .toast,.toast-wrap,#submission-toast,#archive-toast{bottom:calc(86px + env(safe-area-inset-bottom, 0px))!important}
+    .main{padding-bottom:calc(92px + env(safe-area-inset-bottom, 0px))}
+    .mtab-spacer{flex:none;height:calc(92px + env(safe-area-inset-bottom, 0px));pointer-events:none}
+    .toast,.toast-wrap,#submission-toast,#archive-toast{bottom:calc(96px + env(safe-area-inset-bottom, 0px))!important}
   }
   @media (max-width:768px) and (prefers-reduced-motion:reduce){
     .mtab.is-floating{transition:opacity .15s linear}
@@ -360,7 +380,7 @@
     // Less whatever room the page already keeps at its end, so the gap above
     // the pill is the same on every page.
     var own = parseFloat(getComputedStyle(scroller).paddingBottom) || 0;
-    spacer.style.height = 'calc(' + Math.max(0, 86 - own) + 'px + env(safe-area-inset-bottom, 0px))';
+    spacer.style.height = 'calc(' + Math.max(0, 94 - own) + 'px + env(safe-area-inset-bottom, 0px))';
     scroller.appendChild(spacer);
   });
 </script>
@@ -383,7 +403,17 @@
     @endif
   @endforeach
   <button type="button" class="mtab-item" onclick="var h = document.querySelector('.hamburger-btn'); if (h) { h.click(); }" aria-label="Open the full menu">
-    <span class="mtab-ic"><svg viewBox="0 0 24 24" aria-hidden="true"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg></span>
+    @if (($floating ?? false) && ! empty($menuAvatar))
+      <span class="mtab-ic mtab-avatar" aria-hidden="true">
+        @if (! empty($menuAvatar['url']))
+          <img src="{{ $menuAvatar['url'] }}" alt="" onerror="this.replaceWith(document.createTextNode(@js($menuAvatar['initials'] ?? '')))">
+        @else
+          {{ $menuAvatar['initials'] ?? '' }}
+        @endif
+      </span>
+    @else
+      <span class="mtab-ic"><svg viewBox="0 0 24 24" aria-hidden="true"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg></span>
+    @endif
     <span class="lb">Menu</span>
   </button>
 </nav>
