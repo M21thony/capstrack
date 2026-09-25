@@ -184,7 +184,7 @@
   </nav>
 </div>
 
-@include('partials.mobile-tabbar', ['tabs' => array_values(array_filter([
+@include('partials.mobile-tabbar', ['floating' => true, 'tabs' => array_values(array_filter([
     ['label' => 'Home', 'href' => route('student.dashboard'), 'active' => request()->routeIs('student.dashboard'),
         'icon' => App\Support\PortalIcons::paths('home')],
     ['label' => 'Team', 'href' => route('student.team'), 'active' => request()->routeIs('student.team'), 'badge' => $newPostCount,

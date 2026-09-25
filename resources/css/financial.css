@@ -150,6 +150,11 @@
 
 @media (max-width:1180px){
   .fx{overflow:auto}
+  /* Once the whole page scrolls, the student's page flows in it at its full
+     length. Held to the leftover height instead, the member list shrank to
+     a sliver on a phone - and on a shorter phone to nothing at all. */
+  .fx-student,.fx-student .fx-scroll{flex:none;min-height:auto}
+  .fx-student .fx-scroll{overflow:visible}
   .fx-split{grid-template-columns:1fr;grid-template-rows:minmax(320px,1fr) auto}
   .fx-list{border-right:0;border-bottom:1px solid var(--fx-line)}
 }
