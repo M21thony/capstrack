@@ -374,6 +374,7 @@ class ConsultationBookingDateTest extends TestCase
 
         DB::table('consultation_booking')->insert([
             'student_id' => $student->student_id,
+            'team_id' => $team,
             'schedule_id' => $scheduleId,
             'session_date' => now()->addDay()->toDateString(),
             'booking_status' => 'scheduled',
