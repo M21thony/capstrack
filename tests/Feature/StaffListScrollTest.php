@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\CapstoneExpert;
+use App\Support\PublicAsset;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\File;
 use Tests\TestCase;
@@ -62,5 +63,39 @@ class StaffListScrollTest extends TestCase
             ->assertSee('<div class="card dr-card" style="padding:0">', false)
             ->assertSee('.content.dr-page > .dr-card { flex: 1 1 0; min-height: 260px; overflow: auto; }', false)
             ->assertSee('.content.dr-page { display: flex; flex-direction: column; }', false);
+    }
+
+    /**
+     * The portals' stylesheets are served with the time they last changed on
+     * the end: after a deploy the pages were new and a browser's copy of the
+     * styles was not, so a fix looked as though it had not been made.
+     */
+    public function test_stylesheets_carry_their_version_so_a_deploy_reaches_the_browser(): void
+    {
+        $url = PublicAsset::url('css/team-management.css');
+        $this->assertSame(asset('css/team-management.css').'?v='.filemtime(public_path('css/team-management.css')), $url);
+        $this->assertSame(asset('css/missing.css'), PublicAsset::url('css/missing.css'));
+
+        $capsa = $this->makeCapsa(CapstoneExpert::factory()->create(['approved_status' => true, 'is_admin' => false, 'sections' => ['BSIT-3A']]));
+        $this->actingAs($capsa, 'expert')->get(route('capsa.team_management'))->assertOk()
+            ->assertSee('href="'.$url.'"', false)
+            ->assertSee('href="'.PublicAsset::url('css/admin.css').'"', false);
+
+        $unversioned = collect(File::allFiles(resource_path('views')))
+            ->reject(fn ($file) => $file->getRelativePathname() === 'errors/layout.blade.php')
+            ->filter(fn ($file) => str_contains($file->getContents(), "asset('css/"))
+            ->map(fn ($file) => $file->getRelativePathname())->values()->all();
+        $this->assertSame([], $unversioned);
+    }
+
+    /** At every width, as the Section List: a phone's cards scroll inside the list too. */
+    public function test_the_team_list_scrolls_inside_itself_at_every_width(): void
+    {
+        $css = File::get(public_path('css/team-management.css'));
+        $listRules = substr($css, strpos($css, '.content:has(> .tm-list){display:flex'), 200);
+
+        $this->assertStringNotContainsString('@media', substr($css, strpos($css, '/* At every width'), 120));
+        $this->assertStringContainsString('overflow:hidden}', $listRules);
+        $this->assertStringContainsString('.tmx.tm-list .pacts{flex-wrap:nowrap;gap:6px}', $css);
     }
 }

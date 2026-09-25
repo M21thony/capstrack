@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <meta name="csrf-token" content="{{ csrf_token() }}"/>
 <title>CapsTRACK — Annotate: {{ $review->document->file_name ?? 'Document' }}</title>
-<link href="{{ asset('css/fonts.css') }}" rel="stylesheet">
+<link href="{{ \App\Support\PublicAsset::url('css/fonts.css') }}" rel="stylesheet">
 @vite(['resources/css/app.css', 'resources/js/main.jsx'])
 </head>
 <body>

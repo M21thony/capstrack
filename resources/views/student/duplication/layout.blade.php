@@ -11,7 +11,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content" />
 <title>@yield('page-title', 'Duplication check') - CapsTrack</title>
-<link href="{{ asset('css/fonts.css') }}" rel="stylesheet">
+<link href="{{ \App\Support\PublicAsset::url('css/fonts.css') }}" rel="stylesheet">
 @vite('resources/student-ui/styles.css')
 @include('student.partials.duplication-ui')
 <x-dashboard.styles />

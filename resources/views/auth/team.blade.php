@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Meet the Team — CapsTrack</title>
-<link href="{{ asset('css/fonts.css') }}" rel="stylesheet">
+<link href="{{ \App\Support\PublicAsset::url('css/fonts.css') }}" rel="stylesheet">
 <style>
   @font-face {
     font-family: 'Geist Pixel';

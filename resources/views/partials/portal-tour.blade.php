@@ -18,12 +18,12 @@
 @endphp
 
 @if ($tourSteps->isNotEmpty())
-<link rel="stylesheet" href="{{ asset('css/portal-tour.css') }}">
+<link rel="stylesheet" href="{{ \App\Support\PublicAsset::url('css/portal-tour.css') }}">
 @if ($tourAutoOpen)
   {{-- The site's own fonts (Poppins for the headings among them); the page
        usually has them already, and a replay from the sidebar adds them
        then. The font file itself is fetched only once a heading is drawn. --}}
-  <link rel="stylesheet" href="{{ asset('css/fonts.css') }}" id="gt-font">
+  <link rel="stylesheet" href="{{ \App\Support\PublicAsset::url('css/fonts.css') }}" id="gt-font">
 @endif
 
 <div class="gt" id="portal-tour" role="dialog" aria-modal="true" aria-labelledby="gt-label" aria-describedby="gt-body" hidden
@@ -352,7 +352,7 @@
     var link = document.createElement('link');
     link.id = 'gt-font';
     link.rel = 'stylesheet';
-    link.href = @js(asset('css/fonts.css'));
+    link.href = @js(\App\Support\PublicAsset::url('css/fonts.css'));
     document.head.appendChild(link);
   }
 

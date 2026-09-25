@@ -4,8 +4,8 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Team Assignments - CapsTRACK</title>
-<link href="{{ asset('css/fonts.css') }}" rel="stylesheet">
-<link rel="stylesheet" href="{{ asset('css/expert.css') }}" />
+<link href="{{ \App\Support\PublicAsset::url('css/fonts.css') }}" rel="stylesheet">
+<link rel="stylesheet" href="{{ \App\Support\PublicAsset::url('css/expert.css') }}" />
 <meta name="csrf-token" content="{{ csrf_token() }}">
 <style>
 /* The page is a queue with the application open beside it. The page itself

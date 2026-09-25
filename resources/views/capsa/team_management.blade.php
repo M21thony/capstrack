@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Team Management - CapsTRACK Admin</title>
 <meta name="csrf-token" content="{{ csrf_token() }}"/>
-<link href="{{ asset('css/fonts.css') }}" rel="stylesheet">
-<link rel="stylesheet" href="{{ asset('css/admin.css') }}"/>
-<link rel="stylesheet" href="{{ asset('css/team-management.css') }}"/>
+<link href="{{ \App\Support\PublicAsset::url('css/fonts.css') }}" rel="stylesheet">
+<link rel="stylesheet" href="{{ \App\Support\PublicAsset::url('css/admin.css') }}"/>
+<link rel="stylesheet" href="{{ \App\Support\PublicAsset::url('css/team-management.css') }}"/>
 <style>
   .tm-empty{text-align:center;padding:44px 20px;color:var(--text3);font-size:13px;line-height:1.6}
 </style>

@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content" />
 <title>Review Viewer - CapsTrack</title>
 <meta name="csrf-token" content="{{ csrf_token() }}">
-<link href="{{ asset('css/fonts.css') }}" rel="stylesheet">
+<link href="{{ \App\Support\PublicAsset::url('css/fonts.css') }}" rel="stylesheet">
 @vite(['resources/student-ui/styles.css', 'resources/js/student-review.jsx'])
 <x-dashboard.styles />
 <style>
