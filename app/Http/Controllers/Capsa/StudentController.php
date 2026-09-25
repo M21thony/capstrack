@@ -64,6 +64,21 @@ class StudentController extends Controller
         return $ordinal.' · '.strtoupper(trim($section));
     }
 
+    /**
+     * The name as the class list writes it - "Dela Cruz, Juan Bautista" -
+     * so a student added or edited here reads like the ones uploaded
+     * beside them.
+     *
+     * @param  array{f_name?: ?string, m_name?: ?string, l_name?: ?string}  $name
+     */
+    private static function listName(array $name): string
+    {
+        $given = trim(($name['f_name'] ?? '').' '.($name['m_name'] ?? ''));
+        $last = trim((string) ($name['l_name'] ?? ''));
+
+        return $last !== '' && $given !== '' ? $last.', '.$given : trim($last.$given);
+    }
+
     /** True when this student sits in a section the viewer handles. */
     private function mine(Student $student): bool
     {
@@ -107,6 +122,7 @@ class StudentController extends Controller
             // is refused below, where the reason can be stated.
             'email' => ['required', 'email', 'max:190'],
             'f_name' => ['required', 'string', 'max:60'],
+            'm_name' => ['nullable', 'string', 'max:60'],
             'l_name' => ['required', 'string', 'max:60'],
             'student_number' => ['nullable', 'string', 'max:30'],
             'course' => ['required', Rule::in(array_keys(Student::PROGRAM_COURSES))],
@@ -142,6 +158,7 @@ class StudentController extends Controller
 
         $fields = [
             'f_name' => trim($data['f_name']),
+            'm_name' => filled($data['m_name'] ?? null) ? trim($data['m_name']) : null,
             'l_name' => trim($data['l_name']),
             'student_number' => $data['student_number'] ?? null,
             // The full course name, as the class-list upload stores it.
@@ -161,7 +178,7 @@ class StudentController extends Controller
         StudentRoster::updateOrCreate(
             ['email' => $email],
             [
-                'name' => trim($data['f_name'].' '.$data['l_name']),
+                'name' => self::listName($fields),
                 'student_number' => $data['student_number'] ?? null,
                 'section' => $yearSection,
                 'program' => $data['course'],
@@ -207,6 +224,7 @@ class StudentController extends Controller
 
         $data = $request->validate([
             'f_name' => ['sometimes', 'string', 'max:60'],
+            'm_name' => ['sometimes', 'nullable', 'string', 'max:60'],
             'l_name' => ['sometimes', 'string', 'max:60'],
             'student_number' => ['sometimes', 'nullable', 'string', 'max:30'],
             'course' => ['sometimes', Rule::in(array_keys(Student::PROGRAM_COURSES))],
@@ -247,6 +265,11 @@ class StudentController extends Controller
         }
 
         unset($data['year'], $data['section'], $data['transfer']);
+
+        if (array_key_exists('m_name', $data)) {
+            $data['m_name'] = filled($data['m_name']) ? trim($data['m_name']) : null;
+        }
+
         $student->fill($data + ['course' => $course, 'year_section' => $yearSection])->save();
 
         $this->keepOnList($student);
@@ -284,7 +307,7 @@ class StudentController extends Controller
         }
 
         $fields = [
-            'name' => trim($student->f_name.' '.$student->l_name) ?: $email,
+            'name' => self::listName($student->only(['f_name', 'm_name', 'l_name'])) ?: $email,
             'student_number' => $student->student_number,
             'section' => $student->year_section,
             'program' => $program,
