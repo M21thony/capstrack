@@ -4,11 +4,11 @@ namespace App\Http\Controllers\Instructor;
 
 use App\Http\Controllers\Controller;
 use App\Jobs\SyncConsultationCancellation;
-use App\Models\Notification;
-use App\Models\StudentSchoolYear;
 use App\Models\ConsultationAvailability;
 use App\Models\ConsultationBooking;
 use App\Models\ConsultationSchedule;
+use App\Models\Notification;
+use App\Models\StudentSchoolYear;
 use App\Services\GoogleCalendarService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -47,8 +47,9 @@ class ScheduleController extends Controller
                     ->whereIn('consultation_booking.booking_status', ['scheduled', 'done']);
             })
             ->leftJoin('students', 'students.student_id', '=', 'consultation_booking.student_id')
-            ->leftJoin('student_s_y', 'student_s_y.student_id', '=', 'students.student_id')
-            ->leftJoin('team', 'team.team_id', '=', 'student_s_y.team_id')
+            // The team the session was booked for, not the one the student
+            // who booked it is in now.
+            ->leftJoin('team', 'team.team_id', '=', 'consultation_booking.team_id')
             ->select(
                 'consultation_schedule.*',
                 'consultation_booking.booking_id',
@@ -343,7 +344,7 @@ class ScheduleController extends Controller
         $nextDate = $this->getNextDateForDay($request->available_date);
 
         $newRecur = $request->recur ?? 'weekly';
-        $newDate  = $newRecur === 'once' ? $request->specific_date : null;
+        $newDate = $newRecur === 'once' ? $request->specific_date : null;
 
         // A slot identical to one that already exists is nobody's intention.
         // It used to be inserted anyway, then flagged unavailable by the
@@ -455,7 +456,6 @@ class ScheduleController extends Controller
         if (! $slot) {
             return response()->json(['error' => 'Slot not found.'], 404);
         }
-
 
         // What the slot will look like once this edit lands - the new value
         // where one was sent, the current one where it was not.
@@ -881,7 +881,7 @@ class ScheduleController extends Controller
         // Remaining combinations involve at least one biweekly side —
         // check whether the dates align on the same 14-day cadence.
         $biweeklyDate = $recurA === 'biweekly' ? $dateA : $dateB;
-        $otherDate    = $recurA === 'biweekly' ? $dateB : $dateA;
+        $otherDate = $recurA === 'biweekly' ? $dateB : $dateA;
 
         if (! $biweeklyDate || ! $otherDate) {
             return true; // can't verify alignment — fail safe
