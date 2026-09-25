@@ -186,6 +186,20 @@ class AdminFinancialController extends Controller
             ], 422);
         }
 
+        // A student can mistype the number they read off the receipt. The
+        // CaPSA, holding the photo, puts right what they typed - saved with
+        // the verification, never on its own.
+        $corrected = $request->validate([
+            'receipt_number' => ['sometimes', ...FinancialRecord::orNumberRules()],
+        ], [
+            'receipt_number.required' => 'Type the OR number printed on the receipt.',
+            'receipt_number.regex' => 'Type the OR number as it is printed: letters, numbers and dashes.',
+        ])['receipt_number'] ?? null;
+
+        if ($corrected !== null) {
+            $financialRecord->receipt_number = FinancialRecord::normaliseOrNumber($corrected);
+        }
+
         // The point of the OR number: somebody looked at the photo and saw it.
         if ($financialRecord->receipt_number && ! $request->boolean('or_confirmed')) {
             return response()->json([
