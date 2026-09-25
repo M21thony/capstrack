@@ -160,12 +160,31 @@
 .sched-cal .calendar-grid{max-width:340px}
 .sched-cal .calendar-header{max-width:340px}
 .sched-cal .calendar-day{height:44px;width:44px;font-size:13px}
+/* The date picker's days stay round on a phone: the older agenda calendar's
+   rules gave .available and .my-booking a 3px left border, and its phone
+   heights (56px, then 34px) are marked !important, which squeezed the
+   circles into half-moons and ovals. */
+.sched-cal .calendar-day{border:0!important}
+@media (max-width:768px){
+  .sched-cal .calendar-day{height:44px!important;padding:0!important;font-size:13px!important}
+  .sched-cal .cal-date-num{font-size:13px!important}
+}
+
+.book-body[hidden],.cal-notes[hidden]{display:none!important}
+.book-empty{display:flex;gap:14px;align-items:flex-start;margin-top:18px;padding:16px;border:1px dashed var(--border2);border-radius:12px;background:var(--bg3)}
+.book-empty-ic{width:40px;height:40px;flex:none;border-radius:10px;display:grid;place-items:center;background:var(--accent-light);color:var(--accent3)}
+.book-empty-ic svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.book-empty-title{font-size:14px;font-weight:700;color:var(--text)}
+.book-empty-text{margin:4px 0 10px;font-size:12.5px;line-height:1.5;color:var(--text2)}
+.book-empty-link{display:inline-flex;align-items:center;min-height:36px;padding:0 14px;border-radius:9px;background:var(--accent);color:#18191f;font-size:13px;font-weight:600;text-decoration:none}
+.book-empty-link:hover{background:var(--accent2)}
+
 /* On a small phone the seven days share the card's width instead of being
    44px each - 314px of calendar in a 250px card ran off its right edge. */
 @media (max-width:480px){
   .book-card{padding:16px 14px 14px}
   .sched-cal .calendar-grid{grid-template-columns:repeat(7,minmax(0,1fr))}
-  .sched-cal .calendar-day{width:100%;max-width:44px;height:auto;aspect-ratio:1/1}
+  .sched-cal .calendar-day{width:100%;max-width:40px;height:auto!important;aspect-ratio:1/1}
 }
 
 .appt-chev{width:15px;height:15px;fill:none;stroke:var(--text3);stroke-width:2.5;flex-shrink:0;align-self:center}
@@ -298,6 +317,23 @@
           <p class="book-sub">Fill in the details below to schedule your consultation.</p>
         </div>
 
+        {{-- Nobody to book with yet: three empty expert cards, a calendar and a
+             Confirm button offered a booking that could not be made. The steps
+             stay in the page, hidden - its script reads them - and this says
+             what to do instead. --}}
+        @if ($experts->isEmpty())
+          <div class="book-empty">
+            <span class="book-empty-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg></span>
+            <div>
+              <div class="book-empty-title">No expert on your team yet</div>
+              <p class="book-empty-text">Consultations are booked with your team's adviser, consultant or grammarian. Once one of them accepts your team, their free dates show here.</p>
+              <a href="{{ route('student.experts') }}" class="book-empty-link">Find an expert</a>
+            </div>
+          </div>
+        @endif
+
+        <div class="book-body" @if ($experts->isEmpty()) hidden @endif>
+
         <div class="book-step">
           <div class="step-head">
             <span class="step-n">1.</span>
@@ -417,9 +453,10 @@
           <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/></svg>
           A booking can't be cancelled once the session is within {{ \App\Http\Controllers\StudentConsultationController::CANCEL_CUTOFF_DAYS }} days.
         </div>
+        </div>
       </div>
 
-      <div class="cal-notes">
+      <div class="cal-notes" @if ($experts->isEmpty()) hidden @endif>
         <h4 style="font-size: 11px; color: var(--text); text-transform: uppercase; margin-bottom: 6px; letter-spacing: 0.5px;">Consultation Legend & Guide</h4>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
@@ -458,6 +495,10 @@
     @php
       // Same type→color mapping as instructor/schedule's renderUpcoming() typeColors,
       // so a slot's type badge looks identical on both pages.
+      // What a booking is, read from its slot type. "consult" is a plain
+      // consultation - put in front of "Consultation" it read "Consult
+      // Consultation".
+      $slotTypeNames = ['consult' => 'Consultation', 'docreview' => 'Document Review', 'defense' => 'Defense Consultation'];
       $slotTypeColors = [
         'consult'   => ['bg' => 'rgba(29,78,216,0.1)',  'color' => 'var(--blue)'],
         'docreview' => ['bg' => 'rgba(124,58,237,0.1)', 'color' => 'var(--purple)'],
@@ -500,7 +541,7 @@
                     &ndash;
                     {{ $booking->schedule?->end_time ? \Carbon\Carbon::parse($booking->schedule->end_time)->format('g:i A') : '—' }}
                   </div>
-                  <div class="appt-kind">{{ ucfirst($booking->schedule->slot_type ?? 'Consult') }} Consultation</div>
+                  <div class="appt-kind">{{ $slotTypeNames[$booking->schedule->slot_type ?? 'consult'] ?? 'Consultation' }}</div>
                   <div class="appt-with">
                     <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                     {{ $booking->schedule->expert->first_name ?? 'Expert' }} {{ $booking->schedule->expert->last_name ?? '' }}
@@ -544,7 +585,7 @@
                     &ndash;
                     {{ $booking->schedule?->end_time ? \Carbon\Carbon::parse($booking->schedule->end_time)->format('g:i A') : '—' }}
                   </div>
-                  <div class="appt-kind">{{ ucfirst($booking->schedule->slot_type ?? 'Consult') }} Consultation</div>
+                  <div class="appt-kind">{{ $slotTypeNames[$booking->schedule->slot_type ?? 'consult'] ?? 'Consultation' }}</div>
                   <div class="appt-with">
                     <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                     {{ $booking->schedule->expert->first_name ?? 'Expert' }} {{ $booking->schedule->expert->last_name ?? '' }}
@@ -658,6 +699,7 @@ let myBookedDates = @json($upcomingBookings->merge($recentBookings)->filter(fn (
 // Thursday can still book their consultant for Friday.
 let bookedExpertIds = @json($bookedExpertIds).map(Number);
 const slotTypeColors = @json($slotTypeColors);
+const slotTypeNames = @json($slotTypeNames);
 
 // Weekly/biweekly slots share a single schedule row across every future
 // occurrence of that weekday, so "is this slot booked out" has to be tracked
@@ -1026,7 +1068,7 @@ function bookingCardHtml(booking, isUpcoming) {
       </div>
       <div class="appt-body">
         <div class="appt-time">${formatTime(booking.start_time)}${endTime}</div>
-        <div class="appt-kind">${ucfirst(booking.slot_type || 'Consult')} Consultation</div>
+        <div class="appt-kind">${slotTypeNames[booking.slot_type || 'consult'] || 'Consultation'}</div>
         <div class="appt-with">
           <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
           ${booking.expert_name}
