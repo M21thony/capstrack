@@ -618,7 +618,7 @@ class AdminFinancialController extends Controller
                     'member_count' => $memberCount,
                     'verified_count' => $verifiedCount,
                     'pending_count' => $pendingCount,
-                    'total_verified_amount' => (float) $totalVerifiedAmount,
+                    'total_verified_amount' => (float) $verifiedAmount,
                     'title' => $teamTitle,
                     'status' => $dataStatus,
                     'post_ids' => $postIds->values()->toArray(),
