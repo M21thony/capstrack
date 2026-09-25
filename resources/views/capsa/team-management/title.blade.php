@@ -28,8 +28,16 @@
     'Address of the organization' => $title['client_address'] ?? null,
     'Representative' => $title['client_representative'] ?? null,
     'Their position' => $title['client_position'] ?? null,
-    'Tags' => is_array($title['tags']) ? implode(', ', $title['tags']) : $title['tags'],
   ];
+
+  // Tags are the one answer that goes somewhere. They come from the same fixed
+  // list (App\Support\ProjectTags) that Analytics filters teams by, so a tag
+  // here can show every other team working on that kind of project - which is
+  // exactly the question this page raises while a title is being judged.
+  $projectTags = is_array($title['tags'])
+      ? $title['tags']
+      : array_map('trim', explode(',', (string) $title['tags']));
+  $projectTags = array_values(array_filter($projectTags, 'filled'));
 @endphp
 
 <div class="th tpg">
@@ -72,6 +80,15 @@
       @foreach ($answers as $label => $value)
         <dt>{{ $label }}</dt><dd>{{ filled($value) ? $value : '—' }}</dd>
       @endforeach
+      <dt>Tags</dt>
+      <dd class="ptags">
+        @forelse ($projectTags as $tag)
+          <a href="{{ route('capsa.analytics', ['tag' => $tag]) }}"
+             title="See every team tagged {{ $tag }}">{{ $tag }}</a>
+        @empty
+          —
+        @endforelse
+      </dd>
     </dl>
   </div>
 </section>
