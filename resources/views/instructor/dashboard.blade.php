@@ -100,17 +100,17 @@
   <div id="real-content" style="display:none">
   <div class="content">
     <div class="grid-4" style="margin-bottom:16px">
-      <x-dashboard.stat-chip value="{{ $pendingApplications }}" label="Pending Applications" sub="{{ $pendingApplicationsNew }} new this week" color="var(--accent3)" />
+      <x-dashboard.stat-chip value="{{ $pendingApplications }}" label="Pending Applications" icon="inbox" sub="{{ $pendingApplicationsNew }} new this week" color="var(--accent3)" />
       <x-dashboard.stat-chip
         value="{{ $docsForReview }}"
-        label="Docs for Review"
+        label="Docs for Review" icon="file-review"
         {{-- Waiting since it arrived. It used to read reviewed_at, which is null
              on anything still waiting, so this rendered "Oldest: " and nothing. --}}
         sub="{{ $oldestDocReview ? 'Oldest: waiting '.$oldestDocReview->created_at?->diffForHumans(null, true) : 'No pending reviews' }}"
         color="var(--red)"
       />
-      <x-dashboard.stat-chip value="{{ $upcomingConsults }}" label="Upcoming Consults" sub="Available slots" color="var(--blue)" />
-      <x-dashboard.stat-chip value="{{ $teamsAdvised }}" label="Teams Advised" sub="Current" color="var(--green)" />
+      <x-dashboard.stat-chip value="{{ $upcomingConsults }}" label="Upcoming Consults" icon="consultation" sub="Available slots" color="var(--blue)" />
+      <x-dashboard.stat-chip value="{{ $teamsAdvised }}" label="Teams Advised" icon="team" sub="Current" color="var(--green)" />
     </div>
 
     <div class="grid-2" style="margin-bottom:16px">
@@ -120,6 +120,7 @@
         :badgeClass="'badge-accent'"
         :empty="$announcements->isEmpty()"
         emptyMessage="No announcements."
+        emptyIcon="announcement"
       >
         <div class="ann-list">
           @foreach ($announcements as $announcement)
@@ -212,6 +213,7 @@
         title="Upcoming Consultations"
         :empty="$consultations->isEmpty()"
         emptyMessage="No upcoming consultations."
+        emptyIcon="consultation"
         scrollable
         maxHeight="320"
       >
@@ -235,6 +237,7 @@
       title="Recent Activity"
       :empty="empty($recentActivity)"
       emptyMessage="No recent activity."
+      emptyIcon="history"
     >
       <x-dashboard.activity-feed :items="$recentActivity" emptyMessage="No recent activity." />
     </x-dashboard.info-card>

@@ -5,6 +5,7 @@
        admin/_sidebar for where that section is built. --}}
   @include('capsa._sidebar')
 @else
+@include('partials.portal-nav-icons')
 <div class="sidebar">
   @if(!isset($showBrand) || $showBrand)
     <div class="sidebar-brand">
@@ -75,13 +76,13 @@
 </div>
 @include('partials.mobile-tabbar', ['tabs' => [
     ['label' => 'Home', 'href' => route('instructor.dashboard'), 'active' => request()->routeIs('instructor.dashboard'),
-        'icon' => '<path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/>'],
+        'icon' => App\Support\PortalIcons::paths('home')],
     ['label' => 'Teams', 'href' => route('instructor.teams'), 'active' => request()->routeIs('instructor.teams'),
-        'icon' => '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>'],
+        'icon' => App\Support\PortalIcons::paths('team')],
     ['label' => 'Reviews', 'href' => route('instructor.docreview'), 'active' => request()->routeIs('instructor.docreview'), 'badge' => $unseenDocReviewCount ?? 0,
-        'icon' => '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6M9 13h6M9 17h4"/>'],
+        'icon' => App\Support\PortalIcons::paths('file-review')],
     ['label' => 'Grading', 'href' => route('instructor.grading'), 'active' => request()->routeIs('instructor.grading', 'instructor.grading.show'),
-        'icon' => '<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>'],
+        'icon' => App\Support\PortalIcons::paths('grading')],
 ]])
 @include('partials.staff-portal-tour', ['tourKey' => 'expert', 'expert' => $expert])
 @include('partials.sidebar-scroll-restore')

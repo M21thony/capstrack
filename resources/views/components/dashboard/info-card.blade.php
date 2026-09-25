@@ -6,6 +6,7 @@
     'badgeClass' => 'badge-blue',
     'empty' => false,
     'emptyMessage' => 'No data available.',
+    'emptyIcon' => 'inbox',
     'loading' => false,
     'scrollable' => false,
     'maxHeight' => null,
@@ -30,7 +31,7 @@
             <div class="skeleton-box" style="width:70%;height:11px;border-radius:4px;"></div>
         </div>
     @elseif ($empty)
-        <x-dashboard.empty-state :message="$emptyMessage" />
+        <x-dashboard.empty-state :message="$emptyMessage" :icon="$emptyIcon" />
     @else
         <div @if($scrollable) class="act-scroll" @if($maxHeight) style="max-height:{{ $maxHeight }}px" @endif @endif>
             {{ $slot }}

@@ -106,5 +106,5 @@
     @endforeach
   </div>
 @else
-  <x-dashboard.empty-state :message="$emptyMessage" />
+  <x-dashboard.empty-state :message="$emptyMessage" icon="history" />
 @endif
