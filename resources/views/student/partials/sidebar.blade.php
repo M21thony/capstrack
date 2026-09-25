@@ -184,17 +184,20 @@
   </nav>
 </div>
 
-@include('partials.mobile-tabbar', ['tabs' => [
+@include('partials.mobile-tabbar', ['tabs' => array_values(array_filter([
     ['label' => 'Home', 'href' => route('student.dashboard'), 'active' => request()->routeIs('student.dashboard'),
         'icon' => App\Support\PortalIcons::paths('home')],
     ['label' => 'Team', 'href' => route('student.team'), 'active' => request()->routeIs('student.team'), 'badge' => $newPostCount,
         'icon' => App\Support\PortalIcons::paths('team')],
-    // Handing in a document is what a student comes here to do most.
-    ['label' => 'Submit', 'onclick' => "window.openSubmissionDrawer && window.openSubmissionDrawer('')", 'primary' => true,
+    // Handing in a document is what a student comes here to do most - but
+    // not on Financial Records. There the page is about uploading a receipt,
+    // and a big Submit button in the middle of the bar read as the way to do
+    // that, then opened the document form instead.
+    request()->routeIs('student.financial') ? null : ['label' => 'Submit', 'onclick' => "window.openSubmissionDrawer && window.openSubmissionDrawer('')", 'primary' => true,
         'icon' => App\Support\PortalIcons::paths('submit')],
     ['label' => 'Progress', 'href' => route('student.progress'), 'active' => request()->routeIs('student.progress'),
         'icon' => App\Support\PortalIcons::paths('progress')],
-]])
+]))])
 
 <style>
   .profile-modal .pm-close-btn { display: inline-flex; align-items: center; justify-content: center; margin-left: auto; flex-shrink: 0; width: auto; height: auto; padding: 4px; background: none; background-color: transparent; color: rgba(255,255,255,0.4); border: none; border-radius: 0; line-height: 1; cursor: pointer; transition: color 0.13s ease-in-out; outline: none; }
