@@ -57,6 +57,28 @@
 .tmx td input[type=checkbox],
 .tmx th input[type=checkbox]{width:16px;height:16px;accent-color:var(--accent);cursor:pointer;margin:0}
 
+/* ── The list scrolls inside itself, under a header that stays ──
+   The whole page used to scroll, walking the column headings, the filters
+   and the counts off the top by the tenth team. On a computer the page now
+   fills the screen and only the rows move, as the admin's long lists do
+   (admin.css, "a long list scrolls inside itself"). The table keeps at
+   least 320px; a screen too short for that and the page scrolls as before.
+   Phones get the cards below instead, so this stops at their width. */
+@media (min-width:1001px){
+  .content:has(> .tmx){display:flex;flex-direction:column}
+  .content > .tmx{flex:1 0 auto;display:flex;flex-direction:column}
+  .tmx .tcard{flex:1 1 0;min-height:320px;display:flex;flex-direction:column}
+  .tmx .tcard[hidden]{display:none}
+  .tmx .tcard > .tscroll{flex:1;min-height:0;overflow:auto}
+  .tmx .tcard > .tfoot{flex:none}
+  .tmx th{
+    position:sticky;top:0;z-index:2;
+    /* The line under a sticky heading does not travel with it as a border
+       in every browser; an inset shadow does. */
+    border-bottom:0;box-shadow:inset 0 -1px 0 var(--line);
+  }
+}
+
 /* ── Teams table → cards on phone ──
    Eight columns plus the select checkbox needs real width, so the table
    stays a real, horizontally-scrolling grid down to tablet - .tcols above
