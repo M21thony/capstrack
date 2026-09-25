@@ -322,7 +322,9 @@ Route::middleware(['expert.auth', 'expert.approved', 'no.cache', 'track.expert']
     // their CaPSA approved instead of attaching a file.
     Route::get('/assignments/{assignment}/pre-proposal', [InstructorAssignmentController::class, 'preProposalDocument'])->name('assignments.pre_proposal');
     Route::view('/pending', 'instructor.pending')->name('pending');
-    Route::view('/rejected', 'instructor.rejected')->name('rejected');
+    // Account approval is gone; the page needs the account it is about, which
+    // only the sign-in's /login/rejected has. Opened on its own it was a 500.
+    Route::redirect('/rejected', '/instructor/dashboard')->name('rejected');
     Route::get('/docreview/{reviewId}/clf', [ConsultationLogController::class, 'generate'])->name('docreview.clf');
 });
 
@@ -421,7 +423,8 @@ Route::middleware(['auth', 'no.cache', 'track.expert'])->group(function () {
     // standalone casual checker was retired in favor of student.duplication
     // (below) always being tied to a real proposal submission. Left in place
     // rather than deleted in case something elsewhere still references it.
-    Route::get('/duplication-legacy', [DuplicationController::class, 'index'])->name('duplication.index');
+    // The old checker page, which rendered the new one without its data - a 500.
+    Route::redirect('/duplication-legacy', '/student/duplication')->name('duplication.index');
     // Running a check produces a result that is kept and referred to later
     // by id, so it is a thing being created. Nothing reaches this one - the
     // pre-proposal route below is what the page calls.
