@@ -181,18 +181,50 @@
     // or content (the skeleton lifting, a list loading, a filter emptying it).
     var BASE = 40;
     var queued = false;
+    var px = function (el, prop) {
+      return parseFloat(getComputedStyle(el)[prop] || 0) || 0;
+    };
+    // The box held to the screen's height, which is the one the room has to
+    // be measured in. It is usually the page container found above, but on
+    // some pages (the expert dashboard, Document Review, Team Grading) that
+    // container only wears overflow:auto and grows with what is in it, while
+    // the box around it is the one that scrolls. Measured in the first, a
+    // short page had "no room left" and the credits stayed halfway up the
+    // screen. Found by pushing the credits far down for a moment and taking
+    // the first box, from the container outwards, that did not grow.
+    var holdingBox = function () {
+      var chain = [];
+      for (var el = content; el && el !== main.parentElement; el = el.parentElement) {
+        chain.push([el, el.clientHeight]);
+      }
+      credits.style.marginTop = (BASE + 5000) + 'px';
+      var found = chain.find(function (pair) { return pair[0].clientHeight === pair[1]; });
+      credits.style.marginTop = BASE + 'px';
+      return found ? found[0] : content;
+    };
     var fit = function () {
       queued = false;
       credits.style.marginTop = BASE + 'px';
-      // Where the credits end, measured from the top of the scrolling area
-      // (scrollHeight never reports less than the visible height, so it
-      // cannot say how much room is left).
-      var box = content.getBoundingClientRect();
-      var end = credits.getBoundingClientRect().bottom - box.top - content.clientTop + content.scrollTop;
-      var bottom = content.clientHeight - parseFloat(getComputedStyle(content).paddingBottom || 0);
-      var free = Math.floor(bottom - end) - 1;
+      var box = holdingBox();
+      // Where the credits end, measured from the top of that box's scrolling
+      // area, with the padding of everything between them and it (scrollHeight
+      // never reports less than the visible height, so it cannot say how much
+      // room is left).
+      var below = 0;
+      for (var el = credits.parentElement; el && el !== box; el = el.parentElement) {
+        below += px(el, 'paddingBottom') + px(el, 'borderBottomWidth') + px(el, 'marginBottom');
+      }
+      var rect = box.getBoundingClientRect();
+      var end = credits.getBoundingClientRect().bottom - rect.top - box.clientTop + box.scrollTop + below;
+      var free = Math.floor(box.clientHeight - px(box, 'paddingBottom') - end) - 1;
       if (free > 0) {
         credits.style.marginTop = (BASE + free) + 'px';
+        // Anything the sum above missed (a collapsed margin, a stray spacer)
+        // would leave the page scrolling a few pixels to reach them.
+        var over = box.scrollHeight - box.clientHeight;
+        if (over > 0) {
+          credits.style.marginTop = Math.max(BASE, BASE + free - over) + 'px';
+        }
       }
     };
     // A timer rather than an animation frame: frames never come in a tab
